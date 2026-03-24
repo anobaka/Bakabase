@@ -247,8 +247,7 @@ public class MediaLibraryTemplateService<TDbContext>(
                             var r = resourcesMap[rpi.Path];
                             r.Properties ??= [];
                             var rp = r.Properties.GetOrAdd((int)p.Pool, _ => []).GetOrAdd(p.Id,
-                                _ => new Resource.Property(p.Property.Name, p.Property.Type,
-                                    p.Property.Type.GetDbValueType(), p.Property.Type.GetBizValueType(), [], true));
+                                _ => new Resource.Property(p.Property.Name, p.Property.Type, [], true));
                             rp.Values ??= [];
                             rp.Values.Add(new Resource.Property.PropertyValue((int)PropertyValueScope.Synchronization,
                                 null, bv, bv));

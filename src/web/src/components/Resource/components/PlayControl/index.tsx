@@ -388,7 +388,7 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
           </div>
         )}
 
-        {discoveryState.hasMorePlayableFiles && !allFilesLoaded && isFileSystemModal && (
+        {discoveryState.hasMoreFileSystemPlayableItems && !allFilesLoaded && isFileSystemModal && (
           <div className={"pt-2"}>
             <Button
               color={"primary"}

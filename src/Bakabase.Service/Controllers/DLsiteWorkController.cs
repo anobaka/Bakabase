@@ -47,8 +47,14 @@ public class DLsiteWorkController(IDLsiteWorkService service, BTaskManager btm, 
 
     [HttpPost("sync")]
     [SwaggerOperation(OperationId = "SyncDLsiteWorks")]
-    public async Task<BaseResponse> Sync()
+    public async Task<BaseResponse> Sync([FromQuery] bool redownloadCover = false)
     {
+        if (redownloadCover)
+        {
+            var sourceLinkService = HttpContext.RequestServices.GetRequiredService<IResourceSourceLinkService>();
+            await sourceLinkService.ClearAllLocalCoverPaths(ResourceSource.DLsite);
+        }
+
         await btm.Start(SyncTaskId, () => new BTaskHandlerBuilder
         {
             Id = SyncTaskId,

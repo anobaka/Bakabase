@@ -32,4 +32,24 @@ public interface IResourceSourceLinkService
 
     Task DeleteByResourceId(int resourceId);
     Task DeleteByResourceIds(IEnumerable<int> resourceIds);
+
+    /// <summary>
+    /// Get source links that have CoverUrls but no LocalCoverPaths (need cover download).
+    /// </summary>
+    Task<List<ResourceSourceLink>> GetPendingCoverDownloads();
+
+    /// <summary>
+    /// Update an existing source link.
+    /// </summary>
+    Task Update(ResourceSourceLink link);
+
+    /// <summary>
+    /// Clear LocalCoverPaths for a specific resource and source (triggers re-download).
+    /// </summary>
+    Task ClearLocalCoverPaths(int resourceId, ResourceSource source);
+
+    /// <summary>
+    /// Clear LocalCoverPaths for all resources of a given source.
+    /// </summary>
+    Task ClearAllLocalCoverPaths(ResourceSource source);
 }

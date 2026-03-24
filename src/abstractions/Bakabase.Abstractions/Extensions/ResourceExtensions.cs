@@ -161,6 +161,30 @@ namespace Bakabase.Abstractions.Extensions
             };
         }
 
+        /// <summary>
+        /// Sets the resource path by combining directory and fileName.
+        /// Use this when you need to build a path from separate components.
+        /// </summary>
+        public static void SetPath(this Resource resource, string? directory, string? fileName)
+        {
+            if (!string.IsNullOrEmpty(fileName) && !string.IsNullOrEmpty(directory))
+            {
+                resource.Path = System.IO.Path.Combine(directory, fileName).StandardizePath()!;
+            }
+            else if (!string.IsNullOrEmpty(directory))
+            {
+                resource.Path = directory.StandardizePath()!;
+            }
+            else if (!string.IsNullOrEmpty(fileName))
+            {
+                resource.Path = fileName;
+            }
+            else
+            {
+                resource.Path = null;
+            }
+        }
+
         public static Dictionary<int, Dictionary<int, Resource.Property>> Copy(
             this Dictionary<int, Dictionary<int, Resource.Property>> properties)
         {
@@ -171,8 +195,6 @@ namespace Bakabase.Abstractions.Extensions
                     y => new Resource.Property(
                         y.Value.Name,
                         y.Value.Type,
-                        y.Value.DbValueType,
-                        y.Value.BizValueType,
                         y.Value.Values?.Select(z => new Resource.Property.PropertyValue(
                             z.Scope,
                             z.Value,

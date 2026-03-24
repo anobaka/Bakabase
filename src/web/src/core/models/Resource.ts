@@ -63,6 +63,19 @@ export type Resource = {
   pinned: boolean;
   tags: ResourceTag[];
   playedAt?: string;
+
+  /** Final resolved cover paths, populated by backend using priority-based selection */
+  covers?: string[];
+  /** Final resolved playable items from all sources */
+  playableItems?: PlayableItem[];
+  /** Whether there are more FileSystem playable items beyond what's shown */
+  hasMoreFileSystemPlayableItems: boolean;
+  /** Whether covers have been resolved and are ready */
+  coversReady: boolean;
+  /** Whether playable items have been resolved and are ready */
+  playableItemsReady: boolean;
+
+  /** @deprecated Use covers/playableItems instead */
   cache?: {
     playableFilePaths?: string[];
     playableItems?: PlayableItem[];

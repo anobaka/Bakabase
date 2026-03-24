@@ -150,4 +150,42 @@ public class ResourceSourceLinkService<TDbContext>(
             await orm.RemoveRange(dbModels);
         }
     }
+
+    public async Task<List<ResourceSourceLink>> GetPendingCoverDownloads()
+    {
+        var dbModels = await orm.GetAll(m =>
+            m.CoverUrls != null && m.CoverUrls != "" &&
+            (m.LocalCoverPaths == null || m.LocalCoverPaths == ""));
+        return dbModels.Select(d => d.ToDomainModel()).ToList();
+    }
+
+    public async Task Update(ResourceSourceLink link)
+    {
+        var dbModel = link.ToDbModel();
+        await orm.Update(dbModel);
+    }
+
+    public async Task ClearLocalCoverPaths(int resourceId, ResourceSource source)
+    {
+        var dbModels = await orm.GetAll(m => m.ResourceId == resourceId && m.Source == source);
+        foreach (var dbModel in dbModels)
+        {
+            dbModel.LocalCoverPaths = null;
+            await orm.Update(dbModel);
+        }
+    }
+
+    public async Task ClearAllLocalCoverPaths(ResourceSource source)
+    {
+        var dbModels = await orm.GetAll(m =>
+            m.Source == source && m.LocalCoverPaths != null && m.LocalCoverPaths != "");
+        foreach (var dbModel in dbModels)
+        {
+            dbModel.LocalCoverPaths = null;
+        }
+        if (dbModels.Count > 0)
+        {
+            await orm.UpdateRange(dbModels);
+        }
+    }
 }

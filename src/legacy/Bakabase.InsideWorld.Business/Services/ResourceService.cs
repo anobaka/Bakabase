@@ -478,8 +478,6 @@ namespace Bakabase.InsideWorld.Business.Services
                                                 reservedProperties[(int)ResourceProperty.Rating] = new Resource.Property(
                                                     reservedPropertyMap.GetValueOrDefault((int)ResourceProperty.Rating)?.Name,
                                                     reservedPropertyMap.GetValueOrDefault((int)ResourceProperty.Rating)?.Type ?? default,
-                                                    StandardValueType.Decimal,
-                                                    StandardValueType.Decimal,
                                                     dbReservedProperties?.Select(s =>
                                                         new Resource.Property.PropertyValue(s.Scope, s.Rating, s.Rating, s.Rating)).ToList(),
                                                     true);
@@ -487,8 +485,6 @@ namespace Bakabase.InsideWorld.Business.Services
                                                 reservedProperties[(int)ResourceProperty.Introduction] = new Resource.Property(
                                                     reservedPropertyMap.GetValueOrDefault((int)ResourceProperty.Introduction)?.Name,
                                                     reservedPropertyMap.GetValueOrDefault((int)ResourceProperty.Introduction)?.Type ?? default,
-                                                    StandardValueType.String,
-                                                    StandardValueType.String,
                                                     dbReservedProperties?.Select(s =>
                                                         new Resource.Property.PropertyValue(s.Scope, s.Introduction, s.Introduction, s.Introduction)).ToList(),
                                                     true);
@@ -496,8 +492,6 @@ namespace Bakabase.InsideWorld.Business.Services
                                                 reservedProperties[(int)ResourceProperty.Cover] = new Resource.Property(
                                                     reservedPropertyMap.GetValueOrDefault((int)ResourceProperty.Cover)?.Name,
                                                     reservedPropertyMap.GetValueOrDefault((int)ResourceProperty.Cover)?.Type ?? default,
-                                                    StandardValueType.ListString,
-                                                    StandardValueType.ListString,
                                                     dbReservedProperties?.Select(s =>
                                                     {
                                                         var coverPaths = s.CoverPaths;
@@ -542,8 +536,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
                                                     var p = customProperties.GetOrAdd(pId,
                                                         _ => new Resource.Property(property.Name, property.Type,
-                                                            property.Type.GetDbValueType(),
-                                                            property.Type.GetBizValueType(), [], visible, propertyOrderMap[pId]));
+                                                            [], visible, propertyOrderMap[pId]));
 
                                                     if (values != null)
                                                     {
@@ -798,6 +791,44 @@ namespace Bakabase.InsideWorld.Business.Services
                     using (MiniProfiler.Current.Step("ReplaceWithPreferredAlias"))
                     {
                         await ReplaceWithPreferredAlias(doList);
+                    }
+                }
+
+                // Populate first-class Covers and PlayableItems fields from priority-based selection
+                using (MiniProfiler.Current.Step("PopulateFirstClassFields"))
+                {
+                    foreach (var r in doList)
+                    {
+                        // Covers: priority-based selection (first non-empty wins)
+                        // 1. User-set / enhancer covers from CoverPaths (already resolved above from properties)
+                        // 2. External source local covers (downloaded from external URLs)
+                        // 3. Cache-discovered covers (filesystem auto-discovery)
+                        if (r.CoverPaths is { Count: > 0 })
+                        {
+                            r.Covers = r.CoverPaths;
+                        }
+                        else
+                        {
+                            var sourceLocalCovers = r.SourceLinks?
+                                .Where(sl => sl.Source != ResourceSource.FileSystem)
+                                .SelectMany(sl => sl.LocalCoverPaths ?? [])
+                                .ToList();
+                            if (sourceLocalCovers is { Count: > 0 })
+                            {
+                                r.Covers = sourceLocalCovers;
+                            }
+                            else
+                            {
+                                r.Covers = r.Cache?.CoverPaths;
+                            }
+                        }
+                        r.CoversReady = r.Covers != null ||
+                                        r.Cache?.CachedTypes.Contains(ResourceCacheType.Covers) == true;
+
+                        // PlayableItems: aggregate from cache (all sources)
+                        r.PlayableItems = r.Cache?.PlayableItems;
+                        r.HasMoreFileSystemPlayableItems = r.Cache?.HasMoreFileSystemPlayableItems ?? false;
+                        r.PlayableItemsReady = r.Cache?.CachedTypes.Contains(ResourceCacheType.PlayableFiles) == true;
                     }
                 }
 
@@ -1258,12 +1289,12 @@ namespace Bakabase.InsideWorld.Business.Services
                     .SelectMany(x => x.Take(InternalOptions.MaxPlayableFilesPerTypeAndSubDir))
                     .ToList();
                 cache.PlayableFilePaths = trimmedPaths.SerializeAsStandardValue(StandardValueType.ListString);
-                cache.HasMorePlayableFiles = trimmedPaths.Count < fileSystemPaths.Count;
+                cache.HasMoreFileSystemPlayableItems = trimmedPaths.Count < fileSystemPaths.Count;
             }
             else
             {
                 cache.PlayableFilePaths = null;
-                cache.HasMorePlayableFiles = allItems.Count > InternalOptions.MaxPlayableFilesPerTypeAndSubDir;
+                cache.HasMoreFileSystemPlayableItems = allItems.Count > InternalOptions.MaxPlayableFilesPerTypeAndSubDir;
             }
 
             cache.CachedTypes |= ResourceCacheType.PlayableFiles;
@@ -1496,14 +1527,14 @@ namespace Bakabase.InsideWorld.Business.Services
                                                 trimmedPlayableFiles.SerializeAsStandardValue(
                                                     StandardValueType
                                                         .ListString);
-                                            cache.HasMorePlayableFiles =
+                                            cache.HasMoreFileSystemPlayableItems =
                                                 trimmedPlayableFiles.Count < fileSystemPaths.Length ||
                                                 allPlayableItems.Count > trimmedPlayableFiles.Count;
                                         }
                                         else
                                         {
                                             cache.PlayableFilePaths = null;
-                                            cache.HasMorePlayableFiles = false;
+                                            cache.HasMoreFileSystemPlayableItems = false;
                                         }
 
                                         cache.CachedTypes |= ResourceCacheType.PlayableFiles;
@@ -1803,6 +1834,16 @@ namespace Bakabase.InsideWorld.Business.Services
             return (await _resourceCacheOrm.GetByKey(id))?.ToDomainModel();
         }
 
+        public async Task InvalidateResourceCovers(int resourceId)
+        {
+            // Clear the cover cache so it gets re-resolved from the new source covers
+            await _resourceCacheOrm.UpdateAll(c => c.ResourceId == resourceId, x =>
+            {
+                x.CoverPaths = null;
+                x.CachedTypes &= ~ResourceCacheType.Covers;
+            });
+        }
+
         public async Task DeleteResourceCacheByResourceIdAndCacheType(int resourceId, ResourceCacheType type)
         {
             await _resourceCacheOrm.UpdateAll(c => c.ResourceId == resourceId, x =>
@@ -1837,7 +1878,7 @@ namespace Bakabase.InsideWorld.Business.Services
                             x.CoverPaths = null;
                             break;
                         case ResourceCacheType.PlayableFiles:
-                            x.HasMorePlayableFiles = false;
+                            x.HasMoreFileSystemPlayableItems = false;
                             x.PlayableFilePaths = null;
                             break;
                         case ResourceCacheType.ResourceMarkers:
@@ -1917,7 +1958,7 @@ namespace Bakabase.InsideWorld.Business.Services
             if (!uiResource.DisablePlayableFileCache)
             {
                 cache.PlayableFilePaths = null;
-                cache.HasMorePlayableFiles = false;
+                cache.HasMoreFileSystemPlayableItems = false;
                 cache.CachedTypes &= ~ResourceCacheType.PlayableFiles;
 
                 await DiscoverAndCachePlayableFiles(resourceId, ct);
@@ -1927,7 +1968,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 if (updatedCache != null)
                 {
                     cache.PlayableFilePaths = updatedCache.PlayableFilePaths;
-                    cache.HasMorePlayableFiles = updatedCache.HasMorePlayableFiles;
+                    cache.HasMoreFileSystemPlayableItems = updatedCache.HasMoreFileSystemPlayableItems;
                 }
 
                 cache.CachedTypes |= ResourceCacheType.PlayableFiles;
