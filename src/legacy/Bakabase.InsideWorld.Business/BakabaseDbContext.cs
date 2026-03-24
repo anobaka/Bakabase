@@ -1,7 +1,6 @@
 ﻿using System;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
-using Bakabase.InsideWorld.Business.Components.Legacy.Models;
 using Bakabase.InsideWorld.Business.Components.PlayList.Models.Db;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Db;
 using Bakabase.InsideWorld.Business.Models.Db;
@@ -12,38 +11,20 @@ using Bakabase.Modules.Comparison.Components;
 using Bakabase.Modules.AI.Models.Db;
 using Bakabase.Modules.Comparison.Models.Db;
 using Bakabase.Modules.Property.Abstractions.Models.Db;
-using Bootstrap.Components.Logging.LogService.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 using CategoryDbModel = Bakabase.Abstractions.Models.Db.CategoryDbModel;
 using CategoryEnhancerOptions = Bakabase.Abstractions.Models.Db.CategoryEnhancerOptions;
 using EnhancementRecord = Bakabase.Abstractions.Models.Db.EnhancementRecord;
-using LegacyAlias = Bakabase.InsideWorld.Models.Models.Entities.LegacyAlias;
 using MediaLibraryDbModel = Bakabase.Abstractions.Models.Db.MediaLibraryDbModel;
 using ReservedPropertyValue = Bakabase.Abstractions.Models.Db.ReservedPropertyValue;
 using SpecialText = Bakabase.Abstractions.Models.Db.SpecialText;
-using Tag = Bakabase.InsideWorld.Models.Models.Entities.Tag;
 
 namespace Bakabase.InsideWorld.Business
 {
     public class BakabaseDbContext : DbContext, IBulkModificationDbContext, IComparisonDbContext
     {
-        [Obsolete] public DbSet<LegacyAlias> Aliases { get; set; }
         [Obsolete] public DbSet<AliasGroup> AliasGroups { get; set; }
-        [Obsolete] public DbSet<LegacyDbResource> Resources { get; set; }
-        [Obsolete] public DbSet<Original> Originals { get; set; }
-        [Obsolete] public DbSet<Publisher> Publishers { get; set; }
-        [Obsolete] public DbSet<Series> Series { get; set; }
         [Obsolete] public DbSet<CustomResourceProperty> CustomResourceProperties { get; set; }
-        [Obsolete] public DbSet<PublisherResourceMapping> OrganizationResourceMappings { get; set; }
-        [Obsolete] public DbSet<OriginalResourceMapping> OriginalResourceMappings { get; set; }
-        [Obsolete] public DbSet<ResourceTagMapping> ResourceTagMappings { get; set; }
-        [Obsolete] public DbSet<PublisherTagMapping> PublisherTagMappings { get; set; }
-        [Obsolete] public DbSet<Favorites> Favorites { get; set; }
-        [Obsolete] public DbSet<FavoritesResourceMapping> FavoritesResourceMappings { get; set; }
-        [Obsolete] public DbSet<Volume> Volumes { get; set; }
-        [Obsolete] public DbSet<Tag> Tags { get; set; }
-        [Obsolete] public DbSet<TagGroup> TagGroups { get; set; }
-        [Obsolete] public DbSet<Log> Logs { get; set; }
         [Obsolete] public DbSet<CustomPlayerOptions> CustomPlayerOptionsList { get; set; }
         [Obsolete] public DbSet<CustomPlayableFileSelectorOptions> CustomPlayableFileSelectorOptionsList { get; set; }
 
@@ -131,67 +112,7 @@ namespace Bakabase.InsideWorld.Business
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-
-            modelBuilder.Entity<LegacyAlias>(t =>
-            {
-                t.HasIndex(a => a.GroupId).IsUnique(false);
-                t.HasIndex(a => a.IsPreferred).IsUnique(false);
-                t.HasIndex(a => a.Name).IsUnique();
-            });
-
-            modelBuilder.Entity<PublisherResourceMapping>(t =>
-            {
-                t.HasIndex(t1 => new {t1.PublisherId, t1.ResourceId, t1.ParentPublisherId}).IsUnique();
-            });
-
-            modelBuilder.Entity<OriginalResourceMapping>(t =>
-            {
-                t.HasIndex(t1 => new {t1.OriginalId, t1.ResourceId}).IsUnique();
-            });
-
-            modelBuilder.Entity<PublisherTagMapping>(t =>
-            {
-                t.HasIndex(t1 => new {t1.TagId, t1.PublisherId}).IsUnique();
-            });
-
-            modelBuilder.Entity<ResourceTagMapping>(t =>
-            {
-                t.HasIndex(t1 => new {t1.TagId, t1.ResourceId}).IsUnique();
-            });
-
-            modelBuilder.Entity<TagGroup>(a => { a.HasIndex(b => b.Name).IsUnique(); });
-
-
-            modelBuilder.Entity<LegacyDbResource>(t =>
-            {
-                t.HasIndex(a => a.CategoryId);
-                t.HasIndex(a => a.Name);
-                t.HasIndex(a => a.RawName);
-                t.HasIndex(a => a.Language);
-                t.HasIndex(a => a.CreateDt);
-                t.HasIndex(a => a.UpdateDt);
-                t.HasIndex(a => a.FileCreateDt);
-                t.HasIndex(a => a.FileModifyDt);
-                t.HasIndex(a => a.Rate);
-            });
-
-            modelBuilder.Entity<Original>(t => { t.HasIndex(a => a.Name); });
-            modelBuilder.Entity<Publisher>(t => { t.HasIndex(a => a.Name); });
-            modelBuilder.Entity<Series>(t => { t.HasIndex(a => a.Name); });
-            modelBuilder.Entity<Volume>(t =>
-            {
-                t.HasIndex(a => a.Name);
-                t.HasIndex(a => a.Title);
-                t.HasIndex(a => a.ResourceId);
-                t.HasIndex(a => a.SerialId);
-            });
-
-            modelBuilder.Entity<Tag>(t =>
-            {
-                t.HasIndex(a => a.Name);
-                t.HasIndex(a => new {a.Name, a.GroupId}).IsUnique();
-            });
-
+            
             modelBuilder.Entity<MediaLibraryDbModel>(t =>
             {
                 t.HasIndex(a => a.CategoryId);

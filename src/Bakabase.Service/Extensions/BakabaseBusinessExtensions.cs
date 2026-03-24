@@ -17,7 +17,6 @@ using Bakabase.InsideWorld.Business.Components.Downloader.Services;
 using Bakabase.InsideWorld.Business.Components.Migration;
 using Bakabase.InsideWorld.Business.Components.FileExplorer;
 using Bakabase.InsideWorld.Business.Components.FileNameModifier.Extensions;
-using Bakabase.InsideWorld.Business.Components.Legacy;
 using Bakabase.InsideWorld.Business.Components.PlayList.Extensions;
 using Bakabase.InsideWorld.Business.Components.PlayList.Services;
 using Bakabase.InsideWorld.Business.Components.PostParser.Extensions;
@@ -32,8 +31,6 @@ using Bakabase.InsideWorld.Business.Components.Tampermonkey;
 using Bakabase.InsideWorld.Business.Components.ThirdParty;
 using Bakabase.InsideWorld.Business.Models.Db;
 using Bakabase.InsideWorld.Business.Services;
-using Bakabase.InsideWorld.Models.Configs;
-using Bakabase.Migrations.V190;
 using Bakabase.Modules.AI.Extensions;
 using Bakabase.Modules.Alias.Extensions;
 using Bakabase.Modules.BulkModification.Extensions;
@@ -113,11 +110,7 @@ namespace Bakabase.Service.Extensions
             #region Optimized after V190
 
             services.AddBakabaseComponents();
-
-            services.AddScoped<V190Migrator>();
-
-            services.AddLegacies();
-
+            
             services.AddAI<BakabaseDbContext>();
             services.AddSingleton<Bakabase.Modules.AI.Components.Tools.ILlmTool, Bakabase.Service.Components.AI.ResourceTools>();
 

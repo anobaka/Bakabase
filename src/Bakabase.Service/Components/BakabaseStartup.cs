@@ -77,7 +77,7 @@ namespace Bakabase.Service.Components
 
             services.AddSingleton<ThirdPartyHttpRequestLogger>();
 
-            services.AddInsideWorldMigrations();
+            services.AddBakabaseMigrations();
 
             services.RegisterAllRegisteredTypeAs<ICookieValidator>();
 
