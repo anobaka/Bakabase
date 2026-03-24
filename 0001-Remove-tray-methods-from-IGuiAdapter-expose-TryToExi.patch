@@ -1,0 +1,92 @@
+From b1ef799019802ddd3efdf069ac5c848c7c0576b6 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Tue, 24 Mar 2026 14:12:06 +0000
+Subject: [PATCH] Remove tray methods from IGuiAdapter, expose TryToExit as
+ public
+
+Tray management (ShowTray, HideTray, SetTrayText, SetTrayIcon) is now
+the responsibility of the GUI framework (Avalonia) rather than the
+abstract adapter interface.
+
+TryToExit is made public so the GUI layer can call it directly from
+tray menu handlers.
+
+https://claude.ai/code/session_01JfhdSkGJLjsqv5VzRK8FA8
+---
+ Bakabase.Infrastructures/Components/App/AppHost.cs     | 3 +--
+ Bakabase.Infrastructures/Components/Gui/GuiAdapter.cs  | 9 ---------
+ Bakabase.Infrastructures/Components/Gui/IGuiAdapter.cs | 5 -----
+ 3 files changed, 1 insertion(+), 16 deletions(-)
+
+diff --git a/Bakabase.Infrastructures/Components/App/AppHost.cs b/Bakabase.Infrastructures/Components/App/AppHost.cs
+index 352c39a..829906e 100644
+--- a/Bakabase.Infrastructures/Components/App/AppHost.cs
++++ b/Bakabase.Infrastructures/Components/App/AppHost.cs
+@@ -296,7 +296,6 @@ namespace Bakabase.Infrastructures.Components.App
+                 #endregion
+ 
+                 _guiAdapter.ShowInitializationWindow(AppLocalizer.App_Initializing());
+-                _guiAdapter.ShowTray(async () => await TryToExit(true));
+ 
+                 var initialOptions = await GetInitializationOptions();
+ 
+@@ -489,7 +488,7 @@ namespace Bakabase.Infrastructures.Components.App
+         /// </summary>
+         /// <returns>Cancel</returns>
+         /// <exception cref="ArgumentOutOfRangeException"></exception>
+-        private async Task TryToExit(bool fromTray)
++        public async Task TryToExit(bool fromTray)
+         {
+             AppOptions? appOptions = null;
+ 
+diff --git a/Bakabase.Infrastructures/Components/Gui/GuiAdapter.cs b/Bakabase.Infrastructures/Components/Gui/GuiAdapter.cs
+index d4a0002..97a37e7 100644
+--- a/Bakabase.Infrastructures/Components/Gui/GuiAdapter.cs
++++ b/Bakabase.Infrastructures/Components/Gui/GuiAdapter.cs
+@@ -1,11 +1,6 @@
+ ﻿using System;
+-using System.Collections.Generic;
+-using System.Drawing;
+-using System.Linq;
+-using System.Text;
+ using System.Threading.Tasks;
+ using AspectCore.DynamicProxy;
+-using JetBrains.Annotations;
+ 
+ namespace Bakabase.Infrastructures.Components.Gui
+ {
+@@ -13,10 +8,6 @@ namespace Bakabase.Infrastructures.Components.Gui
+     {
+         public abstract void InvokeInGuiContext(Action action);
+         public abstract T InvokeInGuiContext<T>(Func<T> func);
+-        public abstract void ShowTray(Func<Task> onExiting);
+-        public abstract void HideTray();
+-        public abstract void SetTrayText(string text);
+-        public abstract void SetTrayIcon(Icon icon);
+         public abstract void ShowFatalErrorWindow(string message, string title = "Fatal Error");
+         public abstract void ShowInitializationWindow(string processName);
+         public abstract void DestroyInitializationWindow();
+diff --git a/Bakabase.Infrastructures/Components/Gui/IGuiAdapter.cs b/Bakabase.Infrastructures/Components/Gui/IGuiAdapter.cs
+index f198740..88945b9 100644
+--- a/Bakabase.Infrastructures/Components/Gui/IGuiAdapter.cs
++++ b/Bakabase.Infrastructures/Components/Gui/IGuiAdapter.cs
+@@ -1,5 +1,4 @@
+ ﻿using System;
+-using System.Drawing;
+ using System.Threading.Tasks;
+ using JetBrains.Annotations;
+ 
+@@ -7,10 +6,6 @@ namespace Bakabase.Infrastructures.Components.Gui
+ {
+     public interface IGuiAdapter
+     {
+-        void ShowTray(Func<Task>? onExiting);
+-        void HideTray();
+-        void SetTrayText(string text);
+-        void SetTrayIcon(Icon icon);
+         void ShowFatalErrorWindow(string message, string title = "Fatal Error");
+         void ShowInitializationWindow(string processName);
+         void DestroyInitializationWindow();
+-- 
+2.43.0
+
