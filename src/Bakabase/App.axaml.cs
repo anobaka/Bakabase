@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Bakabase.Components;
@@ -16,9 +17,15 @@ public partial class App : Application
     private ISystemService _systemService = null!;
     public BakabaseHost? Host { get; private set; }
 
+    public TrayIcon AppTrayIcon { get; private set; } = null!;
+
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
+
+        // Resolve XAML-declared tray icon and menu items
+        var icons = TrayIcon.GetIcons(this);
+        AppTrayIcon = icons![0];
     }
 
     public override async void OnFrameworkInitializationCompleted()
@@ -37,14 +44,19 @@ public partial class App : Application
 
             Host = new BakabaseHost(_guiAdapter, _systemService);
 
-            // Set up tray before starting, using Host.TryToExit for the exit action
-            _guiAdapter.ShowTray(async () => await Host.TryToExit(true));
+            // Wire up tray events now that Host is available
+            AppTrayIcon.Clicked += (_, _) => _guiAdapter.Show();
+
+            var openItem = AppTrayIcon.Menu!.Items.OfType<NativeMenuItem>().First(i => i.Header == "Open");
+            var exitItem = AppTrayIcon.Menu!.Items.OfType<NativeMenuItem>().First(i => i.Header == "Exit");
+            openItem.Click += (_, _) => _guiAdapter.Show();
+            exitItem.Click += async (_, _) => await Host.TryToExit(true);
 
             await Host.Start(desktop.Args ?? []);
 
             desktop.Exit += (_, _) =>
             {
-                _guiAdapter.HideTray();
+                AppTrayIcon.IsVisible = false;
                 Host?.Dispose();
             };
         }

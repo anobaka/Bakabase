@@ -19,7 +19,6 @@ namespace Bakabase.Components;
 public class AvaloniaGuiAdapter : GuiAdapter, ITrayIconController
 {
     private readonly App _app;
-    private TrayIcon? _tray;
     private InitializationWindow? _initializationWindow;
     private ErrorWindow? _errorWindow;
     private MainWindow? _mainWindow;
@@ -36,61 +35,15 @@ public class AvaloniaGuiAdapter : GuiAdapter, ITrayIconController
     public override T InvokeInGuiContext<T>(Func<T> func) =>
         Dispatcher.UIThread.Invoke(func);
 
-    #region Tray (Avalonia-native)
-
-    public void ShowTray(Func<Task> onExiting)
-    {
-        Dispatcher.UIThread.Invoke(() =>
-        {
-            var openItem = new NativeMenuItem("Open");
-            openItem.Click += (_, _) => Show();
-
-            var exitItem = new NativeMenuItem("Exit");
-            exitItem.Click += async (_, _) => await onExiting();
-
-            _tray = new TrayIcon
-            {
-                Icon = new WindowIcon(AssetLoader.Open(new Uri("avares://Bakabase/Assets/favicon.ico"))),
-                ToolTipText = "Bakabase",
-                Menu = new NativeMenu
-                {
-                    Items = { openItem, exitItem }
-                },
-                IsVisible = true
-            };
-
-            _tray.Clicked += (_, _) => Show();
-
-            var icons = new TrayIcons { _tray };
-            TrayIcon.SetIcons(Application.Current!, icons);
-        });
-    }
-
-    public void HideTray()
-    {
-        Dispatcher.UIThread.Invoke(() =>
-        {
-            if (_tray != null)
-            {
-                _tray.IsVisible = false;
-            }
-        });
-    }
-
     public void SetTrayIcon(bool isRunning)
     {
         Dispatcher.UIThread.Invoke(() =>
         {
-            if (_tray != null)
-            {
-                var assetName = isRunning ? "tray-running" : "favicon";
-                _tray.Icon = new WindowIcon(
-                    AssetLoader.Open(new Uri($"avares://Bakabase/Assets/{assetName}.ico")));
-            }
+            var assetName = isRunning ? "tray-running" : "favicon";
+            _app.AppTrayIcon.Icon = new WindowIcon(
+                AssetLoader.Open(new Uri($"avares://Bakabase/Assets/{assetName}.ico")));
         });
     }
-
-    #endregion
 
     [GuiContextInterceptor]
     public override void ShowFatalErrorWindow(string message, string title = "Fatal Error")
