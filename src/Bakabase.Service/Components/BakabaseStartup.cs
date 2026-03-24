@@ -5,14 +5,12 @@ using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Services;
 using Bakabase.Infrastructures.Components.App;
-using Bakabase.Infrastructures.Components.App.Upgrade.Adapters;
 using Bakabase.Infrastructures.Components.Orm;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Compression;
 using Bakabase.InsideWorld.Business.Components.Configurations;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
-using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.BakabaseUpdater;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Lux;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.SevenZip;
@@ -83,11 +81,8 @@ namespace Bakabase.Service.Components
             services.TryAddSingleton<FfMpegService>();
             services.TryAddSingleton<HardwareAccelerationService>();
             services.TryAddSingleton<LuxService>();
-            services.TryAddSingleton<BakabaseUpdaterService>();
             services.TryAddSingleton<SevenZipService>();
             services.RegisterAllRegisteredTypeAs<IDependentComponentService>();
-
-            services.TryAddSingleton<IBakabaseUpdater>(sp => sp.GetRequiredService<BakabaseUpdaterService>());
 
             services.TryAddSingleton<WebGuiHubConfigurationAdapter>();
             services.TryAddSingleton<CompressedFileService>();
