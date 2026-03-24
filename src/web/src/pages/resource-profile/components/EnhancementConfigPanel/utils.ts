@@ -8,14 +8,15 @@ type ApiEnhancerOptions = BakabaseAbstractionsModelsDomainEnhancerFullOptions;
 /** Map EnhancerId to PropertyValueScope */
 export const enhancerIdToScope = (id: EnhancerId): PropertyValueScope => {
   const map: Record<EnhancerId, PropertyValueScope> = {
-    [EnhancerId.Bakabase]: PropertyValueScope.BakabaseEnhancer,
-    [EnhancerId.ExHentai]: PropertyValueScope.ExHentaiEnhancer,
-    [EnhancerId.Bangumi]: PropertyValueScope.BangumiEnhancer,
-    [EnhancerId.DLsite]: PropertyValueScope.DLsiteEnhancer,
-    [EnhancerId.Regex]: PropertyValueScope.RegexEnhancer,
-    [EnhancerId.Kodi]: PropertyValueScope.KodiEnhancer,
-    [EnhancerId.Tmdb]: PropertyValueScope.TmdbEnhancer,
-    [EnhancerId.Av]: PropertyValueScope.AvEnhancer,
+    [EnhancerId.Bakabase]: PropertyValueScope.Bakabase,
+    [EnhancerId.ExHentai]: PropertyValueScope.ExHentai,
+    [EnhancerId.Bangumi]: PropertyValueScope.Bangumi,
+    [EnhancerId.DLsite]: PropertyValueScope.DLsite,
+    [EnhancerId.Regex]: PropertyValueScope.Regex,
+    [EnhancerId.Kodi]: PropertyValueScope.Kodi,
+    [EnhancerId.Tmdb]: PropertyValueScope.Tmdb,
+    [EnhancerId.Av]: PropertyValueScope.Av,
+    [EnhancerId.AI]: PropertyValueScope.Ai,
   };
   return map[id];
 };

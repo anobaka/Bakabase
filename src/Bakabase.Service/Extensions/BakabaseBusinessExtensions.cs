@@ -57,16 +57,9 @@ namespace Bakabase.Service.Extensions
     {
         public static IServiceCollection AddInsideWorldBusinesses(this IServiceCollection services)
         {
-            // services.AddScoped<BulkModificationService>();
-            // services.AddScoped<BulkModificationDiffService>();
-            // services.AddScoped<BulkModificationTempDataService>();
             services.TryAddScoped<ComponentService>();
             services.TryAddScoped<ComponentOptionsService>();
             services.TryAddScoped<CategoryComponentService>();
-
-            // services.AddScoped<SubscriptionService>();
-            // services.AddScoped<SubscriptionProgressService>();
-            // services.AddScoped<SubscriptionRecordService>();
 
             services.TryAddSingleton<SelfPlayer>();
             services.TryAddSingleton<PotPlayer>();
@@ -77,35 +70,9 @@ namespace Bakabase.Service.Extensions
             services.TryAddSingleton<AudioPlayableFileSelector>();
             services.RegisterAllRegisteredTypeAs<IPlayableFileSelector>();
 
-            // services.TryAddScoped<InsideWorldEnhancer>();
-            // services.TryAddScoped<DLsiteEnhancer>();
-            // //services.TryAddSingleton<DMMEnhancer>();
-            // services.TryAddScoped<JavLibraryEnhancer>();
-            // services.TryAddScoped<BangumiEnhancer>();
-            // services.TryAddScoped<ExHentaiEnhancer>();
-            // services.TryAddScoped<NfoEnhancer>();
-            //services.TryAddTransient<IOptions<InsideWorldAppOptions>>(t =>
-            //{
-            //    var options = InsideWorldAppService.GetInsideWorldOptionsAsync().ConfigureAwait(false).GetAwaiter().GetResult();
-            //    return Options.Create(options);
-            //});
-            //services.TryAddTransient<IOptions<ExHentaiEnhancerOptions>>(t =>
-            //{
-            //    var options = t.GetRequiredService<IOptions<InsideWorldAppOptions>>();
-            //    return Options.Create(new ExHentaiEnhancerOptions
-            //    {
-            //        ExcludedTags = options.Value.ExHentaiExcludedTags,
-            //        Cookie = options.Value.ExHentaiCookie
-            //    });
-            //});
-
             services.AddScoped<PasswordService>();
 
             services.TryAddSingleton<IwFsWatcher>();
-
-            // services.AddScoped<BmCategoryProcessor>();
-            // services.AddScoped<BmMediaLibraryProcessor>();
-            // services.AddScoped<BmTagProcessor>();
 
             #region Optimized after V190
 

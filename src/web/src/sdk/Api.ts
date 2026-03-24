@@ -291,7 +291,7 @@ export type BakabaseAbstractionsModelsDomainConstantsPropertyType =
   | 16;
 
 /**
- * [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer, 1008: AiEnhancer, 1009: SteamEnhancer]
+ * [0: Manual, 1: Synchronization, 1000: Bakabase, 1001: ExHentai, 1002: Bangumi, 1003: DLsite, 1004: Regex, 1005: Kodi, 1006: Tmdb, 1007: Av, 1008: Ai, 1009: Steam]
  * @format int32
  */
 export type BakabaseAbstractionsModelsDomainConstantsPropertyValueScope =
@@ -752,6 +752,11 @@ export interface BakabaseAbstractionsModelsDomainResource {
   pinned: boolean;
   /** @format date-time */
   playedAt?: string;
+  covers?: string[];
+  playableItems?: BakabaseAbstractionsModelsDomainPlayableItem[];
+  hasMoreFileSystemPlayableItems: boolean;
+  coversReady: boolean;
+  playableItemsReady: boolean;
   cache?: BakabaseAbstractionsModelsDomainResourceCache;
   /** @deprecated */
   isMediaLibraryV2: boolean;
@@ -773,12 +778,12 @@ export interface BakabaseAbstractionsModelsDomainResourceMediaLibraryInfo {
 export interface BakabaseAbstractionsModelsDomainResourceProperty {
   name?: string;
   values?: BakabaseAbstractionsModelsDomainResourcePropertyPropertyValue[];
+  /** [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel, 16: Tags] */
+  type: BakabaseAbstractionsModelsDomainConstantsPropertyType;
   /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag] */
   dbValueType: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
   /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag] */
   bizValueType: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
-  /** [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel, 16: Tags] */
-  type: BakabaseAbstractionsModelsDomainConstantsPropertyType;
   visible: boolean;
   /** @format int32 */
   order: number;
@@ -795,7 +800,8 @@ export interface BakabaseAbstractionsModelsDomainResourcePropertyPropertyValue {
 
 export interface BakabaseAbstractionsModelsDomainResourceCache {
   coverPaths?: string[];
-  hasMorePlayableFiles: boolean;
+  hasMoreFileSystemPlayableItems: boolean;
+  /** @deprecated */
   playableFilePaths?: string[];
   playableItems?: BakabaseAbstractionsModelsDomainPlayableItem[];
   cachedTypes: BakabaseAbstractionsModelsDomainConstantsResourceCacheType[];
@@ -864,6 +870,8 @@ export interface BakabaseAbstractionsModelsDomainResourceSourceLink {
   sourceKey: string;
   /** @format date-time */
   createDt: string;
+  coverUrls?: string[];
+  localCoverPaths?: string[];
 }
 
 export interface BakabaseAbstractionsModelsDomainScopePropertyKey {
@@ -871,8 +879,20 @@ export interface BakabaseAbstractionsModelsDomainScopePropertyKey {
   pool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
   /** @format int32 */
   id: number;
-  /** [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer, 1008: AiEnhancer, 1009: SteamEnhancer] */
+  /** [0: Manual, 1: Synchronization, 1000: Bakabase, 1001: ExHentai, 1002: Bangumi, 1003: DLsite, 1004: Regex, 1005: Kodi, 1006: Tmdb, 1007: Av, 1008: Ai, 1009: Steam] */
   scope: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope;
+}
+
+export interface BakabaseAbstractionsModelsDomainSourceMetadataMapping {
+  /** @format int32 */
+  id: number;
+  /** [1: FileSystem, 2: Steam, 3: DLsite, 4: ExHentai] */
+  source: BakabaseAbstractionsModelsDomainConstantsResourceSource;
+  metadataField: string;
+  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
+  targetPool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
+  /** @format int32 */
+  targetPropertyId: number;
 }
 
 export interface BakabaseAbstractionsModelsDomainSpecialText {
@@ -3024,7 +3044,7 @@ export interface BakabaseModulesComparisonModelsDomainComparisonRule {
   propertyPool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
   /** @format int32 */
   propertyId: number;
-  /** [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer, 1008: AiEnhancer, 1009: SteamEnhancer] */
+  /** [0: Manual, 1: Synchronization, 1000: Bakabase, 1001: ExHentai, 1002: Bangumi, 1003: DLsite, 1004: Regex, 1005: Kodi, 1006: Tmdb, 1007: Av, 1008: Ai, 1009: Steam] */
   propertyValueScope?: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope;
   /** [0: StrictEqual, 2: TextSimilarity, 3: RegexExtractNumber, 4: FixedTolerance, 5: RelativeTolerance, 6: SetIntersection, 7: Subset, 8: TimeWindow, 9: SameDay, 10: ExtensionMap] */
   mode: BakabaseModulesComparisonModelsDomainConstantsComparisonMode;
@@ -3070,7 +3090,7 @@ export interface BakabaseModulesComparisonModelsInputComparisonRuleInputModel {
   propertyPool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
   /** @format int32 */
   propertyId: number;
-  /** [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer, 1008: AiEnhancer, 1009: SteamEnhancer] */
+  /** [0: Manual, 1: Synchronization, 1000: Bakabase, 1001: ExHentai, 1002: Bangumi, 1003: DLsite, 1004: Regex, 1005: Kodi, 1006: Tmdb, 1007: Av, 1008: Ai, 1009: Steam] */
   propertyValueScope?: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope;
   /** [0: StrictEqual, 2: TextSimilarity, 3: RegexExtractNumber, 4: FixedTolerance, 5: RelativeTolerance, 6: SetIntersection, 7: Subset, 8: TimeWindow, 9: SameDay, 10: ExtensionMap] */
   mode: BakabaseModulesComparisonModelsDomainConstantsComparisonMode;
@@ -3159,7 +3179,7 @@ export interface BakabaseModulesComparisonModelsViewComparisonRuleViewModel {
   /** @format int32 */
   propertyId: number;
   propertyName?: string;
-  /** [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer, 1008: AiEnhancer, 1009: SteamEnhancer] */
+  /** [0: Manual, 1: Synchronization, 1000: Bakabase, 1001: ExHentai, 1002: Bangumi, 1003: DLsite, 1004: Regex, 1005: Kodi, 1006: Tmdb, 1007: Av, 1008: Ai, 1009: Steam] */
   propertyValueScope?: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope;
   /** [0: StrictEqual, 2: TextSimilarity, 3: RegexExtractNumber, 4: FixedTolerance, 5: RelativeTolerance, 6: SetIntersection, 7: Subset, 8: TimeWindow, 9: SameDay, 10: ExtensionMap] */
   mode: BakabaseModulesComparisonModelsDomainConstantsComparisonMode;
@@ -3230,7 +3250,7 @@ export type BakabaseModulesEnhancerAbstractionsModelsDomainConstantsEnhancementA
   | 1;
 
 /**
- * [1: Bakabase, 2: ExHentai, 3: Bangumi, 4: DLsite, 5: Regex, 6: Kodi, 7: Tmdb, 8: Av, 9: AI, 10: Steam]
+ * [1: Bakabase, 2: ExHentai, 3: Bangumi, 4: DLsite, 5: Regex, 6: Kodi, 7: Tmdb, 8: Av, 9: AI]
  * @format int32
  */
 export type BakabaseModulesEnhancerModelsDomainConstantsEnhancerId =
@@ -3242,8 +3262,7 @@ export type BakabaseModulesEnhancerModelsDomainConstantsEnhancerId =
   | 6
   | 7
   | 8
-  | 9
-  | 10;
+  | 9;
 
 /**
  * [1: UseRegex, 2: UseKeyword]
@@ -3368,7 +3387,7 @@ export interface BakabaseModulesPresetsAbstractionsModelsMediaLibraryTemplatePre
 }
 
 export interface BakabaseModulesPresetsAbstractionsModelsMediaLibraryTemplatePresetDataPoolEnhancer {
-  /** [1: Bakabase, 2: ExHentai, 3: Bangumi, 4: DLsite, 5: Regex, 6: Kodi, 7: Tmdb, 8: Av, 9: AI, 10: Steam] */
+  /** [1: Bakabase, 2: ExHentai, 3: Bangumi, 4: DLsite, 5: Regex, 6: Kodi, 7: Tmdb, 8: Av, 9: AI] */
   id: BakabaseModulesEnhancerModelsDomainConstantsEnhancerId;
   name: string;
   description?: string;
@@ -3568,7 +3587,7 @@ export interface BakabaseServiceModelsInputBulkModificationProcessInputModel {
 
 export interface BakabaseServiceModelsInputBulkModificationVariableInputModel {
   key?: string;
-  /** [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer, 1008: AiEnhancer, 1009: SteamEnhancer] */
+  /** [0: Manual, 1: Synchronization, 1000: Bakabase, 1001: ExHentai, 1002: Bangumi, 1003: DLsite, 1004: Regex, 1005: Kodi, 1006: Tmdb, 1007: Av, 1008: Ai, 1009: Steam] */
   scope: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope;
   /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
   propertyPool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
@@ -3751,7 +3770,7 @@ export interface BakabaseServiceModelsViewBulkModificationProcessViewModel {
 }
 
 export interface BakabaseServiceModelsViewBulkModificationVariableViewModel {
-  /** [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer, 1008: AiEnhancer, 1009: SteamEnhancer] */
+  /** [0: Manual, 1: Synchronization, 1000: Bakabase, 1001: ExHentai, 1002: Bangumi, 1003: DLsite, 1004: Regex, 1005: Kodi, 1006: Tmdb, 1007: Av, 1008: Ai, 1009: Steam] */
   scope: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope;
   /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
   propertyPool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
@@ -4186,6 +4205,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsM
   code: number;
   message?: string;
   data?: BakabaseAbstractionsModelsDomainResource[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainSourceMetadataMapping {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDomainSourceMetadataMapping[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsViewResourceDisplayNameViewModel {
@@ -9542,10 +9568,17 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name SyncDLsiteWorks
      * @request POST:/dlsite-work/sync
      */
-    syncDLsiteWorks: (params: RequestParams = {}) =>
+    syncDLsiteWorks: (
+      query?: {
+        /** @default false */
+        redownloadCover?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/dlsite-work/sync`,
         method: "POST",
+        query: query,
         format: "json",
         ...params,
       }),
@@ -9554,9 +9587,22 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @description Build URL for syncDLsiteWorks
      * @name syncDLsiteWorksUrl
      */
-    syncDLsiteWorksUrl: () => {
+    syncDLsiteWorksUrl: (query?: {
+        /** @default false */
+        redownloadCover?: boolean;
+      }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/dlsite-work/sync`;
+      
+      // Build query string
+      if (query) {
+        const queryString = Object.keys(query)
+          .filter(key => query[key] !== undefined && query[key] !== null)
+          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+          .join("&");
+        
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
       
       return baseUrl + path;
     },
@@ -12308,10 +12354,17 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name SyncExHentaiGalleries
      * @request POST:/exhentai-gallery/sync
      */
-    syncExHentaiGalleries: (params: RequestParams = {}) =>
+    syncExHentaiGalleries: (
+      query?: {
+        /** @default false */
+        redownloadCover?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/exhentai-gallery/sync`,
         method: "POST",
+        query: query,
         format: "json",
         ...params,
       }),
@@ -12320,9 +12373,22 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @description Build URL for syncExHentaiGalleries
      * @name syncExHentaiGalleriesUrl
      */
-    syncExHentaiGalleriesUrl: () => {
+    syncExHentaiGalleriesUrl: (query?: {
+        /** @default false */
+        redownloadCover?: boolean;
+      }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/exhentai-gallery/sync`;
+      
+      // Build query string
+      if (query) {
+        const queryString = Object.keys(query)
+          .filter(key => query[key] !== undefined && query[key] !== null)
+          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+          .join("&");
+        
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
       
       return baseUrl + path;
     },
@@ -17981,6 +18047,85 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       return baseUrl + path;
     },
   };
+  source = {
+    /**
+     * No description
+     *
+     * @tags SourceMetadataMapping
+     * @name GetSourceMetadataMappings
+     * @request GET:/source/{source}/metadata-mapping
+     */
+    getSourceMetadataMappings: (
+      source: BakabaseAbstractionsModelsDomainConstantsResourceSource,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainSourceMetadataMapping,
+        any
+      >({
+        path: `/source/${source}/metadata-mapping`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags SourceMetadataMapping
+     * @name SaveSourceMetadataMappings
+     * @request PUT:/source/{source}/metadata-mapping
+     */
+    saveSourceMetadataMappings: (
+      source: BakabaseAbstractionsModelsDomainConstantsResourceSource,
+      data: BakabaseAbstractionsModelsDomainSourceMetadataMapping[],
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/source/${source}/metadata-mapping`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags SourceMetadataMapping
+     * @name GetSourceAvailableMetadataFields
+     * @request GET:/source/{source}/metadata-mapping/available-fields
+     */
+    getSourceAvailableMetadataFields: (
+      source: BakabaseAbstractionsModelsDomainConstantsResourceSource,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsListResponse1SystemString, any>({
+        path: `/source/${source}/metadata-mapping/available-fields`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags SourceMetadataMapping
+     * @name ApplySourceMetadataToAllResources
+     * @request POST:/source/{source}/metadata-mapping/apply-all
+     */
+    applySourceMetadataToAllResources: (
+      source: BakabaseAbstractionsModelsDomainConstantsResourceSource,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/source/${source}/metadata-mapping/apply-all`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+  };
   specialText = {
     /**
      * No description
@@ -18276,10 +18421,17 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name SyncSteamApps
      * @request POST:/steam-app/sync
      */
-    syncSteamApps: (params: RequestParams = {}) =>
+    syncSteamApps: (
+      query?: {
+        /** @default false */
+        redownloadCover?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/steam-app/sync`,
         method: "POST",
+        query: query,
         format: "json",
         ...params,
       }),
@@ -18288,9 +18440,22 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @description Build URL for syncSteamApps
      * @name syncSteamAppsUrl
      */
-    syncSteamAppsUrl: () => {
+    syncSteamAppsUrl: (query?: {
+        /** @default false */
+        redownloadCover?: boolean;
+      }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/steam-app/sync`;
+      
+      // Build query string
+      if (query) {
+        const queryString = Object.keys(query)
+          .filter(key => query[key] !== undefined && query[key] !== null)
+          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+          .join("&");
+        
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
       
       return baseUrl + path;
     },
