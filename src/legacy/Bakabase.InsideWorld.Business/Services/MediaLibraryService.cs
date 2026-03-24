@@ -537,8 +537,7 @@ namespace Bakabase.InsideWorld.Business.Services
                                 pr.Properties ??= [];
                                 var propertyValues = pr.Properties.GetOrAdd((int) PropertyPool.Reserved,
                                     _ => new Dictionary<int, Resource.Property>()).GetOrAdd((int) propertyId,
-                                    _ => new Resource.Property(property.Name, property.Type, property.Type.GetDbValueType(),
-                                        property.Type.GetBizValueType(), null));
+                                    _ => new Resource.Property(property.Name, property.Type, null));
                                 propertyValues.Values ??= [];
                                 var v = propertyValues.Values!.FirstOrDefault(x =>
                                     x.Scope == (int) PropertyValueScope.Synchronization);
@@ -572,8 +571,7 @@ namespace Bakabase.InsideWorld.Business.Services
                     {
                         var propertyMap = (pr.Properties ??= []).GetOrAdd((int) PropertyPool.Custom, _ => [])!;
                         var rp = propertyMap.GetOrAdd(property.Id,
-                            _ => new Resource.Property(property.Name, property.Type, property.Type.GetDbValueType(),
-                                property.Type.GetBizValueType(), null));
+                            _ => new Resource.Property(property.Name, property.Type, null));
                         rp.Values ??= [];
                         rp.Values.Add(new Resource.Property.PropertyValue((int) PropertyValueScope.Synchronization,
                             bizValue, bizValue, bizValue));

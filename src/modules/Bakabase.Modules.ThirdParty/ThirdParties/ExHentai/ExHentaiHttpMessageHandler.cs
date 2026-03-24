@@ -9,7 +9,8 @@ namespace Bakabase.Modules.ThirdParty.ThirdParties.ExHentai;
 public class ExHentaiHttpMessageHandler<TExHentaiOptions>(
     ThirdPartyHttpRequestLogger logger,
     AspNetCoreOptionsManager<TExHentaiOptions> optionsManager,
-    BakabaseWebProxy webProxy)
+    BakabaseWebProxy webProxy,
+    IThirdPartyCookieContainer cookieContainer)
     : BakabaseOptionsBasedThirdPartyHttpMessageHandler<TExHentaiOptions>(logger, ThirdPartyId.ExHentai, optionsManager,
-        webProxy)
+        webProxy, cookieContainer)
     where TExHentaiOptions : class, IThirdPartyHttpClientOptions, new();

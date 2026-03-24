@@ -55,7 +55,8 @@ namespace Bakabase.InsideWorld.Business.Extensions
                 // 直接设置 Path，避免 Directory/FileName 分别设置触发两次 StandardizePath
                 Path = dbModel.Path,
                 Tags = TagsCache.GetValueOrDefault(validTagBits, EmptyTags),
-                PlayedAt = dbModel.PlayedAt
+                PlayedAt = dbModel.PlayedAt,
+                Status = dbModel.Status,
             };
             return domainModel;
         }
@@ -75,7 +76,8 @@ namespace Bakabase.InsideWorld.Business.Extensions
                 IsFile = domainModel.IsFile,
                 Path = domainModel.Path,
                 Tags = domainModel.Tags.Aggregate(default(ResourceTag), (s, t) => (s | t)),
-                PlayedAt = domainModel.PlayedAt
+                PlayedAt = domainModel.PlayedAt,
+                Status = domainModel.Status,
             };
             return dbModel;
         }

@@ -40,6 +40,9 @@ namespace Bakabase.Modules.Enhancer.Models.Domain.Constants
         Av = 8,
 
         [Enhancer(typeof(AiEnhancer), PropertyValueScope.AiEnhancer, typeof(AiEnhancerTarget), [])]
-        AI = 9
+        AI = 9,
+
+        [Obsolete("Steam Enhancer has been replaced by Source Metadata Sync. PropertyValueScope.SteamEnhancer is still used for Steam source metadata sync.")]
+        Steam = 10
     }
 }

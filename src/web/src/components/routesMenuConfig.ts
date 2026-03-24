@@ -15,7 +15,6 @@ import {
   AiOutlineInteraction,
   AiOutlineFileText,
   AiOutlineTool,
-  AiOutlineExperiment,
   AiOutlineSetting,
   AiOutlineDatabase,
   AiOutlineHdd,
@@ -30,6 +29,7 @@ import {
   AiOutlineRobot,
   AiOutlineBarChart,
   AiOutlineAudit,
+  AiOutlineCloudServer,
 } from "react-icons/ai";
 import { lazy } from "react";
 import { MdOutlineArticle, MdVideoLibrary } from "react-icons/md";
@@ -67,6 +67,10 @@ import AiConfigurationPage from "@/pages/ai-configuration";
 import AiUsagePage from "@/pages/ai-usage";
 import AiAuditLogPage from "@/pages/ai-audit-log";
 import AiCachePage from "@/pages/ai-cache";
+import SteamAppsPage from "@/pages/steam-apps";
+import DLsiteWorksPage from "@/pages/dlsite-works";
+import ExHentaiGalleriesPage from "@/pages/exhentai-galleries";
+import { SteamIcon, DLsiteIcon, ExHentaiIcon } from "@/components/SourceIcons";
 
 // Lazy load test page to avoid circular dependency
 const Test = lazy(() => import("@/pages/test"));
@@ -102,29 +106,34 @@ export const routesMenuConfig: RouteMenuItem[] = [
   },
   {
     name: "menu.mediaLibrary",
-    path: "/media-library",
-    component: MediaLibraryPage,
     icon: MdVideoLibrary,
-    layout: "basic",
     menu: true,
-  },
-  {
-    name: "menu.mediaLibraryConfiguration",
-    path: "/path-mark-config",
-    component: PathRuleConfigPage,
-    icon: AiOutlineControl,
-    layout: "basic",
-    menu: true,
-    // isBeta: true,
-  },
-  {
-    name: "menu.pathMarks",
-    path: "/path-marks",
-    component: PathMarksPage,
-    icon: AiOutlineTags,
-    layout: "basic",
-    menu: true,
-    // isBeta: true,
+    children: [
+      {
+        name: "menu.mediaLibrary.overview",
+        path: "/media-library",
+        component: MediaLibraryPage,
+        icon: MdVideoLibrary,
+        layout: "basic",
+        menu: true,
+      },
+      {
+        name: "menu.mediaLibrary.setup",
+        path: "/path-mark-config",
+        component: PathRuleConfigPage,
+        icon: AiOutlineControl,
+        layout: "basic",
+        menu: true,
+      },
+      {
+        name: "menu.mediaLibrary.paths",
+        path: "/path-marks",
+        component: PathMarksPage,
+        icon: AiOutlineTags,
+        layout: "basic",
+        menu: true,
+      },
+    ],
   },
   {
     name: "menu.resourceProfile",
@@ -133,7 +142,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
     icon: AiOutlineFilter,
     layout: "basic",
     menu: true,
-    // isBeta: true,
+    isBeta: false,
   },
   {
     name: "menu.data",
@@ -172,14 +181,6 @@ export const routesMenuConfig: RouteMenuItem[] = [
         layout: "basic",
         menu: true,
       },
-      // {
-      //   name: "menu.playHistory",
-      //   path: "/play-history",
-      //   component: PlayHistoryPage,
-      //   icon: AiOutlineHistory,
-      //   layout: "basic",
-      //   menu: true,
-      // },
       {
         name: "menu.bulkModification",
         path: "/bulk-modification",
@@ -205,33 +206,38 @@ export const routesMenuConfig: RouteMenuItem[] = [
         icon: AiOutlineBranches,
         layout: "basic",
         menu: true,
-      },
+      }
+    ],
+  },
+  {
+    name: "menu.otherPlatforms",
+    icon: AiOutlineCloudServer,
+    menu: true,
+    isBeta: true,
+    children: [
       {
-        name: "menu.mediaLibrary",
-        path: "/media-library",
-        isDeprecated: true,
-        component: LegacyMediaLibraryPage,
-        icon: AiOutlineProduct,
+        name: "menu.steam",
+        path: "/steam-apps",
+        component: SteamAppsPage,
+        icon: SteamIcon,
         layout: "basic",
         menu: true,
       },
       {
-        name: "menu.mediaLibraryTemplate",
-        path: "/media-library-template",
-        component: MediaLibraryTemplatePage,
-        icon: AiOutlineAppstoreAdd,
+        name: "menu.dlsite",
+        path: "/dlsite-works",
+        component: DLsiteWorksPage,
+        icon: DLsiteIcon,
         layout: "basic",
         menu: true,
-        isDeprecated: true,
       },
       {
-        name: "menu.synchronizationOptions",
-        path: "/synchronization-options",
-        component: SynchronizationOptionsPage,
-        icon: AiOutlineSync,
+        name: "menu.exhentai",
+        path: "/exhentai-galleries",
+        component: ExHentaiGalleriesPage,
+        icon: ExHentaiIcon,
         layout: "basic",
         menu: true,
-        isDeprecated: true,
       },
     ],
   },
@@ -271,29 +277,6 @@ export const routesMenuConfig: RouteMenuItem[] = [
         icon: AiOutlineEdit,
         layout: "basic",
         isBeta: true,
-        menu: true,
-      },
-      {
-        name: "menu.migration",
-        path: "/migration",
-        // component: Migration,
-        icon: AiOutlineExperiment,
-        layout: "basic",
-        menu: false, // 不在菜单中
-      },
-    ],
-  },
-  {
-    name: "menu.experimental",
-    icon: AiOutlineExperiment,
-    menu: true,
-    children: [
-      {
-        name: "menu.thirdPartyIntegration",
-        path: "/third-party-integration",
-        component: ThirdPartyIntegrationPage,
-        icon: TbToolsKitchen,
-        layout: "basic",
         menu: true,
       },
       {
@@ -364,6 +347,14 @@ export const routesMenuConfig: RouteMenuItem[] = [
         path: "/third-party-configuration",
         component: ThirdPartyConfiguration,
         icon: TbToolsKitchen,
+        layout: "basic",
+        menu: true,
+      },
+      {
+        name: "menu.thirdPartyIntegration",
+        path: "/third-party-integration",
+        component: ThirdPartyIntegrationPage,
+        icon: AiOutlineAppstoreAdd,
         layout: "basic",
         menu: true,
       },

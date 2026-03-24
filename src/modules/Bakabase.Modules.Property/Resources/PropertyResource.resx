@@ -234,4 +234,19 @@
   <data name="BuiltinPropertyName_PlayedAt" xml:space="preserve">
     <value>Played at</value>
   </data>
+  <data name="BuiltinPropertyName_Source" xml:space="preserve">
+    <value>Source</value>
+  </data>
+  <data name="ResourceSourceName_FileSystem" xml:space="preserve">
+    <value>File System</value>
+  </data>
+  <data name="ResourceSourceName_Steam" xml:space="preserve">
+    <value>Steam</value>
+  </data>
+  <data name="ResourceSourceName_DLsite" xml:space="preserve">
+    <value>DLsite</value>
+  </data>
+  <data name="ResourceSourceName_ExHentai" xml:space="preserve">
+    <value>ExHentai</value>
+  </data>
 </root>

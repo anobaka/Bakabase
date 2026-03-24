@@ -10,6 +10,7 @@ namespace Bakabase.InsideWorld.Models.Constants
     {
         BiliBili = ThirdPartyId.Bilibili,
         ExHentai = ThirdPartyId.ExHentai,
-        Pixiv = ThirdPartyId.Pixiv
+        Pixiv = ThirdPartyId.Pixiv,
+        DLsite = ThirdPartyId.DLsite
     }
 }

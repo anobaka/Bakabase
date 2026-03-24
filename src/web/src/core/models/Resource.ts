@@ -2,6 +2,8 @@ import type {
   PropertyType,
   PropertyValueScope,
   ResourceCacheType,
+  ResourceSource,
+  ResourceStatus,
   ResourceTag,
   StandardValueType,
 } from "@/sdk/constants";
@@ -24,14 +26,23 @@ export type Property = {
   order: number;
 };
 
+export type PlayableItem = {
+  source: ResourceSource;
+  key: string;
+  displayName?: string;
+};
+
 export type Resource = {
   id: number;
   mediaLibraryId: number;
   categoryId: number;
-  fileName: string;
-  directory: string;
-  displayName: string;
-  path: string;
+  source: ResourceSource;
+  status: ResourceStatus;
+  sourceKey: string;
+  fileName?: string;
+  directory?: string;
+  displayName?: string;
+  path?: string;
   parentId?: number;
   hasChildren: boolean;
   isFile: boolean;
@@ -52,8 +63,22 @@ export type Resource = {
   pinned: boolean;
   tags: ResourceTag[];
   playedAt?: string;
+
+  /** Final resolved cover paths, populated by backend using priority-based selection */
+  covers?: string[];
+  /** Final resolved playable items from all sources */
+  playableItems?: PlayableItem[];
+  /** Whether there are more FileSystem playable items beyond what's shown */
+  hasMoreFileSystemPlayableItems: boolean;
+  /** Whether covers have been resolved and are ready */
+  coversReady: boolean;
+  /** Whether playable items have been resolved and are ready */
+  playableItemsReady: boolean;
+
+  /** @deprecated Use covers/playableItems instead */
   cache?: {
     playableFilePaths?: string[];
+    playableItems?: PlayableItem[];
     hasMorePlayableFiles: boolean;
     coverPaths?: string[];
     cachedTypes: ResourceCacheType[];

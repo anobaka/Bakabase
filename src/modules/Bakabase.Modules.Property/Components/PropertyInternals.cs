@@ -109,6 +109,8 @@ internal static class PropertyInternals
                     (int) ResourceProperty.PlayedAt, PropertyType.DateTime),
                 new Bakabase.Abstractions.Models.Domain.Property(PropertyPool.Internal,
                     (int) ResourceProperty.ParentResource, PropertyType.SingleChoice),
+                new Bakabase.Abstractions.Models.Domain.Property(PropertyPool.Internal,
+                    (int) ResourceProperty.Source, PropertyType.MultipleChoice),
                 new Bakabase.Abstractions.Models.Domain.Property(PropertyPool.Reserved,
                     (int) ResourceProperty.Rating, PropertyType.Rating),
                 new Bakabase.Abstractions.Models.Domain.Property(PropertyPool.Reserved,
@@ -136,6 +138,7 @@ internal static class PropertyInternals
                 ResourceProperty.MediaLibraryV2,
                 ResourceProperty.MediaLibraryV2Multi,
                 ResourceProperty.ParentResource,
+                ResourceProperty.Source,
             }.ToDictionary(d => d, d => BuiltinPropertyMap[d]));
 
     /// <summary>

@@ -740,6 +740,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/cache/resource/{resourceId}/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RefreshResourceCache"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/category/{id}": {
         parameters: {
             query?: never;
@@ -1503,6 +1519,198 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dlsite-work": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAllDLsiteWorks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dlsite-work/{workId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDLsiteWorkByWorkId"];
+        put?: never;
+        post?: never;
+        delete: operations["DeleteDLsiteWork"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dlsite-work/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SyncDLsiteWorks"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dlsite-work/{workId}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["DownloadDLsiteWork"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dlsite-work/{workId}/drm-key": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDLsiteWorkDrmKey"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dlsite-work/{workId}/launch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["LaunchDLsiteWork"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dlsite-work/{workId}/playable-files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDLsiteWorkPlayableFiles"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dlsite-work/scan-folders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ScanDLsiteFolders"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dlsite-work/{workId}/extract": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ExtractDLsiteWork"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dlsite-work/{workId}/local-files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["DeleteDLsiteWorkLocalFiles"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dlsite-work/{workId}/hidden": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["SetDLsiteWorkHidden"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dlsite-work/{workId}/use-locale-emulator": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["SetDLsiteWorkUseLocaleEmulator"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/download-task/downloaders/definitions": {
         parameters: {
             query?: never;
@@ -1679,6 +1887,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/resource/{resourceId}/enhancement/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ValidateEnhancerConfiguration"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/media-library/{mediaLibraryId}/enhancement": {
         parameters: {
             query?: never;
@@ -1769,6 +1993,86 @@ export interface paths {
         get: operations["GetAllEnhancerDescriptors"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/exhentai-gallery": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAllExHentaiGalleries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/exhentai-gallery/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["DeleteExHentaiGallery"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/exhentai-gallery/{galleryId}/{galleryToken}/local-files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["DeleteExHentaiGalleryLocalFiles"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/exhentai-gallery/{galleryId}/{galleryToken}/hidden": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["SetExHentaiGalleryHidden"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/exhentai-gallery/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SyncExHentaiGalleries"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3417,6 +3721,22 @@ export interface paths {
         patch: operations["PatchDLsiteOptions"];
         trace?: never;
     };
+    "/options/steam": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetSteamOptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["PatchSteamOptions"];
+        trace?: never;
+    };
     "/options/fanbox": {
         parameters: {
             query?: never;
@@ -3827,6 +4147,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["StartPathMarkSyncByPath"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/path-mark/sync/by-source": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["StartSyncBySource"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4345,6 +4681,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/resource/{resourceId}/play-item": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PlayResourceItem"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource/{id}/playable-items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetResourcePlayableItems"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/resource/play/random": {
         parameters: {
             query?: never;
@@ -4505,6 +4873,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/resource/{id}/source-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetResourceSourceLinks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource/{id}/conflicts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetResourceConflicts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MergeResources"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/resource/discovery/stream": {
         parameters: {
             query?: never;
@@ -4659,6 +5075,70 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["PretreatText"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/steam-app": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAllSteamApps"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/steam-app/{appId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetSteamAppByAppId"];
+        put?: never;
+        post?: never;
+        delete: operations["DeleteSteamApp"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/steam-app/{appId}/hidden": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["SetSteamAppHidden"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/steam-app/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SyncSteamApps"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4928,6 +5408,59 @@ export interface components {
             componentType: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ComponentType"];
             descriptor: components["schemas"]["Bakabase.Abstractions.Models.Domain.ComponentDescriptor"];
         };
+        "Bakabase.Abstractions.Models.Db.DLsiteWorkDbModel": {
+            /** Format: int32 */
+            id: number;
+            workId: string;
+            title?: string;
+            circle?: string;
+            workType?: string;
+            metadataJson?: string;
+            /** Format: date-time */
+            metadataFetchedAt?: string;
+            coverUrl?: string;
+            drmKey?: string;
+            account?: string;
+            /** Format: date-time */
+            salesDate?: string;
+            /** Format: date-time */
+            purchasedAt?: string;
+            isPurchased: boolean;
+            isDownloaded: boolean;
+            localPath?: string;
+            /** Format: int32 */
+            resourceId?: number;
+            isHidden: boolean;
+            useLocaleEmulator: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        "Bakabase.Abstractions.Models.Db.ExHentaiGalleryDbModel": {
+            /** Format: int32 */
+            id: number;
+            /** Format: int64 */
+            galleryId: number;
+            galleryToken: string;
+            title?: string;
+            titleJpn?: string;
+            category?: string;
+            coverUrl?: string;
+            metadataJson?: string;
+            /** Format: date-time */
+            metadataFetchedAt?: string;
+            isDownloaded: boolean;
+            localPath?: string;
+            /** Format: int32 */
+            resourceId?: number;
+            account?: string;
+            isHidden: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
         "Bakabase.Abstractions.Models.Db.PlayHistoryDbModel": {
             /** Format: int32 */
             id: number;
@@ -4936,6 +5469,32 @@ export interface components {
             item?: string;
             /** Format: date-time */
             playedAt: string;
+        };
+        "Bakabase.Abstractions.Models.Db.SteamAppDbModel": {
+            /** Format: int32 */
+            id: number;
+            /** Format: int32 */
+            appId: number;
+            name?: string;
+            /** Format: int32 */
+            playtimeForever: number;
+            /** Format: int32 */
+            rtimeLastPlayed: number;
+            imgIconUrl?: string;
+            hasCommunityVisibleStats: boolean;
+            metadataJson?: string;
+            /** Format: date-time */
+            metadataFetchedAt?: string;
+            isInstalled: boolean;
+            installPath?: string;
+            /** Format: int32 */
+            resourceId?: number;
+            account?: string;
+            isHidden: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
         };
         "Bakabase.Abstractions.Models.Domain.Category": {
             /** Format: int32 */
@@ -5076,10 +5635,10 @@ export interface components {
         "Bakabase.Abstractions.Models.Domain.Constants.PropertyType": 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16;
         /**
          * Format: int32
-         * @description [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer, 1008: AiEnhancer]
+         * @description [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer, 1008: AiEnhancer, 1009: SteamEnhancer]
          * @enum {integer}
          */
-        "Bakabase.Abstractions.Models.Domain.Constants.PropertyValueScope": 0 | 1 | 1000 | 1001 | 1002 | 1003 | 1004 | 1005 | 1006 | 1007 | 1008;
+        "Bakabase.Abstractions.Models.Domain.Constants.PropertyValueScope": 0 | 1 | 1000 | 1001 | 1002 | 1003 | 1004 | 1005 | 1006 | 1007 | 1008 | 1009;
         /**
          * Format: int32
          * @description [12: Introduction, 13: Rating, 22: Cover]
@@ -5092,6 +5651,18 @@ export interface components {
          * @enum {integer}
          */
         "Bakabase.Abstractions.Models.Domain.Constants.ResourceCacheType": 1 | 2 | 4;
+        /**
+         * Format: int32
+         * @description [1: FileSystem, 2: Steam, 3: DLsite, 4: ExHentai]
+         * @enum {integer}
+         */
+        "Bakabase.Abstractions.Models.Domain.Constants.ResourceSource": 1 | 2 | 3 | 4;
+        /**
+         * Format: int32
+         * @description [1: Active, 2: Absent, 3: Unavailable]
+         * @enum {integer}
+         */
+        "Bakabase.Abstractions.Models.Domain.Constants.ResourceStatus": 1 | 2 | 3;
         /**
          * Format: int32
          * @description [1: IsParent, 2: Pinned, 4: PathDoesNotExist, 8: UnknownMediaLibrary]
@@ -5160,6 +5731,7 @@ export interface components {
             pretreatKeyword?: boolean;
             /** Format: int32 */
             bangumiPrioritySubjectType?: number;
+            translationOptions?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Options.EnhancerTranslationOptions"];
         };
         "Bakabase.Abstractions.Models.Domain.EnhancerTargetFullOptions": {
             /** Format: int32 */
@@ -5265,6 +5837,10 @@ export interface components {
             /** @deprecated */
             readonly syncMayBeOutdated: boolean;
         };
+        "Bakabase.Abstractions.Models.Domain.Options.EnhancerTranslationOptions": {
+            enabled: boolean;
+            targetLanguage: string;
+        };
         "Bakabase.Abstractions.Models.Domain.PathConfiguration": {
             path?: string;
             rpmValues?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PropertyPathSegmentMatcherValue"][];
@@ -5346,6 +5922,11 @@ export interface components {
             layer?: number;
             regex?: string;
         };
+        "Bakabase.Abstractions.Models.Domain.PlayableItem": {
+            source: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceSource"];
+            key: string;
+            displayName?: string;
+        };
         "Bakabase.Abstractions.Models.Domain.Property": {
             pool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
             /** Format: int32 */
@@ -5401,10 +5982,12 @@ export interface components {
              * @deprecated
              */
             categoryId: number;
-            fileName: string;
-            directory: string;
-            path: string;
-            displayName: string;
+            status: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceStatus"];
+            sourceLinks?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceSourceLink"][];
+            fileName?: string;
+            directory?: string;
+            path?: string;
+            displayName?: string;
             /** Format: int32 */
             parentId?: number;
             readonly hasChildren: boolean;
@@ -5466,6 +6049,7 @@ export interface components {
             coverPaths?: string[];
             hasMorePlayableFiles: boolean;
             playableFilePaths?: string[];
+            playableItems?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PlayableItem"][];
             cachedTypes: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceCacheType"][];
         };
         "Bakabase.Abstractions.Models.Domain.ResourceProfileEnhancerOptions": {
@@ -5506,6 +6090,16 @@ export interface components {
             groups?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceSearchFilterGroup"][];
             filters?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceSearchFilter"][];
             disabled: boolean;
+        };
+        "Bakabase.Abstractions.Models.Domain.ResourceSourceLink": {
+            /** Format: int32 */
+            id: number;
+            /** Format: int32 */
+            resourceId: number;
+            source: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceSource"];
+            sourceKey: string;
+            /** Format: date-time */
+            createDt: string;
         };
         "Bakabase.Abstractions.Models.Domain.ScopePropertyKey": {
             pool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
@@ -5634,6 +6228,12 @@ export interface components {
             path: string;
             type: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PathMarkType"];
             configJson: string;
+        };
+        "Bakabase.Abstractions.Models.Input.ResourceMergeInputModel": {
+            /** Format: int32 */
+            targetResourceId: number;
+            sourceResourceIds: number[];
+            deleteResourceIds: number[];
         };
         "Bakabase.Abstractions.Models.Input.ResourcePropertyValuePutInputModel": {
             /** Format: int32 */
@@ -5893,7 +6493,12 @@ export interface components {
             /** Format: int32 */
             requestTimeout: number;
         };
+        "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.DLsiteAccount": {
+            name: string;
+            cookie?: string;
+        };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.DLsiteOptions": {
+            accounts?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.DLsiteAccount"][];
             cookie?: string;
             userAgent?: string;
             referer?: string;
@@ -5905,14 +6510,22 @@ export interface components {
             /** Format: int32 */
             requestInterval: number;
             defaultPath?: string;
+            scanFolders?: string[];
             namingConvention?: string;
             skipExisting: boolean;
             /** Format: int32 */
             maxRetries: number;
             /** Format: int32 */
             requestTimeout: number;
+            showCover: boolean;
+            deleteArchiveAfterExtraction: boolean;
+        };
+        "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ExHentaiAccount": {
+            name?: string;
+            cookie?: string;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ExHentaiOptions": {
+            accounts?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ExHentaiAccount"][];
             cookie?: string;
             userAgent?: string;
             referer?: string;
@@ -5930,6 +6543,7 @@ export interface components {
             maxRetries: number;
             /** Format: int32 */
             requestTimeout: number;
+            showCover: boolean;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.FanboxOptions": {
             cookie?: string;
@@ -6074,6 +6688,17 @@ export interface components {
             /** Format: int32 */
             autoBuyThreshold: number;
         };
+        "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.SteamAccount": {
+            name?: string;
+            apiKey?: string;
+            steamId?: string;
+        };
+        "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.SteamOptions": {
+            accounts?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.SteamAccount"][];
+            readonly apiKey?: string;
+            readonly steamId?: string;
+            showCover: boolean;
+        };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.TmdbOptions": {
             /** Format: int32 */
             maxConcurrency: number;
@@ -6139,6 +6764,7 @@ export interface components {
             requestTimeout?: number;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.DLsiteOptionsPatchInputModel": {
+            accounts?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.DLsiteAccount"][];
             cookie?: string;
             userAgent?: string;
             referer?: string;
@@ -6150,17 +6776,21 @@ export interface components {
             /** Format: int32 */
             requestInterval?: number;
             defaultPath?: string;
+            scanFolders?: string[];
             namingConvention?: string;
             skipExisting?: boolean;
             /** Format: int32 */
             maxRetries?: number;
             /** Format: int32 */
             requestTimeout?: number;
+            showCover?: boolean;
+            deleteArchiveAfterExtraction?: boolean;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.EnhancerOptionsPatchInputModel": {
             regexEnhancer?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.EnhancerOptions+RegexEnhancerModel"];
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.ExHentaiOptionsPatchInputModel": {
+            accounts?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ExHentaiAccount"][];
             cookie?: string;
             /** Format: int32 */
             maxConcurrency?: number;
@@ -6173,6 +6803,7 @@ export interface components {
             maxRetries?: number;
             /** Format: int32 */
             requestTimeout?: number;
+            showCover?: boolean;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.FanboxOptionsPatchInputModel": {
             cookie?: string;
@@ -6252,6 +6883,10 @@ export interface components {
             cookie?: string;
             /** Format: int32 */
             autoBuyThreshold?: number;
+        };
+        "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.SteamOptionsPatchInputModel": {
+            accounts?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.SteamAccount"][];
+            showCover?: boolean;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.TaskOptionsPatchInputModel": {
             tasks?: components["schemas"]["Bakabase.Abstractions.Models.Db.BTaskDbModel"][];
@@ -6707,10 +7342,10 @@ export interface components {
         "Bakabase.InsideWorld.Models.Constants.AdditionalItems.MediaLibraryAdditionalItem": 0 | 1 | 2 | 4;
         /**
          * Format: int32
-         * @description [0: None, 32: Properties, 64: Alias, 128: Category, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 7008: All]
+         * @description [0: None, 32: Properties, 64: Alias, 128: Category, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 8192: SourceLinks, 15200: All]
          * @enum {integer}
          */
-        "Bakabase.InsideWorld.Models.Constants.AdditionalItems.ResourceAdditionalItem": 0 | 32 | 64 | 128 | 288 | 512 | 2048 | 4096 | 7008;
+        "Bakabase.InsideWorld.Models.Constants.AdditionalItems.ResourceAdditionalItem": 0 | 32 | 64 | 128 | 288 | 512 | 2048 | 4096 | 8192 | 15200;
         /**
          * Format: int32
          * @description [1: Latest, 2: Frequency]
@@ -6737,10 +7372,10 @@ export interface components {
         "Bakabase.InsideWorld.Models.Constants.ComponentType": 1 | 2 | 3;
         /**
          * Format: int32
-         * @description [1: BiliBili, 2: ExHentai, 3: Pixiv]
+         * @description [1: BiliBili, 2: ExHentai, 3: Pixiv, 6: DLsite]
          * @enum {integer}
          */
-        "Bakabase.InsideWorld.Models.Constants.CookieValidatorTarget": 1 | 2 | 3;
+        "Bakabase.InsideWorld.Models.Constants.CookieValidatorTarget": 1 | 2 | 3 | 6;
         /**
          * Format: int32
          * @description [1: Contain, 2: Cover]
@@ -7112,13 +7747,16 @@ export interface components {
             filePaths: string[];
             workingDirectory?: string;
             targetConvention?: string;
+            referencePaths?: string[];
         };
         "Bakabase.Modules.AI.Models.Input.FileProcessorDirectoryInputModel": {
             directoryPath: string;
+            referencePaths?: string[];
         };
         "Bakabase.Modules.AI.Models.Input.FileProcessorPathsInputModel": {
             filePaths: string[];
             workingDirectory?: string;
+            referencePaths?: string[];
         };
         "Bakabase.Modules.AI.Models.Input.LlmProviderConfigAddInputModel": {
             providerType: components["schemas"]["Bakabase.Modules.AI.Models.Domain.LlmProviderType"];
@@ -7452,10 +8090,10 @@ export interface components {
         "Bakabase.Modules.Enhancer.Abstractions.Models.Domain.Constants.EnhancementAdditionalItem": 0 | 1;
         /**
          * Format: int32
-         * @description [1: Bakabase, 2: ExHentai, 3: Bangumi, 4: DLsite, 5: Regex, 6: Kodi, 7: Tmdb, 8: Av, 9: AI]
+         * @description [1: Bakabase, 2: ExHentai, 3: Bangumi, 4: DLsite, 5: Regex, 6: Kodi, 7: Tmdb, 8: Av, 9: AI, 10: Steam]
          * @enum {integer}
          */
-        "Bakabase.Modules.Enhancer.Models.Domain.Constants.EnhancerId": 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+        "Bakabase.Modules.Enhancer.Models.Domain.Constants.EnhancerId": 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
         /**
          * Format: int32
          * @description [1: UseRegex, 2: UseKeyword]
@@ -8140,6 +8778,18 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PathMark"][];
         };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.PlayableItem]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PlayableItem"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.ResourceSourceLink]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceSourceLink"][];
+        };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.Resource]": {
             /** Format: int32 */
             code: number;
@@ -8350,11 +9000,47 @@ export interface components {
             message?: string;
             data?: string[];
         };
+        "Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Abstractions.Models.Db.DLsiteWorkDbModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Models.Db.DLsiteWorkDbModel"][];
+            /** Format: int32 */
+            totalCount: number;
+            /** Format: int32 */
+            pageIndex: number;
+            /** Format: int32 */
+            pageSize: number;
+        };
+        "Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Abstractions.Models.Db.ExHentaiGalleryDbModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Models.Db.ExHentaiGalleryDbModel"][];
+            /** Format: int32 */
+            totalCount: number;
+            /** Format: int32 */
+            pageIndex: number;
+            /** Format: int32 */
+            pageSize: number;
+        };
         "Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Abstractions.Models.Db.PlayHistoryDbModel]": {
             /** Format: int32 */
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.Db.PlayHistoryDbModel"][];
+            /** Format: int32 */
+            totalCount: number;
+            /** Format: int32 */
+            pageIndex: number;
+            /** Format: int32 */
+            pageSize: number;
+        };
+        "Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Abstractions.Models.Db.SteamAppDbModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Models.Db.SteamAppDbModel"][];
             /** Format: int32 */
             totalCount: number;
             /** Format: int32 */
@@ -8428,6 +9114,18 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Components.Configuration.TaskOptions"];
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Db.DLsiteWorkDbModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Models.Db.DLsiteWorkDbModel"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Db.SteamAppDbModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Models.Db.SteamAppDbModel"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.CategoryEnhancerOptions]": {
             /** Format: int32 */
             code: number;
@@ -8487,6 +9185,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PathMark"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ResourceCache]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceCache"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.SpecialText]": {
             /** Format: int32 */
@@ -8601,6 +9305,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.SoulPlusOptions"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.SteamOptions]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.SteamOptions"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.TmdbOptions]": {
             /** Format: int32 */
@@ -11108,6 +11818,30 @@ export interface operations {
             };
         };
     };
+    RefreshResourceCache: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                resourceId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ResourceCache]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ResourceCache]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ResourceCache]"];
+                };
+            };
+        };
+    };
     GetCategory: {
         parameters: {
             query?: {
@@ -12591,6 +13325,331 @@ export interface operations {
             };
         };
     };
+    GetAllDLsiteWorks: {
+        parameters: {
+            query?: {
+                keyword?: string;
+                showHidden?: boolean;
+                pageIndex?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Abstractions.Models.Db.DLsiteWorkDbModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Abstractions.Models.Db.DLsiteWorkDbModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Abstractions.Models.Db.DLsiteWorkDbModel]"];
+                };
+            };
+        };
+    };
+    GetDLsiteWorkByWorkId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Db.DLsiteWorkDbModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Db.DLsiteWorkDbModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Db.DLsiteWorkDbModel]"];
+                };
+            };
+        };
+    };
+    DeleteDLsiteWork: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    SyncDLsiteWorks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    DownloadDLsiteWork: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
+                };
+            };
+        };
+    };
+    GetDLsiteWorkDrmKey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
+                };
+            };
+        };
+    };
+    LaunchDLsiteWork: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetDLsiteWorkPlayableFiles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.String]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.String]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.String]"];
+                };
+            };
+        };
+    };
+    ScanDLsiteFolders: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    ExtractDLsiteWork: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    DeleteDLsiteWorkLocalFiles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    SetDLsiteWorkHidden: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": boolean;
+                "application/json": boolean;
+                "text/json": boolean;
+                "application/*+json": boolean;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    SetDLsiteWorkUseLocaleEmulator: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": boolean;
+                "application/json": boolean;
+                "text/json": boolean;
+                "application/*+json": boolean;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
     GetAllDownloaderDefinitions: {
         parameters: {
             query?: never;
@@ -13069,6 +14128,37 @@ export interface operations {
             };
         };
     };
+    ValidateEnhancerConfiguration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                resourceId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Domain.EnhancerFullOptions"][];
+                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Domain.EnhancerFullOptions"][];
+                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Domain.EnhancerFullOptions"][];
+                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Domain.EnhancerFullOptions"][];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
     DeleteByEnhancementsMediaLibrary: {
         parameters: {
             query?: {
@@ -13219,6 +14309,135 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Enhancer.Abstractions.Components.IEnhancerDescriptor]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Enhancer.Abstractions.Components.IEnhancerDescriptor]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Enhancer.Abstractions.Components.IEnhancerDescriptor]"];
+                };
+            };
+        };
+    };
+    GetAllExHentaiGalleries: {
+        parameters: {
+            query?: {
+                keyword?: string;
+                pageIndex?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Abstractions.Models.Db.ExHentaiGalleryDbModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Abstractions.Models.Db.ExHentaiGalleryDbModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Abstractions.Models.Db.ExHentaiGalleryDbModel]"];
+                };
+            };
+        };
+    };
+    DeleteExHentaiGallery: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    DeleteExHentaiGalleryLocalFiles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                galleryId: number;
+                galleryToken: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    SetExHentaiGalleryHidden: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                galleryId: number;
+                galleryToken: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": boolean;
+                "application/json": boolean;
+                "text/json": boolean;
+                "application/*+json": boolean;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    SyncExHentaiGalleries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                 };
             };
         };
@@ -16957,6 +18176,57 @@ export interface operations {
             };
         };
     };
+    GetSteamOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.SteamOptions]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.SteamOptions]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.SteamOptions]"];
+                };
+            };
+        };
+    };
+    PatchSteamOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.SteamOptionsPatchInputModel"];
+                "application/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.SteamOptionsPatchInputModel"];
+                "text/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.SteamOptionsPatchInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.SteamOptionsPatchInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
     GetFanboxOptions: {
         parameters: {
             query?: never;
@@ -17820,6 +19090,31 @@ export interface operations {
             };
         };
     };
+    StartSyncBySource: {
+        parameters: {
+            query?: {
+                /** @description [1: FileSystem, 2: Steam, 3: DLsite, 4: ExHentai] */
+                source?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceSource"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
     SearchPlayHistories: {
         parameters: {
             query?: {
@@ -18534,7 +19829,7 @@ export interface operations {
             query?: {
                 saveSearch?: boolean;
                 searchId?: string;
-                /** @description [0: None, 32: Properties, 64: Alias, 128: Category, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 7008: All] */
+                /** @description [0: None, 32: Properties, 64: Alias, 128: Category, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 8192: SourceLinks, 15200: All] */
                 additionalItems?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.AdditionalItems.ResourceAdditionalItem"];
             };
             header?: never;
@@ -18596,7 +19891,7 @@ export interface operations {
         parameters: {
             query?: {
                 ids?: number[];
-                /** @description [0: None, 32: Properties, 64: Alias, 128: Category, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 7008: All] */
+                /** @description [0: None, 32: Properties, 64: Alias, 128: Category, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 8192: SourceLinks, 15200: All] */
                 additionalItems?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.AdditionalItems.ResourceAdditionalItem"];
             };
             header?: never;
@@ -18909,6 +20204,58 @@ export interface operations {
             };
         };
     };
+    PlayResourceItem: {
+        parameters: {
+            query?: {
+                /** @description [1: FileSystem, 2: Steam, 3: DLsite, 4: ExHentai] */
+                source?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceSource"];
+                key?: string;
+            };
+            header?: never;
+            path: {
+                resourceId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetResourcePlayableItems: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.PlayableItem]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.PlayableItem]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.PlayableItem]"];
+                };
+            };
+        };
+    };
     PlayRandomResource: {
         parameters: {
             query?: never;
@@ -19201,6 +20548,86 @@ export interface operations {
                 "application/json": components["schemas"]["BulkResourceMediaLibraryMappingInputModel"];
                 "text/json": components["schemas"]["BulkResourceMediaLibraryMappingInputModel"];
                 "application/*+json": components["schemas"]["BulkResourceMediaLibraryMappingInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetResourceSourceLinks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.ResourceSourceLink]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.ResourceSourceLink]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.ResourceSourceLink]"];
+                };
+            };
+        };
+    };
+    GetResourceConflicts: {
+        parameters: {
+            query?: {
+                /** @description [0: None, 32: Properties, 64: Alias, 128: Category, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 8192: SourceLinks, 15200: All] */
+                additionalItems?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.AdditionalItems.ResourceAdditionalItem"];
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.Resource]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.Resource]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.Resource]"];
+                };
+            };
+        };
+    };
+    MergeResources: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Input.ResourceMergeInputModel"];
+                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Input.ResourceMergeInputModel"];
+                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Input.ResourceMergeInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Input.ResourceMergeInputModel"];
             };
         };
         responses: {
@@ -19599,6 +21026,133 @@ export interface operations {
             };
         };
     };
+    GetAllSteamApps: {
+        parameters: {
+            query?: {
+                keyword?: string;
+                pageIndex?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Abstractions.Models.Db.SteamAppDbModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Abstractions.Models.Db.SteamAppDbModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Abstractions.Models.Db.SteamAppDbModel]"];
+                };
+            };
+        };
+    };
+    GetSteamAppByAppId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                appId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Db.SteamAppDbModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Db.SteamAppDbModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Db.SteamAppDbModel]"];
+                };
+            };
+        };
+    };
+    DeleteSteamApp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                appId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    SetSteamAppHidden: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                appId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": boolean;
+                "application/json": boolean;
+                "text/json": boolean;
+                "application/*+json": boolean;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    SyncSteamApps: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
     InstallTampermonkeyScript: {
         parameters: {
             query?: {
@@ -19779,7 +21333,7 @@ export interface operations {
     ValidateCookie: {
         parameters: {
             query?: {
-                /** @description [1: BiliBili, 2: ExHentai, 3: Pixiv] */
+                /** @description [1: BiliBili, 2: ExHentai, 3: Pixiv, 6: DLsite] */
                 target?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.CookieValidatorTarget"];
                 cookie?: string;
             };

@@ -9,7 +9,6 @@ using Bakabase.Abstractions.Components.Network;
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Services;
-using Bakabase.Infrastructures.Components.App.Upgrade.Adapters;
 using Bakabase.Infrastructures.Components.Gui;
 using Bakabase.Infrastructures.Components.Logging;
 using Bakabase.Infrastructures.Components.Orm;

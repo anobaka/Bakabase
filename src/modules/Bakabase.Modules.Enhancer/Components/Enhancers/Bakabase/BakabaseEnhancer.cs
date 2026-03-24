@@ -31,8 +31,9 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase
         ICoverDiscoverer coverDiscoverer,
         IStandardValueService standardValueService,
         IServiceProvider serviceProvider
-        )
-        : AbstractKeywordEnhancer<BakabaseEnhancerTarget, BakabaseEnhancerContext, IKeywordEnhancerOptions>(loggerFactory,
+    )
+        : AbstractKeywordEnhancer<BakabaseEnhancerTarget, BakabaseEnhancerContext, IKeywordEnhancerOptions>(
+            loggerFactory,
             fileManager, standardValueService, specialTextService, serviceProvider)
     {
         protected override EnhancerId TypedId => EnhancerId.Bakabase;
@@ -124,7 +125,7 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase
             ctx.Name = name;
 
             var coverSelectionOrder =
-                options.TargetOptions?.FirstOrDefault(to => to.Target == (int) BakabaseEnhancerTarget.Cover)
+                options.TargetOptions?.FirstOrDefault(to => to.Target == (int)BakabaseEnhancerTarget.Cover)
                     ?.CoverSelectOrder ?? CoverSelectOrder.FilenameAscending;
 
             logCollector.LogInfo(EnhancementLogEvent.DataFetching,
@@ -157,7 +158,8 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase
             }
             catch (Exception e)
             {
-                Logger.LogError(e, $"An error occurred during discovering cover for resource {resource.Id} at {resource.Path}");
+                Logger.LogError(e,
+                    $"An error occurred during discovering cover for resource {resource.Id} at {resource.Path}");
                 logCollector.LogError(EnhancementLogEvent.Error,
                     $"Failed to discover cover: {e.Message}");
             }
@@ -259,7 +261,7 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase
                 {
                     var publisherString = name.Substring(1, endIndex - 1);
                     name = name[(endIndex + 1)..];
-                    return publisherString.AnalyzePublishers().Extract().Select(p => p.Name).Distinct().ToList();
+                    return Extract(AnalyzePublishers(publisherString)).Select(p => p.Name).Distinct().ToList();
                 }
             }
 
@@ -288,7 +290,7 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase
                     {
                         var originals = name.Substring(i + 1, name.Length - i - 2);
                         name = name.Substring(0, i);
-                        return originals.Split(new[] {'、'}, StringSplitOptions.RemoveEmptyEntries)
+                        return originals.Split(new[] { '、' }, StringSplitOptions.RemoveEmptyEntries)
                             .Select(t => t.Trim()).Distinct().ToList();
                     }
                 }
@@ -338,7 +340,8 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase
             var volumeTexts = await specialTextService.GetAll(x => x.Type == SpecialTextType.Volume, false);
             foreach (var v in volumeTexts)
             {
-                var reg = new System.Text.RegularExpressions.Regex($"(?<volumeIndexName>{v.Value1})(?<volumeTitle>.*)$");
+                var reg = new System.Text.RegularExpressions.Regex(
+                    $"(?<volumeIndexName>{v.Value1})(?<volumeTitle>.*)$");
                 var match = reg.Match(str);
                 if (match.Success)
                 {
@@ -390,6 +393,109 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase
                 Index = om.Match.Index
             }).ToArray();
             return wcs;
+        }
+
+        private class Publisher
+        {
+            public string Name { get; set; } = null!;
+            public List<Publisher>? SubPublishers { get; set; }
+        }
+
+        private static List<Publisher>? AnalyzePublishers(string publisherString, int level = 1)
+        {
+            if (!string.IsNullOrEmpty(publisherString))
+            {
+                // 只需要分割出A(...)、B(...)、C即可，...交给下级分割
+                var dotLayer = 0;
+                // 补头
+                var dotPositions = new List<int> { -1 };
+                for (var i = 0; i < publisherString.Length; i++)
+                {
+                    var c = publisherString[i];
+                    switch (c)
+                    {
+                        // 分隔符
+                        case '、':
+                            if (dotLayer == 0)
+                            {
+                                dotPositions.Add(i);
+                            }
+
+                            break;
+                        // 多级
+                        case '(':
+                        {
+                            dotLayer++;
+                            break;
+                        }
+                        // 多级
+                        case ')':
+                        {
+                            dotLayer--;
+                            break;
+                        }
+                    }
+                }
+
+                // 补尾
+                dotPositions.Add(publisherString.Length);
+
+                var list = new List<Publisher>();
+                for (var i = 0; i < dotPositions.Count - 1; i++)
+                {
+                    var sp = new Publisher();
+                    var name = publisherString.Substring(dotPositions[i] + 1,
+                        dotPositions[i + 1] - dotPositions[i] - 1);
+                    var lb = name.IndexOf('(');
+                    var rb = name.LastIndexOf(')');
+                    var length = rb - lb - 1;
+                    if (length > 0 && lb > -1)
+                    {
+                        // (circle)author
+                        if (lb == 0)
+                        {
+                            // (circle)
+                            if (rb == name.Length - 1)
+                            {
+                                name = name.Substring(lb + 1, length);
+                            }
+                            // (circle)author
+                            else
+                            {
+                                var sub = name[(rb + 1)..];
+                                name = name.Substring(lb + 1, length);
+                                sp.SubPublishers = AnalyzePublishers(sub, level + 1);
+                            }
+                        }
+                        // circle(author)
+                        else
+                        {
+                            var sub = name.Substring(lb + 1, length);
+                            name = name[..lb];
+                            sp.SubPublishers = AnalyzePublishers(sub, level + 1);
+                        }
+                    }
+
+                    sp.Name = name;
+                    list.Add(sp);
+                }
+
+                return list;
+            }
+
+            return null;
+        }
+
+        private static List<Publisher> Extract(List<Publisher>? publishers)
+        {
+            var list = new List<Publisher>();
+            if (publishers != null)
+            {
+                list.AddRange(publishers);
+                publishers.ForEach(t => { list.AddRange(Extract(t.SubPublishers)); });
+            }
+
+            return list;
         }
     }
 }

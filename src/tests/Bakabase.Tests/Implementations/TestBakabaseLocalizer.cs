@@ -94,6 +94,15 @@ public class TestBakabaseLocalizer : IBakabaseLocalizer
     public string PlayableFiles() => "PlayableFiles";
     public string BuildingData() => "BuildingData";
 
+    // SearchIndex
+    public string SearchIndex_LoadingResources() => "SearchIndex_LoadingResources";
+    public string SearchIndex_LoadedResources(int count) => $"SearchIndex_LoadedResources_{count}";
+    public string SearchIndex_LoadedCustomPropertyValues(int count) => $"SearchIndex_LoadedCustomPropertyValues_{count}";
+    public string SearchIndex_LoadedReservedPropertyValues(int count) => $"SearchIndex_LoadedReservedPropertyValues_{count}";
+    public string SearchIndex_BuildingIndex() => "SearchIndex_BuildingIndex";
+    public string SearchIndex_IndexingProgress(int indexed, int total) => $"SearchIndex_IndexingProgress_{indexed}_{total}";
+    public string SearchIndex_Completed(int count) => $"SearchIndex_Completed_{count}";
+
     // PathMark Sync
     public string SyncPathMark_Collecting() => "SyncPathMark_Collecting";
     public string SyncPathMark_Collected(int count) => $"SyncPathMark_Collected_{count}";

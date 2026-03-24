@@ -258,6 +258,19 @@ public class PathMarkController(IPathMarkService service, IPathMarkSyncService s
         await syncService.EnqueueSync(markIds);
         return BaseResponseBuilder.Ok;
     }
+
+    /// <summary>
+    /// Start resource synchronization for a specific source (e.g., Steam, DLsite, ExHentai).
+    /// This triggers resource discovery from the source, and if new resources are found,
+    /// related property/media library marks are automatically set to pending for sync.
+    /// </summary>
+    [HttpPost("sync/by-source")]
+    [SwaggerOperation(OperationId = "StartSyncBySource")]
+    public async Task<BaseResponse> StartSyncBySource([FromQuery] ResourceSource source)
+    {
+        await syncService.EnqueueSync(source);
+        return BaseResponseBuilder.Ok;
+    }
 }
 
 public class PathMarkSyncStatusResponse

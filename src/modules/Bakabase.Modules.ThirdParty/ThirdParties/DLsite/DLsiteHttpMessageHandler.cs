@@ -9,7 +9,16 @@ namespace Bakabase.Modules.ThirdParty.ThirdParties.DLsite;
 public class DLsiteHttpMessageHandler<TDLsiteOptions>(
     ThirdPartyHttpRequestLogger logger,
     AspNetCoreOptionsManager<TDLsiteOptions> optionsManager,
-    BakabaseWebProxy webProxy)
+    BakabaseWebProxy webProxy,
+    IThirdPartyCookieContainer cookieContainer)
     : BakabaseOptionsBasedThirdPartyHttpMessageHandler<TDLsiteOptions>(logger, ThirdPartyId.DLsite, optionsManager,
-        webProxy)
-    where TDLsiteOptions : class, IThirdPartyHttpClientOptions, new();
+        webProxy, cookieContainer)
+    where TDLsiteOptions : class, IThirdPartyHttpClientOptions, new()
+{
+    protected override void ConfigureHandler()
+    {
+        // Disable auto-redirect so DLsiteClient can follow redirects manually
+        // and carry cookies across different DLsite subdomains.
+        AllowAutoRedirect = false;
+    }
+}

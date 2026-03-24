@@ -5,10 +5,27 @@ using Microsoft.Extensions.Options;
 
 namespace Bakabase.Modules.ThirdParty.Abstractions.Http
 {
+    /// <summary>
+    /// Non-generic holder for HttpRequestMessage.Options keys used by third-party handlers.
+    /// </summary>
+    public static class ThirdPartyRequestOptions
+    {
+        /// <summary>
+        /// Per-request account key. When set, the handler uses this instead of "default" for the cookie container.
+        /// </summary>
+        public static readonly HttpRequestOptionsKey<string> AccountKey = new("ThirdParty.AccountKey");
+
+        /// <summary>
+        /// Per-request cookie string. When set, the handler uses this instead of Options.Cookie.
+        /// </summary>
+        public static readonly HttpRequestOptionsKey<string> Cookie = new("ThirdParty.Cookie");
+    }
+
     public abstract class AbstractThirdPartyHttpMessageHandler<TOptions> : HttpClientHandler
         where TOptions : class, IThirdPartyHttpClientOptions, new()
     {
         private readonly ThirdPartyHttpRequestLogger _logger;
+        private readonly IThirdPartyCookieContainer? _cookieContainer;
         private ThirdPartyId ThirdPartyId { get; }
         private int _threadDebts;
         private DateTime _prevRequestDt;
@@ -17,13 +34,30 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
 
         private TOptions _options;
 
-        protected AbstractThirdPartyHttpMessageHandler(ThirdPartyHttpRequestLogger logger, ThirdPartyId thirdPartyId, BakabaseWebProxy webProxy, TOptions options)
+        /// <summary>
+        /// Cookie container key prefix for this handler. Used to scope containers per source.
+        /// </summary>
+        protected string CookieContainerKeyPrefix => $"{ThirdPartyId}:";
+
+        protected AbstractThirdPartyHttpMessageHandler(ThirdPartyHttpRequestLogger logger, ThirdPartyId thirdPartyId, BakabaseWebProxy webProxy, TOptions options, IThirdPartyCookieContainer? cookieContainer = null)
         {
             _logger = logger;
             ThirdPartyId = thirdPartyId;
+            _cookieContainer = cookieContainer;
             _options = options;
             Proxy = webProxy;
+            // Disable automatic cookie handling since we manage cookies manually via headers
+            UseCookies = false;
             _threadsSemaphore = new SemaphoreSlim(options.MaxConcurrency, int.MaxValue);
+            ConfigureHandler();
+        }
+
+        /// <summary>
+        /// Override to configure HttpClientHandler properties (e.g. AllowAutoRedirect).
+        /// Called at the end of the constructor.
+        /// </summary>
+        protected virtual void ConfigureHandler()
+        {
         }
 
         protected TOptions Options
@@ -73,6 +107,13 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
             return Task.CompletedTask;
         }
 
+        private (string accountKey, string? cookie) GetRequestCookieInfo(HttpRequestMessage request)
+        {
+            request.Options.TryGetValue(ThirdPartyRequestOptions.AccountKey, out var accountKey);
+            request.Options.TryGetValue(ThirdPartyRequestOptions.Cookie, out var cookie);
+            return (accountKey ?? "default", cookie ?? Options.Cookie);
+        }
+
         private void _populateRequest(HttpRequestMessage request)
         {
             if (Options.UserAgent.IsNotEmpty())
@@ -82,9 +123,22 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
                     Options.UserAgent ?? IThirdPartyHttpClientOptions.DefaultUserAgent);
             }
 
-            if (Options.Cookie.IsNotEmpty())
+            if (!request.Headers.Contains("Cookie"))
             {
-                request.Headers.Add("Cookie", Options.Cookie);
+                var (accountKey, cookie) = GetRequestCookieInfo(request);
+                if (_cookieContainer != null && request.RequestUri != null)
+                {
+                    var cookieHeader = _cookieContainer.GetCookieHeader(
+                        $"{CookieContainerKeyPrefix}{accountKey}", cookie, request.RequestUri);
+                    if (cookieHeader != null)
+                    {
+                        request.Headers.Add("Cookie", cookieHeader);
+                    }
+                }
+                else if (cookie.IsNotEmpty())
+                {
+                    request.Headers.Add("Cookie", cookie);
+                }
             }
 
             if (Options.Referer.IsNotEmpty())
@@ -98,6 +152,16 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
                 {
                     request.Headers.Add(k, v);
                 }
+            }
+        }
+
+        private void _processResponse(HttpRequestMessage request, HttpResponseMessage response)
+        {
+            if (_cookieContainer != null && request.RequestUri != null)
+            {
+                var (accountKey, cookie) = GetRequestCookieInfo(request);
+                _cookieContainer.ProcessResponse(
+                    $"{CookieContainerKeyPrefix}{accountKey}", cookie, request.RequestUri, response);
             }
         }
 
@@ -136,8 +200,10 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
             try
             {
                 _prevRequestDt = DateTime.Now;
-                return _logger.Capture(ThirdPartyId, () => base.Send(request, cancellationToken),
+                var response = _logger.Capture(ThirdPartyId, () => base.Send(request, cancellationToken),
                     request.RequestUri?.ToString(), ct: cancellationToken);
+                _processResponse(request, response);
+                return response;
             }
             finally
             {
@@ -165,9 +231,11 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
             try
             {
                 _prevRequestDt = DateTime.Now;
-                return await _logger.CaptureAsync(ThirdPartyId,
+                var response = await _logger.CaptureAsync(ThirdPartyId,
                     async () => await base.SendAsync(request, cancellationToken), request.RequestUri?.ToString(),
                     ct: cancellationToken);
+                _processResponse(request, response);
+                return response;
             }
             finally
             {

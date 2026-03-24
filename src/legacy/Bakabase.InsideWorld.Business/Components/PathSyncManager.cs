@@ -17,11 +17,18 @@ using Microsoft.Extensions.Logging;
 namespace Bakabase.InsideWorld.Business.Components;
 
 /// <summary>
-/// Background service that manages path mark synchronization queue and BTask lifecycle.
-/// This service is responsible for:
-/// - Maintaining a queue of pending mark IDs
-/// - Polling the queue periodically
-/// - Managing BTask creation and lifecycle based on task status
+/// Background service that manages resource sync and property sync queues.
+///
+/// Two independent queues:
+/// 1. Resource sync queue: ResourceSource values, aggregated (deduplicates same source).
+///    When resource sync completes with new resources, it marks related path marks as pending,
+///    which triggers the path mark sync queue.
+/// 2. Path mark sync queue: Triggers PathMarkSyncService when pending path marks exist.
+///
+/// Flow:
+/// - User syncs specific marks -> marks set to pending -> path mark sync triggers
+/// - User syncs a source -> resource sync triggers -> new resources found ->
+///   related marks set to pending -> path mark sync triggers automatically
 /// </summary>
 public class PathSyncManager : BackgroundService, IPathMarkSyncService
 {
@@ -29,10 +36,21 @@ public class PathSyncManager : BackgroundService, IPathMarkSyncService
     private readonly IServiceProvider _serviceProvider;
     private readonly BTaskManager _btm;
     private readonly IBakabaseLocalizer _localizer;
-    private readonly ConcurrentQueue<int> _pendingMarkIds = new();
+
+    /// <summary>
+    /// Resource sync queue. Uses ConcurrentDictionary for deduplication (only one entry per source).
+    /// </summary>
+    private readonly ConcurrentDictionary<ResourceSource, byte> _pendingResourceSources = new();
+
+    /// <summary>
+    /// Flag indicating that path mark sync should run (pending property/media library marks exist).
+    /// </summary>
+    private volatile bool _pathMarkSyncRequested;
+
     private readonly TimeSpan _pollInterval = TimeSpan.FromSeconds(5);
 
-    private const string SyncTaskId = "SyncPathMarks";
+    private const string ResourceSyncTaskId = "SyncResources";
+    private const string PathMarkSyncTaskId = "SyncPathMarks";
 
     public PathSyncManager(
         ILogger<PathSyncManager> logger,
@@ -48,44 +66,76 @@ public class PathSyncManager : BackgroundService, IPathMarkSyncService
 
     /// <summary>
     /// Enqueue mark IDs for synchronization.
+    /// Marks the specified marks as pending and requests path mark sync.
     /// If markIds is empty, loads all pending marks from the database.
     /// </summary>
     public async Task EnqueueSync(params int[] markIds)
     {
         if (markIds.Length == 0)
         {
-            // Load all pending marks from the database
+            // All pending marks - just trigger path mark sync
+            _pathMarkSyncRequested = true;
+            _logger.LogDebug("Requested path mark sync for all pending marks");
+            return;
+        }
+
+        // Mark specific marks as pending
+        await using var scope = _serviceProvider.CreateAsyncScope();
+        var pathMarkService = scope.ServiceProvider.GetRequiredService<IPathMarkService>();
+        await pathMarkService.MarkAsPendingBatch(markIds);
+
+        // Check if any of these are resource marks - if so, also enqueue FileSystem resource sync
+        var marks = await pathMarkService.GetAll();
+        var hasResourceMarks = marks
+            .Where(m => markIds.Contains(m.Id))
+            .Any(m => m.Type == PathMarkType.Resource);
+
+        if (hasResourceMarks)
+        {
+            _pendingResourceSources.TryAdd(ResourceSource.FileSystem, 0);
+            _logger.LogDebug("Enqueued FileSystem resource sync for resource marks");
+        }
+
+        // Always request path mark sync for property/media library marks
+        _pathMarkSyncRequested = true;
+        _logger.LogDebug("Enqueued {Count} mark IDs for synchronization", markIds.Length);
+    }
+
+    /// <summary>
+    /// Enqueue a source-based sync request.
+    /// For any source, this adds to the resource sync queue (with deduplication).
+    /// </summary>
+    public async Task EnqueueSync(ResourceSource source, params int[] markIds)
+    {
+        if (markIds.Length > 0)
+        {
+            // Mark specific marks as pending first
             await using var scope = _serviceProvider.CreateAsyncScope();
             var pathMarkService = scope.ServiceProvider.GetRequiredService<IPathMarkService>();
-            var pendingMarks = await pathMarkService.GetPendingMarks();
-            markIds = pendingMarks.Select(m => m.Id).ToArray();
-
-            _logger.LogDebug("No mark IDs specified, loaded {Count} pending mark(s) from database", markIds.Length);
+            await pathMarkService.MarkAsPendingBatch(markIds);
         }
 
-        foreach (var id in markIds)
-        {
-            _pendingMarkIds.Enqueue(id);
-        }
-
-        _logger.LogDebug("Enqueued {Count} mark IDs for synchronization", markIds.Length);
+        // Add source to resource sync queue (deduplicates automatically)
+        _pendingResourceSources.TryAdd(source, 0);
+        _logger.LogDebug("Enqueued {Source} source for resource synchronization", source);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("PathSyncManager started. Poll interval: {Interval} seconds", _pollInterval.TotalSeconds);
+        _logger.LogInformation("PathSyncManager started. Poll interval: {Interval} seconds",
+            _pollInterval.TotalSeconds);
 
         // Wait a bit before starting to allow the application to fully initialize
         await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
 
-        // Recover any marks that were left in Syncing state (e.g., due to app crash or shutdown during sync)
+        // Recover any marks that were left in Syncing state
         await RecoverInterruptedSyncs(stoppingToken);
 
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                await ProcessQueueIfNeeded(stoppingToken);
+                await ProcessQueuesIfNeeded(stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -93,7 +143,7 @@ public class PathSyncManager : BackgroundService, IPathMarkSyncService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while processing path sync queue");
+                _logger.LogError(ex, "Error occurred while processing sync queues");
             }
 
             try
@@ -109,54 +159,103 @@ public class PathSyncManager : BackgroundService, IPathMarkSyncService
         _logger.LogInformation("PathSyncManager stopped");
     }
 
-    private async Task ProcessQueueIfNeeded(CancellationToken ct)
+    private async Task ProcessQueuesIfNeeded(CancellationToken ct)
     {
-        // Check if queue is empty
-        if (_pendingMarkIds.IsEmpty)
+        // Process resource sync queue
+        if (!_pendingResourceSources.IsEmpty)
         {
-            return;
+            await ProcessResourceSyncQueue(ct);
         }
 
-        // Check existing task status
-        var existingTask = _btm.GetTaskViewModel(SyncTaskId);
+        // Process path mark sync queue
+        if (_pathMarkSyncRequested)
+        {
+            await ProcessPathMarkSyncQueue(ct);
+        }
+    }
 
+    private async Task ProcessResourceSyncQueue(CancellationToken ct)
+    {
+        // Check if resource sync task is already running
+        var existingTask = _btm.GetTaskViewModel(ResourceSyncTaskId);
         if (existingTask != null)
         {
             var status = existingTask.Status;
-
             if (status is BTaskStatus.Running or BTaskStatus.Paused or BTaskStatus.NotStarted)
             {
-                // Task is active, let it continue processing
-                _logger.LogDebug("Sync task is already active (status: {Status}), waiting for next poll", status);
                 return;
             }
 
-            // Task is in a terminal state (Completed, Error, Cancelled), clean it up
-            _logger.LogDebug("Cleaning up completed sync task (status: {Status})", status);
-            await _btm.Clean(SyncTaskId);
+            await _btm.Clean(ResourceSyncTaskId);
         }
 
-        // Enqueue a new task
-        _logger.LogInformation("Creating new sync task to process {Count} pending mark(s)", _pendingMarkIds.Count);
-        await EnqueueNewSyncTask();
-    }
+        // Drain all pending sources
+        var sources = new HashSet<ResourceSource>();
+        foreach (var key in _pendingResourceSources.Keys.ToList())
+        {
+            if (_pendingResourceSources.TryRemove(key, out _))
+            {
+                sources.Add(key);
+            }
+        }
 
-    private async Task EnqueueNewSyncTask()
-    {
+        if (sources.Count == 0) return;
+
+        _logger.LogInformation("Creating resource sync task for sources: {Sources}",
+            string.Join(", ", sources));
+
+        var capturedSources = sources.ToList();
+
         await _btm.Enqueue(new BTaskHandlerBuilder
         {
-            Id = SyncTaskId,
+            Id = ResourceSyncTaskId,
+            Type = BTaskType.Any,
+            ResourceType = BTaskResourceType.Any,
+            GetName = () => _localizer.BTask_Name("SyncResources"),
+            GetDescription = () => _localizer.BTask_Description("SyncResources"),
+            GetMessageOnInterruption = () => _localizer.BTask_MessageOnInterruption("SyncResources"),
+            ConflictKeys = [ResourceSyncTaskId],
+            Level = BTaskLevel.Default,
+            IsPersistent = false,
+            StartNow = true,
+            DuplicateIdHandling = BTaskDuplicateIdHandling.Ignore,
+            Run = async args => await RunResourceSync(args, capturedSources)
+        });
+    }
+
+    private async Task ProcessPathMarkSyncQueue(CancellationToken ct)
+    {
+        // Check if path mark sync task is already running
+        var existingTask = _btm.GetTaskViewModel(PathMarkSyncTaskId);
+        if (existingTask != null)
+        {
+            var status = existingTask.Status;
+            if (status is BTaskStatus.Running or BTaskStatus.Paused or BTaskStatus.NotStarted)
+            {
+                return;
+            }
+
+            await _btm.Clean(PathMarkSyncTaskId);
+        }
+
+        _pathMarkSyncRequested = false;
+
+        _logger.LogInformation("Creating path mark sync task");
+
+        await _btm.Enqueue(new BTaskHandlerBuilder
+        {
+            Id = PathMarkSyncTaskId,
             Type = BTaskType.Any,
             ResourceType = BTaskResourceType.Any,
             GetName = () => _localizer.BTask_Name("SyncPathMarks"),
             GetDescription = () => _localizer.BTask_Description("SyncPathMarks"),
             GetMessageOnInterruption = () => _localizer.BTask_MessageOnInterruption("SyncPathMarks"),
-            ConflictKeys = [SyncTaskId],
+            ConflictKeys = [PathMarkSyncTaskId],
             Level = BTaskLevel.Default,
             IsPersistent = false,
             StartNow = true,
             DuplicateIdHandling = BTaskDuplicateIdHandling.Ignore,
-            Run = RunSyncLoop
+            Run = RunPathMarkSync
         });
     }
 
@@ -179,14 +278,23 @@ public class PathSyncManager : BackgroundService, IPathMarkSyncService
                 return;
             }
 
-            _logger.LogInformation("Found {Count} mark(s) left in Syncing state, resetting to Pending and re-queuing", syncingMarks.Count);
+            _logger.LogInformation(
+                "Found {Count} mark(s) left in Syncing state, resetting to Pending and re-queuing",
+                syncingMarks.Count);
 
             var markIds = syncingMarks.Select(m => m.Id).ToList();
             await pathMarkService.MarkAsPendingBatch(markIds);
 
-            foreach (var id in markIds)
+            // Check if any are resource marks
+            if (syncingMarks.Any(m => m.Type == PathMarkType.Resource))
             {
-                _pendingMarkIds.Enqueue(id);
+                _pendingResourceSources.TryAdd(ResourceSource.FileSystem, 0);
+            }
+
+            // Request path mark sync for property/media library marks
+            if (syncingMarks.Any(m => m.Type is PathMarkType.Property or PathMarkType.MediaLibrary))
+            {
+                _pathMarkSyncRequested = true;
             }
 
             _logger.LogInformation("Successfully recovered {Count} interrupted sync(s)", syncingMarks.Count);
@@ -197,33 +305,64 @@ public class PathSyncManager : BackgroundService, IPathMarkSyncService
         }
     }
 
-    private async Task RunSyncLoop(BTaskArgs args)
+    /// <summary>
+    /// Runs resource sync for the given sources.
+    /// After each source sync, if new resources were created, path mark sync is triggered automatically.
+    /// </summary>
+    private async Task RunResourceSync(BTaskArgs args, List<ResourceSource> sources)
     {
-        // 1. Drain queue
-        var markIds = new List<int>();
-        while (_pendingMarkIds.TryDequeue(out var id))
+        await using var scope = args.RootServiceProvider.CreateAsyncScope();
+        var resourceSyncService = scope.ServiceProvider.GetRequiredService<ResourceSyncService>();
+
+        for (var i = 0; i < sources.Count; i++)
         {
-            markIds.Add(id);
+            args.CancellationToken.ThrowIfCancellationRequested();
+
+            var source = sources[i];
+            var baseProgress = (int)(100.0 * i / sources.Count);
+            var progressRange = (int)(100.0 / sources.Count);
+
+            var result = await resourceSyncService.SyncResources(
+                source,
+                async p => await args.UpdateTask(t => t.Percentage = baseProgress + p * progressRange / 100),
+                async p => await args.UpdateTask(t => t.Process = p),
+                args.PauseToken,
+                args.CancellationToken);
+
+            await args.UpdateTask(t => t.Data = result);
+
+            // If new resources were created or marks were marked pending, trigger path mark sync
+            if (result.PathMarksMarkedPending)
+            {
+                _pathMarkSyncRequested = true;
+                _logger.LogInformation(
+                    "[ResourceSync] New resources from {Source}, path mark sync will be triggered", source);
+            }
         }
 
-        // 2. If queue is empty, task is done
-        if (markIds.Count == 0)
+        // Check if any new sources were added while we were running
+        if (!_pendingResourceSources.IsEmpty)
         {
-            return;
+            // Re-add them so they get picked up on next poll
+            _logger.LogDebug("Additional resource sources were queued during sync, will process on next poll");
         }
+    }
 
-        // 3. Initialize task state
+    /// <summary>
+    /// Runs path mark sync for pending property/media library marks.
+    /// </summary>
+    private async Task RunPathMarkSync(BTaskArgs args)
+    {
         await args.UpdateTask(t =>
         {
             t.Percentage = 0;
             t.Process = null;
         });
 
-        // 4. Call SyncMarks (handles deduplication internally)
         await using var scope = args.RootServiceProvider.CreateAsyncScope();
         var syncService = scope.ServiceProvider.GetRequiredService<PathMarkSyncService>();
+
         var result = await syncService.SyncMarks(
-            markIds.ToArray(),
             async p => await args.UpdateTask(t => t.Percentage = p),
             async p => await args.UpdateTask(t => t.Process = p),
             args.PauseToken,

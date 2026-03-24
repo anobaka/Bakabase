@@ -126,8 +126,16 @@ export const UIHubConnection = () => {
     });
 
     conn.on("OptionsChanged", (name, options) => {
-      if (name.toLowerCase() === "uioptions") name = "uiOptions";
-      if (name.toLowerCase() === "uistyleoptions") name = "uiStyleOptions";
+      // Humanizer's Camelize() lowercases only the first char, producing
+      // incorrect camelCase for names with consecutive uppercase letters
+      // (e.g. "DLsiteOptions" → "dLsiteOptions" instead of "dlsiteOptions").
+      const nameLower = name.toLowerCase();
+      const nameFixMap: Record<string, string> = {
+        uioptions: "uiOptions",
+        uistyleoptions: "uiStyleOptions",
+        dlsiteoptions: "dlsiteOptions",
+      };
+      if (nameFixMap[nameLower]) name = nameFixMap[nameLower];
       log("options changed", name, options);
       const store = optionsStores[name as keyof typeof optionsStores];
 

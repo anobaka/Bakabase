@@ -203,7 +203,8 @@ export enum InternalProperty {
   MediaLibrary = 21,
   PlayedAt = 23,
   MediaLibraryV2 = 24,
-  MediaLibraryV2Multi = 25
+  MediaLibraryV2Multi = 25,
+  Source = 26
 }
 
 export const internalProperties = [
@@ -219,7 +220,8 @@ export const internalProperties = [
   { label: 'MediaLibrary', value: InternalProperty.MediaLibrary },
   { label: 'PlayedAt', value: InternalProperty.PlayedAt },
   { label: 'MediaLibraryV2', value: InternalProperty.MediaLibraryV2 },
-  { label: 'MediaLibraryV2Multi', value: InternalProperty.MediaLibraryV2Multi }
+  { label: 'MediaLibraryV2Multi', value: InternalProperty.MediaLibraryV2Multi },
+  { label: 'Source', value: InternalProperty.Source }
 ] as const;
 
 export const InternalPropertyLabel: Record<InternalProperty, string> = {
@@ -235,7 +237,8 @@ export const InternalPropertyLabel: Record<InternalProperty, string> = {
   [InternalProperty.MediaLibrary]: 'MediaLibrary',
   [InternalProperty.PlayedAt]: 'PlayedAt',
   [InternalProperty.MediaLibraryV2]: 'MediaLibraryV2',
-  [InternalProperty.MediaLibraryV2Multi]: 'MediaLibraryV2Multi'
+  [InternalProperty.MediaLibraryV2Multi]: 'MediaLibraryV2Multi',
+  [InternalProperty.Source]: 'Source'
 };
 
 export enum MediaLibraryTemplateAdditionalItem {
@@ -492,7 +495,8 @@ export enum PropertyValueScope {
   KodiEnhancer = 1005,
   TmdbEnhancer = 1006,
   AvEnhancer = 1007,
-  AiEnhancer = 1008
+  AiEnhancer = 1008,
+  SteamEnhancer = 1009
 }
 
 export const propertyValueScopes = [
@@ -506,7 +510,8 @@ export const propertyValueScopes = [
   { label: 'KodiEnhancer', value: PropertyValueScope.KodiEnhancer },
   { label: 'TmdbEnhancer', value: PropertyValueScope.TmdbEnhancer },
   { label: 'AvEnhancer', value: PropertyValueScope.AvEnhancer },
-  { label: 'AiEnhancer', value: PropertyValueScope.AiEnhancer }
+  { label: 'AiEnhancer', value: PropertyValueScope.AiEnhancer },
+  { label: 'SteamEnhancer', value: PropertyValueScope.SteamEnhancer }
 ] as const;
 
 export const PropertyValueScopeLabel: Record<PropertyValueScope, string> = {
@@ -520,7 +525,8 @@ export const PropertyValueScopeLabel: Record<PropertyValueScope, string> = {
   [PropertyValueScope.KodiEnhancer]: 'KodiEnhancer',
   [PropertyValueScope.TmdbEnhancer]: 'TmdbEnhancer',
   [PropertyValueScope.AvEnhancer]: 'AvEnhancer',
-  [PropertyValueScope.AiEnhancer]: 'AiEnhancer'
+  [PropertyValueScope.AiEnhancer]: 'AiEnhancer',
+  [PropertyValueScope.SteamEnhancer]: 'SteamEnhancer'
 };
 
 export enum PropertyValueType {
@@ -572,6 +578,45 @@ export const ResourceCacheTypeLabel: Record<ResourceCacheType, string> = {
   [ResourceCacheType.Covers]: 'Covers',
   [ResourceCacheType.PlayableFiles]: 'PlayableFiles',
   [ResourceCacheType.ResourceMarkers]: 'ResourceMarkers'
+};
+
+export enum ResourceSource {
+  FileSystem = 1,
+  Steam = 2,
+  DLsite = 3,
+  ExHentai = 4
+}
+
+export const resourceSources = [
+  { label: 'FileSystem', value: ResourceSource.FileSystem },
+  { label: 'Steam', value: ResourceSource.Steam },
+  { label: 'DLsite', value: ResourceSource.DLsite },
+  { label: 'ExHentai', value: ResourceSource.ExHentai }
+] as const;
+
+export const ResourceSourceLabel: Record<ResourceSource, string> = {
+  [ResourceSource.FileSystem]: 'FileSystem',
+  [ResourceSource.Steam]: 'Steam',
+  [ResourceSource.DLsite]: 'DLsite',
+  [ResourceSource.ExHentai]: 'ExHentai'
+};
+
+export enum ResourceStatus {
+  Active = 1,
+  Absent = 2,
+  Unavailable = 3
+}
+
+export const resourceStatuses = [
+  { label: 'Active', value: ResourceStatus.Active },
+  { label: 'Absent', value: ResourceStatus.Absent },
+  { label: 'Unavailable', value: ResourceStatus.Unavailable }
+] as const;
+
+export const ResourceStatusLabel: Record<ResourceStatus, string> = {
+  [ResourceStatus.Active]: 'Active',
+  [ResourceStatus.Absent]: 'Absent',
+  [ResourceStatus.Unavailable]: 'Unavailable'
 };
 
 export enum ResourceTag {
@@ -994,19 +1039,22 @@ export const ComponentTypeLabel: Record<ComponentType, string> = {
 export enum CookieValidatorTarget {
   BiliBili = 1,
   ExHentai = 2,
-  Pixiv = 3
+  Pixiv = 3,
+  DLsite = 6
 }
 
 export const cookieValidatorTargets = [
   { label: 'BiliBili', value: CookieValidatorTarget.BiliBili },
   { label: 'ExHentai', value: CookieValidatorTarget.ExHentai },
-  { label: 'Pixiv', value: CookieValidatorTarget.Pixiv }
+  { label: 'Pixiv', value: CookieValidatorTarget.Pixiv },
+  { label: 'DLsite', value: CookieValidatorTarget.DLsite }
 ] as const;
 
 export const CookieValidatorTargetLabel: Record<CookieValidatorTarget, string> = {
   [CookieValidatorTarget.BiliBili]: 'BiliBili',
   [CookieValidatorTarget.ExHentai]: 'ExHentai',
-  [CookieValidatorTarget.Pixiv]: 'Pixiv'
+  [CookieValidatorTarget.Pixiv]: 'Pixiv',
+  [CookieValidatorTarget.DLsite]: 'DLsite'
 };
 
 export enum CoverFit {
@@ -1362,7 +1410,8 @@ export enum ResourceProperty {
   Cover = 22,
   PlayedAt = 23,
   MediaLibraryV2 = 24,
-  MediaLibraryV2Multi = 25
+  MediaLibraryV2Multi = 25,
+  Source = 26
 }
 
 export const resourceProperties = [
@@ -1382,7 +1431,8 @@ export const resourceProperties = [
   { label: 'Cover', value: ResourceProperty.Cover },
   { label: 'PlayedAt', value: ResourceProperty.PlayedAt },
   { label: 'MediaLibraryV2', value: ResourceProperty.MediaLibraryV2 },
-  { label: 'MediaLibraryV2Multi', value: ResourceProperty.MediaLibraryV2Multi }
+  { label: 'MediaLibraryV2Multi', value: ResourceProperty.MediaLibraryV2Multi },
+  { label: 'Source', value: ResourceProperty.Source }
 ] as const;
 
 export const ResourcePropertyLabel: Record<ResourceProperty, string> = {
@@ -1402,7 +1452,8 @@ export const ResourcePropertyLabel: Record<ResourceProperty, string> = {
   [ResourceProperty.Cover]: 'Cover',
   [ResourceProperty.PlayedAt]: 'PlayedAt',
   [ResourceProperty.MediaLibraryV2]: 'MediaLibraryV2',
-  [ResourceProperty.MediaLibraryV2Multi]: 'MediaLibraryV2Multi'
+  [ResourceProperty.MediaLibraryV2Multi]: 'MediaLibraryV2Multi',
+  [ResourceProperty.Source]: 'Source'
 };
 
 export enum ResourceTaskType {
@@ -1429,7 +1480,8 @@ export enum SearchableReservedProperty {
   MediaLibrary = 21,
   Cover = 22,
   MediaLibraryV2 = 24,
-  MediaLibraryV2Multi = 25
+  MediaLibraryV2Multi = 25,
+  Source = 26
 }
 
 export const searchableReservedProperties = [
@@ -1444,7 +1496,8 @@ export const searchableReservedProperties = [
   { label: 'MediaLibrary', value: SearchableReservedProperty.MediaLibrary },
   { label: 'Cover', value: SearchableReservedProperty.Cover },
   { label: 'MediaLibraryV2', value: SearchableReservedProperty.MediaLibraryV2 },
-  { label: 'MediaLibraryV2Multi', value: SearchableReservedProperty.MediaLibraryV2Multi }
+  { label: 'MediaLibraryV2Multi', value: SearchableReservedProperty.MediaLibraryV2Multi },
+  { label: 'Source', value: SearchableReservedProperty.Source }
 ] as const;
 
 export const SearchableReservedPropertyLabel: Record<SearchableReservedProperty, string> = {
@@ -1459,7 +1512,8 @@ export const SearchableReservedPropertyLabel: Record<SearchableReservedProperty,
   [SearchableReservedProperty.MediaLibrary]: 'MediaLibrary',
   [SearchableReservedProperty.Cover]: 'Cover',
   [SearchableReservedProperty.MediaLibraryV2]: 'MediaLibraryV2',
-  [SearchableReservedProperty.MediaLibraryV2Multi]: 'MediaLibraryV2Multi'
+  [SearchableReservedProperty.MediaLibraryV2Multi]: 'MediaLibraryV2Multi',
+  [SearchableReservedProperty.Source]: 'Source'
 };
 
 export enum StartupPage {
@@ -1672,7 +1726,8 @@ export enum ResourceAdditionalItem {
   HasChildren = 512,
   MediaLibraryName = 2048,
   Cache = 4096,
-  All = 7008
+  SourceLinks = 8192,
+  All = 15200
 }
 
 export const resourceAdditionalItems = [
@@ -1684,6 +1739,7 @@ export const resourceAdditionalItems = [
   { label: 'HasChildren', value: ResourceAdditionalItem.HasChildren },
   { label: 'MediaLibraryName', value: ResourceAdditionalItem.MediaLibraryName },
   { label: 'Cache', value: ResourceAdditionalItem.Cache },
+  { label: 'SourceLinks', value: ResourceAdditionalItem.SourceLinks },
   { label: 'All', value: ResourceAdditionalItem.All }
 ] as const;
 
@@ -1696,6 +1752,7 @@ export const ResourceAdditionalItemLabel: Record<ResourceAdditionalItem, string>
   [ResourceAdditionalItem.HasChildren]: 'HasChildren',
   [ResourceAdditionalItem.MediaLibraryName]: 'MediaLibraryName',
   [ResourceAdditionalItem.Cache]: 'Cache',
+  [ResourceAdditionalItem.SourceLinks]: 'SourceLinks',
   [ResourceAdditionalItem.All]: 'All'
 };
 
@@ -2080,7 +2137,8 @@ export enum EnhancerId {
   Kodi = 6,
   Tmdb = 7,
   Av = 8,
-  AI = 9
+  AI = 9,
+  Steam = 10
 }
 
 export const enhancerIds = [
@@ -2092,7 +2150,8 @@ export const enhancerIds = [
   { label: 'Kodi', value: EnhancerId.Kodi },
   { label: 'Tmdb', value: EnhancerId.Tmdb },
   { label: 'Av', value: EnhancerId.Av },
-  { label: 'AI', value: EnhancerId.AI }
+  { label: 'AI', value: EnhancerId.AI },
+  { label: 'Steam', value: EnhancerId.Steam }
 ] as const;
 
 export const EnhancerIdLabel: Record<EnhancerId, string> = {
@@ -2104,7 +2163,8 @@ export const EnhancerIdLabel: Record<EnhancerId, string> = {
   [EnhancerId.Kodi]: 'Kodi',
   [EnhancerId.Tmdb]: 'Tmdb',
   [EnhancerId.Av]: 'Av',
-  [EnhancerId.AI]: 'AI'
+  [EnhancerId.AI]: 'AI',
+  [EnhancerId.Steam]: 'Steam'
 };
 
 export enum EnhancerTag {
@@ -2177,6 +2237,42 @@ export const TmdbEnhancerTargetLabel: Record<TmdbEnhancerTarget, string> = {
   [TmdbEnhancerTarget.Revenue]: 'Revenue',
   [TmdbEnhancerTarget.Cover]: 'Cover',
   [TmdbEnhancerTarget.Backdrop]: 'Backdrop'
+};
+
+export enum SteamEnhancerTarget {
+  Name = 1,
+  Description = 2,
+  Developer = 3,
+  Publisher = 4,
+  ReleaseDate = 5,
+  Genre = 6,
+  Category = 7,
+  MetacriticScore = 8,
+  Cover = 9
+}
+
+export const steamEnhancerTargets = [
+  { label: 'Name', value: SteamEnhancerTarget.Name },
+  { label: 'Description', value: SteamEnhancerTarget.Description },
+  { label: 'Developer', value: SteamEnhancerTarget.Developer },
+  { label: 'Publisher', value: SteamEnhancerTarget.Publisher },
+  { label: 'ReleaseDate', value: SteamEnhancerTarget.ReleaseDate },
+  { label: 'Genre', value: SteamEnhancerTarget.Genre },
+  { label: 'Category', value: SteamEnhancerTarget.Category },
+  { label: 'MetacriticScore', value: SteamEnhancerTarget.MetacriticScore },
+  { label: 'Cover', value: SteamEnhancerTarget.Cover }
+] as const;
+
+export const SteamEnhancerTargetLabel: Record<SteamEnhancerTarget, string> = {
+  [SteamEnhancerTarget.Name]: 'Name',
+  [SteamEnhancerTarget.Description]: 'Description',
+  [SteamEnhancerTarget.Developer]: 'Developer',
+  [SteamEnhancerTarget.Publisher]: 'Publisher',
+  [SteamEnhancerTarget.ReleaseDate]: 'ReleaseDate',
+  [SteamEnhancerTarget.Genre]: 'Genre',
+  [SteamEnhancerTarget.Category]: 'Category',
+  [SteamEnhancerTarget.MetacriticScore]: 'MetacriticScore',
+  [SteamEnhancerTarget.Cover]: 'Cover'
 };
 
 export enum RegexEnhancerTarget {
@@ -4472,6 +4568,27 @@ export const LegacyResourcePropertyLabel: Record<LegacyResourceProperty, string>
   [LegacyResourceProperty.CustomProperty]: 'CustomProperty',
   [LegacyResourceProperty.Favorites]: 'Favorites',
   [LegacyResourceProperty.Cover]: 'Cover'
+};
+
+export enum ResolverConfigFieldType {
+  String = 1,
+  Password = 2,
+  StringList = 3,
+  DirectoryList = 4
+}
+
+export const resolverConfigFieldTypes = [
+  { label: 'String', value: ResolverConfigFieldType.String },
+  { label: 'Password', value: ResolverConfigFieldType.Password },
+  { label: 'StringList', value: ResolverConfigFieldType.StringList },
+  { label: 'DirectoryList', value: ResolverConfigFieldType.DirectoryList }
+] as const;
+
+export const ResolverConfigFieldTypeLabel: Record<ResolverConfigFieldType, string> = {
+  [ResolverConfigFieldType.String]: 'String',
+  [ResolverConfigFieldType.Password]: 'Password',
+  [ResolverConfigFieldType.StringList]: 'StringList',
+  [ResolverConfigFieldType.DirectoryList]: 'DirectoryList'
 };
 
 export enum LogLevel {

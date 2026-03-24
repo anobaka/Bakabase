@@ -16,6 +16,7 @@ import {
   QuestionCircleOutlined,
   ReloadOutlined,
   SettingOutlined,
+  WarningOutlined,
 } from "@ant-design/icons";
 import { MdCalendarMonth } from "react-icons/md";
 import { TiFlowChildren } from "react-icons/ti";
@@ -60,6 +61,7 @@ import PlayControl from "@/components/Resource/components/PlayControl";
 import type { PlayControlPortalProps } from "@/components/Resource/components/PlayControl";
 import CustomPropertySortModal from "@/components/CustomPropertySortModal";
 import AiTranslateModal from "@/components/Resource/components/DetailModal/AiTranslateModal";
+import ConflictResolutionModal from "@/components/Resource/components/DetailModal/ConflictResolutionModal";
 import { useUiOptionsStore } from "@/stores/options";
 
 type ColumnCount = 1 | 2 | 3;
@@ -78,6 +80,16 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
   const uiOptions = useUiOptionsStore((state) => state.data);
   const [columns, setColumns] = useLocalStorage<ColumnCount>(PROPERTIES_COLUMNS_KEY, 2);
   const [refreshingCache, setRefreshingCache] = useState(false);
+  const [conflictCount, setConflictCount] = useState<number>(0);
+
+  const loadConflictCount = async () => {
+    try {
+      const r = await BApi.resource.getResourceConflicts(id);
+      setConflictCount((r.data || []).length);
+    } catch {
+      setConflictCount(0);
+    }
+  };
 
   const loadResource = async () => {
     // @ts-ignore
@@ -109,6 +121,7 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
     // Always load full data, even if initialResource is provided
     // initialResource may be a basic resource without complete properties
     loadResource();
+    loadConflictCount();
   }, []);
 
   console.log(resource);
@@ -135,6 +148,30 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
                 />
                 <ResourceProfiles compact resourceId={resource.id} />
               </>
+            )}
+            {resource && conflictCount > 0 && (
+              <Tooltip content={t("resource.conflict.tooltip", { count: conflictCount })}>
+                <Button
+                  isIconOnly
+                  size={"sm"}
+                  variant={"light"}
+                  color={"warning"}
+                  onPress={() => {
+                    createPortal(ConflictResolutionModal, {
+                      resourceId: resource.id,
+                      onResolved: () => {
+                        loadResource();
+                        loadConflictCount();
+                      },
+                    });
+                  }}
+                >
+                  <WarningOutlined className={"text-base"} />
+                  <span className="absolute -top-1 -right-1 bg-warning text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
+                    {conflictCount}
+                  </span>
+                </Button>
+              </Tooltip>
             )}
             {resource && (
               <Tooltip content={t("resource.action.aiTranslate.tooltip")}>

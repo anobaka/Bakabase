@@ -57,6 +57,11 @@ public interface IResourceService
     Task RefreshParentTag();
     Task<string[]> DiscoverAndCachePlayableFiles(int id, CancellationToken ct);
 
+    /// <summary>
+    /// Discovers playable items from all sources linked to a resource and caches them.
+    /// </summary>
+    Task<List<PlayableItem>> DiscoverAndCachePlayableItems(int id, CancellationToken ct);
+
     Task<bool> Any(Func<Abstractions.Models.Db.ResourceDbModel, bool>? selector = null);
 
     Task<List<Abstractions.Models.Db.ResourceDbModel>> AddAll(
@@ -80,6 +85,11 @@ public interface IResourceService
 
     Task<BaseResponse> Play(int resourceId, string file);
 
+    /// <summary>
+    /// Plays a specific playable item, dispatching to the appropriate resolver based on source.
+    /// </summary>
+    Task<BaseResponse> PlayItem(int resourceId, ResourceSource source, string key);
+
     Task<BaseResponse> ChangeMediaLibrary(int[] ids, int mediaLibraryId, Dictionary<int, string>? newPaths = null);
     Task<BaseResponse> ChangePath(int[] ids, Dictionary<int, string> newPaths);
 
@@ -96,6 +106,12 @@ public interface IResourceService
     /// <returns></returns>
     Task<CacheOverviewViewModel> GetCacheOverview();
     Task<ResourceCache?> GetResourceCache(int id);
+
+    /// <summary>
+    /// Invalidate the covers for a resource so they get re-resolved on next access.
+    /// Called after external cover download completes.
+    /// </summary>
+    Task InvalidateResourceCovers(int resourceId);
 
     Task DeleteResourceCacheByResourceIdAndCacheType(int resourceId, ResourceCacheType type);
     Task DeleteResourceCacheByMediaLibraryIdAndCacheType(int mediaLibraryId, ResourceCacheType type);
@@ -126,6 +142,18 @@ public interface IResourceService
     /// <param name="mediaLibraryIds">Media library IDs to set</param>
     /// <returns>Response indicating success or failure</returns>
     Task<BaseResponse> SetMediaLibraries(int[] resourceIds, int[] mediaLibraryIds);
+
+    /// <summary>
+    /// Get conflicting resource IDs for a given resource.
+    /// Conflict = resources sharing some source links but not being the same resource.
+    /// </summary>
+    Task<List<int>> GetConflictingResourceIds(int resourceId);
+
+    /// <summary>
+    /// Merge multiple resources into one target resource.
+    /// Transfers selected property values and source links to the target, then deletes the others.
+    /// </summary>
+    Task MergeResources(ResourceMergeInputModel model);
 
     Segment[] BuildDisplayNameSegmentsForResource(Resource resource, string template,
         (string Left, string Right)[] wrappers);

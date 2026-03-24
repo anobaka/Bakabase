@@ -19,7 +19,6 @@ public static class MediaLibraryV2Extensions
             Id = tempSyncResource.Id,
             MediaLibraryId = mediaLibraryId,
             Path = tempSyncResource.Path,
-            Directory = Path.GetDirectoryName(tempSyncResource.Path)!.StandardizePath()!,
             IsFile = tempSyncResource.IsFile,
             Parent = parent,
             FileCreatedAt = tempSyncResource.FileCreatedAt,
@@ -28,13 +27,21 @@ public static class MediaLibraryV2Extensions
             UpdatedAt = DateTime.Now,
             Properties = tempSyncResource.PropertyValues?.GroupBy(d => d.Key.Pool).ToDictionary(d => (int) d.Key,
                 d => d.ToDictionary(c => c.Key.Id,
-                    c => new Resource.Property(c.Key.Name, c.Key.Type, c.Key.Type.GetDbValueType(),
-                        c.Key.Type.GetBizValueType(),
+                    c => new Resource.Property(c.Key.Name, c.Key.Type,
                         [
                             new Resource.Property.PropertyValue((int) PropertyValueScope.Synchronization, null,
                                 c.Value,
                                 null)
-                        ])))
+                        ]))),
+            // FileSystem resources use Path as SourceKey
+            SourceLinks =
+            [
+                new ResourceSourceLink
+                {
+                    Source = ResourceSource.FileSystem,
+                    SourceKey = tempSyncResource.Path
+                }
+            ]
         };
 
         yield return r;

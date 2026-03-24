@@ -12,16 +12,21 @@ import { CookieValidatorTarget } from "@/sdk/constants";
 import {
   useBilibiliOptionsStore,
   useExHentaiOptionsStore,
+  useDLsiteOptionsStore,
   usePixivOptionsStore,
   useSoulPlusOptionsStore,
   useBangumiOptionsStore,
   useCienOptionsStore,
-  useDLsiteOptionsStore,
   useFanboxOptionsStore,
   useFantiaOptionsStore,
   usePatreonOptionsStore,
   useTmdbOptionsStore,
 } from "@/stores/options";
+import {
+  DLsiteConfig,
+  ExHentaiConfig,
+  DownloaderOptionsConfig,
+} from "@/components/ThirdPartyConfig";
 
 export default function ThirdPartyConfigurationPage() {
   const { t } = useTranslation();
@@ -39,13 +44,16 @@ export default function ThirdPartyConfigurationPage() {
     });
   };
 
-  const bilibiliOptions = useBilibiliOptionsStore((state) => state.data);
+  const [exhentaiConfigOpen, setExhentaiConfigOpen] = useState(false);
+  const [dlsiteConfigOpen, setDlsiteConfigOpen] = useState(false);
+
   const exhentaiOptions = useExHentaiOptionsStore((state) => state.data);
+  const dlsiteOptions = useDLsiteOptionsStore((state) => state.data);
+  const bilibiliOptions = useBilibiliOptionsStore((state) => state.data);
   const pixivOptions = usePixivOptionsStore((state) => state.data);
   const soulPlusOptions = useSoulPlusOptionsStore((state) => state.data);
   const bangumiOptions = useBangumiOptionsStore((state) => state.data);
   const cienOptions = useCienOptionsStore((state) => state.data);
-  const dlsiteOptions = useDLsiteOptionsStore((state) => state.data);
   const fanboxOptions = useFanboxOptionsStore((state) => state.data);
   const fantiaOptions = useFantiaOptionsStore((state) => state.data);
   const patreonOptions = usePatreonOptionsStore((state) => state.data);
@@ -53,9 +61,6 @@ export default function ThirdPartyConfigurationPage() {
 
   const [tmpBilibiliOptions, setTmpBilibiliOptions] = useState<any>(
     bilibiliOptions || {},
-  );
-  const [tmpExHentaiOptions, setTmpExHentaiOptions] = useState<any>(
-    exhentaiOptions || {},
   );
   const [tmpPixivOptions, setTmpPixivOptions] = useState<any>(
     pixivOptions || {},
@@ -67,9 +72,6 @@ export default function ThirdPartyConfigurationPage() {
     bangumiOptions || {},
   );
   const [tmpCienOptions, setTmpCienOptions] = useState<any>(cienOptions || {});
-  const [tmpDLsiteOptions, setTmpDLsiteOptions] = useState<any>(
-    dlsiteOptions || {},
-  );
   const [tmpFanboxOptions, setTmpFanboxOptions] = useState<any>(
     fanboxOptions || {},
   );
@@ -89,9 +91,6 @@ export default function ThirdPartyConfigurationPage() {
     setTmpBilibiliOptions(JSON.parse(JSON.stringify(bilibiliOptions || {})));
   }, [bilibiliOptions]);
   useEffect(() => {
-    setTmpExHentaiOptions(JSON.parse(JSON.stringify(exhentaiOptions || {})));
-  }, [exhentaiOptions]);
-  useEffect(() => {
     setTmpPixivOptions(JSON.parse(JSON.stringify(pixivOptions || {})));
   }, [pixivOptions]);
   useEffect(() => {
@@ -103,9 +102,6 @@ export default function ThirdPartyConfigurationPage() {
   useEffect(() => {
     setTmpCienOptions(JSON.parse(JSON.stringify(cienOptions || {})));
   }, [cienOptions]);
-  useEffect(() => {
-    setTmpDLsiteOptions(JSON.parse(JSON.stringify(dlsiteOptions || {})));
-  }, [dlsiteOptions]);
   useEffect(() => {
     setTmpFanboxOptions(JSON.parse(JSON.stringify(fanboxOptions || {})));
   }, [fanboxOptions]);
@@ -291,11 +287,28 @@ export default function ThirdPartyConfigurationPage() {
         key: "exhentai",
         label: "ExHentai",
         tip: "thirdPartyConfig.tip.exhentai",
-        content: renderDownloaderOptions(
-          tmpExHentaiOptions,
-          setTmpExHentaiOptions,
-          BApi.options.patchExHentaiOptions,
-          "exhentai",
+        content: (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="flat"
+                onPress={() => setExhentaiConfigOpen(true)}
+              >
+                {t("resourceSource.action.configure")} ({exhentaiOptions?.accounts?.length || 0} {t("resourceSource.accounts.title", { platform: "" }).trim()})
+              </Button>
+              <ExHentaiConfig
+                isOpen={exhentaiConfigOpen}
+                onClose={() => setExhentaiConfigOpen(false)}
+              />
+            </div>
+            <DownloaderOptionsConfig
+              hideCookie
+              options={exhentaiOptions}
+              patchApi={BApi.options.patchExHentaiOptions}
+              cookieValidatorTarget={CookieValidatorTarget.ExHentai}
+            />
+          </div>
         ),
       },
       {
@@ -460,11 +473,27 @@ export default function ThirdPartyConfigurationPage() {
         key: "dlsite",
         label: "DLsite",
         tip: "thirdPartyConfig.tip.dlsite",
-        content: renderDownloaderOptions(
-          tmpDLsiteOptions,
-          setTmpDLsiteOptions,
-          BApi.options.patchDLsiteOptions,
-          "dlsite",
+        content: (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="flat"
+                onPress={() => setDlsiteConfigOpen(true)}
+              >
+                {t("resourceSource.action.configure")} ({dlsiteOptions?.accounts?.length || 0} {t("resourceSource.accounts.title", { platform: "" }).trim()})
+              </Button>
+              <DLsiteConfig
+                isOpen={dlsiteConfigOpen}
+                onClose={() => setDlsiteConfigOpen(false)}
+              />
+            </div>
+            <DownloaderOptionsConfig
+              hideCookie
+              options={dlsiteOptions}
+              patchApi={BApi.options.patchDLsiteOptions}
+            />
+          </div>
         ),
       },
       {
@@ -599,16 +628,18 @@ export default function ThirdPartyConfigurationPage() {
     ],
     [
       tmpBilibiliOptions,
-      tmpExHentaiOptions,
       tmpPixivOptions,
       tmpSoulPlusOptions,
       tmpBangumiOptions,
       tmpCienOptions,
-      tmpDLsiteOptions,
       tmpFanboxOptions,
       tmpFantiaOptions,
       tmpPatreonOptions,
       tmpTmdbOptions,
+      exhentaiOptions,
+      dlsiteOptions,
+      exhentaiConfigOpen,
+      dlsiteConfigOpen,
     ],
   );
 

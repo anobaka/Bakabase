@@ -37,5 +37,10 @@ namespace Bakabase.InsideWorld.Models.Constants
         /// New code should use this instead of MediaLibraryV2.
         /// </summary>
         MediaLibraryV2Multi = 25,
+        /// <summary>
+        /// Resource source (e.g. FileSystem, Steam, DLsite, ExHentai).
+        /// MultipleChoice - a resource can be linked to multiple sources.
+        /// </summary>
+        Source = 26,
     }
 }

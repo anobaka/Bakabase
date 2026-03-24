@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
 using Microsoft.AspNetCore.Http;
@@ -21,7 +23,8 @@ public record DiscoveryResult
     public bool Success { get; init; }
     public string[]? CoverPaths { get; init; }
     public string[]? PlayableFilePaths { get; init; }
-    public bool HasMorePlayableFiles { get; init; }
+    public PlayableItem[]? PlayableItems { get; init; }
+    public bool HasMoreFileSystemPlayableItems { get; init; }
     public string? Error { get; init; }
 }
 
@@ -150,6 +153,7 @@ public class ResourceDiscoveryService : BackgroundService
 
         string[]? coverPaths = null;
         string[]? playableFilePaths = null;
+        PlayableItem[]? playableItems = null;
         var hasMorePlayableFiles = false;
 
         // Discover covers if requested
@@ -163,15 +167,24 @@ public class ResourceDiscoveryService : BackgroundService
             }
         }
 
-        // Discover playable files if requested
+        // Discover playable items if requested (multi-source)
         if (request.Types.HasFlag(ResourceCacheType.PlayableFiles))
         {
-            _logger.LogDebug("Discovering playable files for resource {ResourceId}", request.ResourceId);
-            playableFilePaths = await resourceService.DiscoverAndCachePlayableFiles(request.ResourceId, ct);
+            _logger.LogDebug("Discovering playable items for resource {ResourceId}", request.ResourceId);
+            var items = await resourceService.DiscoverAndCachePlayableItems(request.ResourceId, ct);
+            playableItems = items.Count > 0 ? items.ToArray() : null;
+
+            // Also populate legacy PlayableFilePaths for backward compat
+            playableFilePaths = items
+                .Where(i => i.Source == ResourceSource.FileSystem)
+                .Select(i => i.Key)
+                .ToArray();
+            if (playableFilePaths.Length == 0)
+                playableFilePaths = null;
 
             // Check cache for hasMorePlayableFiles flag
             var cache = await resourceService.GetResourceCache(request.ResourceId);
-            hasMorePlayableFiles = cache?.HasMorePlayableFiles ?? false;
+            hasMorePlayableFiles = cache?.HasMoreFileSystemPlayableItems ?? false;
         }
 
         var result = new DiscoveryResult
@@ -180,7 +193,8 @@ public class ResourceDiscoveryService : BackgroundService
             Success = true,
             CoverPaths = coverPaths,
             PlayableFilePaths = playableFilePaths,
-            HasMorePlayableFiles = hasMorePlayableFiles
+            PlayableItems = playableItems,
+            HasMoreFileSystemPlayableItems = hasMorePlayableFiles
         };
 
         await BroadcastResult(result);
