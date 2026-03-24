@@ -1,5 +1,4 @@
-﻿using Bakabase.Infrastructures.Components.Gui;
-using System.Drawing;
+using Bakabase.Infrastructures.Components.Gui;
 using System.Threading.Tasks;
 using System;
 
@@ -7,26 +6,6 @@ namespace Bakabase.Service.Components;
 
 public class NullGuiAdapter : IGuiAdapter
 {
-    public void ShowTray(Func<Task>? onExiting)
-    {
-
-    }
-
-    public void HideTray()
-    {
-
-    }
-
-    public void SetTrayText(string text)
-    {
-
-    }
-
-    public void SetTrayIcon(Icon icon)
-    {
-
-    }
-
     public void ShowFatalErrorWindow(string message, string title = "Fatal Error")
     {
 

@@ -13,7 +13,7 @@ export type DiscoveryState = {
   coverPaths?: string[];
   playableFilePaths?: string[];
   playableItems?: PlayableItem[];
-  hasMorePlayableFiles?: boolean;
+  hasMoreFileSystemPlayableItems?: boolean;
   error?: string;
 };
 
@@ -47,7 +47,7 @@ export function useResourceDiscovery(
   const coverPathsKey = resource.cache?.coverPaths?.join(",") ?? "";
   const playableFilePathsKey = resource.cache?.playableFilePaths?.join(",") ?? "";
   const playableItemsKey = resource.cache?.playableItems?.map(i => `${i.source}:${i.key}`).join(",") ?? "";
-  const hasMorePlayableFiles = resource.cache?.hasMorePlayableFiles;
+  const hasMoreFileSystemPlayableItems = resource.cache?.hasMoreFileSystemPlayableItems;
 
   // Check if we already have cached data
   const initialState = useMemo((): DiscoveryState => {
@@ -63,7 +63,7 @@ export function useResourceDiscovery(
         coverPaths: resource.cache?.coverPaths,
         playableFilePaths: resource.cache?.playableFilePaths,
         playableItems: resource.cache?.playableItems,
-        hasMorePlayableFiles: resource.cache?.hasMorePlayableFiles,
+        hasMoreFileSystemPlayableItems: resource.cache?.hasMoreFileSystemPlayableItems,
       };
     }
 
@@ -82,7 +82,7 @@ export function useResourceDiscovery(
       source: "realtime",
       cacheEnabled,
     };
-  }, [resource.id, cachedTypesKey, coverPathsKey, playableFilePathsKey, playableItemsKey, hasMorePlayableFiles, typesKey, cacheEnabled, autoDiscover]);
+  }, [resource.id, cachedTypesKey, coverPathsKey, playableFilePathsKey, playableItemsKey, hasMoreFileSystemPlayableItems, typesKey, cacheEnabled, autoDiscover]);
 
   const [state, setState] = useState<DiscoveryState>(initialState);
   const mountedRef = useRef(true);
@@ -106,7 +106,7 @@ export function useResourceDiscovery(
         coverPaths: resource.cache?.coverPaths,
         playableFilePaths: resource.cache?.playableFilePaths,
         playableItems: resource.cache?.playableItems,
-        hasMorePlayableFiles: resource.cache?.hasMorePlayableFiles,
+        hasMoreFileSystemPlayableItems: resource.cache?.hasMoreFileSystemPlayableItems,
       });
       subscribedRef.current = false;
     } else if (!autoDiscover) {
@@ -124,7 +124,7 @@ export function useResourceDiscovery(
       });
       subscribedRef.current = false;
     }
-  }, [resource.id, cachedTypesKey, coverPathsKey, playableFilePathsKey, playableItemsKey, hasMorePlayableFiles, typesKey, cacheEnabled, autoDiscover]);
+  }, [resource.id, cachedTypesKey, coverPathsKey, playableFilePathsKey, playableItemsKey, hasMoreFileSystemPlayableItems, typesKey, cacheEnabled, autoDiscover]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -161,7 +161,7 @@ export function useResourceDiscovery(
             coverPaths: data.coverPaths,
             playableFilePaths: data.playableFilePaths,
             playableItems: data.playableItems,
-            hasMorePlayableFiles: data.hasMorePlayableFiles,
+            hasMoreFileSystemPlayableItems: data.hasMoreFileSystemPlayableItems,
           });
         }
       })

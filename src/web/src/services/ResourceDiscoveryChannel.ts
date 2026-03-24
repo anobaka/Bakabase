@@ -6,7 +6,7 @@ export type DiscoveryData = {
   coverPaths?: string[];
   playableFilePaths?: string[];
   playableItems?: PlayableItem[];
-  hasMorePlayableFiles?: boolean;
+  hasMoreFileSystemPlayableItems?: boolean;
 };
 
 export type DiscoveryResult = {
@@ -15,7 +15,7 @@ export type DiscoveryResult = {
   coverPaths?: string[];
   playableFilePaths?: string[];
   playableItems?: PlayableItem[];
-  hasMorePlayableFiles?: boolean;
+  hasMoreFileSystemPlayableItems?: boolean;
   error?: string;
 };
 
@@ -146,7 +146,7 @@ class ResourceDiscoveryChannel {
         coverPaths: result.coverPaths,
         playableFilePaths: result.playableFilePaths,
         playableItems: result.playableItems,
-        hasMorePlayableFiles: result.hasMorePlayableFiles,
+        hasMoreFileSystemPlayableItems: result.hasMoreFileSystemPlayableItems,
       };
       subscribers.forEach((cb) => cb(data));
     } else {

@@ -820,8 +820,7 @@ namespace Bakabase.Modules.Enhancer.Services
                                         rp = rpp.GetOrAdd(
                                             property.Id,
                                             _ => new Resource.Property(property.Name,
-                                                property.Type, property.Type.GetDbValueType(),
-                                                property.Type.GetBizValueType(), [], true, property.Order));
+                                                property.Type, [], true, property.Order));
                                     }
                                     else
                                     {
@@ -832,8 +831,7 @@ namespace Bakabase.Modules.Enhancer.Services
                                             // Fake property
                                             var fakeId = Math.Max(rpp.Keys.Any() ? rpp.Keys.Max() : 0, 9999) + 1;
                                             t = new Resource.Property(property.Name,
-                                                property.Type, property.Type.GetDbValueType(),
-                                                property.Type.GetBizValueType(), [], true, property.Order);
+                                                property.Type, [], true, property.Order);
                                             rpp[fakeId] = t;
                                         }
 

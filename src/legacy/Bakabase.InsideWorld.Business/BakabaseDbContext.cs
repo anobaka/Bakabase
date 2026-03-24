@@ -82,6 +82,7 @@ namespace Bakabase.InsideWorld.Business
 
         // Resource source tables
         public DbSet<ResourceSourceLinkDbModel> ResourceSourceLinks { get; set; }
+        public DbSet<SourceMetadataMappingDbModel> SourceMetadataMappings { get; set; }
         public DbSet<SteamAppDbModel> SteamApps { get; set; }
         public DbSet<DLsiteWorkDbModel> DLsiteWorks { get; set; }
         public DbSet<ExHentaiGalleryDbModel> ExHentaiGalleries { get; set; }

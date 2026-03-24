@@ -12,6 +12,12 @@ import {
   Pagination,
   Select,
   SelectItem,
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Checkbox,
 } from "@heroui/react";
 import {
   AiOutlineSearch,
@@ -99,8 +105,17 @@ export default function SteamAppsPage() {
     prevSyncStatusRef.current = syncTask?.status;
   }, [syncTask?.status]);
 
+  const [showSyncConfirm, setShowSyncConfirm] = useState(false);
+  const [redownloadCover, setRedownloadCover] = useState(false);
+
   const handleSync = async () => {
-    await BApi.steamApp.syncSteamApps();
+    setShowSyncConfirm(true);
+  };
+
+  const handleSyncConfirmed = async () => {
+    setShowSyncConfirm(false);
+    await BApi.steamApp.syncSteamApps({ redownloadCover });
+    setRedownloadCover(false);
   };
 
   const handleStopSync = async () => {
@@ -281,6 +296,29 @@ export default function SteamAppsPage() {
           )}
         </>
       )}
+
+      <Modal isOpen={showSyncConfirm} onClose={() => setShowSyncConfirm(false)}>
+        <ModalContent>
+          <ModalHeader>{t("resourceSource.confirm.sync.title")}</ModalHeader>
+          <ModalBody>
+            <p>{t("resourceSource.confirm.sync.description")}</p>
+            <Checkbox
+              isSelected={redownloadCover}
+              onValueChange={setRedownloadCover}
+            >
+              {t("resourceSource.confirm.sync.redownloadCover")}
+            </Checkbox>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="light" onPress={() => setShowSyncConfirm(false)}>
+              {t("common.action.cancel")}
+            </Button>
+            <Button color="primary" onPress={handleSyncConfirmed}>
+              {t("resourceSource.action.sync")}
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </div>
   );
 }

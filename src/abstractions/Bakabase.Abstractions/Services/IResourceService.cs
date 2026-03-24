@@ -107,6 +107,12 @@ public interface IResourceService
     Task<CacheOverviewViewModel> GetCacheOverview();
     Task<ResourceCache?> GetResourceCache(int id);
 
+    /// <summary>
+    /// Invalidate the covers for a resource so they get re-resolved on next access.
+    /// Called after external cover download completes.
+    /// </summary>
+    Task InvalidateResourceCovers(int resourceId);
+
     Task DeleteResourceCacheByResourceIdAndCacheType(int resourceId, ResourceCacheType type);
     Task DeleteResourceCacheByMediaLibraryIdAndCacheType(int mediaLibraryId, ResourceCacheType type);
     Task DeleteResourceCacheByResourceIdsAndCacheType(IEnumerable<int> resourceIds, ResourceCacheType type);

@@ -24,7 +24,7 @@ public record DiscoveryResult
     public string[]? CoverPaths { get; init; }
     public string[]? PlayableFilePaths { get; init; }
     public PlayableItem[]? PlayableItems { get; init; }
-    public bool HasMorePlayableFiles { get; init; }
+    public bool HasMoreFileSystemPlayableItems { get; init; }
     public string? Error { get; init; }
 }
 
@@ -184,7 +184,7 @@ public class ResourceDiscoveryService : BackgroundService
 
             // Check cache for hasMorePlayableFiles flag
             var cache = await resourceService.GetResourceCache(request.ResourceId);
-            hasMorePlayableFiles = cache?.HasMorePlayableFiles ?? false;
+            hasMorePlayableFiles = cache?.HasMoreFileSystemPlayableItems ?? false;
         }
 
         var result = new DiscoveryResult
@@ -194,7 +194,7 @@ public class ResourceDiscoveryService : BackgroundService
             CoverPaths = coverPaths,
             PlayableFilePaths = playableFilePaths,
             PlayableItems = playableItems,
-            HasMorePlayableFiles = hasMorePlayableFiles
+            HasMoreFileSystemPlayableItems = hasMorePlayableFiles
         };
 
         await BroadcastResult(result);

@@ -1,4 +1,6 @@
+using System;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Models.Domain.Constants;
 
@@ -17,6 +19,10 @@ public record ResourceCacheDbModel
     /// JSON-serialized List&lt;PlayableItem&gt; supporting multi-source playable items.
     /// </summary>
     public string? PlayableItems { get; set; }
-    public bool HasMorePlayableFiles { get; set; }
+    /// <summary>
+    /// DB column remains HasMorePlayableFiles for backward compatibility.
+    /// </summary>
+    [Column("HasMorePlayableFiles")]
+    public bool HasMoreFileSystemPlayableItems { get; set; }
     public ResourceCacheType CachedTypes { get; set; }
 }

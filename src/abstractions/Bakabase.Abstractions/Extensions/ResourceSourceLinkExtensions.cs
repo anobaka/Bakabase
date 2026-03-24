@@ -1,3 +1,4 @@
+using Bakabase.Abstractions.Helpers;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain;
 
@@ -13,7 +14,9 @@ public static class ResourceSourceLinkExtensions
             ResourceId = model.ResourceId,
             Source = model.Source,
             SourceKey = model.SourceKey,
-            CreateDt = model.CreateDt
+            CreateDt = model.CreateDt,
+            CoverUrls = StringListSerializer.Serialize(model.CoverUrls),
+            LocalCoverPaths = StringListSerializer.Serialize(model.LocalCoverPaths),
         };
     }
 
@@ -25,7 +28,9 @@ public static class ResourceSourceLinkExtensions
             ResourceId = dbModel.ResourceId,
             Source = dbModel.Source,
             SourceKey = dbModel.SourceKey,
-            CreateDt = dbModel.CreateDt
+            CreateDt = dbModel.CreateDt,
+            CoverUrls = StringListSerializer.Deserialize(dbModel.CoverUrls),
+            LocalCoverPaths = StringListSerializer.Deserialize(dbModel.LocalCoverPaths),
         };
     }
 }

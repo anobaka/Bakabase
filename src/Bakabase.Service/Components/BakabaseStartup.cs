@@ -102,6 +102,9 @@ namespace Bakabase.Service.Components
             services.TryAddSingleton<BakabaseWebProxy>();
 
             services.AddBTask<BTaskEventHandler>();
+            services.AddTransient(sp =>
+                sp.GetService<Bakabase.Infrastructures.Components.Gui.IGuiAdapter>()
+                    as Bakabase.Abstractions.Components.Gui.ITrayIconController);
             services.AddSingleton<DynamicTaskRegistry>();
             services.AddSingleton<IPrepareCacheTrigger, PrepareCacheTrigger>();
 

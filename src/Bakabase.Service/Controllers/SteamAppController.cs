@@ -51,8 +51,14 @@ public class SteamAppController(ISteamAppService service, BTaskManager btm, IBak
 
     [HttpPost("sync")]
     [SwaggerOperation(OperationId = "SyncSteamApps")]
-    public async Task<BaseResponse> Sync()
+    public async Task<BaseResponse> Sync([FromQuery] bool redownloadCover = false)
     {
+        if (redownloadCover)
+        {
+            var sourceLinkService = HttpContext.RequestServices.GetRequiredService<IResourceSourceLinkService>();
+            await sourceLinkService.ClearAllLocalCoverPaths(ResourceSource.Steam);
+        }
+
         await btm.Start(SyncTaskId, () => new BTaskHandlerBuilder
         {
             Id = SyncTaskId,

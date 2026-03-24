@@ -67,7 +67,7 @@ public static class ResourceCacheExtensions
                             rc.PlayableFilePaths =
                                 model.PlayableFilePaths.DeserializeAsStandardValue<List<string>>(StandardValueType
                                     .ListString);
-                            rc.HasMorePlayableFiles = model.HasMorePlayableFiles;
+                            rc.HasMoreFileSystemPlayableItems = model.HasMoreFileSystemPlayableItems;
                         }
 
                         // If PlayableItems is empty but PlayableFilePaths exists, build PlayableItems from legacy data
@@ -93,7 +93,7 @@ public static class ResourceCacheExtensions
                                 rc.PlayableFilePaths = null;
                         }
 
-                        rc.HasMorePlayableFiles = model.HasMorePlayableFiles;
+                        rc.HasMoreFileSystemPlayableItems = model.HasMoreFileSystemPlayableItems;
 
                         break;
                     }
