@@ -8,6 +8,10 @@ public record ResourceCacheDbModel
 {
     [Key] public int ResourceId { get; set; }
     public string? CoverPaths { get; set; }
+    /// <summary>
+    /// Legacy field for backward compatibility. Use <see cref="PlayableItems"/> instead.
+    /// </summary>
+    [Obsolete("Use PlayableItems instead. Will be removed in v2.4.")]
     public string? PlayableFilePaths { get; set; }
     /// <summary>
     /// JSON-serialized List&lt;PlayableItem&gt; supporting multi-source playable items.

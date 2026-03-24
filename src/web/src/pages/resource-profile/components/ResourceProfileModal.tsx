@@ -19,7 +19,7 @@ type Props = {
   onUpdate?: (profileId: number, updates: Partial<ResourceProfile>) => Promise<void>;
 } & DestroyableProps;
 
-// Generate default name like "资源档案 1", "资源档案 2", etc.
+// Generate default name like "资源配置 1", "资源配置 2", etc.
 const generateDefaultName = (existingNames: string[], t: (key: string) => string): string => {
   const baseNameKey = "resourceProfile.label.resourceProfile";
   const baseName = t(baseNameKey);
