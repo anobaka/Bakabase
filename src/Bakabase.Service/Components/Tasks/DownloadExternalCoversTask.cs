@@ -44,7 +44,7 @@ public class DownloadExternalCoversTask : AbstractPredefinedBTaskBuilder
         foreach (var link in pendingLinks)
         {
             args.CancellationToken.ThrowIfCancellationRequested();
-            await args.PauseToken.WaitIfPaused();
+            await args.PauseToken.WaitWhilePausedAsync(args.CancellationToken);
 
             try
             {

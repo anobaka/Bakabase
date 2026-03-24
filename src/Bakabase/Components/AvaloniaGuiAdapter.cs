@@ -1,8 +1,11 @@
+using System;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using Avalonia.Threading;
+using Bakabase.Abstractions.Components.Gui;
 using Bakabase.Infrastructures.Components.Gui;
 using Bakabase.Infrastructures.Components.SystemService;
 using Bakabase.Infrastructures.Resources;
@@ -11,14 +14,12 @@ using Bakabase.Controls;
 using Bakabase.Windows;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.DependencyInjection;
-using Icon = System.Drawing.Icon;
 
 namespace Bakabase.Components;
 
-public class AvaloniaGuiAdapter : GuiAdapter
+public class AvaloniaGuiAdapter : GuiAdapter, ITrayIconController
 {
     private readonly App _app;
-    private TrayIcon? _tray;
     private InitializationWindow? _initializationWindow;
     private ErrorWindow? _errorWindow;
     private MainWindow? _mainWindow;
@@ -35,56 +36,14 @@ public class AvaloniaGuiAdapter : GuiAdapter
     public override T InvokeInGuiContext<T>(Func<T> func) =>
         Dispatcher.UIThread.Invoke(func);
 
-    [GuiContextInterceptor]
-    public override void ShowTray(Func<Task> onExiting)
+    public void SetTrayIcon(bool isRunning)
     {
-        var openItem = new NativeMenuItem("Open");
-        openItem.Click += (_, _) => Show();
-
-        var exitItem = new NativeMenuItem("Exit");
-        exitItem.Click += async (_, _) => await onExiting();
-
-        _tray = new TrayIcon
+        Dispatcher.UIThread.Invoke(() =>
         {
-            Icon = new WindowIcon(new Bitmap("Assets/favicon.ico")),
-            ToolTipText = "Bakabase",
-            Menu = new NativeMenu
-            {
-                Items = { openItem, exitItem }
-            },
-            IsVisible = true
-        };
-
-        _tray.Clicked += (_, _) => Show();
-
-        var icons = new TrayIcons { _tray };
-        TrayIcon.SetIcons(Application.Current!, icons);
-    }
-
-    [GuiContextInterceptor]
-    public override void HideTray()
-    {
-        if (_tray != null)
-        {
-            _tray.IsVisible = false;
-        }
-    }
-
-    [GuiContextInterceptor]
-    public override void SetTrayText(string text)
-    {
-        if (_tray != null)
-        {
-            const int systemLimit = 127;
-            _tray.ToolTipText = text.Substring(0, Math.Min(systemLimit, text.Length));
-        }
-    }
-
-    [GuiContextInterceptor]
-    public override void SetTrayIcon(Icon icon)
-    {
-        // System.Drawing.Icon is Windows-specific; on cross-platform we skip custom icon changes
-        // The default icon set in ShowTray is used instead
+            var assetName = isRunning ? "tray-running" : "favicon";
+            _app.AppTrayIcon.Icon = new WindowIcon(
+                AssetLoader.Open(new Uri($"avares://Bakabase/Assets/{assetName}.ico")));
+        });
     }
 
     [GuiContextInterceptor]

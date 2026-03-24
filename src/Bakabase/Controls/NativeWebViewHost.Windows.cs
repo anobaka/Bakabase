@@ -50,12 +50,13 @@ public partial class NativeWebViewHost
             // This avoids a hard compile-time dependency on the Windows-only native loader
             var coreAssembly = System.Reflection.Assembly.Load("Microsoft.Web.WebView2.Core");
             var envType = coreAssembly.GetType("Microsoft.Web.WebView2.Core.CoreWebView2Environment")!;
-            var createMethod = envType.GetMethod("CreateAsync",
-                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static,
-                null, Type.EmptyTypes, null)!;
 
-            // CoreWebView2Environment.CreateAsync()
-            var envTask = (Task)createMethod.Invoke(null, null)!;
+            // CreateAsync(string?, string?, CoreWebView2EnvironmentOptions?) - all nullable
+            var createMethods = envType.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+            var createMethod = createMethods.First(m => m.Name == "CreateAsync" && m.GetParameters().Length == 3);
+
+            // CoreWebView2Environment.CreateAsync(null, null, null)
+            var envTask = (Task)createMethod.Invoke(null, new object?[] { null, null, null })!;
             await envTask;
             var env = envTask.GetType().GetProperty("Result")!.GetValue(envTask);
 
