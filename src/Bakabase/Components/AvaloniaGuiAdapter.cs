@@ -1,3 +1,4 @@
+using System;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -46,7 +47,7 @@ public class AvaloniaGuiAdapter : GuiAdapter
 
         _tray = new TrayIcon
         {
-            Icon = new WindowIcon(new Bitmap("Assets/favicon.ico")),
+            Icon = new WindowIcon(AssetLoader.Open(new Uri("avares://Bakabase/Assets/favicon.ico"))),
             ToolTipText = "Bakabase",
             Menu = new NativeMenu
             {
