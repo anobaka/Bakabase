@@ -1,4 +1,4 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 using Bakabase.Infrastructures.Components.App.Upgrade;
 using Bakabase.Infrastructures.Components.App.Upgrade.Abstractions;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
@@ -13,12 +13,10 @@ namespace Bakabase.Service.Controllers
     public class UpdaterController : Controller
     {
         private readonly AppUpdater _appUpdater;
-        private readonly IHostApplicationLifetime _lifetime;
 
-        public UpdaterController(AppUpdater appUpdater, IHostApplicationLifetime lifetime)
+        public UpdaterController(AppUpdater appUpdater)
         {
             _appUpdater = appUpdater;
-            _lifetime = lifetime;
         }
 
         [HttpGet("app/new-version")]
@@ -47,8 +45,7 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "RestartAndUpdateApp")]
         public async Task<BaseResponse> RestartAndUpdateApp()
         {
-            await _appUpdater.StartUpdater();
-            _lifetime.StopApplication();
+            await _appUpdater.ApplyUpdatesAndRestart();
             return BaseResponseBuilder.Ok;
         }
     }
