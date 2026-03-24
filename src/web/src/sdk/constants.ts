@@ -487,46 +487,46 @@ export const PropertyTypeLabel: Record<PropertyType, string> = {
 export enum PropertyValueScope {
   Manual = 0,
   Synchronization = 1,
-  BakabaseEnhancer = 1000,
-  ExHentaiEnhancer = 1001,
-  BangumiEnhancer = 1002,
-  DLsiteEnhancer = 1003,
-  RegexEnhancer = 1004,
-  KodiEnhancer = 1005,
-  TmdbEnhancer = 1006,
-  AvEnhancer = 1007,
-  AiEnhancer = 1008,
-  SteamEnhancer = 1009
+  Bakabase = 1000,
+  ExHentai = 1001,
+  Bangumi = 1002,
+  DLsite = 1003,
+  Regex = 1004,
+  Kodi = 1005,
+  Tmdb = 1006,
+  Av = 1007,
+  Ai = 1008,
+  Steam = 1009
 }
 
 export const propertyValueScopes = [
   { label: 'Manual', value: PropertyValueScope.Manual },
   { label: 'Synchronization', value: PropertyValueScope.Synchronization },
-  { label: 'BakabaseEnhancer', value: PropertyValueScope.BakabaseEnhancer },
-  { label: 'ExHentaiEnhancer', value: PropertyValueScope.ExHentaiEnhancer },
-  { label: 'BangumiEnhancer', value: PropertyValueScope.BangumiEnhancer },
-  { label: 'DLsiteEnhancer', value: PropertyValueScope.DLsiteEnhancer },
-  { label: 'RegexEnhancer', value: PropertyValueScope.RegexEnhancer },
-  { label: 'KodiEnhancer', value: PropertyValueScope.KodiEnhancer },
-  { label: 'TmdbEnhancer', value: PropertyValueScope.TmdbEnhancer },
-  { label: 'AvEnhancer', value: PropertyValueScope.AvEnhancer },
-  { label: 'AiEnhancer', value: PropertyValueScope.AiEnhancer },
-  { label: 'SteamEnhancer', value: PropertyValueScope.SteamEnhancer }
+  { label: 'Bakabase', value: PropertyValueScope.Bakabase },
+  { label: 'ExHentai', value: PropertyValueScope.ExHentai },
+  { label: 'Bangumi', value: PropertyValueScope.Bangumi },
+  { label: 'DLsite', value: PropertyValueScope.DLsite },
+  { label: 'Regex', value: PropertyValueScope.Regex },
+  { label: 'Kodi', value: PropertyValueScope.Kodi },
+  { label: 'Tmdb', value: PropertyValueScope.Tmdb },
+  { label: 'Av', value: PropertyValueScope.Av },
+  { label: 'Ai', value: PropertyValueScope.Ai },
+  { label: 'Steam', value: PropertyValueScope.Steam }
 ] as const;
 
 export const PropertyValueScopeLabel: Record<PropertyValueScope, string> = {
   [PropertyValueScope.Manual]: 'Manual',
   [PropertyValueScope.Synchronization]: 'Synchronization',
-  [PropertyValueScope.BakabaseEnhancer]: 'BakabaseEnhancer',
-  [PropertyValueScope.ExHentaiEnhancer]: 'ExHentaiEnhancer',
-  [PropertyValueScope.BangumiEnhancer]: 'BangumiEnhancer',
-  [PropertyValueScope.DLsiteEnhancer]: 'DLsiteEnhancer',
-  [PropertyValueScope.RegexEnhancer]: 'RegexEnhancer',
-  [PropertyValueScope.KodiEnhancer]: 'KodiEnhancer',
-  [PropertyValueScope.TmdbEnhancer]: 'TmdbEnhancer',
-  [PropertyValueScope.AvEnhancer]: 'AvEnhancer',
-  [PropertyValueScope.AiEnhancer]: 'AiEnhancer',
-  [PropertyValueScope.SteamEnhancer]: 'SteamEnhancer'
+  [PropertyValueScope.Bakabase]: 'Bakabase',
+  [PropertyValueScope.ExHentai]: 'ExHentai',
+  [PropertyValueScope.Bangumi]: 'Bangumi',
+  [PropertyValueScope.DLsite]: 'DLsite',
+  [PropertyValueScope.Regex]: 'Regex',
+  [PropertyValueScope.Kodi]: 'Kodi',
+  [PropertyValueScope.Tmdb]: 'Tmdb',
+  [PropertyValueScope.Av]: 'Av',
+  [PropertyValueScope.Ai]: 'Ai',
+  [PropertyValueScope.Steam]: 'Steam'
 };
 
 export enum PropertyValueType {
@@ -1339,42 +1339,6 @@ export const ResourceDisplayContentLabel: Record<ResourceDisplayContent, string>
   [ResourceDisplayContent.FileModifiedDate]: 'FileModifiedDate'
 };
 
-export enum ResourceLanguage {
-  NotSet = 0,
-  Chinese = 1,
-  English = 2,
-  Japanese = 3,
-  Korean = 4,
-  French = 5,
-  German = 6,
-  Spanish = 7,
-  Russian = 8
-}
-
-export const resourceLanguages = [
-  { label: 'NotSet', value: ResourceLanguage.NotSet },
-  { label: 'Chinese', value: ResourceLanguage.Chinese },
-  { label: 'English', value: ResourceLanguage.English },
-  { label: 'Japanese', value: ResourceLanguage.Japanese },
-  { label: 'Korean', value: ResourceLanguage.Korean },
-  { label: 'French', value: ResourceLanguage.French },
-  { label: 'German', value: ResourceLanguage.German },
-  { label: 'Spanish', value: ResourceLanguage.Spanish },
-  { label: 'Russian', value: ResourceLanguage.Russian }
-] as const;
-
-export const ResourceLanguageLabel: Record<ResourceLanguage, string> = {
-  [ResourceLanguage.NotSet]: 'NotSet',
-  [ResourceLanguage.Chinese]: 'Chinese',
-  [ResourceLanguage.English]: 'English',
-  [ResourceLanguage.Japanese]: 'Japanese',
-  [ResourceLanguage.Korean]: 'Korean',
-  [ResourceLanguage.French]: 'French',
-  [ResourceLanguage.German]: 'German',
-  [ResourceLanguage.Spanish]: 'Spanish',
-  [ResourceLanguage.Russian]: 'Russian'
-};
-
 export enum ResourceMatcherValueType {
   Layer = 1,
   Regex = 2,
@@ -2137,8 +2101,7 @@ export enum EnhancerId {
   Kodi = 6,
   Tmdb = 7,
   Av = 8,
-  AI = 9,
-  Steam = 10
+  AI = 9
 }
 
 export const enhancerIds = [
@@ -2150,8 +2113,7 @@ export const enhancerIds = [
   { label: 'Kodi', value: EnhancerId.Kodi },
   { label: 'Tmdb', value: EnhancerId.Tmdb },
   { label: 'Av', value: EnhancerId.Av },
-  { label: 'AI', value: EnhancerId.AI },
-  { label: 'Steam', value: EnhancerId.Steam }
+  { label: 'AI', value: EnhancerId.AI }
 ] as const;
 
 export const EnhancerIdLabel: Record<EnhancerId, string> = {
@@ -2163,8 +2125,7 @@ export const EnhancerIdLabel: Record<EnhancerId, string> = {
   [EnhancerId.Kodi]: 'Kodi',
   [EnhancerId.Tmdb]: 'Tmdb',
   [EnhancerId.Av]: 'Av',
-  [EnhancerId.AI]: 'AI',
-  [EnhancerId.Steam]: 'Steam'
+  [EnhancerId.AI]: 'AI'
 };
 
 export enum EnhancerTag {
@@ -2237,42 +2198,6 @@ export const TmdbEnhancerTargetLabel: Record<TmdbEnhancerTarget, string> = {
   [TmdbEnhancerTarget.Revenue]: 'Revenue',
   [TmdbEnhancerTarget.Cover]: 'Cover',
   [TmdbEnhancerTarget.Backdrop]: 'Backdrop'
-};
-
-export enum SteamEnhancerTarget {
-  Name = 1,
-  Description = 2,
-  Developer = 3,
-  Publisher = 4,
-  ReleaseDate = 5,
-  Genre = 6,
-  Category = 7,
-  MetacriticScore = 8,
-  Cover = 9
-}
-
-export const steamEnhancerTargets = [
-  { label: 'Name', value: SteamEnhancerTarget.Name },
-  { label: 'Description', value: SteamEnhancerTarget.Description },
-  { label: 'Developer', value: SteamEnhancerTarget.Developer },
-  { label: 'Publisher', value: SteamEnhancerTarget.Publisher },
-  { label: 'ReleaseDate', value: SteamEnhancerTarget.ReleaseDate },
-  { label: 'Genre', value: SteamEnhancerTarget.Genre },
-  { label: 'Category', value: SteamEnhancerTarget.Category },
-  { label: 'MetacriticScore', value: SteamEnhancerTarget.MetacriticScore },
-  { label: 'Cover', value: SteamEnhancerTarget.Cover }
-] as const;
-
-export const SteamEnhancerTargetLabel: Record<SteamEnhancerTarget, string> = {
-  [SteamEnhancerTarget.Name]: 'Name',
-  [SteamEnhancerTarget.Description]: 'Description',
-  [SteamEnhancerTarget.Developer]: 'Developer',
-  [SteamEnhancerTarget.Publisher]: 'Publisher',
-  [SteamEnhancerTarget.ReleaseDate]: 'ReleaseDate',
-  [SteamEnhancerTarget.Genre]: 'Genre',
-  [SteamEnhancerTarget.Category]: 'Category',
-  [SteamEnhancerTarget.MetacriticScore]: 'MetacriticScore',
-  [SteamEnhancerTarget.Cover]: 'Cover'
 };
 
 export enum RegexEnhancerTarget {
@@ -4526,48 +4451,6 @@ export const PresetResourceTypeLabel: Record<PresetResourceType, string> = {
   [PresetResourceType.MotionManga]: 'MotionManga',
   [PresetResourceType.Mod]: 'Mod',
   [PresetResourceType.Tool]: 'Tool'
-};
-
-export enum LegacyResourceProperty {
-  ReleaseDt = 4,
-  Publisher = 5,
-  Name = 6,
-  Language = 7,
-  Volume = 8,
-  Original = 9,
-  Series = 10,
-  Tag = 11,
-  CustomProperty = 14,
-  Favorites = 22,
-  Cover = 23
-}
-
-export const legacyResourceProperties = [
-  { label: 'ReleaseDt', value: LegacyResourceProperty.ReleaseDt },
-  { label: 'Publisher', value: LegacyResourceProperty.Publisher },
-  { label: 'Name', value: LegacyResourceProperty.Name },
-  { label: 'Language', value: LegacyResourceProperty.Language },
-  { label: 'Volume', value: LegacyResourceProperty.Volume },
-  { label: 'Original', value: LegacyResourceProperty.Original },
-  { label: 'Series', value: LegacyResourceProperty.Series },
-  { label: 'Tag', value: LegacyResourceProperty.Tag },
-  { label: 'CustomProperty', value: LegacyResourceProperty.CustomProperty },
-  { label: 'Favorites', value: LegacyResourceProperty.Favorites },
-  { label: 'Cover', value: LegacyResourceProperty.Cover }
-] as const;
-
-export const LegacyResourcePropertyLabel: Record<LegacyResourceProperty, string> = {
-  [LegacyResourceProperty.ReleaseDt]: 'ReleaseDt',
-  [LegacyResourceProperty.Publisher]: 'Publisher',
-  [LegacyResourceProperty.Name]: 'Name',
-  [LegacyResourceProperty.Language]: 'Language',
-  [LegacyResourceProperty.Volume]: 'Volume',
-  [LegacyResourceProperty.Original]: 'Original',
-  [LegacyResourceProperty.Series]: 'Series',
-  [LegacyResourceProperty.Tag]: 'Tag',
-  [LegacyResourceProperty.CustomProperty]: 'CustomProperty',
-  [LegacyResourceProperty.Favorites]: 'Favorites',
-  [LegacyResourceProperty.Cover]: 'Cover'
 };
 
 export enum ResolverConfigFieldType {

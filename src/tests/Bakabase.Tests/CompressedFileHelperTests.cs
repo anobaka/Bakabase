@@ -48,7 +48,7 @@ namespace Bakabase.Tests
             };
 
 
-            var result = CompressedFileHelper.Group(filenameList);
+            var result = CompressedFileHelperV2.DetectCompressedFileGroups(filenameList);
 
             var str = string.Join(Environment.NewLine, result.Select(t => $"{t}{Environment.NewLine}"));
 

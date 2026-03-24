@@ -69,18 +69,6 @@ public static class BuiltinProperties
         /// Resource source links (MultipleChoice)
         /// </summary>
         public static readonly MultipleChoicePropertyAccessor Source = new(ResourceProperty.Source);
-
-        /// <summary>
-        /// Category (SingleChoice) - DEPRECATED
-        /// </summary>
-        [Obsolete]
-        public static readonly SingleChoicePropertyAccessor Category = new(ResourceProperty.Category);
-
-        /// <summary>
-        /// Media library (Multilevel) - DEPRECATED
-        /// </summary>
-        [Obsolete]
-        public static readonly MultilevelPropertyAccessor MediaLibrary = new(ResourceProperty.MediaLibrary);
     }
 
     /// <summary>

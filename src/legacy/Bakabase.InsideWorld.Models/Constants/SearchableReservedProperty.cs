@@ -9,10 +9,10 @@ public enum SearchableReservedProperty
 	CreatedAt = ResourceProperty.CreatedAt,
 	FileCreatedAt = ResourceProperty.FileCreatedAt,
 	FileModifiedAt = ResourceProperty.FileModifiedAt,
-	[Obsolete]
-	Category = ResourceProperty.Category,
-    [Obsolete]
-    MediaLibrary = ResourceProperty.MediaLibrary,
+	// [Obsolete]
+	// Category = ResourceProperty.Category,
+    // [Obsolete]
+    // MediaLibrary = ResourceProperty.MediaLibrary,
 	Introduction = ResourceProperty.Introduction,
 	Rating = ResourceProperty.Rating,
 	Cover = ResourceProperty.Cover,

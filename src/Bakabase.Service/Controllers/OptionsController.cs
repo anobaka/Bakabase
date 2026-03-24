@@ -868,27 +868,6 @@ namespace Bakabase.Service.Controllers
             return BaseResponseBuilder.Ok;
         }
 
-        [HttpGet("enhancer")]
-        [SwaggerOperation(OperationId = "GetEnhancerOptions")]
-        public async Task<SingletonResponse<EnhancerOptions>> GetEnhancerOptions()
-        {
-            return new SingletonResponse<EnhancerOptions>(_bakabaseOptionsManager.Get<EnhancerOptions>().Value);
-        }
-
-        [HttpPatch("enhancer")]
-        [SwaggerOperation(OperationId = "PatchEnhancerOptions")]
-        public async Task<BaseResponse> PatchEnhancerOptions([FromBody] EnhancerOptionsPatchInputModel model)
-        {
-            await _bakabaseOptionsManager.Get<EnhancerOptions>().SaveAsync(options =>
-            {
-                if (model.RegexEnhancer != null)
-                {
-                    options.RegexEnhancer = model.RegexEnhancer;
-                }
-            });
-            return BaseResponseBuilder.Ok;
-        }
-
         [HttpGet("task")]
         [SwaggerOperation(OperationId = "GetTaskOptions")]
         public async Task<SingletonResponse<TaskOptions>> GetTaskOptions()

@@ -70,7 +70,6 @@ public static class PropertyExtensions
             Name = dbModel.Name,
             Type = dbModel.Type,
             ValueCount = null,
-            Categories = null,
             Order = dbModel.Order
         };
         if (dbModel.Options.IsNotEmpty())
@@ -110,7 +109,6 @@ public static class PropertyExtensions
                     Name = dbModel.Name,
                     Type = dbModel.Type,
                     ValueCount = null,
-                    Categories = null,
                     Order = dbModel.Order
                 };
 

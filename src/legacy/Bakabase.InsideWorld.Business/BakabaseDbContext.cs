@@ -12,10 +12,7 @@ using Bakabase.Modules.AI.Models.Db;
 using Bakabase.Modules.Comparison.Models.Db;
 using Bakabase.Modules.Property.Abstractions.Models.Db;
 using Microsoft.EntityFrameworkCore;
-using CategoryDbModel = Bakabase.Abstractions.Models.Db.CategoryDbModel;
-using CategoryEnhancerOptions = Bakabase.Abstractions.Models.Db.CategoryEnhancerOptions;
 using EnhancementRecord = Bakabase.Abstractions.Models.Db.EnhancementRecord;
-using MediaLibraryDbModel = Bakabase.Abstractions.Models.Db.MediaLibraryDbModel;
 using ReservedPropertyValue = Bakabase.Abstractions.Models.Db.ReservedPropertyValue;
 using SpecialText = Bakabase.Abstractions.Models.Db.SpecialText;
 
@@ -29,12 +26,8 @@ namespace Bakabase.InsideWorld.Business
         [Obsolete] public DbSet<CustomPlayableFileSelectorOptions> CustomPlayableFileSelectorOptionsList { get; set; }
 
         public DbSet<SpecialText> SpecialTexts { get; set; }
-        public DbSet<CategoryDbModel> ResourceCategories { get; set; }
-
-        public DbSet<MediaLibraryDbModel> MediaLibraries { get; set; }
         public DbSet<PlayListDbModel> Playlists { get; set; }
         public DbSet<ComponentOptions> ComponentOptions { get; set; }
-        public DbSet<CategoryComponent> CategoryComponents { get; set; }
 
         public DbSet<DownloadTaskDbModel> DownloadTasks { get; set; }
 
@@ -48,7 +41,6 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<CategoryCustomPropertyMapping> CategoryCustomPropertyMappings { get; set; }
 
         public DbSet<EnhancementDbModel> Enhancements { get; set; }
-        public DbSet<CategoryEnhancerOptions> CategoryEnhancerOptions { get; set; }
         public DbSet<EnhancementRecord> EnhancementRecords { get; set; }
 
         public DbSet<ResourceDbModel> ResourcesV2 { get; set; }
@@ -113,12 +105,6 @@ namespace Bakabase.InsideWorld.Business
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-            
-            modelBuilder.Entity<MediaLibraryDbModel>(t =>
-            {
-                t.HasIndex(a => a.CategoryId);
-                t.HasIndex(a => a.Name);
-            });
 
             modelBuilder.Entity<DownloadTaskDbModel>(t =>
             {

@@ -123,10 +123,8 @@ namespace Bakabase.InsideWorld.Business.Components.Search
                             InternalProperty.CreatedAt => r => r.CreatedAt,
                             InternalProperty.FileCreatedAt => r => r.FileCreatedAt,
                             InternalProperty.FileModifiedAt => r => r.FileModifiedAt,
-                            InternalProperty.Category => r => r.CategoryId.ToString(),
-                            InternalProperty.MediaLibrary => r => new List<string> {r.MediaLibraryId.ToString()},
-                            InternalProperty.MediaLibraryV2 => r => (r.CategoryId == 0 ? r.MediaLibraryId : -1).ToString(),
-                            InternalProperty.MediaLibraryV2Multi => r => (r.CategoryId == 0 ? resourceMediaLibraryMap?.GetValueOrDefault(r.Id) : null),
+                            InternalProperty.MediaLibraryV2 => r => r.MediaLibraryId.ToString(),
+                            InternalProperty.MediaLibraryV2Multi => r => resourceMediaLibraryMap?.GetValueOrDefault(r.Id),
                             InternalProperty.ParentResource => r => r.ParentId?.ToString(),
                             InternalProperty.PlayedAt => r => r.PlayedAt,
                             _ => null

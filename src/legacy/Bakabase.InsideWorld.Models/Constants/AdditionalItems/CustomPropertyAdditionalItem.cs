@@ -10,7 +10,8 @@ namespace Bakabase.InsideWorld.Models.Constants.AdditionalItems
 	public enum CustomPropertyAdditionalItem
 	{
 		None = 0,
-		Category = 1,
+		// [Obsolete]
+		// Category = 1,
 		ValueCount = 2
 	}
 }

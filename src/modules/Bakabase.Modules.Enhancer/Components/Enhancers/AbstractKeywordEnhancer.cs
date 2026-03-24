@@ -55,8 +55,6 @@ public abstract class
                     case InternalProperty.CreatedAt:
                     case InternalProperty.FileCreatedAt:
                     case InternalProperty.FileModifiedAt:
-                    case InternalProperty.Category:
-                    case InternalProperty.MediaLibrary:
                     case InternalProperty.MediaLibraryV2:
                     default:
                         throw new ArgumentOutOfRangeException();

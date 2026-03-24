@@ -5017,6 +5017,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/source/{source}/metadata-mapping": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetSourceMetadataMappings"];
+        put: operations["SaveSourceMetadataMappings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/source/{source}/metadata-mapping/available-fields": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetSourceAvailableMetadataFields"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/source/{source}/metadata-mapping/apply-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ApplySourceMetadataToAllResources"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/special-text": {
         parameters: {
             query?: never;
@@ -5635,7 +5683,7 @@ export interface components {
         "Bakabase.Abstractions.Models.Domain.Constants.PropertyType": 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16;
         /**
          * Format: int32
-         * @description [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer, 1008: AiEnhancer, 1009: SteamEnhancer]
+         * @description [0: Manual, 1: Synchronization, 1000: Bakabase, 1001: ExHentai, 1002: Bangumi, 1003: DLsite, 1004: Regex, 1005: Kodi, 1006: Tmdb, 1007: Av, 1008: Ai, 1009: Steam]
          * @enum {integer}
          */
         "Bakabase.Abstractions.Models.Domain.Constants.PropertyValueScope": 0 | 1 | 1000 | 1001 | 1002 | 1003 | 1004 | 1005 | 1006 | 1007 | 1008 | 1009;
@@ -5984,8 +6032,8 @@ export interface components {
             categoryId: number;
             status: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceStatus"];
             sourceLinks?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceSourceLink"][];
-            fileName?: string;
-            directory?: string;
+            readonly fileName?: string;
+            readonly directory?: string;
             path?: string;
             displayName?: string;
             /** Format: int32 */
@@ -6011,6 +6059,11 @@ export interface components {
             readonly pinned: boolean;
             /** Format: date-time */
             playedAt?: string;
+            covers?: string[];
+            playableItems?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PlayableItem"][];
+            hasMoreFileSystemPlayableItems: boolean;
+            coversReady: boolean;
+            playableItemsReady: boolean;
             cache?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceCache"];
             /** @deprecated */
             readonly isMediaLibraryV2: boolean;
@@ -6030,9 +6083,9 @@ export interface components {
         "Bakabase.Abstractions.Models.Domain.Resource+Property": {
             name?: string;
             values?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Resource+Property+PropertyValue"][];
+            type: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyType"];
             dbValueType: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.StandardValueType"];
             bizValueType: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.StandardValueType"];
-            type: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyType"];
             visible: boolean;
             /** Format: int32 */
             order: number;
@@ -6047,7 +6100,8 @@ export interface components {
         };
         "Bakabase.Abstractions.Models.Domain.ResourceCache": {
             coverPaths?: string[];
-            hasMorePlayableFiles: boolean;
+            hasMoreFileSystemPlayableItems: boolean;
+            /** @deprecated */
             playableFilePaths?: string[];
             playableItems?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PlayableItem"][];
             cachedTypes: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceCacheType"][];
@@ -6100,12 +6154,23 @@ export interface components {
             sourceKey: string;
             /** Format: date-time */
             createDt: string;
+            coverUrls?: string[];
+            localCoverPaths?: string[];
         };
         "Bakabase.Abstractions.Models.Domain.ScopePropertyKey": {
             pool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
             /** Format: int32 */
             id: number;
             scope: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyValueScope"];
+        };
+        "Bakabase.Abstractions.Models.Domain.SourceMetadataMapping": {
+            /** Format: int32 */
+            id: number;
+            source: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceSource"];
+            metadataField: string;
+            targetPool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
+            /** Format: int32 */
+            targetPropertyId: number;
         };
         "Bakabase.Abstractions.Models.Domain.SpecialText": {
             /** Format: int32 */
@@ -8090,10 +8155,10 @@ export interface components {
         "Bakabase.Modules.Enhancer.Abstractions.Models.Domain.Constants.EnhancementAdditionalItem": 0 | 1;
         /**
          * Format: int32
-         * @description [1: Bakabase, 2: ExHentai, 3: Bangumi, 4: DLsite, 5: Regex, 6: Kodi, 7: Tmdb, 8: Av, 9: AI, 10: Steam]
+         * @description [1: Bakabase, 2: ExHentai, 3: Bangumi, 4: DLsite, 5: Regex, 6: Kodi, 7: Tmdb, 8: Av, 9: AI]
          * @enum {integer}
          */
-        "Bakabase.Modules.Enhancer.Models.Domain.Constants.EnhancerId": 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
+        "Bakabase.Modules.Enhancer.Models.Domain.Constants.EnhancerId": 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
         /**
          * Format: int32
          * @description [1: UseRegex, 2: UseKeyword]
@@ -8795,6 +8860,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Resource"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.SourceMetadataMapping]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.SourceMetadataMapping"][];
         };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.View.ResourceDisplayNameViewModel]": {
             /** Format: int32 */
@@ -13402,7 +13473,9 @@ export interface operations {
     };
     SyncDLsiteWorks: {
         parameters: {
-            query?: never;
+            query?: {
+                redownloadCover?: boolean;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -14422,7 +14495,9 @@ export interface operations {
     };
     SyncExHentaiGalleries: {
         parameters: {
-            query?: never;
+            query?: {
+                redownloadCover?: boolean;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -20874,6 +20949,113 @@ export interface operations {
             };
         };
     };
+    GetSourceMetadataMappings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description [1: FileSystem, 2: Steam, 3: DLsite, 4: ExHentai] */
+                source: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceSource"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.SourceMetadataMapping]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.SourceMetadataMapping]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.SourceMetadataMapping]"];
+                };
+            };
+        };
+    };
+    SaveSourceMetadataMappings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description [1: FileSystem, 2: Steam, 3: DLsite, 4: ExHentai] */
+                source: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceSource"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Domain.SourceMetadataMapping"][];
+                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Domain.SourceMetadataMapping"][];
+                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Domain.SourceMetadataMapping"][];
+                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Domain.SourceMetadataMapping"][];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetSourceAvailableMetadataFields: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description [1: FileSystem, 2: Steam, 3: DLsite, 4: ExHentai] */
+                source: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceSource"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.String]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.String]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.String]"];
+                };
+            };
+        };
+    };
+    ApplySourceMetadataToAllResources: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description [1: FileSystem, 2: Steam, 3: DLsite, 4: ExHentai] */
+                source: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceSource"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
     GetAllSpecialTexts: {
         parameters: {
             query?: never;
@@ -21133,7 +21315,9 @@ export interface operations {
     };
     SyncSteamApps: {
         parameters: {
-            query?: never;
+            query?: {
+                redownloadCover?: boolean;
+            };
             header?: never;
             path?: never;
             cookie?: never;

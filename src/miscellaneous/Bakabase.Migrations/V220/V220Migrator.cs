@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain;
@@ -11,14 +7,9 @@ using Bakabase.Infrastructures.Components.App.Migrations;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components.Configurations;
 using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
-using Bakabase.InsideWorld.Business.Components.Migration;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.Property;
-using Bakabase.Modules.Property.Components;
-using Bakabase.Modules.Property.Abstractions.Models.Db;
-using Bakabase.Modules.Property.Components.Properties.Choice;
 using Bakabase.Modules.Search.Models.Db;
-using Bootstrap.Components.Configuration.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -44,9 +35,6 @@ public class V220Migrator : AbstractMigrator
     {
         var dbCtx = GetRequiredService<BakabaseDbContext>();
 
-        // 0) First migrate early version Category+MediaLibrary(v1) to MediaLibraryV2+MediaLibraryTemplate
-        await MigrateLegacyCategoryMediaLibrary();
-
         // Clean up resources with CategoryId > 0 (historical bad data since legacy resources' categoryId should be 0)
         await CleanupResourcesWithInvalidCategoryId(dbCtx);
 
@@ -58,39 +46,6 @@ public class V220Migrator : AbstractMigrator
 
         // 3) Migrate MediaLibraryV2 (PropertyId=24) to MediaLibraryV2Multi (PropertyId=25) in SearchFilters
         await MigrateMediaLibraryV2ToMultiInSearchFilters();
-    }
-
-    /// <summary>
-    /// Migrate early version Category+MediaLibrary(v1) to MediaLibraryV2+MediaLibraryTemplate.
-    /// This step is for users upgrading from versions before MediaLibraryV2 was introduced.
-    /// Skips if MediaLibraryV2 or MediaLibraryTemplate already exist to prevent duplicate data.
-    /// </summary>
-    private async Task MigrateLegacyCategoryMediaLibrary()
-    {
-        try
-        {
-            var dbCtx = GetRequiredService<BakabaseDbContext>();
-
-            // Skip if MediaLibraryV2 or MediaLibraryTemplate already exist to prevent duplicate data
-            var hasMediaLibraryV2 = await dbCtx.MediaLibrariesV2.AnyAsync();
-            var hasMediaLibraryTemplate = await dbCtx.MediaLibraryTemplates.AnyAsync();
-
-            if (hasMediaLibraryV2 || hasMediaLibraryTemplate)
-            {
-                Logger.LogInformation(
-                    "MediaLibraryV2 ({HasV2}) or MediaLibraryTemplate ({HasTemplate}) already exist, skipping legacy migration.",
-                    hasMediaLibraryV2, hasMediaLibraryTemplate);
-                return;
-            }
-
-            var migrationHelper = GetRequiredService<MigrationHelper>();
-            await migrationHelper.MigrateCategoriesMediaLibrariesAndResources();
-            Logger.LogInformation("Completed migration from Category+MediaLibrary(v1) to MediaLibraryV2+MediaLibraryTemplate.");
-        }
-        catch (Exception ex)
-        {
-            Logger.LogWarning(ex, "MigrationHelper failed or is not available. This is expected if the codebase no longer supports legacy Category+MediaLibrary. Continuing with V220 migration.");
-        }
     }
 
     /// <summary>

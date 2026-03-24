@@ -14,17 +14,13 @@ using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Component
 using Bakabase.InsideWorld.Business.Components.Downloader.Components;
 using Bakabase.InsideWorld.Business.Components.Downloader.Extensions;
 using Bakabase.InsideWorld.Business.Components.Downloader.Services;
-using Bakabase.InsideWorld.Business.Components.Migration;
 using Bakabase.InsideWorld.Business.Components.FileExplorer;
 using Bakabase.InsideWorld.Business.Components.FileNameModifier.Extensions;
 using Bakabase.InsideWorld.Business.Components.PlayList.Extensions;
 using Bakabase.InsideWorld.Business.Components.PlayList.Services;
 using Bakabase.InsideWorld.Business.Components.PostParser.Extensions;
 using Bakabase.InsideWorld.Business.Components.ReservedProperty;
-using Bakabase.InsideWorld.Business.Components.Resource.Components.PlayableFileSelector;
-using Bakabase.InsideWorld.Business.Components.Resource.Components.PlayableFileSelector.Infrastructures;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.Player;
-using Bakabase.InsideWorld.Business.Components.Resource.Components.Player.Infrastructures;
 using Bakabase.InsideWorld.Business.Components.Search;
 using Bakabase.InsideWorld.Business.Components.Search.Index;
 using Bakabase.InsideWorld.Business.Components.Tampermonkey;
@@ -47,8 +43,6 @@ using Bootstrap.Components.Orm;
 using Bootstrap.Components.Orm.Infrastructures;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using CategoryDbModel = Bakabase.Abstractions.Models.Db.CategoryDbModel;
-using MediaLibraryDbModel = Bakabase.Abstractions.Models.Db.MediaLibraryDbModel;
 using SpecialText = Bakabase.Abstractions.Models.Db.SpecialText;
 
 namespace Bakabase.Service.Extensions
@@ -57,55 +51,9 @@ namespace Bakabase.Service.Extensions
     {
         public static IServiceCollection AddInsideWorldBusinesses(this IServiceCollection services)
         {
-            // services.AddScoped<BulkModificationService>();
-            // services.AddScoped<BulkModificationDiffService>();
-            // services.AddScoped<BulkModificationTempDataService>();
-            services.TryAddScoped<ComponentService>();
-            services.TryAddScoped<ComponentOptionsService>();
-            services.TryAddScoped<CategoryComponentService>();
-
-            // services.AddScoped<SubscriptionService>();
-            // services.AddScoped<SubscriptionProgressService>();
-            // services.AddScoped<SubscriptionRecordService>();
-
-            services.TryAddSingleton<SelfPlayer>();
-            services.TryAddSingleton<PotPlayer>();
-            services.RegisterAllRegisteredTypeAs<IPlayer>();
-
-            services.TryAddSingleton<ImagePlayableFileSelector>();
-            services.TryAddSingleton<VideoPlayableFileSelector>();
-            services.TryAddSingleton<AudioPlayableFileSelector>();
-            services.RegisterAllRegisteredTypeAs<IPlayableFileSelector>();
-
-            // services.TryAddScoped<InsideWorldEnhancer>();
-            // services.TryAddScoped<DLsiteEnhancer>();
-            // //services.TryAddSingleton<DMMEnhancer>();
-            // services.TryAddScoped<JavLibraryEnhancer>();
-            // services.TryAddScoped<BangumiEnhancer>();
-            // services.TryAddScoped<ExHentaiEnhancer>();
-            // services.TryAddScoped<NfoEnhancer>();
-            //services.TryAddTransient<IOptions<InsideWorldAppOptions>>(t =>
-            //{
-            //    var options = InsideWorldAppService.GetInsideWorldOptionsAsync().ConfigureAwait(false).GetAwaiter().GetResult();
-            //    return Options.Create(options);
-            //});
-            //services.TryAddTransient<IOptions<ExHentaiEnhancerOptions>>(t =>
-            //{
-            //    var options = t.GetRequiredService<IOptions<InsideWorldAppOptions>>();
-            //    return Options.Create(new ExHentaiEnhancerOptions
-            //    {
-            //        ExcludedTags = options.Value.ExHentaiExcludedTags,
-            //        Cookie = options.Value.ExHentaiCookie
-            //    });
-            //});
-
             services.AddScoped<PasswordService>();
 
             services.TryAddSingleton<IwFsWatcher>();
-
-            // services.AddScoped<BmCategoryProcessor>();
-            // services.AddScoped<BmMediaLibraryProcessor>();
-            // services.AddScoped<BmTagProcessor>();
 
             #region Optimized after V190
 
@@ -145,10 +93,6 @@ namespace Bakabase.Service.Extensions
             services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, SpecialText, int>>();
             services.AddScoped<SpecialTextService>();
             services.AddScoped<ISpecialTextService>(sp => sp.GetRequiredService<SpecialTextService>());
-            services.AddScoped<ResourceService<BakabaseDbContext, MediaLibraryDbModel, int>>();
-            services.AddScoped<IMediaLibraryService, MediaLibraryService>();
-            services.AddScoped<ResourceService<BakabaseDbContext, CategoryDbModel, int>>();
-            services.AddScoped<ICategoryService, CategoryService>();
             services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, ResourceCacheDbModel, int>>();
             services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, PlayHistoryDbModel, int>>();
             services.AddScoped<IPlayHistoryService, PlayHistoryService>();
@@ -222,9 +166,7 @@ namespace Bakabase.Service.Extensions
             services.AddHostedService<ResourceCoverCacheInvalidationService>();
 
             #endregion
-
-            services.AddScoped<MigrationHelper>();
-
+            
             return services;
         }
     }

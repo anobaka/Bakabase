@@ -12,8 +12,8 @@ namespace Bakabase.InsideWorld.Models.Constants.AdditionalItems
         None = 0,
         Properties = 1 << 5,
         Alias = 1 << 6,
-        [Obsolete]
-        Category = 1 << 7,
+        // [Obsolete]
+        // Category = 1 << 7,
         DisplayName = 1 << 8 | Properties,
         HasChildren = 1 << 9,
         MediaLibraryName = 1 << 11,

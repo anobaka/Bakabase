@@ -62,7 +62,6 @@ namespace Bakabase.Service.Controllers
         ICustomPropertyService customPropertyService,
         ICustomPropertyValueService customPropertyValueService,
         IPropertyLocalizer propertyLocalizer,
-        IMediaLibraryService mediaLibraryService,
         IMediaLibraryV2Service mediaLibraryV2Service,
         IMediaLibraryResourceMappingService mappingService,
         IBakabaseLocalizer localizer,

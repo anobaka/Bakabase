@@ -18,18 +18,16 @@ using Resource = Bakabase.Abstractions.Models.Domain.Resource;
 
 namespace Bakabase.Modules.Enhancer.Components.Enhancers.Regex;
 
-[EnhancerComponent(OptionsType = typeof(RegexEnhancerOptions))]
 public class RegexEnhancer(
     ILoggerFactory loggerFactory,
     IFileManager fileManager,
-    IBOptions<EnhancerOptions> enhancerOptions,
     IServiceProvider serviceProvider)
     : AbstractEnhancer<RegexEnhancerTarget, RegexEnhancerContext, IRegexEnhancerOptions>(loggerFactory, fileManager, serviceProvider)
 {
     protected override async Task<RegexEnhancerContext?> BuildContextInternal(Resource resource, IRegexEnhancerOptions options,
         EnhancementLogCollector logCollector, CancellationToken ct)
     {
-        var expressions = options.Expressions ?? enhancerOptions.Value.RegexEnhancer?.Expressions ?? [];
+        var expressions = options.Expressions ?? [];
         if (!expressions.Any())
         {
             logCollector.LogWarning(EnhancementLogEvent.Configuration,

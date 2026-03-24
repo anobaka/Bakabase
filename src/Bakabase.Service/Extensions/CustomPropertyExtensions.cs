@@ -12,7 +12,6 @@ public static class CustomPropertyExtensions
     {
         return new CustomPropertyViewModel
         {
-            Categories = property.Categories,
             Id = property.Id,
             Name = property.Name,
             Options = property.Options,
