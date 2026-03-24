@@ -740,6 +740,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/cache/resource/{resourceId}/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RefreshResourceCache"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/category/{id}": {
         parameters: {
             query?: never;
@@ -1865,6 +1881,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["ApplyEnhancementContextDataForResourceByEnhancer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource/{resourceId}/enhancement/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ValidateEnhancerConfiguration"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5911,13 +5943,6 @@ export interface components {
             id: number;
             scopePriority?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyValueScope"][];
         };
-        "Bakabase.Abstractions.Models.Domain.PropertyKeyWithScopePriority": {
-            pool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
-            /** Format: int32 */
-            id: number;
-            /** Optional per-property scope priority override. Null means use global setting. */
-            scopePriority?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyValueScope"][] | null;
-        };
         "Bakabase.Abstractions.Models.Domain.PropertyPathSegmentMatcherValue": {
             fixedText?: string;
             /** Format: int32 */
@@ -6339,6 +6364,7 @@ export interface components {
             listeningPorts?: number[];
             /** Format: int32 */
             maxParallelism?: number;
+            timeZoneId?: string;
         };
         "Bakabase.Infrastructures.Components.App.Models.RequestModels.CoreDataMoveRequestModel": {
             dataPath: string;
@@ -6383,6 +6409,8 @@ export interface components {
             maxParallelism?: number;
             /** Format: int32 */
             readonly effectiveMaxParallelism: number;
+            timeZoneId?: string;
+            effectiveTimeZone: components["schemas"]["System.TimeZoneInfo"];
         };
         /**
          * Format: int32
@@ -7275,6 +7303,7 @@ export interface components {
             inlineDisplayName: boolean;
             autoSelectFirstPlayableFile: boolean;
             displayOperations: string[];
+            hideResourceBorder: boolean;
         };
         "Bakabase.InsideWorld.Models.Configs.UIStyleOptions": {
             cssVariableOverwrites: {
@@ -9157,6 +9186,12 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PathMark"];
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ResourceCache]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceCache"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.SpecialText]": {
             /** Format: int32 */
             code: number;
@@ -10137,6 +10172,16 @@ export interface components {
          * @enum {integer}
          */
         "System.Security.SecurityRuleSet": 0 | 1 | 2;
+        "System.TimeZoneInfo": {
+            readonly id: string;
+            readonly hasIanaId: boolean;
+            readonly displayName: string;
+            readonly standardName: string;
+            readonly daylightName: string;
+            /** Format: date-span */
+            readonly baseUtcOffset: string;
+            readonly supportsDaylightSavingTime: boolean;
+        };
         "System.Type": {
             readonly name: string;
             readonly customAttributes: components["schemas"]["System.Reflection.CustomAttributeData"][];
@@ -11769,6 +11814,30 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    RefreshResourceCache: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                resourceId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ResourceCache]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ResourceCache]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ResourceCache]"];
                 };
             };
         };
@@ -14045,6 +14114,37 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    ValidateEnhancerConfiguration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                resourceId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Domain.EnhancerFullOptions"][];
+                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Domain.EnhancerFullOptions"][];
+                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Domain.EnhancerFullOptions"][];
+                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Domain.EnhancerFullOptions"][];
+            };
+        };
         responses: {
             /** @description OK */
             200: {

@@ -684,15 +684,6 @@ export interface BakabaseAbstractionsModelsDomainPropertyKeyWithScopePriority {
   scopePriority?: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope[];
 }
 
-export interface BakabaseAbstractionsModelsDomainPropertyKeyWithScopePriority {
-  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
-  pool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
-  /** @format int32 */
-  id: number;
-  /** Optional per-property scope priority override. Null means use global setting. */
-  scopePriority?: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope[] | null;
-}
-
 export interface BakabaseAbstractionsModelsDomainPropertyPathSegmentMatcherValue {
   fixedText?: string;
   /** @format int32 */
@@ -1212,6 +1203,7 @@ export interface BakabaseInfrastructuresComponentsAppModelsRequestModelsAppOptio
   listeningPorts?: number[];
   /** @format int32 */
   maxParallelism?: number;
+  timeZoneId?: string;
 }
 
 export interface BakabaseInfrastructuresComponentsAppModelsRequestModelsCoreDataMoveRequestModel {
@@ -1265,6 +1257,8 @@ export interface BakabaseInfrastructuresComponentsConfigurationsAppAppOptions {
   maxParallelism?: number;
   /** @format int32 */
   effectiveMaxParallelism: number;
+  timeZoneId?: string;
+  effectiveTimeZone: SystemTimeZoneInfo;
 }
 
 /**
@@ -2265,10 +2259,6 @@ export interface BakabaseInsideWorldModelsConfigsUIOptionsPropertyKey {
   pool: number;
   /** @format int32 */
   id: number;
-}
-
-export interface BakabaseInsideWorldModelsConfigsUIStyleOptions {
-  cssVariableOverwrites: Record<string, string>;
 }
 
 export interface BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions {
@@ -4638,18 +4628,18 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstract
   data?: BakabaseAbstractionsModelsDomainPathConfigurationTestResult;
 }
 
-export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainResourceCache {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseAbstractionsModelsDomainResourceCache;
-}
-
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainPathMark {
   /** @format int32 */
   code: number;
   message?: string;
   data?: BakabaseAbstractionsModelsDomainPathMark;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainResourceCache {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDomainResourceCache;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainSpecialText {
@@ -5812,6 +5802,17 @@ export interface SystemRuntimeTypeHandle {
  * @format int32
  */
 export type SystemSecuritySecurityRuleSet = 0 | 1 | 2;
+
+export interface SystemTimeZoneInfo {
+  id: string;
+  hasIanaId: boolean;
+  displayName: string;
+  standardName: string;
+  daylightName: string;
+  /** @format date-span */
+  baseUtcOffset: string;
+  supportsDaylightSavingTime: boolean;
+}
 
 export interface SystemType {
   name: string;
@@ -7866,11 +7867,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name RefreshResourceCache
      * @request POST:/cache/resource/{resourceId}/refresh
      */
-    refreshResourceCache: (
-      resourceId: number,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainResourceCache, any>({
+    refreshResourceCache: (resourceId: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainResourceCache,
+        any
+      >({
         path: `/cache/resource/${resourceId}/refresh`,
         method: "POST",
         format: "json",
@@ -10152,6 +10153,25 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Enhancement
+     * @name ApplyEnhancementContextDataForResourceByEnhancer
+     * @request POST:/resource/{resourceId}/enhancer/{enhancerId}/enhancement/apply
+     */
+    applyEnhancementContextDataForResourceByEnhancer: (
+      resourceId: number,
+      enhancerId: number,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/${resourceId}/enhancer/${enhancerId}/enhancement/apply`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Enhancement
      * @name ValidateEnhancerConfiguration
      * @request POST:/resource/{resourceId}/enhancement/validate
      */
@@ -10165,25 +10185,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         method: "POST",
         body: data,
         type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Enhancement
-     * @name ApplyEnhancementContextDataForResourceByEnhancer
-     * @request POST:/resource/{resourceId}/enhancer/{enhancerId}/enhancement/apply
-     */
-    applyEnhancementContextDataForResourceByEnhancer: (
-      resourceId: number,
-      enhancerId: number,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/${resourceId}/enhancer/${enhancerId}/enhancement/apply`,
-        method: "POST",
         format: "json",
         ...params,
       }),
@@ -15206,67 +15207,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addLatestUsedPropertyUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/ui/latest-used-property`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Options
-     * @name GetUiStyleOptions
-     * @request GET:/options/ui-style
-     */
-    getUiStyleOptions: (params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsUIStyleOptions,
-        any
-      >({
-        path: `/options/ui-style`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for getUiStyleOptions
-     * @name getUiStyleOptionsUrl
-     */
-    getUiStyleOptionsUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/options/ui-style`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Options
-     * @name PatchUiStyleOptions
-     * @request PATCH:/options/ui-style
-     */
-    patchUiStyleOptions: (
-      data: BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputUIStyleOptionsPatchRequestModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/options/ui-style`,
-        method: "PATCH",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for patchUiStyleOptions
-     * @name patchUiStyleOptionsUrl
-     */
-    patchUiStyleOptionsUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/options/ui-style`;
-
+      
       return baseUrl + path;
     },
 
