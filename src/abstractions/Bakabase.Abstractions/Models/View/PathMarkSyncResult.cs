@@ -1,20 +1,10 @@
 namespace Bakabase.Abstractions.Models.View;
 
 /// <summary>
-/// PathMark 同步结果
+/// PathMark 属性/媒体库同步结果
 /// </summary>
 public class PathMarkSyncResult
 {
-    /// <summary>
-    /// 创建的资源数量
-    /// </summary>
-    public int ResourcesCreated { get; set; }
-
-    /// <summary>
-    /// 删除的资源数量
-    /// </summary>
-    public int ResourcesDeleted { get; set; }
-
     /// <summary>
     /// 应用的属性值数量
     /// </summary>

@@ -18,7 +18,8 @@ namespace Bakabase.InsideWorld.Models.Constants.AdditionalItems
         HasChildren = 1 << 9,
         MediaLibraryName = 1 << 11,
         Cache = 1 << 12,
+        SourceLinks = 1 << 13,
 
-        All = Properties | DisplayName | Alias | HasChildren | MediaLibraryName | Cache
+        All = Properties | DisplayName | Alias | HasChildren | MediaLibraryName | Cache | SourceLinks
     }
 }

@@ -34,7 +34,16 @@ public static class MediaLibraryV2Extensions
                             new Resource.Property.PropertyValue((int) PropertyValueScope.Synchronization, null,
                                 c.Value,
                                 null)
-                        ])))
+                        ]))),
+            // FileSystem resources use Path as SourceKey
+            SourceLinks =
+            [
+                new ResourceSourceLink
+                {
+                    Source = ResourceSource.FileSystem,
+                    SourceKey = tempSyncResource.Path
+                }
+            ]
         };
 
         yield return r;

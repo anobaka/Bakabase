@@ -36,4 +36,9 @@ internal class PropertyLocalizer(IStringLocalizer<PropertyResource> localizer) :
     {
         return localizer[nameof(UnavailablePropertyTypeForManuallySettingValue_DueTo_NoPropertyWithReferenceValueType)];
     }
+
+    public string ResourceSourceName(ResourceSource source)
+    {
+        return localizer[$"{nameof(ResourceSourceName)}_{source}"];
+    }
 }

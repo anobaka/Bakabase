@@ -117,5 +117,22 @@
   "resource.ai.applySelected": "应用所选",
   "resource.ai.applied": "已应用",
   "resource.ai.targetLanguage": "目标语言",
-  "resource.ai.modelConfig": "模型配置"
+  "resource.ai.modelConfig": "模型配置",
+
+  "resource.conflict.tooltip": "发现 {{count}} 个冲突资源",
+  "resource.conflict.title": "冲突处理",
+  "resource.conflict.loading": "加载冲突数据...",
+  "resource.conflict.noConflicts": "未发现冲突资源",
+  "resource.conflict.description": "以下资源与当前资源共享部分来源链接，但并非同一资源。您可以将它们的数据合并到当前资源中，或直接删除。",
+  "resource.conflict.property": "属性",
+  "resource.conflict.scope": "作用域",
+  "resource.conflict.current": "当前",
+  "resource.conflict.actionMerge": "合并",
+  "resource.conflict.actionDelete": "删除",
+  "resource.conflict.sourceLinks": "来源链接",
+  "resource.conflict.mediaLibraries": "媒体库",
+  "resource.conflict.path": "路径",
+  "resource.conflict.apply": "执行",
+  "resource.conflict.mergeSuccess": "资源合并成功",
+  "resource.conflict.mergeFailed": "资源合并失败"
 }

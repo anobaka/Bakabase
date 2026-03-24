@@ -13,6 +13,7 @@ using Bakabase.InsideWorld.Business.Components.Configurations;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Lux;
+using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.LocaleEmulator;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.SevenZip;
 using Bakabase.InsideWorld.Business.Components.FileMover;
 using Bakabase.InsideWorld.Business.Components.Gui;
@@ -23,6 +24,7 @@ using Bakabase.Migrations;
 using Bakabase.Modules.ThirdParty.Abstractions.Http;
 using Bakabase.Modules.ThirdParty.Abstractions.Http.Cookie;
 using Bakabase.Modules.ThirdParty.ThirdParties.Bilibili;
+using Bakabase.Modules.ThirdParty.ThirdParties.DLsite;
 using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai;
 using Bakabase.Modules.ThirdParty.ThirdParties.Pixiv;
 using Bakabase.Service.Components.Tasks;
@@ -67,6 +69,7 @@ namespace Bakabase.Service.Components
 
 
             services.TryAddSingleton<BilibiliCookieValidator>();
+            services.TryAddSingleton<DLsiteCookieValidator>();
             services.TryAddSingleton<ExHentaiCookieValidator>();
             services.TryAddSingleton<PixivCookieValidator>();
 
@@ -82,6 +85,7 @@ namespace Bakabase.Service.Components
             services.TryAddSingleton<HardwareAccelerationService>();
             services.TryAddSingleton<LuxService>();
             services.TryAddSingleton<SevenZipService>();
+            services.TryAddSingleton<LocaleEmulatorService>();
             services.RegisterAllRegisteredTypeAs<IDependentComponentService>();
 
             services.TryAddSingleton<WebGuiHubConfigurationAdapter>();

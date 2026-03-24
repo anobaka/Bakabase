@@ -8,6 +8,7 @@ interface IContext {
   description?: string;
   defaultLocation: string;
   status: DependentComponentStatus;
+  isAvailableOnCurrentPlatform: boolean;
   isRequired: boolean;
   installationProgress: number;
   location?: string;

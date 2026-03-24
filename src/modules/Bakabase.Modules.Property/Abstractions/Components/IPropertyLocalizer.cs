@@ -11,4 +11,5 @@ public interface IPropertyLocalizer
     string PropertyTypeName(PropertyType type);
     string PropertyPoolName(PropertyPool  pool);
     string UnavailablePropertyTypeForManuallySettingValue_DueTo_NoPropertyWithReferenceValueType();
+    string ResourceSourceName(ResourceSource source);
 }

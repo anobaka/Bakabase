@@ -22,6 +22,7 @@ using Bakabase.InsideWorld.Business.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.Modules.Alias.Abstractions.Services;
+using Bakabase.Modules.ResourceResolver.Abstractions;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property;
 using Bakabase.Modules.Property.Abstractions.Models.Db;
@@ -52,6 +53,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Diagnostics;
 using System.Threading;
@@ -75,6 +77,8 @@ namespace Bakabase.InsideWorld.Business.Services
         private IMediaLibraryResourceMappingService MediaLibraryResourceMappingService => GetRequiredService<IMediaLibraryResourceMappingService>();
         private IResourceDataChangeEventPublisher ResourceDataChangeEventPublisher => GetRequiredService<IResourceDataChangeEventPublisher>();
         private IResourceSearchIndexService ResourceSearchIndexService => GetRequiredService<IResourceSearchIndexService>();
+        private IEnumerable<IResourceResolver> ResourceResolvers => GetRequiredService<IEnumerable<IResourceResolver>>();
+        private IResourceSourceLinkService ResourceSourceLinkService => GetRequiredService<IResourceSourceLinkService>();
         private readonly ICategoryService _categoryService;
         private readonly ILogger<ResourceService> _logger;
         private readonly SemaphoreSlim _addOrUpdateLock = new(1, 1);
@@ -619,6 +623,69 @@ namespace Bakabase.InsideWorld.Business.Services
                                                 }
                                             }
                                         }
+
+                                        // Fill display names from resolvers for resources that still have empty display names
+                                        using (MiniProfiler.Current.Step("DisplayName from resolvers"))
+                                        {
+                                            var resourcesWithEmptyDisplayName = doList.Where(r => string.IsNullOrEmpty(r.DisplayName)).ToList();
+                                            if (resourcesWithEmptyDisplayName.Count > 0)
+                                            {
+                                                var sourceLinkService = GetRequiredService<IResourceSourceLinkService>();
+                                                var linksGrouped = await sourceLinkService.GetByResourceIdsGrouped(
+                                                    resourcesWithEmptyDisplayName.Select(r => r.Id).ToArray());
+
+                                                // Group source keys by source type
+                                                var sourceKeysBySource = new Dictionary<ResourceSource, HashSet<string>>();
+                                                var resourceSourceLinks = new Dictionary<int, List<ResourceSourceLink>>();
+                                                foreach (var resource in resourcesWithEmptyDisplayName)
+                                                {
+                                                    if (linksGrouped.TryGetValue(resource.Id, out var links))
+                                                    {
+                                                        resourceSourceLinks[resource.Id] = links;
+                                                        foreach (var link in links)
+                                                        {
+                                                            if (!sourceKeysBySource.TryGetValue(link.Source, out var keys))
+                                                            {
+                                                                keys = [];
+                                                                sourceKeysBySource[link.Source] = keys;
+                                                            }
+
+                                                            keys.Add(link.SourceKey);
+                                                        }
+                                                    }
+                                                }
+
+                                                // Batch fetch display names from each resolver
+                                                var resolvers = GetRequiredService<IEnumerable<IResourceResolver>>();
+                                                var resolverMap = resolvers.ToDictionary(r => r.Source);
+                                                var displayNamesBySource = new Dictionary<ResourceSource, Dictionary<string, string>>();
+
+                                                foreach (var (source, keys) in sourceKeysBySource)
+                                                {
+                                                    if (resolverMap.TryGetValue(source, out var resolver))
+                                                    {
+                                                        displayNamesBySource[source] = await resolver.GetDefaultDisplayNames(keys);
+                                                    }
+                                                }
+
+                                                // Apply display names (prefer non-filesystem sources)
+                                                foreach (var resource in resourcesWithEmptyDisplayName)
+                                                {
+                                                    if (!resourceSourceLinks.TryGetValue(resource.Id, out var links)) continue;
+
+                                                    // Try non-filesystem sources first, then filesystem
+                                                    foreach (var link in links.OrderBy(l => l.Source == ResourceSource.FileSystem ? 1 : 0))
+                                                    {
+                                                        if (displayNamesBySource.TryGetValue(link.Source, out var names) &&
+                                                            names.TryGetValue(link.SourceKey, out var name))
+                                                        {
+                                                            resource.DisplayName = name;
+                                                            break;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
                                     }
 
                                     break;
@@ -671,6 +738,17 @@ namespace Bakabase.InsideWorld.Business.Services
                                     {
                                         var cache = cacheMap.GetValueOrDefault(r.Id);
                                         r.Cache = cache?.ToDomainModel();
+                                    }
+
+                                    break;
+                                }
+                                case ResourceAdditionalItem.SourceLinks:
+                                {
+                                    var sourceLinkService = GetRequiredService<IResourceSourceLinkService>();
+                                    var linksGrouped = await sourceLinkService.GetByResourceIdsGrouped(resourceIds.ToArray());
+                                    foreach (var r in doList)
+                                    {
+                                        r.SourceLinks = linksGrouped.GetValueOrDefault(r.Id) ?? [];
                                     }
 
                                     break;
@@ -797,9 +875,9 @@ namespace Bakabase.InsideWorld.Business.Services
         /// <returns></returns>
         public async Task<List<DataChangeViewModel>> AddOrPutRange(List<Resource> resources)
         {
-            var resourceDtoMap = resources.GroupBy(d => d.Path).ToDictionary(d => d.Key, d => d.First());
-
-            var parents = resources.Select(a => a.Parent).Where(a => a != null).GroupBy(a => a!.Path)
+            var parents = resources.Select(a => a.Parent)
+                .Where(a => a != null && !string.IsNullOrEmpty(a!.Path))
+                .GroupBy(a => a!.Path)
                 .Select(a => a.FirstOrDefault()).ToList();
             if (parents.Any())
             {
@@ -809,13 +887,33 @@ namespace Bakabase.InsideWorld.Business.Services
             await _addOrUpdateLock.WaitAsync();
             try
             {
-                // Resource
-                var dbResources = resources.Select(a => a.ToDbModel()).ToList();
-                var existedResources = dbResources.Where(a => a.Id > 0).ToList();
-                var newResources = dbResources.Except(existedResources).ToList();
-                await _orm.UpdateRange(existedResources);
-                dbResources = (await _orm.AddRange(newResources)).Data!.Concat(existedResources).ToList();
-                dbResources.ForEach(a => { resourceDtoMap[a.Path].Id = a.Id; });
+                // Resource - maintain index correspondence for ID writeback
+                var dbModels = resources.Select(a => a.ToDbModel()).ToList();
+                var existedModels = new List<ResourceDbModel>();
+                var newModelIndices = new List<int>();
+                var newModels = new List<ResourceDbModel>();
+
+                for (var i = 0; i < dbModels.Count; i++)
+                {
+                    if (dbModels[i].Id > 0)
+                        existedModels.Add(dbModels[i]);
+                    else
+                    {
+                        newModelIndices.Add(i);
+                        newModels.Add(dbModels[i]);
+                    }
+                }
+
+                await _orm.UpdateRange(existedModels);
+                var addedModels = (await _orm.AddRange(newModels)).Data!.ToList();
+
+                // Write back auto-generated IDs using index correspondence
+                for (var i = 0; i < addedModels.Count; i++)
+                {
+                    resources[newModelIndices[i]].Id = addedModels[i].Id;
+                }
+
+                var dbResources = addedModels.Concat(existedModels).ToList();
 
                 // Alias
                 await _aliasService.SaveByResources(resources);
@@ -826,11 +924,22 @@ namespace Bakabase.InsideWorld.Business.Services
                 // Custom properties
                 await _customPropertyValueService.SaveByResources(resources);
 
+                // Source links
+                var sourceLinkService = GetRequiredService<IResourceSourceLinkService>();
+                foreach (var resource in resources)
+                {
+                    if (resource.SourceLinks is { Count: > 0 })
+                    {
+                        await sourceLinkService.EnsureLinks(resource.Id,
+                            resource.SourceLinks.Select(l => (l.Source, l.SourceKey)));
+                    }
+                }
+
                 // Publish resource data changed event (triggers index updates via event subscription)
                 var allChangedIds = dbResources.Select(r => r.Id).ToArray();
                 ResourceDataChangeEventPublisher.PublishResourcesChanged(allChangedIds);
 
-                return [new DataChangeViewModel("Resource", newResources.Count, existedResources.Count, 0)];
+                return [new DataChangeViewModel("Resource", newModels.Count, existedModels.Count, 0)];
             }
             finally
             {
@@ -1080,6 +1189,92 @@ namespace Bakabase.InsideWorld.Business.Services
             return playableFiles;
         }
 
+        public async Task<List<PlayableItem>> DiscoverAndCachePlayableItems(int id, CancellationToken ct)
+        {
+            var r = await Get(id, ResourceAdditionalItem.None);
+            if (r == null)
+                return [];
+
+            var allItems = new List<PlayableItem>();
+
+            // Get source links for this resource
+            var sourceLinks = await ResourceSourceLinkService.GetByResourceId(id);
+
+            // Discover playable items from each linked source
+            foreach (var link in sourceLinks)
+            {
+                ct.ThrowIfCancellationRequested();
+
+                var resolver = ResourceResolvers.FirstOrDefault(x => x.Source == link.Source);
+                if (resolver == null) continue;
+
+                try
+                {
+                    var items = await resolver.DiscoverPlayableItemsAsync(r, link.SourceKey, ct);
+                    allItems.AddRange(items);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to discover playable items from {Source} for resource {Id}",
+                        link.Source, id);
+                }
+            }
+
+            // If no source links found, fallback to FileSystem discovery (backward compat)
+            if (sourceLinks.Count == 0 && !string.IsNullOrEmpty(r.Path))
+            {
+                var fsResolver = ResourceResolvers.FirstOrDefault(x => x.Source == ResourceSource.FileSystem);
+                if (fsResolver != null)
+                {
+                    var items = await fsResolver.DiscoverPlayableItemsAsync(r, r.Path, ct);
+                    allItems.AddRange(items);
+                }
+            }
+
+            // Save to cache
+            var cache = await _resourceCacheOrm.GetByKey(id, true);
+            var isNewCache = cache == null;
+            cache ??= new ResourceCacheDbModel { ResourceId = id };
+
+            // Serialize PlayableItems as JSON
+            cache.PlayableItems = allItems.Count > 0
+                ? System.Text.Json.JsonSerializer.Serialize(allItems, new System.Text.Json.JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+                })
+                : null;
+
+            // Also update legacy PlayableFilePaths for backward compatibility
+            var fileSystemPaths = allItems
+                .Where(i => i.Source == ResourceSource.FileSystem)
+                .Select(i => i.Key)
+                .ToList();
+
+            // Apply trimming for cache (same logic as PrepareCache)
+            if (fileSystemPaths.Count > 0)
+            {
+                var trimmedPaths = fileSystemPaths
+                    .GroupBy(d => $"{Path.GetDirectoryName(d)}-{Path.GetExtension(d)}")
+                    .SelectMany(x => x.Take(InternalOptions.MaxPlayableFilesPerTypeAndSubDir))
+                    .ToList();
+                cache.PlayableFilePaths = trimmedPaths.SerializeAsStandardValue(StandardValueType.ListString);
+                cache.HasMorePlayableFiles = trimmedPaths.Count < fileSystemPaths.Count;
+            }
+            else
+            {
+                cache.PlayableFilePaths = null;
+                cache.HasMorePlayableFiles = allItems.Count > InternalOptions.MaxPlayableFilesPerTypeAndSubDir;
+            }
+
+            cache.CachedTypes |= ResourceCacheType.PlayableFiles;
+            if (isNewCache)
+                await _resourceCacheOrm.Add(cache);
+            else
+                await _resourceCacheOrm.Update(cache);
+
+            return allItems;
+        }
+
         public async Task<BaseResponse> PlayRandomResource()
         {
             var playableCaches = await _resourceCacheOrm.GetAll(x => !string.IsNullOrEmpty(x.PlayableFilePaths));
@@ -1241,58 +1436,56 @@ namespace Bakabase.InsideWorld.Business.Services
                                             break;
                                         }
 
-                                        string[]? playableFiles = null;
+                                        // Discover playable items from all linked sources
+                                        var allPlayableItems = new List<PlayableItem>();
+                                        var sourceLinks = await ResourceSourceLinkService.GetByResourceId(resource.Id);
 
-                                        // For file resources, directly use the file itself as playable
-                                        if (resource.IsFile)
+                                        foreach (var link in sourceLinks)
                                         {
-                                            if (File.Exists(resource.Path))
+                                            var resolver = ResourceResolvers.FirstOrDefault(x => x.Source == link.Source);
+                                            if (resolver == null) continue;
+
+                                            try
                                             {
-                                                playableFiles = [resource.Path.StandardizePath()!];
+                                                var items = await resolver.DiscoverPlayableItemsAsync(resource, link.SourceKey, ct);
+                                                allPlayableItems.AddRange(items);
                                             }
-                                        }
-                                        else
-                                        {
-                                            // Use ResourceProfile to get effective playable file options for folder resources
-                                            var playableFileOptions =
-                                                await ResourceProfileService.GetEffectivePlayableFileOptions(resource);
-                                            if (playableFileOptions?.Extensions is { Count: > 0 })
+                                            catch (Exception ex)
                                             {
-                                                // Normalize extensions to ensure they start with a dot (Path.GetExtension returns ".ext")
-                                                var extensions = playableFileOptions.Extensions
-                                                    .Select(e => e.StartsWith('.') ? e : $".{e}")
-                                                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
-                                                var files = Directory.Exists(resource.Path)
-                                                    ? Directory.EnumerateFiles(resource.Path, "*",
-                                                        SearchOption.AllDirectories)
-                                                    : [];
-
-                                                var result = files.Where(f =>
-                                                    extensions.Contains(Path.GetExtension(f))).ToArray();
-
-                                                // Apply file name pattern filter if configured
-                                                if (!string.IsNullOrEmpty(playableFileOptions.FileNamePattern))
-                                                {
-                                                    try
-                                                    {
-                                                        var regex = new System.Text.RegularExpressions.Regex(
-                                                            playableFileOptions.FileNamePattern,
-                                                            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-                                                        result = result.Where(f => regex.IsMatch(Path.GetFileName(f))).ToArray();
-                                                    }
-                                                    catch
-                                                    {
-                                                        // Invalid regex, ignore the filter
-                                                    }
-                                                }
-
-                                                playableFiles = result.Select(f => f.StandardizePath()!).ToArray();
+                                                _logger.LogWarning(ex,
+                                                    "Failed to discover playable items from {Source} for resource {Id}",
+                                                    link.Source, resource.Id);
                                             }
                                         }
 
-                                        if (playableFiles?.Any() == true)
+                                        // Fallback: if no source links, try FileSystem discovery
+                                        if (sourceLinks.Count == 0 && !string.IsNullOrEmpty(resource.Path))
                                         {
-                                            var trimmedPlayableFiles = playableFiles
+                                            var fsResolver = ResourceResolvers.FirstOrDefault(x => x.Source == ResourceSource.FileSystem);
+                                            if (fsResolver != null)
+                                            {
+                                                var items = await fsResolver.DiscoverPlayableItemsAsync(resource, resource.Path, ct);
+                                                allPlayableItems.AddRange(items);
+                                            }
+                                        }
+
+                                        // Serialize PlayableItems as JSON
+                                        cache.PlayableItems = allPlayableItems.Count > 0
+                                            ? JsonSerializer.Serialize(allPlayableItems, new JsonSerializerOptions
+                                            {
+                                                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                                            })
+                                            : null;
+
+                                        // Also update legacy PlayableFilePaths for backward compat
+                                        var fileSystemPaths = allPlayableItems
+                                            .Where(i => i.Source == ResourceSource.FileSystem)
+                                            .Select(i => i.Key)
+                                            .ToArray();
+
+                                        if (fileSystemPaths.Length > 0)
+                                        {
+                                            var trimmedPlayableFiles = fileSystemPaths
                                                 .GroupBy(d =>
                                                     $"{Path.GetDirectoryName(d)}-{Path.GetExtension(d)}")
                                                 .SelectMany(x =>
@@ -1304,7 +1497,8 @@ namespace Bakabase.InsideWorld.Business.Services
                                                     StandardValueType
                                                         .ListString);
                                             cache.HasMorePlayableFiles =
-                                                trimmedPlayableFiles.Count < playableFiles.Length;
+                                                trimmedPlayableFiles.Count < fileSystemPaths.Length ||
+                                                allPlayableItems.Count > trimmedPlayableFiles.Count;
                                         }
                                         else
                                         {
@@ -2274,6 +2468,36 @@ namespace Bakabase.InsideWorld.Business.Services
             return BaseResponseBuilder.Ok;
         }
 
+        public async Task<BaseResponse> PlayItem(int resourceId, ResourceSource source, string key)
+        {
+            var resource = await Get(resourceId, ResourceAdditionalItem.None);
+            if (resource == null)
+                return BaseResponseBuilder.NotFound;
+
+            var resolver = ResourceResolvers.FirstOrDefault(x => x.Source == source);
+            if (resolver == null)
+                return BaseResponseBuilder.BuildBadRequest($"No resolver found for source {source}.");
+
+            var item = new PlayableItem { Source = source, Key = key };
+
+            try
+            {
+                await resolver.PlayAsync(resource, item, CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to play item from {Source} for resource {ResourceId}", source, resourceId);
+                return BaseResponseBuilder.BuildBadRequest($"Failed to play: {ex.Message}");
+            }
+
+            var now = DateTime.Now;
+            await _orm.UpdateByKey(resourceId, r => r.PlayedAt = now);
+            await _playHistoryService.Add(new PlayHistoryDbModel
+                { ResourceId = resourceId, Item = $"{source}:{key}", PlayedAt = now });
+
+            return BaseResponseBuilder.Ok;
+        }
+
         public async Task<BaseResponse> ChangeMediaLibrary(int[] ids, int mediaLibraryId, Dictionary<int, string>? newPaths = null)
         {
             // Verify media library exists
@@ -2366,9 +2590,78 @@ namespace Bakabase.InsideWorld.Business.Services
             ResourceDataChangeEventPublisher.PublishResourceChanged(id);
         }
 
+        public async Task<List<int>> GetConflictingResourceIds(int resourceId)
+        {
+            var conflictIds = new HashSet<int>();
+
+            // 1. Find conflicts by overlapping source links
+            var sourceLinkService = GetRequiredService<IResourceSourceLinkService>();
+            var sourceLinkConflicts = await sourceLinkService.FindConflictingResourceIds(resourceId);
+            foreach (var id in sourceLinkConflicts)
+            {
+                conflictIds.Add(id);
+            }
+
+            // 2. Find conflicts by same Path
+            var resource = await _orm.GetByKey(resourceId);
+            if (resource != null && !string.IsNullOrEmpty(resource.Path))
+            {
+                var allResources = await _orm.GetAll(r => r.Id != resourceId, false);
+                var pathConflicts = allResources
+                    .Where(r => !string.IsNullOrEmpty(r.Path) &&
+                                string.Equals(r.Path, resource.Path, StringComparison.OrdinalIgnoreCase))
+                    .Select(r => r.Id);
+                foreach (var id in pathConflicts)
+                {
+                    conflictIds.Add(id);
+                }
+            }
+
+            return conflictIds.ToList();
+        }
+
+        public async Task MergeResources(ResourceMergeInputModel model)
+        {
+            var sourceLinkService = GetRequiredService<IResourceSourceLinkService>();
+
+            // 1. Collect all source links from merge-source resources and add to target
+            var mergeSourceIds = model.SourceResourceIds.Concat([model.TargetResourceId]).Distinct().ToArray();
+            var sourceLinks = await sourceLinkService.GetByResourceIds(mergeSourceIds);
+            var allLinks = sourceLinks.Select(l => (l.Source, l.SourceKey)).Distinct().ToList();
+            await sourceLinkService.EnsureLinks(model.TargetResourceId, allLinks);
+
+            // 2. Transfer media library mappings from source resources to target
+            var mappingService = MediaLibraryResourceMappingService;
+            var sourceMappings = await mappingService.GetByResourceIds(model.SourceResourceIds);
+            if (sourceMappings.Count > 0)
+            {
+                var targetMappings = sourceMappings
+                    .Select(m => (model.TargetResourceId, m.MediaLibraryId))
+                    .Distinct()
+                    .ToList();
+                await mappingService.EnsureMappingsRange(targetMappings);
+            }
+
+            // 3. Delete source resources and explicitly-deleted resources
+            // Note: Property value selections should be applied via separate PutPropertyValue calls
+            // before calling merge.
+            var idsToDelete = model.SourceResourceIds
+                .Concat(model.DeleteResourceIds)
+                .Where(id => id != model.TargetResourceId)
+                .Distinct()
+                .ToArray();
+
+            if (idsToDelete.Length > 0)
+            {
+                await DeleteByKeys(idsToDelete);
+            }
+        }
+
         private async Task DeleteRelatedData(List<int> ids)
         {
             await _customPropertyValueService.RemoveAll(x => ids.Contains(x.ResourceId));
+            var sourceLinkService = GetRequiredService<IResourceSourceLinkService>();
+            await sourceLinkService.DeleteByResourceIds(ids);
         }
 
         public string BuildDisplayNameForResource(Resource resource, string template,

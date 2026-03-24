@@ -50,7 +50,7 @@ export default function BasicLayout({
         <div className={styles.insideWorld}>
           <FloatingAssistant />
           <PageNav />
-          <div className={`${styles.main} pt-1 pb-1 pr-1`}>{children}</div>
+          <div className={`${styles.main} pt-2 pb-2 pr-2`}>{children}</div>
         </div>
       </ErrorBoundary>
     </TourProvider>

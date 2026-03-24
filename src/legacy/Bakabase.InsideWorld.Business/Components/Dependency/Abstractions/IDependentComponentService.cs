@@ -29,6 +29,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Abstractions
         // Task<DependentComponentVersion> GetVersion(CancellationToken ct);
         // Task<bool> VerifyIntegrality(CancellationToken ct);
 
+        bool IsAvailableOnCurrentPlatform { get; }
         DependentComponentStatus Status { get; }
         DependentComponentContext Context { get; }
 

@@ -19,6 +19,7 @@ using Bakabase.Modules.ThirdParty.ThirdParties.Dahlia;
 using Bakabase.Modules.ThirdParty.ThirdParties.Dmm;
 using Bakabase.Modules.ThirdParty.ThirdParties.DLsite;
 using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai;
+using Bakabase.Modules.ThirdParty.ThirdParties.Steam;
 using Bakabase.Modules.ThirdParty.ThirdParties.Faleno;
 using Bakabase.Modules.ThirdParty.ThirdParties.Fantastica;
 using Bakabase.Modules.ThirdParty.ThirdParties.FC2;
@@ -90,6 +91,9 @@ public static class ThirdPartyExtensions
                 .ExHentai);
         services.TryAddSingleton<ExHentaiClient>();
 
+        services.TryAddSingleton<SteamClient>();
+        services.TryAddSingleton<SteamLocalLibrary>();
+
         services.AddBakabaseHttpClient<PixivHttpMessageHandler<TPixivOptions>>(InternalOptions
             .HttpClientNames
             .Pixiv);
@@ -156,7 +160,8 @@ public static class ThirdPartyExtensions
 
         services.AddTransient<IThirdPartyLocalizer, ThirdPartyLocalizer>();
         services.TryAddSingleton<ThirdPartyHttpRequestLogger>();
-        
+        services.TryAddSingleton<IThirdPartyCookieContainer, ThirdPartyCookieContainer>();
+
         services.AddSingleton<IThirdPartyService, ThirdPartyService>();
 
         return services;

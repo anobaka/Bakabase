@@ -1,6 +1,7 @@
 enum DependentComponentIds {
   FFMpeg = "364e3884-4c6f-446f-b72c-1ec84e8da2c2",
   Lux = "6cb4ac7f-f60d-45c9-86bc-a48918623654",
+  LocaleEmulator = "locale-emulator-component-service",
 }
 
 export default DependentComponentIds;

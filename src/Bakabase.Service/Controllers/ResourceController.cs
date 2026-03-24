@@ -499,6 +499,21 @@ namespace Bakabase.Service.Controllers
             return await service.Play(resourceId, file);
         }
 
+        [HttpGet("{resourceId}/play-item")]
+        [SwaggerOperation(OperationId = "PlayResourceItem")]
+        public async Task<BaseResponse> PlayItem(int resourceId, ResourceSource source, string key)
+        {
+            return await service.PlayItem(resourceId, source, key);
+        }
+
+        [HttpGet("{id}/playable-items")]
+        [SwaggerOperation(OperationId = "GetResourcePlayableItems")]
+        public async Task<ListResponse<PlayableItem>> GetPlayableItems(int id)
+        {
+            var items = await service.DiscoverAndCachePlayableItems(id, HttpContext.RequestAborted);
+            return new ListResponse<PlayableItem>(items);
+        }
+
         [HttpGet("play/random")]
         [SwaggerOperation(OperationId = "PlayRandomResource")]
         public async Task<BaseResponse> PlayRandom()
@@ -722,6 +737,58 @@ namespace Bakabase.Service.Controllers
                 await mappingService.EnsureMappings(resourceId, model.MediaLibraryIds);
             }
 
+            return BaseResponseBuilder.Ok;
+        }
+
+        #endregion
+
+        #region Source Links & Conflict Resolution
+
+        /// <summary>
+        /// Get source links for a resource
+        /// </summary>
+        [HttpGet("{id:int}/source-links")]
+        [SwaggerOperation(OperationId = "GetResourceSourceLinks")]
+        public async Task<ListResponse<ResourceSourceLink>> GetResourceSourceLinks(int id)
+        {
+            var sourceLinkService = HttpContext.RequestServices.GetRequiredService<IResourceSourceLinkService>();
+            var links = await sourceLinkService.GetByResourceId(id);
+            return new ListResponse<ResourceSourceLink>(links);
+        }
+
+        /// <summary>
+        /// Get conflicting resources for a given resource.
+        /// Conflicting resources share source links but are not the same resource.
+        /// </summary>
+        [HttpGet("{id:int}/conflicts")]
+        [SwaggerOperation(OperationId = "GetResourceConflicts")]
+        public async Task<ListResponse<Resource>> GetResourceConflicts(int id,
+            ResourceAdditionalItem additionalItems = ResourceAdditionalItem.All)
+        {
+            var conflictIds = await service.GetConflictingResourceIds(id);
+            if (conflictIds.Count == 0)
+            {
+                return new ListResponse<Resource>([]);
+            }
+
+            var resources = await service.GetByKeys(conflictIds.ToArray(), additionalItems);
+            return new ListResponse<Resource>(resources);
+        }
+
+        /// <summary>
+        /// Merge multiple resources into one target resource.
+        /// </summary>
+        [HttpPost("merge")]
+        [SwaggerOperation(OperationId = "MergeResources")]
+        public async Task<BaseResponse> MergeResources([FromBody] ResourceMergeInputModel model)
+        {
+            var targetResource = await service.Get(model.TargetResourceId);
+            if (targetResource == null)
+            {
+                return BaseResponseBuilder.BuildBadRequest($"Target resource {model.TargetResourceId} not found");
+            }
+
+            await service.MergeResources(model);
             return BaseResponseBuilder.Ok;
         }
 

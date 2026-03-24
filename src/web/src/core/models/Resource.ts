@@ -2,6 +2,8 @@ import type {
   PropertyType,
   PropertyValueScope,
   ResourceCacheType,
+  ResourceSource,
+  ResourceStatus,
   ResourceTag,
   StandardValueType,
 } from "@/sdk/constants";
@@ -24,14 +26,23 @@ export type Property = {
   order: number;
 };
 
+export type PlayableItem = {
+  source: ResourceSource;
+  key: string;
+  displayName?: string;
+};
+
 export type Resource = {
   id: number;
   mediaLibraryId: number;
   categoryId: number;
-  fileName: string;
-  directory: string;
-  displayName: string;
-  path: string;
+  source: ResourceSource;
+  status: ResourceStatus;
+  sourceKey: string;
+  fileName?: string;
+  directory?: string;
+  displayName?: string;
+  path?: string;
   parentId?: number;
   hasChildren: boolean;
   isFile: boolean;
@@ -54,6 +65,7 @@ export type Resource = {
   playedAt?: string;
   cache?: {
     playableFilePaths?: string[];
+    playableItems?: PlayableItem[];
     hasMorePlayableFiles: boolean;
     coverPaths?: string[];
     cachedTypes: ResourceCacheType[];

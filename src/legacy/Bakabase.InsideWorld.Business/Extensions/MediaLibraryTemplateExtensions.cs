@@ -56,6 +56,7 @@ public static class MediaLibraryTemplateExtensions
         services.AddScoped<IPathMarkEffectService, PathMarkEffectService<TDbContext>>();
 
         services.AddScoped<PathMarkSyncService>();
+        services.AddScoped<ResourceSyncService>();
         services.AddSingleton<PathSyncManager>();
         services.AddHostedService(sp => sp.GetRequiredService<PathSyncManager>());
         services.AddSingleton<IPathMarkSyncService>(sp => sp.GetRequiredService<PathSyncManager>());
@@ -63,6 +64,9 @@ public static class MediaLibraryTemplateExtensions
         services.AddScoped<FullMemoryCacheResourceService<TDbContext, MediaLibraryResourceMappingDbModel, int>>();
         services.AddSingleton<MediaLibraryResourceMappingIndexService>();
         services.AddScoped<IMediaLibraryResourceMappingService, MediaLibraryResourceMappingService<TDbContext>>();
+
+        services.AddScoped<FullMemoryCacheResourceService<TDbContext, ResourceSourceLinkDbModel, int>>();
+        services.AddScoped<IResourceSourceLinkService, ResourceSourceLinkService<TDbContext>>();
 
         services.AddScoped<FullMemoryCacheResourceService<TDbContext, ResourceProfileDbModel, int>>();
         services.AddScoped<IResourceProfileService, ResourceProfileService<TDbContext>>();

@@ -674,4 +674,37 @@
   <data name="Enhancer_KeywordAfterPretreatment" xml:space="preserve">
     <value>Keyword after pretreatment: {0}</value>
   </data>
+  <data name="Enhancer_Steam_Name" xml:space="preserve">
+    <value>Steam</value>
+  </data>
+  <data name="Enhancer_Steam_Description" xml:space="preserve">
+    <value>Fetch game metadata from Steam Store.</value>
+  </data>
+  <data name="Enhancer_Steam_Target_Name_Name" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="Enhancer_Steam_Target_Description_Name" xml:space="preserve">
+    <value>Description</value>
+  </data>
+  <data name="Enhancer_Steam_Target_Developer_Name" xml:space="preserve">
+    <value>Developer</value>
+  </data>
+  <data name="Enhancer_Steam_Target_Publisher_Name" xml:space="preserve">
+    <value>Publisher</value>
+  </data>
+  <data name="Enhancer_Steam_Target_ReleaseDate_Name" xml:space="preserve">
+    <value>Release Date</value>
+  </data>
+  <data name="Enhancer_Steam_Target_Genre_Name" xml:space="preserve">
+    <value>Genre</value>
+  </data>
+  <data name="Enhancer_Steam_Target_Category_Name" xml:space="preserve">
+    <value>Category</value>
+  </data>
+  <data name="Enhancer_Steam_Target_MetacriticScore_Name" xml:space="preserve">
+    <value>Metacritic Score</value>
+  </data>
+  <data name="Enhancer_Steam_Target_Cover_Name" xml:space="preserve">
+    <value>Cover</value>
+  </data>
 </root>

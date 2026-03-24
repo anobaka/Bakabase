@@ -126,6 +126,11 @@ namespace Bakabase.Service.Controllers
                     options.AutoListeningPortCount = model.AutoListeningPortCount.Value;
                 }
 
+                if (model.TimeZoneId != null)
+                {
+                    options.TimeZoneId = model.TimeZoneId.Length == 0 ? null : model.TimeZoneId;
+                }
+
             });
 
             if (newUiTheme.HasValue)
@@ -290,7 +295,11 @@ namespace Bakabase.Service.Controllers
         {
             await _bakabaseOptionsManager.Get<ExHentaiOptions>().SaveAsync(options =>
             {
-                if (model.Cookie != null)
+                if (model.Accounts != null)
+                {
+                    options.Accounts = model.Accounts;
+                }
+                else if (model.Cookie != null)
                 {
                     options.Cookie = model.Cookie;
                 }
@@ -328,6 +337,11 @@ namespace Bakabase.Service.Controllers
                 if (model.RequestTimeout.HasValue)
                 {
                     options.RequestTimeout = model.RequestTimeout.Value;
+                }
+
+                if (model.ShowCover.HasValue)
+                {
+                    options.ShowCover = model.ShowCover.Value;
                 }
             });
             return BaseResponseBuilder.Ok;
@@ -1104,7 +1118,11 @@ namespace Bakabase.Service.Controllers
         {
             await _bakabaseOptionsManager.Get<DLsiteOptions>().SaveAsync(options =>
             {
-                if (model.Cookie != null)
+                if (model.Accounts != null)
+                {
+                    options.Accounts = model.Accounts;
+                }
+                else if (model.Cookie != null)
                 {
                     options.Cookie = model.Cookie;
                 }
@@ -1157,6 +1175,42 @@ namespace Bakabase.Service.Controllers
                 if (model.RequestTimeout.HasValue)
                 {
                     options.RequestTimeout = model.RequestTimeout.Value;
+                }
+
+                if (model.ShowCover.HasValue)
+                {
+                    options.ShowCover = model.ShowCover.Value;
+                }
+
+                if (model.ScanFolders != null)
+                {
+                    options.ScanFolders = model.ScanFolders;
+                }
+            });
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpGet("steam")]
+        [SwaggerOperation(OperationId = "GetSteamOptions")]
+        public async Task<SingletonResponse<SteamOptions>> GetSteamOptions()
+        {
+            return new SingletonResponse<SteamOptions>(_bakabaseOptionsManager.Get<SteamOptions>().Value);
+        }
+
+        [HttpPatch("steam")]
+        [SwaggerOperation(OperationId = "PatchSteamOptions")]
+        public async Task<BaseResponse> PatchSteamOptions([FromBody] SteamOptionsPatchInputModel model)
+        {
+            await _bakabaseOptionsManager.Get<SteamOptions>().SaveAsync(options =>
+            {
+                if (model.Accounts != null)
+                {
+                    options.Accounts = model.Accounts;
+                }
+
+                if (model.ShowCover.HasValue)
+                {
+                    options.ShowCover = model.ShowCover.Value;
                 }
             });
             return BaseResponseBuilder.Ok;

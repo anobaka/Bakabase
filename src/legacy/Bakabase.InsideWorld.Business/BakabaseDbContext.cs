@@ -99,6 +99,12 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<LlmCallCacheEntryDbModel> LlmCallCacheEntries { get; set; }
         public DbSet<AiFeatureConfigDbModel> AiFeatureConfigs { get; set; }
 
+        // Resource source tables
+        public DbSet<ResourceSourceLinkDbModel> ResourceSourceLinks { get; set; }
+        public DbSet<SteamAppDbModel> SteamApps { get; set; }
+        public DbSet<DLsiteWorkDbModel> DLsiteWorks { get; set; }
+        public DbSet<ExHentaiGalleryDbModel> ExHentaiGalleries { get; set; }
+
         // Comparison module tables
         public DbSet<ComparisonPlanDbModel> ComparisonPlans { get; set; }
         public DbSet<ComparisonRuleDbModel> ComparisonRules { get; set; }
@@ -227,6 +233,7 @@ namespace Bakabase.InsideWorld.Business
             modelBuilder.Entity<ResourceDbModel>(r =>
             {
                 r.HasIndex(x => x.Path);
+                r.HasIndex(x => x.Status);
             });
 
             modelBuilder.Entity<EnhancementRecord>(er =>
@@ -321,6 +328,33 @@ namespace Bakabase.InsideWorld.Business
             modelBuilder.Entity<AiFeatureConfigDbModel>(t =>
             {
                 t.HasIndex(x => x.Feature).IsUnique();
+            });
+
+            // Resource source link table
+            modelBuilder.Entity<ResourceSourceLinkDbModel>(t =>
+            {
+                t.HasIndex(x => x.ResourceId);
+                t.HasIndex(x => new { x.Source, x.SourceKey });
+                t.HasIndex(x => new { x.ResourceId, x.Source, x.SourceKey }).IsUnique();
+            });
+
+            // Resource source tables
+            modelBuilder.Entity<SteamAppDbModel>(t =>
+            {
+                t.HasIndex(x => x.AppId).IsUnique();
+                t.HasIndex(x => x.ResourceId);
+            });
+
+            modelBuilder.Entity<DLsiteWorkDbModel>(t =>
+            {
+                t.HasIndex(x => x.WorkId).IsUnique();
+                t.HasIndex(x => x.ResourceId);
+            });
+
+            modelBuilder.Entity<ExHentaiGalleryDbModel>(t =>
+            {
+                t.HasIndex(x => new { x.GalleryId, x.GalleryToken }).IsUnique();
+                t.HasIndex(x => x.ResourceId);
             });
 
             // Comparison module tables

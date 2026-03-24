@@ -117,5 +117,22 @@
   "resource.ai.applySelected": "Apply Selected",
   "resource.ai.applied": "Applied",
   "resource.ai.targetLanguage": "Target Language",
-  "resource.ai.modelConfig": "Model Config"
+  "resource.ai.modelConfig": "Model Config",
+
+  "resource.conflict.tooltip": "{{count}} conflicting resource(s) found",
+  "resource.conflict.title": "Conflict Resolution",
+  "resource.conflict.loading": "Loading conflict data...",
+  "resource.conflict.noConflicts": "No conflicting resources found",
+  "resource.conflict.description": "The following resources share some source links with the current resource but are not the same resource. You can merge their data into the current resource or delete them.",
+  "resource.conflict.property": "Property",
+  "resource.conflict.scope": "Scope",
+  "resource.conflict.current": "Current",
+  "resource.conflict.actionMerge": "Merge",
+  "resource.conflict.actionDelete": "Delete",
+  "resource.conflict.sourceLinks": "Source Links",
+  "resource.conflict.mediaLibraries": "Media Libraries",
+  "resource.conflict.path": "Path",
+  "resource.conflict.apply": "Apply",
+  "resource.conflict.mergeSuccess": "Resources merged successfully",
+  "resource.conflict.mergeFailed": "Failed to merge resources"
 }

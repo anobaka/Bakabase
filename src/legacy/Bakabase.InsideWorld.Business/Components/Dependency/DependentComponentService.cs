@@ -145,6 +145,8 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency
 
         protected abstract IDiscoverer Discoverer { get; }
 
+        public virtual bool IsAvailableOnCurrentPlatform => true;
+
         public DependentComponentStatus Status { get; protected set; } = DependentComponentStatus.NotInstalled;
 
         private DependentComponentVersion? _latestVersion;

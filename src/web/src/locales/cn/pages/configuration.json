@@ -9,6 +9,7 @@
   "configuration.dependency.clickToUpdate": "点击更新至版本",
   "configuration.dependency.updating": "更新中",
   "configuration.dependency.failedToGetVersion": "获取新版本信息失败",
+  "configuration.dependency.notAvailableOnCurrentPlatform": "当前平台不支持",
 
   "configuration.thirdParty.title": "第三方配置",
   "configuration.thirdParty.validateCookie": "验证 Cookie",

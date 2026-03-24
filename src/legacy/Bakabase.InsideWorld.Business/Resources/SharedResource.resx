@@ -573,6 +573,27 @@ The version of lux is not limited.</value>
   <data name="BTask_Description_SearchIndex" xml:space="preserve">
     <value>Build the inverted index for fast resource searching</value>
   </data>
+  <data name="SearchIndex_LoadingResources" xml:space="preserve">
+    <value>Loading resources...</value>
+  </data>
+  <data name="SearchIndex_LoadedResources" xml:space="preserve">
+    <value>Loaded {0} resources</value>
+  </data>
+  <data name="SearchIndex_LoadedCustomPropertyValues" xml:space="preserve">
+    <value>Loaded {0} custom property values</value>
+  </data>
+  <data name="SearchIndex_LoadedReservedPropertyValues" xml:space="preserve">
+    <value>Loaded {0} reserved property values</value>
+  </data>
+  <data name="SearchIndex_BuildingIndex" xml:space="preserve">
+    <value>Building index...</value>
+  </data>
+  <data name="SearchIndex_IndexingProgress" xml:space="preserve">
+    <value>Indexed {0}/{1} resources</value>
+  </data>
+  <data name="SearchIndex_Completed" xml:space="preserve">
+    <value>Completed: {0} resources indexed</value>
+  </data>
   <data name="VersionCheck_NewVersionAvailableTitle" xml:space="preserve">
     <value>New Version Available</value>
   </data>
@@ -624,6 +645,42 @@ The version of lux is not limited.</value>
   <data name="BTask_MessageOnInterruption_SyncPathMark_Single" xml:space="preserve">
     <value>Path mark synchronization is in progress; forcibly interrupting may result in incomplete synchronization.</value>
   </data>
+  <data name="BTask_Name_SyncSteam" xml:space="preserve">
+    <value>Sync Steam apps</value>
+  </data>
+  <data name="BTask_Description_SyncSteam" xml:space="preserve">
+    <value>Synchronize games from Steam library</value>
+  </data>
+  <data name="BTask_Name_SyncExHentai" xml:space="preserve">
+    <value>Sync ExHentai galleries</value>
+  </data>
+  <data name="BTask_Description_SyncExHentai" xml:space="preserve">
+    <value>Synchronize galleries from ExHentai favorites</value>
+  </data>
+  <data name="BTask_Name_SyncDLsite" xml:space="preserve">
+    <value>Sync DLsite works</value>
+  </data>
+  <data name="BTask_Description_SyncDLsite" xml:space="preserve">
+    <value>Synchronize works from DLsite purchases</value>
+  </data>
+  <data name="BTask_Name_DownloadDLsite" xml:space="preserve">
+    <value>Download DLsite: {0}</value>
+  </data>
+  <data name="BTask_Description_DownloadDLsite" xml:space="preserve">
+    <value>Downloading work {0} from DLsite</value>
+  </data>
+  <data name="BTask_Name_ScanDLsiteFolder" xml:space="preserve">
+    <value>Scan DLsite folders</value>
+  </data>
+  <data name="BTask_Description_ScanDLsiteFolder" xml:space="preserve">
+    <value>Scan configured folders to match DLsite works</value>
+  </data>
+  <data name="BTask_Name_ExtractDLsite" xml:space="preserve">
+    <value>Extract DLsite: {0}</value>
+  </data>
+  <data name="BTask_Description_ExtractDLsite" xml:space="preserve">
+    <value>Extracting DLsite work {0}</value>
+  </data>
   <data name="Dependency_NotInstalled_Message" xml:space="preserve">
     <value>{0} is not installed. Please install it in the system settings page.</value>
   </data>
@@ -638,6 +695,12 @@ The version of lux is not limited.</value>
   </data>
   <data name="Dependency_Component_7z_Description" xml:space="preserve">
     <value>This component is used for archive compression and extraction. It is required by other components such as ffmpeg and lux for their installation.</value>
+  </data>
+  <data name="Dependency_Component_LocaleEmulator_Name" xml:space="preserve">
+    <value>Locale Emulator</value>
+  </data>
+  <data name="Dependency_Component_LocaleEmulator_Description" xml:space="preserve">
+    <value>This component allows running applications with a different system locale (e.g., Japanese locale). Windows only.</value>
   </data>
   <data name="CodecNotSupportedByBrowsers" xml:space="preserve">
     <value>Codec '{0}' is not supported by browsers</value>

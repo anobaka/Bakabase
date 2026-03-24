@@ -7,6 +7,7 @@ using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Ai;
+using Bakabase.InsideWorld.Business.Components.Compression;
 using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Components;
@@ -41,6 +42,7 @@ using Bakabase.Modules.Presets.Extensions;
 using Bakabase.Modules.Property.Extensions;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bakabase.Modules.Comparison.Extensions;
+using Bakabase.Modules.ResourceResolver.Extensions;
 using Bakabase.Modules.ThirdParty.Extensions;
 using Bakabase.Modules.ThirdParty.Services;
 using Bootstrap.Components.DependencyInjection;
@@ -170,6 +172,7 @@ namespace Bakabase.Service.Extensions
                     SoulPlusOptions, TmdbOptions>();
 
             services.AddDownloaders();
+            services.AddResourceResolvers();
 
             services.AddBulkModification<BakabaseDbContext>();
             services.AddComparison<BakabaseDbContext>();
@@ -177,7 +180,19 @@ namespace Bakabase.Service.Extensions
             services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, ExtensionGroupDbModel, int>>();
             services.AddScoped<IExtensionGroupService, ExtensionGroupService>();
 
+            services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, SteamAppDbModel, int>>();
+            services.AddScoped<ISteamAppService, SteamAppService>();
+
+            services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, DLsiteWorkDbModel, int>>();
+            services.AddScoped<DLsiteArchiveExtractor>();
+            services.AddScoped<IDLsiteWorkService, DLsiteWorkService>();
+
+            services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, ExHentaiGalleryDbModel, int>>();
+            services.AddScoped<IExHentaiGalleryService, ExHentaiGalleryService>();
+
             services.AddSingleton<ISystemPlayer, SelfPlayer>();
+            services.AddSingleton<Bakabase.Abstractions.Components.ISystemPlayer>(sp =>
+                sp.GetRequiredService<ISystemPlayer>());
 
             services.AddPostParser<BakabaseDbContext>();
             services.AddSingleton<OllamaApiClientAccessor>();

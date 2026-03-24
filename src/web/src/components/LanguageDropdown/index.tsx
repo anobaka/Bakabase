@@ -28,7 +28,7 @@ type Props = {
   value?: string;
   defaultValue?: string;
   onValueChange?: (value: string) => void;
-  availableLocales?: { code: string; label: string }[];
+  availableLocales?: { code: string; label: string; shortLabel?: string }[];
 } & Omit<SelectProps, "dataSource" | "selectedKeys" | "defaultSelectedKeys" | "onSelectionChange" | "children">;
 
 const LanguageDropdown = ({
@@ -41,6 +41,7 @@ const LanguageDropdown = ({
   const appLanguage = useAppOptionsStore((state) => state.data?.language);
   const languages = availableLocales ?? DEFAULT_LANGUAGES;
   const effectiveDefaultValue = defaultValue ?? appLanguage;
+  const hasShortLabels = languages.some((l) => l.shortLabel);
 
   return (
     <Select
@@ -58,6 +59,16 @@ const LanguageDropdown = ({
           onValueChange?.(selected);
         }
       }}
+      {...(hasShortLabels
+        ? {
+            renderValue: (items) => {
+              const selectedCode = items[0]?.key as string;
+              const lang = languages.find((l) => l.code === selectedCode);
+              return <span>{lang?.shortLabel ?? lang?.label ?? ""}</span>;
+            },
+            popoverProps: { placement: "top", className: "min-w-[140px]" },
+          }
+        : {})}
     />
   );
 };
