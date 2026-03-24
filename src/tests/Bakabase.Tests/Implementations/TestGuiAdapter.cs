@@ -1,5 +1,4 @@
-﻿using System;
-using System.Drawing;
+using System;
 using System.Threading.Tasks;
 using Bakabase.Infrastructures.Components.Gui;
 
@@ -7,26 +6,6 @@ namespace Bakabase.Tests.Implementations;
 
 public class TestGuiAdapter : IGuiAdapter
 {
-    public void ShowTray(Func<Task> onExiting)
-    {
-        throw new NotImplementedException();
-    }
-
-    public void HideTray()
-    {
-        throw new NotImplementedException();
-    }
-
-    public void SetTrayText(string text)
-    {
-        throw new NotImplementedException();
-    }
-
-    public void SetTrayIcon(Icon icon)
-    {
-        throw new NotImplementedException();
-    }
-
     public void ShowFatalErrorWindow(string message, string title = "Fatal Error")
     {
         throw new NotImplementedException();

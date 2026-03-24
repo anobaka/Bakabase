@@ -12,7 +12,7 @@ namespace Bakabase;
 
 public partial class App : Application
 {
-    private IGuiAdapter _guiAdapter = null!;
+    private AvaloniaGuiAdapter _guiAdapter = null!;
     private ISystemService _systemService = null!;
     public BakabaseHost? Host { get; private set; }
 
@@ -36,6 +36,10 @@ public partial class App : Application
             AppService.SetCulture(options.Language);
 
             Host = new BakabaseHost(_guiAdapter, _systemService);
+
+            // Set up tray before starting, using Host.TryToExit for the exit action
+            _guiAdapter.ShowTray(async () => await Host.TryToExit(true));
+
             await Host.Start(desktop.Args ?? []);
 
             desktop.Exit += (_, _) =>
