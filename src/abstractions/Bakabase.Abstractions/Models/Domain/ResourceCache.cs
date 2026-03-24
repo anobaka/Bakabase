@@ -9,6 +9,7 @@ public record ResourceCache
     /// <summary>
     /// Kept for backward compatibility. Populated from PlayableItems where Source == FileSystem.
     /// </summary>
+    [Obsolete("Use PlayableItems instead. Will be removed in v2.4.")]
     public List<string>? PlayableFilePaths { get; set; }
     public List<PlayableItem>? PlayableItems { get; set; }
     public List<ResourceCacheType> CachedTypes { get; set; } = [];
