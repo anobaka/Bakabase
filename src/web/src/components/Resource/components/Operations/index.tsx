@@ -25,7 +25,7 @@ import DeleteResourceConfirmContent from "@/components/Resource/components/Delet
 import { EnhancementAdditionalItem, IwFsType } from "@/sdk/constants";
 import { PlaylistCollection } from "@/components/Playlist";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import { Button, Popover, Modal, toast } from "@/components/bakaui";
+import { Button, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Modal, toast } from "@/components/bakaui";
 import { useUiOptionsStore } from "@/stores/options";
 import MediaPlayer from "@/components/MediaPlayer";
 
@@ -157,195 +157,147 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
   const showAddToPlaylist = displayOperations.includes("addToPlaylist");
   const showDelete = displayOperations.includes("delete");
 
-  // If aggregate is selected, show popover with all buttons (filtered by what's selected)
-  // Otherwise, show individual buttons for selected operations
+  // Aggregate mode: dropdown with icon + label items
   if (showAggregate) {
-    let buttons = [];
+    type MenuItem = { key: string; icon: React.ReactNode; label: string; className?: string; onAction: () => void };
+
+    let items: MenuItem[] = [];
 
     if (showPin) {
-      buttons.push(
-        <Button
-          key="pin"
-          isIconOnly
-          color={resource.pinned ? "warning" : "default"}
-          size={"sm"}
-          title={resource.pinned ? t<string>("Unpin") : t<string>("Pin")}
-          onPress={() => {
-            BApi.resource.pinResource(resource.id, { pin: !resource.pinned }).then((r) => {
-              reload?.();
-            });
-          }}
-        >
-          <PushpinOutlined className={"text-lg"} />
-        </Button>,
-      );
+      items.push({
+        key: "pin",
+        icon: <PushpinOutlined />,
+        label: resource.pinned ? t<string>("resource.operation.unpin") : t<string>("resource.operation.pin"),
+        onAction: () => {
+          BApi.resource.pinResource(resource.id, { pin: !resource.pinned }).then(() => reload?.());
+        },
+      });
     }
     if (showEnhancements) {
-      buttons.push(
-        <Button
-          key="enhancements"
-          isIconOnly
-          size={"sm"}
-          title={t<string>("Enhancements")}
-          onPress={() => {
-            BApi.resource
-              .getResourceEnhancements(resource.id, {
-                additionalItem: EnhancementAdditionalItem.GeneratedPropertyValue,
-              })
-              .then((t) => {
-                createPortal(ResourceEnhancementsModal, {
-                  resourceId: resource.id,
-                  // @ts-ignore
-                  enhancements: t.data || [],
-                });
+      items.push({
+        key: "enhancements",
+        icon: <FireOutlined />,
+        label: t<string>("resource.operation.enhancements"),
+        onAction: () => {
+          BApi.resource
+            .getResourceEnhancements(resource.id, {
+              additionalItem: EnhancementAdditionalItem.GeneratedPropertyValue,
+            })
+            .then((resp) => {
+              createPortal(ResourceEnhancementsModal, {
+                resourceId: resource.id,
+                // @ts-ignore
+                enhancements: resp.data || [],
               });
-          }}
-        >
-          <FireOutlined className={"text-lg"} />
-        </Button>,
-      );
+            });
+        },
+      });
     }
     if (showPreview) {
-      buttons.push(
-        <Button
-          key="preview"
-          isIconOnly
-          size={"sm"}
-          title={t<string>("Preview")}
-          onPress={showResourceMediaPlayer}
-        >
-          <AiOutlinePicture className={"text-lg"} />
-        </Button>,
-      );
+      items.push({
+        key: "preview",
+        icon: <AiOutlinePicture />,
+        label: t<string>("resource.operation.preview"),
+        onAction: showResourceMediaPlayer,
+      });
     }
     if (showAddToPlaylist) {
-      buttons.push(
-        <Button
-          key="addToPlaylist"
-          isIconOnly
-          size={"sm"}
-          title={t<string>("Add to playlist")}
-          onPress={() => {
-            createPortal(Modal, {
-              defaultVisible: true,
-              title: t<string>("Add to playlist"),
-              children: <PlaylistCollection addingResourceId={resource.id} />,
-              style: { minWidth: 600 },
-              footer: {
-                actions: ["cancel"],
-              },
-            });
-          }}
-        >
-          <VideoCameraAddOutlined className={"text-lg"} />
-        </Button>,
-      );
+      items.push({
+        key: "addToPlaylist",
+        icon: <VideoCameraAddOutlined />,
+        label: t<string>("resource.operation.addToPlaylist"),
+        onAction: () => {
+          createPortal(Modal, {
+            defaultVisible: true,
+            title: t<string>("resource.operation.addToPlaylist"),
+            children: <PlaylistCollection addingResourceId={resource.id} />,
+            style: { minWidth: 600 },
+            footer: {
+              actions: ["cancel"],
+            },
+          });
+        },
+      });
     }
     if (showDelete) {
-      buttons.push(
-        <Button
-          key="delete"
-          isIconOnly
-          color="danger"
-          size={"sm"}
-          title={t<string>("common.action.delete")}
-          onPress={handleDelete}
-        >
-          <DeleteOutlined className={"text-lg"} />
-        </Button>,
-      );
+      items.push({
+        key: "delete",
+        icon: <DeleteOutlined />,
+        label: t<string>("common.action.delete"),
+        className: "text-danger",
+        onAction: handleDelete,
+      });
     }
 
-    // If no individual operations selected, show all buttons (default behavior)
-    if (buttons.length === 0) {
-      buttons = [
-        <Button
-          key="pin"
-          isIconOnly
-          color={resource.pinned ? "warning" : "default"}
-          size={"sm"}
-          title={resource.pinned ? t<string>("Unpin") : t<string>("Pin")}
-          onPress={() => {
-            BApi.resource.pinResource(resource.id, { pin: !resource.pinned }).then((r) => {
-              reload?.();
-            });
-          }}
-        >
-          <PushpinOutlined className={"text-lg"} />
-        </Button>,
-        <Button
-          key="enhancements"
-          isIconOnly
-          size={"sm"}
-          title={t<string>("Enhancements")}
-          onPress={() => {
+    // If no individual operations selected, show all (default behavior)
+    if (items.length === 0) {
+      items = [
+        {
+          key: "pin",
+          icon: <PushpinOutlined />,
+          label: resource.pinned ? t<string>("resource.operation.unpin") : t<string>("resource.operation.pin"),
+          onAction: () => {
+            BApi.resource.pinResource(resource.id, { pin: !resource.pinned }).then(() => reload?.());
+          },
+        },
+        {
+          key: "enhancements",
+          icon: <FireOutlined />,
+          label: t<string>("resource.operation.enhancements"),
+          onAction: () => {
             BApi.resource
               .getResourceEnhancements(resource.id, {
                 additionalItem: EnhancementAdditionalItem.GeneratedPropertyValue,
               })
-              .then((t) => {
+              .then((resp) => {
                 createPortal(ResourceEnhancementsModal, {
                   resourceId: resource.id,
                   // @ts-ignore
-                  enhancements: t.data || [],
+                  enhancements: resp.data || [],
                 });
               });
-          }}
-        >
-          <FireOutlined className={"text-lg"} />
-        </Button>,
-        <Button
-          key="preview"
-          isIconOnly
-          size={"sm"}
-          title={t<string>("Preview")}
-          onPress={showResourceMediaPlayer}
-        >
-          <AiOutlinePicture className={"text-lg"} />
-        </Button>,
-        <Button
-          key="addToPlaylist"
-          isIconOnly
-          size={"sm"}
-          title={t<string>("Add to playlist")}
-          onPress={() => {
+          },
+        },
+        {
+          key: "preview",
+          icon: <AiOutlinePicture />,
+          label: t<string>("resource.operation.preview"),
+          onAction: showResourceMediaPlayer,
+        },
+        {
+          key: "addToPlaylist",
+          icon: <VideoCameraAddOutlined />,
+          label: t<string>("resource.operation.addToPlaylist"),
+          onAction: () => {
             createPortal(Modal, {
               defaultVisible: true,
-              title: t<string>("Add to playlist"),
+              title: t<string>("resource.operation.addToPlaylist"),
               children: <PlaylistCollection addingResourceId={resource.id} />,
               style: { minWidth: 600 },
               footer: {
                 actions: ["cancel"],
               },
             });
-          }}
-        >
-          <VideoCameraAddOutlined className={"text-lg"} />
-        </Button>,
+          },
+        },
       ];
     }
 
-    // Always add refreshCache if applicable (not part of configurable operations)
+    // Always add refreshCache if applicable
     if (hasCacheData) {
-      buttons.push(
-        <Button
-          key="refreshCache"
-          isIconOnly
-          size={"sm"}
-          title={t<string>("resource.action.refreshCache")}
-          isDisabled={refreshingCache}
-          onClick={handleRefreshCache}
-        >
-          {refreshingCache ? <LoadingOutlined className={"text-lg"} spin /> : <ReloadOutlined className={"text-lg"} />}
-        </Button>,
-      );
+      items.push({
+        key: "refreshCache",
+        icon: refreshingCache ? <LoadingOutlined spin /> : <ReloadOutlined />,
+        label: t<string>("resource.action.refreshCache"),
+        onAction: handleRefreshCache,
+      });
     }
 
-    const cols = Math.min(buttons.length, 3);
+    const actionMap = Object.fromEntries(items.map((item) => [item.key, item.onAction]));
 
     return (
-      <Popover
-        trigger={
+      <Dropdown>
+        <DropdownTrigger>
           <Button
             isIconOnly
             className={"absolute top-1 right-1 z-10 opacity-0 group-hover/resource:opacity-100"}
@@ -353,14 +305,22 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
           >
             <ProductOutlined className={"text-lg"} />
           </Button>
-        }
-      >
-        <div className={`grid gap-1 py-1 rounded`} style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>{buttons}</div>
-      </Popover>
+        </DropdownTrigger>
+        <DropdownMenu
+          aria-label="Resource operations"
+          onAction={(key) => actionMap[key as string]?.()}
+        >
+          {items.map((item) => (
+            <DropdownItem key={item.key} className={item.className} startContent={item.icon}>
+              {item.label}
+            </DropdownItem>
+          ))}
+        </DropdownMenu>
+      </Dropdown>
     );
   }
 
-  // Show individual buttons for selected operations
+  // Non-aggregate: show individual icon buttons directly on the card
   const individualButtons = [];
 
   const buttonClassName = "min-w-6 w-6 h-6 bg-transparent hover:bg-white/20";
@@ -373,7 +333,7 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
         isIconOnly
         className={buttonClassName}
         color={resource.pinned ? "warning" : "default"}
-        title={resource.pinned ? t<string>("Unpin") : t<string>("Pin")}
+        title={resource.pinned ? t<string>("resource.operation.unpin") : t<string>("resource.operation.pin")}
         onPress={() => {
           BApi.resource.pinResource(resource.id, { pin: !resource.pinned }).then((r) => {
             reload?.();
@@ -390,7 +350,7 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
         key="enhancements"
         isIconOnly
         className={buttonClassName}
-        title={t<string>("Enhancements")}
+        title={t<string>("resource.operation.enhancements")}
         onPress={() => {
           BApi.resource
             .getResourceEnhancements(resource.id, {
@@ -415,7 +375,7 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
         key="preview"
         isIconOnly
         className={buttonClassName}
-        title={t<string>("Preview")}
+        title={t<string>("resource.operation.preview")}
         onPress={showResourceMediaPlayer}
       >
         <AiOutlinePicture className={iconClassName} />
@@ -428,11 +388,11 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
         key="addToPlaylist"
         isIconOnly
         className={buttonClassName}
-        title={t<string>("Add to playlist")}
+        title={t<string>("resource.operation.addToPlaylist")}
         onPress={() => {
           createPortal(Modal, {
             defaultVisible: true,
-            title: t<string>("Add to playlist"),
+            title: t<string>("resource.operation.addToPlaylist"),
             children: <PlaylistCollection addingResourceId={resource.id} />,
             style: { minWidth: 600 },
             footer: {
