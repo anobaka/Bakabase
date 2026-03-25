@@ -699,68 +699,6 @@ namespace Bakabase.Service.Controllers
                 // .OrderBy(t => t.Type == IwFsType.Directory ? 0 : 1)
                 .OrderBy(t => t.Name, StringComparer.OrdinalIgnoreCase).ToList();
 
-            // var entriesMap = entries.ToDictionary(t => t.Path, t => t);
-            // var unknownTypePaths =
-            //     entriesMap.Where(k => k.Value.Type == IwFsType.Unknown).Select(t => t.Key).ToArray();
-            // var compressedFileGroups = CompressedFileHelper.Group(unknownTypePaths);
-            //
-            // var iwFsCompressedFileGroups = new List<IwFsCompressedFileGroup>();
-            //
-            // foreach (var group in compressedFileGroups)
-            // {
-            //     for (var i = 0; i < group.Files.Count; i++)
-            //     {
-            //         var f = group.Files[i];
-            //         var e = entriesMap[f];
-            //         // e.Type = i == 0
-            //         //     ? group.MissEntry ? IwFsType.CompressedFilePart : IwFsType.CompressedFileEntry
-            //         //     : IwFsType.CompressedFilePart;
-            //         e.Type = i == 0 ? IwFsType.CompressedFileEntry : IwFsType.CompressedFilePart;
-            //         e.MeaningfulName = group.KeyName;
-            //     }
-            //
-            //     var segments = group.Files[0].Split(BusinessConstants.PathSeparator).ToList();
-            //     segments.RemoveAt(segments.Count - 1);
-            //     segments.Add(group.KeyName);
-            //     segments.Reverse();
-            //     var passwords = segments.Select(x => x.TryGetPasswordForDecompressionExactly())
-            //         .Where(a => a.IsNotEmpty()).ToArray();
-            //
-            //     iwFsCompressedFileGroups.Add(new IwFsCompressedFileGroup
-            //     {
-            //         Files = group.Files,
-            //         KeyName = group.KeyName,
-            //         Extension = group.Extension,
-            //         Password = passwords.FirstOrDefault(),
-            //         PasswordCandidates = passwords.Skip(1).ToList()
-            //     });
-            // }
-            //
-            // var allCompressedFiles = compressedFileGroups.SelectMany(a => a.Files);
-            // // Make entries with other types can be decompressed.
-            // var otherFiles = entries.Where(t => t.Type != IwFsType.Directory && t.Type != IwFsType.Invalid)
-            //     .Select(t => t.Path).Except(allCompressedFiles).ToArray();
-            // foreach (var p in otherFiles)
-            // {
-            //     var keyName = Path.GetFileNameWithoutExtension(p);
-            //
-            //     var segments = p.Split(BusinessConstants.PathSeparator).ToList();
-            //     segments.RemoveAt(segments.Count - 1);
-            //     segments.Add(keyName);
-            //     segments.Reverse();
-            //     var passwords = segments.Select(x => x.TryGetPasswordForDecompressionExactly())
-            //         .Where(a => a.IsNotEmpty()).ToArray();
-            //
-            //     iwFsCompressedFileGroups.Add(new IwFsCompressedFileGroup
-            //     {
-            //         Files = new List<string> {p},
-            //         KeyName = keyName,
-            //         Extension = Path.GetExtension(p),
-            //         Password = passwords.FirstOrDefault(),
-            //         PasswordCandidates = passwords.Skip(1).ToList()
-            //     });
-            // }
-
             var rsp = new IwFsPreview()
             {
                 Entries = entries.ToArray(),
@@ -1499,12 +1437,12 @@ namespace Bakabase.Service.Controllers
                 var dirInfo = new DirectoryInfo(parent!);
                 if (dirInfo.Exists)
                 {
-                    var groups = CompressedFileHelper.Group(dirInfo.GetFiles().Select(t => t.FullName).ToArray())
+                    var groups = CompressedFileHelperV2.DetectCompressedFileGroups(dirInfo.GetFiles().Select(t => t.FullName).ToArray())
                         .Where(t => t.Files.Any(paths.Contains)).ToList();
                     var compressedFiles = groups.SelectMany(t => t.Files).ToArray();
                     var otherFiles = paths.Except(compressedFiles).ToArray();
                     var otherGroups = otherFiles
-                        .Select(CompressedFileHelper.CompressedFileGroup.FromSingleFile<IwFsCompressedFileGroup>)
+                        .Select(CompressedFileGroup.FromSingleFile<IwFsCompressedFileGroup>)
                         .ToArray();
 
                     var allGroups = groups.Concat(otherGroups).Select(g =>
