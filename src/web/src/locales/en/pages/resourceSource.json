@@ -117,6 +117,7 @@
   "resourceSource.pagination.pageSize": "Per page",
   "resourceSource.pagination.total": "{{total}} total",
 
+  "resourceSource.metadataMapping.settingsButton": "Metadata Sync Settings",
   "resourceSource.metadataMapping.title": "Metadata Mapping",
   "resourceSource.metadataMapping.description": "Configure how external source metadata fields map to resource properties. Supports dot-separated paths (e.g. release_date.date). Applied automatically after fetching details.",
   "resourceSource.metadataMapping.fieldPlaceholder": "Enter metadata field path (e.g. name, tags, metacritic.score)",

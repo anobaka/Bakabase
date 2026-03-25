@@ -31,8 +31,9 @@ import BApi from "@/sdk/BApi";
 import { toast } from "@/components/bakaui";
 import { useExHentaiOptionsStore } from "@/stores/options";
 import { ExHentaiConfig } from "@/components/ThirdPartyConfig";
+import MetadataMappingModal from "@/components/ThirdPartyConfig/MetadataMappingModal";
 import { useBTasksStore } from "@/stores/bTasks";
-import { BTaskStatus } from "@/sdk/constants";
+import { BTaskStatus, ResourceSource } from "@/sdk/constants";
 import ExHentaiTable from "./components/ExHentaiTable";
 
 export interface ExHentaiGallery {
@@ -63,6 +64,7 @@ export default function ExHentaiGalleriesPage() {
   const [keyword, setKeyword] = useState("");
   const [searchKeyword, setSearchKeyword] = useState("");
   const [configOpen, setConfigOpen] = useState(false);
+  const [metadataMappingOpen, setMetadataMappingOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [totalCount, setTotalCount] = useState(0);
@@ -212,6 +214,13 @@ export default function ExHentaiGalleriesPage() {
           </Button>
           <Button
             size="sm"
+            variant="flat"
+            onPress={() => setMetadataMappingOpen(true)}
+          >
+            {t("resourceSource.metadataMapping.settingsButton")}
+          </Button>
+          <Button
+            size="sm"
             startContent={<AiOutlineSetting />}
             variant="flat"
             onPress={() => setConfigOpen(true)}
@@ -222,6 +231,7 @@ export default function ExHentaiGalleriesPage() {
       </div>
 
       <ExHentaiConfig isOpen={configOpen} onClose={() => setConfigOpen(false)} />
+      <MetadataMappingModal source={ResourceSource.ExHentai} isOpen={metadataMappingOpen} onClose={() => setMetadataMappingOpen(false)} />
 
       {!isConfigured && galleries.length === 0 && !loading && (
         <div className="flex flex-col items-center justify-center py-16 gap-4 text-default-500">
