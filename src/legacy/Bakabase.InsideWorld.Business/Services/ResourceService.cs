@@ -1,4 +1,14 @@
-﻿using Bakabase.Abstractions.Components.Configuration;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Linq.Expressions;
+using System.Text.Json;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Cover;
 using Bakabase.Abstractions.Components.Events;
 using Bakabase.Abstractions.Components.FileSystem;
@@ -10,25 +20,23 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Input;
 using Bakabase.Abstractions.Models.View;
 using Bakabase.Abstractions.Services;
+using Bakabase.Infrastructures.Components.Configurations.App;
 using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
-using Bakabase.InsideWorld.Business.Components.Resource.Components.PlayableFileSelector.Infrastructures;
-using Bakabase.InsideWorld.Business.Components.Resource.Components.Player.Infrastructures;
 using Bakabase.InsideWorld.Business.Components.Search;
-using Bakabase.InsideWorld.Business.Components.Search.Index;
 using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Business.Models.Db;
 using Bakabase.InsideWorld.Business.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.Modules.Alias.Abstractions.Services;
-using Bakabase.Modules.ResourceResolver.Abstractions;
-using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property;
+using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Models.Db;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.Property.Extensions;
+using Bakabase.Modules.ResourceResolver.Abstractions;
 using Bakabase.Modules.StandardValue;
 using Bakabase.Modules.StandardValue.Abstractions.Configurations;
 using Bakabase.Modules.StandardValue.Extensions;
@@ -45,21 +53,10 @@ using Bootstrap.Models.ResponseModels;
 using CliWrap;
 using DotNext.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Text.Json;
-using System.Text.RegularExpressions;
-using System.Diagnostics;
-using System.Threading;
-using System.Threading.Tasks;
-using Bakabase.Infrastructures.Components.Configurations.App;
-using Microsoft.Extensions.DependencyInjection;
 using StackExchange.Profiling;
 using static Bakabase.Abstractions.Models.View.ResourceDisplayNameViewModel;
 using ReservedPropertyValue = Bakabase.Abstractions.Models.Domain.ReservedPropertyValue;
@@ -71,7 +68,6 @@ namespace Bakabase.InsideWorld.Business.Services
         private readonly FullMemoryCacheResourceService<BakabaseDbContext, ResourceDbModel, int> _orm;
         private readonly FullMemoryCacheResourceService<BakabaseDbContext, ResourceCacheDbModel, int> _resourceCacheOrm;
         private readonly ISpecialTextService _specialTextService;
-        private readonly IMediaLibraryService _mediaLibraryService;
         private IMediaLibraryV2Service MediaLibraryV2Service => GetRequiredService<IMediaLibraryV2Service>();
         private IResourceProfileService ResourceProfileService => GetRequiredService<IResourceProfileService>();
         private IMediaLibraryResourceMappingService MediaLibraryResourceMappingService => GetRequiredService<IMediaLibraryResourceMappingService>();
@@ -79,7 +75,6 @@ namespace Bakabase.InsideWorld.Business.Services
         private IResourceSearchIndexService ResourceSearchIndexService => GetRequiredService<IResourceSearchIndexService>();
         private IEnumerable<IResourceResolver> ResourceResolvers => GetRequiredService<IEnumerable<IResourceResolver>>();
         private IResourceSourceLinkService ResourceSourceLinkService => GetRequiredService<IResourceSourceLinkService>();
-        private readonly ICategoryService _categoryService;
         private readonly ILogger<ResourceService> _logger;
         private readonly SemaphoreSlim _addOrUpdateLock = new(1, 1);
         private readonly IBOptionsManager<ResourceOptions> _optionsManager;
@@ -109,7 +104,7 @@ namespace Bakabase.InsideWorld.Business.Services
         };
 
         public ResourceService(IServiceProvider serviceProvider, ISpecialTextService specialTextService,
-            IAliasService aliasService, IMediaLibraryService mediaLibraryService, ICategoryService categoryService,
+            IAliasService aliasService, 
             ILogger<ResourceService> logger,
             ICustomPropertyService customPropertyService, ICustomPropertyValueService customPropertyValueService,
             IReservedPropertyValueService reservedPropertyValueService,
@@ -126,8 +121,6 @@ namespace Bakabase.InsideWorld.Business.Services
         {
             _specialTextService = specialTextService;
             _aliasService = aliasService;
-            _mediaLibraryService = mediaLibraryService;
-            _categoryService = categoryService;
             _logger = logger;
             _customPropertyService = customPropertyService;
             _customPropertyValueService = customPropertyValueService;
@@ -568,18 +561,6 @@ namespace Bakabase.InsideWorld.Business.Services
                                     break;
                                 case ResourceAdditionalItem.None:
                                     break;
-                                case ResourceAdditionalItem.Category:
-                                {
-                                    var categoryIds = resources.Select(r => r.CategoryId).Distinct().ToArray();
-                                    var categoryMap = (await _categoryService.GetAll(x => categoryIds.Contains(x.Id),
-                                        CategoryAdditionalItem.None)).ToDictionary(d => d.Id, d => d);
-                                    foreach (var r in doList)
-                                    {
-                                        r.Category = categoryMap.GetValueOrDefault(r.CategoryId);
-                                    }
-
-                                    break;
-                                }
                                 case ResourceAdditionalItem.HasChildren:
                                 {
                                     break;
@@ -2711,62 +2692,6 @@ namespace Bakabase.InsideWorld.Business.Services
             var segments = BuildDisplayNameSegmentsForResource(resource, template, wrappers);
             var displayName = string.Join("", segments.Select(a => a.Text));
             return displayName.IsNullOrEmpty() ? resource.FileName : displayName;
-        }
-
-        public async Task<List<ResourceDisplayNameViewModel>> PreviewResourceDisplayNameTemplate(int id,
-            string template,
-            int maxCount = 100)
-        {
-            var resourcesSearchResult = await Search(new ResourceSearch
-            {
-                Group = new ResourceSearchFilterGroup
-                {
-                    Combinator = SearchCombinator.And,
-                    Filters =
-                    [
-                        new ResourceSearchFilter
-                        {
-                            PropertyPool = PropertyPool.Internal,
-                            Operation = SearchOperation.In,
-                            PropertyId = (int) ResourceProperty.Category,
-                            DbValue = new[] {id.ToString()}.SerializeAsStandardValue(StandardValueType.ListString)
-                        }
-                    ]
-                },
-                // Orders = [new ResourceSearchOrderInputModel
-                //             {
-                //                 Asc = false,
-                // 	Property = 
-                //             }]
-                PageIndex = 0,
-                PageSize = maxCount
-            });
-
-            var resources = resourcesSearchResult.Data ?? [];
-
-            var wrapperPairs = (await _specialTextService.GetAll(x => x.Type == SpecialTextType.Wrapper))
-                .GroupBy(d => d.Value1)
-                .Select(d => (Left: d.Key,
-                    Rights: d.Select(c => c.Value2).Where(s => !string.IsNullOrEmpty(s)).Distinct().OfType<string>()
-                        .First()))
-                .OrderByDescending(d => d.Left.Length)
-                .ToArray();
-
-            var result = new List<ResourceDisplayNameViewModel>();
-
-            foreach (var r in resources)
-            {
-                var segments = BuildDisplayNameSegmentsForResource(r, template, wrapperPairs);
-
-                result.Add(new ResourceDisplayNameViewModel
-                {
-                    ResourceId = r.Id,
-                    ResourcePath = r.Path,
-                    Segments = segments
-                });
-            }
-
-            return result;
         }
 
         public Segment[] BuildDisplayNameSegmentsForResource(Resource resource, string template, (string Left, string Right)[] wrappers)

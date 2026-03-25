@@ -60,39 +60,7 @@ public static class ResourceCacheExtensions
                                 rc.PlayableItems = null;
                             }
                         }
-
-                        // Also populate legacy PlayableFilePaths for backward compatibility
-                        if (model.PlayableFilePaths.IsNotEmpty())
-                        {
-                            rc.PlayableFilePaths =
-                                model.PlayableFilePaths.DeserializeAsStandardValue<List<string>>(StandardValueType
-                                    .ListString);
-                            rc.HasMoreFileSystemPlayableItems = model.HasMoreFileSystemPlayableItems;
-                        }
-
-                        // If PlayableItems is empty but PlayableFilePaths exists, build PlayableItems from legacy data
-                        if (rc.PlayableItems == null && rc.PlayableFilePaths is { Count: > 0 })
-                        {
-                            rc.PlayableItems = rc.PlayableFilePaths
-                                .Select(p => new PlayableItem
-                                {
-                                    Source = ResourceSource.FileSystem,
-                                    Key = p
-                                })
-                                .ToList();
-                        }
-
-                        // Populate PlayableFilePaths from PlayableItems if not already set
-                        if (rc.PlayableFilePaths == null && rc.PlayableItems is { Count: > 0 })
-                        {
-                            rc.PlayableFilePaths = rc.PlayableItems
-                                .Where(i => i.Source == ResourceSource.FileSystem)
-                                .Select(i => i.Key)
-                                .ToList();
-                            if (rc.PlayableFilePaths.Count == 0)
-                                rc.PlayableFilePaths = null;
-                        }
-
+                        
                         rc.HasMoreFileSystemPlayableItems = model.HasMoreFileSystemPlayableItems;
 
                         break;

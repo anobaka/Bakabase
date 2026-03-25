@@ -12,8 +12,6 @@ public record Resource
 
     [Obsolete]
     public int MediaLibraryId { get; set; }
-    [Obsolete]
-    public int CategoryId { get; set; }
 
     public ResourceStatus Status { get; set; } = ResourceStatus.Active;
 
@@ -85,8 +83,6 @@ public record Resource
     public bool PlayableItemsReady { get; set; }
 
     public ResourceCache? Cache { get; set; }
-    [Obsolete]
-    public bool IsMediaLibraryV2 => CategoryId == 0;
 
     public record Property(
         string? Name,
@@ -117,9 +113,6 @@ public record Resource
             public bool IsManuallySet => Scope == (int)PropertyValueScope.Manual;
         }
     }
-
-    [Obsolete]
-    public Category? Category { get; set; }
 
     [Obsolete]
     public string? MediaLibraryName { get; set; }

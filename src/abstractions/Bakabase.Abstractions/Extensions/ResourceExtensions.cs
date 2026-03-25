@@ -48,15 +48,7 @@ namespace Bakabase.Abstractions.Extensions
                 InternalProperty.CreatedAt => (resource.CreatedAt, resource.CreatedAt),
                 InternalProperty.FileCreatedAt => (resource.FileCreatedAt, resource.FileCreatedAt),
                 InternalProperty.FileModifiedAt => (resource.FileModifiedAt, resource.FileModifiedAt),
-                InternalProperty.Category => (resource.CategoryId.ToString(), resource.Category?.Name),
-                InternalProperty.MediaLibrary => (
-                    new List<string> { resource.MediaLibraryId.ToString() },
-                    new List<string?> { resource.MediaLibraryName }
-                ),
-                InternalProperty.MediaLibraryV2 => (
-                    (resource.CategoryId == 0 ? resource.MediaLibraryId : -1).ToString(),
-                    resource.MediaLibraryName
-                ),
+                InternalProperty.MediaLibraryV2 => (resource.MediaLibraryId.ToString(), resource.MediaLibraryName),
                 InternalProperty.MediaLibraryV2Multi => (
                     resource.MediaLibraries?.Select(ml => ml.Id.ToString()).ToList(),
                     resource.MediaLibraries?.Select(ml => ml.Name).ToList()

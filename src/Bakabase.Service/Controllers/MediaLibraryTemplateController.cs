@@ -90,24 +90,7 @@ public class MediaLibraryTemplateController(
     {
         return new(data: await service.Import(model));
     }
-
-    // [HttpPut("{id:int}/share-png/code")]
-    // [SwaggerOperation(OperationId = "AppendMediaLibraryTemplateShareCodeToPng")]
-    // public async Task<IActionResult> AppendShareCodeToPng(int id)
-    // {
-    //     var code = await service.GenerateShareCode(id);
-    //     throw new NotImplementedException();
-    // }
-
-    [HttpPost("by-media-library-v1")]
-    [SwaggerOperation(OperationId = "AddMediaLibraryTemplateByMediaLibraryV1")]
-    public async Task<BaseResponse> AddByMediaLibraryV1(
-        [FromBody] MediaLibraryTemplateAddByMediaLibraryV1InputModel model)
-    {
-        await service.AddByMediaLibraryV1(model.V1Id, model.PcIdx, model.Name);
-        return BaseResponseBuilder.Ok;
-    }
-
+    
     [HttpPost("{id:int}/duplicate")]
     [SwaggerOperation(OperationId = "DuplicateMediaLibraryTemplate")]
     public async Task<BaseResponse> Duplicate(int id)

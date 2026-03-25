@@ -9,6 +9,7 @@ using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Dto;
+using Bakabase.Abstractions.Models.Input;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.Modules.Property.Abstractions.Services;
@@ -784,11 +785,10 @@ public class PathMarkSyncTests
         var pathMarkService = _sp.GetRequiredService<IPathMarkService>();
         var syncService = _sp.GetRequiredService<IPathMarkSyncService>();
         var resourceService = _sp.GetRequiredService<IResourceService>();
-        var mediaLibraryService = _sp.GetRequiredService<IMediaLibraryService>();
+        var mediaLibraryService = _sp.GetRequiredService<IMediaLibraryV2Service>();
 
         // 创建测试用的 MediaLibrary
-        var testLibrary = new MediaLibrary { Name = "TestLibrary" };
-        await mediaLibraryService.AddRange(new[] { testLibrary });
+        var testLibrary = await mediaLibraryService.Add(new MediaLibraryV2AddOrPutInputModel("TestLibrary", []));
         var libraries = await mediaLibraryService.GetAll();
         testLibrary = libraries.First(l => l.Name == "TestLibrary");
 
@@ -895,16 +895,15 @@ public class PathMarkSyncTests
         var syncService = _sp.GetRequiredService<IPathMarkSyncService>();
         var resourceService = _sp.GetRequiredService<IResourceService>();
         var customPropertyService = _sp.GetRequiredService<ICustomPropertyService>();
-        var mediaLibraryService = _sp.GetRequiredService<IMediaLibraryService>();
+        var mediaLibraryService = _sp.GetRequiredService<IMediaLibraryV2Service>();
 
         var testProperty = await customPropertyService.Add(new CustomPropertyAddOrPutDto
         {
             Name = "RandomTestProperty",
             Type = PropertyType.SingleLineText
         });
-
-        var testLibrary = new MediaLibrary { Name = "RandomTestLibrary" };
-        await mediaLibraryService.AddRange(new[] { testLibrary });
+        
+        var testLibrary = await mediaLibraryService.Add(new MediaLibraryV2AddOrPutInputModel("RandomTestLibrary", []));
         var libraries = await mediaLibraryService.GetAll();
         testLibrary = libraries.First(l => l.Name == "RandomTestLibrary");
 
@@ -1241,12 +1240,11 @@ public class PathMarkSyncTests
         var pathMarkService = _sp.GetRequiredService<IPathMarkService>();
         var syncService = _sp.GetRequiredService<IPathMarkSyncService>();
         var resourceService = _sp.GetRequiredService<IResourceService>();
-        var mediaLibraryService = _sp.GetRequiredService<IMediaLibraryService>();
+        var mediaLibraryService = _sp.GetRequiredService<IMediaLibraryV2Service>();
         var mappingService = _sp.GetRequiredService<IMediaLibraryResourceMappingService>();
 
         // 创建 MediaLibrary
-        var testLibrary = new MediaLibrary { Name = "TestLibraryForNewResource" };
-        await mediaLibraryService.AddRange(new[] { testLibrary });
+        var testLibrary = await mediaLibraryService.Add(new MediaLibraryV2AddOrPutInputModel("TestLibraryForNewResource", []));
         var libraries = await mediaLibraryService.GetAll();
         testLibrary = libraries.First(l => l.Name == "TestLibraryForNewResource");
 
@@ -1386,7 +1384,7 @@ public class PathMarkSyncTests
         var resourceService = _sp.GetRequiredService<IResourceService>();
         var customPropertyService = _sp.GetRequiredService<ICustomPropertyService>();
         var propertyValueService = _sp.GetRequiredService<ICustomPropertyValueService>();
-        var mediaLibraryService = _sp.GetRequiredService<IMediaLibraryService>();
+        var mediaLibraryService = _sp.GetRequiredService<IMediaLibraryV2Service>();
         var mappingService = _sp.GetRequiredService<IMediaLibraryResourceMappingService>();
 
         // 创建 CustomProperty
@@ -1397,8 +1395,7 @@ public class PathMarkSyncTests
         });
 
         // 创建 MediaLibrary
-        var testLibrary = new MediaLibrary { Name = "MultiMarkLibrary" };
-        await mediaLibraryService.AddRange(new[] { testLibrary });
+        var testLibrary = await mediaLibraryService.Add(new MediaLibraryV2AddOrPutInputModel("MultiMarkLibrary", []));
         var libraries = await mediaLibraryService.GetAll();
         testLibrary = libraries.First(l => l.Name == "MultiMarkLibrary");
 

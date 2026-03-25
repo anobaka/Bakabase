@@ -3,11 +3,8 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Components.Tracing;
 using Bakabase.Abstractions.Extensions;
@@ -19,15 +16,10 @@ using Bakabase.Abstractions.Models.Dto;
 using Bakabase.Abstractions.Models.Input;
 using Bakabase.Abstractions.Models.View;
 using Bakabase.Abstractions.Services;
-using Bakabase.InsideWorld.Business.Components.Resource.Components.PlayableFileSelector.Infrastructures;
 using Bakabase.InsideWorld.Business.Extensions;
-using Bakabase.InsideWorld.Business.Models.Domain;
 using Bakabase.InsideWorld.Models.Configs;
-using Bakabase.InsideWorld.Models.Constants;
-using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.Modules.Enhancer.Abstractions.Components;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
-using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using Bakabase.Modules.Presets.Abstractions;
 using Bakabase.Modules.Property.Abstractions.Components;
@@ -39,11 +31,9 @@ using Bootstrap.Components.DependencyInjection;
 using Bootstrap.Components.Orm;
 using Bootstrap.Components.Tasks;
 using Bootstrap.Extensions;
-using Bootstrap.Models;
 using DotNext.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Metadata.Profiles.Exif;
 using SixLabors.ImageSharp.PixelFormats;
@@ -53,13 +43,10 @@ namespace Bakabase.InsideWorld.Business.Services;
 public class MediaLibraryTemplateService<TDbContext>(
     FullMemoryCacheResourceService<TDbContext, MediaLibraryTemplateDbModel, int> orm,
     IStandardValueService standardValueService,
-    ICategoryService categoryService,
     ISpecialTextService specialTextService,
     IExtensionGroupService extensionGroupService,
     IPropertyService propertyService,
     ICustomPropertyService customPropertyService,
-    IMediaLibraryService mediaLibraryService,
-    IBOptions<EnhancerOptions> enhancerOptions,
     IBakabaseLocalizer localizer,
     IEnumerable<IEnhancer> enhancers,
     IPropertyLocalizer propertyLocalizer,
@@ -277,7 +264,12 @@ public class MediaLibraryTemplateService<TDbContext>(
                     var r = resourcesMap[rpi.Path];
                     r.Cache ??= new ResourceCache
                     {
-                        PlayableFilePaths = playableFilePaths
+                        PlayableItems = playableFilePaths.Select(p => new PlayableItem
+                        {
+                            Source = ResourceSource.FileSystem,
+                            Key = p,
+                            DisplayName = Path.GetFileName(p),
+                        }).ToList()
                     };
                 }
             }
@@ -599,19 +591,6 @@ public class MediaLibraryTemplateService<TDbContext>(
         using var ms = new MemoryStream();
         await image.SaveAsPngAsync(ms);
         return ms.ToArray();
-    }
-
-    public async Task AddByMediaLibraryV1(int v1Id, int pcIdx, string templateName)
-    {
-        var ml = (await mediaLibraryService.Get(v1Id, MediaLibraryAdditionalItem.None))!;
-        var category = await categoryService.Get(ml.CategoryId,
-            CategoryAdditionalItem.CustomProperties | CategoryAdditionalItem.EnhancerOptions);
-        var playableFilesSelector =
-            (await categoryService.GetFirstComponent<IPlayableFileSelector>(category.Id,
-                ComponentType.PlayableFileSelector)).Data;
-        var template = await Add(new MediaLibraryTemplateAddInputModel(templateName));
-        template.InitFromMediaLibraryV1(ml, pcIdx, category, playableFilesSelector, enhancerOptions);
-        await Put(template.Id, template);
     }
 
     public async Task Duplicate(int id)

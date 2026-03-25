@@ -34,7 +34,6 @@ namespace Bakabase.Modules.Property.Services
             GetRequiredService<ICustomPropertyValueService>();
 
         protected IStandardValueService StandardValueService => GetRequiredService<IStandardValueService>();
-        protected ICategoryService CategoryService => GetRequiredService<ICategoryService>();
         protected IPropertyTypeConverter PropertyTypeConverter => GetRequiredService<IPropertyTypeConverter>();
 
         public async Task<List<CustomProperty>> GetAll(
@@ -110,26 +109,6 @@ namespace Bakabase.Modules.Property.Services
                     {
                         case CustomPropertyAdditionalItem.None:
                             break;
-                        case CustomPropertyAdditionalItem.Category:
-                        {
-                            var propertyIds = properties.Select(x => x.Id).ToHashSet();
-                            var mappings =
-                                (await CategoryCustomPropertyMappingService.GetAll(x =>
-                                    propertyIds.Contains(x.PropertyId)))!;
-                            var categoryIds = mappings.Select(x => x.CategoryId).ToHashSet();
-                            var categories = await CategoryService.GetAll(x => categoryIds.Contains(x.Id));
-                            var categoryMap = categories.ToDictionary(x => x.Id);
-                            var propertyCategoryIdMap = mappings.GroupBy(x => x.PropertyId)
-                                .ToDictionary(x => x.Key, x => x.Select(y => y.CategoryId).ToHashSet());
-
-                            foreach (var dto in properties)
-                            {
-                                dto.Categories = propertyCategoryIdMap.GetValueOrDefault(dto.Id)
-                                    ?.Select(x => categoryMap.GetValueOrDefault(x)).Where(x => x != null).ToList()!;
-                            }
-
-                            break;
-                        }
                         case CustomPropertyAdditionalItem.ValueCount:
                         {
                             var propertyIds = properties.Select(x => x.Id).ToList();
@@ -142,7 +121,7 @@ namespace Bakabase.Modules.Property.Services
                             break;
                         }
                         default:
-                            throw new ArgumentOutOfRangeException();
+                            break;
                     }
                 }
             }

@@ -21,8 +21,6 @@ public static class ServiceCollectionExtensions
     {
         services.TryAddScoped<IEnhancerService, EnhancerService>();
         services.TryAddScoped<IEnhancementService, EnhancementService<TDbContext>>();
-        services.TryAddScoped<ResourceService<TDbContext, CategoryEnhancerOptions, int>>();
-        services.TryAddScoped<ICategoryEnhancerOptionsService, AbstractCategoryEnhancerOptionsService<TDbContext>>();
         services.TryAddScoped<ResourceService<TDbContext, EnhancementRecord, int>>();
         services.TryAddScoped<IEnhancementRecordService, EnhancementRecordService<TDbContext>>();
         services.AddTransient<IEnhancerLocalizer, EnhancerLocalizer>();

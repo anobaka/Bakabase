@@ -44,7 +44,6 @@ namespace Bakabase.InsideWorld.Business.Extensions
             var domainModel = new Resource()
             {
                 Id = dbModel.Id,
-                CategoryId = dbModel.CategoryId,
                 MediaLibraryId = dbModel.MediaLibraryId,
                 CreatedAt = dbModel.CreateDt,
                 UpdatedAt = dbModel.UpdateDt,
@@ -67,7 +66,6 @@ namespace Bakabase.InsideWorld.Business.Extensions
             {
                 Id = domainModel.Id,
                 CreateDt = domainModel.CreatedAt,
-                CategoryId = domainModel.CategoryId,
                 MediaLibraryId = domainModel.MediaLibraryId,
                 UpdateDt = domainModel.UpdatedAt,
                 FileCreateDt = domainModel.FileCreatedAt,
@@ -190,12 +188,6 @@ namespace Bakabase.InsideWorld.Business.Extensions
             if (current.MediaLibraryId != patches.MediaLibraryId && patches.MediaLibraryId > 0)
             {
                 current.MediaLibraryId = patches.MediaLibraryId;
-                changed = true;
-            }
-
-            if (current.CategoryId != patches.CategoryId && patches.CategoryId > 0)
-            {
-                current.CategoryId = patches.CategoryId;
                 changed = true;
             }
 

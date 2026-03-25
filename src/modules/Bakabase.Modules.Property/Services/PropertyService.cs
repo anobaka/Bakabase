@@ -19,49 +19,6 @@ namespace Bakabase.Modules.Property.Services;
 
 public class PropertyService(IServiceProvider serviceProvider, IPropertyLocalizer propertyLocalizer) : IPropertyService
 {
-    private static SingleChoicePropertyOptions BuildOptionsForCategory(IEnumerable<Category> categories)
-    {
-        return new SingleChoicePropertyOptions
-        {
-            Choices = categories.Select(c => new ChoiceOptions()
-            {
-                Value = c.Id.ToString(),
-                Label = c.Name
-            }).ToList()
-        };
-    }
-
-    private static MultilevelPropertyOptions BuildOptionsForMediaLibrary(Dictionary<int, Category> categoryMap,
-        List<MediaLibrary> mediaLibraries)
-    {
-        var categoryIdMediaLibraries =
-            mediaLibraries.GroupBy(d => d.CategoryId).ToDictionary(d => d.Key, d => d.ToList());
-        return new MultilevelPropertyOptions
-        {
-            Data = categoryIdMediaLibraries!.Select(kv =>
-            {
-                var (cId, libraries) = kv;
-                var category = categoryMap!.GetValueOrDefault(cId);
-                if (category == null)
-                {
-                    return null;
-                }
-
-                return new MultilevelDataOptions()
-                {
-                    Value = $"c-{cId}",
-                    Label = category.Name,
-                    Children = libraries.Select(l => new MultilevelDataOptions
-                    {
-                        Label = l.Name,
-                        Value = l.Id.ToString()
-                    }).ToList()
-                };
-            }).OfType<MultilevelDataOptions>().ToList(),
-            ValueIsSingleton = true
-        };
-    }
-
     private static SingleChoicePropertyOptions BuildOptionsForMediaLibraryV2(List<MediaLibraryV2> mediaLibraries)
     {
         return new SingleChoicePropertyOptions
@@ -113,23 +70,7 @@ public class PropertyService(IServiceProvider serviceProvider, IPropertyLocalize
                     Name = propertyLocalizer.BuiltinPropertyName(rp)
                 };
 
-                Dictionary<int, Category>? categoryMap = null;
-                List<MediaLibrary>? mediaLibraries = null;
                 List<MediaLibraryV2>? mediaLibrariesV2 = null;
-
-                if (rp == ResourceProperty.Category || rp == ResourceProperty.MediaLibrary)
-                {
-                    var categoryService = serviceProvider.GetRequiredService<ICategoryService>();
-                    var categories = await categoryService.GetAll();
-                    categoryMap = categories.ToDictionary(d => d.Id, d => d);
-                }
-
-                if (rp == ResourceProperty.MediaLibrary)
-                {
-                    var mediaLibraryService = serviceProvider.GetRequiredService<IMediaLibraryService>();
-                    mediaLibraries =
-                        await mediaLibraryService.GetAll(null, MediaLibraryAdditionalItem.Category);
-                }
 
                 if (rp == ResourceProperty.MediaLibraryV2 || rp == ResourceProperty.MediaLibraryV2Multi)
                 {
@@ -139,16 +80,6 @@ public class PropertyService(IServiceProvider serviceProvider, IPropertyLocalize
 
                 switch ((InternalProperty)id)
                 {
-                    case InternalProperty.Category:
-                    {
-                        tmpProperty.Options = BuildOptionsForCategory(categoryMap!.Values);
-                        break;
-                    }
-                    case InternalProperty.MediaLibrary:
-                    {
-                        tmpProperty.Options = BuildOptionsForMediaLibrary(categoryMap!, mediaLibraries!);
-                        break;
-                    }
                     case InternalProperty.MediaLibraryV2:
                     {
                         tmpProperty.Options = BuildOptionsForMediaLibraryV2(mediaLibrariesV2!);
@@ -198,8 +129,6 @@ public class PropertyService(IServiceProvider serviceProvider, IPropertyLocalize
         // Deprecated internal properties
         var deprecatedProperties = new HashSet<InternalProperty>
         {
-            InternalProperty.Category,
-            InternalProperty.MediaLibrary,
             InternalProperty.MediaLibraryV2
         };
 
@@ -212,18 +141,10 @@ public class PropertyService(IServiceProvider serviceProvider, IPropertyLocalize
                     case PropertyPool.Internal:
                     {
                         // Skip loading dependencies if not including deprecated properties
-                        Dictionary<int, Category>? categoryMap = null;
-                        List<MediaLibrary>? mediaLibraries = null;
                         List<MediaLibraryV2>? mediaLibrariesV2 = null;
 
                         if (includeDeprecated)
                         {
-                            var categoryService = serviceProvider.GetRequiredService<ICategoryService>();
-                            var categories = await categoryService.GetAll();
-                            categoryMap = categories.ToDictionary(d => d.Id, d => d);
-                            var mediaLibraryService = serviceProvider.GetRequiredService<IMediaLibraryService>();
-                            mediaLibraries =
-                                await mediaLibraryService.GetAll(null, MediaLibraryAdditionalItem.Category);
                             var mediaLibraryServiceV2 = serviceProvider.GetRequiredService<IMediaLibraryV2Service>();
                             mediaLibrariesV2 = await mediaLibraryServiceV2.GetAll();
                         }
@@ -237,22 +158,6 @@ public class PropertyService(IServiceProvider serviceProvider, IPropertyLocalize
                                 };
                                 switch ((InternalProperty)v.Id)
                                 {
-                                    case InternalProperty.Category:
-                                    {
-                                        if (categoryMap != null)
-                                        {
-                                            tmpProperty.Options = BuildOptionsForCategory(categoryMap.Values);
-                                        }
-                                        break;
-                                    }
-                                    case InternalProperty.MediaLibrary:
-                                    {
-                                        if (categoryMap != null && mediaLibraries != null)
-                                        {
-                                            tmpProperty.Options = BuildOptionsForMediaLibrary(categoryMap, mediaLibraries);
-                                        }
-                                        break;
-                                    }
                                     case InternalProperty.MediaLibraryV2:
                                     {
                                         if (mediaLibrariesV2 != null)
