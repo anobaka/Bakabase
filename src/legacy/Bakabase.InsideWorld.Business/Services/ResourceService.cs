@@ -370,6 +370,17 @@ namespace Bakabase.InsideWorld.Business.Services
 
                 var resourceIds = resources.Select(a => a.Id).ToList();
 
+                // Always populate SourceLinks (required for source icon display)
+                using (MiniProfiler.Current.Step("SourceLinks (mandatory)"))
+                {
+                    var sourceLinkService = GetRequiredService<IResourceSourceLinkService>();
+                    var linksGrouped = await sourceLinkService.GetByResourceIdsGrouped(resourceIds.ToArray());
+                    foreach (var r in doList)
+                    {
+                        r.SourceLinks = linksGrouped.GetValueOrDefault(r.Id) ?? [];
+                    }
+                }
+
                 // Pre-fetch unified profile data if needed (optimization to avoid multiple index service calls)
                 Dictionary<int, ResourceProfileEffectiveData>? unifiedProfileData = null;
                 var needsNameTemplate = additionalItems.HasFlag(ResourceAdditionalItem.DisplayName);
@@ -749,16 +760,8 @@ namespace Bakabase.InsideWorld.Business.Services
                                     break;
                                 }
                                 case ResourceAdditionalItem.SourceLinks:
-                                {
-                                    var sourceLinkService = GetRequiredService<IResourceSourceLinkService>();
-                                    var linksGrouped = await sourceLinkService.GetByResourceIdsGrouped(resourceIds.ToArray());
-                                    foreach (var r in doList)
-                                    {
-                                        r.SourceLinks = linksGrouped.GetValueOrDefault(r.Id) ?? [];
-                                    }
-
+                                    // Already populated above (mandatory)
                                     break;
-                                }
                                 default:
                                     throw new ArgumentOutOfRangeException();
                             }
