@@ -1,7 +1,8 @@
+using System;
+using System.Linq;
 using System.Reflection;
 using Bakabase.Abstractions.Services;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Bakabase.InsideWorld.Business.Components.ResourceResolver;
 
