@@ -52,12 +52,13 @@ public class ExHentaiGalleryController(IExHentaiGalleryService service, BTaskMan
 
     [HttpPost("sync")]
     [SwaggerOperation(OperationId = "SyncExHentaiGalleries")]
-    public async Task<BaseResponse> Sync([FromQuery] bool redownloadCover = false)
+    public async Task<BaseResponse> Sync([FromQuery] bool refetchMetadata = false)
     {
-        if (redownloadCover)
+        if (refetchMetadata)
         {
             var sourceLinkService = HttpContext.RequestServices.GetRequiredService<IResourceSourceLinkService>();
             await sourceLinkService.ClearAllLocalCoverPaths(ResourceSource.ExHentai);
+            await service.ClearAllMetadata();
         }
 
         await btm.Start(SyncTaskId, () => new BTaskHandlerBuilder

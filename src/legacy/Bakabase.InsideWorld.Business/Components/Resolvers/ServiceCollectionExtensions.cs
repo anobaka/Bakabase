@@ -1,9 +1,10 @@
+using System;
+using System.Linq;
 using System.Reflection;
-using Bakabase.Modules.ResourceResolver.Abstractions;
+using Bakabase.Abstractions.Services;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace Bakabase.Modules.ResourceResolver.Extensions;
+namespace Bakabase.InsideWorld.Business.Components.Resolvers;
 
 public static class ServiceCollectionExtensions
 {

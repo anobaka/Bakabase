@@ -272,4 +272,19 @@ public class SteamAppService(
         app.UpdatedAt = DateTime.Now;
         await orm.Update(app);
     }
+
+    public async Task ClearAllMetadata()
+    {
+        var apps = await orm.GetAll(a => a.MetadataJson != null);
+        foreach (var app in apps)
+        {
+            app.MetadataJson = null;
+            app.MetadataFetchedAt = null;
+        }
+
+        if (apps.Count > 0)
+        {
+            await orm.UpdateRange(apps);
+        }
+    }
 }

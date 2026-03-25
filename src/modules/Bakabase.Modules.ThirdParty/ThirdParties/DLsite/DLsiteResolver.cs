@@ -1,26 +1,28 @@
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
-using Bakabase.Modules.ResourceResolver.Abstractions;
+using Bakabase.Modules.ThirdParty.ThirdParties.DLsite;
 using Microsoft.Extensions.Logging;
 
-namespace Bakabase.Modules.ResourceResolver.Components;
+namespace Bakabase.Modules.ThirdParty.ThirdParties.DLsite;
 
 /// <summary>
 /// Discovers DLsite works as resources.
 /// Uses cached DLsiteWork data from DLsiteWorkService.
-/// Metadata retrieval is handled by the existing DLsiteEnhancer.
 /// </summary>
 public class DLsiteResolver : IResourceResolver
 {
     private readonly IDLsiteWorkService _workService;
+    private readonly DLsiteClient _dlsiteClient;
     private readonly ILogger<DLsiteResolver> _logger;
     private static readonly Regex WorkIdPattern = new(@"[RBV]J\d+", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-    public DLsiteResolver(IDLsiteWorkService workService, ILogger<DLsiteResolver> logger)
+    public DLsiteResolver(IDLsiteWorkService workService, DLsiteClient dlsiteClient, ILogger<DLsiteResolver> logger)
     {
         _workService = workService;
+        _dlsiteClient = dlsiteClient;
         _logger = logger;
     }
 
@@ -179,5 +181,43 @@ public class DLsiteResolver : IResourceResolver
         };
         process.Start();
         return Task.CompletedTask;
+    }
+
+    public List<SourceMetadataFieldInfo> GetPredefinedMetadataFields() =>
+    [
+        new(nameof(DLsiteMetadataField.Name), StandardValueType.String),
+        new(nameof(DLsiteMetadataField.Introduction), StandardValueType.String),
+        new(nameof(DLsiteMetadataField.Rating), StandardValueType.Decimal),
+        new(nameof(DLsiteMetadataField.CoverUrls), StandardValueType.ListString),
+    ];
+
+    public async Task<SourceDetailedMetadata?> FetchDetailedMetadataAsync(string sourceKey, CancellationToken ct)
+    {
+        var detail = await _dlsiteClient.ParseWorkDetailById(sourceKey);
+        if (detail == null) return null;
+
+        var result = new SourceDetailedMetadata
+        {
+            RawJson = JsonSerializer.Serialize(detail, JsonSerializerOptions.Web),
+            CoverUrls = detail.CoverUrls?.ToList(),
+            PredefinedFieldValues =
+            {
+                [nameof(DLsiteMetadataField.Name)] = detail.Name,
+                [nameof(DLsiteMetadataField.Introduction)] = detail.Introduction,
+                [nameof(DLsiteMetadataField.Rating)] = detail.Rating,
+                [nameof(DLsiteMetadataField.CoverUrls)] = detail.CoverUrls?.ToList(),
+            }
+        };
+
+        // Dynamic fields from the right side of cover (声優, ジャンル, etc.)
+        if (detail.PropertiesOnTheRightSideOfCover is { Count: > 0 })
+        {
+            foreach (var (key, values) in detail.PropertiesOnTheRightSideOfCover)
+            {
+                result.CustomFieldValues[key] = values;
+            }
+        }
+
+        return result;
     }
 }

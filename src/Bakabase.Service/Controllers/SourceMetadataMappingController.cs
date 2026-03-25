@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Localization;
@@ -18,6 +19,7 @@ namespace Bakabase.Service.Controllers;
 [ApiController]
 public class SourceMetadataMappingController(
     ISourceMetadataSyncService metadataSyncService,
+    IEnumerable<IResourceResolver> resolvers,
     BTaskManager btm,
     IBakabaseLocalizer localizer
 ) : ControllerBase
@@ -39,11 +41,13 @@ public class SourceMetadataMappingController(
         return BaseResponseBuilder.Ok;
     }
 
-    [HttpGet("available-fields")]
-    [SwaggerOperation(OperationId = "GetSourceAvailableMetadataFields")]
-    public ListResponse<string> GetAvailableFields(ResourceSource source)
+    [HttpGet("predefined-fields")]
+    [SwaggerOperation(OperationId = "GetSourcePredefinedMetadataFields")]
+    public ListResponse<SourceMetadataFieldInfo> GetPredefinedFields(ResourceSource source)
     {
-        return new ListResponse<string>(metadataSyncService.GetAvailableMetadataFields(source));
+        var resolver = resolvers.FirstOrDefault(r => r.Source == source);
+        var fields = resolver?.GetPredefinedMetadataFields() ?? [];
+        return new ListResponse<SourceMetadataFieldInfo>(fields);
     }
 
     [HttpPost("apply-all")]

@@ -1,17 +1,23 @@
+using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 using Bakabase.Abstractions.Components;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
-using Bakabase.Modules.ResourceResolver.Abstractions;
 using Microsoft.Extensions.Logging;
+using DomainResource = Bakabase.Abstractions.Models.Domain.Resource;
 
-namespace Bakabase.Modules.ResourceResolver.Components;
+namespace Bakabase.InsideWorld.Business.Components.Resolvers;
 
 /// <summary>
 /// FileSystem resolver that discovers resources from PathMark resource marks.
@@ -401,7 +407,7 @@ public class FileSystemResolver : IResourceResolver
     }
 
     public Task<List<MigrationCandidate>> IdentifyMigrationCandidates(
-        List<Resource> fileSystemResources, CancellationToken ct)
+        List<DomainResource> fileSystemResources, CancellationToken ct)
     {
         return Task.FromResult(new List<MigrationCandidate>());
     }
@@ -433,7 +439,7 @@ public class FileSystemResolver : IResourceResolver
 
     #region Playable Items
 
-    public async Task<List<PlayableItem>> DiscoverPlayableItemsAsync(Resource resource, string sourceKey, CancellationToken ct)
+    public async Task<List<PlayableItem>> DiscoverPlayableItemsAsync(DomainResource resource, string sourceKey, CancellationToken ct)
     {
         var items = new List<PlayableItem>();
 
@@ -494,7 +500,7 @@ public class FileSystemResolver : IResourceResolver
         return items;
     }
 
-    public async Task PlayAsync(Resource resource, PlayableItem item, CancellationToken ct)
+    public async Task PlayAsync(DomainResource resource, PlayableItem item, CancellationToken ct)
     {
         var file = item.Key;
         var playedByCustomPlayer = false;

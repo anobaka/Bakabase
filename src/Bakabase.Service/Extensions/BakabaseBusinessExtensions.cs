@@ -35,7 +35,7 @@ using Bakabase.Modules.Presets.Extensions;
 using Bakabase.Modules.Property.Extensions;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bakabase.Modules.Comparison.Extensions;
-using Bakabase.Modules.ResourceResolver.Extensions;
+using Bakabase.InsideWorld.Business.Components.Resolvers;
 using Bakabase.Modules.ThirdParty.Extensions;
 using Bakabase.Modules.ThirdParty.Services;
 using Bootstrap.Components.DependencyInjection;
@@ -126,6 +126,9 @@ namespace Bakabase.Service.Extensions
 
             services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, ExHentaiGalleryDbModel, int>>();
             services.AddScoped<IExHentaiGalleryService, ExHentaiGalleryService>();
+
+            services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, SourceMetadataMappingDbModel, int>>();
+            services.AddScoped<ISourceMetadataSyncService, SourceMetadataSyncService<BakabaseDbContext>>();
 
             services.AddSingleton<ISystemPlayer, SelfPlayer>();
             services.AddSingleton<Bakabase.Abstractions.Components.ISystemPlayer>(sp =>

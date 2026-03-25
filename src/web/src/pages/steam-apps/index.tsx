@@ -106,7 +106,7 @@ export default function SteamAppsPage() {
   }, [syncTask?.status]);
 
   const [showSyncConfirm, setShowSyncConfirm] = useState(false);
-  const [redownloadCover, setRedownloadCover] = useState(false);
+  const [refetchMetadata, setRefetchMetadata] = useState(false);
 
   const handleSync = async () => {
     setShowSyncConfirm(true);
@@ -114,8 +114,8 @@ export default function SteamAppsPage() {
 
   const handleSyncConfirmed = async () => {
     setShowSyncConfirm(false);
-    await BApi.steamApp.syncSteamApps({ redownloadCover });
-    setRedownloadCover(false);
+    await BApi.steamApp.syncSteamApps({ refetchMetadata });
+    setRefetchMetadata(false);
   };
 
   const handleStopSync = async () => {
@@ -303,10 +303,10 @@ export default function SteamAppsPage() {
           <ModalBody>
             <p>{t("resourceSource.confirm.sync.description")}</p>
             <Checkbox
-              isSelected={redownloadCover}
-              onValueChange={setRedownloadCover}
+              isSelected={refetchMetadata}
+              onValueChange={setRefetchMetadata}
             >
-              {t("resourceSource.confirm.sync.redownloadCover")}
+              {t("resourceSource.confirm.sync.refetchMetadata")}
             </Checkbox>
           </ModalBody>
           <ModalFooter>
