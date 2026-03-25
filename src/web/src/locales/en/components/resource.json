@@ -141,5 +141,7 @@
   "resource.conflict.path": "Path",
   "resource.conflict.apply": "Apply",
   "resource.conflict.mergeSuccess": "Resources merged successfully",
-  "resource.conflict.mergeFailed": "Failed to merge resources"
+  "resource.conflict.mergeFailed": "Failed to merge resources",
+
+  "resource.playControl.tooltip.launchAsSource": "Launch as {{source}} resource"
 }
