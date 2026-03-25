@@ -3,6 +3,7 @@ using System;
 using Bakabase.InsideWorld.Business;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bakabase.InsideWorld.Business.Migrations
 {
     [DbContext(typeof(BakabaseDbContext))]
-    partial class InsideWorldDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260325064940_AddDeleteResourceToBulkModification")]
+    partial class AddDeleteResourceToBulkModification
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.0");
@@ -968,6 +971,58 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.HasKey("ResourceId");
 
                     b.ToTable("ResourceCaches");
+                });
+
+            modelBuilder.Entity("Bakabase.InsideWorld.Models.Models.Entities.CategoryCustomPropertyMapping", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("CategoryId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("PropertyId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId", "PropertyId")
+                        .IsUnique();
+
+                    b.ToTable("CategoryCustomPropertyMappings");
+                });
+
+            modelBuilder.Entity("Bakabase.InsideWorld.Models.Models.Entities.ComponentOptions", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ComponentAssemblyQualifiedTypeName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ComponentType")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Json")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ComponentOptions");
                 });
 
             modelBuilder.Entity("Bakabase.InsideWorld.Models.Models.Entities.Password", b =>

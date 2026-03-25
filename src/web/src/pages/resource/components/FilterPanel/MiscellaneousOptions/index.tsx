@@ -7,6 +7,7 @@ import {
   AppstoreAddOutlined,
   CloseOutlined,
   DatabaseOutlined,
+  DeleteOutlined,
   FireOutlined,
   FolderOpenOutlined,
   FullscreenOutlined,
@@ -424,6 +425,29 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
             <div className={"flex items-center gap-1"}>
               <VideoCameraAddOutlined className={"text-base"} />
               {t<string>("resource.display.addToPlaylist")}
+            </div>
+          </Checkbox>
+          <Checkbox
+            size="sm"
+            isSelected={
+              resourceUiOptions?.displayOperations?.includes("delete") ?? false
+            }
+            onValueChange={(checked) => {
+              const current = resourceUiOptions?.displayOperations ?? [];
+              if (checked) {
+                if (!current.includes("delete")) {
+                  patchOptions({ displayOperations: [...current, "delete"] });
+                }
+              } else {
+                patchOptions({
+                  displayOperations: current.filter((op: string) => op !== "delete"),
+                });
+              }
+            }}
+          >
+            <div className={"flex items-center gap-1 text-danger"}>
+              <DeleteOutlined className={"text-base"} />
+              {t<string>("common.action.delete")}
             </div>
           </Checkbox>
         </div>

@@ -10,7 +10,7 @@ import {
 } from "@ant-design/icons";
 
 import MediaLibraryMultiSelector from "@/components/MediaLibraryMultiSelector";
-import { ResourceAdditionalItem, ResourceTag } from "@/sdk/constants";
+import { ResourceAdditionalItem } from "@/sdk/constants";
 import ResourceTransferModal from "@/components/ResourceTransferModal";
 import { Modal } from "@/components/bakaui";
 import { buildLogger } from "@/components/utils";
@@ -120,11 +120,6 @@ const ContextMenuItems = ({
       <MenuItem
         onClick={() => {
           log("inner", "click");
-          // Check if any selected resource has files (no PathDoesNotExist tag)
-          const filesExist = selectedResources
-            ? selectedResources.some((r) => !r.tags?.includes(ResourceTag.PathDoesNotExist))
-            : true; // Default to true if resource info not available
-
           let deleteFiles = false;
 
           createPortal(Modal, {
@@ -135,7 +130,6 @@ const ContextMenuItems = ({
             children: (
               <DeleteResourceConfirmContent
                 count={selectedResourceIds.length}
-                filesExist={filesExist}
                 onDeleteFilesChange={(v) => {
                   deleteFiles = v;
                 }}

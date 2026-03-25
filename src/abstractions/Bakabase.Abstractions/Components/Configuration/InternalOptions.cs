@@ -100,32 +100,6 @@ namespace Bakabase.Abstractions.Components.Configuration
         public const char CompressedFileRootSeparator = '!';
         public const string RegexForOnePathLayer = @"[^\/]+";
 
-        public static readonly Dictionary<ComponentType, ComponentTypeRequirement> ComponentTypeRequirements =
-            new Dictionary<ComponentType, ComponentTypeRequirement>
-            {
-                {
-                    ComponentType.Player, new ComponentTypeRequirement
-                    {
-                        MaxCount = 1,
-                        Required = true
-                    }
-                },
-                {
-                    ComponentType.PlayableFileSelector, new ComponentTypeRequirement
-                    {
-                        MaxCount = 1,
-                        Required = true
-                    }
-                },
-                {
-                    ComponentType.Enhancer, new ComponentTypeRequirement
-                    {
-                        MaxCount = int.MaxValue,
-                        Required = false
-                    }
-                }
-            };
-
         public static HashSet<string> IgnoredFileExtensions = new(StringComparer.OrdinalIgnoreCase)
             {".nfo"};
 

@@ -8,6 +8,7 @@ import type { MediaType } from "@/sdk/constants";
 import { useTranslation } from "react-i18next";
 import React, { useMemo, useState } from "react";
 import {
+  DeleteOutlined,
   FireOutlined,
   FolderOpenOutlined,
   LoadingOutlined,
@@ -20,6 +21,7 @@ import { AiOutlinePicture } from "react-icons/ai";
 
 import BApi from "@/sdk/BApi";
 import ResourceEnhancementsModal from "@/components/Resource/components/ResourceEnhancementsModal.tsx";
+import DeleteResourceConfirmContent from "@/components/Resource/components/DeleteResourceConfirmContent";
 import { EnhancementAdditionalItem, IwFsType } from "@/sdk/constants";
 import { PlaylistCollection } from "@/components/Playlist";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
@@ -117,11 +119,43 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
       });
   };
 
+  const handleDelete = () => {
+    let deleteFiles = false;
+
+    createPortal(Modal, {
+      defaultVisible: true,
+      title: t<string>("resource.contextMenu.deleteResource"),
+      children: (
+        <DeleteResourceConfirmContent
+          count={1}
+          onDeleteFilesChange={(v) => {
+            deleteFiles = v;
+          }}
+        />
+      ),
+      footer: {
+        actions: ["cancel", "ok"],
+        okProps: {
+          color: "danger",
+          children: t<string>("common.action.delete"),
+        },
+      },
+      onOk: async () => {
+        await BApi.resource.deleteResourcesByKeys({
+          ids: [resource.id],
+          deleteFiles,
+        });
+        reload?.();
+      },
+    });
+  };
+
   const showAggregate = displayOperations.includes("aggregate");
   const showPin = displayOperations.includes("pin");
   const showEnhancements = displayOperations.includes("enhancements");
   const showPreview = displayOperations.includes("preview");
   const showAddToPlaylist = displayOperations.includes("addToPlaylist");
+  const showDelete = displayOperations.includes("delete");
 
   // If aggregate is selected, show popover with all buttons (filtered by what's selected)
   // Otherwise, show individual buttons for selected operations
@@ -204,6 +238,20 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
           }}
         >
           <VideoCameraAddOutlined className={"text-lg"} />
+        </Button>,
+      );
+    }
+    if (showDelete) {
+      buttons.push(
+        <Button
+          key="delete"
+          isIconOnly
+          color="danger"
+          size={"sm"}
+          title={t<string>("common.action.delete")}
+          onPress={handleDelete}
+        >
+          <DeleteOutlined className={"text-lg"} />
         </Button>,
       );
     }
@@ -406,6 +454,20 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
         }}
       >
         <VideoCameraAddOutlined className={iconClassName} />
+      </Button>,
+    );
+  }
+  if (showDelete) {
+    individualButtons.push(
+      <Button
+        key="delete"
+        isIconOnly
+        className={buttonClassName}
+        color="danger"
+        title={t<string>("common.action.delete")}
+        onPress={handleDelete}
+      >
+        <DeleteOutlined className={iconClassName} />
       </Button>,
     );
   }

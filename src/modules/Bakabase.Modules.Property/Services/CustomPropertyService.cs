@@ -2,22 +2,18 @@
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Dto;
-using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Models.Db;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Extensions;
 using Bakabase.Modules.Property.Models.View;
-using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Bakabase.Modules.StandardValue.Abstractions.Services;
-using Bakabase.Modules.StandardValue.Extensions;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Components.Orm;
 using Bootstrap.Extensions;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.EntityFrameworkCore;
-using Newtonsoft.Json;
 using StackExchange.Profiling;
 
 namespace Bakabase.Modules.Property.Services
@@ -27,9 +23,6 @@ namespace Bakabase.Modules.Property.Services
                 serviceProvider),
             ICustomPropertyService where TDbContext : DbContext
     {
-        protected ICategoryCustomPropertyMappingService CategoryCustomPropertyMappingService =>
-            GetRequiredService<ICategoryCustomPropertyMappingService>();
-
         protected ICustomPropertyValueService CustomPropertyValueService =>
             GetRequiredService<ICustomPropertyValueService>();
 
@@ -81,23 +74,7 @@ namespace Bakabase.Modules.Property.Services
             await PopulateAdditionalItems(data, additionalItems);
             return data;
         }
-
-        public async Task<Dictionary<int, List<CustomProperty>>> GetByCategoryIds(int[] ids)
-        {
-            var mappings = await CategoryCustomPropertyMappingService.GetAll(x => ids.Contains(x.CategoryId));
-            var propertyIds = mappings.Select(x => x.PropertyId).ToHashSet();
-            var properties = await GetAll(x => propertyIds.Contains(x.Id));
-            var propertyMap = properties.ToDictionary(x => x.Id);
-            var orderMap = mappings.GroupBy(d => d.CategoryId)
-                .ToDictionary(d => d.Key, d => d.ToDictionary(a => a.PropertyId, a => a.Order));
-
-            return mappings.GroupBy(x => x.CategoryId).ToDictionary(x => x.Key,
-                x => x.Select(y => propertyMap.GetValueOrDefault(y.PropertyId)).OfType<CustomProperty>()
-                    .OrderBy(a =>
-                        orderMap.GetValueOrDefault(x.Key)?.GetValueOrDefault(a.Id, int.MaxValue) ?? int.MaxValue)
-                    .ToList());
-        }
-
+        
         private async Task PopulateAdditionalItems(List<CustomProperty> properties,
             CustomPropertyAdditionalItem additionalItems = CustomPropertyAdditionalItem.None)
         {
@@ -187,7 +164,6 @@ namespace Bakabase.Modules.Property.Services
 
         public override async Task<BaseResponse> RemoveByKey(int id)
         {
-            await CategoryCustomPropertyMappingService.RemoveAll(x => x.PropertyId == id);
             await CustomPropertyValueService.RemoveAll(x => x.PropertyId == id);
             return await base.RemoveByKey(id);
         }

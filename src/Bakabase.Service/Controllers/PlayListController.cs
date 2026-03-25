@@ -3,20 +3,13 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Services;
-using Bakabase.InsideWorld.Business.Components;
-using Bakabase.InsideWorld.Business.Components.PlayList.Extensions;
 using Bakabase.InsideWorld.Business.Components.PlayList.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.PlayList.Models.Input;
 using Bakabase.InsideWorld.Business.Components.PlayList.Services;
-using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
-using Bakabase.InsideWorld.Models.Extensions;
-using Bakabase.InsideWorld.Models.Models.Dtos;
-using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Extensions;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace Bakabase.Service.Controllers
