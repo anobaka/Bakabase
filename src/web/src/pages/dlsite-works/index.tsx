@@ -319,7 +319,7 @@ export default function DLsiteWorksPage() {
         </div>
       </div>
 
-      <DLsiteConfig isOpen={configOpen} onClose={() => setConfigOpen(false)} />
+      {configOpen && <DLsiteConfig isOpen onClose={() => setConfigOpen(false)} />}
 
 
       {!isConfigured && works.length === 0 && !loading && (

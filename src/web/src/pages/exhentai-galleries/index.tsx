@@ -221,7 +221,7 @@ export default function ExHentaiGalleriesPage() {
         </div>
       </div>
 
-      <ExHentaiConfig isOpen={configOpen} onClose={() => setConfigOpen(false)} />
+      {configOpen && <ExHentaiConfig isOpen onClose={() => setConfigOpen(false)} />}
 
 
       {!isConfigured && galleries.length === 0 && !loading && (

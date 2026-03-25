@@ -205,7 +205,7 @@ export default function SteamAppsPage() {
         </div>
       </div>
 
-      <SteamConfig isOpen={configOpen} onClose={() => setConfigOpen(false)} />
+      {configOpen && <SteamConfig isOpen onClose={() => setConfigOpen(false)} />}
 
 
       {!isConfigured && apps.length === 0 && !loading && (
