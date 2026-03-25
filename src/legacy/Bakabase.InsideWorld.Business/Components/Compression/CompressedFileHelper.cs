@@ -1,220 +1,195 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
-using System.Reflection.Metadata;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using Aliyun.OSS;
 using Bakabase.Abstractions.Components.Configuration;
-using Bakabase.Abstractions.Extensions;
-using Bakabase.InsideWorld.Business.Extensions;
-using Bakabase.InsideWorld.Models.Constants;
-using Bakabase.InsideWorld.Models.Extensions;
-using Bootstrap.Extensions;
-using JetBrains.Annotations;
 
 namespace Bakabase.InsideWorld.Business.Components.Compression
 {
-    [Obsolete]
-    public class CompressedFileHelper
+    public static class CompressedFileHelper
     {
-        private static readonly Regex PartExtRegex = new Regex(@"^\.(?<prefix>[a-zA-Z]{0,5})?(?<index>\d{0,5})$");
+        private static readonly Regex PartPattern =
+            new Regex(@"\.part(?<index>\d+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-        [NotNull]
-        public static List<CompressedFileGroup> Group(string[] fileOrFullNames)
+        private static readonly Regex NumericSplitPattern =
+            new Regex(@"\.(?<index>\d{3,})$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        private static readonly Regex TailingXNumberPattern =
+            new Regex(@"\.[rz](?<index>\d{3,})$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        public static List<CompressedFileGroup> DetectCompressedFileGroups(
+            string[] filePaths,
+            bool ignoreUnknownExtensions = true)
         {
-            // dir - key name - ext info list
-            var allDirGroups = new Dictionary<string, Dictionary<string, List<ExtInfo>>>();
-            foreach (var f in fileOrFullNames.OrderBy(t => t))
+            var allGroups = new List<CompressedFileGroup>();
+
+            foreach (var dirGroup in filePaths.GroupBy(d => Path.GetDirectoryName(d)!))
             {
-                var ext1 = Path.GetExtension(f);
-                var extInfo = new ExtInfo { Raw = ext1 };
-                var ext1IsKeyExt = InternalOptions.CompressedFileExtensions.Contains(ext1);
-                if (ext1IsKeyExt)
+                var groups = new Dictionary<string, CompressedFileGroup>(StringComparer.OrdinalIgnoreCase);
+
+                foreach (var path in dirGroup.OrderBy(p => p, StringComparer.OrdinalIgnoreCase))
                 {
-                    extInfo.TypeKey = ext1;
-                }
-                else
-                {
-                    var match = PartExtRegex.Match(ext1);
-                    if (match.Success)
+                    var fileName = Path.GetFileName(path);
+                    string ext = GetArchiveExtension(fileName);
+
+                    bool isKnown = InternalOptions.CompressedFileExtensions.Contains(ext) || InternalOptions.CompoundCompressedFileExtensions.Contains(ext);
+                    bool isPart = PartPattern.IsMatch(fileName) ||
+                                  TailingXNumberPattern.IsMatch(fileName)
+                                  || NumericSplitPattern.IsMatch(fileName);
+
+                    if (!isKnown && !isPart)
                     {
-                        extInfo.PartPrefix = match.Groups["prefix"].Value;
-                        extInfo.PartIndex = match.Groups["index"].Value;
-                    }
-                    else
-                    {
+                        if (ignoreUnknownExtensions) continue;
+                        AddToGroup(groups, Path.GetFileNameWithoutExtension(fileName), null, path, fileName);
                         continue;
                     }
-                }
 
-                var keyName = Path.GetFileNameWithoutExtension(f);
-                var ext2 = Path.GetExtension(keyName);
-                // ignore part segment on single file
-                if (ext2.IsNotEmpty() && fileOrFullNames.Length > 1)
-                {
-                    if (ext1IsKeyExt)
+                    string keyName;
+                    string? mainExt = null;
+
+                    if (isKnown)
                     {
-                        var match = PartExtRegex.Match(ext2);
+                        keyName = Path.GetFileNameWithoutExtension(fileName[..^ext.Length]);
+                        mainExt = ext;
+                    }
+                    else if (isPart)
+                    {
+                        var match = PartPattern.Match(fileName);
                         if (match.Success)
                         {
-                            extInfo.PartPrefix = match.Groups["prefix"].Value;
-                            extInfo.PartIndex = match.Groups["index"].Value;
-                            extInfo.LeadingPart = true;
-
-                            keyName = Path.GetFileNameWithoutExtension(keyName);
-                            extInfo.Raw = ext2 + extInfo.Raw;
+                            var baseName = fileName[..match.Index];
+                            keyName = Path.GetFileNameWithoutExtension(baseName);
+                            mainExt = GetArchiveExtension(fileName[(match.Index + match.Length)..]);
+                        }
+                        else if (NumericSplitPattern.IsMatch(fileName))
+                        {
+                            var baseName = NumericSplitPattern.Replace(fileName, "");
+                            keyName = Path.GetFileNameWithoutExtension(baseName);
+                            mainExt = GetArchiveExtension(baseName);
+                        }
+                        else
+                        {
+                            var baseName = Path.GetFileNameWithoutExtension(fileName);
+                            keyName = baseName;
+                            mainExt = Path.GetExtension(baseName);
                         }
                     }
                     else
                     {
-                        if (InternalOptions.CompressedFileExtensions.Contains(ext2))
-                        {
-                            extInfo.TypeKey = ext2;
+                        keyName = Path.GetFileNameWithoutExtension(fileName);
+                    }
 
-                            keyName = Path.GetFileNameWithoutExtension(keyName);
-                            extInfo.Raw = ext2 + extInfo.Raw;
+                    mainExt = NormalizeExtension(mainExt);
+                    AddToGroup(groups, keyName, mainExt, path, fileName);
+                }
+
+                // Finalize groups
+                foreach (var g in groups.Values)
+                {
+                    var ordered = g.Files.OrderBy(f => f, StringComparer.OrdinalIgnoreCase).ToList();
+
+                    // Prefer the file with the main archive extension as the entry
+                    if (!string.IsNullOrEmpty(g.Extension))
+                    {
+                        var entry = ordered.FirstOrDefault(f =>
+                            Path.GetFileName(f).EndsWith(g.Extension, StringComparison.OrdinalIgnoreCase));
+
+                        if (entry != null)
+                        {
+                            ordered.Remove(entry);
+                            ordered.Insert(0, entry);
                         }
                     }
+
+                    g.Files = ordered;
+                    g.FileSizes = ordered.Select(f => new FileInfo(f).Length).ToList();
                 }
 
-                var dir = Path.GetDirectoryName(f);
-
-                if (!allDirGroups.TryGetValue(dir, out var d))
-                {
-                    d = allDirGroups[dir] = new Dictionary<string, List<ExtInfo>>();
-                }
-
-                if (!d.TryGetValue(keyName, out var extList))
-                {
-                    extList = d[keyName] = new List<ExtInfo>();
-                }
-
-                extList.Add(extInfo);
+                allGroups.AddRange(groups.Values);
             }
 
-            var result = new List<CompressedFileGroup>();
-            foreach (var dirGroups in allDirGroups)
-            {
-                foreach (var (kn, extInfoList) in dirGroups.Value)
-                {
-                    var extGroups = new List<List<ExtInfo>>();
-                    var restExtInfoList = extInfoList.ToList();
-
-                    var possibleEntries = extInfoList
-                        .Where(t => t.PartIndex.IsNullOrEmpty() && t.PartPrefix.IsNullOrEmpty())
-                        .OrderByDescending(t => t.Raw)
-                        .ToList();
-                    // .rar, .r01, ...
-                    // .zip, .z01, ...
-                    var unknownExtInfosWithPartPrefix = extInfoList
-                        .Where(t => t.TypeKey.IsNullOrEmpty() && t.PartPrefix.IsNotEmpty()).ToList();
-                    if (unknownExtInfosWithPartPrefix.Any())
-                    {
-                        var usedPes = new List<ExtInfo>();
-                        foreach (var pe in possibleEntries)
-                        {
-                            var firstTargetPartIndex =
-                                unknownExtInfosWithPartPrefix.FindIndex(t =>
-                                    t.PartPrefix.FirstOrDefault() == pe.TypeKey[1]);
-                            if (firstTargetPartIndex > -1)
-                            {
-                                var g = new List<ExtInfo> { pe };
-                                var parts = unknownExtInfosWithPartPrefix.Skip(firstTargetPartIndex).ToArray();
-                                g.AddRange(parts);
-                                extGroups.Add(g);
-
-                                restExtInfoList.RemoveAll(g.Contains);
-                                usedPes.Add(pe);
-                                unknownExtInfosWithPartPrefix.RemoveRange(firstTargetPartIndex, parts.Length);
-                            }
-                        }
-
-                        // We don't know what format they are, so just ignore them.
-                        restExtInfoList.RemoveAll(unknownExtInfosWithPartPrefix.Contains);
-                        possibleEntries.RemoveAll(usedPes.Contains);
-                    }
-
-                    var purePartIndexExtInfoList = restExtInfoList
-                        .Where(t => t.PartPrefix.IsNullOrEmpty() && t.TypeKey.IsNullOrEmpty()).ToArray();
-                    // .rar, .01, .02...
-                    if (purePartIndexExtInfoList.Any() && possibleEntries.Count == 1)
-                    {
-                        var e = possibleEntries.FirstOrDefault();
-                        var g = new List<ExtInfo> { e }.Concat(purePartIndexExtInfoList).ToList();
-                        extGroups.Add(g);
-                        restExtInfoList.RemoveAll(g.Contains);
-                        possibleEntries.Remove(e);
-                    }
-
-                    // .rar
-                    var independents =
-                        restExtInfoList.Where(t => t.PartIndex.IsNullOrEmpty() && t.PartPrefix.IsNullOrEmpty())
-                            .ToArray();
-                    foreach (var i in independents)
-                    {
-                        restExtInfoList.Remove(i);
-                        extGroups.Add(new List<ExtInfo> { i });
-                    }
-
-                    // .rar.part1
-                    // .part1.rar
-                    foreach (var groups in restExtInfoList.GroupBy(t => t.LeadingPart))
-                    {
-                        foreach (var subGroups in groups.GroupBy(a => a.TypeKey))
-                        {
-                            var g = subGroups;
-                            extGroups.Add(g.ToList());
-                        }
-                    }
-
-                    result.AddRange(extGroups.Select(g => new CompressedFileGroup
-                    {
-                        Extension = g.FirstOrDefault(a => a.TypeKey.IsNotEmpty())?.TypeKey,
-                        Files = g.Select(t => Path.Combine(dirGroups.Key, $"{kn}{t.Raw}").StandardizePath()).ToList(),
-                        KeyName = kn?.Trim()
-                    }));
-                }
-            }
-
-            return result;
+            return allGroups;
         }
 
-        private class ExtInfo
+        private static string GetArchiveExtension(string fileName)
         {
-            public string TypeKey { get; set; }
-            public string PartPrefix { get; set; }
-            public string PartIndex { get; set; }
-            public string Raw { get; set; }
-            public bool LeadingPart { get; set; }
+            var lower = fileName.ToLowerInvariant();
+            var compound =
+                InternalOptions.CompoundCompressedFileExtensions.FirstOrDefault(c => lower.EndsWith(c, StringComparison.OrdinalIgnoreCase));
+            return compound ?? Path.GetExtension(fileName);
         }
 
-        public class CompressedFileGroup
+        private static string? NormalizeExtension(string? ext)
         {
-            public string KeyName { get; set; }
-            public List<string> Files { get; set; } = new();
-            public string Extension { get; set; }
-            public bool MissEntry => Extension.IsNullOrEmpty();
+            return string.IsNullOrWhiteSpace(ext) ? null : ext;
+        }
 
-            public static T FromSingleFile<T>(string path) where T : CompressedFileGroup, new() => new()
-            {
-                KeyName = Path.GetFileNameWithoutExtension(path).Trim(),
-                Extension = Path.GetExtension(path),
-                Files = new List<string> { path }
-            };
+        private static void AddToGroup(
+            Dictionary<string, CompressedFileGroup> groups,
+            string key,
+            string? ext,
+            string path,
+            string fileName)
+        {
+            var familyKey = GetFamilyKey(key, ext, fileName);
 
-            public override string ToString()
+            if (!groups.TryGetValue(familyKey, out var group))
             {
-                var noEntry = Extension.IsNullOrEmpty();
-                var segments = new[]
+                group = new CompressedFileGroup
                 {
-                    $"[Key]{KeyName}",
-                    $"[Entry]{(noEntry ? "Not found" : Files.FirstOrDefault())}",
-                }.Concat(Files.Skip(noEntry ? 0 : 1).Select(t => $"[Part]{t}"));
-                return string.Join(Environment.NewLine, segments);
+                    KeyName = key,
+                    Extension = ext
+                };
+                groups[familyKey] = group;
             }
+
+            if (ext != null && group.Extension == null)
+                group.Extension = ext;
+
+            group.Files.Add(path);
+        }
+
+        private static string GetFamilyKey(string keyName, string? ext, string fileName)
+        {
+            // RAR .partN family
+            if (PartPattern.IsMatch(fileName) && fileName.EndsWith(".rar", StringComparison.OrdinalIgnoreCase))
+                return $"{keyName}|rar.part";
+
+            // RAR + .rNN family
+            if (ext != null && ext.Equals(".rar", StringComparison.OrdinalIgnoreCase))
+                return $"{keyName}|rar";
+
+            if (Regex.IsMatch(Path.GetExtension(fileName), @"^\.r\d+$", RegexOptions.IgnoreCase))
+                return $"{keyName}|rar";
+
+            // ZIP + .zNN family
+            if (ext != null && ext.Equals(".zip", StringComparison.OrdinalIgnoreCase))
+                return $"{keyName}|zip";
+
+            if (Regex.IsMatch(Path.GetExtension(fileName), @"^\.z\d+$", RegexOptions.IgnoreCase))
+                return $"{keyName}|zip";
+
+            // 7Z family (single archive)
+            if (ext != null && ext.Equals(".7z", StringComparison.OrdinalIgnoreCase)
+                            && !NumericSplitPattern.IsMatch(fileName))
+                return $"{keyName}|7z";
+
+            // 7Z split family (multi-volume .7z.00001, .00002, …)
+            if (NumericSplitPattern.IsMatch(fileName) && fileName.Contains(".7z", StringComparison.OrdinalIgnoreCase))
+                return $"{keyName}|7z.split";
+
+            // Compound TAR families
+            if (InternalOptions.CompoundCompressedFileExtensions.Contains(ext ?? ""))
+                return $"{keyName}|{ext}";
+
+            // Plain TAR
+            if (ext != null && ext.Equals(".tar", StringComparison.OrdinalIgnoreCase))
+                return $"{keyName}|tar";
+
+            // Fallback: key + ext
+            return $"{keyName}|{ext}";
         }
     }
 }
