@@ -76,27 +76,36 @@ public class SourceMetadataSyncService<TDbContext>(
         };
     }
 
+    // --- Steam: SteamAppDetails from store API ---
     private static readonly List<SourceMetadataFieldInfo> SteamFields =
     [
         new("Name", StandardValueType.String),
+        new("Type", StandardValueType.String),
         new("ShortDescription", StandardValueType.String),
+        new("DetailedDescription", StandardValueType.String),
+        new("HeaderImage", StandardValueType.String),
+        new("CapsuleImage", StandardValueType.String),
         new("Developers", StandardValueType.ListString),
         new("Publishers", StandardValueType.ListString),
         new("Genres", StandardValueType.ListString),
         new("Categories", StandardValueType.ListString),
         new("MetacriticScore", StandardValueType.Decimal),
-        new("HeaderImage", StandardValueType.String),
         new("ReleaseDate", StandardValueType.String),
     ];
 
+    // --- DLsite: DLsiteProductDetail from HTML scraping ---
     private static readonly List<SourceMetadataFieldInfo> DLsiteFields =
     [
         new("Name", StandardValueType.String),
         new("Introduction", StandardValueType.String),
         new("Rating", StandardValueType.Decimal),
         new("CoverUrls", StandardValueType.ListString),
+        // Dynamic properties from the right side of cover (e.g. 声优, ジャンル, etc.)
+        // Each key becomes a separate Tags group
+        new("PropertiesOnTheRightSideOfCover", StandardValueType.ListTag),
     ];
 
+    // --- ExHentai: ExHentaiResource from gallery page parsing ---
     private static readonly List<SourceMetadataFieldInfo> ExHentaiFields =
     [
         new("Name", StandardValueType.String),
@@ -105,6 +114,9 @@ public class SourceMetadataSyncService<TDbContext>(
         new("Rate", StandardValueType.Decimal),
         new("Tags", StandardValueType.ListTag),
         new("Category", StandardValueType.String),
+        new("CoverUrl", StandardValueType.String),
+        new("FileCount", StandardValueType.Decimal),
+        new("PageCount", StandardValueType.Decimal),
     ];
 
     #endregion
@@ -133,62 +145,80 @@ public class SourceMetadataSyncService<TDbContext>(
 
     private static (object? Value, StandardValueType Type)? ExtractSteamField(string fieldName, string json)
     {
-        var detail = JsonSerializer.Deserialize<SteamAppDetails>(json, JsonSerializerOptions.Web);
-        if (detail == null) return null;
+        var d = JsonSerializer.Deserialize<SteamAppDetails>(json, JsonSerializerOptions.Web);
+        if (d == null) return null;
 
         return fieldName switch
         {
-            "Name" => (detail.Name, StandardValueType.String),
-            "ShortDescription" => (detail.ShortDescription, StandardValueType.String),
-            "Developers" => (detail.Developers, StandardValueType.ListString),
-            "Publishers" => (detail.Publishers, StandardValueType.ListString),
-            "Genres" => (detail.Genres?.Select(g => g.Description).Where(d => d != null).ToList() as object,
-                StandardValueType.ListString),
-            "Categories" => (detail.Categories?.Select(c => c.Description).Where(d => d != null).ToList() as object,
-                StandardValueType.ListString),
-            "MetacriticScore" => detail.Metacritic != null
-                ? ((decimal)detail.Metacritic.Score, StandardValueType.Decimal)
-                : null,
-            "HeaderImage" => (detail.HeaderImage, StandardValueType.String),
-            "ReleaseDate" => (detail.ReleaseDate?.Date, StandardValueType.String),
+            "Name" => Str(d.Name),
+            "Type" => Str(d.Type),
+            "ShortDescription" => Str(d.ShortDescription),
+            "DetailedDescription" => Str(d.DetailedDescription),
+            "HeaderImage" => Str(d.HeaderImage),
+            "CapsuleImage" => Str(d.CapsuleImage),
+            "Developers" => StrList(d.Developers),
+            "Publishers" => StrList(d.Publishers),
+            "Genres" => StrList(d.Genres?.Select(g => g.Description).OfType<string>().ToList()),
+            "Categories" => StrList(d.Categories?.Select(c => c.Description).OfType<string>().ToList()),
+            "MetacriticScore" => d.Metacritic != null ? Dec(d.Metacritic.Score) : null,
+            "ReleaseDate" => Str(d.ReleaseDate?.Date),
             _ => null
         };
     }
 
     private static (object? Value, StandardValueType Type)? ExtractDLsiteField(string fieldName, string json)
     {
-        var detail = JsonSerializer.Deserialize<DLsiteProductDetail>(json, JsonSerializerOptions.Web);
-        if (detail == null) return null;
+        var d = JsonSerializer.Deserialize<DLsiteProductDetail>(json, JsonSerializerOptions.Web);
+        if (d == null) return null;
 
         return fieldName switch
         {
-            "Name" => (detail.Name, StandardValueType.String),
-            "Introduction" => (detail.Introduction, StandardValueType.String),
-            "Rating" => detail.Rating.HasValue ? (detail.Rating.Value, StandardValueType.Decimal) : null,
-            "CoverUrls" => (detail.CoverUrls?.ToList() as object, StandardValueType.ListString),
+            "Name" => Str(d.Name),
+            "Introduction" => Str(d.Introduction),
+            "Rating" => d.Rating.HasValue ? Dec(d.Rating.Value) : null,
+            "CoverUrls" => StrList(d.CoverUrls?.ToList()),
+            "PropertiesOnTheRightSideOfCover" => d.PropertiesOnTheRightSideOfCover is { Count: > 0 }
+                ? (d.PropertiesOnTheRightSideOfCover
+                        .SelectMany(kv => kv.Value.Select(v => new TagValue(kv.Key, v)))
+                        .ToList() as object,
+                    StandardValueType.ListTag)
+                : null,
             _ => null
         };
     }
 
     private static (object? Value, StandardValueType Type)? ExtractExHentaiField(string fieldName, string json)
     {
-        var detail = JsonSerializer.Deserialize<ExHentaiResource>(json, JsonSerializerOptions.Web);
-        if (detail == null) return null;
+        var d = JsonSerializer.Deserialize<ExHentaiResource>(json, JsonSerializerOptions.Web);
+        if (d == null) return null;
 
         return fieldName switch
         {
-            "Name" => (detail.Name, StandardValueType.String),
-            "RawName" => (detail.RawName, StandardValueType.String),
-            "Introduction" => (detail.Introduction, StandardValueType.String),
-            "Rate" => detail.Rate != 0 ? (detail.Rate, StandardValueType.Decimal) : null,
-            "Tags" => detail.Tags != null
-                ? (detail.Tags.SelectMany(kv => kv.Value.Select(v => new TagValue(kv.Key, v))).ToList() as object,
+            "Name" => Str(d.Name),
+            "RawName" => Str(d.RawName),
+            "Introduction" => Str(d.Introduction),
+            "Rate" => d.Rate != 0 ? Dec(d.Rate) : null,
+            "Tags" => d.Tags is { Count: > 0 }
+                ? (d.Tags.SelectMany(kv => kv.Value.Select(v => new TagValue(kv.Key, v))).ToList() as object,
                     StandardValueType.ListTag)
                 : null,
-            "Category" => (detail.Category?.ToString(), StandardValueType.String),
+            "Category" => Str(d.Category.ToString()),
+            "CoverUrl" => Str(d.CoverUrl),
+            "FileCount" => Dec(d.FileCount),
+            "PageCount" => Dec(d.PageCount),
             _ => null
         };
     }
+
+    // Value construction helpers
+    private static (object, StandardValueType)? Str(string? v) =>
+        !string.IsNullOrEmpty(v) ? (v, StandardValueType.String) : null;
+
+    private static (object, StandardValueType)? StrList(List<string>? v) =>
+        v is { Count: > 0 } ? (v, StandardValueType.ListString) : null;
+
+    private static (object, StandardValueType) Dec(decimal v) =>
+        (v, StandardValueType.Decimal);
 
     #endregion
 
