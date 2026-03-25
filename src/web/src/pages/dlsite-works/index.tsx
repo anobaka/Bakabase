@@ -41,7 +41,7 @@ import { BTaskStatus } from "@/sdk/constants";
 import type { DLsiteWork } from "./types";
 import { SYNC_TASK_ID, DOWNLOAD_TASK_ID_PREFIX, EXTRACT_TASK_ID_PREFIX, SCAN_TASK_ID } from "./types";
 import { DLsiteTable } from "./components/DLsiteTable";
-import { LeStatusIndicator } from "./components/LeStatusIndicator";
+
 
 const PAGE_SIZE_OPTIONS = [20, 50];
 
@@ -225,7 +225,7 @@ export default function DLsiteWorksPage() {
           </p>
         </div>
         <div className="flex gap-2 items-center">
-          <LeStatusIndicator />
+
           {isSyncing ? (
             <div className="flex items-center gap-2">
               <CircularProgress
@@ -281,26 +281,15 @@ export default function DLsiteWorksPage() {
               {t("resourceSource.dlsite.action.scanFolder")}
             </Button>
           )}
-          {hasDownloadDir ? (
-            <Button
-              size="sm"
-              startContent={<AiOutlineFolderOpen className="text-lg" />}
-              variant="flat"
-              onPress={handleOpenDownloadDir}
-            >
-              {t("resourceSource.dlsite.action.openDownloadDir")}
-            </Button>
-          ) : (
-            <Button
-              color="warning"
-              size="sm"
-              startContent={<AiOutlineFolderOpen className="text-lg" />}
-              variant="flat"
-              onPress={() => createPortal(DLsiteConfig, {})}
-            >
-              {t("resourceSource.dlsite.action.setDownloadDir")}
-            </Button>
-          )}
+          <Button
+            isDisabled={!hasDownloadDir}
+            size="sm"
+            startContent={<AiOutlineFolderOpen className="text-lg" />}
+            variant="flat"
+            onPress={handleOpenDownloadDir}
+          >
+            {t("resourceSource.dlsite.action.openDownloadDir")}
+          </Button>
           <Button
             size="sm"
             startContent={<AiOutlineReload className="text-lg" />}
