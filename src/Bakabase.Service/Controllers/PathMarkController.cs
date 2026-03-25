@@ -20,7 +20,7 @@ public class PathMarkController(IPathMarkService service, IPathMarkSyncService s
     [SwaggerOperation(OperationId = "GetAllPathMarks")]
     public async Task<ListResponse<PathMark>> GetAll([FromQuery] PathMarkAdditionalItem additionalItems = PathMarkAdditionalItem.None)
     {
-        var items = await service.GetAll(additionalItems: additionalItems);
+        var items = await service.GetAll(m => !m.IsDeleted, additionalItems);
         return new ListResponse<PathMark>(items);
     }
 

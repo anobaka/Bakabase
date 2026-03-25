@@ -1642,14 +1642,13 @@ public class PathMarkSyncService : ScopedService
         // Sort paths to enable prefix-based optimization
         standardizedResourcePaths.Sort(StringComparer.OrdinalIgnoreCase);
 
-        var allMarks = await _pathMarkService.GetAll(m => m.Type == type && !excludeIds.Contains(m.Id));
+        var allMarks = await _pathMarkService.GetAll(m => m.Type == type && !excludeIds.Contains(m.Id) && !m.IsDeleted);
 
         var relatedMarks = new List<PathMark>();
 
         foreach (var mark in allMarks)
         {
-            if (mark.SyncStatus is not (PathMarkSyncStatus.Pending or PathMarkSyncStatus.PendingDelete
-                or PathMarkSyncStatus.Synced))
+            if (mark.SyncStatus is not (PathMarkSyncStatus.Pending or PathMarkSyncStatus.Synced))
                 continue;
 
             var markPath = ctx.GetStandardizedPath(mark.Path);
