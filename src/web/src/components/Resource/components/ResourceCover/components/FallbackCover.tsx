@@ -6,7 +6,6 @@ import toast from "../../../../bakaui/components/Toast";
 
 import { Button, Modal, Tooltip } from "@/components/bakaui";
 import BApi from "@/sdk/BApi.tsx";
-import { ResourceCacheType } from "@/sdk/constants.ts";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider.tsx";
 
 type Props = {
@@ -18,11 +17,7 @@ const FallbackCover = ({ id, afterClearingCache }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
-  const showModal = async () => {
-    const cacheExists =
-      (await BApi.cache.checkResourceCacheExistence(id, ResourceCacheType.Covers)).data ??
-      false;
-
+  const showModal = () => {
     createPortal(Modal, {
       defaultVisible: true,
       size: "lg",
@@ -59,31 +54,26 @@ const FallbackCover = ({ id, afterClearingCache }: Props) => {
               <li>{t<string>("ResourceCover.CoverTips.S2.Todo.DisableCache")}</li>
             </ol>
           </div>
-          {cacheExists && (
-            <div>
-              <div className="font-medium">{t<string>("Cover cache")}</div>
-              <Button
-                color={"secondary"}
-                size={"sm"}
-                variant={"flat"}
-                onPress={async () => {
-                  try {
-                    await BApi.cache.deleteResourceCacheByResourceIdAndCacheType(
-                      id,
-                      ResourceCacheType.Covers,
-                    );
-                    await BApi.resource.discoverResourceCover(id);
+          <div>
+            <Button
+              color={"secondary"}
+              size={"sm"}
+              variant={"flat"}
+              onPress={async () => {
+                try {
+                  const rsp = await BApi.cache.refreshResourceCache(id);
+                  if (!rsp.code) {
                     afterClearingCache?.();
-                    toast.success(t<string>("Cover cache has been reset"));
-                  } catch (err) {
-                    toast.danger("Failed");
+                    toast.success(t<string>("resource.action.refreshCache.success"));
                   }
-                }}
-              >
-                {t<string>("Reset cover cache of current resource")}
-              </Button>
-            </div>
-          )}
+                } catch (err) {
+                  toast.danger("Failed");
+                }
+              }}
+            >
+              {t<string>("resource.action.refreshCache")}
+            </Button>
+          </div>
         </div>
       ),
       footer: { actions: ["ok"] },
