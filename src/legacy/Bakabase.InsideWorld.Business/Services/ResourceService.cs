@@ -1282,10 +1282,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
             // Serialize PlayableItems as JSON
             cache.PlayableItems = allItems.Count > 0
-                ? System.Text.Json.JsonSerializer.Serialize(allItems, new System.Text.Json.JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
-                })
+                ? System.Text.Json.JsonSerializer.Serialize(allItems, System.Text.Json.JsonSerializerOptions.Web)
                 : null;
 
             // Also update legacy PlayableFilePaths for backward compatibility
@@ -1515,10 +1512,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
                                         // Serialize PlayableItems as JSON
                                         cache.PlayableItems = allPlayableItems.Count > 0
-                                            ? JsonSerializer.Serialize(allPlayableItems, new JsonSerializerOptions
-                                            {
-                                                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                                            })
+                                            ? JsonSerializer.Serialize(allPlayableItems, JsonSerializerOptions.Web)
                                             : null;
 
                                         // Also update legacy PlayableFilePaths for backward compat
@@ -1582,7 +1576,7 @@ namespace Bakabase.InsideWorld.Business.Services
                                                         var markerPath = Path.Combine(resource.Path,
                                                             InternalOptions.ResourceMarkerFileName);
                                                         var content = System.Text.Json.JsonSerializer.Serialize(new
-                                                            { ids = new[] { resource.Id } });
+                                                            { ids = new[] { resource.Id } }, System.Text.Json.JsonSerializerOptions.Web);
                                                         await File.WriteAllTextAsync(markerPath, content);
                                                         File.SetAttributes(markerPath,
                                                             File.GetAttributes(markerPath) | FileAttributes.Hidden);

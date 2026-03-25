@@ -14,11 +14,7 @@ public class CachingChatClient(
     int cacheTtlDays = 7
 ) : DelegatingChatClient(innerClient)
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = false
-    };
+    private static readonly JsonSerializerOptions JsonOptions = JsonSerializerOptions.Web;
 
     public override async Task<ChatResponse> GetResponseAsync(IEnumerable<ChatMessage> messages, ChatOptions? options = null,
         CancellationToken cancellationToken = new CancellationToken())

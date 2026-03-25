@@ -27,7 +27,7 @@ public class FileNameModifierController(IFileNameModifier modifier) : Controller
         foreach (var op in input.Operations.Where(op => !modifier.ValidateOperation(op)))
         {
             return ListResponseBuilder<string>.BuildBadRequest(
-                $"Invalid operations: {System.Text.Json.JsonSerializer.Serialize(op)}");
+                $"Invalid operations: {System.Text.Json.JsonSerializer.Serialize(op, System.Text.Json.JsonSerializerOptions.Web)}");
         }
 
         var fileNames = input.FilePaths.Select(Path.GetFileName).OfType<string>().ToList();
@@ -52,7 +52,7 @@ public class FileNameModifierController(IFileNameModifier modifier) : Controller
         foreach (var op in input.Operations.Where(op => !modifier.ValidateOperation(op)))
         {
             return ListResponseBuilder<FileRenameResult>.BuildBadRequest(
-                $"Invalid operations: {System.Text.Json.JsonSerializer.Serialize(op)}");
+                $"Invalid operations: {System.Text.Json.JsonSerializer.Serialize(op, System.Text.Json.JsonSerializerOptions.Web)}");
         }
 
         var results = new List<FileRenameResult>();

@@ -22,10 +22,7 @@ namespace Bakabase.Migrations.V230;
 /// </summary>
 public class V230Migrator : AbstractMigrator
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
+    private static readonly JsonSerializerOptions JsonOptions = JsonSerializerOptions.Web;
 
     public V230Migrator(IServiceProvider serviceProvider) : base(serviceProvider)
     {

@@ -666,7 +666,7 @@ public class ResourceSyncService : ScopedService
         try
         {
             var markerPath = Path.Combine(path, InternalOptions.ResourceMarkerFileName);
-            var content = System.Text.Json.JsonSerializer.Serialize(new { ids = new[] { resourceId } });
+            var content = System.Text.Json.JsonSerializer.Serialize(new { ids = new[] { resourceId } }, System.Text.Json.JsonSerializerOptions.Web);
             await File.WriteAllTextAsync(markerPath, content);
             File.SetAttributes(markerPath, File.GetAttributes(markerPath) | FileAttributes.Hidden);
         }

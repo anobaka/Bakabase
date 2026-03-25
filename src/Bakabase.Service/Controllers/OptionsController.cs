@@ -568,7 +568,7 @@ namespace Bakabase.Service.Controllers
                         deleted = 0,
                         failed = 0
                     };
-                    await Response.WriteAsync(JsonSerializer.Serialize(completeMessage) + "\n", HttpContext.RequestAborted);
+                    await Response.WriteAsync(JsonSerializer.Serialize(completeMessage, JsonSerializerOptions.Web) + "\n", HttpContext.RequestAborted);
                     await Response.Body.FlushAsync(HttpContext.RequestAborted);
                     return new EmptyResult();
                 }
@@ -623,7 +623,7 @@ namespace Bakabase.Service.Controllers
                             percentage = processedCount * 100 / total,
                             currentResourcePath = path
                         };
-                        await Response.WriteAsync(JsonSerializer.Serialize(progress) + "\n", HttpContext.RequestAborted);
+                        await Response.WriteAsync(JsonSerializer.Serialize(progress, JsonSerializerOptions.Web) + "\n", HttpContext.RequestAborted);
                         await Response.Body.FlushAsync(HttpContext.RequestAborted);
                     }
                     catch (OperationCanceledException)
@@ -646,7 +646,7 @@ namespace Bakabase.Service.Controllers
                             percentage = processedCount * 100 / total,
                             currentResourcePath = path
                         };
-                        await Response.WriteAsync(JsonSerializer.Serialize(progress) + "\n", HttpContext.RequestAborted);
+                        await Response.WriteAsync(JsonSerializer.Serialize(progress, JsonSerializerOptions.Web) + "\n", HttpContext.RequestAborted);
                         await Response.Body.FlushAsync(HttpContext.RequestAborted);
                     }
                 }
@@ -661,7 +661,7 @@ namespace Bakabase.Service.Controllers
                     deleted,
                     failed
                 };
-                await Response.WriteAsync(JsonSerializer.Serialize(completeMsg) + "\n", HttpContext.RequestAborted);
+                await Response.WriteAsync(JsonSerializer.Serialize(completeMsg, JsonSerializerOptions.Web) + "\n", HttpContext.RequestAborted);
                 await Response.Body.FlushAsync(HttpContext.RequestAborted);
             }
             catch (OperationCanceledException)
@@ -687,7 +687,7 @@ namespace Bakabase.Service.Controllers
                         type = "cancelled",
                         message = "Operation was stopped by user"
                     };
-                    await Response.WriteAsync(JsonSerializer.Serialize(cancelledMsg) + "\n");
+                    await Response.WriteAsync(JsonSerializer.Serialize(cancelledMsg, JsonSerializerOptions.Web) + "\n");
                     await Response.Body.FlushAsync();
                 }
                 catch
@@ -704,7 +704,7 @@ namespace Bakabase.Service.Controllers
                 };
                 try
                 {
-                    await Response.WriteAsync(JsonSerializer.Serialize(errorMsg) + "\n");
+                    await Response.WriteAsync(JsonSerializer.Serialize(errorMsg, JsonSerializerOptions.Web) + "\n");
                     await Response.Body.FlushAsync();
                 }
                 catch

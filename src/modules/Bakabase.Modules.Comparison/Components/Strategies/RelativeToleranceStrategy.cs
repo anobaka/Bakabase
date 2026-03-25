@@ -18,7 +18,7 @@ public class RelativeToleranceStrategy : IComparisonStrategy
         {
             try
             {
-                var param = JsonSerializer.Deserialize<RelativeToleranceParameter>(parameter);
+                var param = JsonSerializer.Deserialize<RelativeToleranceParameter>(parameter, JsonSerializerOptions.Web);
                 tolerancePercent = param?.TolerancePercent ?? 0.05;
             }
             catch

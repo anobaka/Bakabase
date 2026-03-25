@@ -15,11 +15,7 @@ namespace Bakabase.Modules.Property.Extensions;
 
 public static class PropertyExtensions
 {
-    private static readonly JsonSerializerOptions CamelCaseJsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowReadingFromString
-    };
+    private static readonly JsonSerializerOptions CamelCaseJsonOptions = JsonSerializerOptions.Web;
 
     private static readonly ConcurrentDictionary<StandardValueType, PropertyType[]>
         StandardValueTypeCustomPropertyTypesMap = new(

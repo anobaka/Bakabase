@@ -63,7 +63,7 @@ public class FileSystemResolver : IResourceResolver
         var boundaryPaths = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         foreach (var mark in resourceMarks)
         {
-            var config = JsonSerializer.Deserialize<ResourceMarkConfig>(mark.ConfigJson);
+            var config = JsonSerializer.Deserialize<ResourceMarkConfig>(mark.ConfigJson, JsonSerializerOptions.Web);
             if (config is { IsResourceBoundary: true })
             {
                 var normalizedPath = mark.Path.StandardizePath();
@@ -87,7 +87,7 @@ public class FileSystemResolver : IResourceResolver
 
             try
             {
-                var config = JsonSerializer.Deserialize<ResourceMarkConfig>(mark.ConfigJson);
+                var config = JsonSerializer.Deserialize<ResourceMarkConfig>(mark.ConfigJson, JsonSerializerOptions.Web);
                 if (config == null) continue;
 
                 // Resolve extension group IDs to actual extensions

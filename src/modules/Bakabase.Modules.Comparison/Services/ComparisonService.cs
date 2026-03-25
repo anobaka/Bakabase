@@ -371,7 +371,7 @@ public class ComparisonService<TDbContext> : ResourceService<TDbContext, Compari
                             Resource1Id = pairData.r1,
                             Resource2Id = pairData.r2,
                             TotalScore = pairData.score,
-                            RuleScoresJson = System.Text.Json.JsonSerializer.Serialize(pairData.details),
+                            RuleScoresJson = System.Text.Json.JsonSerializer.Serialize(pairData.details, System.Text.Json.JsonSerializerOptions.Web),
                             CreatedAt = DateTime.Now
                         });
                     }
@@ -729,7 +729,7 @@ public class ComparisonService<TDbContext> : ResourceService<TDbContext, Compari
         if (value is string str) return str;
         try
         {
-            return System.Text.Json.JsonSerializer.Serialize(value);
+            return System.Text.Json.JsonSerializer.Serialize(value, System.Text.Json.JsonSerializerOptions.Web);
         }
         catch
         {
