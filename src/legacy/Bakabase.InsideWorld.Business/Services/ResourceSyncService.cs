@@ -299,7 +299,8 @@ public class ResourceSyncService : ScopedService
             Source = r.Source,
             SourceKey = r.SourceKey,
             DisplayName = r.DisplayName,
-            LocalPath = r.Path
+            LocalPath = r.Path,
+            CoverUrls = r.CoverUrls
         }).ToList();
     }
 
@@ -328,7 +329,7 @@ public class ResourceSyncService : ScopedService
             }
             else
             {
-                EnsureSourceLink(existingByPath, entry.Source, entry.SourceKey);
+                EnsureSourceLink(existingByPath, entry.Source, entry.SourceKey, entry.CoverUrls);
                 return existingByPath;
             }
         }
@@ -343,7 +344,7 @@ public class ResourceSyncService : ScopedService
                 linkedResource.Path = newPath;
                 linkedResource.UpdatedAt = DateTime.Now;
             }
-            EnsureSourceLink(linkedResource, entry.Source, entry.SourceKey);
+            EnsureSourceLink(linkedResource, entry.Source, entry.SourceKey, entry.CoverUrls);
             return linkedResource;
         }
 
@@ -355,7 +356,7 @@ public class ResourceSyncService : ScopedService
             {
                 markerResource.Path = entry.EffectivePath;
                 markerResource.UpdatedAt = DateTime.Now;
-                EnsureSourceLink(markerResource, entry.Source, entry.SourceKey);
+                EnsureSourceLink(markerResource, entry.Source, entry.SourceKey, entry.CoverUrls);
                 return markerResource;
             }
         }
@@ -374,7 +375,7 @@ public class ResourceSyncService : ScopedService
                 FileModifiedAt = DateTime.Now,
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now,
-                SourceLinks = [new ResourceSourceLink { Source = entry.Source, SourceKey = entry.SourceKey }]
+                SourceLinks = [new ResourceSourceLink { Source = entry.Source, SourceKey = entry.SourceKey, CoverUrls = entry.CoverUrls }]
             };
         }
         else
@@ -407,7 +408,7 @@ public class ResourceSyncService : ScopedService
                 FileModifiedAt = fileModifiedAt,
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now,
-                SourceLinks = [new ResourceSourceLink { Source = entry.Source, SourceKey = entry.SourceKey }]
+                SourceLinks = [new ResourceSourceLink { Source = entry.Source, SourceKey = entry.SourceKey, CoverUrls = entry.CoverUrls }]
             };
         }
     }
@@ -607,12 +608,21 @@ public class ResourceSyncService : ScopedService
         return path.Contains("://");
     }
 
-    private static void EnsureSourceLink(Resource resource, ResourceSource source, string sourceKey)
+    private static void EnsureSourceLink(Resource resource, ResourceSource source, string sourceKey, List<string>? coverUrls = null)
     {
         resource.SourceLinks ??= [];
-        if (!resource.SourceLinks.Any(l => l.Source == source && l.SourceKey == sourceKey))
+        var existing = resource.SourceLinks.FirstOrDefault(l => l.Source == source && l.SourceKey == sourceKey);
+        if (existing != null)
         {
-            resource.SourceLinks.Add(new ResourceSourceLink { Source = source, SourceKey = sourceKey });
+            // Update cover URLs if newly provided and not already set
+            if (coverUrls is { Count: > 0 } && existing.CoverUrls is not { Count: > 0 })
+            {
+                existing.CoverUrls = coverUrls;
+            }
+        }
+        else
+        {
+            resource.SourceLinks.Add(new ResourceSourceLink { Source = source, SourceKey = sourceKey, CoverUrls = coverUrls });
         }
     }
 
@@ -720,6 +730,11 @@ internal class DiscoveredResourceEntry
     /// The mark ID that discovered this resource (filesystem only).
     /// </summary>
     public int? MarkId { get; init; }
+
+    /// <summary>
+    /// Cover image URLs from the external source.
+    /// </summary>
+    public List<string>? CoverUrls { get; init; }
 }
 
 /// <summary>

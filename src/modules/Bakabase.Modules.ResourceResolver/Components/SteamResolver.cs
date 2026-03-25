@@ -39,12 +39,18 @@ public class SteamResolver : IResourceResolver
         {
             ct.ThrowIfCancellationRequested();
 
+            var coverUrls = new List<string>
+            {
+                $"https://cdn.akamai.steamstatic.com/steam/apps/{app.AppId}/header.jpg"
+            };
+
             resources.Add(new ResolvedResource
             {
                 SourceKey = app.AppId.ToString(),
                 DisplayName = app.Name ?? $"Steam App {app.AppId}",
                 Path = app.IsInstalled ? app.InstallPath : null,
-                Source = ResourceSource.Steam
+                Source = ResourceSource.Steam,
+                CoverUrls = coverUrls
             });
         }
 
