@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Extensions;
+using Bakabase.Abstractions.Helpers;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
@@ -110,25 +111,47 @@ public class ResourceSourceLinkService<TDbContext>(
         }
     }
 
-    public async Task EnsureLinks(int resourceId, IEnumerable<(ResourceSource Source, string SourceKey)> links)
+    public async Task EnsureLinks(int resourceId, IEnumerable<ResourceSourceLink> links)
     {
         var existing = await orm.GetAll(m => m.ResourceId == resourceId);
-        var existingSet = existing.Select(l => (l.Source, l.SourceKey)).ToHashSet();
+        var existingDict = existing.ToDictionary(l => (l.Source, l.SourceKey));
 
-        var toAdd = links
-            .Where(l => !existingSet.Contains(l))
-            .Select(l => new ResourceSourceLink
+        var toAdd = new List<ResourceSourceLink>();
+        var toUpdate = new List<ResourceSourceLinkDbModel>();
+
+        foreach (var link in links)
+        {
+            if (existingDict.TryGetValue((link.Source, link.SourceKey), out var existingDb))
             {
-                ResourceId = resourceId,
-                Source = l.Source,
-                SourceKey = l.SourceKey,
-                CreateDt = DateTime.UtcNow
-            })
-            .ToList();
+                // Update CoverUrls if newly provided and not already set
+                if (link.CoverUrls is { Count: > 0 }
+                    && string.IsNullOrEmpty(existingDb.CoverUrls))
+                {
+                    existingDb.CoverUrls = StringListSerializer.Serialize(link.CoverUrls);
+                    toUpdate.Add(existingDb);
+                }
+            }
+            else
+            {
+                toAdd.Add(new ResourceSourceLink
+                {
+                    ResourceId = resourceId,
+                    Source = link.Source,
+                    SourceKey = link.SourceKey,
+                    CoverUrls = link.CoverUrls,
+                    CreateDt = DateTime.UtcNow
+                });
+            }
+        }
 
         if (toAdd.Count > 0)
         {
             await AddRange(toAdd);
+        }
+
+        if (toUpdate.Count > 0)
+        {
+            await orm.UpdateRange(toUpdate);
         }
     }
 

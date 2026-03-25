@@ -26,9 +26,9 @@ public interface IResourceSourceLinkService
     Task AddRange(IEnumerable<ResourceSourceLink> links);
 
     /// <summary>
-    /// Ensure source links exist for a resource (add missing, preserve existing).
+    /// Ensure source links exist for a resource (add missing, update CoverUrls on existing if not already set).
     /// </summary>
-    Task EnsureLinks(int resourceId, IEnumerable<(ResourceSource Source, string SourceKey)> links);
+    Task EnsureLinks(int resourceId, IEnumerable<ResourceSourceLink> links);
 
     Task DeleteByResourceId(int resourceId);
     Task DeleteByResourceIds(IEnumerable<int> resourceIds);
