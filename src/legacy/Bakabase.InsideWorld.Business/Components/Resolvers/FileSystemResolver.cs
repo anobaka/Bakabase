@@ -15,7 +15,7 @@ using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
 using Microsoft.Extensions.Logging;
-using Resource = Bakabase.Abstractions.Models.Domain.Resource;
+using DomainResource = Bakabase.Abstractions.Models.Domain.Resource;
 
 namespace Bakabase.InsideWorld.Business.Components.Resolvers;
 
@@ -407,7 +407,7 @@ public class FileSystemResolver : IResourceResolver
     }
 
     public Task<List<MigrationCandidate>> IdentifyMigrationCandidates(
-        List<Resource> fileSystemResources, CancellationToken ct)
+        List<DomainResource> fileSystemResources, CancellationToken ct)
     {
         return Task.FromResult(new List<MigrationCandidate>());
     }
@@ -439,7 +439,7 @@ public class FileSystemResolver : IResourceResolver
 
     #region Playable Items
 
-    public async Task<List<PlayableItem>> DiscoverPlayableItemsAsync(Resource resource, string sourceKey, CancellationToken ct)
+    public async Task<List<PlayableItem>> DiscoverPlayableItemsAsync(DomainResource resource, string sourceKey, CancellationToken ct)
     {
         var items = new List<PlayableItem>();
 
@@ -500,7 +500,7 @@ public class FileSystemResolver : IResourceResolver
         return items;
     }
 
-    public async Task PlayAsync(Resource resource, PlayableItem item, CancellationToken ct)
+    public async Task PlayAsync(DomainResource resource, PlayableItem item, CancellationToken ct)
     {
         var file = item.Key;
         var playedByCustomPlayer = false;
