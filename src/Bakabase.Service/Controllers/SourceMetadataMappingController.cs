@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Localization;
@@ -6,6 +7,7 @@ using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
+using Bakabase.Modules.ResourceResolver.Abstractions;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
@@ -18,6 +20,7 @@ namespace Bakabase.Service.Controllers;
 [ApiController]
 public class SourceMetadataMappingController(
     ISourceMetadataSyncService metadataSyncService,
+    IEnumerable<IResourceResolver> resolvers,
     BTaskManager btm,
     IBakabaseLocalizer localizer
 ) : ControllerBase
@@ -37,6 +40,15 @@ public class SourceMetadataMappingController(
     {
         await metadataSyncService.SaveMappings(source, mappings);
         return BaseResponseBuilder.Ok;
+    }
+
+    [HttpGet("predefined-fields")]
+    [SwaggerOperation(OperationId = "GetSourcePredefinedMetadataFields")]
+    public ListResponse<SourceMetadataFieldInfo> GetPredefinedFields(ResourceSource source)
+    {
+        var resolver = resolvers.FirstOrDefault(r => r.Source == source);
+        var fields = resolver?.GetPredefinedMetadataFields() ?? [];
+        return new ListResponse<SourceMetadataFieldInfo>(fields);
     }
 
     [HttpPost("apply-all")]

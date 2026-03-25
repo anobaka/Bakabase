@@ -1,7 +1,9 @@
+using System.Text.Json;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
 using Bakabase.Modules.ResourceResolver.Abstractions;
+using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai;
 using Microsoft.Extensions.Logging;
 
 namespace Bakabase.Modules.ResourceResolver.Components;
@@ -9,16 +11,18 @@ namespace Bakabase.Modules.ResourceResolver.Components;
 /// <summary>
 /// Discovers ExHentai galleries as resources.
 /// Uses cached gallery data from ExHentaiGalleryService.
-/// Metadata retrieval is handled by the existing ExHentaiEnhancer.
 /// </summary>
 public class ExHentaiResolver : IResourceResolver
 {
     private readonly IExHentaiGalleryService _galleryService;
+    private readonly ExHentaiClient _exHentaiClient;
     private readonly ILogger<ExHentaiResolver> _logger;
 
-    public ExHentaiResolver(IExHentaiGalleryService galleryService, ILogger<ExHentaiResolver> logger)
+    public ExHentaiResolver(IExHentaiGalleryService galleryService, ExHentaiClient exHentaiClient,
+        ILogger<ExHentaiResolver> logger)
     {
         _galleryService = galleryService;
+        _exHentaiClient = exHentaiClient;
         _logger = logger;
     }
 
@@ -145,5 +149,52 @@ public class ExHentaiResolver : IResourceResolver
         };
         process.Start();
         return Task.CompletedTask;
+    }
+
+    public List<SourceMetadataFieldInfo> GetPredefinedMetadataFields() =>
+    [
+        new("Name", StandardValueType.String),
+        new("RawName", StandardValueType.String),
+        new("Introduction", StandardValueType.String),
+        new("Rate", StandardValueType.Decimal),
+        new("Category", StandardValueType.String),
+        new("CoverUrl", StandardValueType.String),
+        new("FileCount", StandardValueType.Decimal),
+        new("PageCount", StandardValueType.Decimal),
+    ];
+
+    public async Task<SourceDetailedMetadata?> FetchDetailedMetadataAsync(string sourceKey, CancellationToken ct)
+    {
+        var url = $"https://exhentai.org/g/{sourceKey}/";
+        var detail = await _exHentaiClient.ParseDetail(url, false);
+        if (detail == null) return null;
+
+        var result = new SourceDetailedMetadata
+        {
+            RawJson = JsonSerializer.Serialize(detail, JsonSerializerOptions.Web),
+            CoverUrls = !string.IsNullOrEmpty(detail.CoverUrl) ? [detail.CoverUrl] : null,
+            PredefinedFieldValues =
+            {
+                ["Name"] = detail.Name,
+                ["RawName"] = detail.RawName,
+                ["Introduction"] = detail.Introduction,
+                ["Rate"] = detail.Rate != 0 ? detail.Rate : null,
+                ["Category"] = detail.Category.ToString(),
+                ["CoverUrl"] = detail.CoverUrl,
+                ["FileCount"] = (decimal)detail.FileCount,
+                ["PageCount"] = (decimal)detail.PageCount,
+            }
+        };
+
+        // Tags are dynamic fields: each tag group → List<string>
+        if (detail.Tags is { Count: > 0 })
+        {
+            foreach (var (group, tags) in detail.Tags)
+            {
+                result.CustomFieldValues[group] = tags.ToList();
+            }
+        }
+
+        return result;
     }
 }

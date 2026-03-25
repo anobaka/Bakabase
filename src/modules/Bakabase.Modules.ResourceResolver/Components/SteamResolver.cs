@@ -1,7 +1,9 @@
+using System.Text.Json;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
 using Bakabase.Modules.ResourceResolver.Abstractions;
+using Bakabase.Modules.ThirdParty.ThirdParties.Steam;
 using Microsoft.Extensions.Logging;
 
 namespace Bakabase.Modules.ResourceResolver.Components;
@@ -9,18 +11,20 @@ namespace Bakabase.Modules.ResourceResolver.Components;
 /// <summary>
 /// Discovers Steam games as resources.
 /// Uses SteamClient to fetch owned games and matches installed paths.
-/// Metadata retrieval is handled by SteamEnhancer.
 /// </summary>
 public class SteamResolver : IResourceResolver
 {
     private readonly ISteamAppService _steamAppService;
+    private readonly SteamClient _steamClient;
     private readonly ILogger<SteamResolver> _logger;
 
     public SteamResolver(
         ISteamAppService steamAppService,
+        SteamClient steamClient,
         ILogger<SteamResolver> logger)
     {
         _steamAppService = steamAppService;
+        _steamClient = steamClient;
         _logger = logger;
     }
 
@@ -214,5 +218,52 @@ public class SteamResolver : IResourceResolver
         };
         process.Start();
         return Task.CompletedTask;
+    }
+
+    public List<SourceMetadataFieldInfo> GetPredefinedMetadataFields() =>
+    [
+        new("Name", StandardValueType.String),
+        new("Type", StandardValueType.String),
+        new("ShortDescription", StandardValueType.String),
+        new("DetailedDescription", StandardValueType.String),
+        new("HeaderImage", StandardValueType.String),
+        new("CapsuleImage", StandardValueType.String),
+        new("Developers", StandardValueType.ListString),
+        new("Publishers", StandardValueType.ListString),
+        new("Genres", StandardValueType.ListString),
+        new("Categories", StandardValueType.ListString),
+        new("MetacriticScore", StandardValueType.Decimal),
+        new("ReleaseDate", StandardValueType.String),
+    ];
+
+    public async Task<SourceDetailedMetadata?> FetchDetailedMetadataAsync(string sourceKey, CancellationToken ct)
+    {
+        if (!int.TryParse(sourceKey, out var appId)) return null;
+
+        var detail = await _steamClient.GetAppDetails(appId, ct: ct);
+        if (detail == null) return null;
+
+        var result = new SourceDetailedMetadata
+        {
+            RawJson = JsonSerializer.Serialize(detail, JsonSerializerOptions.Web),
+            CoverUrls = [detail.HeaderImage ?? $"https://cdn.akamai.steamstatic.com/steam/apps/{appId}/header.jpg"],
+            PredefinedFieldValues =
+            {
+                ["Name"] = detail.Name,
+                ["Type"] = detail.Type,
+                ["ShortDescription"] = detail.ShortDescription,
+                ["DetailedDescription"] = detail.DetailedDescription,
+                ["HeaderImage"] = detail.HeaderImage,
+                ["CapsuleImage"] = detail.CapsuleImage,
+                ["Developers"] = detail.Developers,
+                ["Publishers"] = detail.Publishers,
+                ["Genres"] = detail.Genres?.Select(g => g.Description).Where(d => d != null).ToList(),
+                ["Categories"] = detail.Categories?.Select(c => c.Description).Where(d => d != null).ToList(),
+                ["MetacriticScore"] = detail.Metacritic != null ? (decimal)detail.Metacritic.Score : null,
+                ["ReleaseDate"] = detail.ReleaseDate?.Date,
+            }
+        };
+
+        return result;
     }
 }

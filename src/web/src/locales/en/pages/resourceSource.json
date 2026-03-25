@@ -123,6 +123,8 @@
   "resourceSource.metadataMapping.add": "Add",
   "resourceSource.metadataMapping.reapply": "Re-apply Mappings",
   "resourceSource.metadataMapping.reapplyConfirm": "This will re-apply metadata to all linked resources using current mapping configuration. Continue?",
+  "resourceSource.metadataMapping.notConfigured": "Not mapped - click to select target property",
+  "resourceSource.metadataMapping.customFields": "Custom fields",
   "resourceSource.metadataMapping.reapplyStarted": "Re-apply task started",
 
   "menu.otherPlatforms": "Other Platforms",

@@ -68,8 +68,21 @@ public interface IResourceResolver
     /// Plays a specific playable item from this source.
     /// Each resolver knows how to launch its own items (file, URI, etc.).
     /// </summary>
-    /// <param name="resource">The resource being played.</param>
-    /// <param name="item">The playable item to play.</param>
-    /// <param name="ct">Cancellation token.</param>
     Task PlayAsync(Resource resource, PlayableItem item, CancellationToken ct);
+
+    /// <summary>
+    /// Returns the predefined metadata fields this source provides.
+    /// These are shown as fixed rows in the metadata mapping UI.
+    /// </summary>
+    List<SourceMetadataFieldInfo> GetPredefinedMetadataFields() => [];
+
+    /// <summary>
+    /// Fetches detailed metadata for an item identified by sourceKey.
+    /// Returns predefined field values, dynamic custom fields, and cover URLs.
+    /// </summary>
+    /// <param name="sourceKey">The source-specific key (e.g., Steam AppId, DLsite WorkId).</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Detailed metadata, or null if fetch failed.</returns>
+    Task<SourceDetailedMetadata?> FetchDetailedMetadataAsync(string sourceKey, CancellationToken ct) =>
+        Task.FromResult<SourceDetailedMetadata?>(null);
 }

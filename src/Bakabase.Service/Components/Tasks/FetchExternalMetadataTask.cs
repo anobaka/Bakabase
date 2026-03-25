@@ -3,24 +3,21 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
-using Bakabase.Modules.ThirdParty.ThirdParties.DLsite;
-using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai;
-using Bakabase.Modules.ThirdParty.ThirdParties.Steam;
+using Bakabase.Modules.ResourceResolver.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Bakabase.Service.Components.Tasks;
 
 /// <summary>
-/// Fetches detailed metadata from external sources (Steam, DLsite, ExHentai) for resources
-/// that don't have metadata yet, downloads covers, and applies metadata mappings to properties.
-/// Replaces DownloadExternalCoversTask.
+/// Fetches detailed metadata from external sources for resources that don't have it yet,
+/// downloads covers, and applies metadata mappings to properties.
+/// Uses IResourceResolver.FetchDetailedMetadataAsync for source-specific logic.
 /// </summary>
 public class FetchExternalMetadataTask : AbstractPredefinedBTaskBuilder
 {
@@ -39,170 +36,147 @@ public class FetchExternalMetadataTask : AbstractPredefinedBTaskBuilder
     {
         await using var scope = CreateScope();
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<FetchExternalMetadataTask>>();
+        var resolvers = scope.ServiceProvider.GetRequiredService<IEnumerable<IResourceResolver>>();
+        var sourceLinkService = scope.ServiceProvider.GetRequiredService<IResourceSourceLinkService>();
+        var metadataSyncService = scope.ServiceProvider.GetRequiredService<ISourceMetadataSyncService>();
 
-        // Phase 1: Fetch metadata for items that need it
-        await FetchMetadata(scope.ServiceProvider, args, logger);
-
-        // Phase 2: Download covers (same logic as old DownloadExternalCoversTask)
-        await DownloadCovers(scope.ServiceProvider, args, logger);
-    }
-
-    private async Task FetchMetadata(IServiceProvider sp, BTaskArgs args, ILogger logger)
-    {
-        var steamAppService = sp.GetRequiredService<ISteamAppService>();
-        var dlsiteWorkService = sp.GetRequiredService<IDLsiteWorkService>();
-        var exHentaiGalleryService = sp.GetRequiredService<IExHentaiGalleryService>();
-        var metadataSyncService = sp.GetRequiredService<ISourceMetadataSyncService>();
-        var sourceLinkService = sp.GetRequiredService<IResourceSourceLinkService>();
-
-        // Steam: fetch app details for items missing metadata
-        var steamApps = (await steamAppService.GetAll())
-            .Where(a => a.ResourceId.HasValue && a.MetadataFetchedAt == null)
-            .ToList();
-
-        if (steamApps.Count > 0)
+        // Phase 1: Fetch metadata for each non-FileSystem source via its resolver
+        foreach (var resolver in resolvers.Where(r => r.Source != ResourceSource.FileSystem))
         {
-            var steamClient = sp.GetRequiredService<SteamClient>();
+            args.CancellationToken.ThrowIfCancellationRequested();
+
+            var items = await GetItemsNeedingMetadata(scope.ServiceProvider, resolver.Source);
+            if (items.Count == 0) continue;
+
+            var sourceName = resolver.Source.ToString();
             var processed = 0;
+            await args.UpdateTask(t => t.Process = $"{sourceName}: 0/{items.Count}");
 
-            await args.UpdateTask(t => t.Process = $"Steam: 0/{steamApps.Count}");
-
-            foreach (var app in steamApps)
+            foreach (var (resourceId, sourceKey) in items)
             {
                 args.CancellationToken.ThrowIfCancellationRequested();
                 await args.PauseToken.WaitWhilePausedAsync(args.CancellationToken);
 
                 try
                 {
-                    var detail = await steamClient.GetAppDetails(app.AppId, ct: args.CancellationToken);
-                    if (detail != null)
+                    var metadata = await resolver.FetchDetailedMetadataAsync(sourceKey, args.CancellationToken);
+                    if (metadata != null)
                     {
-                        app.MetadataJson = JsonSerializer.Serialize(detail, JsonSerializerOptions.Web);
-                        app.MetadataFetchedAt = DateTime.Now;
-                        await steamAppService.AddOrUpdate(app);
+                        // Store raw JSON in source DbModel
+                        await StoreMetadataJson(scope.ServiceProvider, resolver.Source, sourceKey, metadata.RawJson);
 
-                        // Apply metadata mappings
-                        await metadataSyncService.SyncMetadataToProperties(
-                            app.ResourceId!.Value, ResourceSource.Steam, args.CancellationToken);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    logger.LogWarning(ex, "Failed to fetch Steam metadata for AppId {AppId}", app.AppId);
-                }
-
-                processed++;
-                await args.UpdateTask(t => t.Process = $"Steam: {processed}/{steamApps.Count}");
-            }
-        }
-
-        // DLsite: fetch work details for items missing metadata
-        var dlsiteWorks = (await dlsiteWorkService.GetAll())
-            .Where(w => w.ResourceId.HasValue && w.MetadataFetchedAt == null)
-            .ToList();
-
-        if (dlsiteWorks.Count > 0)
-        {
-            var dlsiteClient = sp.GetRequiredService<DLsiteClient>();
-            var processed = 0;
-
-            await args.UpdateTask(t => t.Process = $"DLsite: 0/{dlsiteWorks.Count}");
-
-            foreach (var work in dlsiteWorks)
-            {
-                args.CancellationToken.ThrowIfCancellationRequested();
-                await args.PauseToken.WaitWhilePausedAsync(args.CancellationToken);
-
-                try
-                {
-                    var detail = await dlsiteClient.ParseWorkDetailById(work.WorkId);
-                    if (detail != null)
-                    {
-                        work.MetadataJson = JsonSerializer.Serialize(detail, JsonSerializerOptions.Web);
-                        work.MetadataFetchedAt = DateTime.Now;
-                        await dlsiteWorkService.AddOrUpdate(work);
-
-                        // Update CoverUrls on the source link if detail has covers
-                        if (detail.CoverUrls is { Length: > 0 })
+                        // Update CoverUrls on source link
+                        if (metadata.CoverUrls is { Count: > 0 })
                         {
-                            var links = await sourceLinkService.GetByResourceId(work.ResourceId!.Value);
-                            var dlsiteLink = links.FirstOrDefault(l =>
-                                l.Source == ResourceSource.DLsite && l.SourceKey == work.WorkId);
-                            if (dlsiteLink != null && dlsiteLink.CoverUrls is not { Count: > 0 })
+                            var links = await sourceLinkService.GetByResourceId(resourceId);
+                            var link = links.FirstOrDefault(l =>
+                                l.Source == resolver.Source && l.SourceKey == sourceKey);
+                            if (link != null && link.CoverUrls is not { Count: > 0 })
                             {
-                                dlsiteLink.CoverUrls = detail.CoverUrls.ToList();
-                                await sourceLinkService.Update(dlsiteLink);
+                                link.CoverUrls = metadata.CoverUrls;
+                                await sourceLinkService.Update(link);
                             }
                         }
 
-                        // Apply metadata mappings
+                        // Apply metadata mappings to resource properties
                         await metadataSyncService.SyncMetadataToProperties(
-                            work.ResourceId!.Value, ResourceSource.DLsite, args.CancellationToken);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    logger.LogWarning(ex, "Failed to fetch DLsite metadata for WorkId {WorkId}", work.WorkId);
-                }
-
-                processed++;
-                await args.UpdateTask(t => t.Process = $"DLsite: {processed}/{dlsiteWorks.Count}");
-            }
-        }
-
-        // ExHentai: fetch gallery details for items missing metadata
-        var galleries = (await exHentaiGalleryService.GetAll())
-            .Where(g => g.ResourceId.HasValue && g.MetadataFetchedAt == null)
-            .ToList();
-
-        if (galleries.Count > 0)
-        {
-            var exHentaiClient = sp.GetRequiredService<ExHentaiClient>();
-            var processed = 0;
-
-            await args.UpdateTask(t => t.Process = $"ExHentai: 0/{galleries.Count}");
-
-            foreach (var gallery in galleries)
-            {
-                args.CancellationToken.ThrowIfCancellationRequested();
-                await args.PauseToken.WaitWhilePausedAsync(args.CancellationToken);
-
-                try
-                {
-                    var url = $"https://exhentai.org/g/{gallery.GalleryId}/{gallery.GalleryToken}/";
-                    var detail = await exHentaiClient.ParseDetail(url, false);
-                    if (detail != null)
-                    {
-                        gallery.MetadataJson = JsonSerializer.Serialize(detail, JsonSerializerOptions.Web);
-                        gallery.MetadataFetchedAt = DateTime.Now;
-                        await exHentaiGalleryService.AddOrUpdate(gallery);
-
-                        // Update CoverUrl on source link
-                        if (!string.IsNullOrEmpty(detail.CoverUrl))
-                        {
-                            var links = await sourceLinkService.GetByResourceId(gallery.ResourceId!.Value);
-                            var ehLink = links.FirstOrDefault(l =>
-                                l.Source == ResourceSource.ExHentai);
-                            if (ehLink != null && ehLink.CoverUrls is not { Count: > 0 })
-                            {
-                                ehLink.CoverUrls = [detail.CoverUrl];
-                                await sourceLinkService.Update(ehLink);
-                            }
-                        }
-
-                        // Apply metadata mappings
-                        await metadataSyncService.SyncMetadataToProperties(
-                            gallery.ResourceId!.Value, ResourceSource.ExHentai, args.CancellationToken);
+                            resourceId, resolver.Source, args.CancellationToken);
                     }
                 }
                 catch (Exception ex)
                 {
                     logger.LogWarning(ex,
-                        "Failed to fetch ExHentai metadata for Gallery {GalleryId}", gallery.GalleryId);
+                        "Failed to fetch {Source} metadata for key {Key}", sourceName, sourceKey);
                 }
 
                 processed++;
-                await args.UpdateTask(t => t.Process = $"ExHentai: {processed}/{galleries.Count}");
+                await args.UpdateTask(t => t.Process = $"{sourceName}: {processed}/{items.Count}");
+            }
+        }
+
+        // Phase 2: Download covers (source links with CoverUrls but no LocalCoverPaths)
+        await DownloadCovers(scope.ServiceProvider, args, logger);
+    }
+
+    /// <summary>
+    /// Gets items that need metadata fetch (have ResourceId but no MetadataFetchedAt).
+    /// Returns (ResourceId, SourceKey) pairs.
+    /// </summary>
+    private async Task<List<(int ResourceId, string SourceKey)>> GetItemsNeedingMetadata(
+        IServiceProvider sp, ResourceSource source)
+    {
+        return source switch
+        {
+            ResourceSource.Steam => (await sp.GetRequiredService<ISteamAppService>().GetAll())
+                .Where(a => a.ResourceId.HasValue && a.MetadataFetchedAt == null)
+                .Select(a => (a.ResourceId!.Value, a.AppId.ToString()))
+                .ToList(),
+            ResourceSource.DLsite => (await sp.GetRequiredService<IDLsiteWorkService>().GetAll())
+                .Where(w => w.ResourceId.HasValue && w.MetadataFetchedAt == null)
+                .Select(w => (w.ResourceId!.Value, w.WorkId))
+                .ToList(),
+            ResourceSource.ExHentai => (await sp.GetRequiredService<IExHentaiGalleryService>().GetAll())
+                .Where(g => g.ResourceId.HasValue && g.MetadataFetchedAt == null)
+                .Select(g => (g.ResourceId!.Value, $"{g.GalleryId}/{g.GalleryToken}"))
+                .ToList(),
+            _ => []
+        };
+    }
+
+    /// <summary>
+    /// Stores the raw metadata JSON and sets MetadataFetchedAt on the source DbModel.
+    /// </summary>
+    private async Task StoreMetadataJson(IServiceProvider sp, ResourceSource source, string sourceKey, string? json)
+    {
+        if (string.IsNullOrEmpty(json)) return;
+
+        switch (source)
+        {
+            case ResourceSource.Steam:
+            {
+                var svc = sp.GetRequiredService<ISteamAppService>();
+                if (int.TryParse(sourceKey, out var appId))
+                {
+                    var app = await svc.GetByAppId(appId);
+                    if (app != null)
+                    {
+                        app.MetadataJson = json;
+                        app.MetadataFetchedAt = DateTime.Now;
+                        await svc.AddOrUpdate(app);
+                    }
+                }
+
+                break;
+            }
+            case ResourceSource.DLsite:
+            {
+                var svc = sp.GetRequiredService<IDLsiteWorkService>();
+                var work = await svc.GetByWorkId(sourceKey);
+                if (work != null)
+                {
+                    work.MetadataJson = json;
+                    work.MetadataFetchedAt = DateTime.Now;
+                    await svc.AddOrUpdate(work);
+                }
+
+                break;
+            }
+            case ResourceSource.ExHentai:
+            {
+                var svc = sp.GetRequiredService<IExHentaiGalleryService>();
+                var parts = sourceKey.Split('/');
+                if (parts.Length == 2 && long.TryParse(parts[0], out var galleryId))
+                {
+                    var gallery = await svc.GetByGalleryId(galleryId, parts[1]);
+                    if (gallery != null)
+                    {
+                        gallery.MetadataJson = json;
+                        gallery.MetadataFetchedAt = DateTime.Now;
+                        await svc.AddOrUpdate(gallery);
+                    }
+                }
+
+                break;
             }
         }
     }
@@ -249,8 +223,7 @@ public class FetchExternalMetadataTask : AbstractPredefinedBTaskBuilder
                     catch (Exception ex)
                     {
                         logger.LogWarning(ex,
-                            "Failed to download cover from {Url} for resource {ResourceId}, source {Source}",
-                            url, link.ResourceId, link.Source);
+                            "Failed to download cover from {Url} for resource {ResourceId}", url, link.ResourceId);
                     }
                 }
 
@@ -264,15 +237,12 @@ public class FetchExternalMetadataTask : AbstractPredefinedBTaskBuilder
             catch (Exception ex)
             {
                 logger.LogError(ex,
-                    "Error processing cover download for resource {ResourceId}, source {Source}",
+                    "Error downloading covers for resource {ResourceId}, source {Source}",
                     link.ResourceId, link.Source);
             }
 
             processed++;
-            await args.UpdateTask(t =>
-            {
-                t.Process = $"Covers: {processed}/{pendingLinks.Count}";
-            });
+            await args.UpdateTask(t => t.Process = $"Covers: {processed}/{pendingLinks.Count}");
         }
     }
 }
