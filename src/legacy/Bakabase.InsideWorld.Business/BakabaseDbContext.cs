@@ -20,11 +20,6 @@ namespace Bakabase.InsideWorld.Business
 {
     public class BakabaseDbContext : DbContext, IBulkModificationDbContext, IComparisonDbContext
     {
-        [Obsolete] public DbSet<AliasGroup> AliasGroups { get; set; }
-        [Obsolete] public DbSet<CustomResourceProperty> CustomResourceProperties { get; set; }
-        [Obsolete] public DbSet<CustomPlayerOptions> CustomPlayerOptionsList { get; set; }
-        [Obsolete] public DbSet<CustomPlayableFileSelectorOptions> CustomPlayableFileSelectorOptionsList { get; set; }
-
         public DbSet<SpecialText> SpecialTexts { get; set; }
         public DbSet<PlayListDbModel> Playlists { get; set; }
         public DbSet<ComponentOptions> ComponentOptions { get; set; }
