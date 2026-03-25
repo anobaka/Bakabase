@@ -42,7 +42,7 @@ export default function ExHentaiConfig({ isOpen, onClose }: ExHentaiConfigProps)
       <ModalContent>
         <ModalHeader>{t("resourceSource.exhentai.title")}</ModalHeader>
         <ModalBody className="pb-6">
-          <Tabs variant="underlined">
+          <Tabs isVertical variant="underlined">
             <Tab key="accounts" title={t("resourceSource.config.tab.accounts")}>
               <AccountsPanel
                 accounts={options?.accounts || []}

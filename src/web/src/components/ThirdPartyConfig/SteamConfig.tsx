@@ -3,12 +3,11 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Modal, ModalContent, ModalHeader, ModalBody, Tab, Tabs } from "@heroui/react";
-import { FiExternalLink } from "react-icons/fi";
-import { Link } from "@heroui/react";
 
 import { toast } from "@/components/bakaui";
 import { useSteamOptionsStore } from "@/stores/options";
 import { ResourceSource } from "@/sdk/constants";
+import ExternalLink from "@/components/ExternalLink";
 import AccountsPanel, { type AccountField } from "./AccountsPanel";
 import MetadataMappingPanel from "./MetadataMappingPanel";
 
@@ -30,16 +29,9 @@ export default function SteamConfig({ isOpen, onClose }: SteamConfigProps) {
         placeholder: t("resourceSource.accounts.apiKeyPlaceholder"),
         type: "password" as const,
         description: (
-          <Link
-            className="text-xs gap-1"
-            href="https://steamcommunity.com/dev/apikey"
-            isExternal
-            showAnchorIcon
-            anchorIcon={<FiExternalLink />}
-            size="sm"
-          >
+          <ExternalLink href="https://steamcommunity.com/dev/apikey" size="sm">
             {t("resourceSource.steam.config.getApiKey")}
-          </Link>
+          </ExternalLink>
         ),
       },
       {
@@ -61,7 +53,7 @@ export default function SteamConfig({ isOpen, onClose }: SteamConfigProps) {
       <ModalContent>
         <ModalHeader>{t("resourceSource.steam.title")}</ModalHeader>
         <ModalBody className="pb-6">
-          <Tabs variant="underlined">
+          <Tabs isVertical variant="underlined">
             <Tab key="accounts" title={t("resourceSource.config.tab.accounts")}>
               <AccountsPanel
                 accounts={steamOptions?.accounts || []}
