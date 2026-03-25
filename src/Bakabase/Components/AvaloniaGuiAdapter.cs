@@ -63,6 +63,7 @@ public class AvaloniaGuiAdapter : GuiAdapter, ITrayIconController
     public override void ShowInitializationWindow(string processName)
     {
         _initializationWindow ??= new InitializationWindow();
+        _initializationWindow.Title = processName;
         _initializationWindow.FindControl<TextBlock>("ProcessName")!.Text = processName;
         _initializationWindow.Show();
     }
