@@ -5,7 +5,7 @@ using Bakabase.Abstractions.Services;
 using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai;
 using Microsoft.Extensions.Logging;
 
-namespace Bakabase.Modules.ThirdParty.Resolvers;
+namespace Bakabase.Modules.ThirdParty.ThirdParties.ExHentai;
 
 /// <summary>
 /// Discovers ExHentai galleries as resources.

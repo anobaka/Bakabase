@@ -5,7 +5,7 @@ using Bakabase.Abstractions.Services;
 using Bakabase.Modules.ThirdParty.ThirdParties.Steam;
 using Microsoft.Extensions.Logging;
 
-namespace Bakabase.Modules.ThirdParty.Resolvers;
+namespace Bakabase.Modules.ThirdParty.ThirdParties.Steam;
 
 /// <summary>
 /// Discovers Steam games as resources.

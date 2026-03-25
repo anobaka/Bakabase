@@ -1,4 +1,4 @@
-namespace Bakabase.Modules.ThirdParty.Resolvers;
+namespace Bakabase.Modules.ThirdParty.ThirdParties.Steam;
 
 public enum SteamMetadataField
 {

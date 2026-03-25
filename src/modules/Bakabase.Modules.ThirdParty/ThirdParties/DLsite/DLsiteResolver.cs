@@ -6,7 +6,7 @@ using Bakabase.Abstractions.Services;
 using Bakabase.Modules.ThirdParty.ThirdParties.DLsite;
 using Microsoft.Extensions.Logging;
 
-namespace Bakabase.Modules.ThirdParty.Resolvers;
+namespace Bakabase.Modules.ThirdParty.ThirdParties.DLsite;
 
 /// <summary>
 /// Discovers DLsite works as resources.

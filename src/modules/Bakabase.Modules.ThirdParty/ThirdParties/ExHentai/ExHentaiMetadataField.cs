@@ -1,4 +1,4 @@
-namespace Bakabase.Modules.ThirdParty.Resolvers;
+namespace Bakabase.Modules.ThirdParty.ThirdParties.ExHentai;
 
 public enum ExHentaiMetadataField
 {
