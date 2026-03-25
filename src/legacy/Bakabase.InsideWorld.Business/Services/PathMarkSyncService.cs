@@ -354,7 +354,7 @@ public class PathMarkSyncService : ScopedService
                 value = sharedValue!;
             }
 
-            var valueString = value is string s ? s : System.Text.Json.JsonSerializer.Serialize(value);
+            var valueString = value is string s ? s : System.Text.Json.JsonSerializer.Serialize(value, System.Text.Json.JsonSerializerOptions.Web);
 
             // Record the effect
             ctx.CollectedPropertyEffects.Add(new PropertyMarkEffect

@@ -36,21 +36,16 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Model
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public string? Options { get; set; }
 
-        private static readonly JsonSerializerOptions JsonOptions = new()
-        {
-            PropertyNameCaseInsensitive = true,
-        };
-
         public T GetTypedOptions<T>() where T : class, new()
         {
             return string.IsNullOrEmpty(Options)
                 ? new T()
-                : JsonSerializer.Deserialize<T>(Options, JsonOptions) ?? new T();
+                : JsonSerializer.Deserialize<T>(Options, JsonSerializerOptions.Web) ?? new T();
         }
 
         public void SetTypedOptions<T>(T options) where T : class
         {
-            Options = JsonSerializer.Serialize(options, JsonOptions);
+            Options = JsonSerializer.Serialize(options, JsonSerializerOptions.Web);
         }
 
         [NotMapped] public string DisplayName => Name ?? Key;

@@ -98,7 +98,7 @@ public static class ComparisonExtensions
         {
             try
             {
-                parameter = JsonSerializer.Deserialize<object>(db.Parameter);
+                parameter = JsonSerializer.Deserialize<object>(db.Parameter, JsonSerializerOptions.Web);
             }
             catch
             {
@@ -129,7 +129,7 @@ public static class ComparisonExtensions
         string? parameter = null;
         if (input.Parameter != null)
         {
-            parameter = input.Parameter is string str ? str : JsonSerializer.Serialize(input.Parameter);
+            parameter = input.Parameter is string str ? str : JsonSerializer.Serialize(input.Parameter, JsonSerializerOptions.Web);
         }
 
         return new ComparisonRuleDbModel
@@ -193,7 +193,7 @@ public static class ComparisonExtensions
         {
             try
             {
-                var details = JsonSerializer.Deserialize<List<RuleScoreDetail>>(db.RuleScoresJson);
+                var details = JsonSerializer.Deserialize<List<RuleScoreDetail>>(db.RuleScoresJson, JsonSerializerOptions.Web);
                 ruleScores = details?.Select(d => new RuleScoreDetailViewModel
                 {
                     RuleId = d.RuleId,

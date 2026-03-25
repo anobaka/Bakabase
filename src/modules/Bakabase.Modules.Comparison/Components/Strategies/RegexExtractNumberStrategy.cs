@@ -24,7 +24,7 @@ public class RegexExtractNumberStrategy : IComparisonStrategy
         {
             try
             {
-                var param = JsonSerializer.Deserialize<RegexExtractNumberParameter>(parameter);
+                var param = JsonSerializer.Deserialize<RegexExtractNumberParameter>(parameter, JsonSerializerOptions.Web);
                 if (!string.IsNullOrEmpty(param?.Pattern))
                     pattern = param.Pattern;
             }

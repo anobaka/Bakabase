@@ -33,7 +33,7 @@ public class SteamClient
                   $"?key={apiKey}&steamid={steamId}&include_appinfo=true&include_played_free_games=true&format=json";
 
         var json = await GetWithRateLimit(url, ct);
-        var response = JsonSerializer.Deserialize<SteamOwnedGamesResponse>(json);
+        var response = JsonSerializer.Deserialize<SteamOwnedGamesResponse>(json, JsonSerializerOptions.Web);
 
         return response?.Response?.Games ?? [];
     }
@@ -53,7 +53,7 @@ public class SteamClient
             if (doc.RootElement.TryGetProperty(appId.ToString(), out var appElement))
             {
                 var responseJson = appElement.GetRawText();
-                var response = JsonSerializer.Deserialize<SteamAppDetailsResponse>(responseJson);
+                var response = JsonSerializer.Deserialize<SteamAppDetailsResponse>(responseJson, JsonSerializerOptions.Web);
                 return response is { Success: true } ? response.Data : null;
             }
         }

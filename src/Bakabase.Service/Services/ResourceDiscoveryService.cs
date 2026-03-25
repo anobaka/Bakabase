@@ -219,10 +219,7 @@ public class ResourceDiscoveryService : BackgroundService
             try
             {
                 var eventType = result.Success ? "result" : "error";
-                var json = System.Text.Json.JsonSerializer.Serialize(result, new System.Text.Json.JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
-                });
+                var json = System.Text.Json.JsonSerializer.Serialize(result, System.Text.Json.JsonSerializerOptions.Web);
 
                 await _response.WriteAsync($"event: {eventType}\n");
                 await _response.WriteAsync($"data: {json}\n\n");

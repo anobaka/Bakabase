@@ -18,7 +18,7 @@ public class FixedToleranceStrategy : IComparisonStrategy
         {
             try
             {
-                var param = JsonSerializer.Deserialize<FixedToleranceParameter>(parameter);
+                var param = JsonSerializer.Deserialize<FixedToleranceParameter>(parameter, JsonSerializerOptions.Web);
                 tolerance = param?.Tolerance ?? 0;
             }
             catch

@@ -12,11 +12,7 @@ namespace Bakabase.InsideWorld.Business.Extensions;
 
 public static class ResourceCacheExtensions
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        PropertyNameCaseInsensitive = true
-    };
+    private static readonly JsonSerializerOptions JsonOptions = JsonSerializerOptions.Web;
 
     public static ResourceCache ToDomainModel(this ResourceCacheDbModel model)
     {

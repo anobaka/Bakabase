@@ -18,7 +18,7 @@ public class TimeWindowStrategy : IComparisonStrategy
         {
             try
             {
-                var param = JsonSerializer.Deserialize<TimeWindowParameter>(parameter);
+                var param = JsonSerializer.Deserialize<TimeWindowParameter>(parameter, JsonSerializerOptions.Web);
                 windowHours = param?.WindowHours ?? 24.0;
             }
             catch
