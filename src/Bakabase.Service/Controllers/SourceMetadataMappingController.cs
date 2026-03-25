@@ -41,9 +41,9 @@ public class SourceMetadataMappingController(
 
     [HttpGet("available-fields")]
     [SwaggerOperation(OperationId = "GetSourceAvailableMetadataFields")]
-    public ListResponse<string> GetAvailableFields(ResourceSource source)
+    public ListResponse<SourceMetadataFieldInfo> GetAvailableFields(ResourceSource source)
     {
-        return new ListResponse<string>(metadataSyncService.GetAvailableMetadataFields(source));
+        return new ListResponse<SourceMetadataFieldInfo>(metadataSyncService.GetAvailableMetadataFields(source));
     }
 
     [HttpPost("apply-all")]

@@ -260,4 +260,19 @@ public class ExHentaiGalleryService(
         gallery.UpdatedAt = DateTime.Now;
         await orm.Update(gallery);
     }
+
+    public async Task ClearAllMetadata()
+    {
+        var galleries = await orm.GetAll(g => g.MetadataJson != null);
+        foreach (var gallery in galleries)
+        {
+            gallery.MetadataJson = null;
+            gallery.MetadataFetchedAt = null;
+        }
+
+        if (galleries.Count > 0)
+        {
+            await orm.UpdateRange(galleries);
+        }
+    }
 }

@@ -8,7 +8,7 @@
   "resourceSource.confirm.delete": "Are you sure to delete this item?",
   "resourceSource.confirm.sync.title": "Confirm Sync",
   "resourceSource.confirm.sync.description": "This will fetch the latest data from the external source.",
-  "resourceSource.confirm.sync.redownloadCover": "Re-download covers (replaces current local covers)",
+  "resourceSource.confirm.sync.refetchMetadata": "Re-fetch metadata (clears cached data and covers, auto re-fetches on next run)",
   "resourceSource.empty": "No items found",
   "resourceSource.filter.keyword": "Search by name...",
   "resourceSource.label.resourceId": "Resource",
@@ -116,6 +116,15 @@
 
   "resourceSource.pagination.pageSize": "Per page",
   "resourceSource.pagination.total": "{{total}} total",
+
+  "resourceSource.metadataMapping.title": "Metadata Mapping",
+  "resourceSource.metadataMapping.description": "Configure how external source metadata fields map to resource properties. Applied automatically after fetching details.",
+  "resourceSource.metadataMapping.field": "Metadata Field",
+  "resourceSource.metadataMapping.targetProperty": "Target Property",
+  "resourceSource.metadataMapping.notConfigured": "Not configured",
+  "resourceSource.metadataMapping.reapply": "Re-apply Mappings",
+  "resourceSource.metadataMapping.reapplyConfirm": "This will re-apply metadata to all linked resources using current mapping configuration. Continue?",
+  "resourceSource.metadataMapping.reapplyStarted": "Re-apply task started",
 
   "menu.otherPlatforms": "Other Platforms",
   "menu.steam": "Steam",

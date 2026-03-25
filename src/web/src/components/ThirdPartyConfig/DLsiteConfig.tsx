@@ -9,10 +9,11 @@ import { toast } from "@/components/bakaui";
 import { useDLsiteOptionsStore } from "@/stores/options";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { FileSystemSelectorModal } from "@/components/FileSystemSelector";
-import { CookieValidatorTarget } from "@/sdk/constants";
+import { CookieValidatorTarget, ResourceSource } from "@/sdk/constants";
 import AccountsConfigModal, {
   type AccountField,
 } from "./AccountsConfigModal";
+import MetadataMappingConfig from "./MetadataMappingConfig";
 
 interface DLsiteConfigProps {
   isOpen: boolean;
@@ -157,6 +158,7 @@ export default function DLsiteConfig({ isOpen, onClose }: DLsiteConfigProps) {
               </div>
             )}
           </div>
+          <MetadataMappingConfig source={ResourceSource.DLsite} />
         </div>
       }
       fields={fields}

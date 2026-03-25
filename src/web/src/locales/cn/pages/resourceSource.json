@@ -8,7 +8,7 @@
   "resourceSource.confirm.delete": "确定要删除此项吗？",
   "resourceSource.confirm.sync.title": "确认同步",
   "resourceSource.confirm.sync.description": "将从外部源重新获取最新数据。",
-  "resourceSource.confirm.sync.redownloadCover": "重新下载封面（替换当前本地封面）",
+  "resourceSource.confirm.sync.refetchMetadata": "重新获取详细数据（清除已缓存的元数据和封面，下次自动重新获取）",
   "resourceSource.empty": "暂无数据",
   "resourceSource.filter.keyword": "按名称搜索...",
   "resourceSource.label.resourceId": "关联资源",
@@ -116,6 +116,15 @@
 
   "resourceSource.pagination.pageSize": "每页",
   "resourceSource.pagination.total": "共 {{total}} 条",
+
+  "resourceSource.metadataMapping.title": "元数据映射",
+  "resourceSource.metadataMapping.description": "配置外部源的元数据字段如何映射到资源属性。详细数据获取后将自动应用。",
+  "resourceSource.metadataMapping.field": "元数据字段",
+  "resourceSource.metadataMapping.targetProperty": "目标属性",
+  "resourceSource.metadataMapping.notConfigured": "未配置",
+  "resourceSource.metadataMapping.reapply": "重新应用映射",
+  "resourceSource.metadataMapping.reapplyConfirm": "将使用当前映射配置重新应用元数据到所有关联资源的属性中。确定继续吗？",
+  "resourceSource.metadataMapping.reapplyStarted": "重新应用任务已启动",
 
   "menu.otherPlatforms": "其他平台",
   "menu.steam": "Steam",

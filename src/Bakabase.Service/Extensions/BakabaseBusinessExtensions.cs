@@ -127,6 +127,9 @@ namespace Bakabase.Service.Extensions
             services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, ExHentaiGalleryDbModel, int>>();
             services.AddScoped<IExHentaiGalleryService, ExHentaiGalleryService>();
 
+            services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, SourceMetadataMappingDbModel, int>>();
+            services.AddScoped<ISourceMetadataSyncService, SourceMetadataSyncService<BakabaseDbContext>>();
+
             services.AddSingleton<ISystemPlayer, SelfPlayer>();
             services.AddSingleton<Bakabase.Abstractions.Components.ISystemPlayer>(sp =>
                 sp.GetRequiredService<ISystemPlayer>());

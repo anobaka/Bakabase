@@ -920,4 +920,18 @@ public class DLsiteWorkService(
         return TimeZoneInfo.ConvertTimeFromUtc(utc, userTz);
     }
 
+    public async Task ClearAllMetadata()
+    {
+        var works = await orm.GetAll(w => w.MetadataJson != null);
+        foreach (var work in works)
+        {
+            work.MetadataJson = null;
+            work.MetadataFetchedAt = null;
+        }
+
+        if (works.Count > 0)
+        {
+            await orm.UpdateRange(works);
+        }
+    }
 }
