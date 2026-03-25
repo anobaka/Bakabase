@@ -17,8 +17,6 @@ import type { Resource as ResourceModel } from "@/core/models/Resource";
 
 import FallbackCover from "@/components/Resource/components/ResourceCover/components/FallbackCover.tsx";
 import { useCoverDiscovery } from "@/hooks/useResourceDiscovery";
-import ResourceSourceIcon from "@/components/Resource/components/ResourceSourceIcon";
-import { ResourceSource } from "@/sdk/constants";
 
 type TooltipPlacement =
   | "top"
@@ -316,11 +314,6 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
       >
         {previewerVisible && <MediaPreviewerPage resourceId={resource.id} />}
         {renderCover()}
-        {resource.source !== ResourceSource.FileSystem && (
-          <div className="source-icon-overlay">
-            <ResourceSourceIcon source={resource.source} />
-          </div>
-        )}
       </div>
     );
   };

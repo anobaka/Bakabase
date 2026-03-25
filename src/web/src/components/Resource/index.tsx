@@ -341,9 +341,6 @@ const Resource = React.forwardRef((props: Props, ref) => {
               <DisconnectOutlined className={"text-warning"} />
             </Tooltip>
           )}
-          {resource.source != null && resource.source !== ResourceSource.FileSystem && (
-            <ResourceSourceIcon source={resource.source} />
-          )}
           {resource.status === ResourceStatus.Absent && (
             <Chip color="danger" radius={"sm"} size={"sm"} variant={"flat"}>
               {t("enum.resourceStatus.absent")}
@@ -508,6 +505,11 @@ const Resource = React.forwardRef((props: Props, ref) => {
               ];
             })}
             {uiOptions.resource?.inlineDisplayName && renderDisplayNameAndTags(true)}
+          </div>
+        )}
+        {resource.source != null && resource.source !== ResourceSource.FileSystem && (
+          <div className="absolute right-1 bottom-1 z-[1] flex items-center justify-center w-6 h-6 rounded-md bg-black/60 text-white text-sm pointer-events-none">
+            <ResourceSourceIcon source={resource.source} className="brightness-0 invert" />
           </div>
         )}
         <PlayControl
