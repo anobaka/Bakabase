@@ -507,13 +507,9 @@ const Resource = React.forwardRef((props: Props, ref) => {
             {uiOptions.resource?.inlineDisplayName && renderDisplayNameAndTags(true)}
           </div>
         )}
-        {resource.source != null && resource.source !== ResourceSource.FileSystem ? (
-          <div className="absolute right-1 bottom-1 z-[1] flex items-center justify-center w-6 h-6 rounded-md bg-black/60 text-white text-sm pointer-events-none">
-            <ResourceSourceIcon source={resource.source} className="brightness-0 invert" />
-          </div>
-        ) : (
-          <div className="absolute right-1 bottom-1 z-[1] flex items-center justify-center w-6 h-6 rounded-md bg-red-500 text-white text-xs pointer-events-none">
-            {resource.source ?? 'N'}
+        {resource.source != null && resource.source !== ResourceSource.FileSystem && (
+          <div className="absolute right-1 bottom-1 z-[1] flex items-center justify-center w-6 h-6 rounded-md bg-black/60 text-white text-sm pointer-events-none [&_img]:h-3.5 [&_img]:brightness-0 [&_img]:invert">
+            <ResourceSourceIcon source={resource.source} />
           </div>
         )}
         <PlayControl
