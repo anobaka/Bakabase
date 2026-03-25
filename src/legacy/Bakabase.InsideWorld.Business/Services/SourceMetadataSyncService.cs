@@ -10,9 +10,6 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.StandardValue.Abstractions.Services;
-using Bakabase.Modules.ThirdParty.ThirdParties.DLsite.Models;
-using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai.Models;
-using Bakabase.Modules.ThirdParty.ThirdParties.Steam.Models;
 using Bootstrap.Components.DependencyInjection;
 using Bootstrap.Components.Orm;
 using Microsoft.EntityFrameworkCore;
@@ -63,162 +60,176 @@ public class SourceMetadataSyncService<TDbContext>(
 
     #endregion
 
-    #region Available Fields
+    #region Metadata Extraction (Generic JSON Path)
 
-    public List<SourceMetadataFieldInfo> GetAvailableMetadataFields(ResourceSource source)
+    /// <summary>
+    /// Extracts a value from MetadataJson using the user-specified field path.
+    /// Supports dot-separated paths (e.g. "release_date.date", "metacritic.score").
+    /// Returns the raw JSON value converted to the most appropriate StandardValueType.
+    /// </summary>
+    private object? ExtractFieldValue(string fieldPath, string metadataJson, out StandardValueType valueType)
     {
-        return source switch
-        {
-            ResourceSource.Steam => SteamFields,
-            ResourceSource.DLsite => DLsiteFields,
-            ResourceSource.ExHentai => ExHentaiFields,
-            _ => []
-        };
-    }
+        valueType = StandardValueType.String;
 
-    // --- Steam: SteamAppDetails from store API ---
-    private static readonly List<SourceMetadataFieldInfo> SteamFields =
-    [
-        new("Name", StandardValueType.String),
-        new("Type", StandardValueType.String),
-        new("ShortDescription", StandardValueType.String),
-        new("DetailedDescription", StandardValueType.String),
-        new("HeaderImage", StandardValueType.String),
-        new("CapsuleImage", StandardValueType.String),
-        new("Developers", StandardValueType.ListString),
-        new("Publishers", StandardValueType.ListString),
-        new("Genres", StandardValueType.ListString),
-        new("Categories", StandardValueType.ListString),
-        new("MetacriticScore", StandardValueType.Decimal),
-        new("ReleaseDate", StandardValueType.String),
-    ];
-
-    // --- DLsite: DLsiteProductDetail from HTML scraping ---
-    private static readonly List<SourceMetadataFieldInfo> DLsiteFields =
-    [
-        new("Name", StandardValueType.String),
-        new("Introduction", StandardValueType.String),
-        new("Rating", StandardValueType.Decimal),
-        new("CoverUrls", StandardValueType.ListString),
-        // Dynamic properties from the right side of cover (e.g. 声优, ジャンル, etc.)
-        // Each key becomes a separate Tags group
-        new("PropertiesOnTheRightSideOfCover", StandardValueType.ListTag),
-    ];
-
-    // --- ExHentai: ExHentaiResource from gallery page parsing ---
-    private static readonly List<SourceMetadataFieldInfo> ExHentaiFields =
-    [
-        new("Name", StandardValueType.String),
-        new("RawName", StandardValueType.String),
-        new("Introduction", StandardValueType.String),
-        new("Rate", StandardValueType.Decimal),
-        new("Tags", StandardValueType.ListTag),
-        new("Category", StandardValueType.String),
-        new("CoverUrl", StandardValueType.String),
-        new("FileCount", StandardValueType.Decimal),
-        new("PageCount", StandardValueType.Decimal),
-    ];
-
-    #endregion
-
-    #region Metadata Extraction
-
-    private (object? Value, StandardValueType Type)? ExtractField(ResourceSource source, string fieldName,
-        string metadataJson)
-    {
         try
         {
-            return source switch
-            {
-                ResourceSource.Steam => ExtractSteamField(fieldName, metadataJson),
-                ResourceSource.DLsite => ExtractDLsiteField(fieldName, metadataJson),
-                ResourceSource.ExHentai => ExtractExHentaiField(fieldName, metadataJson),
-                _ => null
-            };
+            using var doc = JsonDocument.Parse(metadataJson);
+            var element = NavigateJsonPath(doc.RootElement, fieldPath);
+            if (element == null) return null;
+
+            return ConvertJsonElement(element.Value, out valueType);
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Failed to extract field {Field} from {Source} metadata", fieldName, source);
+            logger.LogWarning(ex, "Failed to extract field '{Field}' from metadata JSON", fieldPath);
             return null;
         }
     }
 
-    private static (object? Value, StandardValueType Type)? ExtractSteamField(string fieldName, string json)
+    /// <summary>
+    /// Navigates a JSON element by dot-separated path segments.
+    /// Supports case-insensitive property matching.
+    /// </summary>
+    private static JsonElement? NavigateJsonPath(JsonElement root, string path)
     {
-        var d = JsonSerializer.Deserialize<SteamAppDetails>(json, JsonSerializerOptions.Web);
-        if (d == null) return null;
-
-        return fieldName switch
+        var current = root;
+        foreach (var segment in path.Split('.'))
         {
-            "Name" => Str(d.Name),
-            "Type" => Str(d.Type),
-            "ShortDescription" => Str(d.ShortDescription),
-            "DetailedDescription" => Str(d.DetailedDescription),
-            "HeaderImage" => Str(d.HeaderImage),
-            "CapsuleImage" => Str(d.CapsuleImage),
-            "Developers" => StrList(d.Developers),
-            "Publishers" => StrList(d.Publishers),
-            "Genres" => StrList(d.Genres?.Select(g => g.Description).OfType<string>().ToList()),
-            "Categories" => StrList(d.Categories?.Select(c => c.Description).OfType<string>().ToList()),
-            "MetacriticScore" => d.Metacritic != null ? Dec(d.Metacritic.Score) : null,
-            "ReleaseDate" => Str(d.ReleaseDate?.Date),
-            _ => null
-        };
+            if (current.ValueKind != JsonValueKind.Object) return null;
+
+            var found = false;
+            foreach (var prop in current.EnumerateObject())
+            {
+                if (string.Equals(prop.Name, segment, StringComparison.OrdinalIgnoreCase))
+                {
+                    current = prop.Value;
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found) return null;
+        }
+
+        return current.ValueKind == JsonValueKind.Null || current.ValueKind == JsonValueKind.Undefined
+            ? null
+            : current;
     }
 
-    private static (object? Value, StandardValueType Type)? ExtractDLsiteField(string fieldName, string json)
+    /// <summary>
+    /// Converts a JsonElement to a CLR object with an inferred StandardValueType.
+    /// </summary>
+    private static object? ConvertJsonElement(JsonElement element, out StandardValueType valueType)
     {
-        var d = JsonSerializer.Deserialize<DLsiteProductDetail>(json, JsonSerializerOptions.Web);
-        if (d == null) return null;
-
-        return fieldName switch
+        switch (element.ValueKind)
         {
-            "Name" => Str(d.Name),
-            "Introduction" => Str(d.Introduction),
-            "Rating" => d.Rating.HasValue ? Dec(d.Rating.Value) : null,
-            "CoverUrls" => StrList(d.CoverUrls?.ToList()),
-            "PropertiesOnTheRightSideOfCover" => d.PropertiesOnTheRightSideOfCover is { Count: > 0 }
-                ? (d.PropertiesOnTheRightSideOfCover
-                        .SelectMany(kv => kv.Value.Select(v => new TagValue(kv.Key, v)))
-                        .ToList() as object,
-                    StandardValueType.ListTag)
-                : null,
-            _ => null
-        };
+            case JsonValueKind.String:
+                valueType = StandardValueType.String;
+                return element.GetString();
+
+            case JsonValueKind.Number:
+                valueType = StandardValueType.Decimal;
+                return element.GetDecimal();
+
+            case JsonValueKind.True:
+            case JsonValueKind.False:
+                valueType = StandardValueType.Boolean;
+                return element.GetBoolean();
+
+            case JsonValueKind.Array:
+            {
+                var items = new List<JsonElement>();
+                foreach (var item in element.EnumerateArray())
+                    items.Add(item);
+
+                if (items.Count == 0)
+                {
+                    valueType = StandardValueType.ListString;
+                    return null;
+                }
+
+                // Check if array of strings
+                if (items.All(i => i.ValueKind == JsonValueKind.String))
+                {
+                    valueType = StandardValueType.ListString;
+                    return items.Select(i => i.GetString()!).ToList();
+                }
+
+                // Check if array of objects with "description" (e.g. Steam genres/categories)
+                if (items.All(i => i.ValueKind == JsonValueKind.Object))
+                {
+                    var descriptions = items
+                        .Select(i =>
+                        {
+                            foreach (var p in i.EnumerateObject())
+                            {
+                                if (string.Equals(p.Name, "description", StringComparison.OrdinalIgnoreCase)
+                                    && p.Value.ValueKind == JsonValueKind.String)
+                                    return p.Value.GetString();
+                                if (string.Equals(p.Name, "name", StringComparison.OrdinalIgnoreCase)
+                                    && p.Value.ValueKind == JsonValueKind.String)
+                                    return p.Value.GetString();
+                            }
+                            return null;
+                        })
+                        .Where(d => d != null)
+                        .ToList();
+
+                    if (descriptions.Count > 0)
+                    {
+                        valueType = StandardValueType.ListString;
+                        return descriptions!;
+                    }
+                }
+
+                // Fallback: serialize each item as string
+                valueType = StandardValueType.ListString;
+                return items.Select(i => i.ToString()).ToList();
+            }
+
+            case JsonValueKind.Object:
+            {
+                // Object with string[] values → treat as ListTag (key=group, value=tag)
+                // e.g. ExHentai Tags: {"artist": ["name1"], "female": ["tag1", "tag2"]}
+                // e.g. DLsite PropertiesOnTheRightSideOfCover: {"声優": ["name1"], "ジャンル": ["tag1"]}
+                var allValuesAreArrays = true;
+                var tags = new List<TagValue>();
+
+                foreach (var prop in element.EnumerateObject())
+                {
+                    if (prop.Value.ValueKind == JsonValueKind.Array)
+                    {
+                        foreach (var item in prop.Value.EnumerateArray())
+                        {
+                            if (item.ValueKind == JsonValueKind.String)
+                            {
+                                tags.Add(new TagValue(prop.Name, item.GetString()!));
+                            }
+                        }
+                    }
+                    else
+                    {
+                        allValuesAreArrays = false;
+                        break;
+                    }
+                }
+
+                if (allValuesAreArrays && tags.Count > 0)
+                {
+                    valueType = StandardValueType.ListTag;
+                    return tags;
+                }
+
+                // Fallback: serialize object as string
+                valueType = StandardValueType.String;
+                return element.ToString();
+            }
+
+            default:
+                valueType = StandardValueType.String;
+                return null;
+        }
     }
-
-    private static (object? Value, StandardValueType Type)? ExtractExHentaiField(string fieldName, string json)
-    {
-        var d = JsonSerializer.Deserialize<ExHentaiResource>(json, JsonSerializerOptions.Web);
-        if (d == null) return null;
-
-        return fieldName switch
-        {
-            "Name" => Str(d.Name),
-            "RawName" => Str(d.RawName),
-            "Introduction" => Str(d.Introduction),
-            "Rate" => d.Rate != 0 ? Dec(d.Rate) : null,
-            "Tags" => d.Tags is { Count: > 0 }
-                ? (d.Tags.SelectMany(kv => kv.Value.Select(v => new TagValue(kv.Key, v))).ToList() as object,
-                    StandardValueType.ListTag)
-                : null,
-            "Category" => Str(d.Category.ToString()),
-            "CoverUrl" => Str(d.CoverUrl),
-            "FileCount" => Dec(d.FileCount),
-            "PageCount" => Dec(d.PageCount),
-            _ => null
-        };
-    }
-
-    // Value construction helpers
-    private static (object, StandardValueType)? Str(string? v) =>
-        !string.IsNullOrEmpty(v) ? (v, StandardValueType.String) : null;
-
-    private static (object, StandardValueType)? StrList(List<string>? v) =>
-        v is { Count: > 0 } ? (v, StandardValueType.ListString) : null;
-
-    private static (object, StandardValueType) Dec(decimal v) =>
-        (v, StandardValueType.Decimal);
 
     #endregion
 
@@ -292,10 +303,7 @@ public class SourceMetadataSyncService<TDbContext>(
         {
             ct.ThrowIfCancellationRequested();
 
-            var extracted = ExtractField(source, mapping.MetadataField, metadataJson);
-            if (extracted == null) continue;
-
-            var (value, valueType) = extracted.Value;
+            var value = ExtractFieldValue(mapping.MetadataField, metadataJson, out var valueType);
             if (value == null) continue;
 
             switch (mapping.TargetPool)

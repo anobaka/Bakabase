@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Chip, Divider, Spinner } from "@heroui/react";
-import { AiOutlineSync } from "react-icons/ai";
+import { Button, Divider, Input, Spinner } from "@heroui/react";
+import { AiOutlineDelete, AiOutlinePlus, AiOutlineSync } from "react-icons/ai";
 
 import { toast } from "@/components/bakaui";
 import { ResourceSource, type PropertyPool } from "@/sdk/constants";
@@ -21,11 +21,6 @@ type SourceMetadataMapping = {
   targetPropertyId: number;
 };
 
-type MetadataFieldInfo = {
-  name: string;
-  valueType: number;
-};
-
 interface Props {
   source: ResourceSource;
 }
@@ -36,35 +31,26 @@ async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
     headers: { "Content-Type": "application/json" },
     ...options,
   });
-  const json = await res.json();
-  return json;
+  return res.json();
 }
 
 export default function MetadataMappingConfig({ source }: Props) {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
-  const [fields, setFields] = useState<MetadataFieldInfo[]>([]);
   const [mappings, setMappings] = useState<SourceMetadataMapping[]>([]);
   const [properties, setProperties] = useState<Record<string, IProperty>>({});
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(false);
+  const [newFieldName, setNewFieldName] = useState("");
+
+  const saveTimeoutRef = useRef<any>();
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [fieldsRes, mappingsRes] = await Promise.all([
-        fetchApi<any>(`/source/${source}/metadata-mapping/available-fields`),
-        fetchApi<any>(`/source/${source}/metadata-mapping`),
-      ]);
-
-      const rawFields = fieldsRes?.data ?? [];
-      // Handle both old (string[]) and new (SourceMetadataFieldInfo[]) formats
-      const parsedFields: MetadataFieldInfo[] = rawFields.map((f: any) =>
-        typeof f === "string" ? { name: f, valueType: 0 } : f,
-      );
-      setFields(parsedFields);
-      setMappings(mappingsRes?.data ?? []);
+      const res = await fetchApi<any>(`/source/${source}/metadata-mapping`);
+      setMappings(res?.data ?? []);
     } finally {
       setLoading(false);
     }
@@ -74,57 +60,64 @@ export default function MetadataMappingConfig({ source }: Props) {
     load();
   }, [load]);
 
-  const getMappingForField = (fieldName: string) =>
-    mappings.find((m) => m.metadataField === fieldName);
+  const saveMappings = useCallback(
+    (updated: SourceMetadataMapping[]) => {
+      // Debounce saves
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = setTimeout(() => {
+        fetchApi(`/source/${source}/metadata-mapping`, {
+          method: "PUT",
+          body: JSON.stringify(updated),
+        });
+      }, 300);
+    },
+    [source],
+  );
 
-  const handlePropertyChange = async (
-    fieldName: string,
-    property?: IProperty,
-  ) => {
-    let updated: SourceMetadataMapping[];
-    if (property) {
-      const existing = getMappingForField(fieldName);
-      if (existing) {
-        updated = mappings.map((m) =>
-          m.metadataField === fieldName
-            ? {
-                ...m,
-                targetPool: property.pool!,
-                targetPropertyId: property.id!,
-              }
-            : m,
-        );
-      } else {
-        updated = [
-          ...mappings,
-          {
-            source,
-            metadataField: fieldName,
-            targetPool: property.pool!,
-            targetPropertyId: property.id!,
-          },
-        ];
-      }
-    } else {
-      updated = mappings.filter((m) => m.metadataField !== fieldName);
+  const handleAddMapping = (property: IProperty) => {
+    if (!newFieldName.trim()) return;
+
+    const fieldName = newFieldName.trim();
+    // Don't add duplicate field names
+    if (mappings.some((m) => m.metadataField === fieldName)) {
+      return;
     }
 
+    const updated = [
+      ...mappings,
+      {
+        source,
+        metadataField: fieldName,
+        targetPool: property.pool!,
+        targetPropertyId: property.id!,
+      },
+    ];
     setMappings(updated);
-    setProperties((prev) =>
-      property
-        ? { ...prev, [fieldName]: property }
-        : (() => {
-            const next = { ...prev };
-            delete next[fieldName];
-            return next;
-          })(),
-    );
+    setProperties((prev) => ({ ...prev, [fieldName]: property }));
+    setNewFieldName("");
+    saveMappings(updated);
+  };
 
-    // Save to backend
-    await fetchApi(`/source/${source}/metadata-mapping`, {
-      method: "PUT",
-      body: JSON.stringify(updated),
+  const handleChangeProperty = (fieldName: string, property: IProperty) => {
+    const updated = mappings.map((m) =>
+      m.metadataField === fieldName
+        ? { ...m, targetPool: property.pool!, targetPropertyId: property.id! }
+        : m,
+    );
+    setMappings(updated);
+    setProperties((prev) => ({ ...prev, [fieldName]: property }));
+    saveMappings(updated);
+  };
+
+  const handleRemoveMapping = (fieldName: string) => {
+    const updated = mappings.filter((m) => m.metadataField !== fieldName);
+    setMappings(updated);
+    setProperties((prev) => {
+      const next = { ...prev };
+      delete next[fieldName];
+      return next;
     });
+    saveMappings(updated);
   };
 
   const handleReapply = async () => {
@@ -140,6 +133,17 @@ export default function MetadataMappingConfig({ source }: Props) {
     }
   };
 
+  const openPropertySelector = (onSelect: (p: IProperty) => void) => {
+    createPortal(PropertySelector, {
+      v2: true,
+      pool: 6, // PropertyPool.Custom | PropertyPool.Reserved
+      multiple: false,
+      onSubmit: async (selection: IProperty[]) => {
+        if (selection[0]) onSelect(selection[0]);
+      },
+    });
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center py-4">
@@ -148,8 +152,6 @@ export default function MetadataMappingConfig({ source }: Props) {
     );
   }
 
-  if (fields.length === 0) return null;
-
   return (
     <div className="space-y-3">
       <Divider />
@@ -157,89 +159,93 @@ export default function MetadataMappingConfig({ source }: Props) {
         <span className="text-sm font-medium">
           {t("resourceSource.metadataMapping.title")}
         </span>
-        <Button
-          color="primary"
-          isLoading={applying}
-          size="sm"
-          startContent={<AiOutlineSync />}
-          variant="flat"
-          onPress={handleReapply}
-        >
-          {t("resourceSource.metadataMapping.reapply")}
-        </Button>
+        {mappings.length > 0 && (
+          <Button
+            color="primary"
+            isLoading={applying}
+            size="sm"
+            startContent={<AiOutlineSync />}
+            variant="flat"
+            onPress={handleReapply}
+          >
+            {t("resourceSource.metadataMapping.reapply")}
+          </Button>
+        )}
       </div>
       <p className="text-xs text-default-400">
         {t("resourceSource.metadataMapping.description")}
       </p>
 
+      {/* Existing mappings */}
       <div className="space-y-2">
-        {fields.map((field) => {
-          const mapping = getMappingForField(field.name);
-          const cachedProp = properties[field.name];
+        {mappings.map((mapping) => {
+          const cachedProp = properties[mapping.metadataField];
 
           return (
             <div
-              key={field.name}
+              key={mapping.metadataField}
               className="flex items-center gap-2 border-small border-default-200 rounded-lg px-3 py-2"
             >
-              <Chip className="min-w-[120px]" size="sm" variant="flat">
-                {field.name}
-              </Chip>
+              <code className="text-xs bg-default-100 px-2 py-1 rounded min-w-[100px]">
+                {mapping.metadataField}
+              </code>
               <span className="text-default-400">&rarr;</span>
-              {mapping && cachedProp ? (
-                <Button
-                  size="sm"
-                  variant="light"
-                  onPress={() => {
-                    createPortal(PropertySelector, {
-                      v2: true,
-                      pool: 6, // PropertyPool.Custom | PropertyPool.Reserved
-                      multiple: false,
-                      onSubmit: async (selection: IProperty[]) => {
-                        handlePropertyChange(field.name, selection[0]);
-                      },
-                    });
-                  }}
-                >
+              <Button
+                className="flex-1"
+                size="sm"
+                variant="light"
+                onPress={() =>
+                  openPropertySelector((p) =>
+                    handleChangeProperty(mapping.metadataField, p),
+                  )
+                }
+              >
+                {cachedProp ? (
                   <BriefProperty property={cachedProp} />
-                </Button>
-              ) : mapping ? (
-                <Chip size="sm" variant="flat">
-                  {`${mapping.targetPool}:${mapping.targetPropertyId}`}
-                </Chip>
-              ) : (
-                <Button
-                  color="default"
-                  size="sm"
-                  variant="flat"
-                  onPress={() => {
-                    createPortal(PropertySelector, {
-                      v2: true,
-                      pool: 6, // PropertyPool.Custom | PropertyPool.Reserved
-                      multiple: false,
-                      onSubmit: async (selection: IProperty[]) => {
-                        handlePropertyChange(field.name, selection[0]);
-                      },
-                    });
-                  }}
-                >
-                  {t("resourceSource.metadataMapping.notConfigured")}
-                </Button>
-              )}
-              {mapping && (
-                <Button
-                  color="danger"
-                  isIconOnly
-                  size="sm"
-                  variant="light"
-                  onPress={() => handlePropertyChange(field.name)}
-                >
-                  &times;
-                </Button>
-              )}
+                ) : (
+                  `${mapping.targetPool}:${mapping.targetPropertyId}`
+                )}
+              </Button>
+              <Button
+                color="danger"
+                isIconOnly
+                size="sm"
+                variant="light"
+                onPress={() => handleRemoveMapping(mapping.metadataField)}
+              >
+                <AiOutlineDelete />
+              </Button>
             </div>
           );
         })}
+      </div>
+
+      {/* Add new mapping */}
+      <div className="flex items-center gap-2">
+        <Input
+          className="flex-1"
+          placeholder={t(
+            "resourceSource.metadataMapping.fieldPlaceholder",
+          )}
+          size="sm"
+          value={newFieldName}
+          onValueChange={setNewFieldName}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && newFieldName.trim()) {
+              openPropertySelector((p) => handleAddMapping(p));
+            }
+          }}
+        />
+        <Button
+          color="primary"
+          isDisabled={!newFieldName.trim()}
+          size="sm"
+          startContent={<AiOutlinePlus />}
+          variant="flat"
+          onPress={() => openPropertySelector((p) => handleAddMapping(p))}
+        >
+          {t("resourceSource.metadataMapping.add")}
+        </Button>
       </div>
     </div>
   );

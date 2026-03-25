@@ -118,10 +118,9 @@
   "resourceSource.pagination.total": "共 {{total}} 条",
 
   "resourceSource.metadataMapping.title": "元数据映射",
-  "resourceSource.metadataMapping.description": "配置外部源的元数据字段如何映射到资源属性。详细数据获取后将自动应用。",
-  "resourceSource.metadataMapping.field": "元数据字段",
-  "resourceSource.metadataMapping.targetProperty": "目标属性",
-  "resourceSource.metadataMapping.notConfigured": "未配置",
+  "resourceSource.metadataMapping.description": "配置外部源的元数据字段如何映射到资源属性。支持点分路径（如 release_date.date）。详细数据获取后将自动应用。",
+  "resourceSource.metadataMapping.fieldPlaceholder": "输入元数据字段路径（如 name、tags、metacritic.score）",
+  "resourceSource.metadataMapping.add": "添加",
   "resourceSource.metadataMapping.reapply": "重新应用映射",
   "resourceSource.metadataMapping.reapplyConfirm": "将使用当前映射配置重新应用元数据到所有关联资源的属性中。确定继续吗？",
   "resourceSource.metadataMapping.reapplyStarted": "重新应用任务已启动",

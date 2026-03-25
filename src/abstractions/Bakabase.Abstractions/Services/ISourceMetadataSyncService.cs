@@ -25,9 +25,4 @@ public interface ISourceMetadataSyncService
     /// Batch sync metadata from a specific source to all linked resources.
     /// </summary>
     Task SyncMetadataToPropertiesBatch(ResourceSource source, Action<int>? onProgress, CancellationToken ct);
-
-    /// <summary>
-    /// Get the list of available metadata fields for a source with their value types.
-    /// </summary>
-    List<SourceMetadataFieldInfo> GetAvailableMetadataFields(ResourceSource source);
 }

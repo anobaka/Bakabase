@@ -118,10 +118,9 @@
   "resourceSource.pagination.total": "{{total}} total",
 
   "resourceSource.metadataMapping.title": "Metadata Mapping",
-  "resourceSource.metadataMapping.description": "Configure how external source metadata fields map to resource properties. Applied automatically after fetching details.",
-  "resourceSource.metadataMapping.field": "Metadata Field",
-  "resourceSource.metadataMapping.targetProperty": "Target Property",
-  "resourceSource.metadataMapping.notConfigured": "Not configured",
+  "resourceSource.metadataMapping.description": "Configure how external source metadata fields map to resource properties. Supports dot-separated paths (e.g. release_date.date). Applied automatically after fetching details.",
+  "resourceSource.metadataMapping.fieldPlaceholder": "Enter metadata field path (e.g. name, tags, metacritic.score)",
+  "resourceSource.metadataMapping.add": "Add",
   "resourceSource.metadataMapping.reapply": "Re-apply Mappings",
   "resourceSource.metadataMapping.reapplyConfirm": "This will re-apply metadata to all linked resources using current mapping configuration. Continue?",
   "resourceSource.metadataMapping.reapplyStarted": "Re-apply task started",
