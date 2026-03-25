@@ -7,7 +7,6 @@
 import type { Duration } from "dayjs/plugin/duration";
 
 import React, { useEffect, useRef } from "react";
-import i18n from "i18next";
 import ReactDOM from "react-dom/client";
 import isUncPath from "is-unc-path";
 import hoistNonReactStatic from "hoist-non-react-statics";
@@ -15,7 +14,7 @@ import chalk from "chalk";
 import { Time } from "@internationalized/date";
 import dayjs from "dayjs";
 
-import { reservedResourceFileTypes, UiTheme } from "@/sdk/constants";
+import { UiTheme } from "@/sdk/constants";
 import BusinessConstants from "@/components/BusinessConstants";
 
 export const convertDurationToTime = (duration: Duration): Time => {
@@ -449,36 +448,6 @@ export function findCapturingGroupsInRegex(regex: string): string[] {
   return regex?.match(/\(\?<(\w+)>/g)?.map((match) => match.slice(3, -1)) || [];
 }
 
-export function extractEnhancerTargetDescription(target: string) {
-  const segs = target.split(":");
-  const type = segs[0];
-  const key = segs[1];
-  let typeName;
-  let keyName;
-
-  if (type == "p") {
-    typeName = "Property";
-    const reserved = reservedResourceProperties.find(
-      (x) => x.label.toLowerCase() == key.toLowerCase(),
-    );
-
-    keyName = reserved ? i18n.t<string>(reserved.label) : key;
-  } else if (type == "f") {
-    typeName = "File";
-    const reserved = reservedResourceFileTypes.find(
-      (x) => x.label.toLowerCase() == key.toLowerCase(),
-    );
-
-    keyName = reserved ? i18n.t<string>(reserved.label) : key;
-  } else {
-    typeName = "Unknown";
-  }
-
-  return {
-    type: i18n.t<string>(typeName),
-    key: keyName,
-  };
-}
 
 export function createPortalOfComponent(
   Component: React.ComponentType<any>,

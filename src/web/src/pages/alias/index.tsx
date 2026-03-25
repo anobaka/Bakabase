@@ -13,7 +13,6 @@ import {
   UploadOutlined,
 } from "@ant-design/icons";
 
-import { AliasAdditionalItem } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
 import {
   Button,
@@ -40,7 +39,6 @@ import envConfig from "@/config/env.ts";
 type Form = {
   pageSize: 20;
   pageIndex: number;
-  additionalItems: AliasAdditionalItem.Candidates;
   text?: string;
   fuzzyText?: string;
 };
@@ -62,7 +60,6 @@ const AliasPage = () => {
   const [form, setForm] = useState<Form>({
     pageSize: 20,
     pageIndex: 0,
-    additionalItems: AliasAdditionalItem.Candidates,
   });
   const [aliases, setAliases] = useState<AliasPage[]>([]);
   const [bulkOperationContext, setBulkOperationContext] = useState<BulkOperationContext>({
