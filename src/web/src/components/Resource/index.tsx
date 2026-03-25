@@ -341,9 +341,6 @@ const Resource = React.forwardRef((props: Props, ref) => {
               <DisconnectOutlined className={"text-warning"} />
             </Tooltip>
           )}
-          {resource.source != null && resource.source !== ResourceSource.FileSystem && (
-            <ResourceSourceIcon source={resource.source} />
-          )}
           {resource.status === ResourceStatus.Absent && (
             <Chip color="danger" radius={"sm"} size={"sm"} variant={"flat"}>
               {t("enum.resourceStatus.absent")}
@@ -510,6 +507,23 @@ const Resource = React.forwardRef((props: Props, ref) => {
             {uiOptions.resource?.inlineDisplayName && renderDisplayNameAndTags(true)}
           </div>
         )}
+        {(() => {
+          const nonFsSources = [...new Set(
+            resource.sourceLinks
+              ?.map(l => l.source)
+              .filter(s => s !== ResourceSource.FileSystem) ?? []
+          )];
+          if (nonFsSources.length === 0) return null;
+          return (
+            <div className="absolute right-1 bottom-1 z-[1] flex items-end gap-0.5 pointer-events-none">
+              {nonFsSources.map(source => (
+                <div key={source} className="flex items-center justify-center w-6 h-6 rounded-md bg-black/60 text-white text-sm [&_img]:h-3.5 [&_img]:brightness-0 [&_img]:invert">
+                  <ResourceSourceIcon source={source} />
+                </div>
+              ))}
+            </div>
+          );
+        })()}
         <PlayControl
           ref={playControlRef}
           PortalComponent={PlayButton}

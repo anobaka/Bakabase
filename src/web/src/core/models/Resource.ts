@@ -32,13 +32,21 @@ export type PlayableItem = {
   displayName?: string;
 };
 
+export type ResourceSourceLink = {
+  id: number;
+  resourceId: number;
+  source: ResourceSource;
+  sourceKey: string;
+  coverUrls?: string[];
+  localCoverPaths?: string[];
+};
+
 export type Resource = {
   id: number;
   mediaLibraryId: number;
   categoryId: number;
-  source: ResourceSource;
   status: ResourceStatus;
-  sourceKey: string;
+  sourceLinks?: ResourceSourceLink[];
   fileName?: string;
   directory?: string;
   displayName?: string;
