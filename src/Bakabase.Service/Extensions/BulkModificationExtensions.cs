@@ -39,6 +39,8 @@ public static class BulkModificationExtensions
             Name = domainModel.Name,
             Search = domainModel.Search?.ToViewModel(propertyLocalizer),
             Processes = domainModel.Processes?.Select(p => p.ToViewModel(propertyLocalizer)).ToList(),
+            DeleteResources = domainModel.DeleteResources,
+            DeleteFiles = domainModel.DeleteFiles,
             Variables = domainModel.Variables?.Select(p => p.ToViewModel(propertyLocalizer)).ToList(),
             AppliedAt = domainModel.AppliedAt,
             ResourceDiffCount = domainModel.ResourceDiffCount
@@ -62,6 +64,8 @@ public static class BulkModificationExtensions
                 ? await domainModel.Search.ToViewModelAsync(propertyService, propertyLocalizer, resourceService)
                 : null,
             Processes = domainModel.Processes?.Select(p => p.ToViewModel(propertyLocalizer)).ToList(),
+            DeleteResources = domainModel.DeleteResources,
+            DeleteFiles = domainModel.DeleteFiles,
             Variables = domainModel.Variables?.Select(p => p.ToViewModel(propertyLocalizer)).ToList(),
             AppliedAt = domainModel.AppliedAt,
             ResourceDiffCount = domainModel.ResourceDiffCount
@@ -112,6 +116,8 @@ public static class BulkModificationExtensions
             Name = inputModel.Name,
             Processes = inputModel.Processes?.Select(p => p.ToDomainModel(propertyMap))
                 .OfType<BulkModificationProcess>().ToList(),
+            DeleteResources = inputModel.DeleteResources,
+            DeleteFiles = inputModel.DeleteFiles,
             Variables = inputModel.Variables?.Select(p => p.ToDomainModel(propertyMap))
                 .OfType<BulkModificationVariable>().ToList(),
             Search = inputModel.Search != null ? await inputModel.Search.ToDomainModel(propertyService) : null

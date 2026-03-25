@@ -522,9 +522,9 @@ namespace Bakabase.Service.Controllers
 
         [HttpDelete("ids")]
         [SwaggerOperation(OperationId = "DeleteResourcesByKeys")]
-        public async Task<BaseResponse> DeleteByKeys(int[] ids)
+        public async Task<BaseResponse> DeleteByKeys(int[] ids, bool deleteFiles = false)
         {
-            await service.DeleteByKeys(ids);
+            await service.DeleteByKeys(ids, deleteFiles);
             return BaseResponseBuilder.Ok;
         }
 

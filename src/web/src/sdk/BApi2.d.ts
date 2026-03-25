@@ -8333,6 +8333,8 @@ export interface components {
             variables?: components["schemas"]["Bakabase.Service.Models.Input.BulkModificationVariableInputModel"][];
             search?: components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
             processes?: components["schemas"]["Bakabase.Service.Models.Input.BulkModificationProcessInputModel"][];
+            deleteResources?: boolean;
+            deleteFiles?: boolean;
         };
         "Bakabase.Service.Models.Input.BulkModificationProcessInputModel": {
             propertyPool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
@@ -8508,6 +8510,8 @@ export interface components {
             variables?: components["schemas"]["Bakabase.Service.Models.View.BulkModificationVariableViewModel"][];
             search?: components["schemas"]["Bakabase.Service.Models.View.ResourceSearchViewModel"];
             processes?: components["schemas"]["Bakabase.Service.Models.View.BulkModificationProcessViewModel"][];
+            deleteResources: boolean;
+            deleteFiles: boolean;
             filteredResourceIds?: number[];
             /** Format: date-time */
             appliedAt?: string;
@@ -20354,6 +20358,7 @@ export interface operations {
         parameters: {
             query?: {
                 ids?: number[];
+                deleteFiles?: boolean;
             };
             header?: never;
             path?: never;

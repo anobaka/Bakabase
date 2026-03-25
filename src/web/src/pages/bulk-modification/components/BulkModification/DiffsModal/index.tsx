@@ -41,8 +41,9 @@ const PageSize = 20;
 
 type Props = {
   bmId: number;
+  deleteResources?: boolean;
 } & DestroyableProps;
-const DiffsModal = ({ bmId, onDestroyed }: Props) => {
+const DiffsModal = ({ bmId, deleteResources, onDestroyed }: Props) => {
   const { t } = useTranslation();
 
   const [keyword, setKeyword] = useState<string>();
@@ -147,35 +148,41 @@ const DiffsModal = ({ bmId, onDestroyed }: Props) => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      {d.diffs.map((diff) => {
-                        return (
-                          <div className={"flex items-center gap-2"}>
-                            <div className={"flex items-center gap-1"}>
-                              <Chip
-                                color={"secondary"}
-                                size={"sm"}
-                                variant={"flat"}
-                              >
-                                {diff.property.poolName}
-                              </Chip>
-                              <Chip color={"primary"} size={"sm"}>
-                                {diff.property.name}
-                              </Chip>
+                      {deleteResources ? (
+                        <Chip color={"danger"} size={"sm"} variant={"flat"}>
+                          {t<string>("bulkModification.diff.resourceWillBeDeleted")}
+                        </Chip>
+                      ) : (
+                        d.diffs.map((diff) => {
+                          return (
+                            <div className={"flex items-center gap-2"}>
+                              <div className={"flex items-center gap-1"}>
+                                <Chip
+                                  color={"secondary"}
+                                  size={"sm"}
+                                  variant={"flat"}
+                                >
+                                  {diff.property.poolName}
+                                </Chip>
+                                <Chip color={"primary"} size={"sm"}>
+                                  {diff.property.name}
+                                </Chip>
+                              </div>
+                              <div className={"flex items-center gap-1"}>
+                                <PropertyValueRenderer
+                                  bizValue={diff.value1}
+                                  property={diff.property}
+                                />
+                                <ArrowRightOutlined className={"text-base"} />
+                                <PropertyValueRenderer
+                                  bizValue={diff.value2}
+                                  property={diff.property}
+                                />
+                              </div>
                             </div>
-                            <div className={"flex items-center gap-1"}>
-                              <PropertyValueRenderer
-                                bizValue={diff.value1}
-                                property={diff.property}
-                              />
-                              <ArrowRightOutlined className={"text-base"} />
-                              <PropertyValueRenderer
-                                bizValue={diff.value2}
-                                property={diff.property}
-                              />
-                            </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })
+                      )}
                     </TableCell>
                   </TableRow>
                 );

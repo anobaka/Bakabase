@@ -14,7 +14,7 @@ namespace Bakabase.Abstractions.Services;
 
 public interface IResourceService
 {
-    Task DeleteByKeys(int[] ids);
+    Task DeleteByKeys(int[] ids, bool deleteFiles = false);
 
     Task<List<Resource>> GetAll(Expression<Func<Models.Db.ResourceDbModel, bool>>? selector = null,
         ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None);

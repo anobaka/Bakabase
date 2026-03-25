@@ -10,13 +10,14 @@ import {
 } from "@ant-design/icons";
 
 import MediaLibraryMultiSelector from "@/components/MediaLibraryMultiSelector";
-import { ResourceAdditionalItem } from "@/sdk/constants";
+import { ResourceAdditionalItem, ResourceTag } from "@/sdk/constants";
 import ResourceTransferModal from "@/components/ResourceTransferModal";
 import { Modal } from "@/components/bakaui";
 import { buildLogger } from "@/components/utils";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import BApi from "@/sdk/BApi";
 import BulkPropertyEditor from "@/components/Resource/components/BulkPropertyEditor";
+import DeleteResourceConfirmContent from "@/components/Resource/components/DeleteResourceConfirmContent";
 
 const log = buildLogger("ResourceContextMenuItems");
 
@@ -119,27 +120,31 @@ const ContextMenuItems = ({
       <MenuItem
         onClick={() => {
           log("inner", "click");
+          // Check if any selected resource has files (no PathDoesNotExist tag)
+          const filesExist = selectedResources
+            ? selectedResources.some((r) => !r.tags?.includes(ResourceTag.PathDoesNotExist))
+            : true; // Default to true if resource info not available
+
+          let deleteFiles = false;
+
           createPortal(Modal, {
             defaultVisible: true,
             title: t<string>("resource.contextMenu.deleteCountResources", {
               count: selectedResourceIds.length,
             }),
             children: (
-              <div>
-                <div className={"font-bold"}>
-                  {t<string>(
-                    "resource.contextMenu.confirmDeleteCount",
-                    { count: selectedResourceIds.length },
-                  )}
-                </div>
-                <div className={"opacity-60 mt-2"}>
-                  {t<string>("resource.contextMenu.filesWillNotBeDeleted")}
-                </div>
-              </div>
+              <DeleteResourceConfirmContent
+                count={selectedResourceIds.length}
+                filesExist={filesExist}
+                onDeleteFilesChange={(v) => {
+                  deleteFiles = v;
+                }}
+              />
             ),
             onOk: async () => {
               await BApi.resource.deleteResourcesByKeys({
                 ids: selectedResourceIds,
+                deleteFiles,
               });
             },
           });

@@ -11,4 +11,6 @@ public record BulkModificationPatchInputModel
     public List<BulkModificationVariableInputModel>? Variables { get; set; }
     public ResourceSearchInputModel? Search { get; set; }
     public List<BulkModificationProcessInputModel>? Processes { get; set; }
+    public bool? DeleteResources { get; set; }
+    public bool? DeleteFiles { get; set; }
 }

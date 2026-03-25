@@ -3575,6 +3575,8 @@ export interface BakabaseServiceModelsInputBulkModificationPatchInputModel {
   variables?: BakabaseServiceModelsInputBulkModificationVariableInputModel[];
   search?: BakabaseServiceModelsInputResourceSearchInputModel;
   processes?: BakabaseServiceModelsInputBulkModificationProcessInputModel[];
+  deleteResources?: boolean;
+  deleteFiles?: boolean;
 }
 
 export interface BakabaseServiceModelsInputBulkModificationProcessInputModel {
@@ -3792,6 +3794,8 @@ export interface BakabaseServiceModelsViewBulkModificationViewModel {
   variables?: BakabaseServiceModelsViewBulkModificationVariableViewModel[];
   search?: BakabaseServiceModelsViewResourceSearchViewModel;
   processes?: BakabaseServiceModelsViewBulkModificationProcessViewModel[];
+  deleteResources: boolean;
+  deleteFiles: boolean;
   filteredResourceIds?: number[];
   /** @format date-time */
   appliedAt?: string;
@@ -11126,6 +11130,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     deleteResourcesByKeys: (
       query?: {
         ids?: number[];
+        deleteFiles?: boolean;
       },
       params: RequestParams = {},
     ) =>
@@ -11143,6 +11148,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     deleteResourcesByKeysUrl: (query?: {
         ids?: number[];
+        deleteFiles?: boolean;
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource/ids`;

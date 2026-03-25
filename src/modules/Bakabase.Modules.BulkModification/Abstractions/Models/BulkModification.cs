@@ -14,6 +14,8 @@ public record BulkModification
     /// </summary>
     public ResourceSearch? Search { get; set; }
     public List<BulkModificationProcess>? Processes { get; set; }
+    public bool DeleteResources { get; set; }
+    public bool DeleteFiles { get; set; }
     public List<int>? FilteredResourceIds { get; set; }
     public DateTime? AppliedAt { get; set; }
     public int ResourceDiffCount { get; set; }

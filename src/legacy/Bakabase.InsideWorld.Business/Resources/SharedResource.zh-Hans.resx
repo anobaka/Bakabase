@@ -681,6 +681,21 @@
   <data name="BTask_Description_ExtractDLsite" xml:space="preserve">
     <value>正在解压 DLsite 作品 {0}</value>
   </data>
+  <data name="BTask_Name_DownloadExternalCovers" xml:space="preserve">
+    <value>下载外部封面</value>
+  </data>
+  <data name="BTask_Description_DownloadExternalCovers" xml:space="preserve">
+    <value>正在从外部来源下载封面图片</value>
+  </data>
+  <data name="BTask_Name_SyncResources" xml:space="preserve">
+    <value>同步资源</value>
+  </data>
+  <data name="BTask_Description_SyncResources" xml:space="preserve">
+    <value>正在从文件系统同步资源</value>
+  </data>
+  <data name="BTask_MessageOnInterruption_SyncResources" xml:space="preserve">
+    <value>资源同步已中断</value>
+  </data>
   <data name="Dependency_NotInstalled_Message" xml:space="preserve">
     <value>{0} 尚未安装，请前往系统设置页面进行安装。</value>
   </data>
