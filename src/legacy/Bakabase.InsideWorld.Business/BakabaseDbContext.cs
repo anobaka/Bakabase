@@ -22,7 +22,6 @@ namespace Bakabase.InsideWorld.Business
     {
         public DbSet<SpecialText> SpecialTexts { get; set; }
         public DbSet<PlayListDbModel> Playlists { get; set; }
-        public DbSet<ComponentOptions> ComponentOptions { get; set; }
 
         public DbSet<DownloadTaskDbModel> DownloadTasks { get; set; }
 
@@ -33,7 +32,6 @@ namespace Bakabase.InsideWorld.Business
 
         public DbSet<CustomPropertyDbModel> CustomProperties { get; set; }
         public DbSet<CustomPropertyValueDbModel> CustomPropertyValues { get; set; }
-        public DbSet<CategoryCustomPropertyMapping> CategoryCustomPropertyMappings { get; set; }
 
         public DbSet<EnhancementDbModel> Enhancements { get; set; }
         public DbSet<EnhancementRecord> EnhancementRecords { get; set; }
@@ -112,11 +110,6 @@ namespace Bakabase.InsideWorld.Business
             {
                 t.HasIndex(a => a.LastUsedAt);
                 t.HasIndex(a => a.UsedTimes);
-            });
-
-            modelBuilder.Entity<CategoryCustomPropertyMapping>(t =>
-            {
-                t.HasIndex(x => new {x.CategoryId, x.PropertyId}).IsUnique();
             });
 
             modelBuilder.Entity<CustomPropertyDbModel>(t => { });

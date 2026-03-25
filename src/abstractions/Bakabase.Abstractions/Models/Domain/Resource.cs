@@ -1,7 +1,6 @@
 ﻿using Bakabase.InsideWorld.Models.Constants;
 using System.Collections.Frozen;
 using Bakabase.Abstractions.Extensions;
-using Bakabase.InsideWorld.Models.Extensions;
 using Bakabase.Abstractions.Models.Domain.Constants;
 
 namespace Bakabase.Abstractions.Models.Domain;

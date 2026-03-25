@@ -15,7 +15,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPropertyService, PropertyService>();
         services.AddScoped<ICustomPropertyService, CustomPropertyService<TDbContext>>();
         services.AddScoped<ICustomPropertyValueService, CustomPropertyValueService<TDbContext>>();
-        services.AddScoped<ICategoryCustomPropertyMappingService, CategoryCustomPropertyMappingService<TDbContext>>();
         services.AddTransient<IPropertyLocalizer, PropertyLocalizer>();
         services.AddScoped<IPropertyTypeConverter, PropertyTypeConverter>();
 

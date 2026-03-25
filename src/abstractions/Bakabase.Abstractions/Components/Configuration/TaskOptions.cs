@@ -1,5 +1,4 @@
 ﻿using Bakabase.Abstractions.Models.Db;
-using Bakabase.InsideWorld.Models.Configs.Infrastructures;
 using Bootstrap.Components.Configuration.Abstractions;
 
 namespace Bakabase.Abstractions.Components.Configuration;
