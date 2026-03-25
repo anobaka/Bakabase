@@ -7,7 +7,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Bakabase.Tests
 {
     [TestClass]
-    public class CompressedFileHelperV2Tests
+    public class CompressedFileHelperTests
     {
         private string _tempDir = null!;
 
@@ -41,7 +41,7 @@ namespace Bakabase.Tests
         public void SingleRarFile_ShouldBeGrouped()
         {
             var f = CreateFile("archive.rar");
-            var groups = CompressedFileHelperV2.DetectCompressedFileGroups(new[] { f });
+            var groups = CompressedFileHelper.DetectCompressedFileGroups(new[] { f });
             Assert.AreEqual(1, groups.Count);
             Assert.AreEqual(".rar", groups[0].Extension);
             Assert.AreEqual(1, groups[0].Files.Count);
@@ -56,7 +56,7 @@ namespace Bakabase.Tests
                 CreateFile("archive.r01"),
                 CreateFile("archive.r02")
             };
-            var groups = CompressedFileHelperV2.DetectCompressedFileGroups(files);
+            var groups = CompressedFileHelper.DetectCompressedFileGroups(files);
             Assert.AreEqual(1, groups.Count);
             Assert.AreEqual(3, groups[0].Files.Count);
         }
@@ -70,7 +70,7 @@ namespace Bakabase.Tests
                 CreateFile("backup.z01"),
                 CreateFile("backup.z02")
             };
-            var groups = CompressedFileHelperV2.DetectCompressedFileGroups(files);
+            var groups = CompressedFileHelper.DetectCompressedFileGroups(files);
             Assert.AreEqual(1, groups.Count);
             Assert.AreEqual(".zip", groups[0].Extension);
             Assert.AreEqual(3, groups[0].Files.Count);
@@ -80,7 +80,7 @@ namespace Bakabase.Tests
         public void TarGz_ShouldBeRecognizedAsCompoundExtension()
         {
             var f = CreateFile("archive.tar.gz");
-            var groups = CompressedFileHelperV2.DetectCompressedFileGroups(new[] { f });
+            var groups = CompressedFileHelper.DetectCompressedFileGroups(new[] { f });
             Assert.AreEqual(".tar.gz", groups[0].Extension);
         }
 
@@ -93,7 +93,7 @@ namespace Bakabase.Tests
                 CreateFile("archive.part1.tar.gz"),
                 CreateFile("archive.part2.tar.gz")
             };
-            var groups = CompressedFileHelperV2.DetectCompressedFileGroups(files);
+            var groups = CompressedFileHelper.DetectCompressedFileGroups(files);
             Assert.AreEqual(1, groups.Count);
             Assert.AreEqual(3, groups[0].Files.Count);
             Assert.AreEqual(".tar.gz", groups[0].Extension);
@@ -103,7 +103,7 @@ namespace Bakabase.Tests
         public void UnknownExtension_ShouldBeIgnored_WhenFlagTrue()
         {
             var f = CreateFile("mystery.abc");
-            var groups = CompressedFileHelperV2.DetectCompressedFileGroups(new[] { f }, ignoreUnknownExtensions: true);
+            var groups = CompressedFileHelper.DetectCompressedFileGroups(new[] { f }, ignoreUnknownExtensions: true);
             Assert.AreEqual(0, groups.Count);
         }
 
@@ -111,7 +111,7 @@ namespace Bakabase.Tests
         public void UnknownExtension_ShouldBeKept_WhenFlagFalse()
         {
             var f = CreateFile("mystery.abc");
-            var groups = CompressedFileHelperV2.DetectCompressedFileGroups(new[] { f }, ignoreUnknownExtensions: false);
+            var groups = CompressedFileHelper.DetectCompressedFileGroups(new[] { f }, ignoreUnknownExtensions: false);
             Assert.AreEqual(1, groups.Count);
             Assert.IsNull(groups[0].Extension);
         }
@@ -125,7 +125,7 @@ namespace Bakabase.Tests
                 CreateFile("archive.r01"),
                 CreateFile("mystery.abc")
             };
-            var groups = CompressedFileHelperV2.DetectCompressedFileGroups(files, ignoreUnknownExtensions: false);
+            var groups = CompressedFileHelper.DetectCompressedFileGroups(files, ignoreUnknownExtensions: false);
             Assert.AreEqual(2, groups.Count);
             Assert.IsTrue(groups.Any(g => g.Extension == ".rar"));
             Assert.IsTrue(groups.Any(g => g.Extension == null));
@@ -135,7 +135,7 @@ namespace Bakabase.Tests
         public void FileSizes_ShouldBeRecorded()
         {
             var f = CreateFile("archive.zip", "1234567890"); // 10 bytes
-            var groups = CompressedFileHelperV2.DetectCompressedFileGroups(new[] { f });
+            var groups = CompressedFileHelper.DetectCompressedFileGroups(new[] { f });
             Assert.AreEqual(10, groups[0].FileSizes[0]);
         }
 
@@ -149,7 +149,7 @@ namespace Bakabase.Tests
             var f2 = Path.Combine(dir2, "archive.rar");
             File.WriteAllText(f2, "data");
 
-            var groups = CompressedFileHelperV2.DetectCompressedFileGroups(new[] { f1, f2 });
+            var groups = CompressedFileHelper.DetectCompressedFileGroups(new[] { f1, f2 });
             Assert.AreEqual(2, groups.Count);
         }
 
@@ -162,7 +162,7 @@ namespace Bakabase.Tests
                 CreateFile("movie.part2.rar"),
                 CreateFile("movie.part3.rar")
             };
-            var groups = CompressedFileHelperV2.DetectCompressedFileGroups(files);
+            var groups = CompressedFileHelper.DetectCompressedFileGroups(files);
             Assert.AreEqual(1, groups.Count);
             Assert.AreEqual(3, groups[0].Files.Count);
         }
@@ -176,7 +176,7 @@ namespace Bakabase.Tests
                 CreateFile("dataset.tar.gz.002"),
                 CreateFile("dataset.tar.gz.003")
             };
-            var groups = CompressedFileHelperV2.DetectCompressedFileGroups(files, ignoreUnknownExtensions: false);
+            var groups = CompressedFileHelper.DetectCompressedFileGroups(files, ignoreUnknownExtensions: false);
             Assert.AreEqual(1, groups.Count);
             Assert.AreEqual(".tar.gz", groups[0].Extension);
             Assert.AreEqual(3, groups[0].Files.Count);
@@ -218,7 +218,7 @@ namespace Bakabase.Tests
                 CreateFile(Path.Combine("dir", "1.r04"))
             };
 
-            var groups = CompressedFileHelperV2.DetectCompressedFileGroups(files, false);
+            var groups = CompressedFileHelper.DetectCompressedFileGroups(files, false);
 
             var str = string.Join(Environment.NewLine,
                 groups.Select(g =>

@@ -129,7 +129,7 @@ namespace Bakabase.Service.Controllers
                         // .Where(f => f.Length >= thresholdBytes)
                         .Select(f => f.FullName).ToArray();
                     path += InternalOptions.DirSeparator;
-                    var groups = CompressedFileHelperV2.DetectCompressedFileGroups(files, !model.IncludeUnknownFiles);
+                    var groups = CompressedFileHelper.DetectCompressedFileGroups(files, !model.IncludeUnknownFiles);
                     foreach (var group in groups.Where(g => g.FileSizes.Sum() >= thresholdBytes))
                     {
                         var vm = group.ToViewModel();
@@ -156,7 +156,7 @@ namespace Bakabase.Service.Controllers
                 prevPath = path;
             }
 
-            var specifiedFileGroups = CompressedFileHelperV2.DetectCompressedFileGroups(specifiedFiles.ToArray(), model.IncludeUnknownFiles);
+            var specifiedFileGroups = CompressedFileHelper.DetectCompressedFileGroups(specifiedFiles.ToArray(), model.IncludeUnknownFiles);
             foreach (var group in specifiedFileGroups.Where(g => g.FileSizes.Sum() >= thresholdBytes))
             {
                 var vm = group.ToViewModel();
@@ -1437,7 +1437,7 @@ namespace Bakabase.Service.Controllers
                 var dirInfo = new DirectoryInfo(parent!);
                 if (dirInfo.Exists)
                 {
-                    var groups = CompressedFileHelperV2.DetectCompressedFileGroups(dirInfo.GetFiles().Select(t => t.FullName).ToArray())
+                    var groups = CompressedFileHelper.DetectCompressedFileGroups(dirInfo.GetFiles().Select(t => t.FullName).ToArray())
                         .Where(t => t.Files.Any(paths.Contains)).ToList();
                     var compressedFiles = groups.SelectMany(t => t.Files).ToArray();
                     var otherFiles = paths.Except(compressedFiles).ToArray();

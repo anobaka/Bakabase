@@ -8,7 +8,7 @@ using Bakabase.Abstractions.Components.Configuration;
 
 namespace Bakabase.InsideWorld.Business.Components.Compression
 {
-    public static class CompressedFileHelperV2
+    public static class CompressedFileHelper
     {
         private static readonly Regex PartPattern =
             new Regex(@"\.part(?<index>\d+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
