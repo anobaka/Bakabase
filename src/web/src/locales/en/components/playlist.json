@@ -1,3 +1,22 @@
 {
-  "playlist.label.unknownResource": "Unknown Resource"
+  "playlist.label.unknownResource": "Unknown Resource",
+  "playlist.label.noPlaylists": "No playlists found",
+  "playlist.label.createFirstHint": "Create your first playlist to get started",
+  "playlist.label.detailsOf": "Details of {{name}}",
+  "playlist.label.addItHere": "Add it here",
+  "playlist.label.noPlayableContents": "No playable contents",
+  "playlist.label.confirmDelete": "Sure to delete?",
+  "playlist.label.confirmDeleteMessage": "Are you sure you want to delete this playlist?",
+  "playlist.label.creating": "Creating playlist",
+  "playlist.label.name": "Playlist Name",
+  "playlist.label.enterName": "Enter playlist name",
+  "playlist.label.nameRequired": "Name can not be empty",
+  "playlist.action.create": "Create",
+  "playlist.label.loading": "Loading playlist...",
+  "playlist.label.notFound": "Playlist not found",
+  "playlist.label.dataEmpty": "Playlist data is empty",
+  "playlist.label.loadFailed": "Failed to load playlist",
+  "playlist.label.resourceFile": "Resource / File",
+  "playlist.label.duration": "Duration",
+  "playlist.label.interval": "Interval"
 }

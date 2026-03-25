@@ -1,3 +1,22 @@
 {
-  "playlist.label.unknownResource": "未知资源"
+  "playlist.label.unknownResource": "未知资源",
+  "playlist.label.noPlaylists": "暂无播放列表",
+  "playlist.label.createFirstHint": "创建您的第一个播放列表",
+  "playlist.label.detailsOf": "{{name}} 的详情",
+  "playlist.label.addItHere": "添加到此列表",
+  "playlist.label.noPlayableContents": "没有可播放的内容",
+  "playlist.label.confirmDelete": "确认删除？",
+  "playlist.label.confirmDeleteMessage": "确定要删除此播放列表吗？",
+  "playlist.label.creating": "创建播放列表",
+  "playlist.label.name": "播放列表名称",
+  "playlist.label.enterName": "输入播放列表名称",
+  "playlist.label.nameRequired": "名称不能为空",
+  "playlist.action.create": "创建",
+  "playlist.label.loading": "正在加载播放列表...",
+  "playlist.label.notFound": "未找到播放列表",
+  "playlist.label.dataEmpty": "播放列表数据为空",
+  "playlist.label.loadFailed": "加载播放列表失败",
+  "playlist.label.resourceFile": "资源 / 文件",
+  "playlist.label.duration": "时长",
+  "playlist.label.interval": "间隔"
 }
