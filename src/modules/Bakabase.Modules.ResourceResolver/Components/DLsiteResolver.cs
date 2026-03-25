@@ -186,10 +186,10 @@ public class DLsiteResolver : IResourceResolver
 
     public List<SourceMetadataFieldInfo> GetPredefinedMetadataFields() =>
     [
-        new("Name", StandardValueType.String),
-        new("Introduction", StandardValueType.String),
-        new("Rating", StandardValueType.Decimal),
-        new("CoverUrls", StandardValueType.ListString),
+        new(nameof(DLsiteMetadataField.Name), StandardValueType.String),
+        new(nameof(DLsiteMetadataField.Introduction), StandardValueType.String),
+        new(nameof(DLsiteMetadataField.Rating), StandardValueType.Decimal),
+        new(nameof(DLsiteMetadataField.CoverUrls), StandardValueType.ListString),
     ];
 
     public async Task<SourceDetailedMetadata?> FetchDetailedMetadataAsync(string sourceKey, CancellationToken ct)
@@ -203,10 +203,10 @@ public class DLsiteResolver : IResourceResolver
             CoverUrls = detail.CoverUrls?.ToList(),
             PredefinedFieldValues =
             {
-                ["Name"] = detail.Name,
-                ["Introduction"] = detail.Introduction,
-                ["Rating"] = detail.Rating,
-                ["CoverUrls"] = detail.CoverUrls?.ToList(),
+                [nameof(DLsiteMetadataField.Name)] = detail.Name,
+                [nameof(DLsiteMetadataField.Introduction)] = detail.Introduction,
+                [nameof(DLsiteMetadataField.Rating)] = detail.Rating,
+                [nameof(DLsiteMetadataField.CoverUrls)] = detail.CoverUrls?.ToList(),
             }
         };
 

@@ -222,18 +222,18 @@ public class SteamResolver : IResourceResolver
 
     public List<SourceMetadataFieldInfo> GetPredefinedMetadataFields() =>
     [
-        new("Name", StandardValueType.String),
-        new("Type", StandardValueType.String),
-        new("ShortDescription", StandardValueType.String),
-        new("DetailedDescription", StandardValueType.String),
-        new("HeaderImage", StandardValueType.String),
-        new("CapsuleImage", StandardValueType.String),
-        new("Developers", StandardValueType.ListString),
-        new("Publishers", StandardValueType.ListString),
-        new("Genres", StandardValueType.ListString),
-        new("Categories", StandardValueType.ListString),
-        new("MetacriticScore", StandardValueType.Decimal),
-        new("ReleaseDate", StandardValueType.String),
+        new(nameof(SteamMetadataField.Name), StandardValueType.String),
+        new(nameof(SteamMetadataField.Type), StandardValueType.String),
+        new(nameof(SteamMetadataField.ShortDescription), StandardValueType.String),
+        new(nameof(SteamMetadataField.DetailedDescription), StandardValueType.String),
+        new(nameof(SteamMetadataField.HeaderImage), StandardValueType.String),
+        new(nameof(SteamMetadataField.CapsuleImage), StandardValueType.String),
+        new(nameof(SteamMetadataField.Developers), StandardValueType.ListString),
+        new(nameof(SteamMetadataField.Publishers), StandardValueType.ListString),
+        new(nameof(SteamMetadataField.Genres), StandardValueType.ListString),
+        new(nameof(SteamMetadataField.Categories), StandardValueType.ListString),
+        new(nameof(SteamMetadataField.MetacriticScore), StandardValueType.Decimal),
+        new(nameof(SteamMetadataField.ReleaseDate), StandardValueType.String),
     ];
 
     public async Task<SourceDetailedMetadata?> FetchDetailedMetadataAsync(string sourceKey, CancellationToken ct)
@@ -243,24 +243,25 @@ public class SteamResolver : IResourceResolver
         var detail = await _steamClient.GetAppDetails(appId, ct: ct);
         if (detail == null) return null;
 
+        var f = typeof(SteamMetadataField);
         var result = new SourceDetailedMetadata
         {
             RawJson = JsonSerializer.Serialize(detail, JsonSerializerOptions.Web),
             CoverUrls = [detail.HeaderImage ?? $"https://cdn.akamai.steamstatic.com/steam/apps/{appId}/header.jpg"],
             PredefinedFieldValues =
             {
-                ["Name"] = detail.Name,
-                ["Type"] = detail.Type,
-                ["ShortDescription"] = detail.ShortDescription,
-                ["DetailedDescription"] = detail.DetailedDescription,
-                ["HeaderImage"] = detail.HeaderImage,
-                ["CapsuleImage"] = detail.CapsuleImage,
-                ["Developers"] = detail.Developers,
-                ["Publishers"] = detail.Publishers,
-                ["Genres"] = detail.Genres?.Select(g => g.Description).Where(d => d != null).ToList(),
-                ["Categories"] = detail.Categories?.Select(c => c.Description).Where(d => d != null).ToList(),
-                ["MetacriticScore"] = detail.Metacritic != null ? (decimal)detail.Metacritic.Score : null,
-                ["ReleaseDate"] = detail.ReleaseDate?.Date,
+                [nameof(SteamMetadataField.Name)] = detail.Name,
+                [nameof(SteamMetadataField.Type)] = detail.Type,
+                [nameof(SteamMetadataField.ShortDescription)] = detail.ShortDescription,
+                [nameof(SteamMetadataField.DetailedDescription)] = detail.DetailedDescription,
+                [nameof(SteamMetadataField.HeaderImage)] = detail.HeaderImage,
+                [nameof(SteamMetadataField.CapsuleImage)] = detail.CapsuleImage,
+                [nameof(SteamMetadataField.Developers)] = detail.Developers,
+                [nameof(SteamMetadataField.Publishers)] = detail.Publishers,
+                [nameof(SteamMetadataField.Genres)] = detail.Genres?.Select(g => g.Description).Where(d => d != null).ToList(),
+                [nameof(SteamMetadataField.Categories)] = detail.Categories?.Select(c => c.Description).Where(d => d != null).ToList(),
+                [nameof(SteamMetadataField.MetacriticScore)] = detail.Metacritic != null ? (decimal)detail.Metacritic.Score : null,
+                [nameof(SteamMetadataField.ReleaseDate)] = detail.ReleaseDate?.Date,
             }
         };
 

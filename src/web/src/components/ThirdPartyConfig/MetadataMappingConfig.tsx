@@ -6,7 +6,7 @@ import { Button, Chip, Divider, Input, Spinner } from "@heroui/react";
 import { AiOutlineDelete, AiOutlinePlus, AiOutlineSync } from "react-icons/ai";
 
 import { toast } from "@/components/bakaui";
-import { ResourceSource, type PropertyPool } from "@/sdk/constants";
+import { ResourceSource, ResourceSourceLabel, type PropertyPool } from "@/sdk/constants";
 import PropertySelector from "@/components/PropertySelector";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import BriefProperty from "@/components/Chips/Property/BriefProperty";
@@ -149,17 +149,30 @@ export default function MetadataMappingConfig({ source }: Props) {
     return <div className="flex justify-center py-4"><Spinner size="sm" /></div>;
   }
 
+  const sourceName = ResourceSourceLabel[source];
+
+  const getFieldDisplayName = (fieldName: string, isPredefined: boolean) => {
+    if (!isPredefined) return fieldName;
+    const key = `metadataField.${sourceName}.${fieldName}`;
+    const translated = t(key);
+    // If translation key not found, i18next returns the key itself
+    return translated !== key ? translated : fieldName;
+  };
+
   const renderMappingRow = (fieldName: string, isPredefined: boolean) => {
     const mapping = getMappingForField(fieldName);
     const cachedProp = properties[fieldName];
+    const displayName = getFieldDisplayName(fieldName, isPredefined);
 
     return (
       <div
         key={fieldName}
         className="flex items-center gap-2 border-small border-default-200 rounded-lg px-3 py-2"
       >
-        <code className={`text-xs px-2 py-1 rounded min-w-[100px] ${isPredefined ? "bg-primary-50 text-primary-700" : "bg-default-100"}`}>
-          {fieldName}
+        <code className={`text-xs px-2 py-1 rounded min-w-[100px] ${isPredefined ? "bg-primary-50 text-primary-700" : "bg-default-100"}`}
+          title={isPredefined && displayName !== fieldName ? fieldName : undefined}
+        >
+          {displayName}
         </code>
         <span className="text-default-400">&rarr;</span>
         <Button

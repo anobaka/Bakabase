@@ -153,14 +153,14 @@ public class ExHentaiResolver : IResourceResolver
 
     public List<SourceMetadataFieldInfo> GetPredefinedMetadataFields() =>
     [
-        new("Name", StandardValueType.String),
-        new("RawName", StandardValueType.String),
-        new("Introduction", StandardValueType.String),
-        new("Rate", StandardValueType.Decimal),
-        new("Category", StandardValueType.String),
-        new("CoverUrl", StandardValueType.String),
-        new("FileCount", StandardValueType.Decimal),
-        new("PageCount", StandardValueType.Decimal),
+        new(nameof(ExHentaiMetadataField.Name), StandardValueType.String),
+        new(nameof(ExHentaiMetadataField.RawName), StandardValueType.String),
+        new(nameof(ExHentaiMetadataField.Introduction), StandardValueType.String),
+        new(nameof(ExHentaiMetadataField.Rate), StandardValueType.Decimal),
+        new(nameof(ExHentaiMetadataField.Category), StandardValueType.String),
+        new(nameof(ExHentaiMetadataField.CoverUrl), StandardValueType.String),
+        new(nameof(ExHentaiMetadataField.FileCount), StandardValueType.Decimal),
+        new(nameof(ExHentaiMetadataField.PageCount), StandardValueType.Decimal),
     ];
 
     public async Task<SourceDetailedMetadata?> FetchDetailedMetadataAsync(string sourceKey, CancellationToken ct)
@@ -175,14 +175,14 @@ public class ExHentaiResolver : IResourceResolver
             CoverUrls = !string.IsNullOrEmpty(detail.CoverUrl) ? [detail.CoverUrl] : null,
             PredefinedFieldValues =
             {
-                ["Name"] = detail.Name,
-                ["RawName"] = detail.RawName,
-                ["Introduction"] = detail.Introduction,
-                ["Rate"] = detail.Rate != 0 ? detail.Rate : null,
-                ["Category"] = detail.Category.ToString(),
-                ["CoverUrl"] = detail.CoverUrl,
-                ["FileCount"] = (decimal)detail.FileCount,
-                ["PageCount"] = (decimal)detail.PageCount,
+                [nameof(ExHentaiMetadataField.Name)] = detail.Name,
+                [nameof(ExHentaiMetadataField.RawName)] = detail.RawName,
+                [nameof(ExHentaiMetadataField.Introduction)] = detail.Introduction,
+                [nameof(ExHentaiMetadataField.Rate)] = detail.Rate != 0 ? detail.Rate : null,
+                [nameof(ExHentaiMetadataField.Category)] = detail.Category.ToString(),
+                [nameof(ExHentaiMetadataField.CoverUrl)] = detail.CoverUrl,
+                [nameof(ExHentaiMetadataField.FileCount)] = (decimal)detail.FileCount,
+                [nameof(ExHentaiMetadataField.PageCount)] = (decimal)detail.PageCount,
             }
         };
 
