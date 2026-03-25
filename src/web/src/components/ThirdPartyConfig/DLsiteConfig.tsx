@@ -26,11 +26,10 @@ import MetadataMappingPanel from "./MetadataMappingPanel";
 import { LeStatusIndicator } from "@/pages/dlsite-works/components/LeStatusIndicator";
 
 interface DLsiteConfigProps {
-  isOpen: boolean;
-  onClose: () => void;
+  onDestroyed?: () => void;
 }
 
-export default function DLsiteConfig({ isOpen, onClose }: DLsiteConfigProps) {
+export default function DLsiteConfig({ onDestroyed }: DLsiteConfigProps) {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const options = useDLsiteOptionsStore((s) => s.data);
@@ -84,7 +83,7 @@ export default function DLsiteConfig({ isOpen, onClose }: DLsiteConfigProps) {
   };
 
   return (
-    <Modal isOpen={isOpen} scrollBehavior="inside" size="5xl" onOpenChange={(open) => { if (!open) onClose(); }}>
+    <Modal defaultOpen scrollBehavior="inside" size="5xl" onClose={onDestroyed}>
       <ModalContent>
         <ModalHeader>{t("resourceSource.dlsite.title")}</ModalHeader>
         <ModalBody className="pb-6">
@@ -98,7 +97,6 @@ export default function DLsiteConfig({ isOpen, onClose }: DLsiteConfigProps) {
             </Tab>
             <Tab key="localFiles" title={t("resourceSource.config.tab.localFiles")}>
               <div className="space-y-4">
-                {/* Download directory */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-medium">
@@ -117,7 +115,6 @@ export default function DLsiteConfig({ isOpen, onClose }: DLsiteConfigProps) {
 
                 <Divider />
 
-                {/* Delete archive after extraction */}
                 <Switch
                   isSelected={options?.deleteArchiveAfterExtraction ?? false}
                   size="sm"
@@ -130,7 +127,6 @@ export default function DLsiteConfig({ isOpen, onClose }: DLsiteConfigProps) {
 
                 <Divider />
 
-                {/* Scan folders */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-medium">

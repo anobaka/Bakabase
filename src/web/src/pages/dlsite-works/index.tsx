@@ -34,6 +34,7 @@ import BApi from "@/sdk/BApi";
 import { toast } from "@/components/bakaui";
 import { useDLsiteOptionsStore } from "@/stores/options";
 import { DLsiteConfig } from "@/components/ThirdPartyConfig";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { useBTasksStore } from "@/stores/bTasks";
 import { BTaskStatus } from "@/sdk/constants";
 
@@ -50,7 +51,7 @@ export default function DLsiteWorksPage() {
   const [loading, setLoading] = useState(true);
   const [keyword, setKeyword] = useState("");
   const [searchKeyword, setSearchKeyword] = useState("");
-  const [configOpen, setConfigOpen] = useState(false);
+  const { createPortal } = useBakabaseContext();
   const [showHidden, setShowHidden] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -139,7 +140,7 @@ export default function DLsiteWorksPage() {
 
   const handleScanFolders = async () => {
     if (!hasScanFolders) {
-      setConfigOpen(true);
+      createPortal(DLsiteConfig, {});
       return;
     }
     const rsp = await BApi.dlsiteWork.scanDLsiteFolders();
@@ -295,7 +296,7 @@ export default function DLsiteWorksPage() {
               size="sm"
               startContent={<AiOutlineFolderOpen className="text-lg" />}
               variant="flat"
-              onPress={() => setConfigOpen(true)}
+              onPress={() => createPortal(DLsiteConfig, {})}
             >
               {t("resourceSource.dlsite.action.setDownloadDir")}
             </Button>
@@ -312,14 +313,14 @@ export default function DLsiteWorksPage() {
             size="sm"
             startContent={<AiOutlineSetting className="text-lg" />}
             variant="flat"
-            onPress={() => setConfigOpen(true)}
+            onPress={() => createPortal(DLsiteConfig, {})}
           >
             {t("resourceSource.action.configure")}
           </Button>
         </div>
       </div>
 
-      {configOpen && <DLsiteConfig isOpen onClose={() => setConfigOpen(false)} />}
+
 
 
       {!isConfigured && works.length === 0 && !loading && (
@@ -329,7 +330,7 @@ export default function DLsiteWorksPage() {
           <Button
             color="primary"
             size="sm"
-            onPress={() => setConfigOpen(true)}
+            onPress={() => createPortal(DLsiteConfig, {})}
           >
             {t("resourceSource.notConfigured.goToConfigure")}
           </Button>

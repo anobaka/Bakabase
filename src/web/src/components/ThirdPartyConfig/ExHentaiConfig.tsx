@@ -11,11 +11,10 @@ import AccountsPanel, { type AccountField } from "./AccountsPanel";
 import MetadataMappingPanel from "./MetadataMappingPanel";
 
 interface ExHentaiConfigProps {
-  isOpen: boolean;
-  onClose: () => void;
+  onDestroyed?: () => void;
 }
 
-export default function ExHentaiConfig({ isOpen, onClose }: ExHentaiConfigProps) {
+export default function ExHentaiConfig({ onDestroyed }: ExHentaiConfigProps) {
   const { t } = useTranslation();
   const options = useExHentaiOptionsStore((s) => s.data);
   const patch = useExHentaiOptionsStore((s) => s.patch);
@@ -38,7 +37,7 @@ export default function ExHentaiConfig({ isOpen, onClose }: ExHentaiConfigProps)
   };
 
   return (
-    <Modal isOpen={isOpen} scrollBehavior="inside" size="5xl" onOpenChange={(open) => { if (!open) onClose(); }}>
+    <Modal defaultOpen scrollBehavior="inside" size="5xl" onClose={onDestroyed}>
       <ModalContent>
         <ModalHeader>{t("resourceSource.exhentai.title")}</ModalHeader>
         <ModalBody className="pb-6">

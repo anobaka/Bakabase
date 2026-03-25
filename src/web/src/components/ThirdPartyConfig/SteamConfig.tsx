@@ -12,11 +12,10 @@ import AccountsPanel, { type AccountField } from "./AccountsPanel";
 import MetadataMappingPanel from "./MetadataMappingPanel";
 
 interface SteamConfigProps {
-  isOpen: boolean;
-  onClose: () => void;
+  onDestroyed?: () => void;
 }
 
-export default function SteamConfig({ isOpen, onClose }: SteamConfigProps) {
+export default function SteamConfig({ onDestroyed }: SteamConfigProps) {
   const { t } = useTranslation();
   const steamOptions = useSteamOptionsStore((s) => s.data);
   const patch = useSteamOptionsStore((s) => s.patch);
@@ -49,7 +48,7 @@ export default function SteamConfig({ isOpen, onClose }: SteamConfigProps) {
   };
 
   return (
-    <Modal isOpen={isOpen} scrollBehavior="inside" size="5xl" onOpenChange={(open) => { if (!open) onClose(); }}>
+    <Modal defaultOpen scrollBehavior="inside" size="5xl" onClose={onDestroyed}>
       <ModalContent>
         <ModalHeader>{t("resourceSource.steam.title")}</ModalHeader>
         <ModalBody className="pb-6">

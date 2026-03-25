@@ -31,6 +31,7 @@ import BApi from "@/sdk/BApi";
 import { toast } from "@/components/bakaui";
 import { useExHentaiOptionsStore } from "@/stores/options";
 import { ExHentaiConfig } from "@/components/ThirdPartyConfig";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { useBTasksStore } from "@/stores/bTasks";
 import { BTaskStatus } from "@/sdk/constants";
 import ExHentaiTable from "./components/ExHentaiTable";
@@ -62,7 +63,7 @@ export default function ExHentaiGalleriesPage() {
   const [loading, setLoading] = useState(true);
   const [keyword, setKeyword] = useState("");
   const [searchKeyword, setSearchKeyword] = useState("");
-  const [configOpen, setConfigOpen] = useState(false);
+  const { createPortal } = useBakabaseContext();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [totalCount, setTotalCount] = useState(0);
@@ -214,14 +215,14 @@ export default function ExHentaiGalleriesPage() {
             size="sm"
             startContent={<AiOutlineSetting />}
             variant="flat"
-            onPress={() => setConfigOpen(true)}
+            onPress={() => createPortal(ExHentaiConfig, {})}
           >
             {t("resourceSource.action.configure")}
           </Button>
         </div>
       </div>
 
-      {configOpen && <ExHentaiConfig isOpen onClose={() => setConfigOpen(false)} />}
+
 
 
       {!isConfigured && galleries.length === 0 && !loading && (
@@ -231,7 +232,7 @@ export default function ExHentaiGalleriesPage() {
           <Button
             color="primary"
             size="sm"
-            onPress={() => setConfigOpen(true)}
+            onPress={() => createPortal(ExHentaiConfig, {})}
           >
             {t("resourceSource.notConfigured.goToConfigure")}
           </Button>

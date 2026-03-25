@@ -31,6 +31,7 @@ import BApi from "@/sdk/BApi";
 
 import { useSteamOptionsStore } from "@/stores/options";
 import { SteamConfig } from "@/components/ThirdPartyConfig";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { useBTasksStore } from "@/stores/bTasks";
 import { BTaskStatus } from "@/sdk/constants";
 import SteamTable from "./components/SteamTable";
@@ -62,7 +63,7 @@ export default function SteamAppsPage() {
   const [loading, setLoading] = useState(true);
   const [keyword, setKeyword] = useState("");
   const [searchKeyword, setSearchKeyword] = useState("");
-  const [configOpen, setConfigOpen] = useState(false);
+  const { createPortal } = useBakabaseContext();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [totalCount, setTotalCount] = useState(0);
@@ -198,14 +199,14 @@ export default function SteamAppsPage() {
             size="sm"
             startContent={<AiOutlineSetting />}
             variant="flat"
-            onPress={() => setConfigOpen(true)}
+            onPress={() => createPortal(SteamConfig, {})}
           >
             {t("resourceSource.action.configure")}
           </Button>
         </div>
       </div>
 
-      {configOpen && <SteamConfig isOpen onClose={() => setConfigOpen(false)} />}
+
 
 
       {!isConfigured && apps.length === 0 && !loading && (
@@ -215,7 +216,7 @@ export default function SteamAppsPage() {
           <Button
             color="primary"
             size="sm"
-            onPress={() => setConfigOpen(true)}
+            onPress={() => createPortal(SteamConfig, {})}
           >
             {t("resourceSource.notConfigured.goToConfigure")}
           </Button>
