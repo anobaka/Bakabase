@@ -160,7 +160,7 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
   // If aggregate is selected, show popover with all buttons (filtered by what's selected)
   // Otherwise, show individual buttons for selected operations
   if (showAggregate) {
-    const buttons = [];
+    let buttons = [];
 
     if (showPin) {
       buttons.push(
@@ -256,24 +256,9 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
       );
     }
 
-    if (hasCacheData) {
-      buttons.push(
-        <Button
-          key="refreshCache"
-          isIconOnly
-          size={"sm"}
-          title={t<string>("resource.action.refreshCache")}
-          isDisabled={refreshingCache}
-          onClick={handleRefreshCache}
-        >
-          {refreshingCache ? <LoadingOutlined className={"text-lg"} spin /> : <ReloadOutlined className={"text-lg"} />}
-        </Button>,
-      );
-    }
-
     // If no individual operations selected, show all buttons (default behavior)
     if (buttons.length === 0) {
-      buttons.push(
+      buttons = [
         <Button
           key="pin"
           isIconOnly
@@ -337,23 +322,26 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
         >
           <VideoCameraAddOutlined className={"text-lg"} />
         </Button>,
-      );
-
-      if (hasCacheData) {
-        buttons.push(
-          <Button
-            key="refreshCache"
-            isIconOnly
-            size={"sm"}
-            title={t<string>("resource.action.refreshCache")}
-            isDisabled={refreshingCache}
-            onClick={handleRefreshCache}
-          >
-            {refreshingCache ? <LoadingOutlined className={"text-lg"} spin /> : <ReloadOutlined className={"text-lg"} />}
-          </Button>,
-        );
-      }
+      ];
     }
+
+    // Always add refreshCache if applicable (not part of configurable operations)
+    if (hasCacheData) {
+      buttons.push(
+        <Button
+          key="refreshCache"
+          isIconOnly
+          size={"sm"}
+          title={t<string>("resource.action.refreshCache")}
+          isDisabled={refreshingCache}
+          onClick={handleRefreshCache}
+        >
+          {refreshingCache ? <LoadingOutlined className={"text-lg"} spin /> : <ReloadOutlined className={"text-lg"} />}
+        </Button>,
+      );
+    }
+
+    const cols = Math.min(buttons.length, 3);
 
     return (
       <Popover
@@ -367,7 +355,7 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
           </Button>
         }
       >
-        <div className={"grid grid-cols-3 gap-1 py-1 rounded"}>{buttons}</div>
+        <div className={`grid gap-1 py-1 rounded`} style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>{buttons}</div>
       </Popover>
     );
   }
