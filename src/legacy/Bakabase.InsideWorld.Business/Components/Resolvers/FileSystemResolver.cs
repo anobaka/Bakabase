@@ -17,7 +17,7 @@ using Bakabase.Abstractions.Services;
 using Microsoft.Extensions.Logging;
 using Resource = Bakabase.Abstractions.Models.Domain.Resource;
 
-namespace Bakabase.InsideWorld.Business.Components.ResourceResolver;
+namespace Bakabase.InsideWorld.Business.Components.Resolvers;
 
 /// <summary>
 /// FileSystem resolver that discovers resources from PathMark resource marks.

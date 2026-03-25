@@ -35,7 +35,7 @@ using Bakabase.Modules.Presets.Extensions;
 using Bakabase.Modules.Property.Extensions;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bakabase.Modules.Comparison.Extensions;
-using Bakabase.InsideWorld.Business.Components.ResourceResolver;
+using Bakabase.InsideWorld.Business.Components.Resolvers;
 using Bakabase.Modules.ThirdParty.Extensions;
 using Bakabase.Modules.ThirdParty.Services;
 using Bootstrap.Components.DependencyInjection;

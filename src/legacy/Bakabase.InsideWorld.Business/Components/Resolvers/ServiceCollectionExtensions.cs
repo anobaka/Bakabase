@@ -4,7 +4,7 @@ using System.Reflection;
 using Bakabase.Abstractions.Services;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Bakabase.InsideWorld.Business.Components.ResourceResolver;
+namespace Bakabase.InsideWorld.Business.Components.Resolvers;
 
 public static class ServiceCollectionExtensions
 {
