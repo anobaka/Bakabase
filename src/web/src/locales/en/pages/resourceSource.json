@@ -43,6 +43,7 @@
   "resourceSource.steam.label.account": "Account",
   "resourceSource.steam.playtimeHours": "{{hours}}h",
   "resourceSource.steam.config.apiKey": "Steam Web API Key",
+  "resourceSource.steam.config.getApiKey": "Get Steam API Key",
   "resourceSource.steam.config.steamId": "Steam ID",
 
   "resourceSource.dlsite.title": "DLsite Works",
@@ -117,7 +118,10 @@
   "resourceSource.pagination.pageSize": "Per page",
   "resourceSource.pagination.total": "{{total}} total",
 
-  "resourceSource.metadataMapping.settingsButton": "Metadata Sync Settings",
+  "resourceSource.config.tab.accounts": "Accounts",
+  "resourceSource.config.tab.localFiles": "Local Files",
+  "resourceSource.config.tab.metadataSync": "Metadata Sync",
+  "resourceSource.config.tab.localeEmulator": "Locale Emulator",
   "resourceSource.metadataMapping.title": "Metadata Mapping",
   "resourceSource.metadataMapping.description": "Configure how external source metadata fields map to resource properties. Supports dot-separated paths (e.g. release_date.date). Applied automatically after fetching details.",
   "resourceSource.metadataMapping.fieldPlaceholder": "Enter metadata field path (e.g. name, tags, metacritic.score)",

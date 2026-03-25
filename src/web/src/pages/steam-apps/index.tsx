@@ -31,9 +31,9 @@ import BApi from "@/sdk/BApi";
 
 import { useSteamOptionsStore } from "@/stores/options";
 import { SteamConfig } from "@/components/ThirdPartyConfig";
-import MetadataMappingModal from "@/components/ThirdPartyConfig/MetadataMappingModal";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { useBTasksStore } from "@/stores/bTasks";
-import { BTaskStatus, ResourceSource } from "@/sdk/constants";
+import { BTaskStatus } from "@/sdk/constants";
 import SteamTable from "./components/SteamTable";
 
 export interface SteamApp {
@@ -63,8 +63,7 @@ export default function SteamAppsPage() {
   const [loading, setLoading] = useState(true);
   const [keyword, setKeyword] = useState("");
   const [searchKeyword, setSearchKeyword] = useState("");
-  const [configOpen, setConfigOpen] = useState(false);
-  const [metadataMappingOpen, setMetadataMappingOpen] = useState(false);
+  const { createPortal } = useBakabaseContext();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [totalCount, setTotalCount] = useState(0);
@@ -198,24 +197,17 @@ export default function SteamAppsPage() {
           </Button>
           <Button
             size="sm"
-            variant="flat"
-            onPress={() => setMetadataMappingOpen(true)}
-          >
-            {t("resourceSource.metadataMapping.settingsButton")}
-          </Button>
-          <Button
-            size="sm"
             startContent={<AiOutlineSetting />}
             variant="flat"
-            onPress={() => setConfigOpen(true)}
+            onPress={() => createPortal(SteamConfig, {})}
           >
             {t("resourceSource.action.configure")}
           </Button>
         </div>
       </div>
 
-      <SteamConfig isOpen={configOpen} onClose={() => setConfigOpen(false)} />
-      <MetadataMappingModal source={ResourceSource.Steam} isOpen={metadataMappingOpen} onClose={() => setMetadataMappingOpen(false)} />
+
+
 
       {!isConfigured && apps.length === 0 && !loading && (
         <div className="flex flex-col items-center justify-center py-16 gap-4 text-default-500">
@@ -224,7 +216,7 @@ export default function SteamAppsPage() {
           <Button
             color="primary"
             size="sm"
-            onPress={() => setConfigOpen(true)}
+            onPress={() => createPortal(SteamConfig, {})}
           >
             {t("resourceSource.notConfigured.goToConfigure")}
           </Button>

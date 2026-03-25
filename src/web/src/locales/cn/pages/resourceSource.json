@@ -43,6 +43,7 @@
   "resourceSource.steam.label.account": "账号",
   "resourceSource.steam.playtimeHours": "{{hours}}小时",
   "resourceSource.steam.config.apiKey": "Steam Web API Key",
+  "resourceSource.steam.config.getApiKey": "获取 Steam API Key",
   "resourceSource.steam.config.steamId": "Steam ID",
 
   "resourceSource.dlsite.title": "DLsite 作品",
@@ -117,7 +118,10 @@
   "resourceSource.pagination.pageSize": "每页",
   "resourceSource.pagination.total": "共 {{total}} 条",
 
-  "resourceSource.metadataMapping.settingsButton": "元数据同步设置",
+  "resourceSource.config.tab.accounts": "账号配置",
+  "resourceSource.config.tab.localFiles": "本地文件",
+  "resourceSource.config.tab.metadataSync": "元数据同步",
+  "resourceSource.config.tab.localeEmulator": "Locale Emulator",
   "resourceSource.metadataMapping.title": "元数据映射",
   "resourceSource.metadataMapping.description": "配置外部源的元数据字段如何映射到资源属性。支持点分路径（如 release_date.date）。详细数据获取后将自动应用。",
   "resourceSource.metadataMapping.fieldPlaceholder": "输入元数据字段路径（如 name、tags、metacritic.score）",

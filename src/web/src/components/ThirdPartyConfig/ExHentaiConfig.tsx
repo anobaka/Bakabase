@@ -2,22 +2,19 @@
 
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { Modal, ModalContent, ModalHeader, ModalBody, Tab, Tabs } from "@heroui/react";
 
 import { toast } from "@/components/bakaui";
 import { useExHentaiOptionsStore } from "@/stores/options";
-import AccountsConfigModal, {
-  type AccountField,
-} from "./AccountsConfigModal";
+import { ResourceSource } from "@/sdk/constants";
+import AccountsPanel, { type AccountField } from "./AccountsPanel";
+import MetadataMappingPanel from "./MetadataMappingPanel";
 
 interface ExHentaiConfigProps {
-  isOpen: boolean;
-  onClose: () => void;
+  onDestroyed?: () => void;
 }
 
-export default function ExHentaiConfig({
-  isOpen,
-  onClose,
-}: ExHentaiConfigProps) {
+export default function ExHentaiConfig({ onDestroyed }: ExHentaiConfigProps) {
   const { t } = useTranslation();
   const options = useExHentaiOptionsStore((s) => s.data);
   const patch = useExHentaiOptionsStore((s) => s.patch);
@@ -40,13 +37,24 @@ export default function ExHentaiConfig({
   };
 
   return (
-    <AccountsConfigModal
-      accounts={options?.accounts || []}
-      fields={fields}
-      isOpen={isOpen}
-      platform="ExHentai"
-      onClose={onClose}
-      onSave={handleSave}
-    />
+    <Modal defaultOpen scrollBehavior="inside" size="5xl" onClose={onDestroyed}>
+      <ModalContent>
+        <ModalHeader>{t("resourceSource.exhentai.title")}</ModalHeader>
+        <ModalBody className="pb-6">
+          <Tabs isVertical classNames={{ panel: "flex-1 w-0" }}>
+            <Tab key="accounts" title={t("resourceSource.config.tab.accounts")}>
+              <AccountsPanel
+                accounts={options?.accounts || []}
+                fields={fields}
+                onSave={handleSave}
+              />
+            </Tab>
+            <Tab key="metadata" title={t("resourceSource.config.tab.metadataSync")}>
+              <MetadataMappingPanel source={ResourceSource.ExHentai} />
+            </Tab>
+          </Tabs>
+        </ModalBody>
+      </ModalContent>
+    </Modal>
   );
 }
