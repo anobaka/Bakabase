@@ -1,7 +1,7 @@
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 
-namespace Bakabase.Modules.ResourceResolver.Abstractions;
+namespace Bakabase.Abstractions.Services;
 
 /// <summary>
 /// Discovers and manages resources from a specific external source.

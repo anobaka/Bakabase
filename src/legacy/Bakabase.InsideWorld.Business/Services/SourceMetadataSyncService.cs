@@ -9,7 +9,6 @@ using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
 using Bakabase.Modules.Property.Abstractions.Services;
-using Bakabase.Modules.ResourceResolver.Abstractions;
 using Bakabase.Modules.StandardValue.Abstractions.Services;
 using Bakabase.Modules.StandardValue.Models.Domain;
 using Bootstrap.Components.DependencyInjection;

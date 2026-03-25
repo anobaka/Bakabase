@@ -1,7 +1,6 @@
-using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 
-namespace Bakabase.Modules.ResourceResolver.Abstractions;
+namespace Bakabase.Abstractions.Models.Domain;
 
 /// <summary>
 /// A resource discovered by a Resolver.

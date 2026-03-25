@@ -1,4 +1,4 @@
-namespace Bakabase.Modules.ResourceResolver.Components;
+namespace Bakabase.Modules.ThirdParty.Resolvers;
 
 public enum DLsiteMetadataField
 {

@@ -3,11 +3,10 @@ using System.Text.RegularExpressions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
-using Bakabase.Modules.ResourceResolver.Abstractions;
 using Bakabase.Modules.ThirdParty.ThirdParties.DLsite;
 using Microsoft.Extensions.Logging;
 
-namespace Bakabase.Modules.ResourceResolver.Components;
+namespace Bakabase.Modules.ThirdParty.Resolvers;
 
 /// <summary>
 /// Discovers DLsite works as resources.

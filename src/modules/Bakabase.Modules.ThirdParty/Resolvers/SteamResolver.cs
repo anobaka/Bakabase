@@ -2,11 +2,10 @@ using System.Text.Json;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
-using Bakabase.Modules.ResourceResolver.Abstractions;
 using Bakabase.Modules.ThirdParty.ThirdParties.Steam;
 using Microsoft.Extensions.Logging;
 
-namespace Bakabase.Modules.ResourceResolver.Components;
+namespace Bakabase.Modules.ThirdParty.Resolvers;
 
 /// <summary>
 /// Discovers Steam games as resources.

@@ -1,5 +1,5 @@
 using System.Reflection;
-using Bakabase.Modules.ResourceResolver.Abstractions;
+using Bakabase.Abstractions.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
