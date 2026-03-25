@@ -115,7 +115,7 @@ const PlayButton: React.FC<PlayControlPortalProps> = ({
       source,
       renderIcon: (cls) => renderSourceIcon(source, cls),
       onClick: () => onPlaySource(source),
-      tooltip: ResourceSourceLabel[source],
+      tooltip: t("resource.playControl.tooltip.launchAsSource", { source: ResourceSourceLabel[source] }),
     });
   }
 

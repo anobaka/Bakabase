@@ -141,5 +141,7 @@
   "resource.conflict.path": "路径",
   "resource.conflict.apply": "执行",
   "resource.conflict.mergeSuccess": "资源合并成功",
-  "resource.conflict.mergeFailed": "资源合并失败"
+  "resource.conflict.mergeFailed": "资源合并失败",
+
+  "resource.playControl.tooltip.launchAsSource": "作为{{source}}资源启动"
 }
