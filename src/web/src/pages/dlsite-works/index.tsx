@@ -281,26 +281,15 @@ export default function DLsiteWorksPage() {
               {t("resourceSource.dlsite.action.scanFolder")}
             </Button>
           )}
-          {hasDownloadDir ? (
-            <Button
-              size="sm"
-              startContent={<AiOutlineFolderOpen className="text-lg" />}
-              variant="flat"
-              onPress={handleOpenDownloadDir}
-            >
-              {t("resourceSource.dlsite.action.openDownloadDir")}
-            </Button>
-          ) : (
-            <Button
-              color="warning"
-              size="sm"
-              startContent={<AiOutlineFolderOpen className="text-lg" />}
-              variant="flat"
-              onPress={() => createPortal(DLsiteConfig, {})}
-            >
-              {t("resourceSource.dlsite.action.setDownloadDir")}
-            </Button>
-          )}
+          <Button
+            isDisabled={!hasDownloadDir}
+            size="sm"
+            startContent={<AiOutlineFolderOpen className="text-lg" />}
+            variant="flat"
+            onPress={handleOpenDownloadDir}
+          >
+            {t("resourceSource.dlsite.action.openDownloadDir")}
+          </Button>
           <Button
             size="sm"
             startContent={<AiOutlineReload className="text-lg" />}
