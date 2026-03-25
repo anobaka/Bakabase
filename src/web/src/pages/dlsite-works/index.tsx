@@ -34,8 +34,9 @@ import BApi from "@/sdk/BApi";
 import { toast } from "@/components/bakaui";
 import { useDLsiteOptionsStore } from "@/stores/options";
 import { DLsiteConfig } from "@/components/ThirdPartyConfig";
+import MetadataMappingModal from "@/components/ThirdPartyConfig/MetadataMappingModal";
 import { useBTasksStore } from "@/stores/bTasks";
-import { BTaskStatus } from "@/sdk/constants";
+import { BTaskStatus, ResourceSource } from "@/sdk/constants";
 
 import type { DLsiteWork } from "./types";
 import { SYNC_TASK_ID, DOWNLOAD_TASK_ID_PREFIX, EXTRACT_TASK_ID_PREFIX, SCAN_TASK_ID } from "./types";
@@ -51,6 +52,7 @@ export default function DLsiteWorksPage() {
   const [keyword, setKeyword] = useState("");
   const [searchKeyword, setSearchKeyword] = useState("");
   const [configOpen, setConfigOpen] = useState(false);
+  const [metadataMappingOpen, setMetadataMappingOpen] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -310,6 +312,13 @@ export default function DLsiteWorksPage() {
           </Button>
           <Button
             size="sm"
+            variant="flat"
+            onPress={() => setMetadataMappingOpen(true)}
+          >
+            {t("resourceSource.metadataMapping.settingsButton")}
+          </Button>
+          <Button
+            size="sm"
             startContent={<AiOutlineSetting className="text-lg" />}
             variant="flat"
             onPress={() => setConfigOpen(true)}
@@ -320,6 +329,7 @@ export default function DLsiteWorksPage() {
       </div>
 
       <DLsiteConfig isOpen={configOpen} onClose={() => setConfigOpen(false)} />
+      <MetadataMappingModal source={ResourceSource.DLsite} isOpen={metadataMappingOpen} onClose={() => setMetadataMappingOpen(false)} />
 
       {!isConfigured && works.length === 0 && !loading && (
         <div className="flex flex-col items-center justify-center py-16 gap-4 text-default-500">

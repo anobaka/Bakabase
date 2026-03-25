@@ -5,11 +5,9 @@ import { useTranslation } from "react-i18next";
 
 import { toast } from "@/components/bakaui";
 import { useExHentaiOptionsStore } from "@/stores/options";
-import { ResourceSource } from "@/sdk/constants";
 import AccountsConfigModal, {
   type AccountField,
 } from "./AccountsConfigModal";
-import MetadataMappingConfig from "./MetadataMappingConfig";
 
 interface ExHentaiConfigProps {
   isOpen: boolean;
@@ -44,7 +42,6 @@ export default function ExHentaiConfig({
   return (
     <AccountsConfigModal
       accounts={options?.accounts || []}
-      extraContent={<MetadataMappingConfig source={ResourceSource.ExHentai} />}
       fields={fields}
       isOpen={isOpen}
       platform="ExHentai"

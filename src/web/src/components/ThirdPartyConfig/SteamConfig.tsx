@@ -5,11 +5,9 @@ import { useTranslation } from "react-i18next";
 
 import { toast } from "@/components/bakaui";
 import { useSteamOptionsStore } from "@/stores/options";
-import { ResourceSource } from "@/sdk/constants";
 import AccountsConfigModal, {
   type AccountField,
 } from "./AccountsConfigModal";
-import MetadataMappingConfig from "./MetadataMappingConfig";
 
 interface SteamConfigProps {
   isOpen: boolean;
@@ -46,7 +44,6 @@ export default function SteamConfig({ isOpen, onClose }: SteamConfigProps) {
   return (
     <AccountsConfigModal
       accounts={steamOptions?.accounts || []}
-      extraContent={<MetadataMappingConfig source={ResourceSource.Steam} />}
       fields={fields}
       isOpen={isOpen}
       platform="Steam"
