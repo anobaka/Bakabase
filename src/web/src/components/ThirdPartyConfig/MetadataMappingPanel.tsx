@@ -7,14 +7,15 @@ import { AiOutlineDelete, AiOutlinePlus, AiOutlineSync } from "react-icons/ai";
 
 import { toast } from "@/components/bakaui";
 import {
+  PropertyPool,
   ResourceSource,
   ResourceSourceLabel,
-  type PropertyPool,
 } from "@/sdk/constants";
 import PropertySelector from "@/components/PropertySelector";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import BriefProperty from "@/components/Chips/Property/BriefProperty";
 import type { IProperty } from "@/components/Property/models";
+import BApi from "@/sdk/BApi";
 import envConfig from "@/config/env";
 
 type SourceMetadataMapping = {
@@ -59,12 +60,29 @@ export default function MetadataMappingPanel({ source }: Props) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [fieldsRes, mappingsRes] = await Promise.all([
+      const [fieldsRes, mappingsRes, reservedPropsRes, customPropsRes] = await Promise.all([
         fetchApi<any>(`/source/${source}/metadata-mapping/predefined-fields`),
         fetchApi<any>(`/source/${source}/metadata-mapping`),
+        BApi.property.getPropertiesByPool(PropertyPool.Reserved),
+        BApi.property.getPropertiesByPool(PropertyPool.Custom),
       ]);
       setPredefinedFields(fieldsRes?.data ?? []);
-      setMappings(mappingsRes?.data ?? []);
+      const loadedMappings: SourceMetadataMapping[] = mappingsRes?.data ?? [];
+      setMappings(loadedMappings);
+
+      // Build property lookup from loaded mappings
+      const allProps: IProperty[] = [
+        ...((reservedPropsRes?.data as any[]) ?? []),
+        ...((customPropsRes?.data as any[]) ?? []),
+      ];
+      const propMap: Record<string, IProperty> = {};
+      for (const m of loadedMappings) {
+        const found = allProps.find((p) => p.id === m.targetPropertyId && p.pool === m.targetPool);
+        if (found) {
+          propMap[m.metadataField] = found;
+        }
+      }
+      setProperties(propMap);
     } finally {
       setLoading(false);
     }

@@ -38,11 +38,11 @@ export default function ExHentaiConfig({ isOpen, onClose }: ExHentaiConfigProps)
   };
 
   return (
-    <Modal isOpen={isOpen} scrollBehavior="inside" size="5xl" onClose={onClose}>
+    <Modal isOpen={isOpen} scrollBehavior="inside" size="5xl" onOpenChange={(open) => { if (!open) onClose(); }}>
       <ModalContent>
         <ModalHeader>{t("resourceSource.exhentai.title")}</ModalHeader>
         <ModalBody className="pb-6">
-          <Tabs isVertical variant="underlined">
+          <Tabs isVertical classNames={{ panel: "flex-1 w-0" }}>
             <Tab key="accounts" title={t("resourceSource.config.tab.accounts")}>
               <AccountsPanel
                 accounts={options?.accounts || []}
