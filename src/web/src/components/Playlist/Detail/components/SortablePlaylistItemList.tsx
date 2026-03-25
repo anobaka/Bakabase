@@ -35,8 +35,8 @@ export default SortableContainer<SortablePlaylistItemListProps>(
         >
           <div className="w-8"></div>
           <div className="w-6"></div>
-          <div>{t<string>("Resource / File")}</div>
-          <div className="text-right">{t<string>("Duration")}</div>
+          <div>{t<string>("playlist.label.resourceFile")}</div>
+          <div className="text-right">{t<string>("playlist.label.duration")}</div>
           <div className="w-10"></div>
         </div>
         {/* Sortable Items */}

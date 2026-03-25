@@ -47,10 +47,10 @@ const Collection = ({ addingResourceId }: Props) => {
       {playlists.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-8 text-center">
           <div className="text-default-400 text-lg mb-2">
-            {t<string>("No playlists found")}
+            {t<string>("playlist.label.noPlaylists")}
           </div>
           <div className="text-default-300 text-sm">
-            {t<string>("Create your first playlist to get started")}
+            {t<string>("playlist.label.createFirstHint")}
           </div>
         </div>
       ) : (
@@ -67,7 +67,7 @@ const Collection = ({ addingResourceId }: Props) => {
                       onPress={() => {
                         const dialog = createPortal(Modal, {
                           defaultVisible: true,
-                          title: t<string>("Details of {{name}}", {
+                          title: t<string>("playlist.label.detailsOf", {
                             name: pl.name,
                           }),
                           size: "4xl",
@@ -114,7 +114,7 @@ const Collection = ({ addingResourceId }: Props) => {
                         }}
                       >
                         <AiOutlinePlusCircle className="text-lg" />
-                        {t<string>("Add it here")}
+                        {t<string>("playlist.label.addItHere")}
                       </Button>
                     )}
 
@@ -158,7 +158,7 @@ const Collection = ({ addingResourceId }: Props) => {
                                   persistent: true,
                                 });
                               } else {
-                                toast.danger(t<string>("No playable contents"));
+                                toast.danger(t<string>("playlist.label.noPlayableContents"));
                               }
                             }
                           });
@@ -176,9 +176,9 @@ const Collection = ({ addingResourceId }: Props) => {
                       onPress={() => {
                         createPortal(Modal, {
                           defaultVisible: true,
-                          title: t<string>("Sure to delete?"),
+                          title: t<string>("playlist.label.confirmDelete"),
                           children: t<string>(
-                            "Are you sure you want to delete this playlist?",
+                            "playlist.label.confirmDeleteMessage",
                           ),
                           onOk: () =>
                             BApi.playlist.deletePlaylist(pl.id).then((a) => {
@@ -213,11 +213,11 @@ const Collection = ({ addingResourceId }: Props) => {
 
             createPortal(Modal, {
               defaultVisible: true,
-              title: t<string>("Creating playlist"),
+              title: t<string>("playlist.label.creating"),
               children: (
                 <Input
-                  label={t<string>("Playlist Name")}
-                  placeholder={t<string>("Enter playlist name")}
+                  label={t<string>("playlist.label.name")}
+                  placeholder={t<string>("playlist.label.enterName")}
                   onValueChange={(v) => {
                     name = v;
                   }}
@@ -225,7 +225,7 @@ const Collection = ({ addingResourceId }: Props) => {
               ),
               onOk: async () => {
                 if (!name) {
-                  toast.danger(t<string>("Name can not be empty"));
+                  toast.danger(t<string>("playlist.label.nameRequired"));
                   throw new Error("Name can not be empty");
                 }
                 const a = await BApi.playlist.addPlaylist({
@@ -239,7 +239,7 @@ const Collection = ({ addingResourceId }: Props) => {
             });
           }}
         >
-          {t<string>("Create")}
+          {t<string>("playlist.action.create")}
         </Button>
       </div>
     </div>

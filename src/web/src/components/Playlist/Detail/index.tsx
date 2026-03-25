@@ -3,7 +3,6 @@
 import type { components } from "@/sdk/BApi2";
 
 import { useCallback, useEffect, useState } from "react";
-import i18n from "i18next";
 import { useTranslation } from "react-i18next";
 
 import { Input, NumberInput } from "@/components/bakaui";
@@ -41,7 +40,7 @@ const Detail = ({ id, onChange }: PlaylistDetailProps) => {
 
         if (!isMounted) return;
         if (!pl) {
-          setError("Playlist data is empty");
+          setError(t<string>("playlist.label.dataEmpty"));
 
           return;
         }
@@ -74,7 +73,7 @@ const Detail = ({ id, onChange }: PlaylistDetailProps) => {
       } catch (err) {
         if (!isMounted) return;
         setError(
-          err instanceof Error ? err.message : "Failed to load playlist",
+          err instanceof Error ? err.message : t<string>("playlist.label.loadFailed"),
         );
       } finally {
         if (isMounted) {
@@ -148,7 +147,7 @@ const Detail = ({ id, onChange }: PlaylistDetailProps) => {
     return (
       <div className="p-4">
         <div className="flex justify-center items-center py-5 text-gray-500">
-          Loading playlist...
+          {t<string>("playlist.label.loading")}
         </div>
       </div>
     );
@@ -158,7 +157,7 @@ const Detail = ({ id, onChange }: PlaylistDetailProps) => {
     return (
       <div className="p-4">
         <div className="flex justify-center items-center py-5 px-4 text-red-600 bg-red-50 rounded border border-red-200">
-          Error: {error}
+          {error}
         </div>
       </div>
     );
@@ -168,7 +167,7 @@ const Detail = ({ id, onChange }: PlaylistDetailProps) => {
     return (
       <div className="p-4">
         <div className="flex justify-center items-center py-5 px-4 text-red-600 bg-red-50 rounded border border-red-200">
-          Playlist not found
+          {t<string>("playlist.label.notFound")}
         </div>
       </div>
     );
@@ -179,15 +178,15 @@ const Detail = ({ id, onChange }: PlaylistDetailProps) => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
         <Input
           fullWidth={false}
-          label={t<string>("Name")}
+          label={t<string>("playlist.label.name")}
           size="sm"
           value={playlist.name || ""}
           onValueChange={handleNameChange}
         />
         <NumberInput
-          endContent={i18n.t<string>("ms")}
+          endContent={t<string>("ms")}
           fullWidth={false}
-          label={t<string>("Interval")}
+          label={t<string>("playlist.label.interval")}
           min={0}
           size="sm"
           value={playlist.interval || 0}

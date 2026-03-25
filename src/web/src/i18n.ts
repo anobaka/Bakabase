@@ -50,6 +50,7 @@ import enResourceComponent from "@/locales/en/components/resource.json";
 import enFloatingAssistant from "@/locales/en/components/floatingAssistant.json";
 import enCookieValidator from "@/locales/en/components/cookieValidator.json";
 import enFileSystemSelector from "@/locales/en/components/fileSystemSelector.json";
+import enPlaylist from "@/locales/en/components/playlist.json";
 
 // New modular imports - Chinese
 import cnCommon from "@/locales/cn/common.json";
@@ -100,6 +101,7 @@ import cnResourceComponent from "@/locales/cn/components/resource.json";
 import cnFloatingAssistant from "@/locales/cn/components/floatingAssistant.json";
 import cnCookieValidator from "@/locales/cn/components/cookieValidator.json";
 import cnFileSystemSelector from "@/locales/cn/components/fileSystemSelector.json";
+import cnPlaylist from "@/locales/cn/components/playlist.json";
 
 // Merge all English resources
 const enResources = {
@@ -149,6 +151,7 @@ const enResources = {
   ...enFloatingAssistant,
   ...enCookieValidator,
   ...enFileSystemSelector,
+  ...enPlaylist,
 };
 
 // Merge all Chinese resources
@@ -199,6 +202,7 @@ const cnResources = {
   ...cnFloatingAssistant,
   ...cnCookieValidator,
   ...cnFileSystemSelector,
+  ...cnPlaylist,
 };
 
 // 只初始化一次，防止热更新或多次 import 时重复初始化
