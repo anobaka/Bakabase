@@ -2,15 +2,15 @@
 
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-
+import { Modal, ModalContent, ModalHeader, ModalBody, Tab, Tabs } from "@heroui/react";
 import { FiExternalLink } from "react-icons/fi";
 import { Link } from "@heroui/react";
 
 import { toast } from "@/components/bakaui";
 import { useSteamOptionsStore } from "@/stores/options";
-import AccountsConfigModal, {
-  type AccountField,
-} from "./AccountsConfigModal";
+import { ResourceSource } from "@/sdk/constants";
+import AccountsPanel, { type AccountField } from "./AccountsPanel";
+import MetadataMappingPanel from "./MetadataMappingPanel";
 
 interface SteamConfigProps {
   isOpen: boolean;
@@ -57,13 +57,24 @@ export default function SteamConfig({ isOpen, onClose }: SteamConfigProps) {
   };
 
   return (
-    <AccountsConfigModal
-      accounts={steamOptions?.accounts || []}
-      fields={fields}
-      isOpen={isOpen}
-      platform="Steam"
-      onClose={onClose}
-      onSave={handleSave}
-    />
+    <Modal isOpen={isOpen} scrollBehavior="inside" size="5xl" onClose={onClose}>
+      <ModalContent>
+        <ModalHeader>{t("resourceSource.steam.title")}</ModalHeader>
+        <ModalBody className="pb-6">
+          <Tabs variant="underlined">
+            <Tab key="accounts" title={t("resourceSource.config.tab.accounts")}>
+              <AccountsPanel
+                accounts={steamOptions?.accounts || []}
+                fields={fields}
+                onSave={handleSave}
+              />
+            </Tab>
+            <Tab key="metadata" title={t("resourceSource.config.tab.metadataSync")}>
+              <MetadataMappingPanel source={ResourceSource.Steam} />
+            </Tab>
+          </Tabs>
+        </ModalBody>
+      </ModalContent>
+    </Modal>
   );
 }
