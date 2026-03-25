@@ -279,5 +279,12 @@
   "bulkModification.label.setValue": "Set value",
 
   "bulkModification.placeholder.inputKeyword": "Please input keyword",
-  "bulkModification.placeholder.inputRegex": "Please input a regular expression"
+  "bulkModification.placeholder.inputRegex": "Please input a regular expression",
+
+  "bulkModification.process.deleteResources": "Delete resource data",
+  "bulkModification.process.deleteResources.description": "When enabled, all filtered resource data will be deleted upon applying.",
+  "bulkModification.process.deleteFiles": "Also delete files",
+  "bulkModification.process.deleteDataOnlyWarning": "This operation only deletes resource data. If your resource markers and corresponding files still exist, the resources may reappear during the next resource marker sync.",
+  "bulkModification.diff.resourceWillBeDeleted": "Resource will be deleted",
+  "bulkModification.filter.noResults": "No resources matched the filter criteria"
 }

@@ -14,10 +14,11 @@ import VariableModal from "@/pages/bulk-modification/components/BulkModification
 
 type Props = {
   variables?: BulkModificationVariable[];
+  disabled?: boolean;
   onChange?: (variables: BulkModificationVariable[]) => void;
 };
 
-const Variables = ({ variables: propsVariable, onChange }: Props) => {
+const Variables = ({ variables: propsVariable, disabled, onChange }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
@@ -100,7 +101,7 @@ const Variables = ({ variables: propsVariable, onChange }: Props) => {
   };
 
   return (
-    <div className={"bulk-modification-variables"}>
+    <div className={`bulk-modification-variables ${disabled ? "opacity-50 pointer-events-none" : ""}`}>
       {variables.length > 0 && (
         <div className={"flex flex-wrap gap-2 mb-2"}>
           {variables.map((v, i) => (
@@ -108,23 +109,25 @@ const Variables = ({ variables: propsVariable, onChange }: Props) => {
           ))}
         </div>
       )}
-      <Button
-        color={"primary"}
-        size={"sm"}
-        variant={"ghost"}
-        onPress={() => {
-          createPortal(VariableModal, {
-            onChange: (v) => {
-              const nvs = [...variables, v];
+      {!disabled && (
+        <Button
+          color={"primary"}
+          size={"sm"}
+          variant={"ghost"}
+          onPress={() => {
+            createPortal(VariableModal, {
+              onChange: (v) => {
+                const nvs = [...variables, v];
 
-              setVariables(nvs);
-              onChange?.(nvs);
-            },
-          });
-        }}
-      >
-        {t<string>("common.action.add")}
-      </Button>
+                setVariables(nvs);
+                onChange?.(nvs);
+              },
+            });
+          }}
+        >
+          {t<string>("common.action.add")}
+        </Button>
+      )}
     </div>
   );
 };

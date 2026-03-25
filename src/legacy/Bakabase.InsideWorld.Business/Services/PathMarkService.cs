@@ -500,15 +500,23 @@ public class PathMarkService<TDbContext>(
         var dbModels = await orm.GetAll(m => idSet.Contains(m.Id));
         var now = DateTime.UtcNow;
 
+        // Skip marks that are pending deletion — resetting them to Pending
+        // would prevent them from being hard-deleted during sync.
+        var modelsToUpdate = new List<PathMarkDbModel>();
         foreach (var dbModel in dbModels)
         {
+            if (dbModel.SyncStatus == PathMarkSyncStatus.PendingDelete) continue;
             dbModel.SyncStatus = PathMarkSyncStatus.Pending;
             dbModel.SyncError = null;
             dbModel.UpdatedAt = now;
+            modelsToUpdate.Add(dbModel);
         }
 
-        await orm.UpdateRange(dbModels);
-        await NotifyPathMarkStatusChangeBatch(dbModels);
+        if (modelsToUpdate.Count > 0)
+        {
+            await orm.UpdateRange(modelsToUpdate);
+            await NotifyPathMarkStatusChangeBatch(modelsToUpdate);
+        }
     }
 
     public async Task<int> GetPendingCount()

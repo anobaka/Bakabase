@@ -14,6 +14,8 @@ namespace Bakabase.Modules.BulkModification.Models.Db
         /// </summary>
         public string? SearchJson { get; set; }
         public string? Processes { get; set; }
+        public bool DeleteResources { get; set; }
+        public bool DeleteFiles { get; set; }
         public string? Variables { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public string? FilteredResourceIds { get; set; }

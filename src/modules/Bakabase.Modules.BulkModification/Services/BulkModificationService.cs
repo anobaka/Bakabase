@@ -83,6 +83,8 @@ namespace Bakabase.Modules.BulkModification.Services
                 bm.Search = model.Search ?? bm.Search;
                 bm.Variables = model.Variables ?? bm.Variables;
                 bm.Processes = model.Processes ?? bm.Processes;
+                bm.DeleteResources = model.DeleteResources ?? bm.DeleteResources;
+                bm.DeleteFiles = model.DeleteFiles ?? bm.DeleteFiles;
                 await Put(bm);
             }
         }
@@ -122,12 +124,19 @@ namespace Bakabase.Modules.BulkModification.Services
             if (bm != null)
             {
                 bm.FilteredResourceIds ??= (await Filter(id)).ToList();
+
+                // DeleteResources mode doesn't need preview - it works directly from FilteredResourceIds
+                if (bm.DeleteResources)
+                {
+                    return;
+                }
+
                 var allDiffs = new List<BulkModificationDiff>();
+
                 if (bm.FilteredResourceIds!.Any() && bm.Processes?.Any() == true)
                 {
                     var resources =
                         await ResourceService.GetByKeys(bm.FilteredResourceIds.ToArray(), ResourceAdditionalItem.All);
-
                     var propertyMap = (await PropertyService.GetProperties(PropertyPool.All)).ToMap();
 
                     foreach (var resource in resources)
@@ -139,17 +148,20 @@ namespace Bakabase.Modules.BulkModification.Services
                             {
                                 var rp = resource.Properties?.GetValueOrDefault((int) v.PropertyPool)
                                     ?.GetValueOrDefault(v.PropertyId);
-                                var variableValue = rp?.Values?.FirstOrDefault(x => x.Scope == (int) v.Scope)?.BizValue;
+                                var variableValue =
+                                    rp?.Values?.FirstOrDefault(x => x.Scope == (int) v.Scope)?.BizValue;
                                 if (v.Preprocesses?.Any() == true)
                                 {
                                     foreach (var preprocess in v.Preprocesses)
                                     {
                                         var processor =
-                                            BulkModificationInternals.ProcessorMap[v.Property.Type.GetBizValueType()];
+                                            BulkModificationInternals.ProcessorMap[
+                                                v.Property.Type.GetBizValueType()];
                                         var options =
                                             preprocess.Options?.ConvertToProcessorOptions(variableMap, propertyMap,
                                                 localizer);
-                                        variableValue = processor.Process(variableValue, preprocess.Operation, options);
+                                        variableValue =
+                                            processor.Process(variableValue, preprocess.Operation, options);
                                     }
                                 }
 
@@ -178,7 +190,8 @@ namespace Bakabase.Modules.BulkModification.Services
                                 }
                             }
 
-                            copyProperties.SetPropertyBizValue(process.Property, newValue, PropertyValueScope.Manual);
+                            copyProperties.SetPropertyBizValue(process.Property, newValue,
+                                PropertyValueScope.Manual);
                         }
 
                         var diffs = resource.Properties.Compare(copyProperties);
@@ -247,64 +260,87 @@ namespace Bakabase.Modules.BulkModification.Services
                 throw new Exception("Can't operate on a bulk modification which is not applied yet.");
             }
 
+            if (bm.DeleteResources)
+            {
+                if (!apply)
+                {
+                    throw new Exception("Cannot revert a bulk modification that deleted resources.");
+                }
+
+                var resourceIds = bm.FilteredResourceIds?.ToArray() ?? [];
+                if (resourceIds.Length == 0)
+                {
+                    throw new Exception("No filtered resources found, please filter resources first.");
+                }
+
+                await ResourceService.DeleteByKeys(resourceIds, bm.DeleteFiles);
+
+                bm.AppliedAt = DateTime.Now;
+                await Put(bm);
+                return;
+            }
+
             if (bm.ResourceDiffCount == 0)
             {
                 throw new Exception("No resource diff is found, please calculate diffs first.");
             }
 
-            var dbBmDiffs = await diffOrm.GetAll(x => x.BulkModificationId == id);
-            var bmDiffs = await dbBmDiffs.ToDomainModels(PropertyService);
-            var resourceIds = dbBmDiffs.Select(r => r.ResourceId).ToList();
-            var resourcesMap =
-                (await ResourceService.GetByKeys(resourceIds.ToArray(), ResourceAdditionalItem.All)).ToDictionary(
-                    d => d.Id, d => d);
-            var propertyMap = await bmDiffs.PreparePropertyMap(PropertyService, true);
-
-            if (bmDiffs.Count != resourcesMap.Count)
             {
-                throw new Exception($"Some of resources do not exist anymore, please perform a preview again.");
-            }
+                var dbBmDiffs = await diffOrm.GetAll(x => x.BulkModificationId == id);
+                var bmDiffs = await dbBmDiffs.ToDomainModels(PropertyService);
+                var resourceIds = dbBmDiffs.Select(r => r.ResourceId).ToList();
+                var resourcesMap =
+                    (await ResourceService.GetByKeys(resourceIds.ToArray(), ResourceAdditionalItem.All)).ToDictionary(
+                        d => d.Id, d => d);
+                var propertyMap = await bmDiffs.PreparePropertyMap(PropertyService, true);
 
-            foreach (var bmDiff in bmDiffs)
-            {
-                var resource = resourcesMap[bmDiff.ResourceId];
-                if (bmDiff.Diffs.Any())
+                if (bmDiffs.Count != resourcesMap.Count)
                 {
-                    resource.Properties ??= [];
-                    foreach (var rDiff in bmDiff.Diffs)
+                    throw new Exception($"Some of resources do not exist anymore, please perform a preview again.");
+                }
+
+                foreach (var bmDiff in bmDiffs)
+                {
+                    var resource = resourcesMap[bmDiff.ResourceId];
+                    if (bmDiff.Diffs.Any())
                     {
-                        var property = propertyMap[rDiff.PropertyPool][rDiff.PropertyId];
-                        var currentValue = resource.Properties.GetPropertyBizValue(rDiff.PropertyPool, rDiff.PropertyId,
-                            PropertyValueScope.Manual)?.Value;
-
-                        var expectedValue = apply ? rDiff.Value1 : rDiff.Value2;
-
-                        var stdHandler = StandardValueSystem.GetHandler(property.Type.GetBizValueType());
-                        if (!stdHandler.Compare(currentValue, expectedValue))
+                        resource.Properties ??= [];
+                        foreach (var rDiff in bmDiff.Diffs)
                         {
-                            throw new Exception(
-                                $"Validation failed: Current value [{currentValue?.SerializeAsStandardValue(property.Type.GetBizValueType())}] of property {property.Name} of resource {resource.Path} does not match the expected value [{expectedValue?.SerializeAsStandardValue(property.Type.GetBizValueType())}]. Please perform a preview again.");
+                            var property = propertyMap[rDiff.PropertyPool][rDiff.PropertyId];
+                            var currentValue = resource.Properties.GetPropertyBizValue(rDiff.PropertyPool,
+                                rDiff.PropertyId,
+                                PropertyValueScope.Manual)?.Value;
+
+                            var expectedValue = apply ? rDiff.Value1 : rDiff.Value2;
+
+                            var stdHandler = StandardValueSystem.GetHandler(property.Type.GetBizValueType());
+                            if (!stdHandler.Compare(currentValue, expectedValue))
+                            {
+                                throw new Exception(
+                                    $"Validation failed: Current value [{currentValue?.SerializeAsStandardValue(property.Type.GetBizValueType())}] of property {property.Name} of resource {resource.Path} does not match the expected value [{expectedValue?.SerializeAsStandardValue(property.Type.GetBizValueType())}]. Please perform a preview again.");
+                            }
+
+                            var targetValue = apply ? rDiff.Value2 : rDiff.Value1;
+
+                            resource.Properties.SetPropertyBizValue(property, targetValue, PropertyValueScope.Manual);
                         }
-
-                        var targetValue = apply ? rDiff.Value2 : rDiff.Value1;
-
-                        resource.Properties.SetPropertyBizValue(property, targetValue, PropertyValueScope.Manual);
                     }
                 }
-            }
 
-            await ResourceService.AddOrPutRange(resourcesMap.Values.ToList());
+                await ResourceService.AddOrPutRange(resourcesMap.Values.ToList());
 
-            if (apply)
-            {
-                bm.AppliedAt = DateTime.Now;
-            }
-            else
-            {
-                bm.AppliedAt = null;
-            }
+                if (apply)
+                {
+                    bm.AppliedAt = DateTime.Now;
+                }
+                else
+                {
+                    bm.AppliedAt = null;
+                }
 
-            await Put(bm);
+                await Put(bm);
+            }
         }
     }
 }

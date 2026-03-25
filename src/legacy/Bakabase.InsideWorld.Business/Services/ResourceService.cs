@@ -143,8 +143,40 @@ namespace Bakabase.InsideWorld.Business.Services
 
         public BakabaseDbContext DbContext => _orm.DbContext;
 
-        public async Task DeleteByKeys(int[] ids)
+        public async Task DeleteByKeys(int[] ids, bool deleteFiles = false)
         {
+            if (deleteFiles)
+            {
+                var resources = await _orm.GetByKeys(ids);
+                foreach (var resource in resources)
+                {
+                    if (!string.IsNullOrEmpty(resource.Path))
+                    {
+                        try
+                        {
+                            if (resource.IsFile)
+                            {
+                                if (File.Exists(resource.Path))
+                                {
+                                    File.Delete(resource.Path);
+                                }
+                            }
+                            else
+                            {
+                                if (Directory.Exists(resource.Path))
+                                {
+                                    Directory.Delete(resource.Path, true);
+                                }
+                            }
+                        }
+                        catch (Exception)
+                        {
+                            // Best-effort file deletion: log and continue
+                        }
+                    }
+                }
+            }
+
             await DeleteRelatedData(ids.ToList());
             await _orm.RemoveByKeys(ids);
 

@@ -681,6 +681,21 @@ The version of lux is not limited.</value>
   <data name="BTask_Description_ExtractDLsite" xml:space="preserve">
     <value>Extracting DLsite work {0}</value>
   </data>
+  <data name="BTask_Name_DownloadExternalCovers" xml:space="preserve">
+    <value>Download External Covers</value>
+  </data>
+  <data name="BTask_Description_DownloadExternalCovers" xml:space="preserve">
+    <value>Downloading cover images from external sources</value>
+  </data>
+  <data name="BTask_Name_SyncResources" xml:space="preserve">
+    <value>Sync Resources</value>
+  </data>
+  <data name="BTask_Description_SyncResources" xml:space="preserve">
+    <value>Syncing resources from file system</value>
+  </data>
+  <data name="BTask_MessageOnInterruption_SyncResources" xml:space="preserve">
+    <value>Resource sync was interrupted</value>
+  </data>
   <data name="Dependency_NotInstalled_Message" xml:space="preserve">
     <value>{0} is not installed. Please install it in the system settings page.</value>
   </data>

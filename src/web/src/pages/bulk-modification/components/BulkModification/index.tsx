@@ -30,6 +30,8 @@ export type BulkModification = {
   variables?: BulkModificationVariable[];
   search?: SearchCriteria;
   processes?: BulkModificationProcess[];
+  deleteResources?: boolean;
+  deleteFiles?: boolean;
   filteredResourceIds?: number[];
   appliedAt?: string;
   resourceDiffCount: number;
@@ -126,7 +128,7 @@ const BulkModification = ({ bm, onChange }: Props) => {
                   });
                 }}
               >
-                {t<string>(bm.filteredResourceIds && bm.filteredResourceIds.length > 0
+                {t<string>(bm.filteredResourceIds
                   ? "bulkModification.action.refilter"
                   : "bulkModification.action.filter")}
               </Button>
@@ -146,6 +148,11 @@ const BulkModification = ({ bm, onChange }: Props) => {
                   })}
                 </Button>
               )}
+              {bm.filteredResourceIds && bm.filteredResourceIds.length === 0 && (
+                <span className="text-sm text-warning">
+                  {t<string>("bulkModification.filter.noResults")}
+                </span>
+              )}
             </div>
           </div>
         );
@@ -154,6 +161,7 @@ const BulkModification = ({ bm, onChange }: Props) => {
         return (
           <Variables
             variables={bm.variables}
+            disabled={bm.deleteResources}
             onChange={(vs) => {
               // Update local state immediately (avoid reload to prevent losing local data)
               onChange({ ...bm, variables: vs });
@@ -173,6 +181,8 @@ const BulkModification = ({ bm, onChange }: Props) => {
           <Processes
             processes={bm.processes}
             variables={bm.variables}
+            deleteResources={bm.deleteResources}
+            deleteFiles={bm.deleteFiles}
             onChange={(ps) => {
               // Update local state immediately (avoid reload to prevent losing local data)
               onChange({ ...bm, processes: ps });
@@ -184,10 +194,26 @@ const BulkModification = ({ bm, onChange }: Props) => {
                 })),
               });
             }}
+            onDeleteResourcesChange={(deleteResources, deleteFiles) => {
+              onChange({ ...bm, deleteResources, deleteFiles });
+              BApi.bulkModification.patchBulkModification(bm.id, {
+                deleteResources,
+                deleteFiles,
+              });
+            }}
           />
         );
 
       case "Changes":
+        if (bm.deleteResources) {
+          return (
+            <div className="text-sm text-default-400">
+              {bm.filteredResourceIds && bm.filteredResourceIds.length > 0
+                ? t<string>("bulkModification.diff.resourceWillBeDeleted") + ` (${bm.filteredResourceIds.length})`
+                : t<string>("bulkModification.tip.filters")}
+            </div>
+          );
+        }
         return (
           <div className="flex items-center gap-2">
             <Button
@@ -233,7 +259,11 @@ const BulkModification = ({ bm, onChange }: Props) => {
           <div className="flex items-center gap-2">
             <Button
               color="primary"
-              isDisabled={!bm.processes || bm.processes.length === 0 || bm.resourceDiffCount === 0}
+              isDisabled={
+                bm.deleteResources
+                  ? !bm.filteredResourceIds || bm.filteredResourceIds.length === 0
+                  : (!bm.processes || bm.processes.length === 0) || bm.resourceDiffCount === 0
+              }
               size="sm"
               onPress={() => {
                 createPortal(Modal, {
@@ -249,7 +279,7 @@ const BulkModification = ({ bm, onChange }: Props) => {
             >
               {t<string>("bulkModification.action.applyChanges")}
             </Button>
-            {bm.appliedAt && (
+            {bm.appliedAt && !bm.deleteResources && (
               <Button
                 color="warning"
                 size="sm"

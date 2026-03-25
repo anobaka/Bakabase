@@ -10,4 +10,6 @@ public record PatchBulkModification
     public List<BulkModificationVariable>? Variables { get; set; }
     public ResourceSearch? Search { get; set; }
     public List<BulkModificationProcess>? Processes { get; set; }
+    public bool? DeleteResources { get; set; }
+    public bool? DeleteFiles { get; set; }
 }

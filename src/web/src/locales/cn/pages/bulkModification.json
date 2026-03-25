@@ -279,5 +279,12 @@
   "bulkModification.label.setValue": "设置值",
 
   "bulkModification.placeholder.inputKeyword": "请输入关键词",
-  "bulkModification.placeholder.inputRegex": "请输入正则表达式"
+  "bulkModification.placeholder.inputRegex": "请输入正则表达式",
+
+  "bulkModification.process.deleteResources": "删除资源数据",
+  "bulkModification.process.deleteResources.description": "启用后，所有筛选出的资源数据将在应用时被删除。",
+  "bulkModification.process.deleteFiles": "同时删除文件",
+  "bulkModification.process.deleteDataOnlyWarning": "此操作仅删除资源数据，如果您的资源标记和对应的文件依旧存在，那资源可能依旧会在下次资源标记同步时出现。",
+  "bulkModification.diff.resourceWillBeDeleted": "资源将被删除",
+  "bulkModification.filter.noResults": "未筛选到任何资源"
 }
