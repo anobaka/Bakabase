@@ -22,6 +22,27 @@ export const CategoryResourceDisplayNameSegmentTypeLabel: Record<CategoryResourc
   [CategoryResourceDisplayNameSegmentType.RightWrapper]: 'RightWrapper'
 };
 
+export enum ResolverConfigFieldType {
+  String = 1,
+  Password = 2,
+  StringList = 3,
+  DirectoryList = 4
+}
+
+export const resolverConfigFieldTypes = [
+  { label: 'String', value: ResolverConfigFieldType.String },
+  { label: 'Password', value: ResolverConfigFieldType.Password },
+  { label: 'StringList', value: ResolverConfigFieldType.StringList },
+  { label: 'DirectoryList', value: ResolverConfigFieldType.DirectoryList }
+] as const;
+
+export const ResolverConfigFieldTypeLabel: Record<ResolverConfigFieldType, string> = {
+  [ResolverConfigFieldType.String]: 'String',
+  [ResolverConfigFieldType.Password]: 'Password',
+  [ResolverConfigFieldType.StringList]: 'StringList',
+  [ResolverConfigFieldType.DirectoryList]: 'DirectoryList'
+};
+
 export enum AppNotificationBehavior {
   AutoDismiss = 0,
   Persistent = 1
@@ -199,8 +220,6 @@ export enum InternalProperty {
   CreatedAt = 17,
   FileCreatedAt = 18,
   FileModifiedAt = 19,
-  Category = 20,
-  MediaLibrary = 21,
   PlayedAt = 23,
   MediaLibraryV2 = 24,
   MediaLibraryV2Multi = 25,
@@ -216,8 +235,6 @@ export const internalProperties = [
   { label: 'CreatedAt', value: InternalProperty.CreatedAt },
   { label: 'FileCreatedAt', value: InternalProperty.FileCreatedAt },
   { label: 'FileModifiedAt', value: InternalProperty.FileModifiedAt },
-  { label: 'Category', value: InternalProperty.Category },
-  { label: 'MediaLibrary', value: InternalProperty.MediaLibrary },
   { label: 'PlayedAt', value: InternalProperty.PlayedAt },
   { label: 'MediaLibraryV2', value: InternalProperty.MediaLibraryV2 },
   { label: 'MediaLibraryV2Multi', value: InternalProperty.MediaLibraryV2Multi },
@@ -233,8 +250,6 @@ export const InternalPropertyLabel: Record<InternalProperty, string> = {
   [InternalProperty.CreatedAt]: 'CreatedAt',
   [InternalProperty.FileCreatedAt]: 'FileCreatedAt',
   [InternalProperty.FileModifiedAt]: 'FileModifiedAt',
-  [InternalProperty.Category]: 'Category',
-  [InternalProperty.MediaLibrary]: 'MediaLibrary',
   [InternalProperty.PlayedAt]: 'PlayedAt',
   [InternalProperty.MediaLibraryV2]: 'MediaLibraryV2',
   [InternalProperty.MediaLibraryV2Multi]: 'MediaLibraryV2Multi',
@@ -621,23 +636,17 @@ export const ResourceStatusLabel: Record<ResourceStatus, string> = {
 
 export enum ResourceTag {
   IsParent = 1,
-  Pinned = 2,
-  PathDoesNotExist = 4,
-  UnknownMediaLibrary = 8
+  Pinned = 2
 }
 
 export const resourceTags = [
   { label: 'IsParent', value: ResourceTag.IsParent },
-  { label: 'Pinned', value: ResourceTag.Pinned },
-  { label: 'PathDoesNotExist', value: ResourceTag.PathDoesNotExist },
-  { label: 'UnknownMediaLibrary', value: ResourceTag.UnknownMediaLibrary }
+  { label: 'Pinned', value: ResourceTag.Pinned }
 ] as const;
 
 export const ResourceTagLabel: Record<ResourceTag, string> = {
   [ResourceTag.IsParent]: 'IsParent',
-  [ResourceTag.Pinned]: 'Pinned',
-  [ResourceTag.PathDoesNotExist]: 'PathDoesNotExist',
-  [ResourceTag.UnknownMediaLibrary]: 'UnknownMediaLibrary'
+  [ResourceTag.Pinned]: 'Pinned'
 };
 
 export enum RuleQueueAction {
@@ -926,834 +935,6 @@ export const BTaskTypeLabel: Record<BTaskType, string> = {
   [BTaskType.MoveResources]: 'MoveResources',
   [BTaskType.CopyFiles]: 'CopyFiles',
   [BTaskType.Any]: 'Any'
-};
-
-export enum CoverDiscoverResultType {
-  LocalFile = 1,
-  FromAdditionalSource = 2,
-  Icon = 3
-}
-
-export const coverDiscoverResultTypes = [
-  { label: 'LocalFile', value: CoverDiscoverResultType.LocalFile },
-  { label: 'FromAdditionalSource', value: CoverDiscoverResultType.FromAdditionalSource },
-  { label: 'Icon', value: CoverDiscoverResultType.Icon }
-] as const;
-
-export const CoverDiscoverResultTypeLabel: Record<CoverDiscoverResultType, string> = {
-  [CoverDiscoverResultType.LocalFile]: 'LocalFile',
-  [CoverDiscoverResultType.FromAdditionalSource]: 'FromAdditionalSource',
-  [CoverDiscoverResultType.Icon]: 'Icon'
-};
-
-export enum ResourceExistence {
-  Exist = 1,
-  Maybe = 2,
-  New = 3
-}
-
-export const resourceExistences = [
-  { label: 'Exist', value: ResourceExistence.Exist },
-  { label: 'Maybe', value: ResourceExistence.Maybe },
-  { label: 'New', value: ResourceExistence.New }
-] as const;
-
-export const ResourceExistenceLabel: Record<ResourceExistence, string> = {
-  [ResourceExistence.Exist]: 'Exist',
-  [ResourceExistence.Maybe]: 'Maybe',
-  [ResourceExistence.New]: 'New'
-};
-
-export enum AdditionalCoverDiscoveringSource {
-  CompressedFile = 1,
-  Video = 2
-}
-
-export const additionalCoverDiscoveringSources = [
-  { label: 'CompressedFile', value: AdditionalCoverDiscoveringSource.CompressedFile },
-  { label: 'Video', value: AdditionalCoverDiscoveringSource.Video }
-] as const;
-
-export const AdditionalCoverDiscoveringSourceLabel: Record<AdditionalCoverDiscoveringSource, string> = {
-  [AdditionalCoverDiscoveringSource.CompressedFile]: 'CompressedFile',
-  [AdditionalCoverDiscoveringSource.Video]: 'Video'
-};
-
-export enum BackgroundTaskStatus {
-  Running = 1,
-  Complete = 2,
-  Failed = 3
-}
-
-export const backgroundTaskStatuses = [
-  { label: 'Running', value: BackgroundTaskStatus.Running },
-  { label: 'Complete', value: BackgroundTaskStatus.Complete },
-  { label: 'Failed', value: BackgroundTaskStatus.Failed }
-] as const;
-
-export const BackgroundTaskStatusLabel: Record<BackgroundTaskStatus, string> = {
-  [BackgroundTaskStatus.Running]: 'Running',
-  [BackgroundTaskStatus.Complete]: 'Complete',
-  [BackgroundTaskStatus.Failed]: 'Failed'
-};
-
-export enum ComponentDescriptorType {
-  Invalid = 0,
-  Fixed = 1,
-  Configurable = 2,
-  Instance = 3
-}
-
-export const componentDescriptorTypes = [
-  { label: 'Invalid', value: ComponentDescriptorType.Invalid },
-  { label: 'Fixed', value: ComponentDescriptorType.Fixed },
-  { label: 'Configurable', value: ComponentDescriptorType.Configurable },
-  { label: 'Instance', value: ComponentDescriptorType.Instance }
-] as const;
-
-export const ComponentDescriptorTypeLabel: Record<ComponentDescriptorType, string> = {
-  [ComponentDescriptorType.Invalid]: 'Invalid',
-  [ComponentDescriptorType.Fixed]: 'Fixed',
-  [ComponentDescriptorType.Configurable]: 'Configurable',
-  [ComponentDescriptorType.Instance]: 'Instance'
-};
-
-export enum ComponentType {
-  Enhancer = 1,
-  PlayableFileSelector = 2,
-  Player = 3
-}
-
-export const componentTypes = [
-  { label: 'Enhancer', value: ComponentType.Enhancer },
-  { label: 'PlayableFileSelector', value: ComponentType.PlayableFileSelector },
-  { label: 'Player', value: ComponentType.Player }
-] as const;
-
-export const ComponentTypeLabel: Record<ComponentType, string> = {
-  [ComponentType.Enhancer]: 'Enhancer',
-  [ComponentType.PlayableFileSelector]: 'PlayableFileSelector',
-  [ComponentType.Player]: 'Player'
-};
-
-export enum CookieValidatorTarget {
-  BiliBili = 1,
-  ExHentai = 2,
-  Pixiv = 3,
-  DLsite = 6
-}
-
-export const cookieValidatorTargets = [
-  { label: 'BiliBili', value: CookieValidatorTarget.BiliBili },
-  { label: 'ExHentai', value: CookieValidatorTarget.ExHentai },
-  { label: 'Pixiv', value: CookieValidatorTarget.Pixiv },
-  { label: 'DLsite', value: CookieValidatorTarget.DLsite }
-] as const;
-
-export const CookieValidatorTargetLabel: Record<CookieValidatorTarget, string> = {
-  [CookieValidatorTarget.BiliBili]: 'BiliBili',
-  [CookieValidatorTarget.ExHentai]: 'ExHentai',
-  [CookieValidatorTarget.Pixiv]: 'Pixiv',
-  [CookieValidatorTarget.DLsite]: 'DLsite'
-};
-
-export enum CoverFit {
-  Contain = 1,
-  Cover = 2
-}
-
-export const coverFits = [
-  { label: 'Contain', value: CoverFit.Contain },
-  { label: 'Cover', value: CoverFit.Cover }
-] as const;
-
-export const CoverFitLabel: Record<CoverFit, string> = {
-  [CoverFit.Contain]: 'Contain',
-  [CoverFit.Cover]: 'Cover'
-};
-
-export enum CoverSaveMode {
-  Replace = 1,
-  Prepend = 2
-}
-
-export const coverSaveModes = [
-  { label: 'Replace', value: CoverSaveMode.Replace },
-  { label: 'Prepend', value: CoverSaveMode.Prepend }
-] as const;
-
-export const CoverSaveModeLabel: Record<CoverSaveMode, string> = {
-  [CoverSaveMode.Replace]: 'Replace',
-  [CoverSaveMode.Prepend]: 'Prepend'
-};
-
-export enum CoverSelectOrder {
-  FilenameAscending = 1,
-  FileModifyDtDescending = 2
-}
-
-export const coverSelectOrders = [
-  { label: 'FilenameAscending', value: CoverSelectOrder.FilenameAscending },
-  { label: 'FileModifyDtDescending', value: CoverSelectOrder.FileModifyDtDescending }
-] as const;
-
-export const CoverSelectOrderLabel: Record<CoverSelectOrder, string> = {
-  [CoverSelectOrder.FilenameAscending]: 'FilenameAscending',
-  [CoverSelectOrder.FileModifyDtDescending]: 'FileModifyDtDescending'
-};
-
-export enum CustomDataType {
-  String = 1,
-  DateTime = 2,
-  Number = 3,
-  Enum = 4
-}
-
-export const customDataTypes = [
-  { label: 'String', value: CustomDataType.String },
-  { label: 'DateTime', value: CustomDataType.DateTime },
-  { label: 'Number', value: CustomDataType.Number },
-  { label: 'Enum', value: CustomDataType.Enum }
-] as const;
-
-export const CustomDataTypeLabel: Record<CustomDataType, string> = {
-  [CustomDataType.String]: 'String',
-  [CustomDataType.DateTime]: 'DateTime',
-  [CustomDataType.Number]: 'Number',
-  [CustomDataType.Enum]: 'Enum'
-};
-
-export enum MatchResultType {
-  Layer = 1,
-  Regex = 2
-}
-
-export const matchResultTypes = [
-  { label: 'Layer', value: MatchResultType.Layer },
-  { label: 'Regex', value: MatchResultType.Regex }
-] as const;
-
-export const MatchResultTypeLabel: Record<MatchResultType, string> = {
-  [MatchResultType.Layer]: 'Layer',
-  [MatchResultType.Regex]: 'Regex'
-};
-
-export enum MediaLibraryFileSystemError {
-  InvalidVolume = 1,
-  FreeSpaceNotEnough = 2,
-  Occupied = 3
-}
-
-export const mediaLibraryFileSystemErrors = [
-  { label: 'InvalidVolume', value: MediaLibraryFileSystemError.InvalidVolume },
-  { label: 'FreeSpaceNotEnough', value: MediaLibraryFileSystemError.FreeSpaceNotEnough },
-  { label: 'Occupied', value: MediaLibraryFileSystemError.Occupied }
-] as const;
-
-export const MediaLibraryFileSystemErrorLabel: Record<MediaLibraryFileSystemError, string> = {
-  [MediaLibraryFileSystemError.InvalidVolume]: 'InvalidVolume',
-  [MediaLibraryFileSystemError.FreeSpaceNotEnough]: 'FreeSpaceNotEnough',
-  [MediaLibraryFileSystemError.Occupied]: 'Occupied'
-};
-
-export enum MediaLibrarySyncStep {
-  Filtering = 0,
-  AcquireFileSystemInfo = 1,
-  CleanResources = 2,
-  CompareResources = 3,
-  SaveResources = 4
-}
-
-export const mediaLibrarySyncSteps = [
-  { label: 'Filtering', value: MediaLibrarySyncStep.Filtering },
-  { label: 'AcquireFileSystemInfo', value: MediaLibrarySyncStep.AcquireFileSystemInfo },
-  { label: 'CleanResources', value: MediaLibrarySyncStep.CleanResources },
-  { label: 'CompareResources', value: MediaLibrarySyncStep.CompareResources },
-  { label: 'SaveResources', value: MediaLibrarySyncStep.SaveResources }
-] as const;
-
-export const MediaLibrarySyncStepLabel: Record<MediaLibrarySyncStep, string> = {
-  [MediaLibrarySyncStep.Filtering]: 'Filtering',
-  [MediaLibrarySyncStep.AcquireFileSystemInfo]: 'AcquireFileSystemInfo',
-  [MediaLibrarySyncStep.CleanResources]: 'CleanResources',
-  [MediaLibrarySyncStep.CompareResources]: 'CompareResources',
-  [MediaLibrarySyncStep.SaveResources]: 'SaveResources'
-};
-
-export enum MediaType {
-  Image = 1,
-  Audio = 2,
-  Video = 3,
-  Text = 4,
-  Application = 5,
-  Unknown = 1000
-}
-
-export const mediaTypes = [
-  { label: 'Image', value: MediaType.Image },
-  { label: 'Audio', value: MediaType.Audio },
-  { label: 'Video', value: MediaType.Video },
-  { label: 'Text', value: MediaType.Text },
-  { label: 'Application', value: MediaType.Application },
-  { label: 'Unknown', value: MediaType.Unknown }
-] as const;
-
-export const MediaTypeLabel: Record<MediaType, string> = {
-  [MediaType.Image]: 'Image',
-  [MediaType.Audio]: 'Audio',
-  [MediaType.Video]: 'Video',
-  [MediaType.Text]: 'Text',
-  [MediaType.Application]: 'Application',
-  [MediaType.Unknown]: 'Unknown'
-};
-
-export enum PlaylistItemType {
-  Resource = 1,
-  Video = 2,
-  Image = 3,
-  Audio = 4
-}
-
-export const playlistItemTypes = [
-  { label: 'Resource', value: PlaylistItemType.Resource },
-  { label: 'Video', value: PlaylistItemType.Video },
-  { label: 'Image', value: PlaylistItemType.Image },
-  { label: 'Audio', value: PlaylistItemType.Audio }
-] as const;
-
-export const PlaylistItemTypeLabel: Record<PlaylistItemType, string> = {
-  [PlaylistItemType.Resource]: 'Resource',
-  [PlaylistItemType.Video]: 'Video',
-  [PlaylistItemType.Image]: 'Image',
-  [PlaylistItemType.Audio]: 'Audio'
-};
-
-export enum ReservedResourceFileType {
-  Cover = 1
-}
-
-export const reservedResourceFileTypes = [
-  { label: 'Cover', value: ReservedResourceFileType.Cover }
-] as const;
-
-export const ReservedResourceFileTypeLabel: Record<ReservedResourceFileType, string> = {
-  [ReservedResourceFileType.Cover]: 'Cover'
-};
-
-export enum ResourceDiffProperty {
-  Category = 0,
-  MediaLibrary = 1,
-  ReleaseDt = 2,
-  Publisher = 3,
-  Name = 4,
-  Language = 5,
-  Volume = 6,
-  Original = 7,
-  Series = 8,
-  Tag = 9,
-  Introduction = 10,
-  Rate = 11,
-  CustomProperty = 12
-}
-
-export const resourceDiffProperties = [
-  { label: 'Category', value: ResourceDiffProperty.Category },
-  { label: 'MediaLibrary', value: ResourceDiffProperty.MediaLibrary },
-  { label: 'ReleaseDt', value: ResourceDiffProperty.ReleaseDt },
-  { label: 'Publisher', value: ResourceDiffProperty.Publisher },
-  { label: 'Name', value: ResourceDiffProperty.Name },
-  { label: 'Language', value: ResourceDiffProperty.Language },
-  { label: 'Volume', value: ResourceDiffProperty.Volume },
-  { label: 'Original', value: ResourceDiffProperty.Original },
-  { label: 'Series', value: ResourceDiffProperty.Series },
-  { label: 'Tag', value: ResourceDiffProperty.Tag },
-  { label: 'Introduction', value: ResourceDiffProperty.Introduction },
-  { label: 'Rate', value: ResourceDiffProperty.Rate },
-  { label: 'CustomProperty', value: ResourceDiffProperty.CustomProperty }
-] as const;
-
-export const ResourceDiffPropertyLabel: Record<ResourceDiffProperty, string> = {
-  [ResourceDiffProperty.Category]: 'Category',
-  [ResourceDiffProperty.MediaLibrary]: 'MediaLibrary',
-  [ResourceDiffProperty.ReleaseDt]: 'ReleaseDt',
-  [ResourceDiffProperty.Publisher]: 'Publisher',
-  [ResourceDiffProperty.Name]: 'Name',
-  [ResourceDiffProperty.Language]: 'Language',
-  [ResourceDiffProperty.Volume]: 'Volume',
-  [ResourceDiffProperty.Original]: 'Original',
-  [ResourceDiffProperty.Series]: 'Series',
-  [ResourceDiffProperty.Tag]: 'Tag',
-  [ResourceDiffProperty.Introduction]: 'Introduction',
-  [ResourceDiffProperty.Rate]: 'Rate',
-  [ResourceDiffProperty.CustomProperty]: 'CustomProperty'
-};
-
-export enum ResourceDiffType {
-  Added = 1,
-  Removed = 2,
-  Modified = 3
-}
-
-export const resourceDiffTypes = [
-  { label: 'Added', value: ResourceDiffType.Added },
-  { label: 'Removed', value: ResourceDiffType.Removed },
-  { label: 'Modified', value: ResourceDiffType.Modified }
-] as const;
-
-export const ResourceDiffTypeLabel: Record<ResourceDiffType, string> = {
-  [ResourceDiffType.Added]: 'Added',
-  [ResourceDiffType.Removed]: 'Removed',
-  [ResourceDiffType.Modified]: 'Modified'
-};
-
-export enum ResourceDisplayContent {
-  MediaLibrary = 1,
-  Category = 2,
-  Tags = 4,
-  AddedDate = 8,
-  UpdatedDate = 16,
-  FileCreatedDate = 32,
-  Default = 39,
-  FileModifiedDate = 64
-}
-
-export const resourceDisplayContents = [
-  { label: 'MediaLibrary', value: ResourceDisplayContent.MediaLibrary },
-  { label: 'Category', value: ResourceDisplayContent.Category },
-  { label: 'Tags', value: ResourceDisplayContent.Tags },
-  { label: 'AddedDate', value: ResourceDisplayContent.AddedDate },
-  { label: 'UpdatedDate', value: ResourceDisplayContent.UpdatedDate },
-  { label: 'FileCreatedDate', value: ResourceDisplayContent.FileCreatedDate },
-  { label: 'Default', value: ResourceDisplayContent.Default },
-  { label: 'FileModifiedDate', value: ResourceDisplayContent.FileModifiedDate }
-] as const;
-
-export const ResourceDisplayContentLabel: Record<ResourceDisplayContent, string> = {
-  [ResourceDisplayContent.MediaLibrary]: 'MediaLibrary',
-  [ResourceDisplayContent.Category]: 'Category',
-  [ResourceDisplayContent.Tags]: 'Tags',
-  [ResourceDisplayContent.AddedDate]: 'AddedDate',
-  [ResourceDisplayContent.UpdatedDate]: 'UpdatedDate',
-  [ResourceDisplayContent.FileCreatedDate]: 'FileCreatedDate',
-  [ResourceDisplayContent.Default]: 'Default',
-  [ResourceDisplayContent.FileModifiedDate]: 'FileModifiedDate'
-};
-
-export enum ResourceMatcherValueType {
-  Layer = 1,
-  Regex = 2,
-  FixedText = 3
-}
-
-export const resourceMatcherValueTypes = [
-  { label: 'Layer', value: ResourceMatcherValueType.Layer },
-  { label: 'Regex', value: ResourceMatcherValueType.Regex },
-  { label: 'FixedText', value: ResourceMatcherValueType.FixedText }
-] as const;
-
-export const ResourceMatcherValueTypeLabel: Record<ResourceMatcherValueType, string> = {
-  [ResourceMatcherValueType.Layer]: 'Layer',
-  [ResourceMatcherValueType.Regex]: 'Regex',
-  [ResourceMatcherValueType.FixedText]: 'FixedText'
-};
-
-export enum ResourceProperty {
-  RootPath = 1,
-  ParentResource = 2,
-  Resource = 3,
-  Introduction = 12,
-  Rating = 13,
-  CustomProperty = 14,
-  Filename = 15,
-  DirectoryPath = 16,
-  CreatedAt = 17,
-  FileCreatedAt = 18,
-  FileModifiedAt = 19,
-  Category = 20,
-  MediaLibrary = 21,
-  Cover = 22,
-  PlayedAt = 23,
-  MediaLibraryV2 = 24,
-  MediaLibraryV2Multi = 25,
-  Source = 26
-}
-
-export const resourceProperties = [
-  { label: 'RootPath', value: ResourceProperty.RootPath },
-  { label: 'ParentResource', value: ResourceProperty.ParentResource },
-  { label: 'Resource', value: ResourceProperty.Resource },
-  { label: 'Introduction', value: ResourceProperty.Introduction },
-  { label: 'Rating', value: ResourceProperty.Rating },
-  { label: 'CustomProperty', value: ResourceProperty.CustomProperty },
-  { label: 'Filename', value: ResourceProperty.Filename },
-  { label: 'DirectoryPath', value: ResourceProperty.DirectoryPath },
-  { label: 'CreatedAt', value: ResourceProperty.CreatedAt },
-  { label: 'FileCreatedAt', value: ResourceProperty.FileCreatedAt },
-  { label: 'FileModifiedAt', value: ResourceProperty.FileModifiedAt },
-  { label: 'Category', value: ResourceProperty.Category },
-  { label: 'MediaLibrary', value: ResourceProperty.MediaLibrary },
-  { label: 'Cover', value: ResourceProperty.Cover },
-  { label: 'PlayedAt', value: ResourceProperty.PlayedAt },
-  { label: 'MediaLibraryV2', value: ResourceProperty.MediaLibraryV2 },
-  { label: 'MediaLibraryV2Multi', value: ResourceProperty.MediaLibraryV2Multi },
-  { label: 'Source', value: ResourceProperty.Source }
-] as const;
-
-export const ResourcePropertyLabel: Record<ResourceProperty, string> = {
-  [ResourceProperty.RootPath]: 'RootPath',
-  [ResourceProperty.ParentResource]: 'ParentResource',
-  [ResourceProperty.Resource]: 'Resource',
-  [ResourceProperty.Introduction]: 'Introduction',
-  [ResourceProperty.Rating]: 'Rating',
-  [ResourceProperty.CustomProperty]: 'CustomProperty',
-  [ResourceProperty.Filename]: 'Filename',
-  [ResourceProperty.DirectoryPath]: 'DirectoryPath',
-  [ResourceProperty.CreatedAt]: 'CreatedAt',
-  [ResourceProperty.FileCreatedAt]: 'FileCreatedAt',
-  [ResourceProperty.FileModifiedAt]: 'FileModifiedAt',
-  [ResourceProperty.Category]: 'Category',
-  [ResourceProperty.MediaLibrary]: 'MediaLibrary',
-  [ResourceProperty.Cover]: 'Cover',
-  [ResourceProperty.PlayedAt]: 'PlayedAt',
-  [ResourceProperty.MediaLibraryV2]: 'MediaLibraryV2',
-  [ResourceProperty.MediaLibraryV2Multi]: 'MediaLibraryV2Multi',
-  [ResourceProperty.Source]: 'Source'
-};
-
-export enum ResourceTaskType {
-  Moving = 1
-}
-
-export const resourceTaskTypes = [
-  { label: 'Moving', value: ResourceTaskType.Moving }
-] as const;
-
-export const ResourceTaskTypeLabel: Record<ResourceTaskType, string> = {
-  [ResourceTaskType.Moving]: 'Moving'
-};
-
-export enum SearchableReservedProperty {
-  Introduction = 12,
-  Rating = 13,
-  FileName = 15,
-  DirectoryPath = 16,
-  CreatedAt = 17,
-  FileCreatedAt = 18,
-  FileModifiedAt = 19,
-  Category = 20,
-  MediaLibrary = 21,
-  Cover = 22,
-  MediaLibraryV2 = 24,
-  MediaLibraryV2Multi = 25,
-  Source = 26
-}
-
-export const searchableReservedProperties = [
-  { label: 'Introduction', value: SearchableReservedProperty.Introduction },
-  { label: 'Rating', value: SearchableReservedProperty.Rating },
-  { label: 'FileName', value: SearchableReservedProperty.FileName },
-  { label: 'DirectoryPath', value: SearchableReservedProperty.DirectoryPath },
-  { label: 'CreatedAt', value: SearchableReservedProperty.CreatedAt },
-  { label: 'FileCreatedAt', value: SearchableReservedProperty.FileCreatedAt },
-  { label: 'FileModifiedAt', value: SearchableReservedProperty.FileModifiedAt },
-  { label: 'Category', value: SearchableReservedProperty.Category },
-  { label: 'MediaLibrary', value: SearchableReservedProperty.MediaLibrary },
-  { label: 'Cover', value: SearchableReservedProperty.Cover },
-  { label: 'MediaLibraryV2', value: SearchableReservedProperty.MediaLibraryV2 },
-  { label: 'MediaLibraryV2Multi', value: SearchableReservedProperty.MediaLibraryV2Multi },
-  { label: 'Source', value: SearchableReservedProperty.Source }
-] as const;
-
-export const SearchableReservedPropertyLabel: Record<SearchableReservedProperty, string> = {
-  [SearchableReservedProperty.Introduction]: 'Introduction',
-  [SearchableReservedProperty.Rating]: 'Rating',
-  [SearchableReservedProperty.FileName]: 'FileName',
-  [SearchableReservedProperty.DirectoryPath]: 'DirectoryPath',
-  [SearchableReservedProperty.CreatedAt]: 'CreatedAt',
-  [SearchableReservedProperty.FileCreatedAt]: 'FileCreatedAt',
-  [SearchableReservedProperty.FileModifiedAt]: 'FileModifiedAt',
-  [SearchableReservedProperty.Category]: 'Category',
-  [SearchableReservedProperty.MediaLibrary]: 'MediaLibrary',
-  [SearchableReservedProperty.Cover]: 'Cover',
-  [SearchableReservedProperty.MediaLibraryV2]: 'MediaLibraryV2',
-  [SearchableReservedProperty.MediaLibraryV2Multi]: 'MediaLibraryV2Multi',
-  [SearchableReservedProperty.Source]: 'Source'
-};
-
-export enum StartupPage {
-  Default = 0,
-  Resource = 1
-}
-
-export const startupPages = [
-  { label: 'Default', value: StartupPage.Default },
-  { label: 'Resource', value: StartupPage.Resource }
-] as const;
-
-export const StartupPageLabel: Record<StartupPage, string> = {
-  [StartupPage.Default]: 'Default',
-  [StartupPage.Resource]: 'Resource'
-};
-
-export enum ThirdPartyId {
-  Bilibili = 1,
-  ExHentai = 2,
-  Pixiv = 3,
-  Bangumi = 4,
-  SoulPlus = 5,
-  DLsite = 6,
-  Fanbox = 7,
-  Fantia = 8,
-  Cien = 9,
-  Patreon = 10,
-  Tmdb = 11
-}
-
-export const thirdPartyIds = [
-  { label: 'Bilibili', value: ThirdPartyId.Bilibili },
-  { label: 'ExHentai', value: ThirdPartyId.ExHentai },
-  { label: 'Pixiv', value: ThirdPartyId.Pixiv },
-  { label: 'Bangumi', value: ThirdPartyId.Bangumi },
-  { label: 'SoulPlus', value: ThirdPartyId.SoulPlus },
-  { label: 'DLsite', value: ThirdPartyId.DLsite },
-  { label: 'Fanbox', value: ThirdPartyId.Fanbox },
-  { label: 'Fantia', value: ThirdPartyId.Fantia },
-  { label: 'Cien', value: ThirdPartyId.Cien },
-  { label: 'Patreon', value: ThirdPartyId.Patreon },
-  { label: 'Tmdb', value: ThirdPartyId.Tmdb }
-] as const;
-
-export const ThirdPartyIdLabel: Record<ThirdPartyId, string> = {
-  [ThirdPartyId.Bilibili]: 'Bilibili',
-  [ThirdPartyId.ExHentai]: 'ExHentai',
-  [ThirdPartyId.Pixiv]: 'Pixiv',
-  [ThirdPartyId.Bangumi]: 'Bangumi',
-  [ThirdPartyId.SoulPlus]: 'SoulPlus',
-  [ThirdPartyId.DLsite]: 'DLsite',
-  [ThirdPartyId.Fanbox]: 'Fanbox',
-  [ThirdPartyId.Fantia]: 'Fantia',
-  [ThirdPartyId.Cien]: 'Cien',
-  [ThirdPartyId.Patreon]: 'Patreon',
-  [ThirdPartyId.Tmdb]: 'Tmdb'
-};
-
-export enum PasswordSearchOrder {
-  Latest = 1,
-  Frequency = 2
-}
-
-export const passwordSearchOrders = [
-  { label: 'Latest', value: PasswordSearchOrder.Latest },
-  { label: 'Frequency', value: PasswordSearchOrder.Frequency }
-] as const;
-
-export const PasswordSearchOrderLabel: Record<PasswordSearchOrder, string> = {
-  [PasswordSearchOrder.Latest]: 'Latest',
-  [PasswordSearchOrder.Frequency]: 'Frequency'
-};
-
-export enum ResourceSearchSortableProperty {
-  FileCreateDt = 1,
-  FileModifyDt = 2,
-  Filename = 3,
-  AddDt = 6,
-  PlayedAt = 11
-}
-
-export const resourceSearchSortableProperties = [
-  { label: 'FileCreateDt', value: ResourceSearchSortableProperty.FileCreateDt },
-  { label: 'FileModifyDt', value: ResourceSearchSortableProperty.FileModifyDt },
-  { label: 'Filename', value: ResourceSearchSortableProperty.Filename },
-  { label: 'AddDt', value: ResourceSearchSortableProperty.AddDt },
-  { label: 'PlayedAt', value: ResourceSearchSortableProperty.PlayedAt }
-] as const;
-
-export const ResourceSearchSortablePropertyLabel: Record<ResourceSearchSortableProperty, string> = {
-  [ResourceSearchSortableProperty.FileCreateDt]: 'FileCreateDt',
-  [ResourceSearchSortableProperty.FileModifyDt]: 'FileModifyDt',
-  [ResourceSearchSortableProperty.Filename]: 'Filename',
-  [ResourceSearchSortableProperty.AddDt]: 'AddDt',
-  [ResourceSearchSortableProperty.PlayedAt]: 'PlayedAt'
-};
-
-export enum AliasAdditionalItem {
-  Candidates = 1
-}
-
-export const aliasAdditionalItems = [
-  { label: 'Candidates', value: AliasAdditionalItem.Candidates }
-] as const;
-
-export const AliasAdditionalItemLabel: Record<AliasAdditionalItem, string> = {
-  [AliasAdditionalItem.Candidates]: 'Candidates'
-};
-
-export enum CategoryAdditionalItem {
-  None = 0,
-  Components = 1,
-  Validation = 3,
-  CustomProperties = 4,
-  EnhancerOptions = 8
-}
-
-export const categoryAdditionalItems = [
-  { label: 'None', value: CategoryAdditionalItem.None },
-  { label: 'Components', value: CategoryAdditionalItem.Components },
-  { label: 'Validation', value: CategoryAdditionalItem.Validation },
-  { label: 'CustomProperties', value: CategoryAdditionalItem.CustomProperties },
-  { label: 'EnhancerOptions', value: CategoryAdditionalItem.EnhancerOptions }
-] as const;
-
-export const CategoryAdditionalItemLabel: Record<CategoryAdditionalItem, string> = {
-  [CategoryAdditionalItem.None]: 'None',
-  [CategoryAdditionalItem.Components]: 'Components',
-  [CategoryAdditionalItem.Validation]: 'Validation',
-  [CategoryAdditionalItem.CustomProperties]: 'CustomProperties',
-  [CategoryAdditionalItem.EnhancerOptions]: 'EnhancerOptions'
-};
-
-export enum ComponentDescriptorAdditionalItem {
-  None = 0,
-  AssociatedCategories = 1
-}
-
-export const componentDescriptorAdditionalItems = [
-  { label: 'None', value: ComponentDescriptorAdditionalItem.None },
-  { label: 'AssociatedCategories', value: ComponentDescriptorAdditionalItem.AssociatedCategories }
-] as const;
-
-export const ComponentDescriptorAdditionalItemLabel: Record<ComponentDescriptorAdditionalItem, string> = {
-  [ComponentDescriptorAdditionalItem.None]: 'None',
-  [ComponentDescriptorAdditionalItem.AssociatedCategories]: 'AssociatedCategories'
-};
-
-export enum CustomPropertyAdditionalItem {
-  None = 0,
-  Category = 1,
-  ValueCount = 2
-}
-
-export const customPropertyAdditionalItems = [
-  { label: 'None', value: CustomPropertyAdditionalItem.None },
-  { label: 'Category', value: CustomPropertyAdditionalItem.Category },
-  { label: 'ValueCount', value: CustomPropertyAdditionalItem.ValueCount }
-] as const;
-
-export const CustomPropertyAdditionalItemLabel: Record<CustomPropertyAdditionalItem, string> = {
-  [CustomPropertyAdditionalItem.None]: 'None',
-  [CustomPropertyAdditionalItem.Category]: 'Category',
-  [CustomPropertyAdditionalItem.ValueCount]: 'ValueCount'
-};
-
-export enum CustomPropertyValueAdditionalItem {
-  None = 0,
-  BizValue = 1
-}
-
-export const customPropertyValueAdditionalItems = [
-  { label: 'None', value: CustomPropertyValueAdditionalItem.None },
-  { label: 'BizValue', value: CustomPropertyValueAdditionalItem.BizValue }
-] as const;
-
-export const CustomPropertyValueAdditionalItemLabel: Record<CustomPropertyValueAdditionalItem, string> = {
-  [CustomPropertyValueAdditionalItem.None]: 'None',
-  [CustomPropertyValueAdditionalItem.BizValue]: 'BizValue'
-};
-
-export enum MediaLibraryAdditionalItem {
-  None = 0,
-  Category = 1,
-  FileSystemInfo = 2,
-  PathConfigurationBoundProperties = 4
-}
-
-export const mediaLibraryAdditionalItems = [
-  { label: 'None', value: MediaLibraryAdditionalItem.None },
-  { label: 'Category', value: MediaLibraryAdditionalItem.Category },
-  { label: 'FileSystemInfo', value: MediaLibraryAdditionalItem.FileSystemInfo },
-  { label: 'PathConfigurationBoundProperties', value: MediaLibraryAdditionalItem.PathConfigurationBoundProperties }
-] as const;
-
-export const MediaLibraryAdditionalItemLabel: Record<MediaLibraryAdditionalItem, string> = {
-  [MediaLibraryAdditionalItem.None]: 'None',
-  [MediaLibraryAdditionalItem.Category]: 'Category',
-  [MediaLibraryAdditionalItem.FileSystemInfo]: 'FileSystemInfo',
-  [MediaLibraryAdditionalItem.PathConfigurationBoundProperties]: 'PathConfigurationBoundProperties'
-};
-
-export enum ResourceAdditionalItem {
-  None = 0,
-  Properties = 32,
-  Alias = 64,
-  Category = 128,
-  DisplayName = 288,
-  HasChildren = 512,
-  MediaLibraryName = 2048,
-  Cache = 4096,
-  SourceLinks = 8192,
-  All = 15200
-}
-
-export const resourceAdditionalItems = [
-  { label: 'None', value: ResourceAdditionalItem.None },
-  { label: 'Properties', value: ResourceAdditionalItem.Properties },
-  { label: 'Alias', value: ResourceAdditionalItem.Alias },
-  { label: 'Category', value: ResourceAdditionalItem.Category },
-  { label: 'DisplayName', value: ResourceAdditionalItem.DisplayName },
-  { label: 'HasChildren', value: ResourceAdditionalItem.HasChildren },
-  { label: 'MediaLibraryName', value: ResourceAdditionalItem.MediaLibraryName },
-  { label: 'Cache', value: ResourceAdditionalItem.Cache },
-  { label: 'SourceLinks', value: ResourceAdditionalItem.SourceLinks },
-  { label: 'All', value: ResourceAdditionalItem.All }
-] as const;
-
-export const ResourceAdditionalItemLabel: Record<ResourceAdditionalItem, string> = {
-  [ResourceAdditionalItem.None]: 'None',
-  [ResourceAdditionalItem.Properties]: 'Properties',
-  [ResourceAdditionalItem.Alias]: 'Alias',
-  [ResourceAdditionalItem.Category]: 'Category',
-  [ResourceAdditionalItem.DisplayName]: 'DisplayName',
-  [ResourceAdditionalItem.HasChildren]: 'HasChildren',
-  [ResourceAdditionalItem.MediaLibraryName]: 'MediaLibraryName',
-  [ResourceAdditionalItem.Cache]: 'Cache',
-  [ResourceAdditionalItem.SourceLinks]: 'SourceLinks',
-  [ResourceAdditionalItem.All]: 'All'
-};
-
-export enum TagAdditionalItem {
-  None = 0,
-  GroupName = 1,
-  PreferredAlias = 2
-}
-
-export const tagAdditionalItems = [
-  { label: 'None', value: TagAdditionalItem.None },
-  { label: 'GroupName', value: TagAdditionalItem.GroupName },
-  { label: 'PreferredAlias', value: TagAdditionalItem.PreferredAlias }
-] as const;
-
-export const TagAdditionalItemLabel: Record<TagAdditionalItem, string> = {
-  [TagAdditionalItem.None]: 'None',
-  [TagAdditionalItem.GroupName]: 'GroupName',
-  [TagAdditionalItem.PreferredAlias]: 'PreferredAlias'
-};
-
-export enum TagGroupAdditionalItem {
-  Tags = 1,
-  PreferredAlias = 2,
-  TagNamePreferredAlias = 4
-}
-
-export const tagGroupAdditionalItems = [
-  { label: 'Tags', value: TagGroupAdditionalItem.Tags },
-  { label: 'PreferredAlias', value: TagGroupAdditionalItem.PreferredAlias },
-  { label: 'TagNamePreferredAlias', value: TagGroupAdditionalItem.TagNamePreferredAlias }
-] as const;
-
-export const TagGroupAdditionalItemLabel: Record<TagGroupAdditionalItem, string> = {
-  [TagGroupAdditionalItem.Tags]: 'Tags',
-  [TagGroupAdditionalItem.PreferredAlias]: 'PreferredAlias',
-  [TagGroupAdditionalItem.TagNamePreferredAlias]: 'TagNamePreferredAlias'
 };
 
 export enum ComparisonMode {
@@ -2090,6 +1271,453 @@ export const AdbInternalErrorLabel: Record<AdbInternalError, string> = {
   [AdbInternalError.INSTALL_FAILED_ALREADY_EXISTS]: 'INSTALL_FAILED_ALREADY_EXISTS',
   [AdbInternalError.DELETE_FAILED_INTERNAL_ERROR]: 'DELETE_FAILED_INTERNAL_ERROR',
   [AdbInternalError.FailedToConnectDevice]: 'FailedToConnectDevice'
+};
+
+export enum AdditionalCoverDiscoveringSource {
+  CompressedFile = 1,
+  Video = 2
+}
+
+export const additionalCoverDiscoveringSources = [
+  { label: 'CompressedFile', value: AdditionalCoverDiscoveringSource.CompressedFile },
+  { label: 'Video', value: AdditionalCoverDiscoveringSource.Video }
+] as const;
+
+export const AdditionalCoverDiscoveringSourceLabel: Record<AdditionalCoverDiscoveringSource, string> = {
+  [AdditionalCoverDiscoveringSource.CompressedFile]: 'CompressedFile',
+  [AdditionalCoverDiscoveringSource.Video]: 'Video'
+};
+
+export enum CookieValidatorTarget {
+  BiliBili = 1,
+  ExHentai = 2,
+  Pixiv = 3,
+  DLsite = 6
+}
+
+export const cookieValidatorTargets = [
+  { label: 'BiliBili', value: CookieValidatorTarget.BiliBili },
+  { label: 'ExHentai', value: CookieValidatorTarget.ExHentai },
+  { label: 'Pixiv', value: CookieValidatorTarget.Pixiv },
+  { label: 'DLsite', value: CookieValidatorTarget.DLsite }
+] as const;
+
+export const CookieValidatorTargetLabel: Record<CookieValidatorTarget, string> = {
+  [CookieValidatorTarget.BiliBili]: 'BiliBili',
+  [CookieValidatorTarget.ExHentai]: 'ExHentai',
+  [CookieValidatorTarget.Pixiv]: 'Pixiv',
+  [CookieValidatorTarget.DLsite]: 'DLsite'
+};
+
+export enum CoverFit {
+  Contain = 1,
+  Cover = 2
+}
+
+export const coverFits = [
+  { label: 'Contain', value: CoverFit.Contain },
+  { label: 'Cover', value: CoverFit.Cover }
+] as const;
+
+export const CoverFitLabel: Record<CoverFit, string> = {
+  [CoverFit.Contain]: 'Contain',
+  [CoverFit.Cover]: 'Cover'
+};
+
+export enum CoverSaveMode {
+  Replace = 1,
+  Prepend = 2
+}
+
+export const coverSaveModes = [
+  { label: 'Replace', value: CoverSaveMode.Replace },
+  { label: 'Prepend', value: CoverSaveMode.Prepend }
+] as const;
+
+export const CoverSaveModeLabel: Record<CoverSaveMode, string> = {
+  [CoverSaveMode.Replace]: 'Replace',
+  [CoverSaveMode.Prepend]: 'Prepend'
+};
+
+export enum CoverSelectOrder {
+  FilenameAscending = 1,
+  FileModifyDtDescending = 2
+}
+
+export const coverSelectOrders = [
+  { label: 'FilenameAscending', value: CoverSelectOrder.FilenameAscending },
+  { label: 'FileModifyDtDescending', value: CoverSelectOrder.FileModifyDtDescending }
+] as const;
+
+export const CoverSelectOrderLabel: Record<CoverSelectOrder, string> = {
+  [CoverSelectOrder.FilenameAscending]: 'FilenameAscending',
+  [CoverSelectOrder.FileModifyDtDescending]: 'FileModifyDtDescending'
+};
+
+export enum MatchResultType {
+  Layer = 1,
+  Regex = 2
+}
+
+export const matchResultTypes = [
+  { label: 'Layer', value: MatchResultType.Layer },
+  { label: 'Regex', value: MatchResultType.Regex }
+] as const;
+
+export const MatchResultTypeLabel: Record<MatchResultType, string> = {
+  [MatchResultType.Layer]: 'Layer',
+  [MatchResultType.Regex]: 'Regex'
+};
+
+export enum MediaLibrarySyncStep {
+  Filtering = 0,
+  AcquireFileSystemInfo = 1,
+  CleanResources = 2,
+  CompareResources = 3,
+  SaveResources = 4
+}
+
+export const mediaLibrarySyncSteps = [
+  { label: 'Filtering', value: MediaLibrarySyncStep.Filtering },
+  { label: 'AcquireFileSystemInfo', value: MediaLibrarySyncStep.AcquireFileSystemInfo },
+  { label: 'CleanResources', value: MediaLibrarySyncStep.CleanResources },
+  { label: 'CompareResources', value: MediaLibrarySyncStep.CompareResources },
+  { label: 'SaveResources', value: MediaLibrarySyncStep.SaveResources }
+] as const;
+
+export const MediaLibrarySyncStepLabel: Record<MediaLibrarySyncStep, string> = {
+  [MediaLibrarySyncStep.Filtering]: 'Filtering',
+  [MediaLibrarySyncStep.AcquireFileSystemInfo]: 'AcquireFileSystemInfo',
+  [MediaLibrarySyncStep.CleanResources]: 'CleanResources',
+  [MediaLibrarySyncStep.CompareResources]: 'CompareResources',
+  [MediaLibrarySyncStep.SaveResources]: 'SaveResources'
+};
+
+export enum MediaType {
+  Image = 1,
+  Audio = 2,
+  Video = 3,
+  Text = 4,
+  Application = 5,
+  Unknown = 1000
+}
+
+export const mediaTypes = [
+  { label: 'Image', value: MediaType.Image },
+  { label: 'Audio', value: MediaType.Audio },
+  { label: 'Video', value: MediaType.Video },
+  { label: 'Text', value: MediaType.Text },
+  { label: 'Application', value: MediaType.Application },
+  { label: 'Unknown', value: MediaType.Unknown }
+] as const;
+
+export const MediaTypeLabel: Record<MediaType, string> = {
+  [MediaType.Image]: 'Image',
+  [MediaType.Audio]: 'Audio',
+  [MediaType.Video]: 'Video',
+  [MediaType.Text]: 'Text',
+  [MediaType.Application]: 'Application',
+  [MediaType.Unknown]: 'Unknown'
+};
+
+export enum PlaylistItemType {
+  Resource = 1,
+  Video = 2,
+  Image = 3,
+  Audio = 4
+}
+
+export const playlistItemTypes = [
+  { label: 'Resource', value: PlaylistItemType.Resource },
+  { label: 'Video', value: PlaylistItemType.Video },
+  { label: 'Image', value: PlaylistItemType.Image },
+  { label: 'Audio', value: PlaylistItemType.Audio }
+] as const;
+
+export const PlaylistItemTypeLabel: Record<PlaylistItemType, string> = {
+  [PlaylistItemType.Resource]: 'Resource',
+  [PlaylistItemType.Video]: 'Video',
+  [PlaylistItemType.Image]: 'Image',
+  [PlaylistItemType.Audio]: 'Audio'
+};
+
+export enum ResourceMatcherValueType {
+  Layer = 1,
+  Regex = 2,
+  FixedText = 3
+}
+
+export const resourceMatcherValueTypes = [
+  { label: 'Layer', value: ResourceMatcherValueType.Layer },
+  { label: 'Regex', value: ResourceMatcherValueType.Regex },
+  { label: 'FixedText', value: ResourceMatcherValueType.FixedText }
+] as const;
+
+export const ResourceMatcherValueTypeLabel: Record<ResourceMatcherValueType, string> = {
+  [ResourceMatcherValueType.Layer]: 'Layer',
+  [ResourceMatcherValueType.Regex]: 'Regex',
+  [ResourceMatcherValueType.FixedText]: 'FixedText'
+};
+
+export enum ResourceProperty {
+  RootPath = 1,
+  ParentResource = 2,
+  Resource = 3,
+  Introduction = 12,
+  Rating = 13,
+  CustomProperty = 14,
+  Filename = 15,
+  DirectoryPath = 16,
+  CreatedAt = 17,
+  FileCreatedAt = 18,
+  FileModifiedAt = 19,
+  Cover = 22,
+  PlayedAt = 23,
+  MediaLibraryV2 = 24,
+  MediaLibraryV2Multi = 25,
+  Source = 26
+}
+
+export const resourceProperties = [
+  { label: 'RootPath', value: ResourceProperty.RootPath },
+  { label: 'ParentResource', value: ResourceProperty.ParentResource },
+  { label: 'Resource', value: ResourceProperty.Resource },
+  { label: 'Introduction', value: ResourceProperty.Introduction },
+  { label: 'Rating', value: ResourceProperty.Rating },
+  { label: 'CustomProperty', value: ResourceProperty.CustomProperty },
+  { label: 'Filename', value: ResourceProperty.Filename },
+  { label: 'DirectoryPath', value: ResourceProperty.DirectoryPath },
+  { label: 'CreatedAt', value: ResourceProperty.CreatedAt },
+  { label: 'FileCreatedAt', value: ResourceProperty.FileCreatedAt },
+  { label: 'FileModifiedAt', value: ResourceProperty.FileModifiedAt },
+  { label: 'Cover', value: ResourceProperty.Cover },
+  { label: 'PlayedAt', value: ResourceProperty.PlayedAt },
+  { label: 'MediaLibraryV2', value: ResourceProperty.MediaLibraryV2 },
+  { label: 'MediaLibraryV2Multi', value: ResourceProperty.MediaLibraryV2Multi },
+  { label: 'Source', value: ResourceProperty.Source }
+] as const;
+
+export const ResourcePropertyLabel: Record<ResourceProperty, string> = {
+  [ResourceProperty.RootPath]: 'RootPath',
+  [ResourceProperty.ParentResource]: 'ParentResource',
+  [ResourceProperty.Resource]: 'Resource',
+  [ResourceProperty.Introduction]: 'Introduction',
+  [ResourceProperty.Rating]: 'Rating',
+  [ResourceProperty.CustomProperty]: 'CustomProperty',
+  [ResourceProperty.Filename]: 'Filename',
+  [ResourceProperty.DirectoryPath]: 'DirectoryPath',
+  [ResourceProperty.CreatedAt]: 'CreatedAt',
+  [ResourceProperty.FileCreatedAt]: 'FileCreatedAt',
+  [ResourceProperty.FileModifiedAt]: 'FileModifiedAt',
+  [ResourceProperty.Cover]: 'Cover',
+  [ResourceProperty.PlayedAt]: 'PlayedAt',
+  [ResourceProperty.MediaLibraryV2]: 'MediaLibraryV2',
+  [ResourceProperty.MediaLibraryV2Multi]: 'MediaLibraryV2Multi',
+  [ResourceProperty.Source]: 'Source'
+};
+
+export enum SearchableReservedProperty {
+  Introduction = 12,
+  Rating = 13,
+  FileName = 15,
+  DirectoryPath = 16,
+  CreatedAt = 17,
+  FileCreatedAt = 18,
+  FileModifiedAt = 19,
+  Cover = 22,
+  MediaLibraryV2 = 24,
+  MediaLibraryV2Multi = 25,
+  Source = 26
+}
+
+export const searchableReservedProperties = [
+  { label: 'Introduction', value: SearchableReservedProperty.Introduction },
+  { label: 'Rating', value: SearchableReservedProperty.Rating },
+  { label: 'FileName', value: SearchableReservedProperty.FileName },
+  { label: 'DirectoryPath', value: SearchableReservedProperty.DirectoryPath },
+  { label: 'CreatedAt', value: SearchableReservedProperty.CreatedAt },
+  { label: 'FileCreatedAt', value: SearchableReservedProperty.FileCreatedAt },
+  { label: 'FileModifiedAt', value: SearchableReservedProperty.FileModifiedAt },
+  { label: 'Cover', value: SearchableReservedProperty.Cover },
+  { label: 'MediaLibraryV2', value: SearchableReservedProperty.MediaLibraryV2 },
+  { label: 'MediaLibraryV2Multi', value: SearchableReservedProperty.MediaLibraryV2Multi },
+  { label: 'Source', value: SearchableReservedProperty.Source }
+] as const;
+
+export const SearchableReservedPropertyLabel: Record<SearchableReservedProperty, string> = {
+  [SearchableReservedProperty.Introduction]: 'Introduction',
+  [SearchableReservedProperty.Rating]: 'Rating',
+  [SearchableReservedProperty.FileName]: 'FileName',
+  [SearchableReservedProperty.DirectoryPath]: 'DirectoryPath',
+  [SearchableReservedProperty.CreatedAt]: 'CreatedAt',
+  [SearchableReservedProperty.FileCreatedAt]: 'FileCreatedAt',
+  [SearchableReservedProperty.FileModifiedAt]: 'FileModifiedAt',
+  [SearchableReservedProperty.Cover]: 'Cover',
+  [SearchableReservedProperty.MediaLibraryV2]: 'MediaLibraryV2',
+  [SearchableReservedProperty.MediaLibraryV2Multi]: 'MediaLibraryV2Multi',
+  [SearchableReservedProperty.Source]: 'Source'
+};
+
+export enum StartupPage {
+  Default = 0,
+  Resource = 1
+}
+
+export const startupPages = [
+  { label: 'Default', value: StartupPage.Default },
+  { label: 'Resource', value: StartupPage.Resource }
+] as const;
+
+export const StartupPageLabel: Record<StartupPage, string> = {
+  [StartupPage.Default]: 'Default',
+  [StartupPage.Resource]: 'Resource'
+};
+
+export enum ThirdPartyId {
+  Bilibili = 1,
+  ExHentai = 2,
+  Pixiv = 3,
+  Bangumi = 4,
+  SoulPlus = 5,
+  DLsite = 6,
+  Fanbox = 7,
+  Fantia = 8,
+  Cien = 9,
+  Patreon = 10,
+  Tmdb = 11
+}
+
+export const thirdPartyIds = [
+  { label: 'Bilibili', value: ThirdPartyId.Bilibili },
+  { label: 'ExHentai', value: ThirdPartyId.ExHentai },
+  { label: 'Pixiv', value: ThirdPartyId.Pixiv },
+  { label: 'Bangumi', value: ThirdPartyId.Bangumi },
+  { label: 'SoulPlus', value: ThirdPartyId.SoulPlus },
+  { label: 'DLsite', value: ThirdPartyId.DLsite },
+  { label: 'Fanbox', value: ThirdPartyId.Fanbox },
+  { label: 'Fantia', value: ThirdPartyId.Fantia },
+  { label: 'Cien', value: ThirdPartyId.Cien },
+  { label: 'Patreon', value: ThirdPartyId.Patreon },
+  { label: 'Tmdb', value: ThirdPartyId.Tmdb }
+] as const;
+
+export const ThirdPartyIdLabel: Record<ThirdPartyId, string> = {
+  [ThirdPartyId.Bilibili]: 'Bilibili',
+  [ThirdPartyId.ExHentai]: 'ExHentai',
+  [ThirdPartyId.Pixiv]: 'Pixiv',
+  [ThirdPartyId.Bangumi]: 'Bangumi',
+  [ThirdPartyId.SoulPlus]: 'SoulPlus',
+  [ThirdPartyId.DLsite]: 'DLsite',
+  [ThirdPartyId.Fanbox]: 'Fanbox',
+  [ThirdPartyId.Fantia]: 'Fantia',
+  [ThirdPartyId.Cien]: 'Cien',
+  [ThirdPartyId.Patreon]: 'Patreon',
+  [ThirdPartyId.Tmdb]: 'Tmdb'
+};
+
+export enum PasswordSearchOrder {
+  Latest = 1,
+  Frequency = 2
+}
+
+export const passwordSearchOrders = [
+  { label: 'Latest', value: PasswordSearchOrder.Latest },
+  { label: 'Frequency', value: PasswordSearchOrder.Frequency }
+] as const;
+
+export const PasswordSearchOrderLabel: Record<PasswordSearchOrder, string> = {
+  [PasswordSearchOrder.Latest]: 'Latest',
+  [PasswordSearchOrder.Frequency]: 'Frequency'
+};
+
+export enum ResourceSearchSortableProperty {
+  FileCreateDt = 1,
+  FileModifyDt = 2,
+  Filename = 3,
+  AddDt = 6,
+  PlayedAt = 11
+}
+
+export const resourceSearchSortableProperties = [
+  { label: 'FileCreateDt', value: ResourceSearchSortableProperty.FileCreateDt },
+  { label: 'FileModifyDt', value: ResourceSearchSortableProperty.FileModifyDt },
+  { label: 'Filename', value: ResourceSearchSortableProperty.Filename },
+  { label: 'AddDt', value: ResourceSearchSortableProperty.AddDt },
+  { label: 'PlayedAt', value: ResourceSearchSortableProperty.PlayedAt }
+] as const;
+
+export const ResourceSearchSortablePropertyLabel: Record<ResourceSearchSortableProperty, string> = {
+  [ResourceSearchSortableProperty.FileCreateDt]: 'FileCreateDt',
+  [ResourceSearchSortableProperty.FileModifyDt]: 'FileModifyDt',
+  [ResourceSearchSortableProperty.Filename]: 'Filename',
+  [ResourceSearchSortableProperty.AddDt]: 'AddDt',
+  [ResourceSearchSortableProperty.PlayedAt]: 'PlayedAt'
+};
+
+export enum CustomPropertyAdditionalItem {
+  None = 0,
+  ValueCount = 2
+}
+
+export const customPropertyAdditionalItems = [
+  { label: 'None', value: CustomPropertyAdditionalItem.None },
+  { label: 'ValueCount', value: CustomPropertyAdditionalItem.ValueCount }
+] as const;
+
+export const CustomPropertyAdditionalItemLabel: Record<CustomPropertyAdditionalItem, string> = {
+  [CustomPropertyAdditionalItem.None]: 'None',
+  [CustomPropertyAdditionalItem.ValueCount]: 'ValueCount'
+};
+
+export enum CustomPropertyValueAdditionalItem {
+  None = 0,
+  BizValue = 1
+}
+
+export const customPropertyValueAdditionalItems = [
+  { label: 'None', value: CustomPropertyValueAdditionalItem.None },
+  { label: 'BizValue', value: CustomPropertyValueAdditionalItem.BizValue }
+] as const;
+
+export const CustomPropertyValueAdditionalItemLabel: Record<CustomPropertyValueAdditionalItem, string> = {
+  [CustomPropertyValueAdditionalItem.None]: 'None',
+  [CustomPropertyValueAdditionalItem.BizValue]: 'BizValue'
+};
+
+export enum ResourceAdditionalItem {
+  None = 0,
+  Properties = 32,
+  Alias = 64,
+  DisplayName = 288,
+  HasChildren = 512,
+  MediaLibraryName = 2048,
+  Cache = 4096,
+  SourceLinks = 8192,
+  All = 15200
+}
+
+export const resourceAdditionalItems = [
+  { label: 'None', value: ResourceAdditionalItem.None },
+  { label: 'Properties', value: ResourceAdditionalItem.Properties },
+  { label: 'Alias', value: ResourceAdditionalItem.Alias },
+  { label: 'DisplayName', value: ResourceAdditionalItem.DisplayName },
+  { label: 'HasChildren', value: ResourceAdditionalItem.HasChildren },
+  { label: 'MediaLibraryName', value: ResourceAdditionalItem.MediaLibraryName },
+  { label: 'Cache', value: ResourceAdditionalItem.Cache },
+  { label: 'SourceLinks', value: ResourceAdditionalItem.SourceLinks },
+  { label: 'All', value: ResourceAdditionalItem.All }
+] as const;
+
+export const ResourceAdditionalItemLabel: Record<ResourceAdditionalItem, string> = {
+  [ResourceAdditionalItem.None]: 'None',
+  [ResourceAdditionalItem.Properties]: 'Properties',
+  [ResourceAdditionalItem.Alias]: 'Alias',
+  [ResourceAdditionalItem.DisplayName]: 'DisplayName',
+  [ResourceAdditionalItem.HasChildren]: 'HasChildren',
+  [ResourceAdditionalItem.MediaLibraryName]: 'MediaLibraryName',
+  [ResourceAdditionalItem.Cache]: 'Cache',
+  [ResourceAdditionalItem.SourceLinks]: 'SourceLinks',
+  [ResourceAdditionalItem.All]: 'All'
 };
 
 export enum EnhancerId {
@@ -4030,6 +3658,84 @@ export const OsPlatformLabel: Record<OsPlatform, string> = {
   [OsPlatform.FreeBsd]: 'FreeBsd'
 };
 
+export enum SteamMetadataField {
+  Name = 1,
+  Type = 2,
+  ShortDescription = 3,
+  DetailedDescription = 4,
+  HeaderImage = 5,
+  CapsuleImage = 6,
+  Developers = 7,
+  Publishers = 8,
+  Genres = 9,
+  Categories = 10,
+  MetacriticScore = 11,
+  ReleaseDate = 12
+}
+
+export const steamMetadataFields = [
+  { label: 'Name', value: SteamMetadataField.Name },
+  { label: 'Type', value: SteamMetadataField.Type },
+  { label: 'ShortDescription', value: SteamMetadataField.ShortDescription },
+  { label: 'DetailedDescription', value: SteamMetadataField.DetailedDescription },
+  { label: 'HeaderImage', value: SteamMetadataField.HeaderImage },
+  { label: 'CapsuleImage', value: SteamMetadataField.CapsuleImage },
+  { label: 'Developers', value: SteamMetadataField.Developers },
+  { label: 'Publishers', value: SteamMetadataField.Publishers },
+  { label: 'Genres', value: SteamMetadataField.Genres },
+  { label: 'Categories', value: SteamMetadataField.Categories },
+  { label: 'MetacriticScore', value: SteamMetadataField.MetacriticScore },
+  { label: 'ReleaseDate', value: SteamMetadataField.ReleaseDate }
+] as const;
+
+export const SteamMetadataFieldLabel: Record<SteamMetadataField, string> = {
+  [SteamMetadataField.Name]: 'Name',
+  [SteamMetadataField.Type]: 'Type',
+  [SteamMetadataField.ShortDescription]: 'ShortDescription',
+  [SteamMetadataField.DetailedDescription]: 'DetailedDescription',
+  [SteamMetadataField.HeaderImage]: 'HeaderImage',
+  [SteamMetadataField.CapsuleImage]: 'CapsuleImage',
+  [SteamMetadataField.Developers]: 'Developers',
+  [SteamMetadataField.Publishers]: 'Publishers',
+  [SteamMetadataField.Genres]: 'Genres',
+  [SteamMetadataField.Categories]: 'Categories',
+  [SteamMetadataField.MetacriticScore]: 'MetacriticScore',
+  [SteamMetadataField.ReleaseDate]: 'ReleaseDate'
+};
+
+export enum ExHentaiMetadataField {
+  Name = 1,
+  RawName = 2,
+  Introduction = 3,
+  Rate = 4,
+  Category = 5,
+  CoverUrl = 6,
+  FileCount = 7,
+  PageCount = 8
+}
+
+export const exHentaiMetadataFields = [
+  { label: 'Name', value: ExHentaiMetadataField.Name },
+  { label: 'RawName', value: ExHentaiMetadataField.RawName },
+  { label: 'Introduction', value: ExHentaiMetadataField.Introduction },
+  { label: 'Rate', value: ExHentaiMetadataField.Rate },
+  { label: 'Category', value: ExHentaiMetadataField.Category },
+  { label: 'CoverUrl', value: ExHentaiMetadataField.CoverUrl },
+  { label: 'FileCount', value: ExHentaiMetadataField.FileCount },
+  { label: 'PageCount', value: ExHentaiMetadataField.PageCount }
+] as const;
+
+export const ExHentaiMetadataFieldLabel: Record<ExHentaiMetadataField, string> = {
+  [ExHentaiMetadataField.Name]: 'Name',
+  [ExHentaiMetadataField.RawName]: 'RawName',
+  [ExHentaiMetadataField.Introduction]: 'Introduction',
+  [ExHentaiMetadataField.Rate]: 'Rate',
+  [ExHentaiMetadataField.Category]: 'Category',
+  [ExHentaiMetadataField.CoverUrl]: 'CoverUrl',
+  [ExHentaiMetadataField.FileCount]: 'FileCount',
+  [ExHentaiMetadataField.PageCount]: 'PageCount'
+};
+
 export enum ExHentaiCategory {
   Unknown = 0,
   Misc = 1,
@@ -4091,6 +3797,27 @@ export const ExHentaiConnectionStatusLabel: Record<ExHentaiConnectionStatus, str
   [ExHentaiConnectionStatus.InvalidCookie]: 'InvalidCookie',
   [ExHentaiConnectionStatus.IpBanned]: 'IpBanned',
   [ExHentaiConnectionStatus.UnknownError]: 'UnknownError'
+};
+
+export enum DLsiteMetadataField {
+  Name = 1,
+  Introduction = 2,
+  Rating = 3,
+  CoverUrls = 4
+}
+
+export const dLsiteMetadataFields = [
+  { label: 'Name', value: DLsiteMetadataField.Name },
+  { label: 'Introduction', value: DLsiteMetadataField.Introduction },
+  { label: 'Rating', value: DLsiteMetadataField.Rating },
+  { label: 'CoverUrls', value: DLsiteMetadataField.CoverUrls }
+] as const;
+
+export const DLsiteMetadataFieldLabel: Record<DLsiteMetadataField, string> = {
+  [DLsiteMetadataField.Name]: 'Name',
+  [DLsiteMetadataField.Introduction]: 'Introduction',
+  [DLsiteMetadataField.Rating]: 'Rating',
+  [DLsiteMetadataField.CoverUrls]: 'CoverUrls'
 };
 
 export enum BangumiSubjectType {
@@ -4451,27 +4178,6 @@ export const PresetResourceTypeLabel: Record<PresetResourceType, string> = {
   [PresetResourceType.MotionManga]: 'MotionManga',
   [PresetResourceType.Mod]: 'Mod',
   [PresetResourceType.Tool]: 'Tool'
-};
-
-export enum ResolverConfigFieldType {
-  String = 1,
-  Password = 2,
-  StringList = 3,
-  DirectoryList = 4
-}
-
-export const resolverConfigFieldTypes = [
-  { label: 'String', value: ResolverConfigFieldType.String },
-  { label: 'Password', value: ResolverConfigFieldType.Password },
-  { label: 'StringList', value: ResolverConfigFieldType.StringList },
-  { label: 'DirectoryList', value: ResolverConfigFieldType.DirectoryList }
-] as const;
-
-export const ResolverConfigFieldTypeLabel: Record<ResolverConfigFieldType, string> = {
-  [ResolverConfigFieldType.String]: 'String',
-  [ResolverConfigFieldType.Password]: 'Password',
-  [ResolverConfigFieldType.StringList]: 'StringList',
-  [ResolverConfigFieldType.DirectoryList]: 'DirectoryList'
 };
 
 export enum LogLevel {

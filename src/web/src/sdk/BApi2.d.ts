@@ -756,249 +756,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/category/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @deprecated */
-        get: operations["GetCategory"];
-        put?: never;
-        post?: never;
-        /** @deprecated */
-        delete: operations["DeleteCategory"];
-        options?: never;
-        head?: never;
-        /** @deprecated */
-        patch: operations["PatchCategory"];
-        trace?: never;
-    };
-    "/category": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @deprecated */
-        get: operations["GetAllCategories"];
-        put?: never;
-        /** @deprecated */
-        post: operations["AddCategory"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/category/{id}/duplication": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** @deprecated */
-        post: operations["DuplicateCategory"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/category/{id}/resource-display-name-template": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /** @deprecated */
-        put: operations["PutCategoryResourceDisplayNameTemplate"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/category/{id}/component": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /** @deprecated */
-        put: operations["ConfigureCategoryComponents"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/category/orders": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /** @deprecated */
-        put: operations["SortCategories"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/category/{id}/custom-properties": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /** @deprecated */
-        put: operations["BindCustomPropertiesToCategory"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/category/{categoryId}/custom-property/{customPropertyId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** @deprecated */
-        post: operations["BindCustomPropertyToCategory"];
-        /** @deprecated */
-        delete: operations["UnlinkCustomPropertyFromCategory"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/category/{categoryId}/custom-property/order": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /** @deprecated */
-        put: operations["SortCustomPropertiesInCategory"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/category/{id}/resource/resource-display-name-template/preview": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @deprecated */
-        get: operations["PreviewCategoryDisplayNameTemplate"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/category/{id}/enhancer/{enhancerId}/options": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @deprecated */
-        get: operations["GetCategoryEnhancerOptions"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** @deprecated */
-        patch: operations["PatchCategoryEnhancerOptions"];
-        trace?: never;
-    };
-    "/category/{id}/enhancer/{enhancerId}/options/target": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** @deprecated */
-        delete: operations["DeleteCategoryEnhancerTargetOptions"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/category/{id}/enhancer/{enhancerId}/options/target/property": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** @deprecated */
-        delete: operations["UnbindCategoryEnhancerTargetProperty"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/category/{id}/synchronization": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /** @deprecated */
-        put: operations["StartSyncingCategoryResources"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/comparison/plan": {
         parameters: {
             query?: never;
@@ -1138,121 +895,6 @@ export interface paths {
         put: operations["HideComparisonResultGroup"];
         post?: never;
         delete: operations["UnhideComparisonResultGroup"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/component": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["GetComponentDescriptors"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/component/key": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["GetComponentDescriptorByKey"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/component/dependency/discovery": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["DiscoverDependentComponent"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/component/dependency/latest-version": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["GetDependentComponentLatestVersion"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/component/dependency": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["InstallDependentComponent"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/component-options": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** @deprecated */
-        post: operations["AddComponentOptions"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/component-options/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /** @deprecated */
-        put: operations["PutComponentOptions"];
-        post?: never;
-        /** @deprecated */
-        delete: operations["RemoveComponentOptions"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2783,163 +2425,6 @@ export interface paths {
         patch: operations["ReadAllLog"];
         trace?: never;
     };
-    "/media-library": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @deprecated */
-        get: operations["GetAllMediaLibraries"];
-        put?: never;
-        /** @deprecated */
-        post: operations["AddMediaLibrary"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/media-library/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @deprecated */
-        get: operations["GetMediaLibrary"];
-        /** @deprecated */
-        put: operations["PatchMediaLibrary"];
-        post?: never;
-        /** @deprecated */
-        delete: operations["DeleteMediaLibrary"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/media-library/sync": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /** @deprecated */
-        put: operations["StartSyncMediaLibrary"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/media-library/path-configuration-validation": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** @deprecated */
-        post: operations["ValidatePathConfiguration"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/media-library/orders-in-category": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /** @deprecated */
-        put: operations["SortMediaLibrariesInCategory"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/media-library/{id}/path-configuration": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** @deprecated */
-        post: operations["AddMediaLibraryPathConfiguration"];
-        /** @deprecated */
-        delete: operations["RemoveMediaLibraryPathConfiguration"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/media-library/bulk-add/{cId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** @deprecated */
-        post: operations["AddMediaLibrariesInBulk"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/media-library/{mlId}/path-configuration/root-paths": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** @deprecated */
-        post: operations["AddMediaLibraryRootPathsInBulk"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/media-library/{id}/synchronization": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /** @deprecated */
-        put: operations["StartSyncingMediaLibraryResources"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/media-library-resource-mapping": {
         parameters: {
             query?: never;
@@ -3118,23 +2603,6 @@ export interface paths {
         put?: never;
         /** @deprecated */
         post: operations["ImportMediaLibraryTemplate"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/media-library-template/by-media-library-v1": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** @deprecated */
-        post: operations["AddMediaLibraryTemplateByMediaLibraryV1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3347,22 +2815,6 @@ export interface paths {
         get: operations["GetMediaLibraryV2Statistics"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/migration/categories-media-libraries-and-resources-to-new-media-library": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["MigrateCategoriesMediaLibrariesAndResourcesToNewMediaLibrary"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3607,22 +3059,6 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["PatchNetworkOptions"];
-        trace?: never;
-    };
-    "/options/enhancer": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["GetEnhancerOptions"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch: operations["PatchEnhancerOptions"];
         trace?: never;
     };
     "/options/task": {
@@ -5033,14 +4469,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/source/{source}/metadata-mapping/available-fields": {
+    "/source/{source}/metadata-mapping/predefined-fields": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["GetSourceAvailableMetadataFields"];
+        get: operations["GetSourcePredefinedMetadataFields"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5447,15 +4883,6 @@ export interface components {
             /** Format: date-time */
             enableAfter?: string;
         };
-        "Bakabase.Abstractions.Models.Db.CategoryComponent": {
-            /** Format: int32 */
-            id: number;
-            /** Format: int32 */
-            categoryId: number;
-            componentKey: string;
-            componentType: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ComponentType"];
-            descriptor: components["schemas"]["Bakabase.Abstractions.Models.Domain.ComponentDescriptor"];
-        };
         "Bakabase.Abstractions.Models.Db.DLsiteWorkDbModel": {
             /** Format: int32 */
             id: number;
@@ -5543,53 +4970,6 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
-        };
-        "Bakabase.Abstractions.Models.Domain.Category": {
-            /** Format: int32 */
-            id: number;
-            name: string;
-            color?: string;
-            /** Format: date-time */
-            createDt: string;
-            isValid: boolean;
-            /** @deprecated */
-            message?: string;
-            /** Format: int32 */
-            order: number;
-            componentsData?: components["schemas"]["Bakabase.Abstractions.Models.Db.CategoryComponent"][];
-            coverSelectionOrder: components["schemas"]["Bakabase.InsideWorld.Models.Constants.CoverSelectOrder"];
-            enhancementOptions?: components["schemas"]["Bakabase.InsideWorld.Models.Models.Dtos.ResourceCategoryEnhancementOptions"];
-            generateNfo: boolean;
-            resourceDisplayNameTemplate?: string;
-            customProperties?: components["schemas"]["Bakabase.Abstractions.Models.Domain.CustomProperty"][];
-            enhancerOptions?: components["schemas"]["Bakabase.Abstractions.Models.Domain.CategoryEnhancerOptions"][];
-        };
-        "Bakabase.Abstractions.Models.Domain.CategoryEnhancerOptions": {
-            /** Format: int32 */
-            id: number;
-            /** Format: int32 */
-            categoryId: number;
-            /** Format: int32 */
-            enhancerId: number;
-            active: boolean;
-        };
-        "Bakabase.Abstractions.Models.Domain.ComponentDescriptor": {
-            type: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ComponentDescriptorType"];
-            componentType: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ComponentType"];
-            assemblyQualifiedTypeName: string;
-            name: string;
-            description?: string;
-            message?: string;
-            optionsJson?: string;
-            /** Format: int32 */
-            optionsId?: number;
-            version: string;
-            dataVersion: string;
-            optionsType?: components["schemas"]["System.Type"];
-            readonly optionsJsonSchema?: string;
-            readonly id?: string;
-            readonly canBeInstantiated: boolean;
-            associatedCategories?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Category"][];
         };
         /**
          * Format: int32
@@ -5713,10 +5093,10 @@ export interface components {
         "Bakabase.Abstractions.Models.Domain.Constants.ResourceStatus": 1 | 2 | 3;
         /**
          * Format: int32
-         * @description [1: IsParent, 2: Pinned, 4: PathDoesNotExist, 8: UnknownMediaLibrary]
+         * @description [1: IsParent, 2: Pinned]
          * @enum {integer}
          */
-        "Bakabase.Abstractions.Models.Domain.Constants.ResourceTag": 1 | 2 | 4 | 8;
+        "Bakabase.Abstractions.Models.Domain.Constants.ResourceTag": 1 | 2;
         /**
          * Format: int32
          * @description [1: And, 2: Or]
@@ -5748,7 +5128,6 @@ export interface components {
             type: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyType"];
             /** Format: date-time */
             createdAt: string;
-            categories?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Category"][];
             options?: unknown;
             /** Format: int32 */
             valueCount?: number;
@@ -5797,22 +5176,6 @@ export interface components {
             id: number;
             name: string;
             extensions?: string[];
-        };
-        "Bakabase.Abstractions.Models.Domain.MediaLibrary": {
-            /** Format: int32 */
-            id: number;
-            name: string;
-            /** Format: int32 */
-            categoryId: number;
-            /** Format: int32 */
-            order: number;
-            /** Format: int32 */
-            resourceCount: number;
-            fileSystemInformation?: {
-                [key: string]: components["schemas"]["Bakabase.InsideWorld.Models.Models.Aos.MediaLibraryFileSystemInformation"];
-            };
-            category?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Category"];
-            pathConfigurations?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PathConfiguration"][];
         };
         "Bakabase.Abstractions.Models.Domain.MediaLibraryPlayer": {
             extensions?: string[];
@@ -5888,39 +5251,6 @@ export interface components {
         "Bakabase.Abstractions.Models.Domain.Options.EnhancerTranslationOptions": {
             enabled: boolean;
             targetLanguage: string;
-        };
-        "Bakabase.Abstractions.Models.Domain.PathConfiguration": {
-            path?: string;
-            rpmValues?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PropertyPathSegmentMatcherValue"][];
-        };
-        "Bakabase.Abstractions.Models.Domain.PathConfigurationTestResult": {
-            rootPath: string;
-            resources: components["schemas"]["Bakabase.Abstractions.Models.Domain.PathConfigurationTestResult+Resource"][];
-            customPropertyMap: {
-                [key: string]: components["schemas"]["Bakabase.Abstractions.Models.Domain.CustomProperty"];
-            };
-        };
-        "Bakabase.Abstractions.Models.Domain.PathConfigurationTestResult+Resource": {
-            isDirectory: boolean;
-            relativePath: string;
-            segmentAndMatchedValues: components["schemas"]["Bakabase.Abstractions.Models.Domain.PathConfigurationTestResult+Resource+SegmentMatchResult"][];
-            globalMatchedValues: components["schemas"]["Bakabase.Abstractions.Models.Domain.PathConfigurationTestResult+Resource+GlobalMatchedValue"][];
-            customPropertyIdValueMap: {
-                [key: string]: unknown;
-            };
-        };
-        "Bakabase.Abstractions.Models.Domain.PathConfigurationTestResult+Resource+GlobalMatchedValue": {
-            propertyKey: components["schemas"]["Bakabase.Abstractions.Models.Domain.PathConfigurationTestResult+Resource+SegmentPropertyKey"];
-            textValues: string[];
-        };
-        "Bakabase.Abstractions.Models.Domain.PathConfigurationTestResult+Resource+SegmentMatchResult": {
-            segmentText: string;
-            propertyKeys: components["schemas"]["Bakabase.Abstractions.Models.Domain.PathConfigurationTestResult+Resource+SegmentPropertyKey"][];
-        };
-        "Bakabase.Abstractions.Models.Domain.PathConfigurationTestResult+Resource+SegmentPropertyKey": {
-            /** Format: int32 */
-            id: number;
-            isCustom: boolean;
         };
         "Bakabase.Abstractions.Models.Domain.PathFilter": {
             positioner: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PathPositioner"];
@@ -6025,11 +5355,6 @@ export interface components {
              * @deprecated
              */
             mediaLibraryId: number;
-            /**
-             * Format: int32
-             * @deprecated
-             */
-            categoryId: number;
             status: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceStatus"];
             sourceLinks?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceSourceLink"][];
             readonly fileName?: string;
@@ -6065,9 +5390,6 @@ export interface components {
             coversReady: boolean;
             playableItemsReady: boolean;
             cache?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceCache"];
-            /** @deprecated */
-            readonly isMediaLibraryV2: boolean;
-            category?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Category"];
             /** @deprecated */
             mediaLibraryName?: string;
             /** @deprecated */
@@ -6163,6 +5485,10 @@ export interface components {
             id: number;
             scope: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyValueScope"];
         };
+        "Bakabase.Abstractions.Models.Domain.SourceMetadataFieldInfo": {
+            name: string;
+            valueType: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.StandardValueType"];
+        };
         "Bakabase.Abstractions.Models.Domain.SourceMetadataMapping": {
             /** Format: int32 */
             id: number;
@@ -6184,40 +5510,6 @@ export interface components {
             type: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyType"];
             options?: string;
         };
-        "Bakabase.Abstractions.Models.Dto.MediaLibraryAddDto": {
-            name: string;
-            /** Format: int32 */
-            categoryId: number;
-            pathConfigurations?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PathConfiguration"][];
-        };
-        "Bakabase.Abstractions.Models.Dto.MediaLibraryPatchDto": {
-            name?: string;
-            pathConfigurations?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PathConfiguration"][];
-            /** Format: int32 */
-            order?: number;
-        };
-        "Bakabase.Abstractions.Models.Input.CategoryAddInputModel": {
-            name: string;
-        };
-        "Bakabase.Abstractions.Models.Input.CategoryComponentConfigureInputModel": {
-            type: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ComponentType"];
-            componentKeys: string[];
-            enhancementOptions?: components["schemas"]["Bakabase.InsideWorld.Models.Models.Dtos.ResourceCategoryEnhancementOptions"];
-        };
-        "Bakabase.Abstractions.Models.Input.CategoryCustomPropertyBindInputModel": {
-            customPropertyIds?: number[];
-        };
-        "Bakabase.Abstractions.Models.Input.CategoryDuplicateInputModel": {
-            name: string;
-        };
-        "Bakabase.Abstractions.Models.Input.CategoryPatchInputModel": {
-            name?: string;
-            color?: string;
-            coverSelectionOrder?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.CoverSelectOrder"];
-            /** Format: int32 */
-            order?: number;
-            generateNfo?: boolean;
-        };
         "Bakabase.Abstractions.Models.Input.ExtensionGroupAddInputModel": {
             name: string;
             extensions?: string[];
@@ -6225,24 +5517,6 @@ export interface components {
         "Bakabase.Abstractions.Models.Input.ExtensionGroupPutInputModel": {
             name: string;
             extensions: string[];
-        };
-        "Bakabase.Abstractions.Models.Input.MediaLibraryAddInBulkInputModel": {
-            nameAndPaths: {
-                [key: string]: string[] | null;
-            };
-        };
-        "Bakabase.Abstractions.Models.Input.MediaLibraryPathConfigurationAddInputModel": {
-            path: string;
-        };
-        "Bakabase.Abstractions.Models.Input.MediaLibraryRootPathsAddInBulkInputModel": {
-            rootPaths: string[];
-        };
-        "Bakabase.Abstractions.Models.Input.MediaLibraryTemplateAddByMediaLibraryV1InputModel": {
-            /** Format: int32 */
-            v1Id: number;
-            /** Format: int32 */
-            pcIdx: number;
-            name: string;
         };
         "Bakabase.Abstractions.Models.Input.MediaLibraryTemplateAddInputModel": {
             name: string;
@@ -6382,27 +5656,10 @@ export interface components {
             /** Format: int32 */
             resourceCount: number;
         };
-        /**
-         * Format: int32
-         * @description [1: StaticText, 2: Property, 3: LeftWrapper, 4: RightWrapper]
-         * @enum {integer}
-         */
-        "Bakabase.Abstractions.Models.View.Constants.CategoryResourceDisplayNameSegmentType": 1 | 2 | 3 | 4;
         "Bakabase.Abstractions.Models.View.MediaLibraryTemplateImportConfigurationViewModel": {
             readonly noNeedToConfigure: boolean;
             uniqueCustomProperties?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Property"][];
             uniqueExtensionGroups?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ExtensionGroup"][];
-        };
-        "Bakabase.Abstractions.Models.View.ResourceDisplayNameViewModel": {
-            /** Format: int32 */
-            resourceId: number;
-            resourcePath: string;
-            segments: components["schemas"]["Bakabase.Abstractions.Models.View.ResourceDisplayNameViewModel+Segment"][];
-        };
-        "Bakabase.Abstractions.Models.View.ResourceDisplayNameViewModel+Segment": {
-            type: components["schemas"]["Bakabase.Abstractions.Models.View.Constants.CategoryResourceDisplayNameSegmentType"];
-            text: string;
-            wrapperPairId?: string;
         };
         "Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerNearestViewModel": {
             contentId: string;
@@ -6851,9 +6108,6 @@ export interface components {
             showCover?: boolean;
             deleteArchiveAfterExtraction?: boolean;
         };
-        "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.EnhancerOptionsPatchInputModel": {
-            regexEnhancer?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.EnhancerOptions+RegexEnhancerModel"];
-        };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.ExHentaiOptionsPatchInputModel": {
             accounts?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ExHentaiAccount"][];
             cookie?: string;
@@ -6988,11 +6242,6 @@ export interface components {
             cssVariableOverwrites?: {
                 [key: string]: string;
             };
-        };
-        "Bakabase.InsideWorld.Business.Components.Dependency.Abstractions.DependentComponentVersion": {
-            version: string;
-            description?: string;
-            canUpdate: boolean;
         };
         "Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg.HardwareAccelerationInfo": {
             isDetected: boolean;
@@ -7130,9 +6379,9 @@ export interface components {
         "Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloaders.ExHentai.ExHentaiDownloadTaskType": 1 | 2 | 3;
         "Bakabase.InsideWorld.Business.Components.FileExplorer.Entries.IwFsCompressedFileGroup": {
             keyName: string;
+            extension?: string;
             files: string[];
-            extension: string;
-            readonly missEntry: boolean;
+            fileSizes: number[];
             password?: string;
             passwordCandidates: string[];
         };
@@ -7273,12 +6522,6 @@ export interface components {
          * @enum {integer}
          */
         "Bakabase.InsideWorld.Business.Components.Tampermonkey.Models.Constants.TampermonkeyScript": 1 | 2;
-        "Bakabase.InsideWorld.Models.Configs.EnhancerOptions": {
-            regexEnhancer?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.EnhancerOptions+RegexEnhancerModel"];
-        };
-        "Bakabase.InsideWorld.Models.Configs.EnhancerOptions+RegexEnhancerModel": {
-            expressions?: string[];
-        };
         "Bakabase.InsideWorld.Models.Configs.FileSystemOptions": {
             recentMovingDestinations?: string[];
             fileMover?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.FileSystemOptions+FileMoverOptions"];
@@ -7383,34 +6626,16 @@ export interface components {
         "Bakabase.InsideWorld.Models.Constants.AdditionalCoverDiscoveringSource": 1 | 2;
         /**
          * Format: int32
-         * @description [0: None, 1: Components, 3: Validation, 4: CustomProperties, 8: EnhancerOptions]
+         * @description [0: None, 2: ValueCount]
          * @enum {integer}
          */
-        "Bakabase.InsideWorld.Models.Constants.AdditionalItems.CategoryAdditionalItem": 0 | 1 | 3 | 4 | 8;
+        "Bakabase.InsideWorld.Models.Constants.AdditionalItems.CustomPropertyAdditionalItem": 0 | 2;
         /**
          * Format: int32
-         * @description [0: None, 1: AssociatedCategories]
+         * @description [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 8192: SourceLinks, 15200: All]
          * @enum {integer}
          */
-        "Bakabase.InsideWorld.Models.Constants.AdditionalItems.ComponentDescriptorAdditionalItem": 0 | 1;
-        /**
-         * Format: int32
-         * @description [0: None, 1: Category, 2: ValueCount]
-         * @enum {integer}
-         */
-        "Bakabase.InsideWorld.Models.Constants.AdditionalItems.CustomPropertyAdditionalItem": 0 | 1 | 2;
-        /**
-         * Format: int32
-         * @description [0: None, 1: Category, 2: FileSystemInfo, 4: PathConfigurationBoundProperties]
-         * @enum {integer}
-         */
-        "Bakabase.InsideWorld.Models.Constants.AdditionalItems.MediaLibraryAdditionalItem": 0 | 1 | 2 | 4;
-        /**
-         * Format: int32
-         * @description [0: None, 32: Properties, 64: Alias, 128: Category, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 8192: SourceLinks, 15200: All]
-         * @enum {integer}
-         */
-        "Bakabase.InsideWorld.Models.Constants.AdditionalItems.ResourceAdditionalItem": 0 | 32 | 64 | 128 | 288 | 512 | 2048 | 4096 | 8192 | 15200;
+        "Bakabase.InsideWorld.Models.Constants.AdditionalItems.ResourceAdditionalItem": 0 | 32 | 64 | 288 | 512 | 2048 | 4096 | 8192 | 15200;
         /**
          * Format: int32
          * @description [1: Latest, 2: Frequency]
@@ -7423,18 +6648,6 @@ export interface components {
          * @enum {integer}
          */
         "Bakabase.InsideWorld.Models.Constants.Aos.ResourceSearchSortableProperty": 1 | 2 | 3 | 6 | 11;
-        /**
-         * Format: int32
-         * @description [0: Invalid, 1: Fixed, 2: Configurable, 3: Instance]
-         * @enum {integer}
-         */
-        "Bakabase.InsideWorld.Models.Constants.ComponentDescriptorType": 0 | 1 | 2 | 3;
-        /**
-         * Format: int32
-         * @description [1: Enhancer, 2: PlayableFileSelector, 3: Player]
-         * @enum {integer}
-         */
-        "Bakabase.InsideWorld.Models.Constants.ComponentType": 1 | 2 | 3;
         /**
          * Format: int32
          * @description [1: BiliBili, 2: ExHentai, 3: Pixiv, 6: DLsite]
@@ -7459,12 +6672,6 @@ export interface components {
          * @enum {integer}
          */
         "Bakabase.InsideWorld.Models.Constants.CoverSelectOrder": 1 | 2;
-        /**
-         * Format: int32
-         * @description [1: InvalidVolume, 2: FreeSpaceNotEnough, 3: Occupied]
-         * @enum {integer}
-         */
-        "Bakabase.InsideWorld.Models.Constants.MediaLibraryFileSystemError": 1 | 2 | 3;
         /**
          * Format: int32
          * @description [1: Image, 2: Audio, 3: Video, 4: Text, 5: Application, 1000: Unknown]
@@ -7495,19 +6702,6 @@ export interface components {
          * @enum {integer}
          */
         "Bakabase.InsideWorld.Models.Constants.ThirdPartyId": 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
-        "Bakabase.InsideWorld.Models.Models.Aos.MediaLibraryFileSystemInformation": {
-            /** Format: int64 */
-            totalSize: number;
-            /** Format: int64 */
-            freeSpace: number;
-            /** Format: double */
-            readonly usedPercentage: number;
-            /** Format: double */
-            readonly freePercentage: number;
-            /** Format: double */
-            readonly freeSpaceInGb: number;
-            error: components["schemas"]["Bakabase.InsideWorld.Models.Constants.MediaLibraryFileSystemError"];
-        };
         "Bakabase.InsideWorld.Models.Models.Aos.PreviewerItem": {
             filePath: string;
             type: components["schemas"]["Bakabase.InsideWorld.Models.Constants.MediaType"];
@@ -7577,33 +6771,12 @@ export interface components {
             /** Format: int32 */
             count: number;
         };
-        "Bakabase.InsideWorld.Models.Models.Dtos.ResourceCategoryEnhancementOptions": {
-            enhancementPriorities: {
-                [key: string]: string[];
-            };
-            defaultPriority: string[];
-        };
-        "Bakabase.InsideWorld.Models.Models.Entities.ComponentOptions": {
-            /** Format: int32 */
-            id: number;
-            componentType: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ComponentType"];
-            componentAssemblyQualifiedTypeName: string;
-            name: string;
-            description?: string;
-            json: string;
-        };
         "Bakabase.InsideWorld.Models.Models.Entities.Password": {
             text: string;
             /** Format: int32 */
             usedTimes: number;
             /** Format: date-time */
             lastUsedAt: string;
-        };
-        "Bakabase.InsideWorld.Models.RequestModels.ComponentOptionsAddRequestModel": {
-            name: string;
-            description?: string;
-            componentAssemblyQualifiedTypeName: string;
-            json: string;
         };
         "Bakabase.InsideWorld.Models.RequestModels.FileDecompressRequestModel": {
             paths: string[];
@@ -7619,13 +6792,6 @@ export interface components {
         "Bakabase.InsideWorld.Models.RequestModels.FileRenameRequestModel": {
             fullname: string;
             newName: string;
-        };
-        "Bakabase.InsideWorld.Models.RequestModels.IdBasedSortRequestModel": {
-            ids: number[];
-        };
-        "Bakabase.InsideWorld.Models.RequestModels.PathConfigurationRemoveRequestModel": {
-            /** Format: int32 */
-            index: number;
         };
         "Bakabase.InsideWorld.Models.RequestModels.RemoveSameEntryInWorkingDirectoryRequestModel": {
             workingDir: string;
@@ -8165,10 +7331,6 @@ export interface components {
          * @enum {integer}
          */
         "Bakabase.Modules.Enhancer.Models.Domain.Constants.EnhancerTag": 1 | 2;
-        "Bakabase.Modules.Enhancer.Models.Input.CategoryEnhancerOptionsPatchInputModel": {
-            options?: components["schemas"]["Bakabase.Abstractions.Models.Domain.EnhancerFullOptions"];
-            active?: boolean;
-        };
         /**
          * Format: int32
          * @description [1: Name, 2: ReleaseDate, 3: Author, 4: Publisher, 5: Series, 6: Tag, 7: Language, 8: Original, 9: Actor, 10: VoiceActor, 11: Duration, 12: Director, 13: Singer, 14: EpisodeCount, 15: Resolution, 16: AspectRatio, 17: SubtitleLanguage, 18: VideoCodec, 19: IsCensored, 20: Is3D, 21: ImageCount, 22: IsAi, 23: Developer, 24: Character, 25: AudioFormat, 26: Bitrate, 27: Platform, 28: SubscriptionPlatform, 29: Type]
@@ -8358,9 +7520,6 @@ export interface components {
             isCustomProperty: boolean;
             value?: string;
         };
-        "Bakabase.Service.Models.Input.CategoryCustomPropertySortInputModel": {
-            orderedPropertyIds: number[];
-        };
         "Bakabase.Service.Models.Input.ComparisonPlanCreateInputModel": {
             name: string;
             search?: components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
@@ -8518,28 +7677,6 @@ export interface components {
             /** Format: int32 */
             resourceDiffCount: number;
         };
-        "Bakabase.Service.Models.View.CategoryViewModel": {
-            /** Format: int32 */
-            id: number;
-            name: string;
-            color?: string;
-            /** Format: date-time */
-            createDt: string;
-            /** Format: int32 */
-            order: number;
-            componentsData?: components["schemas"]["Bakabase.Abstractions.Models.Db.CategoryComponent"][];
-            coverSelectionOrder: components["schemas"]["Bakabase.InsideWorld.Models.Constants.CoverSelectOrder"];
-            generateNfo: boolean;
-            resourceDisplayNameTemplate?: string;
-            customProperties?: components["schemas"]["Bakabase.Service.Models.View.CategoryViewModel+CustomPropertyViewModel"][];
-            enhancerOptions?: components["schemas"]["Bakabase.Abstractions.Models.Domain.CategoryEnhancerOptions"][];
-        };
-        "Bakabase.Service.Models.View.CategoryViewModel+CustomPropertyViewModel": {
-            /** Format: int32 */
-            id: number;
-            name: string;
-            type: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyType"];
-        };
         "Bakabase.Service.Models.View.ComparisonPlanViewModel": {
             /** Format: int32 */
             id: number;
@@ -8602,7 +7739,6 @@ export interface components {
             order: number;
             /** Format: int32 */
             valueCount?: number;
-            categories?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Category"][];
         };
         "Bakabase.Service.Models.View.DecompressionResultViewModel": {
             key: string;
@@ -8793,12 +7929,6 @@ export interface components {
             code: number;
             message?: string;
         };
-        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.ComponentDescriptor]": {
-            /** Format: int32 */
-            code: number;
-            message?: string;
-            data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ComponentDescriptor"][];
-        };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.Constants.SearchOperation]": {
             /** Format: int32 */
             code: number;
@@ -8828,12 +7958,6 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.MediaLibraryV2"][];
-        };
-        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.MediaLibrary]": {
-            /** Format: int32 */
-            code: number;
-            message?: string;
-            data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.MediaLibrary"][];
         };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.PathMarkPreviewResult]": {
             /** Format: int32 */
@@ -8865,17 +7989,17 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Resource"][];
         };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.SourceMetadataFieldInfo]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.SourceMetadataFieldInfo"][];
+        };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.SourceMetadataMapping]": {
             /** Format: int32 */
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.SourceMetadataMapping"][];
-        };
-        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.View.ResourceDisplayNameViewModel]": {
-            /** Format: int32 */
-            code: number;
-            message?: string;
-            data?: components["schemas"]["Bakabase.Abstractions.Models.View.ResourceDisplayNameViewModel"][];
         };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerStatusViewModel]": {
             /** Format: int32 */
@@ -8984,12 +8108,6 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Models.View.BulkModificationViewModel"][];
-        };
-        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.CategoryViewModel]": {
-            /** Format: int32 */
-            code: number;
-            message?: string;
-            data?: components["schemas"]["Bakabase.Service.Models.View.CategoryViewModel"][];
         };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ComparisonPlanViewModel]": {
             /** Format: int32 */
@@ -9201,18 +8319,6 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.Db.SteamAppDbModel"];
         };
-        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.CategoryEnhancerOptions]": {
-            /** Format: int32 */
-            code: number;
-            message?: string;
-            data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.CategoryEnhancerOptions"];
-        };
-        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ComponentDescriptor]": {
-            /** Format: int32 */
-            code: number;
-            message?: string;
-            data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ComponentDescriptor"];
-        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.Constants.InitializationContentType]": {
             /** Format: int32 */
             code: number;
@@ -9242,18 +8348,6 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.MediaLibraryV2"];
-        };
-        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.MediaLibrary]": {
-            /** Format: int32 */
-            code: number;
-            message?: string;
-            data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.MediaLibrary"];
-        };
-        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.PathConfigurationTestResult]": {
-            /** Format: int32 */
-            code: number;
-            message?: string;
-            data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PathConfigurationTestResult"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.PathMark]": {
             /** Format: int32 */
@@ -9393,12 +8487,6 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.TmdbOptions"];
         };
-        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Dependency.Abstractions.DependentComponentVersion]": {
-            /** Format: int32 */
-            code: number;
-            message?: string;
-            data?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Dependency.Abstractions.DependentComponentVersion"];
-        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg.HardwareAccelerationInfo]": {
             /** Format: int32 */
             code: number;
@@ -9440,12 +8528,6 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.InsideWorld.Business.Components.PlayList.Models.Domain.PlayList"];
-        };
-        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Configs.EnhancerOptions]": {
-            /** Format: int32 */
-            code: number;
-            message?: string;
-            data?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.EnhancerOptions"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Configs.FileSystemOptions]": {
             /** Format: int32 */
@@ -9500,12 +8582,6 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics"];
-        };
-        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Models.Entities.ComponentOptions]": {
-            /** Format: int32 */
-            code: number;
-            message?: string;
-            data?: components["schemas"]["Bakabase.InsideWorld.Models.Models.Entities.ComponentOptions"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Components.Observation.LlmUsageSummary]": {
             /** Format: int32 */
@@ -9632,12 +8708,6 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Models.View.BulkModificationViewModel"];
-        };
-        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.CategoryViewModel]": {
-            /** Format: int32 */
-            code: number;
-            message?: string;
-            data?: components["schemas"]["Bakabase.Service.Models.View.CategoryViewModel"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ComparisonPlanViewModel]": {
             /** Format: int32 */
@@ -11917,540 +10987,6 @@ export interface operations {
             };
         };
     };
-    GetCategory: {
-        parameters: {
-            query?: {
-                /** @description [0: None, 1: Components, 3: Validation, 4: CustomProperties, 8: EnhancerOptions] */
-                additionalItems?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.AdditionalItems.CategoryAdditionalItem"];
-            };
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.CategoryViewModel]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.CategoryViewModel]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.CategoryViewModel]"];
-                };
-            };
-        };
-    };
-    DeleteCategory: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
-    PatchCategory: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Input.CategoryPatchInputModel"];
-                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Input.CategoryPatchInputModel"];
-                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Input.CategoryPatchInputModel"];
-                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Input.CategoryPatchInputModel"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
-    GetAllCategories: {
-        parameters: {
-            query?: {
-                /** @description [0: None, 1: Components, 3: Validation, 4: CustomProperties, 8: EnhancerOptions] */
-                additionalItems?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.AdditionalItems.CategoryAdditionalItem"];
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.CategoryViewModel]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.CategoryViewModel]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.CategoryViewModel]"];
-                };
-            };
-        };
-    };
-    AddCategory: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Input.CategoryAddInputModel"];
-                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Input.CategoryAddInputModel"];
-                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Input.CategoryAddInputModel"];
-                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Input.CategoryAddInputModel"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
-    DuplicateCategory: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Input.CategoryDuplicateInputModel"];
-                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Input.CategoryDuplicateInputModel"];
-                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Input.CategoryDuplicateInputModel"];
-                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Input.CategoryDuplicateInputModel"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
-    PutCategoryResourceDisplayNameTemplate: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": string;
-                "application/json": string;
-                "text/json": string;
-                "application/*+json": string;
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
-    ConfigureCategoryComponents: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Input.CategoryComponentConfigureInputModel"];
-                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Input.CategoryComponentConfigureInputModel"];
-                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Input.CategoryComponentConfigureInputModel"];
-                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Input.CategoryComponentConfigureInputModel"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
-    SortCategories: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.IdBasedSortRequestModel"];
-                "application/json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.IdBasedSortRequestModel"];
-                "text/json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.IdBasedSortRequestModel"];
-                "application/*+json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.IdBasedSortRequestModel"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
-    BindCustomPropertiesToCategory: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Input.CategoryCustomPropertyBindInputModel"];
-                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Input.CategoryCustomPropertyBindInputModel"];
-                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Input.CategoryCustomPropertyBindInputModel"];
-                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Input.CategoryCustomPropertyBindInputModel"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
-    BindCustomPropertyToCategory: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                categoryId: number;
-                customPropertyId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
-    UnlinkCustomPropertyFromCategory: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                categoryId: number;
-                customPropertyId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
-    SortCustomPropertiesInCategory: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                categoryId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.CategoryCustomPropertySortInputModel"];
-                "application/json": components["schemas"]["Bakabase.Service.Models.Input.CategoryCustomPropertySortInputModel"];
-                "text/json": components["schemas"]["Bakabase.Service.Models.Input.CategoryCustomPropertySortInputModel"];
-                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.CategoryCustomPropertySortInputModel"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
-    PreviewCategoryDisplayNameTemplate: {
-        parameters: {
-            query?: {
-                template?: string;
-                maxCount?: number;
-            };
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.View.ResourceDisplayNameViewModel]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.View.ResourceDisplayNameViewModel]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.View.ResourceDisplayNameViewModel]"];
-                };
-            };
-        };
-    };
-    GetCategoryEnhancerOptions: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-                enhancerId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.CategoryEnhancerOptions]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.CategoryEnhancerOptions]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.CategoryEnhancerOptions]"];
-                };
-            };
-        };
-    };
-    PatchCategoryEnhancerOptions: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-                enhancerId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Enhancer.Models.Input.CategoryEnhancerOptionsPatchInputModel"];
-                "application/json": components["schemas"]["Bakabase.Modules.Enhancer.Models.Input.CategoryEnhancerOptionsPatchInputModel"];
-                "text/json": components["schemas"]["Bakabase.Modules.Enhancer.Models.Input.CategoryEnhancerOptionsPatchInputModel"];
-                "application/*+json": components["schemas"]["Bakabase.Modules.Enhancer.Models.Input.CategoryEnhancerOptionsPatchInputModel"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
-    DeleteCategoryEnhancerTargetOptions: {
-        parameters: {
-            query?: {
-                target?: number;
-                dynamicTarget?: string;
-            };
-            header?: never;
-            path: {
-                id: number;
-                enhancerId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
-    UnbindCategoryEnhancerTargetProperty: {
-        parameters: {
-            query: {
-                target: number;
-                dynamicTarget?: string;
-            };
-            header?: never;
-            path: {
-                id: number;
-                enhancerId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
-    StartSyncingCategoryResources: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
     GetAllComparisonPlans: {
         parameters: {
             query?: never;
@@ -12809,216 +11345,6 @@ export interface operations {
             };
         };
     };
-    GetComponentDescriptors: {
-        parameters: {
-            query?: {
-                /** @description [1: Enhancer, 2: PlayableFileSelector, 3: Player] */
-                type?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ComponentType"];
-                /** @description [0: None, 1: AssociatedCategories] */
-                additionalItems?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.AdditionalItems.ComponentDescriptorAdditionalItem"];
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.ComponentDescriptor]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.ComponentDescriptor]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.ComponentDescriptor]"];
-                };
-            };
-        };
-    };
-    GetComponentDescriptorByKey: {
-        parameters: {
-            query?: {
-                key?: string;
-                /** @description [0: None, 1: AssociatedCategories] */
-                additionalItems?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.AdditionalItems.ComponentDescriptorAdditionalItem"];
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ComponentDescriptor]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ComponentDescriptor]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ComponentDescriptor]"];
-                };
-            };
-        };
-    };
-    DiscoverDependentComponent: {
-        parameters: {
-            query?: {
-                id?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
-    GetDependentComponentLatestVersion: {
-        parameters: {
-            query?: {
-                id?: string;
-                fromCache?: boolean;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Dependency.Abstractions.DependentComponentVersion]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Dependency.Abstractions.DependentComponentVersion]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Dependency.Abstractions.DependentComponentVersion]"];
-                };
-            };
-        };
-    };
-    InstallDependentComponent: {
-        parameters: {
-            query?: {
-                id?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
-    AddComponentOptions: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.ComponentOptionsAddRequestModel"];
-                "application/json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.ComponentOptionsAddRequestModel"];
-                "text/json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.ComponentOptionsAddRequestModel"];
-                "application/*+json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.ComponentOptionsAddRequestModel"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Models.Entities.ComponentOptions]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Models.Entities.ComponentOptions]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Models.Entities.ComponentOptions]"];
-                };
-            };
-        };
-    };
-    PutComponentOptions: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.ComponentOptionsAddRequestModel"];
-                "application/json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.ComponentOptionsAddRequestModel"];
-                "text/json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.ComponentOptionsAddRequestModel"];
-                "application/*+json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.ComponentOptionsAddRequestModel"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
-    RemoveComponentOptions: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
     GetAllExtensionMediaTypes: {
         parameters: {
             query?: never;
@@ -13044,7 +11370,7 @@ export interface operations {
     GetAllCustomProperties: {
         parameters: {
             query?: {
-                /** @description [0: None, 1: Category, 2: ValueCount] */
+                /** @description [0: None, 2: ValueCount] */
                 additionalItems?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.AdditionalItems.CustomPropertyAdditionalItem"];
             };
             header?: never;
@@ -13070,7 +11396,7 @@ export interface operations {
         parameters: {
             query?: {
                 ids?: number[];
-                /** @description [0: None, 1: Category, 2: ValueCount] */
+                /** @description [0: None, 2: ValueCount] */
                 additionalItems?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.AdditionalItems.CustomPropertyAdditionalItem"];
             };
             header?: never;
@@ -13478,7 +11804,7 @@ export interface operations {
     SyncDLsiteWorks: {
         parameters: {
             query?: {
-                redownloadCover?: boolean;
+                refetchMetadata?: boolean;
             };
             header?: never;
             path?: never;
@@ -14500,7 +12826,7 @@ export interface operations {
     SyncExHentaiGalleries: {
         parameters: {
             query?: {
-                redownloadCover?: boolean;
+                refetchMetadata?: boolean;
             };
             header?: never;
             path?: never;
@@ -15768,370 +14094,6 @@ export interface operations {
             };
         };
     };
-    GetAllMediaLibraries: {
-        parameters: {
-            query?: {
-                /** @description [0: None, 1: Category, 2: FileSystemInfo, 4: PathConfigurationBoundProperties] */
-                additionalItems?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.AdditionalItems.MediaLibraryAdditionalItem"];
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.MediaLibrary]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.MediaLibrary]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.MediaLibrary]"];
-                };
-            };
-        };
-    };
-    AddMediaLibrary: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Dto.MediaLibraryAddDto"];
-                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Dto.MediaLibraryAddDto"];
-                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Dto.MediaLibraryAddDto"];
-                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Dto.MediaLibraryAddDto"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
-    GetMediaLibrary: {
-        parameters: {
-            query?: {
-                /** @description [0: None, 1: Category, 2: FileSystemInfo, 4: PathConfigurationBoundProperties] */
-                additionalItems?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.AdditionalItems.MediaLibraryAdditionalItem"];
-            };
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.MediaLibrary]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.MediaLibrary]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.MediaLibrary]"];
-                };
-            };
-        };
-    };
-    PatchMediaLibrary: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Dto.MediaLibraryPatchDto"];
-                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Dto.MediaLibraryPatchDto"];
-                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Dto.MediaLibraryPatchDto"];
-                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Dto.MediaLibraryPatchDto"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
-    DeleteMediaLibrary: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
-    StartSyncMediaLibrary: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
-    ValidatePathConfiguration: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Domain.PathConfiguration"];
-                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Domain.PathConfiguration"];
-                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Domain.PathConfiguration"];
-                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Domain.PathConfiguration"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.PathConfigurationTestResult]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.PathConfigurationTestResult]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.PathConfigurationTestResult]"];
-                };
-            };
-        };
-    };
-    SortMediaLibrariesInCategory: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.IdBasedSortRequestModel"];
-                "application/json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.IdBasedSortRequestModel"];
-                "text/json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.IdBasedSortRequestModel"];
-                "application/*+json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.IdBasedSortRequestModel"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
-    AddMediaLibraryPathConfiguration: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Input.MediaLibraryPathConfigurationAddInputModel"];
-                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Input.MediaLibraryPathConfigurationAddInputModel"];
-                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Input.MediaLibraryPathConfigurationAddInputModel"];
-                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Input.MediaLibraryPathConfigurationAddInputModel"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
-    RemoveMediaLibraryPathConfiguration: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.PathConfigurationRemoveRequestModel"];
-                "application/json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.PathConfigurationRemoveRequestModel"];
-                "text/json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.PathConfigurationRemoveRequestModel"];
-                "application/*+json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.PathConfigurationRemoveRequestModel"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
-    AddMediaLibrariesInBulk: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                cId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Input.MediaLibraryAddInBulkInputModel"];
-                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Input.MediaLibraryAddInBulkInputModel"];
-                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Input.MediaLibraryAddInBulkInputModel"];
-                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Input.MediaLibraryAddInBulkInputModel"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
-    AddMediaLibraryRootPathsInBulk: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                mlId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Input.MediaLibraryRootPathsAddInBulkInputModel"];
-                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Input.MediaLibraryRootPathsAddInBulkInputModel"];
-                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Input.MediaLibraryRootPathsAddInBulkInputModel"];
-                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Input.MediaLibraryRootPathsAddInBulkInputModel"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
-    StartSyncingMediaLibraryResources: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
     GetAllMediaLibraryResourceMappings: {
         parameters: {
             query?: never;
@@ -16551,35 +14513,6 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Int32]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Int32]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Int32]"];
-                };
-            };
-        };
-    };
-    AddMediaLibraryTemplateByMediaLibraryV1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Input.MediaLibraryTemplateAddByMediaLibraryV1InputModel"];
-                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Input.MediaLibraryTemplateAddByMediaLibraryV1InputModel"];
-                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Input.MediaLibraryTemplateAddByMediaLibraryV1InputModel"];
-                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Input.MediaLibraryTemplateAddByMediaLibraryV1InputModel"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                 };
             };
         };
@@ -17068,28 +15001,6 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.MediaLibraryStatistics]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.MediaLibraryStatistics]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.MediaLibraryStatistics]"];
-                };
-            };
-        };
-    };
-    MigrateCategoriesMediaLibrariesAndResourcesToNewMediaLibrary: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                 };
             };
         };
@@ -17824,57 +15735,6 @@ export interface operations {
                 "application/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.NetworkOptionsPatchInputModel"];
                 "text/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.NetworkOptionsPatchInputModel"];
                 "application/*+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.NetworkOptionsPatchInputModel"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
-    GetEnhancerOptions: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Configs.EnhancerOptions]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Configs.EnhancerOptions]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Configs.EnhancerOptions]"];
-                };
-            };
-        };
-    };
-    PatchEnhancerOptions: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.EnhancerOptionsPatchInputModel"];
-                "application/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.EnhancerOptionsPatchInputModel"];
-                "text/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.EnhancerOptionsPatchInputModel"];
-                "application/*+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.EnhancerOptionsPatchInputModel"];
             };
         };
         responses: {
@@ -19905,7 +17765,7 @@ export interface operations {
             query?: {
                 saveSearch?: boolean;
                 searchId?: string;
-                /** @description [0: None, 32: Properties, 64: Alias, 128: Category, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 8192: SourceLinks, 15200: All] */
+                /** @description [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 8192: SourceLinks, 15200: All] */
                 additionalItems?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.AdditionalItems.ResourceAdditionalItem"];
             };
             header?: never;
@@ -19967,7 +17827,7 @@ export interface operations {
         parameters: {
             query?: {
                 ids?: number[];
-                /** @description [0: None, 32: Properties, 64: Alias, 128: Category, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 8192: SourceLinks, 15200: All] */
+                /** @description [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 8192: SourceLinks, 15200: All] */
                 additionalItems?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.AdditionalItems.ResourceAdditionalItem"];
             };
             header?: never;
@@ -20668,7 +18528,7 @@ export interface operations {
     GetResourceConflicts: {
         parameters: {
             query?: {
-                /** @description [0: None, 32: Properties, 64: Alias, 128: Category, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 8192: SourceLinks, 15200: All] */
+                /** @description [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 8192: SourceLinks, 15200: All] */
                 additionalItems?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.AdditionalItems.ResourceAdditionalItem"];
             };
             header?: never;
@@ -21008,7 +18868,7 @@ export interface operations {
             };
         };
     };
-    GetSourceAvailableMetadataFields: {
+    GetSourcePredefinedMetadataFields: {
         parameters: {
             query?: never;
             header?: never;
@@ -21026,9 +18886,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.String]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.String]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.String]"];
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.SourceMetadataFieldInfo]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.SourceMetadataFieldInfo]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.SourceMetadataFieldInfo]"];
                 };
             };
         };
@@ -21318,7 +19178,7 @@ export interface operations {
     SyncSteamApps: {
         parameters: {
             query?: {
-                redownloadCover?: boolean;
+                refetchMetadata?: boolean;
             };
             header?: never;
             path?: never;
