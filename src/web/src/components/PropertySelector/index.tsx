@@ -178,7 +178,7 @@ const PropertySelector = (props: IProps) => {
             case PropertyPool.Custom:
               filters.push(
                 <Chip key={`pool-${v}`} size="sm">
-                  {t<string>(PropertyPool[v])}
+                  {t<string>(`PropertyPool.${PropertyPool[v]}`)}
                 </Chip>,
               );
               break;
