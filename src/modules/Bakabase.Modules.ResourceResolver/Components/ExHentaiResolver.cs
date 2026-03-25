@@ -33,12 +33,17 @@ public class ExHentaiResolver : IResourceResolver
         {
             ct.ThrowIfCancellationRequested();
 
+            var coverUrls = !string.IsNullOrEmpty(gallery.CoverUrl)
+                ? new List<string> { gallery.CoverUrl }
+                : null;
+
             resources.Add(new ResolvedResource
             {
                 SourceKey = $"{gallery.GalleryId}/{gallery.GalleryToken}",
                 DisplayName = gallery.Title ?? gallery.TitleJpn ?? $"Gallery {gallery.GalleryId}",
                 Path = gallery.IsDownloaded ? gallery.LocalPath : null,
-                Source = ResourceSource.ExHentai
+                Source = ResourceSource.ExHentai,
+                CoverUrls = coverUrls
             });
         }
 

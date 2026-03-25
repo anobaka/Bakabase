@@ -28,6 +28,11 @@ public record ResolvedResource
     /// The source this resource was discovered from.
     /// </summary>
     public ResourceSource Source { get; set; }
+
+    /// <summary>
+    /// Cover image URLs from the external source (e.g., Steam header image, DLsite cover).
+    /// </summary>
+    public List<string>? CoverUrls { get; set; }
 }
 
 /// <summary>

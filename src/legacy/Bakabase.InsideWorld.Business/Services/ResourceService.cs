@@ -977,8 +977,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 {
                     if (resource.SourceLinks is { Count: > 0 })
                     {
-                        await sourceLinkService.EnsureLinks(resource.Id,
-                            resource.SourceLinks.Select(l => (l.Source, l.SourceKey)));
+                        await sourceLinkService.EnsureLinks(resource.Id, resource.SourceLinks);
                     }
                 }
 
@@ -2678,8 +2677,7 @@ namespace Bakabase.InsideWorld.Business.Services
             // 1. Collect all source links from merge-source resources and add to target
             var mergeSourceIds = model.SourceResourceIds.Concat([model.TargetResourceId]).Distinct().ToArray();
             var sourceLinks = await sourceLinkService.GetByResourceIds(mergeSourceIds);
-            var allLinks = sourceLinks.Select(l => (l.Source, l.SourceKey)).Distinct().ToList();
-            await sourceLinkService.EnsureLinks(model.TargetResourceId, allLinks);
+            await sourceLinkService.EnsureLinks(model.TargetResourceId, sourceLinks);
 
             // 2. Transfer media library mappings from source resources to target
             var mappingService = MediaLibraryResourceMappingService;

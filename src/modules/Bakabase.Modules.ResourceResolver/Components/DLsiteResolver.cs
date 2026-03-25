@@ -35,12 +35,17 @@ public class DLsiteResolver : IResourceResolver
         {
             ct.ThrowIfCancellationRequested();
 
+            var coverUrls = !string.IsNullOrEmpty(work.CoverUrl)
+                ? new List<string> { work.CoverUrl }
+                : null;
+
             resources.Add(new ResolvedResource
             {
                 SourceKey = work.WorkId,
                 DisplayName = work.Title ?? work.WorkId,
                 Path = work.IsDownloaded ? work.LocalPath : null,
-                Source = ResourceSource.DLsite
+                Source = ResourceSource.DLsite,
+                CoverUrls = coverUrls
             });
         }
 
