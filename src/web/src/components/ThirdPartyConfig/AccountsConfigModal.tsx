@@ -25,6 +25,7 @@ export interface AccountField {
   placeholder?: string;
   type?: "text" | "password" | "textarea";
   cookieValidatorTarget?: CookieValidatorTarget;
+  description?: React.ReactNode;
 }
 
 interface Account {
@@ -205,17 +206,23 @@ export default function AccountsConfigModal({
                         )}
                       </div>
                     ) : (
-                      <Input
-                        key={field.key}
-                        label={field.label}
-                        placeholder={field.placeholder}
-                        size="sm"
-                        type={field.type === "password" ? "password" : "text"}
-                        value={account[field.key] || ""}
-                        onValueChange={(v) =>
-                          updateAccount(index, field.key, v)
-                        }
-                      />
+                      <div key={field.key}>
+                        <Input
+                          label={field.label}
+                          placeholder={field.placeholder}
+                          size="sm"
+                          type={field.type === "password" ? "password" : "text"}
+                          value={account[field.key] || ""}
+                          onValueChange={(v) =>
+                            updateAccount(index, field.key, v)
+                          }
+                        />
+                        {field.description && (
+                          <div className="mt-1 text-xs text-default-400">
+                            {field.description}
+                          </div>
+                        )}
+                      </div>
                     );
                   })}
 

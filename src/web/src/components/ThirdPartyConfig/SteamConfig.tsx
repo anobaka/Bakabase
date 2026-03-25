@@ -3,6 +3,9 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
+import { FiExternalLink } from "react-icons/fi";
+import { Link } from "@heroui/react";
+
 import { toast } from "@/components/bakaui";
 import { useSteamOptionsStore } from "@/stores/options";
 import AccountsConfigModal, {
@@ -26,6 +29,18 @@ export default function SteamConfig({ isOpen, onClose }: SteamConfigProps) {
         label: t("resourceSource.accounts.apiKey"),
         placeholder: t("resourceSource.accounts.apiKeyPlaceholder"),
         type: "password" as const,
+        description: (
+          <Link
+            className="text-xs gap-1"
+            href="https://steamcommunity.com/dev/apikey"
+            isExternal
+            showAnchorIcon
+            anchorIcon={<FiExternalLink />}
+            size="sm"
+          >
+            {t("resourceSource.steam.config.getApiKey")}
+          </Link>
+        ),
       },
       {
         key: "steamId",

@@ -43,6 +43,7 @@
   "resourceSource.steam.label.account": "Account",
   "resourceSource.steam.playtimeHours": "{{hours}}h",
   "resourceSource.steam.config.apiKey": "Steam Web API Key",
+  "resourceSource.steam.config.getApiKey": "Get Steam API Key",
   "resourceSource.steam.config.steamId": "Steam ID",
 
   "resourceSource.dlsite.title": "DLsite Works",

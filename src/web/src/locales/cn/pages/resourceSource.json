@@ -43,6 +43,7 @@
   "resourceSource.steam.label.account": "账号",
   "resourceSource.steam.playtimeHours": "{{hours}}小时",
   "resourceSource.steam.config.apiKey": "Steam Web API Key",
+  "resourceSource.steam.config.getApiKey": "获取 Steam API Key",
   "resourceSource.steam.config.steamId": "Steam ID",
 
   "resourceSource.dlsite.title": "DLsite 作品",
