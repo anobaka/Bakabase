@@ -55,31 +55,29 @@ const isGroupEmpty = (group?: SearchFilterGroup): boolean => {
 };
 
 /**
- * Creates a media library filter by fetching property info from API.
+ * Creates an internal property filter by fetching property info from API.
  */
-const createMediaLibraryFilter = async (): Promise<SearchFilter | null> => {
+const createInternalPropertyFilter = async (
+  propertyId: ResourceProperty,
+  operation: SearchOperation = SearchOperation.In
+): Promise<SearchFilter | null> => {
   try {
-    const propertyId = ResourceProperty.MediaLibraryV2Multi;
     const pool = PropertyPool.Internal;
-    const operation = SearchOperation.In;
 
-    // Fetch property definition
     const propertyResponse = await BApi.property.getPropertiesByPool(pool);
     const property = (propertyResponse.data || []).find(p => p.id === propertyId);
     if (!property) return null;
 
-    // Fetch value property
     const valuePropertyResponse = await BApi.resource.getFilterValueProperty({
       propertyPool: pool,
-      propertyId: propertyId,
-      operation: operation,
+      propertyId,
+      operation,
     });
     const valueProperty = valuePropertyResponse.data;
 
-    // Fetch available operations
     const operationsResponse = await BApi.resource.getSearchOperationsForProperty({
       propertyPool: pool,
-      propertyId: propertyId,
+      propertyId,
     });
     const availableOperations = operationsResponse.data ?? [];
 
@@ -113,7 +111,7 @@ const FilterGroupWithContextContent = ({
 }: Omit<FilterGroupWithContextProps, "config">) => {
   const autoCreateTriggeredRef = useRef(false);
 
-  // Auto-create media library filter when group is empty
+  // Auto-create default filters (MediaLibrary + Source) when group is empty
   useEffect(() => {
     if (!autoCreateMediaLibraryFilter) return;
     if (autoCreateTriggeredRef.current) return;
@@ -121,12 +119,16 @@ const FilterGroupWithContextContent = ({
 
     autoCreateTriggeredRef.current = true;
 
-    createMediaLibraryFilter().then((filter) => {
-      if (filter) {
+    Promise.all([
+      createInternalPropertyFilter(ResourceProperty.MediaLibraryV2Multi),
+      createInternalPropertyFilter(ResourceProperty.Source),
+    ]).then((filters) => {
+      const validFilters = filters.filter((f): f is SearchFilter => f !== null);
+      if (validFilters.length > 0) {
         const newGroup: SearchFilterGroup = {
           combinator: GroupCombinator.And,
           disabled: false,
-          filters: [filter],
+          filters: validFilters,
           groups: [],
         };
         onChange(newGroup);
