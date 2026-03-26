@@ -120,8 +120,8 @@ const FilterGroupWithContextContent = ({
     autoCreateTriggeredRef.current = true;
 
     Promise.all([
-      createInternalPropertyFilter(ResourceProperty.MediaLibraryV2Multi),
       createInternalPropertyFilter(ResourceProperty.Source),
+      createInternalPropertyFilter(ResourceProperty.MediaLibraryV2Multi),
     ]).then((filters) => {
       const validFilters = filters.filter((f): f is SearchFilter => f !== null);
       if (validFilters.length > 0) {
