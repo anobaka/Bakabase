@@ -10,6 +10,7 @@ import { ResourceSource } from "@/sdk/constants";
 import ExternalLink from "@/components/ExternalLink";
 import AccountsPanel, { type AccountField } from "./AccountsPanel";
 import MetadataMappingPanel from "./MetadataMappingPanel";
+import AutoSyncPanel from "./AutoSyncPanel";
 
 interface SteamConfigProps {
   onDestroyed?: () => void;
@@ -62,6 +63,12 @@ export default function SteamConfig({ onDestroyed }: SteamConfigProps) {
             </Tab>
             <Tab key="metadata" title={t("resourceSource.config.tab.metadataSync")}>
               <MetadataMappingPanel source={ResourceSource.Steam} />
+            </Tab>
+            <Tab key="autoSync" title={t("thirdPartyConfig.autoSync.tabTitle")}>
+              <AutoSyncPanel
+                autoSyncIntervalMinutes={steamOptions?.autoSyncIntervalMinutes}
+                onSave={(v) => patch({ autoSyncIntervalMinutes: v })}
+              />
             </Tab>
           </Tabs>
         </ModalBody>

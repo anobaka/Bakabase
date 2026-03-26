@@ -45,7 +45,6 @@ export default function ExHentaiTable({
       { key: "title", label: t("resourceSource.exhentai.label.title") },
       { key: "category", label: t("resourceSource.exhentai.label.category") },
       { key: "downloaded", label: t("resourceSource.exhentai.label.downloaded") },
-      { key: "resourceId", label: t("resourceSource.label.resourceId") },
       { key: "account", label: t("resourceSource.exhentai.label.account") },
       { key: "createdAt", label: t("resourceSource.label.createdAt") },
       { key: "actions", label: "", width: 120 },
@@ -108,12 +107,6 @@ export default function ExHentaiTable({
             {gallery.isDownloaded ? "Yes" : "No"}
           </Chip>
         );
-      case "resourceId":
-        return gallery.resourceId ? (
-          <Chip color="primary" size="sm" variant="flat">
-            #{gallery.resourceId}
-          </Chip>
-        ) : "-";
       case "account":
         return gallery.account ? (
           <Chip size="sm" variant="flat">

@@ -50,5 +50,10 @@ namespace Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain
         public int MaxRetries { get; set; }
         public int RequestTimeout { get; set; }
         public bool ShowCover { get; set; }
+
+        /// <summary>
+        /// Auto-sync interval in minutes. 0 or null = disabled.
+        /// </summary>
+        public int? AutoSyncIntervalMinutes { get; set; }
     }
 }

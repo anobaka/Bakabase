@@ -27,4 +27,9 @@ public class SteamOptions
     public string? SteamId => Accounts?.FirstOrDefault()?.SteamId;
 
     public bool ShowCover { get; set; }
+
+    /// <summary>
+    /// Auto-sync interval in minutes. 0 or null = disabled.
+    /// </summary>
+    public int? AutoSyncIntervalMinutes { get; set; }
 }

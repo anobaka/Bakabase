@@ -23,6 +23,7 @@ import { FileSystemSelectorModal } from "@/components/FileSystemSelector";
 import { CookieValidatorTarget, ResourceSource } from "@/sdk/constants";
 import AccountsPanel, { type AccountField } from "./AccountsPanel";
 import MetadataMappingPanel from "./MetadataMappingPanel";
+import AutoSyncPanel from "./AutoSyncPanel";
 import { LeStatusIndicator } from "@/pages/dlsite-works/components/LeStatusIndicator";
 
 interface DLsiteConfigProps {
@@ -179,6 +180,12 @@ export default function DLsiteConfig({ onDestroyed }: DLsiteConfigProps) {
             </Tab>
             <Tab key="metadata" title={t("resourceSource.config.tab.metadataSync")}>
               <MetadataMappingPanel source={ResourceSource.DLsite} />
+            </Tab>
+            <Tab key="autoSync" title={t("thirdPartyConfig.autoSync.tabTitle")}>
+              <AutoSyncPanel
+                autoSyncIntervalMinutes={options?.autoSyncIntervalMinutes}
+                onSave={(v) => patch({ autoSyncIntervalMinutes: v })}
+              />
             </Tab>
             <Tab key="le" title={t("resourceSource.config.tab.localeEmulator")}>
               <div className="py-4">

@@ -720,4 +720,10 @@ The version of lux is not limited.</value>
   <data name="CodecNotSupportedByBrowsers" xml:space="preserve">
     <value>Codec '{0}' is not supported by browsers</value>
   </data>
+  <data name="BTask_Name_FetchExternalMetadata" xml:space="preserve">
+    <value>Fetch External Metadata</value>
+  </data>
+  <data name="BTask_Description_FetchExternalMetadata" xml:space="preserve">
+    <value>Fetching metadata and covers from external sources (Steam, DLsite, ExHentai)</value>
+  </data>
 </root>

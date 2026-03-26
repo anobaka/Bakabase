@@ -25,5 +25,10 @@
   "thirdPartyConfig.tip.fanbox": "配置 Fanbox 下载器设置，包括认证和下载参数。",
   "thirdPartyConfig.tip.fantia": "配置 Fantia 下载器设置，包括认证和下载参数。",
   "thirdPartyConfig.tip.patreon": "配置 Patreon 下载器设置，包括认证和下载参数。",
-  "thirdPartyConfig.tip.tmdb": "配置 TMDB（电影数据库）设置，包括 API Key 和请求参数。"
+  "thirdPartyConfig.tip.tmdb": "配置 TMDB（电影数据库）设置，包括 API Key 和请求参数。",
+  "thirdPartyConfig.autoSync.tabTitle": "自动同步",
+  "thirdPartyConfig.autoSync.intervalLabel": "同步间隔",
+  "thirdPartyConfig.autoSync.intervalDescription": "自动从此源同步数据的频率。设为 0 或留空则禁用。",
+  "thirdPartyConfig.autoSync.unit": "分钟",
+  "thirdPartyConfig.autoSync.warning": "设置过短的同步间隔可能导致你的账号被服务提供商限速或封禁。"
 }

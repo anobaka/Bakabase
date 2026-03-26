@@ -66,7 +66,6 @@ export function DLsiteTable({
       { key: "title", label: t("resourceSource.dlsite.label.title") },
       { key: "salesDate", label: t("resourceSource.dlsite.label.salesDate") },
       { key: "purchasedAt", label: t("resourceSource.dlsite.label.purchasedAt") },
-      { key: "resourceId", label: t("resourceSource.label.resourceId") },
       { key: "account", label: t("resourceSource.dlsite.label.account") },
       { key: "drmKey", label: t("resourceSource.dlsite.label.drmKey") },
       { key: "actions", label: "", width: 260 },
@@ -127,12 +126,6 @@ export function DLsiteTable({
         return work.purchasedAt
           ? new Date(work.purchasedAt).toLocaleDateString()
           : "-";
-      case "resourceId":
-        return work.resourceId ? (
-          <Chip color="primary" size="sm" variant="flat">
-            #{work.resourceId}
-          </Chip>
-        ) : "-";
       case "account":
         return work.account ? (
           <Chip size="sm" variant="flat">

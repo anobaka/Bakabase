@@ -25,5 +25,10 @@
   "thirdPartyConfig.tip.fanbox": "Configure Fanbox downloader settings including authentication and download parameters.",
   "thirdPartyConfig.tip.fantia": "Configure Fantia downloader settings including authentication and download parameters.",
   "thirdPartyConfig.tip.patreon": "Configure Patreon downloader settings including authentication and download parameters.",
-  "thirdPartyConfig.tip.tmdb": "Configure TMDB (The Movie Database) settings including API key and request parameters."
+  "thirdPartyConfig.tip.tmdb": "Configure TMDB (The Movie Database) settings including API key and request parameters.",
+  "thirdPartyConfig.autoSync.tabTitle": "Auto Sync",
+  "thirdPartyConfig.autoSync.intervalLabel": "Sync interval",
+  "thirdPartyConfig.autoSync.intervalDescription": "How often to automatically sync data from this source. Set to 0 or leave empty to disable.",
+  "thirdPartyConfig.autoSync.unit": "minutes",
+  "thirdPartyConfig.autoSync.warning": "Setting a very short interval may cause your account to be rate-limited or blocked by the service provider."
 }

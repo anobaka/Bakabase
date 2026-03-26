@@ -9,6 +9,7 @@ import { useExHentaiOptionsStore } from "@/stores/options";
 import { ResourceSource } from "@/sdk/constants";
 import AccountsPanel, { type AccountField } from "./AccountsPanel";
 import MetadataMappingPanel from "./MetadataMappingPanel";
+import AutoSyncPanel from "./AutoSyncPanel";
 
 interface ExHentaiConfigProps {
   onDestroyed?: () => void;
@@ -51,6 +52,12 @@ export default function ExHentaiConfig({ onDestroyed }: ExHentaiConfigProps) {
             </Tab>
             <Tab key="metadata" title={t("resourceSource.config.tab.metadataSync")}>
               <MetadataMappingPanel source={ResourceSource.ExHentai} />
+            </Tab>
+            <Tab key="autoSync" title={t("thirdPartyConfig.autoSync.tabTitle")}>
+              <AutoSyncPanel
+                autoSyncIntervalMinutes={options?.autoSyncIntervalMinutes}
+                onSave={(v) => patch({ autoSyncIntervalMinutes: v })}
+              />
             </Tab>
           </Tabs>
         </ModalBody>

@@ -50,4 +50,9 @@ public record DLsiteOptions : ISimpleDownloaderOptionsHolder, IThirdPartyHttpCli
     public int RequestTimeout { get; set; }
     public bool ShowCover { get; set; }
     public bool DeleteArchiveAfterExtraction { get; set; }
+
+    /// <summary>
+    /// Auto-sync interval in minutes. 0 or null = disabled.
+    /// </summary>
+    public int? AutoSyncIntervalMinutes { get; set; }
 }
