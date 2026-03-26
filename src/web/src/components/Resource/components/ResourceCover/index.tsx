@@ -67,8 +67,11 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
   const resourceUiOptions = useUiOptionsStore((state) => state.data?.resource);
   const cacheEnabled = !resourceUiOptions?.disableCoverCache;
 
-  // Use SSE-based discovery for covers
-  const discoveryState = useCoverDiscovery(resource, cacheEnabled);
+  // Backend already resolves covers with priority:
+  // 1. User-set cover property  2. External source local covers  3. Cache-discovered covers
+  // Only need SSE discovery when backend couldn't resolve (coversReady=false, no covers)
+  const needsDiscovery = !resource.coversReady && !resource.covers?.length;
+  const discoveryState = useCoverDiscovery(resource, cacheEnabled, needsDiscovery);
 
   const [previewerVisible, setPreviewerVisible] = useState(false);
   const previewerHoverTimerRef = useRef<any>();
@@ -89,19 +92,22 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     () => discoveryState.coverPaths,
     [discoveryState.coverPaths?.join(",")]
   );
-  const stableResourceCoverPaths = useMemo(
-    () => resource.coverPaths,
-    [resource.coverPaths?.join(",")]
+  const stableCovers = useMemo(
+    () => resource.covers,
+    [resource.covers?.join(",")]
   );
   const stableApiEndpoints = useMemo(
     () => appContext.apiEndpoints,
     [appContext.apiEndpoints?.join(",")]
   );
 
-  // Build URLs from discovery result
+  // Build URLs from cover paths
   // Uses only 2nd-nth endpoints for resource loading (1st is for API calls)
   const urls = useMemo(() => {
-    if (discoveryState.status !== "ready") {
+    // If backend resolved covers, use them directly
+    // Otherwise wait for SSE discovery to be ready
+    const hasBackendCovers = stableCovers?.length;
+    if (!hasBackendCovers && discoveryState.status !== "ready") {
       return null;
     }
 
@@ -111,10 +117,9 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     const serverAddress =
       resourceServerAddresses[Math.floor(Math.random() * resourceServerAddresses.length)];
 
-    // Priority: resource.coverPaths (from ReservedPropertyValue) > discovered covers (from cache) > resource.path
-    // This ensures user-configured or enhancer-created covers take precedence over auto-discovered cache
-    const coverPaths = stableResourceCoverPaths?.length
-      ? stableResourceCoverPaths
+    // Priority: backend-resolved covers > SSE-discovered covers > resource.path fallback
+    const coverPaths = hasBackendCovers
+      ? stableCovers
       : stableDiscoveryCoverPaths?.length
         ? stableDiscoveryCoverPaths
         : [resource.path];
@@ -122,7 +127,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     return coverPaths.map(
       (coverPath) => `${serverAddress}/tool/thumbnail?path=${encodeURIComponent(coverPath)}`
     );
-  }, [discoveryState.status, stableDiscoveryCoverPaths, stableApiEndpoints, stableResourceCoverPaths, resource.path, reloadKey]);
+  }, [stableCovers, discoveryState.status, stableDiscoveryCoverPaths, stableApiEndpoints, resource.path, reloadKey]);
 
   useUpdateEffect(() => {
     forceUpdate();

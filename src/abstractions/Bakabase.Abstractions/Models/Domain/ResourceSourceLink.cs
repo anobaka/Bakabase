@@ -21,4 +21,10 @@ public class ResourceSourceLink
     /// When CoverUrls is non-empty but LocalCoverPaths is empty, the DownloadExternalCovers task will download them.
     /// </summary>
     public List<string>? LocalCoverPaths { get; set; }
+
+    /// <summary>
+    /// When set, indicates that the last cover download attempt failed for all URLs.
+    /// Used to implement backoff so broken links aren't retried every task cycle.
+    /// </summary>
+    public DateTime? CoverDownloadFailedAt { get; set; }
 }

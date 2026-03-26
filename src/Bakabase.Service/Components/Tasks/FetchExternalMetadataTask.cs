@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Models.Domain.Constants;
@@ -73,6 +74,7 @@ public class FetchExternalMetadataTask : AbstractPredefinedBTaskBuilder
                             if (link != null && link.CoverUrls is not { Count: > 0 })
                             {
                                 link.CoverUrls = metadata.CoverUrls;
+                                link.CoverDownloadFailedAt = null;
                                 await sourceLinkService.Update(link);
                             }
                         }
@@ -185,6 +187,7 @@ public class FetchExternalMetadataTask : AbstractPredefinedBTaskBuilder
         var sourceLinkService = sp.GetRequiredService<IResourceSourceLinkService>();
         var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
         var resourceService = sp.GetRequiredService<IResourceService>();
+        var fileManager = sp.GetRequiredService<IFileManager>();
 
         var pendingLinks = await sourceLinkService.GetPendingCoverDownloads();
         if (pendingLinks.Count == 0) return;
@@ -202,9 +205,8 @@ public class FetchExternalMetadataTask : AbstractPredefinedBTaskBuilder
             try
             {
                 var localPaths = new List<string>();
-                var coverDir = Path.Combine(
-                    AppContext.BaseDirectory, "cache", "cover", "source",
-                    $"{link.ResourceId}_{link.Source}");
+                var coverDir = fileManager.BuildAbsolutePath(
+                    "cache", "cover", "source", $"{link.ResourceId}_{link.Source}");
                 Directory.CreateDirectory(coverDir);
 
                 for (var i = 0; i < link.CoverUrls!.Count; i++)
@@ -229,8 +231,19 @@ public class FetchExternalMetadataTask : AbstractPredefinedBTaskBuilder
                 if (localPaths.Count > 0)
                 {
                     link.LocalCoverPaths = localPaths;
+                    link.CoverDownloadFailedAt = null;
                     await sourceLinkService.Update(link);
                     await resourceService.InvalidateResourceCovers(link.ResourceId);
+                }
+                else
+                {
+                    // All cover URLs failed (e.g., 404). Mark failure time so we don't
+                    // retry every task cycle. Will be retried after 24h backoff.
+                    link.CoverDownloadFailedAt = DateTime.Now;
+                    await sourceLinkService.Update(link);
+                    logger.LogWarning(
+                        "All cover downloads failed for resource {ResourceId}, source {Source}. Will retry after backoff.",
+                        link.ResourceId, link.Source);
                 }
             }
             catch (Exception ex)

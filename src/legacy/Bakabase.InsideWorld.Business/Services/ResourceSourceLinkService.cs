@@ -176,9 +176,11 @@ public class ResourceSourceLinkService<TDbContext>(
 
     public async Task<List<ResourceSourceLink>> GetPendingCoverDownloads()
     {
+        var now = DateTime.Now;
         var dbModels = await orm.GetAll(m =>
             m.CoverUrls != null && m.CoverUrls != "" &&
-            (m.LocalCoverPaths == null || m.LocalCoverPaths == ""));
+            (m.LocalCoverPaths == null || m.LocalCoverPaths == "") &&
+            (m.CoverDownloadFailedAt == null || m.CoverDownloadFailedAt.Value.AddHours(24) < now));
         return dbModels.Select(d => d.ToDomainModel()).ToList();
     }
 

@@ -196,10 +196,10 @@ export function useResourceDiscovery(
 
 /**
  * Hook specifically for discovering covers.
- * Always auto-discovers (no deferred mode).
+ * When autoDiscover is false, stays idle until trigger() is called.
  */
-export function useCoverDiscovery(resource: Resource, cacheEnabled: boolean = true): DiscoveryResult {
-  return useResourceDiscovery(resource, [ResourceCacheType.Covers], cacheEnabled);
+export function useCoverDiscovery(resource: Resource, cacheEnabled: boolean = true, autoDiscover: boolean = true): DiscoveryResult {
+  return useResourceDiscovery(resource, [ResourceCacheType.Covers], cacheEnabled, autoDiscover);
 }
 
 /**

@@ -17,4 +17,9 @@ public record ResourceSourceLinkDbModel
     /// Serialized List&lt;string&gt; of local file paths for downloaded covers.
     /// </summary>
     public string? LocalCoverPaths { get; set; }
+    /// <summary>
+    /// When set, indicates that the last cover download attempt failed for all URLs.
+    /// Used to implement backoff so broken links aren't retried every task cycle.
+    /// </summary>
+    public DateTime? CoverDownloadFailedAt { get; set; }
 }

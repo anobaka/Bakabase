@@ -17,6 +17,7 @@ public static class ResourceSourceLinkExtensions
             CreateDt = model.CreateDt,
             CoverUrls = StringListSerializer.Serialize(model.CoverUrls),
             LocalCoverPaths = StringListSerializer.Serialize(model.LocalCoverPaths),
+            CoverDownloadFailedAt = model.CoverDownloadFailedAt,
         };
     }
 
@@ -31,6 +32,7 @@ public static class ResourceSourceLinkExtensions
             CreateDt = dbModel.CreateDt,
             CoverUrls = StringListSerializer.Deserialize(dbModel.CoverUrls),
             LocalCoverPaths = StringListSerializer.Deserialize(dbModel.LocalCoverPaths),
+            CoverDownloadFailedAt = dbModel.CoverDownloadFailedAt,
         };
     }
 }
