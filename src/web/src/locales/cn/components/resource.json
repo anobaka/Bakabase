@@ -142,5 +142,7 @@
   "resource.conflict.mergeSuccess": "资源合并成功",
   "resource.conflict.mergeFailed": "资源合并失败",
 
-  "resource.playControl.tooltip.launchAsSource": "作为{{source}}资源启动"
+  "resource.playControl.tooltip.launchAsSource": "作为{{source}}资源启动",
+  "resource.playControl.tooltip.discoveringFiles": "正在发现可播放文件...",
+  "resource.playControl.menu.openVia": "通过 {{source}} 打开"
 }

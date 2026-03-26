@@ -868,8 +868,9 @@ namespace Bakabase.InsideWorld.Business.Services
 
                         r.PlayableItems = allItems.Count > 0 ? allItems : null;
                         r.HasMorePlayableFiles = r.Cache?.HasMorePlayableFiles ?? false;
-                        r.PlayableItemsReady = r.PlayableItems != null ||
-                                               r.Cache?.CachedTypes.Contains(ResourceCacheType.PlayableFiles) == true;
+                        // PlayableItemsReady reflects FileSystem cache state only.
+                        // External source items are always derived from SourceLinks (no cache needed).
+                        r.PlayableItemsReady = r.Cache?.CachedTypes.Contains(ResourceCacheType.PlayableFiles) == true;
                     }
                 }
 
@@ -1271,8 +1272,8 @@ namespace Bakabase.InsideWorld.Business.Services
             // Get source links for this resource
             var sourceLinks = await ResourceSourceLinkService.GetByResourceId(id);
 
-            // Discover playable items from each linked source
-            foreach (var link in sourceLinks)
+            // Discover playable items from each non-FileSystem linked source
+            foreach (var link in sourceLinks.Where(l => l.Source != ResourceSource.FileSystem))
             {
                 ct.ThrowIfCancellationRequested();
 
@@ -1291,8 +1292,8 @@ namespace Bakabase.InsideWorld.Business.Services
                 }
             }
 
-            // If no source links found, fallback to FileSystem discovery
-            if (sourceLinks.Count == 0 && !string.IsNullOrEmpty(r.Path))
+            // Always discover FileSystem playable files when resource has a local path
+            if (!string.IsNullOrEmpty(r.Path))
             {
                 var fsResolver = ResourceResolvers.FirstOrDefault(x => x.Source == ResourceSource.FileSystem);
                 if (fsResolver != null)
@@ -1348,7 +1349,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 return BaseResponseBuilder.BuildBadRequest("No playable file was found.");
             }
 
-            return await Play(cache.ResourceId, file);
+            return await PlayItem(cache.ResourceId, ResourceSource.FileSystem, file);
         }
 
         public async Task<bool> Any(Func<Abstractions.Models.Db.ResourceDbModel, bool>? selector = null)

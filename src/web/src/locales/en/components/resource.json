@@ -142,5 +142,7 @@
   "resource.conflict.mergeSuccess": "Resources merged successfully",
   "resource.conflict.mergeFailed": "Failed to merge resources",
 
-  "resource.playControl.tooltip.launchAsSource": "Launch as {{source}} resource"
+  "resource.playControl.tooltip.launchAsSource": "Launch as {{source}} resource",
+  "resource.playControl.tooltip.discoveringFiles": "Discovering playable files...",
+  "resource.playControl.menu.openVia": "Open via {{source}}"
 }

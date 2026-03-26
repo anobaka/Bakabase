@@ -22,6 +22,9 @@ import NoPlayableFilesModal from "./NoPlayableFilesModal";
 // Play control status for UI rendering
 export type PlayControlStatus = "idle" | "loading" | "ready" | "not-found";
 
+// FileSystem discovery status
+export type FsDiscoveryStatus = "idle" | "loading" | "ready";
+
 export type SourceEntry = {
   source: ResourceSource;
   items: PlayableItem[];
@@ -29,18 +32,22 @@ export type SourceEntry = {
 
 export type PlayControlPortalProps = {
   status: PlayControlStatus;
-  /** Ordered list of sources that have playable items */
+  /** Ordered list of sources that have playable items (non-FileSystem first) */
   sources: SourceEntry[];
   /** Whether the resource has a local file path */
   hasPath: boolean;
   /** Whether the resource is a file (affects open folder behavior) */
   isFile: boolean;
+  /** FileSystem discovery status (for showing loading on FS button) */
+  fsDiscoveryStatus: FsDiscoveryStatus;
   /** Play items from a specific source */
   onPlaySource: (source: ResourceSource) => void;
   /** Open the resource's folder */
   onOpenFolder: () => void;
   /** Handle click when no playable items found */
   onNotFound: () => void;
+  /** Trigger FileSystem SSE discovery (call when FS button becomes visible) */
+  triggerFsDiscovery: () => void;
 };
 
 type Props = {
@@ -130,11 +137,10 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
   // Get playable file cache enabled status from UI options
   const cacheEnabled = !resourceUiOptions?.disablePlayableFileCache;
 
-  // Backend resolves playable items with priority:
-  // 1. External source items (from SourceLinks)  2. FileSystem cache
-  // Only need SSE discovery when backend hasn't resolved (playableItemsReady=false, no items)
-  const needsDiscovery = !resource.playableItemsReady && !resource.playableItems?.length;
-  const discoveryState = usePlayableFilesDiscovery(resource, cacheEnabled, needsDiscovery);
+  // FileSystem discovery is LAZY — only triggered when FS button becomes visible to user.
+  // autoDiscover=false: stays idle until trigger() is called.
+  const fsCacheReady = resource.playableItemsReady;
+  const discoveryState = usePlayableFilesDiscovery(resource, cacheEnabled, false /* lazy */);
 
   const [dirs, setDirs] = useState<Directory[]>();
   const [modalVisible, setModalVisible] = useState(false);
@@ -142,16 +148,24 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
   const [loadingAllFiles, setLoadingAllFiles] = useState(false);
   const [allFilesLoaded, setAllFilesLoaded] = useState(false);
 
-  // Use backend-resolved items first, fall back to filesystem discovery
+  // Aggregate all playable items: backend items + SSE-discovered filesystem items
   const playableItems = useMemo(() => {
-    if (resource.playableItems?.length) return resource.playableItems;
+    // Start with backend-resolved items (external source + cached filesystem)
+    const items: PlayableItem[] = [...(resource.playableItems ?? [])];
+
+    // If filesystem cache wasn't ready but SSE discovered new filesystem files,
+    // merge them (avoid duplicates with existing filesystem items from backend)
     if (discoveryState.playableFilePaths?.length) {
-      return discoveryState.playableFilePaths.map((p) => ({
-        source: ResourceSource.FileSystem as ResourceSource,
-        key: p,
-      }));
+      const existingFsKeys = new Set(
+        items.filter((i) => i.source === ResourceSource.FileSystem).map((i) => i.key)
+      );
+      for (const p of discoveryState.playableFilePaths) {
+        if (!existingFsKeys.has(p)) {
+          items.push({ source: ResourceSource.FileSystem as ResourceSource, key: p });
+        }
+      }
     }
-    return [];
+    return items;
   }, [resource.playableItems, discoveryState.playableFilePaths]);
 
   // Group items by source
@@ -165,20 +179,40 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
     return groups;
   }, [playableItems]);
 
-  // Ordered source entries (sources with playable items)
+  // Ordered source entries: non-FileSystem first, then FileSystem.
+  // Skip sources with no items.
   const sources: SourceEntry[] = useMemo(() => {
-    return Array.from(sourceGroups.entries()).map(([source, items]) => ({ source, items }));
+    const nonFs: SourceEntry[] = [];
+    let fsEntry: SourceEntry | null = null;
+    for (const [source, items] of sourceGroups.entries()) {
+      if (items.length === 0) continue;
+      if (source === ResourceSource.FileSystem) {
+        fsEntry = { source, items };
+      } else {
+        nonFs.push({ source, items });
+      }
+    }
+    // Non-FileSystem sources first, FileSystem last
+    return fsEntry ? [...nonFs, fsEntry] : nonFs;
   }, [sourceGroups]);
 
-  // Compute status for PortalComponent
+  // FileSystem discovery status for the portal
+  const fsDiscoveryStatus: FsDiscoveryStatus = useMemo(() => {
+    if (fsCacheReady) return "ready";
+    if (discoveryState.status === "loading") return "loading";
+    if (discoveryState.status === "ready") return "ready";
+    return "idle"; // not yet triggered
+  }, [fsCacheReady, discoveryState.status]);
+
+  // Compute overall status for PortalComponent
   const computeStatus = (): PlayControlStatus => {
-    // 1. Has data?
+    // Has any data from any source?
     if (playableItems.length > 0) return "ready";
-    // 2. Can still discover?
-    const hasBackendItems = resource.playableItems?.length;
-    if (!hasBackendItems && (discoveryState.status === "loading")) return "loading";
-    if (!hasBackendItems && discoveryState.status === "idle") return "idle";
-    // 3. Nothing found
+    // FileSystem discovery still pending?
+    if (fsDiscoveryStatus === "loading") return "loading";
+    // FS cache not ready and not yet triggered — resource might have FS items
+    if (!fsCacheReady && fsDiscoveryStatus === "idle") return "idle";
+    // Nothing found
     return "not-found";
   };
 
@@ -205,26 +239,8 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
     triggerDiscovery: discoveryState.trigger,
   }), [discoveryState.trigger]);
 
-  // Play a file via legacy API (FileSystem source)
-  const playFile = (file: string) =>
-    BApi.resource
-      .playResourceFile(resource.id, {
-        file,
-      })
-      .then((a) => {
-        if (!a.code) {
-          toast.success(t<string>("Opened"));
-          afterPlaying?.();
-        }
-      });
-
-  // Play a PlayableItem via the new multi-source API
+  // Play a PlayableItem via unified PlayItem API (all sources go through resolvers)
   const playItem = async (item: PlayableItem) => {
-    if (item.source === ResourceSource.FileSystem) {
-      // For FileSystem items, use the existing API for backward compatibility
-      return playFile(item.key);
-    }
-
     try {
       const rsp = await playItemApi(resource.id, item.source, item.key);
       if (!rsp.code) {
@@ -287,9 +303,11 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
         sources={sources}
         hasPath={!!resource.path}
         isFile={resource.isFile}
+        fsDiscoveryStatus={fsDiscoveryStatus}
         onPlaySource={handlePlaySource}
         onOpenFolder={handleOpenFolder}
         onNotFound={handleNotFound}
+        triggerFsDiscovery={discoveryState.trigger}
       />
       <Modal
         footer={false}
@@ -336,7 +354,7 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
                                 radius={"sm"}
                                 size={"sm"}
                                 onPress={() => {
-                                  playFile(file.path);
+                                  playItem({ source: ResourceSource.FileSystem, key: file.path });
                                 }}
                               >
                                 <PlayCircleOutlined className={"text-base"} />

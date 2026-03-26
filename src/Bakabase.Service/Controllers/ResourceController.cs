@@ -495,7 +495,7 @@ namespace Bakabase.Service.Controllers
                 return BaseResponseBuilder.BuildBadRequest("No playable file was found.");
             }
 
-            return await service.Play(resourceId, file);
+            return await service.PlayItem(resourceId, ResourceSource.FileSystem, file);
         }
 
         [HttpGet("{resourceId}/play-item")]

@@ -49,7 +49,8 @@ import {
 } from "@/sdk/constants";
 import { useUiOptionsStore } from "@/stores/options";
 import PlayControl from "@/components/Resource/components/PlayControl";
-import type { PlayControlPortalProps, PlayControlRef } from "@/components/Resource/components/PlayControl";
+import type { PlayControlPortalProps, PlayControlRef, FsDiscoveryStatus } from "@/components/Resource/components/PlayControl";
+import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@/components/bakaui/components/Dropdown";
 import ContextMenuItems from "@/components/Resource/components/ContextMenuItems";
 import ResourceSourceIcon from "@/components/Resource/components/ResourceSourceIcon";
 import { SteamIcon, DLsiteIcon, ExHentaiIcon } from "@/components/SourceIcons";
@@ -70,28 +71,28 @@ const renderSourceIcon = (source: ResourceSource, className: string): React.Reac
   }
 };
 
-type IconEntry = {
+type MenuEntry = {
   key: string;
   type: "source" | "openFolder" | "notFound";
   source?: ResourceSource;
-  renderIcon: (className: string) => React.ReactNode;
+  icon: React.ReactNode;
+  label: string;
   onClick: () => void;
-  tooltip?: string;
+  isLoading?: boolean;
+  isDisabled?: boolean;
 };
 
 // PlayButton component defined outside Resource to maintain stable reference
 const PlayButton: React.FC<PlayControlPortalProps> = ({
-  status, sources, hasPath, isFile, onPlaySource, onOpenFolder, onNotFound,
+  status, sources, hasPath, isFile, fsDiscoveryStatus, onPlaySource, onOpenFolder, onNotFound, triggerFsDiscovery,
 }) => {
   const { t } = useTranslation();
+  const fsTriggeredRef = React.useRef(false);
 
-  // Button size: ~22% of container (between 1/4 and 1/5), min 32px, max 64px
   const iconClass = "text-lg @[150px]:text-xl @[250px]:text-3xl";
   const buttonClass = "!w-[22cqw] !h-[22cqw] !min-w-8 !min-h-8 !max-w-16 !max-h-16 !p-0";
-  const smallIconClass = "text-sm @[150px]:text-base @[250px]:text-xl";
-  const smallButtonClass = "!w-[16cqw] !h-[16cqw] !min-w-6 !min-h-6 !max-w-12 !max-h-12 !p-0";
 
-  // Loading/idle state: show spinner
+  // Overall loading/idle — no items yet, possibly discovering
   if (status === "idle" || status === "loading") {
     return (
       <div className="hidden group-hover/cover:flex absolute left-0 bottom-0 z-[1]">
@@ -102,20 +103,35 @@ const PlayButton: React.FC<PlayControlPortalProps> = ({
     );
   }
 
-  // Build icon entries by priority:
-  // 1. Sources with playable items (first = main icon)
-  // 2. Open folder (if resource has path)
-  // 3. Question mark (if no playable items)
-  const entries: IconEntry[] = [];
+  // Build menu entries. Sources are ordered: non-FileSystem first, FileSystem last.
+  const entries: MenuEntry[] = [];
 
   for (const { source } of sources) {
+    const isFs = source === ResourceSource.FileSystem;
     entries.push({
       key: `source-${source}`,
       type: "source",
       source,
-      renderIcon: (cls) => renderSourceIcon(source, cls),
+      icon: isFs && fsDiscoveryStatus === "loading"
+        ? <LoadingOutlined spin />
+        : renderSourceIcon(source, "text-base"),
+      label: t("resource.playControl.menu.openVia", { source: ResourceSourceLabel[source] }),
       onClick: () => onPlaySource(source),
-      tooltip: t("resource.playControl.tooltip.launchAsSource", { source: ResourceSourceLabel[source] }),
+    });
+  }
+
+  // If FileSystem has no items yet but discovery is pending/idle, add a loading entry
+  const hasFsSource = sources.some((s) => s.source === ResourceSource.FileSystem);
+  if (!hasFsSource && fsDiscoveryStatus !== "ready") {
+    entries.push({
+      key: "source-fs-loading",
+      type: "source",
+      source: ResourceSource.FileSystem,
+      icon: <LoadingOutlined spin />,
+      label: t("resource.playControl.tooltip.discoveringFiles"),
+      onClick: () => {},
+      isDisabled: true,
+      isLoading: true,
     });
   }
 
@@ -123,48 +139,109 @@ const PlayButton: React.FC<PlayControlPortalProps> = ({
     entries.push({
       key: "openFolder",
       type: "openFolder",
-      renderIcon: (cls) => <FolderOpenOutlined className={cls} />,
+      icon: <FolderOpenOutlined className="text-base" />,
+      label: t("common.action.openFolder"),
       onClick: onOpenFolder,
-      tooltip: t("common.action.openFolder"),
     });
   }
 
-  if (sources.length === 0) {
+  if (sources.length === 0 && fsDiscoveryStatus === "ready") {
     entries.push({
       key: "notFound",
       type: "notFound",
-      renderIcon: (cls) => <QuestionCircleOutlined className={`${cls} text-warning`} />,
+      icon: <QuestionCircleOutlined className="text-base text-warning" />,
+      label: t("resource.playControl.tooltip.notFound"),
       onClick: onNotFound,
     });
   }
 
   const mainEntry = entries[0];
-  const secondaryEntries = entries.slice(1);
-
   if (!mainEntry) return null;
 
-  // Question mark as main icon = no tooltip
-  const showSecondary = mainEntry.type !== "notFound" && secondaryEntries.length > 0;
+  // Trigger FS discovery when FS button is visible
+  const fsIsVisible = entries.some((e) => e.source === ResourceSource.FileSystem);
+
+  React.useEffect(() => {
+    if (fsIsVisible && fsDiscoveryStatus === "idle" && !fsTriggeredRef.current) {
+      fsTriggeredRef.current = true;
+      triggerFsDiscovery();
+    }
+  }, [fsIsVisible, fsDiscoveryStatus, triggerFsDiscovery]);
+
+  React.useEffect(() => {
+    if (fsDiscoveryStatus === "idle") {
+      fsTriggeredRef.current = false;
+    }
+  }, [fsDiscoveryStatus]);
+
+  const [menuOpen, setMenuOpen] = React.useState(false);
+  const closeTimerRef = React.useRef<ReturnType<typeof setTimeout>>();
+
+  const handleMouseEnter = React.useCallback(() => {
+    clearTimeout(closeTimerRef.current);
+    setMenuOpen(true);
+  }, []);
+
+  const handleMouseLeave = React.useCallback(() => {
+    closeTimerRef.current = setTimeout(() => setMenuOpen(false), 150);
+  }, []);
+
+  // Single entry or only notFound — no dropdown, just a button
+  const needsDropdown = entries.length > 1 && mainEntry.type !== "notFound";
+
+  if (!needsDropdown) {
+    return (
+      <div className="hidden group-hover/cover:flex absolute left-0 bottom-0 z-[1]">
+        <Tooltip content={mainEntry.label}>
+          <Button isIconOnly className={buttonClass} isDisabled={mainEntry.isDisabled} onPress={mainEntry.onClick}>
+            {mainEntry.isLoading ? <LoadingOutlined className={iconClass} spin /> : renderSourceIcon(mainEntry.source ?? ResourceSource.FileSystem, iconClass)}
+          </Button>
+        </Tooltip>
+      </div>
+    );
+  }
+
+  // Multiple entries — dropdown menu triggered by hover
+  const actionableEntries = entries.filter((e) => !e.isDisabled);
 
   return (
-    <div className="hidden group-hover/cover:flex absolute left-0 bottom-0 z-[1] items-end gap-0.5 group/play">
-      <Tooltip content={mainEntry.tooltip} isDisabled={!mainEntry.tooltip}>
-        <Button isIconOnly className={buttonClass} onPress={mainEntry.onClick}>
-          {mainEntry.renderIcon(iconClass)}
-        </Button>
-      </Tooltip>
-
-      {showSecondary && (
-        <div className="flex gap-0.5 items-end opacity-0 group-hover/play:opacity-100 transition-opacity">
-          {secondaryEntries.map((entry) => (
-            <Tooltip key={entry.key} content={entry.tooltip} isDisabled={!entry.tooltip}>
-              <Button isIconOnly className={smallButtonClass} onPress={entry.onClick}>
-                {entry.renderIcon(smallIconClass)}
-              </Button>
-            </Tooltip>
+    <div className="hidden group-hover/cover:flex absolute left-0 bottom-0 z-[1]">
+      <Dropdown
+        isOpen={menuOpen}
+        onOpenChange={setMenuOpen}
+        placement="right-start"
+      >
+        <DropdownTrigger>
+          <Button
+            isIconOnly
+            className={buttonClass}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+            onPress={mainEntry.onClick}
+          >
+            {renderSourceIcon(mainEntry.source ?? ResourceSource.FileSystem, iconClass)}
+          </Button>
+        </DropdownTrigger>
+        <DropdownMenu
+          aria-label="Play options"
+          onAction={(key) => {
+            const entry = entries.find((e) => e.key === String(key));
+            entry?.onClick();
+            setMenuOpen(false);
+          }}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+        >
+          {actionableEntries.map((entry) => (
+            <DropdownItem
+              key={entry.key}
+              startContent={entry.icon}
+            >
+              {entry.label}
+            </DropdownItem>
           ))}
-        </div>
-      )}
+        </DropdownMenu>
+      </Dropdown>
     </div>
   );
 };

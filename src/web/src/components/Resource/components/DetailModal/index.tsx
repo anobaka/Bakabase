@@ -295,24 +295,32 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
                 <div className="flex-1 flex justify-end">
                   <ButtonGroup size={"sm"}>
                     <PlayControl
-                      PortalComponent={({ status, onClick, tooltipContent }: PlayControlPortalProps) => (
-                        <Tooltip content={tooltipContent ?? t("common.action.play")}>
-                          <Button
-                            isIconOnly
-                            color="primary"
-                            onPress={onClick}
-                            isDisabled={status === "loading"}
-                          >
-                            {status === "loading" ? (
-                              <LoadingOutlined className="text-lg" spin />
-                            ) : status === "not-found" ? (
-                              <QuestionCircleOutlined className="text-lg text-warning" />
-                            ) : (
-                              <PlayCircleOutlined className="text-lg" />
-                            )}
-                          </Button>
-                        </Tooltip>
-                      )}
+                      PortalComponent={({ status, sources, onPlaySource, onNotFound, triggerFsDiscovery, fsDiscoveryStatus }: PlayControlPortalProps) => {
+                        // Trigger FS discovery when this button renders
+                        React.useEffect(() => {
+                          if (fsDiscoveryStatus === "idle") triggerFsDiscovery();
+                        }, [fsDiscoveryStatus, triggerFsDiscovery]);
+
+                        const mainSource = sources[0];
+                        return (
+                          <Tooltip content={t("common.action.play")}>
+                            <Button
+                              isIconOnly
+                              color="primary"
+                              onPress={() => mainSource ? onPlaySource(mainSource.source) : onNotFound()}
+                              isDisabled={status === "loading" || status === "idle"}
+                            >
+                              {status === "loading" || status === "idle" ? (
+                                <LoadingOutlined className="text-lg" spin />
+                              ) : status === "not-found" ? (
+                                <QuestionCircleOutlined className="text-lg text-warning" />
+                              ) : (
+                                <PlayCircleOutlined className="text-lg" />
+                              )}
+                            </Button>
+                          </Tooltip>
+                        );
+                      }}
                       resource={resource}
                     />
                     <Tooltip content={t("common.action.openFolder")}>
