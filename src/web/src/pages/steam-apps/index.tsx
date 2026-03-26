@@ -169,7 +169,7 @@ export default function SteamAppsPage() {
               <Button
                 color="danger"
                 size="sm"
-                startContent={<AiOutlineStop />}
+                startContent={<AiOutlineStop className="text-lg" />}
                 variant="flat"
                 onPress={handleStopSync}
               >
@@ -180,7 +180,7 @@ export default function SteamAppsPage() {
             <Button
               isDisabled={!isConfigured}
               size="sm"
-              startContent={<AiOutlineSync />}
+              startContent={<AiOutlineSync className="text-lg" />}
               variant="flat"
               onPress={handleSync}
             >
@@ -189,7 +189,7 @@ export default function SteamAppsPage() {
           )}
           <Button
             size="sm"
-            startContent={<AiOutlineReload />}
+            startContent={<AiOutlineReload className="text-lg" />}
             variant="flat"
             onPress={() => loadApps(page, pageSize, searchKeyword)}
           >
@@ -197,7 +197,7 @@ export default function SteamAppsPage() {
           </Button>
           <Button
             size="sm"
-            startContent={<AiOutlineSetting />}
+            startContent={<AiOutlineSetting className="text-lg" />}
             variant="flat"
             onPress={() => createPortal(SteamConfig, {})}
           >

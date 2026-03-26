@@ -185,7 +185,7 @@ export default function ExHentaiGalleriesPage() {
               <Button
                 color="danger"
                 size="sm"
-                startContent={<AiOutlineStop />}
+                startContent={<AiOutlineStop className="text-lg" />}
                 variant="flat"
                 onPress={handleStopSync}
               >
@@ -196,7 +196,7 @@ export default function ExHentaiGalleriesPage() {
             <Button
               isDisabled={!isConfigured}
               size="sm"
-              startContent={<AiOutlineSync />}
+              startContent={<AiOutlineSync className="text-lg" />}
               variant="flat"
               onPress={handleSync}
             >
@@ -205,7 +205,7 @@ export default function ExHentaiGalleriesPage() {
           )}
           <Button
             size="sm"
-            startContent={<AiOutlineReload />}
+            startContent={<AiOutlineReload className="text-lg" />}
             variant="flat"
             onPress={() => loadGalleries(page, pageSize, searchKeyword)}
           >
@@ -213,7 +213,7 @@ export default function ExHentaiGalleriesPage() {
           </Button>
           <Button
             size="sm"
-            startContent={<AiOutlineSetting />}
+            startContent={<AiOutlineSetting className="text-lg" />}
             variant="flat"
             onPress={() => createPortal(ExHentaiConfig, {})}
           >
