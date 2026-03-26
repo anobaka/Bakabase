@@ -24,7 +24,7 @@ export default function AutoSyncPanel({ autoSyncIntervalMinutes, onSave }: AutoS
           const num = parseInt(v, 10);
           onSave(isNaN(num) || num <= 0 ? null : num);
         }}
-        endContent={<span className="text-default-400 text-sm">{t("thirdPartyConfig.autoSync.unit")}</span>}
+        endContent={<span className="text-default-400 text-sm whitespace-nowrap">{t("thirdPartyConfig.autoSync.unit")}</span>}
         className="max-w-xs"
       />
       <p className="text-xs text-warning">
