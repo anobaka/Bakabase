@@ -1,19 +1,18 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { resourceDiscoveryChannel, type DiscoveryData } from "@/services/ResourceDiscoveryChannel";
 import { ResourceCacheType } from "@/sdk/constants";
-import type { PlayableItem, Resource } from "@/core/models/Resource";
+import type { Resource } from "@/core/models/Resource";
 
 // Data source for discovery
 export type DiscoverySource = "cache" | "realtime";
 
 export type DiscoveryState = {
   status: "idle" | "loading" | "ready" | "error";
-  source: DiscoverySource;          // Data source: cache or realtime discovery
-  cacheEnabled: boolean;            // Whether cache is enabled
+  source: DiscoverySource;
+  cacheEnabled: boolean;
   coverPaths?: string[];
   playableFilePaths?: string[];
-  playableItems?: PlayableItem[];
-  hasMoreFileSystemPlayableItems?: boolean;
+  hasMorePlayableFiles?: boolean;
   error?: string;
 };
 
@@ -23,14 +22,9 @@ export type DiscoveryResult = DiscoveryState & {
 };
 
 /**
- * Hook to discover cover and playable files for a resource.
+ * Hook to discover filesystem-level cover and playable files for a resource.
  * Uses SSE-based discovery channel for efficient server communication.
- *
- * @param resource - The resource to discover data for
- * @param types - Array of ResourceCacheType to discover (Covers, PlayableFiles)
- * @param cacheEnabled - Whether cache is enabled (when true, uses cached data if available)
- * @param autoDiscover - When false, waits for manual trigger() call before subscribing to SSE
- * @returns DiscoveryResult with status, discovered data, and trigger function
+ * Only discovers filesystem data - external source data is resolved by backend at query time.
  */
 export function useResourceDiscovery(
   resource: Resource,
@@ -38,23 +32,18 @@ export function useResourceDiscovery(
   cacheEnabled: boolean = true,
   autoDiscover: boolean = true
 ): DiscoveryResult {
-  // Memoize types array to prevent unnecessary re-renders
   const typesKey = useMemo(() => types.sort().join(","), [types]);
 
-  // Extract stable primitive values from cache to use as dependencies
-  // This prevents re-renders when cache object reference changes but content is the same
+  // Extract stable primitive values from cache
   const cachedTypesKey = resource.cache?.cachedTypes?.sort().join(",") ?? "";
   const coverPathsKey = resource.cache?.coverPaths?.join(",") ?? "";
   const playableFilePathsKey = resource.cache?.playableFilePaths?.join(",") ?? "";
-  const playableItemsKey = resource.cache?.playableItems?.map(i => `${i.source}:${i.key}`).join(",") ?? "";
-  const hasMoreFileSystemPlayableItems = resource.cache?.hasMoreFileSystemPlayableItems;
+  const hasMorePlayableFiles = resource.cache?.hasMorePlayableFiles;
 
-  // Check if we already have cached data
   const initialState = useMemo((): DiscoveryState => {
     const cachedTypes = resource.cache?.cachedTypes ?? [];
     const hasAllRequiredTypes = types.every((t) => cachedTypes.includes(t));
 
-    // If cache is enabled and we have all required types, return cached data
     if (cacheEnabled && hasAllRequiredTypes) {
       return {
         status: "ready",
@@ -62,33 +51,21 @@ export function useResourceDiscovery(
         cacheEnabled,
         coverPaths: resource.cache?.coverPaths,
         playableFilePaths: resource.cache?.playableFilePaths,
-        playableItems: resource.cache?.playableItems,
-        hasMoreFileSystemPlayableItems: resource.cache?.hasMoreFileSystemPlayableItems,
+        hasMorePlayableFiles: resource.cache?.hasMorePlayableFiles,
       };
     }
 
-    // If not auto-discovering, stay idle until trigger() is called
     if (!autoDiscover) {
-      return {
-        status: "idle",
-        source: "realtime",
-        cacheEnabled,
-      };
+      return { status: "idle", source: "realtime", cacheEnabled };
     }
 
-    // Otherwise, we need to load via SSE (realtime discovery)
-    return {
-      status: "loading",
-      source: "realtime",
-      cacheEnabled,
-    };
-  }, [resource.id, cachedTypesKey, coverPathsKey, playableFilePathsKey, playableItemsKey, hasMoreFileSystemPlayableItems, typesKey, cacheEnabled, autoDiscover]);
+    return { status: "loading", source: "realtime", cacheEnabled };
+  }, [resource.id, cachedTypesKey, coverPathsKey, playableFilePathsKey, hasMorePlayableFiles, typesKey, cacheEnabled, autoDiscover]);
 
   const [state, setState] = useState<DiscoveryState>(initialState);
   const mountedRef = useRef(true);
   const subscribedRef = useRef(false);
 
-  /** Manually trigger discovery - transitions from "idle" to "loading" */
   const trigger = useCallback(() => {
     setState(prev => prev.status === "idle" ? { ...prev, status: "loading" } : prev);
   }, []);
@@ -105,36 +82,25 @@ export function useResourceDiscovery(
         cacheEnabled,
         coverPaths: resource.cache?.coverPaths,
         playableFilePaths: resource.cache?.playableFilePaths,
-        playableItems: resource.cache?.playableItems,
-        hasMoreFileSystemPlayableItems: resource.cache?.hasMoreFileSystemPlayableItems,
+        hasMorePlayableFiles: resource.cache?.hasMorePlayableFiles,
       });
       subscribedRef.current = false;
     } else if (!autoDiscover) {
-      setState({
-        status: "idle",
-        source: "realtime",
-        cacheEnabled,
-      });
+      setState({ status: "idle", source: "realtime", cacheEnabled });
       subscribedRef.current = false;
     } else {
-      setState({
-        status: "loading",
-        source: "realtime",
-        cacheEnabled,
-      });
+      setState({ status: "loading", source: "realtime", cacheEnabled });
       subscribedRef.current = false;
     }
-  }, [resource.id, cachedTypesKey, coverPathsKey, playableFilePathsKey, playableItemsKey, hasMoreFileSystemPlayableItems, typesKey, cacheEnabled, autoDiscover]);
+  }, [resource.id, cachedTypesKey, coverPathsKey, playableFilePathsKey, hasMorePlayableFiles, typesKey, cacheEnabled, autoDiscover]);
 
   useEffect(() => {
     mountedRef.current = true;
 
-    // If already ready from cache or idle (waiting for trigger), no need to subscribe
     if (state.status === "ready" || state.status === "idle") {
       return;
     }
 
-    // Prevent duplicate subscriptions
     if (subscribedRef.current) {
       return;
     }
@@ -147,12 +113,7 @@ export function useResourceDiscovery(
         if (!mountedRef.current) return;
 
         if (error) {
-          setState({
-            status: "error",
-            source: "realtime",
-            cacheEnabled,
-            error,
-          });
+          setState({ status: "error", source: "realtime", cacheEnabled, error });
         } else if (data) {
           setState({
             status: "ready",
@@ -160,8 +121,7 @@ export function useResourceDiscovery(
             cacheEnabled,
             coverPaths: data.coverPaths,
             playableFilePaths: data.playableFilePaths,
-            playableItems: data.playableItems,
-            hasMoreFileSystemPlayableItems: data.hasMoreFileSystemPlayableItems,
+            hasMorePlayableFiles: data.hasMorePlayableFiles,
           });
         }
       })
@@ -169,18 +129,12 @@ export function useResourceDiscovery(
         if (mountedRef.current) {
           unsubscribe = unsub;
         } else {
-          // Component unmounted before subscription completed
           unsub();
         }
       })
       .catch((err) => {
         if (mountedRef.current) {
-          setState({
-            status: "error",
-            source: "realtime",
-            cacheEnabled,
-            error: String(err),
-          });
+          setState({ status: "error", source: "realtime", cacheEnabled, error: String(err) });
         }
       });
 
@@ -195,7 +149,7 @@ export function useResourceDiscovery(
 }
 
 /**
- * Hook specifically for discovering covers.
+ * Hook specifically for discovering covers from filesystem.
  * When autoDiscover is false, stays idle until trigger() is called.
  */
 export function useCoverDiscovery(resource: Resource, cacheEnabled: boolean = true, autoDiscover: boolean = true): DiscoveryResult {
@@ -203,7 +157,7 @@ export function useCoverDiscovery(resource: Resource, cacheEnabled: boolean = tr
 }
 
 /**
- * Hook specifically for discovering playable files.
+ * Hook specifically for discovering playable files from filesystem.
  * Supports deferred discovery via autoDiscover parameter.
  */
 export function usePlayableFilesDiscovery(

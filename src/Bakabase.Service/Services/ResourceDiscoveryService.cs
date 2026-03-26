@@ -23,8 +23,7 @@ public record DiscoveryResult
     public bool Success { get; init; }
     public string[]? CoverPaths { get; init; }
     public string[]? PlayableFilePaths { get; init; }
-    public PlayableItem[]? PlayableItems { get; init; }
-    public bool HasMoreFileSystemPlayableItems { get; init; }
+    public bool HasMorePlayableFiles { get; init; }
     public string? Error { get; init; }
 }
 
@@ -78,10 +77,6 @@ public class ResourceDiscoveryService : BackgroundService
             return;
         }
 
-        // Always enqueue for real-time discovery.
-        // Frontend already checks cache before calling subscribe, so if we receive a request,
-        // it means either cache is disabled or cache doesn't have the required data.
-        // The discovery process will write results to cache after completion.
         await _requestChannel.Writer.WriteAsync(new DiscoveryRequest(resourceId, types));
         _logger.LogDebug("Request enqueued: {RequestKey}", requestKey);
     }
@@ -153,10 +148,9 @@ public class ResourceDiscoveryService : BackgroundService
 
         string[]? coverPaths = null;
         string[]? playableFilePaths = null;
-        PlayableItem[]? playableItems = null;
         var hasMorePlayableFiles = false;
 
-        // Discover covers if requested
+        // Discover covers if requested (filesystem discovery)
         if (request.Types.HasFlag(ResourceCacheType.Covers))
         {
             _logger.LogDebug("Discovering cover for resource {ResourceId}", request.ResourceId);
@@ -167,24 +161,16 @@ public class ResourceDiscoveryService : BackgroundService
             }
         }
 
-        // Discover playable items if requested (multi-source)
+        // Discover playable files if requested (filesystem only for cache)
         if (request.Types.HasFlag(ResourceCacheType.PlayableFiles))
         {
-            _logger.LogDebug("Discovering playable items for resource {ResourceId}", request.ResourceId);
-            var items = await resourceService.DiscoverAndCachePlayableItems(request.ResourceId, ct);
-            playableItems = items.Count > 0 ? items.ToArray() : null;
-
-            // Also populate legacy PlayableFilePaths for backward compat
-            playableFilePaths = items
-                .Where(i => i.Source == ResourceSource.FileSystem)
-                .Select(i => i.Key)
-                .ToArray();
-            if (playableFilePaths.Length == 0)
-                playableFilePaths = null;
+            _logger.LogDebug("Discovering playable files for resource {ResourceId}", request.ResourceId);
+            var files = await resourceService.DiscoverAndCachePlayableFiles(request.ResourceId, ct);
+            playableFilePaths = files.Length > 0 ? files : null;
 
             // Check cache for hasMorePlayableFiles flag
             var cache = await resourceService.GetResourceCache(request.ResourceId);
-            hasMorePlayableFiles = cache?.HasMoreFileSystemPlayableItems ?? false;
+            hasMorePlayableFiles = cache?.HasMorePlayableFiles ?? false;
         }
 
         var result = new DiscoveryResult
@@ -193,8 +179,7 @@ public class ResourceDiscoveryService : BackgroundService
             Success = true,
             CoverPaths = coverPaths,
             PlayableFilePaths = playableFilePaths,
-            PlayableItems = playableItems,
-            HasMoreFileSystemPlayableItems = hasMorePlayableFiles
+            HasMorePlayableFiles = hasMorePlayableFiles
         };
 
         await BroadcastResult(result);

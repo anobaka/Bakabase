@@ -509,7 +509,7 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "GetResourcePlayableItems")]
         public async Task<ListResponse<PlayableItem>> GetPlayableItems(int id)
         {
-            var items = await service.DiscoverAndCachePlayableItems(id, HttpContext.RequestAborted);
+            var items = await service.DiscoverPlayableItems(id, HttpContext.RequestAborted);
             return new ListResponse<PlayableItem>(items);
         }
 

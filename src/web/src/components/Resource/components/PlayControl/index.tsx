@@ -130,11 +130,11 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
   // Get playable file cache enabled status from UI options
   const cacheEnabled = !resourceUiOptions?.disablePlayableFileCache;
 
-  // Defer discovery when cache is enabled (wait for hover trigger)
-  const autoDiscover = !cacheEnabled;
-
-  // Use SSE-based discovery for playable files
-  const discoveryState = usePlayableFilesDiscovery(resource, cacheEnabled, autoDiscover);
+  // Backend resolves playable items with priority:
+  // 1. External source items (from SourceLinks)  2. FileSystem cache
+  // Only need SSE discovery when backend hasn't resolved (playableItemsReady=false, no items)
+  const needsDiscovery = !resource.playableItemsReady && !resource.playableItems?.length;
+  const discoveryState = usePlayableFilesDiscovery(resource, cacheEnabled, needsDiscovery);
 
   const [dirs, setDirs] = useState<Directory[]>();
   const [modalVisible, setModalVisible] = useState(false);
@@ -142,8 +142,17 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
   const [loadingAllFiles, setLoadingAllFiles] = useState(false);
   const [allFilesLoaded, setAllFilesLoaded] = useState(false);
 
-  // Get playable items from discovery state
-  const playableItems = discoveryState.playableItems ?? [];
+  // Use backend-resolved items first, fall back to filesystem discovery
+  const playableItems = useMemo(() => {
+    if (resource.playableItems?.length) return resource.playableItems;
+    if (discoveryState.playableFilePaths?.length) {
+      return discoveryState.playableFilePaths.map((p) => ({
+        source: ResourceSource.FileSystem as ResourceSource,
+        key: p,
+      }));
+    }
+    return [];
+  }, [resource.playableItems, discoveryState.playableFilePaths]);
 
   // Group items by source
   const sourceGroups = useMemo(() => {
@@ -163,33 +172,27 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
 
   // Compute status for PortalComponent
   const computeStatus = (): PlayControlStatus => {
-    if (discoveryState.status === "idle") {
-      return "idle";
-    }
-
-    if (discoveryState.status === "loading") {
-      return "loading";
-    }
-
-    if (discoveryState.status === "error") {
-      return "not-found";
-    }
-
-    // Check if we have any playable items
-    if (playableItems.length > 0) {
-      return "ready";
-    }
+    // 1. Has data?
+    if (playableItems.length > 0) return "ready";
+    // 2. Can still discover?
+    const hasBackendItems = resource.playableItems?.length;
+    if (!hasBackendItems && (discoveryState.status === "loading")) return "loading";
+    if (!hasBackendItems && discoveryState.status === "idle") return "idle";
+    // 3. Nothing found
     return "not-found";
   };
 
   const status = computeStatus();
 
-  // Update dirs when discovery completes
+  // Update dirs from filesystem playable files
   useEffect(() => {
-    if (discoveryState.status === "ready" && discoveryState.playableFilePaths?.length && !resource.isFile) {
-      setDirs(splitIntoDirs(discoveryState.playableFilePaths, resource.path));
+    const fsPaths = playableItems
+      .filter((i) => i.source === ResourceSource.FileSystem)
+      .map((i) => i.key);
+    if (fsPaths.length > 0 && !resource.isFile) {
+      setDirs(splitIntoDirs(fsPaths, resource.path));
     }
-  }, [discoveryState.status, discoveryState.playableFilePaths, resource.isFile, resource.path]);
+  }, [playableItems, resource.isFile, resource.path]);
 
   // Reset dirs when resource changes
   useEffect(() => {
@@ -388,7 +391,7 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
           </div>
         )}
 
-        {discoveryState.hasMoreFileSystemPlayableItems && !allFilesLoaded && isFileSystemModal && (
+        {resource.hasMorePlayableFiles && !allFilesLoaded && isFileSystemModal && (
           <div className={"pt-2"}>
             <Button
               color={"primary"}

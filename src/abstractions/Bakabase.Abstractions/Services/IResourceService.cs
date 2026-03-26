@@ -58,9 +58,10 @@ public interface IResourceService
     Task<string[]> DiscoverAndCachePlayableFiles(int id, CancellationToken ct);
 
     /// <summary>
-    /// Discovers playable items from all sources linked to a resource and caches them.
+    /// Discovers playable items from all sources linked to a resource.
+    /// FileSystem results are cached; other source results are resolved on-demand.
     /// </summary>
-    Task<List<PlayableItem>> DiscoverAndCachePlayableItems(int id, CancellationToken ct);
+    Task<List<PlayableItem>> DiscoverPlayableItems(int id, CancellationToken ct);
 
     Task<bool> Any(Func<Abstractions.Models.Db.ResourceDbModel, bool>? selector = null);
 
@@ -105,7 +106,7 @@ public interface IResourceService
     /// </summary>
     /// <returns></returns>
     Task<CacheOverviewViewModel> GetCacheOverview();
-    Task<ResourceCache?> GetResourceCache(int id);
+    Task<ResourceFileSystemCache?> GetResourceCache(int id);
 
     /// <summary>
     /// Invalidate the covers for a resource so they get re-resolved on next access.
@@ -121,7 +122,7 @@ public interface IResourceService
     /// <summary>
     /// Clears cache for a resource and rebuilds it, respecting individual cache toggles.
     /// </summary>
-    Task<ResourceCache?> RefreshResourceCache(int resourceId, CancellationToken ct);
+    Task<ResourceFileSystemCache?> RefreshResourceCache(int resourceId, CancellationToken ct);
 
     Task MarkAsNotPlayed(int id);
 

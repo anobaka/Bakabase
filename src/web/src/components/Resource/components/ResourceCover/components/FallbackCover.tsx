@@ -1,4 +1,5 @@
 import { MdBrokenImage, MdHelpOutline } from "react-icons/md";
+import { FiSettings, FiGlobe, FiHardDrive, FiSearch } from "react-icons/fi";
 import React from "react";
 import { useTranslation } from "react-i18next";
 
@@ -13,6 +14,13 @@ type Props = {
   afterClearingCache?: () => any;
 };
 
+const priorities = [
+  { icon: FiSettings, key: "manual" },
+  { icon: FiGlobe, key: "external" },
+  { icon: FiHardDrive, key: "cache" },
+  { icon: FiSearch, key: "discovery" },
+] as const;
+
 const FallbackCover = ({ id, afterClearingCache }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
@@ -23,37 +31,43 @@ const FallbackCover = ({ id, afterClearingCache }: Props) => {
       size: "lg",
       title: t<string>("ResourceCover.CoverTips.Title"),
       children: (
-        <div className="flex flex-col gap-6">
-          <div>
-            <div className="font-medium">{t<string>("ResourceCover.CoverTips.S1.Title")}</div>
-            <div className="text-sm mb-1">
-              {t<string>("ResourceCover.CoverTips.S1.Happens")}
-            </div>
-            <ul className="list-disc pl-5 text-sm">
-              <li>{t<string>("ResourceCover.CoverTips.S1.When.NotImage")}</li>
-              <li>{t<string>("ResourceCover.CoverTips.S1.When.NoImageInFolder")}</li>
-            </ul>
-            <div className="text-sm mt-1">{t<string>("ResourceCover.CoverTips.S1.Todo")}</div>
-            <ol className="list-decimal pl-5 text-sm">
-              <li>{t<string>("ResourceCover.CoverTips.S1.Todo.ManualSet")}</li>
-              <li>{t<string>("ResourceCover.CoverTips.S1.Todo.FFmpeg")}</li>
-              <li>{t<string>("ResourceCover.CoverTips.S1.Todo.Enhancers")}</li>
-              <li>{t<string>("ResourceCover.CoverTips.S1.Todo.Cache")}</li>
-            </ol>
+        <div className="flex flex-col gap-5">
+          <p className="text-sm text-default-500">
+            {t<string>("ResourceCover.CoverTips.description")}
+          </p>
+
+          <div className="flex flex-col gap-3">
+            {priorities.map(({ icon: Icon, key }, index) => (
+              <div key={key} className="flex items-start gap-3">
+                <div className="flex items-center justify-center w-7 h-7 rounded-full bg-default-100 text-default-600 shrink-0 mt-0.5">
+                  <span className="text-xs font-medium">{index + 1}</span>
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <Icon className="text-default-500" size={14} />
+                    <span className="font-medium text-sm">
+                      {t<string>(`ResourceCover.CoverTips.priority.${key}`)}
+                    </span>
+                  </div>
+                  <p className="text-xs text-default-400 mt-0.5">
+                    {t<string>(`ResourceCover.CoverTips.priority.${key}.desc`)}
+                  </p>
+                </div>
+              </div>
+            ))}
           </div>
+
           <div>
-            <div className="font-medium">{t<string>("ResourceCover.CoverTips.S2.Title")}</div>
-            <div className="text-sm mb-1">
-              {t<string>("ResourceCover.CoverTips.S2.Happens")}
-            </div>
-            <ul className="list-disc pl-5 text-sm">
-              <li>{t<string>("ResourceCover.CoverTips.S2.When.CacheDeleted")}</li>
+            <p className="text-sm text-default-500 mb-2">
+              {t<string>("ResourceCover.CoverTips.noCover")}
+            </p>
+            <ul className="list-disc pl-5 text-sm text-default-600 space-y-1">
+              <li>{t<string>("ResourceCover.CoverTips.action.manualSet")}</li>
+              <li>{t<string>("ResourceCover.CoverTips.action.enhancer")}</li>
+              <li>{t<string>("ResourceCover.CoverTips.action.ffmpeg")}</li>
             </ul>
-            <div className="text-sm mt-1">{t<string>("ResourceCover.CoverTips.S2.Todo")}</div>
-            <ol className="list-decimal pl-5 text-sm">
-              <li>{t<string>("ResourceCover.CoverTips.S2.Todo.DisableCache")}</li>
-            </ol>
           </div>
+
           <div>
             <Button
               color={"secondary"}

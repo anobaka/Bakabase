@@ -61,9 +61,9 @@ public class CacheController(IResourceService resourceService) : Controller
 
     [HttpPost("resource/{resourceId:int}/refresh")]
     [SwaggerOperation(OperationId = "RefreshResourceCache")]
-    public async Task<SingletonResponse<ResourceCache>> RefreshResourceCache(int resourceId, CancellationToken ct)
+    public async Task<SingletonResponse<ResourceFileSystemCache>> RefreshResourceCache(int resourceId, CancellationToken ct)
     {
         var cache = await resourceService.RefreshResourceCache(resourceId, ct);
-        return new SingletonResponse<ResourceCache>(cache);
+        return new SingletonResponse<ResourceFileSystemCache>(cache);
     }
 }

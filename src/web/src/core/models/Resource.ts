@@ -76,17 +76,16 @@ export type Resource = {
   covers?: string[];
   /** Final resolved playable items from all sources */
   playableItems?: PlayableItem[];
-  /** Whether there are more FileSystem playable items beyond what's shown */
-  hasMoreFileSystemPlayableItems: boolean;
+  /** Whether there are more playable files beyond what's cached */
+  hasMorePlayableFiles: boolean;
   /** Whether covers have been resolved and are ready */
   coversReady: boolean;
   /** Whether playable items have been resolved and are ready */
   playableItemsReady: boolean;
 
-  /** @deprecated Use covers/playableItems instead */
+  /** Filesystem-level cache (covers and playable files discovered from filesystem) */
   cache?: {
     playableFilePaths?: string[];
-    playableItems?: PlayableItem[];
     hasMorePlayableFiles: boolean;
     coverPaths?: string[];
     cachedTypes: ResourceCacheType[];

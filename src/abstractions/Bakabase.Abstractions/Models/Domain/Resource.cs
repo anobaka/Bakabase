@@ -67,9 +67,9 @@ public record Resource
     public List<PlayableItem>? PlayableItems { get; set; }
 
     /// <summary>
-    /// Whether there are more FileSystem playable items beyond what's shown (due to trimming limits).
+    /// Whether there are more playable files beyond what's shown in cache (due to trimming limits).
     /// </summary>
-    public bool HasMoreFileSystemPlayableItems { get; set; }
+    public bool HasMorePlayableFiles { get; set; }
 
     /// <summary>
     /// Whether covers have been resolved and are ready.
@@ -81,7 +81,7 @@ public record Resource
     /// </summary>
     public bool PlayableItemsReady { get; set; }
 
-    public ResourceCache? Cache { get; set; }
+    public ResourceFileSystemCache? Cache { get; set; }
 
     public record Property(
         string? Name,
