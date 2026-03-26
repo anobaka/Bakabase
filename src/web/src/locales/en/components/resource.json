@@ -144,5 +144,9 @@
 
   "resource.playControl.tooltip.launchAsSource": "Launch as {{source}} resource",
   "resource.playControl.tooltip.discoveringFiles": "Discovering playable files...",
-  "resource.playControl.menu.openVia": "Open via {{source}}"
+  "resource.playControl.menu.openVia": "Open via {{source}}",
+  "resource.source.FileSystem": "Local files",
+  "resource.source.Steam": "Steam",
+  "resource.source.DLsite": "DLsite",
+  "resource.source.ExHentai": "ExHentai"
 }

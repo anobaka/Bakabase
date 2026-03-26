@@ -144,5 +144,9 @@
 
   "resource.playControl.tooltip.launchAsSource": "作为{{source}}资源启动",
   "resource.playControl.tooltip.discoveringFiles": "正在发现可播放文件...",
-  "resource.playControl.menu.openVia": "通过 {{source}} 打开"
+  "resource.playControl.menu.openVia": "通过 {{source}} 打开",
+  "resource.source.FileSystem": "本地文件",
+  "resource.source.Steam": "Steam",
+  "resource.source.DLsite": "DLsite",
+  "resource.source.ExHentai": "ExHentai"
 }
