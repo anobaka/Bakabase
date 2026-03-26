@@ -262,14 +262,9 @@ public class MediaLibraryTemplateService<TDbContext>(
                 if (playableFilePaths.Any())
                 {
                     var r = resourcesMap[rpi.Path];
-                    r.Cache ??= new ResourceCache
+                    r.Cache ??= new ResourceFileSystemCache
                     {
-                        PlayableItems = playableFilePaths.Select(p => new PlayableItem
-                        {
-                            Source = ResourceSource.FileSystem,
-                            Key = p,
-                            DisplayName = Path.GetFileName(p),
-                        }).ToList()
+                        PlayableFilePaths = playableFilePaths
                     };
                 }
             }
