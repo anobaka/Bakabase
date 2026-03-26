@@ -118,6 +118,7 @@
   "resourceSource.pagination.pageSize": "Per page",
   "resourceSource.pagination.total": "{{total}} total",
 
+  "resourceSource.config.tab.general": "General",
   "resourceSource.config.tab.accounts": "Accounts",
   "resourceSource.config.tab.localFiles": "Local Files",
   "resourceSource.config.tab.metadataSync": "Metadata Sync",

@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Modal, ModalContent, ModalHeader, ModalBody, Tab, Tabs } from "@heroui/react";
+import { Modal, ModalContent, ModalHeader, ModalBody, Tab, Tabs, Select, SelectItem } from "@heroui/react";
 
 import { toast } from "@/components/bakaui";
 import { useSteamOptionsStore } from "@/stores/options";
@@ -11,6 +11,24 @@ import ExternalLink from "@/components/ExternalLink";
 import AccountsPanel, { type AccountField } from "./AccountsPanel";
 import MetadataMappingPanel from "./MetadataMappingPanel";
 import AutoSyncPanel from "./AutoSyncPanel";
+
+const steamLanguageOptions = [
+  { value: "english", label: "English" },
+  { value: "schinese", label: "简体中文" },
+  { value: "tchinese", label: "繁體中文" },
+  { value: "japanese", label: "日本語" },
+  { value: "korean", label: "한국어" },
+  { value: "french", label: "Français" },
+  { value: "german", label: "Deutsch" },
+  { value: "spanish", label: "Español" },
+  { value: "latam", label: "Español (Latinoamérica)" },
+  { value: "italian", label: "Italiano" },
+  { value: "portuguese", label: "Português" },
+  { value: "brazilian", label: "Português (Brasil)" },
+  { value: "russian", label: "Русский" },
+  { value: "thai", label: "ไทย" },
+  { value: "vietnamese", label: "Tiếng Việt" },
+];
 
 interface SteamConfigProps {
   onDestroyed?: () => void;
@@ -54,6 +72,24 @@ export default function SteamConfig({ onDestroyed }: SteamConfigProps) {
         <ModalHeader>{t("resourceSource.steam.title")}</ModalHeader>
         <ModalBody className="pb-6">
           <Tabs isVertical classNames={{ panel: "flex-1 w-0" }}>
+            <Tab key="general" title={t("resourceSource.config.tab.general")}>
+              <Select
+                label={t("thirdPartyConfig.steam.language.label")}
+                description={t("thirdPartyConfig.steam.language.description")}
+                placeholder={t("thirdPartyConfig.steam.language.auto")}
+                selectedKeys={steamOptions?.language ? [steamOptions.language] : []}
+                onSelectionChange={async (keys) => {
+                  const selected = Array.from(keys)[0] as string | undefined;
+                  await patch({ language: selected ?? null });
+                  toast.success(t("thirdPartyConfig.success.saved"));
+                }}
+                className="max-w-xs"
+              >
+                {steamLanguageOptions.map((opt) => (
+                  <SelectItem key={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </Select>
+            </Tab>
             <Tab key="accounts" title={t("resourceSource.config.tab.accounts")}>
               <AccountsPanel
                 accounts={steamOptions?.accounts || []}

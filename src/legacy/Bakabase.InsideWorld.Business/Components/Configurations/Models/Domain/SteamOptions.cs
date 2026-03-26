@@ -32,4 +32,10 @@ public class SteamOptions
     /// Auto-sync interval in minutes. 0 or null = disabled.
     /// </summary>
     public int? AutoSyncIntervalMinutes { get; set; }
+
+    /// <summary>
+    /// Language for all Steam data (sync, metadata, etc.). Null = use app language.
+    /// Steam API language codes: english, schinese, tchinese, japanese, korean, etc.
+    /// </summary>
+    public string? Language { get; set; }
 }

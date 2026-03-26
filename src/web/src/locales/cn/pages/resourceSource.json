@@ -118,6 +118,7 @@
   "resourceSource.pagination.pageSize": "每页",
   "resourceSource.pagination.total": "共 {{total}} 条",
 
+  "resourceSource.config.tab.general": "通用配置",
   "resourceSource.config.tab.accounts": "账号配置",
   "resourceSource.config.tab.localFiles": "本地文件",
   "resourceSource.config.tab.metadataSync": "元数据同步",

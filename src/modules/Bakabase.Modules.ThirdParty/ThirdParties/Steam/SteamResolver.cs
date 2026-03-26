@@ -2,7 +2,11 @@ using System.Text.Json;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
+using Bakabase.Infrastructures.Components.App;
+using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
+using Bakabase.Modules.ThirdParty.Abstractions;
 using Bakabase.Modules.ThirdParty.ThirdParties.Steam;
+using Bootstrap.Components.Configuration.Abstractions;
 using Microsoft.Extensions.Logging;
 
 namespace Bakabase.Modules.ThirdParty.ThirdParties.Steam;
@@ -16,15 +20,21 @@ public class SteamResolver : IResourceResolver
     private readonly ISteamAppService _steamAppService;
     private readonly SteamClient _steamClient;
     private readonly ILogger<SteamResolver> _logger;
+    private readonly IBOptions<SteamOptions> _options;
+    private readonly AppService _appService;
 
     public SteamResolver(
         ISteamAppService steamAppService,
         SteamClient steamClient,
-        ILogger<SteamResolver> logger)
+        ILogger<SteamResolver> logger,
+        IBOptions<SteamOptions> options,
+        AppService appService)
     {
         _steamAppService = steamAppService;
         _steamClient = steamClient;
         _logger = logger;
+        _options = options;
+        _appService = appService;
     }
 
     public ResourceSource Source => ResourceSource.Steam;
@@ -239,7 +249,9 @@ public class SteamResolver : IResourceResolver
     {
         if (!int.TryParse(sourceKey, out var appId)) return null;
 
-        var detail = await _steamClient.GetAppDetails(appId, ct: ct);
+        var language = MetadataLanguageHelper.GetSteamLanguage(
+            _options.Value.Language, _appService.AppOptions.Language);
+        var detail = await _steamClient.GetAppDetails(appId, language, ct);
         if (detail == null) return null;
 
         var f = typeof(SteamMetadataField);
