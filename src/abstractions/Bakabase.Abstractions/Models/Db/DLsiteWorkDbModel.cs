@@ -9,8 +9,6 @@ public record DLsiteWorkDbModel
     public string? Title { get; set; }
     public string? Circle { get; set; }
     public string? WorkType { get; set; }
-    public string? MetadataJson { get; set; }
-    public DateTime? MetadataFetchedAt { get; set; }
     public string? CoverUrl { get; set; }
     public string? DrmKey { get; set; }
     public string? Account { get; set; }

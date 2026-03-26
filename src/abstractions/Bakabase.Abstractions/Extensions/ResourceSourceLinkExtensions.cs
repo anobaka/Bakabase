@@ -18,6 +18,8 @@ public static class ResourceSourceLinkExtensions
             CoverUrls = StringListSerializer.Serialize(model.CoverUrls),
             LocalCoverPaths = StringListSerializer.Serialize(model.LocalCoverPaths),
             CoverDownloadFailedAt = model.CoverDownloadFailedAt,
+            MetadataJson = model.MetadataJson,
+            MetadataFetchedAt = model.MetadataFetchedAt,
         };
     }
 
@@ -33,6 +35,8 @@ public static class ResourceSourceLinkExtensions
             CoverUrls = StringListSerializer.Deserialize(dbModel.CoverUrls),
             LocalCoverPaths = StringListSerializer.Deserialize(dbModel.LocalCoverPaths),
             CoverDownloadFailedAt = dbModel.CoverDownloadFailedAt,
+            MetadataJson = dbModel.MetadataJson,
+            MetadataFetchedAt = dbModel.MetadataFetchedAt,
         };
     }
 }

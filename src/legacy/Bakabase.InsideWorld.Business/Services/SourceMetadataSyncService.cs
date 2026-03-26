@@ -353,33 +353,19 @@ public class SourceMetadataSyncService<TDbContext>(
 
     private async Task<string?> GetMetadataJsonForResource(int resourceId, ResourceSource source)
     {
-        return source switch
-        {
-            ResourceSource.Steam => (await serviceProvider.GetRequiredService<ISteamAppService>().GetAll())
-                .FirstOrDefault(a => a.ResourceId == resourceId)?.MetadataJson,
-            ResourceSource.DLsite => (await serviceProvider.GetRequiredService<IDLsiteWorkService>().GetAll())
-                .FirstOrDefault(w => w.ResourceId == resourceId)?.MetadataJson,
-            ResourceSource.ExHentai => (await serviceProvider.GetRequiredService<IExHentaiGalleryService>().GetAll())
-                .FirstOrDefault(g => g.ResourceId == resourceId)?.MetadataJson,
-            _ => null
-        };
+        var sourceLinkService = serviceProvider.GetRequiredService<IResourceSourceLinkService>();
+        var links = await sourceLinkService.GetByResourceId(resourceId);
+        return links.FirstOrDefault(l => l.Source == source)?.MetadataJson;
     }
 
     private async Task<List<(int ResourceId, string? MetadataJson)>> GetAllItemsWithMetadata(ResourceSource source)
     {
-        return source switch
-        {
-            ResourceSource.Steam => (await serviceProvider.GetRequiredService<ISteamAppService>().GetAll())
-                .Where(a => a.ResourceId.HasValue && !string.IsNullOrEmpty(a.MetadataJson))
-                .Select(a => (a.ResourceId!.Value, a.MetadataJson)).ToList(),
-            ResourceSource.DLsite => (await serviceProvider.GetRequiredService<IDLsiteWorkService>().GetAll())
-                .Where(w => w.ResourceId.HasValue && !string.IsNullOrEmpty(w.MetadataJson))
-                .Select(w => (w.ResourceId!.Value, w.MetadataJson)).ToList(),
-            ResourceSource.ExHentai => (await serviceProvider.GetRequiredService<IExHentaiGalleryService>().GetAll())
-                .Where(g => g.ResourceId.HasValue && !string.IsNullOrEmpty(g.MetadataJson))
-                .Select(g => (g.ResourceId!.Value, g.MetadataJson)).ToList(),
-            _ => []
-        };
+        var sourceLinkService = serviceProvider.GetRequiredService<IResourceSourceLinkService>();
+        var links = await sourceLinkService.GetAll();
+        return links
+            .Where(l => l.Source == source && !string.IsNullOrEmpty(l.MetadataJson))
+            .Select(l => (l.ResourceId, l.MetadataJson))
+            .ToList();
     }
 
     private static SourceMetadataMapping ToDomainModel(SourceMetadataMappingDbModel db) => new()

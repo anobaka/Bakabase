@@ -213,4 +213,26 @@ public class ResourceSourceLinkService<TDbContext>(
             await orm.UpdateRange(dbModels);
         }
     }
+
+    public async Task<List<ResourceSourceLink>> GetPendingMetadataFetches()
+    {
+        var dbModels = await orm.GetAll(m =>
+            m.Source != ResourceSource.FileSystem && m.MetadataFetchedAt == null);
+        return dbModels.Select(d => d.ToDomainModel()).ToList();
+    }
+
+    public async Task ClearAllMetadata(ResourceSource source)
+    {
+        var dbModels = await orm.GetAll(m =>
+            m.Source == source && (m.MetadataJson != null || m.MetadataFetchedAt != null));
+        foreach (var dbModel in dbModels)
+        {
+            dbModel.MetadataJson = null;
+            dbModel.MetadataFetchedAt = null;
+        }
+        if (dbModels.Count > 0)
+        {
+            await orm.UpdateRange(dbModels);
+        }
+    }
 }

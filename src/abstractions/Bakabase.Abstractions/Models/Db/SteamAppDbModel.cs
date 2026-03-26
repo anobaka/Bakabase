@@ -11,8 +11,6 @@ public record SteamAppDbModel
     public int RtimeLastPlayed { get; set; }
     public string? ImgIconUrl { get; set; }
     public bool HasCommunityVisibleStats { get; set; }
-    public string? MetadataJson { get; set; }
-    public DateTime? MetadataFetchedAt { get; set; }
     public bool IsInstalled { get; set; }
     public string? InstallPath { get; set; }
     public int? ResourceId { get; set; }

@@ -58,7 +58,7 @@ public class ExHentaiGalleryController(IExHentaiGalleryService service, BTaskMan
         {
             var sourceLinkService = HttpContext.RequestServices.GetRequiredService<IResourceSourceLinkService>();
             await sourceLinkService.ClearAllLocalCoverPaths(ResourceSource.ExHentai);
-            await service.ClearAllMetadata();
+            await sourceLinkService.ClearAllMetadata(ResourceSource.ExHentai);
         }
 
         await btm.Start(SyncTaskId, () => new BTaskHandlerBuilder

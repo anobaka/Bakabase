@@ -57,7 +57,7 @@ public class SteamAppController(ISteamAppService service, BTaskManager btm, IBak
         {
             var sourceLinkService = HttpContext.RequestServices.GetRequiredService<IResourceSourceLinkService>();
             await sourceLinkService.ClearAllLocalCoverPaths(ResourceSource.Steam);
-            await service.ClearAllMetadata();
+            await sourceLinkService.ClearAllMetadata(ResourceSource.Steam);
         }
 
         await btm.Start(SyncTaskId, () => new BTaskHandlerBuilder

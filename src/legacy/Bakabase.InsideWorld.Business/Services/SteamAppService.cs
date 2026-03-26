@@ -63,8 +63,7 @@ public class SteamAppService(
             existing.RtimeLastPlayed = app.RtimeLastPlayed;
             existing.ImgIconUrl = app.ImgIconUrl;
             existing.HasCommunityVisibleStats = app.HasCommunityVisibleStats;
-            existing.MetadataJson = app.MetadataJson;
-            existing.MetadataFetchedAt = app.MetadataFetchedAt;
+
 
             // Update account if changed
             if (existing.Account != app.Account && app.Account != null)
@@ -181,7 +180,6 @@ public class SteamAppService(
                 existing.RtimeLastPlayed = game.RtimeLastPlayed;
                 existing.ImgIconUrl = game.ImgIconUrl;
                 existing.HasCommunityVisibleStats = game.HasCommunityVisibleStats;
-                existing.MetadataJson = game.MetadataJson;
                 if (existing.Account != game.Account && game.Account != null)
                 {
                     existing.Account = game.Account;
@@ -273,18 +271,4 @@ public class SteamAppService(
         await orm.Update(app);
     }
 
-    public async Task ClearAllMetadata()
-    {
-        var apps = await orm.GetAll(a => a.MetadataJson != null);
-        foreach (var app in apps)
-        {
-            app.MetadataJson = null;
-            app.MetadataFetchedAt = null;
-        }
-
-        if (apps.Count > 0)
-        {
-            await orm.UpdateRange(apps);
-        }
-    }
 }

@@ -155,8 +155,6 @@ public class DLsiteWorkService(
             existing.SalesDate = work.SalesDate;
             existing.PurchasedAt = work.PurchasedAt;
             existing.IsPurchased = work.IsPurchased;
-            existing.MetadataJson = work.MetadataJson;
-            existing.MetadataFetchedAt = work.MetadataFetchedAt;
 
             // If account changed, update account and reset DRM key
             if (existing.Account != work.Account)
@@ -291,8 +289,6 @@ public class DLsiteWorkService(
                         SalesDate = salesDate,
                         PurchasedAt = purchasedAt,
                         IsPurchased = true,
-                        MetadataJson = JsonConvert.SerializeObject(work),
-                        MetadataFetchedAt = DateTime.Now,
                         UseLocaleEmulator = ShouldUseLocaleEmulator(work.WorkType),
                     };
 
@@ -345,8 +341,6 @@ public class DLsiteWorkService(
                 existing.SalesDate = work.SalesDate;
                 existing.PurchasedAt = work.PurchasedAt;
                 existing.IsPurchased = work.IsPurchased;
-                existing.MetadataJson = work.MetadataJson;
-                existing.MetadataFetchedAt = work.MetadataFetchedAt;
                 if (existing.Account != work.Account)
                 {
                     existing.Account = work.Account;
@@ -920,18 +914,4 @@ public class DLsiteWorkService(
         return TimeZoneInfo.ConvertTimeFromUtc(utc, userTz);
     }
 
-    public async Task ClearAllMetadata()
-    {
-        var works = await orm.GetAll(w => w.MetadataJson != null);
-        foreach (var work in works)
-        {
-            work.MetadataJson = null;
-            work.MetadataFetchedAt = null;
-        }
-
-        if (works.Count > 0)
-        {
-            await orm.UpdateRange(works);
-        }
-    }
 }

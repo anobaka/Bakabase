@@ -15,9 +15,4 @@ public interface ISteamAppService
     Task SyncFromApi(Func<int, int, Task>? onProgress = null, CancellationToken ct = default);
     Task SetHidden(int appId, bool isHidden);
     Task UpdateInstallationStatus();
-
-    /// <summary>
-    /// Clear MetadataJson and MetadataFetchedAt for all items, triggering re-fetch on next metadata task run.
-    /// </summary>
-    Task ClearAllMetadata();
 }

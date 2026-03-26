@@ -11,8 +11,6 @@ public record ExHentaiGalleryDbModel
     public string? TitleJpn { get; set; }
     public string? Category { get; set; }
     public string? CoverUrl { get; set; }
-    public string? MetadataJson { get; set; }
-    public DateTime? MetadataFetchedAt { get; set; }
     public bool IsDownloaded { get; set; }
     public string? LocalPath { get; set; }
     public int? ResourceId { get; set; }

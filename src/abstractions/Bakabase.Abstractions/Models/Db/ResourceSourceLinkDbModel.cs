@@ -22,4 +22,12 @@ public record ResourceSourceLinkDbModel
     /// Used to implement backoff so broken links aren't retried every task cycle.
     /// </summary>
     public DateTime? CoverDownloadFailedAt { get; set; }
+    /// <summary>
+    /// Raw JSON metadata fetched from the external source.
+    /// </summary>
+    public string? MetadataJson { get; set; }
+    /// <summary>
+    /// When metadata was last fetched. Null means metadata needs to be fetched.
+    /// </summary>
+    public DateTime? MetadataFetchedAt { get; set; }
 }

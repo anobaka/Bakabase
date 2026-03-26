@@ -61,8 +61,6 @@ public class ExHentaiGalleryService(
             existing.TitleJpn = gallery.TitleJpn;
             existing.Category = gallery.Category;
             existing.CoverUrl = gallery.CoverUrl;
-            existing.MetadataJson = gallery.MetadataJson;
-            existing.MetadataFetchedAt = gallery.MetadataFetchedAt;
 
             // Update account if changed
             if (existing.Account != gallery.Account && gallery.Account != null)
@@ -217,8 +215,6 @@ public class ExHentaiGalleryService(
                 existing.TitleJpn = gallery.TitleJpn;
                 existing.Category = gallery.Category;
                 existing.CoverUrl = gallery.CoverUrl;
-                existing.MetadataJson = gallery.MetadataJson;
-                existing.MetadataFetchedAt = gallery.MetadataFetchedAt;
                 if (existing.Account != gallery.Account && gallery.Account != null)
                 {
                     existing.Account = gallery.Account;
@@ -261,18 +257,4 @@ public class ExHentaiGalleryService(
         await orm.Update(gallery);
     }
 
-    public async Task ClearAllMetadata()
-    {
-        var galleries = await orm.GetAll(g => g.MetadataJson != null);
-        foreach (var gallery in galleries)
-        {
-            gallery.MetadataJson = null;
-            gallery.MetadataFetchedAt = null;
-        }
-
-        if (galleries.Count > 0)
-        {
-            await orm.UpdateRange(galleries);
-        }
-    }
 }

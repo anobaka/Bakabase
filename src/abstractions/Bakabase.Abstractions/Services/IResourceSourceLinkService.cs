@@ -52,4 +52,14 @@ public interface IResourceSourceLinkService
     /// Clear LocalCoverPaths for all resources of a given source.
     /// </summary>
     Task ClearAllLocalCoverPaths(ResourceSource source);
+
+    /// <summary>
+    /// Get source links that need metadata fetch (non-FileSystem, MetadataFetchedAt is null).
+    /// </summary>
+    Task<List<ResourceSourceLink>> GetPendingMetadataFetches();
+
+    /// <summary>
+    /// Clear MetadataJson and MetadataFetchedAt for all source links of a given source.
+    /// </summary>
+    Task ClearAllMetadata(ResourceSource source);
 }

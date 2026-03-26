@@ -24,9 +24,4 @@ public interface IDLsiteWorkService
     Task SetUseLocaleEmulator(string workId, bool useLocaleEmulator);
     Task<string?> FetchDrmKey(string workId, CancellationToken ct = default);
     Task DeleteLocalFiles(string workId);
-
-    /// <summary>
-    /// Clear MetadataJson and MetadataFetchedAt for all items, triggering re-fetch on next metadata task run.
-    /// </summary>
-    Task ClearAllMetadata();
 }

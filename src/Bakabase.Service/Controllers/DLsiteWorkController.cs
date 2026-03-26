@@ -53,7 +53,7 @@ public class DLsiteWorkController(IDLsiteWorkService service, BTaskManager btm, 
         {
             var sourceLinkService = HttpContext.RequestServices.GetRequiredService<IResourceSourceLinkService>();
             await sourceLinkService.ClearAllLocalCoverPaths(ResourceSource.DLsite);
-            await service.ClearAllMetadata();
+            await sourceLinkService.ClearAllMetadata(ResourceSource.DLsite);
         }
 
         await btm.Start(SyncTaskId, () => new BTaskHandlerBuilder
