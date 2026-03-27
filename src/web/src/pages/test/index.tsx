@@ -11,10 +11,8 @@ import PscPage from "./cases/Psc";
 import TourPage from "./cases/Tour";
 import SortablePage from "./cases/Sortable";
 import MediaPreviewerTest from "./cases/MediaPreviewer";
-import CategoryEnhancerOptionsDialogTest from "./cases/CategoryEnhancerOptionsDialog";
 import ResourceFilterPage from "./cases/ResourceFilter";
 import PropertiesPage from "./cases/Properties";
-import PresetMediaLibraryTemplateBuilderTest from "./cases/PresetMediaLibraryTemplateBuilderTest";
 import LongTabsPage from "./cases/LongTabs";
 import ReactPlayer from "./cases/ReactPlayer";
 import HlsPlayerPage from "./cases/HlsPlayer";
@@ -27,6 +25,7 @@ import PathMarksInvalidPathsTest from "./cases/PathMarksInvalidPathsTest";
 import BulkModificationProcessEditorsTest from "./cases/BulkModificationProcessEditors";
 import ComparisonRuleTest from "./cases/ComparisonRuleTest";
 import PropertyValueRendererTestPage from "./cases/PropertyValueRenderer";
+import PlayControlAndCoverTest from "./cases/PlayControlAndCoverTest";
 
 import ErrorBoundaryTestPage from "@/pages/test/cases/ErrorBoundaryTest";
 import { Listbox } from "@/components/bakaui";
@@ -44,6 +43,7 @@ import DeprecatedChip from "@/components/Chips/DeprecatedChip";
 import { FileSystemSelectorButton } from "@/components/FileSystemSelector";
 
 const components = {
+  PlayControlAndCover: <PlayControlAndCoverTest />,
   PropertyValueRenderer: <PropertyValueRendererTestPage />,
   ComparisonRule: <ComparisonRuleTest />,
   BulkModificationProcessEditors: <BulkModificationProcessEditorsTest />,
@@ -78,13 +78,11 @@ const components = {
       <DeprecatedChip showTooltip={false} />
     </div>
   ),
-  PresetMediaLibraryTemplateBuilder: <PresetMediaLibraryTemplateBuilderTest />,
   Properties: <PropertiesPage />,
   BulkModification: <ProcessValueEditor valueType={StandardValueType.Boolean} />,
   ResourceTransfer: <ResourceTransferPage />,
   ResourceFilter: <ResourceFilterPage />,
   VirtualList: <VirtualListPage />,
-  CategoryEnhancerOptions: <CategoryEnhancerOptionsDialogTest />,
   Psc: <PscPage />,
   Tour: <TourPage />,
   ResourceOrderSelector: <OrderSelector />,
@@ -173,9 +171,11 @@ const TestPage = () => {
                   setTestingKey(k as string);
                 }}
               >
-                {Object.keys(components).sort().map((c) => {
-                  return <ListboxItem key={c}>{c}</ListboxItem>;
-                })}
+                {Object.keys(components)
+                  .sort()
+                  .map((c) => {
+                    return <ListboxItem key={c}>{c}</ListboxItem>;
+                  })}
               </Listbox>
             </div>
           )}

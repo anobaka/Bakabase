@@ -35,8 +35,6 @@ public static class ResourceCacheExtensions
                 rc.PlayableFilePaths =
                     model.PlayableFilePaths.DeserializeAsStandardValue<List<string>>(StandardValueType.ListString);
             }
-
-            rc.HasMorePlayableFiles = model.HasMorePlayableFiles;
         }
 
         return rc;

@@ -372,11 +372,23 @@
   <data name="BTask_Name_PrepareCache" xml:space="preserve">
     <value>准备缓存</value>
   </data>
+  <data name="BTask_Name_PrepareData" xml:space="preserve">
+    <value>准备数据</value>
+  </data>
+  <data name="BTask_Name_ResourceData" xml:space="preserve">
+    <value>准备资源数据</value>
+  </data>
   <data name="BTask_Name_MoveFiles" xml:space="preserve">
     <value>移动文件</value>
   </data>
   <data name="BTask_Description_PrepareCache" xml:space="preserve">
     <value>为资源准备缓存，缓存可以提升资源加载速度</value>
+  </data>
+  <data name="BTask_Description_PrepareData" xml:space="preserve">
+    <value>为所有资源准备封面和可播放项数据</value>
+  </data>
+  <data name="BTask_Description_ResourceData" xml:space="preserve">
+    <value>为所有资源准备封面、可播放项和元数据</value>
   </data>
   <data name="BTask_MessageOnInterruption_MoveFiles" xml:space="preserve">
     <value>部分文件还在移动中，强制中断可能会导致目标文件或文件夹不完整</value>

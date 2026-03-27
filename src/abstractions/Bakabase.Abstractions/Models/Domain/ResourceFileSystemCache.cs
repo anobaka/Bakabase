@@ -11,6 +11,5 @@ public record ResourceFileSystemCache
 {
     public List<string>? CoverPaths { get; set; }
     public List<string>? PlayableFilePaths { get; set; }
-    public bool HasMorePlayableFiles { get; set; }
     public List<ResourceCacheType> CachedTypes { get; set; } = [];
 }

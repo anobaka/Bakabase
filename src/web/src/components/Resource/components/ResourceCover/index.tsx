@@ -16,7 +16,7 @@ import { Carousel, Tooltip, Image, Spinner } from "@/components/bakaui";
 import type { Resource as ResourceModel } from "@/core/models/Resource";
 
 import FallbackCover from "@/components/Resource/components/ResourceCover/components/FallbackCover.tsx";
-import { useCoverDiscovery } from "@/hooks/useResourceDiscovery";
+import { useCoverResolution } from "@/hooks/useCoverResolution";
 
 type TooltipPlacement =
   | "top"
@@ -63,15 +63,8 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
 
   const forceUpdate = useUpdate();
 
-  // Get cover cache enabled status from UI options
-  const resourceUiOptions = useUiOptionsStore((state) => state.data?.resource);
-  const cacheEnabled = !resourceUiOptions?.disableCoverCache;
-
-  // Backend already resolves covers with priority:
-  // 1. User-set cover property  2. External source local covers  3. Cache-discovered covers
-  // Only need SSE discovery when backend couldn't resolve (coversReady=false, no covers)
-  const needsDiscovery = !resource.coversReady && !resource.covers?.length;
-  const discoveryState = useCoverDiscovery(resource, cacheEnabled, needsDiscovery);
+  // Use cover resolution hook which handles SSE discovery internally
+  const coverResolution = useCoverResolution(resource);
 
   const [previewerVisible, setPreviewerVisible] = useState(false);
   const previewerHoverTimerRef = useRef<any>();
@@ -87,27 +80,14 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
   const [failureUrls, setFailureUrls] = useState<Set<string>>(new Set());
   const [reloadKey, setReloadKey] = useState(0);
 
-  // Stabilize array references using useMemo to prevent unnecessary re-renders
-  const stableDiscoveryCoverPaths = useMemo(
-    () => discoveryState.coverPaths,
-    [discoveryState.coverPaths?.join(",")]
-  );
-  const stableCovers = useMemo(
-    () => resource.covers,
-    [resource.covers?.join(",")]
-  );
   const stableApiEndpoints = useMemo(
     () => appContext.apiEndpoints,
     [appContext.apiEndpoints?.join(",")]
   );
 
-  // Build URLs from cover paths
-  // Uses only 2nd-nth endpoints for resource loading (1st is for API calls)
+  // Build URLs from cover paths using coverResolution
   const urls = useMemo(() => {
-    // If backend resolved covers, use them directly
-    // Otherwise wait for SSE discovery to be ready
-    const hasBackendCovers = stableCovers?.length;
-    if (!hasBackendCovers && discoveryState.status !== "ready") {
+    if (coverResolution.status === "loading") {
       return null;
     }
 
@@ -117,17 +97,15 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     const serverAddress =
       resourceServerAddresses[Math.floor(Math.random() * resourceServerAddresses.length)];
 
-    // Priority: backend-resolved covers > SSE-discovered covers > resource.path fallback
-    const coverPaths = hasBackendCovers
-      ? stableCovers
-      : stableDiscoveryCoverPaths?.length
-        ? stableDiscoveryCoverPaths
-        : [resource.path];
+    // Use resolved covers, or fall back to resource.path
+    const coverPaths = coverResolution.covers?.length
+      ? coverResolution.covers
+      : [resource.path];
 
     return coverPaths.map(
       (coverPath) => `${serverAddress}/tool/thumbnail?path=${encodeURIComponent(coverPath)}`
     );
-  }, [stableCovers, discoveryState.status, stableDiscoveryCoverPaths, stableApiEndpoints, resource.path, reloadKey]);
+  }, [coverResolution.status, coverResolution.covers, stableApiEndpoints, resource.path, reloadKey]);
 
   useUpdateEffect(() => {
     forceUpdate();
@@ -172,14 +150,11 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
 
   // Compute tooltip content for loading state
   const loadingTooltipContent = useMemo(() => {
-    if (discoveryState.status === "loading") {
-      if (discoveryState.cacheEnabled) {
-        return t("resource.cover.tooltip.cachePreparing");
-      }
+    if (coverResolution.status === "loading") {
       return t("resource.cover.tooltip.loading");
     }
     return undefined;
-  }, [discoveryState.status, discoveryState.cacheEnabled, t]);
+  }, [coverResolution.status, t]);
 
   const handleImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     const img = e.target as HTMLImageElement;
@@ -220,7 +195,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
 
   const renderCover = useCallback(() => {
     // Show loading state with tooltip
-    if (discoveryState.status === "loading" || !urls) {
+    if (coverResolution.status === "loading" || !urls) {
       return (
         <Tooltip content={loadingTooltipContent} isDisabled={!loadingTooltipContent}>
           <div className="w-full h-full flex items-center justify-center bg-default-100">
@@ -230,8 +205,8 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
       );
     }
 
-    // Show error state
-    if (discoveryState.status === "error") {
+    // Show not-found state
+    if (coverResolution.status === "not-found") {
       return (
         <FallbackCover afterClearingCache={reload} id={resource.id} />
       );
@@ -290,7 +265,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
         })}
       </Carousel>
     );
-  }, [urls, coverFit, disableCarousel, failureUrls, discoveryState.status, loadingTooltipContent, handleImageLoad, handleImageError]);
+  }, [urls, coverFit, disableCarousel, failureUrls, coverResolution.status, loadingTooltipContent, handleImageLoad, handleImageError]);
 
   const renderContainer = () => {
     return (

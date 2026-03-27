@@ -41,7 +41,6 @@ public record Resource
     public DateTime UpdatedAt { get; set; } = DateTime.Now;
     public DateTime FileCreatedAt { get; set; }
     public DateTime FileModifiedAt { get; set; }
-    public List<string>? CoverPaths { get; set; }
     public IReadOnlySet<ResourceTag> Tags { get; set; } = FrozenSet<ResourceTag>.Empty;
     public Resource? Parent { get; set; }
     /// <summary>
@@ -67,20 +66,12 @@ public record Resource
     public List<PlayableItem>? PlayableItems { get; set; }
 
     /// <summary>
-    /// Whether there are more playable files beyond what's shown in cache (due to trimming limits).
+    /// Per-origin readiness states for cover, playable item, and metadata data.
+    /// Populated at runtime by providers; not persisted.
     /// </summary>
-    public bool HasMorePlayableFiles { get; set; }
+    public List<ResourceDataState>? DataStates { get; set; }
 
-    /// <summary>
-    /// Whether covers have been resolved and are ready.
-    /// </summary>
-    public bool CoversReady { get; set; }
-
-    /// <summary>
-    /// Whether playable items have been resolved and are ready.
-    /// </summary>
-    public bool PlayableItemsReady { get; set; }
-
+    [System.Text.Json.Serialization.JsonIgnore]
     public ResourceFileSystemCache? Cache { get; set; }
 
     public record Property(

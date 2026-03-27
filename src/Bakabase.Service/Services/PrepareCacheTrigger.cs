@@ -9,7 +9,7 @@ namespace Bakabase.Service.Services;
 
 public class PrepareCacheTrigger : IPrepareCacheTrigger, IDisposable
 {
-    private const string TaskId = "PrepareCache";
+    private const string TaskId = "ResourceData";
     private const int DebounceMs = 5000;
 
     private readonly BTaskManager _taskManager;
@@ -43,7 +43,7 @@ public class PrepareCacheTrigger : IPrepareCacheTrigger, IDisposable
                     await Task.Delay(DebounceMs, token);
                     if (!token.IsCancellationRequested)
                     {
-                        _logger.LogInformation("Triggering PrepareCache task after debounce window");
+                        _logger.LogInformation("Triggering ResourceData task after debounce window");
                         await _taskManager.Start(TaskId);
                     }
                 }
@@ -53,7 +53,7 @@ public class PrepareCacheTrigger : IPrepareCacheTrigger, IDisposable
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to trigger PrepareCache task");
+                    _logger.LogError(ex, "Failed to trigger ResourceData task");
                 }
             }, token);
         }

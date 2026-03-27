@@ -92,7 +92,7 @@ public class PathSyncManager : BackgroundService, IPathMarkSyncService
 
         if (hasResourceMarks)
         {
-            _pendingResourceSources.TryAdd(ResourceSource.FileSystem, 0);
+            _pendingResourceSources.TryAdd(ResourceSource.PathMark, 0);
             _logger.LogDebug("Enqueued FileSystem resource sync for resource marks");
         }
 
@@ -288,7 +288,7 @@ public class PathSyncManager : BackgroundService, IPathMarkSyncService
             // Check if any are resource marks
             if (syncingMarks.Any(m => m.Type == PathMarkType.Resource))
             {
-                _pendingResourceSources.TryAdd(ResourceSource.FileSystem, 0);
+                _pendingResourceSources.TryAdd(ResourceSource.PathMark, 0);
             }
 
             // Request path mark sync for property/media library marks

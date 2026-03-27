@@ -38,7 +38,7 @@ public static class MediaLibraryV2Extensions
             [
                 new ResourceSourceLink
                 {
-                    Source = ResourceSource.FileSystem,
+                    Source = ResourceSource.PathMark,
                     SourceKey = tempSyncResource.Path
                 }
             ]

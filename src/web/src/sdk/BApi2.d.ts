@@ -4890,9 +4890,6 @@ export interface components {
             title?: string;
             circle?: string;
             workType?: string;
-            metadataJson?: string;
-            /** Format: date-time */
-            metadataFetchedAt?: string;
             coverUrl?: string;
             drmKey?: string;
             account?: string;
@@ -4922,9 +4919,6 @@ export interface components {
             titleJpn?: string;
             category?: string;
             coverUrl?: string;
-            metadataJson?: string;
-            /** Format: date-time */
-            metadataFetchedAt?: string;
             isDownloaded: boolean;
             localPath?: string;
             /** Format: int32 */
@@ -4957,9 +4951,6 @@ export interface components {
             rtimeLastPlayed: number;
             imgIconUrl?: string;
             hasCommunityVisibleStats: boolean;
-            metadataJson?: string;
-            /** Format: date-time */
-            metadataFetchedAt?: string;
             isInstalled: boolean;
             installPath?: string;
             /** Format: int32 */
@@ -4983,6 +4974,18 @@ export interface components {
          * @enum {integer}
          */
         "Bakabase.Abstractions.Models.Domain.Constants.AppNotificationSeverity": 0 | 1 | 2 | 3;
+        /**
+         * Format: int32
+         * @description [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai]
+         * @enum {integer}
+         */
+        "Bakabase.Abstractions.Models.Domain.Constants.DataOrigin": 1 | 2 | 3 | 4 | 5;
+        /**
+         * Format: int32
+         * @description [1: NotStarted, 2: Ready, 3: Failed]
+         * @enum {integer}
+         */
+        "Bakabase.Abstractions.Models.Domain.Constants.DataStatus": 1 | 2 | 3;
         /**
          * Format: int32
          * @description [1: ContextCreated, 2: ContextApplied]
@@ -5081,7 +5084,13 @@ export interface components {
         "Bakabase.Abstractions.Models.Domain.Constants.ResourceCacheType": 1 | 2 | 4;
         /**
          * Format: int32
-         * @description [1: FileSystem, 2: Steam, 3: DLsite, 4: ExHentai]
+         * @description [1: Cover, 2: PlayableItem, 3: Metadata]
+         * @enum {integer}
+         */
+        "Bakabase.Abstractions.Models.Domain.Constants.ResourceDataType": 1 | 2 | 3;
+        /**
+         * Format: int32
+         * @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai]
          * @enum {integer}
          */
         "Bakabase.Abstractions.Models.Domain.Constants.ResourceSource": 1 | 2 | 3 | 4;
@@ -5252,6 +5261,20 @@ export interface components {
             enabled: boolean;
             targetLanguage: string;
         };
+        "Bakabase.Abstractions.Models.Domain.Options.SteamAccount": {
+            name?: string;
+            apiKey?: string;
+            steamId?: string;
+        };
+        "Bakabase.Abstractions.Models.Domain.Options.SteamOptions": {
+            accounts?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Options.SteamAccount"][];
+            readonly apiKey?: string;
+            readonly steamId?: string;
+            showCover: boolean;
+            /** Format: int32 */
+            autoSyncIntervalMinutes?: number;
+            language?: string;
+        };
         "Bakabase.Abstractions.Models.Domain.PathFilter": {
             positioner: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PathPositioner"];
             /** Format: int32 */
@@ -5301,7 +5324,7 @@ export interface components {
             regex?: string;
         };
         "Bakabase.Abstractions.Models.Domain.PlayableItem": {
-            source: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceSource"];
+            origin: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.DataOrigin"];
             key: string;
             displayName?: string;
         };
@@ -5373,7 +5396,6 @@ export interface components {
             fileCreatedAt: string;
             /** Format: date-time */
             fileModifiedAt: string;
-            coverPaths?: string[];
             tags: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceTag"][];
             parent?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Resource"];
             properties?: {
@@ -5386,10 +5408,8 @@ export interface components {
             playedAt?: string;
             covers?: string[];
             playableItems?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PlayableItem"][];
-            hasMoreFileSystemPlayableItems: boolean;
-            coversReady: boolean;
-            playableItemsReady: boolean;
-            cache?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceCache"];
+            hasMorePlayableFiles: boolean;
+            dataStates?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceDataState"][];
             /** @deprecated */
             mediaLibraryName?: string;
             /** @deprecated */
@@ -5420,12 +5440,17 @@ export interface components {
             aliasAppliedBizValue?: unknown;
             readonly isManuallySet: boolean;
         };
-        "Bakabase.Abstractions.Models.Domain.ResourceCache": {
+        "Bakabase.Abstractions.Models.Domain.ResourceDataState": {
+            /** Format: int32 */
+            resourceId: number;
+            dataType: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceDataType"];
+            origin: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.DataOrigin"];
+            status: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.DataStatus"];
+        };
+        "Bakabase.Abstractions.Models.Domain.ResourceFileSystemCache": {
             coverPaths?: string[];
-            hasMoreFileSystemPlayableItems: boolean;
-            /** @deprecated */
             playableFilePaths?: string[];
-            playableItems?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PlayableItem"][];
+            hasMorePlayableFiles: boolean;
             cachedTypes: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceCacheType"][];
         };
         "Bakabase.Abstractions.Models.Domain.ResourceProfileEnhancerOptions": {
@@ -5478,6 +5503,11 @@ export interface components {
             createDt: string;
             coverUrls?: string[];
             localCoverPaths?: string[];
+            /** Format: date-time */
+            coverDownloadFailedAt?: string;
+            metadataJson?: string;
+            /** Format: date-time */
+            metadataFetchedAt?: string;
         };
         "Bakabase.Abstractions.Models.Domain.ScopePropertyKey": {
             pool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
@@ -5841,6 +5871,8 @@ export interface components {
             requestTimeout: number;
             showCover: boolean;
             deleteArchiveAfterExtraction: boolean;
+            /** Format: int32 */
+            autoSyncIntervalMinutes?: number;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ExHentaiAccount": {
             name?: string;
@@ -5866,6 +5898,8 @@ export interface components {
             /** Format: int32 */
             requestTimeout: number;
             showCover: boolean;
+            /** Format: int32 */
+            autoSyncIntervalMinutes?: number;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.FanboxOptions": {
             cookie?: string;
@@ -6009,17 +6043,6 @@ export interface components {
             };
             /** Format: int32 */
             autoBuyThreshold: number;
-        };
-        "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.SteamAccount": {
-            name?: string;
-            apiKey?: string;
-            steamId?: string;
-        };
-        "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.SteamOptions": {
-            accounts?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.SteamAccount"][];
-            readonly apiKey?: string;
-            readonly steamId?: string;
-            showCover: boolean;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.TmdbOptions": {
             /** Format: int32 */
@@ -6204,7 +6227,7 @@ export interface components {
             autoBuyThreshold?: number;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.SteamOptionsPatchInputModel": {
-            accounts?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.SteamAccount"][];
+            accounts?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Options.SteamAccount"][];
             showCover?: boolean;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.TaskOptionsPatchInputModel": {
@@ -6632,10 +6655,10 @@ export interface components {
         "Bakabase.InsideWorld.Models.Constants.AdditionalItems.CustomPropertyAdditionalItem": 0 | 2;
         /**
          * Format: int32
-         * @description [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 8192: SourceLinks, 15200: All]
+         * @description [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 52064: All]
          * @enum {integer}
          */
-        "Bakabase.InsideWorld.Models.Constants.AdditionalItems.ResourceAdditionalItem": 0 | 32 | 64 | 288 | 512 | 2048 | 4096 | 8192 | 15200;
+        "Bakabase.InsideWorld.Models.Constants.AdditionalItems.ResourceAdditionalItem": 0 | 32 | 64 | 288 | 512 | 2048 | 16416 | 32768 | 52064;
         /**
          * Format: int32
          * @description [1: Latest, 2: Frequency]
@@ -7466,7 +7489,8 @@ export interface components {
         "Bakabase.Service.Controllers.DiscoverySubscribeRequest": {
             /** Format: int32 */
             resourceId: number;
-            types: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceCacheType"];
+            origin: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.DataOrigin"];
+            dataType: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceDataType"];
         };
         "Bakabase.Service.Controllers.EnsureMappingsInput": {
             /** Format: int32 */
@@ -8349,17 +8373,23 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.MediaLibraryV2"];
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.Options.SteamOptions]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Options.SteamOptions"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.PathMark]": {
             /** Format: int32 */
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PathMark"];
         };
-        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ResourceCache]": {
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ResourceFileSystemCache]": {
             /** Format: int32 */
             code: number;
             message?: string;
-            data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceCache"];
+            data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceFileSystemCache"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.SpecialText]": {
             /** Format: int32 */
@@ -8474,12 +8504,6 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.SoulPlusOptions"];
-        };
-        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.SteamOptions]": {
-            /** Format: int32 */
-            code: number;
-            message?: string;
-            data?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.SteamOptions"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.TmdbOptions]": {
             /** Format: int32 */
@@ -10980,9 +11004,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ResourceCache]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ResourceCache]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ResourceCache]"];
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ResourceFileSystemCache]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ResourceFileSystemCache]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ResourceFileSystemCache]"];
                 };
             };
         };
@@ -16130,9 +16154,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.SteamOptions]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.SteamOptions]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.SteamOptions]"];
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.Options.SteamOptions]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.Options.SteamOptions]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.Options.SteamOptions]"];
                 };
             };
         };
@@ -16556,7 +16580,7 @@ export interface operations {
     SoftDeletePathMark: {
         parameters: {
             query?: {
-                cleanupEffects?: boolean;
+                removeEffects?: boolean;
             };
             header?: never;
             path: {
@@ -16608,7 +16632,6 @@ export interface operations {
         parameters: {
             query?: {
                 path?: string;
-                cleanupEffects?: boolean;
             };
             header?: never;
             path?: never;
@@ -17032,7 +17055,7 @@ export interface operations {
     StartSyncBySource: {
         parameters: {
             query?: {
-                /** @description [1: FileSystem, 2: Steam, 3: DLsite, 4: ExHentai] */
+                /** @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai] */
                 source?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceSource"];
             };
             header?: never;
@@ -17768,7 +17791,7 @@ export interface operations {
             query?: {
                 saveSearch?: boolean;
                 searchId?: string;
-                /** @description [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 8192: SourceLinks, 15200: All] */
+                /** @description [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 52064: All] */
                 additionalItems?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.AdditionalItems.ResourceAdditionalItem"];
             };
             header?: never;
@@ -17830,7 +17853,7 @@ export interface operations {
         parameters: {
             query?: {
                 ids?: number[];
-                /** @description [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 8192: SourceLinks, 15200: All] */
+                /** @description [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 52064: All] */
                 additionalItems?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.AdditionalItems.ResourceAdditionalItem"];
             };
             header?: never;
@@ -18146,8 +18169,8 @@ export interface operations {
     PlayResourceItem: {
         parameters: {
             query?: {
-                /** @description [1: FileSystem, 2: Steam, 3: DLsite, 4: ExHentai] */
-                source?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceSource"];
+                /** @description [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai] */
+                origin?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.DataOrigin"];
                 key?: string;
             };
             header?: never;
@@ -18531,7 +18554,7 @@ export interface operations {
     GetResourceConflicts: {
         parameters: {
             query?: {
-                /** @description [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 8192: SourceLinks, 15200: All] */
+                /** @description [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 52064: All] */
                 additionalItems?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.AdditionalItems.ResourceAdditionalItem"];
             };
             header?: never;
@@ -18819,7 +18842,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description [1: FileSystem, 2: Steam, 3: DLsite, 4: ExHentai] */
+                /** @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai] */
                 source: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceSource"];
             };
             cookie?: never;
@@ -18844,7 +18867,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description [1: FileSystem, 2: Steam, 3: DLsite, 4: ExHentai] */
+                /** @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai] */
                 source: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceSource"];
             };
             cookie?: never;
@@ -18876,7 +18899,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description [1: FileSystem, 2: Steam, 3: DLsite, 4: ExHentai] */
+                /** @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai] */
                 source: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceSource"];
             };
             cookie?: never;
@@ -18901,7 +18924,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description [1: FileSystem, 2: Steam, 3: DLsite, 4: ExHentai] */
+                /** @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai] */
                 source: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceSource"];
             };
             cookie?: never;

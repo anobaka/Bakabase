@@ -2,8 +2,8 @@ using System.Text.Json;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
-using Bakabase.Infrastructures.Components.App;
-using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
+using Bakabase.Abstractions.Models.Domain.Options;
+using Bakabase.Infrastructures.Components.Configurations.App;
 using Bakabase.Modules.ThirdParty.Abstractions;
 using Bakabase.Modules.ThirdParty.ThirdParties.Steam;
 using Bootstrap.Components.Configuration.Abstractions;
@@ -21,20 +21,20 @@ public class SteamResolver : IResourceResolver
     private readonly SteamClient _steamClient;
     private readonly ILogger<SteamResolver> _logger;
     private readonly IBOptions<SteamOptions> _options;
-    private readonly AppService _appService;
+    private readonly IBOptions<AppOptions> _appOptions;
 
     public SteamResolver(
         ISteamAppService steamAppService,
         SteamClient steamClient,
         ILogger<SteamResolver> logger,
         IBOptions<SteamOptions> options,
-        AppService appService)
+        IBOptions<AppOptions> appOptions)
     {
         _steamAppService = steamAppService;
         _steamClient = steamClient;
         _logger = logger;
         _options = options;
-        _appService = appService;
+        _appOptions = appOptions;
     }
 
     public ResourceSource Source => ResourceSource.Steam;
@@ -208,7 +208,7 @@ public class SteamResolver : IResourceResolver
         [
             new PlayableItem
             {
-                Source = ResourceSource.Steam,
+                Origin = DataOrigin.Steam,
                 Key = sourceKey,
                 DisplayName = displayName
             }
@@ -250,7 +250,7 @@ public class SteamResolver : IResourceResolver
         if (!int.TryParse(sourceKey, out var appId)) return null;
 
         var language = MetadataLanguageHelper.GetSteamLanguage(
-            _options.Value.Language, _appService.AppOptions.Language);
+            _options.Value.Language, _appOptions.Value.Language);
         var detail = await _steamClient.GetAppDetails(appId, language, ct);
         if (detail == null) return null;
 

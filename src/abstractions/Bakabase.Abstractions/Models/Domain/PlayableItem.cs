@@ -3,7 +3,7 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 namespace Bakabase.Abstractions.Models.Domain;
 
 /// <summary>
-/// Represents a playable item from any resource source.
+/// Represents a playable item from any data origin.
 /// For FileSystem: Key is the file path.
 /// For Steam: Key is the AppId (used with steam:// URI).
 /// For DLsite/ExHentai: Key is source-specific identifier.
@@ -11,12 +11,12 @@ namespace Bakabase.Abstractions.Models.Domain;
 public record PlayableItem
 {
     /// <summary>
-    /// The source that provided this playable item.
+    /// The origin that provided this playable item.
     /// </summary>
-    public ResourceSource Source { get; set; }
+    public DataOrigin Origin { get; set; }
 
     /// <summary>
-    /// Source-specific key. Interpretation depends on the source:
+    /// Origin-specific key. Interpretation depends on the origin:
     /// - FileSystem: absolute file path
     /// - Steam: AppId (for steam://rungameid/{key})
     /// - DLsite: WorkId

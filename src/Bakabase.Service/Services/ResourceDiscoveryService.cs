@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
+using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -15,15 +16,16 @@ using Microsoft.Extensions.Logging;
 
 namespace Bakabase.Service.Services;
 
-public record DiscoveryRequest(int ResourceId, ResourceCacheType Types);
+public record DiscoveryRequest(int ResourceId, DataOrigin Origin, ResourceDataType DataType);
 
 public record DiscoveryResult
 {
     public int ResourceId { get; init; }
+    public DataOrigin Origin { get; init; }
+    public ResourceDataType DataType { get; init; }
     public bool Success { get; init; }
-    public string[]? CoverPaths { get; init; }
-    public string[]? PlayableFilePaths { get; init; }
-    public bool HasMorePlayableFiles { get; init; }
+    public string[]? CoverPaths { get; init; }         // when DataType=Cover
+    public PlayableItem[]? PlayableItems { get; init; } // when DataType=PlayableItem
     public string? Error { get; init; }
 }
 
@@ -66,9 +68,9 @@ public class ResourceDiscoveryService : BackgroundService
         }
     }
 
-    public async Task EnqueueRequest(int resourceId, ResourceCacheType types)
+    public async Task EnqueueRequest(int resourceId, DataOrigin origin, ResourceDataType dataType)
     {
-        var requestKey = $"{resourceId}-{(int)types}";
+        var requestKey = $"{resourceId}-{origin}-{dataType}";
 
         // Avoid duplicate requests
         if (!_pendingRequests.TryAdd(requestKey, 0))
@@ -77,7 +79,7 @@ public class ResourceDiscoveryService : BackgroundService
             return;
         }
 
-        await _requestChannel.Writer.WriteAsync(new DiscoveryRequest(resourceId, types));
+        await _requestChannel.Writer.WriteAsync(new DiscoveryRequest(resourceId, origin, dataType));
         _logger.LogDebug("Request enqueued: {RequestKey}", requestKey);
     }
 
@@ -111,7 +113,7 @@ public class ResourceDiscoveryService : BackgroundService
 
         await foreach (var request in _requestChannel.Reader.ReadAllAsync(stoppingToken))
         {
-            var requestKey = $"{request.ResourceId}-{(int)request.Types}";
+            var requestKey = $"{request.ResourceId}-{request.Origin}-{request.DataType}";
 
             try
             {
@@ -128,6 +130,8 @@ public class ResourceDiscoveryService : BackgroundService
                 await BroadcastResult(new DiscoveryResult
                 {
                     ResourceId = request.ResourceId,
+                    Origin = request.Origin,
+                    DataType = request.DataType,
                     Success = false,
                     Error = ex.Message
                 });
@@ -146,41 +150,65 @@ public class ResourceDiscoveryService : BackgroundService
         using var scope = _scopeFactory.CreateScope();
         var resourceService = scope.ServiceProvider.GetRequiredService<IResourceService>();
 
-        string[]? coverPaths = null;
-        string[]? playableFilePaths = null;
-        var hasMorePlayableFiles = false;
+        var resource = await resourceService.Get(request.ResourceId,
+            ResourceAdditionalItem.Cover | ResourceAdditionalItem.PlayableItem);
+        if (resource == null) return;
 
-        // Discover covers if requested (filesystem discovery)
-        if (request.Types.HasFlag(ResourceCacheType.Covers))
+        DiscoveryResult result;
+
+        if (request.DataType == ResourceDataType.Cover)
         {
-            _logger.LogDebug("Discovering cover for resource {ResourceId}", request.ResourceId);
-            var coverPath = await resourceService.DiscoverAndCacheCover(request.ResourceId, ct);
-            if (!string.IsNullOrEmpty(coverPath))
+            var coverProviders = scope.ServiceProvider.GetRequiredService<IEnumerable<ICoverProvider>>();
+            var provider = coverProviders.FirstOrDefault(p => p.Origin == request.Origin);
+
+            string[]? coverPaths = null;
+            if (provider != null && provider.AppliesTo(resource))
             {
-                coverPaths = [coverPath];
+                var covers = await provider.GetCoversAsync(resource, ct);
+                coverPaths = covers?.ToArray();
             }
+
+            result = new DiscoveryResult
+            {
+                ResourceId = request.ResourceId,
+                Origin = request.Origin,
+                DataType = request.DataType,
+                Success = true,
+                CoverPaths = coverPaths,
+            };
         }
-
-        // Discover playable files if requested (filesystem only for cache)
-        if (request.Types.HasFlag(ResourceCacheType.PlayableFiles))
+        else if (request.DataType == ResourceDataType.PlayableItem)
         {
-            _logger.LogDebug("Discovering playable files for resource {ResourceId}", request.ResourceId);
-            var files = await resourceService.DiscoverAndCachePlayableFiles(request.ResourceId, ct);
-            playableFilePaths = files.Length > 0 ? files : null;
+            var playableItemProviders = scope.ServiceProvider.GetRequiredService<IEnumerable<IPlayableItemProvider>>();
+            var provider = playableItemProviders.FirstOrDefault(p => p.Origin == request.Origin);
 
-            // Check cache for hasMorePlayableFiles flag
-            var cache = await resourceService.GetResourceCache(request.ResourceId);
-            hasMorePlayableFiles = cache?.HasMorePlayableFiles ?? false;
+            PlayableItem[]? items = null;
+            if (provider != null && provider.AppliesTo(resource))
+            {
+                var providerResult = await provider.GetPlayableItemsAsync(resource, ct);
+                items = providerResult.Items.Count > 0 ? providerResult.Items.ToArray() : null;
+            }
+
+            result = new DiscoveryResult
+            {
+                ResourceId = request.ResourceId,
+                Origin = request.Origin,
+                DataType = request.DataType,
+                Success = true,
+                PlayableItems = items,
+            };
         }
-
-        var result = new DiscoveryResult
+        else
         {
-            ResourceId = request.ResourceId,
-            Success = true,
-            CoverPaths = coverPaths,
-            PlayableFilePaths = playableFilePaths,
-            HasMorePlayableFiles = hasMorePlayableFiles
-        };
+            result = new DiscoveryResult
+            {
+                ResourceId = request.ResourceId,
+                Origin = request.Origin,
+                DataType = request.DataType,
+                Success = false,
+                Error = $"Unsupported data type: {request.DataType}"
+            };
+        }
 
         await BroadcastResult(result);
         _logger.LogDebug("Discovery completed for resource {ResourceId}", request.ResourceId);

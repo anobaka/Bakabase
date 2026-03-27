@@ -1,7 +1,9 @@
 import type {
+  DataOrigin,
+  DataStatus,
   PropertyType,
   PropertyValueScope,
-  ResourceCacheType,
+  ResourceDataType,
   ResourceSource,
   ResourceStatus,
   ResourceTag,
@@ -27,9 +29,16 @@ export type Property = {
 };
 
 export type PlayableItem = {
-  source: ResourceSource;
+  origin: DataOrigin;
   key: string;
   displayName?: string;
+};
+
+export type ResourceDataState = {
+  resourceId: number;
+  dataType: ResourceDataType;
+  origin: DataOrigin;
+  status: DataStatus;
 };
 
 export type ResourceSourceLink = {
@@ -60,7 +69,6 @@ export type Resource = {
   fileModifiedAt: string;
   parent?: Resource;
   properties?: { [key in PropertyPool]?: Record<number, Property> };
-  coverPaths?: string[];
   /** @deprecated */
   mediaLibraryName?: string;
   /** @deprecated */
@@ -71,23 +79,10 @@ export type Resource = {
   pinned: boolean;
   tags: ResourceTag[];
   playedAt?: string;
+  dataStates?: ResourceDataState[];
 
   /** Final resolved cover paths, populated by backend using priority-based selection */
   covers?: string[];
   /** Final resolved playable items from all sources */
   playableItems?: PlayableItem[];
-  /** Whether there are more playable files beyond what's cached */
-  hasMorePlayableFiles: boolean;
-  /** Whether covers have been resolved and are ready */
-  coversReady: boolean;
-  /** Whether playable items have been resolved and are ready */
-  playableItemsReady: boolean;
-
-  /** Filesystem-level cache (covers and playable files discovered from filesystem) */
-  cache?: {
-    playableFilePaths?: string[];
-    hasMorePlayableFiles: boolean;
-    coverPaths?: string[];
-    cachedTypes: ResourceCacheType[];
-  };
 };

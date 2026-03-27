@@ -19,7 +19,7 @@ namespace Bakabase.Service.Controllers;
 [ApiController]
 public class SourceMetadataMappingController(
     ISourceMetadataSyncService metadataSyncService,
-    IEnumerable<IResourceResolver> resolvers,
+    IEnumerable<IMetadataProvider> metadataProviders,
     BTaskManager btm,
     IBakabaseLocalizer localizer
 ) : ControllerBase
@@ -45,8 +45,15 @@ public class SourceMetadataMappingController(
     [SwaggerOperation(OperationId = "GetSourcePredefinedMetadataFields")]
     public ListResponse<SourceMetadataFieldInfo> GetPredefinedFields(ResourceSource source)
     {
-        var resolver = resolvers.FirstOrDefault(r => r.Source == source);
-        var fields = resolver?.GetPredefinedMetadataFields() ?? [];
+        var origin = source switch
+        {
+            ResourceSource.Steam => DataOrigin.Steam,
+            ResourceSource.DLsite => DataOrigin.DLsite,
+            ResourceSource.ExHentai => DataOrigin.ExHentai,
+            _ => (DataOrigin?)null
+        };
+        var provider = origin.HasValue ? metadataProviders.FirstOrDefault(p => p.Origin == origin.Value) : null;
+        var fields = provider?.GetPredefinedMetadataFields() ?? [];
         return new ListResponse<SourceMetadataFieldInfo>(fields);
     }
 

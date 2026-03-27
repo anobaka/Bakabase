@@ -110,6 +110,11 @@ namespace Bakabase.Service.Extensions
 
             services.AddDownloaders();
             services.AddResourceResolvers();
+            services.AddCoverProviders();
+            services.AddPlayableItemProviders();
+            services.AddMetadataProviders();
+            services.AddScoped<ICoverProviderService, Bakabase.InsideWorld.Business.Components.Providers.Cover.CoverProviderService>();
+            services.AddScoped<IPlayableItemProviderService, Bakabase.InsideWorld.Business.Components.Providers.PlayableItem.PlayableItemProviderService>();
 
             services.AddBulkModification<BakabaseDbContext>();
             services.AddComparison<BakabaseDbContext>();

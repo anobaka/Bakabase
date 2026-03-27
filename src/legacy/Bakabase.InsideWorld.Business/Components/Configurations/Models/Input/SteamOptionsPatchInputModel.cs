@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
+using Bakabase.Abstractions.Models.Domain.Options;
 
 namespace Bakabase.InsideWorld.Business.Components.Configurations.Models.Input;
 

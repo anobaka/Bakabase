@@ -37,6 +37,7 @@ import Operations from "@/components/Resource/components/Operations";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { Button, Chip, Link, Tooltip } from "@/components/bakaui";
 import {
+  DataOrigin,
   PropertyPool,
   PropertyType,
   ResourceAdditionalItem,
@@ -55,16 +56,16 @@ import ResourceSourceIcon from "@/components/Resource/components/ResourceSourceI
 import { SteamIcon, DLsiteIcon, ExHentaiIcon } from "@/components/SourceIcons";
 import { autoBackgroundColor } from "@/components/utils"; // adjust the path as needed
 
-/** Render a source-specific icon */
-const renderSourceIcon = (source: ResourceSource, className: string): React.ReactNode => {
-  switch (source) {
-    case ResourceSource.Steam:
+/** Render a DataOrigin-specific icon for playable items */
+const renderSourceIcon = (origin: DataOrigin, className: string): React.ReactNode => {
+  switch (origin) {
+    case DataOrigin.Steam:
       return <SteamIcon className={className} />;
-    case ResourceSource.DLsite:
+    case DataOrigin.DLsite:
       return <DLsiteIcon className={className} />;
-    case ResourceSource.ExHentai:
+    case DataOrigin.ExHentai:
       return <ExHentaiIcon className={className} />;
-    case ResourceSource.FileSystem:
+    case DataOrigin.FileSystem:
     default:
       return <PlayCircleOutlined className={className} />;
   }
@@ -73,7 +74,7 @@ const renderSourceIcon = (source: ResourceSource, className: string): React.Reac
 type MenuEntry = {
   key: string;
   type: "source" | "openFolder" | "notFound";
-  source?: ResourceSource;
+  source?: DataOrigin;
   icon: React.ReactNode;
   label: string;
   onClick: () => void;
@@ -91,77 +92,66 @@ const PlayButton: React.FC<PlayControlPortalProps> = ({
   const iconClass = "text-lg @[150px]:text-xl @[250px]:text-3xl";
   const buttonClass = "!w-[22cqw] !h-[22cqw] !min-w-8 !min-h-8 !max-w-16 !max-h-16 !p-0";
 
-  // Overall loading/idle — no items yet, possibly discovering
-  if (status === "idle" || status === "loading") {
-    return (
-      <div className="hidden group-hover/cover:flex absolute left-0 bottom-0 z-[1]">
-        <Button isIconOnly isDisabled className={buttonClass}>
-          <LoadingOutlined className={iconClass} spin />
-        </Button>
-      </div>
-    );
-  }
-
   // Build menu entries. Sources are ordered: non-FileSystem first, FileSystem last.
-  const entries: MenuEntry[] = [];
+  const entries: MenuEntry[] = React.useMemo(() => {
+    if (status === "idle" || status === "loading") return [];
 
-  for (const { source } of sources) {
-    const isFs = source === ResourceSource.FileSystem;
-    entries.push({
-      key: `source-${source}`,
-      type: "source",
-      source,
-      icon: isFs && fsDiscoveryStatus === "loading"
-        ? <LoadingOutlined spin />
-        : renderSourceIcon(source, "text-base"),
-      label: t("resource.playControl.menu.openVia", { source: t(`resource.source.${ResourceSourceLabel[source]}`) }),
-      onClick: () => onPlaySource(source),
-    });
-  }
+    const result: MenuEntry[] = [];
 
-  // If FileSystem has no items yet but discovery is pending/idle, add a loading entry
-  const hasFsSource = sources.some((s) => s.source === ResourceSource.FileSystem);
-  if (!hasFsSource && fsDiscoveryStatus !== "ready") {
-    entries.push({
-      key: "source-fs-loading",
-      type: "source",
-      source: ResourceSource.FileSystem,
-      icon: <LoadingOutlined spin />,
-      label: t("resource.playControl.tooltip.discoveringFiles"),
-      onClick: () => {},
-      isDisabled: true,
-      isLoading: true,
-    });
-  }
+    for (const { source } of sources) {
+      const isFs = source === DataOrigin.FileSystem;
+      result.push({
+        key: `source-${source}`,
+        type: "source",
+        source,
+        icon: isFs && fsDiscoveryStatus === "loading"
+          ? <LoadingOutlined spin />
+          : renderSourceIcon(source, "text-base"),
+        label: t("resource.playControl.menu.openVia", { source: t(`resource.source.${DataOrigin[source]}`) }),
+        onClick: () => onPlaySource(source),
+      });
+    }
 
-  if (hasPath) {
-    entries.push({
-      key: "openFolder",
-      type: "openFolder",
-      icon: <FolderOpenOutlined className="text-base" />,
-      label: t("common.action.openFolder"),
-      onClick: onOpenFolder,
-    });
-  }
+    // If FileSystem has no items yet but discovery is pending/idle, add a loading entry
+    const hasFsSource = sources.some((s) => s.source === DataOrigin.FileSystem);
+    if (!hasFsSource && fsDiscoveryStatus !== "ready") {
+      result.push({
+        key: "source-fs-loading",
+        type: "source",
+        source: DataOrigin.FileSystem,
+        icon: <LoadingOutlined spin />,
+        label: t("resource.playControl.tooltip.discoveringFiles"),
+        onClick: () => {},
+        isDisabled: true,
+        isLoading: true,
+      });
+    }
 
-  if (sources.length === 0 && fsDiscoveryStatus === "ready") {
-    entries.push({
-      key: "notFound",
-      type: "notFound",
-      icon: <QuestionCircleOutlined className="text-base text-warning" />,
-      label: t("resource.playControl.tooltip.notFound"),
-      onClick: onNotFound,
-    });
-  }
+    if (hasPath) {
+      result.push({
+        key: "openFolder",
+        type: "openFolder",
+        icon: <FolderOpenOutlined className="text-base" />,
+        label: t("common.action.openFolder"),
+        onClick: onOpenFolder,
+      });
+    }
 
-  const mainEntry = entries[0];
-  if (!mainEntry) return null;
+    if (sources.length === 0 && fsDiscoveryStatus === "ready") {
+      result.push({
+        key: "notFound",
+        type: "notFound",
+        icon: <QuestionCircleOutlined className="text-base text-warning" />,
+        label: t("resource.playControl.tooltip.notFound"),
+        onClick: onNotFound,
+      });
+    }
 
-  // Dropdown entries = all entries except the main one (which is the trigger button)
-  const dropdownEntries = entries.slice(1).filter((e) => !e.isDisabled);
+    return result;
+  }, [status, sources, fsDiscoveryStatus, hasPath, t, onPlaySource, onOpenFolder, onNotFound]);
 
   // Trigger FS discovery when FS button is visible
-  const fsIsVisible = entries.some((e) => e.source === ResourceSource.FileSystem);
+  const fsIsVisible = entries.some((e) => e.source === DataOrigin.FileSystem);
 
   React.useEffect(() => {
     if (fsIsVisible && fsDiscoveryStatus === "idle" && !fsTriggeredRef.current) {
@@ -176,6 +166,23 @@ const PlayButton: React.FC<PlayControlPortalProps> = ({
     }
   }, [fsDiscoveryStatus]);
 
+  // Overall loading/idle — no items yet, possibly discovering
+  if (status === "idle" || status === "loading") {
+    return (
+      <div className="hidden group-hover/cover:flex absolute left-0 bottom-0 z-[1]">
+        <Button isIconOnly isDisabled className={buttonClass}>
+          <LoadingOutlined className={iconClass} spin />
+        </Button>
+      </div>
+    );
+  }
+
+  const mainEntry = entries[0];
+  if (!mainEntry) return null;
+
+  // Dropdown entries = all entries except the main one (which is the trigger button)
+  const dropdownEntries = entries.slice(1).filter((e) => !e.isDisabled);
+
   return (
     <div className="hidden group-hover/cover:flex absolute left-0 bottom-0 z-[1] group/play">
       <Tooltip content={mainEntry.label}>
@@ -189,7 +196,7 @@ const PlayButton: React.FC<PlayControlPortalProps> = ({
             ? <LoadingOutlined className={iconClass} spin />
             : mainEntry.type === "openFolder"
               ? <AiOutlineFolderOpen className={iconClass} />
-              : renderSourceIcon(mainEntry.source ?? ResourceSource.FileSystem, iconClass)}
+              : renderSourceIcon(mainEntry.source ?? DataOrigin.FileSystem, iconClass)}
         </Button>
       </Tooltip>
 

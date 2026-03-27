@@ -317,34 +317,6 @@ namespace Bakabase.Service.Controllers
             return BaseResponseBuilder.Ok;
         }
 
-        [HttpGet("{id}/cover")]
-        [SwaggerOperation(OperationId = "DiscoverResourceCover")]
-        public async Task<IActionResult> DiscoverCover(int id)
-        {
-            var coverPath = await service.DiscoverAndCacheCover(id, HttpContext.RequestAborted);
-            if (coverPath.IsNullOrEmpty())
-            {
-                var resource = await service.Get(id, ResourceAdditionalItem.None);
-                if (resource == null)
-                {
-                    return NotFound();
-                }
-
-                coverPath = resource.Path;
-            }
-
-            return RedirectToAction("GetThumbnail", "Tool", new {path = coverPath});
-        }
-
-        [HttpGet("{id}/playable-files")]
-        [SwaggerOperation(OperationId = "GetResourcePlayableFiles")]
-        [ResponseCache(Duration = 20 * 60)]
-        public async Task<ListResponse<string>> GetPlayableFiles(int id)
-        {
-            return new ListResponse<string>(await service.DiscoverAndCachePlayableFiles(id, HttpContext.RequestAborted) ??
-                                            new string[] { });
-        }
-
         [HttpPut("media-libraries")]
         [SwaggerOperation(OperationId = "SetResourceMediaLibraries")]
         public async Task<BaseResponse> SetMediaLibraries([FromBody] ResourceSetMediaLibrariesRequestModel model)
@@ -486,8 +458,14 @@ namespace Bakabase.Service.Controllers
         {
             if (file.IsNullOrEmpty())
             {
-                var pfs = await service.DiscoverAndCachePlayableFiles(resourceId, HttpContext.RequestAborted);
-                file = pfs.FirstOrDefault();
+                var playableItemProviders = HttpContext.RequestServices.GetRequiredService<IEnumerable<IPlayableItemProvider>>();
+                var localFileProvider = playableItemProviders.FirstOrDefault(p => p.Origin == DataOrigin.FileSystem);
+                var resource = await service.Get(resourceId, ResourceAdditionalItem.PlayableItem);
+                if (resource != null && localFileProvider != null && localFileProvider.AppliesTo(resource))
+                {
+                    var result = await localFileProvider.GetPlayableItemsAsync(resource, HttpContext.RequestAborted);
+                    file = result.Items.Select(i => i.Key).FirstOrDefault();
+                }
             }
 
             if (file.IsNullOrEmpty())
@@ -495,14 +473,14 @@ namespace Bakabase.Service.Controllers
                 return BaseResponseBuilder.BuildBadRequest("No playable file was found.");
             }
 
-            return await service.PlayItem(resourceId, ResourceSource.FileSystem, file);
+            return await service.PlayItem(resourceId, DataOrigin.FileSystem, file);
         }
 
         [HttpGet("{resourceId}/play-item")]
         [SwaggerOperation(OperationId = "PlayResourceItem")]
-        public async Task<BaseResponse> PlayItem(int resourceId, ResourceSource source, string key)
+        public async Task<BaseResponse> PlayItem(int resourceId, DataOrigin origin, string key)
         {
-            return await service.PlayItem(resourceId, source, key);
+            return await service.PlayItem(resourceId, origin, key);
         }
 
         [HttpGet("{id}/playable-items")]

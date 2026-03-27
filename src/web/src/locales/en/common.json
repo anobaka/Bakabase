@@ -29,6 +29,7 @@
   "common.action.reset": "Reset",
   "common.action.clear": "Clear",
   "common.action.copy": "Copy",
+  "common.message.copiedToClipboard": "Copied to clipboard",
   "common.action.duplicate": "Duplicate",
   "common.action.enable": "Enable",
   "common.action.disable": "Disable",

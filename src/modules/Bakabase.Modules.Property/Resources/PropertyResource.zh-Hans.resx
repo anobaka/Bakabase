@@ -240,6 +240,9 @@
   <data name="ResourceSourceName_FileSystem" xml:space="preserve">
     <value>文件系统</value>
   </data>
+  <data name="ResourceSourceName_PathMark" xml:space="preserve">
+    <value>路径标记</value>
+  </data>
   <data name="ResourceSourceName_Steam" xml:space="preserve">
     <value>Steam</value>
   </data>

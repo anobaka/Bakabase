@@ -161,7 +161,7 @@ public class DLsiteResolver : IResourceResolver
         [
             new PlayableItem
             {
-                Source = ResourceSource.DLsite,
+                Origin = DataOrigin.DLsite,
                 Key = sourceKey,
                 DisplayName = displayName
             }

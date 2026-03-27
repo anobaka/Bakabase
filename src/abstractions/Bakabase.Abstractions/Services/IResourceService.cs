@@ -55,7 +55,6 @@ public interface IResourceService
     Task<List<DataChangeViewModel>> AddOrPutRange(List<Abstractions.Models.Domain.Resource> resources);
 
     Task RefreshParentTag();
-    Task<string[]> DiscoverAndCachePlayableFiles(int id, CancellationToken ct);
 
     /// <summary>
     /// Discovers playable items from all sources linked to a resource.
@@ -76,28 +75,18 @@ public interface IResourceService
     /// </summary>
     Task<BaseResponse> BulkPutPropertyValue(int[] resourceIds, ResourcePropertyValuePutInputModel model);
 
-    /// <summary>
-    /// Raw cover, no cache.
-    /// </summary>
-    /// <param name="id"></param>
-    /// <param name="ct"></param>
-    /// <returns>File path</returns>
-    Task<string?> DiscoverAndCacheCover(int id, CancellationToken ct);
-
     Task<BaseResponse> Play(int resourceId, string file);
 
     /// <summary>
-    /// Plays a specific playable item, dispatching to the appropriate resolver based on source.
+    /// Plays a specific playable item, dispatching to the appropriate provider based on origin.
     /// </summary>
-    Task<BaseResponse> PlayItem(int resourceId, ResourceSource source, string key);
+    Task<BaseResponse> PlayItem(int resourceId, DataOrigin origin, string key);
 
     Task<BaseResponse> ChangeMediaLibrary(int[] ids, int mediaLibraryId, Dictionary<int, string>? newPaths = null);
     Task<BaseResponse> ChangePath(int[] ids, Dictionary<int, string> newPaths);
 
     Task Pin(int id, bool pin);
 
-    Task PrepareCache(Func<int, Task>? onProgressChange, Func<string, Task>? onProcessChange, PauseToken pt,
-        CancellationToken ct);
     Task Transfer(ResourceTransferInputModel model);
     Task SaveCover(int id, byte[] imageBytes, CoverSaveMode mode);
 

@@ -33,9 +33,6 @@ export interface BakabaseAbstractionsModelsDbDLsiteWorkDbModel {
   title?: string;
   circle?: string;
   workType?: string;
-  metadataJson?: string;
-  /** @format date-time */
-  metadataFetchedAt?: string;
   coverUrl?: string;
   drmKey?: string;
   account?: string;
@@ -67,9 +64,6 @@ export interface BakabaseAbstractionsModelsDbExHentaiGalleryDbModel {
   titleJpn?: string;
   category?: string;
   coverUrl?: string;
-  metadataJson?: string;
-  /** @format date-time */
-  metadataFetchedAt?: string;
   isDownloaded: boolean;
   localPath?: string;
   /** @format int32 */
@@ -104,9 +98,6 @@ export interface BakabaseAbstractionsModelsDbSteamAppDbModel {
   rtimeLastPlayed: number;
   imgIconUrl?: string;
   hasCommunityVisibleStats: boolean;
-  metadataJson?: string;
-  /** @format date-time */
-  metadataFetchedAt?: string;
   isInstalled: boolean;
   installPath?: string;
   /** @format int32 */
@@ -130,6 +121,18 @@ export type BakabaseAbstractionsModelsDomainConstantsAppNotificationBehavior = 0
  * @format int32
  */
 export type BakabaseAbstractionsModelsDomainConstantsAppNotificationSeverity = 0 | 1 | 2 | 3;
+
+/**
+ * [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai]
+ * @format int32
+ */
+export type BakabaseAbstractionsModelsDomainConstantsDataOrigin = 1 | 2 | 3 | 4 | 5;
+
+/**
+ * [1: NotStarted, 2: Ready, 3: Failed]
+ * @format int32
+ */
+export type BakabaseAbstractionsModelsDomainConstantsDataStatus = 1 | 2 | 3;
 
 /**
  * [1: ContextCreated, 2: ContextApplied]
@@ -256,7 +259,13 @@ export type BakabaseAbstractionsModelsDomainConstantsReservedProperty = 12 | 13 
 export type BakabaseAbstractionsModelsDomainConstantsResourceCacheType = 1 | 2 | 4;
 
 /**
- * [1: FileSystem, 2: Steam, 3: DLsite, 4: ExHentai]
+ * [1: Cover, 2: PlayableItem, 3: Metadata]
+ * @format int32
+ */
+export type BakabaseAbstractionsModelsDomainConstantsResourceDataType = 1 | 2 | 3;
+
+/**
+ * [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai]
  * @format int32
  */
 export type BakabaseAbstractionsModelsDomainConstantsResourceSource = 1 | 2 | 3 | 4;
@@ -475,6 +484,22 @@ export interface BakabaseAbstractionsModelsDomainOptionsEnhancerTranslationOptio
   targetLanguage: string;
 }
 
+export interface BakabaseAbstractionsModelsDomainOptionsSteamAccount {
+  name?: string;
+  apiKey?: string;
+  steamId?: string;
+}
+
+export interface BakabaseAbstractionsModelsDomainOptionsSteamOptions {
+  accounts?: BakabaseAbstractionsModelsDomainOptionsSteamAccount[];
+  apiKey?: string;
+  steamId?: string;
+  showCover: boolean;
+  /** @format int32 */
+  autoSyncIntervalMinutes?: number;
+  language?: string;
+}
+
 export interface BakabaseAbstractionsModelsDomainPathFilter {
   /** [1: Layer, 2: Regex] */
   positioner: BakabaseAbstractionsModelsDomainConstantsPathPositioner;
@@ -536,8 +561,8 @@ export interface BakabaseAbstractionsModelsDomainPathPropertyExtractor {
 }
 
 export interface BakabaseAbstractionsModelsDomainPlayableItem {
-  /** [1: FileSystem, 2: Steam, 3: DLsite, 4: ExHentai] */
-  source: BakabaseAbstractionsModelsDomainConstantsResourceSource;
+  /** [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai] */
+  origin: BakabaseAbstractionsModelsDomainConstantsDataOrigin;
   key: string;
   displayName?: string;
 }
@@ -619,7 +644,6 @@ export interface BakabaseAbstractionsModelsDomainResource {
   fileCreatedAt: string;
   /** @format date-time */
   fileModifiedAt: string;
-  coverPaths?: string[];
   tags: BakabaseAbstractionsModelsDomainConstantsResourceTag[];
   parent?: BakabaseAbstractionsModelsDomainResource;
   properties?: Record<string, Record<string, BakabaseAbstractionsModelsDomainResourceProperty>>;
@@ -628,10 +652,8 @@ export interface BakabaseAbstractionsModelsDomainResource {
   playedAt?: string;
   covers?: string[];
   playableItems?: BakabaseAbstractionsModelsDomainPlayableItem[];
-  hasMoreFileSystemPlayableItems: boolean;
-  coversReady: boolean;
-  playableItemsReady: boolean;
-  cache?: BakabaseAbstractionsModelsDomainResourceCache;
+  hasMorePlayableFiles: boolean;
+  dataStates?: BakabaseAbstractionsModelsDomainResourceDataState[];
   /** @deprecated */
   mediaLibraryName?: string;
   /** @deprecated */
@@ -669,12 +691,21 @@ export interface BakabaseAbstractionsModelsDomainResourcePropertyPropertyValue {
   isManuallySet: boolean;
 }
 
-export interface BakabaseAbstractionsModelsDomainResourceCache {
+export interface BakabaseAbstractionsModelsDomainResourceDataState {
+  /** @format int32 */
+  resourceId: number;
+  /** [1: Cover, 2: PlayableItem, 3: Metadata] */
+  dataType: BakabaseAbstractionsModelsDomainConstantsResourceDataType;
+  /** [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai] */
+  origin: BakabaseAbstractionsModelsDomainConstantsDataOrigin;
+  /** [1: NotStarted, 2: Ready, 3: Failed] */
+  status: BakabaseAbstractionsModelsDomainConstantsDataStatus;
+}
+
+export interface BakabaseAbstractionsModelsDomainResourceFileSystemCache {
   coverPaths?: string[];
-  hasMoreFileSystemPlayableItems: boolean;
-  /** @deprecated */
   playableFilePaths?: string[];
-  playableItems?: BakabaseAbstractionsModelsDomainPlayableItem[];
+  hasMorePlayableFiles: boolean;
   cachedTypes: BakabaseAbstractionsModelsDomainConstantsResourceCacheType[];
 }
 
@@ -736,13 +767,18 @@ export interface BakabaseAbstractionsModelsDomainResourceSourceLink {
   id: number;
   /** @format int32 */
   resourceId: number;
-  /** [1: FileSystem, 2: Steam, 3: DLsite, 4: ExHentai] */
+  /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai] */
   source: BakabaseAbstractionsModelsDomainConstantsResourceSource;
   sourceKey: string;
   /** @format date-time */
   createDt: string;
   coverUrls?: string[];
   localCoverPaths?: string[];
+  /** @format date-time */
+  coverDownloadFailedAt?: string;
+  metadataJson?: string;
+  /** @format date-time */
+  metadataFetchedAt?: string;
 }
 
 export interface BakabaseAbstractionsModelsDomainScopePropertyKey {
@@ -763,7 +799,7 @@ export interface BakabaseAbstractionsModelsDomainSourceMetadataFieldInfo {
 export interface BakabaseAbstractionsModelsDomainSourceMetadataMapping {
   /** @format int32 */
   id: number;
-  /** [1: FileSystem, 2: Steam, 3: DLsite, 4: ExHentai] */
+  /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai] */
   source: BakabaseAbstractionsModelsDomainConstantsResourceSource;
   metadataField: string;
   /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
@@ -1176,6 +1212,8 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
   requestTimeout: number;
   showCover: boolean;
   deleteArchiveAfterExtraction: boolean;
+  /** @format int32 */
+  autoSyncIntervalMinutes?: number;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainExHentaiAccount {
@@ -1201,6 +1239,8 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
   /** @format int32 */
   requestTimeout: number;
   showCover: boolean;
+  /** @format int32 */
+  autoSyncIntervalMinutes?: number;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainFanboxOptions {
@@ -1363,19 +1403,6 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
   headers?: Record<string, string>;
   /** @format int32 */
   autoBuyThreshold: number;
-}
-
-export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainSteamAccount {
-  name?: string;
-  apiKey?: string;
-  steamId?: string;
-}
-
-export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainSteamOptions {
-  accounts?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainSteamAccount[];
-  apiKey?: string;
-  steamId?: string;
-  showCover: boolean;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainTmdbOptions {
@@ -1571,7 +1598,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputS
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputSteamOptionsPatchInputModel {
-  accounts?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainSteamAccount[];
+  accounts?: BakabaseAbstractionsModelsDomainOptionsSteamAccount[];
   showCover?: boolean;
 }
 
@@ -2087,7 +2114,7 @@ export type BakabaseInsideWorldModelsConstantsAdditionalCoverDiscoveringSource =
 export type BakabaseInsideWorldModelsConstantsAdditionalItemsCustomPropertyAdditionalItem = 0 | 2;
 
 /**
- * [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 8192: SourceLinks, 15200: All]
+ * [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 52064: All]
  * @format int32
  */
 export type BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem =
@@ -2097,9 +2124,9 @@ export type BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalI
   | 288
   | 512
   | 2048
-  | 4096
-  | 8192
-  | 15200;
+  | 16416
+  | 32768
+  | 52064;
 
 /**
  * [1: Latest, 2: Frequency]
@@ -3201,8 +3228,10 @@ export interface BakabaseModulesThirdPartyThirdPartiesBilibiliModelsFavorites {
 export interface BakabaseServiceControllersDiscoverySubscribeRequest {
   /** @format int32 */
   resourceId: number;
-  /** [1: Covers, 2: PlayableFiles, 4: ResourceMarkers] */
-  types: BakabaseAbstractionsModelsDomainConstantsResourceCacheType;
+  /** [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai] */
+  origin: BakabaseAbstractionsModelsDomainConstantsDataOrigin;
+  /** [1: Cover, 2: PlayableItem, 3: Metadata] */
+  dataType: BakabaseAbstractionsModelsDomainConstantsResourceDataType;
 }
 
 export interface BakabaseServiceControllersEnsureMappingsInput {
@@ -4239,6 +4268,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstract
   data?: BakabaseAbstractionsModelsDomainMediaLibraryV2;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainOptionsSteamOptions {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDomainOptionsSteamOptions;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainPathMark {
   /** @format int32 */
   code: number;
@@ -4246,11 +4282,11 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstract
   data?: BakabaseAbstractionsModelsDomainPathMark;
 }
 
-export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainResourceCache {
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainResourceFileSystemCache {
   /** @format int32 */
   code: number;
   message?: string;
-  data?: BakabaseAbstractionsModelsDomainResourceCache;
+  data?: BakabaseAbstractionsModelsDomainResourceFileSystemCache;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainSpecialText {
@@ -4384,13 +4420,6 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWo
   code: number;
   message?: string;
   data?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainSoulPlusOptions;
-}
-
-export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainSteamOptions {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainSteamOptions;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainTmdbOptions {
@@ -7452,7 +7481,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     refreshResourceCache: (resourceId: number, params: RequestParams = {}) =>
       this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainResourceCache,
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainResourceFileSystemCache,
         any
       >({
         path: `/cache/resource/${resourceId}/refresh`,
@@ -9422,7 +9451,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       query?: {
         saveSearch?: boolean;
         searchId?: string;
-        /** [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 8192: SourceLinks, 15200: All] */
+        /** [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 52064: All] */
         additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem;
       },
       params: RequestParams = {},
@@ -9447,7 +9476,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     searchResourcesUrl: (query?: {
         saveSearch?: boolean;
         searchId?: string;
-        /** [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 8192: SourceLinks, 15200: All] */
+        /** [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 52064: All] */
         additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem;
       }) => {
       const baseUrl = this.baseUrl || "";
@@ -9507,7 +9536,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getResourcesByKeys: (
       query?: {
         ids?: number[];
-        /** [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 8192: SourceLinks, 15200: All] */
+        /** [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 52064: All] */
         additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem;
       },
       params: RequestParams = {},
@@ -9529,7 +9558,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     getResourcesByKeysUrl: (query?: {
         ids?: number[];
-        /** [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 8192: SourceLinks, 15200: All] */
+        /** [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 52064: All] */
         additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem;
       }) => {
       const baseUrl = this.baseUrl || "";
@@ -9826,8 +9855,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     playResourceItem: (
       resourceId: number,
       query?: {
-        /** [1: FileSystem, 2: Steam, 3: DLsite, 4: ExHentai] */
-        source?: BakabaseAbstractionsModelsDomainConstantsResourceSource;
+        /** [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai] */
+        origin?: BakabaseAbstractionsModelsDomainConstantsDataOrigin;
         key?: string;
       },
       params: RequestParams = {},
@@ -10237,7 +10266,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getResourceConflicts: (
       id: number,
       query?: {
-        /** [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 8192: SourceLinks, 15200: All] */
+        /** [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 52064: All] */
         additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem;
       },
       params: RequestParams = {},
@@ -14760,7 +14789,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     getSteamOptions: (params: RequestParams = {}) =>
       this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainSteamOptions,
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainOptionsSteamOptions,
         any
       >({
         path: `/options/steam`,
@@ -15295,8 +15324,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     softDeletePathMark: (
       id: number,
       query?: {
-        /** @default false */
-        cleanupEffects?: boolean;
+        /** @default true */
+        removeEffects?: boolean;
       },
       params: RequestParams = {},
     ) =>
@@ -15369,8 +15398,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     softDeletePathMarksByPath: (
       query?: {
         path?: string;
-        /** @default false */
-        cleanupEffects?: boolean;
       },
       params: RequestParams = {},
     ) =>
@@ -15388,8 +15415,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     softDeletePathMarksByPathUrl: (query?: {
         path?: string;
-        /** @default false */
-        cleanupEffects?: boolean;
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/path-mark/by-path`;
@@ -15832,7 +15857,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     startSyncBySource: (
       query?: {
-        /** [1: FileSystem, 2: Steam, 3: DLsite, 4: ExHentai] */
+        /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai] */
         source?: BakabaseAbstractionsModelsDomainConstantsResourceSource;
       },
       params: RequestParams = {},
@@ -15850,7 +15875,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name startSyncBySourceUrl
      */
     startSyncBySourceUrl: (query?: {
-        /** [1: FileSystem, 2: Steam, 3: DLsite, 4: ExHentai] */
+        /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai] */
         source?: BakabaseAbstractionsModelsDomainConstantsResourceSource;
       }) => {
       const baseUrl = this.baseUrl || "";

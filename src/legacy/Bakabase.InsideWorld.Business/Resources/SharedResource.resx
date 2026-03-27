@@ -372,11 +372,23 @@ The version of lux is not limited.</value>
   <data name="BTask_Name_PrepareCache" xml:space="preserve">
     <value>Prepare cache</value>
   </data>
+  <data name="BTask_Name_PrepareData" xml:space="preserve">
+    <value>Prepare data</value>
+  </data>
+  <data name="BTask_Name_ResourceData" xml:space="preserve">
+    <value>Prepare resource data</value>
+  </data>
   <data name="BTask_Name_MoveFiles" xml:space="preserve">
     <value>Move files</value>
   </data>
   <data name="BTask_Description_PrepareCache" xml:space="preserve">
     <value>Prepare cache for resources; caching can improve resource loading speed</value>
+  </data>
+  <data name="BTask_Description_PrepareData" xml:space="preserve">
+    <value>Prepare cover and playable item data for all resources</value>
+  </data>
+  <data name="BTask_Description_ResourceData" xml:space="preserve">
+    <value>Prepare cover, playable item, and metadata data for all resources</value>
   </data>
   <data name="BTask_MessageOnInterruption_MoveFiles" xml:space="preserve">
     <value>Some files are still in the process of being moved; forcibly interrupting may result in incomplete target files or folders.</value>

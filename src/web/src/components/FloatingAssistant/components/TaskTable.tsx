@@ -7,6 +7,7 @@ import {
   CheckCircleOutlined,
   ClearOutlined,
   ClockCircleOutlined,
+  CopyOutlined,
   ExclamationCircleOutlined,
   LoadingOutlined,
   PauseCircleOutlined,
@@ -183,6 +184,12 @@ export function TaskTable({ tasks }: TaskTableProps) {
     { key: "operations", label: t("common.label.operations") },
   ], [t]);
 
+  const handleCopyError = (errorText: string) => {
+    navigator.clipboard.writeText(errorText).then(() => {
+      toast.success({ title: t("common.message.copiedToClipboard") });
+    });
+  };
+
   const handleShowError = (task: BTask) => {
     if (task.error) {
       createPortal(Modal, {
@@ -190,7 +197,22 @@ export function TaskTable({ tasks }: TaskTableProps) {
         size: "xl",
         classNames: { wrapper: "floating-assistant-modal" },
         title: t("common.label.error"),
-        children: <pre>{task.error}</pre>,
+        children: (
+          <div className="relative">
+            <Tooltip content={t("common.action.copy")} placement="top">
+              <Button
+                isIconOnly
+                size="sm"
+                variant="light"
+                className="absolute top-1 right-1 z-10"
+                onPress={() => handleCopyError(task.error!)}
+              >
+                <CopyOutlined className="text-base" />
+              </Button>
+            </Tooltip>
+            <pre className="pr-8">{task.error}</pre>
+          </div>
+        ),
         footer: { actions: ["cancel"] },
       });
     }

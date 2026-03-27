@@ -11,7 +11,8 @@ namespace Bakabase.Service.Controllers;
 public class DiscoverySubscribeRequest
 {
     public int ResourceId { get; set; }
-    public ResourceCacheType Types { get; set; }
+    public DataOrigin Origin { get; set; }
+    public ResourceDataType DataType { get; set; }
 }
 
 [Route("~/resource/discovery")]
@@ -62,7 +63,7 @@ public class ResourceDiscoveryController(ResourceDiscoveryService discoveryServi
     [SwaggerOperation(OperationId = "SubscribeResourceDiscovery")]
     public async Task<BaseResponse> Subscribe([FromBody] DiscoverySubscribeRequest request)
     {
-        await discoveryService.EnqueueRequest(request.ResourceId, request.Types);
+        await discoveryService.EnqueueRequest(request.ResourceId, request.Origin, request.DataType);
         return new BaseResponse();
     }
 
@@ -75,7 +76,7 @@ public class ResourceDiscoveryController(ResourceDiscoveryService discoveryServi
     {
         foreach (var request in requests)
         {
-            await discoveryService.EnqueueRequest(request.ResourceId, request.Types);
+            await discoveryService.EnqueueRequest(request.ResourceId, request.Origin, request.DataType);
         }
         return new BaseResponse();
     }

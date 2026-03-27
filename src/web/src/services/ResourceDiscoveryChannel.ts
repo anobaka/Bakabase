@@ -1,32 +1,37 @@
 import envConfig from "@/config/env";
-import { ResourceCacheType } from "@/sdk/constants";
+import { DataOrigin, ResourceDataType } from "@/sdk/constants";
+import type { PlayableItem } from "@/core/models/Resource";
 
 export type DiscoveryData = {
+  origin: DataOrigin;
+  dataType: ResourceDataType;
   coverPaths?: string[];
-  playableFilePaths?: string[];
-  hasMorePlayableFiles?: boolean;
+  playableItems?: PlayableItem[];
 };
 
 export type DiscoveryResult = {
   resourceId: number;
+  origin: DataOrigin;
+  dataType: ResourceDataType;
   success: boolean;
   coverPaths?: string[];
-  playableFilePaths?: string[];
-  hasMorePlayableFiles?: boolean;
+  playableItems?: PlayableItem[];
   error?: string;
 };
 
+type SubscriberKey = `${number}-${DataOrigin}-${ResourceDataType}`;
 type Subscriber = (data: DiscoveryData | null, error?: string) => void;
 
 type PendingSubscription = {
   resourceId: number;
-  types: number;
+  origin: number;
+  dataType: number;
 };
 
 class ResourceDiscoveryChannel {
   private eventSource: EventSource | null = null;
-  private subscribers = new Map<number, Set<Subscriber>>();
-  private pendingRequests = new Set<string>(); // resourceId-types (already sent)
+  private subscribers = new Map<SubscriberKey, Set<Subscriber>>();
+  private pendingRequests = new Set<string>(); // resourceId-origin-dataType (already sent)
   private pendingSubscriptions = new Map<string, PendingSubscription>(); // to be sent in batch
   private connectionPromise: Promise<void> | null = null;
   private reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -126,23 +131,27 @@ class ResourceDiscoveryChannel {
   }
 
   private notifySubscribers(result: DiscoveryResult) {
-    const subscribers = this.subscribers.get(result.resourceId);
-    if (!subscribers || subscribers.size === 0) {
-      return;
-    }
+    const key: SubscriberKey = `${result.resourceId}-${result.origin}-${result.dataType}`;
+    const subscribers = this.subscribers.get(key);
+    if (!subscribers || subscribers.size === 0) return;
 
     console.log(
       "[ResourceDiscoveryChannel] Notifying",
       subscribers.size,
       "subscribers for resource",
-      result.resourceId
+      result.resourceId,
+      "origin",
+      result.origin,
+      "dataType",
+      result.dataType
     );
 
     if (result.success) {
       const data: DiscoveryData = {
+        origin: result.origin,
+        dataType: result.dataType,
         coverPaths: result.coverPaths,
-        playableFilePaths: result.playableFilePaths,
-        hasMorePlayableFiles: result.hasMorePlayableFiles,
+        playableItems: result.playableItems,
       };
       subscribers.forEach((cb) => cb(data));
     } else {
@@ -191,7 +200,8 @@ class ResourceDiscoveryChannel {
 
       // Notify subscribers of error
       requests.forEach((req) => {
-        const subs = this.subscribers.get(req.resourceId);
+        const key: SubscriberKey = `${req.resourceId}-${req.origin}-${req.dataType}` as SubscriberKey;
+        const subs = this.subscribers.get(key);
         if (subs) {
           subs.forEach((cb) => cb(null, "Failed to subscribe"));
         }
@@ -201,35 +211,36 @@ class ResourceDiscoveryChannel {
 
   async subscribe(
     resourceId: number,
-    types: ResourceCacheType[],
+    origin: DataOrigin,
+    dataType: ResourceDataType,
     callback: Subscriber
   ): Promise<() => void> {
+    const key: SubscriberKey = `${resourceId}-${origin}-${dataType}`;
+
     // Register subscriber
-    if (!this.subscribers.has(resourceId)) {
-      this.subscribers.set(resourceId, new Set());
+    if (!this.subscribers.has(key)) {
+      this.subscribers.set(key, new Set());
     }
-    this.subscribers.get(resourceId)!.add(callback);
+    this.subscribers.get(key)!.add(callback);
 
     // Ensure connection is established
     await this.ensureConnected();
 
-    // Calculate types flag
-    const typesFlag = types.reduce((acc, t) => acc | t, 0);
-    const requestKey = `${resourceId}-${typesFlag}`;
+    const requestKey = `${resourceId}-${origin}-${dataType}`;
 
     // Add to batch if not already pending or sent
     if (!this.pendingRequests.has(requestKey) && !this.pendingSubscriptions.has(requestKey)) {
-      this.pendingSubscriptions.set(requestKey, { resourceId, types: typesFlag });
+      this.pendingSubscriptions.set(requestKey, { resourceId, origin, dataType });
       this.scheduleBatchSend();
     }
 
     // Return unsubscribe function
     return () => {
-      const subs = this.subscribers.get(resourceId);
+      const subs = this.subscribers.get(key);
       if (subs) {
         subs.delete(callback);
         if (subs.size === 0) {
-          this.subscribers.delete(resourceId);
+          this.subscribers.delete(key);
         }
       }
 

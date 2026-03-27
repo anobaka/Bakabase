@@ -690,7 +690,7 @@ namespace Bakabase.InsideWorld.Business.Services
                                                     if (!resourceSourceLinks.TryGetValue(resource.Id, out var links)) continue;
 
                                                     // Try non-filesystem sources first, then filesystem
-                                                    foreach (var link in links.OrderBy(l => l.Source == ResourceSource.FileSystem ? 1 : 0))
+                                                    foreach (var link in links.OrderBy(l => l.Source == ResourceSource.PathMark ? 1 : 0))
                                                     {
                                                         if (displayNamesBySource.TryGetValue(link.Source, out var names) &&
                                                             names.TryGetValue(link.SourceKey, out var name))
@@ -745,59 +745,82 @@ namespace Bakabase.InsideWorld.Business.Services
 
                                     break;
                                 }
-                                case ResourceAdditionalItem.Cache:
+                                case ResourceAdditionalItem.Cover:
                                 {
-                                    var cacheMap =
-                                        (await _resourceCacheOrm.GetAll(x => resourceIds.Contains(x.ResourceId))).ToDictionary(
-                                            d => d.ResourceId, d => d);
+                                    // Load Cache internally (needed by LocalFileCoverProvider)
+                                    await EnsureCacheLoaded(doList, resourceIds);
+
+                                    // Properties are loaded via dependency (Cover depends on Properties)
+                                    var coverProviders = GetRequiredService<IEnumerable<ICoverProvider>>()
+                                        .OrderBy(p => p.Priority).ToList();
+
                                     foreach (var r in doList)
                                     {
-                                        var cache = cacheMap.GetValueOrDefault(r.Id);
-                                        r.Cache = cache?.ToDomainModel();
+                                        foreach (var cp in coverProviders)
+                                        {
+                                            if (!cp.AppliesTo(r)) continue;
+                                            if (cp.GetStatus(r) != DataStatus.Ready) continue;
+                                            var covers = cp.GetCoversAsync(r, CancellationToken.None).GetAwaiter().GetResult();
+                                            if (covers is { Count: > 0 })
+                                            {
+                                                r.Covers = covers;
+                                                break;
+                                            }
+                                        }
+
+                                        // Populate Cover DataStates
+                                        r.DataStates ??= [];
+                                        foreach (var cp in coverProviders.Where(cp => cp.AppliesTo(r)))
+                                            r.DataStates.Add(new ResourceDataState
+                                            {
+                                                ResourceId = r.Id,
+                                                DataType = ResourceDataType.Cover,
+                                                Origin = cp.Origin,
+                                                Status = cp.GetStatus(r)
+                                            });
                                     }
 
                                     break;
                                 }
-                                case ResourceAdditionalItem.SourceLinks:
-                                    // Already populated above (mandatory)
+                                case ResourceAdditionalItem.PlayableItem:
+                                {
+                                    // Load Cache internally (needed by LocalFilePlayableItemProvider)
+                                    await EnsureCacheLoaded(doList, resourceIds);
+
+                                    var playableItemProviders = GetRequiredService<IEnumerable<IPlayableItemProvider>>()
+                                        .OrderBy(p => p.Priority).ToList();
+
+                                    foreach (var r in doList)
+                                    {
+                                        var allItems = new List<PlayableItem>();
+                                        foreach (var pp in playableItemProviders)
+                                        {
+                                            if (!pp.AppliesTo(r)) continue;
+                                            if (pp.GetStatus(r) != DataStatus.Ready) continue;
+                                            var result = pp.GetPlayableItemsAsync(r, CancellationToken.None).GetAwaiter().GetResult();
+                                            allItems.AddRange(result.Items);
+                                        }
+
+                                        r.PlayableItems = allItems.Count > 0 ? allItems : null;
+
+                                        // Populate PlayableItem DataStates
+                                        r.DataStates ??= [];
+                                        foreach (var pp in playableItemProviders.Where(pp => pp.AppliesTo(r)))
+                                            r.DataStates.Add(new ResourceDataState
+                                            {
+                                                ResourceId = r.Id,
+                                                DataType = ResourceDataType.PlayableItem,
+                                                Origin = pp.Origin,
+                                                Status = pp.GetStatus(r)
+                                            });
+                                    }
+
                                     break;
+                                }
                                 default:
                                     throw new ArgumentOutOfRangeException();
                             }
                         }
-                    }
-                }
-
-                // Set cover: reserved(manually) > reserved(other scope) > custom(manually) > custom(other scope)
-                using (MiniProfiler.Current.Step("Set cover"))
-                {
-                    foreach (var @do in doList)
-                    {
-                        var coverPropertyValue = @do.Properties?.GetValueOrDefault((int)PropertyPool.Reserved)
-                            ?.GetValueOrDefault((int)ReservedProperty.Cover)?.Values?.OrderBy(x => x.Scope)
-                            .Select(x => x.Value as List<string>)
-                            .OfType<List<string>>()
-                            .Where(x => x.Any())
-                            .ToList();
-                        if (coverPropertyValue != null && coverPropertyValue.Any())
-                        {
-                            @do.CoverPaths = coverPropertyValue.First();
-                            continue;
-                        }
-
-                        var candidateCustomAttachmentPropertyValues =
-                            (@do.Properties?.GetValueOrDefault((int)PropertyPool.Custom)?.ToList() ?? []).Select(x => x.Value)
-                            .Where(x =>
-                                x.Type == PropertyType.Attachment && x.Values?.Any() == true).ToList();
-                        var coverPathsCandidates = candidateCustomAttachmentPropertyValues
-                            .Select(x => x.Values!.FirstOrDefault(a => a.IsManuallySet))
-                            .Concat(candidateCustomAttachmentPropertyValues.SelectMany(x =>
-                                x.Values!.Where(a => !a.IsManuallySet)))
-                            .Select(x => x?.Value)
-                            .OfType<List<string>>()
-                            .Where(a => a.Any())
-                            .ToList();
-                        @do.CoverPaths = coverPathsCandidates.FirstOrDefault();
                     }
                 }
 
@@ -809,72 +832,26 @@ namespace Bakabase.InsideWorld.Business.Services
                     }
                 }
 
-                // Populate first-class Covers and PlayableItems fields from priority-based selection
-                using (MiniProfiler.Current.Step("PopulateFirstClassFields"))
-                {
-                    foreach (var r in doList)
-                    {
-                        // Covers: priority-based selection (first non-empty wins)
-                        // 1. User-set / enhancer covers from CoverPaths (already resolved above from properties)
-                        // 2. External source local covers (downloaded from external URLs)
-                        // 3. Cache-discovered covers (filesystem auto-discovery)
-                        if (r.CoverPaths is { Count: > 0 })
-                        {
-                            r.Covers = r.CoverPaths;
-                        }
-                        else
-                        {
-                            var sourceLocalCovers = r.SourceLinks?
-                                .Where(sl => sl.Source != ResourceSource.FileSystem)
-                                .SelectMany(sl => sl.LocalCoverPaths ?? [])
-                                .ToList();
-                            if (sourceLocalCovers is { Count: > 0 })
-                            {
-                                r.Covers = sourceLocalCovers;
-                            }
-                            else
-                            {
-                                r.Covers = r.Cache?.CoverPaths;
-                            }
-                        }
-                        r.CoversReady = r.Covers != null ||
-                                        r.Cache?.CachedTypes.Contains(ResourceCacheType.Covers) == true;
-
-                        // PlayableItems: priority-based selection (like covers)
-                        // 1. External source playable items (derived from SourceLinks)
-                        // 2. FileSystem playable files (from cache)
-                        var externalPlayableItems = r.SourceLinks?
-                            .Where(sl => sl.Source != ResourceSource.FileSystem)
-                            .Select(sl => new PlayableItem
-                            {
-                                Source = sl.Source,
-                                Key = sl.SourceKey
-                            })
-                            .ToList();
-
-                        var fsPlayableItems = r.Cache?.PlayableFilePaths?
-                            .Select(p => new PlayableItem
-                            {
-                                Source = ResourceSource.FileSystem,
-                                Key = p
-                            })
-                            .ToList();
-
-                        var allItems = new List<PlayableItem>();
-                        if (externalPlayableItems is { Count: > 0 })
-                            allItems.AddRange(externalPlayableItems);
-                        if (fsPlayableItems is { Count: > 0 })
-                            allItems.AddRange(fsPlayableItems);
-
-                        r.PlayableItems = allItems.Count > 0 ? allItems : null;
-                        r.HasMorePlayableFiles = r.Cache?.HasMorePlayableFiles ?? false;
-                        // PlayableItemsReady reflects FileSystem cache state only.
-                        // External source items are always derived from SourceLinks (no cache needed).
-                        r.PlayableItemsReady = r.Cache?.CachedTypes.Contains(ResourceCacheType.PlayableFiles) == true;
-                    }
-                }
-
                 return doList;
+            }
+        }
+
+        /// <summary>
+        /// Loads Cache for resources that don't have it yet.
+        /// Uses dict-based batch loading for O(N) complexity.
+        /// </summary>
+        private async Task EnsureCacheLoaded(List<Resource> resources, List<int> resourceIds)
+        {
+            // Skip if all resources already have cache loaded
+            if (resources.All(r => r.Cache != null))
+                return;
+
+            var cacheMap = (await _resourceCacheOrm.GetAll(x => resourceIds.Contains(x.ResourceId)))
+                .ToDictionary(d => d.ResourceId, d => d);
+
+            foreach (var r in resources)
+            {
+                r.Cache ??= cacheMap.GetValueOrDefault(r.Id)?.ToDomainModel();
             }
         }
 
@@ -1102,234 +1079,16 @@ namespace Bakabase.InsideWorld.Business.Services
             return null;
         }
 
-        public async Task<string?> DiscoverAndCacheCover(int id, CancellationToken ct)
-        {
-            using (MiniProfiler.Current.Step("DiscoverAndCacheCover"))
-            {
-                ResourceDbModel resource;
-                using (MiniProfiler.Current.Step("GetResource"))
-                {
-                    resource = await _orm.GetByKey(id, false);
-                }
-
-                // TODO: Get CoverSelectionOrder from ResourceProfile when implemented
-                var coverSelectOrder = CoverSelectOrder.FilenameAscending;
-
-                CoverDiscoveryResult? coverDiscoverResult;
-                using (MiniProfiler.Current.Step("CoverDiscoverer.Discover"))
-                {
-                    coverDiscoverResult = await _coverDiscoverer.Discover(resource.Path, coverSelectOrder, false, ct);
-                }
-
-                string? path = null;
-                if (coverDiscoverResult != null)
-                {
-                    try
-                    {
-                        Image<Argb32> image;
-                        using (MiniProfiler.Current.Step("LoadByImageSharp"))
-                        {
-                            image = await coverDiscoverResult.LoadByImageSharp(ct);
-                        }
-
-                        string pathWithoutExt;
-                        using (MiniProfiler.Current.Step("BuildThumbnailPath"))
-                        {
-                            pathWithoutExt = Path.Combine(_fileManager.BuildAbsolutePath("cache", "cover"), resource.Id.ToString())
-                                .StandardizePath()!;
-                        }
-
-                        using (MiniProfiler.Current.Step("SaveAsThumbnail"))
-                        {
-                            path = await image.SaveAsThumbnail(pathWithoutExt, ct);
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.LogWarning(e, $"An error occurred during saving image as cover");
-                    }
-                }
-
-                using (MiniProfiler.Current.Step("UpdateCache"))
-                {
-                    ResourceCacheDbModel? cache;
-                    using (MiniProfiler.Current.Step("GetCacheByKey"))
-                    {
-                        cache = await _resourceCacheOrm.GetByKey(id, true);
-                    }
-
-                    var isNewCache = cache == null;
-                    cache ??= new ResourceCacheDbModel { ResourceId = id };
-
-                    string? serializedCoverPaths;
-                    using (MiniProfiler.Current.Step("SerializeCoverPaths"))
-                    {
-                        serializedCoverPaths = new ListStringValueBuilder(path.IsNullOrEmpty() ? null : [path]).Value!.SerializeAsStandardValue(
-                            StandardValueType.ListString);
-                    }
-
-                    if (cache.CoverPaths != serializedCoverPaths ||
-                        !cache.CachedTypes.HasFlag(ResourceCacheType.Covers))
-                    {
-                        cache.CoverPaths = serializedCoverPaths;
-                        cache.CachedTypes |= ResourceCacheType.Covers;
-                        if (isNewCache)
-                        {
-                            using (MiniProfiler.Current.Step("AddCache"))
-                            {
-                                await _resourceCacheOrm.Add(cache);
-                            }
-                        }
-                        else
-                        {
-                            using (MiniProfiler.Current.Step("UpdateCacheRecord"))
-                            {
-                                await _resourceCacheOrm.Update(cache);
-                            }
-                        }
-                    }
-                }
-
-                // Use cached cover path instead
-                return path;
-            }
-        }
-
-        public async Task<string[]> DiscoverAndCachePlayableFiles(int id, CancellationToken ct)
-        {
-            var r = await Get(id, ResourceAdditionalItem.None);
-            if (r == null)
-            {
-                return [];
-            }
-
-            string[] playableFiles = [];
-
-            // Use ResourceProfile to get effective playable file options
-            var playableFileOptions = await ResourceProfileService.GetEffectivePlayableFileOptions(r);
-            if (playableFileOptions?.Extensions != null && playableFileOptions.Extensions.Count > 0)
-            {
-                // Normalize extensions to ensure they start with a dot (Path.GetExtension returns ".ext")
-                var extensions = playableFileOptions.Extensions
-                    .Select(e => e.StartsWith('.') ? e : $".{e}")
-                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
-                var files = r.IsFile ? new List<string> { r.Path } : Directory.EnumerateFiles(r.Path, "*", SearchOption.AllDirectories);
-
-                var result = files.Where(f => extensions.Contains(Path.GetExtension(f))).ToList();
-
-                // Apply file name pattern filter if configured
-                if (!string.IsNullOrEmpty(playableFileOptions.FileNamePattern))
-                {
-                    try
-                    {
-                        var regex = new System.Text.RegularExpressions.Regex(playableFileOptions.FileNamePattern,
-                            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-                        result = result.Where(f => regex.IsMatch(Path.GetFileName(f))).ToList();
-                    }
-                    catch
-                    {
-                        // Invalid regex, ignore the filter
-                    }
-                }
-
-                playableFiles = result.Select(f => f.StandardizePath()!).ToArray();
-            }
-
-            // Save to cache
-            var cache = await _resourceCacheOrm.GetByKey(id, true);
-            var isNewCache = cache == null;
-            cache ??= new ResourceCacheDbModel { ResourceId = id };
-
-            var serializedPlayableFiles = new ListStringValueBuilder(playableFiles.Length == 0 ? null : playableFiles.ToList()).Value
-                ?.SerializeAsStandardValue(StandardValueType.ListString);
-
-            if (cache.PlayableFilePaths != serializedPlayableFiles ||
-                !cache.CachedTypes.HasFlag(ResourceCacheType.PlayableFiles))
-            {
-                cache.PlayableFilePaths = serializedPlayableFiles;
-                cache.CachedTypes |= ResourceCacheType.PlayableFiles;
-                if (isNewCache)
-                {
-                    await _resourceCacheOrm.Add(cache);
-                }
-                else
-                {
-                    await _resourceCacheOrm.Update(cache);
-                }
-            }
-
-            return playableFiles;
-        }
 
         public async Task<List<PlayableItem>> DiscoverPlayableItems(int id, CancellationToken ct)
         {
-            var r = await Get(id, ResourceAdditionalItem.None);
+            var r = await Get(id, ResourceAdditionalItem.PlayableItem);
             if (r == null)
                 return [];
 
-            var allItems = new List<PlayableItem>();
-
-            // Get source links for this resource
-            var sourceLinks = await ResourceSourceLinkService.GetByResourceId(id);
-
-            // Discover playable items from each non-FileSystem linked source
-            foreach (var link in sourceLinks.Where(l => l.Source != ResourceSource.FileSystem))
-            {
-                ct.ThrowIfCancellationRequested();
-
-                var resolver = ResourceResolvers.FirstOrDefault(x => x.Source == link.Source);
-                if (resolver == null) continue;
-
-                try
-                {
-                    var items = await resolver.DiscoverPlayableItemsAsync(r, link.SourceKey, ct);
-                    allItems.AddRange(items);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Failed to discover playable items from {Source} for resource {Id}",
-                        link.Source, id);
-                }
-            }
-
-            // Always discover FileSystem playable files when resource has a local path
-            if (!string.IsNullOrEmpty(r.Path))
-            {
-                var fsResolver = ResourceResolvers.FirstOrDefault(x => x.Source == ResourceSource.FileSystem);
-                if (fsResolver != null)
-                {
-                    var items = await fsResolver.DiscoverPlayableItemsAsync(r, r.Path, ct);
-                    allItems.AddRange(items);
-                }
-            }
-
-            // Cache only filesystem results
-            var fileSystemPaths = allItems
-                .Where(i => i.Source == ResourceSource.FileSystem)
-                .Select(i => i.Key)
-                .ToList();
-
-            if (fileSystemPaths.Count > 0)
-            {
-                var cache = await _resourceCacheOrm.GetByKey(id, true);
-                var isNewCache = cache == null;
-                cache ??= new ResourceCacheDbModel { ResourceId = id };
-
-                var trimmedPaths = fileSystemPaths
-                    .GroupBy(d => $"{Path.GetDirectoryName(d)}-{Path.GetExtension(d)}")
-                    .SelectMany(x => x.Take(InternalOptions.MaxPlayableFilesPerTypeAndSubDir))
-                    .ToList();
-                cache.PlayableFilePaths = trimmedPaths.SerializeAsStandardValue(StandardValueType.ListString);
-                cache.HasMorePlayableFiles = trimmedPaths.Count < fileSystemPaths.Count;
-                cache.CachedTypes |= ResourceCacheType.PlayableFiles;
-
-                if (isNewCache)
-                    await _resourceCacheOrm.Add(cache);
-                else
-                    await _resourceCacheOrm.Update(cache);
-            }
-
-            return allItems;
+            var providerService = GetRequiredService<IPlayableItemProviderService>();
+            var result = await providerService.GetPlayableItemsAsync(r, ct);
+            return result.Items;
         }
 
         public async Task<BaseResponse> PlayRandomResource()
@@ -1349,7 +1108,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 return BaseResponseBuilder.BuildBadRequest("No playable file was found.");
             }
 
-            return await PlayItem(cache.ResourceId, ResourceSource.FileSystem, file);
+            return await PlayItem(cache.ResourceId, DataOrigin.FileSystem, file);
         }
 
         public async Task<bool> Any(Func<Abstractions.Models.Db.ResourceDbModel, bool>? selector = null)
@@ -1361,258 +1120,6 @@ namespace Bakabase.InsideWorld.Business.Services
             IEnumerable<Abstractions.Models.Db.ResourceDbModel> resources)
         {
             return (await _orm.AddRange(resources.ToList())).Data;
-        }
-
-        public async Task PrepareCache(Func<int, Task>? onProgressChange, Func<string, Task>? onProcessChange,
-            PauseToken pt, CancellationToken ct)
-        {
-            var caches = await _resourceCacheOrm.GetAll();
-            var cachedResourceIds = caches.Select(c => c.ResourceId).ToList();
-            var resourceIds = (await GetAllDbModels(null, false)).Select(r => r.Id).ToList();
-            var newCaches = resourceIds.Except(cachedResourceIds).Select(x => new ResourceCacheDbModel
-            {
-                ResourceId = x
-            }).ToList();
-            await _resourceCacheOrm.AddRange(newCaches);
-            var badCachedResourceIds = cachedResourceIds.Except(resourceIds).ToHashSet();
-            var badCaches = caches.Where(c => badCachedResourceIds.Contains(c.ResourceId)).ToList();
-            await _resourceCacheOrm.RemoveRange(badCaches);
-            _resourceCacheOrm.DbContext.DetachAll(caches.Concat(newCaches));
-
-            // Calculate fullCacheType based on options
-            var keepResourcesOnPathChange = _optionsManager.Value.KeepResourcesOnPathChange;
-            var uiResourceOptions = _uiOptions.Value.Resource;
-            var fullCacheType = (ResourceCacheType)SpecificEnumUtils<ResourceCacheType>.Values.Sum(x => (int)x);
-            if (!keepResourcesOnPathChange)
-            {
-                fullCacheType &= ~ResourceCacheType.ResourceMarkers;
-            }
-            if (uiResourceOptions.DisableCoverCache)
-            {
-                fullCacheType &= ~ResourceCacheType.Covers;
-            }
-            if (uiResourceOptions.DisablePlayableFileCache)
-            {
-                fullCacheType &= ~ResourceCacheType.PlayableFiles;
-            }
-
-            var percentage = 0m;
-
-            // All caches where CachedTypes != fullCacheType need processing
-            var tbdCaches = await _resourceCacheOrm.GetAll(x => x.CachedTypes != fullCacheType);
-
-            // Batch preload existing cover data from ReservedPropertyValue
-            // This avoids discovering covers for resources that already have user-configured or enhancer-created covers
-            var tbdResourceIds = tbdCaches.Select(c => c.ResourceId).ToList();
-            var existingCoverMap = (await _reservedPropertyValueService.GetAll(
-                    x => tbdResourceIds.Contains(x.ResourceId) && x.CoverPaths != null && x.CoverPaths.Any()))
-                .GroupBy(x => x.ResourceId)
-                .ToDictionary(
-                    g => g.Key,
-                    g => g.OrderBy(x => x.Scope).First().CoverPaths); // Priority by Scope: Manual=0 > Enhancer=1000+
-
-            var estimateCount = tbdCaches.Count;
-            var itemPercentage = estimateCount == 0 ? 0 : 100m / estimateCount;
-            var doneCount = 0;
-
-            if (onProcessChange != null)
-            {
-                await onProcessChange(string.Empty);
-            }
-
-            foreach (var tbdCache in tbdCaches)
-            {
-                ct.ThrowIfCancellationRequested();
-
-                // Re-check option state at each iteration (user might toggle during long operation)
-                var currentKeepResourcesOnPathChange = _optionsManager.Value.KeepResourcesOnPathChange;
-                var currentUiResourceOptions = _uiOptions.Value.Resource;
-                var currentFullCacheType =
-                    (ResourceCacheType)SpecificEnumUtils<ResourceCacheType>.Values.Sum(x => (int)x);
-                if (!currentKeepResourcesOnPathChange)
-                {
-                    currentFullCacheType &= ~ResourceCacheType.ResourceMarkers;
-                }
-                if (currentUiResourceOptions.DisableCoverCache)
-                {
-                    currentFullCacheType &= ~ResourceCacheType.Covers;
-                }
-                if (currentUiResourceOptions.DisablePlayableFileCache)
-                {
-                    currentFullCacheType &= ~ResourceCacheType.PlayableFiles;
-                }
-
-                try
-                {
-                    var cache = await _resourceCacheOrm.GetByKey(tbdCache.ResourceId);
-                    if (cache != null && cache.CachedTypes != currentFullCacheType)
-                    {
-                        var resource = await Get(cache.ResourceId, ResourceAdditionalItem.None);
-                        if (resource != null)
-                        {
-                            foreach (var cacheType in SpecificEnumUtils<ResourceCacheType>.Values)
-                            {
-                                ct.ThrowIfCancellationRequested();
-                                await pt.WaitWhilePausedAsync(ct);
-
-                                switch (cacheType)
-                                {
-                                    case ResourceCacheType.Covers:
-                                    {
-                                        // Skip if already cached
-                                        if (!cache.CachedTypes.HasFlag(ResourceCacheType.Covers))
-                                        {
-                                            // Check if resource already has covers from ReservedPropertyValue (user-configured or enhancer-created)
-                                            var existingCoverPaths = existingCoverMap.GetValueOrDefault(resource.Id);
-
-                                            if (existingCoverPaths?.Any() == true)
-                                            {
-                                                // Use existing covers, skip discovery
-                                                cache.CoverPaths = new ListStringValueBuilder(existingCoverPaths).Value
-                                                    ?.SerializeAsStandardValue(StandardValueType.ListString);
-                                            }
-                                            else
-                                            {
-                                                // No existing covers, run discovery
-                                                var coverPath = await DiscoverAndCacheCover(resource.Id, ct);
-                                                cache.CoverPaths = coverPath.IsNotEmpty()
-                                                    ? new ListStringValueBuilder([coverPath]).Value
-                                                        ?.SerializeAsStandardValue(StandardValueType.ListString)
-                                                    : null;
-                                            }
-                                        }
-
-                                        cache.CachedTypes |= ResourceCacheType.Covers;
-                                        break;
-                                    }
-                                    case ResourceCacheType.PlayableFiles:
-                                    {
-                                        // Skip if already cached
-                                        if (cache.CachedTypes.HasFlag(ResourceCacheType.PlayableFiles))
-                                        {
-                                            break;
-                                        }
-
-                                        // Only discover filesystem playable files for cache
-                                        await DiscoverAndCachePlayableFiles(resource.Id, ct);
-
-                                        // Re-read cache since DiscoverAndCachePlayableFiles updates it directly
-                                        var updatedPlayableCache = await _resourceCacheOrm.GetByKey(resource.Id, false);
-                                        if (updatedPlayableCache != null)
-                                        {
-                                            cache.PlayableFilePaths = updatedPlayableCache.PlayableFilePaths;
-                                            cache.HasMorePlayableFiles = updatedPlayableCache.HasMorePlayableFiles;
-                                        }
-
-                                        cache.CachedTypes |= ResourceCacheType.PlayableFiles;
-
-                                        break;
-                                    }
-                                    case ResourceCacheType.ResourceMarkers:
-                                    {
-                                        var keepResourcesOnPathChangeInternal =
-                                            _optionsManager.Value.KeepResourcesOnPathChange;
-
-                                        // File resources can't have marker files, just update cache flag accordingly
-                                        if (resource.IsFile)
-                                        {
-                                            if (keepResourcesOnPathChangeInternal)
-                                                cache.CachedTypes |= ResourceCacheType.ResourceMarkers;
-                                            else
-                                                cache.CachedTypes &= ~ResourceCacheType.ResourceMarkers;
-                                            break;
-                                        }
-
-                                        // For folder resources, create or delete marker file based on option
-                                        if (keepResourcesOnPathChangeInternal)
-                                        {
-                                            // Option enabled: ensure marker exists
-                                            if (!cache.CachedTypes.HasFlag(ResourceCacheType.ResourceMarkers))
-                                            {
-                                                try
-                                                {
-                                                    if (Directory.Exists(resource.Path))
-                                                    {
-                                                        var markerPath = Path.Combine(resource.Path,
-                                                            InternalOptions.ResourceMarkerFileName);
-                                                        var content = System.Text.Json.JsonSerializer.Serialize(new
-                                                            { ids = new[] { resource.Id } }, System.Text.Json.JsonSerializerOptions.Web);
-                                                        await File.WriteAllTextAsync(markerPath, content);
-                                                        File.SetAttributes(markerPath,
-                                                            File.GetAttributes(markerPath) | FileAttributes.Hidden);
-                                                    }
-                                                }
-                                                catch (Exception e)
-                                                {
-                                                    _logger.LogWarning(e,
-                                                        $"Failed to create resource marker for {resource.Path}");
-                                                }
-                                            }
-
-                                            // Always set flag (even if file operation failed, to avoid infinite retry)
-                                            cache.CachedTypes |= ResourceCacheType.ResourceMarkers;
-                                        }
-                                        else
-                                        {
-                                            // Option disabled: ensure marker is removed
-                                            if (cache.CachedTypes.HasFlag(ResourceCacheType.ResourceMarkers))
-                                            {
-                                                try
-                                                {
-                                                    var markerPath = Path.Combine(resource.Path,
-                                                        InternalOptions.ResourceMarkerFileName);
-                                                    if (File.Exists(markerPath))
-                                                    {
-                                                        File.Delete(markerPath);
-                                                    }
-                                                }
-                                                catch (Exception e)
-                                                {
-                                                    _logger.LogWarning(e,
-                                                        $"Failed to delete resource marker at {resource.Path}");
-                                                }
-                                            }
-
-                                            // Always clear flag (even if file operation failed, to avoid infinite retry)
-                                            cache.CachedTypes &= ~ResourceCacheType.ResourceMarkers;
-                                        }
-
-                                        break;
-                                    }
-                                    default:
-                                        throw new ArgumentOutOfRangeException();
-                                }
-                            }
-                        }
-
-                        await _resourceCacheOrm.Update(cache);
-                        _logger.LogInformation($"Cache for {cache.ResourceId} has been prepared.");
-                    }
-                }
-                catch (Exception e)
-                {
-                    await _logService.Log(nameof(PrepareCache), LogLevel.Error, "Failed to prepare cache",
-                        e.BuildFullInformationText());
-                }
-
-                var newPercentage = percentage + itemPercentage;
-                if ((int)newPercentage != (int)percentage && onProgressChange != null)
-                {
-                    await onProgressChange((int)newPercentage);
-                }
-
-                percentage = newPercentage;
-
-                if (onProcessChange != null)
-                {
-                    await onProcessChange($"{++doneCount}/{estimateCount}");
-                }
-            }
-
-            if (onProgressChange != null)
-            {
-                await onProgressChange(100);
-            }
         }
 
         public async Task Transfer(ResourceTransferInputModel model)
@@ -1845,7 +1352,6 @@ namespace Bakabase.InsideWorld.Business.Services
                             x.CoverPaths = null;
                             break;
                         case ResourceCacheType.PlayableFiles:
-                            x.HasMorePlayableFiles = false;
                             x.PlayableFilePaths = null;
                             break;
                         case ResourceCacheType.ResourceMarkers:
@@ -1911,7 +1417,15 @@ namespace Bakabase.InsideWorld.Business.Services
                 }
                 else
                 {
-                    var coverPath = await DiscoverAndCacheCover(resourceId, ct);
+                    var coverProviders = GetRequiredService<IEnumerable<ICoverProvider>>();
+                    var localCoverProvider = coverProviders.FirstOrDefault(p => p.Origin == DataOrigin.FileSystem);
+                    string? coverPath = null;
+                    var coverResource = await Get(resourceId, ResourceAdditionalItem.Cover);
+                    if (coverResource != null && localCoverProvider != null && localCoverProvider.AppliesTo(coverResource))
+                    {
+                        var covers = await localCoverProvider.GetCoversAsync(coverResource, ct);
+                        coverPath = covers?.FirstOrDefault();
+                    }
                     cache.CoverPaths = coverPath.IsNotEmpty()
                         ? new ListStringValueBuilder([coverPath]).Value
                             ?.SerializeAsStandardValue(StandardValueType.ListString)
@@ -1925,17 +1439,19 @@ namespace Bakabase.InsideWorld.Business.Services
             if (!uiResource.DisablePlayableFileCache)
             {
                 cache.PlayableFilePaths = null;
-                cache.HasMorePlayableFiles = false;
                 cache.CachedTypes &= ~ResourceCacheType.PlayableFiles;
 
-                await DiscoverAndCachePlayableFiles(resourceId, ct);
-
-                // Re-read cache since DiscoverAndCachePlayableFiles updates it directly
-                var updatedCache = await _resourceCacheOrm.GetByKey(resourceId, false);
-                if (updatedCache != null)
+                var playableProviders = GetRequiredService<IEnumerable<IPlayableItemProvider>>();
+                var localPlayableProvider = playableProviders.FirstOrDefault(p => p.Origin == DataOrigin.FileSystem);
+                var playableResource = await Get(resourceId, ResourceAdditionalItem.PlayableItem);
+                if (playableResource != null && localPlayableProvider != null && localPlayableProvider.AppliesTo(playableResource))
                 {
-                    cache.PlayableFilePaths = updatedCache.PlayableFilePaths;
-                    cache.HasMorePlayableFiles = updatedCache.HasMorePlayableFiles;
+                    var playableResult = await localPlayableProvider.GetPlayableItemsAsync(playableResource, ct);
+                    var playableFiles = playableResult.Items.Select(i => i.Key).ToList();
+                    cache.PlayableFilePaths = playableFiles.Any()
+                        ? new ListStringValueBuilder(playableFiles).Value
+                            ?.SerializeAsStandardValue(StandardValueType.ListString)
+                        : null;
                 }
 
                 cache.CachedTypes |= ResourceCacheType.PlayableFiles;
@@ -2476,32 +1992,28 @@ namespace Bakabase.InsideWorld.Business.Services
             return BaseResponseBuilder.Ok;
         }
 
-        public async Task<BaseResponse> PlayItem(int resourceId, ResourceSource source, string key)
+        public async Task<BaseResponse> PlayItem(int resourceId, DataOrigin origin, string key)
         {
             var resource = await Get(resourceId, ResourceAdditionalItem.None);
             if (resource == null)
                 return BaseResponseBuilder.NotFound;
 
-            var resolver = ResourceResolvers.FirstOrDefault(x => x.Source == source);
-            if (resolver == null)
-                return BaseResponseBuilder.BuildBadRequest($"No resolver found for source {source}.");
-
-            var item = new PlayableItem { Source = source, Key = key };
+            var playableItemProviderService = GetRequiredService<IPlayableItemProviderService>();
 
             try
             {
-                await resolver.PlayAsync(resource, item, CancellationToken.None);
+                await playableItemProviderService.PlayAsync(resource, origin, key, CancellationToken.None);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to play item from {Source} for resource {ResourceId}", source, resourceId);
+                _logger.LogError(ex, "Failed to play item from {Origin} for resource {ResourceId}", origin, resourceId);
                 return BaseResponseBuilder.BuildBadRequest($"Failed to play: {ex.Message}");
             }
 
             var now = DateTime.Now;
             await _orm.UpdateByKey(resourceId, r => r.PlayedAt = now);
             await _playHistoryService.Add(new PlayHistoryDbModel
-                { ResourceId = resourceId, Item = $"{source}:{key}", PlayedAt = now });
+                { ResourceId = resourceId, Item = $"{origin}:{key}", PlayedAt = now });
 
             return BaseResponseBuilder.Ok;
         }

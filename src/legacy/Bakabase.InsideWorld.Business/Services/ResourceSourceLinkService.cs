@@ -217,7 +217,7 @@ public class ResourceSourceLinkService<TDbContext>(
     public async Task<List<ResourceSourceLink>> GetPendingMetadataFetches()
     {
         var dbModels = await orm.GetAll(m =>
-            m.Source != ResourceSource.FileSystem && m.MetadataFetchedAt == null);
+            m.Source != ResourceSource.PathMark && m.MetadataFetchedAt == null);
         return dbModels.Select(d => d.ToDomainModel()).ToList();
     }
 

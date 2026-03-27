@@ -94,7 +94,7 @@ public class ResourceSyncService : ScopedService
 
         List<DiscoveredResourceEntry> discoveredEntries;
 
-        if (source == ResourceSource.FileSystem)
+        if (source == ResourceSource.PathMark)
         {
             discoveredEntries = await DiscoverFileSystemResources(resolver, ctx, onProgressChange, onProcessChange, ct);
         }
@@ -251,7 +251,7 @@ public class ResourceSyncService : ScopedService
             var entries = discovered.Select(d => new DiscoveredResourceEntry
             {
                 EffectivePath = d.Path,
-                Source = ResourceSource.FileSystem,
+                Source = ResourceSource.PathMark,
                 SourceKey = d.Path,
                 MarkId = d.MarkId
             }).ToList();
@@ -426,7 +426,7 @@ public class ResourceSyncService : ScopedService
         CancellationToken ct)
     {
         // Only for non-FileSystem sources
-        if (source == ResourceSource.FileSystem) return;
+        if (source == ResourceSource.PathMark) return;
 
         var discoveredKeys = discoveredEntries
             .Select(e => (e.Source, e.SourceKey))
@@ -487,7 +487,7 @@ public class ResourceSyncService : ScopedService
         CancellationToken ct)
     {
         // For FileSystem, orphan detection is handled via effect tracking in PathMarkSyncService
-        if (source == ResourceSource.FileSystem) return 0;
+        if (source == ResourceSource.PathMark) return 0;
 
         // For resolver sources, resources marked as Absent that have no other active source links
         // could potentially be deleted, but we keep them as Absent for now.

@@ -128,7 +128,7 @@ public class ExHentaiResolver : IResourceResolver
         [
             new PlayableItem
             {
-                Source = ResourceSource.ExHentai,
+                Origin = DataOrigin.ExHentai,
                 Key = sourceKey,
                 DisplayName = displayName
             }

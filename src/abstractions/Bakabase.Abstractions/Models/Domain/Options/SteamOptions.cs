@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Bootstrap.Components.Configuration.Abstractions;
 
-namespace Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
+namespace Bakabase.Abstractions.Models.Domain.Options;
 
 public class SteamAccount
 {

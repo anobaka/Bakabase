@@ -139,6 +139,48 @@ export const BTaskStatusLabel: Record<BTaskStatus, string> = {
   [BTaskStatus.Cancelled]: 'Cancelled'
 };
 
+export enum DataOrigin {
+  Manual = 1,
+  FileSystem = 2,
+  Steam = 3,
+  DLsite = 4,
+  ExHentai = 5
+}
+
+export const dataOrigins = [
+  { label: 'Manual', value: DataOrigin.Manual },
+  { label: 'FileSystem', value: DataOrigin.FileSystem },
+  { label: 'Steam', value: DataOrigin.Steam },
+  { label: 'DLsite', value: DataOrigin.DLsite },
+  { label: 'ExHentai', value: DataOrigin.ExHentai }
+] as const;
+
+export const DataOriginLabel: Record<DataOrigin, string> = {
+  [DataOrigin.Manual]: 'Manual',
+  [DataOrigin.FileSystem]: 'FileSystem',
+  [DataOrigin.Steam]: 'Steam',
+  [DataOrigin.DLsite]: 'DLsite',
+  [DataOrigin.ExHentai]: 'ExHentai'
+};
+
+export enum DataStatus {
+  NotStarted = 1,
+  Ready = 2,
+  Failed = 3
+}
+
+export const dataStatuses = [
+  { label: 'NotStarted', value: DataStatus.NotStarted },
+  { label: 'Ready', value: DataStatus.Ready },
+  { label: 'Failed', value: DataStatus.Failed }
+] as const;
+
+export const DataStatusLabel: Record<DataStatus, string> = {
+  [DataStatus.NotStarted]: 'NotStarted',
+  [DataStatus.Ready]: 'Ready',
+  [DataStatus.Failed]: 'Failed'
+};
+
 export enum EnhancementRecordStatus {
   ContextCreated = 1,
   ContextApplied = 2
@@ -595,22 +637,40 @@ export const ResourceCacheTypeLabel: Record<ResourceCacheType, string> = {
   [ResourceCacheType.ResourceMarkers]: 'ResourceMarkers'
 };
 
+export enum ResourceDataType {
+  Cover = 1,
+  PlayableItem = 2,
+  Metadata = 3
+}
+
+export const resourceDataTypes = [
+  { label: 'Cover', value: ResourceDataType.Cover },
+  { label: 'PlayableItem', value: ResourceDataType.PlayableItem },
+  { label: 'Metadata', value: ResourceDataType.Metadata }
+] as const;
+
+export const ResourceDataTypeLabel: Record<ResourceDataType, string> = {
+  [ResourceDataType.Cover]: 'Cover',
+  [ResourceDataType.PlayableItem]: 'PlayableItem',
+  [ResourceDataType.Metadata]: 'Metadata'
+};
+
 export enum ResourceSource {
-  FileSystem = 1,
+  PathMark = 1,
   Steam = 2,
   DLsite = 3,
   ExHentai = 4
 }
 
 export const resourceSources = [
-  { label: 'FileSystem', value: ResourceSource.FileSystem },
+  { label: 'PathMark', value: ResourceSource.PathMark },
   { label: 'Steam', value: ResourceSource.Steam },
   { label: 'DLsite', value: ResourceSource.DLsite },
   { label: 'ExHentai', value: ResourceSource.ExHentai }
 ] as const;
 
 export const ResourceSourceLabel: Record<ResourceSource, string> = {
-  [ResourceSource.FileSystem]: 'FileSystem',
+  [ResourceSource.PathMark]: 'PathMark',
   [ResourceSource.Steam]: 'Steam',
   [ResourceSource.DLsite]: 'DLsite',
   [ResourceSource.ExHentai]: 'ExHentai'
@@ -1691,9 +1751,9 @@ export enum ResourceAdditionalItem {
   DisplayName = 288,
   HasChildren = 512,
   MediaLibraryName = 2048,
-  Cache = 4096,
-  SourceLinks = 8192,
-  All = 15200
+  Cover = 16416,
+  PlayableItem = 32768,
+  All = 52064
 }
 
 export const resourceAdditionalItems = [
@@ -1703,8 +1763,8 @@ export const resourceAdditionalItems = [
   { label: 'DisplayName', value: ResourceAdditionalItem.DisplayName },
   { label: 'HasChildren', value: ResourceAdditionalItem.HasChildren },
   { label: 'MediaLibraryName', value: ResourceAdditionalItem.MediaLibraryName },
-  { label: 'Cache', value: ResourceAdditionalItem.Cache },
-  { label: 'SourceLinks', value: ResourceAdditionalItem.SourceLinks },
+  { label: 'Cover', value: ResourceAdditionalItem.Cover },
+  { label: 'PlayableItem', value: ResourceAdditionalItem.PlayableItem },
   { label: 'All', value: ResourceAdditionalItem.All }
 ] as const;
 
@@ -1715,8 +1775,8 @@ export const ResourceAdditionalItemLabel: Record<ResourceAdditionalItem, string>
   [ResourceAdditionalItem.DisplayName]: 'DisplayName',
   [ResourceAdditionalItem.HasChildren]: 'HasChildren',
   [ResourceAdditionalItem.MediaLibraryName]: 'MediaLibraryName',
-  [ResourceAdditionalItem.Cache]: 'Cache',
-  [ResourceAdditionalItem.SourceLinks]: 'SourceLinks',
+  [ResourceAdditionalItem.Cover]: 'Cover',
+  [ResourceAdditionalItem.PlayableItem]: 'PlayableItem',
   [ResourceAdditionalItem.All]: 'All'
 };
 

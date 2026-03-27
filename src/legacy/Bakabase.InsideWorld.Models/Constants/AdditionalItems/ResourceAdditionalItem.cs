@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -17,9 +17,9 @@ namespace Bakabase.InsideWorld.Models.Constants.AdditionalItems
         DisplayName = 1 << 8 | Properties,
         HasChildren = 1 << 9,
         MediaLibraryName = 1 << 11,
-        Cache = 1 << 12,
-        SourceLinks = 1 << 13,
+        Cover = 1 << 14 | Properties,
+        PlayableItem = 1 << 15,
 
-        All = Properties | DisplayName | Alias | HasChildren | MediaLibraryName | Cache | SourceLinks
+        All = Properties | DisplayName | Alias | HasChildren | MediaLibraryName | Cover | PlayableItem
     }
 }

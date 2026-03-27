@@ -42,7 +42,7 @@ public class FileSystemResolver : IResourceResolver
         _logger = logger;
     }
 
-    public ResourceSource Source => ResourceSource.FileSystem;
+    public ResourceSource Source => ResourceSource.PathMark;
 
     /// <summary>
     /// Not used directly - filesystem discovery is done via <see cref="DiscoverFromMarks"/>.
@@ -453,7 +453,7 @@ public class FileSystemResolver : IResourceResolver
             {
                 items.Add(new PlayableItem
                 {
-                    Source = ResourceSource.FileSystem,
+                    Origin = DataOrigin.FileSystem,
                     Key = resource.Path.StandardizePath()!,
                     DisplayName = Path.GetFileName(resource.Path)
                 });
@@ -492,7 +492,7 @@ public class FileSystemResolver : IResourceResolver
 
         items.AddRange(result.Select(f => new PlayableItem
         {
-            Source = ResourceSource.FileSystem,
+            Origin = DataOrigin.FileSystem,
             Key = f.StandardizePath()!,
             DisplayName = Path.GetFileName(f)
         }));

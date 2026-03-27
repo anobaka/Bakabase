@@ -240,6 +240,9 @@
   <data name="ResourceSourceName_FileSystem" xml:space="preserve">
     <value>File System</value>
   </data>
+  <data name="ResourceSourceName_PathMark" xml:space="preserve">
+    <value>Path Mark</value>
+  </data>
   <data name="ResourceSourceName_Steam" xml:space="preserve">
     <value>Steam</value>
   </data>

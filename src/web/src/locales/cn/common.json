@@ -29,6 +29,7 @@
   "common.action.reset": "重置",
   "common.action.clear": "清除",
   "common.action.copy": "复制",
+  "common.message.copiedToClipboard": "已复制到剪贴板",
   "common.action.duplicate": "复制",
   "common.action.enable": "启用",
   "common.action.disable": "禁用",

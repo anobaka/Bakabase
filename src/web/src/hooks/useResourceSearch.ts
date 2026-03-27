@@ -93,7 +93,7 @@ export const useResourceSearch = (): UseResourceSearchResult => {
         // Step 1: Quick search with Cache for fast initial response
         // Cache allows ResourceCover and PlayableFiles to use cached data immediately
         const rsp = await BApi.resource.searchResources(form, {
-          additionalItems: ResourceAdditionalItem.Cache,
+          additionalItems: ResourceAdditionalItem.Cover,
           saveSearch: options?.saveSearch,
           searchId: options?.searchId,
         });
@@ -231,7 +231,7 @@ export const progressiveSearch = async (
 ): Promise<Resource[]> => {
   // Step 1: Quick search with Cache for fast initial response
   const quickRes = await BApi.resource.searchResources(searchParams, {
-    additionalItems: ResourceAdditionalItem.Cache,
+    additionalItems: ResourceAdditionalItem.Cover,
   });
   let basicResources = (quickRes.data ?? []) as Resource[];
 

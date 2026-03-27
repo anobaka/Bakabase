@@ -64,7 +64,7 @@ public class PathMarkSyncTests
         // Step 1: Resource sync (discovers filesystem resources, marks related property marks as pending)
         var resourceSyncService = _sp.GetRequiredService<ResourceSyncService>();
         await resourceSyncService.SyncResources(
-            ResourceSource.FileSystem,
+            ResourceSource.PathMark,
             null,
             null,
             new PauseToken(),

@@ -41,7 +41,7 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
   const uiOptions = useUiOptionsStore((state) => state.data);
   const [refreshingCache, setRefreshingCache] = useState(false);
 
-  const hasCacheData = (resource.cache?.cachedTypes?.length ?? 0) > 0;
+  const hasCacheData = (resource.dataStates?.length ?? 0) > 0;
 
   const handleRefreshCache = async () => {
     if (refreshingCache) return;

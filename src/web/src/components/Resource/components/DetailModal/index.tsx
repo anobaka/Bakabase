@@ -353,7 +353,7 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
                         </Button>
                       </Tooltip>
                     )}
-                    {(resource.cache?.cachedTypes?.length ?? 0) > 0 && (
+                    {(resource.dataStates?.length ?? 0) > 0 && (
                       <Tooltip content={t("resource.action.refreshCache.tooltip")}>
                         <Button
                           isIconOnly
