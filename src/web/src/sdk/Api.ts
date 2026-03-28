@@ -652,7 +652,6 @@ export interface BakabaseAbstractionsModelsDomainResource {
   playedAt?: string;
   covers?: string[];
   playableItems?: BakabaseAbstractionsModelsDomainPlayableItem[];
-  hasMorePlayableFiles: boolean;
   dataStates?: BakabaseAbstractionsModelsDomainResourceDataState[];
   /** @deprecated */
   mediaLibraryName?: string;
@@ -705,7 +704,6 @@ export interface BakabaseAbstractionsModelsDomainResourceDataState {
 export interface BakabaseAbstractionsModelsDomainResourceFileSystemCache {
   coverPaths?: string[];
   playableFilePaths?: string[];
-  hasMorePlayableFiles: boolean;
   cachedTypes: BakabaseAbstractionsModelsDomainConstantsResourceCacheType[];
 }
 
@@ -9645,56 +9643,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Resource
-     * @name DiscoverResourceCover
-     * @request GET:/resource/{id}/cover
-     */
-    discoverResourceCover: (id: number, params: RequestParams = {}) =>
-      this.request<void, any>({
-        path: `/resource/${id}/cover`,
-        method: "GET",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name SaveCover
-     * @request PUT:/resource/{id}/cover
-     */
-    saveCover: (
-      id: number,
-      data: BakabaseServiceModelsInputResourceCoverSaveInputModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/${id}/cover`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name GetResourcePlayableFiles
-     * @request GET:/resource/{id}/playable-files
-     */
-    getResourcePlayableFiles: (id: number, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsListResponse1SystemString, any>({
-        path: `/resource/${id}/playable-files`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
      * @name SetResourceMediaLibraries
      * @request PUT:/resource/media-libraries
      */
@@ -10060,6 +10008,27 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       return baseUrl + path;
     },
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name SaveCover
+     * @request PUT:/resource/{id}/cover
+     */
+    saveCover: (
+      id: number,
+      data: BakabaseServiceModelsInputResourceCoverSaveInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/${id}/cover`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
 
     /**
      * No description

@@ -18,13 +18,41 @@ import ThirdPartyIcon from "@/components/ThirdPartyIcon";
 import { isThirdPartyDeveloping } from "@/pages/downloader/models";
 import DevelopingChip from "@/components/Chips/DevelopingChip";
 import { ThirdPartyId as ThirdPartyIdEnum } from "@/sdk/constants";
+import {
+  ExHentaiConfig,
+  ExHentaiConfigField,
+  DLsiteConfig,
+  DLsiteConfigField,
+  SteamConfig,
+  SteamConfigField,
+} from "@/components/ThirdPartyConfig";
 
 type Props = {
   onSubmitted?: any;
 } & DestroyableProps;
 
+const thirdPartyAccountConfigs: Record<number, {
+  component: React.ComponentType<any>;
+  fields: any[];
+}> = {
+  [ThirdPartyIdEnum.ExHentai]: {
+    component: ExHentaiConfig,
+    fields: [ExHentaiConfigField.Accounts],
+  },
+  [ThirdPartyIdEnum.DLsite]: {
+    component: DLsiteConfig,
+    fields: [DLsiteConfigField.Accounts],
+  },
+  [ThirdPartyIdEnum.Steam]: {
+    component: SteamConfig,
+    fields: [SteamConfigField.Accounts],
+  },
+};
+
 const ConfigurationsModal = ({ onSubmitted, onDestroyed }: Props) => {
   const { t } = useTranslation();
+
+  const [accountConfigOpen, setAccountConfigOpen] = useState<ThirdPartyId | null>(null);
 
   const [thirdPartyGroups, setThirdPartyGroups] = useState<{
     [key in ThirdPartyId]?: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloaderDefinition[];
@@ -223,7 +251,8 @@ const ConfigurationsModal = ({ onSubmitted, onDestroyed }: Props) => {
         selectedKey={selectedTab?.toString()}
         onSelectionChange={(key) => handleTabChange(key as string)}
         classNames={{
-          tab: "justify-start"
+          tab: "justify-start",
+          panel: "w-full",
         }}
       >
         {Object.entries(thirdPartyGroups).map(([thirdPartyIdStr]) => {
@@ -247,6 +276,27 @@ const ConfigurationsModal = ({ onSubmitted, onDestroyed }: Props) => {
                 </div>
               }
             >
+              {thirdPartyAccountConfigs[thirdPartyId] && (
+                <>
+                  <div className="mb-4">
+                    <button
+                      className="text-sm text-primary underline cursor-pointer"
+                      onClick={() => setAccountConfigOpen(thirdPartyId)}
+                    >
+                      {t("resourceSource.action.configure")} {t("resourceSource.config.tab.accounts")}
+                    </button>
+                  </div>
+                  {accountConfigOpen === thirdPartyId && (() => {
+                    const AccountConfigComponent = thirdPartyAccountConfigs[thirdPartyId].component;
+                    return (
+                      <AccountConfigComponent
+                        fields={thirdPartyAccountConfigs[thirdPartyId].fields}
+                        onDestroyed={() => setAccountConfigOpen(null)}
+                      />
+                    );
+                  })()}
+                </>
+              )}
               {options && (
                 <DownloaderOptions
                   namingDefinition={allNamingDefinitions[thirdPartyId]}

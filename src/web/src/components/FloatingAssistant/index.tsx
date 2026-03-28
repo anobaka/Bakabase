@@ -10,7 +10,7 @@ import {
   PauseOutlined,
 } from "@ant-design/icons";
 
-import { BTaskStatus } from "@/sdk/constants";
+import { BTaskStatus, DownloadTaskStatus } from "@/sdk/constants";
 import {
   Button,
   CircularProgress,
@@ -22,10 +22,12 @@ import BApi from "@/sdk/BApi";
 import { buildLogger } from "@/components/utils";
 
 import { useBTasksStore, selectTasks } from "@/stores/bTasks";
+import { useDownloadTasksStore } from "@/stores/downloadTasks";
 import { AssistantStatus, POLLING_INTERVAL_MS } from "./constants";
 import type { AssistantStatusType } from "./constants";
 import { useDraggable } from "./hooks/useDraggable";
 import { TaskTable } from "./components/TaskTable";
+import { DownloadTaskTable } from "./components/DownloadTaskTable";
 
 const log = buildLogger("FloatingAssistant");
 
@@ -39,6 +41,7 @@ const FloatingAssistant = () => {
   const { position, handleMouseDown, isDragging, isDraggingState } = useDraggable();
 
   const bTasks = useBTasksStore(selectTasks);
+  const downloadTasks = useDownloadTasksStore((s) => s.tasks);
 
   // Tick to trigger re-render so simulated durations update every second
   const [, setNowTick] = useState<number>(Date.now());
@@ -52,21 +55,32 @@ const FloatingAssistant = () => {
     log("Initializing...");
     const queryTask = setInterval(() => {
       const tempTasks = useBTasksStore.getState().tasks;
+      const tempDownloads = useDownloadTasksStore.getState().tasks;
       let newStatus: AssistantStatusType = AssistantStatus.AllDone;
 
-      if (tempTasks.length > 0) {
+      const hasActiveDownloads = tempDownloads.some(
+        (d) =>
+          d.status === DownloadTaskStatus.Downloading ||
+          d.status === DownloadTaskStatus.Starting ||
+          d.status === DownloadTaskStatus.InQueue,
+      );
+      const hasFailedDownloads = tempDownloads.some(
+        (d) => d.status === DownloadTaskStatus.Failed,
+      );
+
+      if (tempTasks.length > 0 || hasActiveDownloads || hasFailedDownloads) {
         const ongoingTasks = tempTasks.filter(
           (a) => a.status === BTaskStatus.Running,
         );
 
-        if (ongoingTasks.length > 0) {
+        if (ongoingTasks.length > 0 || hasActiveDownloads) {
           newStatus = AssistantStatus.Working;
         } else {
           const failedTasks = tempTasks.filter(
             (a) => a.status === BTaskStatus.Error,
           );
 
-          if (failedTasks.length > 0) {
+          if (failedTasks.length > 0 || hasFailedDownloads) {
             newStatus = AssistantStatus.Failed;
           } else {
             const doneTasks = tempTasks.filter(
@@ -112,6 +126,14 @@ const FloatingAssistant = () => {
           task.status === BTaskStatus.Error ||
           task.status === BTaskStatus.Cancelled),
     ), [bTasks]);
+
+  const activeDownloadTasks = useMemo(() =>
+    downloadTasks.filter(
+      (task) =>
+        task.status === DownloadTaskStatus.Downloading ||
+        task.status === DownloadTaskStatus.Starting ||
+        task.status === DownloadTaskStatus.InQueue,
+    ), [downloadTasks]);
 
   const runningTasks = useMemo(() =>
     bTasks.filter((task) => task.status === BTaskStatus.Running),
@@ -166,7 +188,7 @@ const FloatingAssistant = () => {
         >
           {/* Working - CircularProgress with task count */}
           <Tooltip
-            content={`${runningTasks.length} ${t("floatingAssistant.status.tasksRunning")} (${overallProgress}%)`}
+            content={`${runningTasks.length + activeDownloadTasks.length} ${t("floatingAssistant.status.tasksRunning")} (${overallProgress}%)`}
             placement="right"
             className="working-tooltip"
           >
@@ -183,7 +205,7 @@ const FloatingAssistant = () => {
                   indicator: "stroke-primary",
                 }}
               />
-              <span className="task-count">{runningTasks.length}</span>
+              <span className="task-count">{runningTasks.length + activeDownloadTasks.length}</span>
             </div>
           </Tooltip>
           {/* AllDone */}
@@ -232,6 +254,7 @@ const FloatingAssistant = () => {
       <div className={"flex flex-col gap-2 p-2 min-w-[300px]"}>
         <div className="flex flex-col gap-1 max-h-[600px] mt-2 overflow-auto">
           <TaskTable tasks={bTasks} />
+          <DownloadTaskTable tasks={downloadTasks} />
         </div>
         <Divider orientation={"horizontal"} />
         <div className="flex items-center gap-2 flex-wrap">

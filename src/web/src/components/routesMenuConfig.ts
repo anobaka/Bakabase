@@ -158,14 +158,6 @@ export const routesMenuConfig: RouteMenuItem[] = [
         menu: true,
       },
       {
-        name: "menu.extensionGroup",
-        path: "/extension-group",
-        component: ExtensionGroup,
-        icon: AiOutlineUngroup,
-        layout: "basic",
-        menu: true,
-      },
-      {
         name: "menu.cache",
         path: "/cache",
         component: CachePage,
@@ -204,6 +196,14 @@ export const routesMenuConfig: RouteMenuItem[] = [
         path: "/alias",
         component: AliasPage,
         icon: AiOutlineBranches,
+        layout: "basic",
+        menu: true,
+      },
+      {
+        name: "menu.extensionGroup",
+        path: "/extension-group",
+        component: ExtensionGroup,
+        icon: AiOutlineUngroup,
         layout: "basic",
         menu: true,
       }

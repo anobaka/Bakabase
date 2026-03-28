@@ -4,7 +4,7 @@
   "text.label.opt": "操作",
   "text.label.original": "原始",
   "text.label.pretreated": "处理后",
-  "text.action.addPrefabs": "添加预设",
+  "text.action.addPrefabs": "添加预设数据",
   "text.label.pretreatmentTest": "预处理测试",
   "text.input.enterText": "输入文本",
   "text.action.runPretreatment": "运行预处理",
@@ -13,10 +13,10 @@
 
   "SpecialTextType.Useless": "无用文本",
   "SpecialTextType.Language": "语言",
-  "SpecialTextType.Wrapper": "包装器",
-  "SpecialTextType.Standardization": "标准化",
-  "SpecialTextType.Volume": "卷",
-  "SpecialTextType.Trim": "修剪",
+  "SpecialTextType.Wrapper": "包裹符号",
+  "SpecialTextType.Standardization": "同义词",
+  "SpecialTextType.Volume": "卷号",
+
   "SpecialTextType.DateTime": "日期时间",
 
   "text.typeDescription.useless": "忽略被正则表达式成功匹配的包装器内的部分",

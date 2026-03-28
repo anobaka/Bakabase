@@ -4,7 +4,7 @@
   "text.label.opt": "Opt",
   "text.label.original": "Original",
   "text.label.pretreated": "Pretreated",
-  "text.action.addPrefabs": "Add prefabs",
+  "text.action.addPrefabs": "Add preset data",
   "text.label.pretreatmentTest": "Pretreatment test",
   "text.input.enterText": "Enter text",
   "text.action.runPretreatment": "Run pretreatment",
@@ -15,8 +15,8 @@
   "SpecialTextType.Language": "Language",
   "SpecialTextType.Wrapper": "Wrapper",
   "SpecialTextType.Standardization": "Standardization",
-  "SpecialTextType.Volume": "Volume",
-  "SpecialTextType.Trim": "Trim",
+  "SpecialTextType.Volume": "Volume Number",
+
   "SpecialTextType.DateTime": "DateTime",
 
   "text.typeDescription.useless": "Ignore the part inside the wrapper that is successfully matched by the regular expression",

@@ -20,5 +20,11 @@
   "floatingAssistant.tip.persistentScheduledTask": "Persistent scheduled task",
   "floatingAssistant.tip.estimatedCompletion": "Estimated completion",
   "floatingAssistant.empty.noBackgroundTask": "No background task",
-  "floatingAssistant.empty.noTasksMatchFilter": "No tasks match the filter"
+  "floatingAssistant.empty.noTasksMatchFilter": "No tasks match the filter",
+  "floatingAssistant.downloadTasks": "Download Tasks",
+  "floatingAssistant.empty.noActiveDownloads": "No active downloads",
+  "floatingAssistant.downloadStatus.inQueue": "In Queue",
+  "floatingAssistant.downloadStatus.starting": "Starting",
+  "floatingAssistant.downloadStatus.downloading": "Downloading",
+  "floatingAssistant.downloadStatus.failed": "Failed"
 }

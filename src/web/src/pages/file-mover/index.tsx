@@ -2,7 +2,7 @@
 
 import React, { useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { DeleteOutlined, FolderOpenOutlined, PlusCircleOutlined, ArrowLeftOutlined } from "@ant-design/icons";
+import { DeleteOutlined, FolderOpenOutlined, PlusCircleOutlined } from "@ant-design/icons";
 import { MdWarning, MdFolder } from "react-icons/md";
 import moment from "moment";
 import dayjs from "dayjs";
@@ -224,6 +224,7 @@ const FileMoverPage = () => {
         <CardBody className="flex flex-col gap-1.5 p-2 px-3">
           <div className="flex items-center justify-between pb-1 border-b border-divider">
             <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-primary">{t<string>("fileMover.label.targetPath")}</span>
               <Button
                 color="primary"
                 size="sm"
@@ -270,7 +271,7 @@ const FileMoverPage = () => {
           <div>
             <div className="flex items-center justify-between mb-1">
               <span className="flex items-center text-xs text-default-500">
-                {t<string>("fileMover.label.sources")}
+                {t<string>("fileMover.label.sourcesDescription")}
                 {(target.sources ?? []).length > 0 && (
                   <Chip size="sm" variant="flat" className="ml-2">
                     {(target.sources ?? []).length}
@@ -299,7 +300,6 @@ const FileMoverPage = () => {
               <div className="flex flex-col gap-1">
                 {(target.sources ?? []).map((sourcePath) => (
                   <div key={sourcePath} className="flex items-center gap-1.5 p-1 px-1.5 bg-default-50 rounded-md">
-                    <ArrowLeftOutlined className="text-danger shrink-0" />
                     {renderSourceItem(target.path, sourcePath)}
                   </div>
                 ))}

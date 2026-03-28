@@ -3989,38 +3989,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/resource/{id}/cover": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["DiscoverResourceCover"];
-        put: operations["SaveCover"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/resource/{id}/playable-files": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["GetResourcePlayableFiles"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/resource/media-libraries": {
         parameters: {
             query?: never;
@@ -4222,6 +4190,22 @@ export interface paths {
         };
         get: operations["SearchResourcePaths"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource/{id}/cover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["SaveCover"];
         post?: never;
         delete?: never;
         options?: never;
@@ -5408,7 +5392,6 @@ export interface components {
             playedAt?: string;
             covers?: string[];
             playableItems?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PlayableItem"][];
-            hasMorePlayableFiles: boolean;
             dataStates?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceDataState"][];
             /** @deprecated */
             mediaLibraryName?: string;
@@ -5450,7 +5433,6 @@ export interface components {
         "Bakabase.Abstractions.Models.Domain.ResourceFileSystemCache": {
             coverPaths?: string[];
             playableFilePaths?: string[];
-            hasMorePlayableFiles: boolean;
             cachedTypes: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceCacheType"][];
         };
         "Bakabase.Abstractions.Models.Domain.ResourceProfileEnhancerOptions": {
@@ -17923,81 +17905,6 @@ export interface operations {
             };
         };
     };
-    DiscoverResourceCover: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    SaveCover: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceCoverSaveInputModel"];
-                "application/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceCoverSaveInputModel"];
-                "text/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceCoverSaveInputModel"];
-                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceCoverSaveInputModel"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
-    GetResourcePlayableFiles: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.String]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.String]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.String]"];
-                };
-            };
-        };
-    };
     SetResourceMediaLibraries: {
         parameters: {
             query?: never;
@@ -18340,6 +18247,37 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourcePathInfoViewModel]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourcePathInfoViewModel]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourcePathInfoViewModel]"];
+                };
+            };
+        };
+    };
+    SaveCover: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceCoverSaveInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceCoverSaveInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceCoverSaveInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceCoverSaveInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                 };
             };
         };

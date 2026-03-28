@@ -491,6 +491,10 @@ export function TaskTable({ tasks }: TaskTableProps) {
             {/* Remaining */}
             <TableCell>
               {(() => {
+                // Show nothing for completed/cancelled tasks
+                if (task.status === BTaskStatus.Completed || task.status === BTaskStatus.Cancelled || task.percentage === 100) {
+                  return null;
+                }
                 const ms = computeDisplayRemainingMs(task);
                 if (ms == null) {
                   // Show next run time for persistent tasks
@@ -503,7 +507,18 @@ export function TaskTable({ tasks }: TaskTableProps) {
                   }
                   return null;
                 }
-                const remaining = dayjs.duration(ms).format("HH:mm:ss");
+                const totalSeconds = Math.floor(ms / 1000);
+                const hours = Math.floor(totalSeconds / 3600);
+                const minutes = Math.floor((totalSeconds % 3600) / 60);
+                const seconds = totalSeconds % 60;
+                let remaining: string;
+                if (totalSeconds < 60) {
+                  remaining = "< 1m";
+                } else if (hours > 0) {
+                  remaining = `${hours}h ${minutes}m`;
+                } else {
+                  remaining = `${minutes}m ${seconds}s`;
+                }
                 const estimatedEndTime = dayjs().add(ms, "millisecond").format("HH:mm");
                 return (
                   <Tooltip content={`${t("floatingAssistant.tip.estimatedCompletion")}: ${estimatedEndTime}`} placement="top">

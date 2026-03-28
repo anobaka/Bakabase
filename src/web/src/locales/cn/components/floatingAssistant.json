@@ -20,5 +20,11 @@
   "floatingAssistant.tip.persistentScheduledTask": "持久化定时任务",
   "floatingAssistant.tip.estimatedCompletion": "预计完成时间",
   "floatingAssistant.empty.noBackgroundTask": "无后台任务",
-  "floatingAssistant.empty.noTasksMatchFilter": "没有符合筛选条件的任务"
+  "floatingAssistant.empty.noTasksMatchFilter": "没有符合筛选条件的任务",
+  "floatingAssistant.downloadTasks": "下载任务",
+  "floatingAssistant.empty.noActiveDownloads": "无活跃下载",
+  "floatingAssistant.downloadStatus.inQueue": "排队中",
+  "floatingAssistant.downloadStatus.starting": "启动中",
+  "floatingAssistant.downloadStatus.downloading": "下载中",
+  "floatingAssistant.downloadStatus.failed": "失败"
 }

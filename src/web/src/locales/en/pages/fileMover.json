@@ -4,6 +4,8 @@
   "fileMover.label.delay": "Delay",
   "fileMover.tip.delay": "Files or directories will be moved after the delayed time from the time they are created here. The delay is working for the first layer entries only.",
   "fileMover.label.sources": "Sources",
+  "fileMover.label.sourcesDescription": "Source paths (contents will be moved into target path)",
+  "fileMover.label.targetPath": "Target Path",
   "fileMover.action.addSource": "Add source",
   "fileMover.action.addTarget": "Add target path",
   "fileMover.empty.noSources": "No sources configured",

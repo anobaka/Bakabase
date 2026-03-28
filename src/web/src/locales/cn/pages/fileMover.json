@@ -4,6 +4,8 @@
   "fileMover.label.delay": "延迟",
   "fileMover.tip.delay": "文件或目录将在此处创建后延迟指定时间后移动。延迟仅对第一层条目生效。",
   "fileMover.label.sources": "来源",
+  "fileMover.label.sourcesDescription": "源路径（内部内容将被移动到目标路径）",
+  "fileMover.label.targetPath": "目标路径",
   "fileMover.action.addSource": "添加来源",
   "fileMover.action.addTarget": "添加目标路径",
   "fileMover.empty.noSources": "未配置来源",

@@ -32,11 +32,11 @@ const FileSystemSelectorButton = ({
   if (!path) {
     if (!children) {
       if (fileSystemSelectorProps.targetType === "folder") {
-        label = t<string>("Select folder");
+        label = t<string>("fileSystemSelector.title.selectFolder");
       } else if (fileSystemSelectorProps.targetType === "file") {
-        label = t<string>("Select file");
+        label = t<string>("fileSystemSelector.title.selectFile");
       } else {
-        label = t<string>("Select file system entries");
+        label = t<string>("fileSystemSelector.title.selectEntries");
       }
     } else {
       label = children;
