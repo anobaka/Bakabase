@@ -134,9 +134,129 @@ public class PathMarkSyncService : ScopedService
             var mediaLibraryMarks = marks.Where(m => m.Type == PathMarkType.MediaLibrary).OrderByDescending(m => m.Priority).ToList();
 
             var marksToDelete = marks.Where(m => m.SyncStatus == PathMarkSyncStatus.PendingDelete).Select(m => m.Id).ToList();
+            ctx.MarksToDeleteIds = marksToDelete.ToHashSet();
             var activeResourceMarks = resourceMarks.Where(m => m.SyncStatus != PathMarkSyncStatus.PendingDelete).ToList();
             var activePropertyMarks = propertyMarks.Where(m => m.SyncStatus != PathMarkSyncStatus.PendingDelete).ToList();
             var activeMediaLibraryMarks = mediaLibraryMarks.Where(m => m.SyncStatus != PathMarkSyncStatus.PendingDelete).ToList();
+
+            // When deleting resource marks, find other synced resource marks that cover the same paths
+            // to ensure shared resources are not incorrectly deleted
+            var deletingResourceMarks = resourceMarks.Where(m => m.SyncStatus == PathMarkSyncStatus.PendingDelete).ToList();
+            if (deletingResourceMarks.Count > 0)
+            {
+                var deletingPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var dm in deletingResourceMarks)
+                {
+                    deletingPaths.Add(ctx.GetStandardizedPath(dm.Path));
+                }
+
+                var excludeIds = marks.Select(m => m.Id).ToHashSet();
+                var allResourceMarks = await _pathMarkService.GetAll(
+                    m => m.Type == PathMarkType.Resource && !excludeIds.Contains(m.Id) && !m.IsDeleted);
+                var additionalResourceMarks = allResourceMarks
+                    .Where(m => m.SyncStatus is PathMarkSyncStatus.Synced or PathMarkSyncStatus.Pending)
+                    .Where(m =>
+                    {
+                        var markPath = ctx.GetStandardizedPath(m.Path);
+                        if (string.IsNullOrEmpty(markPath)) return false;
+                        // Include if paths overlap (either is parent of the other)
+                        var markPathWithSep = markPath + InternalOptions.DirSeparator;
+                        foreach (var dp in deletingPaths)
+                        {
+                            var dpWithSep = dp + InternalOptions.DirSeparator;
+                            if (markPath.Equals(dp, StringComparison.OrdinalIgnoreCase) ||
+                                markPath.StartsWith(dpWithSep, StringComparison.OrdinalIgnoreCase) ||
+                                dp.StartsWith(markPathWithSep, StringComparison.OrdinalIgnoreCase))
+                            {
+                                return true;
+                            }
+                        }
+                        return false;
+                    })
+                    .ToList();
+
+                if (additionalResourceMarks.Count > 0)
+                {
+                    _logger.LogInformation(
+                        "[Sync] Found {Count} additional resource marks covering same paths as deleting marks",
+                        additionalResourceMarks.Count);
+                    activeResourceMarks = activeResourceMarks
+                        .Concat(additionalResourceMarks)
+                        .DistinctBy(m => m.Id)
+                        .OrderByDescending(m => m.Priority)
+                        .ToList();
+
+                    // Load old effects for additional resource marks
+                    var additionalResMarkIds = additionalResourceMarks
+                        .Select(m => m.Id)
+                        .Where(id => !allMarkIds.Contains(id))
+                        .Distinct()
+                        .ToList();
+                    if (additionalResMarkIds.Count > 0)
+                    {
+                        await LoadOldEffects(additionalResMarkIds, ctx);
+                        allMarkIds.AddRange(additionalResMarkIds);
+                    }
+                }
+            }
+
+            // When deleting property/media library marks, find other synced marks of the same type
+            // that cover the same resources to ensure shared property values are not incorrectly deleted
+            var deletingPropertyMarks = propertyMarks.Where(m => m.SyncStatus == PathMarkSyncStatus.PendingDelete).ToList();
+            if (deletingPropertyMarks.Count > 0)
+            {
+                var additionalPropMarks = await FindRelatedMarksByOldEffects(deletingPropertyMarks, PathMarkType.Property, marks, ctx);
+                if (additionalPropMarks.Count > 0)
+                {
+                    _logger.LogInformation(
+                        "[Sync] Found {Count} additional property marks covering same resources as deleting marks",
+                        additionalPropMarks.Count);
+                    activePropertyMarks = activePropertyMarks
+                        .Concat(additionalPropMarks)
+                        .DistinctBy(m => m.Id)
+                        .OrderByDescending(m => m.Priority)
+                        .ToList();
+
+                    var additionalPropMarkIds = additionalPropMarks
+                        .Select(m => m.Id)
+                        .Where(id => !allMarkIds.Contains(id))
+                        .Distinct()
+                        .ToList();
+                    if (additionalPropMarkIds.Count > 0)
+                    {
+                        await LoadOldEffects(additionalPropMarkIds, ctx);
+                        allMarkIds.AddRange(additionalPropMarkIds);
+                    }
+                }
+            }
+
+            var deletingMediaLibraryMarks = mediaLibraryMarks.Where(m => m.SyncStatus == PathMarkSyncStatus.PendingDelete).ToList();
+            if (deletingMediaLibraryMarks.Count > 0)
+            {
+                var additionalMlMarks = await FindRelatedMarksByOldEffects(deletingMediaLibraryMarks, PathMarkType.MediaLibrary, marks, ctx);
+                if (additionalMlMarks.Count > 0)
+                {
+                    _logger.LogInformation(
+                        "[Sync] Found {Count} additional media library marks covering same resources as deleting marks",
+                        additionalMlMarks.Count);
+                    activeMediaLibraryMarks = activeMediaLibraryMarks
+                        .Concat(additionalMlMarks)
+                        .DistinctBy(m => m.Id)
+                        .OrderByDescending(m => m.Priority)
+                        .ToList();
+
+                    var additionalMlMarkIds = additionalMlMarks
+                        .Select(m => m.Id)
+                        .Where(id => !allMarkIds.Contains(id))
+                        .Distinct()
+                        .ToList();
+                    if (additionalMlMarkIds.Count > 0)
+                    {
+                        await LoadOldEffects(additionalMlMarkIds, ctx);
+                        allMarkIds.AddRange(additionalMlMarkIds);
+                    }
+                }
+            }
 
             // Pre-collect resource boundary paths
             foreach (var mark in activeResourceMarks)
@@ -900,6 +1020,12 @@ public class PathMarkSyncService : ScopedService
                 if (!ctx.FinalResourcePaths.ContainsKey(effect.Path))
                 {
                     ctx.ResourcePathsToDelete.Add(effect.Path);
+
+                    // Track paths from explicitly deleted marks (for bakabase.json bypass)
+                    if (ctx.MarksToDeleteIds.Contains(markId))
+                    {
+                        ctx.ResourcePathsFromDeletedMarks.Add(effect.Path);
+                    }
                 }
             }
         }
@@ -1161,12 +1287,22 @@ public class PathMarkSyncService : ScopedService
                 if (!ctx.PathToResource.TryGetValue(path, out var resource))
                     continue;
 
-                // Check bakabase.json preservation
+                // Check bakabase.json preservation (skip for explicitly deleted marks)
                 if (_resourceOptions.Value.KeepResourcesOnPathChange && !resource.IsFile)
                 {
                     var markerPath = Path.Combine(path, InternalOptions.ResourceMarkerFileName);
                     if (File.Exists(markerPath))
-                        continue;
+                    {
+                        if (ctx.ResourcePathsFromDeletedMarks.Contains(path))
+                        {
+                            // Mark was explicitly deleted with cleanup - remove the marker file
+                            try { File.Delete(markerPath); } catch { /* ignore */ }
+                        }
+                        else
+                        {
+                            continue;
+                        }
+                    }
                 }
 
                 resourcesToDelete.Add(resource.Id);
@@ -1661,6 +1797,51 @@ public class PathMarkSyncService : ScopedService
             {
                 if (resourcePath.StartsWith(markPathWithSeparator, StringComparison.OrdinalIgnoreCase) ||
                     resourcePath.Equals(markPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    relatedMarks.Add(mark);
+                    break;
+                }
+            }
+        }
+
+        return relatedMarks;
+    }
+
+    /// <summary>
+    /// Find other synced marks of the same type that cover the same paths as the deleting marks.
+    /// Uses old effects of the deleting marks to determine which paths/resources are affected,
+    /// then finds other marks whose paths overlap.
+    /// </summary>
+    private async Task<List<PathMark>> FindRelatedMarksByOldEffects(
+        List<PathMark> deletingMarks, PathMarkType type, List<PathMark> allCurrentMarks, SyncContext ctx)
+    {
+        // Collect affected paths from old effects of deleting marks
+        var affectedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var dm in deletingMarks)
+        {
+            affectedPaths.Add(ctx.GetStandardizedPath(dm.Path));
+        }
+
+        var excludeIds = allCurrentMarks.Select(m => m.Id).ToHashSet();
+        var allMarks = await _pathMarkService.GetAll(
+            m => m.Type == type && !excludeIds.Contains(m.Id) && !m.IsDeleted);
+
+        var relatedMarks = new List<PathMark>();
+        foreach (var mark in allMarks)
+        {
+            if (mark.SyncStatus is not (PathMarkSyncStatus.Pending or PathMarkSyncStatus.Synced))
+                continue;
+
+            var markPath = ctx.GetStandardizedPath(mark.Path);
+            if (string.IsNullOrEmpty(markPath)) continue;
+
+            var markPathWithSep = markPath + InternalOptions.DirSeparator;
+            foreach (var ap in affectedPaths)
+            {
+                var apWithSep = ap + InternalOptions.DirSeparator;
+                if (markPath.Equals(ap, StringComparison.OrdinalIgnoreCase) ||
+                    markPath.StartsWith(apWithSep, StringComparison.OrdinalIgnoreCase) ||
+                    ap.StartsWith(markPathWithSep, StringComparison.OrdinalIgnoreCase))
                 {
                     relatedMarks.Add(mark);
                     break;

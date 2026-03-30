@@ -25,7 +25,7 @@ import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContext
 import { useCopyMarksStore } from "@/stores/copyMarks";
 import { getNewMarks, getExistingMarksCount } from "@/pages/path-mark-config/utils/markComparison";
 import { PathMarkType } from "@/sdk/constants";
-import { AiOutlinePlus } from "react-icons/ai";
+import { AiOutlinePlus, AiOutlineFileSearch, AiOutlineTags, AiOutlineAppstore } from "react-icons/ai";
 
 export interface PathTreeNode {
   name: string;
@@ -255,13 +255,13 @@ const TreeNodeComponent = ({
                 onAction={(key) => handleAddMark(Number(key) as PathMarkType)}
               >
                 <DropdownItem key={PathMarkType.Resource} className="text-success">
-                  {t("pathMarks.label.resourceMark")}
+                  <span className="flex items-center gap-1.5"><AiOutlineFileSearch />{t("pathMarks.label.resourceMark")}</span>
                 </DropdownItem>
                 <DropdownItem key={PathMarkType.Property} className="text-primary">
-                  {t("pathMarks.label.propertyMark")}
+                  <span className="flex items-center gap-1.5"><AiOutlineTags />{t("pathMarks.label.propertyMark")}</span>
                 </DropdownItem>
                 <DropdownItem key={PathMarkType.MediaLibrary} className="text-warning">
-                  {t("pathMarks.label.mediaLibraryMark")}
+                  <span className="flex items-center gap-1.5"><AiOutlineAppstore />{t("pathMarks.label.mediaLibraryMark")}</span>
                 </DropdownItem>
               </DropdownMenu>
             </Dropdown>

@@ -5426,6 +5426,7 @@ export interface components {
             listeningPorts?: number[];
             /** Format: int32 */
             maxParallelism?: number;
+            timeZoneId?: string;
         };
         "Bakabase.Infrastructures.Components.App.Models.RequestModels.CoreDataMoveRequestModel": {
             dataPath: string;
@@ -5470,6 +5471,8 @@ export interface components {
             maxParallelism?: number;
             /** Format: int32 */
             readonly effectiveMaxParallelism: number;
+            timeZoneId?: string;
+            effectiveTimeZone: components["schemas"]["System.TimeZoneInfo"];
         };
         /**
          * Format: int32
@@ -6062,10 +6065,10 @@ export interface components {
         };
         /**
          * Format: int32
-         * @description [1: SingleWork, 2: Watched, 3: List, 4: Torrent]
+         * @description [1: SingleWork, 2: Watched, 3: List]
          * @enum {integer}
          */
-        "Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloaders.ExHentai.ExHentaiDownloadTaskType": 1 | 2 | 3 | 4;
+        "Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloaders.ExHentai.ExHentaiDownloadTaskType": 1 | 2 | 3;
         "Bakabase.InsideWorld.Business.Components.FileExplorer.Entries.IwFsCompressedFileGroup": {
             keyName: string;
             files: string[];
@@ -6305,6 +6308,7 @@ export interface components {
             inlineDisplayName: boolean;
             autoSelectFirstPlayableFile: boolean;
             displayOperations: string[];
+            hideResourceBorder: boolean;
         };
         /**
          * Format: int32
@@ -8664,6 +8668,16 @@ export interface components {
          * @enum {integer}
          */
         "System.Security.SecurityRuleSet": 0 | 1 | 2;
+        "System.TimeZoneInfo": {
+            readonly id: string;
+            readonly hasIanaId: boolean;
+            readonly displayName: string;
+            readonly standardName: string;
+            readonly daylightName: string;
+            /** Format: date-span */
+            readonly baseUtcOffset: string;
+            readonly supportsDaylightSavingTime: boolean;
+        };
         "System.Type": {
             readonly name: string;
             readonly customAttributes: components["schemas"]["System.Reflection.CustomAttributeData"][];
@@ -15800,7 +15814,9 @@ export interface operations {
     };
     SoftDeletePathMark: {
         parameters: {
-            query?: never;
+            query?: {
+                cleanupEffects?: boolean;
+            };
             header?: never;
             path: {
                 id: number;
@@ -15851,6 +15867,7 @@ export interface operations {
         parameters: {
             query?: {
                 path?: string;
+                cleanupEffects?: boolean;
             };
             header?: never;
             path?: never;

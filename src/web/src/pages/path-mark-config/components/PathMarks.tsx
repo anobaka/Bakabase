@@ -6,7 +6,7 @@ import type { BTask } from "@/core/models/BTask";
 
 import React, { useCallback, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { AiOutlineAim, AiOutlineCopy } from "react-icons/ai";
+import { AiOutlineAim, AiOutlineCopy, AiOutlineFileSearch, AiOutlineTags, AiOutlineAppstore } from "react-icons/ai";
 
 import MarkConfigModal from "./MarkConfigModal";
 import PathMarkChip from "./PathMarkChip";
@@ -213,21 +213,21 @@ const PathMarks = ({ entry, marks = [], onSaveMark, onDeleteMark, onTaskComplete
                 className="text-success"
                 description={<ResourceDescription />}
               >
-                {t("common.label.resource")}
+                <span className="flex items-center gap-1.5"><AiOutlineFileSearch />{t("common.label.resource")}</span>
               </DropdownItem>
               <DropdownItem
                 key={PathMarkType.Property}
                 className="text-primary"
                 description={<PropertyDescription />}
               >
-                {t("common.label.property")}
+                <span className="flex items-center gap-1.5"><AiOutlineTags />{t("common.label.property")}</span>
               </DropdownItem>
               <DropdownItem
                 key={PathMarkType.MediaLibrary}
                 className="text-secondary"
                 description={<MediaLibraryDescription />}
               >
-                {t("common.label.mediaLibrary")}
+                <span className="flex items-center gap-1.5"><AiOutlineAppstore />{t("common.label.mediaLibrary")}</span>
               </DropdownItem>
             </DropdownMenu>
           </Dropdown>

@@ -99,6 +99,12 @@ internal class SyncContext
     // Paths affected by resource effect changes
     public HashSet<string> AffectedResourcePaths { get; } = new(StringComparer.OrdinalIgnoreCase);
 
+    // Mark IDs that are being explicitly deleted (PendingDelete)
+    public HashSet<int> MarksToDeleteIds { get; set; } = new();
+
+    // Resource paths from explicitly deleted marks (bypass bakabase.json preservation)
+    public HashSet<string> ResourcePathsFromDeletedMarks { get; } = new(StringComparer.OrdinalIgnoreCase);
+
     // Effect keys for current sync (used for diff detection)
     public HashSet<(int MarkId, PropertyPool Pool, int PropertyId, int ResourceId)> CurrentPropertyEffectKeys { get; } = new();
     public HashSet<(int MarkId, string Path)> CurrentResourceEffectKeys { get; } = new(new ResourceEffectKeyComparer());

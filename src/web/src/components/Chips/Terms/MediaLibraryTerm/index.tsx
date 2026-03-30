@@ -22,11 +22,11 @@ export const MediaLibraryDescription = () => {
   const { t } = useTranslation();
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-1.5">
       <p>{t("term.mediaLibrary.description")}</p>
-      <p>{t("term.mediaLibrary.usage")}</p>
-      <p className="text-secondary text-xs pt-1 border-t border-default-200">
-        {t("term.mediaLibrary.suggestion")}
+      <p className="text-default-500">{t("term.mediaLibrary.usage")}</p>
+      <p className="text-small text-warning-500 border-t border-default-200 pt-1.5">
+        {t("term.mediaLibrary.tip")}
       </p>
     </div>
   );

@@ -1067,6 +1067,7 @@ export interface BakabaseInfrastructuresComponentsAppModelsRequestModelsAppOptio
   listeningPorts?: number[];
   /** @format int32 */
   maxParallelism?: number;
+  timeZoneId?: string;
 }
 
 export interface BakabaseInfrastructuresComponentsAppModelsRequestModelsCoreDataMoveRequestModel {
@@ -1120,6 +1121,8 @@ export interface BakabaseInfrastructuresComponentsConfigurationsAppAppOptions {
   maxParallelism?: number;
   /** @format int32 */
   effectiveMaxParallelism: number;
+  timeZoneId?: string;
+  effectiveTimeZone: SystemTimeZoneInfo;
 }
 
 /**
@@ -1678,6 +1681,7 @@ export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsMode
   availableActions: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsConstantsDownloadTaskAction[];
   /** @format date-time */
   createdAt: string;
+  options?: string;
   displayName: string;
   canStart: boolean;
 }
@@ -1737,6 +1741,7 @@ export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsMode
   /** @minLength 1 */
   downloadPath: string;
   isDuplicateAllowed: boolean;
+  options?: string;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsInputDownloadTaskDeleteInputModel {
@@ -1754,6 +1759,7 @@ export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsMode
   endPage?: number;
   checkpoint?: string;
   autoRetry: boolean;
+  options?: string;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsInputDownloadTaskStartRequestModel {
@@ -1763,11 +1769,11 @@ export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsMode
 }
 
 /**
- * [1: SingleWork, 2: Watched, 3: List, 4: Torrent]
+ * [1: SingleWork, 2: Watched, 3: List]
  * @format int32
  */
 export type BakabaseInsideWorldBusinessComponentsDownloaderComponentsDownloadersExHentaiExHentaiDownloadTaskType =
-  1 | 2 | 3 | 4;
+  1 | 2 | 3;
 
 export interface BakabaseInsideWorldBusinessComponentsFileExplorerEntriesIwFsCompressedFileGroup {
   keyName: string;
@@ -3045,7 +3051,7 @@ export interface BakabaseServiceModelsInputDecompressionInputModelItem {
 }
 
 export interface BakabaseServiceModelsInputExHentaiDownloadTaskAddInputModel {
-  /** [1: SingleWork, 2: Watched, 3: List, 4: Torrent] */
+  /** [1: SingleWork, 2: Watched, 3: List] */
   type: BakabaseInsideWorldBusinessComponentsDownloaderComponentsDownloadersExHentaiExHentaiDownloadTaskType;
   link: string;
 }
@@ -5003,6 +5009,17 @@ export interface SystemRuntimeTypeHandle {
  * @format int32
  */
 export type SystemSecuritySecurityRuleSet = 0 | 1 | 2;
+
+export interface SystemTimeZoneInfo {
+  id: string;
+  hasIanaId: boolean;
+  displayName: string;
+  standardName: string;
+  daylightName: string;
+  /** @format date-span */
+  baseUtcOffset: string;
+  supportsDaylightSavingTime: boolean;
+}
 
 export interface SystemType {
   name: string;
@@ -14650,10 +14667,18 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name SoftDeletePathMark
      * @request DELETE:/path-mark/{id}
      */
-    softDeletePathMark: (id: number, params: RequestParams = {}) =>
+    softDeletePathMark: (
+      id: number,
+      query?: {
+        /** @default false */
+        cleanupEffects?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/path-mark/${id}`,
         method: "DELETE",
+        query: query,
         format: "json",
         ...params,
       }),
@@ -14719,6 +14744,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     softDeletePathMarksByPath: (
       query?: {
         path?: string;
+        /** @default false */
+        cleanupEffects?: boolean;
       },
       params: RequestParams = {},
     ) =>
@@ -14736,6 +14763,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     softDeletePathMarksByPathUrl: (query?: {
         path?: string;
+        /** @default false */
+        cleanupEffects?: boolean;
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/path-mark/by-path`;

@@ -6,7 +6,7 @@ import type { BakabaseAbstractionsModelsDomainPathMark } from "@/sdk/Api";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { MenuItem } from "@szhsin/react-menu";
-import { AiOutlineAim, AiOutlineCopy } from "react-icons/ai";
+import { AiOutlineAim, AiOutlineCopy, AiOutlineFileSearch, AiOutlineTags, AiOutlineAppstore } from "react-icons/ai";
 
 import PathMarks from "./PathMarks";
 import MarkConfigModal from "./MarkConfigModal";
@@ -15,7 +15,7 @@ import CopyMarksSidebar from "./CopyMarksSidebar";
 import usePathMarks from "../hooks/usePathMarks";
 
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import { toast, Modal } from "@/components/bakaui";
+import { toast, Modal, Checkbox } from "@/components/bakaui";
 import { FileExplorer } from "@/components/FileExplorer";
 import BApi from "@/sdk/BApi";
 import { PathMarkType } from "@/sdk/constants";
@@ -85,19 +85,35 @@ const PathMarkTreeView = ({
         return;
       }
 
-      const confirmed = await new Promise<boolean>((resolve) => {
+      const result = await new Promise<{ confirmed: boolean; cleanupEffects: boolean }>((resolve) => {
+        let cleanup = false;
         const modal = createPortal(Modal, {
           defaultVisible: true,
           title: t("pathMarkConfig.confirm.deleteMarkTitle"),
           children: (
-            <div>
-              <p>{t("pathMarkConfig.confirm.deleteMarkQuestion")}</p>
-              <p className="text-sm text-default-500 mt-2">
-                {t("common.label.path")}: {entry.path}
-              </p>
-              <p className="text-sm text-default-500">
-                {t("common.label.priority")}: {mark.priority}
-              </p>
+            <div className="flex flex-col gap-3">
+              <div>
+                <p>{t("pathMarkConfig.confirm.deleteMarkQuestion")}</p>
+                <p className="text-sm text-default-500 mt-2">
+                  {t("common.label.path")}: {entry.path}
+                </p>
+                <p className="text-sm text-default-500">
+                  {t("common.label.priority")}: {mark.priority}
+                </p>
+              </div>
+              <div className="border border-warning-200 rounded-lg p-3 bg-warning-50/50">
+                <Checkbox
+                  defaultSelected={false}
+                  onValueChange={(v) => { cleanup = v; }}
+                >
+                  <span className="text-sm font-medium">
+                    {t("pathMarks.checkbox.cleanupEffects")}
+                  </span>
+                </Checkbox>
+                <p className="text-xs text-default-500 mt-1 ml-7">
+                  {t("pathMarks.tip.cleanupEffectsDescription")}
+                </p>
+              </div>
             </div>
           ),
           footer: {
@@ -108,18 +124,18 @@ const PathMarkTreeView = ({
             },
           },
           onOk: () => {
-            resolve(true);
+            resolve({ confirmed: true, cleanupEffects: cleanup });
             modal.destroy();
           },
           onDestroyed: () => {
-            resolve(false);
+            resolve({ confirmed: false, cleanupEffects: false });
           },
         });
       });
 
-      if (confirmed) {
+      if (result.confirmed) {
         try {
-          await BApi.pathMark.softDeletePathMark(markId);
+          await BApi.pathMark.softDeletePathMark(markId, { cleanupEffects: result.cleanupEffects });
           toast.success(t("pathMarkConfig.success.markDeleted"));
           notifyMarksChanged();
         } catch (error) {
@@ -247,8 +263,8 @@ const PathMarkTreeView = ({
             }}
           >
             <div className="flex items-center gap-2">
-              <AiOutlineAim className="text-base text-success" />
-              {t("pathMarkConfig.action.addResourceMark", { count: entries.length })}
+              <AiOutlineFileSearch className="text-success" />
+              <span className="text-success">{t("pathMarkConfig.action.addResourceMark", { count: entries.length })}</span>
             </div>
           </MenuItem>
           <MenuItem
@@ -263,8 +279,8 @@ const PathMarkTreeView = ({
             }}
           >
             <div className="flex items-center gap-2">
-              <AiOutlineAim className="text-base text-primary" />
-              {t("pathMarkConfig.action.addPropertyMark", { count: entries.length })}
+              <AiOutlineTags className="text-primary" />
+              <span className="text-primary">{t("pathMarkConfig.action.addPropertyMark", { count: entries.length })}</span>
             </div>
           </MenuItem>
           <MenuItem
@@ -279,8 +295,8 @@ const PathMarkTreeView = ({
             }}
           >
             <div className="flex items-center gap-2">
-              <AiOutlineAim className="text-base text-secondary" />
-              {t("pathMarkConfig.action.addMediaLibraryMark", { count: entries.length })}
+              <AiOutlineAppstore className="text-secondary" />
+              <span className="text-secondary">{t("pathMarkConfig.action.addMediaLibraryMark", { count: entries.length })}</span>
             </div>
           </MenuItem>
           {canCopyMarks && (

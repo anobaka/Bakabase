@@ -49,6 +49,8 @@
   "pathMarks.action.pasteMarksWithExisting": "Paste {{count}} marks ({{existing}} already exist)",
 
   "pathMarks.checkbox.alsoDeleteChildMarks": "Also delete {{count}} mark(s) from {{pathCount}} child path(s)",
+  "pathMarks.checkbox.cleanupEffects": "Clean up effects produced by marks",
+  "pathMarks.tip.cleanupEffectsDescription": "When checked, deleting a resource mark will also delete the resources it created (unless covered by other resource marks), deleting a property mark will remove the property values it set, and deleting a media library mark will remove the media library associations it established. When unchecked, only the mark itself is removed — existing resources, property values, and media library associations remain unchanged.",
   "pathMarks.checkbox.includeChildPaths": "Include {{count}} child path(s) with marks",
   "pathMarks.checkbox.childPathsAvailableForTransfer": "+ {{count}} child path(s) with marks will also be available for transfer",
 

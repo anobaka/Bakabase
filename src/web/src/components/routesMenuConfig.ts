@@ -108,7 +108,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
     icon: AiOutlineControl,
     layout: "basic",
     menu: true,
-    isBeta: true,
+    // isBeta: true,
   },
   {
     name: "menu.pathMarks",
@@ -117,7 +117,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
     icon: AiOutlineTags,
     layout: "basic",
     menu: true,
-    isBeta: true,
+    // isBeta: true,
   },
   {
     name: "menu.resourceProfile",
@@ -126,7 +126,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
     icon: AiOutlineFilter,
     layout: "basic",
     menu: true,
-    isBeta: true,
+    // isBeta: true,
   },
   {
     name: "menu.data",

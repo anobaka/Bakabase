@@ -99,17 +99,33 @@ public class PathMarkController(IPathMarkService service, IPathMarkSyncService s
 
     [HttpDelete("{id:int}")]
     [SwaggerOperation(OperationId = "SoftDeletePathMark")]
-    public async Task<BaseResponse> SoftDelete(int id)
+    public async Task<BaseResponse> SoftDelete(int id, [FromQuery] bool cleanupEffects = false)
     {
-        await service.SoftDelete(id);
+        if (cleanupEffects)
+        {
+            await service.SoftDelete(id);
+        }
+        else
+        {
+            await service.HardDeleteWithoutCleanup(id);
+        }
+
         return BaseResponseBuilder.Ok;
     }
 
     [HttpDelete("by-path")]
     [SwaggerOperation(OperationId = "SoftDeletePathMarksByPath")]
-    public async Task<BaseResponse> SoftDeleteByPath([FromQuery] string path)
+    public async Task<BaseResponse> SoftDeleteByPath([FromQuery] string path, [FromQuery] bool cleanupEffects = false)
     {
-        await service.SoftDeleteByPath(path);
+        if (cleanupEffects)
+        {
+            await service.SoftDeleteByPath(path);
+        }
+        else
+        {
+            await service.HardDeleteByPathWithoutCleanup(path);
+        }
+
         return BaseResponseBuilder.Ok;
     }
 

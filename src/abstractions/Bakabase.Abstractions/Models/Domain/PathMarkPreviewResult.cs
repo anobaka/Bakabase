@@ -25,4 +25,9 @@ public class PathMarkPreviewResult
     /// For Property type: the extracted property value
     /// </summary>
     public string? PropertyValue { get; set; }
+
+    /// <summary>
+    /// Whether this result is a subdirectory example (when ApplyScope = MatchedAndSubdirectories)
+    /// </summary>
+    public bool IsSubdirectoryExample { get; set; }
 }

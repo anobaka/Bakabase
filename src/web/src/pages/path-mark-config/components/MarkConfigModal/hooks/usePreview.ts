@@ -9,6 +9,7 @@ export type PathMarkPreviewResult = {
   resourceLayerIndex?: number | null;
   resourceSegmentName?: string | null;
   propertyValue?: string | null;
+  isSubdirectoryExample?: boolean;
 };
 
 export type PreviewResultsByPath = {
@@ -108,13 +109,28 @@ export const usePreview = (
   }, [
     effectivePaths,
     markType,
+    // Match settings
     config.matchMode,
     config.layer,
     config.regex,
+    config.applyScope,
+    // Resource filter settings
     config.fsTypeFilter,
     config.extensions,
     config.extensionGroupIds,
-    config.applyScope,
+    // Property value settings
+    config.propertyPool,
+    config.propertyId,
+    config.valueType,
+    config.fixedValue,
+    config.valueMatchMode,
+    config.valueLayer,
+    config.valueRegex,
+    // MediaLibrary value settings
+    config.mediaLibraryId,
+    config.mediaLibraryValueType,
+    config.layerToMediaLibrary,
+    config.regexToMediaLibrary,
     debounceMs,
   ]);
 
