@@ -193,5 +193,6 @@
   "pathMarkConfig.label.nextStepHint": "下一步：查看所有已配置的标记，或配置资源扩展来定义增强器、播放器等设置",
   "pathMarkConfig.action.goToResourceProfile": "配置资源扩展",
   "pathMarkConfig.label.keepResourcesOnPathChange": "保持资源身份标识",
-  "pathMarkConfig.tip.keepResourcesOnPathChange": "通常情况下，系统会为每个资源路径创建一条资源数据。启用此选项后，系统会在资源文件夹中生成标记文件（bakabase.json）。下次同步资源标记时，如果资源路径发生变动，系统将不会为新路径创建新的资源数据，而是通过标记文件找到原有资源数据并更新其路径。"
+  "pathMarkConfig.tip.keepResourcesOnPathChange": "通常情况下，系统会为每个资源路径创建一条资源数据。启用此选项后，系统会在资源文件夹中生成标记文件（bakabase.json）。下次同步资源标记时，如果资源路径发生变动，系统将不会为新路径创建新的资源数据，而是通过标记文件找到原有资源数据并更新其路径。⚠️ 如果未启用此选项，当您修改资源路径后，下次同步时系统会将其视为一个全新的资源。同步后您通过手动编辑、增强器等方式为资源设置的数据将不会出现在新资源中（路径标记中配置的属性会被重新应用）。同时，如果旧路径仍能被资源标记匹配，旧资源数据会作为过时数据保留。",
+  "pathMarkConfig.warning.resourceIdentityNotEnabled": "提示：当前未启用「保持资源身份标识」。如果您修改了资源路径，下次同步时该路径将被视为一个全新的资源。同步后您通过手动编辑、增强器等方式额外设置的数据将不会出现在新资源中，这可能与您的预期不符。"
 }
