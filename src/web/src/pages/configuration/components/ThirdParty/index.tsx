@@ -32,9 +32,16 @@ import {
   useFantiaOptionsStore,
   usePatreonOptionsStore,
   useTmdbOptionsStore,
+  useSteamOptionsStore,
 } from "@/stores/options";
 import BApi from "@/sdk/BApi";
 import BetaChip from "@/components/Chips/BetaChip";
+import {
+  ExHentaiConfig,
+  SteamConfig,
+  DLsiteConfig,
+  DownloaderOptionsConfig,
+} from "@/components/ThirdPartyConfig";
 const ThirdParty = ({
   applyPatches = () => {},
 }: {
@@ -53,12 +60,10 @@ const ThirdParty = ({
   const fantiaOptions = useFantiaOptionsStore((state) => state.data);
   const patreonOptions = usePatreonOptionsStore((state) => state.data);
   const tmdbOptions = useTmdbOptionsStore((state) => state.data);
+  const steamOptions = useSteamOptionsStore((state) => state.data);
 
   const [tmpBilibiliOptions, setTmpBilibiliOptions] = useState(
     bilibiliOptions || {},
-  );
-  const [tmpExHentaiOptions, setTmpExHentaiOptions] = useState(
-    exhentaiOptions || {},
   );
   const [tmpPixivOptions, setTmpPixivOptions] = useState(pixivOptions || {});
   const [tmpSoulPlusOptions, setTmpSoulPlusOptions] = useState(
@@ -68,13 +73,16 @@ const ThirdParty = ({
     bangumiOptions || {},
   );
   const [tmpCienOptions, setTmpCienOptions] = useState(cienOptions || {});
-  const [tmpDLsiteOptions, setTmpDLsiteOptions] = useState(dlsiteOptions || {});
   const [tmpFanboxOptions, setTmpFanboxOptions] = useState(fanboxOptions || {});
   const [tmpFantiaOptions, setTmpFantiaOptions] = useState(fantiaOptions || {});
   const [tmpPatreonOptions, setTmpPatreonOptions] = useState(
     patreonOptions || {},
   );
   const [tmpTmdbOptions, setTmpTmdbOptions] = useState(tmdbOptions || {});
+
+  const [exhentaiConfigOpen, setExhentaiConfigOpen] = useState(false);
+  const [dlsiteConfigOpen, setDlsiteConfigOpen] = useState(false);
+  const [steamConfigOpen, setSteamConfigOpen] = useState(false);
 
   const [validatingCookies, setValidatingCookies] = useState<{
     [key: string]: boolean;
@@ -83,10 +91,6 @@ const ThirdParty = ({
   useEffect(() => {
     setTmpBilibiliOptions(JSON.parse(JSON.stringify(bilibiliOptions || {})));
   }, [bilibiliOptions]);
-
-  useEffect(() => {
-    setTmpExHentaiOptions(JSON.parse(JSON.stringify(exhentaiOptions || {})));
-  }, [exhentaiOptions]);
 
   useEffect(() => {
     setTmpPixivOptions(JSON.parse(JSON.stringify(pixivOptions || {})));
@@ -103,10 +107,6 @@ const ThirdParty = ({
   useEffect(() => {
     setTmpCienOptions(JSON.parse(JSON.stringify(cienOptions || {})));
   }, [cienOptions]);
-
-  useEffect(() => {
-    setTmpDLsiteOptions(JSON.parse(JSON.stringify(dlsiteOptions || {})));
-  }, [dlsiteOptions]);
 
   useEffect(() => {
     setTmpFanboxOptions(JSON.parse(JSON.stringify(fanboxOptions || {})));
@@ -299,11 +299,30 @@ const ThirdParty = ({
       key: "exhentai",
       label: "ExHentai",
       tip: "Configure ExHentai downloader settings. Cookie is required for authentication.",
-      content: renderDownloaderOptions(
-        tmpExHentaiOptions,
-        setTmpExHentaiOptions,
-        BApi.options.patchExHentaiOptions,
-        "exhentai",
+      content: (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="flat"
+              onPress={() => setExhentaiConfigOpen(true)}
+            >
+              {t("configuration.thirdParty.configure")}
+            </Button>
+            {exhentaiConfigOpen && (
+              <ExHentaiConfig
+                fields="all"
+                onDestroyed={() => setExhentaiConfigOpen(false)}
+              />
+            )}
+          </div>
+          <DownloaderOptionsConfig
+            hideCookie
+            options={exhentaiOptions}
+            patchApi={BApi.options.patchExHentaiOptions}
+            cookieValidatorTarget={CookieValidatorTarget.ExHentai}
+          />
+        </div>
       ),
     },
     {
@@ -465,14 +484,56 @@ const ThirdParty = ({
       ),
     },
     {
+      key: "steam",
+      label: "Steam",
+      tip: "Configure Steam settings including API key, language, and metadata sync.",
+      content: (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="flat"
+              onPress={() => setSteamConfigOpen(true)}
+            >
+              {t("configuration.thirdParty.configure")}
+            </Button>
+            {steamConfigOpen && (
+              <SteamConfig
+                fields="all"
+                onDestroyed={() => setSteamConfigOpen(false)}
+              />
+            )}
+          </div>
+        </div>
+      ),
+    },
+    {
       key: "dlsite",
       label: "DLsite",
       tip: "Configure DLsite downloader settings including authentication and download parameters.",
-      content: renderDownloaderOptions(
-        tmpDLsiteOptions,
-        setTmpDLsiteOptions,
-        BApi.options.patchDLsiteOptions,
-        "dlsite",
+      content: (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="flat"
+              onPress={() => setDlsiteConfigOpen(true)}
+            >
+              {t("configuration.thirdParty.configure")}
+            </Button>
+            {dlsiteConfigOpen && (
+              <DLsiteConfig
+                fields="all"
+                onDestroyed={() => setDlsiteConfigOpen(false)}
+              />
+            )}
+          </div>
+          <DownloaderOptionsConfig
+            hideCookie
+            options={dlsiteOptions}
+            patchApi={BApi.options.patchDLsiteOptions}
+          />
+        </div>
       ),
     },
     {

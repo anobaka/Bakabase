@@ -6,5 +6,6 @@ public enum BTaskType
     MoveFiles = 2,
     MoveResources = 3,
     CopyFiles = 4,
+    Download = 5,
     Any = 1000
 }

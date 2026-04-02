@@ -21,10 +21,12 @@ import {
   useFantiaOptionsStore,
   usePatreonOptionsStore,
   useTmdbOptionsStore,
+  useSteamOptionsStore,
 } from "@/stores/options";
 import {
   DLsiteConfig,
   ExHentaiConfig,
+  SteamConfig,
   DownloaderOptionsConfig,
 } from "@/components/ThirdPartyConfig";
 
@@ -46,9 +48,11 @@ export default function ThirdPartyConfigurationPage() {
 
   const [exhentaiConfigOpen, setExhentaiConfigOpen] = useState(false);
   const [dlsiteConfigOpen, setDlsiteConfigOpen] = useState(false);
+  const [steamConfigOpen, setSteamConfigOpen] = useState(false);
 
   const exhentaiOptions = useExHentaiOptionsStore((state) => state.data);
   const dlsiteOptions = useDLsiteOptionsStore((state) => state.data);
+  const steamOptions = useSteamOptionsStore((state) => state.data);
   const bilibiliOptions = useBilibiliOptionsStore((state) => state.data);
   const pixivOptions = usePixivOptionsStore((state) => state.data);
   const soulPlusOptions = useSoulPlusOptionsStore((state) => state.data);
@@ -308,6 +312,28 @@ export default function ThirdPartyConfigurationPage() {
               patchApi={BApi.options.patchExHentaiOptions}
               cookieValidatorTarget={CookieValidatorTarget.ExHentai}
             />
+          </div>
+        ),
+      },
+      {
+        key: "steam",
+        label: "Steam",
+        tip: "thirdPartyConfig.tip.steam",
+        content: (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="flat"
+                onPress={() => setSteamConfigOpen(true)}
+              >
+                {t("resourceSource.action.configure")} ({steamOptions?.accounts?.length || 0} {t("resourceSource.accounts.title", { platform: "" }).trim()})
+              </Button>
+              <SteamConfig
+                isOpen={steamConfigOpen}
+                onClose={() => setSteamConfigOpen(false)}
+              />
+            </div>
           </div>
         ),
       },
@@ -638,8 +664,10 @@ export default function ThirdPartyConfigurationPage() {
       tmpTmdbOptions,
       exhentaiOptions,
       dlsiteOptions,
+      steamOptions,
       exhentaiConfigOpen,
       dlsiteConfigOpen,
+      steamConfigOpen,
     ],
   );
 

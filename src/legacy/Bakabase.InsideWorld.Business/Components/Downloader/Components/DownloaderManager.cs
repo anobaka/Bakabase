@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Components;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
@@ -23,9 +24,11 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly ConcurrentDictionary<int, IDownloader> _downloaders = new();
+        private readonly ConcurrentDictionary<int, TaskCompletionSource> _downloadBTaskCompletionSources = new();
         private readonly IStringLocalizer<SharedResource> _localizer;
         private readonly IDownloaderLocalizer _downloaderLocalizer;
         private readonly IDownloaderFactory _downloaderFactory;
+        private readonly BTaskManager _bTaskManager;
 
         private readonly ILogger<DownloaderManager> _logger;
 
@@ -33,22 +36,35 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
 
         public DownloaderManager(IServiceProvider serviceProvider, IStringLocalizer<SharedResource> localizer,
             ILogger<DownloaderManager> logger, IDownloaderLocalizer downloaderLocalizer,
-            IDownloaderFactory downloaderFactory)
+            IDownloaderFactory downloaderFactory, BTaskManager bTaskManager)
         {
             _serviceProvider = serviceProvider;
             _localizer = localizer;
             _logger = logger;
             _downloaderLocalizer = downloaderLocalizer;
             _downloaderFactory = downloaderFactory;
+            _bTaskManager = bTaskManager;
 
             OnStatusChanged += (taskId, downloader) =>
                 GetNewScopeRequiredService<DownloadTaskService>().OnStatusChanged(taskId, downloader, null);
+            OnStatusChanged += (taskId, downloader) =>
+            {
+                if (downloader.Status is DownloaderStatus.Complete or DownloaderStatus.Failed
+                    or DownloaderStatus.Stopped)
+                {
+                    CompleteBTask(taskId);
+                }
+
+                return Task.CompletedTask;
+            };
             OnNameAcquired += (taskId, name) =>
                 GetNewScopeRequiredService<DownloadTaskService>().OnNameAcquired(taskId, name);
             OnProgress += (taskId, progress) =>
                 GetNewScopeRequiredService<DownloadTaskService>().OnProgress(taskId, progress);
+            OnProgress += (taskId, progress) => UpdateBTaskProgress(taskId, progress);
             OnCurrentChanged += (taskId) =>
                 GetNewScopeRequiredService<DownloadTaskService>().OnCurrentChanged(taskId);
+            OnCurrentChanged += (taskId) => UpdateBTaskProcess(taskId);
             OnCheckpointReached += (taskId, checkpoint) =>
                 GetNewScopeRequiredService<DownloadTaskService>().OnCheckpointReached(taskId, checkpoint);
             return;
@@ -126,12 +142,89 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
 
             await downloader.Start(task);
 
+            await EnsureBTaskExists(task);
+
             return BaseResponseBuilder.Ok;
         }
 
         public async Task<BaseResponse> Start(DownloadTask task, bool stopConflicts)
         {
             return await _tryStart(task, stopConflicts);
+        }
+
+        private static string GetBTaskId(int downloadTaskId) => $"DownloadTask:{downloadTaskId}";
+
+        private async Task EnsureBTaskExists(DownloadTask task)
+        {
+            var btaskId = GetBTaskId(task.Id);
+            var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            if (!_downloadBTaskCompletionSources.TryAdd(task.Id, tcs))
+            {
+                // BTask already exists for this download
+                return;
+            }
+
+            try
+            {
+                await _bTaskManager.Enqueue(new BTaskHandlerBuilder
+                {
+                    Id = btaskId,
+                    GetName = () => task.DisplayName,
+                    IsPersistent = false,
+                    Type = BTaskType.Download,
+                    ResourceType = BTaskResourceType.Any,
+                    StartNow = true,
+                    DuplicateIdHandling = BTaskDuplicateIdHandling.Ignore,
+                    Run = async args =>
+                    {
+                        try
+                        {
+                            await tcs.Task.WaitAsync(args.CancellationToken);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            tcs.TrySetCanceled();
+                            throw;
+                        }
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                _downloadBTaskCompletionSources.TryRemove(task.Id, out _);
+                _logger.LogError(ex, $"Failed to create BTask for download task {task.Id}");
+            }
+        }
+
+        private void CompleteBTask(int downloadTaskId)
+        {
+            if (_downloadBTaskCompletionSources.TryRemove(downloadTaskId, out var tcs))
+            {
+                tcs.TrySetResult();
+            }
+        }
+
+        private async Task UpdateBTaskProgress(int downloadTaskId, decimal progress)
+        {
+            var btaskId = GetBTaskId(downloadTaskId);
+            var handler = _bTaskManager.Tasks.FirstOrDefault(t => t.Id == btaskId);
+            if (handler != null)
+            {
+                await handler.UpdateTask(t => t.Percentage = (int)progress);
+            }
+        }
+
+        private async Task UpdateBTaskProcess(int downloadTaskId)
+        {
+            var btaskId = GetBTaskId(downloadTaskId);
+            var handler = _bTaskManager.Tasks.FirstOrDefault(t => t.Id == btaskId);
+            if (handler != null)
+            {
+                await using var scope = _serviceProvider.CreateAsyncScope();
+                var service = scope.ServiceProvider.GetRequiredService<DownloadTaskService>();
+                var task = await service.GetDto(downloadTaskId);
+                await handler.UpdateTask(t => t.Process = task.Current);
+            }
         }
     }
 }
