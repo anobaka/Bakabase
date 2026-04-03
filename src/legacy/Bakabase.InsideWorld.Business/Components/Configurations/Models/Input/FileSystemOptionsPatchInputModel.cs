@@ -8,4 +8,5 @@ public class FileSystemOptionsPatchInputModel
     public FileSystemOptions.FileMoverOptions? FileMover { get; set; }
     public List<string>? RecentMovingDestinations { get; set; }
     public FileSystemOptions.FileProcessorOptions? FileProcessor { get; set; }
+    public bool? ShowHiddenFiles { get; set; }
 }

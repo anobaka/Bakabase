@@ -17,6 +17,8 @@ import { useDebounce, useUpdate, useUpdateEffect } from "react-use";
 import {
   ArrowLeftOutlined,
   ArrowUpOutlined,
+  EyeInvisibleOutlined,
+  EyeOutlined,
   FolderOpenOutlined,
   FolderOutlined,
   SearchOutlined,
@@ -34,8 +36,9 @@ import FileExplorerEntry from "./FileExplorerEntry";
 import BApi from "@/sdk/BApi";
 import { buildLogger, getStandardParentPath, standardizePath } from "@/components/utils";
 import { useFileExplorerClipboardStore } from "@/stores/fileExplorerClipboard";
+import { useFileSystemOptionsStore } from "@/stores/options";
 import RootEntry from "@/core/models/FileExplorer/RootEntry";
-import { Button, Chip, Input, toast } from "@/components/bakaui";
+import { Button, Chip, Input, Tooltip, toast } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import DeleteConfirmationModal from "./components/DeleteConfirmationModal";
 import WrapModal from "./components/WrapModal";
@@ -100,6 +103,11 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
     // Use global store for clipboard state
     const clipboardStore = useFileExplorerClipboardStore();
 
+    const fsOptions = useFileSystemOptionsStore((state) => state.data);
+    const fsOptionsStore = useFileSystemOptionsStore();
+    const showHiddenFiles = fsOptions?.showHiddenFiles ?? false;
+    const showHiddenFilesRef = useRef(showHiddenFiles);
+
     const defaultSelectedPathInitializedRef = useRef(false);
 
     const [historyRootPaths, setHistoryRootPaths] = useState<(string | undefined)[]>([]);
@@ -159,7 +167,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
 
       log("initialize", finalPath, historyRootPathsRef.current);
 
-      setRoot(new RootEntry(finalPath));
+      setRoot(new RootEntry(finalPath, showHiddenFilesRef.current));
     }, []);
 
     useEffect(() => {
@@ -176,6 +184,14 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
     useUpdateEffect(() => {
       initialize(rootPath);
     }, [rootPath]);
+
+    // Re-initialize when showHiddenFiles option changes
+    useUpdateEffect(() => {
+      showHiddenFilesRef.current = showHiddenFiles;
+      if (rootRef.current) {
+        initialize(rootRef.current.path, false);
+      }
+    }, [showHiddenFiles]);
 
     useUpdateEffect(() => {
       rootRef.current?.patchFilter(filter);
@@ -657,6 +673,24 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
             value={filterInputValue}
             onValueChange={(v) => setFilterInputValue(v)}
           />
+          <Tooltip content={t<string>("fileExplorer.label.showHiddenFiles")}>
+            <Button
+              isIconOnly
+              radius={"none"}
+              size={"sm"}
+              variant={showHiddenFiles ? "flat" : "light"}
+              color={showHiddenFiles ? "primary" : "default"}
+              onPress={() => {
+                fsOptionsStore.patch({ showHiddenFiles: !showHiddenFiles });
+              }}
+            >
+              {showHiddenFiles ? (
+                <EyeOutlined className={"text-base"} />
+              ) : (
+                <EyeInvisibleOutlined className={"text-base"} />
+              )}
+            </Button>
+          </Tooltip>
           <Button
             className={"px-6"}
             radius={"none"}

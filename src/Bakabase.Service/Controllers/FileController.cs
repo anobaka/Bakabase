@@ -97,6 +97,30 @@ namespace Bakabase.Service.Controllers
             _appService = appService;
         }
 
+        private static bool IsHiddenEntry(string path)
+        {
+            var name = Path.GetFileName(path);
+            if (string.IsNullOrEmpty(name))
+            {
+                name = path;
+            }
+
+            if (name.StartsWith('.'))
+            {
+                return true;
+            }
+
+            try
+            {
+                var attributes = System.IO.File.GetAttributes(path);
+                return (attributes & FileAttributes.Hidden) != 0;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         [HttpPost("decompression/detect")]
         [SwaggerOperation(OperationId = "DetectCompressedFiles")]
         public async Task<IActionResult> DetectCompressedFiles([FromBody] CompressedFileDetectionInputModel model)
@@ -461,12 +485,21 @@ namespace Bakabase.Service.Controllers
         [HttpGet("top-level-file-system-entries")]
         [SwaggerOperation(OperationId = "GetTopLevelFileSystemEntryNames")]
         public async Task<ListResponse<FileSystemEntryNameViewModel>> GetTopLevelFileSystemEntryNames(
-            string root)
+            string root, bool showHiddenFiles = false)
         {
-            var files = Directory.GetFiles(root)
+            var filePaths = Directory.GetFiles(root).AsEnumerable();
+            var dirPaths = Directory.GetDirectories(root).AsEnumerable();
+
+            if (!showHiddenFiles)
+            {
+                filePaths = filePaths.Where(p => !IsHiddenEntry(p));
+                dirPaths = dirPaths.Where(p => !IsHiddenEntry(p));
+            }
+
+            var files = filePaths
                 .Select(x => new FileSystemEntryNameViewModel(x.StandardizePath()!, Path.GetFileName(x), false))
                 .ToArray();
-            var directories = Directory.GetDirectories(root)
+            var directories = dirPaths
                 .Select(x => new FileSystemEntryNameViewModel(x.StandardizePath()!, Path.GetFileName(x)!, true))
                 .ToArray();
 
@@ -599,9 +632,10 @@ namespace Bakabase.Service.Controllers
 
         [HttpGet("iwfs-info")]
         [SwaggerOperation(OperationId = "GetIwFsInfo")]
-        public async Task<SingletonResponse<IwFsEntryLazyInfo>> GetIwFsInfo(string path, IwFsType type)
+        public async Task<SingletonResponse<IwFsEntryLazyInfo>> GetIwFsInfo(string path, IwFsType type,
+            bool showHiddenFiles = false)
         {
-            return new SingletonResponse<IwFsEntryLazyInfo>(new IwFsEntryLazyInfo(path, type));
+            return new SingletonResponse<IwFsEntryLazyInfo>(new IwFsEntryLazyInfo(path, type, showHiddenFiles));
         }
 
         [HttpGet("iwfs-entry")]
@@ -642,7 +676,7 @@ namespace Bakabase.Service.Controllers
 
         [HttpGet("children/iwfs-info")]
         [SwaggerOperation(OperationId = "GetChildrenIwFsInfo")]
-        public async Task<SingletonResponse<IwFsPreview>> Preview(string? root)
+        public async Task<SingletonResponse<IwFsPreview>> Preview(string? root, bool showHiddenFiles = false)
         {
             var isDirectory = false;
 
@@ -689,6 +723,12 @@ namespace Bakabase.Service.Controllers
                 else
                 {
                     files = [root];
+                }
+
+                if (!showHiddenFiles)
+                {
+                    dirs = dirs.Where(d => !IsHiddenEntry(d)).ToArray();
+                    files = files.Where(f => !IsHiddenEntry(f)).ToArray();
                 }
 
                 entries.AddRange(dirs.Select(d => new IwFsEntry(d, IwFsType.Directory)));

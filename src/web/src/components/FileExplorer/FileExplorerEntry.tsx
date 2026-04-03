@@ -417,7 +417,7 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
         setLoading(true);
         // @ts-ignore
         const rsp = await BApi.file.getChildrenIwFsInfo(
-          { root: entryRef.current.path },
+          { root: entryRef.current.path, showHiddenFiles: entryRef.current.root?.showHiddenFiles },
           { showErrorToast: () => false },
         );
 

@@ -361,11 +361,14 @@ class RootEntry extends Entry {
     await this._stop();
   }
 
-  constructor(path?: string) {
+  public showHiddenFiles: boolean = false;
+
+  constructor(path?: string, showHiddenFiles: boolean = false) {
     super({ path });
     this.root = this;
     this.expanded = true;
     this.type = IwFsType.Directory;
+    this.showHiddenFiles = showHiddenFiles;
     this.nodeMap[this.path] = this;
   }
 }

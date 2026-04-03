@@ -226,7 +226,7 @@ export class Entry {
           case EntryProperty.ChildrenCount: {
             {
               const info = await BApi.file.getIwFsInfo(
-                { path: this.path, type: this.type },
+                { path: this.path, type: this.type, showHiddenFiles: this.root?.showHiddenFiles },
                 { showErrorToast: () => false },
               );
 

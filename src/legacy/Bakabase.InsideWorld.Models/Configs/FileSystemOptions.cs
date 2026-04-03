@@ -15,6 +15,7 @@ namespace Bakabase.InsideWorld.Models.Configs
         public List<string>? RecentMovingDestinations { get; set; }
         public FileMoverOptions? FileMover { get; set; }
         public FileProcessorOptions? FileProcessor { get; set; }
+        public bool ShowHiddenFiles { get; set; }
 
         public void AddRecentMovingDestination(string destination)
         {

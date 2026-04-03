@@ -1541,6 +1541,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputF
   fileMover?: BakabaseInsideWorldModelsConfigsFileSystemOptionsFileMoverOptions;
   recentMovingDestinations?: string[];
   fileProcessor?: BakabaseInsideWorldModelsConfigsFileSystemOptionsFileProcessorOptions;
+  showHiddenFiles?: boolean;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputJavLibraryOptionsPatchInputModel {
@@ -1988,6 +1989,7 @@ export interface BakabaseInsideWorldModelsConfigsFileSystemOptions {
   recentMovingDestinations?: string[];
   fileMover?: BakabaseInsideWorldModelsConfigsFileSystemOptionsFileMoverOptions;
   fileProcessor?: BakabaseInsideWorldModelsConfigsFileSystemOptionsFileProcessorOptions;
+  showHiddenFiles: boolean;
 }
 
 export interface BakabaseInsideWorldModelsConfigsFileSystemOptionsFileMoverOptions {
@@ -11007,6 +11009,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getTopLevelFileSystemEntryNames: (
       query?: {
         root?: string;
+        showHiddenFiles?: boolean;
       },
       params: RequestParams = {},
     ) =>
@@ -11027,6 +11030,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     getTopLevelFileSystemEntryNamesUrl: (query?: {
         root?: string;
+        showHiddenFiles?: boolean;
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/top-level-file-system-entries`;
@@ -11115,6 +11119,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         path?: string;
         /** [0: Unknown, 100: Directory, 200: Image, 300: CompressedFileEntry, 400: CompressedFilePart, 500: Symlink, 600: Video, 700: Audio, 1000: Drive, 10000: Invalid] */
         type?: BakabaseInsideWorldBusinessComponentsFileExplorerIwFsType;
+        showHiddenFiles?: boolean;
       },
       params: RequestParams = {},
     ) =>
@@ -11137,6 +11142,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         path?: string;
         /** [0: Unknown, 100: Directory, 200: Image, 300: CompressedFileEntry, 400: CompressedFilePart, 500: Symlink, 600: Video, 700: Audio, 1000: Drive, 10000: Invalid] */
         type?: BakabaseInsideWorldBusinessComponentsFileExplorerIwFsType;
+        showHiddenFiles?: boolean;
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/iwfs-info`;
@@ -11255,6 +11261,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getChildrenIwFsInfo: (
       query?: {
         root?: string;
+        showHiddenFiles?: boolean;
       },
       params: RequestParams = {},
     ) =>
@@ -11275,6 +11282,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     getChildrenIwFsInfoUrl: (query?: {
         root?: string;
+        showHiddenFiles?: boolean;
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/children/iwfs-info`;

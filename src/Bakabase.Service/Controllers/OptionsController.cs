@@ -384,10 +384,15 @@ namespace Bakabase.Service.Controllers
                 {
                     options.FileProcessor = model.FileProcessor;
                 }
+
+                if (model.ShowHiddenFiles != null)
+                {
+                    options.ShowHiddenFiles = model.ShowHiddenFiles.Value;
+                }
             });
             return BaseResponseBuilder.Ok;
         }
-        
+
         [HttpPut("filesystem/latest-moving-destination")]
         [SwaggerOperation(OperationId = "AddLatestMovingDestination")]
         public async Task<BaseResponse> AddLatestMovingDestination([FromBody] string destination)

@@ -6161,6 +6161,7 @@ export interface components {
             fileMover?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.FileSystemOptions+FileMoverOptions"];
             recentMovingDestinations?: string[];
             fileProcessor?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.FileSystemOptions+FileProcessorOptions"];
+            showHiddenFiles?: boolean;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.JavLibraryOptionsPatchInputModel": {
             cookie?: string;
@@ -6531,6 +6532,7 @@ export interface components {
             recentMovingDestinations?: string[];
             fileMover?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.FileSystemOptions+FileMoverOptions"];
             fileProcessor?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.FileSystemOptions+FileProcessorOptions"];
+            showHiddenFiles: boolean;
         };
         "Bakabase.InsideWorld.Models.Configs.FileSystemOptions+FileMoverOptions": {
             targets?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.FileSystemOptions+FileMoverOptions+Target"][];
@@ -13037,6 +13039,7 @@ export interface operations {
         parameters: {
             query?: {
                 root?: string;
+                showHiddenFiles?: boolean;
             };
             header?: never;
             path?: never;
@@ -13089,6 +13092,7 @@ export interface operations {
                 path?: string;
                 /** @description [0: Unknown, 100: Directory, 200: Image, 300: CompressedFileEntry, 400: CompressedFilePart, 500: Symlink, 600: Video, 700: Audio, 1000: Drive, 10000: Invalid] */
                 type?: components["schemas"]["Bakabase.InsideWorld.Business.Components.FileExplorer.IwFsType"];
+                showHiddenFiles?: boolean;
             };
             header?: never;
             path?: never;
@@ -13161,6 +13165,7 @@ export interface operations {
         parameters: {
             query?: {
                 root?: string;
+                showHiddenFiles?: boolean;
             };
             header?: never;
             path?: never;

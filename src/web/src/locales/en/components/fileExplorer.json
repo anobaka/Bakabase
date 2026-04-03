@@ -57,6 +57,7 @@
   "fileExplorer.action.wrap": "Wrap",
   "fileExplorer.action.move": "Move",
   "fileExplorer.tip.extractChildrenToParent": "Extract children to parent and delete current directory",
+  "fileExplorer.label.showHiddenFiles": "Show hidden files",
   "fileExplorer.label.shortcuts": "Shortcuts",
   "fileExplorer.shortcut.selectPrevious": "Select previous",
   "fileExplorer.shortcut.selectNext": "Select next",

@@ -269,8 +269,8 @@ const PathMarkTreeView = ({
               });
             }}
           >
-            <div className="flex items-center gap-2">
-              <AiOutlineAim className="text-base text-success" />
+            <div className="flex items-center gap-2 text-success">
+              <AiOutlineAim className="text-base" />
               {t("pathMarkConfig.action.addResourceMark", { count: entries.length })}
             </div>
           </MenuItem>
@@ -285,8 +285,8 @@ const PathMarkTreeView = ({
               });
             }}
           >
-            <div className="flex items-center gap-2">
-              <AiOutlineAim className="text-base text-primary" />
+            <div className="flex items-center gap-2 text-primary">
+              <AiOutlineAim className="text-base" />
               {t("pathMarkConfig.action.addPropertyMark", { count: entries.length })}
             </div>
           </MenuItem>
@@ -301,8 +301,8 @@ const PathMarkTreeView = ({
               });
             }}
           >
-            <div className="flex items-center gap-2">
-              <AiOutlineAim className="text-base text-secondary" />
+            <div className="flex items-center gap-2 text-secondary">
+              <AiOutlineAim className="text-base" />
               {t("pathMarkConfig.action.addMediaLibraryMark", { count: entries.length })}
             </div>
           </MenuItem>
