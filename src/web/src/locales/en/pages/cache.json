@@ -1,4 +1,5 @@
 {
+  "cache.description": "This cache only contains data related to local files. It does not include the files themselves, nor external data.",
   "cache.label.resourceCount": "Resource count",
   "cache.label.cached": "Cached",
   "cache.label.unassociatedResources": "Unassociated Resources",

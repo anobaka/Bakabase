@@ -15,8 +15,9 @@
   "SpecialTextType.Language": "语言",
   "SpecialTextType.Wrapper": "包裹符号",
   "SpecialTextType.Standardization": "同义词",
-  "SpecialTextType.Volume": "章节",
+  "SpecialTextType.Volume": "卷号",
 
+  "SpecialTextType.Trim": "端部清除",
   "SpecialTextType.DateTime": "日期时间",
 
   "text.typeDescription.useless": "忽略被正则表达式成功匹配的包装器内的部分",
@@ -24,7 +25,7 @@
   "text.typeDescription.wrapper": "文本包装器，用于匹配和提取包装器内的文本",
   "text.typeDescription.standardization": "分析时将[文本1]视为[文本2]",
   "text.typeDescription.volume": "从此文本组中提取卷信息",
-  "text.typeDescription.trim": "待定，目前不要设置",
+  "text.typeDescription.trim": "当文本的前端或后端出现指定文本时，将其从两端移除",
   "text.typeDescription.dateTime": "日期时间解析模板，用于从文本中提取日期和时间",
 
   "text.usedIn.textPretreatment": "文本预处理",

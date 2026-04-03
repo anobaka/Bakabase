@@ -1,4 +1,5 @@
 {
+  "cache.description": "该缓存仅包含本地文件相关的数据，不包含文件本身，也不包含外部数据。",
   "cache.label.resourceCount": "资源数量",
   "cache.label.cached": "已缓存",
   "cache.label.unassociatedResources": "未关联的资源",

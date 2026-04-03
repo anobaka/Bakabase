@@ -17,6 +17,7 @@
   "SpecialTextType.Standardization": "Standardization",
   "SpecialTextType.Volume": "Volume Number",
 
+  "SpecialTextType.Trim": "Edge Trim",
   "SpecialTextType.DateTime": "DateTime",
 
   "text.typeDescription.useless": "Ignore the part inside the wrapper that is successfully matched by the regular expression",
@@ -24,7 +25,7 @@
   "text.typeDescription.wrapper": "Text wrapper, used to match and extract the text within the wrapper",
   "text.typeDescription.standardization": "Treat [text1] as [text2] during analyzation",
   "text.typeDescription.volume": "Extract volume information from this text group",
-  "text.typeDescription.trim": "TBD, do not set it for now",
+  "text.typeDescription.trim": "When the specified text appears at either end of the text, remove it from both ends",
   "text.typeDescription.dateTime": "Date and time parsing template, used to extract dates and times from text",
 
   "text.usedIn.textPretreatment": "Text pretreatment",

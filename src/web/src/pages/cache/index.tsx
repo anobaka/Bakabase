@@ -51,6 +51,7 @@ const CachePage = () => {
 
   return (
     <div>
+      <p className="text-sm text-default-500 mb-4">{t("cache.description")}</p>
       <div className={"flex flex-col gap-2"}>
         {cacheOverview?.mediaLibraryCaches &&
           cacheOverview.mediaLibraryCaches.length > 0 && (
