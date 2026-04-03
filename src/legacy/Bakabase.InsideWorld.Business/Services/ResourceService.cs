@@ -1542,10 +1542,35 @@ namespace Bakabase.InsideWorld.Business.Services
             return BaseResponseBuilder.Ok;
         }
 
+        /// <summary>
+        /// When IsBizValue is true, converts bizValue to dbValue via PrepareDbValue and auto-creates options if needed.
+        /// </summary>
+        private async Task<string?> ConvertBizValueToDbValueIfNeeded(ResourcePropertyValuePutInputModel model)
+        {
+            if (!model.IsBizValue || !model.IsCustomProperty || model.Value == null)
+            {
+                return model.Value;
+            }
+
+            var customProperty = await _customPropertyService.GetByKey(model.PropertyId);
+            var property = customProperty.ToProperty();
+            var bizValue = model.Value.DeserializeAsStandardValue(PropertySystem.Property.GetBizValueType(property.Type));
+            var (dbValue, propertyChanged) = PropertySystem.Property.ToDbValue(property, bizValue);
+
+            if (propertyChanged)
+            {
+                customProperty.Options = property.Options;
+                await _customPropertyService.Put(customProperty);
+            }
+
+            return dbValue?.SerializeAsStandardValue(PropertySystem.Property.GetDbValueType(property.Type));
+        }
+
         public async Task<BaseResponse> PutPropertyValue(int resourceId, ResourcePropertyValuePutInputModel model)
         {
             if (model.IsCustomProperty)
             {
+                var dbValue = await ConvertBizValueToDbValueIfNeeded(model);
                 var value = (await _customPropertyValueService.GetAllDbModels(x =>
                     x.ResourceId == resourceId && x.PropertyId == model.PropertyId &&
                     x.Scope == (int) PropertyValueScope.Manual)).FirstOrDefault();
@@ -1555,14 +1580,14 @@ namespace Bakabase.InsideWorld.Business.Services
                     {
                         ResourceId = resourceId,
                         PropertyId = model.PropertyId,
-                        Value = model.Value,
+                        Value = dbValue,
                         Scope = (int) PropertyValueScope.Manual
                     };
                     return await _customPropertyValueService.AddDbModel(value);
                 }
                 else
                 {
-                    value.Value = model.Value;
+                    value.Value = dbValue;
                     return await _customPropertyValueService.UpdateDbModel(value);
                 }
             }
@@ -1652,6 +1677,8 @@ namespace Bakabase.InsideWorld.Business.Services
 
             if (model.IsCustomProperty)
             {
+                var dbValue = await ConvertBizValueToDbValueIfNeeded(model);
+
                 // Get all existing values for these resources and property
                 var existingValues = await _customPropertyValueService.GetAllDbModels(x =>
                     resourceIds.Contains(x.ResourceId) && x.PropertyId == model.PropertyId &&
@@ -1672,7 +1699,7 @@ namespace Bakabase.InsideWorld.Business.Services
                             Id = existing.Id,
                             ResourceId = resourceId,
                             PropertyId = model.PropertyId,
-                            Value = model.Value,
+                            Value = dbValue,
                             Scope = (int) PropertyValueScope.Manual
                         });
                     }
@@ -1683,7 +1710,7 @@ namespace Bakabase.InsideWorld.Business.Services
                         {
                             ResourceId = resourceId,
                             PropertyId = model.PropertyId,
-                            Value = model.Value,
+                            Value = dbValue,
                             Scope = (int) PropertyValueScope.Manual
                         });
                     }

@@ -15,5 +15,21 @@
   "error.transfer.marks": "Failed to transfer marks",
   "error.start.sync": "Failed to start sync",
   "error.update.option": "Failed to update option",
-  "error.unknown": "Unknown error"
+  "error.unknown": "Unknown error",
+
+  "error.modal.title": "Something went wrong",
+  "error.modal.errorLabel": "Error",
+  "error.modal.unknownError": "Unknown error",
+  "error.modal.stackTrace": "Stack Trace",
+  "error.modal.componentStack": "Component Stack",
+  "error.modal.showLess": "Show less",
+  "error.modal.showAll": "Show all",
+  "error.modal.whatYouCanTry": "What you can try",
+  "error.modal.reloadPage": "Reload the page",
+  "error.modal.restartApp": "Restart the app",
+  "error.modal.restartAppDesc": "Shutdown and restart completely",
+  "error.modal.contactSupport": "Contact support",
+  "error.modal.logFile": "Log file:",
+  "error.modal.continueBrowsing": "Continue browsing",
+  "error.modal.returnHome": "Return to homepage"
 }

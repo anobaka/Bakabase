@@ -150,21 +150,21 @@ const MultilevelValueRenderer = ({
     let newBizValues: string[][];
 
     if (isSelected) {
-      // Remove - filter out the leaf value
       newDbValues = selectedValues.filter((v) => v !== leafValue);
-      // Rebuild bizValues from remaining selections
+      if (newDbValues.length === 0) {
+        editor.onValueChange(undefined, undefined);
+        return;
+      }
       newBizValues = flattenedOptions
         .filter((opt) => newDbValues.includes(opt.path[opt.path.length - 1]))
         .map((opt) => opt.path);
     } else {
       if (multiple) {
-        // Add to selection
         newDbValues = [...selectedValues, leafValue];
         newBizValues = flattenedOptions
           .filter((opt) => newDbValues.includes(opt.path[opt.path.length - 1]))
           .map((opt) => opt.path);
       } else {
-        // Replace selection
         newDbValues = [leafValue];
         newBizValues = [path];
       }

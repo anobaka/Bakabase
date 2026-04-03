@@ -9,7 +9,7 @@ import { useTranslation } from "react-i18next";
 import { useUpdate } from "react-use";
 
 import { PropertyPool, PropertyValueScope, propertyValueScopes } from "@/sdk/constants";
-import { useResourceOptionsStore } from "@/stores/options";
+import { useResourceOptionsStore, useUiOptionsStore } from "@/stores/options";
 import PropertyContainer from "@/components/Resource/components/DetailModal/Properties/PropertyContainer";
 import BApi from "@/sdk/BApi";
 import { buildLogger } from "@/components/utils";
@@ -126,6 +126,8 @@ const Properties = (props: Props) => {
     );
   }
 
+  const uiOptionsStore = useUiOptionsStore();
+
   const onValueChange = async (propertyId: number, isCustomProperty: boolean, value?: string) => {
     await BApi.resource.putResourcePropertyValue(resource.id, {
       value,
@@ -133,6 +135,35 @@ const Properties = (props: Props) => {
       propertyId,
     });
     reload();
+
+    // Auto-add to quick-set context menu config if enabled
+    const resourceUiOptions = uiOptionsStore.data?.resource;
+    if (resourceUiOptions?.autoAddRecentPropertyValues && value) {
+      const pool = isCustomProperty ? PropertyPool.Custom : PropertyPool.Reserved;
+      const items = [...(resourceUiOptions.customContextMenuItems ?? [])];
+      const itemKey = `${pool}-${propertyId}`;
+      let itemIndex = items.findIndex(
+        (i: any) => `${i.property?.pool}-${i.property?.id}` === itemKey,
+      );
+
+      if (itemIndex === -1) {
+        // Property not in config yet, add it
+        items.push({ property: { pool, id: propertyId }, presetValues: [value] });
+      } else {
+        // Property exists, add value if not already present
+        const existing = items[itemIndex];
+        const presets = existing.presetValues ?? [];
+        if (!presets.includes(value)) {
+          items[itemIndex] = { ...existing, presetValues: [...presets, value] };
+        } else {
+          return; // Already present, nothing to do
+        }
+      }
+
+      await uiOptionsStore.patch({
+        resource: { ...resourceUiOptions, customContextMenuItems: items },
+      });
+    }
   };
 
   log(props, "reserved property map", builtinPropertyMap);

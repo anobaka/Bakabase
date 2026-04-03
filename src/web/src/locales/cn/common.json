@@ -79,6 +79,7 @@
   "common.label.pattern": "模式",
   "common.label.extensions": "扩展名",
   "common.placeholder.separateBySpaceOrNewline": "用空格或换行分隔",
+  "common.placeholder.search": "搜索",
   "common.placeholder.typeHere": "在这里输入",
   "common.placeholder.readonly": "只读",
   "common.label.total": "总计",

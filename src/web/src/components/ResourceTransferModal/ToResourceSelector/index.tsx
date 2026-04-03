@@ -48,7 +48,7 @@ const ToResourceSelector = ({ onSelect, fromResourcePath }: Props) => {
           listItems.push({
             id: 0,
             fileName: t<string>(
-              "20 results can be shown at most, please refine your search",
+              "resourceTransfer.selector.overflow",
             ),
           });
         }
@@ -73,16 +73,16 @@ const ToResourceSelector = ({ onSelect, fromResourcePath }: Props) => {
         fullWidth
         isRequired
         description={t<string>(
-          "You may need modify the default keyword to search the expected resources",
+          "resourceTransfer.selector.description",
         )}
         inputValue={targetResourceCandidates.filterText}
         isLoading={targetResourceCandidates.isLoading}
         items={targetResourceCandidates.items}
         label={t<string>(
-          "Input keyword of the resource path to select the target resource",
+          "resourceTransfer.selector.label",
         )}
         listboxProps={{
-          emptyContent: t<string>("Can not find any resource"),
+          emptyContent: t<string>("resourceTransfer.selector.empty"),
         }}
         radius={"none"}
         size={"sm"}
@@ -108,7 +108,7 @@ const ToResourceSelector = ({ onSelect, fromResourcePath }: Props) => {
               startContent={
                 isFromResource ? (
                   <Chip radius={"sm"} size={"sm"}>
-                    {t<string>("Current path")}
+                    {t<string>("resourceTransfer.selector.currentPath")}
                   </Chip>
                 ) : undefined
               }
@@ -127,7 +127,7 @@ const ToResourceSelector = ({ onSelect, fromResourcePath }: Props) => {
         }}
       >
         <ReloadOutlined className={"text-base"} />
-        {t<string>("Reset keyword to path of from resource")}
+        {t<string>("resourceTransfer.selector.resetKeyword")}
       </Button>
     </div>
   );

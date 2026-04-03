@@ -129,16 +129,13 @@
   color: var(--theme-text-subtle);
 }
 
-/* Submenu arrow */
+/* Submenu arrow - remove custom arrow, use library default only */
 .szh-menu__item--submenu::after {
-  content: '';
-  width: 0;
-  height: 0;
-  border-style: solid;
-  border-width: 4px 0 4px 6px;
-  border-color: transparent transparent transparent currentColor;
-  margin-left: auto;
-  opacity: 0.6;
+  content: none !important;
+}
+
+.szh-menu__item--submenu::before {
+  content: none !important;
 }
 
 /* Submenu positioning */

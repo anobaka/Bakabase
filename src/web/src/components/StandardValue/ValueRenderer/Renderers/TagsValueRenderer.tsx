@@ -113,7 +113,11 @@ const TagsValueRenderer = (props: TagsValueRendererProps) => {
       ? selectedValues.filter((v) => v !== tagValue)
       : [...selectedValues, tagValue];
 
-    // Convert to bizValue format
+    if (newDbValues.length === 0) {
+      editor.onValueChange(undefined, undefined);
+      return;
+    }
+
     const newBizValues: TagValue[] = newDbValues.map((v) => {
       const t = dataSource.find((d) => d.value === v);
       return t ? { name: t.name, group: t.group } : { name: v };

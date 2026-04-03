@@ -2,7 +2,7 @@
 
 import type { CSSProperties } from "react";
 
-import { sizeTextClassMap } from "@/components/StandardValue/ValueRenderer/Renderers/components/LightText";
+import { Chip } from "@/components/bakaui";
 import { autoBackgroundColor } from "@/components/utils";
 
 export interface SelectableChipProps {
@@ -12,6 +12,8 @@ export interface SelectableChipProps {
   label: React.ReactNode;
   /** Whether this chip is currently selected */
   isSelected: boolean;
+  /** Whether this chip is disabled */
+  isDisabled?: boolean;
   /** Custom color for the chip (optional) */
   color?: string;
   /** Size of the chip */
@@ -22,66 +24,72 @@ export interface SelectableChipProps {
 
 /**
  * A reusable chip component for selectable options in value renderers.
- * Uses minimal padding to align with LightText components.
+ * Uses HeroUI Chip for consistent UI styling.
  *
- * Styling logic:
- * - If item has custom color:
- *   - Unselected: show text in custom color, faded
- *   - Selected: text in custom color with auto-generated light background
- * - If no custom color:
- *   - Unselected: faded text
- *   - Selected: primary background
+ * States:
+ * - Selected: solid style with primary color (or custom color background)
+ * - Unselected: flat style with faded appearance
+ * - Disabled: bordered style with reduced opacity, not clickable
  */
 const SelectableChip = ({
   itemKey,
   label,
   isSelected,
+  isDisabled,
   color,
   size,
   onClick,
 }: SelectableChipProps) => {
-  const textClass = size ? sizeTextClassMap[size] : sizeTextClassMap.md;
-
-  // Build styles based on selection state and custom color
   const style: CSSProperties = {};
-  const classNames: string[] = [
-    "inline-flex items-center rounded-md px-1",
-    textClass,
-  ];
+  const classNames: string[] = [];
 
-  if (onClick) {
+  if (onClick && !isDisabled) {
     classNames.push("cursor-pointer");
   }
 
-  if (isSelected) {
+  // Determine variant and color based on state
+  let chipVariant: "solid" | "flat" | "bordered" | "light";
+  let chipColor: "default" | "primary" | undefined;
+
+  if (isDisabled) {
+    chipVariant = "bordered";
+    chipColor = "default";
+    classNames.push("opacity-40");
     if (color) {
-      // Selected with custom color: text in custom color with light background
+      style.color = color;
+      style.borderColor = color;
+    }
+  } else if (isSelected) {
+    if (color) {
+      chipVariant = "flat";
       style.color = color;
       style.backgroundColor = autoBackgroundColor(color);
     } else {
-      // Selected without custom color: primary background
-      classNames.push("bg-primary text-primary-foreground");
+      chipVariant = "solid";
+      chipColor = "primary";
     }
   } else {
+    chipVariant = "flat";
+    chipColor = "default";
+    classNames.push("opacity-50");
     if (color) {
-      // Unselected with custom color: show text in custom color, faded
       style.color = color;
-      classNames.push("opacity-50");
-    } else {
-      // Unselected without custom color: faded text
-      classNames.push("opacity-50");
     }
   }
 
   return (
-    <span
+    <Chip
       key={itemKey}
+      size={size}
+      variant={chipVariant}
+      color={chipColor}
       className={classNames.join(" ")}
       style={Object.keys(style).length > 0 ? style : undefined}
-      onClick={onClick}
+      isDisabled={isDisabled}
+      onClick={isDisabled ? undefined : onClick}
     >
       {label}
-    </span>
+    </Chip>
   );
 };
 

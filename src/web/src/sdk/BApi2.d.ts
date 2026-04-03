@@ -6705,10 +6705,10 @@ export interface components {
         "Bakabase.InsideWorld.Models.Constants.StartupPage": 0 | 1;
         /**
          * Format: int32
-         * @description [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb]
+         * @description [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam]
          * @enum {integer}
          */
-        "Bakabase.InsideWorld.Models.Constants.ThirdPartyId": 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
+        "Bakabase.InsideWorld.Models.Constants.ThirdPartyId": 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
         "Bakabase.InsideWorld.Models.Models.Aos.PreviewerItem": {
             filePath: string;
             type: components["schemas"]["Bakabase.InsideWorld.Models.Constants.MediaType"];
@@ -12354,7 +12354,7 @@ export interface operations {
             };
             header?: never;
             path: {
-                /** @description [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb] */
+                /** @description [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam] */
                 thirdPartyId: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ThirdPartyId"];
             };
             cookie?: never;
@@ -12381,7 +12381,7 @@ export interface operations {
             };
             header?: never;
             path: {
-                /** @description [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb] */
+                /** @description [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam] */
                 thirdPartyId: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ThirdPartyId"];
             };
             cookie?: never;

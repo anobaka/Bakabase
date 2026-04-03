@@ -58,6 +58,23 @@ namespace Bakabase.InsideWorld.Models.Configs
             public bool AutoSelectFirstPlayableFile { get; set; }
             public List<string> DisplayOperations { get; set; } = [];
             public bool HideResourceBorder { get; set; }
+            public List<CustomContextMenuItem> CustomContextMenuItems { get; set; } = [];
+            /// <summary>
+            /// When true, manually saved property values in resource detail modal
+            /// are automatically added to the quick-set context menu config.
+            /// </summary>
+            public bool AutoAddRecentPropertyValues { get; set; }
+        }
+
+        public record CustomContextMenuItem
+        {
+            public PropertyKey Property { get; set; }
+            /// <summary>
+            /// Serialized DB values for preset quick-access values.
+            /// For reference types, these are UUIDs from property options.
+            /// For other types, these are serialized standard values.
+            /// </summary>
+            public List<string> PresetValues { get; set; } = [];
         }
     }
 }

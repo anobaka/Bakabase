@@ -178,7 +178,7 @@ const ResourceTransferModal = ({ fromResources, onDestroyed }: Props) => {
         },
       }}
       size={"full"}
-      title={t<string>("Transfer data of resources")}
+      title={t<string>("resourceTransfer.title")}
       onDestroyed={onDestroyed}
       onOk={async () => {
         log("Transferring resources", inputModel);
@@ -196,7 +196,7 @@ const ResourceTransferModal = ({ fromResources, onDestroyed }: Props) => {
             setDeletedSourceResourceIds([...deletedSourceResourceIds]);
           }
         } else {
-          toast.error(t<string>("Invalid data"));
+          toast.error(t<string>("resourceTransfer.error.invalidData"));
         }
 
         if (deletedSourceResourceIds.length != fromResources.length) {
@@ -210,7 +210,7 @@ const ResourceTransferModal = ({ fromResources, onDestroyed }: Props) => {
             <div>
               <Input
                 className={"w-[360px]"}
-                placeholder={t<string>("Path keyword")}
+                placeholder={t<string>("resourceTransfer.filter.pathKeyword")}
                 size={"sm"}
                 startContent={<SearchOutlined className={"text-base"} />}
                 value={filterForm.pathKeyword}
@@ -233,12 +233,12 @@ const ResourceTransferModal = ({ fromResources, onDestroyed }: Props) => {
                   });
                 }}
               >
-                {t<string>("Show unfinished only")}
+                {t<string>("resourceTransfer.filter.showUnfinishedOnly")}
               </Checkbox>
             </div>
             <div className={"flex items-center gap-1"}>
               <Chip color={"secondary"} size={"sm"} variant={"light"}>
-                {t<string>("Finished")}
+                {t<string>("resourceTransfer.label.finished")}
               </Chip>
               {
                 fromResources.filter(
@@ -273,16 +273,16 @@ const ResourceTransferModal = ({ fromResources, onDestroyed }: Props) => {
                   <div>
                     <div className={"flex items-center gap-1"}>
                       {t<string>(
-                        "Following properties will not be transferred",
+                        "resourceTransfer.tip.nonTransferableProperties",
                       )}
                       {[
-                        "Parent association",
-                        "Path",
-                        "FileCreatedAt",
-                        "FileModifiedAt",
+                        "parentAssociation",
+                        "path",
+                        "fileCreatedAt",
+                        "fileModifiedAt",
                       ].map((x) => (
-                        <Chip radius={"sm"} size={"sm"}>
-                          {t<string>(`Property.${x}`)}
+                        <Chip key={x} radius={"sm"} size={"sm"}>
+                          {t<string>(`resourceTransfer.property.${x}`)}
                         </Chip>
                       ))}
                     </div>
@@ -296,19 +296,19 @@ const ResourceTransferModal = ({ fromResources, onDestroyed }: Props) => {
         </div>
         <div className={"grow overflow-y-auto"}>
           {resources.length == 0 ? (
-            t<string>("No resources to be transferred")
+            t<string>("resourceTransfer.empty.noResources")
           ) : (
             <Table isCompact removeWrapper>
               <TableHeader>
-                <TableColumn width={100}>{t<string>("#")}</TableColumn>
+                <TableColumn width={100}>{t<string>("resourceTransfer.column.index")}</TableColumn>
                 <TableColumn width={200}>
-                  {t<string>("Source resource")}
+                  {t<string>("resourceTransfer.column.sourceResource")}
                 </TableColumn>
-                <TableColumn width={60}>-</TableColumn>
+                <TableColumn width={60}>{" "}</TableColumn>
                 <TableColumn width={200}>
-                  {t<string>("Resource will be overwritten")}
+                  {t<string>("resourceTransfer.column.targetResource")}
                 </TableColumn>
-                <TableColumn>{t<string>("Operations")}</TableColumn>
+                <TableColumn>{t<string>("resourceTransfer.column.operations")}</TableColumn>
               </TableHeader>
               <TableBody>
                 {resources.map((x, i) => {
@@ -355,12 +355,12 @@ const ResourceTransferModal = ({ fromResources, onDestroyed }: Props) => {
                           toResource ? (
                             <Resource resource={toResource} />
                           ) : (
-                            t<string>("Unknown resource")
+                            t<string>("resourceTransfer.label.unknownResource")
                           )
                         ) : (
                           <div className={"text-warning"}>
                             {t<string>(
-                              "Please select a target resource on the right side",
+                              "resourceTransfer.tip.selectTarget",
                             )}
                           </div>
                         )}
@@ -404,7 +404,7 @@ const ResourceTransferModal = ({ fromResources, onDestroyed }: Props) => {
                               setInputModel({ ...inputModel });
                             }}
                           >
-                            {t<string>("Delete source resource (data only)")}
+                            {t<string>("resourceTransfer.option.deleteSource")}
                           </Checkbox>
                           <Checkbox
                             isDisabled={inputModel.keepMediaLibraryForAll}
@@ -419,7 +419,7 @@ const ResourceTransferModal = ({ fromResources, onDestroyed }: Props) => {
                             }}
                           >
                             {t<string>(
-                              "Keep associated media library information for target resource",
+                              "resourceTransfer.option.keepMediaLibrary",
                             )}
                           </Checkbox>
                         </div>
@@ -443,8 +443,8 @@ const ResourceTransferModal = ({ fromResources, onDestroyed }: Props) => {
                 });
               }}
             >
-              {t<string>("Delete source resource (data only)")}(
-              {t<string>("For all {{count}} items", {
+              {t<string>("resourceTransfer.option.deleteSource")}(
+              {t<string>("resourceTransfer.option.forAllItems", {
                 count: fromResources.length,
               })}
               )
@@ -455,12 +455,12 @@ const ResourceTransferModal = ({ fromResources, onDestroyed }: Props) => {
                 <div>
                   <div>
                     {t<string>(
-                      "Category and media library of target resource will be remained by default.",
+                      "resourceTransfer.tip.keepMediaLibrary",
                     )}
                   </div>
                   <div>
                     {t<string>(
-                      "By disable this options, the category and media library of target resource will be replaced with data from source resource.",
+                      "resourceTransfer.tip.replaceMediaLibrary",
                     )}
                   </div>
                 </div>
@@ -477,10 +477,10 @@ const ResourceTransferModal = ({ fromResources, onDestroyed }: Props) => {
                 }}
               >
                 {t<string>(
-                  "Keep associated media library information for target resource",
+                  "resourceTransfer.option.keepMediaLibrary",
                 )}
                 (
-                {t<string>("For all {{count}} items", {
+                {t<string>("resourceTransfer.option.forAllItems", {
                   count: fromResources.length,
                 })}
                 )

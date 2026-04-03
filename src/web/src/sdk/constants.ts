@@ -1647,7 +1647,8 @@ export enum ThirdPartyId {
   Fantia = 8,
   Cien = 9,
   Patreon = 10,
-  Tmdb = 11
+  Tmdb = 11,
+  Steam = 12
 }
 
 export const thirdPartyIds = [
@@ -1661,7 +1662,8 @@ export const thirdPartyIds = [
   { label: 'Fantia', value: ThirdPartyId.Fantia },
   { label: 'Cien', value: ThirdPartyId.Cien },
   { label: 'Patreon', value: ThirdPartyId.Patreon },
-  { label: 'Tmdb', value: ThirdPartyId.Tmdb }
+  { label: 'Tmdb', value: ThirdPartyId.Tmdb },
+  { label: 'Steam', value: ThirdPartyId.Steam }
 ] as const;
 
 export const ThirdPartyIdLabel: Record<ThirdPartyId, string> = {
@@ -1675,7 +1677,8 @@ export const ThirdPartyIdLabel: Record<ThirdPartyId, string> = {
   [ThirdPartyId.Fantia]: 'Fantia',
   [ThirdPartyId.Cien]: 'Cien',
   [ThirdPartyId.Patreon]: 'Patreon',
-  [ThirdPartyId.Tmdb]: 'Tmdb'
+  [ThirdPartyId.Tmdb]: 'Tmdb',
+  [ThirdPartyId.Steam]: 'Steam'
 };
 
 export enum PasswordSearchOrder {

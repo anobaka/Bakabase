@@ -6,7 +6,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useUpdateEffect } from "react-use";
 
-import { NumberInput, Progress } from "@/components/bakaui";
+import { Input, NumberInput, Progress } from "@/components/bakaui";
 import NotSet, {
   LightText,
 } from "@/components/StandardValue/ValueRenderer/Renderers/components/LightText";
@@ -58,24 +58,22 @@ const NumberValueRenderer = (props: NumberValueRendererProps) => {
   };
 
   // Direct editing mode: always show input without toggle
+  // Use plain Input with type="number" to avoid HeroUI NumberInput's
+  // comma formatting which breaks parseFloat on onChange.
   if (isEditing && !isReadonly && editor) {
-    const handleChange = (newValue: number) => {
-      const v = Number.isNaN(newValue) ? undefined : newValue;
-
-      setValue(v);
-      editor.onValueChange?.(v, v);
-    };
-
     return (
-      <NumberInput
-        hideStepper
-        className={"w-[120px]"}
-        classNames={{ input: "text-left" }}
+      <Input
+        type="number"
         endContent={as === "progress" ? "%" : undefined}
         placeholder={t("common.placeholder.typeHere")}
         size={size}
-        value={value}
-        onValueChange={handleChange}
+        value={value?.toString() ?? ""}
+        onValueChange={(raw) => {
+          const v = raw === "" ? undefined : parseFloat(raw);
+          const valid = v != null && !Number.isNaN(v) ? v : undefined;
+          setValue(valid);
+          editor.onValueChange?.(valid, valid);
+        }}
       />
     );
   }

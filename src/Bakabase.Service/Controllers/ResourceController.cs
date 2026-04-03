@@ -446,7 +446,8 @@ namespace Bakabase.Service.Controllers
             {
                 PropertyId = model.PropertyId,
                 IsCustomProperty = model.IsCustomProperty,
-                Value = model.Value
+                Value = model.Value,
+                IsBizValue = model.IsBizValue
             };
 
             return await service.BulkPutPropertyValue(model.ResourceIds.ToArray(), propertyValueModel);

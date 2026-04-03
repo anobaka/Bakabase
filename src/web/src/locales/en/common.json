@@ -79,6 +79,7 @@
   "common.label.pattern": "Pattern",
   "common.label.extensions": "Extensions",
   "common.placeholder.separateBySpaceOrNewline": "Separate by space or newline",
+  "common.placeholder.search": "Search",
   "common.placeholder.typeHere": "Type here",
   "common.placeholder.readonly": "Readonly",
   "common.label.total": "Total",

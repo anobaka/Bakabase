@@ -101,19 +101,25 @@ const ChoiceValueRenderer = (props: ChoiceValueRendererProps) => {
     if (isReadonly || !editor?.onValueChange) return;
 
     if (multiple) {
-      // Multiple selection: toggle the item
       const newDbValues = selectedValues.includes(itemValue)
         ? selectedValues.filter((v) => v !== itemValue)
         : [...selectedValues, itemValue];
-      // Convert dbValues (UUIDs) to bizValues (labels)
+      // Empty array → undefined (no value)
+      if (newDbValues.length === 0) {
+        editor.onValueChange(undefined, undefined);
+        return;
+      }
       const newBizValues = newDbValues
         .map((v) => dataSource.find((d) => d.value === v)?.label)
         .filter((l): l is string => l !== undefined);
       editor.onValueChange(newDbValues, newBizValues);
     } else {
-      // Single selection: select or deselect
-      const newDbValues = selectedValues.includes(itemValue) ? [] : [itemValue];
-      // Convert dbValues (UUIDs) to bizValues (labels)
+      if (selectedValues.includes(itemValue)) {
+        // Deselect → no value
+        editor.onValueChange(undefined, undefined);
+        return;
+      }
+      const newDbValues = [itemValue];
       const newBizValues = newDbValues
         .map((v) => dataSource.find((d) => d.value === v)?.label)
         .filter((l): l is string => l !== undefined);

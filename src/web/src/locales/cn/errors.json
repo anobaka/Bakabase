@@ -15,5 +15,21 @@
   "error.transfer.marks": "转移标记失败",
   "error.start.sync": "启动同步失败",
   "error.update.option": "更新选项失败",
-  "error.unknown": "未知错误"
+  "error.unknown": "未知错误",
+
+  "error.modal.title": "出了点问题",
+  "error.modal.errorLabel": "错误",
+  "error.modal.unknownError": "未知错误",
+  "error.modal.stackTrace": "堆栈信息",
+  "error.modal.componentStack": "组件堆栈",
+  "error.modal.showLess": "收起",
+  "error.modal.showAll": "展开全部",
+  "error.modal.whatYouCanTry": "你可以尝试",
+  "error.modal.reloadPage": "刷新页面",
+  "error.modal.restartApp": "重启应用",
+  "error.modal.restartAppDesc": "完全关闭并重新启动",
+  "error.modal.contactSupport": "联系支持",
+  "error.modal.logFile": "日志文件：",
+  "error.modal.continueBrowsing": "继续浏览",
+  "error.modal.returnHome": "返回首页"
 }

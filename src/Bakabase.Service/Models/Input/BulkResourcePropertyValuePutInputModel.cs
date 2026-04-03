@@ -26,4 +26,11 @@ public class BulkResourcePropertyValuePutInputModel
     /// Serialized property value (StandardValue format)
     /// </summary>
     public string? Value { get; set; }
+
+    /// <summary>
+    /// When true, Value is treated as a serialized bizValue (e.g. label text for choices)
+    /// and will be converted to dbValue via PrepareDbValue, auto-creating options if needed.
+    /// When false (default), Value is treated as a serialized dbValue.
+    /// </summary>
+    public bool IsBizValue { get; set; }
 }
