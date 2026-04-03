@@ -6,25 +6,17 @@ import type { BTask } from "@/core/models/BTask";
 
 import React, { useCallback, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { AiOutlineAim, AiOutlineCopy, AiOutlineFileSearch, AiOutlineTags, AiOutlineAppstore } from "react-icons/ai";
+import { AiOutlineCopy } from "react-icons/ai";
 
 import MarkConfigModal from "./MarkConfigModal";
 import PathMarkChip from "./PathMarkChip";
+import AddMarkDropdown from "./AddMarkDropdown";
 
 import {
   Button,
-  Dropdown,
-  DropdownTrigger,
-  DropdownMenu,
-  DropdownItem,
 } from "@/components/bakaui";
 import { PathMarkType, BTaskStatus } from "@/sdk/constants";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import {
-  ResourceDescription,
-  PropertyDescription,
-  MediaLibraryDescription,
-} from "@/components/Chips/Terms";
 import { useBTasksStore } from "@/stores/bTasks";
 import { useCopyMarksStore } from "@/stores/copyMarks";
 
@@ -192,45 +184,7 @@ const PathMarks = ({ entry, marks = [], onSaveMark, onDeleteMark, onTaskComplete
       {/* Add Mark Dropdown - hidden in copy mode */}
       {!isInCopyMode && (
         <div className="flex items-center gap-1">
-          <Dropdown>
-            <DropdownTrigger>
-              <Button
-                className="min-w-0 px-2 text-default-400 hover:text-primary transition-colors"
-                size="sm"
-                startContent={<AiOutlineAim className="text-lg" />}
-                variant="light"
-              >
-                {t("pathMarkConfig.action.addMark")}
-              </Button>
-            </DropdownTrigger>
-            <DropdownMenu
-              aria-label="Mark type selection"
-              className="max-w-[600px]"
-              onAction={(key) => handleAddMark(Number(key) as PathMarkType)}
-            >
-              <DropdownItem
-                key={PathMarkType.Resource}
-                className="text-success"
-                description={<ResourceDescription />}
-              >
-                <span className="flex items-center gap-1.5"><AiOutlineFileSearch />{t("common.label.resource")}</span>
-              </DropdownItem>
-              <DropdownItem
-                key={PathMarkType.Property}
-                className="text-primary"
-                description={<PropertyDescription />}
-              >
-                <span className="flex items-center gap-1.5"><AiOutlineTags />{t("common.label.property")}</span>
-              </DropdownItem>
-              <DropdownItem
-                key={PathMarkType.MediaLibrary}
-                className="text-secondary"
-                description={<MediaLibraryDescription />}
-              >
-                <span className="flex items-center gap-1.5"><AiOutlineAppstore />{t("common.label.mediaLibrary")}</span>
-              </DropdownItem>
-            </DropdownMenu>
-          </Dropdown>
+          <AddMarkDropdown onSelect={handleAddMark} />
         </div>
       )}
 

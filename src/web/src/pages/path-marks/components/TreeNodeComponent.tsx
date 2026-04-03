@@ -17,15 +17,15 @@ import {
   AiOutlineSnippets,
 } from "react-icons/ai";
 
-import { Button, toast, Tooltip, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@/components/bakaui";
+import { Button, toast, Tooltip } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 import MarkConfigModal from "@/pages/path-mark-config/components/MarkConfigModal";
 import PathMarkChip from "@/pages/path-mark-config/components/PathMarkChip";
+import AddMarkDropdown from "@/pages/path-mark-config/components/AddMarkDropdown";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { useCopyMarksStore } from "@/stores/copyMarks";
 import { getNewMarks, getExistingMarksCount } from "@/pages/path-mark-config/utils/markComparison";
 import { PathMarkType } from "@/sdk/constants";
-import { AiOutlinePlus, AiOutlineFileSearch, AiOutlineTags, AiOutlineAppstore } from "react-icons/ai";
 
 export interface PathTreeNode {
   name: string;
@@ -238,33 +238,7 @@ const TreeNodeComponent = ({
         {!isInCopyMode && !isInvalid && (
           <div className="flex items-center gap-0.5 ml-2">
             {/* Add mark dropdown */}
-            <Dropdown>
-              <DropdownTrigger>
-                <Button
-                  isIconOnly
-                  className="min-w-0 w-5 h-5"
-                  color="success"
-                  size="sm"
-                  variant="light"
-                >
-                  <AiOutlinePlus className="text-base" />
-                </Button>
-              </DropdownTrigger>
-              <DropdownMenu
-                aria-label="Add mark options"
-                onAction={(key) => handleAddMark(Number(key) as PathMarkType)}
-              >
-                <DropdownItem key={PathMarkType.Resource} className="text-success">
-                  <span className="flex items-center gap-1.5"><AiOutlineFileSearch />{t("pathMarks.label.resourceMark")}</span>
-                </DropdownItem>
-                <DropdownItem key={PathMarkType.Property} className="text-primary">
-                  <span className="flex items-center gap-1.5"><AiOutlineTags />{t("pathMarks.label.propertyMark")}</span>
-                </DropdownItem>
-                <DropdownItem key={PathMarkType.MediaLibrary} className="text-warning">
-                  <span className="flex items-center gap-1.5"><AiOutlineAppstore />{t("pathMarks.label.mediaLibraryMark")}</span>
-                </DropdownItem>
-              </DropdownMenu>
-            </Dropdown>
+            <AddMarkDropdown compact onSelect={handleAddMark} />
 
             {/* Copy marks button - only for paths with marks */}
             {hasMarks && (

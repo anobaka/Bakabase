@@ -218,12 +218,3 @@
   background-color: hsl(var(--nextui-danger, 0 84% 60%) / 0.15);
   color: hsl(var(--nextui-danger, 0 84% 60%));
 }
-
-/* Custom secondary item styling */
-.szh-menu__item .text-secondary {
-  color: var(--theme-text-secondary);
-}
-
-.szh-menu__item:hover .text-secondary {
-  color: var(--theme-text-secondary);
-}

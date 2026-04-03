@@ -208,7 +208,9 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     // Show not-found state
     if (coverResolution.status === "not-found") {
       return (
-        <FallbackCover afterClearingCache={reload} id={resource.id} />
+        <div className="w-full h-full flex items-center justify-center">
+          <FallbackCover afterClearingCache={reload} id={resource.id} />
+        </div>
       );
     }
 
