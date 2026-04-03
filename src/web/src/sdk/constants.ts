@@ -978,6 +978,7 @@ export enum BTaskType {
   MoveFiles = 2,
   MoveResources = 3,
   CopyFiles = 4,
+  Download = 5,
   Any = 1000
 }
 
@@ -986,6 +987,7 @@ export const bTaskTypes = [
   { label: 'MoveFiles', value: BTaskType.MoveFiles },
   { label: 'MoveResources', value: BTaskType.MoveResources },
   { label: 'CopyFiles', value: BTaskType.CopyFiles },
+  { label: 'Download', value: BTaskType.Download },
   { label: 'Any', value: BTaskType.Any }
 ] as const;
 
@@ -994,6 +996,7 @@ export const BTaskTypeLabel: Record<BTaskType, string> = {
   [BTaskType.MoveFiles]: 'MoveFiles',
   [BTaskType.MoveResources]: 'MoveResources',
   [BTaskType.CopyFiles]: 'CopyFiles',
+  [BTaskType.Download]: 'Download',
   [BTaskType.Any]: 'Any'
 };
 

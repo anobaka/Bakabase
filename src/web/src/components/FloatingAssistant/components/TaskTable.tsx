@@ -33,7 +33,7 @@ import {
   toast,
 } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
-import { BTaskStatus } from "@/sdk/constants";
+import { BTaskStatus, BTaskType } from "@/sdk/constants";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import type { BTask } from "@/core/models/BTask";
 import { TaskAction, ActionsFilter } from "../constants";
@@ -107,7 +107,27 @@ export function TaskTable({ tasks }: TaskTableProps) {
   const [cleaningTaskId, setCleaningTaskId] = useState<string | undefined>();
   const [loadingTasks, setLoadingTasks] = useState<Map<string, TaskAction>>(new Map());
   const [filter, setFilter] = useState<TaskFilter>("all");
+  const [typeFilter, setTypeFilter] = useState<BTaskType | null>(null);
   const { computeDisplayElapsedMs, computeDisplayRemainingMs } = useTaskTimingSimulation(tasks);
+
+  // Types that have at least one task
+  const typesWithTasks = useMemo(() => {
+    const types = new Set<BTaskType>();
+    tasks.forEach(t => types.add(t.type));
+    return Array.from(types);
+  }, [tasks]);
+
+  const typeLabel = (type: BTaskType): string => {
+    switch (type) {
+      case BTaskType.Decompress: return t("floatingAssistant.taskType.decompress");
+      case BTaskType.MoveFiles: return t("floatingAssistant.taskType.moveFiles");
+      case BTaskType.MoveResources: return t("floatingAssistant.taskType.moveResources");
+      case BTaskType.CopyFiles: return t("floatingAssistant.taskType.copyFiles");
+      case 5: return t("floatingAssistant.taskType.download"); // BTaskType.Download (pending SDK regen)
+      case BTaskType.Any: return t("floatingAssistant.taskType.any");
+      default: return String(type);
+    }
+  };
 
   // Task counts by status
   const taskCounts = useMemo(() => {
@@ -143,9 +163,14 @@ export function TaskTable({ tasks }: TaskTableProps) {
   const filteredTasks = useMemo(() => {
     let result = tasks;
 
-    // Apply filter
+    // Apply type filter
+    if (typeFilter != null) {
+      result = result.filter((task) => task.type === typeFilter);
+    }
+
+    // Apply status filter
     if (filter !== "all") {
-      result = tasks.filter((task) => {
+      result = result.filter((task) => {
         switch (filter) {
           case "running":
             return task.status === BTaskStatus.Running;
@@ -173,7 +198,7 @@ export function TaskTable({ tasks }: TaskTableProps) {
       };
       return (order[a.status] ?? 99) - (order[b.status] ?? 99);
     });
-  }, [tasks, filter]);
+  }, [tasks, filter, typeFilter]);
 
   const columns = useMemo(() => [
     { key: "name", label: t("floatingAssistant.label.taskList") },
@@ -392,7 +417,34 @@ export function TaskTable({ tasks }: TaskTableProps) {
 
   return (
     <div className="flex flex-col gap-2">
-      {/* Filter chips */}
+      {/* Type filter chips */}
+      {typesWithTasks.length > 1 && (
+        <div className="flex flex-wrap gap-1">
+          <Chip
+            size="sm"
+            variant={typeFilter == null ? "solid" : "flat"}
+            color={typeFilter == null ? "primary" : "default"}
+            className="cursor-pointer"
+            onClick={() => setTypeFilter(null)}
+          >
+            {t("floatingAssistant.taskType.all")}
+          </Chip>
+          {typesWithTasks.map((type) => (
+            <Chip
+              key={type}
+              size="sm"
+              variant={typeFilter === type ? "solid" : "flat"}
+              color={typeFilter === type ? "primary" : "default"}
+              className="cursor-pointer"
+              onClick={() => setTypeFilter(type)}
+            >
+              {typeLabel(type)}
+            </Chip>
+          ))}
+        </div>
+      )}
+
+      {/* Status filter chips */}
       <div className="flex flex-wrap gap-1">
         {filterOptions.map((option) => {
           const count = taskCounts[option.key];

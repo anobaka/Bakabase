@@ -20,5 +20,12 @@
   "floatingAssistant.tip.persistentScheduledTask": "Persistent scheduled task",
   "floatingAssistant.tip.estimatedCompletion": "Estimated completion",
   "floatingAssistant.empty.noBackgroundTask": "No background task",
-  "floatingAssistant.empty.noTasksMatchFilter": "No tasks match the filter"
+  "floatingAssistant.empty.noTasksMatchFilter": "No tasks match the filter",
+  "floatingAssistant.taskType.all": "All",
+  "floatingAssistant.taskType.decompress": "Decompress",
+  "floatingAssistant.taskType.moveFiles": "Move Files",
+  "floatingAssistant.taskType.moveResources": "Move Resources",
+  "floatingAssistant.taskType.copyFiles": "Copy Files",
+  "floatingAssistant.taskType.download": "Download",
+  "floatingAssistant.taskType.any": "Other"
 }
