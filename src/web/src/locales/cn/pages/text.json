@@ -17,12 +17,12 @@
   "SpecialTextType.Standardization": "同义词",
   "SpecialTextType.Volume": "卷号",
 
-  "SpecialTextType.Trim": "端部清除",
+  "SpecialTextType.Trim": "首尾清除",
   "SpecialTextType.DateTime": "日期时间",
 
-  "text.typeDescription.useless": "忽略被正则表达式成功匹配的包装器内的部分",
-  "text.typeDescription.language": "如果文本被[包装器]包围，将被解析为[特定语言]",
-  "text.typeDescription.wrapper": "文本包装器，用于匹配和提取包装器内的文本",
+  "text.typeDescription.useless": "忽略被正则表达式成功匹配的包裹符号内的部分",
+  "text.typeDescription.language": "如果文本被[包裹符号]包围，将被解析为[特定语言]",
+  "text.typeDescription.wrapper": "文本包裹符号，用于匹配和提取包裹符号内的文本",
   "text.typeDescription.standardization": "分析时将[文本1]视为[文本2]",
   "text.typeDescription.volume": "从此文本组中提取卷信息",
   "text.typeDescription.trim": "当文本的前端或后端出现指定文本时，将其从两端移除",
@@ -40,8 +40,8 @@
   "text.placeholder.sourceText": "输入源文本",
   "text.label.convertTo": "转换为",
   "text.placeholder.convertTo": "输入目标文本",
-  "text.label.leftWrapper": "左包装器",
-  "text.placeholder.leftWrapper": "输入左包装器",
-  "text.label.rightWrapper": "右包装器",
-  "text.placeholder.rightWrapper": "输入右包装器"
+  "text.label.leftWrapper": "左包裹符号",
+  "text.placeholder.leftWrapper": "输入左包裹符号",
+  "text.label.rightWrapper": "右包裹符号",
+  "text.placeholder.rightWrapper": "输入右包裹符号"
 }
