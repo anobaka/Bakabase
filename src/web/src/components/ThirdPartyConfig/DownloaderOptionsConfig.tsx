@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Input, Button, Textarea } from "@heroui/react";
+import { AiOutlineCheck, AiOutlineClose } from "react-icons/ai";
 
 import BApi from "@/sdk/BApi";
 import { toast } from "@/components/bakaui";
@@ -24,6 +25,7 @@ export default function DownloaderOptionsConfig({
   const { t } = useTranslation();
   const [options, setOptions] = useState<any>(externalOptions || {});
   const [validatingCookie, setValidatingCookie] = useState(false);
+  const [validationResult, setValidationResult] = useState<"succeed" | "failed" | undefined>();
 
   useEffect(() => {
     setOptions(JSON.parse(JSON.stringify(externalOptions || {})));
@@ -44,13 +46,15 @@ export default function DownloaderOptionsConfig({
       .validateCookie({ cookie: options.cookie, target: cookieValidatorTarget })
       .then((r: any) => {
         if (r.code) {
+          setValidationResult("failed");
           toast.danger(
             `${t<string>("thirdPartyConfig.error.invalidCookie")}:${r.message}`,
           );
         } else {
-          toast.success(t<string>("thirdPartyConfig.success.cookieValid"));
+          setValidationResult("succeed");
         }
       })
+      .catch(() => setValidationResult("failed"))
       .finally(() => {
         setValidatingCookie(false);
       });
@@ -132,9 +136,12 @@ export default function DownloaderOptionsConfig({
         </Button>
         {!hideCookie && cookieValidatorTarget && options.cookie && (
           <Button
+            color={validationResult === "succeed" ? "success" : validationResult === "failed" ? "danger" : "default"}
             disabled={!options.cookie?.length || validatingCookie}
             isLoading={validatingCookie}
             size="sm"
+            variant="flat"
+            startContent={validationResult === "succeed" ? <AiOutlineCheck /> : validationResult === "failed" ? <AiOutlineClose /> : undefined}
             onPress={handleValidateCookie}
           >
             {t<string>("thirdPartyConfig.action.validateCookie")}

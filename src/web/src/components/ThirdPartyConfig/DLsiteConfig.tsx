@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Button,
@@ -9,6 +9,7 @@ import {
   Modal,
   ModalBody,
   ModalContent,
+  ModalFooter,
   ModalHeader,
   Switch,
   Tab,
@@ -36,14 +37,18 @@ export enum DLsiteConfigField {
 
 interface DLsiteConfigProps {
   onDestroyed?: () => void;
+  onClose?: () => void;
+  isOpen?: boolean;
   fields?: DLsiteConfigField[] | "all";
 }
 
-export default function DLsiteConfig({ onDestroyed, fields: visibleFields }: DLsiteConfigProps) {
+export default function DLsiteConfig({ onDestroyed, onClose, isOpen, fields: visibleFields }: DLsiteConfigProps) {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const options = useDLsiteOptionsStore((s) => s.data);
   const patch = useDLsiteOptionsStore((s) => s.patch);
+  const [saving, setSaving] = useState(false);
+  const pendingAccountsRef = useRef<any[] | null>(null);
 
   const downloadDir = options?.defaultPath;
   const scanFolders = options?.scanFolders || [];
@@ -56,14 +61,29 @@ export default function DLsiteConfig({ onDestroyed, fields: visibleFields }: DLs
         placeholder: t("resourceSource.accounts.cookiePlaceholder"),
         type: "textarea" as const,
         cookieValidatorTarget: CookieValidatorTarget.DLsite,
+        cookieCaptureTarget: CookieValidatorTarget.DLsite,
       },
     ],
     [t],
   );
 
-  const handleSave = async (accounts: any[]) => {
-    await patch({ accounts });
-    toast.success(t("thirdPartyConfig.success.saved"));
+  const handleClose = onClose ?? onDestroyed;
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const updates: any = {};
+      if (pendingAccountsRef.current !== null) {
+        updates.accounts = pendingAccountsRef.current;
+      }
+      if (Object.keys(updates).length > 0) {
+        await patch(updates);
+      }
+      toast.success(t("thirdPartyConfig.success.saved"));
+      handleClose?.();
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleSelectDownloadDir = () => {
@@ -188,7 +208,9 @@ export default function DLsiteConfig({ onDestroyed, fields: visibleFields }: DLs
           <AccountsPanel
             accounts={options?.accounts || []}
             fields={accountFields}
-            onSave={handleSave}
+            hideFooter
+            onAccountsChange={(accs) => { pendingAccountsRef.current = accs; }}
+            onSave={async () => {}}
           />
         ),
       },
@@ -230,10 +252,10 @@ export default function DLsiteConfig({ onDestroyed, fields: visibleFields }: DLs
   }, [visibleFields, options, accountFields, scanFolders, downloadDir, t]);
 
   return (
-    <Modal defaultOpen scrollBehavior="inside" size="5xl" onClose={onDestroyed}>
+    <Modal isOpen={isOpen ?? true} scrollBehavior="inside" size="5xl" onClose={handleClose}>
       <ModalContent>
         <ModalHeader>{t("resourceSource.dlsite.title")}</ModalHeader>
-        <ModalBody className="pb-6">
+        <ModalBody>
           {tabs.length === 1 ? (
             tabs[0].content
           ) : (
@@ -246,6 +268,14 @@ export default function DLsiteConfig({ onDestroyed, fields: visibleFields }: DLs
             </Tabs>
           )}
         </ModalBody>
+        <ModalFooter>
+          <Button variant="light" onPress={handleClose}>
+            {t("common.action.cancel")}
+          </Button>
+          <Button color="primary" isLoading={saving} onPress={handleSave}>
+            {t("common.action.save")}
+          </Button>
+        </ModalFooter>
       </ModalContent>
     </Modal>
   );

@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using Avalonia.Platform;
 
 namespace Bakabase.Controls;
@@ -157,6 +160,92 @@ public partial class NativeWebViewHost
         }
 
         ObjC.SendVoid(nsStringPath, ObjC.Sel("release"));
+    }
+
+    private string? GetCurrentUrlMacOS()
+    {
+        if (_macWebView == IntPtr.Zero) return null;
+        try
+        {
+            var urlObj = ObjC.SendIntPtr(_macWebView, ObjC.Sel("URL"));
+            if (urlObj == IntPtr.Zero) return null;
+            var absStr = ObjC.SendIntPtr(urlObj, ObjC.Sel("absoluteString"));
+            if (absStr == IntPtr.Zero) return null;
+            var utf8Ptr = ObjC.SendIntPtr(absStr, ObjC.Sel("UTF8String"));
+            return utf8Ptr != IntPtr.Zero ? Marshal.PtrToStringUTF8(utf8Ptr) : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Extracts cookies from WKWebView by navigating to each cookie URL
+    /// and reading document.cookie via JavaScript (title trick).
+    /// Note: HttpOnly cookies are not accessible via this method.
+    /// </summary>
+    private async Task<string?> GetCookiesMacOS(string[] cookieUrls)
+    {
+        if (_macWebView == IntPtr.Zero) return null;
+
+        try
+        {
+            var allCookies = new Dictionary<string, string>();
+
+            foreach (var url in cookieUrls)
+            {
+                NavigateMacOS(url);
+                await Task.Delay(2000); // Wait for page load
+
+                // Inject JS to copy document.cookie into the page title
+                const string marker = "__BAKABASE_COOKIE__";
+                var js = ObjC.CreateNSString($"document.title = '{marker}' + document.cookie");
+                ObjC.SendVoid_IntPtr_IntPtr(_macWebView, ObjC.Sel("evaluateJavaScript:completionHandler:"), js, IntPtr.Zero);
+                ObjC.SendVoid(js, ObjC.Sel("release"));
+
+                await Task.Delay(500); // Wait for JS execution
+
+                // Read the title
+                var titlePtr = ObjC.SendIntPtr(_macWebView, ObjC.Sel("title"));
+                if (titlePtr != IntPtr.Zero)
+                {
+                    var utf8Ptr = ObjC.SendIntPtr(titlePtr, ObjC.Sel("UTF8String"));
+                    if (utf8Ptr != IntPtr.Zero)
+                    {
+                        var title = Marshal.PtrToStringUTF8(utf8Ptr);
+                        if (title != null && title.StartsWith(marker))
+                        {
+                            var cookieStr = title[marker.Length..];
+                            ParseCookieString(cookieStr, allCookies);
+                        }
+                    }
+                }
+            }
+
+            if (allCookies.Count == 0) return null;
+            return string.Join("; ", allCookies.Select(kv => $"{kv.Key}={kv.Value}"));
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"GetCookiesMacOS failed: {ex}");
+            return null;
+        }
+    }
+
+    private static void ParseCookieString(string cookieStr, Dictionary<string, string> target)
+    {
+        if (string.IsNullOrWhiteSpace(cookieStr)) return;
+        foreach (var pair in cookieStr.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+        {
+            var eqIdx = pair.IndexOf('=');
+            if (eqIdx > 0)
+            {
+                var name = pair[..eqIdx].Trim();
+                var value = pair[(eqIdx + 1)..].Trim();
+                target[name] = value;
+            }
+        }
     }
 
     private void DestroyMacOS()

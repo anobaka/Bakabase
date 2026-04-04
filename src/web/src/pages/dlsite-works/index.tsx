@@ -362,7 +362,7 @@ export default function DLsiteWorksPage() {
                 }}
               >
                 <span className="text-sm text-default-500 whitespace-nowrap">
-                  {t("resourceSource.dlsite.action.showHidden", { count: "" })}
+                  {t("resourceSource.dlsite.action.showHidden")}
                 </span>
               </Switch>
               <div className="flex items-center gap-2">
@@ -424,12 +424,17 @@ export default function DLsiteWorksPage() {
           <ModalHeader>{t("resourceSource.confirm.sync.title")}</ModalHeader>
           <ModalBody>
             <p>{t("resourceSource.confirm.sync.description")}</p>
-            <Checkbox
-              isSelected={refetchMetadata}
-              onValueChange={setRefetchMetadata}
-            >
-              {t("resourceSource.confirm.sync.refetchMetadata")}
-            </Checkbox>
+            <div>
+              <Checkbox
+                isSelected={refetchMetadata}
+                onValueChange={setRefetchMetadata}
+              >
+                {t("resourceSource.confirm.sync.refetchMetadata")}
+              </Checkbox>
+              <p className="text-xs text-default-400 ml-7 mt-1">
+                {t("resourceSource.confirm.sync.refetchMetadata.description")}
+              </p>
+            </div>
           </ModalBody>
           <ModalFooter>
             <Button variant="light" onPress={() => setShowSyncConfirm(false)}>

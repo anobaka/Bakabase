@@ -1,12 +1,12 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Modal, ModalContent, ModalHeader, ModalBody, Tab, Tabs } from "@heroui/react";
+import { Button, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Tab, Tabs } from "@heroui/react";
 
 import { toast } from "@/components/bakaui";
 import { useExHentaiOptionsStore } from "@/stores/options";
-import { ResourceSource } from "@/sdk/constants";
+import { CookieValidatorTarget, ResourceSource } from "@/sdk/constants";
 import AccountsPanel, { type AccountField } from "./AccountsPanel";
 import MetadataMappingPanel from "./MetadataMappingPanel";
 import AutoSyncPanel from "./AutoSyncPanel";
@@ -19,13 +19,17 @@ export enum ExHentaiConfigField {
 
 interface ExHentaiConfigProps {
   onDestroyed?: () => void;
+  onClose?: () => void;
+  isOpen?: boolean;
   fields?: ExHentaiConfigField[] | "all";
 }
 
-export default function ExHentaiConfig({ onDestroyed, fields: visibleFields }: ExHentaiConfigProps) {
+export default function ExHentaiConfig({ onDestroyed, onClose, isOpen, fields: visibleFields }: ExHentaiConfigProps) {
   const { t } = useTranslation();
   const options = useExHentaiOptionsStore((s) => s.data);
   const patch = useExHentaiOptionsStore((s) => s.patch);
+  const [saving, setSaving] = useState(false);
+  const pendingAccountsRef = useRef<any[] | null>(null);
 
   const accountFields: AccountField[] = useMemo(
     () => [
@@ -34,14 +38,30 @@ export default function ExHentaiConfig({ onDestroyed, fields: visibleFields }: E
         label: t("resourceSource.accounts.cookie"),
         placeholder: t("resourceSource.accounts.cookiePlaceholder"),
         type: "textarea" as const,
+        cookieValidatorTarget: CookieValidatorTarget.ExHentai,
+        cookieCaptureTarget: CookieValidatorTarget.ExHentai,
       },
     ],
     [t],
   );
 
-  const handleSave = async (accounts: any[]) => {
-    await patch({ accounts });
-    toast.success(t("thirdPartyConfig.success.saved"));
+  const handleClose = onClose ?? onDestroyed;
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const updates: any = {};
+      if (pendingAccountsRef.current !== null) {
+        updates.accounts = pendingAccountsRef.current;
+      }
+      if (Object.keys(updates).length > 0) {
+        await patch(updates);
+      }
+      toast.success(t("thirdPartyConfig.success.saved"));
+      handleClose?.();
+    } finally {
+      setSaving(false);
+    }
   };
 
   const isFieldVisible = (field: ExHentaiConfigField) =>
@@ -57,7 +77,9 @@ export default function ExHentaiConfig({ onDestroyed, fields: visibleFields }: E
           <AccountsPanel
             accounts={options?.accounts || []}
             fields={accountFields}
-            onSave={handleSave}
+            hideFooter
+            onAccountsChange={(accs) => { pendingAccountsRef.current = accs; }}
+            onSave={async () => {}}
           />
         ),
       },
@@ -83,10 +105,10 @@ export default function ExHentaiConfig({ onDestroyed, fields: visibleFields }: E
   }, [visibleFields, options, accountFields, t]);
 
   return (
-    <Modal defaultOpen scrollBehavior="inside" size="5xl" onClose={onDestroyed}>
+    <Modal isOpen={isOpen ?? true} scrollBehavior="inside" size="5xl" onClose={handleClose}>
       <ModalContent>
         <ModalHeader>{t("resourceSource.exhentai.title")}</ModalHeader>
-        <ModalBody className="pb-6">
+        <ModalBody>
           {tabs.length === 1 ? (
             tabs[0].content
           ) : (
@@ -99,6 +121,14 @@ export default function ExHentaiConfig({ onDestroyed, fields: visibleFields }: E
             </Tabs>
           )}
         </ModalBody>
+        <ModalFooter>
+          <Button variant="light" onPress={handleClose}>
+            {t("common.action.cancel")}
+          </Button>
+          <Button color="primary" isLoading={saving} onPress={handleSave}>
+            {t("common.action.save")}
+          </Button>
+        </ModalFooter>
       </ModalContent>
     </Modal>
   );

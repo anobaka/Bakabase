@@ -39,10 +39,12 @@ export enum SteamConfigField {
 
 interface SteamConfigProps {
   onDestroyed?: () => void;
+  onClose?: () => void;
+  isOpen?: boolean;
   fields?: SteamConfigField[] | "all";
 }
 
-export default function SteamConfig({ onDestroyed, fields: visibleFields }: SteamConfigProps) {
+export default function SteamConfig({ onDestroyed, onClose, isOpen, fields: visibleFields }: SteamConfigProps) {
   const { t } = useTranslation();
   const steamOptions = useSteamOptionsStore((s) => s.data);
   const patch = useSteamOptionsStore((s) => s.patch);
@@ -136,7 +138,7 @@ export default function SteamConfig({ onDestroyed, fields: visibleFields }: Stea
   }, [visibleFields, steamOptions, accountFields, t]);
 
   return (
-    <Modal defaultOpen scrollBehavior="inside" size="5xl" onClose={onDestroyed}>
+    <Modal isOpen={isOpen ?? true} scrollBehavior="inside" size="5xl" onClose={onClose ?? onDestroyed}>
       <ModalContent>
         <ModalHeader>{t("resourceSource.steam.title")}</ModalHeader>
         <ModalBody className="pb-6">

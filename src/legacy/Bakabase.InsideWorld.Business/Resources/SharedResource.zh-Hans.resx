@@ -738,4 +738,28 @@
   <data name="BTask_Description_FetchExternalMetadata" xml:space="preserve">
     <value>正在从外部源（Steam、DLsite、ExHentai）获取元数据和封面</value>
   </data>
+  <data name="ResourceSync_Complete" xml:space="preserve">
+    <value>资源同步完成</value>
+  </data>
+  <data name="CookieCapture_Confirm" xml:space="preserve">
+    <value>确认</value>
+  </data>
+  <data name="CookieCapture_Cancel" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="CookieCapture_WaitingForLogin" xml:space="preserve">
+    <value>请登录，如果已登录请点击确认</value>
+  </data>
+  <data name="CookieCapture_LoginDetected" xml:space="preserve">
+    <value>检测到登录，正在提取 Cookie...</value>
+  </data>
+  <data name="CookieCapture_ExtractingCookies" xml:space="preserve">
+    <value>正在提取 Cookie...</value>
+  </data>
+  <data name="CookieCapture_NavigatingTo" xml:space="preserve">
+    <value>正在跳转到 {0}...</value>
+  </data>
+  <data name="CookieCapture_Error" xml:space="preserve">
+    <value>错误</value>
+  </data>
 </root>

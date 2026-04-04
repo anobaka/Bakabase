@@ -9,9 +9,10 @@ import {
   Chip,
   Divider,
 } from "@heroui/react";
-import { AiOutlinePlus, AiOutlineDelete } from "react-icons/ai";
-import { CheckCircleOutlined, CloseCircleOutlined } from "@ant-design/icons";
+import { AiOutlinePlus, AiOutlineDelete, AiOutlineCheck, AiOutlineClose } from "react-icons/ai";
 import type { CookieValidatorTarget } from "@/sdk/constants";
+import { RuntimeMode } from "@/sdk/constants";
+import { useAppContextStore } from "@/stores/appContext";
 import BApi from "@/sdk/BApi";
 
 export interface AccountField {
@@ -20,6 +21,7 @@ export interface AccountField {
   placeholder?: string;
   type?: "text" | "password" | "textarea";
   cookieValidatorTarget?: CookieValidatorTarget;
+  cookieCaptureTarget?: CookieValidatorTarget;
   description?: React.ReactNode;
 }
 
@@ -32,17 +34,26 @@ interface AccountsPanelProps {
   accounts: Account[];
   fields: AccountField[];
   onSave: (accounts: Account[]) => Promise<void>;
+  hideFooter?: boolean;
+  onAccountsChange?: (accounts: Account[]) => void;
 }
 
 export default function AccountsPanel({
   accounts: initialAccounts,
   fields,
   onSave,
+  hideFooter,
+  onAccountsChange,
 }: AccountsPanelProps) {
   const { t } = useTranslation();
+  const runtimeMode = useAppContextStore((s) => s.runtimeMode);
+  const isDesktopApp = runtimeMode !== RuntimeMode.Docker;
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [saving, setSaving] = useState(false);
   const [validationStatus, setValidationStatus] = useState<
+    Record<string, "loading" | "succeed" | "failed">
+  >({});
+  const [captureStatus, setCaptureStatus] = useState<
     Record<string, "loading" | "succeed" | "failed">
   >({});
 
@@ -53,6 +64,10 @@ export default function AccountsPanel({
         : [],
     );
   }, [initialAccounts]);
+
+  useEffect(() => {
+    onAccountsChange?.(accounts);
+  }, [accounts]);
 
   const addAccount = () => {
     const newAccount: Account = { name: "" };
@@ -91,6 +106,26 @@ export default function AccountsPanel({
       }));
     } catch {
       setValidationStatus((prev) => ({ ...prev, [key]: "failed" }));
+    }
+  };
+
+  const handleCaptureCookie = async (
+    index: number,
+    field: AccountField,
+  ) => {
+    if (!field.cookieCaptureTarget) return;
+    const key = `${index}-${field.key}`;
+    setCaptureStatus((prev) => ({ ...prev, [key]: "loading" }));
+    try {
+      const rsp = await BApi.tool.captureCookie({ target: field.cookieCaptureTarget });
+      if (!rsp.code && rsp.data) {
+        updateAccount(index, field.key, rsp.data);
+        setCaptureStatus((prev) => ({ ...prev, [key]: "succeed" }));
+      } else {
+        setCaptureStatus((prev) => ({ ...prev, [key]: "failed" }));
+      }
+    } catch {
+      setCaptureStatus((prev) => ({ ...prev, [key]: "failed" }));
     }
   };
 
@@ -168,25 +203,33 @@ export default function AccountsPanel({
                         updateAccount(index, field.key, v)
                       }
                     />
-                    {field.cookieValidatorTarget != null && (
+                    {(field.cookieValidatorTarget != null || (isDesktopApp && field.cookieCaptureTarget != null)) && (
                       <div className="flex items-center gap-2 mt-1">
-                        <Button
-                          color="primary"
-                          isDisabled={!account[field.key]}
-                          isLoading={vStatus === "loading"}
-                          size="sm"
-                          variant="flat"
-                          onPress={() =>
-                            handleValidateCookie(index, field)
-                          }
-                        >
-                          {t("common.action.validate")}
-                        </Button>
-                        {vStatus === "succeed" && (
-                          <CheckCircleOutlined className="text-base text-success" />
+                        {field.cookieValidatorTarget != null && (
+                          <Button
+                            color={vStatus === "succeed" ? "success" : vStatus === "failed" ? "danger" : "primary"}
+                            isDisabled={!account[field.key]}
+                            isLoading={vStatus === "loading"}
+                            size="sm"
+                            variant="flat"
+                            startContent={vStatus === "succeed" ? <AiOutlineCheck /> : vStatus === "failed" ? <AiOutlineClose /> : undefined}
+                            onPress={() =>
+                              handleValidateCookie(index, field)
+                            }
+                          >
+                            {t("common.action.validate")}
+                          </Button>
                         )}
-                        {vStatus === "failed" && (
-                          <CloseCircleOutlined className="text-base text-danger" />
+                        {isDesktopApp && field.cookieCaptureTarget != null && (
+                          <Button
+                            color="secondary"
+                            isLoading={captureStatus[`${index}-${field.key}`] === "loading"}
+                            size="sm"
+                            variant="flat"
+                            onPress={() => handleCaptureCookie(index, field)}
+                          >
+                            {t("resourceSource.accounts.loginToImport")}
+                          </Button>
                         )}
                       </div>
                     )}
@@ -234,15 +277,19 @@ export default function AccountsPanel({
         >
           {t("resourceSource.accounts.add")}
         </Button>
-        <div className="flex-1" />
-        <Button
-          color="primary"
-          isLoading={saving}
-          size="sm"
-          onPress={handleSave}
-        >
-          {t("thirdPartyConfig.action.save")}
-        </Button>
+        {!hideFooter && (
+          <>
+            <div className="flex-1" />
+            <Button
+              color="primary"
+              isLoading={saving}
+              size="sm"
+              onPress={handleSave}
+            >
+              {t("thirdPartyConfig.action.save")}
+            </Button>
+          </>
+        )}
       </div>
     </div>
   );

@@ -195,7 +195,7 @@ public class ResourceSyncService : ScopedService
             result.PathMarksMarkedPending = true;
         }
 
-        await ReportProgress(onProgressChange, onProcessChange, 100, "Resource sync complete");
+        await ReportProgress(onProgressChange, onProcessChange, 100, _localizer["ResourceSync_Complete"]);
 
         sw.Stop();
         _logger.LogInformation(

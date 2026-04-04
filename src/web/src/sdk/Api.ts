@@ -17064,6 +17064,28 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Tool
+     * @name CaptureCookie
+     * @request POST:/tool/cookie-capture
+     */
+    captureCookie: (
+      query?: {
+        /** [1: BiliBili, 2: ExHentai, 3: Pixiv, 6: DLsite] */
+        target?: BakabaseInsideWorldModelsConstantsCookieValidatorTarget;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemString, any>({
+        path: `/tool/cookie-capture`,
+        method: "POST",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Tool
      * @name ValidateCookie
      * @request GET:/tool/cookie-validation
      */
@@ -17094,17 +17116,17 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/tool/cookie-validation`;
-      
+
       // Build query string
       if (query) {
         const queryString = Object.keys(query)
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 

@@ -16,7 +16,7 @@ import {
   AccordionItem,
   Textarea,
 } from "@heroui/react";
-import { AiOutlineQuestionCircle } from "react-icons/ai";
+import { AiOutlineQuestionCircle, AiOutlineCheck, AiOutlineClose } from "react-icons/ai";
 
 import { toast } from "@/components/bakaui";
 import { CookieValidatorTarget } from "@/sdk/constants";
@@ -87,6 +87,9 @@ const ThirdParty = ({
   const [validatingCookies, setValidatingCookies] = useState<{
     [key: string]: boolean;
   }>({});
+  const [cookieValidationResults, setCookieValidationResults] = useState<{
+    [key: string]: "succeed" | "failed";
+  }>({});
 
   useEffect(() => {
     setTmpBilibiliOptions(JSON.parse(JSON.stringify(bilibiliOptions || {})));
@@ -137,9 +140,10 @@ const ThirdParty = ({
       })
       .then((r) => {
         if (r.code) {
+          setCookieValidationResults((prev) => ({ ...prev, [thirdParty]: "failed" }));
           toast.danger(`${t<string>("configuration.thirdParty.invalidCookie")}:${r.message}`);
         } else {
-          toast.success(t<string>("configuration.thirdParty.cookieValid"));
+          setCookieValidationResults((prev) => ({ ...prev, [thirdParty]: "succeed" }));
         }
       })
       .finally(() => {
@@ -257,11 +261,14 @@ const ThirdParty = ({
         </Button>
         {options.cookie && (
           <Button
+            color={cookieValidationResults[thirdPartyName] === "succeed" ? "success" : cookieValidationResults[thirdPartyName] === "failed" ? "danger" : "default"}
             disabled={
               !options.cookie?.length || validatingCookies[thirdPartyName]
             }
             isLoading={validatingCookies[thirdPartyName]}
             size="sm"
+            variant="flat"
+            startContent={cookieValidationResults[thirdPartyName] === "succeed" ? <AiOutlineCheck /> : cookieValidationResults[thirdPartyName] === "failed" ? <AiOutlineClose /> : undefined}
             onPress={() => {
               const validatorMap: { [key: string]: CookieValidatorTarget } = {
                 bilibili: CookieValidatorTarget.BiliBili,

@@ -9,9 +9,11 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Configuration;
+using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Helpers;
 using Bakabase.Abstractions.Services;
+using Bakabase.Infrastructures.Components.Gui;
 using Bakabase.Infrastructures.Components.Storage.Services;
 using Bakabase.InsideWorld.Business.Components.Compression;
 using Bakabase.InsideWorld.Models.Constants;
@@ -39,6 +41,51 @@ namespace Bakabase.Service.Controllers
         {
             FileService.Open(path, openInDirectory);
             return BaseResponseBuilder.Ok;
+        }
+
+        [HttpPost("cookie-capture")]
+        [SwaggerOperation(OperationId = "CaptureCookie")]
+        public async Task<SingletonResponse<string>> CaptureCookie(
+            CookieValidatorTarget target,
+            [FromServices] IGuiAdapter guiAdapter,
+            [FromServices] IEnumerable<ICookieCaptureFlow> captureFlows,
+            [FromServices] IBakabaseLocalizer localizer)
+        {
+            var flow = captureFlows.FirstOrDefault(f => f.Target == target);
+            if (flow == null)
+            {
+                return SingletonResponseBuilder<string>.Build(ResponseCode.NotFound,
+                    $"Cookie capture is not supported for target: {target}");
+            }
+
+            var labels = new Dictionary<string, string>
+            {
+                ["confirm"] = localizer["CookieCapture_Confirm"],
+                ["cancel"] = localizer["CookieCapture_Cancel"],
+                ["waitingForLogin"] = localizer["CookieCapture_WaitingForLogin"],
+                ["loginDetected"] = localizer["CookieCapture_LoginDetected"],
+                ["extractingCookies"] = localizer["CookieCapture_ExtractingCookies"],
+                ["navigatingTo"] = localizer["CookieCapture_NavigatingTo"],
+                ["error"] = localizer["CookieCapture_Error"],
+            };
+
+            var cookie = await guiAdapter.CaptureWebViewCookiesAsync(
+                flow.StartUrl,
+                flow.Title,
+                flow.CookieUrls,
+                url =>
+                {
+                    var step = flow.OnTick(url);
+                    return (step.IsDone, step.NavigateToUrl);
+                },
+                labels);
+
+            if (cookie == null)
+            {
+                return SingletonResponseBuilder<string>.Build(ResponseCode.InvalidPayloadOrOperation, "Cookie capture was cancelled or is not supported in this environment.");
+            }
+
+            return new SingletonResponse<string>(cookie);
         }
 
         [HttpGet("cookie-validation")]

@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -283,5 +284,41 @@ public class AvaloniaGuiAdapter : GuiAdapter, ITrayIconController
         // Cross-platform icon extraction is not available without platform-specific APIs.
         // Return null to let the caller handle the fallback.
         return null;
+    }
+
+    public override Task<string?> CaptureWebViewCookiesAsync(string loginUrl, string title, string[] cookieUrls,
+        Func<string, (bool Done, string? NavigateToUrl)>? onNavigated = null,
+        Dictionary<string, string>? labels = null)
+    {
+        var tcs = new TaskCompletionSource<string?>();
+
+        Dispatcher.UIThread.Invoke(() =>
+        {
+            CookieCaptureWindowLabels? windowLabels = null;
+            if (labels != null)
+            {
+                windowLabels = new CookieCaptureWindowLabels
+                {
+                    Confirm = labels.GetValueOrDefault("confirm", CookieCaptureWindowLabels.Default.Confirm),
+                    Cancel = labels.GetValueOrDefault("cancel", CookieCaptureWindowLabels.Default.Cancel),
+                    WaitingForLogin = labels.GetValueOrDefault("waitingForLogin", CookieCaptureWindowLabels.Default.WaitingForLogin),
+                    LoginDetected = labels.GetValueOrDefault("loginDetected", CookieCaptureWindowLabels.Default.LoginDetected),
+                    ExtractingCookies = labels.GetValueOrDefault("extractingCookies", CookieCaptureWindowLabels.Default.ExtractingCookies),
+                    NavigatingTo = labels.GetValueOrDefault("navigatingTo", CookieCaptureWindowLabels.Default.NavigatingTo),
+                    Error = labels.GetValueOrDefault("error", CookieCaptureWindowLabels.Default.Error),
+                };
+            }
+            var window = new CookieCaptureWindow(loginUrl, title, cookieUrls, tcs, onNavigated, windowLabels);
+            if (_mainWindow != null)
+            {
+                window.ShowDialog(_mainWindow);
+            }
+            else
+            {
+                window.Show();
+            }
+        });
+
+        return tcs.Task;
     }
 }

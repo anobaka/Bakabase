@@ -319,12 +319,17 @@ export default function ExHentaiGalleriesPage() {
           <ModalHeader>{t("resourceSource.confirm.sync.title")}</ModalHeader>
           <ModalBody>
             <p>{t("resourceSource.confirm.sync.description")}</p>
-            <Checkbox
-              isSelected={refetchMetadata}
-              onValueChange={setRefetchMetadata}
-            >
-              {t("resourceSource.confirm.sync.refetchMetadata")}
-            </Checkbox>
+            <div>
+              <Checkbox
+                isSelected={refetchMetadata}
+                onValueChange={setRefetchMetadata}
+              >
+                {t("resourceSource.confirm.sync.refetchMetadata")}
+              </Checkbox>
+              <p className="text-xs text-default-400 ml-7 mt-1">
+                {t("resourceSource.confirm.sync.refetchMetadata.description")}
+              </p>
+            </div>
           </ModalBody>
           <ModalFooter>
             <Button variant="light" onPress={() => setShowSyncConfirm(false)}>

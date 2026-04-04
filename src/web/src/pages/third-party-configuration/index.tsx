@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { AiOutlineQuestionCircle } from "react-icons/ai";
+import { AiOutlineQuestionCircle, AiOutlineCheck, AiOutlineClose } from "react-icons/ai";
 import { Tooltip, Input, Button, Textarea } from "@heroui/react";
 
 import { Listbox, ListboxItem } from "@/components/bakaui/components/Listbox";
@@ -90,6 +90,9 @@ export default function ThirdPartyConfigurationPage() {
   const [validatingCookies, setValidatingCookies] = useState<{
     [key: string]: boolean;
   }>({});
+  const [cookieValidationResults, setCookieValidationResults] = useState<{
+    [key: string]: "succeed" | "failed";
+  }>({});
 
   useEffect(() => {
     setTmpBilibiliOptions(JSON.parse(JSON.stringify(bilibiliOptions || {})));
@@ -129,9 +132,10 @@ export default function ThirdPartyConfigurationPage() {
       .validateCookie({ cookie, target })
       .then((r: any) => {
         if (r.code) {
+          setCookieValidationResults((prev) => ({ ...prev, [thirdParty]: "failed" }));
           toast.danger(`${t<string>("thirdPartyConfig.error.invalidCookie")}:${r.message}`);
         } else {
-          toast.success(t<string>("thirdPartyConfig.success.cookieValid"));
+          setCookieValidationResults((prev) => ({ ...prev, [thirdParty]: "succeed" }));
         }
       })
       .finally(() => {
@@ -249,11 +253,14 @@ export default function ThirdPartyConfigurationPage() {
         </Button>
         {options.cookie && (
           <Button
+            color={cookieValidationResults[thirdPartyName] === "succeed" ? "success" : cookieValidationResults[thirdPartyName] === "failed" ? "danger" : "default"}
             disabled={
               !options.cookie?.length || validatingCookies[thirdPartyName]
             }
             isLoading={validatingCookies[thirdPartyName]}
             size="sm"
+            variant="flat"
+            startContent={cookieValidationResults[thirdPartyName] === "succeed" ? <AiOutlineCheck /> : cookieValidationResults[thirdPartyName] === "failed" ? <AiOutlineClose /> : undefined}
             onPress={() => {
               const validatorMap: { [key: string]: CookieValidatorTarget } = {
                 bilibili: CookieValidatorTarget.BiliBili,

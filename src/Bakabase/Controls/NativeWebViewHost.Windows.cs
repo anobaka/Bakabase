@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Avalonia.Platform;
@@ -108,6 +110,70 @@ public partial class NativeWebViewHost
 
         var navigateMethod = _winWebView.GetType().GetMethod("Navigate", new[] { typeof(string) });
         navigateMethod?.Invoke(_winWebView, new object[] { url });
+    }
+
+    private string? GetCurrentUrlWindows()
+    {
+        if (!_winWebView2Ready || _winWebView == null) return null;
+        try
+        {
+            return _winWebView.GetType().GetProperty("Source")?.GetValue(_winWebView)?.ToString();
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Extracts cookies from WebView2 using CoreWebView2.CookieManager.GetCookiesAsync.
+    /// This provides full access to all cookies including HttpOnly.
+    /// CookieUrls are processed in priority order — first-write-wins for duplicate cookie names.
+    /// </summary>
+    private async Task<string?> GetCookiesWindows(string[] cookieUrls)
+    {
+        if (!_winWebView2Ready || _winWebView == null) return null;
+
+        try
+        {
+            var cookieManager = _winWebView.GetType().GetProperty("CookieManager")?.GetValue(_winWebView);
+            if (cookieManager == null) return null;
+
+            var getCookiesMethod = cookieManager.GetType().GetMethod("GetCookiesAsync", new[] { typeof(string) });
+            if (getCookiesMethod == null) return null;
+
+            var allCookies = new Dictionary<string, string>();
+
+            foreach (var url in cookieUrls)
+            {
+                var task = (Task)getCookiesMethod.Invoke(cookieManager, new object[] { url })!;
+                await task;
+                var cookieList = task.GetType().GetProperty("Result")?.GetValue(task);
+                if (cookieList == null) continue;
+
+                var enumerable = cookieList as System.Collections.IEnumerable;
+                if (enumerable == null) continue;
+
+                foreach (var cookie in enumerable)
+                {
+                    var name = cookie.GetType().GetProperty("Name")?.GetValue(cookie)?.ToString();
+                    var value = cookie.GetType().GetProperty("Value")?.GetValue(cookie)?.ToString();
+                    if (name != null && value != null)
+                    {
+                        // First-write-wins: higher-priority URL cookies take precedence
+                        allCookies.TryAdd(name, value);
+                    }
+                }
+            }
+
+            if (allCookies.Count == 0) return null;
+            return string.Join("; ", allCookies.Select(kv => $"{kv.Key}={kv.Value}"));
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"GetCookiesWindows failed: {ex}");
+            return null;
+        }
     }
 
     private void DestroyWindows()

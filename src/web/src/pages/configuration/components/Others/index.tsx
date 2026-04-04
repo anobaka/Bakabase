@@ -5,7 +5,7 @@ import type { BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputNetw
 
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
-import { AiOutlineQuestionCircle } from "react-icons/ai";
+import { AiOutlineQuestionCircle, AiOutlineDelete } from "react-icons/ai";
 
 import BApi from "@/sdk/BApi";
 import {
@@ -153,6 +153,26 @@ const Others: React.FC<OthersProps> = ({ applyPatches }) => {
             >
               {t("common.action.add")}
             </Button>
+            {networkOptions?.proxy?.mode === ProxyMode.UseCustom && networkOptions?.proxy?.customProxyId && (
+              <Button
+                color="danger"
+                isIconOnly
+                size="sm"
+                variant="light"
+                onClick={async () => {
+                  const remaining = (networkOptions.customProxies ?? []).filter(
+                    (c) => c.id !== networkOptions.proxy?.customProxyId,
+                  );
+                  await BApi.options.patchNetworkOptions({
+                    customProxies: remaining,
+                    proxy: { mode: ProxyMode.DoNotUse, customProxyId: undefined },
+                  });
+                  toast.success(t("common.success.saved"));
+                }}
+              >
+                <AiOutlineDelete className="text-lg" />
+              </Button>
+            )}
           </div>
         );
       },

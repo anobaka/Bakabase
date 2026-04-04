@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.Compression;
@@ -302,6 +303,7 @@ public class DLsiteWorkService(
             catch (Exception ex)
             {
                 logger.LogError(ex, "Failed to sync DLsite account '{Name}'", account.Name);
+                throw new BTaskException($"Failed to sync DLsite account '{account.Name}': {ex.Message}", ex.Message);
             }
 
             processedAccounts++;

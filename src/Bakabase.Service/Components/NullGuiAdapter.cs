@@ -67,4 +67,11 @@ public class NullGuiAdapter : IGuiAdapter
     {
         return null;
     }
+
+    public Task<string?> CaptureWebViewCookiesAsync(string loginUrl, string title, string[] cookieUrls,
+        Func<string, (bool Done, string? NavigateToUrl)>? onNavigated = null,
+        Dictionary<string, string>? labels = null)
+    {
+        return Task.FromResult<string?>(null);
+    }
 }

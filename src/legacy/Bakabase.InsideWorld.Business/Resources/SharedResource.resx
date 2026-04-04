@@ -738,4 +738,28 @@ The version of lux is not limited.</value>
   <data name="BTask_Description_FetchExternalMetadata" xml:space="preserve">
     <value>Fetching metadata and covers from external sources (Steam, DLsite, ExHentai)</value>
   </data>
+  <data name="ResourceSync_Complete" xml:space="preserve">
+    <value>Resource sync complete</value>
+  </data>
+  <data name="CookieCapture_Confirm" xml:space="preserve">
+    <value>Confirm</value>
+  </data>
+  <data name="CookieCapture_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="CookieCapture_WaitingForLogin" xml:space="preserve">
+    <value>Please log in, or click Confirm if already logged in</value>
+  </data>
+  <data name="CookieCapture_LoginDetected" xml:space="preserve">
+    <value>Login detected, extracting cookies...</value>
+  </data>
+  <data name="CookieCapture_ExtractingCookies" xml:space="preserve">
+    <value>Extracting cookies...</value>
+  </data>
+  <data name="CookieCapture_NavigatingTo" xml:space="preserve">
+    <value>Navigating to {0}...</value>
+  </data>
+  <data name="CookieCapture_Error" xml:space="preserve">
+    <value>Error</value>
+  </data>
 </root>
