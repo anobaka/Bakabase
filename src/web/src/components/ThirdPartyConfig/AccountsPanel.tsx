@@ -70,7 +70,7 @@ export default function AccountsPanel({
   }, [accounts]);
 
   const addAccount = () => {
-    const newAccount: Account = { name: "" };
+    const newAccount: Account = { name: t("resourceSource.accounts.defaultName", { index: accounts.length + 1 }) };
     for (const field of fields) {
       newAccount[field.key] = "";
     }

@@ -32,6 +32,7 @@
   "resourceSource.accounts.remove": "Remove",
   "resourceSource.accounts.removeConfirm": "Are you sure to remove this account?",
   "resourceSource.accounts.default": "Default",
+  "resourceSource.accounts.defaultName": "Account {{index}}",
   "resourceSource.accounts.defaultTip": "Enhancers and downloaders will use the first account by default",
   "resourceSource.accounts.loginToImport": "Login to Import",
 

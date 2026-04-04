@@ -32,6 +32,7 @@
   "resourceSource.accounts.remove": "移除",
   "resourceSource.accounts.removeConfirm": "确定要移除此账号吗？",
   "resourceSource.accounts.default": "默认",
+  "resourceSource.accounts.defaultName": "账号 {{index}}",
   "resourceSource.accounts.defaultTip": "增强器和下载器等功能将默认使用第一个账号",
   "resourceSource.accounts.loginToImport": "登录导入",
 
