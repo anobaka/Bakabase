@@ -53,8 +53,6 @@ public class ThirdPartyCookieContainer : IThirdPartyCookieContainer
                 {
                     // Remove any existing cookies with the same name from domains that have
                     // a containment relationship with the request domain.
-                    // e.g., if Set-Cookie comes from play.dlsite.com with name "foo",
-                    // remove "foo" from .dlsite.com (and vice versa) to prevent duplicates.
                     RemoveCookiesByNameFromRelatedDomains(container, cookieName, requestUri, baseDomain);
                 }
 
@@ -79,24 +77,20 @@ public class ThirdPartyCookieContainer : IThirdPartyCookieContainer
 
     /// <summary>
     /// Removes cookies with the given name from domains that have a containment relationship
-    /// with the request domain. Two domains have a containment relationship if they share
-    /// the same base domain (e.g., .dlsite.com and play.dlsite.com).
+    /// with the request domain.
     /// </summary>
     private static void RemoveCookiesByNameFromRelatedDomains(
         CookieContainer container, string cookieName, Uri requestUri, string baseDomain)
     {
         try
         {
-            // Check cookies at the base domain level (covers .dlsite.com)
             var baseDomainUri = new Uri($"{requestUri.Scheme}://{baseDomain}");
             ExpireCookieByName(container, baseDomainUri, cookieName);
-
-            // Also check cookies at the request host level
             ExpireCookieByName(container, requestUri, cookieName);
         }
         catch
         {
-            // Best effort - don't fail if cleanup has issues
+            // Best effort
         }
     }
 
@@ -115,12 +109,19 @@ public class ThirdPartyCookieContainer : IThirdPartyCookieContainer
         }
     }
 
+    /// <summary>
+    /// Creates a seeded CookieContainer from a static cookie string.
+    /// Uses SetCookies with proper Set-Cookie format for maximum compatibility,
+    /// since the Cookie() constructor rejects values with commas, spaces, etc.
+    /// Seeds to the base domain so cookies are available across all subdomains.
+    /// </summary>
     private static CookieContainer CreateSeeded(string? staticCookie, Uri seedUri)
     {
         var container = new CookieContainer();
         if (string.IsNullOrWhiteSpace(staticCookie)) return container;
 
         var baseDomain = GetBaseDomain(seedUri);
+        var seedBaseUri = new Uri($"{seedUri.Scheme}://{baseDomain}");
 
         foreach (var part in staticCookie.Split(';', StringSplitOptions.RemoveEmptyEntries))
         {
@@ -130,16 +131,25 @@ public class ThirdPartyCookieContainer : IThirdPartyCookieContainer
             var eqIndex = trimmed.IndexOf('=');
             if (eqIndex <= 0) continue;
 
-            var name = trimmed[..eqIndex].Trim();
-            var value = trimmed[(eqIndex + 1)..].Trim();
-
             try
             {
-                container.Add(new System.Net.Cookie(name, value, "/", $".{baseDomain}"));
+                // Use SetCookies with Set-Cookie format: "name=value; domain=.baseDomain; path=/"
+                // This is more lenient than the Cookie constructor with special characters.
+                container.SetCookies(seedBaseUri, $"{trimmed}; domain=.{baseDomain}; path=/");
             }
             catch
             {
-                // Skip malformed cookies
+                // Fallback: try adding via Cookie constructor with the raw value
+                try
+                {
+                    var name = trimmed[..eqIndex].Trim();
+                    var value = trimmed[(eqIndex + 1)..].Trim();
+                    container.Add(new System.Net.Cookie(name, value, "/", $".{baseDomain}"));
+                }
+                catch
+                {
+                    // Skip truly malformed cookies
+                }
             }
         }
 
@@ -147,7 +157,7 @@ public class ThirdPartyCookieContainer : IThirdPartyCookieContainer
     }
 
     /// <summary>
-    /// Extracts the base domain (e.g. "dlsite.com" from "www.dlsite.com" or "play.dlsite.com").
+    /// Extracts the base domain (e.g. "dlsite.com" from "play.dlsite.com").
     /// </summary>
     private static string GetBaseDomain(Uri uri)
     {

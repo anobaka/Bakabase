@@ -87,7 +87,7 @@ public class DLsiteResolver : IResourceResolver
     {
         return new ResolverPlayerConfig
         {
-            UseLocaleEmulator = true
+            UseLocaleEmulator = false
         };
     }
 

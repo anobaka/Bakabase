@@ -61,7 +61,7 @@
   "resourceSource.dlsite.label.purchased": "已购入",
   "resourceSource.dlsite.label.downloaded": "已下载",
   "resourceSource.dlsite.label.drmKey": "序列号",
-  "resourceSource.dlsite.drmKey.none": "无",
+  "resourceSource.dlsite.drmKey.none": "无需序列号",
   "resourceSource.dlsite.drmKey.fetch": "点击获取",
   "resourceSource.dlsite.drmKey.fetching": "获取中...",
   "resourceSource.dlsite.drmKey.copy": "复制",

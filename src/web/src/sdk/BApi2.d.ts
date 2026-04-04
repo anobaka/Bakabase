@@ -4725,6 +4725,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/tool/cookie-capture": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CaptureCookie"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tool/cookie-validation": {
         parameters: {
             query?: never;
@@ -5591,6 +5607,7 @@ export interface components {
             propertyId: number;
             isCustomProperty: boolean;
             value?: string;
+            isBizValue: boolean;
         };
         "Bakabase.Abstractions.Models.Input.ResourceSearchOrderInputModel": {
             property: components["schemas"]["Bakabase.InsideWorld.Models.Constants.Aos.ResourceSearchSortableProperty"];
@@ -6597,6 +6614,10 @@ export interface components {
             isMenuCollapsed: boolean;
             latestUsedProperties: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+PropertyKey"][];
         };
+        "Bakabase.InsideWorld.Models.Configs.UIOptions+CustomContextMenuItem": {
+            property: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+PropertyKey"];
+            presetValues: string[];
+        };
         "Bakabase.InsideWorld.Models.Configs.UIOptions+PropertyKey": {
             /** Format: int32 */
             pool: number;
@@ -6619,6 +6640,8 @@ export interface components {
             autoSelectFirstPlayableFile: boolean;
             displayOperations: string[];
             hideResourceBorder: boolean;
+            customContextMenuItems: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+CustomContextMenuItem"][];
+            autoAddRecentPropertyValues: boolean;
         };
         "Bakabase.InsideWorld.Models.Configs.UIStyleOptions": {
             cssVariableOverwrites: {
@@ -7527,6 +7550,7 @@ export interface components {
             propertyId: number;
             isCustomProperty: boolean;
             value?: string;
+            isBizValue: boolean;
         };
         "Bakabase.Service.Models.Input.ComparisonPlanCreateInputModel": {
             name: string;
@@ -19341,6 +19365,31 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    CaptureCookie: {
+        parameters: {
+            query?: {
+                /** @description [1: BiliBili, 2: ExHentai, 3: Pixiv, 6: DLsite] */
+                target?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.CookieValidatorTarget"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
                 };
             };
         };

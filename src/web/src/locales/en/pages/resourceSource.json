@@ -61,7 +61,7 @@
   "resourceSource.dlsite.label.purchased": "Purchased",
   "resourceSource.dlsite.label.downloaded": "Downloaded",
   "resourceSource.dlsite.label.drmKey": "Serial Key",
-  "resourceSource.dlsite.drmKey.none": "None",
+  "resourceSource.dlsite.drmKey.none": "No serial key required",
   "resourceSource.dlsite.drmKey.fetch": "Click to fetch",
   "resourceSource.dlsite.drmKey.fetching": "Fetching...",
   "resourceSource.dlsite.drmKey.copy": "Copy",

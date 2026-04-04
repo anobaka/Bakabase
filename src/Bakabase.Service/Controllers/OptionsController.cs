@@ -1167,6 +1167,11 @@ namespace Bakabase.Service.Controllers
                     options.ShowCover = model.ShowCover.Value;
                 }
 
+                if (model.DeleteArchiveAfterExtraction.HasValue)
+                {
+                    options.DeleteArchiveAfterExtraction = model.DeleteArchiveAfterExtraction.Value;
+                }
+
                 if (model.ScanFolders != null)
                 {
                     options.ScanFolders = model.ScanFolders;

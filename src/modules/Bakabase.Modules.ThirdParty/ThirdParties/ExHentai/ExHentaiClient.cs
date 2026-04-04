@@ -318,6 +318,20 @@ namespace Bakabase.Modules.ThirdParty.ThirdParties.ExHentai
             return (bytes, contentType);
         }
 
+        /// <summary>
+        /// Downloads an image directly from its URL (for cover images etc).
+        /// Unlike <see cref="DownloadImage"/> which expects an ExHentai page URL
+        /// and extracts the image from it, this method downloads the URL as-is.
+        /// </summary>
+        public async Task<(byte[] Data, string? ContentType)> DownloadImageByUrl(string imageUrl)
+        {
+            var rsp = await HttpClient.GetAsync(imageUrl);
+            rsp.EnsureSuccessStatusCode();
+            var contentType = rsp.Content.Headers.ContentType?.MediaType;
+            var bytes = await rsp.Content.ReadAsByteArrayAsync();
+            return (bytes, contentType);
+        }
+
         private static List<ExHentaiResource> ParseList(CQ cq)
         {
             var container = cq[".itg"];
@@ -339,7 +353,7 @@ namespace Bakabase.Modules.ThirdParty.ThirdParties.ExHentai
                             var url = nameCq.Attr<string>("href");
 
                             var imgCq = acq.Find(".gl2m .glthumb img");
-                            var imgUrl = imgCq.Attr<string>("src");
+                            var imgUrl = imgCq.Attr<string>("data-src") ?? imgCq.Attr<string>("src");
 
                             var categoryCq = acq.Find(".gl1m.glcat>.cs").Eq(0);
                             var categoryClass = categoryCq.Attr<string>("class");
@@ -383,7 +397,7 @@ namespace Bakabase.Modules.ThirdParty.ThirdParties.ExHentai
                             var url = nameCq.Attr<string>("href");
 
                             var imgCq = acq.Find(".gl2c .glthumb img");
-                            var imgUrl = imgCq.Attr<string>("src");
+                            var imgUrl = imgCq.Attr<string>("data-src") ?? imgCq.Attr<string>("src");
 
                             var categoryCq = acq.Find(".gl1c.glcat>.cn").Eq(0);
                             var categoryClass = categoryCq.Attr<string>("class");

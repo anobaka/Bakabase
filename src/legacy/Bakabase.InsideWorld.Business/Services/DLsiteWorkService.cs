@@ -697,25 +697,11 @@ public class DLsiteWorkService(
         }
 
         var extensions = GetPlayableExtensions(workType);
-        var isExeOnly = extensions.SetEquals(ExecutableExtensions);
 
         var files = Directory.EnumerateFiles(localPath, "*.*", SearchOption.AllDirectories)
             .Where(f => extensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
+            .Where(f => !ExeBlacklist.Contains(Path.GetFileName(f)))
             .ToList();
-
-        if (isExeOnly)
-        {
-            // Filter out blacklisted executables
-            var filtered = files
-                .Where(f => !ExeBlacklist.Contains(Path.GetFileName(f)))
-                .ToList();
-
-            // Fall back to unfiltered list only if filtering removed everything
-            if (filtered.Count > 0)
-            {
-                files = filtered;
-            }
-        }
 
         // Sort by priority: shallower depth first, then deprioritize known low-priority directories
         var normalizedRoot = NormalizeDirPath(localPath);
@@ -768,11 +754,7 @@ public class DLsiteWorkService(
     /// </summary>
     private static bool ShouldUseLocaleEmulator(string? workType)
     {
-        return workType?.ToLowerInvariant() switch
-        {
-            "GCM" or "GAM" or "ACN" or "game" or "tool" => true,
-            _ => true // Default to true for now; can be refined later
-        };
+        return false;
     }
 
     private static readonly System.Text.RegularExpressions.Regex WorkIdPattern =

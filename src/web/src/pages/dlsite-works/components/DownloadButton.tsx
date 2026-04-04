@@ -5,18 +5,19 @@ import { AiOutlineDownload, AiOutlineStop } from "react-icons/ai";
 
 import BApi from "@/sdk/BApi";
 import { useBTasksStore } from "@/stores/bTasks";
+import { useDLsiteOptionsStore } from "@/stores/options";
 import { BTaskStatus } from "@/sdk/constants";
 import type { DLsiteWork } from "../types";
 import { DOWNLOAD_TASK_ID_PREFIX } from "../types";
 
-/** Standalone download button - subscribes to BTask store directly to bypass Table memoization */
-export function DownloadButton({ work, hasDownloadDir, onSetWorksLocalPath }: {
+/** Standalone download button - subscribes to stores directly to bypass Table memoization */
+export function DownloadButton({ work, onSetWorksLocalPath }: {
   work: DLsiteWork;
-  hasDownloadDir: boolean;
   onSetWorksLocalPath: (workId: string, localPath: string) => void;
 }) {
   const { t } = useTranslation();
   const downloadTask = useBTasksStore((s) => s.tasks.find((task) => task.id === `${DOWNLOAD_TASK_ID_PREFIX}${work.workId}`));
+  const hasDownloadDir = !!useDLsiteOptionsStore((s) => s.data?.defaultPath);
   const [isStarting, setIsStarting] = useState(false);
 
   // Clear optimistic state once BTask arrives

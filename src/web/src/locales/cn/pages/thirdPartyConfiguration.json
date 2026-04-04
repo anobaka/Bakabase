@@ -33,5 +33,12 @@
   "thirdPartyConfig.autoSync.intervalLabel": "同步间隔",
   "thirdPartyConfig.autoSync.intervalDescription": "自动从此源同步数据的频率。设为 0 或留空则禁用。",
   "thirdPartyConfig.autoSync.unit": "分钟",
-  "thirdPartyConfig.autoSync.warning": "设置过短的同步间隔可能导致你的账号被服务提供商限速或封禁。"
+  "thirdPartyConfig.autoSync.warning": "设置过短的同步间隔可能导致你的账号被服务提供商限速或封禁。",
+
+  "thirdPartyConfig.recommendedDir.title": "是否使用推荐目录？",
+  "thirdPartyConfig.recommendedDir.description": "建议使用专用子目录来保持文件整洁有序。",
+  "thirdPartyConfig.recommendedDir.recommended": "推荐",
+  "thirdPartyConfig.recommendedDir.selected": "已选择",
+  "thirdPartyConfig.recommendedDir.useRecommended": "使用推荐目录",
+  "thirdPartyConfig.recommendedDir.useSelected": "使用已选目录"
 }

@@ -157,7 +157,7 @@ export function DLsiteTable({
                 </Button>
               </Tooltip>
             )}
-            <DownloadButton work={work} hasDownloadDir={hasDownloadDir} onSetWorksLocalPath={onSetWorksLocalPath} />
+            <DownloadButton work={work} onSetWorksLocalPath={onSetWorksLocalPath} />
             <Tooltip content={work.isHidden ? t("resourceSource.dlsite.action.unhide") : t("resourceSource.dlsite.action.hide")}>
               <Button
                 isIconOnly

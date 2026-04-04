@@ -17,7 +17,7 @@ import {
 } from "@heroui/react";
 import { AiOutlineDelete, AiOutlinePlus } from "react-icons/ai";
 
-import { toast } from "@/components/bakaui";
+import { toast, Modal as BakaModal } from "@/components/bakaui";
 import { useDLsiteOptionsStore } from "@/stores/options";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { FileSystemSelectorModal } from "@/components/FileSystemSelector";
@@ -86,13 +86,65 @@ export default function DLsiteConfig({ onDestroyed, onClose, isOpen, fields: vis
     }
   };
 
+  const recommendedSubdir = "DLsite";
+
+  const getRecommendedPath = (selectedPath: string): string | null => {
+    const normalized = selectedPath.replace(/[\\/]+$/, "");
+    const lastSegment = normalized.split(/[\\/]/).pop();
+    if (lastSegment === recommendedSubdir) return null;
+    const sep = selectedPath.includes("\\") ? "\\" : "/";
+    return `${normalized}${sep}${recommendedSubdir}`;
+  };
+
   const handleSelectDownloadDir = () => {
     createPortal(FileSystemSelectorModal, {
       targetType: "folder",
       defaultSelectedPath: downloadDir,
       startPath: downloadDir,
       onSelected: async (e: any) => {
-        await patch({ defaultPath: e.path });
+        const selected = e.path as string;
+        const recommended = getRecommendedPath(selected);
+
+        if (!recommended) {
+          await patch({ defaultPath: selected });
+          return;
+        }
+
+        createPortal(BakaModal, {
+          defaultVisible: true,
+          size: "lg",
+          title: t("thirdPartyConfig.recommendedDir.title"),
+          children: (
+            <div className="space-y-3">
+              <p className="text-sm">{t("thirdPartyConfig.recommendedDir.description")}</p>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-2 p-2 rounded-md bg-success-50">
+                  <span className="text-default-500 shrink-0">{t("thirdPartyConfig.recommendedDir.recommended")}:</span>
+                  <code className="break-all">{recommended}</code>
+                </div>
+                <div className="flex items-center gap-2 p-2 rounded-md bg-default-100">
+                  <span className="text-default-500 shrink-0">{t("thirdPartyConfig.recommendedDir.selected")}:</span>
+                  <code className="break-all">{selected}</code>
+                </div>
+              </div>
+            </div>
+          ),
+          footer: {
+            actions: ["ok", "cancel"],
+            cancelProps: {
+              children: t("thirdPartyConfig.recommendedDir.useSelected"),
+              onPress: async () => {
+                await patch({ defaultPath: selected });
+              },
+            },
+          },
+          okProps: {
+            children: t("thirdPartyConfig.recommendedDir.useRecommended"),
+          },
+          onOk: async () => {
+            await patch({ defaultPath: recommended });
+          },
+        });
       },
     });
   };

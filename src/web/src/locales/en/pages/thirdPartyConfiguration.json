@@ -33,5 +33,12 @@
   "thirdPartyConfig.autoSync.intervalLabel": "Sync interval",
   "thirdPartyConfig.autoSync.intervalDescription": "How often to automatically sync data from this source. Set to 0 or leave empty to disable.",
   "thirdPartyConfig.autoSync.unit": "minutes",
-  "thirdPartyConfig.autoSync.warning": "Setting a very short interval may cause your account to be rate-limited or blocked by the service provider."
+  "thirdPartyConfig.autoSync.warning": "Setting a very short interval may cause your account to be rate-limited or blocked by the service provider.",
+
+  "thirdPartyConfig.recommendedDir.title": "Use recommended directory?",
+  "thirdPartyConfig.recommendedDir.description": "We recommend using a dedicated subdirectory to keep files organized.",
+  "thirdPartyConfig.recommendedDir.recommended": "Recommended",
+  "thirdPartyConfig.recommendedDir.selected": "Selected",
+  "thirdPartyConfig.recommendedDir.useRecommended": "Use recommended",
+  "thirdPartyConfig.recommendedDir.useSelected": "Use selected"
 }

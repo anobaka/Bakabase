@@ -908,6 +908,7 @@ export interface BakabaseAbstractionsModelsInputResourcePropertyValuePutInputMod
   propertyId: number;
   isCustomProperty: boolean;
   value?: string;
+  isBizValue: boolean;
 }
 
 export interface BakabaseAbstractionsModelsInputResourceSearchOrderInputModel {
@@ -2071,6 +2072,11 @@ export interface BakabaseInsideWorldModelsConfigsUIOptions {
   latestUsedProperties: BakabaseInsideWorldModelsConfigsUIOptionsPropertyKey[];
 }
 
+export interface BakabaseInsideWorldModelsConfigsUIOptionsCustomContextMenuItem {
+  property: BakabaseInsideWorldModelsConfigsUIOptionsPropertyKey;
+  presetValues: string[];
+}
+
 export interface BakabaseInsideWorldModelsConfigsUIOptionsPropertyKey {
   /** @format int32 */
   pool: number;
@@ -2097,12 +2103,6 @@ export interface BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions {
   hideResourceBorder: boolean;
   customContextMenuItems: BakabaseInsideWorldModelsConfigsUIOptionsCustomContextMenuItem[];
   autoAddRecentPropertyValues: boolean;
-}
-
-export interface BakabaseInsideWorldModelsConfigsUIOptionsCustomContextMenuItem {
-  property: BakabaseInsideWorldModelsConfigsUIOptionsPropertyKey;
-  /** Serialized DB values for preset quick-access values */
-  presetValues: string[];
 }
 
 export interface BakabaseInsideWorldModelsConfigsUIStyleOptions {
@@ -3304,8 +3304,7 @@ export interface BakabaseServiceModelsInputBulkResourcePropertyValuePutInputMode
   propertyId: number;
   isCustomProperty: boolean;
   value?: string;
-  /** When true, value is treated as bizValue and auto-converted to dbValue */
-  isBizValue?: boolean;
+  isBizValue: boolean;
 }
 
 export interface BakabaseServiceModelsInputComparisonPlanCreateInputModel {
@@ -17083,6 +17082,30 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }),
 
     /**
+     * @description Build URL for captureCookie
+     * @name captureCookieUrl
+     */
+    captureCookieUrl: (query?: {
+        /** [1: BiliBili, 2: ExHentai, 3: Pixiv, 6: DLsite] */
+        target?: BakabaseInsideWorldModelsConstantsCookieValidatorTarget;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/tool/cookie-capture`;
+      
+      // Build query string
+      if (query) {
+        const queryString = Object.keys(query)
+          .filter(key => query[key] !== undefined && query[key] !== null)
+          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+          .join("&");
+        
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+      
+      return baseUrl + path;
+    },
+
+    /**
      * No description
      *
      * @tags Tool
@@ -17116,17 +17139,17 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/tool/cookie-validation`;
-
+      
       // Build query string
       if (query) {
         const queryString = Object.keys(query)
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-
+        
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-
+      
       return baseUrl + path;
     },
 

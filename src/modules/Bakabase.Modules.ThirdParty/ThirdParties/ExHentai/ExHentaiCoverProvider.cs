@@ -73,7 +73,7 @@ public class ExHentaiCoverProvider : ICoverProvider
             try
             {
                 ct.ThrowIfCancellationRequested();
-                var (imageData, contentType) = await _exHentaiClient.DownloadImage(url);
+                var (imageData, contentType) = await _exHentaiClient.DownloadImageByUrl(url);
                 var ext = GetExtensionFromContentType(contentType)
                           ?? Path.GetExtension(new Uri(url).AbsolutePath);
                 if (string.IsNullOrEmpty(ext)) ext = ".jpg";

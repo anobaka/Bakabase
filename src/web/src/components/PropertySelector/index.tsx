@@ -80,7 +80,7 @@ const PropertySelector = (props: IProps) => {
   const loadProperties = async () => {
     const psr = (await BApi.property.getPropertiesByPool(pool)).data || [];
     // @ts-ignore
-    setProperties(psr);
+    setProperties(psr.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
   };
 
   useEffect(() => {
