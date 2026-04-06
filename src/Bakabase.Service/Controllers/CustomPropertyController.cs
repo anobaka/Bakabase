@@ -63,7 +63,7 @@ namespace Bakabase.Service.Controllers
                 List<CustomPropertyViewModel> vms;
                 using (MiniProfiler.Current.Step("ToViewModel"))
                 {
-                    vms = cps.Select(c => c.ToViewModel(propertyLocalizer)).ToList();
+                    vms = cps.OrderBy(c => c.Order).Select(c => c.ToViewModel(propertyLocalizer)).ToList();
                 }
 
                 return new ListResponse<CustomPropertyViewModel>(vms);

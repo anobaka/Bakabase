@@ -207,7 +207,7 @@ public class PropertyService(IServiceProvider serviceProvider, IPropertyLocalize
                     {
                         var customPropertyService = serviceProvider.GetRequiredService<ICustomPropertyService>();
                         var customProperties = await customPropertyService.GetAll();
-                        properties.AddRange(customProperties.Select(c => c.ToProperty()));
+                        properties.AddRange(customProperties.OrderBy(c => c.Order).Select(c => c.ToProperty()));
                         break;
                     }
                     case PropertyPool.All:
