@@ -3,7 +3,7 @@
 import type { Entry } from "@/core/models/FileExplorer/Entry";
 import type { FileExplorerEntryProps } from "../../FileExplorerEntry";
 
-import { FolderAddOutlined, FolderOpenOutlined, SyncOutlined, UploadOutlined } from "@ant-design/icons";
+import { FolderAddOutlined, FolderOpenOutlined, LoginOutlined, SyncOutlined, UploadOutlined } from "@ant-design/icons";
 import React from "react";
 import { useTranslation } from "react-i18next";
 
@@ -18,11 +18,12 @@ import CreateDirectoryModal from "../CreateDirectoryModal";
 
 type Props = {
   entry: Entry;
+  onEnterDirectory?: (path: string) => void;
 } & Pick<FileExplorerEntryProps, "capabilities">;
 const TailingOperations = (props: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
-  const { entry, capabilities } = props;
+  const { entry, capabilities, onEnterDirectory } = props;
 
   const isExtractable =
     capabilities?.includes("extract") &&
@@ -44,6 +45,21 @@ const TailingOperations = (props: Props) => {
       >
         <FolderOpenOutlined className={"text-base"} />
       </OperationButton>
+      {entry.isDirectoryOrDrive && onEnterDirectory && (
+        <Tooltip content={t<string>("fileExplorer.action.enterDirectory")} placement={"top"}>
+          <Button
+            isIconOnly
+            className={"w-auto h-auto p-1 min-w-fit opacity-60 hover:opacity-100"}
+            variant={"light"}
+            onClick={(e) => {
+              e.stopPropagation();
+              onEnterDirectory(entry.path);
+            }}
+          >
+            <LoginOutlined className={"text-base"} />
+          </Button>
+        </Tooltip>
+      )}
       {isExtractable && (
         <Tooltip
           content={`(E)${t<string>("fileExplorer.tip.extractChildrenToParent")}`}

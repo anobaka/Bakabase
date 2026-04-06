@@ -714,6 +714,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
             renderAfterName={renderAfterName}
             renderBeforeRightOperations={renderBeforeRightOperations}
             switchSelective={switchSelective}
+            onEnterDirectory={initialize}
             onChildrenLoaded={(e) => {
               if (!defaultSelectedPathInitializedRef.current) {
                 defaultSelectedPathInitializedRef.current = true;

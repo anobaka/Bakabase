@@ -72,6 +72,7 @@ export type FileExplorerEntryProps = {
   // Render props for custom decorations
   renderAfterName?: (entry: Entry) => React.ReactNode;
   renderBeforeRightOperations?: (entry: Entry) => React.ReactNode;
+  onEnterDirectory?: (path: string) => void;
 };
 
 // todo: split this component into base components: simple, advance
@@ -90,6 +91,7 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
     afterPlayedFirstFile,
     renderAfterName,
     renderBeforeRightOperations,
+    onEnterDirectory,
   } = props;
   const { t } = useTranslation();
   const forceUpdate = useUpdate();
@@ -335,6 +337,7 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
           onLoadFail={onLoadFail}
           renderAfterName={renderAfterName}
           renderBeforeRightOperations={renderBeforeRightOperations}
+          onEnterDirectory={onEnterDirectory}
         />
       );
     },
@@ -739,7 +742,7 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
                     <BsCollectionPlayFill className={"text-base"} />
                   </OperationButton>
                 </Tooltip>
-                <TailingOperations capabilities={capabilities} entry={entry} />
+                <TailingOperations capabilities={capabilities} entry={entry} onEnterDirectory={onEnterDirectory} />
                 {renderFileSystemInfo()}
                 {renderTaskError()}
                 {renderAfterName && (

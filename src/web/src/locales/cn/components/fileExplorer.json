@@ -56,6 +56,7 @@
   "fileExplorer.action.decompress": "解压",
   "fileExplorer.action.wrap": "包装",
   "fileExplorer.action.move": "移动",
+  "fileExplorer.action.enterDirectory": "设为工作目录",
   "fileExplorer.tip.extractChildrenToParent": "提取子项到父目录并删除当前目录",
   "fileExplorer.label.showHiddenFiles": "显示隐藏文件",
   "fileExplorer.label.shortcuts": "快捷键",
