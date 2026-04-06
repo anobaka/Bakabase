@@ -108,7 +108,7 @@ const PropertyExtra = ({ property }: Props) => {
     components.push(
       <Tooltip
         key={"value-count"}
-        content={t<string>("{{count}} resource(s) have set this property value.", {
+        content={t<string>("property.tip.resourceValueCount", {
           count: property.valueCount,
         })}
         placement={"bottom"}
