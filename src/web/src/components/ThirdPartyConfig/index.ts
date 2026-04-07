@@ -5,3 +5,4 @@ export { DLsiteConfigField } from "./DLsiteConfig";
 export { default as ExHentaiConfig } from "./ExHentaiConfig";
 export { ExHentaiConfigField } from "./ExHentaiConfig";
 export { default as DownloaderOptionsConfig } from "./DownloaderOptionsConfig";
+export { default as SimpleThirdPartyConfig } from "./SimpleThirdPartyConfig";

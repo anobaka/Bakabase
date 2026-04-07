@@ -29,6 +29,7 @@ import {
   ExHentaiConfig,
   SteamConfig,
   DownloaderOptionsConfig,
+  SimpleThirdPartyConfig,
 } from "@/components/ThirdPartyConfig";
 
 export default function ThirdPartyConfigurationPage() {
@@ -50,6 +51,12 @@ export default function ThirdPartyConfigurationPage() {
   const [exhentaiConfigOpen, setExhentaiConfigOpen] = useState(false);
   const [dlsiteConfigOpen, setDlsiteConfigOpen] = useState(false);
   const [steamConfigOpen, setSteamConfigOpen] = useState(false);
+  const [bilibiliConfigOpen, setBilibiliConfigOpen] = useState(false);
+  const [pixivConfigOpen, setPixivConfigOpen] = useState(false);
+  const [fanboxConfigOpen, setFanboxConfigOpen] = useState(false);
+  const [fantiaConfigOpen, setFantiaConfigOpen] = useState(false);
+  const [cienConfigOpen, setCienConfigOpen] = useState(false);
+  const [patreonConfigOpen, setPatreonConfigOpen] = useState(false);
 
   const exhentaiOptions = useExHentaiOptionsStore((state) => state.data);
   const dlsiteOptions = useDLsiteOptionsStore((state) => state.data);
@@ -329,11 +336,24 @@ export default function ThirdPartyConfigurationPage() {
         key: "bilibili",
         label: "Bilibili",
         tip: "thirdPartyConfig.tip.bilibili",
-        content: renderDownloaderOptions(
-          tmpBilibiliOptions,
-          setTmpBilibiliOptions,
-          BApi.options.patchBilibiliOptions,
-          "bilibili",
+        content: (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="flat" onPress={() => setBilibiliConfigOpen(true)}>
+                {t("resourceSource.action.configure")} ({bilibiliOptions?.accounts?.length || 0} {t("resourceSource.accounts.title", { platform: "" }).trim()})
+              </Button>
+              <SimpleThirdPartyConfig
+                title="Bilibili"
+                isOpen={bilibiliConfigOpen}
+                onClose={() => setBilibiliConfigOpen(false)}
+                accounts={bilibiliOptions?.accounts || []}
+                onSave={(accounts) => BApi.options.patchBilibiliOptions({ accounts })}
+                cookieValidatorTarget={CookieValidatorTarget.BiliBili}
+                cookieCaptureTarget={CookieValidatorTarget.BiliBili}
+              />
+            </div>
+            <DownloaderOptionsConfig hideCookie options={bilibiliOptions} patchApi={BApi.options.patchBilibiliOptions} />
+          </div>
         ),
       },
       {
@@ -390,11 +410,24 @@ export default function ThirdPartyConfigurationPage() {
         key: "pixiv",
         label: "Pixiv",
         tip: "thirdPartyConfig.tip.pixiv",
-        content: renderDownloaderOptions(
-          tmpPixivOptions,
-          setTmpPixivOptions,
-          BApi.options.patchPixivOptions,
-          "pixiv",
+        content: (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="flat" onPress={() => setPixivConfigOpen(true)}>
+                {t("resourceSource.action.configure")} ({pixivOptions?.accounts?.length || 0} {t("resourceSource.accounts.title", { platform: "" }).trim()})
+              </Button>
+              <SimpleThirdPartyConfig
+                title="Pixiv"
+                isOpen={pixivConfigOpen}
+                onClose={() => setPixivConfigOpen(false)}
+                accounts={pixivOptions?.accounts || []}
+                onSave={(accounts) => BApi.options.patchPixivOptions({ accounts })}
+                cookieValidatorTarget={CookieValidatorTarget.Pixiv}
+                cookieCaptureTarget={CookieValidatorTarget.Pixiv}
+              />
+            </div>
+            <DownloaderOptionsConfig hideCookie options={pixivOptions} patchApi={BApi.options.patchPixivOptions} />
+          </div>
         ),
       },
       {
@@ -537,11 +570,24 @@ export default function ThirdPartyConfigurationPage() {
         key: "cien",
         label: "Cien",
         tip: "thirdPartyConfig.tip.cien",
-        content: renderDownloaderOptions(
-          tmpCienOptions,
-          setTmpCienOptions,
-          BApi.options.patchCienOptions,
-          "cien",
+        content: (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="flat" onPress={() => setCienConfigOpen(true)}>
+                {t("resourceSource.action.configure")} ({cienOptions?.accounts?.length || 0} {t("resourceSource.accounts.title", { platform: "" }).trim()})
+              </Button>
+              <SimpleThirdPartyConfig
+                title="Cien"
+                isOpen={cienConfigOpen}
+                onClose={() => setCienConfigOpen(false)}
+                accounts={cienOptions?.accounts || []}
+                onSave={(accounts) => BApi.options.patchCienOptions({ accounts })}
+                cookieValidatorTarget={CookieValidatorTarget.Cien}
+                cookieCaptureTarget={CookieValidatorTarget.Cien}
+              />
+            </div>
+            <DownloaderOptionsConfig hideCookie options={cienOptions} patchApi={BApi.options.patchCienOptions} />
+          </div>
         ),
       },
       {
@@ -575,33 +621,72 @@ export default function ThirdPartyConfigurationPage() {
         key: "fanbox",
         label: "Fanbox",
         tip: "thirdPartyConfig.tip.fanbox",
-        content: renderDownloaderOptions(
-          tmpFanboxOptions,
-          setTmpFanboxOptions,
-          BApi.options.patchFanboxOptions,
-          "fanbox",
+        content: (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="flat" onPress={() => setFanboxConfigOpen(true)}>
+                {t("resourceSource.action.configure")} ({fanboxOptions?.accounts?.length || 0} {t("resourceSource.accounts.title", { platform: "" }).trim()})
+              </Button>
+              <SimpleThirdPartyConfig
+                title="Fanbox"
+                isOpen={fanboxConfigOpen}
+                onClose={() => setFanboxConfigOpen(false)}
+                accounts={fanboxOptions?.accounts || []}
+                onSave={(accounts) => BApi.options.patchFanboxOptions({ accounts })}
+                cookieValidatorTarget={CookieValidatorTarget.Fanbox}
+                cookieCaptureTarget={CookieValidatorTarget.Fanbox}
+              />
+            </div>
+            <DownloaderOptionsConfig hideCookie options={fanboxOptions} patchApi={BApi.options.patchFanboxOptions} />
+          </div>
         ),
       },
       {
         key: "fantia",
         label: "Fantia",
         tip: "thirdPartyConfig.tip.fantia",
-        content: renderDownloaderOptions(
-          tmpFantiaOptions,
-          setTmpFantiaOptions,
-          BApi.options.patchFantiaOptions,
-          "fantia",
+        content: (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="flat" onPress={() => setFantiaConfigOpen(true)}>
+                {t("resourceSource.action.configure")} ({fantiaOptions?.accounts?.length || 0} {t("resourceSource.accounts.title", { platform: "" }).trim()})
+              </Button>
+              <SimpleThirdPartyConfig
+                title="Fantia"
+                isOpen={fantiaConfigOpen}
+                onClose={() => setFantiaConfigOpen(false)}
+                accounts={fantiaOptions?.accounts || []}
+                onSave={(accounts) => BApi.options.patchFantiaOptions({ accounts })}
+                cookieValidatorTarget={CookieValidatorTarget.Fantia}
+                cookieCaptureTarget={CookieValidatorTarget.Fantia}
+              />
+            </div>
+            <DownloaderOptionsConfig hideCookie options={fantiaOptions} patchApi={BApi.options.patchFantiaOptions} />
+          </div>
         ),
       },
       {
         key: "patreon",
         label: "Patreon",
         tip: "thirdPartyConfig.tip.patreon",
-        content: renderDownloaderOptions(
-          tmpPatreonOptions,
-          setTmpPatreonOptions,
-          BApi.options.patchPatreonOptions,
-          "patreon",
+        content: (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="flat" onPress={() => setPatreonConfigOpen(true)}>
+                {t("resourceSource.action.configure")} ({patreonOptions?.accounts?.length || 0} {t("resourceSource.accounts.title", { platform: "" }).trim()})
+              </Button>
+              <SimpleThirdPartyConfig
+                title="Patreon"
+                isOpen={patreonConfigOpen}
+                onClose={() => setPatreonConfigOpen(false)}
+                accounts={patreonOptions?.accounts || []}
+                onSave={(accounts) => BApi.options.patchPatreonOptions({ accounts })}
+                cookieValidatorTarget={CookieValidatorTarget.Patreon}
+                cookieCaptureTarget={CookieValidatorTarget.Patreon}
+              />
+            </div>
+            <DownloaderOptionsConfig hideCookie options={patreonOptions} patchApi={BApi.options.patchPatreonOptions} />
+          </div>
         ),
       },
       {
@@ -714,9 +799,21 @@ export default function ThirdPartyConfigurationPage() {
       exhentaiOptions,
       dlsiteOptions,
       steamOptions,
+      bilibiliOptions,
+      pixivOptions,
+      fanboxOptions,
+      fantiaOptions,
+      cienOptions,
+      patreonOptions,
       exhentaiConfigOpen,
       dlsiteConfigOpen,
       steamConfigOpen,
+      bilibiliConfigOpen,
+      pixivConfigOpen,
+      fanboxConfigOpen,
+      fantiaConfigOpen,
+      cienConfigOpen,
+      patreonConfigOpen,
     ],
   );
 

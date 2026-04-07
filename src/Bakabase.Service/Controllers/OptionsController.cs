@@ -240,7 +240,11 @@ namespace Bakabase.Service.Controllers
         {
             await _bakabaseOptionsManager.Get<BilibiliOptions>().SaveAsync(options =>
             {
-                if (model.Cookie != null)
+                if (model.Accounts != null)
+                {
+                    options.Accounts = model.Accounts;
+                }
+                else if (model.Cookie != null)
                 {
                     options.Cookie = model.Cookie;
                 }
@@ -443,7 +447,11 @@ namespace Bakabase.Service.Controllers
         {
             await _bakabaseOptionsManager.Get<PixivOptions>().SaveAsync(options =>
             {
-                if (model.Cookie != null)
+                if (model.Accounts != null)
+                {
+                    options.Accounts = model.Accounts;
+                }
+                else if (model.Cookie != null)
                 {
                     options.Cookie = model.Cookie;
                 }
@@ -1047,7 +1055,11 @@ namespace Bakabase.Service.Controllers
         {
             await _bakabaseOptionsManager.Get<CienOptions>().SaveAsync(options =>
             {
-                if (model.Cookie != null)
+                if (model.Accounts != null)
+                {
+                    options.Accounts = model.Accounts;
+                }
+                else if (model.Cookie != null)
                 {
                     options.Cookie = model.Cookie;
                 }
@@ -1219,7 +1231,11 @@ namespace Bakabase.Service.Controllers
         {
             await _bakabaseOptionsManager.Get<FanboxOptions>().SaveAsync(options =>
             {
-                if (model.Cookie != null)
+                if (model.Accounts != null)
+                {
+                    options.Accounts = model.Accounts;
+                }
+                else if (model.Cookie != null)
                 {
                     options.Cookie = model.Cookie;
                 }
@@ -1275,7 +1291,11 @@ namespace Bakabase.Service.Controllers
         {
             await _bakabaseOptionsManager.Get<FantiaOptions>().SaveAsync(options =>
             {
-                if (model.Cookie != null)
+                if (model.Accounts != null)
+                {
+                    options.Accounts = model.Accounts;
+                }
+                else if (model.Cookie != null)
                 {
                     options.Cookie = model.Cookie;
                 }
@@ -1331,7 +1351,11 @@ namespace Bakabase.Service.Controllers
         {
             await _bakabaseOptionsManager.Get<PatreonOptions>().SaveAsync(options =>
             {
-                if (model.Cookie != null)
+                if (model.Accounts != null)
+                {
+                    options.Accounts = model.Accounts;
+                }
+                else if (model.Cookie != null)
                 {
                     options.Cookie = model.Cookie;
                 }
