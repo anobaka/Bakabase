@@ -762,4 +762,7 @@
   <data name="CookieCapture_Error" xml:space="preserve">
     <value>错误</value>
   </data>
+  <data name="CookieCapture_Cancelled" xml:space="preserve">
+    <value>已取消导入 Cookie。需要时可重新尝试。</value>
+  </data>
 </root>

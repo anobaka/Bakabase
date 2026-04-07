@@ -351,14 +351,6 @@ export const routesMenuConfig: RouteMenuItem[] = [
         menu: true,
       },
       {
-        name: "menu.thirdPartyIntegration",
-        path: "/third-party-integration",
-        component: ThirdPartyIntegrationPage,
-        icon: AiOutlineAppstoreAdd,
-        layout: "basic",
-        menu: true,
-      },
-      {
         name: "menu.backgroundTask",
         path: "/background-task",
         component: BackgroundTaskPage,

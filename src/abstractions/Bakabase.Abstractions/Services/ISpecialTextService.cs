@@ -2,7 +2,6 @@
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Input;
 using Bakabase.InsideWorld.Models.Constants;
-using Bakabase.InsideWorld.Models.Models.Entities;
 using Bootstrap.Models.ResponseModels;
 using System.Linq.Expressions;
 

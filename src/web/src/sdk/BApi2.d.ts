@@ -5800,6 +5800,7 @@ export interface components {
             auditLogRequestContent: boolean;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.BangumiOptions": {
+            accounts?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ThirdPartyAccount"][];
             /** Format: int32 */
             maxConcurrency: number;
             /** Format: int32 */
@@ -6029,7 +6030,12 @@ export interface components {
             };
             syncMarksImmediately?: boolean;
         };
+        "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ThirdPartyAccount": {
+            name?: string;
+            cookie?: string;
+        };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.SoulPlusOptions": {
+            accounts?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ThirdPartyAccount"][];
             /** Format: int32 */
             maxConcurrency: number;
             /** Format: int32 */
@@ -6068,6 +6074,7 @@ export interface components {
             auditLogRequestContent?: boolean;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.BangumiOptionsPatchInputModel": {
+            accounts?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ThirdPartyAccount"][];
             /** Format: int32 */
             maxConcurrency?: number;
             /** Format: int32 */
@@ -6222,6 +6229,7 @@ export interface components {
             requestTimeout?: number;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.SoulPlusOptionsPatchInputModel": {
+            accounts?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ThirdPartyAccount"][];
             cookie?: string;
             /** Format: int32 */
             autoBuyThreshold?: number;
@@ -6683,7 +6691,7 @@ export interface components {
          * @description [1: BiliBili, 2: ExHentai, 3: Pixiv, 6: DLsite]
          * @enum {integer}
          */
-        "Bakabase.InsideWorld.Models.Constants.CookieValidatorTarget": 1 | 2 | 3 | 6;
+        "Bakabase.InsideWorld.Models.Constants.CookieValidatorTarget": 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
         /**
          * Format: int32
          * @description [1: Contain, 2: Cover]

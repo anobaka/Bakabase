@@ -4,8 +4,8 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Models.Db;
 using Bakabase.InsideWorld.Models.Constants.Aos;
-using Bakabase.InsideWorld.Models.Models.Entities;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bootstrap.Components.Orm.Infrastructures;
 using Bootstrap.Models.ResponseModels;
@@ -13,15 +13,15 @@ using Microsoft.Extensions.Logging;
 
 namespace Bakabase.InsideWorld.Business.Services
 {
-    public class PasswordService : ResourceService<BakabaseDbContext, Password, string>
+    public class PasswordService : ResourceService<BakabaseDbContext, PasswordDbModel, string>
     {
         public PasswordService(IServiceProvider serviceProvider) : base(serviceProvider)
         {
         }
 
-        public async Task<SearchResponse<Password>> Search(PasswordSearchRequestModel model)
+        public async Task<SearchResponse<PasswordDbModel>> Search(PasswordSearchRequestModel model)
         {
-            Expression<Func<Password, object>>? orderBy = null;
+            Expression<Func<PasswordDbModel, object>>? orderBy = null;
             if (model.Order.HasValue)
             {
                 switch (model.Order.Value)
@@ -47,7 +47,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 var p = await GetByKey(password);
                 if (p == null)
                 {
-                    p = new Password {Text = password};
+                    p = new PasswordDbModel {Text = password};
                     DbContext.Add(p);
                 }
 

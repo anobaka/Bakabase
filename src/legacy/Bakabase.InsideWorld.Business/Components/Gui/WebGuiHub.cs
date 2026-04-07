@@ -25,7 +25,6 @@ using Bakabase.InsideWorld.Business.Models.View;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Abstractions.Models.View;
 using Bakabase.InsideWorld.Models.Models.Aos;
-using Bakabase.InsideWorld.Models.Models.Entities;
 using Bakabase.Modules.BulkModification.Components;
 using Bakabase.Modules.ThirdParty.Services;
 using Bootstrap.Extensions;

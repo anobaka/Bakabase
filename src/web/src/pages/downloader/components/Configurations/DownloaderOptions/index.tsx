@@ -18,6 +18,7 @@ type Props = {
   thirdPartyId: ThirdPartyId;
   options: Partial<BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloaderOptions>;
   namingDefinition?: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloaderDefinition;
+  hideCookie?: boolean;
   onChange: (
     patches: Partial<BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloaderOptions>,
   ) => void;
@@ -26,25 +27,26 @@ const DownloaderOptions = ({
   thirdPartyId,
   options,
   namingDefinition,
+  hideCookie,
   onChange,
 }: Props) => {
   const { t } = useTranslation();
 
   return (
     <div className="flex flex-col gap-4">
-      <CookieValidator
+      {!hideCookie && <CookieValidator
         cookie={options?.cookie || ""}
         description={t<string>("Cookie required for authentication")}
         target={thirdPartyId as unknown as CookieValidatorTarget}
         onChange={(cookie: string) => {
           onChange({ cookie });
         }}
-      />
+      />}
 
       <div className={"flex flex-col gap-1"}>
-        <Chip className={"opacity-70"} size="sm" variant="light">
+        <span className="text-sm font-medium">
           {t<string>("Default download path")}
-        </Chip>
+        </span>
         <div>
           {options && (
             <FileSystemSelectorButton
@@ -59,9 +61,9 @@ const DownloaderOptions = ({
             />
           )}
         </div>
-        <Chip className={"opacity-70"} size="sm" variant="light">
+        <span className="text-xs text-default-400">
           {t<string>("Default path where downloads will be saved")}
-        </Chip>
+        </span>
       </div>
 
       <NumberInput

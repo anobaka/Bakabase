@@ -14,6 +14,7 @@ import type { CookieValidatorTarget } from "@/sdk/constants";
 import { RuntimeMode } from "@/sdk/constants";
 import { useAppContextStore } from "@/stores/appContext";
 import BApi from "@/sdk/BApi";
+import { notifyCookieCaptureDismissal } from "./notifyCookieCaptureDismissal";
 
 export interface AccountField {
   key: string;
@@ -121,6 +122,12 @@ export default function AccountsPanel({
       if (!rsp.code && rsp.data) {
         updateAccount(index, field.key, rsp.data);
         setCaptureStatus((prev) => ({ ...prev, [key]: "succeed" }));
+      } else if (notifyCookieCaptureDismissal(rsp)) {
+        setCaptureStatus((prev) => {
+          const next = { ...prev };
+          delete next[key];
+          return next;
+        });
       } else {
         setCaptureStatus((prev) => ({ ...prev, [key]: "failed" }));
       }

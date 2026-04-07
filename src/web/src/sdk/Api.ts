@@ -1143,6 +1143,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainBangumiOptions {
+  accounts?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainThirdPartyAccount[];
   /** @format int32 */
   maxConcurrency: number;
   /** @format int32 */
@@ -1391,7 +1392,13 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
   syncMarksImmediately?: boolean;
 }
 
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainThirdPartyAccount {
+  name?: string;
+  cookie?: string;
+}
+
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainSoulPlusOptions {
+  accounts?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainThirdPartyAccount[];
   /** @format int32 */
   maxConcurrency: number;
   /** @format int32 */
@@ -1429,6 +1436,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputA
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputBangumiOptionsPatchInputModel {
+  accounts?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainThirdPartyAccount[];
   /** @format int32 */
   maxConcurrency?: number;
   /** @format int32 */
@@ -1592,6 +1600,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputP
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputSoulPlusOptionsPatchInputModel {
+  accounts?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainThirdPartyAccount[];
   cookie?: string;
   /** @format int32 */
   autoBuyThreshold?: number;
@@ -2157,7 +2166,7 @@ export type BakabaseInsideWorldModelsConstantsAosResourceSearchSortableProperty 
  * [1: BiliBili, 2: ExHentai, 3: Pixiv, 6: DLsite]
  * @format int32
  */
-export type BakabaseInsideWorldModelsConstantsCookieValidatorTarget = 1 | 2 | 3 | 6;
+export type BakabaseInsideWorldModelsConstantsCookieValidatorTarget = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
 
 /**
  * [1: Contain, 2: Cover]

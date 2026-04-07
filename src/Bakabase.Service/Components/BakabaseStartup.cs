@@ -32,6 +32,8 @@ using Bakabase.Modules.ThirdParty.ThirdParties.Fanbox;
 using Bakabase.Modules.ThirdParty.ThirdParties.Fantia;
 using Bakabase.Modules.ThirdParty.ThirdParties.Cien;
 using Bakabase.Modules.ThirdParty.ThirdParties.Patreon;
+using Bakabase.Modules.ThirdParty.ThirdParties.Bangumi;
+using Bakabase.Modules.ThirdParty.ThirdParties.SoulPlus;
 using Bakabase.Service.Components.Tasks;
 using Bakabase.Service.Extensions;
 using Bakabase.Service.Services;
@@ -98,6 +100,8 @@ namespace Bakabase.Service.Components
             services.TryAddSingleton<FantiaCookieCaptureFlow>();
             services.TryAddSingleton<CienCookieCaptureFlow>();
             services.TryAddSingleton<PatreonCookieCaptureFlow>();
+            services.TryAddSingleton<BangumiCookieCaptureFlow>();
+            services.TryAddSingleton<SoulPlusCookieCaptureFlow>();
             services.RegisterAllRegisteredTypeAs<ICookieCaptureFlow>();
 
             services.TryAddSingleton<FfMpegService>();

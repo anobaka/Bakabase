@@ -4,7 +4,6 @@ using Bakabase.InsideWorld.Business.Components.PlayList.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.PlayList.Models.Input;
 using Bakabase.InsideWorld.Business.Components.PlayList.Services;
 using Bakabase.InsideWorld.Models.Models.Dtos;
-using Bakabase.InsideWorld.Models.Models.Entities;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;

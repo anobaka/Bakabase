@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
+using Bakabase.Abstractions.Models.Db;
 using Bakabase.InsideWorld.Business.Services;
-using Bakabase.InsideWorld.Models.Models.Entities;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
@@ -20,16 +20,16 @@ namespace Bakabase.Service.Controllers
 
         [HttpGet]
         [SwaggerOperation(OperationId = "SearchPasswords")]
-        public async Task<SearchResponse<Password>> Search(PasswordSearchRequestModel model)
+        public async Task<SearchResponse<PasswordDbModel>> Search(PasswordSearchRequestModel model)
         {
             return await _service.Search(model);
         }
 
         [HttpGet("all")]
         [SwaggerOperation(OperationId = "GetAllPasswords")]
-        public async Task<ListResponse<Password>> GetAll()
+        public async Task<ListResponse<PasswordDbModel>> GetAll()
         {
-            return new ListResponse<Password>(await _service.GetAll());
+            return new ListResponse<PasswordDbModel>(await _service.GetAll());
         }
 
         [HttpDelete("{password}")]

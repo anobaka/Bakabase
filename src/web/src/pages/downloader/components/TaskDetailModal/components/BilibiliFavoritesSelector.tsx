@@ -82,7 +82,7 @@ const BilibiliFavoritesSelector = ({ isDisabled, value, onChange }: Props) => {
         {favorites.map((f) => {
           return (
             <Radio key={f.id} value={f.id.toString()}>
-              {f.title} ({f.mediaCount})
+              {f.title}{f.mediaCount ? `(${f.mediaCount})` : ''} 
             </Radio>
           );
         })}
@@ -92,7 +92,7 @@ const BilibiliFavoritesSelector = ({ isDisabled, value, onChange }: Props) => {
 
   return (
     <div className="flex items-center gap-2">
-      <Chip radius="sm">{t<string>("downloader.bilibili.selectFavorites")}</Chip>
+      {/* <Chip radius="sm">{t<string>("downloader.bilibili.selectFavorites")}</Chip> */}
       {renderFavorites()}
     </div>
   );

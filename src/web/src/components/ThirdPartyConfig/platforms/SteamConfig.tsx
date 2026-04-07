@@ -1,16 +1,18 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, type FC } from "react";
 import { useTranslation } from "react-i18next";
-import { Modal, ModalContent, ModalHeader, ModalBody, Tab, Tabs, Select, SelectItem } from "@heroui/react";
+import { Select, SelectItem } from "@heroui/react";
 
 import { toast } from "@/components/bakaui";
 import { useSteamOptionsStore } from "@/stores/options";
 import { ResourceSource } from "@/sdk/constants";
 import ExternalLink from "@/components/ExternalLink";
-import AccountsPanel, { type AccountField } from "./AccountsPanel";
-import MetadataMappingPanel from "./MetadataMappingPanel";
-import AutoSyncPanel from "./AutoSyncPanel";
+import AccountsPanel, { type AccountField } from "../base/AccountsPanel";
+import ConfigurableThirdPartyPanel, { type ConfigFieldTab } from "../base/ConfigurableThirdPartyPanel";
+import MetadataMappingPanel from "../base/MetadataMappingPanel";
+import AutoSyncPanel from "../base/AutoSyncPanel";
+import ThirdPartyConfigModal from "../base/ThirdPartyConfigModal";
 
 const steamLanguageOptions = [
   { value: "english", label: "English" },
@@ -37,14 +39,11 @@ export enum SteamConfigField {
   AutoSync = "autoSync",
 }
 
-interface SteamConfigProps {
-  onDestroyed?: () => void;
-  onClose?: () => void;
-  isOpen?: boolean;
+export interface SteamConfigPanelProps {
   fields?: SteamConfigField[] | "all";
 }
 
-export default function SteamConfig({ onDestroyed, onClose, isOpen, fields: visibleFields }: SteamConfigProps) {
+export const SteamConfigPanel: FC<SteamConfigPanelProps> = ({ fields = "all" }) => {
   const { t } = useTranslation();
   const steamOptions = useSteamOptionsStore((s) => s.data);
   const patch = useSteamOptionsStore((s) => s.patch);
@@ -76,11 +75,8 @@ export default function SteamConfig({ onDestroyed, onClose, isOpen, fields: visi
     toast.success(t("thirdPartyConfig.success.saved"));
   };
 
-  const isFieldVisible = (field: SteamConfigField) =>
-    !visibleFields || visibleFields === "all" || visibleFields.includes(field);
-
-  const tabs = useMemo(() => {
-    const allTabs = [
+  const tabs: ConfigFieldTab<SteamConfigField>[] = useMemo(() => {
+    const allTabs: ConfigFieldTab<SteamConfigField>[] = [
       {
         field: SteamConfigField.General,
         key: "general",
@@ -134,27 +130,38 @@ export default function SteamConfig({ onDestroyed, onClose, isOpen, fields: visi
         ),
       },
     ];
-    return allTabs.filter((tab) => isFieldVisible(tab.field));
-  }, [visibleFields, steamOptions, accountFields, t]);
+    return allTabs;
+  }, [steamOptions, accountFields, t, patch]);
 
-  return (
-    <Modal isOpen={isOpen ?? true} scrollBehavior="inside" size="5xl" onClose={onClose ?? onDestroyed}>
-      <ModalContent>
-        <ModalHeader>{t("resourceSource.steam.title")}</ModalHeader>
-        <ModalBody className="pb-6">
-          {tabs.length === 1 ? (
-            tabs[0].content
-          ) : (
-            <Tabs isVertical classNames={{ panel: "flex-1 w-0" }}>
-              {tabs.map((tab) => (
-                <Tab key={tab.key} title={tab.title}>
-                  {tab.content}
-                </Tab>
-              ))}
-            </Tabs>
-          )}
-        </ModalBody>
-      </ModalContent>
-    </Modal>
-  );
+  return <ConfigurableThirdPartyPanel fields={fields} tabs={tabs} />;
+};
+
+export interface SteamConfigModalProps {
+  onDestroyed?: () => void;
+  onClose?: () => void;
+  isOpen?: boolean;
+  fields?: SteamConfigField[] | "all";
 }
+
+export const SteamConfigModal: FC<SteamConfigModalProps> = ({
+  onDestroyed,
+  onClose,
+  isOpen,
+  fields,
+}) => {
+  const { t } = useTranslation();
+  const handleClose = onClose ?? onDestroyed;
+  return (
+    <ThirdPartyConfigModal
+      title={t("resourceSource.steam.title")}
+      isOpen={isOpen}
+      onClose={handleClose}
+    >
+      <SteamConfigPanel fields={fields} />
+    </ThirdPartyConfigModal>
+  );
+};
+
+/** Modal wrapper; same as SteamConfigModal (legacy name). */
+const SteamConfig = SteamConfigModal;
+export default SteamConfig;

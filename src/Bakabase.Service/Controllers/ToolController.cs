@@ -82,7 +82,12 @@ namespace Bakabase.Service.Controllers
 
             if (cookie == null)
             {
-                return SingletonResponseBuilder<string>.Build(ResponseCode.InvalidPayloadOrOperation, "Cookie capture was cancelled or is not supported in this environment.");
+                // Success + no data avoids HTTP 400 / global error toast; message explains cancel or unsupported environment.
+                return new SingletonResponse<string>(null)
+                {
+                    Code = (int)ResponseCode.Success,
+                    Message = localizer["CookieCapture_Cancelled"],
+                };
             }
 
             return new SingletonResponse<string>(cookie);

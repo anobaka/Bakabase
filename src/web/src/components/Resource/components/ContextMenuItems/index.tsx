@@ -6,14 +6,21 @@ import {
   ApiOutlined,
   DeleteOutlined,
   EditOutlined,
+  FireOutlined,
+  PushpinOutlined,
+  ReloadOutlined,
   SendOutlined,
   SettingOutlined,
+  VideoCameraAddOutlined,
 } from "@ant-design/icons";
+import { AiOutlinePicture } from "react-icons/ai";
 import React, { useCallback, useEffect, useState } from "react";
 
 import MediaLibraryMultiSelector from "@/components/MediaLibraryMultiSelector";
-import { PropertyPool, ResourceAdditionalItem } from "@/sdk/constants";
+import { EnhancementAdditionalItem, PropertyPool, ResourceAdditionalItem } from "@/sdk/constants";
 import ResourceTransferModal from "@/components/ResourceTransferModal";
+import ResourceEnhancementsModal from "@/components/Resource/components/ResourceEnhancementsModal";
+import { PlaylistCollection } from "@/components/Playlist";
 import { Modal, toast } from "@/components/bakaui";
 import { buildLogger } from "@/components/utils";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
@@ -200,6 +207,62 @@ const ContextMenuItems = ({
       })}
 
       {customContextMenuItems.length > 0 && <MenuDivider />}
+
+      {/* Single-resource actions (mirrored from cover buttons) */}
+      {selectedResourceIds.length === 1 && (() => {
+        const resId = selectedResourceIds[0];
+        const res = selectedResources?.[0];
+        return (
+          <>
+            <MenuItem onClick={() => {
+              BApi.resource.pinResource(resId, { pin: !res?.pinned }).then(() => onSelectedResourcesChanged?.(selectedResourceIds));
+            }}>
+              <div className="flex items-center gap-2">
+                <PushpinOutlined className="text-base" />
+                {res?.pinned ? t<string>("resource.operation.unpin") : t<string>("resource.operation.pin")}
+              </div>
+            </MenuItem>
+            <MenuItem onClick={() => {
+              BApi.resource.getResourceEnhancements(resId, { additionalItem: EnhancementAdditionalItem.GeneratedPropertyValue })
+                .then((resp) => { createPortal(ResourceEnhancementsModal, { resourceId: resId, enhancements: resp.data || [] }); });
+            }}>
+              <div className="flex items-center gap-2">
+                <FireOutlined className="text-base" />
+                {t<string>("resource.operation.enhancements")}
+              </div>
+            </MenuItem>
+            <MenuItem onClick={() => {
+              createPortal(Modal, {
+                defaultVisible: true,
+                title: t<string>("resource.operation.addToPlaylist"),
+                children: <PlaylistCollection addingResourceId={resId} />,
+                style: { minWidth: 600 },
+                footer: { actions: ["cancel"] },
+              });
+            }}>
+              <div className="flex items-center gap-2">
+                <VideoCameraAddOutlined className="text-base" />
+                {t<string>("resource.operation.addToPlaylist")}
+              </div>
+            </MenuItem>
+            {(res?.dataStates?.length ?? 0) > 0 && (
+              <MenuItem onClick={async () => {
+                const rsp = await BApi.cache.refreshResourceCache(resId);
+                if (!rsp.code) {
+                  toast.success(t<string>("resource.action.refreshCache.success"));
+                  onSelectedResourcesChanged?.(selectedResourceIds);
+                }
+              }}>
+                <div className="flex items-center gap-2">
+                  <ReloadOutlined className="text-base" />
+                  {t<string>("resource.action.refreshCache")}
+                </div>
+              </MenuItem>
+            )}
+            <MenuDivider />
+          </>
+        );
+      })()}
 
       {/* Built-in menu items */}
       <MenuItem

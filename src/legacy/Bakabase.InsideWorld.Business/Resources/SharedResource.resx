@@ -762,4 +762,7 @@ The version of lux is not limited.</value>
   <data name="CookieCapture_Error" xml:space="preserve">
     <value>Error</value>
   </data>
+  <data name="CookieCapture_Cancelled" xml:space="preserve">
+    <value>Cookie import was cancelled. You can try again when ready.</value>
+  </data>
 </root>

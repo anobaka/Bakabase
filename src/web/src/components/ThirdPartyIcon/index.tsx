@@ -8,12 +8,28 @@ import Pixiv from "@/assets/logo/pixiv.png";
 import Bilibili from "@/assets/logo/bilibili.png";
 import SoulPlus from "@/assets/logo/soulplus.png";
 import { ThirdPartyId } from "@/sdk/constants";
+import dlsiteLogo from "@/assets/logo/dlsite.png";
+import fanboxLogo from "@/assets/logo/fanbox.png";
+import fantiaLogo from "@/assets/logo/fantia.png";
+import cienLogo from "@/assets/logo/cien.png";
+import patreonLogo from "@/assets/logo/patreon.png";
+import bangumiLogo from "@/assets/logo/bangumi.png";
+import steamLogo from "@/assets/logo/steam.png";
+import tmdbLogo from "@/assets/logo/tmdb.png";
 
 const NameIcon: { [key in ThirdPartyId]?: string } = {
   [ThirdPartyId.ExHentai]: ExHentai,
   [ThirdPartyId.Pixiv]: Pixiv,
   [ThirdPartyId.Bilibili]: Bilibili,
+  [ThirdPartyId.Bangumi]: bangumiLogo,
   [ThirdPartyId.SoulPlus]: SoulPlus,
+  [ThirdPartyId.DLsite]: dlsiteLogo,
+  [ThirdPartyId.Fanbox]: fanboxLogo,
+  [ThirdPartyId.Fantia]: fantiaLogo,
+  [ThirdPartyId.Cien]: cienLogo,
+  [ThirdPartyId.Patreon]: patreonLogo,
+  [ThirdPartyId.Tmdb]: tmdbLogo,
+  [ThirdPartyId.Steam]: steamLogo,
 };
 
 type Props = {

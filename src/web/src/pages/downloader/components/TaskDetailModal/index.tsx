@@ -439,7 +439,7 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
             description={
               <div className="flex items-center gap-1 flex-wrap">
                 <span>{t<string>("downloader.tip.exHentaiUserscript")}</span>
-                <NavigateButton to="/third-party-integration">
+                <NavigateButton to="/third-party-configuration">
                   {t<string>("downloader.tip.goToThirdPartyIntegration")}
                 </NavigateButton>
               </div>

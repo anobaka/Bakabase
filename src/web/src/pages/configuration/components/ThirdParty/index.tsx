@@ -43,7 +43,10 @@ import {
   SteamConfig,
   DLsiteConfig,
   DownloaderOptionsConfig,
+  SimpleThirdPartyConfig,
 } from "@/components/ThirdPartyConfig";
+import { notifyCookieCaptureDismissal } from "@/components/ThirdPartyConfig/notifyCookieCaptureDismissal";
+
 const ThirdParty = ({
   applyPatches = () => {},
 }: {
@@ -85,6 +88,7 @@ const ThirdParty = ({
   const [exhentaiConfigOpen, setExhentaiConfigOpen] = useState(false);
   const [dlsiteConfigOpen, setDlsiteConfigOpen] = useState(false);
   const [steamConfigOpen, setSteamConfigOpen] = useState(false);
+  const [bangumiConfigOpen, setBangumiConfigOpen] = useState(false);
 
   const [validatingCookies, setValidatingCookies] = useState<{
     [key: string]: boolean;
@@ -319,6 +323,8 @@ const ThirdParty = ({
                   const rsp = await BApi.tool.captureCookie({ target });
                   if (!rsp.code && rsp.data) {
                     setOptions({ ...options, cookie: rsp.data });
+                  } else {
+                    notifyCookieCaptureDismissal(rsp);
                   }
                 } finally {
                   setCapturingCookies((prev) => ({ ...prev, [thirdPartyName]: false }));
@@ -442,6 +448,23 @@ const ThirdParty = ({
       tip: "Configure Bangumi settings including request parameters and authentication.",
       content: (
         <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="flat" onPress={() => setBangumiConfigOpen(true)}>
+              {t("configuration.thirdParty.configure")} ({bangumiOptions?.accounts?.length || 0})
+            </Button>
+            <SimpleThirdPartyConfig
+              title="Bangumi"
+              isOpen={bangumiConfigOpen}
+              onClose={() => setBangumiConfigOpen(false)}
+              accounts={bangumiOptions?.accounts || []}
+              onSave={async (accounts) => {
+                await BApi.options.patchBangumiOptions({ accounts });
+                useBangumiOptionsStore.getState().update({ accounts });
+              }}
+              cookieValidatorTarget={CookieValidatorTarget.Bangumi}
+              cookieCaptureTarget={CookieValidatorTarget.Bangumi}
+            />
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <Input
               label="Max Concurrency"
@@ -464,19 +487,6 @@ const ThirdParty = ({
                 setTmpBangumiOptions({
                   ...tmpBangumiOptions,
                   requestInterval: Number(v) || 1000,
-                });
-              }}
-            />
-          </div>
-          <div>
-            <Input
-              label="Cookie"
-              size="sm"
-              value={tmpBangumiOptions.cookie || ""}
-              onValueChange={(v) => {
-                setTmpBangumiOptions({
-                  ...tmpBangumiOptions,
-                  cookie: v,
                 });
               }}
             />
@@ -510,10 +520,13 @@ const ThirdParty = ({
               color="primary"
               size="sm"
               onPress={() => {
-                applyPatches(
-                  BApi.options.patchBangumiOptions,
-                  tmpBangumiOptions,
-                );
+                applyPatches(BApi.options.patchBangumiOptions, {
+                  maxConcurrency: tmpBangumiOptions.maxConcurrency,
+                  requestInterval: tmpBangumiOptions.requestInterval,
+                  userAgent: tmpBangumiOptions.userAgent,
+                  referer: tmpBangumiOptions.referer,
+                  headers: tmpBangumiOptions.headers,
+                });
               }}
             >
               {t<string>("common.action.save")}
@@ -664,19 +677,6 @@ const ThirdParty = ({
               }}
             />
           </div>
-          <div>
-            <Textarea
-              label="Cookie"
-              size="sm"
-              value={tmpTmdbOptions.cookie || ""}
-              onValueChange={(v) => {
-                setTmpTmdbOptions({
-                  ...tmpTmdbOptions,
-                  cookie: v,
-                });
-              }}
-            />
-          </div>
           <div className="grid grid-cols-2 gap-4">
             <Input
               label="User Agent"
@@ -706,7 +706,14 @@ const ThirdParty = ({
               color="primary"
               size="sm"
               onPress={() => {
-                applyPatches(BApi.options.patchTmdbOptions, tmpTmdbOptions);
+                applyPatches(BApi.options.patchTmdbOptions, {
+                  maxConcurrency: tmpTmdbOptions.maxConcurrency,
+                  requestInterval: tmpTmdbOptions.requestInterval,
+                  apiKey: tmpTmdbOptions.apiKey,
+                  userAgent: tmpTmdbOptions.userAgent,
+                  referer: tmpTmdbOptions.referer,
+                  headers: tmpTmdbOptions.headers,
+                });
               }}
             >
               {t<string>("common.action.save")}

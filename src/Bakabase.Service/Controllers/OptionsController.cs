@@ -975,7 +975,11 @@ namespace Bakabase.Service.Controllers
         {
             await _bakabaseOptionsManager.Get<SoulPlusOptions>().SaveAsync(options =>
             {
-                if (model.Cookie != null)
+                if (model.Accounts != null)
+                {
+                    options.Accounts = model.Accounts;
+                }
+                else if (model.Cookie != null)
                 {
                     options.Cookie = model.Cookie;
                 }
@@ -1009,6 +1013,15 @@ namespace Bakabase.Service.Controllers
         {
             await _bakabaseOptionsManager.Get<BangumiOptions>().SaveAsync(options =>
             {
+                if (model.Accounts != null)
+                {
+                    options.Accounts = model.Accounts;
+                }
+                else if (model.Cookie != null)
+                {
+                    options.Cookie = model.Cookie;
+                }
+
                 if (model.MaxConcurrency.HasValue)
                 {
                     options.MaxConcurrency = model.MaxConcurrency.Value;
@@ -1017,11 +1030,6 @@ namespace Bakabase.Service.Controllers
                 if (model.RequestInterval.HasValue)
                 {
                     options.RequestInterval = model.RequestInterval.Value;
-                }
-
-                if (model.Cookie != null)
-                {
-                    options.Cookie = model.Cookie;
                 }
 
                 if (model.UserAgent != null)

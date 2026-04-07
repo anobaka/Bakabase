@@ -11,6 +11,12 @@
   "thirdPartyConfig.label.userAgent": "User Agent",
   "thirdPartyConfig.label.referer": "Referer",
   "thirdPartyConfig.label.apiKey": "API Key",
+  "thirdPartyConfig.group.dataFetch": "Data fetching",
+  "thirdPartyConfig.group.download": "Download",
+  "thirdPartyConfig.group.authentication": "Authentication",
+  "thirdPartyConfig.group.apiAccess": "API & access",
+  "thirdPartyConfig.group.httpClient": "HTTP client",
+  "thirdPartyConfig.group.other": "Other",
   "thirdPartyConfig.action.save": "Save",
   "thirdPartyConfig.action.validateCookie": "Validate cookie",
   "thirdPartyConfig.error.invalidCookie": "Invalid cookie",
@@ -34,11 +40,18 @@
   "thirdPartyConfig.autoSync.intervalDescription": "How often to automatically sync data from this source. Set to 0 or leave empty to disable.",
   "thirdPartyConfig.autoSync.unit": "minutes",
   "thirdPartyConfig.autoSync.warning": "Setting a very short interval may cause your account to be rate-limited or blocked by the service provider.",
-
   "thirdPartyConfig.recommendedDir.title": "Use recommended directory?",
   "thirdPartyConfig.recommendedDir.description": "We recommend using a dedicated subdirectory to keep files organized.",
   "thirdPartyConfig.recommendedDir.recommended": "Recommended",
   "thirdPartyConfig.recommendedDir.selected": "Selected",
   "thirdPartyConfig.recommendedDir.useRecommended": "Use recommended",
-  "thirdPartyConfig.recommendedDir.useSelected": "Use selected"
+  "thirdPartyConfig.recommendedDir.useSelected": "Use selected",
+  "thirdPartyConfig.field.defaultPath.label": "Default Download Path",
+  "thirdPartyConfig.field.defaultPath.description": "Default path where downloaded files will be saved.",
+  "thirdPartyConfig.field.maxConcurrency.description": "Maximum number of concurrent requests. Higher values may speed up data fetching but could trigger rate limiting.",
+  "thirdPartyConfig.field.requestInterval.description": "Minimum time between requests in milliseconds. Helps avoid rate limiting.",
+  "thirdPartyConfig.field.maxRetries.description": "Maximum number of retry attempts for failed requests.",
+  "thirdPartyConfig.field.requestTimeout.description": "Maximum time to wait for a response before timing out.",
+  "thirdPartyConfig.field.namingConvention.label": "Naming Convention",
+  "thirdPartyConfig.field.namingConvention.description": "Define how downloaded files and folders should be named. Use available variables below."
 }

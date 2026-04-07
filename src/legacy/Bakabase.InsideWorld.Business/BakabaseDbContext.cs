@@ -4,7 +4,6 @@ using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
 using Bakabase.InsideWorld.Business.Components.PlayList.Models.Db;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Db;
 using Bakabase.InsideWorld.Business.Models.Db;
-using Bakabase.InsideWorld.Models.Models.Entities;
 using Bakabase.Modules.BulkModification.Components;
 using Bakabase.Modules.BulkModification.Models.Db;
 using Bakabase.Modules.Comparison.Components;
@@ -25,7 +24,7 @@ namespace Bakabase.InsideWorld.Business
 
         public DbSet<DownloadTaskDbModel> DownloadTasks { get; set; }
 
-        public DbSet<Password> Passwords { get; set; }
+        public DbSet<PasswordDbModel> Passwords { get; set; }
 
         public DbSet<BulkModificationDbModel> BulkModifications { get; set; }
         public DbSet<BulkModificationDiffDbModel> BulkModificationDiffs { get; set; }
@@ -106,7 +105,7 @@ namespace Bakabase.InsideWorld.Business
                 t.HasIndex(a => a.Status);
             });
 
-            modelBuilder.Entity<Password>(t =>
+            modelBuilder.Entity<PasswordDbModel>(t =>
             {
                 t.HasIndex(a => a.LastUsedAt);
                 t.HasIndex(a => a.UsedTimes);

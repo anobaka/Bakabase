@@ -13,7 +13,6 @@ using Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloaders
 using Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloaders.Pixiv;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
 using Bakabase.InsideWorld.Models.Constants;
-using Bakabase.InsideWorld.Models.Models.Entities;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Extensions;

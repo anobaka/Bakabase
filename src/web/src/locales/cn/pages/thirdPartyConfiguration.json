@@ -11,6 +11,12 @@
   "thirdPartyConfig.label.userAgent": "User Agent",
   "thirdPartyConfig.label.referer": "Referer",
   "thirdPartyConfig.label.apiKey": "API Key",
+  "thirdPartyConfig.group.dataFetch": "数据获取",
+  "thirdPartyConfig.group.download": "下载",
+  "thirdPartyConfig.group.authentication": "认证",
+  "thirdPartyConfig.group.apiAccess": "API 与访问",
+  "thirdPartyConfig.group.httpClient": "HTTP 客户端",
+  "thirdPartyConfig.group.other": "其他",
   "thirdPartyConfig.action.save": "保存",
   "thirdPartyConfig.action.validateCookie": "验证 Cookie",
   "thirdPartyConfig.error.invalidCookie": "无效的 Cookie",
@@ -34,11 +40,18 @@
   "thirdPartyConfig.autoSync.intervalDescription": "自动从此源同步数据的频率。设为 0 或留空则禁用。",
   "thirdPartyConfig.autoSync.unit": "分钟",
   "thirdPartyConfig.autoSync.warning": "设置过短的同步间隔可能导致你的账号被服务提供商限速或封禁。",
-
   "thirdPartyConfig.recommendedDir.title": "是否使用推荐目录？",
   "thirdPartyConfig.recommendedDir.description": "建议使用专用子目录来保持文件整洁有序。",
   "thirdPartyConfig.recommendedDir.recommended": "推荐",
   "thirdPartyConfig.recommendedDir.selected": "已选择",
   "thirdPartyConfig.recommendedDir.useRecommended": "使用推荐目录",
-  "thirdPartyConfig.recommendedDir.useSelected": "使用已选目录"
+  "thirdPartyConfig.recommendedDir.useSelected": "使用已选目录",
+  "thirdPartyConfig.field.defaultPath.label": "默认下载路径",
+  "thirdPartyConfig.field.defaultPath.description": "下载文件的默认保存路径。",
+  "thirdPartyConfig.field.maxConcurrency.description": "最大并发请求数。较高的值可以加快数据获取速度，但可能触发限流。",
+  "thirdPartyConfig.field.requestInterval.description": "两次请求之间的最小间隔时间（毫秒），有助于避免被限流。",
+  "thirdPartyConfig.field.maxRetries.description": "请求失败后的最大重试次数。",
+  "thirdPartyConfig.field.requestTimeout.description": "等待响应的最大时间，超时后将放弃请求。",
+  "thirdPartyConfig.field.namingConvention.label": "命名规则",
+  "thirdPartyConfig.field.namingConvention.description": "定义下载文件和文件夹的命名方式。可使用下方的可用变量。"
 }

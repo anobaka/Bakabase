@@ -1,6 +1,7 @@
 ﻿using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
 using Bakabase.Modules.ThirdParty.Components.Localization;
+using Bakabase.Modules.ThirdParty.ThirdParties.Bilibili.Extensions;
 using Bakabase.Modules.ThirdParty.ThirdParties.Bilibili.Models;
 using Bakabase.Modules.ThirdParty.ThirdParties.Bilibili.Models.Constants;
 using Microsoft.Extensions.Logging;
@@ -33,7 +34,7 @@ namespace Bakabase.Modules.ThirdParty.ThirdParties.Bilibili
             var favListJson =
                 await HttpClient.GetStringAsync(BiliBiliApiUrls.FavList.Replace("{mid}", mid.ToString()));
             var favList = JsonConvert.DeserializeObject<DataWrapper<FavoritesList>>(favListJson).Data.List;
-            return favList;
+            return favList.Select(f => f.ToDomain()).ToList();
         }
 
         public async Task<FavoriteItemSearchResponseData> GetPostsInFavorites(long favoritesId, int page,
