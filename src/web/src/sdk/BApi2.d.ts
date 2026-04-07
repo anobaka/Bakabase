@@ -4930,6 +4930,13 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
         };
+        "Bakabase.Abstractions.Models.Db.PasswordDbModel": {
+            text: string;
+            /** Format: int32 */
+            usedTimes: number;
+            /** Format: date-time */
+            lastUsedAt: string;
+        };
         "Bakabase.Abstractions.Models.Db.PlayHistoryDbModel": {
             /** Format: int32 */
             id: number;
@@ -5801,11 +5808,11 @@ export interface components {
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.BangumiOptions": {
             accounts?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ThirdPartyAccount"][];
+            cookie?: string;
             /** Format: int32 */
             maxConcurrency: number;
             /** Format: int32 */
             requestInterval: number;
-            cookie?: string;
             userAgent?: string;
             referer?: string;
             headers?: {
@@ -5813,6 +5820,7 @@ export interface components {
             };
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.BilibiliOptions": {
+            accounts?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ThirdPartyAccount"][];
             cookie?: string;
             userAgent?: string;
             referer?: string;
@@ -5832,6 +5840,7 @@ export interface components {
             requestTimeout: number;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.CienOptions": {
+            accounts?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ThirdPartyAccount"][];
             cookie?: string;
             /** Format: int32 */
             maxConcurrency: number;
@@ -5902,6 +5911,7 @@ export interface components {
             autoSyncIntervalMinutes?: number;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.FanboxOptions": {
+            accounts?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ThirdPartyAccount"][];
             cookie?: string;
             /** Format: int32 */
             maxConcurrency: number;
@@ -5916,6 +5926,7 @@ export interface components {
             requestTimeout: number;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.FantiaOptions": {
+            accounts?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ThirdPartyAccount"][];
             cookie?: string;
             /** Format: int32 */
             maxConcurrency: number;
@@ -5930,6 +5941,7 @@ export interface components {
             requestTimeout: number;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.PatreonOptions": {
+            accounts?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ThirdPartyAccount"][];
             cookie?: string;
             /** Format: int32 */
             maxConcurrency: number;
@@ -5944,7 +5956,13 @@ export interface components {
             requestTimeout: number;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.PixivOptions": {
+            accounts?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ThirdPartyAccount"][];
             cookie?: string;
+            userAgent?: string;
+            referer?: string;
+            headers?: {
+                [key: string]: string;
+            };
             /** Format: int32 */
             maxConcurrency: number;
             /** Format: int32 */
@@ -5956,11 +5974,6 @@ export interface components {
             maxRetries: number;
             /** Format: int32 */
             requestTimeout: number;
-            userAgent?: string;
-            referer?: string;
-            headers?: {
-                [key: string]: string;
-            };
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ResourceOptions": {
             /** Format: date-time */
@@ -6030,17 +6043,13 @@ export interface components {
             };
             syncMarksImmediately?: boolean;
         };
-        "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ThirdPartyAccount": {
-            name?: string;
-            cookie?: string;
-        };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.SoulPlusOptions": {
             accounts?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ThirdPartyAccount"][];
+            cookie?: string;
             /** Format: int32 */
             maxConcurrency: number;
             /** Format: int32 */
             requestInterval: number;
-            cookie?: string;
             userAgent?: string;
             referer?: string;
             headers?: {
@@ -6048,6 +6057,10 @@ export interface components {
             };
             /** Format: int32 */
             autoBuyThreshold: number;
+        };
+        "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ThirdPartyAccount": {
+            name?: string;
+            cookie?: string;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.TmdbOptions": {
             /** Format: int32 */
@@ -6087,6 +6100,7 @@ export interface components {
             };
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.BilibiliOptionsPatchInputModel": {
+            accounts?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ThirdPartyAccount"][];
             cookie?: string;
             /** Format: int32 */
             maxConcurrency?: number;
@@ -6101,6 +6115,7 @@ export interface components {
             requestTimeout?: number;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.CienOptionsPatchInputModel": {
+            accounts?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ThirdPartyAccount"][];
             cookie?: string;
             /** Format: int32 */
             maxConcurrency?: number;
@@ -6154,6 +6169,7 @@ export interface components {
             showCover?: boolean;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.FanboxOptionsPatchInputModel": {
+            accounts?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ThirdPartyAccount"][];
             cookie?: string;
             /** Format: int32 */
             maxConcurrency?: number;
@@ -6168,6 +6184,7 @@ export interface components {
             requestTimeout?: number;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.FantiaOptionsPatchInputModel": {
+            accounts?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ThirdPartyAccount"][];
             cookie?: string;
             /** Format: int32 */
             maxConcurrency?: number;
@@ -6201,6 +6218,7 @@ export interface components {
             credentials?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.NetworkOptions+ProxyOptions+ProxyCredentials"];
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.PatreonOptionsPatchInputModel": {
+            accounts?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ThirdPartyAccount"][];
             cookie?: string;
             /** Format: int32 */
             maxConcurrency?: number;
@@ -6215,6 +6233,7 @@ export interface components {
             requestTimeout?: number;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.PixivOptionsPatchInputModel": {
+            accounts?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ThirdPartyAccount"][];
             cookie?: string;
             /** Format: int32 */
             maxConcurrency?: number;
@@ -6688,7 +6707,7 @@ export interface components {
         "Bakabase.InsideWorld.Models.Constants.Aos.ResourceSearchSortableProperty": 1 | 2 | 3 | 6 | 11;
         /**
          * Format: int32
-         * @description [1: BiliBili, 2: ExHentai, 3: Pixiv, 6: DLsite]
+         * @description [1: BiliBili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon]
          * @enum {integer}
          */
         "Bakabase.InsideWorld.Models.Constants.CookieValidatorTarget": 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
@@ -6808,13 +6827,6 @@ export interface components {
             offset: number;
             /** Format: int32 */
             count: number;
-        };
-        "Bakabase.InsideWorld.Models.Models.Entities.Password": {
-            text: string;
-            /** Format: int32 */
-            usedTimes: number;
-            /** Format: date-time */
-            lastUsedAt: string;
         };
         "Bakabase.InsideWorld.Models.RequestModels.FileDecompressRequestModel": {
             paths: string[];
@@ -7969,6 +7981,12 @@ export interface components {
             code: number;
             message?: string;
         };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Db.PasswordDbModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Models.Db.PasswordDbModel"][];
+        };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.Constants.SearchOperation]": {
             /** Format: int32 */
             code: number;
@@ -8082,12 +8100,6 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.InsideWorld.Models.Models.Aos.PreviewerItem"][];
-        };
-        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Models.Models.Entities.Password]": {
-            /** Format: int32 */
-            code: number;
-            message?: string;
-            data?: components["schemas"]["Bakabase.InsideWorld.Models.Models.Entities.Password"][];
         };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.AiFeatureConfigDbModel]": {
             /** Format: int32 */
@@ -8257,6 +8269,18 @@ export interface components {
             /** Format: int32 */
             pageSize: number;
         };
+        "Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Abstractions.Models.Db.PasswordDbModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Models.Db.PasswordDbModel"][];
+            /** Format: int32 */
+            totalCount: number;
+            /** Format: int32 */
+            pageIndex: number;
+            /** Format: int32 */
+            pageSize: number;
+        };
         "Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Abstractions.Models.Db.PlayHistoryDbModel]": {
             /** Format: int32 */
             code: number;
@@ -8286,18 +8310,6 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Resource"][];
-            /** Format: int32 */
-            totalCount: number;
-            /** Format: int32 */
-            pageIndex: number;
-            /** Format: int32 */
-            pageSize: number;
-        };
-        "Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.InsideWorld.Models.Models.Entities.Password]": {
-            /** Format: int32 */
-            code: number;
-            message?: string;
-            data?: components["schemas"]["Bakabase.InsideWorld.Models.Models.Entities.Password"][];
             /** Format: int32 */
             totalCount: number;
             /** Format: int32 */
@@ -16434,9 +16446,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.InsideWorld.Models.Models.Entities.Password]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.InsideWorld.Models.Models.Entities.Password]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.InsideWorld.Models.Models.Entities.Password]"];
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Abstractions.Models.Db.PasswordDbModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Abstractions.Models.Db.PasswordDbModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Abstractions.Models.Db.PasswordDbModel]"];
                 };
             };
         };
@@ -16456,9 +16468,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Models.Models.Entities.Password]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Models.Models.Entities.Password]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Models.Models.Entities.Password]"];
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Db.PasswordDbModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Db.PasswordDbModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Db.PasswordDbModel]"];
                 };
             };
         };
@@ -19380,7 +19392,7 @@ export interface operations {
     CaptureCookie: {
         parameters: {
             query?: {
-                /** @description [1: BiliBili, 2: ExHentai, 3: Pixiv, 6: DLsite] */
+                /** @description [1: BiliBili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon] */
                 target?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.CookieValidatorTarget"];
             };
             header?: never;
@@ -19405,7 +19417,7 @@ export interface operations {
     ValidateCookie: {
         parameters: {
             query?: {
-                /** @description [1: BiliBili, 2: ExHentai, 3: Pixiv, 6: DLsite] */
+                /** @description [1: BiliBili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon] */
                 target?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.CookieValidatorTarget"];
                 cookie?: string;
             };

@@ -76,6 +76,15 @@ export interface BakabaseAbstractionsModelsDbExHentaiGalleryDbModel {
   updatedAt: string;
 }
 
+export interface BakabaseAbstractionsModelsDbPasswordDbModel {
+  /** @maxLength 64 */
+  text: string;
+  /** @format int32 */
+  usedTimes: number;
+  /** @format date-time */
+  lastUsedAt: string;
+}
+
 export interface BakabaseAbstractionsModelsDbPlayHistoryDbModel {
   /** @format int32 */
   id: number;
@@ -1144,17 +1153,18 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainBangumiOptions {
   accounts?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainThirdPartyAccount[];
+  cookie?: string;
   /** @format int32 */
   maxConcurrency: number;
   /** @format int32 */
   requestInterval: number;
-  cookie?: string;
   userAgent?: string;
   referer?: string;
   headers?: Record<string, string>;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainBilibiliOptions {
+  accounts?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainThirdPartyAccount[];
   cookie?: string;
   userAgent?: string;
   referer?: string;
@@ -1173,6 +1183,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainCienOptions {
+  accounts?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainThirdPartyAccount[];
   cookie?: string;
   /** @format int32 */
   maxConcurrency: number;
@@ -1244,6 +1255,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainFanboxOptions {
+  accounts?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainThirdPartyAccount[];
   cookie?: string;
   /** @format int32 */
   maxConcurrency: number;
@@ -1259,6 +1271,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainFantiaOptions {
+  accounts?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainThirdPartyAccount[];
   cookie?: string;
   /** @format int32 */
   maxConcurrency: number;
@@ -1274,6 +1287,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainPatreonOptions {
+  accounts?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainThirdPartyAccount[];
   cookie?: string;
   /** @format int32 */
   maxConcurrency: number;
@@ -1289,7 +1303,11 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainPixivOptions {
+  accounts?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainThirdPartyAccount[];
   cookie?: string;
+  userAgent?: string;
+  referer?: string;
+  headers?: Record<string, string>;
   /** @format int32 */
   maxConcurrency: number;
   /** @format int32 */
@@ -1301,9 +1319,6 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
   maxRetries: number;
   /** @format int32 */
   requestTimeout: number;
-  userAgent?: string;
-  referer?: string;
-  headers?: Record<string, string>;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainResourceOptions {
@@ -1392,23 +1407,23 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
   syncMarksImmediately?: boolean;
 }
 
-export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainThirdPartyAccount {
-  name?: string;
-  cookie?: string;
-}
-
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainSoulPlusOptions {
   accounts?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainThirdPartyAccount[];
+  cookie?: string;
   /** @format int32 */
   maxConcurrency: number;
   /** @format int32 */
   requestInterval: number;
-  cookie?: string;
   userAgent?: string;
   referer?: string;
   headers?: Record<string, string>;
   /** @format int32 */
   autoBuyThreshold: number;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainThirdPartyAccount {
+  name?: string;
+  cookie?: string;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainTmdbOptions {
@@ -1448,6 +1463,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputB
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputBilibiliOptionsPatchInputModel {
+  accounts?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainThirdPartyAccount[];
   cookie?: string;
   /** @format int32 */
   maxConcurrency?: number;
@@ -1463,6 +1479,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputB
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputCienOptionsPatchInputModel {
+  accounts?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainThirdPartyAccount[];
   cookie?: string;
   /** @format int32 */
   maxConcurrency?: number;
@@ -1517,6 +1534,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputE
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputFanboxOptionsPatchInputModel {
+  accounts?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainThirdPartyAccount[];
   cookie?: string;
   /** @format int32 */
   maxConcurrency?: number;
@@ -1532,6 +1550,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputF
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputFantiaOptionsPatchInputModel {
+  accounts?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainThirdPartyAccount[];
   cookie?: string;
   /** @format int32 */
   maxConcurrency?: number;
@@ -1570,6 +1589,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputN
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputPatreonOptionsPatchInputModel {
+  accounts?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainThirdPartyAccount[];
   cookie?: string;
   /** @format int32 */
   maxConcurrency?: number;
@@ -1585,6 +1605,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputP
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputPixivOptionsPatchInputModel {
+  accounts?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainThirdPartyAccount[];
   cookie?: string;
   /** @format int32 */
   maxConcurrency?: number;
@@ -2163,10 +2184,20 @@ export type BakabaseInsideWorldModelsConstantsAosResourceSearchSortableProperty 
   | 11;
 
 /**
- * [1: BiliBili, 2: ExHentai, 3: Pixiv, 6: DLsite]
+ * [1: BiliBili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon]
  * @format int32
  */
-export type BakabaseInsideWorldModelsConstantsCookieValidatorTarget = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
+export type BakabaseInsideWorldModelsConstantsCookieValidatorTarget =
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5
+  | 6
+  | 7
+  | 8
+  | 9
+  | 10;
 
 /**
  * [1: Contain, 2: Cover]
@@ -2305,15 +2336,6 @@ export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsWeekCount
   offset: number;
   /** @format int32 */
   count: number;
-}
-
-export interface BakabaseInsideWorldModelsModelsEntitiesPassword {
-  /** @maxLength 64 */
-  text: string;
-  /** @format int32 */
-  usedTimes: number;
-  /** @format date-time */
-  lastUsedAt: string;
 }
 
 export interface BakabaseInsideWorldModelsRequestModelsFileDecompressRequestModel {
@@ -3805,6 +3827,13 @@ export interface BootstrapModelsResponseModelsBaseResponse {
   message?: string;
 }
 
+export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDbPasswordDbModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDbPasswordDbModel[];
+}
+
 export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainConstantsSearchOperation {
   /** @format int32 */
   code: number;
@@ -3936,13 +3965,6 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldMo
   code: number;
   message?: string;
   data?: BakabaseInsideWorldModelsModelsAosPreviewerItem[];
-}
-
-export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsEntitiesPassword {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseInsideWorldModelsModelsEntitiesPassword[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDbAiFeatureConfigDbModel {
@@ -4139,6 +4161,19 @@ export interface BootstrapModelsResponseModelsSearchResponse1BakabaseAbstraction
   pageSize: number;
 }
 
+export interface BootstrapModelsResponseModelsSearchResponse1BakabaseAbstractionsModelsDbPasswordDbModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDbPasswordDbModel[];
+  /** @format int32 */
+  totalCount: number;
+  /** @format int32 */
+  pageIndex: number;
+  /** @format int32 */
+  pageSize: number;
+}
+
 export interface BootstrapModelsResponseModelsSearchResponse1BakabaseAbstractionsModelsDbPlayHistoryDbModel {
   /** @format int32 */
   code: number;
@@ -4170,19 +4205,6 @@ export interface BootstrapModelsResponseModelsSearchResponse1BakabaseAbstraction
   code: number;
   message?: string;
   data?: BakabaseAbstractionsModelsDomainResource[];
-  /** @format int32 */
-  totalCount: number;
-  /** @format int32 */
-  pageIndex: number;
-  /** @format int32 */
-  pageSize: number;
-}
-
-export interface BootstrapModelsResponseModelsSearchResponse1BakabaseInsideWorldModelsModelsEntitiesPassword {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseInsideWorldModelsModelsEntitiesPassword[];
   /** @format int32 */
   totalCount: number;
   /** @format int32 */
@@ -15108,7 +15130,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       params: RequestParams = {},
     ) =>
       this.request<
-        BootstrapModelsResponseModelsSearchResponse1BakabaseInsideWorldModelsModelsEntitiesPassword,
+        BootstrapModelsResponseModelsSearchResponse1BakabaseAbstractionsModelsDbPasswordDbModel,
         any
       >({
         path: `/password`,
@@ -15161,7 +15183,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     getAllPasswords: (params: RequestParams = {}) =>
       this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsEntitiesPassword,
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDbPasswordDbModel,
         any
       >({
         path: `/password/all`,
@@ -17077,7 +17099,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     captureCookie: (
       query?: {
-        /** [1: BiliBili, 2: ExHentai, 3: Pixiv, 6: DLsite] */
+        /** [1: BiliBili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon] */
         target?: BakabaseInsideWorldModelsConstantsCookieValidatorTarget;
       },
       params: RequestParams = {},
@@ -17095,7 +17117,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name captureCookieUrl
      */
     captureCookieUrl: (query?: {
-        /** [1: BiliBili, 2: ExHentai, 3: Pixiv, 6: DLsite] */
+        /** [1: BiliBili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon] */
         target?: BakabaseInsideWorldModelsConstantsCookieValidatorTarget;
       }) => {
       const baseUrl = this.baseUrl || "";
@@ -17123,7 +17145,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     validateCookie: (
       query?: {
-        /** [1: BiliBili, 2: ExHentai, 3: Pixiv, 6: DLsite] */
+        /** [1: BiliBili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon] */
         target?: BakabaseInsideWorldModelsConstantsCookieValidatorTarget;
         cookie?: string;
       },
@@ -17142,7 +17164,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name validateCookieUrl
      */
     validateCookieUrl: (query?: {
-        /** [1: BiliBili, 2: ExHentai, 3: Pixiv, 6: DLsite] */
+        /** [1: BiliBili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon] */
         target?: BakabaseInsideWorldModelsConstantsCookieValidatorTarget;
         cookie?: string;
       }) => {

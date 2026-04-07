@@ -1,7 +1,7 @@
 "use client";
 
 import type { EnhancerDescriptor } from "@/components/EnhancerSelectorV2/models";
-import type { EnhancerFullOptions } from "@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/models";
+import type { EnhancerFullOptions } from "@/components/EnhancerSelectorV2/models";
 import type { IProperty } from "@/components/Property/models";
 import type { DestroyableProps } from "@/components/bakaui/types";
 import type { BangumiSubjectType } from "@/sdk/constants";
@@ -29,6 +29,14 @@ import {
 } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import {
+  ExHentaiConfigPanel,
+  ExHentaiConfigField,
+  DLsiteConfigPanel,
+  DLsiteConfigField,
+  BangumiConfigPanel,
+  BangumiConfigField,
+} from "@/components/ThirdPartyConfig";
 import BriefEnhancer from "@/components/Chips/Enhancer/BriefEnhancer";
 import BriefProperty from "@/components/Chips/Property/BriefProperty";
 import PropertySelector from "@/components/PropertySelector";
@@ -396,6 +404,17 @@ export default function EnhancerOptionsModal({
       }}
     >
       <div className={"flex flex-col gap-y-2"}>
+        {/* Embed third-party account & data-fetch config for platform-linked enhancers */}
+        {enhancer.id === EnhancerId.ExHentai && (
+          <ExHentaiConfigPanel fields={[ExHentaiConfigField.Accounts, ExHentaiConfigField.DataFetch]} showFooter={false} />
+        )}
+        {enhancer.id === EnhancerId.DLsite && (
+          <DLsiteConfigPanel fields={[DLsiteConfigField.Accounts, DLsiteConfigField.DataFetch]} showFooter={false} />
+        )}
+        {enhancer.id === EnhancerId.Bangumi && (
+          <BangumiConfigPanel fields={[BangumiConfigField.Accounts, BangumiConfigField.DataFetch]} />
+        )}
+
         <Select
           isClearable
           dataSource={allEnhancers.map((e) => ({ label: e.name, value: e.id.toString() }))}
