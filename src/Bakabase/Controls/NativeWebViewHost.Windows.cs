@@ -72,6 +72,18 @@ public partial class NativeWebViewHost
             // Get CoreWebView2
             _winWebView = _winController!.GetType().GetProperty("CoreWebView2")!.GetValue(_winController);
 
+            // Set a modern User-Agent to avoid "browser version too low" errors on sites like Bilibili
+            try
+            {
+                var settings = _winWebView!.GetType().GetProperty("Settings")?.GetValue(_winWebView);
+                settings?.GetType().GetProperty("UserAgent")?.SetValue(settings,
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to set WebView2 UserAgent: {ex.Message}");
+            }
+
             // Resize to fill parent
             ResizeWebView2();
 

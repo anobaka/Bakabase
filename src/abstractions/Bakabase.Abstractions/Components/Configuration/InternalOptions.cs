@@ -124,7 +124,7 @@ namespace Bakabase.Abstractions.Components.Configuration
         }
 
         public static string DefaultHttpUserAgent =
-            $"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.71 Safari/537.36 Edg/94.0.992.38 Bakabase/{AppService.CoreVersion}";
+            $"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36 Bakabase/{AppService.CoreVersion}";
 
         public const string CoverDirectoryName = "cover";
         public const string TempDirectoryName = "temp";

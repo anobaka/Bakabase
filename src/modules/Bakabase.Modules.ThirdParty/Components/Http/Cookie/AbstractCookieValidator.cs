@@ -1,6 +1,8 @@
-﻿using Bakabase.Abstractions.Components.Configuration;
+﻿using System;
+using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.Modules.ThirdParty.Abstractions.Http;
 using Bakabase.Modules.ThirdParty.Abstractions.Http.Cookie;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Models.ResponseModels;
@@ -15,8 +17,11 @@ namespace Bakabase.Modules.ThirdParty.Components.Http.Cookie
         public async Task<BaseResponse> Validate(string cookie)
         {
             var client = httpClientFactory.CreateClient(HttpClientName);
-            var response = await client.SendAsync(new HttpRequestMessage(HttpMethod.Get, Url)
-                {Headers = {{"Cookie", cookie}}});
+            var request = new HttpRequestMessage(HttpMethod.Get, Url);
+            request.Headers.Add("Cookie", cookie);
+            request.Headers.Add("User-Agent", IThirdPartyHttpClientOptions.DefaultUserAgent);
+            request.Headers.Add("Referer", new Uri(Url).GetLeftPart(UriPartial.Authority) + "/");
+            var response = await client.SendAsync(request);
             var (success, message, content) = await Validate(response);
             return success
                 ? BaseResponseBuilder.Ok

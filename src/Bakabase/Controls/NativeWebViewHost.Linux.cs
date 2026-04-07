@@ -52,6 +52,14 @@ public partial class NativeWebViewHost
             return base.CreateNativeControlCore(parent);
         }
 
+        // Set a modern User-Agent to avoid "browser version too low" errors
+        var settings = WebKitGtk.webkit_web_view_get_settings(_linuxWebView);
+        if (settings != IntPtr.Zero)
+        {
+            WebKitGtk.webkit_settings_set_user_agent(settings,
+                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36");
+        }
+
         _initialized = true;
 
         if (_pendingUrl != null)
@@ -225,5 +233,11 @@ public partial class NativeWebViewHost
 
         [DllImport(WebKitLib)]
         public static extern IntPtr webkit_web_view_get_title(IntPtr webView);
+
+        [DllImport(WebKitLib)]
+        public static extern IntPtr webkit_web_view_get_settings(IntPtr webView);
+
+        [DllImport(WebKitLib, CharSet = CharSet.Ansi)]
+        public static extern void webkit_settings_set_user_agent(IntPtr settings, string userAgent);
     }
 }
