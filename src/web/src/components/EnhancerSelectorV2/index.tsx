@@ -52,33 +52,29 @@ const EnhancerSelector = ({ categoryId, onDestroyed, onClose }: IProps) => {
     useState<CategoryEnhancerFullOptions[]>([]);
 
   const init = async () => {
-    await BApi.enhancer.getAllEnhancerDescriptors().then((r) => {
-      const data = r.data || [];
-
+    const [enhancersRes, categoryRes] = await Promise.all([
+      BApi.enhancer.getAllEnhancerDescriptors(),
       // @ts-ignore
-      setEnhancers(data);
-    });
-
-    // @ts-ignore
-    await BApi.category
-      .getCategory(categoryId, {
+      BApi.category.getCategory(categoryId, {
         additionalItems:
           CategoryAdditionalItem.EnhancerOptions |
           CategoryAdditionalItem.CustomProperties,
-      })
-      .then((r) => {
-        const data = r.data!;
+      }),
+    ]);
 
-        setCategory({
-          id: data.id!,
-          name: data.name!,
-        });
-        setCategoryEnhancerOptionsList(
-          data.enhancerOptions?.map(
-            (eo) => eo as CategoryEnhancerFullOptions,
-          ) || [],
-        );
-      });
+    // @ts-ignore
+    setEnhancers(enhancersRes.data || []);
+
+    const data = categoryRes.data!;
+    setCategory({
+      id: data.id!,
+      name: data.name!,
+    });
+    setCategoryEnhancerOptionsList(
+      data.enhancerOptions?.map(
+        (eo) => eo as CategoryEnhancerFullOptions,
+      ) || [],
+    );
   };
 
   useEffect(() => {
