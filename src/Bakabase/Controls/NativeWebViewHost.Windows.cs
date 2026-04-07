@@ -38,10 +38,28 @@ public partial class NativeWebViewHost
 
         _initialized = true;
 
+        // Listen for size changes to resize WebView2
+        SizeChanged += OnSizeChangedWindows;
+
         // Initialize WebView2 asynchronously
         _ = InitWebView2Async();
 
         return new PlatformHandle(_winHwnd, "HWND");
+    }
+
+    private void OnSizeChangedWindows(object? sender, Avalonia.Controls.SizeChangedEventArgs e)
+    {
+        if (_winHwnd == IntPtr.Zero) return;
+
+        var w = (int)e.NewSize.Width;
+        var h = (int)e.NewSize.Height;
+
+        // Resize the host HWND
+        Win32.SetWindowPos(_winHwnd, IntPtr.Zero, 0, 0, w, h,
+            Win32.SWP_NOZORDER | Win32.SWP_NOMOVE | Win32.SWP_NOACTIVATE);
+
+        // Resize WebView2 controller bounds
+        ResizeWebView2();
     }
 
     private async Task InitWebView2Async()
@@ -190,6 +208,8 @@ public partial class NativeWebViewHost
 
     private void DestroyWindows()
     {
+        SizeChanged -= OnSizeChangedWindows;
+
         if (_winController != null)
         {
             var closeMethod = _winController.GetType().GetMethod("Close");
@@ -246,6 +266,14 @@ public partial class NativeWebViewHost
 
         [DllImport("user32.dll")]
         public static extern bool GetClientRect(IntPtr hwnd, out RECT lpRect);
+
+        [DllImport("user32.dll")]
+        public static extern bool SetWindowPos(IntPtr hwnd, IntPtr hwndInsertAfter,
+            int x, int y, int cx, int cy, uint flags);
+
+        public const uint SWP_NOZORDER = 0x0004;
+        public const uint SWP_NOMOVE = 0x0002;
+        public const uint SWP_NOACTIVATE = 0x0010;
 
         [DllImport("user32.dll", CharSet = CharSet.Unicode)]
         public static extern IntPtr DefWindowProcW(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam);
