@@ -1,6 +1,6 @@
 import BetaChip from "../BetaChip";
 
-import { EnhancerIcon } from "@/components/Enhancer";
+import EnhancerIcon from "@/components/EnhancerIcon";
 import { EnhancerId } from "@/sdk/constants";
 
 type Props = {

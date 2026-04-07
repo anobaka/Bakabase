@@ -4,6 +4,9 @@ import type { EnhancerDescriptor } from "@/components/EnhancerSelectorV2/models"
 import type { EnhancerFullOptions } from "@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/models";
 import type { DestroyableProps } from "@/components/bakaui/types";
 import type { BakabaseAbstractionsModelsDomainEnhancerFullOptions } from "@/sdk/Api";
+import type { PropertyRow, SourceState } from "./utils";
+import type { IProperty } from "@/components/Property/models";
+import type { EnhancerId, PropertyPool } from "@/sdk/constants";
 
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
@@ -27,7 +30,7 @@ import {
   PropertyGroup,
   getGroupsForEnabledEnhancers,
 } from "./utils";
-import type { PropertyRow, SourceState } from "./utils";
+import EnhancerValidationModal from "./EnhancerValidationModal";
 
 import {
   Button,
@@ -48,15 +51,13 @@ import {
   Tooltip,
 } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
-import { CoverSelectOrder, EnhancerId, EnhancerTargetOptionsItem, PropertyPool } from "@/sdk/constants";
-import type { IProperty } from "@/components/Property/models";
+import { CoverSelectOrder, EnhancerTargetOptionsItem } from "@/sdk/constants";
 import BriefEnhancer from "@/components/Chips/Enhancer/BriefEnhancer";
-import { EnhancerIcon } from "@/components/Enhancer";
+import EnhancerIcon from "@/components/EnhancerIcon";
 import PropertyTypeIcon from "@/components/Property/components/PropertyTypeIcon";
 import PropertyMatcher from "@/components/PropertyMatcher";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import EnhancerOptionsModal from "@/components/EnhancerSelectorV2/components/EnhancerOptionsModal";
-import EnhancerValidationModal from "./EnhancerValidationModal";
 
 type ApiEnhancerOptions = BakabaseAbstractionsModelsDomainEnhancerFullOptions;
 
@@ -65,14 +66,22 @@ type Props = {
   onSubmit?: (options: ApiEnhancerOptions[]) => any;
 } & DestroyableProps;
 
-const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit, onDestroyed }: Props) => {
+const EnhancementConfigPanel = ({
+  enhancerOptions: propEnhancerOptions,
+  onSubmit,
+  onDestroyed,
+}: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
   const [descriptors, setDescriptors] = useState<EnhancerDescriptor[]>([]);
   const [sourceStates, setSourceStates] = useState<Map<string, SourceState>>(new Map());
-  const [enhancerLevelConfigs, setEnhancerLevelConfigs] = useState<Map<EnhancerId, Partial<ApiEnhancerOptions>>>(new Map());
-  const [selectedGroups, setSelectedGroups] = useState<Set<PropertyGroup>>(new Set([PropertyGroup.General]));
+  const [enhancerLevelConfigs, setEnhancerLevelConfigs] = useState<
+    Map<EnhancerId, Partial<ApiEnhancerOptions>>
+  >(new Map());
+  const [selectedGroups, setSelectedGroups] = useState<Set<PropertyGroup>>(
+    new Set([PropertyGroup.General]),
+  );
   const [selectedEnhancers, setSelectedEnhancers] = useState<Set<EnhancerId>>(new Set());
   // Cache of loaded properties for display in PropertyMatcher
   const [propertyCache, setPropertyCache] = useState<Map<string, IProperty>>(new Map());
@@ -80,9 +89,11 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
   useEffect(() => {
     BApi.enhancer.getAllEnhancerDescriptors().then((r) => {
       const descs = (r.data || []) as EnhancerDescriptor[];
+
       setDescriptors(descs);
       const existingConfig = propEnhancerOptions ?? [];
       const states = buildSourceStates(descs, existingConfig);
+
       setSourceStates(states);
       setEnhancerLevelConfigs(extractEnhancerLevelConfigs(existingConfig));
 
@@ -91,26 +102,30 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
 
       // Load bound properties into cache
       const propertyIds = new Map<PropertyPool, Set<number>>();
+
       for (const [, state] of states) {
         if (state.targetMapping) {
           const ids = propertyIds.get(state.targetMapping.pool) ?? new Set();
+
           ids.add(state.targetMapping.id);
           propertyIds.set(state.targetMapping.pool, ids);
         }
       }
       const pools = [...propertyIds.keys()];
+
       if (pools.length > 0) {
-        Promise.all(
-          pools.map((pool) => BApi.property.getPropertiesByPool(pool))
-        ).then((results) => {
-          const cache = new Map<string, IProperty>();
-          for (const res of results) {
-            for (const p of (res.data ?? []) as IProperty[]) {
-              cache.set(`${p.pool}:${p.id}`, p);
+        Promise.all(pools.map((pool) => BApi.property.getPropertiesByPool(pool))).then(
+          (results) => {
+            const cache = new Map<string, IProperty>();
+
+            for (const res of results) {
+              for (const p of (res.data ?? []) as IProperty[]) {
+                cache.set(`${p.pool}:${p.id}`, p);
+              }
             }
-          }
-          setPropertyCache(cache);
-        });
+            setPropertyCache(cache);
+          },
+        );
       }
     });
   }, []);
@@ -120,9 +135,11 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
   // Combined enhancer IDs from both group selection and direct enhancer selection
   const selectedEnhancerIds = useMemo(() => {
     const ids = getEnhancerIdsForGroups(selectedGroupsArray);
+
     for (const id of selectedEnhancers) {
       ids.add(id);
     }
+
     return ids;
   }, [selectedGroupsArray, selectedEnhancers]);
 
@@ -131,23 +148,25 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
   // Derived data for combined selection
   const currentProperties = useMemo(
     () => getPropertyRowsForEnhancerIds(selectedEnhancerIds, sourceStates),
-    [selectedEnhancerIds, sourceStates]
+    [selectedEnhancerIds, sourceStates],
   );
 
   const dynamicEnhancers = useMemo(
     () => getDynamicEnhancersForEnhancerIds(selectedEnhancerIds, descriptors),
-    [selectedEnhancerIds, descriptors]
+    [selectedEnhancerIds, descriptors],
   );
 
   // Toggle group selection
   const toggleGroup = useCallback((group: PropertyGroup) => {
     setSelectedGroups((prev) => {
       const next = new Set(prev);
+
       if (next.has(group)) {
         next.delete(group);
       } else {
         next.add(group);
       }
+
       return next;
     });
   }, []);
@@ -156,11 +175,13 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
   const toggleEnhancer = useCallback((enhancerId: EnhancerId) => {
     setSelectedEnhancers((prev) => {
       const next = new Set(prev);
+
       if (next.has(enhancerId)) {
         next.delete(enhancerId);
       } else {
         next.add(enhancerId);
       }
+
       return next;
     });
   }, []);
@@ -170,47 +191,61 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
     setSourceStates((prev) => {
       const next = new Map(prev);
       const state = next.get(stateKey);
+
       if (state) {
         next.set(stateKey, { ...state, enabled: !state.enabled });
       }
+
       return next;
     });
   }, []);
 
   // Update config for a source
-  const updateSourceConfig = useCallback((stateKey: string, configPatch: Partial<SourceState["config"]>) => {
-    setSourceStates((prev) => {
-      const next = new Map(prev);
-      const state = next.get(stateKey);
-      if (state) {
-        next.set(stateKey, {
-          ...state,
-          config: { ...state.config, ...configPatch },
-        });
-      }
-      return next;
-    });
-  }, []);
+  const updateSourceConfig = useCallback(
+    (stateKey: string, configPatch: Partial<SourceState["config"]>) => {
+      setSourceStates((prev) => {
+        const next = new Map(prev);
+        const state = next.get(stateKey);
+
+        if (state) {
+          next.set(stateKey, {
+            ...state,
+            config: { ...state.config, ...configPatch },
+          });
+        }
+
+        return next;
+      });
+    },
+    [],
+  );
 
   // Toggle all sources in the selected groups
-  const toggleAllInSelectedGroups = useCallback((enabled: boolean) => {
-    setSourceStates((prev) => {
-      const next = new Map(prev);
-      for (const [key, state] of next) {
-        if (selectedEnhancerIds.has(state.enhancerId)) {
-          next.set(key, { ...state, enabled });
+  const toggleAllInSelectedGroups = useCallback(
+    (enabled: boolean) => {
+      setSourceStates((prev) => {
+        const next = new Map(prev);
+
+        for (const [key, state] of next) {
+          if (selectedEnhancerIds.has(state.enhancerId)) {
+            next.set(key, { ...state, enabled });
+          }
         }
-      }
-      return next;
-    });
-  }, [selectedEnhancerIds]);
+
+        return next;
+      });
+    },
+    [selectedEnhancerIds],
+  );
 
   // Bind a property to all sources in a row
   const bindPropertyToRow = useCallback((row: PropertyRow, property: IProperty) => {
     setSourceStates((prev) => {
       const next = new Map(prev);
+
       for (const source of row.sources) {
         const state = next.get(source.stateKey);
+
         if (state) {
           next.set(source.stateKey, {
             ...state,
@@ -218,11 +253,14 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
           });
         }
       }
+
       return next;
     });
     setPropertyCache((prev) => {
       const next = new Map(prev);
+
       next.set(`${property.pool}:${property.id}`, property);
+
       return next;
     });
   }, []);
@@ -231,8 +269,10 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
   const unbindPropertyFromRow = useCallback((row: PropertyRow) => {
     setSourceStates((prev) => {
       const next = new Map(prev);
+
       for (const source of row.sources) {
         const state = next.get(source.stateKey);
+
         if (state) {
           next.set(source.stateKey, {
             ...state,
@@ -240,6 +280,7 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
           });
         }
       }
+
       return next;
     });
   }, []);
@@ -249,7 +290,15 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
     const currentLevelConfig = enhancerLevelConfigs.get(enhancer.id) ?? {};
 
     // Only collect dynamic enabled targets for the modal
-    const dynamicTargets: { target: number; dynamicTarget?: string; pool?: number; propertyId?: number; autoBindProperty?: boolean; autoMatchMultilevelString?: boolean }[] = [];
+    const dynamicTargets: {
+      target: number;
+      dynamicTarget?: string;
+      pool?: number;
+      propertyId?: number;
+      autoBindProperty?: boolean;
+      autoMatchMultilevelString?: boolean;
+    }[] = [];
+
     for (const [, state] of sourceStates) {
       if (state.enhancerId === enhancer.id && state.enabled && state.isDynamic) {
         dynamicTargets.push({
@@ -279,7 +328,7 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
         autoMatchMultilevelString: dt.autoMatchMultilevelString,
       })),
       expressions: currentLevelConfig.expressions ?? undefined,
-      requirements: currentLevelConfig.requirements as EnhancerId[] ?? undefined,
+      requirements: (currentLevelConfig.requirements as EnhancerId[]) ?? undefined,
       keywordProperty: currentLevelConfig.keywordProperty as EnhancerFullOptions["keywordProperty"],
       pretreatKeyword: currentLevelConfig.pretreatKeyword ?? undefined,
       bangumiPrioritySubjectType: currentLevelConfig.bangumiPrioritySubjectType ?? undefined,
@@ -292,6 +341,7 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
       onSubmit: async (newOptions: EnhancerFullOptions) => {
         setEnhancerLevelConfigs((prev) => {
           const next = new Map(prev);
+
           next.set(enhancer.id, {
             enhancerId: enhancer.id,
             expressions: newOptions.expressions,
@@ -300,6 +350,7 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
             pretreatKeyword: newOptions.pretreatKeyword,
             bangumiPrioritySubjectType: newOptions.bangumiPrioritySubjectType,
           });
+
           return next;
         });
 
@@ -308,6 +359,7 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
             const next = new Map(prev);
 
             const existingDynamicKeys = new Set<string>();
+
             for (const [key, state] of next) {
               if (state.enhancerId === enhancer.id && state.isDynamic) {
                 existingDynamicKeys.add(key);
@@ -315,8 +367,10 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
             }
 
             const processedKeys = new Set<string>();
+
             for (const to of newOptions.targetOptions!) {
               const target = enhancer.targets.find((tgt) => tgt.id === to.target);
+
               if (!target) continue;
 
               const key = target.isDynamic
@@ -326,6 +380,7 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
               processedKeys.add(key);
 
               const existing = next.get(key);
+
               if (existing) {
                 // Preserve targetMapping and config from outer panel (inner modal doesn't manage them)
                 next.set(key, {
@@ -364,12 +419,14 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
 
   const handleSubmit = () => {
     const result = getCurrentOptions();
+
     onSubmit?.(result);
     onDestroyed?.();
   };
 
   const handleValidate = () => {
     const currentOptions = getCurrentOptions();
+
     if (currentOptions.length === 0) {
       return;
     }
@@ -382,12 +439,14 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
   const groupStats = useMemo(() => {
     let total = 0;
     let enabled = 0;
+
     for (const [, state] of sourceStates) {
       if (selectedEnhancerIds.has(state.enhancerId)) {
         total++;
         if (state.enabled) enabled++;
       }
     }
+
     return { total, enabled };
   }, [selectedEnhancerIds, sourceStates]);
 
@@ -408,7 +467,7 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
         {/* Property name + type */}
         <TableCell>
           <div className="flex items-center gap-1 text-sm font-medium">
-            <PropertyTypeIcon type={prop.propertyType} textVariant="tooltip" />
+            <PropertyTypeIcon textVariant="tooltip" type={prop.propertyType} />
             <span className="truncate">{prop.propertyName}</span>
           </div>
         </TableCell>
@@ -420,9 +479,10 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
               const desc = descriptors.find((d) => d.id === source.enhancerId);
               const state = sourceStates.get(source.stateKey);
               const activeOptionsItems = source.targetDescriptor.optionsItems?.filter(
-                (item) => item === EnhancerTargetOptionsItem.CoverSelectOrder
+                (item) => item === EnhancerTargetOptionsItem.CoverSelectOrder,
               );
               const hasConfig = activeOptionsItems && activeOptionsItems.length > 0;
+
               return (
                 <div key={source.stateKey} className="flex items-center gap-0.5">
                   <Checkbox
@@ -435,7 +495,9 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
                         <span className="flex items-center gap-1">
                           <BriefEnhancer enhancer={desc} />
                         </span>
-                      ) : source.enhancerName}
+                      ) : (
+                        source.enhancerName
+                      )}
                     </span>
                   </Checkbox>
                   {hasConfig && source.enabled && (
@@ -468,13 +530,16 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
                                     .filter((x) => !Number.isNaN(parseInt(x, 10)))
                                     .map((x) => (
                                       <Radio key={x} value={x}>
-                                        {t(`CoverSelectOrder.${CoverSelectOrder[parseInt(x, 10) as CoverSelectOrder]}`)}
+                                        {t(
+                                          `CoverSelectOrder.${CoverSelectOrder[parseInt(x, 10) as CoverSelectOrder]}`,
+                                        )}
                                       </Radio>
                                     ))}
                                 </RadioGroup>
                               </div>
                             );
                           }
+
                           return null;
                         })}
                       </div>
@@ -490,10 +555,10 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
         <TableCell>
           <div className="flex items-center gap-1">
             <PropertyMatcher
+              isClearable
               matchedProperty={boundProperty}
               name={prop.propertyName}
               type={prop.propertyType}
-              isClearable
               onValueChanged={(p) => {
                 if (p) {
                   bindPropertyToRow(prop, p);
@@ -519,36 +584,29 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
     <Modal
       defaultVisible
       classNames={{ base: "max-w-[90vw] max-h-[90vh]" }}
-      size="7xl"
-      title={t<string>("enhancementConfig.title")}
-      onDestroyed={onDestroyed}
-      footer={(
+      footer={
         <div className="flex justify-between items-center w-full">
           <Button
             color="secondary"
-            variant="flat"
             startContent={<ExperimentOutlined />}
+            variant="flat"
             onPress={handleValidate}
           >
             {t<string>("enhancementConfig.validation.action")}
           </Button>
           <div className="flex gap-2">
-            <Button
-              color="default"
-              variant="light"
-              onPress={() => onDestroyed?.()}
-            >
+            <Button color="default" variant="light" onPress={() => onDestroyed?.()}>
               {t<string>("common.action.cancel")}
             </Button>
-            <Button
-              color="primary"
-              onPress={handleSubmit}
-            >
+            <Button color="primary" onPress={handleSubmit}>
               {t<string>("common.action.confirm")}
             </Button>
           </div>
         </div>
-      )}
+      }
+      size="7xl"
+      title={t<string>("enhancementConfig.title")}
+      onDestroyed={onDestroyed}
     >
       <div className="flex flex-col" style={{ height: "70vh" }}>
         {/* ─── Intro tip ─── */}
@@ -569,13 +627,14 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
           {groupOrder.map((group) => {
             const isSelected = selectedGroups.has(group);
             const count = getGroupEnabledCount(group, sourceStates);
+
             return (
               <Chip
                 key={group}
                 className="cursor-pointer select-none"
                 color={isSelected ? "primary" : "default"}
-                variant={isSelected ? "solid" : "bordered"}
                 size="sm"
+                variant={isSelected ? "solid" : "bordered"}
                 onClick={() => toggleGroup(group)}
               >
                 {t(`enhancementConfig.scenario.${group}`)}
@@ -593,15 +652,16 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
           {descriptors.map((enhancer) => {
             const isSelected = selectedEnhancers.has(enhancer.id);
             const count = getEnhancerEnabledCount(enhancer.id, sourceStates);
+
             return (
               <Chip
                 key={enhancer.id}
                 className="cursor-pointer select-none"
                 color={isSelected ? "secondary" : "default"}
-                variant={isSelected ? "solid" : "bordered"}
                 size="sm"
-                onClick={() => toggleEnhancer(enhancer.id)}
                 startContent={<EnhancerIcon id={enhancer.id} />}
+                variant={isSelected ? "solid" : "bordered"}
+                onClick={() => toggleEnhancer(enhancer.id)}
               >
                 {enhancer.name}
                 {count > 0 && ` (${count})`}
@@ -613,16 +673,9 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
         {/* ─── Scrollable middle: Property list ─── */}
         <div className="flex-1 overflow-y-auto pb-2 min-h-0">
           {hasSelection && currentProperties.length > 0 ? (
-            <Table
-              isCompact
-              isHeaderSticky
-              removeWrapper
-              aria-label="Enhancement properties"
-            >
+            <Table isCompact isHeaderSticky removeWrapper aria-label="Enhancement properties">
               <TableHeader>
-                <TableColumn width="20%">
-                  {t("enhancementConfig.columnProperty")}
-                </TableColumn>
+                <TableColumn width="20%">{t("enhancementConfig.columnProperty")}</TableColumn>
                 <TableColumn>
                   <div className="flex items-center gap-2">
                     {t("enhancementConfig.columnSources")}
@@ -637,19 +690,15 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
                       </span>
                     </Checkbox>
                     {someSelected && (
-                      <Chip size="sm" variant="flat" color="success">
+                      <Chip color="success" size="sm" variant="flat">
                         {groupStats.enabled}/{groupStats.total}
                       </Chip>
                     )}
                   </div>
                 </TableColumn>
-                <TableColumn width="15%">
-                  {t("enhancementConfig.columnBindProperty")}
-                </TableColumn>
+                <TableColumn width="15%">{t("enhancementConfig.columnBindProperty")}</TableColumn>
               </TableHeader>
-              <TableBody>
-                {currentProperties.map((prop) => renderPropertyRow(prop))}
-              </TableBody>
+              <TableBody>{currentProperties.map((prop) => renderPropertyRow(prop))}</TableBody>
             </Table>
           ) : !hasSelection ? (
             <div className="py-8 text-center text-sm text-default-400">
@@ -682,6 +731,7 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
             {descriptors.map((enhancer) => {
               const needsCfg = enhancerNeedsConfig(enhancer, enhancerLevelConfigs.get(enhancer.id));
               let hasEnabled = false;
+
               for (const [, state] of sourceStates) {
                 if (state.enhancerId === enhancer.id && state.enabled) {
                   hasEnabled = true;
@@ -697,15 +747,20 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
                   <CardBody className="flex-row items-center gap-2 py-1.5 px-3">
                     <BriefEnhancer enhancer={enhancer} />
                     {needsCfg && (
-                      <Chip size="sm" variant="flat" color="warning" startContent={<AiOutlineWarning />}>
+                      <Chip
+                        color="warning"
+                        size="sm"
+                        startContent={<AiOutlineWarning />}
+                        variant="flat"
+                      >
                         {t<string>("enhancementConfig.needsConfig")}
                       </Chip>
                     )}
                     <Button
+                      isIconOnly
+                      color="primary"
                       size="sm"
                       variant="light"
-                      color="primary"
-                      isIconOnly
                       onPress={() => openEnhancerConfig(enhancer)}
                     >
                       <AiOutlineSetting className="text-lg" />

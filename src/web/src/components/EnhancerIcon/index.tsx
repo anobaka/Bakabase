@@ -4,7 +4,7 @@ import { SiKodi } from "react-icons/si";
 import { RiRobot2Line } from "react-icons/ri";
 import { MdVideoLibrary, MdMovie } from "react-icons/md";
 
-import { EnhancerId } from "@/sdk/constants";
+import { EnhancerId } from "@/sdk/constants.ts";
 import DLsite from "@/assets/logo/dlsite.png";
 import Bangumi from "@/assets/logo/bangumi.png";
 import ExHentai from "@/assets/logo/exhentai.png";
@@ -16,21 +16,13 @@ type Props = {
 const EnhancerIcon = ({ id }: Props) => {
   switch (id) {
     case EnhancerId.Bakabase:
-      return (
-        <img alt={""} className={"max-h-[16px]"} height={16} src={Bakabase} />
-      );
+      return <img alt={""} className={"max-h-[16px]"} height={16} src={Bakabase} />;
     case EnhancerId.ExHentai:
-      return (
-        <img alt={""} className={"max-h-[16px]"} height={16} src={ExHentai} />
-      );
+      return <img alt={""} className={"max-h-[16px]"} height={16} src={ExHentai} />;
     case EnhancerId.Bangumi:
-      return (
-        <img alt={""} className={"max-h-[16px]"} height={16} src={Bangumi} />
-      );
+      return <img alt={""} className={"max-h-[16px]"} height={16} src={Bangumi} />;
     case EnhancerId.DLsite:
-      return (
-        <img alt={""} className={"max-h-[16px]"} height={16} src={DLsite} />
-      );
+      return <img alt={""} className={"max-h-[16px]"} height={16} src={DLsite} />;
     case EnhancerId.Regex:
       return <BsRegex className={"text-base"} />;
     case EnhancerId.Kodi:

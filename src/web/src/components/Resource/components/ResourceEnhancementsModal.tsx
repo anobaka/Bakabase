@@ -1,7 +1,7 @@
 "use client";
 
 import type { DestroyableProps } from "@/components/bakaui/types";
-import type { Enhancement } from "@/components/Enhancer/models";
+import type { Enhancement } from "@/core/models/Enhancement";
 import type { EnhancerDescriptor } from "@/components/EnhancerSelectorV2/models";
 import type { BakabaseServiceModelsViewResourceProfileViewModel } from "@/sdk/Api";
 
@@ -17,7 +17,6 @@ import {
 import { Dayjs } from "dayjs";
 
 import BApi from "@/sdk/BApi";
-import { createPortalOfComponent } from "@/components/utils";
 import {
   Accordion,
   AccordionItem,
@@ -43,7 +42,6 @@ import {
   EnhancementAdditionalItem,
   EnhancementRecordStatus,
   PropertyPool,
-  ReservedProperty,
   ResourceProperty,
 } from "@/sdk/constants";
 import EnhancerOptionsModal from "@/components/EnhancerSelectorV2/components/EnhancerOptionsModal";
@@ -109,12 +107,14 @@ const ConfigureEnhancerButton = ({
 
       if (profilesWithEnhancer.length === 0) {
         toast.default(t<string>("enhancer.records.noProfilesFound.warning"));
+
         return;
       }
 
       if (profilesWithEnhancer.length === 1) {
         // 只有一个 profile，直接打开配置
         onConfigure(profilesWithEnhancer[0], enhancer);
+
         return;
       }
 
@@ -130,24 +130,25 @@ const ConfigureEnhancerButton = ({
     return (
       <Popover
         isOpen={isOpen}
-        onOpenChange={setIsOpen}
         placement="bottom"
         trigger={
           <Button
             color="primary"
+            isLoading={loading}
             size="sm"
             variant="light"
-            isLoading={loading}
             onClick={handleClick}
           >
             {t<string>("enhancer.records.configure.action")}
           </Button>
         }
+        onOpenChange={setIsOpen}
       >
         <Listbox
           aria-label={t<string>("enhancer.records.selectProfile.label")}
           onAction={(key) => {
             const profile = profiles.find((p) => p.id === Number(key));
+
             if (profile) {
               onConfigure(profile, enhancer);
               setIsOpen(false);
@@ -155,9 +156,7 @@ const ConfigureEnhancerButton = ({
           }}
         >
           {profiles.map((profile) => (
-            <ListboxItem key={profile.id!}>
-              {profile.name}
-            </ListboxItem>
+            <ListboxItem key={profile.id!}>{profile.name}</ListboxItem>
           ))}
         </Listbox>
       </Popover>
@@ -165,13 +164,7 @@ const ConfigureEnhancerButton = ({
   }
 
   return (
-    <Button
-      color="primary"
-      size="sm"
-      variant="light"
-      isLoading={loading}
-      onClick={handleClick}
-    >
+    <Button color="primary" isLoading={loading} size="sm" variant="light" onClick={handleClick}>
       {t<string>("enhancer.records.configure.action")}
     </Button>
   );
@@ -185,7 +178,13 @@ type EmptyStateProps = {
   onNavigateToProfiles?: () => void;
 };
 
-const EmptyState = ({ type, enhancerName, isLoading, onConfigureClick, onNavigateToProfiles }: EmptyStateProps) => {
+const EmptyState = ({
+  type,
+  enhancerName,
+  isLoading,
+  onConfigureClick,
+  onNavigateToProfiles,
+}: EmptyStateProps) => {
   const { t } = useTranslation();
 
   if (type === "no-profile") {
@@ -196,17 +195,10 @@ const EmptyState = ({ type, enhancerName, isLoading, onConfigureClick, onNavigat
             {t<string>("enhancer.records.noProfiles.title")}
           </div>
           <div className={"text-sm"}>
-            {t<string>(
-              "enhancer.records.noProfiles.description",
-              { enhancerName }
-            )}
+            {t<string>("enhancer.records.noProfiles.description", { enhancerName })}
           </div>
         </div>
-        <Button
-          color={"primary"}
-          variant={"flat"}
-          onClick={onNavigateToProfiles}
-        >
+        <Button color={"primary"} variant={"flat"} onClick={onNavigateToProfiles}>
           {t<string>("enhancer.records.goToProfiles.action")}
         </Button>
       </div>
@@ -220,11 +212,7 @@ const EmptyState = ({ type, enhancerName, isLoading, onConfigureClick, onNavigat
           <div className={"text-lg font-semibold mb-2"}>
             {t<string>("enhancer.records.noData.title")}
           </div>
-          <div className={"text-sm"}>
-            {t<string>(
-              "enhancer.records.noData.description"
-            )}
-          </div>
+          <div className={"text-sm"}>{t<string>("enhancer.records.noData.description")}</div>
         </div>
         {onConfigureClick && (
           <Button
@@ -253,10 +241,8 @@ function ResourceEnhancementsModal({ resourceId, ...props }: Props) {
   const [enhancerTabs, setEnhancerTabs] = useState<EnhancerTabData[]>([]);
   const [resource, setResource] = useState<{
     path: string;
-    categoryId: number;
   }>({
     path: "",
-    categoryId: 0,
   });
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -272,7 +258,6 @@ function ResourceEnhancementsModal({ resourceId, ...props }: Props) {
 
       setResource({
         path: data[0]?.path || "",
-        categoryId: data[0]?.categoryId ?? 0,
       });
     });
   }, []);
@@ -286,6 +271,7 @@ function ResourceEnhancementsModal({ resourceId, ...props }: Props) {
 
     // Process enhancement data and collect enhancers
     const enhancerMap = new Map<number, EnhancerDescriptor>();
+
     for (const d of enhancementsData) {
       d.dynamicTargets?.forEach((dt) => {
         dt.enhancements?.forEach((e) => {
@@ -310,10 +296,13 @@ function ResourceEnhancementsModal({ resourceId, ...props }: Props) {
 
     // Extract enhancers from profiles and group profiles by enhancer
     const profilesByEnhancerId = new Map<number, ResourceProfile[]>();
+
     for (const profile of allProfiles) {
       const enhancers = profile.enhancerOptions?.enhancers || [];
+
       for (const enhancerOption of enhancers) {
         const enhancerId = enhancerOption.enhancerId;
+
         if (!enhancerId) continue;
 
         // Store profile for this enhancer
@@ -404,7 +393,7 @@ function ResourceEnhancementsModal({ resourceId, ...props }: Props) {
   };
 
   const getProfilesForEnhancer = async (
-    enhancer: EnhancerDescriptor
+    enhancer: EnhancerDescriptor,
   ): Promise<ResourceProfile[]> => {
     // 1. 获取匹配的 resource profiles
     const profilesResponse = await BApi.resourceProfile.getMatchingProfilesForResource(resourceId);
@@ -412,7 +401,7 @@ function ResourceEnhancementsModal({ resourceId, ...props }: Props) {
 
     // 2. 过滤出包含该 enhancer 的 profiles
     const profilesWithEnhancer = profiles.filter((profile) =>
-      profile.enhancerOptions?.enhancers?.some((opt) => opt.enhancerId === enhancer.id)
+      profile.enhancerOptions?.enhancers?.some((opt) => opt.enhancerId === enhancer.id),
     );
 
     return profilesWithEnhancer;
@@ -500,7 +489,7 @@ function ResourceEnhancementsModal({ resourceId, ...props }: Props) {
         actions: ["cancel"],
         cancelProps: {
           children: t<string>("common.action.close"),
-        }
+        },
       }}
       size={"7xl"}
       title={t<string>("enhancer.records.title")}
@@ -521,387 +510,435 @@ function ResourceEnhancementsModal({ resourceId, ...props }: Props) {
             <div className={"text-lg font-semibold mb-2"}>
               {t<string>("enhancer.records.noEnhancers.title")}
             </div>
-            <div className={"text-sm"}>
-              {t<string>(
-                "enhancer.records.noEnhancers.description"
-              )}
-            </div>
+            <div className={"text-sm"}>{t<string>("enhancer.records.noEnhancers.description")}</div>
           </div>
-          <Button
-            color={"primary"}
-            variant={"flat"}
-            onClick={() => navigate("/resource-profile")}
-          >
+          <Button color={"primary"} variant={"flat"} onClick={() => navigate("/resource-profile")}>
             {t<string>("enhancer.records.goToProfiles.action")}
           </Button>
         </div>
       ) : (
-      <Tabs
-        isVertical
-        aria-label="Enhancers"
-        classNames={{
-          panel: "grow min-w-0",
-        }}
-        variant={"bordered"}
-      >
-        {enhancerTabs.map((tabData) => {
-          const { enhancer, profiles, enhancement } = tabData;
-          const hasProfiles = profiles.length > 0;
-          const targets = enhancement?.targets || [];
-          const hasEnhancementData =
-            enhancement?.contextCreatedAt ||
-            targets.some((x) => x.enhancement) ||
-            (enhancement?.dynamicTargets && enhancement.dynamicTargets.some((dt) => dt.enhancements && dt.enhancements.length > 0));
+        <Tabs
+          isVertical
+          aria-label="Enhancers"
+          classNames={{
+            panel: "grow min-w-0",
+          }}
+          variant={"bordered"}
+        >
+          {enhancerTabs.map((tabData) => {
+            const { enhancer, profiles, enhancement } = tabData;
+            const hasProfiles = profiles.length > 0;
+            const targets = enhancement?.targets || [];
+            const hasEnhancementData =
+              enhancement?.contextCreatedAt ||
+              targets.some((x) => x.enhancement) ||
+              (enhancement?.dynamicTargets &&
+                enhancement.dynamicTargets.some(
+                  (dt) => dt.enhancements && dt.enhancements.length > 0,
+                ));
 
-          return (
-            <Tab key={enhancer.id} title={enhancer.name}>
-              {!hasEnhancementData ? (
-                <EmptyState
-                  type="no-enhancements"
-                  enhancerName={enhancer.name}
-                  isLoading={enhancing}
-                  onConfigureClick={() => {
-                    setEnhancing(true);
-                    BApi.resource
-                      .enhanceResourceByEnhancer(resourceId, enhancer.id)
-                      .then(() => {
-                        loadEnhancements();
-                      })
-                      .finally(() => {
-                        setEnhancing(false);
-                      });
-                  }}
-                  onNavigateToProfiles={() => navigate("/resource-profiles")}
-                />
-              ) : (
-                <>
-              {!hasProfiles && (
-                <div className={"mb-4 p-4 bg-warning-50 dark:bg-warning-900/20 rounded-lg border border-warning-200 dark:border-warning-800"}>
-                  <div className={"flex items-start gap-2"}>
-                    <ExclamationCircleOutlined className={"text-warning-600 dark:text-warning-400 text-lg mt-0.5"} />
-                    <div className={"flex-1"}>
-                      <div className={"text-warning-800 dark:text-warning-300 font-semibold mb-1"}>
-                        {t<string>("enhancer.records.notConfigured.title")}
+            return (
+              <Tab key={enhancer.id} title={enhancer.name}>
+                {!hasEnhancementData ? (
+                  <EmptyState
+                    enhancerName={enhancer.name}
+                    isLoading={enhancing}
+                    type="no-enhancements"
+                    onConfigureClick={() => {
+                      setEnhancing(true);
+                      BApi.resource
+                        .enhanceResourceByEnhancer(resourceId, enhancer.id)
+                        .then(() => {
+                          loadEnhancements();
+                        })
+                        .finally(() => {
+                          setEnhancing(false);
+                        });
+                    }}
+                    onNavigateToProfiles={() => navigate("/resource-profiles")}
+                  />
+                ) : (
+                  <>
+                    {!hasProfiles && (
+                      <div
+                        className={
+                          "mb-4 p-4 bg-warning-50 dark:bg-warning-900/20 rounded-lg border border-warning-200 dark:border-warning-800"
+                        }
+                      >
+                        <div className={"flex items-start gap-2"}>
+                          <ExclamationCircleOutlined
+                            className={"text-warning-600 dark:text-warning-400 text-lg mt-0.5"}
+                          />
+                          <div className={"flex-1"}>
+                            <div
+                              className={
+                                "text-warning-800 dark:text-warning-300 font-semibold mb-1"
+                              }
+                            >
+                              {t<string>("enhancer.records.notConfigured.title")}
+                            </div>
+                            <div className={"text-warning-700 dark:text-warning-400 text-sm"}>
+                              {t<string>("enhancer.records.notConfigured.description")}
+                            </div>
+                            <Button
+                              className={"mt-2"}
+                              color={"warning"}
+                              size={"sm"}
+                              variant={"flat"}
+                              onClick={() => navigate("/resource-profiles")}
+                            >
+                              {t<string>("enhancer.records.goToProfiles.action")}
+                            </Button>
+                          </div>
+                        </div>
                       </div>
-                      <div className={"text-warning-700 dark:text-warning-400 text-sm"}>
-                        {t<string>(
-                          "enhancer.records.notConfigured.description"
+                    )}
+                    <div className={"flex items-center justify-between"}>
+                      <div className={"flex items-center gap-2"}>
+                        <div className={"flex items-center gap-2"}>
+                          <Chip
+                            // size={'sm'}
+                            color={"secondary"}
+                            radius={"sm"}
+                            variant={"light"}
+                          >
+                            <div className={"flex items-center gap-1"}>
+                              {t<string>("enhancer.records.dataCreatedAt.label")}
+                              <Tooltip
+                                className={"max-w-[500px]"}
+                                color={"secondary"}
+                                content={t<string>("enhancer.records.dataCreatedAt.tip")}
+                                placement={"top"}
+                              >
+                                <QuestionCircleOutlined className={"text-base"} />
+                              </Tooltip>
+                            </div>
+                          </Chip>
+                          {enhancement?.contextCreatedAt ?? t<string>("common.label.none")}
+                        </div>
+                        <div className={"flex items-center gap-2"}>
+                          <Chip
+                            // size={'sm'}
+                            color={"secondary"}
+                            radius={"sm"}
+                            variant={"light"}
+                          >
+                            <div className={"flex items-center gap-1"}>
+                              {t<string>("enhancer.records.dataAppliedAt.label")}
+                              <Tooltip
+                                className={"max-w-[500px]"}
+                                color={"secondary"}
+                                content={t<string>("enhancer.records.dataAppliedAt.tip")}
+                                placement={"top"}
+                              >
+                                <QuestionCircleOutlined className={"text-base"} />
+                              </Tooltip>
+                            </div>
+                          </Chip>
+                          {enhancement?.contextAppliedAt ?? t<string>("common.label.none")}
+                        </div>
+                        <Tooltip
+                          className={"max-w-[500px]"}
+                          color={"secondary"}
+                          content={t<string>("enhancer.records.enhanceProcess.tip")}
+                        >
+                          <Button
+                            color={
+                              enhancement?.status == EnhancementRecordStatus.ContextApplied ||
+                              enhancement?.status == EnhancementRecordStatus.ContextCreated
+                                ? "warning"
+                                : "primary"
+                            }
+                            isLoading={enhancing}
+                            size={"sm"}
+                            variant={"light"}
+                            onClick={() => {
+                              setEnhancing(true);
+                              BApi.resource
+                                .enhanceResourceByEnhancer(resourceId, enhancer.id)
+                                .then(() => {
+                                  loadEnhancements();
+                                })
+                                .finally(() => {
+                                  setEnhancing(false);
+                                });
+                            }}
+                          >
+                            <SyncOutlined className={"text-base"} />
+                            {t<string>(
+                              enhancement?.status == EnhancementRecordStatus.ContextApplied
+                                ? "enhancer.records.reEnhance.action"
+                                : "enhancer.records.enhanceNow.action",
+                            )}
+                          </Button>
+                        </Tooltip>
+                        {(enhancement?.status == EnhancementRecordStatus.ContextApplied ||
+                          enhancement?.status == EnhancementRecordStatus.ContextCreated) && (
+                          <Tooltip
+                            color={"secondary"}
+                            content={t<string>("enhancer.records.applyData.tip")}
+                          >
+                            <Button
+                              color={"primary"}
+                              isLoading={applyingContext}
+                              size={"sm"}
+                              variant={"light"}
+                              onClick={() => {
+                                setApplyingContext(true);
+                                BApi.resource
+                                  .applyEnhancementContextDataForResourceByEnhancer(
+                                    resourceId,
+                                    enhancer.id,
+                                  )
+                                  .then(() => {
+                                    loadEnhancements();
+                                    setApplyingContext(false);
+                                  });
+                              }}
+                            >
+                              <ApiOutlined className={"text-base"} />
+                              {t<string>("enhancer.records.applyData.action")}
+                            </Button>
+                          </Tooltip>
                         )}
                       </div>
-                      <Button
-                        className={"mt-2"}
-                        color={"warning"}
-                        size={"sm"}
-                        variant={"flat"}
-                        onClick={() => navigate("/resource-profiles")}
-                      >
-                        {t<string>("enhancer.records.goToProfiles.action")}
-                      </Button>
+                      {hasProfiles && (
+                        <div className={"flex items-center gap-2"}>
+                          <ConfigureEnhancerButton
+                            enhancer={enhancer}
+                            getProfiles={getProfilesForEnhancer}
+                            onConfigure={openEnhancerOptionsForProfile}
+                          />
+                        </div>
+                      )}
                     </div>
-                  </div>
-                </div>
-              )}
-              <div className={"flex items-center justify-between"}>
-                <div className={"flex items-center gap-2"}>
-                  <div className={"flex items-center gap-2"}>
-                    <Chip
-                      // size={'sm'}
-                      color={"secondary"}
-                      radius={"sm"}
-                      variant={"light"}
-                    >
-                      <div className={"flex items-center gap-1"}>
-                        {t<string>("enhancer.records.dataCreatedAt.label")}
-                        <Tooltip
-                          className={"max-w-[500px]"}
-                          color={"secondary"}
-                          content={t<string>(
-                            "enhancer.records.dataCreatedAt.tip",
-                          )}
-                          placement={"top"}
-                        >
-                          <QuestionCircleOutlined className={"text-base"} />
-                        </Tooltip>
+                    {/* Error Message Display */}
+                    {enhancement?.errorMessage && (
+                      <div
+                        className={
+                          "mb-4 p-4 bg-danger-50 dark:bg-danger-900/20 rounded-lg border border-danger-200 dark:border-danger-800"
+                        }
+                      >
+                        <div className={"flex items-start gap-2"}>
+                          <ExclamationCircleOutlined
+                            className={"text-danger-600 dark:text-danger-400 text-lg mt-0.5"}
+                          />
+                          <div className={"flex-1"}>
+                            <div
+                              className={"text-danger-800 dark:text-danger-300 font-semibold mb-1"}
+                            >
+                              {t<string>("enhancer.records.error.title")}
+                            </div>
+                            <div
+                              className={
+                                "text-danger-700 dark:text-danger-400 text-sm whitespace-pre-wrap"
+                              }
+                            >
+                              {enhancement.errorMessage}
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </Chip>
-                    {enhancement?.contextCreatedAt ?? t<string>("common.label.none")}
-                  </div>
-                  <div className={"flex items-center gap-2"}>
-                    <Chip
-                      // size={'sm'}
-                      color={"secondary"}
-                      radius={"sm"}
-                      variant={"light"}
-                    >
-                      <div className={"flex items-center gap-1"}>
-                        {t<string>("enhancer.records.dataAppliedAt.label")}
-                        <Tooltip
-                          className={"max-w-[500px]"}
-                          color={"secondary"}
-                          content={t<string>(
-                            "enhancer.records.dataAppliedAt.tip",
-                          )}
-                          placement={"top"}
-                        >
-                          <QuestionCircleOutlined className={"text-base"} />
-                        </Tooltip>
-                      </div>
-                    </Chip>
-                    {enhancement?.contextAppliedAt ?? t<string>("common.label.none")}
-                  </div>
-                  <Tooltip
-                    className={"max-w-[500px]"}
-                    color={"secondary"}
-                    content={t<string>(
-                      "enhancer.records.enhanceProcess.tip",
                     )}
-                  >
-                    <Button
-                      color={
-                        enhancement?.status == EnhancementRecordStatus.ContextApplied ||
-                        enhancement?.status == EnhancementRecordStatus.ContextCreated
-                          ? "warning"
-                          : "primary"
-                      }
-                      isLoading={enhancing}
-                      size={"sm"}
-                      variant={"light"}
-                      onClick={() => {
-                        setEnhancing(true);
-                        BApi.resource
-                          .enhanceResourceByEnhancer(resourceId, enhancer.id)
-                          .then(() => {
-                            loadEnhancements();
-                          })
-                          .finally(() => {
-                            setEnhancing(false);
-                          });
-                      }}
-                    >
-                      <SyncOutlined className={"text-base"} />
-                      {t<string>(
-                        enhancement?.status == EnhancementRecordStatus.ContextApplied
-                          ? "enhancer.records.reEnhance.action"
-                          : "enhancer.records.enhanceNow.action",
-                      )}
-                    </Button>
-                  </Tooltip>
-                  {(enhancement?.status == EnhancementRecordStatus.ContextApplied ||
-                    enhancement?.status == EnhancementRecordStatus.ContextCreated) && (
-                    <Tooltip
-                      color={"secondary"}
-                      content={t<string>("enhancer.records.applyData.tip")}
-                    >
-                      <Button
-                        color={"primary"}
-                        isLoading={applyingContext}
-                        size={"sm"}
-                        variant={"light"}
-                        onClick={() => {
-                          setApplyingContext(true);
-                          BApi.resource
-                            .applyEnhancementContextDataForResourceByEnhancer(
-                              resourceId,
-                              enhancer.id,
-                            )
-                            .then(() => {
-                              loadEnhancements();
-                              setApplyingContext(false);
-                            });
-                        }}
-                      >
-                        <ApiOutlined className={"text-base"} />
-                        {t<string>("enhancer.records.applyData.action")}
-                      </Button>
-                    </Tooltip>
-                  )}
-                </div>
-                {hasProfiles && (
-                  <div className={"flex items-center gap-2"}>
-                    <ConfigureEnhancerButton
-                      enhancer={enhancer}
-                      onConfigure={openEnhancerOptionsForProfile}
-                      getProfiles={getProfilesForEnhancer}
-                    />
-                  </div>
-                )}
-              </div>
-              {/* Error Message Display */}
-              {enhancement?.errorMessage && (
-                <div className={"mb-4 p-4 bg-danger-50 dark:bg-danger-900/20 rounded-lg border border-danger-200 dark:border-danger-800"}>
-                  <div className={"flex items-start gap-2"}>
-                    <ExclamationCircleOutlined className={"text-danger-600 dark:text-danger-400 text-lg mt-0.5"} />
-                    <div className={"flex-1"}>
-                      <div className={"text-danger-800 dark:text-danger-300 font-semibold mb-1"}>
-                        {t<string>("enhancer.records.error.title")}
-                      </div>
-                      <div className={"text-danger-700 dark:text-danger-400 text-sm whitespace-pre-wrap"}>
-                        {enhancement.errorMessage}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
 
-              {/* Enhancement Logs Section */}
-              {enhancement?.logs && enhancement.logs.length > 0 && (
-                <Accordion className={"mb-4"} variant={"bordered"}>
-                  <AccordionItem
-                    key="logs"
-                    aria-label={t<string>("enhancer.logs.title")}
-                    title={
-                      <div className={"flex items-center gap-2"}>
-                        <span>{t<string>("enhancer.logs.title")}</span>
-                        <Chip size={"sm"} variant={"flat"}>{enhancement.logs.length}</Chip>
-                      </div>
-                    }
-                  >
-                    <div className={"max-h-[400px] overflow-y-auto"}>
-                      <Table isStriped aria-label={t<string>("enhancer.logs.title")}>
-                        <TableHeader>
-                          <TableColumn width={160}>{t<string>("enhancer.logs.timestamp.label")}</TableColumn>
-                          <TableColumn width={80}>{t<string>("enhancer.logs.level.label")}</TableColumn>
-                          <TableColumn width={120}>{t<string>("enhancer.logs.event.label")}</TableColumn>
-                          <TableColumn>{t<string>("common.label.message")}</TableColumn>
-                          <TableColumn width={200}>{t<string>("enhancer.logs.data.label")}</TableColumn>
-                        </TableHeader>
-                        <TableBody>
-                          {enhancement.logs.map((log, index) => (
-                            <TableRow key={index}>
-                              <TableCell>
-                                <span className={"text-xs text-default-500"}>
-                                  {new Date(log.timestamp).toLocaleString()}
-                                </span>
-                              </TableCell>
-                              <TableCell>
-                                <Chip
-                                  size={"sm"}
-                                  color={
-                                    log.level === "Error" ? "danger" :
-                                    log.level === "Warning" ? "warning" : "primary"
-                                  }
-                                  variant={"flat"}
-                                >
-                                  {log.level}
-                                </Chip>
-                              </TableCell>
-                              <TableCell>
-                                <Chip size={"sm"} variant={"light"}>
-                                  {log.event}
-                                </Chip>
-                              </TableCell>
-                              <TableCell>
-                                <span className={"text-sm"}>{log.message}</span>
-                              </TableCell>
-                              <TableCell>
-                                {log.data && (
-                                  <Popover
-                                    placement={"left"}
-                                    trigger={
-                                      <span className={"text-xs text-primary cursor-pointer underline"}>
-                                        {t<string>("enhancer.logs.viewData.action")}
+                    {/* Enhancement Logs Section */}
+                    {enhancement?.logs && enhancement.logs.length > 0 && (
+                      <Accordion className={"mb-4"} variant={"bordered"}>
+                        <AccordionItem
+                          key="logs"
+                          aria-label={t<string>("enhancer.logs.title")}
+                          title={
+                            <div className={"flex items-center gap-2"}>
+                              <span>{t<string>("enhancer.logs.title")}</span>
+                              <Chip size={"sm"} variant={"flat"}>
+                                {enhancement.logs.length}
+                              </Chip>
+                            </div>
+                          }
+                        >
+                          <div className={"max-h-[400px] overflow-y-auto"}>
+                            <Table isStriped aria-label={t<string>("enhancer.logs.title")}>
+                              <TableHeader>
+                                <TableColumn width={160}>
+                                  {t<string>("enhancer.logs.timestamp.label")}
+                                </TableColumn>
+                                <TableColumn width={80}>
+                                  {t<string>("enhancer.logs.level.label")}
+                                </TableColumn>
+                                <TableColumn width={120}>
+                                  {t<string>("enhancer.logs.event.label")}
+                                </TableColumn>
+                                <TableColumn>{t<string>("common.label.message")}</TableColumn>
+                                <TableColumn width={200}>
+                                  {t<string>("enhancer.logs.data.label")}
+                                </TableColumn>
+                              </TableHeader>
+                              <TableBody>
+                                {enhancement.logs.map((log, index) => (
+                                  <TableRow key={index}>
+                                    <TableCell>
+                                      <span className={"text-xs text-default-500"}>
+                                        {new Date(log.timestamp).toLocaleString()}
                                       </span>
-                                    }
-                                  >
-                                    <div className={"p-2"}>
-                                      <div className={"flex justify-end mb-2"}>
-                                        <Button
-                                          size={"sm"}
-                                          variant={"light"}
-                                          onClick={() => {
-                                            navigator.clipboard.writeText(JSON.stringify(log.data, null, 2));
-                                            toast.success(t<string>("enhancer.logs.copiedToClipboard.label"));
-                                          }}
+                                    </TableCell>
+                                    <TableCell>
+                                      <Chip
+                                        color={
+                                          log.level === "Error"
+                                            ? "danger"
+                                            : log.level === "Warning"
+                                              ? "warning"
+                                              : "primary"
+                                        }
+                                        size={"sm"}
+                                        variant={"flat"}
+                                      >
+                                        {log.level}
+                                      </Chip>
+                                    </TableCell>
+                                    <TableCell>
+                                      <Chip size={"sm"} variant={"light"}>
+                                        {log.event}
+                                      </Chip>
+                                    </TableCell>
+                                    <TableCell>
+                                      <span className={"text-sm"}>{log.message}</span>
+                                    </TableCell>
+                                    <TableCell>
+                                      {log.data && (
+                                        <Popover
+                                          placement={"left"}
+                                          trigger={
+                                            <span
+                                              className={
+                                                "text-xs text-primary cursor-pointer underline"
+                                              }
+                                            >
+                                              {t<string>("enhancer.logs.viewData.action")}
+                                            </span>
+                                          }
                                         >
-                                          {t<string>("common.action.copy")}
-                                        </Button>
-                                      </div>
-                                      <pre className={"text-xs max-w-[400px] max-h-[300px] overflow-auto whitespace-pre-wrap bg-default-100 p-2 rounded"}>
-                                        {JSON.stringify(log.data, null, 2)}
-                                      </pre>
-                                    </div>
-                                  </Popover>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </AccordionItem>
-                </Accordion>
-              )}
+                                          <div className={"p-2"}>
+                                            <div className={"flex justify-end mb-2"}>
+                                              <Button
+                                                size={"sm"}
+                                                variant={"light"}
+                                                onClick={() => {
+                                                  navigator.clipboard.writeText(
+                                                    JSON.stringify(log.data, null, 2),
+                                                  );
+                                                  toast.success(
+                                                    t<string>(
+                                                      "enhancer.logs.copiedToClipboard.label",
+                                                    ),
+                                                  );
+                                                }}
+                                              >
+                                                {t<string>("common.action.copy")}
+                                              </Button>
+                                            </div>
+                                            <pre
+                                              className={
+                                                "text-xs max-w-[400px] max-h-[300px] overflow-auto whitespace-pre-wrap bg-default-100 p-2 rounded"
+                                              }
+                                            >
+                                              {JSON.stringify(log.data, null, 2)}
+                                            </pre>
+                                          </div>
+                                        </Popover>
+                                      )}
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        </AccordionItem>
+                      </Accordion>
+                    )}
 
-              <div className={"flex flex-col gap-y-2 min-w-0"}>
-                <div>
-                  {targets.every((x) => !x.enhancement) && (
-                    <Chip className={"opacity-60"} radius={"sm"} size={"sm"} variant={"light"}>
-                      <ExclamationCircleOutlined className={"text-sm mr-1"} />
-                      {t<string>(
-                        "enhancer.records.noFixedData.warning",
-                      )}
-                    </Chip>
-                  )}
-                  <Table isStriped className={"break-all"}>
-                    <TableHeader>
-                      <TableColumn>{t<string>("enhancer.target.label")}</TableColumn>
-                      <TableColumn>{t<string>("enhancer.records.rawData.label")}</TableColumn>
-                      <TableColumn>{t<string>("enhancer.records.generatedValue.label")}</TableColumn>
-                    </TableHeader>
-                    <TableBody>
-                      {targets.map((e) => {
+                    <div className={"flex flex-col gap-y-2 min-w-0"}>
+                      <div>
+                        {targets.every((x) => !x.enhancement) && (
+                          <Chip
+                            className={"opacity-60"}
+                            radius={"sm"}
+                            size={"sm"}
+                            variant={"light"}
+                          >
+                            <ExclamationCircleOutlined className={"text-sm mr-1"} />
+                            {t<string>("enhancer.records.noFixedData.warning")}
+                          </Chip>
+                        )}
+                        <Table isStriped className={"break-all"}>
+                          <TableHeader>
+                            <TableColumn>{t<string>("enhancer.target.label")}</TableColumn>
+                            <TableColumn>{t<string>("enhancer.records.rawData.label")}</TableColumn>
+                            <TableColumn>
+                              {t<string>("enhancer.records.generatedValue.label")}
+                            </TableColumn>
+                          </TableHeader>
+                          <TableBody>
+                            {targets.map((e) => {
+                              return (
+                                <TableRow>
+                                  <TableCell>{e.targetName}</TableCell>
+                                  <TableCell>{JSON.stringify(e.enhancement?.value)}</TableCell>
+                                  <TableCell>{renderConvertedValue(e.enhancement)}</TableCell>
+                                </TableRow>
+                              );
+                            })}
+                          </TableBody>
+                        </Table>
+                      </div>
+                      {enhancement?.dynamicTargets?.map((dt) => {
                         return (
-                          <TableRow>
-                            <TableCell>{e.targetName}</TableCell>
-                            <TableCell>{JSON.stringify(e.enhancement?.value)}</TableCell>
-                            <TableCell>{renderConvertedValue(e.enhancement)}</TableCell>
-                          </TableRow>
+                          <div>
+                            {(!dt.enhancements || dt.enhancements.length == 0) && (
+                              <Chip
+                                className={"opacity-60"}
+                                radius={"sm"}
+                                size={"sm"}
+                                variant={"light"}
+                              >
+                                <ExclamationCircleOutlined className={"text-sm mr-1"} />
+                                {t<string>("enhancer.records.noDynamicData.warning")}
+                              </Chip>
+                            )}
+                            <Table isStriped className={"break-all"}>
+                              <TableHeader>
+                                <TableColumn>
+                                  {dt.targetName}({dt.enhancements?.length ?? 0})
+                                </TableColumn>
+                                <TableColumn>
+                                  {t<string>("enhancer.records.rawData.label")}
+                                </TableColumn>
+                                <TableColumn>
+                                  {t<string>("enhancer.records.generatedValue.label")}
+                                </TableColumn>
+                              </TableHeader>
+                              <TableBody>
+                                {dt.enhancements?.map((e) => {
+                                  return (
+                                    <TableRow>
+                                      <TableCell>{e.dynamicTarget}</TableCell>
+                                      <TableCell>{JSON.stringify(e.value)}</TableCell>
+                                      <TableCell>{renderConvertedValue(e)}</TableCell>
+                                    </TableRow>
+                                  );
+                                })}
+                              </TableBody>
+                            </Table>
+                          </div>
                         );
                       })}
-                    </TableBody>
-                  </Table>
-                </div>
-                {enhancement?.dynamicTargets?.map((dt) => {
-                  return (
-                    <div>
-                      {(!dt.enhancements || dt.enhancements.length == 0) && (
-                        <Chip className={"opacity-60"} radius={"sm"} size={"sm"} variant={"light"}>
-                          <ExclamationCircleOutlined className={"text-sm mr-1"} />
-                          {t<string>(
-                            "enhancer.records.noDynamicData.warning",
-                          )}
-                        </Chip>
-                      )}
-                      <Table isStriped className={"break-all"}>
-                        <TableHeader>
-                          <TableColumn>
-                            {dt.targetName}({dt.enhancements?.length ?? 0})
-                          </TableColumn>
-                          <TableColumn>{t<string>("enhancer.records.rawData.label")}</TableColumn>
-                          <TableColumn>{t<string>("enhancer.records.generatedValue.label")}</TableColumn>
-                        </TableHeader>
-                        <TableBody>
-                          {dt.enhancements?.map((e) => {
-                            return (
-                              <TableRow>
-                                <TableCell>{e.dynamicTarget}</TableCell>
-                                <TableCell>{JSON.stringify(e.value)}</TableCell>
-                                <TableCell>{renderConvertedValue(e)}</TableCell>
-                              </TableRow>
-                            );
-                          })}
-                        </TableBody>
-                      </Table>
                     </div>
-                  );
-                })}
-              </div>
-              </>
-              )}
-            </Tab>
-          );
-        })}
-      </Tabs>
+                  </>
+                )}
+              </Tab>
+            );
+          })}
+        </Tabs>
       )}
     </Modal>
   );
