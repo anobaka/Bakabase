@@ -89,8 +89,8 @@ const PlayButton: React.FC<PlayControlPortalProps> = ({
   const { t } = useTranslation();
   const fsTriggeredRef = React.useRef(false);
 
-  const iconClass = "text-lg @[150px]:text-xl @[250px]:text-3xl";
-  const buttonClass = "!w-[22cqw] !h-[22cqw] !min-w-8 !min-h-8 !max-w-16 !max-h-16 !p-0";
+  const iconClass = "text-2xl";
+  const buttonClass = "!p-0";
 
   // Build menu entries. Sources are ordered: non-FileSystem first, FileSystem last.
   const entries: MenuEntry[] = React.useMemo(() => {
