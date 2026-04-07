@@ -1355,21 +1355,33 @@ export enum CookieValidatorTarget {
   BiliBili = 1,
   ExHentai = 2,
   Pixiv = 3,
-  DLsite = 6
+  DLsite = 6,
+  Fanbox = 7,
+  Fantia = 8,
+  Cien = 9,
+  Patreon = 10
 }
 
 export const cookieValidatorTargets = [
   { label: 'BiliBili', value: CookieValidatorTarget.BiliBili },
   { label: 'ExHentai', value: CookieValidatorTarget.ExHentai },
   { label: 'Pixiv', value: CookieValidatorTarget.Pixiv },
-  { label: 'DLsite', value: CookieValidatorTarget.DLsite }
+  { label: 'DLsite', value: CookieValidatorTarget.DLsite },
+  { label: 'Fanbox', value: CookieValidatorTarget.Fanbox },
+  { label: 'Fantia', value: CookieValidatorTarget.Fantia },
+  { label: 'Cien', value: CookieValidatorTarget.Cien },
+  { label: 'Patreon', value: CookieValidatorTarget.Patreon }
 ] as const;
 
 export const CookieValidatorTargetLabel: Record<CookieValidatorTarget, string> = {
   [CookieValidatorTarget.BiliBili]: 'BiliBili',
   [CookieValidatorTarget.ExHentai]: 'ExHentai',
   [CookieValidatorTarget.Pixiv]: 'Pixiv',
-  [CookieValidatorTarget.DLsite]: 'DLsite'
+  [CookieValidatorTarget.DLsite]: 'DLsite',
+  [CookieValidatorTarget.Fanbox]: 'Fanbox',
+  [CookieValidatorTarget.Fantia]: 'Fantia',
+  [CookieValidatorTarget.Cien]: 'Cien',
+  [CookieValidatorTarget.Patreon]: 'Patreon'
 };
 
 export enum CoverFit {

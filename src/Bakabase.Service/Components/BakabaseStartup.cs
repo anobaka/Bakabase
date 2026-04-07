@@ -28,6 +28,10 @@ using Bakabase.Modules.ThirdParty.ThirdParties.DLsite;
 using Bakabase.Modules.ThirdParty.ThirdParties.DLsite;
 using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai;
 using Bakabase.Modules.ThirdParty.ThirdParties.Pixiv;
+using Bakabase.Modules.ThirdParty.ThirdParties.Fanbox;
+using Bakabase.Modules.ThirdParty.ThirdParties.Fantia;
+using Bakabase.Modules.ThirdParty.ThirdParties.Cien;
+using Bakabase.Modules.ThirdParty.ThirdParties.Patreon;
 using Bakabase.Service.Components.Tasks;
 using Bakabase.Service.Extensions;
 using Bakabase.Service.Services;
@@ -73,6 +77,10 @@ namespace Bakabase.Service.Components
             services.TryAddSingleton<DLsiteCookieValidator>();
             services.TryAddSingleton<ExHentaiCookieValidator>();
             services.TryAddSingleton<PixivCookieValidator>();
+            services.TryAddSingleton<FanboxCookieValidator>();
+            services.TryAddSingleton<FantiaCookieValidator>();
+            services.TryAddSingleton<CienCookieValidator>();
+            services.TryAddSingleton<PatreonCookieValidator>();
 
             services.AddSingleton<BakabaseOptionsManagerPool>();
 
@@ -82,8 +90,14 @@ namespace Bakabase.Service.Components
 
             services.RegisterAllRegisteredTypeAs<ICookieValidator>();
 
+            services.TryAddSingleton<BilibiliCookieCaptureFlow>();
             services.TryAddSingleton<ExHentaiCookieCaptureFlow>();
             services.TryAddSingleton<DLsiteCookieCaptureFlow>();
+            services.TryAddSingleton<PixivCookieCaptureFlow>();
+            services.TryAddSingleton<FanboxCookieCaptureFlow>();
+            services.TryAddSingleton<FantiaCookieCaptureFlow>();
+            services.TryAddSingleton<CienCookieCaptureFlow>();
+            services.TryAddSingleton<PatreonCookieCaptureFlow>();
             services.RegisterAllRegisteredTypeAs<ICookieCaptureFlow>();
 
             services.TryAddSingleton<FfMpegService>();

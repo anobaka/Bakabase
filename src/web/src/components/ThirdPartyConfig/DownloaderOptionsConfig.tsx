@@ -7,12 +7,14 @@ import { AiOutlineCheck, AiOutlineClose } from "react-icons/ai";
 
 import BApi from "@/sdk/BApi";
 import { toast } from "@/components/bakaui";
-import { CookieValidatorTarget } from "@/sdk/constants";
+import { CookieValidatorTarget, RuntimeMode } from "@/sdk/constants";
+import { useAppContextStore } from "@/stores/appContext";
 
 interface DownloaderOptionsConfigProps {
   options: any;
   patchApi: (patches: any) => Promise<any>;
   cookieValidatorTarget?: CookieValidatorTarget;
+  cookieCaptureTarget?: CookieValidatorTarget;
   hideCookie?: boolean;
 }
 
@@ -20,12 +22,16 @@ export default function DownloaderOptionsConfig({
   options: externalOptions,
   patchApi,
   cookieValidatorTarget,
+  cookieCaptureTarget,
   hideCookie,
 }: DownloaderOptionsConfigProps) {
   const { t } = useTranslation();
+  const runtimeMode = useAppContextStore((s) => s.runtimeMode);
+  const isDesktopApp = runtimeMode !== RuntimeMode.Docker;
   const [options, setOptions] = useState<any>(externalOptions || {});
   const [validatingCookie, setValidatingCookie] = useState(false);
   const [validationResult, setValidationResult] = useState<"succeed" | "failed" | undefined>();
+  const [capturing, setCapturing] = useState(false);
 
   useEffect(() => {
     setOptions(JSON.parse(JSON.stringify(externalOptions || {})));
@@ -58,6 +64,19 @@ export default function DownloaderOptionsConfig({
       .finally(() => {
         setValidatingCookie(false);
       });
+  };
+
+  const handleCaptureCookie = async () => {
+    if (!cookieCaptureTarget) return;
+    setCapturing(true);
+    try {
+      const rsp = await BApi.tool.captureCookie({ target: cookieCaptureTarget });
+      if (!rsp.code && rsp.data) {
+        setOptions((prev: any) => ({ ...prev, cookie: rsp.data }));
+      }
+    } finally {
+      setCapturing(false);
+    }
   };
 
   return (
@@ -145,6 +164,17 @@ export default function DownloaderOptionsConfig({
             onPress={handleValidateCookie}
           >
             {t<string>("thirdPartyConfig.action.validateCookie")}
+          </Button>
+        )}
+        {!hideCookie && isDesktopApp && cookieCaptureTarget != null && (
+          <Button
+            color="secondary"
+            isLoading={capturing}
+            size="sm"
+            variant="flat"
+            onPress={handleCaptureCookie}
+          >
+            {t("resourceSource.accounts.loginToImport")}
           </Button>
         )}
       </div>

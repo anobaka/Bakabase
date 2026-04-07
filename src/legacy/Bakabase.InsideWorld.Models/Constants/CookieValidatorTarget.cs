@@ -11,6 +11,10 @@ namespace Bakabase.InsideWorld.Models.Constants
         BiliBili = ThirdPartyId.Bilibili,
         ExHentai = ThirdPartyId.ExHentai,
         Pixiv = ThirdPartyId.Pixiv,
-        DLsite = ThirdPartyId.DLsite
+        DLsite = ThirdPartyId.DLsite,
+        Fanbox = ThirdPartyId.Fanbox,
+        Fantia = ThirdPartyId.Fantia,
+        Cien = ThirdPartyId.Cien,
+        Patreon = ThirdPartyId.Patreon
     }
 }

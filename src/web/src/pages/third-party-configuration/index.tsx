@@ -8,7 +8,8 @@ import { Tooltip, Input, Button, Textarea } from "@heroui/react";
 import { Listbox, ListboxItem } from "@/components/bakaui/components/Listbox";
 import { toast } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
-import { CookieValidatorTarget } from "@/sdk/constants";
+import { CookieValidatorTarget, RuntimeMode } from "@/sdk/constants";
+import { useAppContextStore } from "@/stores/appContext";
 import {
   useBilibiliOptionsStore,
   useExHentaiOptionsStore,
@@ -93,6 +94,9 @@ export default function ThirdPartyConfigurationPage() {
   const [cookieValidationResults, setCookieValidationResults] = useState<{
     [key: string]: "succeed" | "failed";
   }>({});
+  const runtimeMode = useAppContextStore((s) => s.runtimeMode);
+  const isDesktopApp = runtimeMode !== RuntimeMode.Docker;
+  const [capturingCookies, setCapturingCookies] = useState<{ [key: string]: boolean }>({});
 
   useEffect(() => {
     setTmpBilibiliOptions(JSON.parse(JSON.stringify(bilibiliOptions || {})));
@@ -266,6 +270,10 @@ export default function ThirdPartyConfigurationPage() {
                 bilibili: CookieValidatorTarget.BiliBili,
                 exhentai: CookieValidatorTarget.ExHentai,
                 pixiv: CookieValidatorTarget.Pixiv,
+                fanbox: CookieValidatorTarget.Fanbox,
+                fantia: CookieValidatorTarget.Fantia,
+                cien: CookieValidatorTarget.Cien,
+                patreon: CookieValidatorTarget.Patreon,
               };
               const target = validatorMap[thirdPartyName.toLowerCase()];
 
@@ -277,6 +285,40 @@ export default function ThirdPartyConfigurationPage() {
             {t<string>("thirdPartyConfig.action.validateCookie")}
           </Button>
         )}
+        {isDesktopApp && (() => {
+          const captureMap: { [key: string]: CookieValidatorTarget } = {
+            bilibili: CookieValidatorTarget.BiliBili,
+            exhentai: CookieValidatorTarget.ExHentai,
+            pixiv: CookieValidatorTarget.Pixiv,
+            fanbox: CookieValidatorTarget.Fanbox,
+            fantia: CookieValidatorTarget.Fantia,
+            cien: CookieValidatorTarget.Cien,
+            patreon: CookieValidatorTarget.Patreon,
+          };
+          const target = captureMap[thirdPartyName.toLowerCase()];
+          if (!target) return null;
+          return (
+            <Button
+              color="secondary"
+              isLoading={capturingCookies[thirdPartyName]}
+              size="sm"
+              variant="flat"
+              onPress={async () => {
+                setCapturingCookies((prev) => ({ ...prev, [thirdPartyName]: true }));
+                try {
+                  const rsp = await BApi.tool.captureCookie({ target });
+                  if (!rsp.code && rsp.data) {
+                    setOptions({ ...options, cookie: rsp.data });
+                  }
+                } finally {
+                  setCapturingCookies((prev) => ({ ...prev, [thirdPartyName]: false }));
+                }
+              }}
+            >
+              {t("resourceSource.accounts.loginToImport")}
+            </Button>
+          );
+        })()}
       </div>
     </div>
   );

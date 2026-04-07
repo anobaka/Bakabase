@@ -35,6 +35,8 @@ import {
   useSteamOptionsStore,
 } from "@/stores/options";
 import BApi from "@/sdk/BApi";
+import { RuntimeMode } from "@/sdk/constants";
+import { useAppContextStore } from "@/stores/appContext";
 import BetaChip from "@/components/Chips/BetaChip";
 import {
   ExHentaiConfig,
@@ -90,6 +92,9 @@ const ThirdParty = ({
   const [cookieValidationResults, setCookieValidationResults] = useState<{
     [key: string]: "succeed" | "failed";
   }>({});
+  const runtimeMode = useAppContextStore((s) => s.runtimeMode);
+  const isDesktopApp = runtimeMode !== RuntimeMode.Docker;
+  const [capturingCookies, setCapturingCookies] = useState<{ [key: string]: boolean }>({});
 
   useEffect(() => {
     setTmpBilibiliOptions(JSON.parse(JSON.stringify(bilibiliOptions || {})));
@@ -274,6 +279,10 @@ const ThirdParty = ({
                 bilibili: CookieValidatorTarget.BiliBili,
                 exhentai: CookieValidatorTarget.ExHentai,
                 pixiv: CookieValidatorTarget.Pixiv,
+                fanbox: CookieValidatorTarget.Fanbox,
+                fantia: CookieValidatorTarget.Fantia,
+                cien: CookieValidatorTarget.Cien,
+                patreon: CookieValidatorTarget.Patreon,
               };
 
               const target = validatorMap[thirdPartyName.toLowerCase()];
@@ -286,6 +295,40 @@ const ThirdParty = ({
             {t<string>("configuration.thirdParty.validateCookie")}
           </Button>
         )}
+        {isDesktopApp && (() => {
+          const captureMap: { [key: string]: CookieValidatorTarget } = {
+            bilibili: CookieValidatorTarget.BiliBili,
+            exhentai: CookieValidatorTarget.ExHentai,
+            pixiv: CookieValidatorTarget.Pixiv,
+            fanbox: CookieValidatorTarget.Fanbox,
+            fantia: CookieValidatorTarget.Fantia,
+            cien: CookieValidatorTarget.Cien,
+            patreon: CookieValidatorTarget.Patreon,
+          };
+          const target = captureMap[thirdPartyName.toLowerCase()];
+          if (!target) return null;
+          return (
+            <Button
+              color="secondary"
+              isLoading={capturingCookies[thirdPartyName]}
+              size="sm"
+              variant="flat"
+              onPress={async () => {
+                setCapturingCookies((prev) => ({ ...prev, [thirdPartyName]: true }));
+                try {
+                  const rsp = await BApi.tool.captureCookie({ target });
+                  if (!rsp.code && rsp.data) {
+                    setOptions({ ...options, cookie: rsp.data });
+                  }
+                } finally {
+                  setCapturingCookies((prev) => ({ ...prev, [thirdPartyName]: false }));
+                }
+              }}
+            >
+              {t("resourceSource.accounts.loginToImport")}
+            </Button>
+          );
+        })()}
       </div>
     </div>
   );
