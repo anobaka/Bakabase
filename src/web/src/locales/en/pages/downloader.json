@@ -75,5 +75,9 @@
   "downloader.tip.preferTorrentDesc": "If available, download torrent files instead of downloading images directly.",
 
   "downloader.tip.exHentaiUserscript": "You can use our Tampermonkey userscript to download from ExHentai with one click.",
-  "downloader.tip.goToThirdPartyIntegration": "Go to Third-Party Integration"
+  "downloader.tip.goToThirdPartyIntegration": "Go to Third-Party Integration",
+
+  "downloader.bilibili.selectFavorites": "Select favorites",
+  "downloader.bilibili.noFavorites": "Unable to retrieve Bilibili favorites. Please ensure your cookie is correctly set and that you have at least one favorite created.",
+  "downloader.bilibili.setupNow": "Setup now"
 }

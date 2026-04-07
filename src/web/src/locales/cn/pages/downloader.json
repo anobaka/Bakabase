@@ -75,5 +75,9 @@
   "downloader.tip.preferTorrentDesc": "如果可用，优先下载种子文件而非直接下载图片。",
 
   "downloader.tip.exHentaiUserscript": "您可以使用我们提供的油猴脚本在 ExHentai 网站上一键下载。",
-  "downloader.tip.goToThirdPartyIntegration": "前往第三方集成页面"
+  "downloader.tip.goToThirdPartyIntegration": "前往第三方集成页面",
+
+  "downloader.bilibili.selectFavorites": "选择收藏夹",
+  "downloader.bilibili.noFavorites": "无法获取 Bilibili 收藏夹。请确认 Cookie 设置正确且至少创建了一个收藏夹。",
+  "downloader.bilibili.setupNow": "立即设置"
 }

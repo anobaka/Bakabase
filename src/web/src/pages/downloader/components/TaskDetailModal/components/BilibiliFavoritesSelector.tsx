@@ -49,9 +49,7 @@ const BilibiliFavoritesSelector = ({ isDisabled, value, onChange }: Props) => {
     if (favorites.length === 0) {
       return (
         <div className={"flex items-center gap-2"}>
-          {t<string>(
-            "Unable to retrieve Bilibili favorites. Please ensure your cookie is correctly set and that you have at least one favorite created.",
-          )}
+          {t<string>("downloader.bilibili.noFavorites")}
           <Button
             color={"primary"}
             size={"sm"}
@@ -64,7 +62,7 @@ const BilibiliFavoritesSelector = ({ isDisabled, value, onChange }: Props) => {
               });
             }}
           >
-            {t<string>("Setup now")}
+            {t<string>("downloader.bilibili.setupNow")}
           </Button>
         </div>
       );
@@ -72,9 +70,8 @@ const BilibiliFavoritesSelector = ({ isDisabled, value, onChange }: Props) => {
 
     return (
       <RadioGroup
-        // color="secondary"
         isDisabled={isDisabled}
-        label={t<string>("Select favorites")}
+        label={t<string>("downloader.bilibili.selectFavorites")}
         orientation="horizontal"
         size={"sm"}
         value={value?.toString()}
@@ -85,7 +82,7 @@ const BilibiliFavoritesSelector = ({ isDisabled, value, onChange }: Props) => {
         {favorites.map((f) => {
           return (
             <Radio key={f.id} value={f.id.toString()}>
-              {f.title}({f.mediaCount})
+              {f.title} ({f.mediaCount})
             </Radio>
           );
         })}
@@ -95,7 +92,7 @@ const BilibiliFavoritesSelector = ({ isDisabled, value, onChange }: Props) => {
 
   return (
     <div className="flex items-center gap-2">
-      <Chip radius="sm">{t<string>("Select favorites")}</Chip>
+      <Chip radius="sm">{t<string>("downloader.bilibili.selectFavorites")}</Chip>
       {renderFavorites()}
     </div>
   );
