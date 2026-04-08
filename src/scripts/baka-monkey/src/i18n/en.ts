@@ -3,6 +3,7 @@ export const en = {
   showMarkers: 'Show Markers',
   apiSettings: 'API Settings',
   apiUrlLabel: 'Bakabase API URL',
+  apiUrlDescription: 'You can find the API Endpoint in Bakabase under System - Configuration (if there are multiple, you can use any one)',
   save: 'Save',
   apiUrlSaved: 'API URL saved, refresh page to apply',
   language: 'Language',

@@ -3,6 +3,7 @@ export const zh = {
   showMarkers: '显示标记',
   apiSettings: 'API 设置',
   apiUrlLabel: 'Bakabase API 地址',
+  apiUrlDescription: '您可以在 Bakabase 的 系统 - 配置 中找到 API Endpoint（如果有多个，可以任意使用一个）',
   save: '保存',
   apiUrlSaved: 'API 地址已保存，刷新页面生效',
   language: '语言',

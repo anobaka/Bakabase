@@ -6,7 +6,6 @@ using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components;
-using Bakabase.InsideWorld.Business.Components.Ai;
 using Bakabase.InsideWorld.Business.Components.Compression;
 using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions;
@@ -140,7 +139,6 @@ namespace Bakabase.Service.Extensions
                 sp.GetRequiredService<ISystemPlayer>());
 
             services.AddPostParser<BakabaseDbContext>();
-            services.AddSingleton<OllamaApiClientAccessor>();
             services.AddSingleton<TampermonkeyService>();
 
             services.AddPresets();

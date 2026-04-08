@@ -5812,7 +5812,6 @@ export interface components {
             readonly sizeInMb: number;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.AiOptions": {
-            ollamaEndpoint?: string;
             /** Format: int32 */
             defaultProviderConfigId?: number;
             defaultModelId?: string;
@@ -6092,7 +6091,6 @@ export interface components {
             apiKey?: string;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.AiOptionsPatchInputModel": {
-            ollamaEndpoint?: string;
             /** Format: int32 */
             defaultProviderConfigId?: number;
             defaultModelId?: string;

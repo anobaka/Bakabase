@@ -1,6 +1,6 @@
 "use client";
 
-import type { InputProps, SnippetProps } from "@heroui/react";
+import type { SnippetProps } from "@heroui/react";
 import type { PathAutocompleteProps } from "@/components/PathAutocomplete";
 
 import { useEffect } from "react";
@@ -10,9 +10,8 @@ import { QuestionCircleOutlined } from "@ant-design/icons";
 import Component from "./components/Component";
 
 import { useDependentComponentContextsStore } from "@/stores/dependentComponentContexts";
-import { useThirdPartyOptionsStore, useAiOptionsStore } from "@/stores/options";
+import { useThirdPartyOptionsStore } from "@/stores/options";
 import {
-  Input,
   Popover,
   Snippet,
   Table,
@@ -31,8 +30,6 @@ const Dependency = () => {
     (state) => state.contexts,
   );
   const thirdPartyOptions = useThirdPartyOptionsStore((state) => state.data);
-  const aiOptions = useAiOptionsStore((state) => state.data);
-
   useEffect(() => {}, []);
 
   return (
@@ -124,39 +121,6 @@ const Dependency = () => {
                     await BApi.options.putThirdPartyOptions({
                       ...thirdPartyOptions,
                       curlExecutable: v,
-                    })
-                  }
-                />
-              </TableCell>
-            </TableRow>
-            <TableRow
-              key={componentContexts.length + 1}
-              className={"hover:bg-[var(--bakaui-overlap-background)]"}
-            >
-              <TableCell>{t<string>("configuration.dependency.ollamaEndpoint")}</TableCell>
-              <TableCell>
-                <EditableValue<
-                  string,
-                  InputProps,
-                  SnippetProps & { value: string }
-                >
-                  Editor={Input}
-                  Viewer={({ value, ...props }) =>
-                    value ? (
-                      <Snippet symbol={<>&nbsp;</>} {...props} size={"sm"}>
-                        {value}
-                      </Snippet>
-                    ) : null
-                  }
-                  editorProps={{
-                    placeholder: "http://localhost:11434",
-                    size: "sm",
-                  }}
-                  value={aiOptions.ollamaEndpoint}
-                  onSubmit={async (v) =>
-                    await BApi.options.putAiOptions({
-                      ...aiOptions,
-                      ollamaEndpoint: v,
                     })
                   }
                 />

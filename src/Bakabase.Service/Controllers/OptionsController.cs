@@ -916,11 +916,6 @@ namespace Bakabase.Service.Controllers
         {
             await _bakabaseOptionsManager.Get<AiOptions>().SaveAsync(options =>
             {
-                if (model.OllamaEndpoint != null)
-                {
-                    options.OllamaEndpoint = model.OllamaEndpoint;
-                }
-
                 if (model.DefaultProviderConfigId != null)
                 {
                     options.DefaultProviderConfigId = model.DefaultProviderConfigId;

@@ -6,8 +6,6 @@ namespace Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 [Options(fileKey: "ai")]
 public record AiOptions
 {
-    public string? OllamaEndpoint { get; set; }
-
     // AI integration settings
     public int? DefaultProviderConfigId { get; set; }
     public string? DefaultModelId { get; set; }

@@ -1140,7 +1140,6 @@ export interface BakabaseInsideWorldBusinessComponentsCompressionCompressedFileE
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainAiOptions {
-  ollamaEndpoint?: string;
   /** @format int32 */
   defaultProviderConfigId?: number;
   defaultModelId?: string;
@@ -1439,7 +1438,6 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputAiOptionsPatchInputModel {
-  ollamaEndpoint?: string;
   /** @format int32 */
   defaultProviderConfigId?: number;
   defaultModelId?: string;

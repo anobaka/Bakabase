@@ -66,6 +66,7 @@ export function SettingsPanel() {
             <Input
               size="sm"
               label={t('apiUrlLabel')}
+              description={t('apiUrlDescription')}
               value={apiUrl}
               onValueChange={setApiUrl}
               onKeyDown={(e) => e.key === 'Enter' && handleSaveApiUrl()}
