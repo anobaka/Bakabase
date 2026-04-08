@@ -115,6 +115,7 @@
   "configuration.ai.feature.Enhancer": "Enhancer",
   "configuration.ai.feature.Translation": "Translation",
   "configuration.ai.feature.FileProcessor": "File Processor",
+  "configuration.ai.feature.PostParser": "Post Parser",
   "configuration.ai.feature.provider": "Provider",
   "configuration.ai.feature.model": "Model",
   "configuration.ai.feature.temperature": "Temperature",

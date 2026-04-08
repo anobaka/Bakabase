@@ -210,7 +210,7 @@
   "menu.fileNameModifier": "File Name Modifier",
   "menu.experimental": "Experimental",
   "menu.thirdPartyIntegration": "Third Party Integration",
-  "menu.postParser": "SoulPlus Post Parser",
+  "menu.postParser": "Post Parser",
   "menu.ai": "AI",
   "menu.ai.configuration": "AI Configuration",
   "menu.ai.usage": "Usage Stats",

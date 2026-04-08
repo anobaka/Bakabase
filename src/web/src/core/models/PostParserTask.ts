@@ -1,4 +1,17 @@
-import type { components } from "@/sdk/BApi2";
+import type { PostParseTarget, PostParserSource } from "@/sdk/constants";
 
-export type PostParserTask =
-  components["schemas"]["Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.PostParserTask"];
+export interface PostParseTargetResult {
+  data?: any;
+  parsedAt?: string;
+  error?: string;
+}
+
+export interface PostParserTask {
+  id: number;
+  source: PostParserSource;
+  link: string;
+  title?: string;
+  content?: string;
+  targets: PostParseTarget[];
+  results?: Record<number, PostParseTargetResult>;
+}

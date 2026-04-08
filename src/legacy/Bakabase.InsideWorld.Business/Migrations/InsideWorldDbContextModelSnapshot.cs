@@ -349,6 +349,27 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.ToTable("MediaLibrariesV2");
                 });
 
+            modelBuilder.Entity("Bakabase.Abstractions.Models.Db.PasswordDbModel", b =>
+                {
+                    b.Property<string>("Text")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastUsedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("UsedTimes")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Text");
+
+                    b.HasIndex("LastUsedAt");
+
+                    b.HasIndex("UsedTimes");
+
+                    b.ToTable("Passwords");
+                });
+
             modelBuilder.Entity("Bakabase.Abstractions.Models.Db.PathMarkDbModel", b =>
                 {
                     b.Property<int>("Id")
@@ -910,21 +931,18 @@ namespace Bakabase.InsideWorld.Business.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("Error")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Items")
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("Link")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime?>("ParsedAt")
+                    b.Property<string>("Results")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("Source")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("Targets")
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Title")
                         .HasColumnType("TEXT");
@@ -955,27 +973,6 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.HasKey("ResourceId");
 
                     b.ToTable("ResourceCaches");
-                });
-
-            modelBuilder.Entity("Bakabase.InsideWorld.Models.Models.Entities.Password", b =>
-                {
-                    b.Property<string>("Text")
-                        .HasMaxLength(64)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("LastUsedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("UsedTimes")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Text");
-
-                    b.HasIndex("LastUsedAt");
-
-                    b.HasIndex("UsedTimes");
-
-                    b.ToTable("Passwords");
                 });
 
             modelBuilder.Entity("Bakabase.Modules.AI.Models.Db.AiFeatureConfigDbModel", b =>

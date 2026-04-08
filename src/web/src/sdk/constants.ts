@@ -2419,21 +2419,6 @@ export const BuiltinPropertyForDisplayNameLabel: Record<BuiltinPropertyForDispla
   [BuiltinPropertyForDisplayName.Filename]: 'Filename'
 };
 
-export enum TampermonkeyScript {
-  SoulPlus = 1,
-  Bakabase = 2
-}
-
-export const tampermonkeyScripts = [
-  { label: 'SoulPlus', value: TampermonkeyScript.SoulPlus },
-  { label: 'Bakabase', value: TampermonkeyScript.Bakabase }
-] as const;
-
-export const TampermonkeyScriptLabel: Record<TampermonkeyScript, string> = {
-  [TampermonkeyScript.SoulPlus]: 'SoulPlus',
-  [TampermonkeyScript.Bakabase]: 'Bakabase'
-};
-
 export enum IndexOperationType {
   Update = 0,
   Remove = 1
@@ -2459,6 +2444,18 @@ export const postParserSources = [
 
 export const PostParserSourceLabel: Record<PostParserSource, string> = {
   [PostParserSource.SoulPlus]: 'SoulPlus'
+};
+
+export enum PostParseTarget {
+  DownloadInfo = 1
+}
+
+export const postParseTargets = [
+  { label: 'DownloadInfo', value: PostParseTarget.DownloadInfo }
+] as const;
+
+export const PostParseTargetLabel: Record<PostParseTarget, string> = {
+  [PostParseTarget.DownloadInfo]: 'DownloadInfo'
 };
 
 export enum FileNameModifierCaseType {
@@ -3170,21 +3167,24 @@ export enum AiFeature {
   Default = 0,
   Enhancer = 1,
   Translation = 2,
-  FileProcessor = 3
+  FileProcessor = 3,
+  PostParser = 4
 }
 
 export const aiFeatures = [
   { label: 'Default', value: AiFeature.Default },
   { label: 'Enhancer', value: AiFeature.Enhancer },
   { label: 'Translation', value: AiFeature.Translation },
-  { label: 'FileProcessor', value: AiFeature.FileProcessor }
+  { label: 'FileProcessor', value: AiFeature.FileProcessor },
+  { label: 'PostParser', value: AiFeature.PostParser }
 ] as const;
 
 export const AiFeatureLabel: Record<AiFeature, string> = {
   [AiFeature.Default]: 'Default',
   [AiFeature.Enhancer]: 'Enhancer',
   [AiFeature.Translation]: 'Translation',
-  [AiFeature.FileProcessor]: 'FileProcessor'
+  [AiFeature.FileProcessor]: 'FileProcessor',
+  [AiFeature.PostParser]: 'PostParser'
 };
 
 export enum LlmCallStatus {

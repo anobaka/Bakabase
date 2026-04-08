@@ -1980,12 +1980,30 @@ export interface BakabaseInsideWorldBusinessComponentsPlayListModelsInputPlayLis
   order?: number;
 }
 
+export interface BakabaseInsideWorldBusinessComponentsPostParserControllersAddPostParserTasksInput {
+  sourceLinksMap: Record<string, string[]>;
+  targets: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstantsPostParseTarget[];
+}
+
+/**
+ * [1: DownloadInfo]
+ * @format int32
+ */
+export type BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstantsPostParseTarget = 1;
+
 /**
  * [5: SoulPlus]
  * @format int32
  */
 export type BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstantsPostParserSource =
   5;
+
+export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParseTargetResult {
+  data?: any;
+  /** @format date-time */
+  parsedAt?: string;
+  error?: string;
+}
 
 export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTask {
   /** @format int32 */
@@ -1995,26 +2013,11 @@ export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPost
   link: string;
   title?: string;
   content?: string;
-  /** @format date-time */
-  parsedAt?: string;
-  items?: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskItem[];
-  error?: string;
+  targets: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstantsPostParseTarget[];
+  results?: {
+    DownloadInfo: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParseTargetResult;
+  };
 }
-
-export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskItem {
-  title: string;
-  link?: string;
-  accessCode?: string;
-  decompressionPassword?: string;
-}
-
-/**
- * [1: SoulPlus, 2: Bakabase]
- * @format int32
- */
-export type BakabaseInsideWorldBusinessComponentsTampermonkeyModelsConstantsTampermonkeyScript =
-  | 1
-  | 2;
 
 export interface BakabaseInsideWorldModelsConfigsFileSystemOptions {
   recentMovingDestinations?: string[];
@@ -2405,7 +2408,7 @@ export interface BakabaseModulesAIComponentsObservationLlmUsageSummary {
 export interface BakabaseModulesAIModelsDbAiFeatureConfigDbModel {
   /** @format int32 */
   id: number;
-  /** [0: Default, 1: Enhancer, 2: Translation, 3: FileProcessor] */
+  /** [0: Default, 1: Enhancer, 2: Translation, 3: FileProcessor, 4: PostParser] */
   feature: BakabaseModulesAIModelsDomainAiFeature;
   useDefault: boolean;
   /** @format int32 */
@@ -2476,10 +2479,10 @@ export interface BakabaseModulesAIModelsDbLlmUsageLogDbModel {
 }
 
 /**
- * [0: Default, 1: Enhancer, 2: Translation, 3: FileProcessor]
+ * [0: Default, 1: Enhancer, 2: Translation, 3: FileProcessor, 4: PostParser]
  * @format int32
  */
-export type BakabaseModulesAIModelsDomainAiFeature = 0 | 1 | 2 | 3;
+export type BakabaseModulesAIModelsDomainAiFeature = 0 | 1 | 2 | 3 | 4;
 
 /**
  * [1: Success, 2: Error, 3: Timeout, 4: Cancelled]
@@ -3951,6 +3954,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBu
   code: number;
   message?: string;
   data?: BakabaseInsideWorldBusinessComponentsPlayListModelsDomainPlayList[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstantsPostParseTarget {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstantsPostParseTarget[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTask {
@@ -16143,6 +16153,35 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags PostParser
+     * @name GetPostParseTargets
+     * @request GET:/post-parser/targets
+     */
+    getPostParseTargets: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstantsPostParseTarget,
+        any
+      >({
+        path: `/post-parser/targets`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getPostParseTargets
+     * @name getPostParseTargetsUrl
+     */
+    getPostParseTargetsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/post-parser/targets`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PostParser
      * @name GetAllPostParserTasks
      * @request GET:/post-parser/task/all
      */
@@ -16201,7 +16240,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name AddPostParserTasks
      * @request POST:/post-parser/task
      */
-    addPostParserTasks: (data: Record<string, string[]>, params: RequestParams = {}) =>
+    addPostParserTasks: (
+      data: BakabaseInsideWorldBusinessComponentsPostParserControllersAddPostParserTasksInput,
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/post-parser/task`,
         method: "POST",
@@ -16840,17 +16882,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name InstallTampermonkeyScript
      * @request GET:/Tampermonkey/install
      */
-    installTampermonkeyScript: (
-      query?: {
-        /** [1: SoulPlus, 2: Bakabase] */
-        script?: BakabaseInsideWorldBusinessComponentsTampermonkeyModelsConstantsTampermonkeyScript;
-      },
-      params: RequestParams = {},
-    ) =>
+    installTampermonkeyScript: (params: RequestParams = {}) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/Tampermonkey/install`,
         method: "GET",
-        query: query,
         format: "json",
         ...params,
       }),
@@ -16859,22 +16894,9 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @description Build URL for installTampermonkeyScript
      * @name installTampermonkeyScriptUrl
      */
-    installTampermonkeyScriptUrl: (query?: {
-        /** [1: SoulPlus, 2: Bakabase] */
-        script?: BakabaseInsideWorldBusinessComponentsTampermonkeyModelsConstantsTampermonkeyScript;
-      }) => {
+    installTampermonkeyScriptUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/Tampermonkey/install`;
-      
-      // Build query string
-      if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
-          .join("&");
-        
-        return baseUrl + path + (queryString ? `?${queryString}` : "");
-      }
       
       return baseUrl + path;
     },
@@ -16884,17 +16906,25 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      *
      * @tags Tampermonkey
      * @name GetTampermonkeyScript
-     * @request GET:/Tampermonkey/script/{script}.user.js
+     * @request GET:/Tampermonkey/script/bakabase.user.js
      */
-    getTampermonkeyScript: (
-      script: BakabaseInsideWorldBusinessComponentsTampermonkeyModelsConstantsTampermonkeyScript,
-      params: RequestParams = {},
-    ) =>
+    getTampermonkeyScript: (params: RequestParams = {}) =>
       this.request<void, any>({
-        path: `/Tampermonkey/script/${script}.user.js`,
+        path: `/Tampermonkey/script/bakabase.user.js`,
         method: "GET",
         ...params,
       }),
+
+    /**
+     * @description Build URL for getTampermonkeyScript
+     * @name getTampermonkeyScriptUrl
+     */
+    getTampermonkeyScriptUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/Tampermonkey/script/bakabase.user.js`;
+      
+      return baseUrl + path;
+    },
   };
   thirdParty = {
     /**

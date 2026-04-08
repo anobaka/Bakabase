@@ -1,21 +1,24 @@
-﻿using System.Collections.Generic;
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Components.Tasks;
-using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Components.PostParser.Services;
-using Bakabase.InsideWorld.Models.Constants;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
-using Microsoft.Extensions.DependencyInjection;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace Bakabase.InsideWorld.Business.Components.PostParser.Controllers;
+
+public record AddPostParserTasksInput
+{
+    public Dictionary<int, List<string>> SourceLinksMap { get; set; } = new();
+    public List<PostParseTarget> Targets { get; set; } = [];
+}
 
 [ApiController]
 [Route("~/post-parser")]
@@ -25,6 +28,14 @@ public class PostParserController(
     BTaskManager btm,
     PostParserTaskTrigger trigger) : ControllerBase
 {
+    [HttpGet("targets")]
+    [SwaggerOperation(OperationId = "GetPostParseTargets")]
+    public ListResponse<PostParseTarget> GetTargets()
+    {
+        var targets = Enum.GetValues<PostParseTarget>().ToList();
+        return new ListResponse<PostParseTarget>(targets);
+    }
+
     [HttpGet("task/all")]
     [SwaggerOperation(OperationId = "GetAllPostParserTasks")]
     public async Task<ListResponse<PostParserTask>> GetAll()
@@ -35,9 +46,11 @@ public class PostParserController(
 
     [HttpPost("task")]
     [SwaggerOperation(OperationId = "AddPostParserTasks")]
-    public async Task<BaseResponse> AddRange([FromBody] Dictionary<int, List<string>> sourceLinksMap)
+    public async Task<BaseResponse> AddRange([FromBody] AddPostParserTasksInput input)
     {
-        await service.AddRange(sourceLinksMap.ToDictionary(d => (PostParserSource)d.Key, d => d.Value));
+        await service.AddRange(
+            input.SourceLinksMap.ToDictionary(d => (PostParserSource) d.Key, d => d.Value),
+            input.Targets);
         return BaseResponseBuilder.Ok;
     }
 

@@ -3669,6 +3669,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/post-parser/targets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetPostParseTargets"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/post-parser/task/all": {
         parameters: {
             query?: never;
@@ -4629,7 +4645,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/Tampermonkey/script/{script}.user.js": {
+    "/Tampermonkey/script/bakabase.user.js": {
         parameters: {
             query?: never;
             header?: never;
@@ -6542,12 +6558,30 @@ export interface components {
             /** Format: int32 */
             order?: number;
         };
+        "Bakabase.InsideWorld.Business.Components.PostParser.Controllers.AddPostParserTasksInput": {
+            sourceLinksMap: {
+                [key: string]: string[];
+            };
+            targets: components["schemas"]["Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParseTarget"][];
+        };
+        /**
+         * Format: int32
+         * @description [1: DownloadInfo]
+         * @enum {integer}
+         */
+        "Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParseTarget": 1;
         /**
          * Format: int32
          * @description [5: SoulPlus]
          * @enum {integer}
          */
         "Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParserSource": 5;
+        "Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.PostParseTargetResult": {
+            data?: unknown;
+            /** Format: date-time */
+            parsedAt?: string;
+            error?: string;
+        };
         "Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.PostParserTask": {
             /** Format: int32 */
             id: number;
@@ -6555,23 +6589,11 @@ export interface components {
             link: string;
             title?: string;
             content?: string;
-            /** Format: date-time */
-            parsedAt?: string;
-            items?: components["schemas"]["Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.PostParserTask+Item"][];
-            error?: string;
+            targets: components["schemas"]["Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParseTarget"][];
+            results?: {
+                DownloadInfo: components["schemas"]["Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.PostParseTargetResult"];
+            };
         };
-        "Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.PostParserTask+Item": {
-            title: string;
-            link?: string;
-            accessCode?: string;
-            decompressionPassword?: string;
-        };
-        /**
-         * Format: int32
-         * @description [1: SoulPlus, 2: Bakabase]
-         * @enum {integer}
-         */
-        "Bakabase.InsideWorld.Business.Components.Tampermonkey.Models.Constants.TampermonkeyScript": 1 | 2;
         "Bakabase.InsideWorld.Models.Configs.FileSystemOptions": {
             recentMovingDestinations?: string[];
             fileMover?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.FileSystemOptions+FileMoverOptions"];
@@ -6951,10 +6973,10 @@ export interface components {
         };
         /**
          * Format: int32
-         * @description [0: Default, 1: Enhancer, 2: Translation, 3: FileProcessor]
+         * @description [0: Default, 1: Enhancer, 2: Translation, 3: FileProcessor, 4: PostParser]
          * @enum {integer}
          */
-        "Bakabase.Modules.AI.Models.Domain.AiFeature": 0 | 1 | 2 | 3;
+        "Bakabase.Modules.AI.Models.Domain.AiFeature": 0 | 1 | 2 | 3 | 4;
         /**
          * Format: int32
          * @description [1: Success, 2: Error, 3: Timeout, 4: Cancelled]
@@ -8088,6 +8110,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.InsideWorld.Business.Components.PlayList.Models.Domain.PlayList"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParseTarget]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParseTarget"][];
         };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.PostParserTask]": {
             /** Format: int32 */
@@ -9814,7 +9842,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description [0: Default, 1: Enhancer, 2: Translation, 3: FileProcessor] */
+                /** @description [0: Default, 1: Enhancer, 2: Translation, 3: FileProcessor, 4: PostParser] */
                 feature: components["schemas"]["Bakabase.Modules.AI.Models.Domain.AiFeature"];
             };
             cookie?: never;
@@ -9839,7 +9867,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description [0: Default, 1: Enhancer, 2: Translation, 3: FileProcessor] */
+                /** @description [0: Default, 1: Enhancer, 2: Translation, 3: FileProcessor, 4: PostParser] */
                 feature: components["schemas"]["Bakabase.Modules.AI.Models.Domain.AiFeature"];
             };
             cookie?: never;
@@ -9871,7 +9899,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description [0: Default, 1: Enhancer, 2: Translation, 3: FileProcessor] */
+                /** @description [0: Default, 1: Enhancer, 2: Translation, 3: FileProcessor, 4: PostParser] */
                 feature: components["schemas"]["Bakabase.Modules.AI.Models.Domain.AiFeature"];
             };
             cookie?: never;
@@ -17319,6 +17347,28 @@ export interface operations {
             };
         };
     };
+    GetPostParseTargets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParseTarget]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParseTarget]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParseTarget]"];
+                };
+            };
+        };
+    };
     GetAllPostParserTasks: {
         parameters: {
             query?: never;
@@ -17372,18 +17422,10 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json-patch+json": {
-                    [key: string]: string[];
-                };
-                "application/json": {
-                    [key: string]: string[];
-                };
-                "text/json": {
-                    [key: string]: string[];
-                };
-                "application/*+json": {
-                    [key: string]: string[];
-                };
+                "application/json-patch+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.PostParser.Controllers.AddPostParserTasksInput"];
+                "application/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.PostParser.Controllers.AddPostParserTasksInput"];
+                "text/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.PostParser.Controllers.AddPostParserTasksInput"];
+                "application/*+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.PostParser.Controllers.AddPostParserTasksInput"];
             };
         };
         responses: {
@@ -19214,10 +19256,7 @@ export interface operations {
     };
     InstallTampermonkeyScript: {
         parameters: {
-            query?: {
-                /** @description [1: SoulPlus, 2: Bakabase] */
-                script?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Tampermonkey.Models.Constants.TampermonkeyScript"];
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;
@@ -19241,10 +19280,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                /** @description [1: SoulPlus, 2: Bakabase] */
-                script: components["schemas"]["Bakabase.InsideWorld.Business.Components.Tampermonkey.Models.Constants.TampermonkeyScript"];
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;

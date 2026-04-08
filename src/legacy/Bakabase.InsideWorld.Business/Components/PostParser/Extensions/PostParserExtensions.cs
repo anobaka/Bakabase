@@ -1,10 +1,12 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using Bakabase.InsideWorld.Business.Components.PostParser.Fetchers;
+using Bakabase.InsideWorld.Business.Components.PostParser.Handlers;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Db;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain;
-using Bakabase.InsideWorld.Business.Components.PostParser.Parsers;
+using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Components.PostParser.Services;
 using Bootstrap.Components.Orm;
 using Bootstrap.Extensions;
@@ -25,13 +27,23 @@ public static class PostParserExtensions
         services.AddSingleton<PostParserTaskTrigger>();
 
         var currentAssemblyTypes = Assembly.GetExecutingAssembly().GetTypes();
-        var dtp = currentAssemblyTypes.Where(s =>
-                s.IsAssignableTo(SpecificTypeUtils<IPostParser>.Type) &&
+
+        var fetcherTypes = currentAssemblyTypes.Where(s =>
+                s.IsAssignableTo(SpecificTypeUtils<IPostContentFetcher>.Type) &&
                 s is {IsPublic: true, IsAbstract: false})
             .ToList();
-        foreach (var et in dtp)
+        foreach (var ft in fetcherTypes)
         {
-            services.AddScoped(SpecificTypeUtils<IPostParser>.Type, et);
+            services.AddScoped(SpecificTypeUtils<IPostContentFetcher>.Type, ft);
+        }
+
+        var handlerTypes = currentAssemblyTypes.Where(s =>
+                s.IsAssignableTo(SpecificTypeUtils<IPostParseTargetHandler>.Type) &&
+                s is {IsPublic: true, IsAbstract: false})
+            .ToList();
+        foreach (var ht in handlerTypes)
+        {
+            services.AddScoped(SpecificTypeUtils<IPostParseTargetHandler>.Type, ht);
         }
 
         return services;
@@ -51,9 +63,8 @@ public static class PostParserExtensions
             Source = task.Source,
             Link = task.Link,
             Title = task.Title,
-            ParsedAt = task.ParsedAt,
-            Items = task.Items != null ? JsonConvert.SerializeObject(task.Items) : null,
-            Error = task.Error
+            Targets = task.Targets.Count > 0 ? JsonConvert.SerializeObject(task.Targets) : null,
+            Results = task.Results != null ? JsonConvert.SerializeObject(task.Results) : null,
         };
     }
 
@@ -65,11 +76,12 @@ public static class PostParserExtensions
             Source = dbModel.Source,
             Link = dbModel.Link,
             Title = dbModel.Title,
-            ParsedAt = dbModel.ParsedAt,
-            Items = dbModel.Items != null
-                ? JsonConvert.DeserializeObject<List<PostParserTask.Item>>(dbModel.Items)
+            Targets = dbModel.Targets != null
+                ? JsonConvert.DeserializeObject<List<PostParseTarget>>(dbModel.Targets)!
+                : [],
+            Results = dbModel.Results != null
+                ? JsonConvert.DeserializeObject<Dictionary<PostParseTarget, PostParseTargetResult>>(dbModel.Results)
                 : null,
-            Error = dbModel.Error
         };
     }
 }

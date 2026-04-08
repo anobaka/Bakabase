@@ -6,11 +6,7 @@
 		<Nullable>enable</Nullable>
 	</PropertyGroup>
 
-	<ItemGroup>
-	  <None Remove="Components\Tampermonkey\Scripts\bakabase.tpl.js" />
-	</ItemGroup>
-
-	<ItemGroup>
+<ItemGroup>
 		<ProjectReference Include="..\..\miscellaneous\Bakabase.Prefabs\Bakabase.Prefabs.csproj" />
 		<ProjectReference Include="..\..\modules\Bakabase.Modules.AI\Bakabase.Modules.AI.csproj" />
 		<ProjectReference Include="..\..\modules\Bakabase.Modules.Alias\Bakabase.Modules.Alias.csproj" />
@@ -83,15 +79,8 @@
 	<ItemGroup>
 	  <Folder Include="Components\Downloader\Resources\" />
 	  <Folder Include="Components\PostParser\Models\Domain\Constants\" />
-	  <Folder Include="Components\Tampermonkey\Models\Constants\" />
 	  <Folder Include="Components\ThirdParty\" />
 	</ItemGroup>
 
-	<ItemGroup>
-		<Content Include="Components/Tampermonkey/Scripts/soulplus.tpl.js" CopyToOutputDirectory="PreserveNewest" />
-		<Content Include="Components\Tampermonkey\Scripts\bakabase.tpl.js">
-		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-	</ItemGroup>
 
 </Project>

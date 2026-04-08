@@ -1,6 +1,6 @@
 "use client";
 
-import type { EnhancerTargetFullOptions } from "@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/models";
+import type { EnhancerTargetFullOptions } from "@/components/EnhancerSelectorV2/models";
 import type { CoverSelectOrder } from "@/sdk/constants";
 
 import { useEffect, useState } from "react";
@@ -22,12 +22,7 @@ type Props = {
   onChange?: (options: Partial<EnhancerTargetFullOptions>) => void;
   isDisabled?: boolean;
 };
-const TargetOptions = ({
-  options: propsOptions,
-  optionsItems,
-  onChange,
-  isDisabled,
-}: Props) => {
+const TargetOptions = ({ options: propsOptions, optionsItems, onChange, isDisabled }: Props) => {
   const { t } = useTranslation();
   const [options, setOptions] = useState<Options>(propsOptions ?? {});
 

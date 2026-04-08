@@ -1,5 +1,7 @@
 "use client";
 
+import type { EnhancerTranslationOptions } from "@/components/EnhancerSelectorV2/models";
+
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -7,7 +9,6 @@ import { Switch } from "@/components/bakaui";
 import LanguageDropdown from "@/components/LanguageDropdown";
 import BApi from "@/sdk/BApi";
 import { AiFeature } from "@/sdk/constants";
-import type { EnhancerTranslationOptions } from "@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/models";
 
 type Props = {
   value?: EnhancerTranslationOptions;
@@ -21,8 +22,10 @@ const TranslationOptionsSection = ({ value, onChange }: Props) => {
   const checkTranslationConfig = useCallback(async () => {
     try {
       const r = await BApi.ai.getAiFeatureConfig(AiFeature.Translation);
+
       if (!r.code) {
         const cfg = r.data;
+
         // Translation is configured if there's a config that either has its own provider
         // or uses default (which means default must be configured)
         if (cfg && cfg.providerConfigId) {
@@ -30,10 +33,12 @@ const TranslationOptionsSection = ({ value, onChange }: Props) => {
         } else if (cfg && cfg.useDefault) {
           // Check default config
           const dr = await BApi.ai.getAiFeatureConfig(AiFeature.Default);
+
           setTranslationConfigured(!!(dr.data && dr.data.providerConfigId));
         } else {
           // No config at all - check if default has config
           const dr = await BApi.ai.getAiFeatureConfig(AiFeature.Default);
+
           setTranslationConfigured(!!(dr.data && dr.data.providerConfigId));
         }
       }
@@ -53,16 +58,14 @@ const TranslationOptionsSection = ({ value, onChange }: Props) => {
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
         <div className="w-[300px]">
-          <div className="text-small">
-            {t<string>("enhancer.options.translation.label")}
-          </div>
+          <div className="text-small">{t<string>("enhancer.options.translation.label")}</div>
           <div className="text-xs text-default-400">
             {t<string>("enhancer.options.translation.description")}
           </div>
         </div>
         <Switch
-          isSelected={enabled}
           isDisabled={isDisabled}
+          isSelected={enabled}
           size="sm"
           onValueChange={(v) => {
             onChange({ ...value, enabled: v });
@@ -76,9 +79,9 @@ const TranslationOptionsSection = ({ value, onChange }: Props) => {
       )}
       {enabled && !isDisabled && (
         <LanguageDropdown
+          className="max-w-[200px]"
           label={t<string>("enhancer.options.translation.targetLanguage.label")}
           size="sm"
-          className="max-w-[200px]"
           value={value?.targetLanguage}
           onValueChange={(v) => {
             onChange({ ...value, enabled: true, targetLanguage: v });

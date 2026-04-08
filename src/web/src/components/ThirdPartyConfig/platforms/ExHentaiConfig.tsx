@@ -2,17 +2,17 @@
 
 import { useEffect, useMemo, useRef, useState, type FC } from "react";
 import { useTranslation } from "react-i18next";
-import { GrInstallOption } from "react-icons/gr";
 import { Button, Textarea } from "@heroui/react";
 
-import { Alert, Chip, NumberInput, toast } from "@/components/bakaui";
+import { Chip, NumberInput, toast } from "@/components/bakaui";
 import { FileSystemSelectorButton } from "@/components/FileSystemSelector";
 import BApi from "@/sdk/BApi";
 import { useExHentaiOptionsStore } from "@/stores/options";
-import { CookieValidatorTarget, ResourceSource, TampermonkeyScript } from "@/sdk/constants";
+import { CookieValidatorTarget, ResourceSource } from "@/sdk/constants";
 import AccountsPanel, { type AccountField } from "../base/AccountsPanel";
 import ConfigurableThirdPartyPanel, { type ConfigFieldTab } from "../base/ConfigurableThirdPartyPanel";
 import MetadataMappingPanel from "../base/MetadataMappingPanel";
+import TampermonkeyInstallButton from "../base/TampermonkeyInstallButton";
 import AutoSyncPanel from "../base/AutoSyncPanel";
 import ThirdPartyConfigModal from "../base/ThirdPartyConfigModal";
 
@@ -205,25 +205,9 @@ export const ExHentaiConfigPanel: FC<ExHentaiConfigPanelProps> = ({
         key: "integration",
         title: t("thirdPartyIntegration.label.tampermonkeyScript"),
         content: (
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Button
-                color="primary"
-                size="sm"
-                variant="light"
-                onPress={() => BApi.tampermonkey.installTampermonkeyScript({ script: TampermonkeyScript.Bakabase })}
-              >
-                <GrInstallOption className="text-base" />
-                {t("thirdPartyIntegration.action.oneClickInstall")}
-              </Button>
-            </div>
-            <Alert
-              color="default"
-              variant="flat"
-              title={t("thirdPartyIntegration.tip.scriptModifies")}
-              description={<div>1. {t("thirdPartyIntegration.tip.exHentaiClick")}</div>}
-            />
-          </div>
+          <TampermonkeyInstallButton
+            descriptions={[t("thirdPartyIntegration.tip.exHentaiClick")]}
+          />
         ),
       },
     ],

@@ -4,15 +4,15 @@ import type { DestroyableProps } from "@/components/bakaui/types";
 
 import { useTranslation } from "react-i18next";
 
-import { Modal, NumberInput, Tab, Tabs, Textarea } from "@/components/bakaui";
-import { useSoulPlusOptionsStore } from "@/stores/options";
-import BApi from "@/sdk/BApi";
-import { EditableValue } from "@/components/EditableValue";
+import { Modal, Tab, Tabs } from "@/components/bakaui";
+import { AiFeature } from "@/sdk/constants";
+import { SoulPlusConfigPanel, SoulPlusConfigField } from "@/components/ThirdPartyConfig/platforms/SoulPlusConfig";
+import AiProviderPanel from "@/components/AiProviderPanel";
+import AiFeaturePanel from "@/components/AiFeaturePanel";
 
 type Props = DestroyableProps;
 const ConfigurationModal = (props: Props) => {
   const { t } = useTranslation();
-  const soulPlusOptions = useSoulPlusOptionsStore((state) => state.data);
 
   return (
     <Modal
@@ -23,47 +23,15 @@ const ConfigurationModal = (props: Props) => {
       size={"xl"}
       onDestroyed={props.onDestroyed}
     >
-      <Tabs isVertical aria-label="Options">
-        <Tab key="soulplus" title={t<string>("SoulPlus")}>
-          <div className={"flex flex-col gap-2"}>
-            <EditableValue
-              Editor={Textarea}
-              Viewer={Textarea}
-              description={t<string>(
-                "Cookie is used to access SoulPlus posts.",
-              )}
-              label={t<string>("Cookie")}
-              value={soulPlusOptions.cookie}
-              onSubmit={async (v) => {
-                await BApi.options.patchSoulPlusOptions({
-                  cookie: v,
-                });
-              }}
-            />
-            <EditableValue
-              Editor={NumberInput}
-              Viewer={NumberInput}
-              description={t<string>(
-                "Items priced below this value will be bought automatically.",
-              )}
-              editorProps={{
-                min: 0,
-                formatOptions: { useGrouping: false },
-                hideStepper: true,
-              }}
-              label={t<string>("Auto buy threshold")}
-              value={soulPlusOptions.autoBuyThreshold}
-              viewerProps={{
-                formatOptions: { useGrouping: false },
-                hideStepper: true,
-              }}
-              onSubmit={async (v) => {
-                await BApi.options.patchSoulPlusOptions({
-                  autoBuyThreshold: v,
-                });
-              }}
-            />
+      <Tabs isVertical aria-label="Options" classNames={{ panel: "flex-1 w-0" }}>
+        <Tab key="ai" title={t<string>("postParser.config.ai")}>
+          <div className="space-y-4">
+            <AiProviderPanel />
+            <AiFeaturePanel features={[AiFeature.Default, AiFeature.PostParser]} />
           </div>
+        </Tab>
+        <Tab key="soulplus" title="SoulPlus">
+          <SoulPlusConfigPanel fields={[SoulPlusConfigField.Accounts, SoulPlusConfigField.Other]} />
         </Tab>
       </Tabs>
     </Modal>

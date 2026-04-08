@@ -1,10 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants;
-using Bakabase.InsideWorld.Models.Constants;
 using Bootstrap.Components.Tasks;
 
 namespace Bakabase.InsideWorld.Business.Components.PostParser.Services;
@@ -12,7 +11,7 @@ namespace Bakabase.InsideWorld.Business.Components.PostParser.Services;
 public interface IPostParserTaskService
 {
     Task<List<PostParserTask>> GetAll();
-    Task AddRange(Dictionary<PostParserSource, List<string>> sourceLinksMap);
+    Task AddRange(Dictionary<PostParserSource, List<string>> sourceLinksMap, List<PostParseTarget> targets);
     Task Delete(int id);
     Task DeleteAll();
     Task Put(int id, PostParserTask pdt);

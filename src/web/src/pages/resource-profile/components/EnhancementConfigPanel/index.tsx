@@ -1,7 +1,9 @@
 "use client";
 
-import type { EnhancerDescriptor } from "@/components/EnhancerSelectorV2/models";
-import type { EnhancerFullOptions } from "@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/models";
+import type {
+  EnhancerDescriptor,
+  EnhancerFullOptions,
+} from "@/components/EnhancerSelectorV2/models";
 import type { DestroyableProps } from "@/components/bakaui/types";
 import type { BakabaseAbstractionsModelsDomainEnhancerFullOptions } from "@/sdk/Api";
 import type { PropertyRow, SourceState } from "./utils";

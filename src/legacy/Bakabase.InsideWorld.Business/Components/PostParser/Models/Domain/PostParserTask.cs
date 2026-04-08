@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants;
 
@@ -11,15 +11,13 @@ public record PostParserTask
     public string Link { get; set; } = null!;
     public string? Title { get; set; }
     public string? Content { get; set; }
-    public DateTime? ParsedAt { get; set; }
-    public List<Item>? Items { get; set; }
-    public string? Error { get; set; }
+    public List<PostParseTarget> Targets { get; set; } = [];
+    public Dictionary<PostParseTarget, PostParseTargetResult>? Results { get; set; }
+}
 
-    public record Item
-    {
-        public string Title { get; set; } = null!;
-        public string? Link { get; set; }
-        public string? AccessCode { get; set; }
-        public string? DecompressionPassword { get; set; }
-    }
+public record PostParseTargetResult
+{
+    public object? Data { get; set; }
+    public DateTime? ParsedAt { get; set; }
+    public string? Error { get; set; }
 }

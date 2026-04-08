@@ -2,17 +2,16 @@
 
 import { useEffect, useMemo, useState, type FC } from "react";
 import { useTranslation } from "react-i18next";
-import { GrInstallOption } from "react-icons/gr";
-import { Alert, Button, Input } from "@heroui/react";
+import { Button, Input } from "@heroui/react";
 
 import { toast } from "@/components/bakaui";
-import BApi from "@/sdk/BApi";
-import { CookieValidatorTarget, TampermonkeyScript } from "@/sdk/constants";
+import { CookieValidatorTarget } from "@/sdk/constants";
 import { useSoulPlusOptionsStore } from "@/stores/options";
 
 import AccountsPanel, { type AccountField } from "../base/AccountsPanel";
 import ConfigurableThirdPartyPanel, { type ConfigFieldTab } from "../base/ConfigurableThirdPartyPanel";
 import ThirdPartyConfigModal from "../base/ThirdPartyConfigModal";
+import TampermonkeyInstallButton from "../base/TampermonkeyInstallButton";
 
 export enum SoulPlusConfigField {
   Accounts = "accounts",
@@ -91,25 +90,9 @@ export const SoulPlusConfigPanel: FC<SoulPlusConfigPanelProps> = ({ fields = "al
         key: "integration",
         title: t("thirdPartyIntegration.label.tampermonkeyScript"),
         content: (
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Button
-                color="primary"
-                size="sm"
-                variant="light"
-                onPress={() => BApi.tampermonkey.installTampermonkeyScript({ script: TampermonkeyScript.SoulPlus })}
-              >
-                <GrInstallOption className="text-base" />
-                {t<string>("thirdPartyIntegration.action.oneClickInstall")}
-              </Button>
-            </div>
-            <Alert
-              color="default"
-              variant="flat"
-              title={t<string>("thirdPartyIntegration.tip.scriptModifies")}
-              description={<div>1. {t<string>("thirdPartyIntegration.tip.soulPlusClick")}</div>}
-            />
-          </div>
+          <TampermonkeyInstallButton
+            descriptions={[t<string>("thirdPartyIntegration.tip.soulPlusClick")]}
+          />
         ),
       },
     ],

@@ -115,6 +115,7 @@
   "configuration.ai.feature.Enhancer": "增强器",
   "configuration.ai.feature.Translation": "翻译",
   "configuration.ai.feature.FileProcessor": "文件处理器",
+  "configuration.ai.feature.PostParser": "帖子解析",
   "configuration.ai.feature.provider": "提供商",
   "configuration.ai.feature.model": "模型",
   "configuration.ai.feature.temperature": "Temperature",

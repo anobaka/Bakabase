@@ -107,6 +107,36 @@ jobs:
         with:
           name: fe
           path: src/web/dist/*
+
+  build-tampermonkey:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install dependencies
+        working-directory: src/scripts/baka-monkey
+        run: pnpm install --frozen-lockfile
+
+      - name: Build tampermonkey script
+        working-directory: src/scripts/baka-monkey
+        run: pnpm build
+
+      - name: Upload tampermonkey artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tampermonkey
+          path: src/scripts/baka-monkey/dist/bakabase.user.js
         
   build:
     runs-on: ${{ matrix.os }}
@@ -223,6 +253,30 @@ jobs:
       - name: Upload zip to OSS
         run: |
           ./ossutil64 cp bakabase.zip oss://anobaka-public/app/bakabase/inside-world/${{ needs.prepare.outputs.version }}/installer/win-x64/bakabase.zip
+
+  deploy-tampermonkey:
+    runs-on: ubuntu-latest
+    needs: [ build-tampermonkey ]
+    steps:
+      - name: Download tampermonkey artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tampermonkey
+          path: .
+
+      - name: Install ossutil
+        run: |
+          wget -O ossutil64 https://gosspublic.alicdn.com/ossutil/1.7.16/ossutil64
+          chmod +x ossutil64
+
+      - name: Upload tampermonkey script to OSS
+        env:
+          OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
+          OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+          OSS_ENDPOINT: http://oss-accelerate.aliyuncs.com
+        run: |
+          ./ossutil64 config -e $OSS_ENDPOINT -i $OSS_ACCESS_KEY_ID -k $OSS_ACCESS_KEY_SECRET
+          ./ossutil64 cp -f bakabase.user.js oss://anobaka-public/app/bakabase/inside-world/scripts/bakabase.user.js
 
   deploy-docker:
     runs-on: ubuntu-latest

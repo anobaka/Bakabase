@@ -1,42 +1,48 @@
-﻿using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Reflection;
+using System.Diagnostics;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Bakabase.Infrastructures.Components.Gui;
-using Bakabase.InsideWorld.Business.Components.Tampermonkey.Models.Constants;
 using AppContext = Bakabase.Infrastructures.Components.App.AppContext;
 
 namespace Bakabase.InsideWorld.Business.Components.Tampermonkey;
 
-public class TampermonkeyService(IGuiAdapter guiAdapter, AppContext appContext)
+public class TampermonkeyService(IGuiAdapter guiAdapter, AppContext appContext, IHttpClientFactory httpClientFactory)
 {
-    /// <summary>
-    ///     Tampermonkey does not handle url encoding properly, so do not encode jsUrl in most cases.
-    /// </summary>
     private const string InstallScriptUrlTemplate = "https://www.tampermonkey.net/script_installation.php#url={jsUrl}";
+    public const string ScriptCdnUrl = "https://cdn-public.anobaka.com/app/bakabase/inside-world/scripts/bakabase.user.js";
 
-    private static readonly string ScriptPath =
-        Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!, "Components", "Tampermonkey",
-            "Scripts");
-
-    private static async Task<string> GetScriptTemplate(TampermonkeyScript script)
+    /// <summary>
+    /// Opens the Tampermonkey install dialog pointing to the local API endpoint,
+    /// which serves the script with the current API endpoint pre-filled.
+    /// </summary>
+    public Task Install()
     {
-        return await File.ReadAllTextAsync(Path.Combine(ScriptPath, $"{script.ToString().ToLower()}.tpl.js"));
-    }
-
-    public async Task Install(TampermonkeyScript script)
-    {
-        var serverAddress = $"{appContext.ApiEndpoint}";
-        var jsUrl = $"{serverAddress}/tampermonkey/script/{(int) script}.user.js";
+        var jsUrl = $"{appContext.ApiEndpoint}/tampermonkey/script/bakabase.user.js";
         var installUrl = InstallScriptUrlTemplate.Replace("{jsUrl}", jsUrl);
-        Process.Start(new ProcessStartInfo(installUrl) {UseShellExecute = true});
+        Process.Start(new ProcessStartInfo(installUrl) { UseShellExecute = true });
+        return Task.CompletedTask;
     }
 
-    public async Task<string> GetScript(TampermonkeyScript script)
+    /// <summary>
+    /// Fetches the script from CDN and replaces the default API URL with the
+    /// current endpoint. The script's @updateURL/@downloadURL still point to CDN,
+    /// so Tampermonkey auto-updates will work. The injected endpoint is auto-persisted
+    /// via GM_setValue on first use, surviving future CDN updates.
+    /// </summary>
+    public async Task<string?> GetScript()
     {
-        var template = await GetScriptTemplate(script);
+        using var client = httpClientFactory.CreateClient();
+        string template;
+        try
+        {
+            template = await client.GetStringAsync(ScriptCdnUrl);
+        }
+        catch
+        {
+            return null;
+        }
+
         var serverAddress = $"{appContext.ApiEndpoint}";
-        return template.Replace("{appEndpoint}", serverAddress);
+        return template.Replace("const DEFAULT_API_URL = '';", $"const DEFAULT_API_URL = '{serverAddress}';");
     }
 }
