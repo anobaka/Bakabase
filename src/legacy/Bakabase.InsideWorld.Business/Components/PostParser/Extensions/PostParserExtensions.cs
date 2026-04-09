@@ -65,6 +65,7 @@ public static class PostParserExtensions
             Title = task.Title,
             Targets = task.Targets.Count > 0 ? JsonConvert.SerializeObject(task.Targets) : null,
             Results = task.Results != null ? JsonConvert.SerializeObject(task.Results) : null,
+            IsDeleted = task.IsDeleted,
         };
     }
 
@@ -82,6 +83,7 @@ public static class PostParserExtensions
             Results = dbModel.Results != null
                 ? JsonConvert.DeserializeObject<Dictionary<PostParseTarget, PostParseTargetResult>>(dbModel.Results)
                 : null,
+            IsDeleted = dbModel.IsDeleted,
         };
     }
 }

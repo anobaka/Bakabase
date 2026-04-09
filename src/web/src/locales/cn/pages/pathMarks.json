@@ -49,8 +49,6 @@
   "pathMarks.action.pasteMarksWithExisting": "粘贴 {{count}} 个标记（{{existing}} 个已存在）",
 
   "pathMarks.checkbox.alsoDeleteChildMarks": "同时从 {{pathCount}} 个子路径删除 {{count}} 个标记",
-  "pathMarks.checkbox.cleanupEffects": "清除标记产生的影响",
-  "pathMarks.tip.cleanupEffectsDescription": "勾选后，删除资源标记会同时删除其创建的资源（如果该资源未被其他资源标记覆盖），删除属性标记会删除其设置的属性值，删除媒体库标记会解除其建立的媒体库关联。不勾选则仅删除标记本身，已生成的资源、属性值和媒体库关联保持不变。",
   "pathMarks.checkbox.includeChildPaths": "包含 {{count}} 个带有标记的子路径",
   "pathMarks.checkbox.childPathsAvailableForTransfer": "+ {{count}} 个带有标记的子路径也可转移",
 

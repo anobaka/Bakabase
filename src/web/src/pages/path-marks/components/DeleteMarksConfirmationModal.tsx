@@ -22,7 +22,7 @@ interface DeleteMarksConfirmationModalProps extends DestroyableProps {
   marks: BakabaseAbstractionsModelsDomainPathMark[];
   /** Child paths that also have marks */
   childPaths?: ChildPathInfo[];
-  onConfirm: (includeChildPaths: boolean, cleanupEffects: boolean) => void;
+  onConfirm: (includeChildPaths: boolean) => void;
 }
 
 const DeleteMarksConfirmationModal = ({
@@ -35,7 +35,6 @@ const DeleteMarksConfirmationModal = ({
   const { t } = useTranslation();
   // Default unchecked for delete operation
   const [includeChildPaths, setIncludeChildPaths] = useState(false);
-  const [cleanupEffects, setCleanupEffects] = useState(false);
 
   const totalMarksCount = useMemo(() => {
     let count = marks.length;
@@ -50,9 +49,9 @@ const DeleteMarksConfirmationModal = ({
   }, [childPaths]);
 
   const handleConfirm = useCallback(() => {
-    onConfirm(includeChildPaths, cleanupEffects);
+    onConfirm(includeChildPaths);
     onDestroyed?.();
-  }, [onConfirm, includeChildPaths, cleanupEffects, onDestroyed]);
+  }, [onConfirm, includeChildPaths, onDestroyed]);
 
   return (
     <Modal
@@ -138,21 +137,6 @@ const DeleteMarksConfirmationModal = ({
             )}
           </div>
         )}
-
-        {/* Cleanup effects option */}
-        <div className="border border-warning-200 rounded-lg p-3 bg-warning-50/50">
-          <Checkbox
-            isSelected={cleanupEffects}
-            onValueChange={setCleanupEffects}
-          >
-            <span className="text-sm font-medium">
-              {t("pathMarks.checkbox.cleanupEffects")}
-            </span>
-          </Checkbox>
-          <p className="text-xs text-default-500 mt-1 ml-7">
-            {t("pathMarks.tip.cleanupEffectsDescription")}
-          </p>
-        </div>
       </div>
     </Modal>
   );

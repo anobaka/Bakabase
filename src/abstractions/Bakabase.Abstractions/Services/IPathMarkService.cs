@@ -64,16 +64,6 @@ public interface IPathMarkService
     Task SoftDeleteByPath(string path);
 
     /// <summary>
-    /// Hard delete a path mark without cleaning up effects (resources, properties, mappings remain)
-    /// </summary>
-    Task HardDeleteWithoutCleanup(int id);
-
-    /// <summary>
-    /// Hard delete all marks for a path without cleaning up effects
-    /// </summary>
-    Task HardDeleteByPathWithoutCleanup(string path);
-
-    /// <summary>
     /// Hard delete a path mark (remove from database)
     /// </summary>
     Task HardDelete(int id);

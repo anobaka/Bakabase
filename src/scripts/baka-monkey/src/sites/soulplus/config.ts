@@ -1,0 +1,76 @@
+import type { SiteConfig } from '../../types';
+import { extractPostUrl, soulplusParseTask } from './adapters';
+
+function isListModeTr(el: HTMLElement): boolean {
+  return el.tagName === 'TR';
+}
+
+export const soulplusConfig: SiteConfig = {
+  key: 'soulplus',
+  domains: ['north-plus.net'],
+
+  extractFilter: () => null,
+
+  findContents: (doc) => {
+    // Image wall mode
+    const wallItems = Array.from(doc.querySelectorAll<HTMLElement>('#thread_img .inner'));
+    if (wallItems.length > 0) return wallItems;
+
+    // List mode: select tr.tr3.t_one that contain a read.php link (actual posts, not announcements/ads)
+    const listRows = Array.from(
+      doc.querySelectorAll<HTMLElement>('tr.tr3.t_one'),
+    ).filter((tr) => {
+      const link = tr.querySelector<HTMLAnchorElement>('td h3 > a[href*="read.php"]');
+      return link != null;
+    });
+    return listRows;
+  },
+
+  extractContentInfo: (element) => {
+    const url = extractPostUrl(element);
+    if (!url) return { id: null, updateTime: null };
+    return { id: url, updateTime: null };
+  },
+
+  onMarkViewed: (markVisibleFn) => {
+    let markTimeout: ReturnType<typeof setTimeout>;
+    window.addEventListener('scroll', () => {
+      clearTimeout(markTimeout);
+      markTimeout = setTimeout(markVisibleFn, 500);
+    });
+    setTimeout(markVisibleFn, 1000);
+  },
+
+  createContainer: (element) => {
+    const container = document.createElement('div');
+    container.className = 'bakabase-react-root';
+
+    if (isListModeTr(element)) {
+      // List mode: insert inline after the h3 in the title td
+      container.style.cssText = 'display:inline;margin-left:8px;';
+      const h3 = element.querySelector('td h3');
+      if (h3) {
+        h3.parentElement!.insertBefore(container, h3.nextSibling);
+      } else {
+        element.appendChild(container);
+      }
+    } else {
+      // Image wall mode: position at bottom-right of the cover image container
+      container.style.cssText = 'position:absolute;bottom:4px;right:4px;z-index:98;';
+      const imgContainer = element.querySelector<HTMLElement>('.section-text div');
+      if (imgContainer) {
+        if (getComputedStyle(imgContainer).position === 'static') {
+          imgContainer.style.position = 'relative';
+        }
+        imgContainer.appendChild(container);
+      } else {
+        container.style.cssText = 'position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:98;';
+        element.appendChild(container);
+      }
+    }
+
+    return container;
+  },
+
+  parseTask: soulplusParseTask,
+};

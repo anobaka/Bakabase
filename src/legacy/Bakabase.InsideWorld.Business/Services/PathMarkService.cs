@@ -378,38 +378,6 @@ public class PathMarkService<TDbContext>(
         }
     }
 
-    public async Task HardDeleteWithoutCleanup(int id)
-    {
-        var dbModel = await orm.GetByKey(id);
-        if (dbModel != null)
-        {
-            // Clean up effect records only (not the actual resources/properties/mappings)
-            var effectService = serviceProvider.GetRequiredService<IPathMarkEffectService>();
-            await effectService.DeleteResourceEffectsByMarkId(id);
-            await effectService.DeletePropertyEffectsByMarkId(id);
-
-            await orm.RemoveByKey(id);
-        }
-    }
-
-    public async Task HardDeleteByPathWithoutCleanup(string path)
-    {
-        var normalizedPath = path.StandardizePath()!;
-        var marks = await orm.GetAll(m => m.Path == normalizedPath && !m.IsDeleted);
-
-        if (marks.Count > 0)
-        {
-            var effectService = serviceProvider.GetRequiredService<IPathMarkEffectService>();
-            foreach (var mark in marks)
-            {
-                await effectService.DeleteResourceEffectsByMarkId(mark.Id);
-                await effectService.DeletePropertyEffectsByMarkId(mark.Id);
-            }
-
-            await orm.RemoveRange(marks);
-        }
-    }
-
     public async Task HardDelete(int id)
     {
         await orm.RemoveByKey(id);
@@ -630,50 +598,6 @@ public class PathMarkService<TDbContext>(
             }
 
             results.Add(result);
-
-            // For MatchedAndSubdirectories: add a few subdirectory examples
-            if (applyScope == PathMarkApplyScope.MatchedAndSubdirectories && Directory.Exists(matchedPath))
-            {
-                try
-                {
-                    var subExamples = new List<string>();
-                    // Get up to 3 immediate subdirectories/files as examples
-                    subExamples.AddRange(Directory.GetDirectories(matchedPath).Take(2));
-                    subExamples.AddRange(Directory.GetFiles(matchedPath).Take(1));
-
-                    foreach (var subPath in subExamples.Take(3))
-                    {
-                        var standardizedSubPath = subPath.StandardizePath()!;
-                        var subSegments = standardizedSubPath.Split(
-                            new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
-                            StringSplitOptions.RemoveEmptyEntries);
-
-                        var subResult = new PathMarkPreviewResult
-                        {
-                            Path = standardizedSubPath,
-                            IsSubdirectoryExample = true
-                        };
-
-                        if (request.Type == PathMarkType.Resource)
-                        {
-                            (subResult.ResourceLayerIndex, subResult.ResourceSegmentName) = CalculateResourceLayerInfo(
-                                rootPath, standardizedSubPath, rootSegments, subSegments, matchMode, layer, regex);
-                        }
-                        else if (request.Type == PathMarkType.Property || request.Type == PathMarkType.MediaLibrary)
-                        {
-                            subResult.PropertyValue = CalculatePropertyValue(
-                                rootPath, standardizedSubPath, rootSegments, subSegments,
-                                valueType, fixedValue, valueLayer, valueRegex);
-                        }
-
-                        results.Add(subResult);
-                    }
-                }
-                catch
-                {
-                    // Ignore access errors for subdirectory examples
-                }
-            }
         }
 
         return results;

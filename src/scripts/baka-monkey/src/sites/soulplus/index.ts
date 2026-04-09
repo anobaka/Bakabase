@@ -1,0 +1,2 @@
+export { soulplusConfig } from './config';
+

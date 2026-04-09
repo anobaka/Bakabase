@@ -11,6 +11,13 @@ namespace Bakabase.Service.Controllers;
 [Route("~/[controller]")]
 public class TampermonkeyController(TampermonkeyService service) : ControllerBase
 {
+    [HttpGet("health")]
+    [SwaggerOperation(OperationId = "TampermonkeyHealth")]
+    public BaseResponse Health()
+    {
+        return BaseResponseBuilder.Ok;
+    }
+
     [HttpGet("install")]
     [SwaggerOperation(OperationId = "InstallTampermonkeyScript")]
     public async Task<BaseResponse> Install()

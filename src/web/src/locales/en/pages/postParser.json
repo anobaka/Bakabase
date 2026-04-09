@@ -25,5 +25,6 @@
   "postParser.action.export": "Export Excel",
   "postParser.action.deleteAll": "Delete all",
   "postParser.config.ai": "AI Configuration",
+  "postParser.label.deleted": "Deleted",
   "PostParseTarget.DownloadInfo": "Parse Download Info"
 }

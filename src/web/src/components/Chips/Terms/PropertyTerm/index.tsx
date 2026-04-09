@@ -22,12 +22,9 @@ export const PropertyDescription = () => {
   const { t } = useTranslation();
 
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-2">
       <p>{t("term.property.description")}</p>
-      <p className="text-default-500">{t("term.property.usage")}</p>
-      <p className="text-small text-warning-500 border-t border-default-200 pt-1.5">
-        {t("term.property.tip")}
-      </p>
+      <p>{t("term.property.usage")}</p>
     </div>
   );
 };

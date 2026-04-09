@@ -1,2 +1,14 @@
 @import "tailwindcss";
 @config "../tailwind.config.js";
+
+/* Zoom our containers so HeroUI's rem-based sizing looks consistent
+   across host pages with different <html> font-size values.
+   Icons (1em) will be slightly larger than ideal — acceptable tradeoff
+   for not modifying the host page's styles. */
+#bakabase-monkey-root,
+.bakabase-react-root {
+  zoom: calc(16 / var(--bk-html-fs, 16));
+  background: transparent !important;
+}
+
+

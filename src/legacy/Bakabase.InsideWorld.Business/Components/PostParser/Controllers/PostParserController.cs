@@ -20,6 +20,12 @@ public record AddPostParserTasksInput
     public List<PostParseTarget> Targets { get; set; } = [];
 }
 
+public record QueryPostParserTaskStatusesInput
+{
+    public PostParserSource Source { get; set; }
+    public List<string> Links { get; set; } = [];
+}
+
 [ApiController]
 [Route("~/post-parser")]
 public class PostParserController(
@@ -76,5 +82,13 @@ public class PostParserController(
     {
         await trigger.Start();
         return BaseResponseBuilder.Ok;
+    }
+
+    [HttpPost("task/statuses")]
+    [SwaggerOperation(OperationId = "GetPostParserTaskStatuses")]
+    public async Task<SingletonResponse<Dictionary<string, PostParserTaskStatus>>> GetTaskStatuses([FromBody] QueryPostParserTaskStatusesInput input)
+    {
+        var result = await service.GetStatusesByLinks(input.Source, input.Links);
+        return new SingletonResponse<Dictionary<string, PostParserTaskStatus>>(result);
     }
 }

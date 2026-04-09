@@ -19,7 +19,7 @@ import type { PendingSyncButtonRef } from "@/pages/path-mark-config/components/P
 import CopyMarksSidebar from "@/pages/path-mark-config/components/CopyMarksSidebar";
 import { PathMarkGuideModal, usePathMarkGuide } from "@/pages/path-mark-config/components/PathMarkGuide";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import { Button, toast, Modal, Spinner, Switch, Checkbox } from "@/components/bakaui";
+import { Button, toast, Modal, Spinner, Switch } from "@/components/bakaui";
 import BetaChip from "@/components/Chips/BetaChip";
 import BApi from "@/sdk/BApi";
 
@@ -85,35 +85,19 @@ const PathMarksPage = () => {
         return;
       }
 
-      const result = await new Promise<{ confirmed: boolean; cleanupEffects: boolean }>((resolve) => {
-        let cleanup = false;
+      const confirmed = await new Promise<boolean>((resolve) => {
         const modal = createPortal(Modal, {
           defaultVisible: true,
           title: t("pathMarks.confirm.deleteTitle"),
           children: (
-            <div className="flex flex-col gap-3">
-              <div>
-                <p>{t("pathMarks.confirm.deleteQuestion")}</p>
-                <p className="text-sm text-default-500 mt-2">
-                  {t("common.label.path")}: {path}
-                </p>
-                <p className="text-sm text-default-500">
-                  {t("common.label.priority")}: {mark.priority}
-                </p>
-              </div>
-              <div className="border border-warning-200 rounded-lg p-3 bg-warning-50/50">
-                <Checkbox
-                  defaultSelected={false}
-                  onValueChange={(v) => { cleanup = v; }}
-                >
-                  <span className="text-sm font-medium">
-                    {t("pathMarks.checkbox.cleanupEffects")}
-                  </span>
-                </Checkbox>
-                <p className="text-xs text-default-500 mt-1 ml-7">
-                  {t("pathMarks.tip.cleanupEffectsDescription")}
-                </p>
-              </div>
+            <div>
+              <p>{t("pathMarks.confirm.deleteQuestion")}</p>
+              <p className="text-sm text-default-500 mt-2">
+                {t("common.label.path")}: {path}
+              </p>
+              <p className="text-sm text-default-500">
+                {t("common.label.priority")}: {mark.priority}
+              </p>
             </div>
           ),
           footer: {
@@ -124,18 +108,18 @@ const PathMarksPage = () => {
             },
           },
           onOk: () => {
-            resolve({ confirmed: true, cleanupEffects: cleanup });
+            resolve(true);
             modal.destroy();
           },
           onDestroyed: () => {
-            resolve({ confirmed: false, cleanupEffects: false });
+            resolve(false);
           },
         });
       });
 
-      if (result.confirmed) {
+      if (confirmed) {
         try {
-          await BApi.pathMark.softDeletePathMark(markId, { cleanupEffects: result.cleanupEffects });
+          await BApi.pathMark.softDeletePathMark(markId);
           toast.success(t("pathMarks.success.markDeleted"));
           loadAllMarks();
           refreshPendingSyncCount();
@@ -192,12 +176,12 @@ const PathMarksPage = () => {
         path,
         marks,
         childPaths,
-        onConfirm: async (includeChildPaths: boolean, cleanupEffects: boolean) => {
+        onConfirm: async (includeChildPaths: boolean) => {
           try {
             // Delete main path marks
             for (const mark of marks) {
               if (mark.id) {
-                await BApi.pathMark.softDeletePathMark(mark.id, { cleanupEffects });
+                await BApi.pathMark.softDeletePathMark(mark.id);
               }
             }
 
@@ -206,7 +190,7 @@ const PathMarksPage = () => {
               for (const child of childPaths) {
                 for (const mark of child.marks) {
                   if (mark.id) {
-                    await BApi.pathMark.softDeletePathMark(mark.id, { cleanupEffects });
+                    await BApi.pathMark.softDeletePathMark(mark.id);
                   }
                 }
               }

@@ -413,8 +413,9 @@ https://xxxxxxx
           </TableHeader>
           <TableBody>
             {tasks.map((task) => {
+              const isDeleted = task.isDeleted === true;
               return (
-                <TableRow key={task.id}>
+                <TableRow key={task.id} className={isDeleted ? "opacity-50" : ""}>
                   <TableCell>{task.id}</TableCell>
                   <TableCell>
                     <div className={"flex flex-col gap-1"}>
@@ -422,7 +423,12 @@ https://xxxxxxx
                         <ThirdPartyIcon
                           thirdPartyId={ThirdPartyMap[task.source]}
                         />
-                        <div>{task.title || ""}</div>
+                        <div className={isDeleted ? "line-through" : ""}>{task.title || ""}</div>
+                        {isDeleted && (
+                          <Chip color={"default"} size={"sm"} variant={"flat"}>
+                            {t<string>("postParser.label.deleted")}
+                          </Chip>
+                        )}
                       </div>
                       <div>
                         <Button
@@ -454,17 +460,19 @@ https://xxxxxxx
                   </TableCell>
                   <TableCell>
                     <div className={"flex items-center gap-1"}>
-                      <Button
-                        isIconOnly
-                        color={"danger"}
-                        size={"sm"}
-                        variant={"light"}
-                        onPress={async () => {
-                          await BApi.postParser.deletePostParserTask(task.id);
-                        }}
-                      >
-                        <AiOutlineDelete className={"text-base"} />
-                      </Button>
+                      {!isDeleted && (
+                        <Button
+                          isIconOnly
+                          color={"danger"}
+                          size={"sm"}
+                          variant={"light"}
+                          onPress={async () => {
+                            await BApi.postParser.deletePostParserTask(task.id);
+                          }}
+                        >
+                          <AiOutlineDelete className={"text-base"} />
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>

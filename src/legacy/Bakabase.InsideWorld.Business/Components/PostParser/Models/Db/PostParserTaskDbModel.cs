@@ -10,4 +10,5 @@ public record PostParserTaskDbModel
     public string? Title { get; set; }
     public string? Targets { get; set; }
     public string? Results { get; set; }
+    public bool IsDeleted { get; set; }
 }

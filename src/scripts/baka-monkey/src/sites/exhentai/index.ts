@@ -1,0 +1,1 @@
+export { exhentaiConfig } from './config';

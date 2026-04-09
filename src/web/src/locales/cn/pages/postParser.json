@@ -25,5 +25,6 @@
   "postParser.action.export": "导出 Excel",
   "postParser.action.deleteAll": "删除全部",
   "postParser.config.ai": "AI 配置",
+  "postParser.label.deleted": "已删除",
   "PostParseTarget.DownloadInfo": "解析下载信息"
 }

@@ -14,15 +14,10 @@ type Props = {
   markType: PathMarkType;
   t: (key: string) => string;
   applyScope?: PathMarkApplyScope;
-  /** When true, show danger styling for results with missing property values */
-  highlightMissingValues?: boolean;
-  /** Property name to display for Property mark type */
-  propertyName?: string;
-  /** Media library name to display for MediaLibrary mark type (Fixed mode) */
-  mediaLibraryName?: string;
 };
 
-const PreviewResults = ({ loading, results, resultsByPath, isMultiplePaths, error, markType, t, applyScope, highlightMissingValues, propertyName, mediaLibraryName }: Props) => {
+const PreviewResults = ({ loading, results, resultsByPath, isMultiplePaths, error, markType, t, applyScope }: Props) => {
+  const showSubdirectoriesSuffix = applyScope === PathMarkApplyScope.MatchedAndSubdirectories;
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-sm text-default-500 py-2">
@@ -46,24 +41,31 @@ const PreviewResults = ({ loading, results, resultsByPath, isMultiplePaths, erro
     );
   }
 
+  const renderSubdirectoriesSuffix = () => {
+    if (!showSubdirectoriesSuffix) return null;
+    return (
+      <span className="text-primary-500 italic ml-1">
+        {t("pathMarkConfig.label.andAllSubdirectories")}
+      </span>
+    );
+  };
+
   const renderResult = (result: PathMarkPreviewResult, idx: number) => {
     const pathSegments = result.path.split(/[/\\]/).filter(Boolean);
     const separator = result.path.includes("/") ? "/" : "\\";
-    const isSub = result.isSubdirectoryExample;
 
     // For Resource type: highlight the resource layer in the path
     if (markType === PathMarkType.Resource && result.resourceLayerIndex !== null && result.resourceLayerIndex !== undefined) {
       return (
-        <div key={idx} className={`text-xs break-all ${isSub ? "ml-4 text-default-400 italic" : "text-default-600"}`}>
+        <div key={idx} className="text-xs text-default-600 break-all">
           <div className="flex items-center gap-2 flex-wrap">
-            {isSub && <span className="text-default-300">↳</span>}
             <span className="flex items-center gap-0.5 flex-wrap">
               {pathSegments.map((segment, segIdx) => {
                 const isResourceLayer = segIdx === result.resourceLayerIndex;
                 return (
                   <span key={segIdx} className="flex items-center gap-0.5">
                     {segIdx > 0 && <span className="text-default-400">{separator}</span>}
-                    {isResourceLayer && !isSub ? (
+                    {isResourceLayer ? (
                     <span className="flex items-center gap-1">
                       <Chip
                         size="sm"
@@ -81,70 +83,56 @@ const PreviewResults = ({ loading, results, resultsByPath, isMultiplePaths, erro
                   </span>
                 );
               })}
+              {renderSubdirectoriesSuffix()}
             </span>
           </div>
         </div>
       );
     }
 
-    // For Property type: show path, property name, and property value
+    // For Property type: show path and property value prominently
     if (markType === PathMarkType.Property) {
-      const hasValue = result.propertyValue !== null && result.propertyValue !== undefined && result.propertyValue !== "";
-      const showDanger = highlightMissingValues && !hasValue;
-      const hasProperty = !!propertyName;
-      const showPropertyDanger = highlightMissingValues && !hasProperty;
       return (
-        <div key={idx} className={`text-xs break-all ${isSub ? "ml-4 text-default-400 italic" : "text-default-600"}`}>
+        <div key={idx} className="text-xs text-default-600 break-all">
           <div className="flex items-center gap-2 flex-wrap">
-            {isSub && <span className="text-default-300">↳</span>}
             <span className="break-all">
               {result.path}
+              {renderSubdirectoriesSuffix()}
             </span>
-            {!isSub && showPropertyDanger ? (
-              <Chip size="sm" color="danger" variant="flat" className="flex-shrink-0">
-                <span className="font-semibold">{t("pathMarkConfig.label.targetProperty")}: {t("pathMarkConfig.status.notSet")}</span>
+            {result.propertyValue !== null && result.propertyValue !== undefined && (
+              <Chip
+                size="sm"
+                color="primary"
+                variant="flat"
+                className="flex-shrink-0"
+              >
+                <span className="font-semibold">{t("pathMarkConfig.label.propertyValue")}: <span className="font-bold">{result.propertyValue}</span></span>
               </Chip>
-            ) : !isSub && hasProperty ? (
-              <Chip size="sm" color="default" variant="flat" className="flex-shrink-0">
-                <span className="font-semibold">{propertyName}</span>
-              </Chip>
-            ) : null}
-            {hasValue ? (
-              <Chip size="sm" color={isSub ? "default" : "primary"} variant="flat" className="flex-shrink-0">
-                <span className="font-bold">{result.propertyValue}</span>
-              </Chip>
-            ) : !isSub && showDanger ? (
-              <Chip size="sm" color="danger" variant="flat" className="flex-shrink-0">
-                <span className="font-semibold">{t("pathMarkConfig.label.propertyValue")}: {t("pathMarkConfig.status.notSet")}</span>
-              </Chip>
-            ) : null}
+            )}
           </div>
         </div>
       );
     }
 
-    // For MediaLibrary type: show path and media library name
+    // For MediaLibrary type: show path and media library value
     if (markType === PathMarkType.MediaLibrary) {
-      // For Dynamic mode, propertyValue contains the extracted name; for Fixed mode, use resolved mediaLibraryName
-      const displayName = result.propertyValue || mediaLibraryName;
-      const hasValue = !!displayName;
-      const showDanger = highlightMissingValues && !hasValue;
       return (
-        <div key={idx} className={`text-xs break-all ${isSub ? "ml-4 text-default-400 italic" : "text-default-600"}`}>
+        <div key={idx} className="text-xs text-default-600 break-all">
           <div className="flex items-center gap-2 flex-wrap">
-            {isSub && <span className="text-default-300">↳</span>}
             <span className="break-all">
               {result.path}
+              {renderSubdirectoriesSuffix()}
             </span>
-            {hasValue ? (
-              <Chip size="sm" color={isSub ? "default" : "secondary"} variant="flat" className="flex-shrink-0">
-                <span className="font-semibold">{t("common.label.mediaLibrary")}: <span className="font-bold">{displayName}</span></span>
+            {result.propertyValue !== null && result.propertyValue !== undefined && (
+              <Chip
+                size="sm"
+                color="secondary"
+                variant="flat"
+                className="flex-shrink-0"
+              >
+                <span className="font-semibold">{t("common.label.mediaLibrary")}: <span className="font-bold">{result.propertyValue}</span></span>
               </Chip>
-            ) : !isSub && showDanger ? (
-              <Chip size="sm" color="danger" variant="flat" className="flex-shrink-0">
-                <span className="font-semibold">{t("common.label.mediaLibrary")}: {t("pathMarkConfig.status.notSet")}</span>
-              </Chip>
-            ) : null}
+            )}
           </div>
         </div>
       );
@@ -152,9 +140,11 @@ const PreviewResults = ({ loading, results, resultsByPath, isMultiplePaths, erro
 
     // Fallback: show path only
     return (
-      <div key={idx} className={`text-xs break-all ${isSub ? "ml-4 text-default-400 italic" : "text-default-600"}`}>
-        {isSub && <span className="text-default-300">↳ </span>}
-        <span>{result.path}</span>
+      <div key={idx} className="text-xs text-default-600 break-all">
+        <span>
+          {result.path}
+          {renderSubdirectoriesSuffix()}
+        </span>
       </div>
     );
   };

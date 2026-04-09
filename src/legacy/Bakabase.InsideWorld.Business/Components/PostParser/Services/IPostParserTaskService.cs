@@ -16,4 +16,5 @@ public interface IPostParserTaskService
     Task DeleteAll();
     Task Put(int id, PostParserTask pdt);
     Task ParseAll(Func<int, Task>? onProgress, Func<string, Task>? onProcessChange, PauseToken pt, CancellationToken ct);
+    Task<Dictionary<string, PostParserTaskStatus>> GetStatusesByLinks(PostParserSource source, List<string> links);
 }

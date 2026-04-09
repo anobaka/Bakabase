@@ -13,6 +13,7 @@ public record PostParserTask
     public string? Content { get; set; }
     public List<PostParseTarget> Targets { get; set; } = [];
     public Dictionary<PostParseTarget, PostParseTargetResult>? Results { get; set; }
+    public bool IsDeleted { get; set; }
 }
 
 public record PostParseTargetResult

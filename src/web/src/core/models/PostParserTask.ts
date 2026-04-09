@@ -14,4 +14,5 @@ export interface PostParserTask {
   content?: string;
   targets: PostParseTarget[];
   results?: Record<number, PostParseTargetResult>;
+  isDeleted?: boolean;
 }

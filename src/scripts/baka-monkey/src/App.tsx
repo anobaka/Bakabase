@@ -3,6 +3,10 @@ import { createPortal } from 'react-dom';
 import type { SiteConfig, ContentStatus } from './types';
 import { getApiBaseUrl, httpRequest } from './api';
 import { SettingsPanel } from './components/SettingsPanel';
+import { ParseTaskButton } from './actions/ParseTaskButton';
+import { DownloadTaskButton } from './actions/DownloadTaskButton';
+import { ContentTrackerBadge } from './actions/ContentTrackerBadge';
+import { startHeartbeat, isConnected, onConnectionChange } from './heartbeat';
 import { t } from './i18n';
 
 interface MarkerEntry {
@@ -31,11 +35,18 @@ function isElementInViewport(element: HTMLElement): boolean {
 
 export function App({ siteConfigs }: { siteConfigs: SiteConfig[] }) {
   const [markers, setMarkers] = useState<MarkerEntry[]>([]);
+  const [connected, setConnected] = useState(isConnected);
   const statusMapRef = useRef(new Map<string, ContentStatus>());
   const siteConfig = useMemo(() => {
     const hostname = window.location.hostname;
     return siteConfigs.find((c) => c.domains.some((d) => hostname.includes(d))) ?? null;
   }, [siteConfigs]);
+
+  // Start heartbeat and track connection state
+  useEffect(() => {
+    startHeartbeat();
+    return onConnectionChange(setConnected);
+  }, []);
 
   const scanAndRender = useCallback(() => {
     if (!siteConfig) return;
@@ -55,12 +66,7 @@ export function App({ siteConfigs }: { siteConfigs: SiteConfig[] }) {
       // Create or reuse a container for the React portal
       let container = element.querySelector<HTMLElement>('.bakabase-react-root');
       if (!container) {
-        container = document.createElement('div');
-        container.className = 'bakabase-react-root';
-        container.style.cssText = 'position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:98;';
-        // Allow interactive children to receive events
-        container.addEventListener('click', (e) => e.stopPropagation(), true);
-        element.appendChild(container);
+        container = siteConfig.createContainer(element);
       }
 
       const status = statusMapRef.current.get(info.id) ?? DEFAULT_STATUS;
@@ -197,11 +203,26 @@ export function App({ siteConfigs }: { siteConfigs: SiteConfig[] }) {
 
   return (
     <>
-      <SettingsPanel />
-      {siteConfig && markers.map((m) =>
+      <SettingsPanel siteKey={siteConfig?.key} connected={connected} />
+      {(connected || __DEV__) && siteConfig && markers.map((m) =>
         createPortal(
-          <div style={{ pointerEvents: 'auto' }}>
-            {siteConfig.renderMarker(m.element, m.status)}
+          <div style={{ pointerEvents: 'auto', display: 'inline-flex', gap: 4, alignItems: 'center' }}>
+            {/* Shared action buttons rendered from adapter declarations */}
+            <ContentTrackerBadge status={m.status} />
+            {siteConfig.parseTask && (
+              <ParseTaskButton
+                adapter={siteConfig.parseTask}
+                postUrl={siteConfig.parseTask.extractPostUrl(m.element)}
+              />
+            )}
+            {siteConfig.downloadTask && (
+              <DownloadTaskButton
+                adapter={siteConfig.downloadTask}
+                element={m.element}
+              />
+            )}
+            {/* Site-specific custom marker (overlays, etc.) */}
+            {siteConfig.renderMarker?.(m.element, m.status)}
           </div>,
           m.container,
         ),

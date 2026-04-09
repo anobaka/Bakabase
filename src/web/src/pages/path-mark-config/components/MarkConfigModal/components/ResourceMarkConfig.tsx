@@ -8,8 +8,6 @@ import { Select, NumberInput, Switch } from "@/components/bakaui";
 import { PathFilterFsType, pathFilterFsTypes, PathMarkType, PathMarkApplyScope } from "@/sdk/constants";
 import ExtensionGroupSelect from "@/components/ExtensionGroupSelect";
 import ExtensionsInput from "@/components/ExtensionsInput";
-import { useResourceOptionsStore } from "@/stores/options";
-import PathMarkSettingsButton from "../../PathMarkSettingsButton";
 
 type Props = {
   config: MarkConfig;
@@ -28,22 +26,12 @@ type Props = {
 };
 
 const ResourceMarkConfig = ({ config, updateConfig, t, priority, onPriorityChange, preview }: Props) => {
-  const keepResourcesOnPathChange = useResourceOptionsStore((state) => state.data?.keepResourcesOnPathChange ?? false);
-
   return (
     <>
       {/* Explanatory text */}
       <div className="bg-primary-50 text-primary-700 rounded p-2 text-xs">
         {t("pathMark.resource.explanation")}
       </div>
-
-      {/* Warning when keepResourcesOnPathChange is not enabled */}
-      {!keepResourcesOnPathChange && (
-        <div className="bg-warning-50 border border-warning-200 rounded p-2 text-xs text-warning-700 flex items-start gap-1.5">
-          <span className="flex-1">{t("pathMarkConfig.warning.resourceIdentityNotEnabled")}</span>
-          <PathMarkSettingsButton buttonVariant="light" buttonSize="sm" className="flex-shrink-0 -mt-1 -mr-1" />
-        </div>
-      )}
 
       <MatchModeSelector
         config={config}

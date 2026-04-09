@@ -43,20 +43,41 @@ public class PostParserTaskService<TDbContext>(
     public async Task AddRange(Dictionary<PostParserSource, List<string>> sourceLinksMap,
         List<PostParseTarget> targets)
     {
-        var tasks = new List<PostParserTaskDbModel>();
+        var allExisting = await orm.GetAll();
+        var newTasks = new List<PostParserTaskDbModel>();
+        var updatedTasks = new List<PostParserTaskDbModel>();
+
         foreach (var (source, links) in sourceLinksMap)
         {
-            tasks.AddRange(links.Select(link => new PostParserTaskDbModel
+            foreach (var link in links)
             {
-                Source = source,
-                Link = link,
-                Targets = Newtonsoft.Json.JsonConvert.SerializeObject(targets),
-            }));
+                var existing = allExisting.FirstOrDefault(t => t.Source == source && t.Link == link);
+                if (existing != null)
+                {
+                    // Reset existing task: clear results, undelete, update targets
+                    existing.Results = null;
+                    existing.IsDeleted = false;
+                    existing.Targets = Newtonsoft.Json.JsonConvert.SerializeObject(targets);
+                    updatedTasks.Add(existing);
+                }
+                else
+                {
+                    newTasks.Add(new PostParserTaskDbModel
+                    {
+                        Source = source,
+                        Link = link,
+                        Targets = Newtonsoft.Json.JsonConvert.SerializeObject(targets),
+                    });
+                }
+            }
         }
 
-        await orm.AddRange(tasks);
+        if (newTasks.Count > 0)
+            await orm.AddRange(newTasks);
+        if (updatedTasks.Count > 0)
+            await orm.UpdateRange(updatedTasks);
 
-        foreach (var task in tasks)
+        foreach (var task in newTasks.Concat(updatedTasks))
         {
             await uiHub.Clients.All.GetIncrementalData(nameof(PostParserTask), task.ToDomainModel());
         }
@@ -64,15 +85,68 @@ public class PostParserTaskService<TDbContext>(
 
     public async Task Delete(int id)
     {
-        await orm.RemoveByKey(id);
-        await uiHub.Clients.All.DeleteData(nameof(PostParserTask), id);
+        var task = await orm.GetByKey(id);
+        if (task == null) return;
+        task.IsDeleted = true;
+        await orm.Update(task);
+        await uiHub.Clients.All.GetIncrementalData(nameof(PostParserTask), task.ToDomainModel());
     }
 
     public async Task DeleteAll()
     {
         var data = await orm.GetAll();
-        await orm.RemoveRange(data);
-        await uiHub.Clients.All.DeleteAllData(nameof(PostParserTask));
+        foreach (var task in data)
+        {
+            task.IsDeleted = true;
+        }
+        await orm.UpdateRange(data);
+        foreach (var task in data)
+        {
+            await uiHub.Clients.All.GetIncrementalData(nameof(PostParserTask), task.ToDomainModel());
+        }
+    }
+
+    public async Task<Dictionary<string, PostParserTaskStatus>> GetStatusesByLinks(PostParserSource source, List<string> links)
+    {
+        var allTasks = await orm.GetAll();
+        var result = new Dictionary<string, PostParserTaskStatus>();
+
+        foreach (var link in links)
+        {
+            var task = allTasks.FirstOrDefault(t => t.Source == source && t.Link == link);
+            if (task == null)
+            {
+                result[link] = PostParserTaskStatus.None;
+                continue;
+            }
+
+            if (task.IsDeleted)
+            {
+                result[link] = PostParserTaskStatus.Deleted;
+                continue;
+            }
+
+            var domainTask = task.ToDomainModel();
+            if (domainTask.Targets.Count == 0 || domainTask.Results == null)
+            {
+                result[link] = PostParserTaskStatus.Pending;
+                continue;
+            }
+
+            var allTargetsDone = domainTask.Targets.All(target =>
+                domainTask.Results.TryGetValue(target, out var r) && r.ParsedAt.HasValue);
+
+            if (!allTargetsDone)
+            {
+                result[link] = PostParserTaskStatus.Pending;
+                continue;
+            }
+
+            var anyError = domainTask.Results.Values.Any(r => r.Error != null);
+            result[link] = anyError ? PostParserTaskStatus.Failed : PostParserTaskStatus.Complete;
+        }
+
+        return result;
     }
 
     public async Task Put(int id, PostParserTask pdt)
@@ -87,7 +161,7 @@ public class PostParserTaskService<TDbContext>(
     {
         // Get tasks that have unparsed targets
         var allTasks = (await orm.GetAll()).Select(d => d.ToDomainModel()).ToList();
-        var pendingTasks = allTasks.Where(t => HasUnparsedTargets(t)).ToList();
+        var pendingTasks = allTasks.Where(t => !t.IsDeleted && HasUnparsedTargets(t)).ToList();
 
         if (pendingTasks.Count == 0)
             return;
