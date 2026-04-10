@@ -83,6 +83,7 @@ namespace Bakabase.Service.Components
             services.TryAddSingleton<FantiaCookieValidator>();
             services.TryAddSingleton<CienCookieValidator>();
             services.TryAddSingleton<PatreonCookieValidator>();
+            services.TryAddSingleton<SoulPlusCookieValidator>();
 
             services.AddSingleton<BakabaseOptionsManagerPool>();
 

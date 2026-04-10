@@ -1,8 +1,6 @@
 {
   "configuration.dependency.title": "依赖组件",
   "configuration.dependency.defaultLocation": "默认位置",
-  "configuration.dependency.curlExecutable": "curl 可执行文件",
-  "configuration.dependency.curlPlaceholder": "path/to/curl.exe",
   "configuration.dependency.notInstalled": "未安装",
   "configuration.dependency.checkingVersion": "正在检查新版本",
   "configuration.dependency.clickToUpdate": "点击更新至版本",

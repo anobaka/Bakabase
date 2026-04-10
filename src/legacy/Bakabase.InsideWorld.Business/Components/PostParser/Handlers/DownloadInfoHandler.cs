@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain;
@@ -11,7 +10,6 @@ using Bakabase.Modules.AI.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace Bakabase.InsideWorld.Business.Components.PostParser.Handlers;
 
@@ -43,7 +41,7 @@ public class DownloadInfoHandler(
                                               {userCommentHtmlList}
                                               """;
 
-    public async Task<object> HandleAsync(PostContent content, CancellationToken ct)
+    public async Task<PostParseHandlerResult> HandleAsync(PostContent content, CancellationToken ct)
     {
         var commentHtml = string.Join(Environment.NewLine, content.CommentHtmlList ?? []);
         var userPrompt = UserPromptTemplate
@@ -61,11 +59,11 @@ public class DownloadInfoHandler(
         var rawText = response.Text?.Trim() ?? "";
         var json = ExtractJson(rawText);
 
+        DownloadInfoLlmResponse llmResult;
         try
         {
-            var result = JObject.Parse(json);
-            Optimize(result);
-            return result;
+            llmResult = JsonConvert.DeserializeObject<DownloadInfoLlmResponse>(json)
+                        ?? new DownloadInfoLlmResponse();
         }
         catch (JsonException ex)
         {
@@ -73,6 +71,12 @@ public class DownloadInfoHandler(
                 "Failed to parse JSON from LLM response: {Response}. Error: {Error}", rawText, ex.Message);
             throw new Exception($"Failed to parse download info from AI response: {ex.Message}");
         }
+
+        Optimize(llmResult);
+
+        // Title belongs at the task level, only resources go into result data
+        var optimizedTitle = string.IsNullOrWhiteSpace(llmResult.Title) ? null : llmResult.Title;
+        return new PostParseHandlerResult(new { resources = llmResult.Resources }, optimizedTitle);
     }
 
     private static string ExtractJson(string text)
@@ -90,34 +94,25 @@ public class DownloadInfoHandler(
         return text;
     }
 
-    private static void Optimize(JObject result)
+    private static void Optimize(DownloadInfoLlmResponse result)
     {
-        if (result["title"] is JValue titleVal && string.IsNullOrEmpty(titleVal.Value<string>()))
-        {
-            result["title"] = null;
-        }
+        if (string.IsNullOrWhiteSpace(result.Title))
+            result.Title = null;
 
-        if (result["resources"] is JArray resources)
+        if (result.Resources != null)
         {
-            var validResources = new JArray();
-            foreach (var r in resources)
-            {
-                if (r is JObject res)
+            result.Resources = result.Resources
+                .Where(r => !string.IsNullOrEmpty(r.Link))
+                .Select(r =>
                 {
-                    var link = res["link"]?.Value<string>();
-                    if (string.IsNullOrEmpty(link))
-                        continue;
+                    if (string.IsNullOrEmpty(r.Code)) r.Code = null;
+                    if (string.IsNullOrEmpty(r.Password)) r.Password = null;
+                    return r;
+                })
+                .ToList();
 
-                    if (res["code"] is JValue codeVal && string.IsNullOrEmpty(codeVal.Value<string>()))
-                        res["code"] = null;
-                    if (res["password"] is JValue pwVal && string.IsNullOrEmpty(pwVal.Value<string>()))
-                        res["password"] = null;
-
-                    validResources.Add(res);
-                }
-            }
-
-            result["resources"] = validResources.Count > 0 ? validResources : null;
+            if (result.Resources.Count == 0)
+                result.Resources = null;
         }
     }
 }

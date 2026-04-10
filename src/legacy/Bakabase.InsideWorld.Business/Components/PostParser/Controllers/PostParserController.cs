@@ -68,6 +68,14 @@ public class PostParserController(
         return BaseResponseBuilder.Ok;
     }
 
+    [HttpPost("task/{id:int}/reparse")]
+    [SwaggerOperation(OperationId = "ReParsePostParserTask")]
+    public async Task<BaseResponse> ReParse(int id)
+    {
+        await service.ReParse(id);
+        return BaseResponseBuilder.Ok;
+    }
+
     [HttpDelete("task/all")]
     [SwaggerOperation(OperationId = "DeleteAllPostParserTasks")]
     public async Task<BaseResponse> DeleteAll()

@@ -822,11 +822,6 @@ namespace Bakabase.Service.Controllers
         {
             await _bakabaseOptionsManager.Get<ThirdPartyOptions>().SaveAsync(options =>
             {
-                if (model.CurlExecutable != null)
-                {
-                    options.CurlExecutable = model.CurlExecutable;
-                }
-
                 if (model.AutomaticallyParsingPosts.HasValue)
                 {
                     options.AutomaticallyParsingPosts = model.AutomaticallyParsingPosts.Value;

@@ -6,6 +6,6 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http.Cookie
     public interface ICookieValidator
     {
         CookieValidatorTarget Target { get; }
-        Task<BaseResponse> Validate(string cookie);
+        Task<BaseResponse> Validate(string cookie, string? userAgent = null, string? tlsPreset = null);
     }
 }

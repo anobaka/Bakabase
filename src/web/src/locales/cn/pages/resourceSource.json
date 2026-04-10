@@ -35,6 +35,12 @@
   "resourceSource.accounts.defaultName": "账号 {{index}}",
   "resourceSource.accounts.defaultTip": "增强器和下载器等功能将默认使用第一个账号",
   "resourceSource.accounts.loginToImport": "登录导入",
+  "resourceSource.accounts.userAgent": "User-Agent",
+  "resourceSource.accounts.userAgentPlaceholder": "Mozilla/5.0 ...",
+  "resourceSource.accounts.userAgentDescription": "登录时使用的浏览器 User-Agent。使用「登录导入」时会自动填写。",
+  "resourceSource.accounts.tlsPreset": "TLS 指纹",
+  "resourceSource.accounts.tlsPresetPlaceholder": "选择 TLS 指纹...",
+  "resourceSource.accounts.tlsPresetDescription": "必须与 User-Agent 的浏览器类型和版本一致。使用「登录导入」时会自动填写。",
 
   "resourceSource.steam.title": "Steam",
   "resourceSource.steam.description": "从 Steam 库同步的游戏。",

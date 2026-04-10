@@ -35,6 +35,12 @@
   "resourceSource.accounts.defaultName": "Account {{index}}",
   "resourceSource.accounts.defaultTip": "Enhancers and downloaders will use the first account by default",
   "resourceSource.accounts.loginToImport": "Login to Import",
+  "resourceSource.accounts.userAgent": "User-Agent",
+  "resourceSource.accounts.userAgentPlaceholder": "Mozilla/5.0 ...",
+  "resourceSource.accounts.userAgentDescription": "The User-Agent of the browser used when logging in. Auto-filled when using 'Login to Import'.",
+  "resourceSource.accounts.tlsPreset": "TLS Fingerprint",
+  "resourceSource.accounts.tlsPresetPlaceholder": "Select a TLS fingerprint...",
+  "resourceSource.accounts.tlsPresetDescription": "Must match the browser type and version of the User-Agent. Auto-filled when using 'Login to Import'.",
 
   "resourceSource.steam.title": "Steam",
   "resourceSource.steam.description": "Games synced from your Steam library.",

@@ -5,9 +5,6 @@
   "postParser.action.configuration": "Configuration",
   "postParser.label.automaticallyParsing": "Start parsing immediately after adding",
   "postParser.action.instructions": "Instructions for use",
-  "postParser.tip.curlVersion": "This feature internally uses curl. If your system-level curl version is lower than 8.14, please configure the correct curl path in the system settings.",
-  "postParser.tip.requestInterval": "The request interval configuration is temporarily unavailable. The built-in default interval is 3 seconds.",
-  "postParser.label.curl": "curl",
   "postParser.tip.aiRequired": "This feature requires AI configuration. Please set up the AI provider and model for Post Parser in the configuration panel.",
   "postParser.label.ai": "AI",
   "postParser.tip.browserIntegration": "Some sites can integrate quick actions through the browser (such as one-click task creation). You can check the \"Third-Party Integrations\" section.",
@@ -22,9 +19,13 @@
   "postParser.label.viewResult": "View",
   "postParser.label.noResult": "Not parsed",
   "postParser.label.pending": "Pending",
+  "postParser.label.error": "Error",
+  "postParser.action.reParse": "Re-parse",
   "postParser.action.export": "Export Excel",
   "postParser.action.deleteAll": "Delete all",
   "postParser.config.ai": "AI Configuration",
   "postParser.label.deleted": "Deleted",
+  "postParser.result.copied": "Copied",
+  "postParser.result.noResources": "No resources found",
   "PostParseTarget.DownloadInfo": "Parse Download Info"
 }

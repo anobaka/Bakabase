@@ -1,8 +1,6 @@
 {
   "configuration.dependency.title": "Dependent components",
   "configuration.dependency.defaultLocation": "Default location",
-  "configuration.dependency.curlExecutable": "curl executable",
-  "configuration.dependency.curlPlaceholder": "path/to/curl.exe",
   "configuration.dependency.notInstalled": "Not installed",
   "configuration.dependency.checkingVersion": "Checking new version",
   "configuration.dependency.clickToUpdate": "Click to update to version",

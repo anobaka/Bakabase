@@ -2,6 +2,8 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Localization;
@@ -54,8 +56,9 @@ public class PostParserTaskService<TDbContext>(
                 var existing = allExisting.FirstOrDefault(t => t.Source == source && t.Link == link);
                 if (existing != null)
                 {
-                    // Reset existing task: clear results, undelete, update targets
+                    // Reset existing task: clear results and error, undelete, update targets
                     existing.Results = null;
+                    existing.Error = null;
                     existing.IsDeleted = false;
                     existing.Targets = Newtonsoft.Json.JsonConvert.SerializeObject(targets);
                     updatedTasks.Add(existing);
@@ -88,6 +91,17 @@ public class PostParserTaskService<TDbContext>(
         var task = await orm.GetByKey(id);
         if (task == null) return;
         task.IsDeleted = true;
+        await orm.Update(task);
+        await uiHub.Clients.All.GetIncrementalData(nameof(PostParserTask), task.ToDomainModel());
+    }
+
+    public async Task ReParse(int id)
+    {
+        var task = await orm.GetByKey(id);
+        if (task == null) return;
+        task.Results = null;
+        task.Error = null;
+        task.IsDeleted = false;
         await orm.Update(task);
         await uiHub.Clients.All.GetIncrementalData(nameof(PostParserTask), task.ToDomainModel());
     }
@@ -127,23 +141,20 @@ public class PostParserTaskService<TDbContext>(
             }
 
             var domainTask = task.ToDomainModel();
-            if (domainTask.Targets.Count == 0 || domainTask.Results == null)
+
+            if (domainTask.Error != null)
+            {
+                result[link] = PostParserTaskStatus.Failed;
+                continue;
+            }
+
+            if (IsPending(domainTask))
             {
                 result[link] = PostParserTaskStatus.Pending;
                 continue;
             }
 
-            var allTargetsDone = domainTask.Targets.All(target =>
-                domainTask.Results.TryGetValue(target, out var r) && r.ParsedAt.HasValue);
-
-            if (!allTargetsDone)
-            {
-                result[link] = PostParserTaskStatus.Pending;
-                continue;
-            }
-
-            var anyError = domainTask.Results.Values.Any(r => r.Error != null);
-            result[link] = anyError ? PostParserTaskStatus.Failed : PostParserTaskStatus.Complete;
+            result[link] = PostParserTaskStatus.Complete;
         }
 
         return result;
@@ -159,9 +170,9 @@ public class PostParserTaskService<TDbContext>(
     public async Task ParseAll(Func<int, Task>? onProgress, Func<string, Task>? onProcessChange, PauseToken pt,
         CancellationToken ct)
     {
-        // Get tasks that have unparsed targets
+        // Get tasks that are pending (no error, not deleted, have unparsed targets)
         var allTasks = (await orm.GetAll()).Select(d => d.ToDomainModel()).ToList();
-        var pendingTasks = allTasks.Where(t => !t.IsDeleted && HasUnparsedTargets(t)).ToList();
+        var pendingTasks = allTasks.Where(t => !t.IsDeleted && t.Error == null && IsPending(t)).ToList();
 
         if (pendingTasks.Count == 0)
             return;
@@ -191,49 +202,32 @@ public class PostParserTaskService<TDbContext>(
                         var content = await fetcher.FetchAsync(t.Link, ct);
                         t.Title ??= content.Title;
 
-                        t.Results ??= new Dictionary<PostParseTarget, PostParseTargetResult>();
+                        t.Results ??= new Dictionary<PostParseTarget, JsonNode?>();
 
                         foreach (var target in t.Targets)
                         {
                             // Skip already parsed targets
-                            if (t.Results.TryGetValue(target, out var existing) && existing.ParsedAt.HasValue)
+                            if (t.Results.ContainsKey(target))
                                 continue;
 
                             if (!_handlerMap.TryGetValue(target, out var handler))
                                 continue;
 
-                            try
+                            var handlerResult = await handler.HandleAsync(content, ct);
+                            var jsonString = JsonSerializer.Serialize(handlerResult.Data, JsonSerializerOptions.Web);
+
+                            if (!string.IsNullOrWhiteSpace(handlerResult.OptimizedTitle) &&
+                                handlerResult.OptimizedTitle != t.Title)
                             {
-                                var data = await handler.HandleAsync(content, ct);
-                                t.Results[target] = new PostParseTargetResult
-                                {
-                                    Data = data,
-                                    ParsedAt = DateTime.Now,
-                                };
+                                t.Title = handlerResult.OptimizedTitle;
                             }
-                            catch (Exception ex)
-                            {
-                                t.Results[target] = new PostParseTargetResult
-                                {
-                                    Error = ex.BuildFullInformationText(),
-                                };
-                            }
+
+                            t.Results[target] = JsonNode.Parse(jsonString);
                         }
                     }
                     catch (Exception e)
                     {
-                        // Content fetching failed - mark all targets as failed
-                        t.Results ??= new Dictionary<PostParseTarget, PostParseTargetResult>();
-                        foreach (var target in t.Targets)
-                        {
-                            if (t.Results.TryGetValue(target, out var existing) && existing.ParsedAt.HasValue)
-                                continue;
-
-                            t.Results[target] = new PostParseTargetResult
-                            {
-                                Error = e.BuildFullInformationText(),
-                            };
-                        }
+                        t.Error = e.BuildFullInformationText();
                     }
 
                     await Put(t.Id, t);
@@ -254,7 +248,10 @@ public class PostParserTaskService<TDbContext>(
         await Task.WhenAll(runningTasks);
     }
 
-    private static bool HasUnparsedTargets(PostParserTask task)
+    /// <summary>
+    /// A task is pending if it has targets without results.
+    /// </summary>
+    private static bool IsPending(PostParserTask task)
     {
         if (task.Targets.Count == 0)
             return false;
@@ -262,7 +259,6 @@ public class PostParserTaskService<TDbContext>(
         if (task.Results == null)
             return true;
 
-        return task.Targets.Any(target =>
-            !task.Results.TryGetValue(target, out var result) || !result.ParsedAt.HasValue);
+        return task.Targets.Any(target => !task.Results.ContainsKey(target));
     }
 }

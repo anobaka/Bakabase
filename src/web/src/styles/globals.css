@@ -109,4 +109,15 @@ div[data-react-aria-top-layer][role="region"] [data-toast="true"]:not([data-toas
   pointer-events: auto !important;
 }
 
+/* HeroUI Toast: fixed 356px width causes long text to overflow */
+div[data-toast="true"] {
+  width: auto !important;
+  max-width: min(90vw, 560px) !important;
+}
+
+div[data-toast="true"] [data-slot="title"],
+div[data-toast="true"] [data-slot="description"] {
+  overflow-wrap: anywhere;
+}
+
 /* ===== END icejs 样式迁移 ===== */

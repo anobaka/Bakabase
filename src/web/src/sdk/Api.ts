@@ -1414,15 +1414,29 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
   /** @format int32 */
   requestInterval: number;
   userAgent?: string;
+  tlsPreset?: string;
   referer?: string;
   headers?: Record<string, string>;
   /** @format int32 */
   autoBuyThreshold: number;
 }
 
+export interface BakabaseServiceControllersCookieCaptureResult {
+  cookie: string;
+  userAgent?: string;
+  tlsPreset?: string;
+}
+
+export interface BakabaseModulesThirdPartyHelpersTlsPresetInfo {
+  id: string;
+  label: string;
+}
+
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainThirdPartyAccount {
   name?: string;
   cookie?: string;
+  userAgent?: string;
+  tlsPreset?: string;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainTmdbOptions {
@@ -1636,7 +1650,6 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputT
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputThirdPartyOptionsPatchInput {
   simpleSearchEngines?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputThirdPartyOptionsPatchInputSimpleSearchEngineOptionsPatchInput[];
-  curlExecutable?: string;
   automaticallyParsingPosts?: boolean;
 }
 
@@ -2086,7 +2099,6 @@ export interface BakabaseInsideWorldModelsConfigsNetworkOptionsProxyOptionsProxy
 
 export interface BakabaseInsideWorldModelsConfigsThirdPartyOptions {
   simpleSearchEngines?: BakabaseInsideWorldModelsConfigsThirdPartyOptionsSimpleSearchEngineOptions[];
-  curlExecutable?: string;
   automaticallyParsingPosts: boolean;
 }
 
@@ -4858,6 +4870,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1SystemString {
   code: number;
   message?: string;
   data?: string;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceControllersCookieCaptureResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceControllersCookieCaptureResult;
 }
 
 export interface BulkResourceMediaLibraryMappingInputModel {
@@ -16281,6 +16300,21 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags PostParser
+     * @name ReParsePostParserTask
+     * @request POST:/post-parser/task/{id}/reparse
+     */
+    reParsePostParserTask: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/post-parser/task/${id}/reparse`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags PostParser
      * @name StartAllPostParserTasks
      * @request POST:/post-parser/start
      */
@@ -17132,7 +17166,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemString, any>({
+      this.request<BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceControllersCookieCaptureResult, any>({
         path: `/tool/cookie-capture`,
         method: "POST",
         query: query,
@@ -17176,6 +17210,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         /** [1: BiliBili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon] */
         target?: BakabaseInsideWorldModelsConstantsCookieValidatorTarget;
         cookie?: string;
+        userAgent?: string;
+        tlsPreset?: string;
       },
       params: RequestParams = {},
     ) =>
@@ -17195,6 +17231,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         /** [1: BiliBili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon] */
         target?: BakabaseInsideWorldModelsConstantsCookieValidatorTarget;
         cookie?: string;
+        userAgent?: string;
+        tlsPreset?: string;
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/tool/cookie-validation`;
@@ -17211,6 +17249,21 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       return baseUrl + path;
     },
+
+    /**
+     * No description
+     *
+     * @tags Tool
+     * @name GetTlsPresets
+     * @request GET:/tool/tls-presets
+     */
+    getTlsPresets: (params: RequestParams = {}) =>
+      this.request<BakabaseModulesThirdPartyHelpersTlsPresetInfo[], any>({
+        path: `/tool/tls-presets`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
 
     /**
      * No description

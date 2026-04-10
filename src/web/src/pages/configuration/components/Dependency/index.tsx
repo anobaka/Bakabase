@@ -1,8 +1,5 @@
 "use client";
 
-import type { SnippetProps } from "@heroui/react";
-import type { PathAutocompleteProps } from "@/components/PathAutocomplete";
-
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { QuestionCircleOutlined } from "@ant-design/icons";
@@ -10,7 +7,6 @@ import { QuestionCircleOutlined } from "@ant-design/icons";
 import Component from "./components/Component";
 
 import { useDependentComponentContextsStore } from "@/stores/dependentComponentContexts";
-import { useThirdPartyOptionsStore } from "@/stores/options";
 import {
   Popover,
   Snippet,
@@ -21,15 +17,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/bakaui";
-import BApi from "@/sdk/BApi";
-import { EditableValue } from "@/components/EditableValue";
-import PathAutocomplete from "@/components/PathAutocomplete";
 const Dependency = () => {
   const { t } = useTranslation();
   const componentContexts = useDependentComponentContextsStore(
     (state) => state.contexts,
   );
-  const thirdPartyOptions = useThirdPartyOptionsStore((state) => state.data);
   useEffect(() => {}, []);
 
   return (
@@ -86,46 +78,6 @@ const Dependency = () => {
                 </TableRow>
               );
             })}
-            <TableRow
-              key={componentContexts.length}
-              className={"hover:bg-[var(--bakaui-overlap-background)]"}
-            >
-              <TableCell>{t<string>("configuration.dependency.curlExecutable")}</TableCell>
-              <TableCell>
-                <EditableValue<
-                  string,
-                  PathAutocompleteProps,
-                  SnippetProps & { value: string }
-                >
-                  Editor={({ onValueChange, value, ...props }) => (
-                    <PathAutocomplete
-                      {...props}
-                      pathType={"file"}
-                      value={value as string}
-                      onChange={onValueChange}
-                    />
-                  )}
-                  Viewer={({ value, ...props }) =>
-                    value ? (
-                      <Snippet symbol={<>&nbsp;</>} {...props} size={"sm"}>
-                        {value}
-                      </Snippet>
-                    ) : null
-                  }
-                  editorProps={{
-                    placeholder: t<string>("configuration.dependency.curlPlaceholder"),
-                    size: "sm",
-                  }}
-                  value={thirdPartyOptions.curlExecutable}
-                  onSubmit={async (v) =>
-                    await BApi.options.putThirdPartyOptions({
-                      ...thirdPartyOptions,
-                      curlExecutable: v,
-                    })
-                  }
-                />
-              </TableCell>
-            </TableRow>
           </TableBody>
         </Table>
         {/* <Table */}

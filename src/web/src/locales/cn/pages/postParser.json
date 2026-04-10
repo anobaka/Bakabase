@@ -5,9 +5,6 @@
   "postParser.action.configuration": "配置",
   "postParser.label.automaticallyParsing": "添加后立即开始解析",
   "postParser.action.instructions": "使用说明",
-  "postParser.tip.curlVersion": "此功能内部使用 curl。如果您的系统级 curl 版本低于 8.14，请在系统设置中配置正确的 curl 路径。",
-  "postParser.tip.requestInterval": "请求间隔配置暂时不可用。内置默认间隔为 3 秒。",
-  "postParser.label.curl": "curl",
   "postParser.tip.aiRequired": "此功能需要配置 AI。请在配置面板中设置帖子解析的 AI 提供商和模型。",
   "postParser.label.ai": "AI",
   "postParser.tip.browserIntegration": "某些站点可以通过浏览器集成快速操作（例如一键创建任务）。您可以查看「第三方集成」部分。",
@@ -22,9 +19,13 @@
   "postParser.label.viewResult": "查看",
   "postParser.label.noResult": "未解析",
   "postParser.label.pending": "待解析",
+  "postParser.label.error": "错误",
+  "postParser.action.reParse": "重新解析",
   "postParser.action.export": "导出 Excel",
   "postParser.action.deleteAll": "删除全部",
   "postParser.config.ai": "AI 配置",
   "postParser.label.deleted": "已删除",
+  "postParser.result.copied": "已复制",
+  "postParser.result.noResources": "未找到资源",
   "PostParseTarget.DownloadInfo": "解析下载信息"
 }

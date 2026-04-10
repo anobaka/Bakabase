@@ -19,6 +19,7 @@ using Bakabase.InsideWorld.Business.Components.Compression;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.Modules.ThirdParty.Abstractions.Http.Cookie;
+using Bakabase.Modules.ThirdParty.Helpers;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Models.Constants;
 using Bootstrap.Models.ResponseModels;
@@ -45,7 +46,7 @@ namespace Bakabase.Service.Controllers
 
         [HttpPost("cookie-capture")]
         [SwaggerOperation(OperationId = "CaptureCookie")]
-        public async Task<SingletonResponse<string>> CaptureCookie(
+        public async Task<SingletonResponse<CookieCaptureResult>> CaptureCookie(
             CookieValidatorTarget target,
             [FromServices] IGuiAdapter guiAdapter,
             [FromServices] IEnumerable<ICookieCaptureFlow> captureFlows,
@@ -54,7 +55,7 @@ namespace Bakabase.Service.Controllers
             var flow = captureFlows.FirstOrDefault(f => f.Target == target);
             if (flow == null)
             {
-                return SingletonResponseBuilder<string>.Build(ResponseCode.NotFound,
+                return SingletonResponseBuilder<CookieCaptureResult>.Build(ResponseCode.NotFound,
                     $"Cookie capture is not supported for target: {target}");
             }
 
@@ -83,19 +84,36 @@ namespace Bakabase.Service.Controllers
             if (cookie == null)
             {
                 // Success + no data avoids HTTP 400 / global error toast; message explains cancel or unsupported environment.
-                return new SingletonResponse<string>(null)
+                return new SingletonResponse<CookieCaptureResult>(null)
                 {
                     Code = (int)ResponseCode.Success,
                     Message = localizer["CookieCapture_Cancelled"],
                 };
             }
 
-            return new SingletonResponse<string>(cookie);
+            // Return cookie along with the WebView's User-Agent and inferred TLS preset
+            var webViewUserAgent = GetWebViewUserAgent();
+            var tlsPreset = TlsPresetHelper.InferPresetFromUserAgent(webViewUserAgent);
+
+            return new SingletonResponse<CookieCaptureResult>(new CookieCaptureResult
+            {
+                Cookie = cookie,
+                UserAgent = webViewUserAgent,
+                TlsPreset = tlsPreset,
+            });
+        }
+
+        [HttpGet("tls-presets")]
+        [SwaggerOperation(OperationId = "GetTlsPresets")]
+        public TlsPresetInfo[] GetTlsPresets()
+        {
+            return TlsPresetHelper.AvailablePresets;
         }
 
         [HttpGet("cookie-validation")]
         [SwaggerOperation(OperationId = "ValidateCookie")]
         public async Task<BaseResponse> ValidateCookie(CookieValidatorTarget target, string cookie,
+            string? userAgent, string? tlsPreset,
             [FromServices] IEnumerable<ICookieValidator> validators)
         {
             var list = validators.ToList();
@@ -113,7 +131,7 @@ namespace Bakabase.Service.Controllers
                     $"No validator is found for target: {target}. Existed validators are: {string.Join(',', list.Select(t => t.Target.ToString()))}");
             }
 
-            var result = await candidates.FirstOrDefault()!.Validate(cookie);
+            var result = await candidates.FirstOrDefault()!.Validate(cookie, userAgent, tlsPreset);
             return result;
         }
 
@@ -304,5 +322,26 @@ namespace Bakabase.Service.Controllers
 
             return BaseResponseBuilder.Ok;
         }
+
+        /// <summary>
+        /// Returns the User-Agent string used by the embedded WebView on the current platform.
+        /// This is a known constant since the WebView UA is explicitly set during initialization.
+        /// </summary>
+        private static string GetWebViewUserAgent()
+        {
+            if (OperatingSystem.IsMacOS())
+                return "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36";
+            if (OperatingSystem.IsLinux())
+                return "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36";
+            // Windows (default)
+            return "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36";
+        }
+    }
+
+    public class CookieCaptureResult
+    {
+        public string Cookie { get; set; } = string.Empty;
+        public string? UserAgent { get; set; }
+        public string? TlsPreset { get; set; }
     }
 }

@@ -29,7 +29,28 @@ public class SoulPlusOptions : ISoulPlusOptions
 
     public int MaxConcurrency { get; set; } = 1;
     public int RequestInterval { get; set; } = 1000;
-    public string? UserAgent { set; get; }
+    public string? UserAgent
+    {
+        get => Accounts?.FirstOrDefault()?.UserAgent;
+        set
+        {
+            if (Accounts is { Count: > 0 })
+            {
+                Accounts[0].UserAgent = value;
+            }
+        }
+    }
+    public string? TlsPreset
+    {
+        get => Accounts?.FirstOrDefault()?.TlsPreset;
+        set
+        {
+            if (Accounts is { Count: > 0 })
+            {
+                Accounts[0].TlsPreset = value;
+            }
+        }
+    }
     public string? Referer { set; get; }
     public Dictionary<string, string>? Headers { set; get; }
     public int AutoBuyThreshold { get; set; } = 10;

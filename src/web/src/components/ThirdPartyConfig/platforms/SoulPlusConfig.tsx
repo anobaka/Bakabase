@@ -2,11 +2,13 @@
 
 import { useEffect, useMemo, useState, type FC } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Input } from "@heroui/react";
+import { Button, Input, Select, SelectItem } from "@heroui/react";
 
 import { toast } from "@/components/bakaui";
 import { CookieValidatorTarget } from "@/sdk/constants";
 import { useSoulPlusOptionsStore } from "@/stores/options";
+import BApi from "@/sdk/BApi";
+import type { BakabaseModulesThirdPartyHelpersTlsPresetInfo } from "@/sdk/Api";
 
 import AccountsPanel, { type AccountField } from "../base/AccountsPanel";
 import ConfigurableThirdPartyPanel, { type ConfigFieldTab } from "../base/ConfigurableThirdPartyPanel";
@@ -29,10 +31,19 @@ export const SoulPlusConfigPanel: FC<SoulPlusConfigPanelProps> = ({ fields = "al
   const patch = useSoulPlusOptionsStore((s) => s.patch);
 
   const [tmpOther, setTmpOther] = useState({ autoBuyThreshold: options?.autoBuyThreshold ?? 10 });
+  const [tlsPresets, setTlsPresets] = useState<BakabaseModulesThirdPartyHelpersTlsPresetInfo[]>([]);
 
   useEffect(() => {
     setTmpOther({ autoBuyThreshold: options?.autoBuyThreshold ?? 10 });
   }, [options?.autoBuyThreshold]);
+
+  useEffect(() => {
+    BApi.tool.getTlsPresets().then((rsp) => {
+      if (Array.isArray(rsp)) {
+        setTlsPresets(rsp);
+      }
+    });
+  }, []);
 
   const accountFields: AccountField[] = useMemo(
     () => [
@@ -43,6 +54,19 @@ export const SoulPlusConfigPanel: FC<SoulPlusConfigPanelProps> = ({ fields = "al
         type: "textarea" as const,
         cookieValidatorTarget: CookieValidatorTarget.SoulPlus,
         cookieCaptureTarget: CookieValidatorTarget.SoulPlus,
+      },
+      {
+        key: "userAgent",
+        label: t("resourceSource.accounts.userAgent"),
+        placeholder: t("resourceSource.accounts.userAgentPlaceholder"),
+        type: "textarea" as const,
+        description: t("resourceSource.accounts.userAgentDescription"),
+      },
+      {
+        key: "tlsPreset",
+        label: t("resourceSource.accounts.tlsPreset"),
+        type: "custom" as const,
+        description: t("resourceSource.accounts.tlsPresetDescription"),
       },
     ],
     [t],
@@ -64,7 +88,38 @@ export const SoulPlusConfigPanel: FC<SoulPlusConfigPanelProps> = ({ fields = "al
         field: SoulPlusConfigField.Accounts,
         key: "accounts",
         title: t("resourceSource.config.tab.accounts"),
-        content: <AccountsPanel accounts={options?.accounts || []} fields={accountFields} onSave={saveAccounts} />,
+        content: (
+          <AccountsPanel
+            accounts={options?.accounts || []}
+            fields={accountFields}
+            onSave={saveAccounts}
+            customFieldRenderers={{
+              tlsPreset: (account, index, updateAccount) => (
+                <div>
+                  <Select
+                    label={t("resourceSource.accounts.tlsPreset")}
+                    placeholder={t("resourceSource.accounts.tlsPresetPlaceholder")}
+                    selectedKeys={account.tlsPreset ? [account.tlsPreset] : []}
+                    size="sm"
+                    onSelectionChange={(keys) => {
+                      const selected = Array.from(keys)[0] as string;
+                      if (selected) {
+                        updateAccount(index, "tlsPreset", selected);
+                      }
+                    }}
+                  >
+                    {tlsPresets.map((preset) => (
+                      <SelectItem key={preset.id}>{preset.label}</SelectItem>
+                    ))}
+                  </Select>
+                  <div className="mt-1 text-xs text-default-400">
+                    {t("resourceSource.accounts.tlsPresetDescription")}
+                  </div>
+                </div>
+              ),
+            }}
+          />
+        ),
       },
       {
         field: SoulPlusConfigField.Other,
@@ -96,7 +151,7 @@ export const SoulPlusConfigPanel: FC<SoulPlusConfigPanelProps> = ({ fields = "al
         ),
       },
     ],
-    [options, tmpOther, accountFields, t, patch],
+    [options, tmpOther, accountFields, t, patch, tlsPresets],
   );
 
   return <ConfigurableThirdPartyPanel fields={fields} tabs={tabs} />;

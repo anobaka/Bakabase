@@ -5,8 +5,10 @@ using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constant
 
 namespace Bakabase.InsideWorld.Business.Components.PostParser.Handlers;
 
+public record PostParseHandlerResult(object Data, string? OptimizedTitle = null);
+
 public interface IPostParseTargetHandler
 {
     PostParseTarget Target { get; }
-    Task<object> HandleAsync(PostContent content, CancellationToken ct);
+    Task<PostParseHandlerResult> HandleAsync(PostContent content, CancellationToken ct);
 }

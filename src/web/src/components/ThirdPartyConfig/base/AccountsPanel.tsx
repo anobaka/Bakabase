@@ -20,7 +20,7 @@ export interface AccountField {
   key: string;
   label: string;
   placeholder?: string;
-  type?: "text" | "password" | "textarea";
+  type?: "text" | "password" | "textarea" | "custom";
   cookieValidatorTarget?: CookieValidatorTarget;
   cookieCaptureTarget?: CookieValidatorTarget;
   description?: React.ReactNode;
@@ -37,6 +37,10 @@ interface AccountsPanelProps {
   onSave: (accounts: Account[]) => Promise<void>;
   hideFooter?: boolean;
   onAccountsChange?: (accounts: Account[]) => void;
+  customFieldRenderers?: Record<
+    string,
+    (account: Account, index: number, updateAccount: (index: number, key: string, value: string) => void) => React.ReactNode
+  >;
 }
 
 export default function AccountsPanel({
@@ -45,6 +49,7 @@ export default function AccountsPanel({
   onSave,
   hideFooter,
   onAccountsChange,
+  customFieldRenderers,
 }: AccountsPanelProps) {
   const { t } = useTranslation();
   const runtimeMode = useAppContextStore((s) => s.runtimeMode);
@@ -100,6 +105,8 @@ export default function AccountsPanel({
       const rsp = await BApi.tool.validateCookie({
         target: field.cookieValidatorTarget,
         cookie,
+        userAgent: accounts[index]?.userAgent || undefined,
+        tlsPreset: accounts[index]?.tlsPreset || undefined,
       });
       setValidationStatus((prev) => ({
         ...prev,
@@ -120,7 +127,19 @@ export default function AccountsPanel({
     try {
       const rsp = await BApi.tool.captureCookie({ target: field.cookieCaptureTarget });
       if (!rsp.code && rsp.data) {
-        updateAccount(index, field.key, rsp.data);
+        const captureResult = rsp.data;
+        // Update cookie, userAgent, and tlsPreset in a single state update
+        // to avoid React batching issues where only the last setAccounts wins
+        setAccounts((prev) => {
+          const updated = [...prev];
+          updated[index] = {
+            ...updated[index],
+            [field.key]: captureResult.cookie,
+            ...(captureResult.userAgent ? { userAgent: captureResult.userAgent } : {}),
+            ...(captureResult.tlsPreset ? { tlsPreset: captureResult.tlsPreset } : {}),
+          };
+          return updated;
+        });
         setCaptureStatus((prev) => ({ ...prev, [key]: "succeed" }));
       } else if (notifyCookieCaptureDismissal(rsp)) {
         setCaptureStatus((prev) => {
@@ -198,6 +217,9 @@ export default function AccountsPanel({
               {fields.map((field) => {
                 const vKey = `${index}-${field.key}`;
                 const vStatus = validationStatus[vKey];
+                if (field.type === "custom" && customFieldRenderers?.[field.key]) {
+                  return <div key={field.key}>{customFieldRenderers[field.key](account, index, updateAccount)}</div>;
+                }
                 return field.type === "textarea" ? (
                   <div key={field.key}>
                     <Textarea

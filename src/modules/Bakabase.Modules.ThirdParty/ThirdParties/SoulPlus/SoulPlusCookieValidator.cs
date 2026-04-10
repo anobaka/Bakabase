@@ -1,31 +1,57 @@
-using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.InsideWorld.Models.Constants;
-using Bakabase.Modules.ThirdParty.Components.Http.Cookie;
+using Bakabase.Modules.ThirdParty.Abstractions.Http;
+using Bakabase.Modules.ThirdParty.Abstractions.Http.Cookie;
+using Bakabase.Modules.ThirdParty.Helpers;
+using Bootstrap.Components.Miscellaneous.ResponseBuilders;
+using Bootstrap.Models.ResponseModels;
+using HttpCloak;
 
 namespace Bakabase.Modules.ThirdParty.ThirdParties.SoulPlus;
 
-public class SoulPlusCookieValidator(IHttpClientFactory httpClientFactory, IBakabaseLocalizer localizer)
-    : AbstractCookieValidator(httpClientFactory, localizer)
+public class SoulPlusCookieValidator(
+    IBakabaseLocalizer localizer)
+    : ICookieValidator
 {
-    public override CookieValidatorTarget Target => CookieValidatorTarget.SoulPlus;
+    private const string Url = "https://www.north-plus.net/index.php";
 
-    protected override string HttpClientName => InternalOptions.HttpClientNames.SoulPlus;
+    public CookieValidatorTarget Target => CookieValidatorTarget.SoulPlus;
 
-    protected override string Url => "https://www.north-plus.net/";
-
-    protected override async Task<(bool Success, string? Message, string? Content)> Validate(HttpResponseMessage rsp)
+    public async Task<BaseResponse> Validate(string cookie, string? userAgent = null, string? tlsPreset = null)
     {
-        var body = await rsp.Content.ReadAsStringAsync();
-        if (!rsp.IsSuccessStatusCode)
+        var preset = tlsPreset ?? TlsPresetHelper.DefaultPreset;
+        var ua = userAgent ?? IThirdPartyHttpClientOptions.DefaultUserAgent;
+
+        string body;
+        try
         {
-            return (false, rsp.StatusCode.ToString(), body);
+            using var session = new Session(preset: preset);
+            var headers = new Dictionary<string, string>
+            {
+                { "User-Agent", ua },
+                { "Cookie", cookie }
+            };
+
+            var response = session.Get(Url, headers: headers);
+            if (response.StatusCode != 200)
+            {
+                return BaseResponseBuilder.BuildBadRequest(
+                    localizer.CookieValidation_Fail(Url, $"Request failed with status code: {response.StatusCode}",
+                        null));
+            }
+
+            body = response.Text;
+        }
+        catch (Exception ex)
+        {
+            return BaseResponseBuilder.BuildBadRequest(
+                localizer.CookieValidation_Fail(Url, ex.Message, null));
         }
 
-        // Discuz logged-in session: common markers on index / forum home
-        var loggedIn = body.Contains("安全退出", StringComparison.Ordinal) ||
-                       body.Contains("logout.php", StringComparison.OrdinalIgnoreCase) ||
-                       body.Contains("space.php?uid=", StringComparison.OrdinalIgnoreCase);
-        return (loggedIn, loggedIn ? null : "Not logged in", body);
+        var loggedIn = body.Contains("login.php?action-quit", StringComparison.OrdinalIgnoreCase);
+
+        return loggedIn
+            ? BaseResponseBuilder.Ok
+            : BaseResponseBuilder.BuildBadRequest(localizer.CookieValidation_Fail(Url, "Not logged in", body));
     }
 }

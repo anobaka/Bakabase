@@ -14,7 +14,7 @@ namespace Bakabase.Modules.ThirdParty.Components.Http.Cookie
     {
         public abstract CookieValidatorTarget Target { get; }
 
-        public async Task<BaseResponse> Validate(string cookie)
+        public async Task<BaseResponse> Validate(string cookie, string? userAgent = null, string? tlsPreset = null)
         {
             var client = httpClientFactory.CreateClient(HttpClientName);
             var request = new HttpRequestMessage(HttpMethod.Get, Url);

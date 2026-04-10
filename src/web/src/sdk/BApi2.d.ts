@@ -6066,6 +6066,7 @@ export interface components {
             /** Format: int32 */
             requestInterval: number;
             userAgent?: string;
+            tlsPreset?: string;
             referer?: string;
             headers?: {
                 [key: string]: string;
@@ -6076,6 +6077,8 @@ export interface components {
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ThirdPartyAccount": {
             name?: string;
             cookie?: string;
+            userAgent?: string;
+            tlsPreset?: string;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.TmdbOptions": {
             /** Format: int32 */
@@ -6276,7 +6279,6 @@ export interface components {
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.ThirdPartyOptionsPatchInput": {
             simpleSearchEngines?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.ThirdPartyOptionsPatchInput+SimpleSearchEngineOptionsPatchInput"][];
-            curlExecutable?: string;
             automaticallyParsingPosts?: boolean;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.ThirdPartyOptionsPatchInput+SimpleSearchEngineOptionsPatchInput": {
@@ -6648,7 +6650,6 @@ export interface components {
         };
         "Bakabase.InsideWorld.Models.Configs.ThirdPartyOptions": {
             simpleSearchEngines?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.ThirdPartyOptions+SimpleSearchEngineOptions"][];
-            curlExecutable?: string;
             automaticallyParsingPosts: boolean;
         };
         "Bakabase.InsideWorld.Models.Configs.ThirdPartyOptions+SimpleSearchEngineOptions": {

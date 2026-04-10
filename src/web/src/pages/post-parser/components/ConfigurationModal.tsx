@@ -23,7 +23,7 @@ const ConfigurationModal = (props: Props) => {
       size={"xl"}
       onDestroyed={props.onDestroyed}
     >
-      <Tabs isVertical aria-label="Options" classNames={{ panel: "flex-1 w-0" }}>
+      <Tabs isVertical disableAnimation aria-label="Options" classNames={{ panel: "flex-1 w-0" }}>
         <Tab key="ai" title={t<string>("postParser.config.ai")}>
           <div className="space-y-4">
             <AiProviderPanel />

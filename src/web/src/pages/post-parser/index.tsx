@@ -2,16 +2,17 @@
 
 import { useTranslation } from "react-i18next";
 import {
+  AiOutlineCopy,
   AiOutlineDelete,
   AiOutlineDownload,
   AiOutlinePlusCircle,
   AiOutlineQuestionCircle,
+  AiOutlineReload,
   AiOutlineSetting,
   AiOutlineWarning,
 } from "react-icons/ai";
 import _ from "lodash";
 import { useEffect } from "react";
-import ReactJson from "react-json-view";
 import * as XLSX from "xlsx";
 
 import {
@@ -28,6 +29,7 @@ import {
   TableHeader,
   TableRow,
   Textarea,
+  toast,
 } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import FeatureStatusTip from "@/components/FeatureStatusTip";
@@ -45,7 +47,7 @@ import { usePostParserTasksStore } from "@/stores/postParserTasks";
 import ConfigurationModal from "@/pages/post-parser/components/ConfigurationModal";
 import ThirdPartyIcon from "@/components/ThirdPartyIcon";
 import TampermonkeyInstallButton from "@/components/ThirdPartyConfig/base/TampermonkeyInstallButton";
-import type { PostParseTargetResult } from "@/core/models/PostParserTask";
+import DownloadInfoResultRenderer from "@/pages/post-parser/components/DownloadInfoResultRenderer";
 
 const ThirdPartyMap: Record<PostParserSource, ThirdPartyId> = {
   [PostParserSource.SoulPlus]: ThirdPartyId.SoulPlus,
@@ -56,11 +58,60 @@ const PostParserPage = () => {
   const { createPortal } = useBakabaseContext();
   const thirdPartyOptions = useThirdPartyOptionsStore((state) => state.data);
 
-  const tasks = usePostParserTasksStore((state) => state.tasks);
+  const allTasks = usePostParserTasksStore((state) => state.tasks);
+  const tasks = allTasks.filter((t) => !t.isDeleted);
 
   useEffect(() => {}, []);
 
-  const renderResultCell = (results: Record<number, PostParseTargetResult> | undefined, targets: PostParseTarget[]) => {
+  const getResultData = (results: Record<string | number, any>, target: PostParseTarget): any | undefined => {
+    return results[target] ?? results[PostParseTargetLabel[target]];
+  };
+
+  const renderTargetResult = (target: PostParseTarget, data: any) => {
+    // Target-specific renderers
+    if (target === PostParseTarget.DownloadInfo) {
+      return <DownloadInfoResultRenderer data={data} />;
+    }
+
+    // Fallback for unknown targets
+    return (
+      <Chip color={"success"} size={"sm"} variant={"flat"}>
+        {t<string>(`PostParseTarget.${PostParseTargetLabel[target]}`)}
+      </Chip>
+    );
+  };
+
+  const renderResultCell = (
+    results: Record<string | number, any> | undefined,
+    targets: PostParseTarget[],
+    error?: string,
+  ) => {
+    if (error) {
+      return (
+        <div className={"flex items-center gap-1"}>
+          <Chip color={"danger"} size={"sm"} variant={"flat"}>
+            {t<string>("postParser.label.error")}
+          </Chip>
+          <Button
+            isIconOnly
+            color={"danger"}
+            size={"sm"}
+            variant={"light"}
+            onPress={() => {
+              createPortal(Modal, {
+                defaultVisible: true,
+                size: "xl",
+                children: <pre className={"whitespace-pre-wrap break-all"}>{error}</pre>,
+                footer: { actions: ["cancel"] },
+              });
+            }}
+          >
+            <AiOutlineWarning className={"text-base"} />
+          </Button>
+        </div>
+      );
+    }
+
     if (!results || Object.keys(results).length === 0) {
       return (
         <div className={"text-default-400 text-sm"}>
@@ -72,8 +123,8 @@ const PostParserPage = () => {
     return (
       <div className={"flex flex-col gap-2"}>
         {targets.map((target) => {
-          const result = results[target];
-          if (!result) {
+          const data = getResultData(results, target);
+          if (data == null) {
             return (
               <Chip key={target} size={"sm"} variant={"flat"}>
                 {t<string>(`PostParseTarget.${PostParseTargetLabel[target]}`)} - {t<string>("postParser.label.pending")}
@@ -81,71 +132,7 @@ const PostParserPage = () => {
             );
           }
 
-          if (result.error) {
-            return (
-              <div key={target} className={"flex items-center gap-1"}>
-                <Chip color={"danger"} size={"sm"} variant={"flat"}>
-                  {t<string>(`PostParseTarget.${PostParseTargetLabel[target]}`)}
-                </Chip>
-                <Button
-                  isIconOnly
-                  color={"danger"}
-                  size={"sm"}
-                  variant={"light"}
-                  onPress={() => {
-                    createPortal(Modal, {
-                      defaultVisible: true,
-                      size: "xl",
-                      children: <pre className={"whitespace-pre-wrap break-all"}>{result.error}</pre>,
-                      footer: { actions: ["cancel"] },
-                    });
-                  }}
-                >
-                  <AiOutlineWarning className={"text-base"} />
-                </Button>
-              </div>
-            );
-          }
-
-          if (result.data) {
-            return (
-              <div key={target} className={"flex items-center gap-1"}>
-                <Chip color={"success"} size={"sm"} variant={"flat"}>
-                  {t<string>(`PostParseTarget.${PostParseTargetLabel[target]}`)}
-                </Chip>
-                <Button
-                  color={"primary"}
-                  size={"sm"}
-                  variant={"light"}
-                  onPress={() => {
-                    createPortal(Modal, {
-                      defaultVisible: true,
-                      size: "xl",
-                      title: t<string>(`PostParseTarget.${PostParseTargetLabel[target]}`),
-                      children: (
-                        <ReactJson
-                          src={typeof result.data === "object" ? result.data : { value: result.data }}
-                          enableClipboard
-                          displayDataTypes={false}
-                          quotesOnKeys={false}
-                          name={false}
-                          theme={"monokai"}
-                        />
-                      ),
-                      footer: { actions: ["cancel"] },
-                    });
-                  }}
-                >
-                  {t<string>("postParser.label.viewResult")}
-                </Button>
-                {result.parsedAt && (
-                  <span className={"text-xs text-default-400"}>{result.parsedAt}</span>
-                )}
-              </div>
-            );
-          }
-
-          return null;
+          return <div key={target}>{renderTargetResult(target, data)}</div>;
         })}
       </div>
     );
@@ -366,19 +353,6 @@ https://xxxxxxx
                       description={
                         <div>
                           <div>
-                            {t<string>("postParser.tip.curlVersion")}
-                          </div>
-                          <div>
-                            {t<string>("postParser.tip.requestInterval")}
-                          </div>
-                        </div>
-                      }
-                      title={t<string>("postParser.label.curl")}
-                    />
-                    <Alert
-                      description={
-                        <div>
-                          <div>
                             {t<string>("postParser.tip.aiRequired")}
                           </div>
                         </div>
@@ -413,9 +387,9 @@ https://xxxxxxx
           </TableHeader>
           <TableBody>
             {tasks.map((task) => {
-              const isDeleted = task.isDeleted === true;
+              const isParsed = (task.results && Object.keys(task.results).length > 0) || task.error;
               return (
-                <TableRow key={task.id} className={isDeleted ? "opacity-50" : ""}>
+                <TableRow key={task.id}>
                   <TableCell>{task.id}</TableCell>
                   <TableCell>
                     <div className={"flex flex-col gap-1"}>
@@ -423,11 +397,22 @@ https://xxxxxxx
                         <ThirdPartyIcon
                           thirdPartyId={ThirdPartyMap[task.source]}
                         />
-                        <div className={isDeleted ? "line-through" : ""}>{task.title || ""}</div>
-                        {isDeleted && (
-                          <Chip color={"default"} size={"sm"} variant={"flat"}>
-                            {t<string>("postParser.label.deleted")}
-                          </Chip>
+                        {task.title && (
+                          <>
+                            <div>{task.title}</div>
+                            <Button
+                              isIconOnly
+                              size={"sm"}
+                              variant={"light"}
+                              className={"min-w-6 w-6 h-6"}
+                              onPress={() => {
+                                navigator.clipboard.writeText(task.title!);
+                                toast.success(t("postParser.result.copied"));
+                              }}
+                            >
+                              <AiOutlineCopy className={"text-sm"} />
+                            </Button>
+                          </>
                         )}
                       </div>
                       <div>
@@ -456,23 +441,36 @@ https://xxxxxxx
                     </div>
                   </TableCell>
                   <TableCell>
-                    {renderResultCell(task.results, task.targets)}
+                    {renderResultCell(task.results, task.targets, task.error)}
                   </TableCell>
                   <TableCell>
                     <div className={"flex items-center gap-1"}>
-                      {!isDeleted && (
+                      {isParsed && (
                         <Button
                           isIconOnly
-                          color={"danger"}
+                          color={"warning"}
                           size={"sm"}
                           variant={"light"}
+                          title={t<string>("postParser.action.reParse")}
                           onPress={async () => {
-                            await BApi.postParser.deletePostParserTask(task.id);
+                            await BApi.postParser.reParsePostParserTask(task.id);
+                            await BApi.postParser.startAllPostParserTasks();
                           }}
                         >
-                          <AiOutlineDelete className={"text-base"} />
+                          <AiOutlineReload className={"text-base"} />
                         </Button>
                       )}
+                      <Button
+                        isIconOnly
+                        color={"danger"}
+                        size={"sm"}
+                        variant={"light"}
+                        onPress={async () => {
+                          await BApi.postParser.deletePostParserTask(task.id);
+                        }}
+                      >
+                        <AiOutlineDelete className={"text-base"} />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
