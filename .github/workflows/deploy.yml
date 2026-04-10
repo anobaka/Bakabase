@@ -275,6 +275,9 @@ jobs:
           echo "ref=${{ github.ref }}"
           echo "ref_name=${{ github.ref_name }}"
           echo "nbgv.version=${{ needs.prepare.outputs.version }}"
+      - name: Install semver
+        run: npm install semver
+
       - name: Find previous release tag
         id: previous
         uses: actions/github-script@v7
@@ -282,17 +285,41 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           result-encoding: string
           script: |
+            const semver = require('semver');
             const current = "${{ needs.prepare.outputs.version }}";
-            const isPrerelease = /(?:beta|rc)/i.test(current);
-            const { owner, repo } = context.repo;
-            const releases = await github.paginate(github.rest.repos.listReleases, { owner, repo, per_page: 100 });
-            const allCandidates = releases.filter(r => !r.draft && r.tag_name && r.tag_name !== current);
-            const stableCandidates = allCandidates.filter(r => !r.prerelease);
-            let candidates = isPrerelease ? allCandidates : stableCandidates;
-            let prev = candidates[0]?.tag_name;
-            if (!prev && allCandidates.length > 0) {
-              prev = allCandidates.find(r => r.tag_name && r.tag_name !== current)?.tag_name;
+            const currentClean = semver.clean(current) || semver.valid(semver.coerce(current));
+            if (!currentClean) {
+              throw new Error(`Cannot parse current version: ${current}`);
             }
+            const isPrerelease = semver.prerelease(currentClean) !== null;
+            const { owner, repo } = context.repo;
+
+            const releases = await github.paginate(github.rest.repos.listReleases, { owner, repo, per_page: 100 });
+            const allCandidates = releases
+              .filter(r => !r.draft && r.tag_name)
+              .map(r => {
+                const cleaned = semver.clean(r.tag_name) || semver.valid(semver.coerce(r.tag_name));
+                return { ...r, semver: cleaned };
+              })
+              .filter(r => r.semver && semver.lt(r.semver, currentClean));
+
+            // If current is stable: only consider stable releases
+            // If current is prerelease: consider all versions (stable + prerelease)
+            let candidates = isPrerelease
+              ? allCandidates
+              : allCandidates.filter(r => !r.prerelease);
+
+            // Sort descending (highest version first)
+            candidates.sort((a, b) => semver.rcompare(a.semver, b.semver));
+
+            let prev = candidates[0]?.tag_name;
+
+            // Fallback: if no stable candidates found for a stable release, try all candidates
+            if (!prev && !isPrerelease && allCandidates.length > 0) {
+              allCandidates.sort((a, b) => semver.rcompare(a.semver, b.semver));
+              prev = allCandidates[0]?.tag_name;
+            }
+
             if (!prev) {
               const { execSync } = require('node:child_process');
               try {
@@ -302,6 +329,7 @@ jobs:
             if (!prev) {
               throw new Error('No previous tag found from releases or tags');
             }
+            core.info(`Current: ${current} (prerelease=${isPrerelease}), Previous: ${prev}`);
             core.setOutput('previous_tag', prev);
 
       - name: Generate initial context (git-cliff)
@@ -324,7 +352,25 @@ jobs:
             const fs = require('node:fs');
             const path = 'cliff.context.initial.json';
             const text = fs.readFileSync(path, { encoding: 'utf8' });
-            const initial = JSON.parse(text || '{}')[0];
+            const allReleases = JSON.parse(text || '[]');
+            // git-cliff splits commits by intermediate tags (e.g. beta tags between two stable releases).
+            // Merge all releases' commits into one so the changelog covers the full range.
+            const initial = allReleases[0];
+            const seenCommitIds = new Set((initial.commits || []).map(c => c.id));
+            for (let i = 1; i < allReleases.length; i++) {
+              for (const commit of allReleases[i].commits || []) {
+                if (!seenCommitIds.has(commit.id)) {
+                  seenCommitIds.add(commit.id);
+                  initial.commits.push(commit);
+                }
+              }
+            }
+            // Update statistics
+            if (initial.statistics) {
+              initial.statistics.commit_count = initial.commits.length;
+            }
+            // Clear previous pointer since we merged everything
+            initial.previous = null;
 
             const issues = {};
             const { owner, repo } = context.repo;
