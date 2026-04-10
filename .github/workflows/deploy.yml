@@ -166,12 +166,9 @@ jobs:
         with:
           fetch-depth: 0  # Fetch all history for all branches and tags
           path: ${{ github.event.repository.name }}
+          submodules: recursive
       - name: Copy global.json to workspace root
-        run: cp ${{ github.event.repository.name }}/global.json .        
-      - name: Clone Bakabase.Infrastructures
-        run: git clone https://github.com/anobaka/Bakabase.Infrastructures.git
-      - name: Clone LazyMortal
-        run: git clone https://github.com/anobaka/LazyMortal.git
+        run: cp ${{ github.event.repository.name }}/global.json .
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:

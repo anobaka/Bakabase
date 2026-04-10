@@ -1,0 +1,6 @@
+[submodule "src/libs/LazyMortal"]
+	path = src/libs/LazyMortal
+	url = git@github.com:anobaka/LazyMortal.git
+[submodule "src/libs/Bakabase.Infrastructures"]
+	path = src/libs/Bakabase.Infrastructures
+	url = git@github.com:anobaka/Bakabase.Infrastructures.git

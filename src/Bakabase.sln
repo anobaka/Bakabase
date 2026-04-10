@@ -13,7 +13,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "libs", "libs", "{4E98F6DA-3
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{E3E19229-9C9B-48D3-A710-9778DD6E2F10}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bootstrap", "..\..\LazyMortal\src\Bootstrap\Bootstrap.csproj", "{8E6D4AF9-EED3-47B4-8734-C996BC7A335E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bootstrap", "libs\LazyMortal\src\Bootstrap\Bootstrap.csproj", "{8E6D4AF9-EED3-47B4-8734-C996BC7A335E}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bakabase.Lab", "tests\Bakabase.Lab\Bakabase.Lab.csproj", "{644F66E0-12D6-4493-9228-CC30AB88A250}"
 EndProject
@@ -21,7 +21,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{8B728E85
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bakabase.Prefabs", "miscellaneous\Bakabase.Prefabs\Bakabase.Prefabs.csproj", "{462E3DB3-DEC9-46B4-8F71-066A58239C76}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bakabase.Infrastructures", "..\..\Bakabase.Infrastructures\Bakabase.Infrastructures\Bakabase.Infrastructures.csproj", "{8E8737EE-8679-4C5A-9F66-3F8582C80247}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bakabase.Infrastructures", "libs\Bakabase.Infrastructures\Bakabase.Infrastructures\Bakabase.Infrastructures.csproj", "{8E8737EE-8679-4C5A-9F66-3F8582C80247}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bakabase.Updater", "..\..\Bakabase.Updater\Bakabase.Updater.csproj", "{DE432D57-2FBC-4AFB-ABE5-20A7B6E0C7BE}"
 EndProject
@@ -62,7 +62,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bakabase.Modules.StandardVa
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bakabase.Modules.Property.Tests", "tests\Bakabase.Modules.Property.Tests\Bakabase.Modules.Property.Tests.csproj", "{1C512718-9490-4984-B64F-6862BE5EABBB}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bootstrap.Tests", "..\..\LazyMortal\test\Bootstrap.Tests\Bootstrap.Tests.csproj", "{CE119E81-02F6-4E55-9F96-F234CA97ABAA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bootstrap.Tests", "libs\LazyMortal\test\Bootstrap.Tests\Bootstrap.Tests.csproj", "{CE119E81-02F6-4E55-9F96-F234CA97ABAA}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bakabase.Modules.BulkModification", "modules\Bakabase.Modules.BulkModification\Bakabase.Modules.BulkModification.csproj", "{837DB2B3-A163-482E-A405-278C48080EBA}"
 EndProject

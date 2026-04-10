@@ -7,8 +7,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\..\..\Bakabase.Infrastructures\Bakabase.Infrastructures\Bakabase.Infrastructures.csproj" />
-        <ProjectReference Include="..\..\..\..\LazyMortal\src\Bootstrap\Bootstrap.csproj" />
+        <ProjectReference Include="..\..\libs\Bakabase.Infrastructures\Bakabase.Infrastructures\Bakabase.Infrastructures.csproj" />
+        <ProjectReference Include="..\..\libs\LazyMortal\src\Bootstrap\Bootstrap.csproj" />
     </ItemGroup>
 
     <ItemGroup>
