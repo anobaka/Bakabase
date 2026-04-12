@@ -9,6 +9,7 @@
     Height="150"
     CanResize="False"
     WindowStartupLocation="CenterScreen"
+    Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
     mc:Ignorable="d">
     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
         <StackPanel Orientation="Horizontal">

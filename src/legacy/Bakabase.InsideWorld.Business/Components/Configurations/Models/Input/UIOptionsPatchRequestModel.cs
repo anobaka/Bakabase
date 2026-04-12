@@ -9,6 +9,7 @@ namespace Bakabase.InsideWorld.Business.Components.Configurations.Models.Input
         public UIResourceOptions? Resource { get; set; }
         public StartupPage? StartupPage { get; set; }
         public bool? IsMenuCollapsed { get; set; }
+        public bool? HideResourceCovers { get; set; }
         public List<PropertyKey>? LatestUsedProperties { get; set; }
     }
 }

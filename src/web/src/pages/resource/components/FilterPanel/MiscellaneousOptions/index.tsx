@@ -474,7 +474,7 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
           visible={visible}
           onClose={() => setVisible(false)}
         >
-          <Tabs>
+          <Tabs disableAnimation>
             <Tab key="general" title={t<string>("resource.display.tab.general")}>
               {renderGeneralTab()}
             </Tab>

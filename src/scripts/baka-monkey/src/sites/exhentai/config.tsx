@@ -126,8 +126,11 @@ export const exhentaiConfig: SiteConfig = {
 
   createContainer: (element) => {
     const container = document.createElement('div');
-    container.className = 'bakabase-react-root';
+    container.className = 'bk-marker';
     container.style.cssText = 'position:absolute;bottom:2px;right:2px;z-index:98;';
+    if (getComputedStyle(element).position === 'static') {
+      element.style.position = 'relative';
+    }
     element.appendChild(container);
     return container;
   },

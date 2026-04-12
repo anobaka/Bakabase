@@ -599,7 +599,7 @@ const AiAnalysisModal = ({ directoryPath, filePaths, onDestroyed }: Props) => {
             )}
           </div>
         )}
-        <Tabs variant="underlined">
+        <Tabs variant="underlined" disableAnimation>
           {/* Structure Analysis */}
           <Tab key="structure" title={t("fileProcessor.ai.analyzeStructure")}>
             <div className="flex flex-col gap-3 p-2">

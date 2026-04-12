@@ -53,7 +53,7 @@ const ConfigurationsModal = ({ onSubmitted, onDestroyed }: Props) => {
   const { t } = useTranslation();
 
   const [thirdPartyIds, setThirdPartyIds] = useState<ThirdPartyId[]>([]);
-  const [selectedTab, setSelectedTab] = useState<ThirdPartyId | "">("");
+  const [selectedTab, setSelectedTab] = useState<ThirdPartyId | "">("")
 
   useEffect(() => {
     BApi.downloadTask.getAllDownloaderDefinitions().then((res) => {
@@ -79,6 +79,7 @@ const ConfigurationsModal = ({ onSubmitted, onDestroyed }: Props) => {
       <Tabs
         destroyInactiveTabPanel
         isVertical
+        disableAnimation
         classNames={{ panel: "flex-1 w-0" }}
         selectedKey={selectedTab.toString()}
         onSelectionChange={(key) => setSelectedTab(parseInt(key as string, 10) as ThirdPartyId)}

@@ -5,10 +5,8 @@
    across host pages with different <html> font-size values.
    Icons (1em) will be slightly larger than ideal — acceptable tradeoff
    for not modifying the host page's styles. */
-#bakabase-monkey-root,
-.bakabase-react-root {
+#bk-app,
+.bk-marker {
   zoom: calc(16 / var(--bk-html-fs, 16));
   background: transparent !important;
 }
-
-

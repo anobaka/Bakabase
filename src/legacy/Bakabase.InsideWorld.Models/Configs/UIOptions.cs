@@ -16,6 +16,8 @@ namespace Bakabase.InsideWorld.Models.Configs
         public StartupPage StartupPage { get; set; }
         
         public bool IsMenuCollapsed { get; set; }
+
+        public bool HideResourceCovers { get; set; }
         
         public List<PropertyKey> LatestUsedProperties { get; set; } = new List<PropertyKey>();
 

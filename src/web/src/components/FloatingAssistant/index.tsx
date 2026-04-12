@@ -16,12 +16,16 @@ import {
   CircularProgress,
   Divider,
   Popover,
+  Switch,
+  Tab,
+  Tabs,
   Tooltip,
 } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 import { buildLogger } from "@/components/utils";
 
 import { useBTasksStore, selectTasks } from "@/stores/bTasks";
+import { useUiOptionsStore } from "@/stores/options";
 import { AssistantStatus, POLLING_INTERVAL_MS } from "./constants";
 import type { AssistantStatusType } from "./constants";
 import { useDraggable } from "./hooks/useDraggable";
@@ -39,6 +43,8 @@ const FloatingAssistant = () => {
   const { position, handleMouseDown, isDragging, isDraggingState } = useDraggable();
 
   const bTasks = useBTasksStore(selectTasks);
+  const hideResourceCovers = useUiOptionsStore((s) => s.data?.hideResourceCovers ?? false);
+  const patchUiOptions = useUiOptionsStore((s) => s.patch);
 
   // Tick to trigger re-render so simulated durations update every second
   const [, setNowTick] = useState<number>(Date.now());
@@ -230,52 +236,73 @@ const FloatingAssistant = () => {
       }
     >
       <div className={"flex flex-col gap-2 p-2 min-w-[300px]"}>
-        <div className="flex flex-col gap-1 max-h-[600px] mt-2 overflow-auto">
-          <TaskTable tasks={bTasks} />
-        </div>
-        <Divider orientation={"horizontal"} />
-        <div className="flex items-center gap-2 flex-wrap">
-          {runningTasks.length > 0 && (
-            <Tooltip content={t("floatingAssistant.tip.pauseAllRunningTasks")}>
-              <Button
-                size={"sm"}
-                variant={"ghost"}
-                color={"warning"}
-                onPress={handlePauseAll}
-              >
-                <PauseOutlined className={"text-base"} />
-                {t("common.action.pauseAll")}
-              </Button>
-            </Tooltip>
-          )}
-          {pausedTasks.length > 0 && (
-            <Tooltip content={t("floatingAssistant.tip.resumeAllPausedTasks")}>
-              <Button
-                size={"sm"}
-                variant={"ghost"}
-                color={"secondary"}
-                onPress={handleResumeAll}
-              >
-                <CaretRightOutlined className={"text-base"} />
-                {t("common.action.resumeAll")}
-              </Button>
-            </Tooltip>
-          )}
-          {clearableTasks.length > 0 && (
-            <Tooltip content={t("floatingAssistant.tip.clearInactiveTasks")}>
-              <Button
-                size={"sm"}
-                variant={"ghost"}
-                onPress={() =>
-                  BApi.backgroundTask.cleanInactiveBackgroundTasks()
-                }
-              >
-                <ClearOutlined className={"text-base"} />
-                {t("floatingAssistant.action.clearInactiveTasks")}
-              </Button>
-            </Tooltip>
-          )}
-        </div>
+        <Tabs size="sm" variant="underlined" disableAnimation>
+          <Tab key="tasks" title={t("floatingAssistant.label.taskList")}>
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-1 max-h-[600px] overflow-auto">
+                <TaskTable tasks={bTasks} />
+              </div>
+              <Divider orientation={"horizontal"} />
+              <div className="flex items-center gap-2 flex-wrap">
+                {runningTasks.length > 0 && (
+                  <Tooltip content={t("floatingAssistant.tip.pauseAllRunningTasks")}>
+                    <Button
+                      size={"sm"}
+                      variant={"ghost"}
+                      color={"warning"}
+                      onPress={handlePauseAll}
+                    >
+                      <PauseOutlined className={"text-base"} />
+                      {t("common.action.pauseAll")}
+                    </Button>
+                  </Tooltip>
+                )}
+                {pausedTasks.length > 0 && (
+                  <Tooltip content={t("floatingAssistant.tip.resumeAllPausedTasks")}>
+                    <Button
+                      size={"sm"}
+                      variant={"ghost"}
+                      color={"secondary"}
+                      onPress={handleResumeAll}
+                    >
+                      <CaretRightOutlined className={"text-base"} />
+                      {t("common.action.resumeAll")}
+                    </Button>
+                  </Tooltip>
+                )}
+                {clearableTasks.length > 0 && (
+                  <Tooltip content={t("floatingAssistant.tip.clearInactiveTasks")}>
+                    <Button
+                      size={"sm"}
+                      variant={"ghost"}
+                      onPress={() =>
+                        BApi.backgroundTask.cleanInactiveBackgroundTasks()
+                      }
+                    >
+                      <ClearOutlined className={"text-base"} />
+                      {t("floatingAssistant.action.clearInactiveTasks")}
+                    </Button>
+                  </Tooltip>
+                )}
+              </div>
+            </div>
+          </Tab>
+          <Tab key="settings" title={t("floatingAssistant.section.quickSettings")}>
+            <div className="flex flex-col gap-3 py-2">
+              <Tooltip content={t("floatingAssistant.tip.hideResourceCovers")} placement="bottom">
+                <div>
+                  <Switch
+                    size="sm"
+                    isSelected={hideResourceCovers}
+                    onValueChange={(v) => patchUiOptions({ hideResourceCovers: v })}
+                  >
+                    {t("floatingAssistant.label.hideResourceCovers")}
+                  </Switch>
+                </div>
+              </Tooltip>
+            </div>
+          </Tab>
+        </Tabs>
       </div>
     </Popover>
   );

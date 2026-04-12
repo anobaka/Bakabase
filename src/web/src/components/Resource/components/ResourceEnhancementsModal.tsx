@@ -519,6 +519,7 @@ function ResourceEnhancementsModal({ resourceId, ...props }: Props) {
       ) : (
         <Tabs
           isVertical
+          disableAnimation
           aria-label="Enhancers"
           classNames={{
             panel: "grow min-w-0",

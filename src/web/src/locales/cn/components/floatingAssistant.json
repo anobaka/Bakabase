@@ -27,5 +27,8 @@
   "floatingAssistant.taskType.moveResources": "移动资源",
   "floatingAssistant.taskType.copyFiles": "复制文件",
   "floatingAssistant.taskType.download": "下载",
-  "floatingAssistant.taskType.any": "其他"
+  "floatingAssistant.taskType.any": "其他",
+  "floatingAssistant.section.quickSettings": "快捷设置",
+  "floatingAssistant.label.hideResourceCovers": "隐藏资源封面",
+  "floatingAssistant.tip.hideResourceCovers": "开启后，所有资源封面将被隐藏"
 }

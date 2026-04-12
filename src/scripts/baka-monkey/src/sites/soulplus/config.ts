@@ -43,11 +43,11 @@ export const soulplusConfig: SiteConfig = {
 
   createContainer: (element) => {
     const container = document.createElement('div');
-    container.className = 'bakabase-react-root';
+    container.className = 'bk-marker';
 
     if (isListModeTr(element)) {
-      // List mode: insert inline after the h3 in the title td
-      container.style.cssText = 'display:inline;margin-left:8px;';
+      // List mode: insert inline after the h3 in the title td, scaled down to avoid expanding the row
+      container.style.cssText = 'display:inline-flex;margin-left:8px;vertical-align:middle;transform:scale(0.75);transform-origin:left center;';
       const h3 = element.querySelector('td h3');
       if (h3) {
         h3.parentElement!.insertBefore(container, h3.nextSibling);
@@ -55,16 +55,15 @@ export const soulplusConfig: SiteConfig = {
         element.appendChild(container);
       }
     } else {
-      // Image wall mode: position at bottom-right of the cover image container
-      container.style.cssText = 'position:absolute;bottom:4px;right:4px;z-index:98;';
-      const imgContainer = element.querySelector<HTMLElement>('.section-text div');
-      if (imgContainer) {
-        if (getComputedStyle(imgContainer).position === 'static') {
-          imgContainer.style.position = 'relative';
+      // Image wall mode: position at bottom-right of the <li> wrapper
+      container.style.cssText = 'position:absolute;bottom:0;right:0;z-index:98;padding:2px 4px;';
+      const li = element.closest('li');
+      if (li) {
+        if (getComputedStyle(li).position === 'static') {
+          li.style.position = 'relative';
         }
-        imgContainer.appendChild(container);
+        li.appendChild(container);
       } else {
-        container.style.cssText = 'position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:98;';
         element.appendChild(container);
       }
     }

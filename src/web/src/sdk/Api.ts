@@ -1421,17 +1421,6 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
   autoBuyThreshold: number;
 }
 
-export interface BakabaseServiceControllersCookieCaptureResult {
-  cookie: string;
-  userAgent?: string;
-  tlsPreset?: string;
-}
-
-export interface BakabaseModulesThirdPartyHelpersTlsPresetInfo {
-  id: string;
-  label: string;
-}
-
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainThirdPartyAccount {
   name?: string;
   cookie?: string;
@@ -1675,6 +1664,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputU
   /** [0: Default, 1: Resource] */
   startupPage?: BakabaseInsideWorldModelsConstantsStartupPage;
   isMenuCollapsed?: boolean;
+  hideResourceCovers?: boolean;
   latestUsedProperties?: BakabaseInsideWorldModelsConfigsUIOptionsPropertyKey[];
 }
 
@@ -1991,45 +1981,6 @@ export interface BakabaseInsideWorldBusinessComponentsPlayListModelsInputPlayLis
   order?: number;
 }
 
-export interface BakabaseInsideWorldBusinessComponentsPostParserControllersAddPostParserTasksInput {
-  sourceLinksMap: Record<string, string[]>;
-  targets: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstantsPostParseTarget[];
-}
-
-/**
- * [1: DownloadInfo]
- * @format int32
- */
-export type BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstantsPostParseTarget = 1;
-
-/**
- * [5: SoulPlus]
- * @format int32
- */
-export type BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstantsPostParserSource =
-  5;
-
-export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParseTargetResult {
-  data?: any;
-  /** @format date-time */
-  parsedAt?: string;
-  error?: string;
-}
-
-export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTask {
-  /** @format int32 */
-  id: number;
-  /** [5: SoulPlus] */
-  source: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstantsPostParserSource;
-  link: string;
-  title?: string;
-  content?: string;
-  targets: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstantsPostParseTarget[];
-  results?: {
-    DownloadInfo: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParseTargetResult;
-  };
-}
-
 export interface BakabaseInsideWorldModelsConfigsFileSystemOptions {
   recentMovingDestinations?: string[];
   fileMover?: BakabaseInsideWorldModelsConfigsFileSystemOptionsFileMoverOptions;
@@ -2112,6 +2063,7 @@ export interface BakabaseInsideWorldModelsConfigsUIOptions {
   /** [0: Default, 1: Resource] */
   startupPage: BakabaseInsideWorldModelsConstantsStartupPage;
   isMenuCollapsed: boolean;
+  hideResourceCovers: boolean;
   latestUsedProperties: BakabaseInsideWorldModelsConfigsUIOptionsPropertyKey[];
 }
 
@@ -3270,12 +3222,23 @@ export interface BakabaseModulesStandardValueModelsViewStandardValueConversionRu
   description?: string;
 }
 
+export interface BakabaseModulesThirdPartyHelpersTlsPresetInfo {
+  id: string;
+  label: string;
+}
+
 export interface BakabaseModulesThirdPartyThirdPartiesBilibiliModelsFavorites {
   /** @format int64 */
   id: number;
   title: string;
   /** @format int32 */
   mediaCount: number;
+}
+
+export interface BakabaseServiceControllersCookieCaptureResult {
+  cookie: string;
+  userAgent?: string;
+  tlsPreset?: string;
 }
 
 export interface BakabaseServiceControllersDiscoverySubscribeRequest {
@@ -3964,20 +3927,6 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBu
   code: number;
   message?: string;
   data?: BakabaseInsideWorldBusinessComponentsPlayListModelsDomainPlayList[];
-}
-
-export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstantsPostParseTarget {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstantsPostParseTarget[];
-}
-
-export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTask {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTask[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsAosPreviewerItem {
@@ -4728,6 +4677,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesP
   data?: BakabaseModulesPropertyModelsViewPropertyViewModel;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceControllersCookieCaptureResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceControllersCookieCaptureResult;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceControllersMediaLibraryStatistics {
   /** @format int32 */
   code: number;
@@ -4870,13 +4826,6 @@ export interface BootstrapModelsResponseModelsSingletonResponse1SystemString {
   code: number;
   message?: string;
   data?: string;
-}
-
-export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceControllersCookieCaptureResult {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseServiceControllersCookieCaptureResult;
 }
 
 export interface BulkResourceMediaLibraryMappingInputModel {
@@ -16165,178 +16114,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         ...params,
       }),
   };
-  postParser = {
-    /**
-     * No description
-     *
-     * @tags PostParser
-     * @name GetPostParseTargets
-     * @request GET:/post-parser/targets
-     */
-    getPostParseTargets: (params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstantsPostParseTarget,
-        any
-      >({
-        path: `/post-parser/targets`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for getPostParseTargets
-     * @name getPostParseTargetsUrl
-     */
-    getPostParseTargetsUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/post-parser/targets`;
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags PostParser
-     * @name GetAllPostParserTasks
-     * @request GET:/post-parser/task/all
-     */
-    getAllPostParserTasks: (params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTask,
-        any
-      >({
-        path: `/post-parser/task/all`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for getAllPostParserTasks
-     * @name getAllPostParserTasksUrl
-     */
-    getAllPostParserTasksUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/post-parser/task/all`;
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags PostParser
-     * @name DeleteAllPostParserTasks
-     * @request DELETE:/post-parser/task/all
-     */
-    deleteAllPostParserTasks: (params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/post-parser/task/all`,
-        method: "DELETE",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for deleteAllPostParserTasks
-     * @name deleteAllPostParserTasksUrl
-     */
-    deleteAllPostParserTasksUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/post-parser/task/all`;
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags PostParser
-     * @name AddPostParserTasks
-     * @request POST:/post-parser/task
-     */
-    addPostParserTasks: (
-      data: BakabaseInsideWorldBusinessComponentsPostParserControllersAddPostParserTasksInput,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/post-parser/task`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for addPostParserTasks
-     * @name addPostParserTasksUrl
-     */
-    addPostParserTasksUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/post-parser/task`;
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags PostParser
-     * @name DeletePostParserTask
-     * @request DELETE:/post-parser/task/{id}
-     */
-    deletePostParserTask: (id: number, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/post-parser/task/${id}`,
-        method: "DELETE",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags PostParser
-     * @name ReParsePostParserTask
-     * @request POST:/post-parser/task/{id}/reparse
-     */
-    reParsePostParserTask: (id: number, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/post-parser/task/${id}/reparse`,
-        method: "POST",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags PostParser
-     * @name StartAllPostParserTasks
-     * @request POST:/post-parser/start
-     */
-    startAllPostParserTasks: (params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/post-parser/start`,
-        method: "POST",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for startAllPostParserTasks
-     * @name startAllPostParserTasksUrl
-     */
-    startAllPostParserTasksUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/post-parser/start`;
-      
-      return baseUrl + path;
-    },
-  };
   property = {
     /**
      * No description
@@ -16911,6 +16688,32 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Tampermonkey
+     * @name TampermonkeyHealth
+     * @request GET:/Tampermonkey/health
+     */
+    tampermonkeyHealth: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/Tampermonkey/health`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for tampermonkeyHealth
+     * @name tampermonkeyHealthUrl
+     */
+    tampermonkeyHealthUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/Tampermonkey/health`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Tampermonkey
      * @name InstallTampermonkeyScript
      * @request GET:/Tampermonkey/install
      */
@@ -17166,7 +16969,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceControllersCookieCaptureResult, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceControllersCookieCaptureResult,
+        any
+      >({
         path: `/tool/cookie-capture`,
         method: "POST",
         query: query,
@@ -17194,6 +17000,32 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Tool
+     * @name GetTlsPresets
+     * @request GET:/tool/tls-presets
+     */
+    getTlsPresets: (params: RequestParams = {}) =>
+      this.request<BakabaseModulesThirdPartyHelpersTlsPresetInfo[], any>({
+        path: `/tool/tls-presets`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getTlsPresets
+     * @name getTlsPresetsUrl
+     */
+    getTlsPresetsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/tool/tls-presets`;
       
       return baseUrl + path;
     },
@@ -17249,21 +17081,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       return baseUrl + path;
     },
-
-    /**
-     * No description
-     *
-     * @tags Tool
-     * @name GetTlsPresets
-     * @request GET:/tool/tls-presets
-     */
-    getTlsPresets: (params: RequestParams = {}) =>
-      this.request<BakabaseModulesThirdPartyHelpersTlsPresetInfo[], any>({
-        path: `/tool/tls-presets`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
 
     /**
      * No description

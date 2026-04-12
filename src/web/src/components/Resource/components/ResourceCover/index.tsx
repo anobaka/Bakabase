@@ -193,7 +193,18 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     log("failed to load url", url);
   }, []);
 
+  const hideCovers = useUiOptionsStore((state) => state.data?.hideResourceCovers ?? false);
+
   const renderCover = useCallback(() => {
+    // Hide covers mode: show fallback for all resources
+    if (hideCovers) {
+      return (
+        <div className="w-full h-full flex items-center justify-center">
+          <FallbackCover afterClearingCache={reload} id={resource.id} />
+        </div>
+      );
+    }
+
     // Show loading state with tooltip
     if (coverResolution.status === "loading" || !urls) {
       return (
@@ -267,7 +278,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
         })}
       </Carousel>
     );
-  }, [urls, coverFit, disableCarousel, failureUrls, coverResolution.status, loadingTooltipContent, handleImageLoad, handleImageError]);
+  }, [urls, coverFit, disableCarousel, failureUrls, coverResolution.status, loadingTooltipContent, handleImageLoad, handleImageError, hideCovers]);
 
   const renderContainer = () => {
     return (
@@ -303,7 +314,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
   let tooltipWidth: number | undefined;
   let tooltipHeight: number | undefined;
 
-  if (showBiggerOnHover && typeof window !== "undefined") {
+  if (showBiggerOnHover && !hideCovers && typeof window !== "undefined") {
     const containerWidth = containerRef.current?.clientWidth ?? 100;
     const containerHeight = containerRef.current?.clientHeight ?? 100;
 

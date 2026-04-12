@@ -27,5 +27,8 @@
   "floatingAssistant.taskType.moveResources": "Move Resources",
   "floatingAssistant.taskType.copyFiles": "Copy Files",
   "floatingAssistant.taskType.download": "Download",
-  "floatingAssistant.taskType.any": "Other"
+  "floatingAssistant.taskType.any": "Other",
+  "floatingAssistant.section.quickSettings": "Quick Settings",
+  "floatingAssistant.label.hideResourceCovers": "Hide resource covers",
+  "floatingAssistant.tip.hideResourceCovers": "When enabled, all resource covers will be hidden"
 }

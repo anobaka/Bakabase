@@ -178,6 +178,11 @@ namespace Bakabase.Service.Controllers
                     options.IsMenuCollapsed = model.IsMenuCollapsed.Value;
                 }
 
+                if (model.HideResourceCovers.HasValue)
+                {
+                    options.HideResourceCovers = model.HideResourceCovers.Value;
+                }
+
                 if (model.LatestUsedProperties != null)
                 {
                     options.LatestUsedProperties = model.LatestUsedProperties;

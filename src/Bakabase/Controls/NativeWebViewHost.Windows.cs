@@ -51,8 +51,11 @@ public partial class NativeWebViewHost
     {
         if (_winHwnd == IntPtr.Zero) return;
 
-        var w = (int)e.NewSize.Width;
-        var h = (int)e.NewSize.Height;
+        // Avalonia reports logical pixels; Win32 SetWindowPos expects physical pixels.
+        // Multiply by DPI scaling to get the correct size on high-DPI displays.
+        var scaling = VisualRoot?.RenderScaling ?? 1.0;
+        var w = (int)(e.NewSize.Width * scaling);
+        var h = (int)(e.NewSize.Height * scaling);
 
         // Resize the host HWND
         Win32.SetWindowPos(_winHwnd, IntPtr.Zero, 0, 0, w, h,

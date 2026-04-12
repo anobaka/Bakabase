@@ -16,7 +16,7 @@ function boot() {
   document.documentElement.style.setProperty('--bk-html-fs', String(htmlFs));
 
   const rootEl = document.createElement('div');
-  rootEl.id = 'bakabase-monkey-root';
+  rootEl.id = 'bk-app';
   document.body.appendChild(rootEl);
 
   ReactDOM.createRoot(rootEl).render(

@@ -2446,6 +2446,30 @@ export const PostParserSourceLabel: Record<PostParserSource, string> = {
   [PostParserSource.SoulPlus]: 'SoulPlus'
 };
 
+export enum PostParserTaskStatus {
+  None = 0,
+  Pending = 1,
+  Complete = 2,
+  Failed = 3,
+  Deleted = 4
+}
+
+export const postParserTaskStatuses = [
+  { label: 'None', value: PostParserTaskStatus.None },
+  { label: 'Pending', value: PostParserTaskStatus.Pending },
+  { label: 'Complete', value: PostParserTaskStatus.Complete },
+  { label: 'Failed', value: PostParserTaskStatus.Failed },
+  { label: 'Deleted', value: PostParserTaskStatus.Deleted }
+] as const;
+
+export const PostParserTaskStatusLabel: Record<PostParserTaskStatus, string> = {
+  [PostParserTaskStatus.None]: 'None',
+  [PostParserTaskStatus.Pending]: 'Pending',
+  [PostParserTaskStatus.Complete]: 'Complete',
+  [PostParserTaskStatus.Failed]: 'Failed',
+  [PostParserTaskStatus.Deleted]: 'Deleted'
+};
+
 export enum PostParseTarget {
   DownloadInfo = 1
 }

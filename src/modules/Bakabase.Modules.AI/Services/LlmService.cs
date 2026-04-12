@@ -45,6 +45,11 @@ public class LlmService(
             chatOptions.TopP = parameters.TopP;
         }
 
+        if (parameters?.UseJsonResponseFormat == true)
+        {
+            chatOptions.ResponseFormat = ChatResponseFormat.Json;
+        }
+
         return await client.GetResponseAsync(messages.ToList(), chatOptions, ct);
     }
 
@@ -88,7 +93,8 @@ public class LlmService(
         {
             Temperature = parametersOverride?.Temperature ?? featureConfig?.Temperature,
             MaxTokens = parametersOverride?.MaxTokens ?? featureConfig?.MaxTokens,
-            TopP = parametersOverride?.TopP ?? featureConfig?.TopP
+            TopP = parametersOverride?.TopP ?? featureConfig?.TopP,
+            UseJsonResponseFormat = parametersOverride?.UseJsonResponseFormat ?? false
         };
 
         return await CompleteAsync(providerConfigId.Value, modelId, messages, parameters, feature, ct);

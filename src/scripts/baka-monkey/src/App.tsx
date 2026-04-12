@@ -58,13 +58,10 @@ export function App({ siteConfigs }: { siteConfigs: SiteConfig[] }) {
       const info = siteConfig.extractContentInfo(element);
       if (!info.id) continue;
 
-      // Ensure element has relative positioning for absolute children
-      if (getComputedStyle(element).position === 'static') {
-        element.style.position = 'relative';
-      }
-
       // Create or reuse a container for the React portal
-      let container = element.querySelector<HTMLElement>('.bakabase-react-root');
+      // Check element itself and its parent (some sites append to a wrapper element)
+      let container = element.querySelector<HTMLElement>('.bk-marker')
+        ?? element.parentElement?.querySelector<HTMLElement>(`:scope > .bk-marker`);
       if (!container) {
         container = siteConfig.createContainer(element);
       }

@@ -13,6 +13,8 @@ public class AiFileProcessorService(
     ILogger<AiFileProcessorService> logger
 ) : IAiFileProcessorService
 {
+    private static readonly LlmModelParameters JsonParameters = new() { UseJsonResponseFormat = true };
+
     private string LanguageInstruction
     {
         get
@@ -57,7 +59,8 @@ public class AiFileProcessorService(
         {
             new(ChatRole.System, $$"""
                 You are a file organization expert. Analyze the given directory structure and identify issues.
-                Respond with a JSON object:
+                You MUST respond with ONLY a valid JSON object, no explanations, no markdown, no extra text.
+                JSON format:
                 {
                   "issues": ["issue1", "issue2"],
                   "suggestions": ["suggestion1", "suggestion2"],
@@ -77,7 +80,7 @@ public class AiFileProcessorService(
             new(ChatRole.User, $"Analyze this directory structure:\n{entries}")
         };
 
-        var response = await llmService.CompleteForFeatureAsync(AiFeature.FileProcessor, messages, ct: ct);
+        var response = await llmService.CompleteForFeatureAsync(AiFeature.FileProcessor, messages, JsonParameters, ct);
         var rawText = response.Text?.Trim() ?? "";
         var json = ExtractJson(rawText);
 
@@ -119,7 +122,8 @@ public class AiFileProcessorService(
         {
             new(ChatRole.System, $$"""
                 You are a file naming convention expert. Analyze the given file names and detect the naming pattern.{{workingDirHint}}
-                Respond with a JSON object:
+                You MUST respond with ONLY a valid JSON object, no explanations, no markdown, no extra text.
+                JSON format:
                 {
                   "detectedPattern": "Pattern description",
                   "inconsistencies": ["file1 doesn't match because..."],
@@ -140,7 +144,7 @@ public class AiFileProcessorService(
                 $"Analyze naming conventions for these files:\n{string.Join("\n", fileInfos.Select(f => f.Path).Take(100))}")
         };
 
-        var response = await llmService.CompleteForFeatureAsync(AiFeature.FileProcessor, messages, ct: ct);
+        var response = await llmService.CompleteForFeatureAsync(AiFeature.FileProcessor, messages, JsonParameters, ct);
         var rawText = response.Text?.Trim() ?? "";
         var json = ExtractJson(rawText);
 
@@ -178,7 +182,8 @@ public class AiFileProcessorService(
         {
             new(ChatRole.System, $$"""
                                    You are a file naming expert. Suggest corrections for inconsistent file names.{{workingDirHint}}{{conventionHint}}
-                                   Respond with a JSON object:
+                                   You MUST respond with ONLY a valid JSON object, no explanations, no markdown, no extra text.
+                                   JSON format:
                                    {
                                      "appliedConvention": "Convention used",
                                      "corrections": [
@@ -193,7 +198,7 @@ public class AiFileProcessorService(
                 $"Suggest corrections for these file names:\n{string.Join("\n", fileNames.Select(f => $"{f.Path}").Take(100))}")
         };
 
-        var response = await llmService.CompleteForFeatureAsync(AiFeature.FileProcessor, messages, ct: ct);
+        var response = await llmService.CompleteForFeatureAsync(AiFeature.FileProcessor, messages, JsonParameters, ct);
         var rawText = response.Text?.Trim() ?? "";
         var json = ExtractJson(rawText);
 
@@ -272,7 +277,8 @@ public class AiFileProcessorService(
                 IMPORTANT: "Filename" refers to the base name of the file (the last segment of the path), NOT the directory name. For example, in "/Users/test/abc.jpg", the filename is "abc.jpg" and the filename without extension is "abc".
                 The "groupName" should be a concise label suitable for use as a folder name.
                 The "targetDirectory" should be the common parent directory of the group's files joined with the groupName.
-                Respond with a JSON object:
+                You MUST respond with ONLY a valid JSON object, no explanations, no markdown, no extra text.
+                JSON format:
                 {
                   "groups": [
                     {
@@ -289,7 +295,7 @@ public class AiFileProcessorService(
                 $"Group these files:\n{string.Join("\n", fileList)}")
         };
 
-        var response = await llmService.CompleteForFeatureAsync(AiFeature.FileProcessor, messages, ct: ct);
+        var response = await llmService.CompleteForFeatureAsync(AiFeature.FileProcessor, messages, JsonParameters, ct);
         var rawText = response.Text?.Trim() ?? "";
         var json = ExtractJson(rawText);
 
@@ -376,7 +382,8 @@ public class AiFileProcessorService(
         {
             new(ChatRole.System, $$"""
                 You are a directory structure expert. Suggest improvements for the directory organization.
-                Respond with a JSON object:
+                You MUST respond with ONLY a valid JSON object, no explanations, no markdown, no extra text.
+                JSON format:
                 {
                   "corrections": [
                     {"originalPath": "current/full/path", "suggestedPath": "better/full/path", "reason": "why"}
@@ -392,7 +399,7 @@ public class AiFileProcessorService(
             new(ChatRole.User, $"Suggest directory structure improvements:\n{entries}")
         };
 
-        var response = await llmService.CompleteForFeatureAsync(AiFeature.FileProcessor, messages, ct: ct);
+        var response = await llmService.CompleteForFeatureAsync(AiFeature.FileProcessor, messages, JsonParameters, ct);
         var rawText = response.Text?.Trim() ?? "";
         var json = ExtractJson(rawText);
 
@@ -722,6 +729,7 @@ public class AiFileProcessorService(
 
     private static string ExtractJson(string text)
     {
+        // Try extracting from markdown code blocks first
         if (text.StartsWith("```"))
         {
             var firstNewline = text.IndexOf('\n');
@@ -730,6 +738,56 @@ public class AiFileProcessorService(
             if (text.EndsWith("```"))
                 text = text[..^3];
             text = text.Trim();
+        }
+
+        // If the text is already valid JSON, return it
+        if (text.StartsWith('{') || text.StartsWith('['))
+            return text;
+
+        // Try to find a JSON code block anywhere in the text (e.g., reasoning models output thinking text first)
+        var codeBlockStart = text.IndexOf("```json", StringComparison.OrdinalIgnoreCase);
+        if (codeBlockStart < 0)
+            codeBlockStart = text.IndexOf("```", StringComparison.Ordinal);
+        if (codeBlockStart >= 0)
+        {
+            var contentStart = text.IndexOf('\n', codeBlockStart);
+            if (contentStart >= 0)
+            {
+                var codeBlockEnd = text.IndexOf("```", contentStart, StringComparison.Ordinal);
+                if (codeBlockEnd > contentStart)
+                    return text[(contentStart + 1)..codeBlockEnd].Trim();
+            }
+        }
+
+        // Try to find the first JSON object or array in the text
+        var firstBrace = text.IndexOf('{');
+        var firstBracket = text.IndexOf('[');
+        var jsonStart = (firstBrace, firstBracket) switch
+        {
+            ( >= 0, >= 0) => Math.Min(firstBrace, firstBracket),
+            ( >= 0, _) => firstBrace,
+            (_, >= 0) => firstBracket,
+            _ => -1
+        };
+
+        if (jsonStart >= 0)
+        {
+            var isObject = text[jsonStart] == '{';
+            var depth = 0;
+            var inString = false;
+            var escape = false;
+            for (var i = jsonStart; i < text.Length; i++)
+            {
+                var c = text[i];
+                if (escape) { escape = false; continue; }
+                if (c == '\\' && inString) { escape = true; continue; }
+                if (c == '"') { inString = !inString; continue; }
+                if (inString) continue;
+                if (c == '{' || c == '[') depth++;
+                else if (c == '}' || c == ']') depth--;
+                if (depth == 0)
+                    return text[jsonStart..(i + 1)];
+            }
         }
 
         return text;

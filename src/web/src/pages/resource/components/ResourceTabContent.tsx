@@ -145,29 +145,40 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
   const isMac = typeof navigator !== "undefined" && navigator.platform.toUpperCase().indexOf("MAC") >= 0;
   const selectionKey = isMac ? "Meta" : "Control";
 
-  const onKeyDown = useCallback((e: KeyboardEvent) => {
+  // Use refs for event handlers to avoid stale closures in event listeners
+  const onKeyDownRef = useRef<(e: KeyboardEvent) => void>(() => {});
+  const onKeyUpRef = useRef<(e: KeyboardEvent) => void>(() => {});
+  const onClickRef = useRef<(e: globalThis.MouseEvent) => void>(() => {});
+  const onWindowBlurRef = useRef<() => void>(() => {});
+
+  onKeyDownRef.current = (e: KeyboardEvent) => {
+    // Ctrl+A / Cmd+A: Select all loaded resources
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "a") {
+      e.preventDefault();
+      setSelectedIds(resourcesRef.current.map((r) => r.id));
+      return;
+    }
     if (e.key == selectionKey && !multiSelectionRef.current) {
       multiSelectionRef.current = true;
       containerRef.current?.setAttribute("data-selection-mode", "true");
     }
-  }, [selectionKey]);
+  };
 
-  const onKeyUp = useCallback((e: KeyboardEvent) => {
+  onKeyUpRef.current = (e: KeyboardEvent) => {
     if (e.key == selectionKey && multiSelectionRef.current) {
       multiSelectionRef.current = false;
       containerRef.current?.removeAttribute("data-selection-mode");
     }
-  }, [selectionKey]);
+  };
 
-  // Reset multi-selection mode when window loses focus (e.g., user switches apps while holding key)
-  const onWindowBlur = useCallback(() => {
+  onWindowBlurRef.current = () => {
     if (multiSelectionRef.current) {
       multiSelectionRef.current = false;
       containerRef.current?.removeAttribute("data-selection-mode");
     }
-  }, []);
+  };
 
-  const onClick = useCallback((e: globalThis.MouseEvent) => {
+  onClickRef.current = (e: globalThis.MouseEvent) => {
     if (!multiSelectionRef.current && !e.shiftKey) {
       // Don't clear selection if clicking on menu items, modals, or other overlay elements
       const target = e.target as HTMLElement;
@@ -180,15 +191,21 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
         lastSelectedIndexRef.current = null;
       }
     }
-  }, []);
+  };
+
+  // Stable event handler delegates that forward to the latest ref
+  const stableKeyDown = useCallback((e: KeyboardEvent) => onKeyDownRef.current(e), []);
+  const stableKeyUp = useCallback((e: KeyboardEvent) => onKeyUpRef.current(e), []);
+  const stableClick = useCallback((e: globalThis.MouseEvent) => onClickRef.current(e), []);
+  const stableBlur = useCallback(() => onWindowBlurRef.current(), []);
 
   useEffect(() => {
     return () => {
-      window.removeEventListener("keydown", onKeyDown);
-      window.removeEventListener("keyup", onKeyUp);
-      window.removeEventListener("click", onClick, true);
-      window.removeEventListener("blur", onWindowBlur);
-      document.removeEventListener("visibilitychange", onWindowBlur);
+      window.removeEventListener("keydown", stableKeyDown);
+      window.removeEventListener("keyup", stableKeyUp);
+      window.removeEventListener("click", stableClick, true);
+      window.removeEventListener("blur", stableBlur);
+      document.removeEventListener("visibilitychange", stableBlur);
     };
   }, []);
 
@@ -204,17 +221,17 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
     }
 
     if (props.activated) {
-      window.addEventListener("keydown", onKeyDown);
-      window.addEventListener("keyup", onKeyUp);
-      window.addEventListener("click", onClick, true);
-      window.addEventListener("blur", onWindowBlur);
-      document.addEventListener("visibilitychange", onWindowBlur);
+      window.addEventListener("keydown", stableKeyDown);
+      window.addEventListener("keyup", stableKeyUp);
+      window.addEventListener("click", stableClick, true);
+      window.addEventListener("blur", stableBlur);
+      document.addEventListener("visibilitychange", stableBlur);
     } else {
-      window.removeEventListener("keydown", onKeyDown);
-      window.removeEventListener("keyup", onKeyUp);
-      window.removeEventListener("click", onClick, true);
-      window.removeEventListener("blur", onWindowBlur);
-      document.removeEventListener("visibilitychange", onWindowBlur);
+      window.removeEventListener("keydown", stableKeyDown);
+      window.removeEventListener("keyup", stableKeyUp);
+      window.removeEventListener("click", stableClick, true);
+      window.removeEventListener("blur", stableBlur);
+      document.removeEventListener("visibilitychange", stableBlur);
     }
   }, [props.activated]);
 
