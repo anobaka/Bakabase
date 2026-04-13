@@ -41,18 +41,13 @@ body = """
 {%- endif -%}
 {%- endfor -%}
 {%- if orphan_commits | length > 0 %}
-### 📝 Other Changes
+### 📝 Other Changes / 其他变更
 {% for commit in orphan_commits %}
 - {{ commit.message | split(pat="\n") | first | upper_first }} ([{{ commit.id | truncate(length=7, end="") }}](https://github.com/anobaka/Bakabase/commit/{{ commit.id }}))
 {%- endfor %}
 {% endif %}
-{% if version %}
-### 下载地址
-- 可通过程序内【系统】-【配置】界面一键更新
-- 完整安装包下载:
-  - 通过阿里云CDN下载: https://cdn-public.anobaka.com/app/bakabase/inside-world/{{ version | trim }}/installer/win-x64/bakabase.zip
-  - 通过Github下载: 通过附件下载对应版本的压缩包即可。
-{% endif %}
+
+
 """
 footer = ""
 trim = false

@@ -1135,19 +1135,22 @@ export const ResponseCodeLabel: Record<ResponseCode, string> = {
 export enum RuntimeMode {
   Dev = 0,
   WinForms = 1,
-  Docker = 2
+  Docker = 2,
+  MacOS = 3
 }
 
 export const runtimeModes = [
   { label: 'Dev', value: RuntimeMode.Dev },
   { label: 'WinForms', value: RuntimeMode.WinForms },
-  { label: 'Docker', value: RuntimeMode.Docker }
+  { label: 'Docker', value: RuntimeMode.Docker },
+  { label: 'MacOS', value: RuntimeMode.MacOS }
 ] as const;
 
 export const RuntimeModeLabel: Record<RuntimeMode, string> = {
   [RuntimeMode.Dev]: 'Dev',
   [RuntimeMode.WinForms]: 'WinForms',
-  [RuntimeMode.Docker]: 'Docker'
+  [RuntimeMode.Docker]: 'Docker',
+  [RuntimeMode.MacOS]: 'MacOS'
 };
 
 export enum Operation {

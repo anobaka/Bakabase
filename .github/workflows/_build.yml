@@ -1,0 +1,206 @@
+name: Build
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+
+jobs:
+  build-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache Yarn
+        uses: actions/cache@v4
+        with:
+          path: |
+            src/web/.yarn/cache
+            src/web/node_modules
+          key: yarn-${{ runner.os }}-${{ hashFiles('src/web/yarn.lock') }}
+          restore-keys: |
+            yarn-${{ runner.os }}-
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Enable corepack
+        run: corepack enable yarn
+
+      - name: Install yarn dependencies
+        working-directory: src/web
+        run: yarn install
+
+      - name: Build frontend
+        working-directory: src/web
+        run: yarn build
+
+      - name: Upload frontend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fe
+          path: src/web/dist/*
+
+  build-tampermonkey:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install dependencies
+        working-directory: src/scripts/baka-monkey
+        run: pnpm install --frozen-lockfile
+
+      - name: Build tampermonkey script
+        working-directory: src/scripts/baka-monkey
+        run: pnpm build
+
+      - name: Upload tampermonkey artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tampermonkey
+          path: src/scripts/baka-monkey/dist/bakabase.user.js
+
+  build-app:
+    runs-on: ${{ matrix.os }}
+    needs: [build-frontend]
+
+    env:
+      DOTNET_MULTILEVEL_LOOKUP: 0
+
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            rid: win-x64
+            artifact: win-x64
+            csproj: Bakabase/src/Bakabase/Bakabase.csproj
+            nuget-path: ~\\.nuget\\packages
+            runtimeMode: WINFORMS
+          - os: macos-15
+            rid: osx-x64
+            artifact: osx-x64
+            csproj: Bakabase/src/Bakabase/Bakabase.csproj
+            nuget-path: ~/.nuget/packages
+            runtimeMode: MACOS
+          - os: macos-latest
+            rid: osx-arm64
+            artifact: osx-arm64
+            csproj: Bakabase/src/Bakabase/Bakabase.csproj
+            nuget-path: ~/.nuget/packages
+            runtimeMode: MACOS
+          - os: ubuntu-latest
+            rid: linux-x64
+            artifact: docker
+            csproj: Bakabase/src/Bakabase.Service/Bakabase.Service.csproj
+            nuget-path: ~/.nuget/packages
+            runtimeMode: DOCKER
+    steps:
+      - name: Checkout main repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          path: ${{ github.event.repository.name }}
+          submodules: recursive
+      - name: Copy global.json to workspace root
+        run: cp ${{ github.event.repository.name }}/global.json .
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.312'
+          dotnet-quality: ''
+      - name: Check dotnet info
+        run: dotnet --info
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ matrix.nuget-path }}
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/packages.lock.json', '**/*.csproj') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+      - name: Build Bakabase project
+        run: dotnet publish -p:RuntimeMode=${{ matrix.runtimeMode }} ${{matrix.csproj}} --self-contained -r ${{ matrix.rid }} -o ./publish
+      - name: Download frontend artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: fe
+          path: ./publish/web
+      - name: Ensure config directory exists
+        run: mkdir -p ./publish/AppData/configs
+      - name: create-json
+        uses: jsdaniell/create-json@v1.2.3
+        with:
+          name: "updater.json"
+          json: ${{ secrets.UPDATER_JSON }}
+          dir: ./publish/AppData/configs
+      - name: Install Velopack CLI
+        if: matrix.runtimeMode == 'WINFORMS' || matrix.runtimeMode == 'MACOS'
+        run: dotnet tool install -g vpk
+      - name: Determine Velopack channel
+        if: matrix.runtimeMode == 'WINFORMS' || matrix.runtimeMode == 'MACOS'
+        id: vpk-channel
+        shell: bash
+        run: |
+          VERSION="${{ inputs.version }}"
+          VERSION_LOWER="$(echo "$VERSION" | tr '[:upper:]' '[:lower:]')"
+          if [[ "$VERSION_LOWER" == *beta* || "$VERSION_LOWER" == *rc* ]]; then
+            echo "channel=beta" >> $GITHUB_OUTPUT
+          else
+            echo "channel=" >> $GITHUB_OUTPUT
+          fi
+      - name: Pack Velopack release
+        if: matrix.runtimeMode == 'WINFORMS' || matrix.runtimeMode == 'MACOS'
+        shell: bash
+        run: |
+          CHANNEL_ARG=""
+          if [[ -n "${{ steps.vpk-channel.outputs.channel }}" ]]; then
+            CHANNEL_ARG="--channel ${{ steps.vpk-channel.outputs.channel }}"
+          fi
+          PLIST_ARG=""
+          if [[ "${{ matrix.runtimeMode }}" == "WINFORMS" ]]; then
+            MAIN_EXE="Bakabase.exe"
+            ICON_ARG="--icon ./publish/Assets/favicon.ico"
+          else
+            MAIN_EXE="Bakabase"
+            ICON_ARG="--icon ./publish/Assets/app.icns"
+            PLIST_ARG="--plist ./publish/Info.plist"
+          fi
+          vpk pack \
+            --packId Bakabase \
+            --packVersion "${{ inputs.version }}" \
+            --packDir ./publish \
+            --mainExe "$MAIN_EXE" \
+            --outputDir ./vpk-output \
+            $ICON_ARG \
+            $PLIST_ARG \
+            $CHANNEL_ARG
+      - name: Upload Velopack artifact
+        if: matrix.runtimeMode == 'WINFORMS' || matrix.runtimeMode == 'MACOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: vpk-${{ matrix.artifact }}
+          path: ./vpk-output/*
+      - name: Upload Bakabase build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ./publish/*
+      - name: Uploaded artifact debug
+        run: |
+          echo "Uploaded artifact name=${{ matrix.artifact }}"
+          echo "Total files: $(find ./publish -type f | wc -l)"

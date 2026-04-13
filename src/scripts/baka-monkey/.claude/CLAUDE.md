@@ -49,7 +49,7 @@ src/
 ### 分发
 
 - 构建产物为 `dist/bakabase.user.js`
-- CI 构建后上传到 OSS（`oss://anobaka-public/app/bakabase/inside-world/scripts/bakabase.user.js`），通过 CDN 分发
+- CI 构建后上传到 OSS（`oss://anobaka-public/app/bakabase/scripts/bakabase.user.js`），通过 CDN 分发
 - 脚本不依赖后端注入，API 地址由用户在 SettingsPanel 中配置（通过 GM_setValue 持久化）
 - 后端 `TampermonkeyService.Install()` 打开 CDN URL 触发 Tampermonkey 安装
 - 后端 `GET /tampermonkey/script/bakabase.user.js` 重定向到 CDN URL（兼容旧链接）

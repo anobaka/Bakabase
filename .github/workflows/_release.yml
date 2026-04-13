@@ -1,0 +1,458 @@
+name: Release
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+      is_tag:
+        required: true
+        type: string
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Debug release context
+        run: |
+          echo "event=${{ github.event_name }}"
+          echo "ref=${{ github.ref }}"
+          echo "ref_name=${{ github.ref_name }}"
+          echo "version=${{ inputs.version }}"
+
+      - name: Install semver
+        run: npm install semver
+
+      - name: Find previous release tag
+        id: previous
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          result-encoding: string
+          script: |
+            const semver = require('semver');
+            const current = "${{ inputs.version }}";
+            const currentClean = semver.clean(current) || semver.valid(semver.coerce(current));
+            if (!currentClean) {
+              throw new Error(`Cannot parse current version: ${current}`);
+            }
+            const isPrerelease = semver.prerelease(currentClean) !== null;
+            const { owner, repo } = context.repo;
+
+            const releases = await github.paginate(github.rest.repos.listReleases, { owner, repo, per_page: 100 });
+            const allCandidates = releases
+              .filter(r => !r.draft && r.tag_name)
+              .map(r => {
+                const cleaned = semver.clean(r.tag_name) || semver.valid(semver.coerce(r.tag_name));
+                return { ...r, semver: cleaned };
+              })
+              .filter(r => r.semver && semver.lt(r.semver, currentClean));
+
+            // If current is stable: only consider stable releases
+            // If current is prerelease: consider all versions (stable + prerelease)
+            let candidates = isPrerelease
+              ? allCandidates
+              : allCandidates.filter(r => !r.prerelease);
+
+            // Sort descending (highest version first)
+            candidates.sort((a, b) => semver.rcompare(a.semver, b.semver));
+
+            let prev = candidates[0]?.tag_name;
+
+            // Fallback: if no stable candidates found for a stable release, try all candidates
+            if (!prev && !isPrerelease && allCandidates.length > 0) {
+              allCandidates.sort((a, b) => semver.rcompare(a.semver, b.semver));
+              prev = allCandidates[0]?.tag_name;
+            }
+
+            if (!prev) {
+              const { execSync } = require('node:child_process');
+              try {
+                prev = execSync('git describe --tags --abbrev=0', { encoding: 'utf8' }).trim();
+              } catch {}
+            }
+            if (!prev) {
+              throw new Error('No previous tag found from releases or tags');
+            }
+            core.info(`Current: ${current} (prerelease=${isPrerelease}), Previous: ${prev}`);
+            core.setOutput('previous_tag', prev);
+
+      - name: Generate initial context (git-cliff)
+        id: cliff_initial
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: -v ${{ steps.previous.outputs.previous_tag }}..${{ github.sha }} --context
+          version: v2.10.0
+        env:
+          OUTPUT: cliff.context.initial.json
+
+      - name: Enrich cliff context
+        id: ctx
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          result-encoding: string
+          script: |
+            const fs = require('node:fs');
+            const path = 'cliff.context.initial.json';
+            const text = fs.readFileSync(path, { encoding: 'utf8' });
+            const allReleases = JSON.parse(text || '[]');
+            // git-cliff splits commits by intermediate tags (e.g. beta tags between two stable releases).
+            // Merge all releases' commits into one so the changelog covers the full range.
+            const initial = allReleases[0];
+            const seenCommitIds = new Set((initial.commits || []).map(c => c.id));
+            for (let i = 1; i < allReleases.length; i++) {
+              for (const commit of allReleases[i].commits || []) {
+                if (!seenCommitIds.has(commit.id)) {
+                  seenCommitIds.add(commit.id);
+                  initial.commits.push(commit);
+                }
+              }
+            }
+            // Update statistics
+            if (initial.statistics) {
+              initial.statistics.commit_count = initial.commits.length;
+            }
+            // Clear previous pointer since we merged everything
+            initial.previous = null;
+
+            const issues = {};
+            const { owner, repo } = context.repo;
+
+            // Label display configuration (order matters for changelog output)
+            const labelConfig = [
+              { name: 'breaking-changes', emoji: '🚨', title: 'Breaking Changes / 破坏性变更' },
+              { name: 'security', emoji: '🔒', title: 'Security / 安全' },
+              { name: 'feature', emoji: '🚀', title: 'Features / 新功能' },
+              { name: 'enhancement', emoji: '✨', title: 'Enhancements / 改进' },
+              { name: 'performance', emoji: '⚡', title: 'Performance / 性能' },
+              { name: 'architecture optimization', emoji: '🏗️', title: 'Architecture / 架构' },
+              { name: 'bug', emoji: '🐛', title: 'Bug Fixes / 缺陷修复' },
+              { name: 'deprecation', emoji: '⚠️', title: 'Deprecations / 弃用' },
+              { name: 'documentation', emoji: '📚', title: 'Documentation / 文档' },
+              { name: 'experiment', emoji: '🧪', title: 'Experiments / 实验性功能' },
+            ];
+            const labelGroups = {};
+            for (const cfg of labelConfig) {
+              labelGroups[cfg.name] = { emoji: cfg.emoji, title: cfg.title, issues: [] };
+            }
+
+            // Collect all issue numbers from commit links
+            const numberSet = new Set();
+            for (const commit of Array.isArray(initial.commits) ? initial.commits : []) {
+              const links = Array.isArray(commit.links) ? commit.links : [];
+              for (const link of links) {
+                const m = /#(\d+)/.exec(link.text || '');
+                if (m) {
+                  numberSet.add(m[1]);
+                }
+              }
+            }
+
+            // Also collect issue numbers from PR descriptions (fix/close/resolve keywords)
+            // commitPrIssues maps commit id -> set of issue numbers found via PR
+            const commitPrIssues = {};
+            const prChecked = new Set();
+            for (const commit of Array.isArray(initial.commits) ? initial.commits : []) {
+              if (!commit.id || prChecked.has(commit.id)) continue;
+              prChecked.add(commit.id);
+              try {
+                const { data: prs } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+                  owner, repo, commit_sha: commit.id
+                });
+                for (const pr of prs) {
+                  if (!pr.body) continue;
+                  const regex = /(?:fix(?:e[sd])?|close[sd]?|resolve[sd]?)\s+#(\d+)/gi;
+                  let match;
+                  while ((match = regex.exec(pr.body)) !== null) {
+                    numberSet.add(match[1]);
+                    commitPrIssues[commit.id] ??= new Set();
+                    commitPrIssues[commit.id].add(match[1]);
+                  }
+                }
+              } catch (e) {
+                core.warning(`Failed to fetch PRs for commit ${commit.id}: ${e.message}`);
+              }
+            }
+
+            // Fetch issue details including labels
+            for (const num of numberSet) {
+              try {
+                const { data } = await github.rest.issues.get({ owner, repo, issue_number: Number(num) });
+                const labels = (data.labels || []).map(l => typeof l === 'string' ? l : l.name);
+                const info = {
+                  title: data.title,
+                  url: data.html_url,
+                  number: data.number,
+                  state: data.state,
+                  labels: labels
+                };
+                issues[num] = info;
+                issues['#' + num] = info;
+
+                // Group issue by each of its labels (issue appears in multiple groups if it has multiple labels)
+                for (const label of labels) {
+                  if (labelGroups[label]) {
+                    // Avoid duplicates
+                    if (!labelGroups[label].issues.find(i => i.number === info.number)) {
+                      labelGroups[label].issues.push(info);
+                    }
+                  }
+                }
+              } catch (e) {
+                core.warning(`Failed to fetch issue #${num}: ${e.message}`);
+              }
+            }
+
+            // Attach issues to commits (from both commit links and PR descriptions)
+            for (const commit of Array.isArray(initial.commits) ? initial.commits : []) {
+              const linkedNums = new Set();
+              const list = [];
+              // From commit message links
+              const links = Array.isArray(commit.links) ? commit.links : [];
+              for (const link of links) {
+                const m = /#(\d+)/.exec(link.text || '');
+                if (m) linkedNums.add(m[1]);
+              }
+              // From PR descriptions
+              if (commit.id && commitPrIssues[commit.id]) {
+                for (const n of commitPrIssues[commit.id]) {
+                  linkedNums.add(n);
+                }
+              }
+              for (const n of linkedNums) {
+                const issue = issues[n] || issues['#' + n] || null;
+                if (issue) list.push(issue);
+              }
+              commit.extra ??= {};
+              commit.extra["issues"] = list;
+            }
+
+            // Add labelGroups to context for template use
+            initial.extra ??= {};
+            initial.extra.labelGroups = labelGroups;
+            initial.extra.labelOrder = labelConfig.map(c => c.name);
+
+            initial.version = "${{ inputs.version }}";
+
+            // set changelog timestamp as Unix seconds from current commit, fallback to now
+            try {
+              const { data: c } = await github.rest.repos.getCommit({ owner, repo, ref: context.sha });
+              const dateStr = c?.commit?.committer?.date || null;
+              const seconds = dateStr ? Math.floor(new Date(dateStr).getTime() / 1000) : Math.floor(Date.now() / 1000);
+              initial.timestamp = seconds;
+            } catch (e) {
+              core.warning(`Failed to resolve commit timestamp: ${e.message}`);
+              initial.timestamp = Math.floor(Date.now() / 1000);
+            }
+            const json = JSON.stringify([initial]);
+            fs.writeFileSync('cliff.context.enriched.json', json);
+            core.setOutput('context', json);
+            core.setOutput('context_path', 'cliff.context.enriched.json');
+            console.log(JSON.stringify(initial, null, 2));
+
+      - name: Generate final changelog (with context)
+        id: cliff_final
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --from-context cliff.context.enriched.json
+          version: v2.10.0
+        env:
+          OUTPUT: CHANGELOG_${{ inputs.version }}.md
+
+      - name: Append upgrade notice to changelog
+        shell: bash
+        run: |
+          CHANGELOG="CHANGELOG_${{ inputs.version }}.md"
+
+          # Check if .github/UPGRADE_NOTICE.md exists and append it
+          if [ -f ".github/UPGRADE_NOTICE.md" ]; then
+            echo "" >> "$CHANGELOG"
+            cat ".github/UPGRADE_NOTICE.md" >> "$CHANGELOG"
+            echo "Appended upgrade notice to changelog"
+          fi
+
+      - name: Upload changelog artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: changelog-md
+          path: CHANGELOG_${{ inputs.version }}.md
+
+      - name: Download Velopack artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: vpk-*
+          path: ./vpk-artifacts
+        continue-on-error: true
+
+      - name: Collect Velopack installers for release
+        shell: bash
+        run: |
+          CDN_BASE="https://cdn-public.anobaka.com/app/bakabase"
+          VERSION="${{ inputs.version }}"
+
+          # Copy Velopack Setup files with platform-suffixed names for GitHub Release
+          for dir in ./vpk-artifacts/vpk-*/; do
+            [ -d "$dir" ] || continue
+            artifact_name=$(basename "$dir" | sed 's/^vpk-//')
+            # Convert artifact name to valid env var suffix (replace - with _)
+            env_suffix=$(echo "$artifact_name" | tr '-' '_')
+            echo "Processing Velopack artifact: $artifact_name"
+            ARCHIVE_BASE="${CDN_BASE}/archives/${VERSION}/${artifact_name}"
+            # Find Setup exe (Windows)
+            for f in "$dir"*Setup*.exe; do
+              [ -f "$f" ] || continue
+              orig_name=$(basename "$f")
+              cp "$f" "./Bakabase-Setup-${VERSION}-${artifact_name}.exe"
+              echo "  -> Bakabase-Setup-${VERSION}-${artifact_name}.exe (from $orig_name)"
+              echo "SETUP_CDN_${env_suffix}=${ARCHIVE_BASE}/${orig_name}" >> "$GITHUB_ENV"
+            done
+            # Find Setup pkg (macOS)
+            for f in "$dir"*.pkg; do
+              [ -f "$f" ] || continue
+              orig_name=$(basename "$f")
+              cp "$f" "./Bakabase-Setup-${VERSION}-${artifact_name}.pkg"
+              echo "  -> Bakabase-Setup-${VERSION}-${artifact_name}.pkg (from $orig_name)"
+              echo "SETUP_CDN_${env_suffix}=${ARCHIVE_BASE}/${orig_name}" >> "$GITHUB_ENV"
+            done
+            # Find Portable zip (Windows)
+            for f in "$dir"*-Portable.zip; do
+              [ -f "$f" ] || continue
+              orig_name=$(basename "$f")
+              cp "$f" "./bakabase-${VERSION}-${artifact_name}.zip"
+              echo "  -> bakabase-${VERSION}-${artifact_name}.zip (from $orig_name)"
+              echo "PORTABLE_CDN_${env_suffix}=${ARCHIVE_BASE}/${orig_name}" >> "$GITHUB_ENV"
+            done
+          done
+          ls -lh Bakabase-Setup-${VERSION}-* 2>/dev/null || echo "No Velopack installers found"
+          ls -lh bakabase-${VERSION}-*.zip 2>/dev/null || echo "No Velopack portable zips found"
+
+      - name: Append download links to changelog
+        shell: bash
+        run: |
+          VERSION="${{ inputs.version }}"
+          CDN_BASE="https://cdn-public.anobaka.com/app/bakabase"
+          CHANGELOG="CHANGELOG_${VERSION}.md"
+
+          {
+            echo ""
+            echo "### Downloads / 下载地址"
+            echo ""
+            echo "> Aliyun CDN links are provided below. You can also download from the GitHub Assets section at the bottom of this page."
+            echo ">"
+            echo "> 下方提供阿里云 CDN 下载链接，也可从本页底部的 GitHub Assets 中下载。"
+            echo ""
+            echo "Auto-update is available via **Settings > System** (installer version required)."
+            echo ""
+            echo "可通过程序内【系统】-【配置】界面一键更新（需使用安装版）。"
+            echo ""
+          } >> "$CHANGELOG"
+
+          # Windows
+          {
+            echo "#### Windows"
+            echo ""
+            echo "| | Installer / 安装版 (Recommended / 推荐) | Portable / 免安装版 |"
+            echo "|---|---|---|"
+            CDN_INSTALLER=""
+            CDN_PORTABLE=""
+            if [ -n "$SETUP_CDN_win_x64" ]; then
+              CDN_INSTALLER="[Download / 下载]($SETUP_CDN_win_x64)"
+            fi
+            if [ -n "$PORTABLE_CDN_win_x64" ]; then
+              CDN_PORTABLE="[Download / 下载]($PORTABLE_CDN_win_x64)"
+            fi
+            echo "| Aliyun CDN / 阿里云CDN | ${CDN_INSTALLER} | ${CDN_PORTABLE} |"
+            echo ""
+          } >> "$CHANGELOG"
+
+          # macOS
+          {
+            echo "#### macOS"
+            echo ""
+            echo "| | Apple Silicon (arm64) | Intel (x64) |"
+            echo "|---|---|---|"
+
+            # Installer row
+            CDN_ARM64=""
+            CDN_X64=""
+            if [ -n "$SETUP_CDN_osx_arm64" ]; then
+              CDN_ARM64="[Download / 下载]($SETUP_CDN_osx_arm64)"
+            fi
+            if [ -n "$SETUP_CDN_osx_x64" ]; then
+              CDN_X64="[Download / 下载]($SETUP_CDN_osx_x64)"
+            fi
+            echo "| **Installer / 安装版** | ${CDN_ARM64} | ${CDN_X64} |"
+            echo ""
+          } >> "$CHANGELOG"
+
+          echo "--- Generated changelog with download links ---"
+          cat "$CHANGELOG"
+
+      - name: Determine release tag
+        id: release_tag
+        run: |
+          if [[ "${{ inputs.is_tag }}" == "true" ]]; then
+            TAG="${{ github.ref_name }}"  # use original tag (may include 'v')
+          else
+            TAG="v${{ inputs.version }}"  # fallback to computed version
+          fi
+          echo "name=$TAG" >> $GITHUB_OUTPUT
+          echo "Resolved release tag: $TAG"
+
+      - name: Determine prerelease flag
+        id: prerelease
+        run: |
+          v="$(echo "${{ inputs.version }}" | tr '[:upper:]' '[:lower:]')"
+          if [[ "$v" == *beta* || "$v" == *rc* ]]; then
+            echo "prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "prerelease=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release_tag.outputs.name }}
+          target_commitish: ${{ github.sha }}
+          body_path: CHANGELOG_${{ inputs.version }}.md
+          prerelease: ${{ steps.prerelease.outputs.prerelease == 'true' }}
+          files: |
+            bakabase-${{ inputs.version }}-win-x64.zip
+            Bakabase-Setup-${{ inputs.version }}-win-x64.exe
+            Bakabase-Setup-${{ inputs.version }}-osx-x64.pkg
+            Bakabase-Setup-${{ inputs.version }}-osx-arm64.pkg
+          fail_on_unmatched_files: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  generate-readme-oss:
+    runs-on: ubuntu-latest
+    needs: [release]
+    steps:
+      - name: Download changelog artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: changelog-md
+          path: .
+      - name: Create README.md
+        run: cp "CHANGELOG_${{ inputs.version }}.md" README.md
+      - name: Install ossutil
+        run: |
+          wget -O ossutil64 https://gosspublic.alicdn.com/ossutil/1.7.16/ossutil64
+          chmod +x ossutil64
+      - name: Upload README.md to OSS
+        env:
+          OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
+          OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+          OSS_ENDPOINT: http://oss-accelerate.aliyuncs.com
+        run: |
+          ./ossutil64 config -e $OSS_ENDPOINT -i $OSS_ACCESS_KEY_ID -k $OSS_ACCESS_KEY_SECRET
+          ./ossutil64 cp README.md oss://anobaka-public/app/bakabase/releases/changelogs/${{ inputs.version }}/README.md

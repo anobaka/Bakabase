@@ -5,7 +5,7 @@ import monkey from 'vite-plugin-monkey';
 
 const isDev = process.env.NODE_ENV !== 'production';
 
-const cdnScriptUrl = 'https://cdn-public.anobaka.com/app/bakabase/inside-world/scripts/bakabase.user.js';
+const cdnScriptUrl = 'https://cdn-public.anobaka.com/app/bakabase/scripts/bakabase.user.js';
 
 const prodMatch = [
   'https://exhentai.org/*',

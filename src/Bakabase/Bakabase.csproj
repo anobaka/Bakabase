@@ -39,6 +39,11 @@
         <None Include="Assets\dock-icon.png" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 
+    <!-- Windows icon for Velopack packaging -->
+    <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+        <None Include="Assets\favicon.ico" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+
     <!-- macOS app bundle configuration -->
     <ItemGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
         <Content Include="Info.plist" CopyToOutputDirectory="PreserveNewest" />

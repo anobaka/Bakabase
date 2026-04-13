@@ -187,7 +187,7 @@ const Development: React.FC = () => {
   ];
 
   // Add port configurations for Dev and WinForms modes
-  if (appContext.runtimeMode === RuntimeMode.Dev || appContext.runtimeMode === RuntimeMode.WinForms) {
+  if (appContext.runtimeMode === RuntimeMode.Dev || appContext.runtimeMode === RuntimeMode.WinForms || appContext.runtimeMode === RuntimeMode.MacOS) {
     items.push(
       {
         label: "configuration.development.listeningPortCount",

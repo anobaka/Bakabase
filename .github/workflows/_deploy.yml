@@ -1,0 +1,112 @@
+name: Deploy
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+
+jobs:
+  deploy-velopack:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - artifact: win-x64
+          - artifact: osx-x64
+          - artifact: osx-arm64
+    steps:
+      - name: Install ossutil
+        run: |
+          wget -O ossutil64 https://gosspublic.alicdn.com/ossutil/1.7.16/ossutil64
+          chmod +x ossutil64
+
+      - name: Configure ossutil
+        env:
+          OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
+          OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+          OSS_ENDPOINT: http://oss-accelerate.aliyuncs.com
+        run: |
+          ./ossutil64 config -e $OSS_ENDPOINT -i $OSS_ACCESS_KEY_ID -k $OSS_ACCESS_KEY_SECRET
+
+      - name: Download Velopack artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: vpk-${{ matrix.artifact }}
+          path: ./vpk-output
+
+      - name: Upload Velopack releases to OSS
+        run: |
+          ./ossutil64 cp -rf ./vpk-output/ oss://anobaka-public/app/bakabase/releases/${{ matrix.artifact }}/
+
+      - name: Archive installer and portable for this version
+        run: |
+          ARCHIVE_BASE="oss://anobaka-public/app/bakabase/archives/${{ inputs.version }}/${{ matrix.artifact }}"
+          GLOBS="./vpk-output/*Setup*.exe ./vpk-output/*.pkg"
+          if [[ "${{ matrix.artifact }}" == win-* ]]; then
+            GLOBS="$GLOBS ./vpk-output/*-Portable.zip"
+          fi
+          for f in $GLOBS; do
+            [ -f "$f" ] || continue
+            ./ossutil64 cp "$f" "${ARCHIVE_BASE}/$(basename "$f")"
+          done
+
+  deploy-tampermonkey:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download tampermonkey artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tampermonkey
+          path: .
+
+      - name: Install ossutil
+        run: |
+          wget -O ossutil64 https://gosspublic.alicdn.com/ossutil/1.7.16/ossutil64
+          chmod +x ossutil64
+
+      - name: Upload tampermonkey script to OSS
+        env:
+          OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
+          OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+          OSS_ENDPOINT: http://oss-accelerate.aliyuncs.com
+        run: |
+          ./ossutil64 config -e $OSS_ENDPOINT -i $OSS_ACCESS_KEY_ID -k $OSS_ACCESS_KEY_SECRET
+          ./ossutil64 cp -f bakabase.user.js oss://anobaka-public/app/bakabase/scripts/bakabase.user.js
+
+  deploy-docker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main repo
+        uses: actions/checkout@v4
+
+      - name: Download Bakabase build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docker
+          path: ./publish
+
+      - name: Set Docker build context
+        id: docker_context
+        run: |
+          echo "DOCKERFILE=docker/Dockerfile" >> $GITHUB_ENV
+          echo "DOCKER_TAG=${{ inputs.version }}" >> $GITHUB_ENV
+      - name: Show working directory
+        run: |
+          echo "Working directory: $(pwd)"
+          echo "------------------------------------------"
+      - name: Build Docker image
+        run: |
+          echo "Building Docker image 'bakabase:${DOCKER_TAG}' using Dockerfile '${DOCKERFILE}'..."
+          docker build --progress=plain -f "${DOCKERFILE}" -t bakabase:${DOCKER_TAG} ./publish
+          echo "Docker image 'bakabase:${DOCKER_TAG}' built successfully"
+      - name: Show local docker images (top)
+        run: |
+          docker images | sed -n '1,50p' || true
+      - name: Log in to Docker Hub
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+      - name: Tag and push Docker image
+        run: |
+          docker tag bakabase:${DOCKER_TAG} ${{ secrets.DOCKERHUB_USERNAME }}/bakabase:${DOCKER_TAG}
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/bakabase:${DOCKER_TAG}

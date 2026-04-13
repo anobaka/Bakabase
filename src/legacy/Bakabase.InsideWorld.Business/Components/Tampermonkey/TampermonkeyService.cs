@@ -9,7 +9,7 @@ namespace Bakabase.InsideWorld.Business.Components.Tampermonkey;
 public class TampermonkeyService(IGuiAdapter guiAdapter, AppContext appContext, IHttpClientFactory httpClientFactory)
 {
     private const string InstallScriptUrlTemplate = "https://www.tampermonkey.net/script_installation.php#url={jsUrl}";
-    public const string ScriptCdnUrl = "https://cdn-public.anobaka.com/app/bakabase/inside-world/scripts/bakabase.user.js";
+    public const string ScriptCdnUrl = "https://cdn-public.anobaka.com/app/bakabase/scripts/bakabase.user.js";
 
     /// <summary>
     /// Opens the Tampermonkey install dialog pointing to the local API endpoint,

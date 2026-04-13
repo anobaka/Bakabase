@@ -8,7 +8,7 @@ import type {
 import Markdown from "react-markdown";
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FolderOpenOutlined } from "@ant-design/icons";
+import { FolderOpenOutlined, InfoCircleOutlined } from "@ant-design/icons";
 
 import { Popover, Divider, Icon, Progress, Snippet } from "@/components/bakaui";
 import { UpdaterStatus } from "@/sdk/constants";
@@ -136,7 +136,11 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo }) => {
             );
           }
         } else {
-          return t("configuration.appInfo.failedToGetLatestVersion");
+          return (
+            <Chip radius="sm" variant="light" color="default">
+              {t("configuration.appInfo.upToDate")}
+            </Chip>
+          );
         }
       case UpdaterStatus.Running:
         return (
@@ -203,13 +207,94 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo }) => {
     </div>
   );
 
+  const renderMigrationGuide = () => {
+    createPortal(Modal, {
+      size: "lg",
+      title: t("configuration.appInfo.migrationGuide.title"),
+      defaultVisible: true,
+      children: (
+        <div className="flex flex-col gap-4">
+          <p>{t("configuration.appInfo.migrationGuide.description")}</p>
+
+          <div className="flex flex-col gap-2">
+            <p className="font-semibold">{t("configuration.appInfo.migrationGuide.stepsTitle")}</p>
+            <ol className="list-decimal list-inside flex flex-col gap-2">
+              <li>{t("configuration.appInfo.migrationGuide.step1")}</li>
+              <li>
+                {t("configuration.appInfo.migrationGuide.step2")}
+                <div className="mt-1 ml-4 flex items-center gap-1">
+                  <Snippet hideSymbol size="sm" variant="bordered">
+                    {appInfo.appDataPath}
+                  </Snippet>
+                  <Button
+                    isIconOnly
+                    size="sm"
+                    variant="light"
+                    color="primary"
+                    onPress={() => BApi.tool.openFileOrDirectory({ path: appInfo.appDataPath })}
+                  >
+                    <FolderOpenOutlined className="text-base" />
+                  </Button>
+                </div>
+              </li>
+              <li>{t("configuration.appInfo.migrationGuide.step3")}</li>
+              <li>{t("configuration.appInfo.migrationGuide.step4")}</li>
+            </ol>
+          </div>
+
+          <div className="bg-warning-50 border border-warning-200 rounded-lg p-3 flex flex-col gap-2">
+            <p className="font-semibold flex items-center gap-1">
+              <InfoCircleOutlined className="text-warning" />
+              {t("configuration.appInfo.migrationGuide.validationTitle")}
+            </p>
+            <p>{t("configuration.appInfo.migrationGuide.validationDescription")}</p>
+            <ul className="list-disc list-inside ml-2 flex flex-col gap-1 text-sm">
+              <li><code>bakabase_insideworld.db</code> — {t("configuration.appInfo.migrationGuide.validationDb")}</li>
+              <li><code>configs/</code> — {t("configuration.appInfo.migrationGuide.validationConfigs")}</li>
+            </ul>
+            <p className="text-sm text-foreground-500">
+              {t("configuration.appInfo.migrationGuide.validationNote")}
+            </p>
+          </div>
+        </div>
+      ),
+      footer: { actions: ["cancel"] },
+    });
+  };
+
   const buildAppInfoDataSource = () => {
     const items: { label: string; value: React.ReactNode }[] = [
       {
         label: "configuration.appInfo.appDataPath",
-        value: renderPathValue(
-          appInfo.appDataPath,
-          t("configuration.appInfo.tip.appDataPath"),
+        value: (
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-1">
+              <Snippet hideSymbol size="sm" variant="bordered">
+                {appInfo.appDataPath}
+              </Snippet>
+              <Button
+                isIconOnly
+                size="sm"
+                variant="light"
+                color="primary"
+                onPress={() => BApi.tool.openFileOrDirectory({ path: appInfo.appDataPath })}
+              >
+                <FolderOpenOutlined className="text-base" />
+              </Button>
+              <Divider orientation="vertical" className="mx-1" />
+              <Button
+                size="sm"
+                variant="light"
+                color="warning"
+                onPress={renderMigrationGuide}
+              >
+                {t("configuration.appInfo.migrationGuide.button")}
+              </Button>
+            </div>
+            <span className="text-xs text-foreground-400">
+              {t("configuration.appInfo.tip.appDataPath")}
+            </span>
+          </div>
         ),
       },
       {

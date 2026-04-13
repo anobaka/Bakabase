@@ -70,580 +70,74 @@ jobs:
           echo "resolved.version=${{ steps.set-var.outputs.version }}"
           echo "resolved.is_tag=${{ steps.set-var.outputs.is_tag }}"
 
-  build-frontend:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Cache Yarn
-        uses: actions/cache@v4
-        with:
-          path: |
-            src/web/.yarn/cache
-            src/web/node_modules
-          key: yarn-${{ runner.os }}-${{ hashFiles('src/web/yarn.lock') }}
-          restore-keys: |
-            yarn-${{ runner.os }}-
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Enable corepack
-        run: corepack enable yarn
-
-      - name: Install yarn dependencies
-        working-directory: src/web
-        run: yarn install
-
-      - name: Build frontend
-        working-directory: src/web
-        run: yarn build
-
-      - name: Upload frontend artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: fe
-          path: src/web/dist/*
-
-  build-tampermonkey:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10
-
-      - name: Install dependencies
-        working-directory: src/scripts/baka-monkey
-        run: pnpm install --frozen-lockfile
-
-      - name: Build tampermonkey script
-        working-directory: src/scripts/baka-monkey
-        run: pnpm build
-
-      - name: Upload tampermonkey artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: tampermonkey
-          path: src/scripts/baka-monkey/dist/bakabase.user.js
-        
   build:
-    runs-on: ${{ matrix.os }}
-    needs: [prepare, build-frontend]
+    needs: [prepare]
+    uses: ./.github/workflows/_build.yml
+    with:
+      version: ${{ needs.prepare.outputs.version }}
+    secrets: inherit
 
-    env:
-      DOTNET_MULTILEVEL_LOOKUP: 0 
-    
-    strategy:
-      matrix:
-        include:
-          - os: windows-latest
-            rid: win-x64
-            artifact: win-x64
-            csproj: Bakabase/src/Bakabase/Bakabase.csproj
-            nuget-path: ~\\.nuget\\packages
-            runtimeMode: WINFORMS
-          - os: ubuntu-latest
-            rid: linux-x64
-            artifact: docker
-            csproj: Bakabase/src/Bakabase.Service/Bakabase.Service.csproj
-            nuget-path: ~/.nuget/packages
-            runtimeMode: DOCKER
-    steps:
-      - name: Checkout main repo
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Fetch all history for all branches and tags
-          path: ${{ github.event.repository.name }}
-          submodules: recursive
-      - name: Copy global.json to workspace root
-        run: cp ${{ github.event.repository.name }}/global.json .
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '9.0.312'
-          dotnet-quality: ''
-      - name: Check dotnet info
-        run: dotnet --info
-      - name: Cache NuGet packages
-        uses: actions/cache@v4
-        with:
-          path: ${{ matrix.nuget-path }}
-          key: nuget-${{ runner.os }}-${{ hashFiles('**/packages.lock.json', '**/*.csproj') }}
-          restore-keys: |
-            nuget-${{ runner.os }}-
-      - name: Build Bakabase project
-        run: dotnet publish -p:RuntimeMode=${{ matrix.runtimeMode }} ${{matrix.csproj}} --self-contained -r ${{ matrix.rid }} -o ./publish
-      - name: Download frontend artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: fe
-          path: ./publish/web
-      - name: Ensure config directory exists
-        run: mkdir -p ./publish/AppData/configs
-      - name: create-json
-        uses: jsdaniell/create-json@v1.2.3
-        with:
-          name: "updater.json"
-          json: ${{ secrets.UPDATER_JSON }}
-          dir: ./publish/AppData/configs
-      - name: Upload Bakabase build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.artifact }}
-          path: ./publish/*
-      - name: Uploaded artifact debug
-        run: |
-          echo "Uploaded artifact name=${{ matrix.artifact }}"
-          echo "Total files: $(find ./publish -type f | wc -l)"
-
-  deploy-oss:
-    runs-on: ubuntu-latest
-    needs: [ prepare, build ]
-    strategy:
-      matrix:
-        include:
-          - artifact: win-x64
-    steps:
-      - name: Download Bakabase build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ matrix.artifact }}
-          path: .
-      - name: Show downloaded artifact contents
-        run: |
-          echo "Downloaded artifact to $(pwd)"
-          ls -al | sed -n '1,200p'
-
-      - name: Install ossutil
-        run: |
-          wget -O ossutil64 https://gosspublic.alicdn.com/ossutil/1.7.16/ossutil64
-          chmod +x ossutil64
-
-      - name: Upload all files to OSS
-        env:
-          OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
-          OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
-          OSS_ENDPOINT: http://oss-accelerate.aliyuncs.com
-        run: |
-          ./ossutil64 config -e $OSS_ENDPOINT -i $OSS_ACCESS_KEY_ID -k $OSS_ACCESS_KEY_SECRET
-          ./ossutil64 cp -rf . oss://anobaka-public/app/bakabase/inside-world/${{ needs.prepare.outputs.version }}/unpacked/win/
-
-      - name: Zip all files
-        run: |
-          zip -r bakabase.zip .
-      - name: Show zip info
-        run: |
-          ls -lh bakabase.zip || true
-
-      - name: Upload zip to OSS
-        run: |
-          ./ossutil64 cp bakabase.zip oss://anobaka-public/app/bakabase/inside-world/${{ needs.prepare.outputs.version }}/installer/win-x64/bakabase.zip
-
-  deploy-tampermonkey:
-    runs-on: ubuntu-latest
-    needs: [ build-tampermonkey ]
-    steps:
-      - name: Download tampermonkey artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: tampermonkey
-          path: .
-
-      - name: Install ossutil
-        run: |
-          wget -O ossutil64 https://gosspublic.alicdn.com/ossutil/1.7.16/ossutil64
-          chmod +x ossutil64
-
-      - name: Upload tampermonkey script to OSS
-        env:
-          OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
-          OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
-          OSS_ENDPOINT: http://oss-accelerate.aliyuncs.com
-        run: |
-          ./ossutil64 config -e $OSS_ENDPOINT -i $OSS_ACCESS_KEY_ID -k $OSS_ACCESS_KEY_SECRET
-          ./ossutil64 cp -f bakabase.user.js oss://anobaka-public/app/bakabase/inside-world/scripts/bakabase.user.js
-
-  deploy-docker:
-    runs-on: ubuntu-latest
-    needs: [ prepare, build, build-frontend ]
-    steps:
-      - name: Checkout main repo
-        uses: actions/checkout@v4
-        
-      - name: Download Bakabase build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: docker
-          path: ./publish
-
-      - name: Set Docker build context
-        id: docker_context
-        run: |
-          echo "DOCKERFILE=docker/Dockerfile" >> $GITHUB_ENV
-          echo "DOCKER_TAG=${{ needs.prepare.outputs.version }}" >> $GITHUB_ENV
-      - name: Show working directory
-        run: |
-          echo "Working directory: $(pwd)"
-          echo "------------------------------------------"
-      - name: Build Docker image
-        run: |
-          echo "Building Docker image 'bakabase:${DOCKER_TAG}' using Dockerfile '${DOCKERFILE}'..."
-          docker build --progress=plain -f "${DOCKERFILE}" -t bakabase:${DOCKER_TAG} ./publish
-          echo "Docker image 'bakabase:${DOCKER_TAG}' built successfully"
-      - name: Show local docker images (top)
-        run: |
-          docker images | sed -n '1,50p' || true
-      - name: Log in to Docker Hub
-        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
-      - name: Tag and push Docker image
-        run: |
-          docker tag bakabase:${DOCKER_TAG} ${{ secrets.DOCKERHUB_USERNAME }}/bakabase:${DOCKER_TAG}
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/bakabase:${DOCKER_TAG}
+  deploy:
+    needs: [prepare, build]
+    uses: ./.github/workflows/_deploy.yml
+    with:
+      version: ${{ needs.prepare.outputs.version }}
+    secrets: inherit
 
   release:
+    needs: [prepare, build]
+    uses: ./.github/workflows/_release.yml
+    with:
+      version: ${{ needs.prepare.outputs.version }}
+      is_tag: ${{ needs.prepare.outputs.is_tag }}
+    secrets: inherit
+
+  cdn-refresh:
     runs-on: ubuntu-latest
-    needs: [ prepare, build ]
+    needs: [deploy, release]
     steps:
-      - uses: actions/checkout@v4   # ✅ pull code into workspace
-        with:
-          fetch-depth: 0
-
-      - name: Debug release context
+      - name: Install Alibaba Cloud CLI
         run: |
-          echo "event=${{ github.event_name }}"
-          echo "ref=${{ github.ref }}"
-          echo "ref_name=${{ github.ref_name }}"
-          echo "nbgv.version=${{ needs.prepare.outputs.version }}"
-      - name: Install semver
-        run: npm install semver
+          curl -sL -o aliyun-cli.tgz https://aliyuncli.alicdn.com/aliyun-cli-linux-latest-amd64.tgz
+          tar xzf aliyun-cli.tgz
+          chmod +x aliyun
 
-      - name: Find previous release tag
-        id: previous
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          result-encoding: string
-          script: |
-            const semver = require('semver');
-            const current = "${{ needs.prepare.outputs.version }}";
-            const currentClean = semver.clean(current) || semver.valid(semver.coerce(current));
-            if (!currentClean) {
-              throw new Error(`Cannot parse current version: ${current}`);
-            }
-            const isPrerelease = semver.prerelease(currentClean) !== null;
-            const { owner, repo } = context.repo;
-
-            const releases = await github.paginate(github.rest.repos.listReleases, { owner, repo, per_page: 100 });
-            const allCandidates = releases
-              .filter(r => !r.draft && r.tag_name)
-              .map(r => {
-                const cleaned = semver.clean(r.tag_name) || semver.valid(semver.coerce(r.tag_name));
-                return { ...r, semver: cleaned };
-              })
-              .filter(r => r.semver && semver.lt(r.semver, currentClean));
-
-            // If current is stable: only consider stable releases
-            // If current is prerelease: consider all versions (stable + prerelease)
-            let candidates = isPrerelease
-              ? allCandidates
-              : allCandidates.filter(r => !r.prerelease);
-
-            // Sort descending (highest version first)
-            candidates.sort((a, b) => semver.rcompare(a.semver, b.semver));
-
-            let prev = candidates[0]?.tag_name;
-
-            // Fallback: if no stable candidates found for a stable release, try all candidates
-            if (!prev && !isPrerelease && allCandidates.length > 0) {
-              allCandidates.sort((a, b) => semver.rcompare(a.semver, b.semver));
-              prev = allCandidates[0]?.tag_name;
-            }
-
-            if (!prev) {
-              const { execSync } = require('node:child_process');
-              try {
-                prev = execSync('git describe --tags --abbrev=0', { encoding: 'utf8' }).trim();
-              } catch {}
-            }
-            if (!prev) {
-              throw new Error('No previous tag found from releases or tags');
-            }
-            core.info(`Current: ${current} (prerelease=${isPrerelease}), Previous: ${prev}`);
-            core.setOutput('previous_tag', prev);
-
-      - name: Generate initial context (git-cliff)
-        id: cliff_initial
-        uses: orhun/git-cliff-action@v4
-        with:
-          config: cliff.toml
-          args: -v ${{ steps.previous.outputs.previous_tag }}..${{ github.sha }} --context
-          version: v2.10.0
-        env:
-          OUTPUT: cliff.context.initial.json
-
-      - name: Enrich cliff context
-        id: ctx
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          result-encoding: string
-          script: |
-            const fs = require('node:fs');
-            const path = 'cliff.context.initial.json';
-            const text = fs.readFileSync(path, { encoding: 'utf8' });
-            const allReleases = JSON.parse(text || '[]');
-            // git-cliff splits commits by intermediate tags (e.g. beta tags between two stable releases).
-            // Merge all releases' commits into one so the changelog covers the full range.
-            const initial = allReleases[0];
-            const seenCommitIds = new Set((initial.commits || []).map(c => c.id));
-            for (let i = 1; i < allReleases.length; i++) {
-              for (const commit of allReleases[i].commits || []) {
-                if (!seenCommitIds.has(commit.id)) {
-                  seenCommitIds.add(commit.id);
-                  initial.commits.push(commit);
-                }
-              }
-            }
-            // Update statistics
-            if (initial.statistics) {
-              initial.statistics.commit_count = initial.commits.length;
-            }
-            // Clear previous pointer since we merged everything
-            initial.previous = null;
-
-            const issues = {};
-            const { owner, repo } = context.repo;
-
-            // Label display configuration (order matters for changelog output)
-            const labelConfig = [
-              { name: 'breaking-changes', emoji: '🚨', title: 'Breaking Changes' },
-              { name: 'security', emoji: '🔒', title: 'Security' },
-              { name: 'feature', emoji: '🚀', title: 'Features' },
-              { name: 'enhancement', emoji: '✨', title: 'Enhancements' },
-              { name: 'performance', emoji: '⚡', title: 'Performance' },
-              { name: 'architecture optimization', emoji: '🏗️', title: 'Architecture' },
-              { name: 'bug', emoji: '🐛', title: 'Bug Fixes' },
-              { name: 'deprecation', emoji: '⚠️', title: 'Deprecations' },
-              { name: 'documentation', emoji: '📚', title: 'Documentation' },
-              { name: 'experiment', emoji: '🧪', title: 'Experiments' },
-            ];
-            const labelGroups = {};
-            for (const cfg of labelConfig) {
-              labelGroups[cfg.name] = { emoji: cfg.emoji, title: cfg.title, issues: [] };
-            }
-
-            // Collect all issue numbers from commit links
-            const numberSet = new Set();
-            for (const commit of Array.isArray(initial.commits) ? initial.commits : []) {
-              const links = Array.isArray(commit.links) ? commit.links : [];
-              for (const link of links) {
-                const m = /#(\d+)/.exec(link.text || '');
-                if (m) {
-                  numberSet.add(m[1]);
-                }
-              }
-            }
-
-            // Also collect issue numbers from PR descriptions (fix/close/resolve keywords)
-            // commitPrIssues maps commit id -> set of issue numbers found via PR
-            const commitPrIssues = {};
-            const prChecked = new Set();
-            for (const commit of Array.isArray(initial.commits) ? initial.commits : []) {
-              if (!commit.id || prChecked.has(commit.id)) continue;
-              prChecked.add(commit.id);
-              try {
-                const { data: prs } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
-                  owner, repo, commit_sha: commit.id
-                });
-                for (const pr of prs) {
-                  if (!pr.body) continue;
-                  const regex = /(?:fix(?:e[sd])?|close[sd]?|resolve[sd]?)\s+#(\d+)/gi;
-                  let match;
-                  while ((match = regex.exec(pr.body)) !== null) {
-                    numberSet.add(match[1]);
-                    commitPrIssues[commit.id] ??= new Set();
-                    commitPrIssues[commit.id].add(match[1]);
-                  }
-                }
-              } catch (e) {
-                core.warning(`Failed to fetch PRs for commit ${commit.id}: ${e.message}`);
-              }
-            }
-
-            // Fetch issue details including labels
-            for (const num of numberSet) {
-              try {
-                const { data } = await github.rest.issues.get({ owner, repo, issue_number: Number(num) });
-                const labels = (data.labels || []).map(l => typeof l === 'string' ? l : l.name);
-                const info = {
-                  title: data.title,
-                  url: data.html_url,
-                  number: data.number,
-                  state: data.state,
-                  labels: labels
-                };
-                issues[num] = info;
-                issues['#' + num] = info;
-
-                // Group issue by each of its labels (issue appears in multiple groups if it has multiple labels)
-                for (const label of labels) {
-                  if (labelGroups[label]) {
-                    // Avoid duplicates
-                    if (!labelGroups[label].issues.find(i => i.number === info.number)) {
-                      labelGroups[label].issues.push(info);
-                    }
-                  }
-                }
-              } catch (e) {
-                core.warning(`Failed to fetch issue #${num}: ${e.message}`);
-              }
-            }
-
-            // Attach issues to commits (from both commit links and PR descriptions)
-            for (const commit of Array.isArray(initial.commits) ? initial.commits : []) {
-              const linkedNums = new Set();
-              const list = [];
-              // From commit message links
-              const links = Array.isArray(commit.links) ? commit.links : [];
-              for (const link of links) {
-                const m = /#(\d+)/.exec(link.text || '');
-                if (m) linkedNums.add(m[1]);
-              }
-              // From PR descriptions
-              if (commit.id && commitPrIssues[commit.id]) {
-                for (const n of commitPrIssues[commit.id]) {
-                  linkedNums.add(n);
-                }
-              }
-              for (const n of linkedNums) {
-                const issue = issues[n] || issues['#' + n] || null;
-                if (issue) list.push(issue);
-              }
-              commit.extra ??= {};
-              commit.extra["issues"] = list;
-            }
-
-            // Add labelGroups to context for template use
-            initial.extra ??= {};
-            initial.extra.labelGroups = labelGroups;
-            initial.extra.labelOrder = labelConfig.map(c => c.name);
-
-            initial.version = "${{ needs.prepare.outputs.version }}";
-
-            // set changelog timestamp as Unix seconds from current commit, fallback to now
-            try {
-              const { data: c } = await github.rest.repos.getCommit({ owner, repo, ref: context.sha });
-              const dateStr = c?.commit?.committer?.date || null;
-              const seconds = dateStr ? Math.floor(new Date(dateStr).getTime() / 1000) : Math.floor(Date.now() / 1000);
-              initial.timestamp = seconds;
-            } catch (e) {
-              core.warning(`Failed to resolve commit timestamp: ${e.message}`);
-              initial.timestamp = Math.floor(Date.now() / 1000);
-            }
-            const json = JSON.stringify([initial]);
-            fs.writeFileSync('cliff.context.enriched.json', json);
-            core.setOutput('context', json);
-            core.setOutput('context_path', 'cliff.context.enriched.json');
-            console.log(JSON.stringify(initial, null, 2));
-
-      - name: Generate final changelog (with context)
-        id: cliff_final
-        uses: orhun/git-cliff-action@v4
-        with:
-          config: cliff.toml
-          args: --from-context cliff.context.enriched.json
-          version: v2.10.0
-        env:
-          OUTPUT: CHANGELOG_${{ needs.prepare.outputs.version }}.md
-      - name: Upload changelog artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: changelog-md
-          path: CHANGELOG_${{ needs.prepare.outputs.version }}.md
-      - name: Download artifact (win-x64)
-        uses: actions/download-artifact@v4
-        with:
-          name: win-x64
-          path: ./artifacts/win-x64
-        continue-on-error: true
-      - name: Show win-x64 artifact tree
-        if: hashFiles('artifacts/win-x64/**') != ''
+      - name: Configure Alibaba Cloud CLI
         run: |
-          echo "Listing ./artifacts/win-x64"
-          ls -alR ./artifacts/win-x64 | sed -n '1,200p'
-      - name: Zip win-x64 artifact
-        if: hashFiles('artifacts/win-x64/**') != ''
-        run: |
-          cd ./artifacts/win-x64
-          zip -r ../../bakabase-${{ needs.prepare.outputs.version }}-win-x64.zip .
-      - name: Show zipped asset info
-        if: hashFiles('artifacts/win-x64/**') != ''
-        run: |
-          ls -lh bakabase-${{ needs.prepare.outputs.version }}-win-x64.zip || true
-      - name: Determine release tag
-        id: release_tag
-        run: |
-          if [[ "${{ needs.prepare.outputs.is_tag }}" == "true" ]]; then
-            TAG="${{ github.ref_name }}"  # use original tag (may include 'v')
-          else
-            TAG="v${{ needs.prepare.outputs.version }}"  # fallback to computed version
-          fi
-          echo "name=$TAG" >> $GITHUB_OUTPUT
-          echo "Resolved release tag: $TAG"
-      - name: Determine prerelease flag
-        id: prerelease
-        run: |
-          v="${{ needs.prepare.outputs.version }}"
-          v="${v,,}"
-          if [[ "$v" == *beta* || "$v" == *rc* ]]; then
-            echo "prerelease=true" >> $GITHUB_OUTPUT
-          else
-            echo "prerelease=false" >> $GITHUB_OUTPUT
-          fi
-      - name: Upload release assets
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.release_tag.outputs.name }}
-          target_commitish: ${{ github.sha }}
-          body_path: CHANGELOG_${{ needs.prepare.outputs.version }}.md
-          prerelease: ${{ steps.prerelease.outputs.prerelease == 'true' }}
-          files: |
-            bakabase-${{ needs.prepare.outputs.version }}-win-x64.zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ./aliyun configure set \
+            --profile default \
+            --mode AK \
+            --access-key-id ${{ secrets.CDN_ACCESS_KEY_ID }} \
+            --access-key-secret ${{ secrets.CDN_ACCESS_KEY_SECRET }} \
+            --region cn-hangzhou
 
-  generate-readme-oss:
-    runs-on: ubuntu-latest
-    needs: [ prepare, release ]
-    steps:
-      - name: Download changelog artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: changelog-md
-          path: .
-      - name: Create README.md
-        run: cp "CHANGELOG_${{ needs.prepare.outputs.version }}.md" README.md
-      - name: Install ossutil
+      - name: Refresh CDN cache
+        id: cdn-refresh
         run: |
-          wget -O ossutil64 https://gosspublic.alicdn.com/ossutil/1.7.16/ossutil64
-          chmod +x ossutil64
-      - name: Upload README.md to OSS
-        env:
-          OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
-          OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
-          OSS_ENDPOINT: http://oss-accelerate.aliyuncs.com
+          RESULT=$(./aliyun cdn RefreshObjectCaches \
+            --ObjectPath "https://cdn-public.anobaka.com/app/bakabase/releases/\nhttps://cdn-public.anobaka.com/app/bakabase/archives/\nhttps://cdn-public.anobaka.com/app/bakabase/scripts/" \
+            --ObjectType Directory)
+          echo "$RESULT"
+          TASK_ID=$(echo "$RESULT" | jq -r '.RefreshTaskId')
+          echo "task_id=$TASK_ID" >> $GITHUB_OUTPUT
+
+      - name: Verify CDN refresh completed
         run: |
-          ./ossutil64 config -e $OSS_ENDPOINT -i $OSS_ACCESS_KEY_ID -k $OSS_ACCESS_KEY_SECRET
-          ./ossutil64 cp README.md oss://anobaka-public/app/bakabase/inside-world/${{ needs.prepare.outputs.version }}/README.md
+          TASK_ID="${{ steps.cdn-refresh.outputs.task_id }}"
+          echo "Waiting for CDN refresh task: $TASK_ID"
+          for i in $(seq 1 12); do
+            RESULT=$(./aliyun cdn DescribeRefreshTasks --TaskId "$TASK_ID")
+            STATUS=$(echo "$RESULT" | jq -r '.Tasks.CDNTask[0].Status // empty')
+            echo "Attempt $i: Status=$STATUS"
+            if [ "$STATUS" = "Complete" ]; then
+              echo "CDN refresh completed successfully"
+              exit 0
+            elif [ "$STATUS" = "Failed" ]; then
+              echo "CDN refresh failed"
+              echo "$RESULT" | jq .
+              exit 1
+            fi
+            sleep 10
+          done
+          echo "CDN refresh timed out after 2 minutes (task may still be processing)"
+          exit 1

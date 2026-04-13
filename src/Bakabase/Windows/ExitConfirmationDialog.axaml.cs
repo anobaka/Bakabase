@@ -9,6 +9,7 @@ public partial class ExitConfirmationDialog : Window
     {
         InitializeComponent();
 
+        Title = localizer.App_Exiting();
         ExitBtn.Content = localizer.App_Exit();
         MinimizeBtn.Content = localizer.App_Minimize();
         RememberCheckBox.Content = localizer.App_RememberMe();
