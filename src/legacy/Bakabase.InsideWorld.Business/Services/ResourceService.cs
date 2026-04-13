@@ -546,7 +546,9 @@ namespace Bakabase.InsideWorld.Business.Services
                                                 }
 
                                                 var boundPropertyIds = propertyIds.ToHashSet();
-                                                propertyIds = propertyIds.Distinct().ToList();
+                                                propertyIds = propertyIds.Distinct()
+                                                    .OrderBy(x => customPropertyMap.GetValueOrDefault(x)?.Order ?? int.MaxValue)
+                                                    .ToList();
 
                                                 customPropertiesValuesMap.TryGetValue(r.Id, out var pValues);
                                                 if (pValues != null)
@@ -555,11 +557,9 @@ namespace Bakabase.InsideWorld.Business.Services
                                                         customPropertyMap.GetValueOrDefault(x)?.Order ?? int.MaxValue));
                                                 }
 
-                                                var propertyOrderMap = new Dictionary<int, int>(propertyIds.Count);
-                                                for (var j = 0; j < propertyIds.Count; j++)
-                                                {
-                                                    propertyOrderMap[propertyIds[j]] = j;
-                                                }
+                                                var propertyOrderMap = propertyIds.ToDictionary(
+                                                    id => id,
+                                                    id => customPropertyMap.GetValueOrDefault(id)?.Order ?? int.MaxValue);
 
                                                 foreach (var pId in propertyIds)
                                                 {
