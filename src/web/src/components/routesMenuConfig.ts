@@ -35,6 +35,7 @@ import { lazy } from "react";
 import { MdOutlineArticle, MdVideoLibrary } from "react-icons/md";
 import { TbToolsKitchen } from "react-icons/tb";
 
+import WelcomePage from "@/pages/welcome";
 import DashboardPage from "@/pages/dashboard";
 import ResourcePage from "@/pages/resource";
 import LegacyMediaLibraryPage from "@/pages/deprecated/media-library";
@@ -88,6 +89,13 @@ export interface RouteMenuItem {
 }
 
 export const routesMenuConfig: RouteMenuItem[] = [
+  {
+    name: "menu.welcome",
+    path: "/welcome",
+    component: WelcomePage,
+    layout: "blank",
+    menu: false,
+  },
   {
     name: "menu.dashboard",
     path: "/",

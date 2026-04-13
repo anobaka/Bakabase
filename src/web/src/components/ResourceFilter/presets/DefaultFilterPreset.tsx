@@ -6,7 +6,7 @@ import type { IProperty } from "@/components/Property/models";
 import BApi from "@/sdk/BApi";
 import PropertySelector from "@/components/PropertySelector";
 import PropertyValueRenderer from "@/components/Property/components/PropertyValueRenderer";
-import { PropertyPool } from "@/sdk/constants";
+import { PropertyPool, ResourceProperty } from "@/sdk/constants";
 
 /**
  * 创建默认的 Filter 配置
@@ -83,6 +83,10 @@ export function createDefaultFilterConfig(
           isDisabled: disabledProperties?.length
             ? (p: IProperty) => disabledProperties.some(dp => dp.id === p.id && dp.pool === p.pool)
             : undefined,
+          pinnedProperties: [
+            { id: ResourceProperty.MediaLibraryV2Multi, pool: PropertyPool.Internal },
+            { id: ResourceProperty.Source, pool: PropertyPool.Internal },
+          ],
         });
       },
 

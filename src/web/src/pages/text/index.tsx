@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import DiffMatchPatch from "diff-match-patch";
 import "./index.scss";
 import { useTranslation } from "react-i18next";
-import { ArrowRightOutlined, QuestionCircleOutlined } from "@ant-design/icons";
+import { ArrowRightOutlined } from "@ant-design/icons";
 
 import { SpecialTextType, specialTextTypes } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
@@ -18,7 +18,6 @@ import {
   TableColumn,
   TableHeader,
   TableRow,
-  Tooltip,
   Textarea,
   Divider,
 } from "@/components/bakaui";
@@ -196,11 +195,9 @@ const TextPage = () => {
             return (
               <TableRow>
                 <TableCell>
-                  <div className={"flex items-center gap-1"}>
-                    {t<string>(`SpecialTextType.${SpecialTextType[type]}`)}
-                    <Tooltip content={t<string>(typeDescriptions[type])}>
-                      <QuestionCircleOutlined className={"text-base"} />
-                    </Tooltip>
+                  <div className={"flex flex-col"}>
+                    <span>{t<string>(`SpecialTextType.${SpecialTextType[type]}`)}</span>
+                    <span className={"text-xs text-default-400"}>{t<string>(typeDescriptions[type])}</span>
                   </div>
                 </TableCell>
                 <TableCell>

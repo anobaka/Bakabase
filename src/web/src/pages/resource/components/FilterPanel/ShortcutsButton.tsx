@@ -14,15 +14,15 @@ interface Shortcut {
 
 const shortcuts: Shortcut[] = [
   {
-    labelKey: "Select multiple resources",
+    labelKey: "resource.shortcut.selectMultiple",
     keys: (mod) => `${mod} + Click`,
   },
   {
-    labelKey: "Select range of resources",
+    labelKey: "resource.shortcut.selectRange",
     keys: "Shift + Click",
   },
   {
-    labelKey: "More actions",
+    labelKey: "resource.shortcut.moreActions",
     keys: "Right click",
   },
 ];
@@ -54,7 +54,7 @@ const ShortcutsButton = ({ className }: Props) => {
               <Kbd>
                 {typeof s.keys === "function"
                   ? s.keys(modifierKey)
-                  : t<string>(s.keys)}
+                  : s.keys}
               </Kbd>
             </div>
           ))}

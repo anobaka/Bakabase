@@ -94,7 +94,7 @@ jobs:
 
   cdn-refresh:
     runs-on: ubuntu-latest
-    needs: [deploy, release]
+    needs: [prepare, deploy, release]
     steps:
       - name: Install Alibaba Cloud CLI
         run: |
@@ -114,8 +114,9 @@ jobs:
       - name: Refresh CDN cache
         id: cdn-refresh
         run: |
+          VERSION="${{ needs.prepare.outputs.version }}"
           RESULT=$(./aliyun cdn RefreshObjectCaches \
-            --ObjectPath "https://cdn-public.anobaka.com/app/bakabase/releases/\nhttps://cdn-public.anobaka.com/app/bakabase/archives/\nhttps://cdn-public.anobaka.com/app/bakabase/scripts/" \
+            --ObjectPath "https://cdn-public.anobaka.com/app/bakabase/releases/\nhttps://cdn-public.anobaka.com/app/bakabase/archives/${VERSION}/\nhttps://cdn-public.anobaka.com/app/bakabase/scripts/" \
             --ObjectType Directory)
           echo "$RESULT"
           TASK_ID=$(echo "$RESULT" | jq -r '.RefreshTaskId')

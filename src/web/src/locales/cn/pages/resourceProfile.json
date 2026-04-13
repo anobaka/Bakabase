@@ -201,6 +201,10 @@
   "resourceProfile.propertyPool.columnType": "类型",
   "resourceProfile.propertyPool.columnScopePriority": "属性值展示优先级",
   "resourceProfile.propertyPool.unknownProperty": "未知属性",
+  "resourceProfile.propertyPool.globalScopePriority": "全局展示优先级",
+
+  "resourceProfile.globalScopePriority.title": "全局属性值展示优先级",
+  "resourceProfile.globalScopePriority.description": "拖拽调整属性值来源的展示优先级。优先级高的来源将优先展示其属性值。此设置对所有未自定义优先级的属性生效。",
 
   "resourceProfile.scopePriority.useGlobal": "使用全局设置",
   "resourceProfile.scopePriority.customize": "自定义",

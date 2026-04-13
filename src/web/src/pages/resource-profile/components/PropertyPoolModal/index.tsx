@@ -11,9 +11,10 @@ import type {
 
 import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
+import { PlusOutlined, DeleteOutlined, OrderedListOutlined } from "@ant-design/icons";
 
 import ScopePriorityEditor from "../ScopePriorityEditor";
+import GlobalScopePriorityModal from "../GlobalScopePriorityModal";
 
 import {
   Button,
@@ -27,7 +28,7 @@ import {
   TableRow,
   Tooltip,
 } from "@/components/bakaui";
-import { PropertyPool, PropertyValueScope } from "@/sdk/constants";
+import { PropertyPool, PropertyTypeLabel, PropertyValueScope } from "@/sdk/constants";
 import { PropertyLabel } from "@/components/Property";
 import PropertySelector from "@/components/PropertySelector";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
@@ -142,14 +143,24 @@ const PropertyPoolModal = ({
           <div className="text-sm text-default-500">
             {t("resourceProfile.propertyPool.description")}
           </div>
-          <Button
-            size="sm"
-            color="primary"
-            startContent={<PlusOutlined />}
-            onPress={handleAddProperties}
-          >
-            {t<string>("resourceProfile.propertyPool.addProperty")}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="flat"
+              startContent={<OrderedListOutlined />}
+              onPress={() => createPortal(GlobalScopePriorityModal, {})}
+            >
+              {t<string>("resourceProfile.propertyPool.globalScopePriority")}
+            </Button>
+            <Button
+              size="sm"
+              color="primary"
+              startContent={<PlusOutlined />}
+              onPress={handleAddProperties}
+            >
+              {t<string>("resourceProfile.propertyPool.addProperty")}
+            </Button>
+          </div>
         </div>
 
         {propertyRefs.length === 0 ? (
@@ -195,7 +206,7 @@ const PropertyPoolModal = ({
                       {property && (
                         <Chip size="sm" variant="flat">
                           {property.type != null
-                            ? t(`PropertyType.${property.type}`)
+                            ? t(`PropertyType.${PropertyTypeLabel[property.type]}`)
                             : "-"}
                         </Chip>
                       )}

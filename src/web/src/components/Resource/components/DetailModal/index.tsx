@@ -243,9 +243,10 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
 
                           createPortal(CustomPropertySortModal, {
                             properties,
-                            onDestroyed: loadResource,
+                            onSaved: loadResource,
                           });
                         });
+                        break;
                       }
                     }
                   }}

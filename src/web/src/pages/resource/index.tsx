@@ -175,7 +175,7 @@ const ResourcePage = () => {
   return (
     <div className={"flex flex-col h-full max-h-full gap-1"}>
       {ss.length > 1 && (
-        <div className="flex flex-wrap items-center gap-1 py-2 border-b border-divider">
+        <div className="flex flex-wrap items-center gap-1 pb-2 border-b border-divider">
           {ss.map((s, i) => {
             const isActive = activeSearchId == s.id || (activeSearchId == undefined && i == 0);
             const isEditing = editingId == s.id;

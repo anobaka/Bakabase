@@ -39,6 +39,8 @@ interface IProps extends DestroyableProps {
   title?: any;
   isDisabled?: (p: IProperty) => boolean;
   v2?: boolean;
+  /** Properties to pin at the top for quick access */
+  pinnedProperties?: Key[];
 }
 
 const log = buildLogger("PropertySelector");
@@ -69,6 +71,7 @@ const PropertySelector = (props: IProps) => {
     onDestroyed,
     isDisabled,
     v2,
+    pinnedProperties,
   } = props;
 
   const [properties, setProperties] = useState<IProperty[]>([]);
@@ -283,6 +286,11 @@ const PropertySelector = (props: IProps) => {
     );
   };
 
+  // Resolve pinned properties from the loaded property list
+  const resolvedPinnedProperties = pinnedProperties
+    ?.map((key) => filteredProperties.find((p) => p.id === key.id && p.pool === key.pool))
+    .filter((p): p is IProperty => p != null) ?? [];
+
   const renderProperties = () => {
     const totalCount = filteredProperties.length;
 
@@ -309,25 +317,34 @@ const PropertySelector = (props: IProps) => {
     }
 
     return (
-      <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
-        {/* Internal Properties */}
-        {(pool & PropertyPool.Internal) !== 0 && internalProperties.length > 0 &&
-          renderPropertyGroup(t("common.label.internalProperties"), internalProperties, false)}
+      <div className="flex flex-col gap-4">
+        {/* Pinned properties - only show when not searching */}
+        {!keyword && resolvedPinnedProperties.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {resolvedPinnedProperties.map((p) => renderPropertyItem(p, false))}
+          </div>
+        )}
 
-        {/* Reserved Properties */}
-        {(pool & PropertyPool.Reserved) !== 0 && reservedProperties.length > 0 &&
-          renderPropertyGroup(t("common.label.reservedProperties"), reservedProperties, false)}
+        <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
+          {/* Internal Properties */}
+          {(pool & PropertyPool.Internal) !== 0 && internalProperties.length > 0 &&
+            renderPropertyGroup(t("common.label.internalProperties"), internalProperties, false)}
 
-        {/* Custom Properties grouped by type */}
-        {(pool & PropertyPool.Custom) !== 0 &&
-          (Object.keys(groupedCustomProperties) as unknown as PropertyType[]).map((k) => {
-            const ps = groupedCustomProperties[k]!;
-            return (
-              <div key={k}>
-                {renderPropertyGroup("", ps, true)}
-              </div>
-            );
-          })}
+          {/* Reserved Properties */}
+          {(pool & PropertyPool.Reserved) !== 0 && reservedProperties.length > 0 &&
+            renderPropertyGroup(t("common.label.reservedProperties"), reservedProperties, false)}
+
+          {/* Custom Properties grouped by type */}
+          {(pool & PropertyPool.Custom) !== 0 &&
+            (Object.keys(groupedCustomProperties) as unknown as PropertyType[]).map((k) => {
+              const ps = groupedCustomProperties[k]!;
+              return (
+                <div key={k}>
+                  {renderPropertyGroup("", ps, true)}
+                </div>
+              );
+            })}
+        </div>
       </div>
     );
   };

@@ -64,6 +64,7 @@ import Alert from "./components/Alert";
 import { CircularProgress } from "./components/CircularProgress";
 import toast from "./components/Toast";
 import DurationInput, { formatDuration } from "./components/DurationInput";
+import Masonry from "./components/Masonry";
 
 export {
   Alert,
@@ -141,4 +142,5 @@ export {
   toast,
   DurationInput,
   formatDuration,
+  Masonry,
 };

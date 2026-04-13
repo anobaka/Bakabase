@@ -261,16 +261,16 @@ const Filter = ({
         </div>
       )}
 
-      {/* First row: Actions + Property + Operation */}
-      <div className={`flex items-center gap-1 ${useFullWidth ? "w-full" : ""} ${filter.disabled ? "opacity-40" : ""}`}>
-        {/* Inline action buttons (delete + disable) for both modes */}
-        {!isReadonly && (
-          <div className="flex items-center">
-            <DeleteButton onDelete={onRemove} />
-            <DisableButton disabled={filter.disabled} onToggle={toggleDisabled} />
-          </div>
-        )}
+      {/* Action buttons - top right corner */}
+      {!isReadonly && (
+        <div className="absolute top-1 right-1 flex items-center z-20">
+          <DisableButton disabled={filter.disabled} onToggle={toggleDisabled} />
+          <DeleteButton onDelete={onRemove} />
+        </div>
+      )}
 
+      {/* First row: Property + Operation */}
+      <div className={`flex items-center gap-1 ${useFullWidth ? "w-full" : ""} ${filter.disabled ? "opacity-40" : ""}`}>
         {/* Property field */}
         <PropertyField
           property={filter.property}

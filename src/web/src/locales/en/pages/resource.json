@@ -86,6 +86,9 @@
   "resource.display.contextMenu.removeItem": "Remove",
 
   "resource.shortcut.title": "Shortcuts",
+  "resource.shortcut.selectMultiple": "Select multiple resources",
+  "resource.shortcut.selectRange": "Select range of resources",
+  "resource.shortcut.moreActions": "More actions",
 
   "resource.recentlyPlayed.title": "Recently played",
   "resource.recentlyPlayed.count": "{{count}} resources",

@@ -68,6 +68,7 @@
   "PropertyValueScope.Tmdb": "TMDb",
   "PropertyValueScope.Av": "AV",
   "PropertyValueScope.Steam": "Steam",
+  "PropertyValueScope.Ai": "AI",
 
   "enum.resourceSource.fileSystem": "文件系统",
   "enum.resourceSource.steam": "Steam",

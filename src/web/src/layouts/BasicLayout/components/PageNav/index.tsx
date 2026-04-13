@@ -13,17 +13,13 @@ import {
 import AntdMenu from "./components/AntdMenu";
 import styles from "./index.module.scss";
 
-import { Button, Divider, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@/components/bakaui";
+import { Button, Divider } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 import { useAppOptionsStore, useUiOptionsStore } from "@/stores/options";
 import { UiTheme } from "@/sdk/constants";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 const OptIconStyle = { fontSize: 20 };
-
-const SUPPORTED_LANGUAGES = [
-  { code: "zh-CN", label: "简体中文", shortLabel: "中" },
-  { code: "en-US", label: "English", shortLabel: "EN" },
-];
 
 const Navigation = () => {
   const { t } = useTranslation();
@@ -32,9 +28,6 @@ const Navigation = () => {
   const appOptions = useAppOptionsStore((state) => state.data);
   const uiOptionsStore = useUiOptionsStore();
   const isDarkMode = appOptions.uiTheme == UiTheme.Dark;
-  const currentLanguageCode = SUPPORTED_LANGUAGES.find(
-    (lang) => lang.code === appOptions.language || lang.code.toLowerCase() === appOptions.language?.toLowerCase()
-  )?.code ?? SUPPORTED_LANGUAGES[1].code;
 
   const [loading, setLoading] = useState(false);
   const prevPathRef = useRef<string>(pathname);
@@ -98,35 +91,7 @@ const Navigation = () => {
             <MoonOutlined style={OptIconStyle} />
           )}
         </Button>
-        <Dropdown>
-          <DropdownTrigger>
-            <Button isIconOnly color="default" variant="light">
-              <span style={{ fontSize: 16, fontWeight: 500 }}>
-                {SUPPORTED_LANGUAGES.find((l) => l.code === currentLanguageCode)?.shortLabel ?? "EN"}
-              </span>
-            </Button>
-          </DropdownTrigger>
-          <DropdownMenu
-            aria-label="Language"
-            selectionMode="single"
-            selectedKeys={[currentLanguageCode]}
-            onSelectionChange={(keys) => {
-              const selected = Array.from(keys)[0] as string;
-              if (selected && selected !== currentLanguageCode) {
-                setLoading(true);
-                BApi.options
-                  .patchAppOptions({ language: selected })
-                  .then(() => {
-                    location.reload();
-                  });
-              }
-            }}
-          >
-            {SUPPORTED_LANGUAGES.map((lang) => (
-              <DropdownItem key={lang.code}>{lang.label}</DropdownItem>
-            ))}
-          </DropdownMenu>
-        </Dropdown>
+        <LanguageSwitcher />
         <Button
           isIconOnly
           color={"default"}

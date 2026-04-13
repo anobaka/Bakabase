@@ -137,6 +137,7 @@ jobs:
               { name: 'deprecation', emoji: '⚠️', title: 'Deprecations / 弃用' },
               { name: 'documentation', emoji: '📚', title: 'Documentation / 文档' },
               { name: 'experiment', emoji: '🧪', title: 'Experiments / 实验性功能' },
+              { name: '_uncategorized', emoji: '📝', title: 'Other Issues / 其他' },
             ];
             const labelGroups = {};
             for (const cfg of labelConfig) {
@@ -197,12 +198,20 @@ jobs:
                 issues['#' + num] = info;
 
                 // Group issue by each of its labels (issue appears in multiple groups if it has multiple labels)
+                let grouped = false;
                 for (const label of labels) {
                   if (labelGroups[label]) {
                     // Avoid duplicates
                     if (!labelGroups[label].issues.find(i => i.number === info.number)) {
                       labelGroups[label].issues.push(info);
                     }
+                    grouped = true;
+                  }
+                }
+                // Collect issues that have no matching label group
+                if (!grouped) {
+                  if (!labelGroups['_uncategorized'].issues.find(i => i.number === info.number)) {
+                    labelGroups['_uncategorized'].issues.push(info);
                   }
                 }
               } catch (e) {

@@ -86,6 +86,9 @@
   "resource.display.contextMenu.removeItem": "移除",
 
   "resource.shortcut.title": "快捷键",
+  "resource.shortcut.selectMultiple": "选择多个资源",
+  "resource.shortcut.selectRange": "选择一段范围的资源",
+  "resource.shortcut.moreActions": "更多操作",
 
   "resource.recentlyPlayed.title": "最近播放",
   "resource.recentlyPlayed.count": "{{count}} 个资源",

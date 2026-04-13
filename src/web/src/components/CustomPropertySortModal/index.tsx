@@ -46,6 +46,7 @@ type PropertyLike = {
 
 type Props = {
   properties: PropertyLike[];
+  onSaved?: () => void;
 } & DestroyableProps;
 
 interface SortableRowProps {
@@ -163,7 +164,7 @@ const SortableRow = ({
   );
 };
 
-const CustomPropertySortModal = ({ properties, onDestroyed }: Props) => {
+const CustomPropertySortModal = ({ properties, onSaved, onDestroyed }: Props) => {
   const { t } = useTranslation();
   const [items, setItems] = useState<PropertyLike[]>(properties);
   const [searchText, setSearchText] = useState("");
@@ -190,8 +191,9 @@ const CustomPropertySortModal = ({ properties, onDestroyed }: Props) => {
       const ids = newItems.map((item) => item.id);
       await BApi.customProperty.sortCustomProperties({ ids });
       toast.success(t<string>("common.state.saved"));
+      onSaved?.();
     },
-    [t]
+    [t, onSaved]
   );
 
   const handleOrderChange = useCallback(

@@ -68,7 +68,7 @@ const SortableScopeItem = ({
         variant="flat"
         color={scope === PropertyValueScope.Manual ? "primary" : "default"}
       >
-        {t(PropertyValueScopeLabel[scope])}
+        {t(`PropertyValueScope.${PropertyValueScopeLabel[scope]}`)}
       </Chip>
     </div>
   );

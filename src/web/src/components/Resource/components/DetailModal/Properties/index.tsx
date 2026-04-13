@@ -14,7 +14,7 @@ import PropertyContainer from "@/components/Resource/components/DetailModal/Prop
 import BApi from "@/sdk/BApi";
 import { buildLogger } from "@/components/utils";
 import { deserializeStandardValue } from "@/components/StandardValue/helpers";
-import { Divider } from "@/components/bakaui";
+import { Divider, Masonry } from "@/components/bakaui";
 
 type ColumnCount = 1 | 2 | 3;
 
@@ -267,31 +267,17 @@ const Properties = (props: Props) => {
 
   // log(renderContext);
 
-  // Masonry layout using CSS columns
-  const masonryStyle = {
-    columnCount: columns,
-    columnGap: "1rem",
-  };
-
-  const masonryItemStyle = {
-    breakInside: "avoid" as const,
-    marginBottom: "0.5rem",
-  };
-
   return (
     <div>
       {propertyInnerDirection == "hoz" ? (
         <>
-          <div
-            className={`${className} overflow-visible`}
-            style={masonryStyle}
-          >
+          <Masonry columns={columns} className={`${className} overflow-visible`}>
             {visibleProperties.map((pCtx) => (
-              <div key={`${pCtx.propertyPool}-${pCtx.property.id}`} style={masonryItemStyle}>
+              <div key={`${pCtx.propertyPool}-${pCtx.property.id}`}>
                 {renderProperty(pCtx)}
               </div>
             ))}
-          </div>
+          </Masonry>
           {invisibleProperties.length > 0 && (
             <>
               <div className="flex items-center gap-2 my-3 opacity-50">
@@ -301,16 +287,13 @@ const Properties = (props: Props) => {
                 </span>
                 <Divider className="flex-1" />
               </div>
-              <div
-                className={`${className} overflow-visible`}
-                style={masonryStyle}
-              >
+              <Masonry columns={columns} className={`${className} overflow-visible`}>
                 {invisibleProperties.map((pCtx) => (
-                  <div key={`${pCtx.propertyPool}-${pCtx.property.id}`} style={masonryItemStyle}>
+                  <div key={`${pCtx.propertyPool}-${pCtx.property.id}`}>
                     {renderProperty(pCtx)}
                   </div>
                 ))}
-              </div>
+              </Masonry>
             </>
           )}
         </>

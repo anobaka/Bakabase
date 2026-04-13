@@ -201,6 +201,10 @@
   "resourceProfile.propertyPool.columnType": "Type",
   "resourceProfile.propertyPool.columnScopePriority": "Value Display Priority",
   "resourceProfile.propertyPool.unknownProperty": "Unknown property",
+  "resourceProfile.propertyPool.globalScopePriority": "Global Display Priority",
+
+  "resourceProfile.globalScopePriority.title": "Global Value Display Priority",
+  "resourceProfile.globalScopePriority.description": "Drag to adjust the display priority of property value sources. Higher priority sources will be preferred when displaying property values. This applies to all properties without a custom priority override.",
 
   "resourceProfile.scopePriority.useGlobal": "Use global setting",
   "resourceProfile.scopePriority.customize": "Customize",
