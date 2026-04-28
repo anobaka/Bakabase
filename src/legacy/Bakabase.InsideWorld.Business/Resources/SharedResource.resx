@@ -423,26 +423,8 @@ The version of lux is not limited.</value>
   <data name="PostParser_ParseAll_TaskName" xml:space="preserve">
     <value>Parse posts</value>
   </data>
-  <data name="SyncMediaLibrary" xml:space="preserve">
-    <value>Sync media library: {0}</value>
-  </data>
   <data name="BTask_CanNotReplaceAnActiveTask" xml:space="preserve">
     <value>An active task [{0}]{1} can not be replaced</value>
-  </data>
-  <data name="SyncMediaLibrary_TaskProcess_DiscoverResources" xml:space="preserve">
-    <value>Discover resources</value>
-  </data>
-  <data name="SyncMediaLibrary_TaskProcess_CleanupResources" xml:space="preserve">
-    <value>Cleanup resources</value>
-  </data>
-  <data name="SyncMediaLibrary_TaskProcess_AddResources" xml:space="preserve">
-    <value>Add resources</value>
-  </data>
-  <data name="SyncMediaLibrary_TaskProcess_UpdateResources" xml:space="preserve">
-    <value>Update resources</value>
-  </data>
-  <data name="SyncMediaLibrary_TaskProcess_AlmostComplete" xml:space="preserve">
-    <value>Almost complete</value>
   </data>
   <data name="MediaType_Image" xml:space="preserve">
     <value>Image</value>
@@ -577,13 +559,19 @@ The version of lux is not limited.</value>
     <value>Build resource profile index</value>
   </data>
   <data name="BTask_Description_ResourceProfileIndex" xml:space="preserve">
-    <value>Build the resource-profile matching index</value>
+    <value>Build the index between resources and profiles to speed up matching. Automatically rebuilds when resources or profiles change.</value>
   </data>
   <data name="BTask_Name_SearchIndex" xml:space="preserve">
     <value>Build search index</value>
   </data>
   <data name="BTask_Description_SearchIndex" xml:space="preserve">
     <value>Build the inverted index for fast resource searching</value>
+  </data>
+  <data name="BTask_Name_HealthScoring" xml:space="preserve">
+    <value>Score resource health</value>
+  </data>
+  <data name="BTask_Description_HealthScoring" xml:space="preserve">
+    <value>Evaluate enabled scoring profiles against matching resources and persist their scores.</value>
   </data>
   <data name="SearchIndex_LoadingResources" xml:space="preserve">
     <value>Loading resources...</value>
@@ -764,5 +752,8 @@ The version of lux is not limited.</value>
   </data>
   <data name="CookieCapture_Cancelled" xml:space="preserve">
     <value>Cookie import was cancelled. You can try again when ready.</value>
+  </data>
+  <data name="CookieCapture_LoginTo" xml:space="preserve">
+    <value>Login to {0}</value>
   </data>
 </root>

@@ -92,6 +92,7 @@ namespace Bakabase.InsideWorld.Business.Services
         private readonly IResourceLegacySearchService _legacySearchService;
         private readonly IPrepareCacheTrigger _prepareCacheTrigger;
         private readonly IBOptions<InsideWorld.Models.Configs.UIOptions> _uiOptions;
+        private readonly IServiceProvider _serviceProvider;
 
         /// <summary>
         /// Gets the ParallelOptions configured with the user's max parallelism setting.
@@ -138,6 +139,7 @@ namespace Bakabase.InsideWorld.Business.Services
             _prepareCacheTrigger = prepareCacheTrigger;
             _uiOptions = uiOptions;
             _orm = orm;
+            _serviceProvider = serviceProvider;
         }
 
         public BakabaseDbContext DbContext => _orm.DbContext;
@@ -263,7 +265,8 @@ namespace Bakabase.InsideWorld.Business.Services
                         : exp.And(r => (r.Tags & tagsValue.Value) == tagsValue.Value);
                 }
 
-                var ordersForSearch = model.Orders.BuildForSearch();
+                var ordersForSearch = model.Orders.BuildForSearch(
+                    _serviceProvider.GetService<Abstractions.Services.IResourceHealthScoreReader>());
                 resources = await _orm.Search(exp?.Compile(), model.PageIndex, model.PageSize,
                     ordersForSearch,
                     asNoTracking);
@@ -365,6 +368,18 @@ namespace Bakabase.InsideWorld.Business.Services
                 using (MiniProfiler.Current.Step("Basic conversion"))
                 {
                     doList = resources.Select(r => r.ToDomainModel()).ToList();
+                }
+
+                // Populate aggregated HealthScore from the in-memory cache (O(1) per resource).
+                // The reader is registered only when the HealthScore module is wired up, so
+                // GetService is used to keep the legacy core decoupled.
+                var healthScoreReader = _serviceProvider.GetService<Abstractions.Services.IResourceHealthScoreReader>();
+                if (healthScoreReader != null)
+                {
+                    foreach (var r in doList)
+                    {
+                        r.HealthScore = healthScoreReader.GetAggregatedScore(r.Id);
+                    }
                 }
 
                 var resourceIds = resources.Select(a => a.Id).ToList();
@@ -937,6 +952,43 @@ namespace Bakabase.InsideWorld.Business.Services
             await _addOrUpdateLock.WaitAsync();
             try
             {
+                var needsHydration = resources
+                    .Where(r => r.Id > 0 &&
+                                (r.CreatedAt == default ||
+                                 r.UpdatedAt == default ||
+                                 r.FileCreatedAt == default ||
+                                 r.FileModifiedAt == default))
+                    .Select(r => r.Id)
+                    .Distinct()
+                    .ToArray();
+                if (needsHydration.Length > 0)
+                {
+                    var rows = await _orm.GetByKeys(needsHydration);
+                    var byId = rows!.ToDictionary(x => x.Id);
+                    foreach (var r in resources)
+                    {
+                        if (r.Id <= 0 || !byId.TryGetValue(r.Id, out var row))
+                        {
+                            continue;
+                        }
+
+                        if (r.CreatedAt == default) r.CreatedAt = row.CreateDt;
+                        if (r.UpdatedAt == default) r.UpdatedAt = row.UpdateDt;
+                        if (r.FileCreatedAt == default) r.FileCreatedAt = row.FileCreateDt.TruncateToMilliseconds();
+                        if (r.FileModifiedAt == default) r.FileModifiedAt = row.FileModifyDt.TruncateToMilliseconds();
+                    }
+                }
+
+                var now = DateTime.Now;
+                foreach (var r in resources)
+                {
+                    if (r.Id == 0)
+                    {
+                        if (r.CreatedAt == default) r.CreatedAt = now;
+                        if (r.UpdatedAt == default) r.UpdatedAt = now;
+                    }
+                }
+
                 // Resource - maintain index correspondence for ID writeback
                 var dbModels = resources.Select(a => a.ToDbModel()).ToList();
                 var existedModels = new List<ResourceDbModel>();
@@ -1161,8 +1213,8 @@ namespace Bakabase.InsideWorld.Business.Services
                 var resource = fromResource with { };
                 resource.Id = toResource.Id;
                 resource.CreatedAt = toResource.CreatedAt;
-                resource.FileCreatedAt = toResource.FileCreatedAt;
-                resource.FileModifiedAt = toResource.FileModifiedAt;
+                resource.FileCreatedAt = toResource.FileCreatedAt.TruncateToMilliseconds();
+                resource.FileModifiedAt = toResource.FileModifiedAt.TruncateToMilliseconds();
                 resource.Tags = toResource.Tags;
                 resource.Path = toResource.Path;
                 resource.IsFile = toResource.IsFile;
@@ -1203,7 +1255,7 @@ namespace Bakabase.InsideWorld.Business.Services
             var currentCovers = rpv?.CoverPaths ?? [];
             var index = currentCovers.Count;
             var image = await Image.LoadAsync(new MemoryStream(imageBytes));
-            var outputFilePath = _fileManager.BuildAbsolutePath("user-saved", "cover", $"{id}-{index}.jpg");
+            var outputFilePath = _fileManager.GetManualCoverPath(id, index);
             Directory.CreateDirectory(Path.GetDirectoryName(outputFilePath)!);
             await image.SaveAsJpegAsync(outputFilePath);
 
@@ -1386,6 +1438,29 @@ namespace Bakabase.InsideWorld.Business.Services
             _prepareCacheTrigger.RequestTrigger();
         }
 
+        /// <summary>
+        /// Best-effort deletion of the on-disk thumbnail produced by
+        /// <see cref="LocalFileCoverProvider"/>. The provider writes either a
+        /// .png (RGBA source) or .jpg (no alpha) under the same stem, so we
+        /// try both extensions.
+        /// </summary>
+        private void TryDeleteLocalCoverThumbnail(int resourceId)
+        {
+            var pathWithoutExt = _fileManager.GetLocalCoverPathWithoutExtension(resourceId);
+            foreach (var ext in new[] { ".png", ".jpg" })
+            {
+                var path = pathWithoutExt + ext;
+                try
+                {
+                    if (File.Exists(path)) File.Delete(path);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to delete local cover thumbnail {Path}", path);
+                }
+            }
+        }
+
         public async Task<ResourceFileSystemCache?> RefreshResourceCache(int resourceId, CancellationToken ct)
         {
             var resource = await Get(resourceId, ResourceAdditionalItem.None);
@@ -1404,6 +1479,25 @@ namespace Bakabase.InsideWorld.Business.Services
                 cache.CoverPaths = null;
                 cache.CachedTypes &= ~ResourceCacheType.Covers;
 
+                // Persist the invalidation immediately so the nested Get(...) below
+                // doesn't see the previous CachedTypes flag and short-circuit to
+                // returning the stale cached cover (LocalFileCoverProvider returns
+                // resource.Cache.CoverPaths as soon as the Covers flag is set).
+                if (isNew)
+                {
+                    await _resourceCacheOrm.Add(cache);
+                    isNew = false;
+                }
+                else
+                {
+                    await _resourceCacheOrm.Update(cache);
+                }
+
+                // Wipe the on-disk thumbnail so a re-discovery actually regenerates
+                // a fresh image — and so a "no source covers anymore" outcome leaves
+                // no stale file behind for next load.
+                TryDeleteLocalCoverThumbnail(resourceId);
+
                 // Check for existing covers from ReservedPropertyValue first
                 var existingCovers = (await _reservedPropertyValueService.GetAll(
                         x => x.ResourceId == resourceId && x.CoverPaths != null && x.CoverPaths.Any()))
@@ -1412,7 +1506,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
                 if (existingCovers?.Any() == true)
                 {
-                    cache.CoverPaths = new ListStringValueBuilder(existingCovers).Value
+                    cache.CoverPaths = new ListStringValueBuilder(AppDataPaths.RelativizeAll(existingCovers)).Value
                         ?.SerializeAsStandardValue(StandardValueType.ListString);
                 }
                 else
@@ -1427,7 +1521,7 @@ namespace Bakabase.InsideWorld.Business.Services
                         coverPath = covers?.FirstOrDefault();
                     }
                     cache.CoverPaths = coverPath.IsNotEmpty()
-                        ? new ListStringValueBuilder([coverPath]).Value
+                        ? new ListStringValueBuilder(AppDataPaths.RelativizeAll([coverPath!])).Value
                             ?.SerializeAsStandardValue(StandardValueType.ListString)
                         : null;
                 }

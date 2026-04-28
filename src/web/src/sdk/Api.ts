@@ -256,10 +256,10 @@ export type BakabaseAbstractionsModelsDomainConstantsPropertyValueScope =
   | 1009;
 
 /**
- * [12: Introduction, 13: Rating, 22: Cover]
+ * [12: Introduction, 13: Rating, 22: Cover, 27: Name]
  * @format int32
  */
-export type BakabaseAbstractionsModelsDomainConstantsReservedProperty = 12 | 13 | 22;
+export type BakabaseAbstractionsModelsDomainConstantsReservedProperty = 12 | 13 | 22 | 27;
 
 /**
  * [1: Covers, 2: PlayableFiles, 4: ResourceMarkers]
@@ -624,6 +624,7 @@ export interface BakabaseAbstractionsModelsDomainReservedPropertyValue {
   rating?: number;
   introduction?: string;
   coverPaths?: string[];
+  name?: string;
 }
 
 export interface BakabaseAbstractionsModelsDomainResource {
@@ -659,6 +660,8 @@ export interface BakabaseAbstractionsModelsDomainResource {
   pinned: boolean;
   /** @format date-time */
   playedAt?: string;
+  /** @format double */
+  healthScore?: number;
   covers?: string[];
   playableItems?: BakabaseAbstractionsModelsDomainPlayableItem[];
   dataStates?: BakabaseAbstractionsModelsDomainResourceDataState[];
@@ -921,7 +924,7 @@ export interface BakabaseAbstractionsModelsInputResourcePropertyValuePutInputMod
 }
 
 export interface BakabaseAbstractionsModelsInputResourceSearchOrderInputModel {
-  /** [1: FileCreateDt, 2: FileModifyDt, 3: Filename, 6: AddDt, 11: PlayedAt] */
+  /** [1: FileCreateDt, 2: FileModifyDt, 3: Filename, 6: AddDt, 11: PlayedAt, 12: HealthScore] */
   property: BakabaseInsideWorldModelsConstantsAosResourceSearchSortableProperty;
   asc: boolean;
 }
@@ -1360,49 +1363,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
   displayMode: BakabaseAbstractionsModelsDomainConstantsFilterDisplayMode;
 }
 
-export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainResourceOptionsSynchronizationCategoryOptions {
-  deleteResourcesWithUnknownPath?: boolean;
-  enhancerOptionsMap?: Record<
-    string,
-    BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainResourceOptionsSynchronizationEnhancerOptions
-  >;
-  mediaLibraryOptionsMap?: Record<
-    string,
-    BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainResourceOptionsSynchronizationMediaLibraryOptions
-  >;
-}
-
-export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainResourceOptionsSynchronizationEnhancerOptions {
-  reApply?: boolean;
-  reEnhance?: boolean;
-}
-
-export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainResourceOptionsSynchronizationMediaLibraryOptions {
-  deleteResourcesWithUnknownPath?: boolean;
-  enhancerOptionsMap?: Record<
-    string,
-    BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainResourceOptionsSynchronizationEnhancerOptions
-  >;
-}
-
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainResourceOptionsSynchronizationOptionsModel {
-  /** @format int32 */
-  maxThreads?: number;
-  deleteResourcesWithUnknownPath?: boolean;
-  deleteResourcesWithUnknownMediaLibrary?: boolean;
-  /** @deprecated */
-  categoryOptionsMap?: Record<
-    string,
-    BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainResourceOptionsSynchronizationCategoryOptions
-  >;
-  enhancerOptionsMap?: Record<
-    string,
-    BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainResourceOptionsSynchronizationEnhancerOptions
-  >;
-  mediaLibraryOptionsMap?: Record<
-    string,
-    BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainResourceOptionsSynchronizationMediaLibraryOptions
-  >;
   syncMarksImmediately?: boolean;
 }
 
@@ -1665,6 +1626,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputU
   startupPage?: BakabaseInsideWorldModelsConstantsStartupPage;
   isMenuCollapsed?: boolean;
   hideResourceCovers?: boolean;
+  resourceDetailLayout?: BakabaseInsideWorldModelsConfigsUIOptionsResourceDetailLayoutConfig;
   latestUsedProperties?: BakabaseInsideWorldModelsConfigsUIOptionsPropertyKey[];
 }
 
@@ -1981,6 +1943,53 @@ export interface BakabaseInsideWorldBusinessComponentsPlayListModelsInputPlayLis
   order?: number;
 }
 
+export interface BakabaseInsideWorldBusinessComponentsPostParserControllersAddPostParserTasksInput {
+  sourceLinksMap: Record<string, string[]>;
+  targets: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstantsPostParseTarget[];
+}
+
+export interface BakabaseInsideWorldBusinessComponentsPostParserControllersQueryPostParserTaskStatusesInput {
+  /** [5: SoulPlus] */
+  source: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstantsPostParserSource;
+  links: string[];
+}
+
+/**
+ * [1: DownloadInfo]
+ * @format int32
+ */
+export type BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstantsPostParseTarget = 1;
+
+/**
+ * [5: SoulPlus]
+ * @format int32
+ */
+export type BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstantsPostParserSource =
+  5;
+
+/**
+ * [0: None, 1: Pending, 2: Complete, 3: Failed, 4: Deleted]
+ * @format int32
+ */
+export type BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstantsPostParserTaskStatus =
+  0 | 1 | 2 | 3 | 4;
+
+export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTask {
+  /** @format int32 */
+  id: number;
+  /** [5: SoulPlus] */
+  source: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstantsPostParserSource;
+  link: string;
+  title?: string;
+  content?: string;
+  targets: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstantsPostParseTarget[];
+  results?: {
+    DownloadInfo: SystemTextJsonNodesJsonNode;
+  };
+  error?: string;
+  isDeleted: boolean;
+}
+
 export interface BakabaseInsideWorldModelsConfigsFileSystemOptions {
   recentMovingDestinations?: string[];
   fileMover?: BakabaseInsideWorldModelsConfigsFileSystemOptionsFileMoverOptions;
@@ -2064,6 +2073,7 @@ export interface BakabaseInsideWorldModelsConfigsUIOptions {
   startupPage: BakabaseInsideWorldModelsConstantsStartupPage;
   isMenuCollapsed: boolean;
   hideResourceCovers: boolean;
+  resourceDetailLayout?: BakabaseInsideWorldModelsConfigsUIOptionsResourceDetailLayoutConfig;
   latestUsedProperties: BakabaseInsideWorldModelsConfigsUIOptionsPropertyKey[];
 }
 
@@ -2077,6 +2087,31 @@ export interface BakabaseInsideWorldModelsConfigsUIOptionsPropertyKey {
   pool: number;
   /** @format int32 */
   id: number;
+}
+
+export interface BakabaseInsideWorldModelsConfigsUIOptionsResourceDetailBlock {
+  id: string;
+  /** @format int32 */
+  colStart: number;
+  /** @format int32 */
+  colSpan: number;
+  /** @format int32 */
+  rowStart: number;
+  /** @format int32 */
+  rowSpan: number;
+}
+
+export interface BakabaseInsideWorldModelsConfigsUIOptionsResourceDetailLayoutConfig {
+  /** @format int32 */
+  modalWidthPercent: number;
+  /** @format int32 */
+  modalHeightPercent: number;
+  /** @format int32 */
+  gridCols: number;
+  /** @format int32 */
+  gap: number;
+  blocks: BakabaseInsideWorldModelsConfigsUIOptionsResourceDetailBlock[];
+  hidden: BakabaseInsideWorldModelsConfigsUIOptionsResourceDetailBlock[];
 }
 
 export interface BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions {
@@ -2096,6 +2131,7 @@ export interface BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions {
   autoSelectFirstPlayableFile: boolean;
   displayOperations: string[];
   hideResourceBorder: boolean;
+  hideHealthScore: boolean;
   customContextMenuItems: BakabaseInsideWorldModelsConfigsUIOptionsCustomContextMenuItem[];
   autoAddRecentPropertyValues: boolean;
 }
@@ -2138,7 +2174,7 @@ export type BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalI
 export type BakabaseInsideWorldModelsConstantsAosPasswordSearchOrder = 1 | 2;
 
 /**
- * [1: FileCreateDt, 2: FileModifyDt, 3: Filename, 6: AddDt, 11: PlayedAt]
+ * [1: FileCreateDt, 2: FileModifyDt, 3: Filename, 6: AddDt, 11: PlayedAt, 12: HealthScore]
  * @format int32
  */
 export type BakabaseInsideWorldModelsConstantsAosResourceSearchSortableProperty =
@@ -2146,7 +2182,8 @@ export type BakabaseInsideWorldModelsConstantsAosResourceSearchSortableProperty 
   | 2
   | 3
   | 6
-  | 11;
+  | 11
+  | 12;
 
 /**
  * [1: BiliBili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon]
@@ -2370,7 +2407,7 @@ export interface BakabaseModulesAIComponentsObservationLlmUsageSummary {
 export interface BakabaseModulesAIModelsDbAiFeatureConfigDbModel {
   /** @format int32 */
   id: number;
-  /** [0: Default, 1: Enhancer, 2: Translation, 3: FileProcessor, 4: PostParser] */
+  /** [0: Default, 1: Enhancer, 2: Translation, 3: FileProcessor, 4: PostParser, 5: Chat] */
   feature: BakabaseModulesAIModelsDomainAiFeature;
   useDefault: boolean;
   /** @format int32 */
@@ -2382,6 +2419,33 @@ export interface BakabaseModulesAIModelsDbAiFeatureConfigDbModel {
   maxTokens?: number;
   /** @format float */
   topP?: number;
+}
+
+export interface BakabaseModulesAIModelsDbChatConversationDbModel {
+  /** @format int32 */
+  id: number;
+  title?: string;
+  /** @format date-time */
+  createdAt: string;
+  /** @format date-time */
+  updatedAt: string;
+  isArchived: boolean;
+}
+
+export interface BakabaseModulesAIModelsDbChatMessageDbModel {
+  /** @format int64 */
+  id: number;
+  /** @format int32 */
+  conversationId: number;
+  role: string;
+  content?: string;
+  toolCalls?: string;
+  toolResults?: string;
+  richContent?: string;
+  /** @format date-time */
+  createdAt: string;
+  /** @format int32 */
+  tokenUsage?: number;
 }
 
 export interface BakabaseModulesAIModelsDbLlmCallCacheEntryDbModel {
@@ -2441,10 +2505,10 @@ export interface BakabaseModulesAIModelsDbLlmUsageLogDbModel {
 }
 
 /**
- * [0: Default, 1: Enhancer, 2: Translation, 3: FileProcessor, 4: PostParser]
+ * [0: Default, 1: Enhancer, 2: Translation, 3: FileProcessor, 4: PostParser, 5: Chat]
  * @format int32
  */
-export type BakabaseModulesAIModelsDomainAiFeature = 0 | 1 | 2 | 3 | 4;
+export type BakabaseModulesAIModelsDomainAiFeature = 0 | 1 | 2 | 3 | 4 | 5;
 
 /**
  * [1: Success, 2: Error, 3: Timeout, 4: Cancelled]
@@ -2909,6 +2973,147 @@ export interface BakabaseModulesComparisonModelsViewRuleScoreDetailViewModel {
   isVetoed: boolean;
 }
 
+export interface BakabaseModulesDataCardAbstractionsModelsDomainDataCard {
+  /** @format int32 */
+  id: number;
+  /** @format int32 */
+  typeId: number;
+  name?: string;
+  /** @format date-time */
+  createdAt: string;
+  /** @format date-time */
+  updatedAt: string;
+  propertyValues?: BakabaseModulesDataCardAbstractionsModelsDomainDataCardPropertyValue[];
+}
+
+export interface BakabaseModulesDataCardAbstractionsModelsDomainDataCardDisplayTemplate {
+  /** @format int32 */
+  cols: number;
+  /** @format int32 */
+  rows: number;
+  layout?: BakabaseModulesDataCardAbstractionsModelsDomainDataCardDisplayTemplateItem[];
+}
+
+export interface BakabaseModulesDataCardAbstractionsModelsDomainDataCardDisplayTemplateItem {
+  /** @format int32 */
+  propertyId: number;
+  /** @format int32 */
+  x: number;
+  /** @format int32 */
+  y: number;
+  /** @format int32 */
+  w: number;
+  /** @format int32 */
+  h: number;
+  hideLabel: boolean;
+  hideEmpty: boolean;
+}
+
+export interface BakabaseModulesDataCardAbstractionsModelsDomainDataCardInitialDataPreview {
+  /** @format int32 */
+  toCreate: number;
+  /** @format int32 */
+  alreadyExists: number;
+}
+
+/**
+ * [1: Any, 2: All]
+ * @format int32
+ */
+export type BakabaseModulesDataCardAbstractionsModelsDomainDataCardMatchMode = 1 | 2;
+
+export interface BakabaseModulesDataCardAbstractionsModelsDomainDataCardMatchRules {
+  autoBindEnabled: boolean;
+  matchProperties?: number[];
+  /** [1: Any, 2: All] */
+  matchMode: BakabaseModulesDataCardAbstractionsModelsDomainDataCardMatchMode;
+  allowCreate: boolean;
+  allowUpdate: boolean;
+}
+
+export interface BakabaseModulesDataCardAbstractionsModelsDomainDataCardPropertyValue {
+  /** @format int32 */
+  id: number;
+  /** @format int32 */
+  cardId: number;
+  /** @format int32 */
+  propertyId: number;
+  value?: string;
+  /** @format int32 */
+  scope: number;
+}
+
+export interface BakabaseModulesDataCardAbstractionsModelsDomainDataCardType {
+  /** @format int32 */
+  id: number;
+  name: string;
+  propertyIds?: number[];
+  identityPropertyIds?: number[];
+  nameTemplate?: string;
+  displayTemplate?: BakabaseModulesDataCardAbstractionsModelsDomainDataCardDisplayTemplate;
+  matchRules?: BakabaseModulesDataCardAbstractionsModelsDomainDataCardMatchRules;
+  /** @format int32 */
+  order: number;
+  /** @format date-time */
+  createdAt: string;
+  /** @format date-time */
+  updatedAt: string;
+}
+
+export interface BakabaseModulesDataCardModelsInputDataCardAddInputModel {
+  /** @format int32 */
+  typeId: number;
+  propertyValues?: BakabaseModulesDataCardModelsInputDataCardPropertyValueInputModel[];
+}
+
+export interface BakabaseModulesDataCardModelsInputDataCardCreateInitialDataInputModel {
+  onlyFromResources: boolean;
+  allowNullPropertyIds?: number[];
+}
+
+export interface BakabaseModulesDataCardModelsInputDataCardFindByIdentityInputModel {
+  /** @format int32 */
+  typeId: number;
+  /** @format int32 */
+  excludeCardId?: number;
+  propertyValues?: BakabaseModulesDataCardModelsInputDataCardPropertyValueInputModel[];
+}
+
+export interface BakabaseModulesDataCardModelsInputDataCardPropertyValueInputModel {
+  /** @format int32 */
+  propertyId: number;
+  value?: string;
+  /** @format int32 */
+  scope: number;
+}
+
+export interface BakabaseModulesDataCardModelsInputDataCardTypeAddInputModel {
+  /**
+   * @minLength 1
+   * @maxLength 256
+   */
+  name: string;
+  propertyIds?: number[];
+  identityPropertyIds?: number[];
+  nameTemplate?: string;
+  matchRules?: BakabaseModulesDataCardAbstractionsModelsDomainDataCardMatchRules;
+}
+
+export interface BakabaseModulesDataCardModelsInputDataCardTypeUpdateInputModel {
+  /** @maxLength 256 */
+  name?: string;
+  propertyIds?: number[];
+  identityPropertyIds?: number[];
+  nameTemplate?: string;
+  matchRules?: BakabaseModulesDataCardAbstractionsModelsDomainDataCardMatchRules;
+  /** @format int32 */
+  order?: number;
+}
+
+export interface BakabaseModulesDataCardModelsInputDataCardUpdateInputModel {
+  propertyValues?: BakabaseModulesDataCardModelsInputDataCardPropertyValueInputModel[];
+}
+
 export type BakabaseModulesEnhancerAbstractionsComponentsIEnhancementConverter = object;
 
 export interface BakabaseModulesEnhancerAbstractionsComponentsIEnhancerDescriptor {
@@ -2935,7 +3140,7 @@ export interface BakabaseModulesEnhancerAbstractionsComponentsIEnhancerTargetDes
   description?: string;
   optionsItems?: number[];
   enhancementConverter?: BakabaseModulesEnhancerAbstractionsComponentsIEnhancementConverter;
-  /** [12: Introduction, 13: Rating, 22: Cover] */
+  /** [12: Introduction, 13: Rating, 22: Cover, 27: Name] */
   reservedPropertyCandidate?: BakabaseAbstractionsModelsDomainConstantsReservedProperty;
 }
 
@@ -2967,6 +3172,114 @@ export type BakabaseModulesEnhancerModelsDomainConstantsEnhancerId =
  * @format int32
  */
 export type BakabaseModulesEnhancerModelsDomainConstantsEnhancerTag = 1 | 2;
+
+export interface BakabaseModulesHealthScoreModelsDbHealthScoreRuleDbModel {
+  /** @format int32 */
+  id: number;
+  name?: string;
+  match: BakabaseModulesHealthScoreModelsDbResourceMatcherDbModel;
+  /** @format double */
+  delta: number;
+}
+
+export interface BakabaseModulesHealthScoreModelsDbResourceMatcherDbModel {
+  /** [1: And, 2: Or] */
+  combinator: BakabaseAbstractionsModelsDomainConstantsSearchCombinator;
+  groups?: BakabaseModulesHealthScoreModelsDbResourceMatcherDbModel[];
+  leaves?: BakabaseModulesHealthScoreModelsDbResourceMatcherLeafDbModel[];
+  disabled: boolean;
+}
+
+export interface BakabaseModulesHealthScoreModelsDbResourceMatcherLeafDbModel {
+  /** [1: Property, 2: File] */
+  kind: BakabaseModulesHealthScoreModelsResourceMatcherLeafKind;
+  negated: boolean;
+  disabled: boolean;
+  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
+  propertyPool?: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
+  /** @format int32 */
+  propertyId?: number;
+  /** [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: StartsWith, 6: NotStartsWith, 7: EndsWith, 8: NotEndsWith, 9: GreaterThan, 10: LessThan, 11: GreaterThanOrEquals, 12: LessThanOrEquals, 13: IsNull, 14: IsNotNull, 15: In, 16: NotIn, 17: Matches, 18: NotMatches] */
+  operation?: BakabaseAbstractionsModelsDomainConstantsSearchOperation;
+  propertyValue?: string;
+  filePredicateId?: string;
+  filePredicateParametersJson?: string;
+}
+
+export interface BakabaseModulesHealthScoreModelsInputHealthScoreProfilePatchInputModel {
+  name?: string;
+  enabled?: boolean;
+  /** @format int32 */
+  priority?: number;
+  /** @format double */
+  baseScore?: number;
+  membershipFilter?: BakabaseModulesSearchModelsDbResourceSearchFilterGroupDbModel;
+  rules?: BakabaseModulesHealthScoreModelsInputHealthScoreRuleInputModel[];
+}
+
+export interface BakabaseModulesHealthScoreModelsInputHealthScoreRuleInputModel {
+  /** @format int32 */
+  id: number;
+  name?: string;
+  match: BakabaseModulesHealthScoreModelsInputResourceMatcherInputModel;
+  /** @format double */
+  delta: number;
+}
+
+export interface BakabaseModulesHealthScoreModelsInputResourceMatcherInputModel {
+  /** [1: And, 2: Or] */
+  combinator: BakabaseAbstractionsModelsDomainConstantsSearchCombinator;
+  groups?: BakabaseModulesHealthScoreModelsInputResourceMatcherInputModel[];
+  leaves?: BakabaseModulesHealthScoreModelsInputResourceMatcherLeafInputModel[];
+  disabled: boolean;
+}
+
+export interface BakabaseModulesHealthScoreModelsInputResourceMatcherLeafInputModel {
+  /** [1: Property, 2: File] */
+  kind: BakabaseModulesHealthScoreModelsResourceMatcherLeafKind;
+  negated: boolean;
+  disabled: boolean;
+  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
+  propertyPool?: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
+  /** @format int32 */
+  propertyId?: number;
+  /** [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: StartsWith, 6: NotStartsWith, 7: EndsWith, 8: NotEndsWith, 9: GreaterThan, 10: LessThan, 11: GreaterThanOrEquals, 12: LessThanOrEquals, 13: IsNull, 14: IsNotNull, 15: In, 16: NotIn, 17: Matches, 18: NotMatches] */
+  operation?: BakabaseAbstractionsModelsDomainConstantsSearchOperation;
+  propertyValue?: string;
+  filePredicateId?: string;
+  filePredicateParametersJson?: string;
+}
+
+/**
+ * [1: Property, 2: File]
+ * @format int32
+ */
+export type BakabaseModulesHealthScoreModelsResourceMatcherLeafKind = 1 | 2;
+
+export interface BakabaseModulesHealthScoreModelsViewFilePredicateDescriptorViewModel {
+  id: string;
+  displayNameKey: string;
+  parametersTypeName: string;
+}
+
+export interface BakabaseModulesHealthScoreModelsViewHealthScoreProfileViewModel {
+  /** @format int32 */
+  id: number;
+  name: string;
+  enabled: boolean;
+  /** @format int32 */
+  priority: number;
+  /** @format double */
+  baseScore: number;
+  membershipFilter?: BakabaseModulesSearchModelsDbResourceSearchFilterGroupDbModel;
+  rules: BakabaseModulesHealthScoreModelsDbHealthScoreRuleDbModel[];
+  /** @format date-time */
+  createdAt: string;
+  /** @format date-time */
+  updatedAt?: string;
+  /** @format int32 */
+  lastMatchedResourceCount?: number;
+}
 
 /**
  * [1: Name, 2: ReleaseDate, 3: Author, 4: Publisher, 5: Series, 6: Tag, 7: Language, 8: Original, 9: Actor, 10: VoiceActor, 11: Duration, 12: Director, 13: Singer, 14: EpisodeCount, 15: Resolution, 16: AspectRatio, 17: SubtitleLanguage, 18: VideoCodec, 19: IsCensored, 20: Is3D, 21: ImageCount, 22: IsAi, 23: Developer, 24: Character, 25: AudioFormat, 26: Bitrate, 27: Platform, 28: SubscriptionPlatform, 29: Type]
@@ -3235,6 +3548,25 @@ export interface BakabaseModulesThirdPartyThirdPartiesBilibiliModelsFavorites {
   mediaCount: number;
 }
 
+export interface BakabaseServiceControllersChatControllerChatToolViewModel {
+  name: string;
+  description: string;
+  isReadOnly: boolean;
+  isEnabled: boolean;
+}
+
+export interface BakabaseServiceControllersChatControllerSendMessageRequest {
+  message: string;
+}
+
+export interface BakabaseServiceControllersChatControllerSetToolEnabledRequest {
+  isEnabled: boolean;
+}
+
+export interface BakabaseServiceControllersChatControllerUpdateTitleRequest {
+  title: string;
+}
+
 export interface BakabaseServiceControllersCookieCaptureResult {
   cookie: string;
   userAgent?: string;
@@ -3273,6 +3605,17 @@ export interface BakabaseServiceControllersPathMarkSyncStatusResponse {
 export interface BakabaseServiceControllersPathMigrationRequest {
   oldPath: string;
   newPath: string;
+}
+
+export interface BakabaseServiceControllersResourceHealthScoreRowViewModel {
+  /** @format int32 */
+  profileId: number;
+  /** @format double */
+  score: number;
+  profileHash: string;
+  matchedRulesJson?: string;
+  /** @format date-time */
+  evaluatedAt: string;
 }
 
 export interface BakabaseServiceModelsInputBulkModificationPatchInputModel {
@@ -3929,6 +4272,20 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBu
   data?: BakabaseInsideWorldBusinessComponentsPlayListModelsDomainPlayList[];
 }
 
+export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstantsPostParseTarget {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstantsPostParseTarget[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTask {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTask[];
+}
+
 export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsAosPreviewerItem {
   /** @format int32 */
   code: number;
@@ -3941,6 +4298,20 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesAIMode
   code: number;
   message?: string;
   data?: BakabaseModulesAIModelsDbAiFeatureConfigDbModel[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDbChatConversationDbModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesAIModelsDbChatConversationDbModel[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDbChatMessageDbModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesAIModelsDbChatMessageDbModel[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDbLlmCallCacheEntryDbModel {
@@ -3978,11 +4349,39 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesAIMode
   data?: BakabaseModulesAIModelsDomainLlmProviderTypeInfo[];
 }
 
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesDataCardAbstractionsModelsDomainDataCardType {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesDataCardAbstractionsModelsDomainDataCardType[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesDataCardAbstractionsModelsDomainDataCard {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesDataCardAbstractionsModelsDomainDataCard[];
+}
+
 export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesEnhancerAbstractionsComponentsIEnhancerDescriptor {
   /** @format int32 */
   code: number;
   message?: string;
   data?: BakabaseModulesEnhancerAbstractionsComponentsIEnhancerDescriptor[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesHealthScoreModelsViewFilePredicateDescriptorViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesHealthScoreModelsViewFilePredicateDescriptorViewModel[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesHealthScoreModelsViewHealthScoreProfileViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesHealthScoreModelsViewHealthScoreProfileViewModel[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesPropertyModelsViewPropertyViewModel {
@@ -3997,6 +4396,20 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesThirdP
   code: number;
   message?: string;
   data?: BakabaseModulesThirdPartyThirdPartiesBilibiliModelsFavorites[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceControllersChatControllerChatToolViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceControllersChatControllerChatToolViewModel[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceControllersResourceHealthScoreRowViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceControllersResourceHealthScoreRowViewModel[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewBulkModificationViewModel {
@@ -4187,6 +4600,19 @@ export interface BootstrapModelsResponseModelsSearchResponse1BakabaseModulesAlia
   code: number;
   message?: string;
   data?: BakabaseModulesAliasAbstractionsModelsDomainAlias[];
+  /** @format int32 */
+  totalCount: number;
+  /** @format int32 */
+  pageIndex: number;
+  /** @format int32 */
+  pageSize: number;
+}
+
+export interface BootstrapModelsResponseModelsSearchResponse1BakabaseModulesDataCardAbstractionsModelsDomainDataCard {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesDataCardAbstractionsModelsDomainDataCard[];
   /** @format int32 */
   totalCount: number;
   /** @format int32 */
@@ -4565,6 +4991,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesA
   data?: BakabaseModulesAIModelsDbAiFeatureConfigDbModel;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIModelsDbChatConversationDbModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesAIModelsDbChatConversationDbModel;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIModelsDbLlmProviderConfigDbModel {
   /** @format int32 */
   code: number;
@@ -4647,6 +5080,34 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesC
   code: number;
   message?: string;
   data?: BakabaseModulesComparisonModelsViewComparisonResultGroupViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataCardAbstractionsModelsDomainDataCardInitialDataPreview {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesDataCardAbstractionsModelsDomainDataCardInitialDataPreview;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataCardAbstractionsModelsDomainDataCardType {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesDataCardAbstractionsModelsDomainDataCardType;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataCardAbstractionsModelsDomainDataCard {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesDataCardAbstractionsModelsDomainDataCard;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesHealthScoreModelsViewHealthScoreProfileViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesHealthScoreModelsViewHealthScoreProfileViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPresetsAbstractionsModelsMediaLibraryTemplatePresetDataPool {
@@ -4778,6 +5239,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollection
   data?: Record<string, BakabaseAbstractionsModelsDomainSpecialText[] | null>;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32SystemDecimal {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: Record<string, number>;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32SystemInt32 {
   /** @format int32 */
   code: number;
@@ -4785,11 +5253,14 @@ export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollection
   data?: Record<string, number[] | null>;
 }
 
-export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemStringBakabaseInsideWorldModelsConstantsMediaType {
+export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemStringBakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstantsPostParserTaskStatus {
   /** @format int32 */
   code: number;
   message?: string;
-  data?: Record<string, BakabaseInsideWorldModelsConstantsMediaType>;
+  data?: Record<
+    string,
+    BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstantsPostParserTaskStatus
+  >;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemStringSystemBoolean {
@@ -5432,6 +5903,16 @@ export interface SystemRuntimeTypeHandle {
  */
 export type SystemSecuritySecurityRuleSet = 0 | 1 | 2;
 
+export interface SystemTextJsonNodesJsonNode {
+  options?: SystemTextJsonNodesJsonNodeOptions;
+  parent?: SystemTextJsonNodesJsonNode;
+  root: SystemTextJsonNodesJsonNode;
+}
+
+export interface SystemTextJsonNodesJsonNodeOptions {
+  propertyNameCaseInsensitive: boolean;
+}
+
 export interface SystemTimeZoneInfo {
   id: string;
   hasIanaId: boolean;
@@ -6061,7 +6542,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -6622,7 +7103,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -6669,7 +7150,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -6744,7 +7225,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -6788,7 +7269,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -6832,7 +7313,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -6901,7 +7382,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -7507,6 +7988,210 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         ...params,
       }),
   };
+  chat = {
+    /**
+     * No description
+     *
+     * @tags Chat
+     * @name CreateChatConversation
+     * @request POST:/chat/conversations
+     */
+    createChatConversation: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIModelsDbChatConversationDbModel,
+        any
+      >({
+        path: `/chat/conversations`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for createChatConversation
+     * @name createChatConversationUrl
+     */
+    createChatConversationUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/chat/conversations`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Chat
+     * @name GetChatConversations
+     * @request GET:/chat/conversations
+     */
+    getChatConversations: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDbChatConversationDbModel,
+        any
+      >({
+        path: `/chat/conversations`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getChatConversations
+     * @name getChatConversationsUrl
+     */
+    getChatConversationsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/chat/conversations`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Chat
+     * @name GetChatConversation
+     * @request GET:/chat/conversations/{id}
+     */
+    getChatConversation: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIModelsDbChatConversationDbModel,
+        any
+      >({
+        path: `/chat/conversations/${id}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Chat
+     * @name DeleteChatConversation
+     * @request DELETE:/chat/conversations/{id}
+     */
+    deleteChatConversation: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/chat/conversations/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Chat
+     * @name UpdateChatConversationTitle
+     * @request PUT:/chat/conversations/{id}/title
+     */
+    updateChatConversationTitle: (
+      id: number,
+      data: BakabaseServiceControllersChatControllerUpdateTitleRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIModelsDbChatConversationDbModel,
+        any
+      >({
+        path: `/chat/conversations/${id}/title`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Chat
+     * @name GetChatMessages
+     * @request GET:/chat/conversations/{id}/messages
+     */
+    getChatMessages: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDbChatMessageDbModel,
+        any
+      >({
+        path: `/chat/conversations/${id}/messages`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Chat
+     * @name SendChatMessage
+     * @request POST:/chat/conversations/{id}/messages
+     */
+    sendChatMessage: (
+      id: number,
+      data: BakabaseServiceControllersChatControllerSendMessageRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/chat/conversations/${id}/messages`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Chat
+     * @name GetChatTools
+     * @request GET:/chat/tools
+     */
+    getChatTools: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceControllersChatControllerChatToolViewModel,
+        any
+      >({
+        path: `/chat/tools`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getChatTools
+     * @name getChatToolsUrl
+     */
+    getChatToolsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/chat/tools`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Chat
+     * @name SetChatToolEnabled
+     * @request PUT:/chat/tools/{toolName}/enabled
+     */
+    setChatToolEnabled: (
+      toolName: string,
+      data: BakabaseServiceControllersChatControllerSetToolEnabledRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/chat/tools/${toolName}/enabled`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+  };
   comparison = {
     /**
      * No description
@@ -7795,62 +8480,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         ...params,
       }),
   };
-  api = {
-    /**
-     * No description
-     *
-     * @tags Constant
-     * @name GetAllExtensionMediaTypes
-     * @request GET:/api/constant/extension-media-types
-     */
-    getAllExtensionMediaTypes: (params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemStringBakabaseInsideWorldModelsConstantsMediaType,
-        any
-      >({
-        path: `/api/constant/extension-media-types`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for getAllExtensionMediaTypes
-     * @name getAllExtensionMediaTypesUrl
-     */
-    getAllExtensionMediaTypesUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/api/constant/extension-media-types`;
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Constant
-     * @name ConstantList
-     * @request GET:/api/constant
-     */
-    constantList: (params: RequestParams = {}) =>
-      this.request<string, any>({
-        path: `/api/constant`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for constantList
-     * @name constantListUrl
-     */
-    constantListUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/api/constant`;
-      
-      return baseUrl + path;
-    },
-  };
   customProperty = {
     /**
      * No description
@@ -7894,7 +8523,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -7945,7 +8574,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -8270,6 +8899,432 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       return baseUrl + path;
     },
   };
+  dataCard = {
+    /**
+     * No description
+     *
+     * @tags DataCard
+     * @name SearchDataCards
+     * @request GET:/data-card/search
+     */
+    searchDataCards: (
+      query?: {
+        /** @format int32 */
+        typeId?: number;
+        keyword?: string;
+        /** @format int32 */
+        pageIndex?: number;
+        /**
+         * @format int32
+         * @min 0
+         * @max 100
+         */
+        pageSize?: number;
+        /** @format int32 */
+        skipCount?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSearchResponse1BakabaseModulesDataCardAbstractionsModelsDomainDataCard,
+        any
+      >({
+        path: `/data-card/search`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for searchDataCards
+     * @name searchDataCardsUrl
+     */
+    searchDataCardsUrl: (query?: {
+        /** @format int32 */
+        typeId?: number;
+        keyword?: string;
+        /** @format int32 */
+        pageIndex?: number;
+        /**
+         * @format int32
+         * @min 0
+         * @max 100
+         */
+        pageSize?: number;
+        /** @format int32 */
+        skipCount?: number;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/data-card/search`;
+      
+      // Build query string
+      if (query) {
+        const queryString = Object.keys(query)
+          .filter(key => query[key] !== undefined && query[key] !== null)
+          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DataCard
+     * @name GetDataCard
+     * @request GET:/data-card/{id}
+     */
+    getDataCard: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataCardAbstractionsModelsDomainDataCard,
+        any
+      >({
+        path: `/data-card/${id}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DataCard
+     * @name UpdateDataCard
+     * @request PUT:/data-card/{id}
+     */
+    updateDataCard: (
+      id: number,
+      data: BakabaseModulesDataCardModelsInputDataCardUpdateInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/data-card/${id}`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DataCard
+     * @name DeleteDataCard
+     * @request DELETE:/data-card/{id}
+     */
+    deleteDataCard: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/data-card/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DataCard
+     * @name AddDataCard
+     * @request POST:/data-card
+     */
+    addDataCard: (
+      data: BakabaseModulesDataCardModelsInputDataCardAddInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataCardAbstractionsModelsDomainDataCard,
+        any
+      >({
+        path: `/data-card`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for addDataCard
+     * @name addDataCardUrl
+     */
+    addDataCardUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/data-card`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DataCard
+     * @name FindDataCardByIdentity
+     * @request POST:/data-card/find-by-identity
+     */
+    findDataCardByIdentity: (
+      data: BakabaseModulesDataCardModelsInputDataCardFindByIdentityInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataCardAbstractionsModelsDomainDataCard,
+        any
+      >({
+        path: `/data-card/find-by-identity`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for findDataCardByIdentity
+     * @name findDataCardByIdentityUrl
+     */
+    findDataCardByIdentityUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/data-card/find-by-identity`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DataCard
+     * @name DeleteDataCardsByType
+     * @request DELETE:/data-card/type/{typeId}
+     */
+    deleteDataCardsByType: (typeId: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/data-card/type/${typeId}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DataCard
+     * @name CreateInitialDataCards
+     * @request POST:/data-card/type/{typeId}/initial-data
+     */
+    createInitialDataCards: (
+      typeId: number,
+      data: BakabaseModulesDataCardModelsInputDataCardCreateInitialDataInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemInt32, any>({
+        path: `/data-card/type/${typeId}/initial-data`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DataCard
+     * @name PreviewInitialDataCards
+     * @request POST:/data-card/type/{typeId}/initial-data/preview
+     */
+    previewInitialDataCards: (
+      typeId: number,
+      data: BakabaseModulesDataCardModelsInputDataCardCreateInitialDataInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataCardAbstractionsModelsDomainDataCardInitialDataPreview,
+        any
+      >({
+        path: `/data-card/type/${typeId}/initial-data/preview`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DataCard
+     * @name GetAssociatedDataCards
+     * @request GET:/data-card/resource/{resourceId}/associated
+     */
+    getAssociatedDataCards: (resourceId: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesDataCardAbstractionsModelsDomainDataCard,
+        any
+      >({
+        path: `/data-card/resource/${resourceId}/associated`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DataCard
+     * @name GetAssociatedResourceIds
+     * @request GET:/data-card/{id}/associated-resource-ids
+     */
+    getAssociatedResourceIds: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsListResponse1SystemInt32, any>({
+        path: `/data-card/${id}/associated-resource-ids`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+  };
+  dataCardType = {
+    /**
+     * No description
+     *
+     * @tags DataCardType
+     * @name GetAllDataCardTypes
+     * @request GET:/data-card-type
+     */
+    getAllDataCardTypes: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesDataCardAbstractionsModelsDomainDataCardType,
+        any
+      >({
+        path: `/data-card-type`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getAllDataCardTypes
+     * @name getAllDataCardTypesUrl
+     */
+    getAllDataCardTypesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/data-card-type`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DataCardType
+     * @name AddDataCardType
+     * @request POST:/data-card-type
+     */
+    addDataCardType: (
+      data: BakabaseModulesDataCardModelsInputDataCardTypeAddInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataCardAbstractionsModelsDomainDataCardType,
+        any
+      >({
+        path: `/data-card-type`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for addDataCardType
+     * @name addDataCardTypeUrl
+     */
+    addDataCardTypeUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/data-card-type`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DataCardType
+     * @name GetDataCardType
+     * @request GET:/data-card-type/{id}
+     */
+    getDataCardType: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataCardAbstractionsModelsDomainDataCardType,
+        any
+      >({
+        path: `/data-card-type/${id}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DataCardType
+     * @name UpdateDataCardType
+     * @request PUT:/data-card-type/{id}
+     */
+    updateDataCardType: (
+      id: number,
+      data: BakabaseModulesDataCardModelsInputDataCardTypeUpdateInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/data-card-type/${id}`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DataCardType
+     * @name DeleteDataCardType
+     * @request DELETE:/data-card-type/{id}
+     */
+    deleteDataCardType: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/data-card-type/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DataCardType
+     * @name UpdateDataCardTypeDisplayTemplate
+     * @request PUT:/data-card-type/{id}/display-template
+     */
+    updateDataCardTypeDisplayTemplate: (
+      id: number,
+      data: BakabaseModulesDataCardAbstractionsModelsDomainDataCardDisplayTemplate,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/data-card-type/${id}/display-template`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+  };
   dlsiteWork = {
     /**
      * No description
@@ -8335,7 +9390,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -8414,7 +9469,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -9095,7 +10150,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -9144,7 +10199,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -9201,7 +10256,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -9311,7 +10366,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -9358,7 +10413,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -9402,7 +10457,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -9449,7 +10504,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -9505,7 +10560,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -9587,7 +10642,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -9651,7 +10706,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -9921,7 +10976,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -10021,7 +11076,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -10111,7 +11166,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -10728,7 +11783,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -10830,7 +11885,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -11060,7 +12115,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -11119,7 +12174,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -11174,7 +12229,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -11221,7 +12276,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -11265,7 +12320,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -11316,7 +12371,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -11448,7 +12503,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -11619,7 +12674,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -11666,7 +12721,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -11709,7 +12764,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -11788,7 +12843,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -11832,7 +12887,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -11879,7 +12934,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -11928,7 +12983,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -12037,7 +13092,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -12133,7 +13188,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -12232,7 +13287,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -12377,7 +13432,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -12411,6 +13466,295 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     sendTestNotificationUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/gui/test-notification`;
+      
+      return baseUrl + path;
+    },
+  };
+  healthScore = {
+    /**
+     * No description
+     *
+     * @tags HealthScore
+     * @name GetAllHealthScoreProfiles
+     * @request GET:/health-score/profiles
+     */
+    getAllHealthScoreProfiles: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesHealthScoreModelsViewHealthScoreProfileViewModel,
+        any
+      >({
+        path: `/health-score/profiles`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getAllHealthScoreProfiles
+     * @name getAllHealthScoreProfilesUrl
+     */
+    getAllHealthScoreProfilesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/health-score/profiles`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags HealthScore
+     * @name AddHealthScoreProfile
+     * @request POST:/health-score/profiles
+     */
+    addHealthScoreProfile: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesHealthScoreModelsViewHealthScoreProfileViewModel,
+        any
+      >({
+        path: `/health-score/profiles`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for addHealthScoreProfile
+     * @name addHealthScoreProfileUrl
+     */
+    addHealthScoreProfileUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/health-score/profiles`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags HealthScore
+     * @name GetHealthScoreProfile
+     * @request GET:/health-score/profiles/{id}
+     */
+    getHealthScoreProfile: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesHealthScoreModelsViewHealthScoreProfileViewModel,
+        any
+      >({
+        path: `/health-score/profiles/${id}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags HealthScore
+     * @name PatchHealthScoreProfile
+     * @request PATCH:/health-score/profiles/{id}
+     */
+    patchHealthScoreProfile: (
+      id: number,
+      data: BakabaseModulesHealthScoreModelsInputHealthScoreProfilePatchInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/health-score/profiles/${id}`,
+        method: "PATCH",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags HealthScore
+     * @name DeleteHealthScoreProfile
+     * @request DELETE:/health-score/profiles/{id}
+     */
+    deleteHealthScoreProfile: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/health-score/profiles/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags HealthScore
+     * @name DuplicateHealthScoreProfile
+     * @request POST:/health-score/profiles/{id}/duplicate
+     */
+    duplicateHealthScoreProfile: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/health-score/profiles/${id}/duplicate`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags HealthScore
+     * @name ClearHealthScoreProfileCache
+     * @request POST:/health-score/profiles/{id}/clear-cache
+     */
+    clearHealthScoreProfileCache: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/health-score/profiles/${id}/clear-cache`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags HealthScore
+     * @name ClearAllHealthScoreCaches
+     * @request POST:/health-score/clear-all-caches
+     */
+    clearAllHealthScoreCaches: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/health-score/clear-all-caches`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for clearAllHealthScoreCaches
+     * @name clearAllHealthScoreCachesUrl
+     */
+    clearAllHealthScoreCachesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/health-score/clear-all-caches`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags HealthScore
+     * @name RunHealthScoringNow
+     * @request POST:/health-score/run
+     */
+    runHealthScoringNow: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/health-score/run`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for runHealthScoringNow
+     * @name runHealthScoringNowUrl
+     */
+    runHealthScoringNowUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/health-score/run`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags HealthScore
+     * @name GetHealthScores
+     * @request GET:/health-score/scores
+     */
+    getHealthScores: (
+      query?: {
+        resourceIds?: number[];
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32SystemDecimal,
+        any
+      >({
+        path: `/health-score/scores`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getHealthScores
+     * @name getHealthScoresUrl
+     */
+    getHealthScoresUrl: (query?: {
+        resourceIds?: number[];
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/health-score/scores`;
+      
+      // Build query string
+      if (query) {
+        const queryString = Object.keys(query)
+          .filter(key => query[key] !== undefined && query[key] !== null)
+          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags HealthScore
+     * @name GetHealthScoreDiagnosisForResource
+     * @request GET:/health-score/resource/{resourceId}/diagnosis
+     */
+    getHealthScoreDiagnosisForResource: (resourceId: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceControllersResourceHealthScoreRowViewModel,
+        any
+      >({
+        path: `/health-score/resource/${resourceId}/diagnosis`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags HealthScore
+     * @name GetAllFilePredicates
+     * @request GET:/health-score/predicates
+     */
+    getAllFilePredicates: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesHealthScoreModelsViewFilePredicateDescriptorViewModel,
+        any
+      >({
+        path: `/health-score/predicates`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getAllFilePredicates
+     * @name getAllFilePredicatesUrl
+     */
+    getAllFilePredicatesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/health-score/predicates`;
       
       return baseUrl + path;
     },
@@ -12547,7 +13891,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -12857,7 +14201,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -13183,7 +14527,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -13326,104 +14670,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
-
-    /**
-     * No description
-     *
-     * @tags MediaLibraryV2
-     * @name MarkMediaLibraryV2AsSynced
-     * @request PATCH:/media-library-v2/mark-as-synced
-     */
-    markMediaLibraryV2AsSynced: (data: number[], params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/media-library-v2/mark-as-synced`,
-        method: "PATCH",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for markMediaLibraryV2AsSynced
-     * @name markMediaLibraryV2AsSyncedUrl
-     */
-    markMediaLibraryV2AsSyncedUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/media-library-v2/mark-as-synced`;
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags MediaLibraryV2
-     * @name SyncMediaLibraryV2
-     * @request POST:/media-library-v2/{id}/sync
-     */
-    syncMediaLibraryV2: (id: number, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/media-library-v2/${id}/sync`,
-        method: "POST",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags MediaLibraryV2
-     * @name SyncAllMediaLibrariesV2
-     * @request POST:/media-library-v2/sync-all
-     */
-    syncAllMediaLibrariesV2: (params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/media-library-v2/sync-all`,
-        method: "POST",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for syncAllMediaLibrariesV2
-     * @name syncAllMediaLibrariesV2Url
-     */
-    syncAllMediaLibrariesV2Url: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/media-library-v2/sync-all`;
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags MediaLibraryV2
-     * @name GetOutdatedMediaLibrariesV2
-     * @request GET:/media-library-v2/outdated
-     */
-    getOutdatedMediaLibrariesV2: (params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainMediaLibraryV2,
-        any
-      >({
-        path: `/media-library-v2/outdated`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for getOutdatedMediaLibrariesV2
-     * @name getOutdatedMediaLibrariesV2Url
-     */
-    getOutdatedMediaLibrariesV2Url: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/media-library-v2/outdated`;
-      
-      return baseUrl + path;
-    },
 
     /**
      * No description
@@ -13639,6 +14885,32 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchUiOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/ui`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Options
+     * @name ResetResourceDetailLayout
+     * @request DELETE:/options/ui/resource-detail-layout
+     */
+    resetResourceDetailLayout: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/options/ui/resource-detail-layout`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for resetResourceDetailLayout
+     * @name resetResourceDetailLayoutUrl
+     */
+    resetResourceDetailLayoutUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/options/ui/resource-detail-layout`;
       
       return baseUrl + path;
     },
@@ -15143,7 +16415,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -15237,7 +16509,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -15381,7 +16653,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -15425,7 +16697,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -15841,7 +17113,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -15887,7 +17159,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -15953,7 +17225,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -16114,6 +17386,212 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         ...params,
       }),
   };
+  postParser = {
+    /**
+     * No description
+     *
+     * @tags PostParser
+     * @name GetPostParseTargets
+     * @request GET:/post-parser/targets
+     */
+    getPostParseTargets: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstantsPostParseTarget,
+        any
+      >({
+        path: `/post-parser/targets`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getPostParseTargets
+     * @name getPostParseTargetsUrl
+     */
+    getPostParseTargetsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/post-parser/targets`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PostParser
+     * @name GetAllPostParserTasks
+     * @request GET:/post-parser/task/all
+     */
+    getAllPostParserTasks: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTask,
+        any
+      >({
+        path: `/post-parser/task/all`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getAllPostParserTasks
+     * @name getAllPostParserTasksUrl
+     */
+    getAllPostParserTasksUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/post-parser/task/all`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PostParser
+     * @name DeleteAllPostParserTasks
+     * @request DELETE:/post-parser/task/all
+     */
+    deleteAllPostParserTasks: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/post-parser/task/all`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for deleteAllPostParserTasks
+     * @name deleteAllPostParserTasksUrl
+     */
+    deleteAllPostParserTasksUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/post-parser/task/all`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PostParser
+     * @name AddPostParserTasks
+     * @request POST:/post-parser/task
+     */
+    addPostParserTasks: (
+      data: BakabaseInsideWorldBusinessComponentsPostParserControllersAddPostParserTasksInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/post-parser/task`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for addPostParserTasks
+     * @name addPostParserTasksUrl
+     */
+    addPostParserTasksUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/post-parser/task`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PostParser
+     * @name DeletePostParserTask
+     * @request DELETE:/post-parser/task/{id}
+     */
+    deletePostParserTask: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/post-parser/task/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags PostParser
+     * @name ReParsePostParserTask
+     * @request POST:/post-parser/task/{id}/reparse
+     */
+    reParsePostParserTask: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/post-parser/task/${id}/reparse`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags PostParser
+     * @name StartAllPostParserTasks
+     * @request POST:/post-parser/start
+     */
+    startAllPostParserTasks: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/post-parser/start`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for startAllPostParserTasks
+     * @name startAllPostParserTasksUrl
+     */
+    startAllPostParserTasksUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/post-parser/start`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PostParser
+     * @name GetPostParserTaskStatuses
+     * @request POST:/post-parser/task/statuses
+     */
+    getPostParserTaskStatuses: (
+      data: BakabaseInsideWorldBusinessComponentsPostParserControllersQueryPostParserTaskStatusesInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemStringBakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstantsPostParserTaskStatus,
+        any
+      >({
+        path: `/post-parser/task/statuses`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getPostParserTaskStatuses
+     * @name getPostParserTaskStatusesUrl
+     */
+    getPostParserTaskStatusesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/post-parser/task/statuses`;
+      
+      return baseUrl + path;
+    },
+  };
   property = {
     /**
      * No description
@@ -16260,7 +17738,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -16512,7 +17990,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -16580,7 +18058,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -16676,7 +18154,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -16901,7 +18379,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -16948,7 +18426,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -16997,7 +18475,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -17075,7 +18553,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -17126,7 +18604,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -17175,7 +18653,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -17219,7 +18697,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       
@@ -17263,7 +18741,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-        
+
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
       

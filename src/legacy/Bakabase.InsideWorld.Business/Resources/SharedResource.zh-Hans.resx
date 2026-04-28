@@ -423,26 +423,8 @@
   <data name="PostParser_ParseAll_TaskName" xml:space="preserve">
     <value>解析帖子</value>
   </data>
-  <data name="SyncMediaLibrary" xml:space="preserve">
-    <value>同步媒体库：{0}</value>
-  </data>
   <data name="BTask_CanNotReplaceAnActiveTask" xml:space="preserve">
     <value>未完成的任务[{0}]{1}无法被替换</value>
-  </data>
-  <data name="SyncMediaLibrary_TaskProcess_DiscoverResources" xml:space="preserve">
-    <value>发现资源</value>
-  </data>
-  <data name="SyncMediaLibrary_TaskProcess_CleanupResources" xml:space="preserve">
-    <value>清理资源</value>
-  </data>
-  <data name="SyncMediaLibrary_TaskProcess_AddResources" xml:space="preserve">
-    <value>添加资源</value>
-  </data>
-  <data name="SyncMediaLibrary_TaskProcess_UpdateResources" xml:space="preserve">
-    <value>更新资源</value>
-  </data>
-  <data name="SyncMediaLibrary_TaskProcess_AlmostComplete" xml:space="preserve">
-    <value>即将完成</value>
   </data>
   <data name="MediaType_Image" xml:space="preserve">
     <value>图片</value>
@@ -577,13 +559,19 @@
     <value>构建资源配置索引</value>
   </data>
   <data name="BTask_Description_ResourceProfileIndex" xml:space="preserve">
-    <value>构建资源与配置的匹配索引</value>
+    <value>构建资源与配置的匹配索引以加速匹配。资源或配置发生变更时会自动重新构建。</value>
   </data>
   <data name="BTask_Name_SearchIndex" xml:space="preserve">
     <value>构建搜索索引</value>
   </data>
   <data name="BTask_Description_SearchIndex" xml:space="preserve">
     <value>构建用于快速资源搜索的倒排索引</value>
+  </data>
+  <data name="BTask_Name_HealthScoring" xml:space="preserve">
+    <value>资源健康度评分</value>
+  </data>
+  <data name="BTask_Description_HealthScoring" xml:space="preserve">
+    <value>对启用中的评分档应用其规则，并将每个资源的得分写入数据库。</value>
   </data>
   <data name="SearchIndex_LoadingResources" xml:space="preserve">
     <value>加载资源中...</value>
@@ -764,5 +752,8 @@
   </data>
   <data name="CookieCapture_Cancelled" xml:space="preserve">
     <value>已取消导入 Cookie。需要时可重新尝试。</value>
+  </data>
+  <data name="CookieCapture_LoginTo" xml:space="preserve">
+    <value>登录 {0}</value>
   </data>
 </root>

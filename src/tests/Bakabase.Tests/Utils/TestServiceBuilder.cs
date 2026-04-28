@@ -1,5 +1,7 @@
 using System;
 using System.IO;
+using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Cover;
@@ -101,6 +103,7 @@ public static class TestServiceBuilder
         services.TryAddSingleton<HardwareAccelerationService>();
         services.TryAddSingleton<LuxService>();
         services.TryAddSingleton<SevenZipService>();
+        services.TryAddSingleton<Bakabase.InsideWorld.Business.Components.Dependency.Implementations.LocaleEmulator.LocaleEmulatorService>();
         services.RegisterAllRegisteredTypeAs<IDependentComponentService>();
 
         // === Compression ===
@@ -167,9 +170,23 @@ public static class TestServiceBuilder
         services.AddSingleton<IBOptionsManager<ResourceOptions>>(sp =>
             new TestBOptionsManager<ResourceOptions>(sp.GetRequiredService<IBOptions<ResourceOptions>>().Value));
 
+        // UI Options
+        services.AddSingleton<IBOptions<UIOptions>>(
+            new TestBOptions<UIOptions>(new UIOptions()));
+        services.AddSingleton<IBOptionsManager<UIOptions>>(sp =>
+            new TestBOptionsManager<UIOptions>(sp.GetRequiredService<IBOptions<UIOptions>>().Value));
+
         // App Options
         services.AddSingleton<IBOptionsManager<AppOptions>>(
             new TestBOptionsManager<AppOptions>(new AppOptions()));
+
+        // AppService (used by SevenZipService and other dependency components)
+        services.AddSingleton<Bakabase.Infrastructures.Components.App.AppService>();
+
+        // Auto-register all [Options]-attributed types as default IBOptions/IBOptionsManager
+        // (mirrors what ConfigurationRegistrations does in production, but with empty values).
+        // TryAdd so manual registrations above (FileSystemOptions, ResourceOptions, etc.) win.
+        RegisterAllOptionsTypes(services);
 
         // Build provider and initialize database
         var sp = services.BuildServiceProvider();
@@ -180,5 +197,45 @@ public static class TestServiceBuilder
         await ctx.Database.MigrateAsync();
 
         return scopeSp;
+    }
+
+    private static void RegisterAllOptionsTypes(IServiceCollection services)
+    {
+        var assemblies = AppDomain.CurrentDomain.GetAssemblies()
+            .Where(a => !a.IsDynamic &&
+                        (a.FullName?.StartsWith("Bakabase", StringComparison.Ordinal) == true ||
+                         a.FullName?.StartsWith("Bootstrap", StringComparison.Ordinal) == true));
+
+        foreach (var assembly in assemblies)
+        {
+            Type[] types;
+            try
+            {
+                types = assembly.GetTypes();
+            }
+            catch
+            {
+                continue;
+            }
+
+            foreach (var t in types)
+            {
+                if (!t.IsPublic || t.IsAbstract || !t.IsClass) continue;
+                if (t.GetCustomAttribute<OptionsAttribute>() == null) continue;
+                if (t.GetConstructor(Type.EmptyTypes) == null) continue;
+
+                var optionsType = typeof(IBOptions<>).MakeGenericType(t);
+                var managerType = typeof(IBOptionsManager<>).MakeGenericType(t);
+                var testOptionsType = typeof(TestBOptions<>).MakeGenericType(t);
+                var testManagerType = typeof(Implementations.TestBOptionsManager<>).MakeGenericType(t);
+
+                var instance = Activator.CreateInstance(t)!;
+                var testOptionsInstance = Activator.CreateInstance(testOptionsType, instance)!;
+                var testManagerInstance = Activator.CreateInstance(testManagerType, instance)!;
+
+                services.TryAddSingleton(optionsType, _ => testOptionsInstance);
+                services.TryAddSingleton(managerType, _ => testManagerInstance);
+            }
+        }
     }
 }

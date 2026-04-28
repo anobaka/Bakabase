@@ -48,12 +48,6 @@ public class TestBakabaseLocalizer : IBakabaseLocalizer
     public string? WrongPassword() => "WrongPassword";
     public string DeletingInvalidResources(int count) => $"DeletingInvalidResources_{count}";
     public string PostParser_ParseAll_TaskName() => "PostParser_ParseAll_TaskName";
-    public string SyncMediaLibrary(string name) => $"SyncMediaLibrary_{name}";
-    public string SyncMediaLibrary_TaskProcess_DiscoverResources(string name) => "SyncMediaLibrary_TaskProcess_DiscoverResources";
-    public string SyncMediaLibrary_TaskProcess_CleanupResources(string name) => "SyncMediaLibrary_TaskProcess_CleanupResources";
-    public string SyncMediaLibrary_TaskProcess_AddResources(string name) => "SyncMediaLibrary_TaskProcess_AddResources";
-    public string SyncMediaLibrary_TaskProcess_UpdateResources(string name) => "SyncMediaLibrary_TaskProcess_UpdateResources";
-    public string SyncMediaLibrary_TaskProcess_AlmostComplete(string name) => "SyncMediaLibrary_TaskProcess_AlmostComplete";
     public string MediaType(MediaType type) => type.ToString();
     public string Resource() => "Resource";
     public string Search() => "Search";

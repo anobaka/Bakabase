@@ -16,6 +16,9 @@
   "property.attachment.selectFromFileSystem": "Select from file system",
   "property.attachment.uploadFromLocal": "Upload from local",
   "property.attachment.uploadHint": "Uploaded files will be saved in the data/attachments folder under the app data path",
+  "property.attachment.layout.label": "Layout",
+  "property.attachment.layout.tile": "Tile",
+  "property.attachment.layout.carousel": "Carousel",
 
   "Custom property": "Custom property",
   "Select a type": "Select a type",

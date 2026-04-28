@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using System.Text;
 using Bakabase.Modules.AI.Models.Db;
 using Bakabase.Modules.AI.Models.Domain;
 using Microsoft.Extensions.AI;
@@ -65,6 +67,66 @@ public class ObservationChatClient(
             sw.Stop();
             await TrackError(sw, LlmCallStatus.Error, ex.Message, chatMessages);
             throw;
+        }
+    }
+
+    public override async IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
+        IEnumerable<ChatMessage> messages, ChatOptions? options = null,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        var chatMessages = new List<ChatMessage>(messages);
+        var sw = Stopwatch.StartNew();
+        var responseText = new StringBuilder();
+        int inputTokens = 0, outputTokens = 0, totalTokens = 0;
+        var completed = false;
+
+        // C# allows yield inside try-finally (no catch), exceptions propagate to caller
+        try
+        {
+            await foreach (var update in base.GetStreamingResponseAsync(chatMessages, options, cancellationToken))
+            {
+                if (update.Text != null)
+                    responseText.Append(update.Text);
+
+                foreach (var content in update.Contents)
+                {
+                    if (content is UsageContent usageContent)
+                    {
+                        inputTokens += (int)(usageContent.Details.InputTokenCount ?? 0);
+                        outputTokens += (int)(usageContent.Details.OutputTokenCount ?? 0);
+                        totalTokens += (int)(usageContent.Details.TotalTokenCount ?? 0);
+                    }
+                }
+
+                yield return update;
+            }
+
+            completed = true;
+        }
+        finally
+        {
+            sw.Stop();
+            var log = new LlmUsageLogDbModel
+            {
+                ProviderConfigId = providerConfigId,
+                ModelId = modelId,
+                Feature = feature,
+                InputTokens = inputTokens,
+                OutputTokens = outputTokens,
+                TotalTokens = totalTokens,
+                DurationMs = (int)sw.ElapsedMilliseconds,
+                CacheHit = false,
+                Status = completed ? LlmCallStatus.Success : LlmCallStatus.Error,
+                CreatedAt = DateTime.Now
+            };
+
+            if (auditRequestContent)
+            {
+                log.RequestSummary = SummarizeMessages(chatMessages);
+                log.ResponseSummary = responseText.Length > 0 ? responseText.ToString() : null;
+            }
+
+            await usageService.TrackAsync(log, CancellationToken.None);
         }
     }
 

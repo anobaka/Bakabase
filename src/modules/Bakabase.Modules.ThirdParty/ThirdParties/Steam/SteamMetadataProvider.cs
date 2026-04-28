@@ -26,7 +26,6 @@ public class SteamMetadataProvider : IMetadataProvider
 
     public List<SourceMetadataFieldInfo> GetPredefinedMetadataFields() =>
     [
-        new(nameof(SteamMetadataField.Name), StandardValueType.String),
         new(nameof(SteamMetadataField.Type), StandardValueType.String),
         new(nameof(SteamMetadataField.ShortDescription), StandardValueType.String),
         new(nameof(SteamMetadataField.DetailedDescription), StandardValueType.String),
@@ -52,10 +51,10 @@ public class SteamMetadataProvider : IMetadataProvider
         var result = new SourceDetailedMetadata
         {
             RawJson = JsonSerializer.Serialize(detail, JsonSerializerOptions.Web),
+            Name = detail.Name,
             CoverUrls = [detail.HeaderImage ?? $"https://cdn.akamai.steamstatic.com/steam/apps/{appId}/header.jpg"],
             PredefinedFieldValues =
             {
-                [nameof(SteamMetadataField.Name)] = detail.Name,
                 [nameof(SteamMetadataField.Type)] = detail.Type,
                 [nameof(SteamMetadataField.ShortDescription)] = detail.ShortDescription,
                 [nameof(SteamMetadataField.DetailedDescription)] = detail.DetailedDescription,

@@ -18,7 +18,6 @@ public class DLsiteMetadataProvider : IMetadataProvider
 
     public List<SourceMetadataFieldInfo> GetPredefinedMetadataFields() =>
     [
-        new(nameof(DLsiteMetadataField.Name), StandardValueType.String),
         new(nameof(DLsiteMetadataField.Introduction), StandardValueType.String),
         new(nameof(DLsiteMetadataField.Rating), StandardValueType.Decimal),
         new(nameof(DLsiteMetadataField.CoverUrls), StandardValueType.ListString),
@@ -32,10 +31,10 @@ public class DLsiteMetadataProvider : IMetadataProvider
         var result = new SourceDetailedMetadata
         {
             RawJson = JsonSerializer.Serialize(detail, JsonSerializerOptions.Web),
+            Name = detail.Name,
             CoverUrls = detail.CoverUrls?.ToList(),
             PredefinedFieldValues =
             {
-                [nameof(DLsiteMetadataField.Name)] = detail.Name,
                 [nameof(DLsiteMetadataField.Introduction)] = detail.Introduction,
                 [nameof(DLsiteMetadataField.Rating)] = detail.Rating,
                 [nameof(DLsiteMetadataField.CoverUrls)] = detail.CoverUrls?.ToList(),

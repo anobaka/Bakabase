@@ -43,6 +43,7 @@ type Props = {
 
   removable?: boolean;
   editable?: boolean;
+  openEditModalOnClick?: boolean;
   onSaved?: (property: IProperty) => any;
   onRemoved?: () => any;
 
@@ -60,6 +61,7 @@ const V2 = ({
   onDialogDestroyed,
   isSelected,
   disabled,
+  openEditModalOnClick,
   ...props
 }: Props) => {
   const { t } = useTranslation();
@@ -87,7 +89,7 @@ const V2 = ({
 
   const actions: any[] = [];
 
-  if (editable) {
+  if (editable && !openEditModalOnClick) {
     actions.push(
       <Button
         isIconOnly
@@ -127,8 +129,11 @@ const V2 = ({
     );
   }
 
+  const pressHandler =
+    openEditModalOnClick && editable ? showDetail : onClick;
+
   const card = (
-    <Card isPressable={!disabled} onPress={onClick} className={disabled ? "cursor-not-allowed opacity-60" : ""}>
+    <Card isPressable={!disabled} onPress={pressHandler} className={disabled ? "cursor-not-allowed opacity-60" : ""}>
       <CardBody className={"flex flex-col gap-1"}>
         {(!hidePool || !hideType) && (
           <div className="flex items-center gap-1">

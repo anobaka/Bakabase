@@ -231,7 +231,6 @@ public class SteamResolver : IResourceResolver
 
     public List<SourceMetadataFieldInfo> GetPredefinedMetadataFields() =>
     [
-        new(nameof(SteamMetadataField.Name), StandardValueType.String),
         new(nameof(SteamMetadataField.Type), StandardValueType.String),
         new(nameof(SteamMetadataField.ShortDescription), StandardValueType.String),
         new(nameof(SteamMetadataField.DetailedDescription), StandardValueType.String),
@@ -261,7 +260,6 @@ public class SteamResolver : IResourceResolver
             CoverUrls = [detail.HeaderImage ?? $"https://cdn.akamai.steamstatic.com/steam/apps/{appId}/header.jpg"],
             PredefinedFieldValues =
             {
-                [nameof(SteamMetadataField.Name)] = detail.Name,
                 [nameof(SteamMetadataField.Type)] = detail.Type,
                 [nameof(SteamMetadataField.ShortDescription)] = detail.ShortDescription,
                 [nameof(SteamMetadataField.DetailedDescription)] = detail.DetailedDescription,

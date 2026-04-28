@@ -107,12 +107,16 @@ internal static class PropertyInternals
                     (int) ResourceProperty.ParentResource, PropertyType.SingleChoice),
                 new Bakabase.Abstractions.Models.Domain.Property(PropertyPool.Internal,
                     (int) ResourceProperty.Source, PropertyType.MultipleChoice),
+                new Bakabase.Abstractions.Models.Domain.Property(PropertyPool.Internal,
+                    (int) ResourceProperty.HealthScore, PropertyType.Number),
                 new Bakabase.Abstractions.Models.Domain.Property(PropertyPool.Reserved,
                     (int) ResourceProperty.Rating, PropertyType.Rating),
                 new Bakabase.Abstractions.Models.Domain.Property(PropertyPool.Reserved,
                     (int) ResourceProperty.Introduction, PropertyType.MultilineText),
                 new Bakabase.Abstractions.Models.Domain.Property(PropertyPool.Reserved,
                     (int) ResourceProperty.Cover, PropertyType.Attachment),
+                new Bakabase.Abstractions.Models.Domain.Property(PropertyPool.Reserved,
+                    (int) ResourceProperty.Name, PropertyType.SingleLineText),
             }.ToDictionary(d => (ResourceProperty) d.Id, d => d));
 
     /// <summary>
@@ -133,6 +137,7 @@ internal static class PropertyInternals
                 ResourceProperty.MediaLibraryV2Multi,
                 ResourceProperty.ParentResource,
                 ResourceProperty.Source,
+                ResourceProperty.HealthScore,
             }.ToDictionary(d => d, d => BuiltinPropertyMap[d]));
 
     /// <summary>
@@ -146,6 +151,7 @@ internal static class PropertyInternals
                 ResourceProperty.Rating,
                 ResourceProperty.Introduction,
                 ResourceProperty.Cover,
+                ResourceProperty.Name,
             }.ToDictionary(
                 d => (ReservedProperty) d, d => BuiltinPropertyMap[d]));
 

@@ -27,4 +27,10 @@ public interface ILlmService
         IEnumerable<ChatMessage> messages,
         LlmModelParameters? parametersOverride = null,
         CancellationToken ct = default);
+
+    IAsyncEnumerable<ChatResponseUpdate> CompleteStreamingForFeatureAsync(
+        AiFeature feature,
+        IList<ChatMessage> messages,
+        ChatOptions? options = null,
+        CancellationToken ct = default);
 }

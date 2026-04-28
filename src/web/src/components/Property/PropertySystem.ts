@@ -12,7 +12,7 @@
 
 import type { Dayjs } from "dayjs";
 import type { Duration } from "dayjs/plugin/duration";
-import { PropertyType, StandardValueType } from "@/sdk/constants";
+import { AttachmentLayout, PropertyType, StandardValueType } from "@/sdk/constants";
 import type { LinkValue, TagValue, MultilevelData } from "@/components/StandardValue/models";
 
 // ============================================================================
@@ -244,6 +244,13 @@ export interface MultilevelPropertyOptions {
 }
 
 /**
+ * Options for Attachment property.
+ */
+export interface AttachmentPropertyOptions {
+  layout?: AttachmentLayout;
+}
+
+/**
  * Options for Tags property.
  */
 export interface TagsPropertyOptions {
@@ -264,7 +271,7 @@ export type PropertyOptionsMap = {
   [PropertyType.Rating]: RatingPropertyOptions;
   [PropertyType.Boolean]: undefined;
   [PropertyType.Link]: undefined;
-  [PropertyType.Attachment]: undefined;
+  [PropertyType.Attachment]: AttachmentPropertyOptions;
   [PropertyType.Date]: undefined;
   [PropertyType.DateTime]: undefined;
   [PropertyType.Time]: undefined;
@@ -308,7 +315,6 @@ export interface BaseProperty {
   poolName: string;
   order: number;
   valueCount?: number;
-  categories?: { id: number; name: string }[];
 }
 
 /**

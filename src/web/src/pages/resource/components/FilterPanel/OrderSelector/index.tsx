@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import { useUpdateEffect } from "react-use";
 import { FaSortAmountDownAlt, FaSortAmountUpAlt } from "react-icons/fa";
 import { MdOutlineCreateNewFolder, MdEditNote, MdSortByAlpha, MdLibraryAdd, MdPlayCircleOutline } from "react-icons/md";
+import { AiOutlineRadarChart } from "react-icons/ai";
 
 import {
   resourceSearchSortableProperties,
@@ -20,6 +21,7 @@ const sortPropertyIcons: Record<ResourceSearchSortableProperty, React.ReactNode>
   [ResourceSearchSortableProperty.Filename]: <MdSortByAlpha className="text-base" />,
   [ResourceSearchSortableProperty.AddDt]: <MdLibraryAdd className="text-base" />,
   [ResourceSearchSortableProperty.PlayedAt]: <MdPlayCircleOutline className="text-base" />,
+  [ResourceSearchSortableProperty.HealthScore]: <AiOutlineRadarChart className="text-base" />,
 };
 
 interface IProps extends React.ComponentPropsWithoutRef<any> {

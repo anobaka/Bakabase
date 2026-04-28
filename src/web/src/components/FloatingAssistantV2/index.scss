@@ -1,0 +1,465 @@
+@use "sass:color";
+
+// ============================================================
+// 小baka (Lil' Baka) - Floating Assistant V2 Styles
+// ============================================================
+
+// -- Variables --
+$baka-body-light: #8ec8f0;       // bright sky blue
+$baka-body-dark: #6bb3e8;        // lighter blue for dark mode
+$baka-eye: #2d2d2d;
+$baka-pupil: #ffffff;
+$baka-blush: rgba(130, 200, 255, 0.35);
+$baka-mouth: #555;
+$baka-arm: #a0d4f5;
+$baka-arm-dark: #7cc0ee;
+$baka-hand: #b8e0fa;
+$baka-hand-dark: #6bb3e8;
+$baka-antenna: rgba(100, 185, 245, 0.85);
+$baka-antenna-dark: #90ccf5;
+$baka-highlight: rgba(255, 255, 255, 0.8);
+
+// ============================================================
+// Dock hitbox (invisible hover target near edge)
+// ============================================================
+.baka-dock-hitbox {
+  // Uncomment border below to debug hitbox area:
+  // border: 1px dashed rgba(255, 0, 0, 0.3);
+}
+
+// ============================================================
+// Main container
+// ============================================================
+.baka-assistant-v2 {
+  position: fixed;
+  z-index: 49;
+  user-select: none;
+  transition: left 0.35s cubic-bezier(0.34, 1.2, 0.64, 1),
+              top 0.35s cubic-bezier(0.34, 1.2, 0.64, 1);
+
+  &.baka-state-dragging {
+    transition: none;
+  }
+}
+
+// ============================================================
+// Character SVG styling
+// ============================================================
+.baka-character {
+  width: 100%;
+  height: 100%;
+  position: relative;
+
+  svg {
+    overflow: visible;
+    filter: drop-shadow(1px 2px 3px rgba(0, 0, 0, 0.15));
+  }
+}
+
+// -- Body --
+.baka-body {
+  fill: $baka-body-light;
+  stroke: color.adjust($baka-body-light, $lightness: -15%);
+  stroke-width: 0.8;
+  transition: fill 0.3s;
+
+  .dark & {
+    fill: $baka-body-dark;
+    stroke: color.adjust($baka-body-dark, $lightness: -15%);
+  }
+}
+
+// -- Eyes --
+.baka-eye {
+  fill: $baka-eye;
+}
+
+.baka-pupil {
+  fill: $baka-pupil;
+}
+
+.baka-eye-highlight {
+  fill: $baka-highlight;
+}
+
+.baka-eye-closed {
+  stroke: $baka-eye;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+.baka-eye-arc {
+  fill: none;
+  stroke: $baka-eye;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+.baka-heart-eye {
+  fill: #50a0dc;
+  font-family: sans-serif;
+}
+
+// -- Mouth --
+.baka-mouth-smile {
+  fill: none;
+  stroke: $baka-mouth;
+  stroke-width: 1.2;
+  stroke-linecap: round;
+}
+
+.baka-mouth-smile-big {
+  fill: none;
+  stroke: $baka-mouth;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+.baka-mouth-open {
+  fill: $baka-mouth;
+  opacity: 0.6;
+}
+
+.baka-mouth-o {
+  fill: $baka-mouth;
+  opacity: 0.5;
+}
+
+.baka-mouth-yawn {
+  fill: $baka-mouth;
+  opacity: 0.4;
+}
+
+// -- Blush --
+.baka-blush-mark {
+  fill: $baka-blush;
+  opacity: 0;
+  animation: baka-blush-in 0.4s ease forwards;
+}
+
+@keyframes baka-blush-in {
+  from { opacity: 0; }
+  to { opacity: 0.6; }
+}
+
+// -- Arms --
+.baka-arm {
+  fill: none;
+  stroke: $baka-arm;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+
+  .dark & {
+    stroke: $baka-arm-dark;
+  }
+}
+
+.baka-hand {
+  fill: $baka-hand;
+  stroke: color.adjust($baka-hand, $lightness: -10%);
+  stroke-width: 0.5;
+
+  .dark & {
+    fill: $baka-hand-dark;
+    stroke: color.adjust($baka-hand-dark, $lightness: -10%);
+  }
+}
+
+// -- Antenna --
+.baka-antenna-line {
+  fill: none;
+  stroke: $baka-antenna;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+
+  .dark & {
+    stroke: $baka-antenna-dark;
+  }
+}
+
+.baka-antenna-tip {
+  fill: $baka-antenna;
+
+  .dark & {
+    fill: $baka-antenna-dark;
+  }
+}
+
+// ============================================================
+// Idle animations
+// ============================================================
+
+// -- Breathe --
+.idle-breathe {
+  animation: baka-breathe 3s ease-in-out infinite;
+}
+
+@keyframes baka-breathe {
+  0%, 100% { transform: scale(1) translateY(0); }
+  50% { transform: scale(1.03) translateY(-1px); }
+}
+
+// -- Blink --
+.idle-blink .baka-blink {
+  animation: baka-blink-anim 0.25s ease-in-out;
+}
+
+@keyframes baka-blink-anim {
+  0% { opacity: 0; }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+// -- Sway --
+.idle-sway {
+  animation: baka-sway 2.5s ease-in-out infinite;
+}
+
+@keyframes baka-sway {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(4deg); }
+  75% { transform: rotate(-4deg); }
+}
+
+// -- Yawn --
+.idle-yawn {
+  animation: baka-yawn 3s ease-in-out;
+}
+
+@keyframes baka-yawn {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.06) translateY(-2px); }
+  60% { transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
+
+// -- Look around --
+.idle-look-around svg {
+  animation: baka-look 3s ease-in-out;
+}
+
+@keyframes baka-look {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(3px); }
+  50% { transform: translateX(0); }
+  75% { transform: translateX(-3px); }
+}
+
+// ============================================================
+// Hover animations
+// ============================================================
+
+.hover-notice {
+  animation: baka-notice 0.4s ease;
+}
+
+@keyframes baka-notice {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.12); }
+  100% { transform: scale(1.06); }
+}
+
+.hover-smile {
+  animation: baka-hover-bounce 0.5s ease;
+  transform: scale(1.05);
+}
+
+@keyframes baka-hover-bounce {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1) translateY(-3px); }
+  100% { transform: scale(1.05); }
+}
+
+.hover-curious {
+  animation: baka-tilt 0.4s ease forwards;
+}
+
+@keyframes baka-tilt {
+  0% { transform: rotate(0); }
+  100% { transform: rotate(8deg); }
+}
+
+// ============================================================
+// Click animations
+// ============================================================
+
+.click-jump {
+  animation: baka-jump 0.6s ease;
+}
+
+@keyframes baka-jump {
+  0% { transform: translateY(0) scale(1); }
+  20% { transform: translateY(0) scale(0.9, 1.1); }
+  40% { transform: translateY(-20px) scale(1.05, 0.95); }
+  60% { transform: translateY(-20px) scale(1); }
+  80% { transform: translateY(0) scale(0.95, 1.05); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+.click-spin {
+  animation: baka-spin 0.7s ease;
+}
+
+@keyframes baka-spin {
+  0% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(180deg) scale(0.9); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+
+.click-heart {
+  animation: baka-heart-pop 0.7s ease;
+}
+
+@keyframes baka-heart-pop {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.2); }
+  60% { transform: scale(0.95); }
+  100% { transform: scale(1.05); }
+}
+
+.click-wave {
+  animation: baka-click-wave 0.7s ease;
+}
+
+@keyframes baka-click-wave {
+  0%, 100% { transform: rotate(0); }
+  20% { transform: rotate(-10deg); }
+  40% { transform: rotate(10deg); }
+  60% { transform: rotate(-8deg); }
+  80% { transform: rotate(5deg); }
+}
+
+// -- Wave arm animation --
+.baka-arm-wave {
+  transform-origin: 6px 28px;
+  animation: baka-wave-arm 0.6s ease-in-out infinite;
+}
+
+.baka-hand-wave {
+  animation: baka-wave-hand 0.6s ease-in-out infinite;
+}
+
+@keyframes baka-wave-arm {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-20deg); }
+}
+
+@keyframes baka-wave-hand {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(-3px, -4px); }
+}
+
+.baka-arm-wave-r {
+  transform-origin: 42px 28px;
+  animation: baka-wave-arm-r 0.6s ease-in-out infinite;
+}
+
+.baka-hand-wave-r {
+  animation: baka-wave-hand-r 0.6s ease-in-out infinite;
+}
+
+@keyframes baka-wave-arm-r {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(20deg); }
+}
+
+@keyframes baka-wave-hand-r {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(3px, -4px); }
+}
+
+// ============================================================
+// Peek animations (from docked)
+// ============================================================
+
+.baka-state-peeking {
+  // Override transition for peek slide
+  transition: left 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
+              top 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+
+.peek-peek-wave,
+.peek-peek-look {
+  animation: baka-peek-bounce 0.5s ease;
+}
+
+@keyframes baka-peek-bounce {
+  0% { transform: scale(0.8); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+// ============================================================
+// Dragging
+// ============================================================
+
+.dragging {
+  animation: baka-wobble 0.3s ease infinite;
+}
+
+@keyframes baka-wobble {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(3deg); }
+  75% { transform: rotate(-3deg); }
+}
+
+// ============================================================
+// Waving bye (before auto-redock)
+// ============================================================
+
+.waving-bye {
+  animation: baka-wave-bye 0.6s ease-in-out infinite;
+}
+
+@keyframes baka-wave-bye {
+  0%, 100% { transform: rotate(0deg) translateY(0); }
+  25% { transform: rotate(-5deg) translateY(-2px); }
+  75% { transform: rotate(5deg) translateY(-2px); }
+}
+
+// ============================================================
+// Docked state
+// ============================================================
+
+.docked {
+  transition: transform 0.3s ease;
+}
+
+// ============================================================
+// Chatting state
+// ============================================================
+
+.chatting {
+  animation: baka-chat-idle 2s ease-in-out infinite;
+}
+
+@keyframes baka-chat-idle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+// ============================================================
+// Chat Panel (floating container around ChatView)
+// ============================================================
+
+.baka-chat-panel {
+  background: var(--theme-block-background, #fff);
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: baka-chat-open 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  .dark & {
+    background: var(--theme-block-background, #1a1a2e);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  }
+}
+
+@keyframes baka-chat-open {
+  0% { opacity: 0; transform: scale(0.8) translateY(10px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+

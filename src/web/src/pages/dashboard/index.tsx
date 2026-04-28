@@ -80,6 +80,7 @@ const DashboardPage = () => {
   const [recentlyAdded, setRecentlyAdded] = useState<ResourceModel[]>([]);
   const [recentlyPlayed, setRecentlyPlayed] = useState<ResourceModel[]>([]);
   const [pinnedResources, setPinnedResources] = useState<ResourceModel[]>([]);
+  const [resourcesLoading, setResourcesLoading] = useState({ added: true, played: true, pinned: true });
   const [mediaLibraries, setMediaLibraries] = useState<Array<{ id: number; name: string }>>([]);
   const initializedRef = useRef(false);
 
@@ -101,7 +102,7 @@ const DashboardPage = () => {
         orders: [{ property: ResourceSearchSortableProperty.AddDt, asc: false }],
       },
       setRecentlyAdded,
-    );
+    ).finally(() => setResourcesLoading((prev) => ({ ...prev, added: false })));
 
     // Fetch recently played with progressive loading
     progressiveSearch(
@@ -112,7 +113,7 @@ const DashboardPage = () => {
       },
       setRecentlyPlayed,
       (resources) => resources.filter((r) => r.playedAt),
-    );
+    ).finally(() => setResourcesLoading((prev) => ({ ...prev, played: false })));
 
     // Fetch pinned resources with progressive loading
     progressiveSearch(
@@ -123,7 +124,7 @@ const DashboardPage = () => {
         orders: [{ property: ResourceSearchSortableProperty.AddDt, asc: false }],
       },
       setPinnedResources,
-    );
+    ).finally(() => setResourcesLoading((prev) => ({ ...prev, pinned: false })));
 
     // Fetch media libraries for Browse Libraries dropdown
     BApi.mediaLibraryV2.getAllMediaLibraryV2().then((res) => {
@@ -410,9 +411,9 @@ const DashboardPage = () => {
             })}
           </DropdownMenu>
         </Dropdown>
-        <Button className="flex-1" variant="flat" onPress={() => navigate("/bulk-modification")}>
+        <Button className="flex-1" variant="flat" onPress={() => navigate("/file-processor")}>
           <AiOutlineEdit className="text-lg" />
-          {t<string>("dashboard.action.bulkOperations")}
+          {t<string>("dashboard.action.fileProcessor")}
         </Button>
         <Button
           className="flex-1"
@@ -455,7 +456,11 @@ const DashboardPage = () => {
           </Button>
         </div>
 
-        {currentResources.length === 0 ? (
+        {resourcesLoading[activeTab] ? (
+          <div className="flex items-center justify-center py-8">
+            <Spinner size="lg" />
+          </div>
+        ) : currentResources.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-4 py-8 opacity-60">
             {activeTab === "added" && <AiOutlineClockCircle className="text-5xl" />}
             {activeTab === "played" && <AiOutlinePlayCircle className="text-5xl" />}

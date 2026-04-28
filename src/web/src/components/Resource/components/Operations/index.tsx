@@ -152,10 +152,17 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
 
   const showAggregate = displayOperations.includes("aggregate");
   const showPin = displayOperations.includes("pin");
+  // Mirrors the right-click "open folder" menu entry — only shown when the
+  // resource has a backing local path (see ContextMenuItems/index.tsx).
+  const showOpenFolder = displayOperations.includes("openFolder") && !!resource.path;
   const showEnhancements = displayOperations.includes("enhancements");
   const showPreview = displayOperations.includes("preview");
   const showAddToPlaylist = displayOperations.includes("addToPlaylist");
   const showDelete = displayOperations.includes("delete");
+
+  const openFolder = () => {
+    BApi.resource.openResourceDirectory({ id: resource.id });
+  };
 
   // Aggregate mode: dropdown with icon + label items
   if (showAggregate) {
@@ -171,6 +178,14 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
         onAction: () => {
           BApi.resource.pinResource(resource.id, { pin: !resource.pinned }).then(() => reload?.());
         },
+      });
+    }
+    if (showOpenFolder) {
+      items.push({
+        key: "openFolder",
+        icon: <FolderOpenOutlined />,
+        label: t<string>("common.action.openFolder"),
+        onAction: openFolder,
       });
     }
     if (showEnhancements) {
@@ -341,6 +356,19 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
         }}
       >
         <PushpinOutlined className={iconClassName} />
+      </Button>,
+    );
+  }
+  if (showOpenFolder) {
+    individualButtons.push(
+      <Button
+        key="openFolder"
+        isIconOnly
+        className={buttonClassName}
+        title={t<string>("common.action.openFolder")}
+        onPress={openFolder}
+      >
+        <FolderOpenOutlined className={iconClassName} />
       </Button>,
     );
   }

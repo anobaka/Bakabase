@@ -24,6 +24,11 @@ public class SourceDetailedMetadata
     public Dictionary<string, List<string>> CustomFieldValues { get; set; } = new();
 
     /// <summary>
+    /// Resource name extracted from metadata (set automatically, not exposed as a mappable field).
+    /// </summary>
+    public string? Name { get; set; }
+
+    /// <summary>
     /// Cover URLs discovered during metadata fetch (to update ResourceSourceLink.CoverUrls).
     /// </summary>
     public List<string>? CoverUrls { get; set; }

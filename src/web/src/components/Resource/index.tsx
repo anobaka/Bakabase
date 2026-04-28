@@ -31,6 +31,8 @@ import "./index.css";
 
 import { buildLogger, useTraceUpdate } from "@/components/utils";
 import ResourceDetailModal from "@/components/Resource/components/DetailModal";
+import HealthScoreDiagnosisModal from "@/components/Resource/components/HealthScoreDiagnosisModal";
+import HealthScoreBadge from "@/components/HealthScoreBadge";
 import BApi from "@/sdk/BApi";
 import ResourceCover from "@/components/Resource/components/ResourceCover";
 import Operations from "@/components/Resource/components/Operations";
@@ -435,6 +437,17 @@ const Resource = React.forwardRef((props: Props, ref) => {
               </Chip>
             </Tooltip>
           )}
+          {resource.healthScore != null && !uiOptions.resource?.hideHealthScore && (
+            <Tooltip content={t<string>("healthScore.label.scoreTip", { score: resource.healthScore })}>
+              <HealthScoreBadge
+                score={resource.healthScore}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  createPortal(HealthScoreDiagnosisModal, { resourceId: resource.id });
+                }}
+              />
+            </Tooltip>
+          )}
           {debug && (
             <Chip radius={"sm"} size={"sm"} variant={"flat"}>
               <div className={"flex items-center gap-1"}>
@@ -732,6 +745,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
           <ContextMenuItems
             selectedResourceIds={selectedResourceIds}
             selectedResources={selectedResources}
+            contextResource={resource}
             onSelectedResourcesChanged={onSelectedResourcesChanged}
           />
         </ControlledMenu>

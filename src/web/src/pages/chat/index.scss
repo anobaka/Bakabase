@@ -1,0 +1,12 @@
+.chat-page {
+  height: calc(100vh - 16px);
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--theme-block-background, #fff);
+
+  .dark & {
+    background: var(--theme-block-background, #1a1a2e);
+  }
+}

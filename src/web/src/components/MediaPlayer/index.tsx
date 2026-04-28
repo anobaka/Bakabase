@@ -20,7 +20,7 @@ import {
   type MediaPlayerRef,
 } from "./types";
 
-import { IwFsType, MediaType } from "@/sdk/constants";
+import { ExtensionMediaTypes, IwFsType, MediaType } from "@/sdk/constants";
 import { buildLogger, forceFocus, useTraceUpdate } from "@/components/utils";
 import BApi from "@/sdk/BApi";
 
@@ -67,9 +67,6 @@ const MediaPlayer = forwardRef<MediaPlayerRef, MediaPlayerProps>((props, ref) =>
 
   log(props);
 
-  const [extensionsMediaTypes, setExtensionsMediaTypes] = useState<Map<string | undefined, number>>(
-    new Map<string, number>(),
-  );
   const [playing, setPlaying] = useState(autoPlay);
 
   const [progress, setProgress] = useState(0);
@@ -197,19 +194,6 @@ const MediaPlayer = forwardRef<MediaPlayerRef, MediaPlayerProps>((props, ref) =>
   }, [progress]);
 
   useEffect(() => {
-    BApi.api.getAllExtensionMediaTypes().then((t) => {
-      if (t.data) {
-        const map = new Map<string | undefined, number>();
-
-        Object.keys(t.data).forEach((ext) => {
-          map.set(ext, t.data![ext]);
-        });
-
-        setExtensionsMediaTypes(map);
-        console.log("[MediaPlayer]Extension-Media-Type initialized", map);
-      }
-    });
-
     return () => {
       console.log("unmounting");
       clearProgressHandler();
@@ -218,19 +202,17 @@ const MediaPlayer = forwardRef<MediaPlayerRef, MediaPlayerProps>((props, ref) =>
 
   const getMediaType = useCallback(
     (entry: BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry): MediaType => {
-      // First try to get from IwFsType
       if (entry.type === IwFsType.Image) return MediaType.Image;
       if (entry.type === IwFsType.Video) return MediaType.Video;
       if (entry.type === IwFsType.Audio) return MediaType.Audio;
 
-      // Fallback to extension-based detection
       const ext = entry.ext || entry.path.split(".").pop();
 
       if (!ext) return MediaType.Unknown;
 
-      return extensionsMediaTypes.get(`.${ext}`) ?? MediaType.Unknown;
+      return ExtensionMediaTypes[`.${ext}`] ?? MediaType.Unknown;
     },
-    [extensionsMediaTypes],
+    [],
   );
 
   const gotoPrevEntry = useCallback(() => {

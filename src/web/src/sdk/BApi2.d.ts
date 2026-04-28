@@ -756,6 +756,102 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/chat/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetChatConversations"];
+        put?: never;
+        post: operations["CreateChatConversation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/chat/conversations/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetChatConversation"];
+        put?: never;
+        post?: never;
+        delete: operations["DeleteChatConversation"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/chat/conversations/{id}/title": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["UpdateChatConversationTitle"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/chat/conversations/{id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetChatMessages"];
+        put?: never;
+        post: operations["SendChatMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/chat/tools": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetChatTools"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/chat/tools/{toolName}/enabled": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["SetChatToolEnabled"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/comparison/plan": {
         parameters: {
             query?: never;
@@ -895,59 +991,6 @@ export interface paths {
         put: operations["HideComparisonResultGroup"];
         post?: never;
         delete: operations["UnhideComparisonResultGroup"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/constant/extension-media-types": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["GetAllExtensionMediaTypes"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/constant": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": string;
-                        "application/json": string;
-                        "text/json": string;
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1154,6 +1197,198 @@ export interface paths {
         };
         get: operations["GetPropertyStatistics"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-card/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SearchDataCards"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-card/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDataCard"];
+        put: operations["UpdateDataCard"];
+        post?: never;
+        delete: operations["DeleteDataCard"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-card": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AddDataCard"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-card/find-by-identity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["FindDataCardByIdentity"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-card/type/{typeId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["DeleteDataCardsByType"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-card/type/{typeId}/initial-data": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CreateInitialDataCards"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-card/type/{typeId}/initial-data/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PreviewInitialDataCards"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-card/resource/{resourceId}/associated": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAssociatedDataCards"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-card/{id}/associated-resource-ids": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAssociatedResourceIds"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-card-type": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAllDataCardTypes"];
+        put?: never;
+        post: operations["AddDataCardType"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-card-type/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDataCardType"];
+        put: operations["UpdateDataCardType"];
+        post?: never;
+        delete: operations["DeleteDataCardType"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-card-type/{id}/display-template": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["UpdateDataCardTypeDisplayTemplate"];
         post?: never;
         delete?: never;
         options?: never;
@@ -2345,6 +2580,150 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/health-score/profiles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAllHealthScoreProfiles"];
+        put?: never;
+        post: operations["AddHealthScoreProfile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/health-score/profiles/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetHealthScoreProfile"];
+        put?: never;
+        post?: never;
+        delete: operations["DeleteHealthScoreProfile"];
+        options?: never;
+        head?: never;
+        patch: operations["PatchHealthScoreProfile"];
+        trace?: never;
+    };
+    "/health-score/profiles/{id}/duplicate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["DuplicateHealthScoreProfile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/health-score/profiles/{id}/clear-cache": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ClearHealthScoreProfileCache"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/health-score/clear-all-caches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ClearAllHealthScoreCaches"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/health-score/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RunHealthScoringNow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/health-score/scores": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetHealthScores"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/health-score/resource/{resourceId}/diagnosis": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetHealthScoreDiagnosisForResource"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/health-score/predicates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAllFilePredicates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/log": {
         parameters: {
             query?: never;
@@ -2709,70 +3088,6 @@ export interface paths {
         patch: operations["PatchMediaLibraryV2"];
         trace?: never;
     };
-    "/media-library-v2/mark-as-synced": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch: operations["MarkMediaLibraryV2AsSynced"];
-        trace?: never;
-    };
-    "/media-library-v2/{id}/sync": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["SyncMediaLibraryV2"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/media-library-v2/sync-all": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["SyncAllMediaLibrariesV2"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/media-library-v2/outdated": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["GetOutdatedMediaLibrariesV2"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/media-library-v2/{id}/resources": {
         parameters: {
             query?: never;
@@ -2851,6 +3166,22 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["PatchUIOptions"];
+        trace?: never;
+    };
+    "/options/ui/resource-detail-layout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["ResetResourceDetailLayout"];
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/options/ui/latest-used-property": {
@@ -3663,6 +3994,118 @@ export interface paths {
         get: operations["GetPlaylistFiles"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/post-parser/targets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetPostParseTargets"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/post-parser/task/all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAllPostParserTasks"];
+        put?: never;
+        post?: never;
+        delete: operations["DeleteAllPostParserTasks"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/post-parser/task": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AddPostParserTasks"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/post-parser/task/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["DeletePostParserTask"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/post-parser/task/{id}/reparse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ReParsePostParserTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/post-parser/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["StartAllPostParserTasks"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/post-parser/task/statuses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["GetPostParserTaskStatuses"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5047,10 +5490,10 @@ export interface components {
         "Bakabase.Abstractions.Models.Domain.Constants.PropertyValueScope": 0 | 1 | 1000 | 1001 | 1002 | 1003 | 1004 | 1005 | 1006 | 1007 | 1008 | 1009;
         /**
          * Format: int32
-         * @description [12: Introduction, 13: Rating, 22: Cover]
+         * @description [12: Introduction, 13: Rating, 22: Cover, 27: Name]
          * @enum {integer}
          */
-        "Bakabase.Abstractions.Models.Domain.Constants.ReservedProperty": 12 | 13 | 22;
+        "Bakabase.Abstractions.Models.Domain.Constants.ReservedProperty": 12 | 13 | 22 | 27;
         /**
          * Format: int32
          * @description [1: Covers, 2: PlayableFiles, 4: ResourceMarkers]
@@ -5344,6 +5787,7 @@ export interface components {
             rating?: number;
             introduction?: string;
             coverPaths?: string[];
+            name?: string;
         };
         "Bakabase.Abstractions.Models.Domain.Resource": {
             /** Format: int32 */
@@ -5381,6 +5825,8 @@ export interface components {
             readonly pinned: boolean;
             /** Format: date-time */
             playedAt?: string;
+            /** Format: double */
+            healthScore?: number;
             covers?: string[];
             playableItems?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PlayableItem"][];
             dataStates?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceDataState"][];
@@ -5974,40 +6420,7 @@ export interface components {
             name: string;
             displayMode: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.FilterDisplayMode"];
         };
-        "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ResourceOptions+SynchronizationCategoryOptions": {
-            deleteResourcesWithUnknownPath?: boolean;
-            enhancerOptionsMap?: {
-                [key: string]: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ResourceOptions+SynchronizationEnhancerOptions"];
-            };
-            mediaLibraryOptionsMap?: {
-                [key: string]: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ResourceOptions+SynchronizationMediaLibraryOptions"];
-            };
-        };
-        "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ResourceOptions+SynchronizationEnhancerOptions": {
-            reApply?: boolean;
-            reEnhance?: boolean;
-        };
-        "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ResourceOptions+SynchronizationMediaLibraryOptions": {
-            deleteResourcesWithUnknownPath?: boolean;
-            enhancerOptionsMap?: {
-                [key: string]: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ResourceOptions+SynchronizationEnhancerOptions"];
-            };
-        };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ResourceOptions+SynchronizationOptionsModel": {
-            /** Format: int32 */
-            maxThreads?: number;
-            deleteResourcesWithUnknownPath?: boolean;
-            deleteResourcesWithUnknownMediaLibrary?: boolean;
-            /** @deprecated */
-            categoryOptionsMap?: {
-                [key: string]: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ResourceOptions+SynchronizationCategoryOptions"];
-            };
-            enhancerOptionsMap?: {
-                [key: string]: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ResourceOptions+SynchronizationEnhancerOptions"];
-            };
-            mediaLibraryOptionsMap?: {
-                [key: string]: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ResourceOptions+SynchronizationMediaLibraryOptions"];
-            };
             syncMarksImmediately?: boolean;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.SoulPlusOptions": {
@@ -6254,6 +6667,8 @@ export interface components {
             resource?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+UIResourceOptions"];
             startupPage?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.StartupPage"];
             isMenuCollapsed?: boolean;
+            hideResourceCovers?: boolean;
+            resourceDetailLayout?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+ResourceDetailLayoutConfig"];
             latestUsedProperties?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+PropertyKey"][];
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.UIStyleOptionsPatchRequestModel": {
@@ -6510,6 +6925,48 @@ export interface components {
             /** Format: int32 */
             order?: number;
         };
+        "Bakabase.InsideWorld.Business.Components.PostParser.Controllers.AddPostParserTasksInput": {
+            sourceLinksMap: {
+                [key: string]: string[];
+            };
+            targets: components["schemas"]["Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParseTarget"][];
+        };
+        "Bakabase.InsideWorld.Business.Components.PostParser.Controllers.QueryPostParserTaskStatusesInput": {
+            source: components["schemas"]["Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParserSource"];
+            links: string[];
+        };
+        /**
+         * Format: int32
+         * @description [1: DownloadInfo]
+         * @enum {integer}
+         */
+        "Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParseTarget": 1;
+        /**
+         * Format: int32
+         * @description [5: SoulPlus]
+         * @enum {integer}
+         */
+        "Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParserSource": 5;
+        /**
+         * Format: int32
+         * @description [0: None, 1: Pending, 2: Complete, 3: Failed, 4: Deleted]
+         * @enum {integer}
+         */
+        "Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParserTaskStatus": 0 | 1 | 2 | 3 | 4;
+        "Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.PostParserTask": {
+            /** Format: int32 */
+            id: number;
+            source: components["schemas"]["Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParserSource"];
+            link: string;
+            title?: string;
+            content?: string;
+            targets: components["schemas"]["Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParseTarget"][];
+            results?: {
+                DownloadInfo: components["schemas"]["System.Text.Json.Nodes.JsonNode"];
+            };
+            error?: string;
+            isDeleted: boolean;
+        };
         "Bakabase.InsideWorld.Models.Configs.FileSystemOptions": {
             recentMovingDestinations?: string[];
             fileMover?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.FileSystemOptions+FileMoverOptions"];
@@ -6577,6 +7034,7 @@ export interface components {
             startupPage: components["schemas"]["Bakabase.InsideWorld.Models.Constants.StartupPage"];
             isMenuCollapsed: boolean;
             hideResourceCovers: boolean;
+            resourceDetailLayout?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+ResourceDetailLayoutConfig"];
             latestUsedProperties: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+PropertyKey"][];
         };
         "Bakabase.InsideWorld.Models.Configs.UIOptions+CustomContextMenuItem": {
@@ -6588,6 +7046,29 @@ export interface components {
             pool: number;
             /** Format: int32 */
             id: number;
+        };
+        "Bakabase.InsideWorld.Models.Configs.UIOptions+ResourceDetailBlock": {
+            id: string;
+            /** Format: int32 */
+            colStart: number;
+            /** Format: int32 */
+            colSpan: number;
+            /** Format: int32 */
+            rowStart: number;
+            /** Format: int32 */
+            rowSpan: number;
+        };
+        "Bakabase.InsideWorld.Models.Configs.UIOptions+ResourceDetailLayoutConfig": {
+            /** Format: int32 */
+            modalWidthPercent: number;
+            /** Format: int32 */
+            modalHeightPercent: number;
+            /** Format: int32 */
+            gridCols: number;
+            /** Format: int32 */
+            gap: number;
+            blocks: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+ResourceDetailBlock"][];
+            hidden: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+ResourceDetailBlock"][];
         };
         "Bakabase.InsideWorld.Models.Configs.UIOptions+UIResourceOptions": {
             /** Format: int32 */
@@ -6605,6 +7086,7 @@ export interface components {
             autoSelectFirstPlayableFile: boolean;
             displayOperations: string[];
             hideResourceBorder: boolean;
+            hideHealthScore: boolean;
             customContextMenuItems: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+CustomContextMenuItem"][];
             autoAddRecentPropertyValues: boolean;
         };
@@ -6639,10 +7121,10 @@ export interface components {
         "Bakabase.InsideWorld.Models.Constants.Aos.PasswordSearchOrder": 1 | 2;
         /**
          * Format: int32
-         * @description [1: FileCreateDt, 2: FileModifyDt, 3: Filename, 6: AddDt, 11: PlayedAt]
+         * @description [1: FileCreateDt, 2: FileModifyDt, 3: Filename, 6: AddDt, 11: PlayedAt, 12: HealthScore]
          * @enum {integer}
          */
-        "Bakabase.InsideWorld.Models.Constants.Aos.ResourceSearchSortableProperty": 1 | 2 | 3 | 6 | 11;
+        "Bakabase.InsideWorld.Models.Constants.Aos.ResourceSearchSortableProperty": 1 | 2 | 3 | 6 | 11 | 12;
         /**
          * Format: int32
          * @description [1: BiliBili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon]
@@ -6836,6 +7318,31 @@ export interface components {
             /** Format: float */
             topP?: number;
         };
+        "Bakabase.Modules.AI.Models.Db.ChatConversationDbModel": {
+            /** Format: int32 */
+            id: number;
+            title?: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            isArchived: boolean;
+        };
+        "Bakabase.Modules.AI.Models.Db.ChatMessageDbModel": {
+            /** Format: int64 */
+            id: number;
+            /** Format: int32 */
+            conversationId: number;
+            role: string;
+            content?: string;
+            toolCalls?: string;
+            toolResults?: string;
+            richContent?: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: int32 */
+            tokenUsage?: number;
+        };
         "Bakabase.Modules.AI.Models.Db.LlmCallCacheEntryDbModel": {
             /** Format: int64 */
             id: number;
@@ -6889,10 +7396,10 @@ export interface components {
         };
         /**
          * Format: int32
-         * @description [0: Default, 1: Enhancer, 2: Translation, 3: FileProcessor, 4: PostParser]
+         * @description [0: Default, 1: Enhancer, 2: Translation, 3: FileProcessor, 4: PostParser, 5: Chat]
          * @enum {integer}
          */
-        "Bakabase.Modules.AI.Models.Domain.AiFeature": 0 | 1 | 2 | 3 | 4;
+        "Bakabase.Modules.AI.Models.Domain.AiFeature": 0 | 1 | 2 | 3 | 4 | 5;
         /**
          * Format: int32
          * @description [1: Success, 2: Error, 3: Timeout, 4: Cancelled]
@@ -7277,6 +7784,127 @@ export interface components {
             isSkipped: boolean;
             isVetoed: boolean;
         };
+        "Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCard": {
+            /** Format: int32 */
+            id: number;
+            /** Format: int32 */
+            typeId: number;
+            name?: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            propertyValues?: components["schemas"]["Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCardPropertyValue"][];
+        };
+        "Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCardDisplayTemplate": {
+            /** Format: int32 */
+            cols: number;
+            /** Format: int32 */
+            rows: number;
+            layout?: components["schemas"]["Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCardDisplayTemplateItem"][];
+        };
+        "Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCardDisplayTemplateItem": {
+            /** Format: int32 */
+            propertyId: number;
+            /** Format: int32 */
+            x: number;
+            /** Format: int32 */
+            y: number;
+            /** Format: int32 */
+            w: number;
+            /** Format: int32 */
+            h: number;
+            hideLabel: boolean;
+            hideEmpty: boolean;
+        };
+        "Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCardInitialDataPreview": {
+            /** Format: int32 */
+            toCreate: number;
+            /** Format: int32 */
+            alreadyExists: number;
+        };
+        /**
+         * Format: int32
+         * @description [1: Any, 2: All]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCardMatchMode": 1 | 2;
+        "Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCardMatchRules": {
+            autoBindEnabled: boolean;
+            matchProperties?: number[];
+            matchMode: components["schemas"]["Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCardMatchMode"];
+            allowCreate: boolean;
+            allowUpdate: boolean;
+        };
+        "Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCardPropertyValue": {
+            /** Format: int32 */
+            id: number;
+            /** Format: int32 */
+            cardId: number;
+            /** Format: int32 */
+            propertyId: number;
+            value?: string;
+            /** Format: int32 */
+            scope: number;
+        };
+        "Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCardType": {
+            /** Format: int32 */
+            id: number;
+            name: string;
+            propertyIds?: number[];
+            identityPropertyIds?: number[];
+            nameTemplate?: string;
+            displayTemplate?: components["schemas"]["Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCardDisplayTemplate"];
+            matchRules?: components["schemas"]["Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCardMatchRules"];
+            /** Format: int32 */
+            order: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        "Bakabase.Modules.DataCard.Models.Input.DataCardAddInputModel": {
+            /** Format: int32 */
+            typeId: number;
+            propertyValues?: components["schemas"]["Bakabase.Modules.DataCard.Models.Input.DataCardPropertyValueInputModel"][];
+        };
+        "Bakabase.Modules.DataCard.Models.Input.DataCardCreateInitialDataInputModel": {
+            onlyFromResources: boolean;
+            allowNullPropertyIds?: number[];
+        };
+        "Bakabase.Modules.DataCard.Models.Input.DataCardFindByIdentityInputModel": {
+            /** Format: int32 */
+            typeId: number;
+            /** Format: int32 */
+            excludeCardId?: number;
+            propertyValues?: components["schemas"]["Bakabase.Modules.DataCard.Models.Input.DataCardPropertyValueInputModel"][];
+        };
+        "Bakabase.Modules.DataCard.Models.Input.DataCardPropertyValueInputModel": {
+            /** Format: int32 */
+            propertyId: number;
+            value?: string;
+            /** Format: int32 */
+            scope: number;
+        };
+        "Bakabase.Modules.DataCard.Models.Input.DataCardTypeAddInputModel": {
+            name: string;
+            propertyIds?: number[];
+            identityPropertyIds?: number[];
+            nameTemplate?: string;
+            matchRules?: components["schemas"]["Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCardMatchRules"];
+        };
+        "Bakabase.Modules.DataCard.Models.Input.DataCardTypeUpdateInputModel": {
+            name?: string;
+            propertyIds?: number[];
+            identityPropertyIds?: number[];
+            nameTemplate?: string;
+            matchRules?: components["schemas"]["Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCardMatchRules"];
+            /** Format: int32 */
+            order?: number;
+        };
+        "Bakabase.Modules.DataCard.Models.Input.DataCardUpdateInputModel": {
+            propertyValues?: components["schemas"]["Bakabase.Modules.DataCard.Models.Input.DataCardPropertyValueInputModel"][];
+        };
         "Bakabase.Modules.Enhancer.Abstractions.Components.IEnhancementConverter": Record<string, never>;
         "Bakabase.Modules.Enhancer.Abstractions.Components.IEnhancerDescriptor": {
             /** Format: int32 */
@@ -7319,6 +7947,97 @@ export interface components {
          * @enum {integer}
          */
         "Bakabase.Modules.Enhancer.Models.Domain.Constants.EnhancerTag": 1 | 2;
+        "Bakabase.Modules.HealthScore.Models.Db.HealthScoreRuleDbModel": {
+            /** Format: int32 */
+            id: number;
+            name?: string;
+            match: components["schemas"]["Bakabase.Modules.HealthScore.Models.Db.ResourceMatcherDbModel"];
+            /** Format: double */
+            delta: number;
+        };
+        "Bakabase.Modules.HealthScore.Models.Db.ResourceMatcherDbModel": {
+            combinator: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.SearchCombinator"];
+            groups?: components["schemas"]["Bakabase.Modules.HealthScore.Models.Db.ResourceMatcherDbModel"][];
+            leaves?: components["schemas"]["Bakabase.Modules.HealthScore.Models.Db.ResourceMatcherLeafDbModel"][];
+            disabled: boolean;
+        };
+        "Bakabase.Modules.HealthScore.Models.Db.ResourceMatcherLeafDbModel": {
+            kind: components["schemas"]["Bakabase.Modules.HealthScore.Models.ResourceMatcherLeafKind"];
+            negated: boolean;
+            disabled: boolean;
+            propertyPool?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
+            /** Format: int32 */
+            propertyId?: number;
+            operation?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.SearchOperation"];
+            propertyValue?: string;
+            filePredicateId?: string;
+            filePredicateParametersJson?: string;
+        };
+        "Bakabase.Modules.HealthScore.Models.Input.HealthScoreProfilePatchInputModel": {
+            name?: string;
+            enabled?: boolean;
+            /** Format: int32 */
+            priority?: number;
+            /** Format: double */
+            baseScore?: number;
+            membershipFilter?: components["schemas"]["Bakabase.Modules.Search.Models.Db.ResourceSearchFilterGroupDbModel"];
+            rules?: components["schemas"]["Bakabase.Modules.HealthScore.Models.Input.HealthScoreRuleInputModel"][];
+        };
+        "Bakabase.Modules.HealthScore.Models.Input.HealthScoreRuleInputModel": {
+            /** Format: int32 */
+            id: number;
+            name?: string;
+            match: components["schemas"]["Bakabase.Modules.HealthScore.Models.Input.ResourceMatcherInputModel"];
+            /** Format: double */
+            delta: number;
+        };
+        "Bakabase.Modules.HealthScore.Models.Input.ResourceMatcherInputModel": {
+            combinator: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.SearchCombinator"];
+            groups?: components["schemas"]["Bakabase.Modules.HealthScore.Models.Input.ResourceMatcherInputModel"][];
+            leaves?: components["schemas"]["Bakabase.Modules.HealthScore.Models.Input.ResourceMatcherLeafInputModel"][];
+            disabled: boolean;
+        };
+        "Bakabase.Modules.HealthScore.Models.Input.ResourceMatcherLeafInputModel": {
+            kind: components["schemas"]["Bakabase.Modules.HealthScore.Models.ResourceMatcherLeafKind"];
+            negated: boolean;
+            disabled: boolean;
+            propertyPool?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
+            /** Format: int32 */
+            propertyId?: number;
+            operation?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.SearchOperation"];
+            propertyValue?: string;
+            filePredicateId?: string;
+            filePredicateParametersJson?: string;
+        };
+        /**
+         * Format: int32
+         * @description [1: Property, 2: File]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.HealthScore.Models.ResourceMatcherLeafKind": 1 | 2;
+        "Bakabase.Modules.HealthScore.Models.View.FilePredicateDescriptorViewModel": {
+            id: string;
+            displayNameKey: string;
+            parametersTypeName: string;
+        };
+        "Bakabase.Modules.HealthScore.Models.View.HealthScoreProfileViewModel": {
+            /** Format: int32 */
+            id: number;
+            name: string;
+            enabled: boolean;
+            /** Format: int32 */
+            priority: number;
+            /** Format: double */
+            baseScore: number;
+            membershipFilter?: components["schemas"]["Bakabase.Modules.Search.Models.Db.ResourceSearchFilterGroupDbModel"];
+            rules: components["schemas"]["Bakabase.Modules.HealthScore.Models.Db.HealthScoreRuleDbModel"][];
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt?: string;
+            /** Format: int32 */
+            lastMatchedResourceCount?: number;
+        };
         /**
          * Format: int32
          * @description [1: Name, 2: ReleaseDate, 3: Author, 4: Publisher, 5: Series, 6: Tag, 7: Language, 8: Original, 9: Actor, 10: VoiceActor, 11: Duration, 12: Director, 13: Singer, 14: EpisodeCount, 15: Resolution, 16: AspectRatio, 17: SubtitleLanguage, 18: VideoCodec, 19: IsCensored, 20: Is3D, 21: ImageCount, 22: IsAi, 23: Developer, 24: Character, 25: AudioFormat, 26: Bitrate, 27: Platform, 28: SubscriptionPlatform, 29: Type]
@@ -7455,6 +8174,21 @@ export interface components {
             /** Format: int32 */
             mediaCount: number;
         };
+        "Bakabase.Service.Controllers.ChatController+ChatToolViewModel": {
+            name: string;
+            description: string;
+            isReadOnly: boolean;
+            isEnabled: boolean;
+        };
+        "Bakabase.Service.Controllers.ChatController+SendMessageRequest": {
+            message: string;
+        };
+        "Bakabase.Service.Controllers.ChatController+SetToolEnabledRequest": {
+            isEnabled: boolean;
+        };
+        "Bakabase.Service.Controllers.ChatController+UpdateTitleRequest": {
+            title: string;
+        };
         "Bakabase.Service.Controllers.CookieCaptureResult": {
             cookie: string;
             userAgent?: string;
@@ -7486,6 +8220,16 @@ export interface components {
         "Bakabase.Service.Controllers.PathMigrationRequest": {
             oldPath: string;
             newPath: string;
+        };
+        "Bakabase.Service.Controllers.ResourceHealthScoreRowViewModel": {
+            /** Format: int32 */
+            profileId: number;
+            /** Format: double */
+            score: number;
+            profileHash: string;
+            matchedRulesJson?: string;
+            /** Format: date-time */
+            evaluatedAt: string;
         };
         "Bakabase.Service.Models.Input.BulkModificationPatchInputModel": {
             name?: string;
@@ -8036,6 +8780,18 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.InsideWorld.Business.Components.PlayList.Models.Domain.PlayList"][];
         };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParseTarget]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParseTarget"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.PostParserTask]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.PostParserTask"][];
+        };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Models.Models.Aos.PreviewerItem]": {
             /** Format: int32 */
             code: number;
@@ -8047,6 +8803,18 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.AI.Models.Db.AiFeatureConfigDbModel"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.ChatConversationDbModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.AI.Models.Db.ChatConversationDbModel"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.ChatMessageDbModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.AI.Models.Db.ChatMessageDbModel"][];
         };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.LlmCallCacheEntryDbModel]": {
             /** Format: int32 */
@@ -8078,11 +8846,35 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.AI.Models.Domain.LlmProviderTypeInfo"][];
         };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCardType]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCardType"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCard]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCard"][];
+        };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Enhancer.Abstractions.Components.IEnhancerDescriptor]": {
             /** Format: int32 */
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.Enhancer.Abstractions.Components.IEnhancerDescriptor"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.HealthScore.Models.View.FilePredicateDescriptorViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.HealthScore.Models.View.FilePredicateDescriptorViewModel"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.HealthScore.Models.View.HealthScoreProfileViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.HealthScore.Models.View.HealthScoreProfileViewModel"][];
         };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Property.Models.View.PropertyViewModel]": {
             /** Format: int32 */
@@ -8095,6 +8887,18 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.ThirdParty.ThirdParties.Bilibili.Models.Favorites"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Controllers.ChatController+ChatToolViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Controllers.ChatController+ChatToolViewModel"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Controllers.ResourceHealthScoreRowViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Controllers.ResourceHealthScoreRowViewModel"][];
         };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.BulkModificationViewModel]": {
             /** Format: int32 */
@@ -8263,6 +9067,18 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.Alias.Abstractions.Models.Domain.Alias"][];
+            /** Format: int32 */
+            totalCount: number;
+            /** Format: int32 */
+            pageIndex: number;
+            /** Format: int32 */
+            pageSize: number;
+        };
+        "Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCard]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCard"][];
             /** Format: int32 */
             totalCount: number;
             /** Format: int32 */
@@ -8588,6 +9404,12 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.AI.Models.Db.AiFeatureConfigDbModel"];
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.ChatConversationDbModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.AI.Models.Db.ChatConversationDbModel"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.LlmProviderConfigDbModel]": {
             /** Format: int32 */
             code: number;
@@ -8659,6 +9481,30 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.Comparison.Models.View.ComparisonResultGroupViewModel"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCardInitialDataPreview]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCardInitialDataPreview"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCardType]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCardType"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCard]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCard"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.HealthScore.Models.View.HealthScoreProfileViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.HealthScore.Models.View.HealthScoreProfileViewModel"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Presets.Abstractions.Models.MediaLibraryTemplatePresetDataPool]": {
             /** Format: int32 */
@@ -8774,6 +9620,14 @@ export interface components {
                 [key: string]: components["schemas"]["Bakabase.Abstractions.Models.Domain.SpecialText"][] | null;
             };
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.Int32,System.Decimal]]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: {
+                [key: string]: number;
+            };
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.Int32,System.Int32[]]]": {
             /** Format: int32 */
             code: number;
@@ -8782,12 +9636,12 @@ export interface components {
                 [key: string]: number[] | null;
             };
         };
-        "Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.String,Bakabase.InsideWorld.Models.Constants.MediaType]]": {
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.String,Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParserTaskStatus]]": {
             /** Format: int32 */
             code: number;
             message?: string;
             data?: {
-                [key: string]: components["schemas"]["Bakabase.InsideWorld.Models.Constants.MediaType"];
+                [key: string]: components["schemas"]["Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParserTaskStatus"];
             };
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.String,System.Boolean]]": {
@@ -9316,6 +10170,14 @@ export interface components {
          * @enum {integer}
          */
         "System.Security.SecurityRuleSet": 0 | 1 | 2;
+        "System.Text.Json.Nodes.JsonNode": {
+            options?: components["schemas"]["System.Text.Json.Nodes.JsonNodeOptions"];
+            parent?: components["schemas"]["System.Text.Json.Nodes.JsonNode"];
+            root: components["schemas"]["System.Text.Json.Nodes.JsonNode"];
+        };
+        "System.Text.Json.Nodes.JsonNodeOptions": {
+            propertyNameCaseInsensitive: boolean;
+        };
         "System.TimeZoneInfo": {
             readonly id: string;
             readonly hasIanaId: boolean;
@@ -9761,7 +10623,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description [0: Default, 1: Enhancer, 2: Translation, 3: FileProcessor, 4: PostParser] */
+                /** @description [0: Default, 1: Enhancer, 2: Translation, 3: FileProcessor, 4: PostParser, 5: Chat] */
                 feature: components["schemas"]["Bakabase.Modules.AI.Models.Domain.AiFeature"];
             };
             cookie?: never;
@@ -9786,7 +10648,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description [0: Default, 1: Enhancer, 2: Translation, 3: FileProcessor, 4: PostParser] */
+                /** @description [0: Default, 1: Enhancer, 2: Translation, 3: FileProcessor, 4: PostParser, 5: Chat] */
                 feature: components["schemas"]["Bakabase.Modules.AI.Models.Domain.AiFeature"];
             };
             cookie?: never;
@@ -9818,7 +10680,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description [0: Default, 1: Enhancer, 2: Translation, 3: FileProcessor, 4: PostParser] */
+                /** @description [0: Default, 1: Enhancer, 2: Translation, 3: FileProcessor, 4: PostParser, 5: Chat] */
                 feature: components["schemas"]["Bakabase.Modules.AI.Models.Domain.AiFeature"];
             };
             cookie?: never;
@@ -10986,6 +11848,233 @@ export interface operations {
             };
         };
     };
+    GetChatConversations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.ChatConversationDbModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.ChatConversationDbModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.ChatConversationDbModel]"];
+                };
+            };
+        };
+    };
+    CreateChatConversation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.ChatConversationDbModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.ChatConversationDbModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.ChatConversationDbModel]"];
+                };
+            };
+        };
+    };
+    GetChatConversation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.ChatConversationDbModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.ChatConversationDbModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.ChatConversationDbModel]"];
+                };
+            };
+        };
+    };
+    DeleteChatConversation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    UpdateChatConversationTitle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.ChatController+UpdateTitleRequest"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.ChatController+UpdateTitleRequest"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.ChatController+UpdateTitleRequest"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.ChatController+UpdateTitleRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.ChatConversationDbModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.ChatConversationDbModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.ChatConversationDbModel]"];
+                };
+            };
+        };
+    };
+    GetChatMessages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.ChatMessageDbModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.ChatMessageDbModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.ChatMessageDbModel]"];
+                };
+            };
+        };
+    };
+    SendChatMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.ChatController+SendMessageRequest"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.ChatController+SendMessageRequest"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.ChatController+SendMessageRequest"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.ChatController+SendMessageRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GetChatTools: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Controllers.ChatController+ChatToolViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Controllers.ChatController+ChatToolViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Controllers.ChatController+ChatToolViewModel]"];
+                };
+            };
+        };
+    };
+    SetChatToolEnabled: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                toolName: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.ChatController+SetToolEnabledRequest"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.ChatController+SetToolEnabledRequest"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.ChatController+SetToolEnabledRequest"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.ChatController+SetToolEnabledRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
     GetAllComparisonPlans: {
         parameters: {
             query?: never;
@@ -11340,28 +12429,6 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
-    GetAllExtensionMediaTypes: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.String,Bakabase.InsideWorld.Models.Constants.MediaType]]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.String,Bakabase.InsideWorld.Models.Constants.MediaType]]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.String,Bakabase.InsideWorld.Models.Constants.MediaType]]"];
                 };
             };
         };
@@ -11721,6 +12788,466 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Models.Dtos.DashboardPropertyStatistics]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Models.Dtos.DashboardPropertyStatistics]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Models.Dtos.DashboardPropertyStatistics]"];
+                };
+            };
+        };
+    };
+    SearchDataCards: {
+        parameters: {
+            query?: {
+                typeId?: number;
+                keyword?: string;
+                pageIndex?: number;
+                pageSize?: number;
+                skipCount?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCard]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCard]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCard]"];
+                };
+            };
+        };
+    };
+    GetDataCard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCard]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCard]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCard]"];
+                };
+            };
+        };
+    };
+    UpdateDataCard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.DataCard.Models.Input.DataCardUpdateInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.DataCard.Models.Input.DataCardUpdateInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.DataCard.Models.Input.DataCardUpdateInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.DataCard.Models.Input.DataCardUpdateInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    DeleteDataCard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    AddDataCard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.DataCard.Models.Input.DataCardAddInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.DataCard.Models.Input.DataCardAddInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.DataCard.Models.Input.DataCardAddInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.DataCard.Models.Input.DataCardAddInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCard]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCard]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCard]"];
+                };
+            };
+        };
+    };
+    FindDataCardByIdentity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.DataCard.Models.Input.DataCardFindByIdentityInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.DataCard.Models.Input.DataCardFindByIdentityInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.DataCard.Models.Input.DataCardFindByIdentityInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.DataCard.Models.Input.DataCardFindByIdentityInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCard]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCard]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCard]"];
+                };
+            };
+        };
+    };
+    DeleteDataCardsByType: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                typeId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    CreateInitialDataCards: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                typeId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.DataCard.Models.Input.DataCardCreateInitialDataInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.DataCard.Models.Input.DataCardCreateInitialDataInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.DataCard.Models.Input.DataCardCreateInitialDataInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.DataCard.Models.Input.DataCardCreateInitialDataInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Int32]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Int32]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Int32]"];
+                };
+            };
+        };
+    };
+    PreviewInitialDataCards: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                typeId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.DataCard.Models.Input.DataCardCreateInitialDataInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.DataCard.Models.Input.DataCardCreateInitialDataInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.DataCard.Models.Input.DataCardCreateInitialDataInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.DataCard.Models.Input.DataCardCreateInitialDataInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCardInitialDataPreview]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCardInitialDataPreview]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCardInitialDataPreview]"];
+                };
+            };
+        };
+    };
+    GetAssociatedDataCards: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                resourceId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCard]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCard]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCard]"];
+                };
+            };
+        };
+    };
+    GetAssociatedResourceIds: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.Int32]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.Int32]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.Int32]"];
+                };
+            };
+        };
+    };
+    GetAllDataCardTypes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCardType]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCardType]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCardType]"];
+                };
+            };
+        };
+    };
+    AddDataCardType: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.DataCard.Models.Input.DataCardTypeAddInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.DataCard.Models.Input.DataCardTypeAddInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.DataCard.Models.Input.DataCardTypeAddInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.DataCard.Models.Input.DataCardTypeAddInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCardType]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCardType]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCardType]"];
+                };
+            };
+        };
+    };
+    GetDataCardType: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCardType]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCardType]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCardType]"];
+                };
+            };
+        };
+    };
+    UpdateDataCardType: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.DataCard.Models.Input.DataCardTypeUpdateInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.DataCard.Models.Input.DataCardTypeUpdateInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.DataCard.Models.Input.DataCardTypeUpdateInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.DataCard.Models.Input.DataCardTypeUpdateInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    DeleteDataCardType: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    UpdateDataCardTypeDisplayTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCardDisplayTemplate"];
+                "application/json": components["schemas"]["Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCardDisplayTemplate"];
+                "text/json": components["schemas"]["Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCardDisplayTemplate"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCardDisplayTemplate"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                 };
             };
         };
@@ -13951,6 +15478,291 @@ export interface operations {
             };
         };
     };
+    GetAllHealthScoreProfiles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.HealthScore.Models.View.HealthScoreProfileViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.HealthScore.Models.View.HealthScoreProfileViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.HealthScore.Models.View.HealthScoreProfileViewModel]"];
+                };
+            };
+        };
+    };
+    AddHealthScoreProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.HealthScore.Models.View.HealthScoreProfileViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.HealthScore.Models.View.HealthScoreProfileViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.HealthScore.Models.View.HealthScoreProfileViewModel]"];
+                };
+            };
+        };
+    };
+    GetHealthScoreProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.HealthScore.Models.View.HealthScoreProfileViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.HealthScore.Models.View.HealthScoreProfileViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.HealthScore.Models.View.HealthScoreProfileViewModel]"];
+                };
+            };
+        };
+    };
+    DeleteHealthScoreProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    PatchHealthScoreProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.HealthScore.Models.Input.HealthScoreProfilePatchInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.HealthScore.Models.Input.HealthScoreProfilePatchInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.HealthScore.Models.Input.HealthScoreProfilePatchInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.HealthScore.Models.Input.HealthScoreProfilePatchInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    DuplicateHealthScoreProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    ClearHealthScoreProfileCache: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    ClearAllHealthScoreCaches: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    RunHealthScoringNow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetHealthScores: {
+        parameters: {
+            query?: {
+                resourceIds?: number[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.Int32,System.Decimal]]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.Int32,System.Decimal]]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.Int32,System.Decimal]]"];
+                };
+            };
+        };
+    };
+    GetHealthScoreDiagnosisForResource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                resourceId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Controllers.ResourceHealthScoreRowViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Controllers.ResourceHealthScoreRowViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Controllers.ResourceHealthScoreRowViewModel]"];
+                };
+            };
+        };
+    };
+    GetAllFilePredicates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.HealthScore.Models.View.FilePredicateDescriptorViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.HealthScore.Models.View.FilePredicateDescriptorViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.HealthScore.Models.View.FilePredicateDescriptorViewModel]"];
+                };
+            };
+        };
+    };
     GetAllLogs: {
         parameters: {
             query?: never;
@@ -14814,103 +16626,6 @@ export interface operations {
             };
         };
     };
-    MarkMediaLibraryV2AsSynced: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": number[];
-                "application/json": number[];
-                "text/json": number[];
-                "application/*+json": number[];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
-    SyncMediaLibraryV2: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
-    SyncAllMediaLibrariesV2: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
-    GetOutdatedMediaLibrariesV2: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.MediaLibraryV2]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.MediaLibraryV2]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.MediaLibraryV2]"];
-                };
-            };
-        };
-    };
     GetMediaLibraryV2Resources: {
         parameters: {
             query?: never;
@@ -15124,6 +16839,28 @@ export interface operations {
                 "application/*+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.UIOptionsPatchRequestModel"];
             };
         };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    ResetResourceDetailLayout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description OK */
             200: {
@@ -17262,6 +18999,200 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.Collections.Generic.List`1[System.String]]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.Collections.Generic.List`1[System.String]]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.Collections.Generic.List`1[System.String]]"];
+                };
+            };
+        };
+    };
+    GetPostParseTargets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParseTarget]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParseTarget]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParseTarget]"];
+                };
+            };
+        };
+    };
+    GetAllPostParserTasks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.PostParserTask]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.PostParserTask]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.PostParserTask]"];
+                };
+            };
+        };
+    };
+    DeleteAllPostParserTasks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    AddPostParserTasks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.PostParser.Controllers.AddPostParserTasksInput"];
+                "application/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.PostParser.Controllers.AddPostParserTasksInput"];
+                "text/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.PostParser.Controllers.AddPostParserTasksInput"];
+                "application/*+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.PostParser.Controllers.AddPostParserTasksInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    DeletePostParserTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    ReParsePostParserTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    StartAllPostParserTasks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetPostParserTaskStatuses: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.PostParser.Controllers.QueryPostParserTaskStatusesInput"];
+                "application/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.PostParser.Controllers.QueryPostParserTaskStatusesInput"];
+                "text/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.PostParser.Controllers.QueryPostParserTaskStatusesInput"];
+                "application/*+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.PostParser.Controllers.QueryPostParserTaskStatusesInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.String,Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParserTaskStatus]]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.String,Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParserTaskStatus]]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.String,Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParserTaskStatus]]"];
                 };
             };
         };

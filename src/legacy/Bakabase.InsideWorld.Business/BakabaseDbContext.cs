@@ -7,8 +7,11 @@ using Bakabase.InsideWorld.Business.Models.Db;
 using Bakabase.Modules.BulkModification.Components;
 using Bakabase.Modules.BulkModification.Models.Db;
 using Bakabase.Modules.Comparison.Components;
+using Bakabase.Modules.HealthScore.Components;
+using Bakabase.Modules.HealthScore.Models.Db;
 using Bakabase.Modules.AI.Models.Db;
 using Bakabase.Modules.Comparison.Models.Db;
+using Bakabase.Modules.DataCard.Abstractions.Models.Db;
 using Bakabase.Modules.Property.Abstractions.Models.Db;
 using Microsoft.EntityFrameworkCore;
 using EnhancementRecord = Bakabase.Abstractions.Models.Db.EnhancementRecord;
@@ -17,7 +20,7 @@ using SpecialText = Bakabase.Abstractions.Models.Db.SpecialText;
 
 namespace Bakabase.InsideWorld.Business
 {
-    public class BakabaseDbContext : DbContext, IBulkModificationDbContext, IComparisonDbContext
+    public class BakabaseDbContext : DbContext, IBulkModificationDbContext, IComparisonDbContext, IHealthScoreDbContext
     {
         public DbSet<SpecialText> SpecialTexts { get; set; }
         public DbSet<PlayListDbModel> Playlists { get; set; }
@@ -28,6 +31,10 @@ namespace Bakabase.InsideWorld.Business
 
         public DbSet<BulkModificationDbModel> BulkModifications { get; set; }
         public DbSet<BulkModificationDiffDbModel> BulkModificationDiffs { get; set; }
+
+        // HealthScore module tables
+        public DbSet<HealthScoreProfileDbModel> HealthScoreProfiles { get; set; }
+        public DbSet<ResourceHealthScoreDbModel> ResourceHealthScores { get; set; }
 
         public DbSet<CustomPropertyDbModel> CustomProperties { get; set; }
         public DbSet<CustomPropertyValueDbModel> CustomPropertyValues { get; set; }
@@ -63,6 +70,9 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<LlmUsageLogDbModel> LlmUsageLogs { get; set; }
         public DbSet<LlmCallCacheEntryDbModel> LlmCallCacheEntries { get; set; }
         public DbSet<AiFeatureConfigDbModel> AiFeatureConfigs { get; set; }
+        public DbSet<ChatConversationDbModel> ChatConversations { get; set; }
+        public DbSet<ChatMessageDbModel> ChatMessages { get; set; }
+        public DbSet<LlmToolConfigDbModel> LlmToolConfigs { get; set; }
 
         // Resource source tables
         public DbSet<ResourceSourceLinkDbModel> ResourceSourceLinks { get; set; }
@@ -70,6 +80,11 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<SteamAppDbModel> SteamApps { get; set; }
         public DbSet<DLsiteWorkDbModel> DLsiteWorks { get; set; }
         public DbSet<ExHentaiGalleryDbModel> ExHentaiGalleries { get; set; }
+
+        // DataCard module tables
+        public DbSet<DataCardTypeDbModel> DataCardTypes { get; set; }
+        public DbSet<DataCardDbModel> DataCards { get; set; }
+        public DbSet<DataCardPropertyValueDbModel> DataCardPropertyValues { get; set; }
 
         // Comparison module tables
         public DbSet<ComparisonPlanDbModel> ComparisonPlans { get; set; }
@@ -143,6 +158,15 @@ namespace Bakabase.InsideWorld.Business
             modelBuilder.Entity<BulkModificationDiffDbModel>(bmd =>
             {
                 bmd.HasIndex(x => new {x.BulkModificationId, x.ResourceId}).IsUnique();
+            });
+
+            // HealthScore module tables
+            modelBuilder.Entity<HealthScoreProfileDbModel>(t => { });
+            modelBuilder.Entity<ResourceHealthScoreDbModel>(t =>
+            {
+                t.HasKey(x => new { x.ResourceId, x.ProfileId });
+                t.HasIndex(x => new { x.ProfileId, x.ProfileHash });
+                t.HasIndex(x => x.ResourceId);
             });
 
             modelBuilder.Entity<PlayHistoryDbModel>(a =>
@@ -225,6 +249,23 @@ namespace Bakabase.InsideWorld.Business
                 t.HasIndex(x => x.Feature).IsUnique();
             });
 
+            modelBuilder.Entity<ChatConversationDbModel>(t =>
+            {
+                t.HasIndex(x => x.CreatedAt);
+                t.HasIndex(x => x.IsArchived);
+            });
+
+            modelBuilder.Entity<ChatMessageDbModel>(t =>
+            {
+                t.HasIndex(x => x.ConversationId);
+                t.HasIndex(x => new { x.ConversationId, x.CreatedAt });
+            });
+
+            modelBuilder.Entity<LlmToolConfigDbModel>(t =>
+            {
+                t.HasIndex(x => x.ToolName).IsUnique();
+            });
+
             // Resource source link table
             modelBuilder.Entity<ResourceSourceLinkDbModel>(t =>
             {
@@ -250,6 +291,22 @@ namespace Bakabase.InsideWorld.Business
             {
                 t.HasIndex(x => new { x.GalleryId, x.GalleryToken }).IsUnique();
                 t.HasIndex(x => x.ResourceId);
+            });
+
+            // DataCard module tables
+            modelBuilder.Entity<DataCardTypeDbModel>(t => { });
+
+            modelBuilder.Entity<DataCardDbModel>(t =>
+            {
+                t.HasIndex(x => x.TypeId);
+            });
+
+            modelBuilder.Entity<DataCardPropertyValueDbModel>(t =>
+            {
+                t.HasIndex(x => x.CardId);
+                t.HasIndex(x => x.PropertyId);
+                t.HasIndex(x => new { x.PropertyId, x.Value });
+                t.HasIndex(x => new { x.CardId, x.PropertyId, x.Scope }).IsUnique();
             });
 
             // Comparison module tables

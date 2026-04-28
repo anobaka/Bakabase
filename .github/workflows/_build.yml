@@ -89,25 +89,25 @@ jobs:
           - os: windows-latest
             rid: win-x64
             artifact: win-x64
-            csproj: Bakabase/src/Bakabase/Bakabase.csproj
+            csproj: Bakabase/src/apps/Bakabase/Bakabase.csproj
             nuget-path: ~\\.nuget\\packages
             runtimeMode: WINFORMS
           - os: macos-15
             rid: osx-x64
             artifact: osx-x64
-            csproj: Bakabase/src/Bakabase/Bakabase.csproj
+            csproj: Bakabase/src/apps/Bakabase/Bakabase.csproj
             nuget-path: ~/.nuget/packages
             runtimeMode: MACOS
           - os: macos-latest
             rid: osx-arm64
             artifact: osx-arm64
-            csproj: Bakabase/src/Bakabase/Bakabase.csproj
+            csproj: Bakabase/src/apps/Bakabase/Bakabase.csproj
             nuget-path: ~/.nuget/packages
             runtimeMode: MACOS
           - os: ubuntu-latest
             rid: linux-x64
             artifact: docker
-            csproj: Bakabase/src/Bakabase.Service/Bakabase.Service.csproj
+            csproj: Bakabase/src/apps/Bakabase.Service/Bakabase.Service.csproj
             nuget-path: ~/.nuget/packages
             runtimeMode: DOCKER
     steps:
@@ -122,7 +122,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0.312'
+          dotnet-version: '9.0.313'
           dotnet-quality: ''
       - name: Check dotnet info
         run: dotnet --info

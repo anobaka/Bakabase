@@ -79,6 +79,8 @@ export type Resource = {
   pinned: boolean;
   tags: ResourceTag[];
   playedAt?: string;
+  /** Aggregated health score; null when no profile has scored this resource. */
+  healthScore?: number;
   dataStates?: ResourceDataState[];
 
   /** Final resolved cover paths, populated by backend using priority-based selection */

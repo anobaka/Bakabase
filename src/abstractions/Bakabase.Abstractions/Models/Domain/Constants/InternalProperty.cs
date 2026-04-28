@@ -20,5 +20,6 @@ public enum InternalProperty
     MediaLibraryV2 = ResourceProperty.MediaLibraryV2,
     MediaLibraryV2Multi = ResourceProperty.MediaLibraryV2Multi,
     PlayedAt = ResourceProperty.PlayedAt,
-    Source = ResourceProperty.Source
+    Source = ResourceProperty.Source,
+    HealthScore = ResourceProperty.HealthScore,
 }

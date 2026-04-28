@@ -153,6 +153,17 @@ public class ReservedPropertyValueService(
 
                             break;
                         }
+                        case Abstractions.Models.Domain.Constants.ReservedProperty.Name:
+                        {
+                            var name = stdValue as string;
+                            if (name != data.Name)
+                            {
+                                data.Name = name;
+                                dataIsChanged = true;
+                            }
+
+                            break;
+                        }
                         default:
                             throw new ArgumentOutOfRangeException();
                     }

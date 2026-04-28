@@ -100,6 +100,49 @@ public class LlmService(
         return await CompleteAsync(providerConfigId.Value, modelId, messages, parameters, feature, ct);
     }
 
+    public async IAsyncEnumerable<ChatResponseUpdate> CompleteStreamingForFeatureAsync(
+        AiFeature feature,
+        IList<ChatMessage> messages,
+        ChatOptions? options = null,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+    {
+        await quotaManager.CheckQuotaAsync(ct);
+
+        var featureConfig = await featureService.GetConfigAsync(feature, ct);
+        if ((featureConfig == null || featureConfig.UseDefault) && feature != AiFeature.Default)
+        {
+            featureConfig = await featureService.GetConfigAsync(AiFeature.Default, ct);
+        }
+
+        var providerConfigId = featureConfig?.ProviderConfigId;
+        var modelId = featureConfig?.ModelId;
+
+        if (!providerConfigId.HasValue || string.IsNullOrEmpty(modelId))
+            throw new InvalidOperationException(
+                $"No provider/model configured for feature '{feature}' and no default configured.");
+
+        var config = await providerService.GetProviderAsync(providerConfigId.Value, ct);
+        if (config == null)
+            throw new InvalidOperationException($"Provider config with id {providerConfigId} not found");
+        if (!config.IsEnabled)
+            throw new InvalidOperationException($"Provider '{config.Name}' is disabled");
+
+        var rawClient = providerService.CreateChatClient(config, modelId);
+        // For streaming, skip cache but keep observation
+        IChatClient client = new ObservationChatClient(rawClient, usageService, providerConfigId.Value, modelId,
+            feature.ToString(), aiOptions.CurrentValue.AuditLogRequestContent);
+
+        options ??= new ChatOptions();
+        options.Temperature ??= featureConfig?.Temperature;
+        options.MaxOutputTokens ??= featureConfig?.MaxTokens;
+        options.TopP ??= featureConfig?.TopP;
+
+        await foreach (var update in client.GetStreamingResponseAsync(messages, options, ct))
+        {
+            yield return update;
+        }
+    }
+
     private IChatClient BuildPipeline(IChatClient rawClient, int providerConfigId, string modelId, AiFeature? feature)
     {
         var opts = aiOptions.CurrentValue;

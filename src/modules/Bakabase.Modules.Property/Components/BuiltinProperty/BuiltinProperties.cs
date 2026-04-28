@@ -69,6 +69,11 @@ public static class BuiltinProperties
         /// Resource source links (MultipleChoice)
         /// </summary>
         public static readonly MultipleChoicePropertyAccessor Source = new(ResourceProperty.Source);
+
+        /// <summary>
+        /// Aggregated health score (Number). Written by the HealthScore module — null when not yet scored.
+        /// </summary>
+        public static readonly DecimalPropertyAccessor HealthScore = new(ResourceProperty.HealthScore);
     }
 
     /// <summary>
@@ -90,6 +95,11 @@ public static class BuiltinProperties
         /// Cover image paths (Attachment/ListString)
         /// </summary>
         public static readonly AttachmentPropertyAccessor Cover = new(ResourceProperty.Cover);
+
+        /// <summary>
+        /// Resource name (SingleLineText)
+        /// </summary>
+        public static readonly TextPropertyAccessor Name = new(ResourceProperty.Name);
     }
 
     /// <summary>

@@ -47,12 +47,6 @@ public interface IBakabaseLocalizer
     string? WrongPassword();
     string DeletingInvalidResources(int count);
     string PostParser_ParseAll_TaskName();
-    string SyncMediaLibrary(string name);
-    string SyncMediaLibrary_TaskProcess_DiscoverResources(string name);
-    string SyncMediaLibrary_TaskProcess_CleanupResources(string name);
-    string SyncMediaLibrary_TaskProcess_AddResources(string name);
-    string SyncMediaLibrary_TaskProcess_UpdateResources(string name);
-    string SyncMediaLibrary_TaskProcess_AlmostComplete(string name);
     string MediaType(MediaType type);
     string Resource();
     string Search();

@@ -185,7 +185,6 @@ public class DLsiteResolver : IResourceResolver
 
     public List<SourceMetadataFieldInfo> GetPredefinedMetadataFields() =>
     [
-        new(nameof(DLsiteMetadataField.Name), StandardValueType.String),
         new(nameof(DLsiteMetadataField.Introduction), StandardValueType.String),
         new(nameof(DLsiteMetadataField.Rating), StandardValueType.Decimal),
         new(nameof(DLsiteMetadataField.CoverUrls), StandardValueType.ListString),
@@ -202,7 +201,6 @@ public class DLsiteResolver : IResourceResolver
             CoverUrls = detail.CoverUrls?.ToList(),
             PredefinedFieldValues =
             {
-                [nameof(DLsiteMetadataField.Name)] = detail.Name,
                 [nameof(DLsiteMetadataField.Introduction)] = detail.Introduction,
                 [nameof(DLsiteMetadataField.Rating)] = detail.Rating,
                 [nameof(DLsiteMetadataField.CoverUrls)] = detail.CoverUrls?.ToList(),

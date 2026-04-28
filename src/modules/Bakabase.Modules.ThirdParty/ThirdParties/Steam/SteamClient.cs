@@ -74,6 +74,11 @@ public class SteamClient
         {
             return await _httpClient.GetByteArrayAsync(url, ct);
         }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            _logger.LogWarning(ex, "Image not found at {Url}", url);
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to download image from {Url}", url);

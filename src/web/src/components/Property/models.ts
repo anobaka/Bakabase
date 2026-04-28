@@ -36,6 +36,7 @@ export type {
   RatingPropertyOptions as TypedRatingPropertyOptions,
   MultilevelPropertyOptions as TypedMultilevelPropertyOptions,
   TagsPropertyOptions as TypedTagsPropertyOptions,
+  AttachmentPropertyOptions,
 } from "./PropertySystem";
 
 /**
@@ -47,7 +48,6 @@ export interface IProperty {
   dbValueType: StandardValueType;
   bizValueType: StandardValueType;
   name: string;
-  categories?: { id: number; name: string }[];
   options?: any;
   pool: PropertyPool;
   type: PropertyType;

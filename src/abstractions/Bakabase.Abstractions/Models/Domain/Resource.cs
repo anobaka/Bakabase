@@ -37,8 +37,9 @@ public record Resource
     public bool HasChildren => Tags.Contains(ResourceTag.IsParent);
     public bool IsFile { get; set; }
 
-    public DateTime CreatedAt { get; set; } = DateTime.Now;
-    public DateTime UpdatedAt { get; set; } = DateTime.Now;
+    public DateTime CreatedAt { get; set; }
+
+    public DateTime UpdatedAt { get; set; }
     public DateTime FileCreatedAt { get; set; }
     public DateTime FileModifiedAt { get; set; }
     public IReadOnlySet<ResourceTag> Tags { get; set; } = FrozenSet<ResourceTag>.Empty;
@@ -50,6 +51,15 @@ public record Resource
 
     public bool Pinned => Tags.Contains(ResourceTag.Pinned);
     public DateTime? PlayedAt { get; set; }
+
+    /// <summary>
+    /// Aggregated health score (max-priority then min-score across enabled
+    /// profiles). Populated by the resource-loading layer from
+    /// <see cref="Bakabase.Abstractions.Services.IResourceHealthScoreReader"/>
+    /// when the HealthScore module is wired in. Null when no profile has scored
+    /// the resource.
+    /// </summary>
+    public decimal? HealthScore { get; set; }
 
     /// <summary>
     /// Final resolved cover paths for this resource, populated by service layer using priority:

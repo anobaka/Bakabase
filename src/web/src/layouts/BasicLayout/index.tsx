@@ -9,7 +9,7 @@ import styles from "./index.module.scss";
 import PageNav from "./components/PageNav";
 
 import { InitializationContentType } from "@/sdk/constants";
-import FloatingAssistant from "@/components/FloatingAssistant";
+import FloatingAssistantV2 from "@/components/FloatingAssistantV2";
 import { ErrorBoundary } from "@/components/Error";
 import BApi from "@/sdk/BApi";
 import { buildLogger } from "@/components/utils";
@@ -48,7 +48,7 @@ export default function BasicLayout({
     <TourProvider steps={[]}>
       <ErrorBoundary>
         <div className={styles.insideWorld}>
-          <FloatingAssistant />
+          <FloatingAssistantV2 />
           <PageNav />
           <div className={`${styles.main} pt-2 pb-2 pr-2`}>{children}</div>
         </div>

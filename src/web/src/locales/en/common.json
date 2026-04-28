@@ -211,6 +211,7 @@
   "menu.thirdPartyIntegration": "Third Party Integration",
   "menu.postParser": "Post Parser",
   "menu.ai": "AI",
+  "menu.ai.chat": "Chat",
   "menu.ai.configuration": "AI Configuration",
   "menu.ai.usage": "Usage Stats",
   "menu.ai.auditLog": "Audit Log",

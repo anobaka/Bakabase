@@ -114,8 +114,8 @@ public static class MediaLibraryTemplateExtensions
             var resource = new TempSyncResource(path);
             var fi = new FileInfo(path);
             resource.IsFile = !fi.Attributes.HasFlag(FileAttributes.Directory);
-            resource.FileCreatedAt = fi.CreationTime;
-            resource.FileModifiedAt = fi.LastWriteTime;
+            resource.FileCreatedAt = fi.CreationTime.TruncateToMilliseconds();
+            resource.FileModifiedAt = fi.LastWriteTime.TruncateToMilliseconds();
 
             var relativePath = path.Replace(Path.GetDirectoryName(rootPath)!, null).StandardizePath()!
                 .Trim(InternalOptions.DirSeparator).StandardizePath()!;

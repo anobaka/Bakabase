@@ -4,8 +4,9 @@
 
 import type { Dayjs } from "dayjs";
 import type { Duration } from "dayjs/plugin/duration";
-import type { IProperty, ChoiceOption, TagOption } from "@/components/Property/models";
+import type { IProperty, ChoiceOption, TagOption, AttachmentPropertyOptions } from "@/components/Property/models";
 import type { LinkValue, TagValue } from "@/components/StandardValue/models";
+import type { ValueRendererSize } from "@/components/StandardValue/ValueRenderer/models";
 
 import { useTranslation } from "react-i18next";
 import React from "react";
@@ -51,12 +52,19 @@ export type Props = {
   dbValue?: string;
   variant?: "default" | "light";
   defaultEditing?: boolean;
-  size?: "sm" | "md" | "lg";
+  size?: ValueRendererSize;
   isReadonly?: boolean;
   /**
    * When true, always show the editing UI without toggle
    */
   isEditing?: boolean;
+  /**
+   * Attachment-specific renderer options. Only applied when the property
+   * is of type Attachment.
+   */
+  attachmentPropertyValueRendererProps?: {
+    fill?: boolean;
+  };
 };
 
 const log = buildLogger("PropertyValueRenderer");
@@ -71,6 +79,7 @@ const PropertyValueRenderer = (props: Props) => {
     size = "md",
     isReadonly: isReadonlyProp,
     isEditing,
+    attachmentPropertyValueRendererProps,
   } = props;
   const { t } = useTranslation();
 
@@ -324,13 +333,16 @@ const PropertyValueRenderer = (props: Props) => {
     case PropertyType.Attachment: {
       const typedDv = dv as string[];
       const typedBv = (bv as string[]) ?? typedDv;
+      const options = property.options as AttachmentPropertyOptions | undefined;
 
       return (
         <AttachmentValueRenderer
           defaultEditing={defaultEditing}
           editor={simpleEditor}
+          fill={attachmentPropertyValueRendererProps?.fill}
           isEditing={isEditing}
           isReadonly={isReadonly}
+          layout={options?.layout}
           size={size}
           value={typedBv}
           variant={variant}

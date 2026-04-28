@@ -152,7 +152,6 @@ public class ExHentaiResolver : IResourceResolver
 
     public List<SourceMetadataFieldInfo> GetPredefinedMetadataFields() =>
     [
-        new(nameof(ExHentaiMetadataField.Name), StandardValueType.String),
         new(nameof(ExHentaiMetadataField.RawName), StandardValueType.String),
         new(nameof(ExHentaiMetadataField.Introduction), StandardValueType.String),
         new(nameof(ExHentaiMetadataField.Rate), StandardValueType.Decimal),
@@ -174,7 +173,6 @@ public class ExHentaiResolver : IResourceResolver
             CoverUrls = !string.IsNullOrEmpty(detail.CoverUrl) ? [detail.CoverUrl] : null,
             PredefinedFieldValues =
             {
-                [nameof(ExHentaiMetadataField.Name)] = detail.Name,
                 [nameof(ExHentaiMetadataField.RawName)] = detail.RawName,
                 [nameof(ExHentaiMetadataField.Introduction)] = detail.Introduction,
                 [nameof(ExHentaiMetadataField.Rate)] = detail.Rate != 0 ? detail.Rate : null,

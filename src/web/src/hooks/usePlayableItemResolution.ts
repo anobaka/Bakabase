@@ -78,15 +78,15 @@ export function usePlayableItemResolution(
       resourceDiscoveryChannel
         .subscribe(resource.id, origin, ResourceDataType.PlayableItem, (data, error) => {
           callbacks?.onDiscoveryComplete?.(resource.id, origin, data, error);
-          if (data?.playableItems) {
-            setSseItems(prev => {
-              const next = new Map(prev);
-              next.set(origin, {
-                items: data.playableItems!,
-              });
-              return next;
+          // Record completion even when the backend returns no items or an error,
+          // otherwise folder-only resources would stay in NotStarted forever.
+          setSseItems(prev => {
+            const next = new Map(prev);
+            next.set(origin, {
+              items: data?.playableItems ?? [],
             });
-          }
+            return next;
+          });
         })
         .then(unsub => unsubscribes.push(unsub));
     }
@@ -125,9 +125,9 @@ export function usePlayableItemResolution(
       const sseData = sseItems.get(origin);
       const items = sseData?.items ?? backendItemsByOrigin.get(origin) ?? [];
 
-      // Don't add empty Ready groups
-      if (state.status === DataStatus.Ready && items.length === 0) continue;
-
+      // Always include applicable origins. The consumer (PlayControl) filters
+      // `sources` by items.length > 0, and having an empty-but-Ready group is
+      // what lets fsDiscoveryStatus resolve to "ready" instead of "idle".
       result.push({
         origin,
         items,

@@ -17,7 +17,7 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
             new Regex(@"\.(?<index>\d{3,})$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         private static readonly Regex TailingXNumberPattern =
-            new Regex(@"\.[rz](?<index>\d{3,})$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+            new Regex(@"\.[rz](?<index>\d{2,})$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         public static List<CompressedFileGroup> DetectCompressedFileGroups(
             string[] filePaths,

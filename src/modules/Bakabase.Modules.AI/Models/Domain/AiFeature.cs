@@ -7,4 +7,5 @@ public enum AiFeature
     Translation = 2,
     FileProcessor = 3,
     PostParser = 4,
+    Chat = 5,
 }

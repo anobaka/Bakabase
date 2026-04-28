@@ -155,6 +155,10 @@ public class SourceMetadataSyncService<TDbContext>(
                             rpv.CoverPaths = nv as List<string>;
                             hasReservedChanges = true;
                             break;
+                        case ReservedProperty.Name:
+                            rpv.Name = nv as string;
+                            hasReservedChanges = true;
+                            break;
                     }
 
                     break;
@@ -343,13 +347,8 @@ public class SourceMetadataSyncService<TDbContext>(
 
     #region Helpers
 
-    private static PropertyValueScope GetPropertyValueScope(ResourceSource source) => source switch
-    {
-        ResourceSource.Steam => PropertyValueScope.Steam,
-        ResourceSource.DLsite => PropertyValueScope.DLsite,
-        ResourceSource.ExHentai => PropertyValueScope.ExHentai,
-        _ => throw new ArgumentOutOfRangeException(nameof(source))
-    };
+    private static PropertyValueScope GetPropertyValueScope(ResourceSource source) =>
+        source.GetPropertyValueScope();
 
     private async Task<string?> GetMetadataJsonForResource(int resourceId, ResourceSource source)
     {

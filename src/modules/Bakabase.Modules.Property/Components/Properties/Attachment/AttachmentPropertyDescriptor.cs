@@ -5,7 +5,7 @@ using Bakabase.Modules.Property.Abstractions.Models.Domain;
 
 namespace Bakabase.Modules.Property.Components.Properties.Attachment;
 
-public class AttachmentPropertyDescriptor : AbstractPropertyDescriptor<List<string>, List<string>>
+public class AttachmentPropertyDescriptor : AbstractPropertyDescriptor<AttachmentPropertyOptions, List<string>, List<string>>
 {
     public override PropertyType Type => PropertyType.Attachment;
 

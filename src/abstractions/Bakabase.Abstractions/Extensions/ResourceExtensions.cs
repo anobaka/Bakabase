@@ -2,6 +2,7 @@
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Input;
+using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.Aos;
 using Velopack;
@@ -96,29 +97,49 @@ namespace Bakabase.Abstractions.Extensions
         }
 
         public static (Func<ResourceDbModel, object> SelectKey, bool Asc, IComparer<object>? Comparer)[] BuildForSearch(
-            this ResourceSearchOrderInputModel[]? orders)
+            this ResourceSearchOrderInputModel[]? orders,
+            IResourceHealthScoreReader? healthScoreReader = null)
         {
             var ordersForSearch =
                 new List<(Func<ResourceDbModel, object> SelectKey, bool Asc, IComparer<object>? Comparer)>();
             if (orders != null)
             {
-                ordersForSearch.AddRange(from om in orders
-                    let o = om.Property
-                    let a = om.Asc
-                    let s = ((Func<ResourceDbModel, object> SelectKey, IComparer<object>? Comparer)) (o switch
+                foreach (var om in orders)
+                {
+                    var o = om.Property;
+                    var a = om.Asc;
+                    Func<ResourceDbModel, object> selectKey;
+                    IComparer<object>? comparer = null;
+                    switch (o)
                     {
-                        ResourceSearchSortableProperty.AddDt => (x => x.CreateDt, null),
-                        // ResourceSearchSortableProperty.Category => (x => x.CategoryId, null),
-                        // ResourceSearchSortableProperty.MediaLibrary => (x => x.MediaLibraryId, null),
-                        ResourceSearchSortableProperty.FileCreateDt => (x => x.FileCreateDt, null),
-                        ResourceSearchSortableProperty.FileModifyDt => (x => x.FileModifyDt, null),
-                        ResourceSearchSortableProperty.Filename => (x => Path.GetFileName(x.Path),
-                            Comparer<object>.Create(StringComparer.OrdinalIgnoreCase.Compare)),
-                        // ResourceSearchSortableProperty.ReleaseDt => (x => x.re),
-                        ResourceSearchSortableProperty.PlayedAt => (x => x.PlayedAt, null),
-                        _ => throw new ArgumentOutOfRangeException()
-                    })
-                    select (s.SelectKey, a, s.Comparer));
+                        case ResourceSearchSortableProperty.AddDt:
+                            selectKey = x => x.CreateDt;
+                            break;
+                        case ResourceSearchSortableProperty.FileCreateDt:
+                            selectKey = x => x.FileCreateDt;
+                            break;
+                        case ResourceSearchSortableProperty.FileModifyDt:
+                            selectKey = x => x.FileModifyDt;
+                            break;
+                        case ResourceSearchSortableProperty.Filename:
+                            selectKey = x => Path.GetFileName(x.Path);
+                            comparer = Comparer<object>.Create(StringComparer.OrdinalIgnoreCase.Compare);
+                            break;
+                        case ResourceSearchSortableProperty.PlayedAt:
+                            selectKey = x => x.PlayedAt;
+                            break;
+                        case ResourceSearchSortableProperty.HealthScore:
+                            // Unscored resources sink to the end regardless of sort
+                            // direction: ascending uses MaxValue as a sentinel, descending
+                            // uses MinValue.
+                            var sentinel = a ? decimal.MaxValue : decimal.MinValue;
+                            selectKey = x => healthScoreReader?.GetAggregatedScore(x.Id) ?? sentinel;
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+                    ordersForSearch.Add((selectKey, a, comparer));
+                }
             }
 
             if (!ordersForSearch.Any())

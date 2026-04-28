@@ -16,6 +16,9 @@
   "property.attachment.selectFromFileSystem": "从文件系统选择",
   "property.attachment.uploadFromLocal": "从本地上传",
   "property.attachment.uploadHint": "上传的文件将保存在应用数据路径下的 data/attachments 文件夹中",
+  "property.attachment.layout.label": "布局",
+  "property.attachment.layout.tile": "平铺",
+  "property.attachment.layout.carousel": "轮播",
 
   "Custom property": "自定义属性",
   "Select a type": "选择类型",

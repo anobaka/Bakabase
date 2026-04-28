@@ -36,36 +36,30 @@ public class DashScopeProviderFactory(ILogger<DashScopeProviderFactory> logger) 
     public async Task<IReadOnlyList<LlmModelInfo>> GetModelsAsync(LlmProviderConfigDbModel config,
         CancellationToken ct = default)
     {
-        // DashScope does not expose a standard model listing endpoint.
-        // Return commonly used models as static list.
-        await Task.CompletedTask;
-        return
-        [
-            new LlmModelInfo
-            {
-                ModelId = "qwen-max",
-                DisplayName = "Qwen Max",
-                Capabilities = DefaultCapabilities | LlmCapabilities.Vision
-            },
-            new LlmModelInfo
-            {
-                ModelId = "qwen-plus",
-                DisplayName = "Qwen Plus",
-                Capabilities = DefaultCapabilities
-            },
-            new LlmModelInfo
-            {
-                ModelId = "qwen-turbo",
-                DisplayName = "Qwen Turbo",
-                Capabilities = DefaultCapabilities
-            },
-            new LlmModelInfo
-            {
-                ModelId = "qwen-long",
-                DisplayName = "Qwen Long",
-                Capabilities = DefaultCapabilities
-            }
-        ];
+        try
+        {
+            var endpoint = config.Endpoint ?? DefaultDashScopeEndpoint;
+            var client = new OpenAIClient(
+                new ApiKeyCredential(config.ApiKey!),
+                new OpenAIClientOptions { Endpoint = new Uri(endpoint) });
+
+            var models = await client.GetOpenAIModelClient().GetModelsAsync(ct);
+
+            return models.Value
+                .OrderBy(m => m.Id)
+                .Select(m => new LlmModelInfo
+                {
+                    ModelId = m.Id,
+                    DisplayName = m.Id,
+                    Capabilities = DefaultCapabilities
+                })
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to list models for DashScope provider {Name}", config.Name);
+            return [];
+        }
     }
 
     public async Task<bool> TestConnectionAsync(LlmProviderConfigDbModel config, CancellationToken ct = default)

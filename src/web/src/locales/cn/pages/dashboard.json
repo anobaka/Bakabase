@@ -8,7 +8,7 @@
 
   "dashboard.action.search": "搜索",
   "dashboard.action.browseLibraries": "浏览媒体库",
-  "dashboard.action.bulkOperations": "批量操作",
+  "dashboard.action.fileProcessor": "文件处理器",
   "dashboard.action.randomPick": "随机播放",
   "dashboard.action.viewAll": "查看全部",
   "dashboard.action.addResources": "添加资源",

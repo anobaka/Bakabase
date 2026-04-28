@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using Bakabase.Modules.AI.Components.Cache;
 using Bakabase.Modules.AI.Components.Enhancer;
 using Bakabase.Modules.AI.Components.Observation;
@@ -34,6 +38,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ResourceService<TDbContext, LlmUsageLogDbModel, long>>();
         services.AddScoped<ResourceService<TDbContext, LlmCallCacheEntryDbModel, long>>();
         services.AddScoped<ResourceService<TDbContext, AiFeatureConfigDbModel, int>>();
+        services.AddScoped<ResourceService<TDbContext, ChatConversationDbModel, int>>();
+        services.AddScoped<ResourceService<TDbContext, ChatMessageDbModel, long>>();
+        services.AddScoped<ResourceService<TDbContext, LlmToolConfigDbModel, int>>();
 
         // Observation & Cache
         services.TryAddScoped<ILlmUsageService, LlmUsageService<TDbContext>>();
@@ -41,7 +48,7 @@ public static class ServiceCollectionExtensions
         services.TryAddScoped<LlmQuotaManager>();
 
         // Tools
-        services.TryAddSingleton<LlmToolRegistry>();
+        services.TryAddScoped<LlmToolRegistry, LlmToolRegistry<TDbContext>>();
 
         // Services
         services.TryAddScoped<ILlmProviderService, LlmProviderService<TDbContext>>();
@@ -49,9 +56,30 @@ public static class ServiceCollectionExtensions
         services.TryAddScoped<ILlmService, LlmService>();
         services.TryAddScoped<IAiTranslationService, AiTranslationService>();
         services.TryAddScoped<IAiFileProcessorService, AiFileProcessorService>();
+        services.TryAddScoped<IChatService, ChatService<TDbContext>>();
 
         // Enhancement post-processors
         services.TryAddScoped<IEnhancementPostProcessor, TranslationPostProcessor>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Scans the given assemblies for all concrete implementations of <see cref="ILlmTool"/>
+    /// and registers them as scoped services.
+    /// </summary>
+    public static IServiceCollection AddLlmTools(this IServiceCollection services, params Assembly[] assemblies)
+    {
+        var toolType = typeof(ILlmTool);
+        var types = assemblies
+            .SelectMany(a => a.GetTypes())
+            .Where(t => t is { IsAbstract: false, IsInterface: false } && toolType.IsAssignableFrom(t))
+            .Distinct();
+
+        foreach (var type in types)
+        {
+            services.AddScoped(toolType, type);
+        }
 
         return services;
     }

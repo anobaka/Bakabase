@@ -1,3 +1,4 @@
+using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Helpers;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain;
@@ -16,7 +17,7 @@ public static class ResourceSourceLinkExtensions
             SourceKey = model.SourceKey,
             CreateDt = model.CreateDt,
             CoverUrls = StringListSerializer.Serialize(model.CoverUrls),
-            LocalCoverPaths = StringListSerializer.Serialize(model.LocalCoverPaths),
+            LocalCoverPaths = StringListSerializer.Serialize(AppDataPaths.RelativizeAll(model.LocalCoverPaths)),
             CoverDownloadFailedAt = model.CoverDownloadFailedAt,
             MetadataJson = model.MetadataJson,
             MetadataFetchedAt = model.MetadataFetchedAt,
@@ -33,7 +34,7 @@ public static class ResourceSourceLinkExtensions
             SourceKey = dbModel.SourceKey,
             CreateDt = dbModel.CreateDt,
             CoverUrls = StringListSerializer.Deserialize(dbModel.CoverUrls),
-            LocalCoverPaths = StringListSerializer.Deserialize(dbModel.LocalCoverPaths),
+            LocalCoverPaths = AppDataPaths.ResolveAll(StringListSerializer.Deserialize(dbModel.LocalCoverPaths)),
             CoverDownloadFailedAt = dbModel.CoverDownloadFailedAt,
             MetadataJson = dbModel.MetadataJson,
             MetadataFetchedAt = dbModel.MetadataFetchedAt,

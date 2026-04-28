@@ -11,7 +11,7 @@ import {
 } from "@heroui/react";
 import { AiOutlineSetting, AiOutlineWarning } from "react-icons/ai";
 
-import { toast, Select, RadioGroup, Radio } from "@/components/bakaui";
+import { toast, Select, RadioGroup, Radio, Autocomplete, AutocompleteItem } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 import type {
   BakabaseModulesAIModelsDbAiFeatureConfigDbModel,
@@ -101,6 +101,12 @@ const AiFeatureConfigShortcut = ({ feature, label }: Props) => {
       loadDefaultConfig();
     }
   }, [feature]);
+
+  useEffect(() => {
+    if (isOpen) {
+      loadProviders();
+    }
+  }, [isOpen]);
 
   // Sync editing state when mode or source configs change
   useEffect(() => {
@@ -220,24 +226,27 @@ const AiFeatureConfigShortcut = ({ feature, label }: Props) => {
         }}
       />
 
-      <Select
+      <Autocomplete
         label={t<string>("configuration.ai.feature.model")}
         size="sm"
         isLoading={loadingModels}
-        dataSource={models.map((m) => ({
+        defaultItems={models.map((m) => ({
           label: m.displayName ?? m.modelId ?? "",
           value: m.modelId ?? "",
         }))}
-        selectedKeys={
-          editing.modelId ? [editing.modelId] : undefined
-        }
-        onSelectionChange={(keys) => {
-          const arr = Array.from(keys);
-          if (arr.length > 0) {
-            setEditing({ ...editing, modelId: String(arr[0]) });
+        selectedKey={editing.modelId ?? null}
+        onSelectionChange={(key) => {
+          if (key != null) {
+            setEditing({ ...editing, modelId: String(key) });
           }
         }}
-      />
+      >
+        {(item) => (
+          <AutocompleteItem key={item.value}>
+            {item.label}
+          </AutocompleteItem>
+        )}
+      </Autocomplete>
 
       <Input
         label={t<string>("configuration.ai.feature.temperature")}

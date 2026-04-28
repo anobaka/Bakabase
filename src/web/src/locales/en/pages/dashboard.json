@@ -8,7 +8,7 @@
 
   "dashboard.action.search": "Search",
   "dashboard.action.browseLibraries": "Browse Libraries",
-  "dashboard.action.bulkOperations": "Bulk Operations",
+  "dashboard.action.fileProcessor": "File Processor",
   "dashboard.action.randomPick": "Random Pick",
   "dashboard.action.viewAll": "View all",
   "dashboard.action.addResources": "Add your resources",

@@ -16,5 +16,6 @@
         // Serial = 9,
         // Volume = 10
         PlayedAt = 11,
+        HealthScore = 12,
     }
 }

@@ -14,11 +14,13 @@ namespace Bakabase.InsideWorld.Models.Configs
     {
         public UIResourceOptions Resource { get; set; } = new UIResourceOptions();
         public StartupPage StartupPage { get; set; }
-        
+
         public bool IsMenuCollapsed { get; set; }
 
         public bool HideResourceCovers { get; set; }
-        
+
+        public ResourceDetailLayoutConfig? ResourceDetailLayout { get; set; }
+
         public List<PropertyKey> LatestUsedProperties { get; set; } = new List<PropertyKey>();
 
         public void AddLatestUsedProperty(int pool, int id)
@@ -60,6 +62,7 @@ namespace Bakabase.InsideWorld.Models.Configs
             public bool AutoSelectFirstPlayableFile { get; set; }
             public List<string> DisplayOperations { get; set; } = [];
             public bool HideResourceBorder { get; set; }
+            public bool HideHealthScore { get; set; }
             public List<CustomContextMenuItem> CustomContextMenuItems { get; set; } = [];
             /// <summary>
             /// When true, manually saved property values in resource detail modal
@@ -77,6 +80,25 @@ namespace Bakabase.InsideWorld.Models.Configs
             /// For other types, these are serialized standard values.
             /// </summary>
             public List<string> PresetValues { get; set; } = [];
+        }
+
+        public record ResourceDetailLayoutConfig
+        {
+            public int ModalWidthPercent { get; set; }
+            public int ModalHeightPercent { get; set; }
+            public int GridCols { get; set; }
+            public int Gap { get; set; }
+            public List<ResourceDetailBlock> Blocks { get; set; } = [];
+            public List<ResourceDetailBlock> Hidden { get; set; } = [];
+        }
+
+        public record ResourceDetailBlock
+        {
+            public string Id { get; set; } = string.Empty;
+            public int ColStart { get; set; }
+            public int ColSpan { get; set; }
+            public int RowStart { get; set; }
+            public int RowSpan { get; set; }
         }
     }
 }

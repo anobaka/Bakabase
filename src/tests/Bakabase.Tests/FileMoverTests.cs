@@ -47,17 +47,17 @@ public class FileMoverTests
 
         var relativeFsEntries = new string[]
         {
-            @"d1",
-            @"d1\f1",
-            @"d1\d1\f1",
-            @"d1\d1\d1\d1",
-            @"d2",
-            @"d3",
-            // @"d3\f1",
-            @"d3\f2",
-            @"d4\f1-fresh",
-            @"d4\d1\f1",
-            @"d5"
+            "d1",
+            "d1/f1",
+            "d1/d1/f1",
+            "d1/d1/d1/d1",
+            "d2",
+            "d3",
+            // "d3/f1",
+            "d3/f2",
+            "d4/f1-fresh",
+            "d4/d1/f1",
+            "d5"
         };
 
         var rand = new Random();
@@ -66,9 +66,8 @@ public class FileMoverTests
 
         foreach (var relativeFs in relativeFsEntries)
         {
-            var fs = Path.Combine(root, relativeFs);
-            var segments = fs.Split('\\');
-            var filename = segments.Last();
+            var fs = Path.Combine(root, relativeFs.Replace('/', Path.DirectorySeparatorChar));
+            var filename = Path.GetFileName(fs);
             if (filename.StartsWith("f"))
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(fs)!);

@@ -83,8 +83,7 @@ public class LocalFileCoverProvider : ICoverProvider
             if (coverDiscoverResult != null)
             {
                 var image = await coverDiscoverResult.LoadByImageSharp(ct);
-                var pathWithoutExt = Path.Combine(_fileManager.BuildAbsolutePath("cache", "cover"), resource.Id.ToString())
-                    .StandardizePath()!;
+                var pathWithoutExt = _fileManager.GetLocalCoverPathWithoutExtension(resource.Id);
                 coverPath = await image.SaveAsThumbnail(pathWithoutExt, ct);
             }
         }
@@ -111,7 +110,8 @@ public class LocalFileCoverProvider : ICoverProvider
         var isNewCache = cache == null;
         cache ??= new ResourceCacheDbModel { ResourceId = resourceId };
 
-        var serializedCoverPaths = new ListStringValueBuilder(coverPath.IsNullOrEmpty() ? null : [coverPath]).Value!
+        var coversForDb = AppDataPaths.RelativizeAll(coverPath.IsNullOrEmpty() ? null : [coverPath]);
+        var serializedCoverPaths = new ListStringValueBuilder(coversForDb).Value!
             .SerializeAsStandardValue(StandardValueType.ListString);
 
         if (cache.CoverPaths != serializedCoverPaths ||

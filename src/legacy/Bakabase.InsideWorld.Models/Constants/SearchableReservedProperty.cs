@@ -19,5 +19,6 @@ public enum SearchableReservedProperty
 	[Obsolete]
     MediaLibraryV2 = ResourceProperty.MediaLibraryV2,
 	MediaLibraryV2Multi = ResourceProperty.MediaLibraryV2Multi,
-	Source = ResourceProperty.Source
+	Source = ResourceProperty.Source,
+	Name = ResourceProperty.Name
 }

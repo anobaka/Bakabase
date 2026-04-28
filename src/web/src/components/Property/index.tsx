@@ -4,11 +4,7 @@ import type { IProperty } from "./models";
 
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
-import {
-  DatabaseOutlined,
-  DisconnectOutlined,
-  LinkOutlined,
-} from "@ant-design/icons";
+import { DatabaseOutlined } from "@ant-design/icons";
 import { MdEdit, MdDelete } from "react-icons/md";
 
 import { useBakabaseContext } from "../ContextProvider/BakabaseContextProvider";
@@ -60,63 +56,23 @@ const Property = ({
     if (property.pool != PropertyPool.Custom) {
       return null;
     }
-    const categories = property.categories || [];
+    if (property.valueCount == undefined) {
+      return null;
+    }
 
     return (
       <div className={`${styles.bottom} mt-1 pt-1 flex flex-wrap gap-2`}>
-        {categories.length > 0 ? (
-          <Tooltip
-            content={
-              <div className={"flex flex-wrap gap-1 max-w-[600px]"}>
-                {categories.map((c) => {
-                  return (
-                    <Chip key={c.id} radius={"sm"} size={"sm"}>
-                      {c.name}
-                    </Chip>
-                  );
-                })}
-              </div>
-            }
-            placement={"bottom"}
-          >
-            <div className={"flex gap-0.5 items-center"}>
-              <LinkOutlined className={"text-sm"} />
-              {categories.length}
-            </div>
-            {/* <Chip */}
-            {/*   radius={'sm'} */}
-            {/*   size={'sm'} */}
-            {/*   classNames={{}} */}
-            {/* >{t<string>('{{count}} categories', { count: categories.length })}</Chip> */}
-          </Tooltip>
-        ) : (
-          <Tooltip
-            content={
-              <div>
-                <div>{t<string>("No category bound")}</div>
-                <div>
-                  {t<string>("You can bind properties in category page")}
-                </div>
-              </div>
-            }
-            placement={"bottom"}
-          >
-            <DisconnectOutlined className={"text-sm"} />
-          </Tooltip>
-        )}
-        {property.valueCount != undefined && (
-          <Tooltip
-            content={t<string>("{{count}} values", {
-              count: property.valueCount,
-            })}
-            placement={"bottom"}
-          >
-            <div className={"flex gap-0.5 items-center"}>
-              <DatabaseOutlined className={"text-sm"} />
-              {property.valueCount}
-            </div>
-          </Tooltip>
-        )}
+        <Tooltip
+          content={t<string>("{{count}} values", {
+            count: property.valueCount,
+          })}
+          placement={"bottom"}
+        >
+          <div className={"flex gap-0.5 items-center"}>
+            <DatabaseOutlined className={"text-sm"} />
+            {property.valueCount}
+          </div>
+        </Tooltip>
       </div>
     );
   };

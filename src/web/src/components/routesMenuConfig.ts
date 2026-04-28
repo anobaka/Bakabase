@@ -48,7 +48,6 @@ import CachePage from "@/pages/cache";
 import AliasPage from "@/pages/alias";
 import TextPage from "@/pages/text";
 import PlayHistoryPage from "@/pages/play-history";
-import SynchronizationOptionsPage from "@/pages/deprecated/synchronization-options";
 import Configuration from "@/pages/configuration";
 import ThirdPartyConfiguration from "@/pages/third-party-configuration";
 import BackgroundTaskPage from "@/pages/background-task";
@@ -65,12 +64,15 @@ import PathMarksPage from "@/pages/path-marks";
 import ProfilerPage from "@/pages/profiler";
 import ComparisonPage from "@/pages/comparison";
 import AiConfigurationPage from "@/pages/ai-configuration";
+import ChatPage from "@/pages/chat";
 import AiUsagePage from "@/pages/ai-usage";
 import AiAuditLogPage from "@/pages/ai-audit-log";
 import AiCachePage from "@/pages/ai-cache";
 import SteamAppsPage from "@/pages/steam-apps";
 import DLsiteWorksPage from "@/pages/dlsite-works";
 import ExHentaiGalleriesPage from "@/pages/exhentai-galleries";
+import DataCardPage from "@/pages/data-card";
+import HealthScorePage from "@/pages/health-score";
 import { SteamIcon, DLsiteIcon, ExHentaiIcon } from "@/components/SourceIcons";
 
 // Lazy load test page to avoid circular dependency
@@ -214,6 +216,24 @@ export const routesMenuConfig: RouteMenuItem[] = [
         icon: AiOutlineUngroup,
         layout: "basic",
         menu: true,
+      },
+      {
+        name: "menu.dataCard",
+        path: "/data-card",
+        component: DataCardPage,
+        icon: AiOutlineAppstoreAdd,
+        layout: "basic",
+        menu: true,
+        isBeta: true,
+      },
+      {
+        name: "menu.healthScore",
+        path: "/health-score",
+        component: HealthScorePage,
+        icon: AiOutlineRadarChart,
+        layout: "basic",
+        menu: true,
+        isBeta: true,
       }
     ],
   },
@@ -303,6 +323,14 @@ export const routesMenuConfig: RouteMenuItem[] = [
     menu: true,
     isBeta: true,
     children: [
+      {
+        name: "menu.ai.chat",
+        path: "/ai/chat",
+        component: ChatPage,
+        icon: AiOutlineRobot,
+        layout: "basic",
+        menu: true,
+      },
       {
         name: "menu.ai.configuration",
         path: "/ai/configuration",

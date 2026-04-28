@@ -11,7 +11,6 @@ using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Bootstrap.Components.Cryptography;
 using Bootstrap.Extensions;
-using Humanizer;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -166,14 +165,14 @@ namespace Bakabase.Modules.Enhancer.Abstractions.Components
         }
 
         protected string BuildFilePath(string fileName) =>
-            _fileManager.BuildAbsolutePath(nameof(Enhancer).Camelize(), Id.ToString(), fileName);
+            _fileManager.GetEnhancerFilePath(Id.ToString(), fileName);
 
         protected string BuildFilePath(Resource resource, string fileName)
         {
             var idPart = resource.Id > 0
                 ? resource.Id.ToString()
                 : $"tmp-{CryptographyUtils.Md5(resource.Path).Substring(0, 6)}";
-            return _fileManager.BuildAbsolutePath(nameof(Enhancer).Camelize(), Id.ToString(), idPart, fileName);
+            return _fileManager.GetEnhancerResourceFilePath(Id.ToString(), idPart, fileName);
         }
 
         /// <summary>

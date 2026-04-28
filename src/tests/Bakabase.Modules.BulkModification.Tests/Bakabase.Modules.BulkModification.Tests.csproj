@@ -10,7 +10,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\modules\Bakabase.Modules.BulkModification\Bakabase.Modules.BulkModification.csproj" />
-    <ProjectReference Include="..\..\Bakabase.Service\Bakabase.Service.csproj" />
+    <ProjectReference Include="..\..\apps\Bakabase.Service\Bakabase.Service.csproj" />
     <ProjectReference Include="..\Bakabase.Tests\Bakabase.Tests.csproj" />
   </ItemGroup>
 

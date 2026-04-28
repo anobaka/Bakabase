@@ -5,7 +5,7 @@ using Bakabase.InsideWorld.Models.Models.Aos;
 
 namespace Bakabase.Abstractions.Components.Configuration
 {
-    public class InternalOptions
+    public static class InternalOptions
     {
         public static readonly ImmutableHashSet<string> ImageExtensions =
             ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase,
@@ -83,7 +83,7 @@ namespace Bakabase.Abstractions.Components.Configuration
                 MediaType.Text, TextExtensions
             },
             {
-                MediaType.Application, [".exe"]
+                MediaType.Application, [ExeExtension]
             }
         };
 
@@ -92,25 +92,19 @@ namespace Bakabase.Abstractions.Components.Configuration
 
         public const char DirSeparator = '/';
         public const char WindowsSpecificDirSeparator = '\\';
-        public static string UncPathPrefix = $"{DirSeparator}{DirSeparator}";
+        public static readonly string UncPathPrefix = $"{DirSeparator}{DirSeparator}";
 
-        public static string WindowsSpecificUncPathPrefix =
+        public static readonly string WindowsSpecificUncPathPrefix =
             $"{WindowsSpecificDirSeparator}{WindowsSpecificDirSeparator}";
 
         public const char CompressedFileRootSeparator = '!';
         public const string RegexForOnePathLayer = @"[^\/]+";
 
-        public static HashSet<string> IgnoredFileExtensions = new(StringComparer.OrdinalIgnoreCase)
-            {".nfo"};
-
-        public const string AppOssObjectPrefix = "app/bakabase/inside-world/";
-        public const string DefaultName = "Default";
-        public const string TagNameSeparator = ":";
         public const string TextSeparator = ",";
         public const string LayerTextSeparator = "/";
         public const string ExeExtension = ".exe";
 
-        public class HttpClientNames
+        public static class HttpClientNames
         {
             public const string JavLibrary = nameof(JavLibrary);
             public const string Bilibili = nameof(Bilibili);
@@ -126,7 +120,6 @@ namespace Bakabase.Abstractions.Components.Configuration
         public static string DefaultHttpUserAgent =
             $"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36 Bakabase/{AppService.CoreVersion}";
 
-        public const string CoverDirectoryName = "cover";
         public const string TempDirectoryName = "temp";
         public const string ComponentInfoFileName = "i.json";
 

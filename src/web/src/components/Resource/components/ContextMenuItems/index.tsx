@@ -7,6 +7,7 @@ import {
   DeleteOutlined,
   EditOutlined,
   FireOutlined,
+  FolderOpenOutlined,
   PushpinOutlined,
   ReloadOutlined,
   SendOutlined,
@@ -36,6 +37,8 @@ const log = buildLogger("ResourceContextMenuItems");
 type Props = {
   selectedResourceIds: number[];
   selectedResources?: any[];
+  /** The resource whose context menu was triggered (may not be in selectedResources). */
+  contextResource?: any;
   onSelectedResourcesChanged?: (ids: number[]) => any;
 };
 
@@ -120,6 +123,7 @@ const PropertyQuickSetItem = ({
 const ContextMenuItems = ({
   selectedResourceIds,
   selectedResources,
+  contextResource,
   onSelectedResourcesChanged,
 }: Props) => {
   const { t } = useTranslation();
@@ -207,6 +211,18 @@ const ContextMenuItems = ({
       })}
 
       {customContextMenuItems.length > 0 && <MenuDivider />}
+
+      {/* Open folder — always uses the right-clicked resource, independent of selection. */}
+      {contextResource?.path && (
+        <MenuItem onClick={() => {
+          BApi.resource.openResourceDirectory({ id: contextResource.id });
+        }}>
+          <div className="flex items-center gap-2">
+            <FolderOpenOutlined className="text-base" />
+            {t<string>("common.action.openFolder")}
+          </div>
+        </MenuItem>
+      )}
 
       {/* Single-resource actions (mirrored from cover buttons) */}
       {selectedResourceIds.length === 1 && (() => {

@@ -311,6 +311,13 @@ public static class PropertySystem
         public static Bakabase.Abstractions.Models.Domain.Property PlayedAt =>
             BuiltinProperties.Internal.PlayedAt.Definition;
 
+        /// <summary>
+        /// Aggregated health score (Number) - property definition.
+        /// Written by the HealthScore module; null when no profile has scored the resource.
+        /// </summary>
+        public static Bakabase.Abstractions.Models.Domain.Property HealthScore =>
+            BuiltinProperties.Internal.HealthScore.Definition;
+
         #endregion
 
         #region Internal Properties - Specialized Accessors

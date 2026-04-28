@@ -36,6 +36,8 @@ interface IProps {
   filterDisplayMode?: FilterDisplayMode;
   /** Layout: horizontal (default) keeps all in one row, vertical puts value on new line */
   layout?: FilterLayout;
+  /** Hide the built-in disable/delete buttons (when host renders its own) */
+  hideInternalActions?: boolean;
 }
 
 const log = buildLogger("Filter");
@@ -51,6 +53,7 @@ const Filter = ({
   onCancelNewFilter,
   filterDisplayMode,
   layout = "horizontal",
+  hideInternalActions,
 }: IProps) => {
   const config = useFilterConfig();
   const [filter, setFilter] = useState<SearchFilter>(propsFilter);
@@ -59,50 +62,59 @@ const Filter = ({
   const isSimpleMode = filterDisplayMode === FilterDisplayMode.Simple;
   const isVertical = layout === "vertical";
 
+  // One-shot: open property selector for filters added by the user.
+  // Other lazy-fill behaviors live in their own keyed effects below so they
+  // re-run whenever propsFilter is replaced (e.g., the parent reloaded data
+  // from the server and reset us to a bare filter without property/valueProperty).
   useEffect(() => {
-    // Only open property selector if no property is selected yet
-    // (filters created in Simple mode already have property selected)
     if ((isNew || autoTriggerPropertySelector) && !filter.propertyId) {
       openPropertySelector();
-    } else if (filter.propertyPool && filter.propertyId && filter.operation) {
-      // Restored filter needs to fetch property info and valueProperty for display
-      if (!filter.property) {
-        // Fetch property info
-        config.api.getValueProperty(filter).then((p) => {
-          if (p) {
-            setFilter((prev) => ({
-              ...prev,
-              property: p,
-              valueProperty: p,
-            }));
-          }
-        });
-      } else if (!filter.valueProperty) {
-        // Only fetch valueProperty
-        config.api.getValueProperty(filter).then((p) => {
-          if (p) {
-            setFilter((prev) => ({
-              ...prev,
-              valueProperty: p,
-            }));
-          }
-        });
-      }
     }
-
-    // Auto-fetch availableOperations if property type is known but availableOperations is missing
-    // This is needed for filters created with mock data or restored from storage
-    if (filter.property?.type && !filter.availableOperations?.length) {
-      config.api.getAvailableOperationsByPropertyType(filter.property.type).then((ops) => {
-        if (ops?.length) {
-          setFilter((prev) => ({
-            ...prev,
-            availableOperations: ops,
-          }));
-        }
-      });
-    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Lazily fill in property + valueProperty when missing. Re-fires whenever
+  // the identifying tuple changes — important when propsFilter gets replaced
+  // by a fresh fetch, because useUpdateEffect below resets local state and
+  // wipes the previously-fetched property/valueProperty.
+  useEffect(() => {
+    if (!filter.propertyPool || !filter.propertyId || !filter.operation) return;
+    if (filter.property && filter.valueProperty) return;
+    config.api.getValueProperty(filter).then((p) => {
+      if (!p) return;
+      setFilter((prev) => ({
+        ...prev,
+        property: prev.property ?? p,
+        valueProperty: p,
+      }));
+    });
+  }, [
+    filter.propertyPool,
+    filter.propertyId,
+    filter.operation,
+    filter.property,
+    filter.valueProperty,
+  ]);
+
+  // Auto-fetch availableOperations once the property type is known.
+  // The mount-time effect above can run before getValueProperty resolves
+  // (for filters restored from storage with no pre-populated property),
+  // leaving availableOperations empty and the operation selector stuck
+  // showing "Can not operate on this property". Watching property.type
+  // closes that gap.
+  useEffect(() => {
+    const type = filter.property?.type;
+    if (!type) return;
+    if (filter.availableOperations?.length) return;
+    config.api.getAvailableOperationsByPropertyType(type).then((ops) => {
+      if (ops?.length) {
+        setFilter((prev) => ({
+          ...prev,
+          availableOperations: ops,
+        }));
+      }
+    });
+  }, [filter.property?.type, filter.availableOperations?.length]);
 
   useUpdateEffect(() => {
     setFilter(propsFilter);
@@ -262,7 +274,7 @@ const Filter = ({
       )}
 
       {/* Action buttons - top right corner */}
-      {!isReadonly && (
+      {!isReadonly && !hideInternalActions && (
         <div className="absolute top-1 right-1 flex items-center z-20">
           <DisableButton disabled={filter.disabled} onToggle={toggleDisabled} />
           <DeleteButton onDelete={onRemove} />

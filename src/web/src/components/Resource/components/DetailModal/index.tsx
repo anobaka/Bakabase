@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocalStorage } from "react-use";
 
 import "./index.scss";
@@ -10,6 +10,7 @@ import {
   CloseCircleOutlined,
   DisconnectOutlined,
   FolderOpenOutlined,
+  LayoutOutlined,
   LoadingOutlined,
   PlayCircleOutlined,
   ProfileOutlined,
@@ -33,6 +34,7 @@ import ResourceProfiles from "./ResourceProfiles";
 import ResourceHierarchy from "./ResourceHierarchy";
 
 import ResourceCover from "@/components/Resource/components/ResourceCover";
+import DataCardAssociationPanel from "@/components/DataCardAssociationPanel";
 
 import type { Resource as ResourceModel } from "@/core/models/Resource";
 
@@ -62,6 +64,13 @@ import type { PlayControlPortalProps } from "@/components/Resource/components/Pl
 import CustomPropertySortModal from "@/components/CustomPropertySortModal";
 import AiTranslateModal from "@/components/Resource/components/DetailModal/AiTranslateModal";
 import ConflictResolutionModal from "@/components/Resource/components/DetailModal/ConflictResolutionModal";
+import ResourceDetailLayoutConfigModal from "@/components/ResourceDetailLayoutConfigModal";
+import {
+  MasonryViewer,
+  normalizeLayoutConfig,
+  type DetailLayoutConfig,
+  type SectionId,
+} from "@/components/ResourceDetailLayoutEditor";
 import { useUiOptionsStore } from "@/stores/options";
 
 type ColumnCount = 1 | 2 | 3;
@@ -81,6 +90,11 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
   const [columns, setColumns] = useLocalStorage<ColumnCount>(PROPERTIES_COLUMNS_KEY, 2);
   const [refreshingCache, setRefreshingCache] = useState(false);
   const [conflictCount, setConflictCount] = useState<number>(0);
+
+  const layoutConfig = useMemo<DetailLayoutConfig>(
+    () => normalizeLayoutConfig(uiOptions.resourceDetailLayout),
+    [uiOptions.resourceDetailLayout],
+  );
 
   const loadConflictCount = async () => {
     try {
@@ -124,31 +138,266 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
     loadConflictCount();
   }, []);
 
-  console.log(resource);
-
   const hideTimeInfo = !!uiOptions.resource?.hideResourceTimeInfo;
+
+  const renderSection = useCallback(
+    (sectionId: SectionId): React.ReactNode => {
+      if (!resource) return null;
+      switch (sectionId) {
+        case "cover":
+          return (
+            <div
+              className="h-[400px] max-h-[400px] overflow-hidden rounded flex items-center justify-center border-1"
+              style={{ borderColor: "var(--bakaui-overlap-background)" }}
+            >
+              <ResourceCover resource={resource} showBiggerOnHover={false} />
+            </div>
+          );
+        case "rating":
+          return (
+            <Properties
+              hidePropertyName
+              propertyInnerDirection={"ver"}
+              reload={loadResource}
+              resource={resource}
+              restrictedPropertyIds={[ReservedProperty.Rating]}
+              restrictedPropertyPool={PropertyPool.Reserved}
+            />
+          );
+        case "actions":
+          return (
+            <div className="flex items-center justify-center">
+              <ButtonGroup size={"sm"}>
+                <PlayControl
+                  PortalComponent={({
+                    status,
+                    sources,
+                    onPlaySource,
+                    onNotFound,
+                    triggerFsDiscovery,
+                    fsDiscoveryStatus,
+                  }: PlayControlPortalProps) => {
+                    React.useEffect(() => {
+                      if (fsDiscoveryStatus === "idle") triggerFsDiscovery();
+                    }, [fsDiscoveryStatus, triggerFsDiscovery]);
+
+                    const mainSource = sources[0];
+                    return (
+                      <Tooltip content={t("common.action.play")}>
+                        <Button
+                          isIconOnly
+                          color="primary"
+                          onPress={() =>
+                            mainSource ? onPlaySource(mainSource.source) : onNotFound()
+                          }
+                          isDisabled={status === "loading" || status === "idle"}
+                        >
+                          {status === "loading" || status === "idle" ? (
+                            <LoadingOutlined className="text-lg" spin />
+                          ) : status === "not-found" ? (
+                            <QuestionCircleOutlined className="text-lg text-warning" />
+                          ) : (
+                            <PlayCircleOutlined className="text-lg" />
+                          )}
+                        </Button>
+                      </Tooltip>
+                    );
+                  }}
+                  resource={resource}
+                />
+                <Tooltip content={t("common.action.openFolder")}>
+                  <Button
+                    isIconOnly
+                    color="default"
+                    variant="light"
+                    onPress={() => {
+                      BApi.resource.openResourceDirectory({ id: resource.id });
+                    }}
+                  >
+                    <FolderOpenOutlined className="text-lg" />
+                  </Button>
+                </Tooltip>
+                {resource.hasChildren && (
+                  <Tooltip content={t("common.action.viewChildren")}>
+                    <Button
+                      isIconOnly
+                      color="default"
+                      onPress={() => {
+                        createPortal(ChildrenModal, {
+                          resourceId: resource.id,
+                          resourceDisplayName: resource.displayName,
+                        });
+                      }}
+                    >
+                      <TiFlowChildren className="text-lg" />
+                    </Button>
+                  </Tooltip>
+                )}
+                {(resource.dataStates?.length ?? 0) > 0 && (
+                  <Tooltip content={t("resource.action.refreshCache.tooltip")}>
+                    <Button
+                      isIconOnly
+                      color="default"
+                      variant="light"
+                      isDisabled={refreshingCache}
+                      onPress={async () => {
+                        setRefreshingCache(true);
+                        try {
+                          const rsp = await BApi.cache.refreshResourceCache(resource.id);
+                          if (!rsp.code) {
+                            toast.success(t<string>("resource.action.refreshCache.success"));
+                            await loadResource();
+                          }
+                        } finally {
+                          setRefreshingCache(false);
+                        }
+                      }}
+                    >
+                      {refreshingCache ? (
+                        <LoadingOutlined className="text-lg" spin />
+                      ) : (
+                        <ReloadOutlined className="text-lg" />
+                      )}
+                    </Button>
+                  </Tooltip>
+                )}
+                <Tooltip
+                  content={
+                    hideTimeInfo
+                      ? t("common.action.showTimeInfo")
+                      : t("common.action.hideTimeInfo")
+                  }
+                >
+                  <Button
+                    isIconOnly
+                    className={hideTimeInfo ? "opacity-40" : undefined}
+                    color="default"
+                    variant={"light"}
+                    onPress={() => {
+                      BApi.options.patchUiOptions({
+                        ...uiOptions,
+                        resource: {
+                          ...uiOptions.resource,
+                          hideResourceTimeInfo: !hideTimeInfo,
+                        },
+                      });
+                    }}
+                  >
+                    <MdCalendarMonth className={"text-lg"} />
+                  </Button>
+                </Tooltip>
+              </ButtonGroup>
+            </div>
+          );
+        case "basicInfo":
+          return hideTimeInfo ? null : <BasicInfo resource={resource} />;
+        case "hierarchy":
+          return <ResourceHierarchy resource={resource} onReload={loadResource} />;
+        case "introduction":
+          return <IntroductionSummary resource={resource} onReload={loadResource} />;
+        case "playedAt":
+          return resource.playedAt ? (
+            <div
+              className={"grid gap-x-4 gap-y-1 items-center overflow-visible"}
+              style={{ gridTemplateColumns: "calc(120px) minmax(0, 1fr)" }}
+            >
+              <Chip
+                className={"text-right justify-self-end"}
+                color={"default"}
+                radius={"sm"}
+                size={"sm"}
+              >
+                {t<string>("resource.label.lastPlayedAt")}
+              </Chip>
+              <div className={"flex items-center gap-1"}>
+                {resource.playedAt}
+                <Tooltip content={t<string>("resource.action.markAsNotPlayed")}>
+                  <Button
+                    isIconOnly
+                    size={"sm"}
+                    variant={"light"}
+                    onPress={() => {
+                      BApi.resource.markResourceAsNotPlayed(resource.id).then((r) => {
+                        if (!r.code) loadResource();
+                      });
+                    }}
+                  >
+                    <CloseCircleOutlined className={"text-base opacity-60"} />
+                  </Button>
+                </Tooltip>
+              </div>
+            </div>
+          ) : null;
+        case "properties":
+          return (
+            <div className={"flex flex-col gap-1"}>
+              <Properties
+                columns={1}
+                reload={loadResource}
+                resource={resource}
+                restrictedPropertyIds={[ReservedProperty.Cover]}
+                restrictedPropertyPool={PropertyPool.Reserved}
+              />
+              <Properties
+                columns={columns}
+                noPropertyContent={
+                  <div className={"flex flex-col items-center gap-2 justify-center"}>
+                    <div className={"w-4/5"}>
+                      <DisconnectOutlined className={"text-base mr-1"} />
+                      {t<string>("resource.empty.noCustomPropertyBound")}
+                    </div>
+                  </div>
+                }
+                reload={loadResource}
+                resource={resource}
+                restrictedPropertyPool={PropertyPool.Custom}
+              />
+            </div>
+          );
+        case "relatedDataCards":
+          return (
+            <DataCardAssociationPanel
+              resourceId={resource.id}
+              onBeforeNavigateToSearch={props.onDestroyed}
+            />
+          );
+        case "mediaLibs":
+          return (
+            <MediaLibraryMappings
+              compact
+              resourceId={resource.id}
+              onMappingsChange={loadResource}
+            />
+          );
+        case "profiles":
+          return <ResourceProfiles compact resourceId={resource.id} />;
+        default:
+          return null;
+      }
+    },
+    [resource, hideTimeInfo, columns, uiOptions, refreshingCache, createPortal, t, props.onDestroyed],
+  );
 
   return (
     <Modal
       defaultVisible
       footer={false}
       size={"7xl"}
+      classNames={{
+        base: "max-w-[var(--detail-modal-w)] max-h-[var(--detail-modal-h)] w-[var(--detail-modal-w)] h-[var(--detail-modal-h)]",
+      }}
+      style={
+        {
+          "--detail-modal-w": `${layoutConfig.modalWidthPercent}vw`,
+          "--detail-modal-h": `${layoutConfig.modalHeightPercent}vh`,
+        } as React.CSSProperties
+      }
       title={
         <div className={"flex items-start justify-between gap-4 flex-wrap"}>
           {/* Left side: Title (allow wrapping) */}
           <div className="flex-shrink min-w-0 break-words">{resource?.displayName}</div>
-          {/* Right side: Media Libraries, Profiles, and Settings */}
+          {/* Right side: Conflict / AI translate / Settings */}
           <div className="flex items-center gap-3 flex-shrink-0">
-            {resource && (
-              <>
-                <MediaLibraryMappings
-                  compact
-                  resourceId={resource.id}
-                  onMappingsChange={loadResource}
-                />
-                <ResourceProfiles compact resourceId={resource.id} />
-              </>
-            )}
             {resource && conflictCount > 0 && (
               <Tooltip content={t("resource.conflict.tooltip", { count: conflictCount })}>
                 <Button
@@ -194,11 +443,7 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
               shouldCloseOnBlur
               placement={"left-start"}
               trigger={
-                <Button
-                  isIconOnly
-                  size={"sm"}
-                  variant={"light"}
-                >
+                <Button isIconOnly size={"sm"} variant={"light"}>
                   <SettingOutlined className={"text-base"} />
                 </Button>
               }
@@ -207,11 +452,13 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-default-500">{t("resource.label.columns")}</span>
                   <ButtonGroup size="sm">
-                    {([
-                      { col: 1 as const, icon: <TbColumns1 /> },
-                      { col: 2 as const, icon: <TbColumns2 /> },
-                      { col: 3 as const, icon: <TbColumns3 /> },
-                    ]).map(({ col, icon }) => (
+                    {(
+                      [
+                        { col: 1 as const, icon: <TbColumns1 /> },
+                        { col: 2 as const, icon: <TbColumns2 /> },
+                        { col: 3 as const, icon: <TbColumns3 /> },
+                      ]
+                    ).map(({ col, icon }) => (
                       <Button
                         key={col}
                         isIconOnly
@@ -231,9 +478,7 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
                     switch (key) {
                       case "AdjustPropertyScopePriority": {
                         if (resource) {
-                          createPortal(PropertyValueScopePicker, {
-                            resource,
-                          });
+                          createPortal(PropertyValueScopePicker, { resource });
                         }
                         break;
                       }
@@ -246,6 +491,10 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
                             onSaved: loadResource,
                           });
                         });
+                        break;
+                      }
+                      case "AdjustDetailLayout": {
+                        createPortal(ResourceDetailLayoutConfigModal, {});
                         break;
                       }
                     }
@@ -263,6 +512,12 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
                   >
                     {t<string>("resource.action.sortPropertiesGlobally")}
                   </ListboxItem>
+                  <ListboxItem
+                    key="AdjustDetailLayout"
+                    startContent={<LayoutOutlined className={"text-small"} />}
+                  >
+                    {t<string>("resource.detailLayout.adjustLayout")}
+                  </ListboxItem>
                 </Listbox>
               </div>
             </Popover>
@@ -271,217 +526,15 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
       }
       onDestroyed={props.onDestroyed}
     >
-      {resource && (
-        <>
-          <div className="flex gap-4 pb-2">
-            <div className="min-w-[400px] w-[400px] max-w-[400px] flex flex-col gap-4">
-              <div
-                className={
-                  "h-[400px] max-h-[400px] overflow-hidden rounded flex items-center justify-center border-1"
-                }
-                style={{ borderColor: "var(--bakaui-overlap-background)" }}
-              >
-                <ResourceCover resource={resource} showBiggerOnHover={false} />
-              </div>
-              <div className={"flex items-center"}>
-                <div className="flex-1" />
-                <Properties
-                  hidePropertyName
-                  propertyInnerDirection={"ver"}
-                  reload={loadResource}
-                  resource={resource}
-                  restrictedPropertyIds={[ReservedProperty.Rating]}
-                  restrictedPropertyPool={PropertyPool.Reserved}
-                />
-                <div className="flex-1 flex justify-end">
-                  <ButtonGroup size={"sm"}>
-                    <PlayControl
-                      PortalComponent={({ status, sources, onPlaySource, onNotFound, triggerFsDiscovery, fsDiscoveryStatus }: PlayControlPortalProps) => {
-                        // Trigger FS discovery when this button renders
-                        React.useEffect(() => {
-                          if (fsDiscoveryStatus === "idle") triggerFsDiscovery();
-                        }, [fsDiscoveryStatus, triggerFsDiscovery]);
-
-                        const mainSource = sources[0];
-                        return (
-                          <Tooltip content={t("common.action.play")}>
-                            <Button
-                              isIconOnly
-                              color="primary"
-                              onPress={() => mainSource ? onPlaySource(mainSource.source) : onNotFound()}
-                              isDisabled={status === "loading" || status === "idle"}
-                            >
-                              {status === "loading" || status === "idle" ? (
-                                <LoadingOutlined className="text-lg" spin />
-                              ) : status === "not-found" ? (
-                                <QuestionCircleOutlined className="text-lg text-warning" />
-                              ) : (
-                                <PlayCircleOutlined className="text-lg" />
-                              )}
-                            </Button>
-                          </Tooltip>
-                        );
-                      }}
-                      resource={resource}
-                    />
-                    <Tooltip content={t("common.action.openFolder")}>
-                      <Button
-                        isIconOnly
-                        color="default"
-                        variant="light"
-                        onPress={() => {
-                          BApi.resource.openResourceDirectory({
-                            id: resource.id,
-                          });
-                        }}
-                      >
-                        <FolderOpenOutlined className="text-lg" />
-                      </Button>
-                    </Tooltip>
-                    {resource.hasChildren && (
-                      <Tooltip content={t("common.action.viewChildren")}>
-                        <Button
-                          isIconOnly
-                          color="default"
-                          onPress={() => {
-                            createPortal(ChildrenModal, {
-                              resourceId: resource.id,
-                              resourceDisplayName: resource.displayName,
-                            });
-                          }}
-                        >
-                          <TiFlowChildren className="text-lg" />
-                        </Button>
-                      </Tooltip>
-                    )}
-                    {(resource.dataStates?.length ?? 0) > 0 && (
-                      <Tooltip content={t("resource.action.refreshCache.tooltip")}>
-                        <Button
-                          isIconOnly
-                          color="default"
-                          variant="light"
-                          isDisabled={refreshingCache}
-                          onPress={async () => {
-                            setRefreshingCache(true);
-                            try {
-                              const rsp = await BApi.cache.refreshResourceCache(resource.id);
-                              if (!rsp.code) {
-                                toast.success(t<string>("resource.action.refreshCache.success"));
-                                await loadResource();
-                              }
-                            } finally {
-                              setRefreshingCache(false);
-                            }
-                          }}
-                        >
-                          {refreshingCache ? (
-                            <LoadingOutlined className="text-lg" spin />
-                          ) : (
-                            <ReloadOutlined className="text-lg" />
-                          )}
-                        </Button>
-                      </Tooltip>
-                    )}
-                    <Tooltip content={hideTimeInfo ? t("common.action.showTimeInfo") : t("common.action.hideTimeInfo")}>
-                      <Button
-                        isIconOnly
-                        className={hideTimeInfo ? "opacity-40" : undefined}
-                        color="default"
-                        variant={"light"}
-                        onPress={() => {
-                          BApi.options.patchUiOptions({
-                            ...uiOptions,
-                            resource: {
-                              ...uiOptions.resource,
-                              hideResourceTimeInfo: !hideTimeInfo,
-                            },
-                          });
-                        }}
-                      >
-                        <MdCalendarMonth className={"text-lg"} />
-                      </Button>
-                    </Tooltip>
-                  </ButtonGroup>
-                </div>
-              </div>
-              {!hideTimeInfo && <BasicInfo resource={resource} />}
-            </div>
-            <div className="overflow-auto relative grow">
-              {loading ? (
-                <div className="flex items-center justify-center h-full min-h-[200px]">
-                  <Spinner label={t<string>("common.state.loadingProperties")} />
-                </div>
-              ) : (
-                <div className="flex flex-col gap-1">
-                  <ResourceHierarchy resource={resource} onReload={loadResource} />
-                  <IntroductionSummary resource={resource} onReload={loadResource} />
-                  <div className={"flex flex-col gap-1"}>
-                    <Properties
-                      columns={1}
-                      reload={loadResource}
-                      resource={resource}
-                      restrictedPropertyIds={[ReservedProperty.Cover]}
-                      restrictedPropertyPool={PropertyPool.Reserved}
-                    />
-                    {resource.playedAt && (
-                      <div
-                        className={"grid gap-x-4 gap-y-1 undefined items-center overflow-visible"}
-                        style={{
-                          gridTemplateColumns: "calc(120px) minmax(0, 1fr)",
-                        }}
-                      >
-                        <Chip
-                          className={"text-right justify-self-end"}
-                          color={"default"}
-                          radius={"sm"}
-                          size={"sm"}
-                        >
-                          {t<string>("resource.label.lastPlayedAt")}
-                        </Chip>
-                        <div className={"flex items-center gap-1"}>
-                          {resource.playedAt}
-                          <Tooltip content={t<string>("resource.action.markAsNotPlayed")}>
-                            <Button
-                              isIconOnly
-                              size={"sm"}
-                              variant={"light"}
-                              onPress={() => {
-                                BApi.resource.markResourceAsNotPlayed(resource.id).then((r) => {
-                                  if (!r.code) {
-                                    loadResource();
-                                  }
-                                });
-                              }}
-                            >
-                              <CloseCircleOutlined className={"text-base opacity-60"} />
-                            </Button>
-                          </Tooltip>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <Properties
-                    columns={columns}
-                    noPropertyContent={
-                      <div className={"flex flex-col items-center gap-2 justify-center"}>
-                        <div className={"w-4/5"}>
-                          <DisconnectOutlined className={"text-base mr-1"} />
-                          {t<string>("resource.empty.noCustomPropertyBound")}
-                        </div>
-                      </div>
-                    }
-                    reload={loadResource}
-                    resource={resource}
-                    restrictedPropertyPool={PropertyPool.Custom}
-                  />
-                </div>
-              )}
-            </div>
+      {resource ? (
+        loading ? (
+          <div className="flex items-center justify-center h-full min-h-[200px]">
+            <Spinner label={t<string>("common.state.loadingProperties")} />
           </div>
-          {/* <Divider /> */}
-          {/* <FileSystemEntries isFile={resource.isFile} path={resource.path} /> */}
-        </>
-      )}
+        ) : (
+          <MasonryViewer config={layoutConfig} renderSection={renderSection} />
+        )
+      ) : null}
     </Modal>
   );
 };

@@ -13,6 +13,7 @@ import {
 import { AiFeature } from "@/sdk/constants";
 import AiProviderPanel from "@/components/AiProviderPanel";
 import AiFeaturePanel from "@/components/AiFeaturePanel";
+import ToolConfigPanel from "@/components/FloatingAssistantV2/components/ChatView/ToolConfigPanel";
 import QuotaSettings from "./QuotaSettings";
 import CacheSettings from "./CacheSettings";
 
@@ -21,6 +22,7 @@ const aiSettingsFeatures = [
   AiFeature.Enhancer,
   AiFeature.Translation,
   AiFeature.FileProcessor,
+  AiFeature.Chat,
 ];
 
 const AISettings = () => {
@@ -34,6 +36,23 @@ const AISettings = () => {
         <div className="mt-4">
           <AiFeaturePanel features={aiSettingsFeatures} />
         </div>
+
+        <Table removeWrapper className="mt-4">
+          <TableHeader>
+            <TableColumn width={200}>
+              {t<string>("configuration.ai.tools.header")}
+            </TableColumn>
+            <TableColumn>&nbsp;</TableColumn>
+          </TableHeader>
+          <TableBody>
+            <TableRow>
+              <TableCell>&nbsp;</TableCell>
+              <TableCell>
+                <ToolConfigPanel hideTitle />
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
 
         <Table removeWrapper className="mt-4">
           <TableHeader>

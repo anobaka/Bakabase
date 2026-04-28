@@ -15,18 +15,27 @@ interface PopoverProps extends Omit<NextUIPopoverProps, "ref"> {
 
 const PopoverComponent = forwardRef<HTMLDivElement, PopoverProps>(
   (
-    { trigger, children, visible, closeMode = ["esc", "mask"], ...otherProps },
+    {
+      trigger,
+      children,
+      visible,
+      closeMode = ["esc", "mask"],
+      onVisibleChange,
+      onOpenChange,
+      ...otherProps
+    },
     ref,
   ) => {
-    // console.log(closeMode?.includes('esc'), closeMode?.includes('mask') == true);
     return (
       <HeroPopover
         isOpen={visible}
-        shouldCloseOnBlur={closeMode?.includes("esc")}
-        shouldCloseOnInteractOutside={() => closeMode?.includes("mask") == true}
-        // style={{
-        //   zIndex: 0,
-        // }}
+        shouldCloseOnBlur={false}
+        isKeyboardDismissDisabled={!closeMode?.includes("esc")}
+        {...(!closeMode?.includes("mask") ? { shouldCloseOnInteractOutside: () => false } : {})}
+        onOpenChange={(isOpen) => {
+          onOpenChange?.(isOpen);
+          onVisibleChange?.(isOpen);
+        }}
         {...otherProps}
         ref={ref}
       >

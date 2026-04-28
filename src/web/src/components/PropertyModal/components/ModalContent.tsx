@@ -30,13 +30,14 @@ import {
   Tooltip,
 } from "@/components/bakaui";
 import FeatureStatusTip from "@/components/FeatureStatusTip";
-import { PropertyType } from "@/sdk/constants";
+import { AttachmentLayout, PropertyType } from "@/sdk/constants";
 import {
   type ChoicePropertyOptions,
   type NumberPropertyOptions,
   type PercentagePropertyOptions,
   type RatingPropertyOptions,
   type TagsPropertyOptions,
+  type AttachmentPropertyOptions,
 } from "@/components/Property/models";
 import ValueRenderer from "@/components/StandardValue/ValueRenderer";
 import { deserializeStandardValue } from "@/components/StandardValue/helpers";
@@ -309,8 +310,34 @@ const ModalContent = ({ validValueTypes, value, onChange }: Props) => {
           break;
         }
         case PropertyType.Link:
-        case PropertyType.Attachment:
           break;
+        case PropertyType.Attachment: {
+          const options = (property.options as AttachmentPropertyOptions) ?? {};
+          const layout = options.layout ?? AttachmentLayout.Tile;
+
+          return (
+            <RadioGroup
+              label={t<string>("property.attachment.layout.label")}
+              orientation="horizontal"
+              value={layout.toString()}
+              onValueChange={(v) => {
+                patchProperty({
+                  options: {
+                    ...options,
+                    layout: Number(v) as AttachmentLayout,
+                  },
+                });
+              }}
+            >
+              <Radio value={AttachmentLayout.Tile.toString()}>
+                {t<string>("property.attachment.layout.tile")}
+              </Radio>
+              <Radio value={AttachmentLayout.Carousel.toString()}>
+                {t<string>("property.attachment.layout.carousel")}
+              </Radio>
+            </RadioGroup>
+          );
+        }
         case PropertyType.Date:
           break;
         case PropertyType.DateTime:

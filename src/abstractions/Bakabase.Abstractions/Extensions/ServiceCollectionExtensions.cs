@@ -10,6 +10,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddBakabaseComponents(this IServiceCollection services)
     {
         services.TryAddSingleton<IFileManager, FileManager>();
+        services.TryAddSingleton<IAppDataPathRelocator, AppDataPathRelocator>();
         return services;
     }
 

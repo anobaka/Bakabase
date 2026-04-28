@@ -38,6 +38,8 @@ import enPathMarks from "@/locales/en/pages/pathMarks.json";
 import enPathMarkConfig from "@/locales/en/pages/pathMarkConfig.json";
 import enComparison from "@/locales/en/pages/comparison.json";
 import enResourceSource from "@/locales/en/pages/resourceSource.json";
+import enDataCard from "@/locales/en/pages/dataCard.json";
+import enHealthScore from "@/locales/en/pages/healthScore.json";
 
 // English - Components
 import enFileExplorer from "@/locales/en/components/fileExplorer.json";
@@ -52,6 +54,7 @@ import enCookieValidator from "@/locales/en/components/cookieValidator.json";
 import enFileSystemSelector from "@/locales/en/components/fileSystemSelector.json";
 import enPlaylist from "@/locales/en/components/playlist.json";
 import enResourceTransfer from "@/locales/en/components/resourceTransfer.json";
+import enBakaChat from "@/locales/en/components/bakaChat.json";
 
 // New modular imports - Chinese
 import cnCommon from "@/locales/cn/common.json";
@@ -90,6 +93,8 @@ import cnPathMarks from "@/locales/cn/pages/pathMarks.json";
 import cnPathMarkConfig from "@/locales/cn/pages/pathMarkConfig.json";
 import cnComparison from "@/locales/cn/pages/comparison.json";
 import cnResourceSource from "@/locales/cn/pages/resourceSource.json";
+import cnDataCard from "@/locales/cn/pages/dataCard.json";
+import cnHealthScore from "@/locales/cn/pages/healthScore.json";
 
 // Chinese - Components
 import cnFileExplorer from "@/locales/cn/components/fileExplorer.json";
@@ -104,6 +109,7 @@ import cnCookieValidator from "@/locales/cn/components/cookieValidator.json";
 import cnFileSystemSelector from "@/locales/cn/components/fileSystemSelector.json";
 import cnPlaylist from "@/locales/cn/components/playlist.json";
 import cnResourceTransfer from "@/locales/cn/components/resourceTransfer.json";
+import cnBakaChat from "@/locales/cn/components/bakaChat.json";
 
 // Merge all English resources
 const enResources = {
@@ -142,6 +148,8 @@ const enResources = {
   ...enPathMarkConfig,
   ...enComparison,
   ...enResourceSource,
+  ...enDataCard,
+  ...enHealthScore,
   // Components
   ...enFileExplorer,
   ...enResourceFilter,
@@ -155,6 +163,7 @@ const enResources = {
   ...enFileSystemSelector,
   ...enPlaylist,
   ...enResourceTransfer,
+  ...enBakaChat,
 };
 
 // Merge all Chinese resources
@@ -194,6 +203,8 @@ const cnResources = {
   ...cnPathMarkConfig,
   ...cnComparison,
   ...cnResourceSource,
+  ...cnDataCard,
+  ...cnHealthScore,
   // Components
   ...cnFileExplorer,
   ...cnResourceFilter,
@@ -207,6 +218,7 @@ const cnResources = {
   ...cnFileSystemSelector,
   ...cnPlaylist,
   ...cnResourceTransfer,
+  ...cnBakaChat,
 };
 
 // 只初始化一次，防止热更新或多次 import 时重复初始化

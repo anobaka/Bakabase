@@ -10,6 +10,7 @@ namespace Bakabase.InsideWorld.Business.Components.Configurations.Models.Input
         public StartupPage? StartupPage { get; set; }
         public bool? IsMenuCollapsed { get; set; }
         public bool? HideResourceCovers { get; set; }
+        public ResourceDetailLayoutConfig? ResourceDetailLayout { get; set; }
         public List<PropertyKey>? LatestUsedProperties { get; set; }
     }
 }

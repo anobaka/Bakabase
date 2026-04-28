@@ -46,12 +46,15 @@ interface TaskTableProps {
 type TaskFilter = "all" | "running" | "pending" | "completed" | "failed";
 
 const TaskStatusIcon = ({ task, onShowError }: { task: BTask; onShowError: () => void }) => {
+  const { t } = useTranslation();
   switch (task.status) {
     case BTaskStatus.NotStarted:
       return (
-        <Chip color="warning" size="sm" variant="light">
-          <ClockCircleOutlined className="text-base" />
-        </Chip>
+        <Tooltip content={t('floatingAssistant.tip.willRunAutomatically')} placement="top">
+          <Chip color="warning" size="sm" variant="light">
+            <ClockCircleOutlined className="text-base" />
+          </Chip>
+        </Tooltip>
       );
     case BTaskStatus.Cancelled:
       return (
@@ -186,18 +189,7 @@ export function TaskTable({ tasks }: TaskTableProps) {
       });
     }
 
-    // Sort: running first, then errors, then others
-    return [...result].sort((a, b) => {
-      const order = {
-        [BTaskStatus.Running]: 0,
-        [BTaskStatus.Error]: 1,
-        [BTaskStatus.Paused]: 2,
-        [BTaskStatus.NotStarted]: 3,
-        [BTaskStatus.Completed]: 4,
-        [BTaskStatus.Cancelled]: 5,
-      };
-      return (order[a.status] ?? 99) - (order[b.status] ?? 99);
-    });
+    return [...result].sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
   }, [tasks, filter, typeFilter]);
 
   const columns = useMemo(() => [
@@ -528,16 +520,12 @@ export function TaskTable({ tasks }: TaskTableProps) {
             </TableCell>
             {/* Time - combined started + elapsed */}
             <TableCell>
-              <div className="flex flex-col text-xs whitespace-nowrap">
-                {task.startedAt && (
-                  <span className="text-default-500">{dayjs(task.startedAt).format("HH:mm:ss")}</span>
-                )}
-                {(() => {
+              <div className="flex flex-col text-xs whitespace-nowrap h-[2lh]">
+                <span className="text-default-500">{task.startedAt ? dayjs(task.startedAt).format("HH:mm:ss") : '--:--:--'}</span>
+                <span className="font-medium">{(() => {
                   const ms = computeDisplayElapsedMs(task);
-                  return ms != null ? (
-                    <span className="font-medium">{dayjs.duration(ms).format("HH:mm:ss")}</span>
-                  ) : null;
-                })()}
+                  return ms != null ? dayjs.duration(ms).format("HH:mm:ss") : '--:--:--';
+                })()}</span>
               </div>
             </TableCell>
             {/* Remaining */}

@@ -72,8 +72,8 @@
   "configuration.others.enablePreRelease.tip": "优先使用具有新功能但稳定性较低的测试版本",
   "configuration.others.enableTracking": "启用匿名数据追踪",
   "configuration.others.enableTracking.tip": "我们使用 Microsoft Clarity 追踪匿名数据，这将帮助我们改进产品体验。",
-  "configuration.others.maxParallelism": "CPU 利用程度",
-  "configuration.others.maxParallelism.tip": "CPU 密集型操作的并行程度。设为 1 表示最低利用。留空使用默认值（CPU 核心数的一半）。",
+  "configuration.others.maxParallelism": "CPU 线程数",
+  "configuration.others.maxParallelism.tip": "CPU 密集型操作的并行线程数。设为 1 表示单线程。留空使用默认值（CPU 核心数的一半）。",
 
   "configuration.development.title": "开发",
   "configuration.development.apiEndpoints": "API 端点",
@@ -127,6 +127,7 @@
   "configuration.ai.feature.Translation": "翻译",
   "configuration.ai.feature.FileProcessor": "文件处理器",
   "configuration.ai.feature.PostParser": "帖子解析",
+  "configuration.ai.feature.Chat": "对话",
   "configuration.ai.feature.provider": "提供商",
   "configuration.ai.feature.model": "模型",
   "configuration.ai.feature.temperature": "Temperature",
@@ -174,6 +175,8 @@
   "configuration.ai.auditLog.allProviders": "全部提供商",
   "configuration.ai.auditLog.detail": "详情",
   "configuration.ai.auditLog.noContent": "无内容",
+
+  "configuration.ai.tools.header": "工具",
 
   "configuration.ai.quota.title": "限额管理",
   "configuration.ai.quota.auditContent": "记录请求/响应内容",

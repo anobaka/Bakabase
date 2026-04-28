@@ -11,4 +11,5 @@ public record ReservedPropertyValue
     /// Standard value (attachment) serialized
     /// </summary>
     public string? CoverPaths { get; set; }
+    public string? Name { get; set; }
 }

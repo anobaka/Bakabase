@@ -1,6 +1,6 @@
 "use client";
 
-import type { ValueRendererProps } from "../models";
+import type { ValueRendererProps, ValueRendererSize } from "../models";
 
 import { useTranslation } from "react-i18next";
 import {
@@ -16,10 +16,11 @@ import { AiOutlineFile } from "react-icons/ai";
 
 import envConfig from "@/config/env";
 import NotSet, { LightText } from "@/components/StandardValue/ValueRenderer/Renderers/components/LightText";
-import { Button, Popover } from "@/components/bakaui";
+import { Button, Carousel, Popover } from "@/components/bakaui";
 import { splitPathIntoSegments } from "@/components/utils";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { FileSystemSelectorModal } from "@/components/FileSystemSelector";
+import { AttachmentLayout } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
 
 type AttachmentValueRendererProps = Omit<
@@ -27,7 +28,13 @@ type AttachmentValueRendererProps = Omit<
   "variant"
 > & {
   variant: ValueRendererProps<string[]>["variant"];
-  size?: "sm" | "md" | "lg";
+  size?: ValueRendererSize;
+  layout?: AttachmentLayout;
+  /**
+   * When true, the renderer adapts to its parent container width with a
+   * square aspect ratio. Used by container-driven layouts like data cards.
+   */
+  fill?: boolean;
 };
 
 const AttachmentValueRenderer = ({
@@ -35,6 +42,8 @@ const AttachmentValueRenderer = ({
   variant,
   editor,
   size,
+  fill,
+  layout = AttachmentLayout.Tile,
   isReadonly: propsIsReadonly,
   isEditing: controlledIsEditing,
   defaultEditing = false,
@@ -123,13 +132,38 @@ const AttachmentValueRenderer = ({
     return segments[segments.length - 1] || path;
   };
 
-  // Size mappings
+  const isFill = fill === true;
+
   const sizeConfig = {
     sm: { thumbnail: 60, iconSize: "text-2xl", gap: 1 },
     md: { thumbnail: 80, iconSize: "text-3xl", gap: 2 },
     lg: { thumbnail: 100, iconSize: "text-4xl", gap: 2 },
   };
-  const config = sizeConfig[size ?? "md"];
+  const presetSize: ValueRendererSize = size ?? "md";
+  const config = sizeConfig[presetSize];
+
+  const renderUploadButton = () => (
+    <Button
+      size="sm"
+      variant="light"
+      startContent={isUploading ? <LoadingOutlined /> : <UploadOutlined />}
+      className="justify-start"
+      onClick={triggerFileUpload}
+      isDisabled={isUploading}
+    >
+      {t("property.attachment.uploadFromLocal")}
+    </Button>
+  );
+
+  // Single shared hidden file input (rendered once per component instance)
+  const renderHiddenFileInput = () => (
+    <input
+      ref={fileInputRef}
+      type="file"
+      className="hidden"
+      onChange={handleFileUpload}
+    />
+  );
 
   // Shared popover content for adding files
   const renderAddPopoverContent = () => (
@@ -143,16 +177,7 @@ const AttachmentValueRenderer = ({
       >
         {t("property.attachment.selectFromFileSystem")}
       </Button>
-      <Button
-        size="sm"
-        variant="light"
-        startContent={isUploading ? <LoadingOutlined /> : <UploadOutlined />}
-        className="justify-start"
-        onClick={triggerFileUpload}
-        isDisabled={isUploading}
-      >
-        {t("property.attachment.uploadFromLocal")}
-      </Button>
+      {renderUploadButton()}
       <div className="text-xs text-default-400 px-2">
         {t("property.attachment.uploadHint")}
       </div>
@@ -176,7 +201,7 @@ const AttachmentValueRenderer = ({
       <Button
         isIconOnly
         color="primary"
-        size={size}
+        size={presetSize}
         variant="flat"
         className="min-w-0"
         style={{
@@ -190,12 +215,7 @@ const AttachmentValueRenderer = ({
 
     return (
       <>
-        <input
-          ref={fileInputRef}
-          type="file"
-          className="hidden"
-          onChange={handleFileUpload}
-        />
+        {renderHiddenFileInput()}
         <Popover
           isOpen={addPopoverOpen}
           onOpenChange={setAddPopoverOpen}
@@ -270,6 +290,86 @@ const AttachmentValueRenderer = ({
     );
   };
 
+  // Fill-mode attachment: image fills its parent width, square aspect ratio.
+  // Delete button floats at top-right on hover, same as the fixed-size variant.
+  const renderFillAttachment = (path: string, showDelete: boolean) => {
+    const fileName = getFileName(path);
+    return (
+      <div
+        key={path}
+        className="relative group w-full"
+        style={{ aspectRatio: "1 / 1" }}
+      >
+        <div
+          className="cursor-pointer w-full h-full"
+          onClick={() => openFile(path)}
+          title={path}
+        >
+          <Img
+            alt={fileName}
+            loader={<LoadingOutlined className={config.iconSize} />}
+            src={[
+              `${envConfig.apiEndpoint}/tool/thumbnail?path=${encodeURIComponent(path)}`,
+            ]}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+            }}
+            unloader={
+              <div className="flex items-center justify-center bg-default-100 rounded w-full h-full">
+                <AiOutlineFile className={config.iconSize} />
+              </div>
+            }
+          />
+        </div>
+        {showDelete && (
+          <Button
+            isIconOnly
+            color="danger"
+            size="sm"
+            variant="flat"
+            className="absolute top-1 right-1 min-w-0 w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={(e) => {
+              e.stopPropagation();
+              removeFile(path);
+            }}
+          >
+            <DeleteOutlined className="text-xs" />
+          </Button>
+        )}
+      </div>
+    );
+  };
+
+  // Floating "+" trigger for fill mode. Anchored bottom-right of the container,
+  // so it stays reachable regardless of how many attachments exist.
+  const renderFloatingAddButton = () => {
+    if (!canEdit) return null;
+    return (
+      <>
+        {renderHiddenFileInput()}
+        <Popover
+          isOpen={addPopoverOpen}
+          onOpenChange={setAddPopoverOpen}
+          trigger={
+            <Button
+              isIconOnly
+              color="primary"
+              size="sm"
+              variant="flat"
+              className="absolute bottom-1 right-1 min-w-0 w-7 h-7 shadow-md z-10"
+            >
+              <PlusOutlined className="text-sm" />
+            </Button>
+          }
+        >
+          {renderAddPopoverContent()}
+        </Popover>
+      </>
+    );
+  };
+
   // Default variant
   if (v === "default") {
     const showEditControls = isEditing === true || (controlledIsEditing === undefined && !!canEdit);
@@ -277,13 +377,73 @@ const AttachmentValueRenderer = ({
     if (!value || value.length === 0) {
       // If readonly, always show NotSet regardless of isEditing
       if (isReadonly) {
-        return <NotSet size={size} />;
+        return <NotSet size={presetSize} />;
       }
       if (showEditControls) {
+        // In fill mode, empty state is a full-width square placeholder so the
+        // cell does not collapse to a small 80px button inside a big data card cell.
+        if (isFill) {
+          return (
+            <>
+              {renderHiddenFileInput()}
+              <Popover
+                isOpen={addPopoverOpen}
+                onOpenChange={setAddPopoverOpen}
+                trigger={
+                  <div
+                    className="w-full flex items-center justify-center rounded border-2 border-dashed border-default-300 hover:border-primary hover:bg-default-50 cursor-pointer transition-colors"
+                    style={{ aspectRatio: "1 / 1" }}
+                  >
+                    <PlusOutlined className="text-3xl text-default-400" />
+                  </div>
+                }
+              >
+                {renderAddPopoverContent()}
+              </Popover>
+            </>
+          );
+        }
         return renderAddButton();
       }
       // Only show click handler if has editor
-      return <NotSet size={size} onClick={canEdit ? handleClick : undefined} />;
+      return <NotSet size={presetSize} onClick={canEdit ? handleClick : undefined} />;
+    }
+
+    if (isFill) {
+      // Carousel: single image shown at a time, filling the container.
+      if (layout === AttachmentLayout.Carousel) {
+        return (
+          <div className="relative w-full">
+            <Carousel
+              dots={value.length > 1}
+              infinite={false}
+              style={{ width: "100%" }}
+            >
+              {value.map((path) => (
+                <div key={path}>
+                  {renderFillAttachment(path, showEditControls)}
+                </div>
+              ))}
+            </Carousel>
+            {showEditControls && renderFloatingAddButton()}
+          </div>
+        );
+      }
+
+      // Tile: auto-fit grid. 1 image → fills; 2+ → two-column square grid.
+      return (
+        <div className="relative w-full">
+          <div
+            className="grid gap-1 w-full"
+            style={{
+              gridTemplateColumns: "repeat(auto-fit, minmax(50%, 1fr))",
+            }}
+          >
+            {value.map((path) => renderFillAttachment(path, showEditControls))}
+          </div>
+          {showEditControls && renderFloatingAddButton()}
+        </div>
+      );
     }
 
     return (
@@ -301,24 +461,19 @@ const AttachmentValueRenderer = ({
     if (!value || value.length === 0) {
       // If readonly, always show NotSet without click handler
       if (isReadonly) {
-        return <NotSet size={size} />;
+        return <NotSet size={presetSize} />;
       }
       // Light variant always uses text style - show "click to set" with popover for adding
       if (showEditControls) {
         return (
           <>
-            <input
-              ref={fileInputRef}
-              type="file"
-              className="hidden"
-              onChange={handleFileUpload}
-            />
+            {renderHiddenFileInput()}
             <Popover
               isOpen={addPopoverOpen}
               onOpenChange={setAddPopoverOpen}
               trigger={
                 <span className="cursor-pointer">
-                  <NotSet size={size} onClick={() => {}} />
+                  <NotSet size={presetSize} onClick={() => {}} />
                 </span>
               }
             >
@@ -328,7 +483,7 @@ const AttachmentValueRenderer = ({
         );
       }
       // Only show click handler if has editor
-      return <NotSet size={size} onClick={canEdit ? handleClick : undefined} />;
+      return <NotSet size={presetSize} onClick={canEdit ? handleClick : undefined} />;
     }
 
     // Render filename with optional popover for editing
@@ -370,16 +525,7 @@ const AttachmentValueRenderer = ({
               >
                 {t("property.attachment.selectFromFileSystem")}
               </Button>
-              <Button
-                size="sm"
-                variant="light"
-                startContent={isUploading ? <LoadingOutlined /> : <UploadOutlined />}
-                className="justify-start"
-                onClick={triggerFileUpload}
-                isDisabled={isUploading}
-              >
-                {t("property.attachment.uploadFromLocal")}
-              </Button>
+              {renderUploadButton()}
             </div>
           </Popover>
         );
@@ -389,14 +535,9 @@ const AttachmentValueRenderer = ({
     };
 
     return (
-      <LightText size={size}>
+      <LightText size={presetSize}>
         <>
-          <input
-            ref={fileInputRef}
-            type="file"
-            className="hidden"
-            onChange={handleFileUpload}
-          />
+          {showEditControls && renderHiddenFileInput()}
           {value.map((path, i) => (
             <span key={path}>
               {i !== 0 && ", "}

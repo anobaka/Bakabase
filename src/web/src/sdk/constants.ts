@@ -265,7 +265,8 @@ export enum InternalProperty {
   PlayedAt = 23,
   MediaLibraryV2 = 24,
   MediaLibraryV2Multi = 25,
-  Source = 26
+  Source = 26,
+  HealthScore = 28
 }
 
 export const internalProperties = [
@@ -280,7 +281,8 @@ export const internalProperties = [
   { label: 'PlayedAt', value: InternalProperty.PlayedAt },
   { label: 'MediaLibraryV2', value: InternalProperty.MediaLibraryV2 },
   { label: 'MediaLibraryV2Multi', value: InternalProperty.MediaLibraryV2Multi },
-  { label: 'Source', value: InternalProperty.Source }
+  { label: 'Source', value: InternalProperty.Source },
+  { label: 'HealthScore', value: InternalProperty.HealthScore }
 ] as const;
 
 export const InternalPropertyLabel: Record<InternalProperty, string> = {
@@ -295,7 +297,8 @@ export const InternalPropertyLabel: Record<InternalProperty, string> = {
   [InternalProperty.PlayedAt]: 'PlayedAt',
   [InternalProperty.MediaLibraryV2]: 'MediaLibraryV2',
   [InternalProperty.MediaLibraryV2Multi]: 'MediaLibraryV2Multi',
-  [InternalProperty.Source]: 'Source'
+  [InternalProperty.Source]: 'Source',
+  [InternalProperty.HealthScore]: 'HealthScore'
 };
 
 export enum MediaLibraryTemplateAdditionalItem {
@@ -604,19 +607,22 @@ export const PropertyValueTypeLabel: Record<PropertyValueType, string> = {
 export enum ReservedProperty {
   Introduction = 12,
   Rating = 13,
-  Cover = 22
+  Cover = 22,
+  Name = 27
 }
 
 export const reservedProperties = [
   { label: 'Introduction', value: ReservedProperty.Introduction },
   { label: 'Rating', value: ReservedProperty.Rating },
-  { label: 'Cover', value: ReservedProperty.Cover }
+  { label: 'Cover', value: ReservedProperty.Cover },
+  { label: 'Name', value: ReservedProperty.Name }
 ] as const;
 
 export const ReservedPropertyLabel: Record<ReservedProperty, string> = {
   [ReservedProperty.Introduction]: 'Introduction',
   [ReservedProperty.Rating]: 'Rating',
-  [ReservedProperty.Cover]: 'Cover'
+  [ReservedProperty.Cover]: 'Cover',
+  [ReservedProperty.Name]: 'Name'
 };
 
 export enum ResourceCacheType {
@@ -998,6 +1004,21 @@ export const BTaskTypeLabel: Record<BTaskType, string> = {
   [BTaskType.CopyFiles]: 'CopyFiles',
   [BTaskType.Download]: 'Download',
   [BTaskType.Any]: 'Any'
+};
+
+export enum AttachmentLayout {
+  Tile = 0,
+  Carousel = 1
+}
+
+export const attachmentLayouts = [
+  { label: 'Tile', value: AttachmentLayout.Tile },
+  { label: 'Carousel', value: AttachmentLayout.Carousel }
+] as const;
+
+export const AttachmentLayoutLabel: Record<AttachmentLayout, string> = {
+  [AttachmentLayout.Tile]: 'Tile',
+  [AttachmentLayout.Carousel]: 'Carousel'
 };
 
 export enum ComparisonMode {
@@ -1559,7 +1580,9 @@ export enum ResourceProperty {
   PlayedAt = 23,
   MediaLibraryV2 = 24,
   MediaLibraryV2Multi = 25,
-  Source = 26
+  Source = 26,
+  Name = 27,
+  HealthScore = 28
 }
 
 export const resourceProperties = [
@@ -1578,7 +1601,9 @@ export const resourceProperties = [
   { label: 'PlayedAt', value: ResourceProperty.PlayedAt },
   { label: 'MediaLibraryV2', value: ResourceProperty.MediaLibraryV2 },
   { label: 'MediaLibraryV2Multi', value: ResourceProperty.MediaLibraryV2Multi },
-  { label: 'Source', value: ResourceProperty.Source }
+  { label: 'Source', value: ResourceProperty.Source },
+  { label: 'Name', value: ResourceProperty.Name },
+  { label: 'HealthScore', value: ResourceProperty.HealthScore }
 ] as const;
 
 export const ResourcePropertyLabel: Record<ResourceProperty, string> = {
@@ -1597,7 +1622,9 @@ export const ResourcePropertyLabel: Record<ResourceProperty, string> = {
   [ResourceProperty.PlayedAt]: 'PlayedAt',
   [ResourceProperty.MediaLibraryV2]: 'MediaLibraryV2',
   [ResourceProperty.MediaLibraryV2Multi]: 'MediaLibraryV2Multi',
-  [ResourceProperty.Source]: 'Source'
+  [ResourceProperty.Source]: 'Source',
+  [ResourceProperty.Name]: 'Name',
+  [ResourceProperty.HealthScore]: 'HealthScore'
 };
 
 export enum SearchableReservedProperty {
@@ -1611,7 +1638,8 @@ export enum SearchableReservedProperty {
   Cover = 22,
   MediaLibraryV2 = 24,
   MediaLibraryV2Multi = 25,
-  Source = 26
+  Source = 26,
+  Name = 27
 }
 
 export const searchableReservedProperties = [
@@ -1625,7 +1653,8 @@ export const searchableReservedProperties = [
   { label: 'Cover', value: SearchableReservedProperty.Cover },
   { label: 'MediaLibraryV2', value: SearchableReservedProperty.MediaLibraryV2 },
   { label: 'MediaLibraryV2Multi', value: SearchableReservedProperty.MediaLibraryV2Multi },
-  { label: 'Source', value: SearchableReservedProperty.Source }
+  { label: 'Source', value: SearchableReservedProperty.Source },
+  { label: 'Name', value: SearchableReservedProperty.Name }
 ] as const;
 
 export const SearchableReservedPropertyLabel: Record<SearchableReservedProperty, string> = {
@@ -1639,7 +1668,8 @@ export const SearchableReservedPropertyLabel: Record<SearchableReservedProperty,
   [SearchableReservedProperty.Cover]: 'Cover',
   [SearchableReservedProperty.MediaLibraryV2]: 'MediaLibraryV2',
   [SearchableReservedProperty.MediaLibraryV2Multi]: 'MediaLibraryV2Multi',
-  [SearchableReservedProperty.Source]: 'Source'
+  [SearchableReservedProperty.Source]: 'Source',
+  [SearchableReservedProperty.Name]: 'Name'
 };
 
 export enum StartupPage {
@@ -1722,7 +1752,8 @@ export enum ResourceSearchSortableProperty {
   FileModifyDt = 2,
   Filename = 3,
   AddDt = 6,
-  PlayedAt = 11
+  PlayedAt = 11,
+  HealthScore = 12
 }
 
 export const resourceSearchSortableProperties = [
@@ -1730,7 +1761,8 @@ export const resourceSearchSortableProperties = [
   { label: 'FileModifyDt', value: ResourceSearchSortableProperty.FileModifyDt },
   { label: 'Filename', value: ResourceSearchSortableProperty.Filename },
   { label: 'AddDt', value: ResourceSearchSortableProperty.AddDt },
-  { label: 'PlayedAt', value: ResourceSearchSortableProperty.PlayedAt }
+  { label: 'PlayedAt', value: ResourceSearchSortableProperty.PlayedAt },
+  { label: 'HealthScore', value: ResourceSearchSortableProperty.HealthScore }
 ] as const;
 
 export const ResourceSearchSortablePropertyLabel: Record<ResourceSearchSortableProperty, string> = {
@@ -1738,7 +1770,8 @@ export const ResourceSearchSortablePropertyLabel: Record<ResourceSearchSortableP
   [ResourceSearchSortableProperty.FileModifyDt]: 'FileModifyDt',
   [ResourceSearchSortableProperty.Filename]: 'Filename',
   [ResourceSearchSortableProperty.AddDt]: 'AddDt',
-  [ResourceSearchSortableProperty.PlayedAt]: 'PlayedAt'
+  [ResourceSearchSortableProperty.PlayedAt]: 'PlayedAt',
+  [ResourceSearchSortableProperty.HealthScore]: 'HealthScore'
 };
 
 export enum CustomPropertyAdditionalItem {
@@ -3190,12 +3223,37 @@ export const FileOperationTypeLabel: Record<FileOperationType, string> = {
   [FileOperationType.CreateDirectory]: 'CreateDirectory'
 };
 
+export enum ChatStreamEventType {
+  TextDelta = 1,
+  ToolCallStart = 2,
+  ToolCallResult = 3,
+  Done = 4,
+  Error = 5
+}
+
+export const chatStreamEventTypes = [
+  { label: 'TextDelta', value: ChatStreamEventType.TextDelta },
+  { label: 'ToolCallStart', value: ChatStreamEventType.ToolCallStart },
+  { label: 'ToolCallResult', value: ChatStreamEventType.ToolCallResult },
+  { label: 'Done', value: ChatStreamEventType.Done },
+  { label: 'Error', value: ChatStreamEventType.Error }
+] as const;
+
+export const ChatStreamEventTypeLabel: Record<ChatStreamEventType, string> = {
+  [ChatStreamEventType.TextDelta]: 'TextDelta',
+  [ChatStreamEventType.ToolCallStart]: 'ToolCallStart',
+  [ChatStreamEventType.ToolCallResult]: 'ToolCallResult',
+  [ChatStreamEventType.Done]: 'Done',
+  [ChatStreamEventType.Error]: 'Error'
+};
+
 export enum AiFeature {
   Default = 0,
   Enhancer = 1,
   Translation = 2,
   FileProcessor = 3,
-  PostParser = 4
+  PostParser = 4,
+  Chat = 5
 }
 
 export const aiFeatures = [
@@ -3203,7 +3261,8 @@ export const aiFeatures = [
   { label: 'Enhancer', value: AiFeature.Enhancer },
   { label: 'Translation', value: AiFeature.Translation },
   { label: 'FileProcessor', value: AiFeature.FileProcessor },
-  { label: 'PostParser', value: AiFeature.PostParser }
+  { label: 'PostParser', value: AiFeature.PostParser },
+  { label: 'Chat', value: AiFeature.Chat }
 ] as const;
 
 export const AiFeatureLabel: Record<AiFeature, string> = {
@@ -3211,7 +3270,8 @@ export const AiFeatureLabel: Record<AiFeature, string> = {
   [AiFeature.Enhancer]: 'Enhancer',
   [AiFeature.Translation]: 'Translation',
   [AiFeature.FileProcessor]: 'FileProcessor',
-  [AiFeature.PostParser]: 'PostParser'
+  [AiFeature.PostParser]: 'PostParser',
+  [AiFeature.Chat]: 'Chat'
 };
 
 export enum LlmCallStatus {
@@ -4042,6 +4102,90 @@ export const StandardValueConversionRuleLabel: Record<StandardValueConversionRul
   [StandardValueConversionRule.ValueToBoolean]: 'ValueToBoolean'
 };
 
+export enum DataCardMatchMode {
+  Any = 1,
+  All = 2
+}
+
+export const dataCardMatchModes = [
+  { label: 'Any', value: DataCardMatchMode.Any },
+  { label: 'All', value: DataCardMatchMode.All }
+] as const;
+
+export const DataCardMatchModeLabel: Record<DataCardMatchMode, string> = {
+  [DataCardMatchMode.Any]: 'Any',
+  [DataCardMatchMode.All]: 'All'
+};
+
+export enum ResourceMatcherLeafKind {
+  Property = 1,
+  File = 2
+}
+
+export const resourceMatcherLeafKinds = [
+  { label: 'Property', value: ResourceMatcherLeafKind.Property },
+  { label: 'File', value: ResourceMatcherLeafKind.File }
+] as const;
+
+export const ResourceMatcherLeafKindLabel: Record<ResourceMatcherLeafKind, string> = {
+  [ResourceMatcherLeafKind.Property]: 'Property',
+  [ResourceMatcherLeafKind.File]: 'File'
+};
+
+export enum ComparisonOperator {
+  Equals = 1,
+  NotEquals = 2,
+  GreaterThan = 3,
+  LessThan = 4,
+  GreaterThanOrEquals = 5,
+  LessThanOrEquals = 6
+}
+
+export const comparisonOperators = [
+  { label: 'Equals', value: ComparisonOperator.Equals },
+  { label: 'NotEquals', value: ComparisonOperator.NotEquals },
+  { label: 'GreaterThan', value: ComparisonOperator.GreaterThan },
+  { label: 'LessThan', value: ComparisonOperator.LessThan },
+  { label: 'GreaterThanOrEquals', value: ComparisonOperator.GreaterThanOrEquals },
+  { label: 'LessThanOrEquals', value: ComparisonOperator.LessThanOrEquals }
+] as const;
+
+export const ComparisonOperatorLabel: Record<ComparisonOperator, string> = {
+  [ComparisonOperator.Equals]: 'Equals',
+  [ComparisonOperator.NotEquals]: 'NotEquals',
+  [ComparisonOperator.GreaterThan]: 'GreaterThan',
+  [ComparisonOperator.LessThan]: 'LessThan',
+  [ComparisonOperator.GreaterThanOrEquals]: 'GreaterThanOrEquals',
+  [ComparisonOperator.LessThanOrEquals]: 'LessThanOrEquals'
+};
+
+export enum PredicateMediaType {
+  All = 0,
+  Video = 1,
+  Image = 2,
+  Audio = 3,
+  Text = 4,
+  Application = 5
+}
+
+export const predicateMediaTypes = [
+  { label: 'All', value: PredicateMediaType.All },
+  { label: 'Video', value: PredicateMediaType.Video },
+  { label: 'Image', value: PredicateMediaType.Image },
+  { label: 'Audio', value: PredicateMediaType.Audio },
+  { label: 'Text', value: PredicateMediaType.Text },
+  { label: 'Application', value: PredicateMediaType.Application }
+] as const;
+
+export const PredicateMediaTypeLabel: Record<PredicateMediaType, string> = {
+  [PredicateMediaType.All]: 'All',
+  [PredicateMediaType.Video]: 'Video',
+  [PredicateMediaType.Image]: 'Image',
+  [PredicateMediaType.Audio]: 'Audio',
+  [PredicateMediaType.Text]: 'Text',
+  [PredicateMediaType.Application]: 'Application'
+};
+
 export enum PresetProperty {
   Name = 1,
   ReleaseDate = 2,
@@ -4361,4 +4505,37 @@ export const CompressedFileDetectionResultStatusLabel: Record<CompressedFileDete
   [CompressedFileDetectionResultStatus.Inprogress]: 'Inprogress',
   [CompressedFileDetectionResultStatus.Complete]: 'Complete',
   [CompressedFileDetectionResultStatus.Error]: 'Error'
+};
+
+export const ExtensionMediaTypes: Record<string, MediaType> = {
+  ".avi": MediaType.Video,
+  ".bmp": MediaType.Image,
+  ".exe": MediaType.Application,
+  ".flac": MediaType.Audio,
+  ".flv": MediaType.Video,
+  ".gif": MediaType.Image,
+  ".ico": MediaType.Image,
+  ".jpeg": MediaType.Image,
+  ".jpg": MediaType.Image,
+  ".m4a": MediaType.Audio,
+  ".mid": MediaType.Audio,
+  ".midi": MediaType.Audio,
+  ".mkv": MediaType.Video,
+  ".mp3": MediaType.Audio,
+  ".mp4": MediaType.Video,
+  ".mpeg": MediaType.Video,
+  ".ogg": MediaType.Audio,
+  ".png": MediaType.Image,
+  ".rmvb": MediaType.Video,
+  ".svg": MediaType.Image,
+  ".tiff": MediaType.Image,
+  ".ts": MediaType.Video,
+  ".txt": MediaType.Text,
+  ".wav": MediaType.Audio,
+  ".weba": MediaType.Audio,
+  ".webm": MediaType.Video,
+  ".webp": MediaType.Image,
+  ".wmv": MediaType.Video,
+  "3gp": MediaType.Video,
+  "mov": MediaType.Video
 };

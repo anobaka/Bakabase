@@ -1,0 +1,1999 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Text;
+using System.Text.Json;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Configuration;
+using Bakabase.Abstractions.Components.Tasks;
+using Bakabase.Abstractions.Components.FileSystem;
+using Bakabase.Abstractions.Extensions;
+using Bakabase.Abstractions.Services;
+using Bakabase.Infrastructures.Components.App;
+using Bakabase.Infrastructures.Components.App.Models.Constants;
+using Bakabase.Infrastructures.Components.Gui;
+using Bakabase.InsideWorld.Business.Components;
+using Bakabase.InsideWorld.Business.Components.Compression;
+using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
+using Bakabase.InsideWorld.Business.Components.FileExplorer;
+using Bakabase.InsideWorld.Business.Components.FileExplorer.Entries;
+using Bakabase.InsideWorld.Business.Components.FileExplorer.Information;
+using Bakabase.InsideWorld.Business.Extensions;
+using Bakabase.InsideWorld.Business.Services;
+using Bakabase.InsideWorld.Models.Configs;
+using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.InsideWorld.Models.RequestModels;
+using Bakabase.Service.Extensions;
+using Bakabase.Service.Models.Input;
+using Bakabase.Service.Models.View;
+using Bakabase.Service.Models.View.Constants;
+using Bootstrap.Components.Configuration.Abstractions;
+using Bootstrap.Components.Cryptography;
+using Bootstrap.Components.Miscellaneous.ResponseBuilders;
+using Bootstrap.Components.Storage;
+using Bootstrap.Components.Tasks;
+using Bootstrap.Extensions;
+using Bootstrap.Models.Constants;
+using Bootstrap.Models.ResponseModels;
+using CliWrap;
+using CliWrap.Buffered;
+using DotNext.Collections.Generic;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using MimeKit;
+using Swashbuckle.AspNetCore.Annotations;
+
+namespace Bakabase.Service.Controllers
+{
+    [Route("~/file")]
+    public class FileController : Controller
+    {
+        private readonly ISpecialTextService _specialTextService;
+        private readonly IWebHostEnvironment _env;
+        private readonly BTaskManager _taskManager;
+        private readonly CompressedFileService _compressedFileService;
+        private readonly IBOptionsManager<FileSystemOptions> _fsOptionsManager;
+        private readonly BakabaseLocalizer _localizer;
+        private readonly IwFsWatcher _fileProcessorWatcher;
+        private readonly PasswordService _passwordService;
+        private readonly ILogger<FileController> _logger;
+        private readonly IGuiAdapter _guiAdapter;
+        private readonly FfMpegService _ffMpegService;
+        private readonly HardwareAccelerationService _hardwareAccelerationService;
+
+        private readonly ISystemPlayer _systemPlayer;
+        private readonly IFileManager _fileManager;
+        private readonly AppService _appService;
+
+        public FileController(ISpecialTextService specialTextService, IWebHostEnvironment env,
+            CompressedFileService compressedFileService, IBOptionsManager<FileSystemOptions> fsOptionsManager,
+            IwFsWatcher fileProcessorWatcher, PasswordService passwordService, ILogger<FileController> logger,
+            BakabaseLocalizer localizer, BTaskManager taskManager, IGuiAdapter guiAdapter,
+            FfMpegService ffMpegService, HardwareAccelerationService hardwareAccelerationService,
+            ISystemPlayer systemPlayer, IFileManager fileManager, AppService appService)
+        {
+            _specialTextService = specialTextService;
+            _env = env;
+            _compressedFileService = compressedFileService;
+            _fsOptionsManager = fsOptionsManager;
+            _fileProcessorWatcher = fileProcessorWatcher;
+            _passwordService = passwordService;
+            _logger = logger;
+            _localizer = localizer;
+            _taskManager = taskManager;
+            _guiAdapter = guiAdapter;
+            _ffMpegService = ffMpegService;
+            _hardwareAccelerationService = hardwareAccelerationService;
+            _systemPlayer = systemPlayer;
+            _fileManager = fileManager;
+            _appService = appService;
+        }
+
+        private static bool IsHiddenEntry(string path)
+        {
+            var name = Path.GetFileName(path);
+            if (string.IsNullOrEmpty(name))
+            {
+                name = path;
+            }
+
+            if (name.StartsWith('.'))
+            {
+                return true;
+            }
+
+            try
+            {
+                var attributes = System.IO.File.GetAttributes(path);
+                return (attributes & FileAttributes.Hidden) != 0;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        [HttpPost("decompression/detect")]
+        [SwaggerOperation(OperationId = "DetectCompressedFiles")]
+        public async Task<IActionResult> DetectCompressedFiles([FromBody] CompressedFileDetectionInputModel model)
+        {
+            Response.Headers.ContentType = "application/x-ndjson";
+            var ct = HttpContext.RequestAborted;
+
+            var thresholdBytes = model.UnknownFilesMinMb.HasValue
+                ? model.UnknownFilesMinMb.Value * 1024L * 1024L
+                : 0;
+            var allPaths = model.Paths.Distinct().OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToArray();
+            var pathQueue = new Queue<string>(allPaths);
+            var prevPath = "";
+            var specifiedFiles = new List<string>();
+            var groupViewModelMap = new Dictionary<CompressedFileGroup, CompressedFileDetectionResultViewModel>();
+            while (pathQueue.Count != 0)
+            {
+                ct.ThrowIfCancellationRequested();
+
+                var path = pathQueue.Dequeue();
+                if (path.StartsWith(prevPath) && prevPath.IsNotEmpty())
+                {
+                    continue;
+                }
+
+                var dir = new DirectoryInfo(path);
+                if (dir.Exists)
+                {
+                    var files = dir.GetFiles("*", SearchOption.AllDirectories)
+                        // .Where(f => f.Length >= thresholdBytes)
+                        .Select(f => f.FullName).ToArray();
+                    path += InternalOptions.DirSeparator;
+                    var groups = CompressedFileHelper.DetectCompressedFileGroups(files, !model.IncludeUnknownFiles);
+                    foreach (var group in groups.Where(g => g.FileSizes.Sum() >= thresholdBytes))
+                    {
+                        var vm = group.ToViewModel();
+                        groupViewModelMap[group] = vm;
+                        await YieldReturn(vm);
+                    }
+                }
+                else
+                {
+                    var file = new FileInfo(path);
+                    if (file.Exists)
+                    {
+                        if (file.Length >= thresholdBytes)
+                        {
+                            specifiedFiles.Add(path);
+                        }
+                        else
+                        {
+                            throw new Exception($"{path} is not found in the file system");
+                        }
+                    }
+                }
+
+                prevPath = path;
+            }
+
+            var specifiedFileGroups = CompressedFileHelper.DetectCompressedFileGroups(specifiedFiles.ToArray(), model.IncludeUnknownFiles);
+            foreach (var group in specifiedFileGroups.Where(g => g.FileSizes.Sum() >= thresholdBytes))
+            {
+                var vm = group.ToViewModel();
+                groupViewModelMap[group] = vm;
+                await YieldReturn(vm);
+            }
+
+            foreach (var (group, vm) in groupViewModelMap)
+            {
+                ct.ThrowIfCancellationRequested();
+                
+                vm.Status = CompressedFileDetectionResultStatus.Inprogress;
+                await YieldReturn(vm);
+                
+                var password = default(string);
+                // Try without password first, then candidates
+                var sampleGroups = new List<CompressedFileDetectionResultViewModel.SampleGroup>();
+                var wrongPasswords = new HashSet<string>();
+                try
+                {
+                    var entry = group.Files.First();
+                    var passwordCandidates = group.Files[0].GetPasswordsFromPath();
+                    var pickedTestStdOut = default(string);
+
+                    foreach (var candidate in new[] { (string)null! }.Concat(passwordCandidates))
+                    {
+                        ct.ThrowIfCancellationRequested();
+
+                        var result = await _compressedFileService.TestCompressedFile(
+                            entry,
+                            candidate,
+                            Path.GetDirectoryName(entry),
+                            onStandardOutput: null,
+                            onStandardError: (line) =>
+                            {
+                                if (line.Contains("Wrong password") && candidate.IsNotEmpty())
+                                {
+                                    wrongPasswords.Add(candidate);
+                                }
+                            },
+                            ct);
+
+                        vm.Message += $"{result.StandardOutput}{Environment.NewLine}{result.StandardError}";
+                        await YieldReturn(vm);
+
+                        if (result.ExitCode == 0)
+                        {
+                            pickedTestStdOut = result.StandardOutput;
+                            vm.Password = password;
+                            vm.Status = CompressedFileDetectionResultStatus.Complete;
+                            break;
+                        }
+
+                        vm.Status = CompressedFileDetectionResultStatus.Error;
+                    }
+
+                    if (vm.Status == CompressedFileDetectionResultStatus.Complete)
+                    {
+                        vm.PasswordCandidates = [];
+                        vm.WrongPasswords = wrongPasswords.ToArray();
+                        await YieldReturn(vm);
+
+                        // Build sample groups from 't' output to avoid a separate 'l' call
+                        var lines = (pickedTestStdOut ?? string.Empty)
+                            .Split('\n', '\r')
+                            .Where(x => x.IsNotEmpty())
+                            .ToArray();
+                        // 7z t outputs lines like: "Testing     path/inside/file.ext"
+                        var testingPrefix = "T ";
+                        var entryPaths = lines
+                            .Select(l =>
+                            {
+                                var t = l.Trim();
+                                if (!t.StartsWith(testingPrefix))
+                                {
+                                    return null;
+                                }
+
+                                var path = t.Substring(testingPrefix.Length)
+                                    .Replace(InternalOptions.WindowsSpecificDirSeparator, InternalOptions.DirSeparator);
+                                return path;
+                            })
+                            .OfType<string>()
+                            .ToList();
+
+                        // group and sampling by first layer of paths
+                        var firstLayers = entryPaths.Select(p =>
+                        {
+                            var segments = p.Split('/');
+                            return (IsFile: segments.Length == 1, Segment: segments[0]);
+                        }).GroupBy(f => f.Segment).Select(x => x.First()).ToList();
+                        var dirs = firstLayers.Where(f => !f.IsFile).Select(s => s.Segment).ToArray();
+                        var files = firstLayers.Where(f => f.IsFile).Select(s => s.Segment).ToArray();
+                        var firstLayerExtensionGroups =
+                            files.GroupBy(Path.GetExtension).Select(x =>
+                                new CompressedFileDetectionResultViewModel.SampleGroup
+                                {
+                                    Count = x.Count(),
+                                    IsFile = true,
+                                    Samples = x.Take(3).ToArray()
+                                });
+                        var nameGroups = new List<CompressedFileDetectionResultViewModel.SampleGroup>();
+                        if (dirs.Any())
+                        {
+                            nameGroups.Add(new CompressedFileDetectionResultViewModel.SampleGroup
+                            {
+                                Count = dirs.Count(),
+                                IsFile = false,
+                                Samples = dirs.Take(3).ToArray()
+                            });
+                        }
+
+                        nameGroups.AddRange(firstLayerExtensionGroups);
+                        sampleGroups.AddRange(nameGroups);
+                    }
+                }
+                catch(Exception e)
+                {
+                    vm.Message += $"{Environment.NewLine}{e.Message}";
+                    vm.Status = CompressedFileDetectionResultStatus.Error;
+                }
+
+                vm.ContentSampleGroups = sampleGroups.ToArray();
+                await YieldReturn(vm);
+            }
+
+            return new EmptyResult();
+
+            async Task YieldReturn(CompressedFileDetectionResultViewModel viewModel)
+            {
+                await Response.WriteAsync(JsonSerializer.Serialize(viewModel, JsonSerializerOptions.Web) + "\n",
+                    HttpContext.RequestAborted);
+                await Response.Body.FlushAsync(HttpContext.RequestAborted);
+            }
+        }
+
+        [HttpPost("decompression/decompress")]
+        [SwaggerOperation(OperationId = "DecompressCompressedFiles")]
+        public async Task<IActionResult> DecompressCompressedFiles([FromBody] DecompressionInputModel model)
+        {
+            Response.Headers.ContentType = "application/x-ndjson";
+            var ct = HttpContext.RequestAborted;
+
+            foreach (var item in model.Items)
+            {
+                if (ct.IsCancellationRequested) break;
+
+                var key = item.Key;
+
+                var vm = new DecompressionResultViewModel
+                {
+                    Key = key,
+                    Status = DecompressionStatus.Pending
+                };
+
+                // Send initial pending status
+                await YieldReturn(vm);
+
+                try
+                {
+                    // Determine target directory
+                    var targetDir = item.DecompressToNewFolder
+                        ? Path.Combine(item.Directory, Path.GetFileNameWithoutExtension(item.Files[0]))
+                        : item.Directory;
+
+                    var processRegex = new Regex(@"\d+\%");
+
+                    vm.Status = DecompressionStatus.Decompressing;
+                    vm.Percentage = 0;
+                    // Send decompressing status
+                    await YieldReturn(vm);
+
+                    var result = await _compressedFileService.ExtractWithProgress(
+                        item.Files[0], // Use first file as entry point for multi-part archives
+                        targetDir,
+                        item.Password,
+                        usePasswordSwitch: true,
+                        overwriteMode: item.OverwriteExistFiles
+                            ? CompressedFileService.OverwriteMode.OverwriteAll
+                            : CompressedFileService.OverwriteMode.None,
+                        progressOutput: CompressedFileService.ProgressOutputTarget.StandardOutput,
+                        workingDirectory: item.Directory,
+                        onStandardOutput: (line) =>
+                        {
+                            var match = processRegex.Match(line);
+                            if (match.Success)
+                            {
+                                var percentageStr = match.Value.TrimEnd('%');
+                                if (int.TryParse(percentageStr, out var percentage))
+                                {
+                                    vm.Status = DecompressionStatus.Decompressing;
+                                    vm.Percentage = percentage;
+                                    YieldReturn(vm).GetAwaiter().GetResult();
+                                }
+                            }
+                        },
+                        onStandardError: null,
+                        ct);
+
+                    vm.Message += $"{result.StandardOutput}{Environment.NewLine}{result.StandardError}";
+
+                    if (result.ExitCode != 0)
+                    {
+                        vm.Status = DecompressionStatus.Error;
+                        await YieldReturn(vm);
+
+                        if (!model.OnFailureContinue)
+                        {
+                            break;
+                        }
+
+                        continue;
+                    }
+
+                    // Post-decompression operations
+                    try
+                    {
+                        if (item.DeleteAfterDecompression)
+                        {
+                            foreach (var file in item.Files)
+                            {
+                                var path = Path.Combine(item.Directory, file);
+                                if (System.IO.File.Exists(path))
+                                {
+                                    FileUtils.Delete(path, true, true);
+                                }
+                            }
+                        }
+
+                        if (item.MoveToParent)
+                        {
+                            if (Directory.Exists(targetDir))
+                            {
+                                var targetDirName = Path.GetFileName(targetDir);
+                                var canDeleteTargetDir = true;
+
+                                foreach (var p in Directory.GetFileSystemEntries(targetDir))
+                                {
+                                    var entryName = Path.GetFileName(p);
+                                    var dest = Path.Combine(Path.GetDirectoryName(targetDir)!, entryName);
+
+                                    // If this entry has the same name as targetDir, don't delete targetDir later
+                                    if (entryName.Equals(targetDirName, StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        canDeleteTargetDir = false;
+                                    }
+
+                                    if (Directory.Exists(p))
+                                        Directory.Move(p, dest);
+                                    else
+                                        System.IO.File.Move(p, dest);
+                                }
+
+                                if (canDeleteTargetDir)
+                                {
+                                    DirectoryUtils.Delete(targetDir, true, true);
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        vm.Message += $"{Environment.NewLine}Post-processing error: {ex.Message}";
+                        vm.Status = DecompressionStatus.Error;
+                        await YieldReturn(vm);
+
+                        if (!model.OnFailureContinue)
+                        {
+                            break;
+                        }
+
+                        continue;
+                    }
+
+                    // Send success status
+                    vm.Status = DecompressionStatus.Success;
+                    vm.Percentage = 100;
+                    await YieldReturn(vm);
+                }
+                catch (Exception ex)
+                {
+                    vm.Message += $"{Environment.NewLine}{ex.Message}";
+                    vm.Status = DecompressionStatus.Error;
+                    await YieldReturn(vm);
+
+                    if (!model.OnFailureContinue)
+                    {
+                        break;
+                    }
+                }
+            }
+
+            return new EmptyResult();
+
+            async Task YieldReturn(DecompressionResultViewModel viewModel)
+            {
+                await Response.WriteAsync(JsonSerializer.Serialize(viewModel, JsonSerializerOptions.Web) + "\n", ct);
+                await Response.Body.FlushAsync(ct);
+            }
+        }
+
+        [HttpGet("top-level-file-system-entries")]
+        [SwaggerOperation(OperationId = "GetTopLevelFileSystemEntryNames")]
+        public async Task<ListResponse<FileSystemEntryNameViewModel>> GetTopLevelFileSystemEntryNames(
+            string root, bool showHiddenFiles = false)
+        {
+            var filePaths = Directory.GetFiles(root).AsEnumerable();
+            var dirPaths = Directory.GetDirectories(root).AsEnumerable();
+
+            if (!showHiddenFiles)
+            {
+                filePaths = filePaths.Where(p => !IsHiddenEntry(p));
+                dirPaths = dirPaths.Where(p => !IsHiddenEntry(p));
+            }
+
+            var files = filePaths
+                .Select(x => new FileSystemEntryNameViewModel(x.StandardizePath()!, Path.GetFileName(x), false))
+                .ToArray();
+            var directories = dirPaths
+                .Select(x => new FileSystemEntryNameViewModel(x.StandardizePath()!, Path.GetFileName(x)!, true))
+                .ToArray();
+
+            return new ListResponse<FileSystemEntryNameViewModel>(files.Concat(directories)
+                .OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase));
+        }
+
+        [HttpGet("search-fs-entries")]
+        [SwaggerOperation(OperationId = "SearchFileSystemEntries")]
+        public async Task<ListResponse<FileSystemEntryNameViewModel>> SearchFileSystemEntries(
+            bool? isDirectory, string? prefix = null, int maxResults = 20)
+        {
+            prefix = prefix?.StandardizePath();
+            var results = new List<FileSystemEntryNameViewModel>();
+            string? parent = null;
+
+            if (prefix.IsNotEmpty())
+            {
+                if (System.IO.File.Exists(prefix))
+                {
+                    parent = Path.GetDirectoryName(prefix);
+                    results.Add(new FileSystemEntryNameViewModel(prefix, Path.GetFileName(prefix), false));
+                }
+                else if (Directory.Exists(prefix))
+                {
+                    parent = prefix;
+                    results.Add(new FileSystemEntryNameViewModel(prefix, Path.GetFileName(prefix), true));
+                    prefix = null;
+                }
+                else
+                {
+                    var dir = Path.GetDirectoryName(prefix);
+                    if (dir.IsNotEmpty())
+                    {
+                        if (Directory.Exists(dir))
+                        {
+                            parent = dir;
+                        }
+                        else
+                        {
+                            return new ListResponse<FileSystemEntryNameViewModel>(results);
+                        }
+                    }
+                }
+            }
+
+            var pathSet = results.Select(r => r.Path).ToHashSet();
+
+            if (parent == null)
+            {
+                var drives = DriveInfo.GetDrives()
+                    .Where(d => d.IsReady)
+                    .Select(d => new FileSystemEntryNameViewModel(
+                        d.Name.StandardizePath()!, d.Name.StandardizePath()!, true));
+
+                results.AddRange(drives
+                    .Where(d =>
+                        (prefix.IsNullOrEmpty() || d.Path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) &&
+                        pathSet.Add(d.Path))
+                    .OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase)
+                    .Take(maxResults));
+            }
+            else
+            {
+                var token = HttpContext?.RequestAborted ?? CancellationToken.None;
+
+                // Compute the user-typed leaf under the parent to leverage filesystem pattern matching
+                var normalizedPrefixForName = prefix?
+                    .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                var leaf = Path.GetFileName(normalizedPrefixForName);
+                var pattern = string.IsNullOrEmpty(leaf) ? "*" : $"{leaf}*";
+
+                var options = new EnumerationOptions
+                {
+                    RecurseSubdirectories = false,
+                    IgnoreInaccessible = true,
+                    MatchCasing = OperatingSystem.IsWindows() ? MatchCasing.CaseInsensitive : MatchCasing.CaseSensitive,
+                };
+
+                // Enumerate directories if requested (or when both are acceptable)
+                if (isDirectory != false)
+                {
+                    try
+                    {
+                        foreach (var d in Directory.EnumerateDirectories(parent, pattern, options))
+                        {
+                            if (token.IsCancellationRequested) break;
+                            var stdPath = d.StandardizePath()!;
+                            if (pathSet.Add(stdPath))
+                            {
+                                results.Add(new FileSystemEntryNameViewModel(stdPath, Path.GetFileName(stdPath), true));
+                            }
+
+                            if (results.Count >= maxResults) break;
+                        }
+                    }
+                    catch
+                    {
+                        // Skip enumeration failures for this parent; partial results are fine
+                    }
+                }
+
+                // Enumerate files if requested (or when both are acceptable)
+                if (results.Count < maxResults && isDirectory != true)
+                {
+                    try
+                    {
+                        foreach (var f in Directory.EnumerateFiles(parent, pattern, options))
+                        {
+                            if (token.IsCancellationRequested) break;
+                            var stdPath = f.StandardizePath()!;
+                            if (pathSet.Add(stdPath))
+                            {
+                                results.Add(new FileSystemEntryNameViewModel(f.StandardizePath()!, Path.GetFileName(f),
+                                    false));
+                            }
+
+                            if (results.Count >= maxResults) break;
+                        }
+                    }
+                    catch
+                    {
+                        // Skip enumeration failures
+                    }
+                }
+            }
+
+            return new ListResponse<FileSystemEntryNameViewModel>(results.Take(maxResults));
+        }
+
+        [HttpGet("iwfs-info")]
+        [SwaggerOperation(OperationId = "GetIwFsInfo")]
+        public async Task<SingletonResponse<IwFsEntryLazyInfo>> GetIwFsInfo(string path, IwFsType type,
+            bool showHiddenFiles = false)
+        {
+            return new SingletonResponse<IwFsEntryLazyInfo>(new IwFsEntryLazyInfo(path, type, showHiddenFiles));
+        }
+
+        [HttpGet("iwfs-entry")]
+        [SwaggerOperation(OperationId = "GetIwFsEntry")]
+        public async Task<SingletonResponse<IwFsEntry>> GetIwFsEntry(string path)
+        {
+            return new SingletonResponse<IwFsEntry>(new IwFsEntry(path));
+        }
+
+        [HttpPost("directory")]
+        [SwaggerOperation(OperationId = "CreateDirectory")]
+        public async Task<BaseResponse> CreateDirectory(string parent)
+        {
+            if (!Directory.Exists(parent))
+            {
+                return BaseResponseBuilder.BuildBadRequest(_localizer.PathIsNotFound(parent));
+            }
+
+            var dirs = Directory.GetDirectories(parent).Select(Path.GetFileName).ToHashSet();
+
+            for (var i = 0; i < 10000; i++)
+            {
+                var dirName = _localizer.NewFolderName();
+                if (i > 0)
+                {
+                    dirName += $" ({i})";
+                }
+
+                if (!dirs.Contains(dirName))
+                {
+                    Directory.CreateDirectory(Path.Combine(parent, dirName));
+                    return BaseResponseBuilder.Ok;
+                }
+            }
+
+            return BaseResponseBuilder.SystemError;
+        }
+
+        [HttpGet("children/iwfs-info")]
+        [SwaggerOperation(OperationId = "GetChildrenIwFsInfo")]
+        public async Task<SingletonResponse<IwFsPreview>> Preview(string? root, bool showHiddenFiles = false)
+        {
+            var isDirectory = false;
+
+            root = root.StandardizePath();
+            var entries = new List<IwFsEntry>();
+            if (string.IsNullOrEmpty(root))
+            {
+                var drives = DriveInfo.GetDrives().Select(f => f.Name).ToArray();
+                entries.AddRange(drives.Select(d => new IwFsEntry(d, IwFsType.Drive)));
+            }
+            else
+            {
+                if (Directory.Exists(root))
+                {
+                    isDirectory = true;
+                }
+                else
+                {
+                    if (!root.StartsWith(InternalOptions.UncPathPrefix))
+                    {
+                        if (!System.IO.File.Exists(root))
+                        {
+                            return SingletonResponseBuilder<IwFsPreview>.Build(ResponseCode.NotFound,
+                                $"{root} does not exist");
+                        }
+                    }
+                    else
+                    {
+                        isDirectory = true;
+                    }
+                }
+
+                string[] dirs = [];
+                string[] files = [];
+                if (isDirectory)
+                {
+                    var standardizedRoot = root.StandardizePath()!;
+                    var dirWithPathSep = standardizedRoot.EndsWith(InternalOptions.DirSeparator)
+                        ? standardizedRoot
+                        : $"{standardizedRoot}{InternalOptions.DirSeparator}";
+                    files = Directory.GetFiles(dirWithPathSep).Select(p => p.StandardizePath()!).ToArray();
+                    dirs = Directory.GetDirectories(dirWithPathSep).Select(p => p.StandardizePath()!).ToArray();
+                }
+                else
+                {
+                    files = [root];
+                }
+
+                if (!showHiddenFiles)
+                {
+                    dirs = dirs.Where(d => !IsHiddenEntry(d)).ToArray();
+                    files = files.Where(f => !IsHiddenEntry(f)).ToArray();
+                }
+
+                entries.AddRange(dirs.Select(d => new IwFsEntry(d, IwFsType.Directory)));
+                entries.AddRange(files.Select(d => new IwFsEntry(d, IwFsType.Unknown)));
+            }
+
+            entries = entries
+                // .OrderBy(t => t.Type == IwFsType.Directory ? 0 : 1)
+                .OrderBy(t => t.Name, StringComparer.OrdinalIgnoreCase).ToList();
+
+            var rsp = new IwFsPreview()
+            {
+                Entries = entries.ToArray(),
+            };
+            return new SingletonResponse<IwFsPreview>(rsp);
+        }
+
+        [HttpDelete]
+        [SwaggerOperation(OperationId = "RemoveFiles")]
+        public async Task<BaseResponse> Remove([FromBody] FileRemoveRequestModel model)
+        {
+            var errors = new List<string>();
+            foreach (var p in model.Paths.Where(e => !e.EndsWith('.')))
+            {
+                try
+                {
+                    if (System.IO.File.Exists(p))
+                    {
+                        FileUtils.Delete(p, false, true);
+                    }
+                    else
+                    {
+                        if (Directory.Exists(p))
+                        {
+                            DirectoryUtils.Delete(p, false, true);
+                        }
+                        else
+                        {
+                            throw new IOException($"{p} does not exist");
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    errors.Add($"[{p}]{e.Message}");
+                }
+            }
+
+            return errors.Any()
+                ? BaseResponseBuilder.Build(ResponseCode.SystemError, string.Join(Environment.NewLine, errors))
+                : BaseResponseBuilder.Ok;
+        }
+
+        [HttpPut("name")]
+        [SwaggerOperation(OperationId = "RenameFile")]
+        public async Task<SingletonResponse<string>> Rename([FromBody] FileRenameRequestModel model)
+        {
+            var invalidFilenameChars = Path.GetInvalidFileNameChars();
+            if (invalidFilenameChars.Any(t => model.NewName.Contains(t)))
+            {
+                return SingletonResponseBuilder<string>.BuildBadRequest(
+                    $"File name can not contains those chars: {string.Join(',', invalidFilenameChars)}");
+            }
+
+            try
+            {
+                var newFullname = Path.Combine(Path.GetDirectoryName(model.Fullname)!, Path.GetFileName(model.NewName));
+                if (System.IO.File.Exists(newFullname) || Directory.Exists(newFullname))
+                {
+                    return SingletonResponseBuilder<string>.BuildBadRequest($"Target path [{newFullname}] exists");
+                }
+
+                if (System.IO.File.Exists(model.Fullname))
+                {
+                    System.IO.File.Move(model.Fullname, newFullname);
+                }
+                else
+                {
+                    var dir = new DirectoryInfo(model.Fullname);
+                    if (dir.Exists)
+                    {
+                        Directory.Move(dir.FullName, newFullname);
+                    }
+                    else
+                    {
+                        return SingletonResponseBuilder<string>.NotFound;
+                    }
+                }
+
+                return new SingletonResponse<string>(newFullname);
+            }
+            catch (Exception e)
+            {
+                return SingletonResponseBuilder<string>.Build(ResponseCode.SystemError, e.Message);
+            }
+        }
+
+        [HttpGet("recycle-bin")]
+        [SwaggerOperation(OperationId = "OpenRecycleBin")]
+        public async Task<BaseResponse> OpenRecycleBin()
+        {
+            var command = "";
+            var args = "";
+
+            switch (AppService.OsPlatform)
+            {
+                case OsPlatform.Unknown:
+                    throw new PlatformNotSupportedException();
+                case OsPlatform.Osx:
+                    command = "open";
+                    args = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".Trash");
+                    break;
+                case OsPlatform.Windows:
+                    command = "explorer.exe";
+                    args = "shell:RecycleBinFolder";
+                    break;
+                case OsPlatform.Linux:
+                    command = "xdg-open";
+                    args = "~/.local/share/Trash";
+                    break;
+                case OsPlatform.FreeBsd:
+                    command = "xdg-open";
+                    args = "~/.Trash";
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = command,
+                Arguments = args,
+                UseShellExecute = true
+            });
+
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpPost("extract-and-remove-directory")]
+        [SwaggerOperation(OperationId = "ExtractAndRemoveDirectory")]
+        public async Task<BaseResponse> ExtractAndRemoveDirectory(string directory)
+        {
+            DirectoryUtils.Merge(directory, Path.GetDirectoryName(directory), false);
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpPost("move-entries")]
+        [SwaggerOperation(OperationId = "MoveEntries")]
+        public async Task<BaseResponse> MoveEntries([FromBody] FileMoveRequestModel model)
+        {
+            var paths = model.EntryPaths.FindTopLevelPaths();
+            // Directory.CreateDirectory(model.DestDir);
+
+            await _fsOptionsManager.SaveAsync(options =>
+            {
+                options.RecentMovingDestinations = new[] { model.DestDir }
+                    .Concat(options.RecentMovingDestinations ?? []).Distinct().Take(5).ToList();
+            });
+
+            var rand = new Random();
+            var taskId = $"FileSystem:BatchMove:{CryptographyUtils.Md5(string.Join('\n', paths))}";
+            foreach (var path in paths)
+            {
+                var path1 = path;
+                var targetPath = Path.Combine(model.DestDir, Path.GetFileName(path1));
+                _taskManager.Enqueue(new BTaskHandlerBuilder
+                {
+                    GetName = () => _localizer.MoveFiles(),
+                    GetMessageOnInterruption = () => _localizer.MessageOnInterruption_MoveFiles(),
+                    GetDescription = () => _localizer.MoveFile(path1, targetPath),
+                    ResourceType = BTaskResourceType.FileSystemEntry,
+                    Type = BTaskType.MoveFiles,
+                    ResourceKeys = [path],
+                    Run = async args =>
+                    {
+                        // var fakeDelay = rand.Next(50, 300);
+                        // for (var i = 0; i < 100; i++)
+                        // {
+                        //     await args.UpdateTask(t => t.Percentage = i + 1);
+                        //     await Task.Delay(fakeDelay, args.CancellationToken);
+                        // }
+                        //
+                        // return;
+
+                        var isDirectory = Directory.Exists(path1);
+                        var isFile = System.IO.File.Exists(path1);
+                        if (isDirectory || isFile)
+                        {
+                            async Task ProgressChange(int p)
+                            {
+                                await args.UpdateTask(task => task.Percentage = p);
+                            }
+
+                            if (isDirectory)
+                            {
+                                await DirectoryUtils.MoveAsync(path1, targetPath, false, ProgressChange,
+                                    PauseToken.None,
+                                    args.CancellationToken);
+                            }
+                            else
+                            {
+                                await FileUtils.MoveAsync(path1, targetPath, false, ProgressChange, PauseToken.None,
+                                    args.CancellationToken);
+                            }
+                        }
+                    },
+                    ConflictKeys = [taskId]
+                });
+            }
+
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpPost("copy-entries")]
+        [SwaggerOperation(OperationId = "CopyEntries")]
+        public async Task<BaseResponse> CopyEntries([FromBody] FileMoveRequestModel model)
+        {
+            var paths = model.EntryPaths.FindTopLevelPaths();
+
+            await _fsOptionsManager.SaveAsync(options =>
+            {
+                options.RecentMovingDestinations = new[] { model.DestDir }
+                    .Concat(options.RecentMovingDestinations ?? []).Distinct().Take(5).ToList();
+            });
+
+            var taskId = $"FileSystem:BatchCopy:{CryptographyUtils.Md5(string.Join('\n', paths))}";
+            foreach (var path in paths)
+            {
+                var path1 = path;
+                var targetPath = Path.Combine(model.DestDir, Path.GetFileName(path1));
+                _taskManager.Enqueue(new BTaskHandlerBuilder
+                {
+                    GetName = () => _localizer.CopyFiles(),
+                    GetMessageOnInterruption = () => _localizer.MessageOnInterruption_CopyFiles(),
+                    GetDescription = () => _localizer.CopyFile(path1, targetPath),
+                    ResourceType = BTaskResourceType.FileSystemEntry,
+                    Type = BTaskType.CopyFiles,
+                    ResourceKeys = [path],
+                    Run = async args =>
+                    {
+                        var isDirectory = Directory.Exists(path1);
+                        var isFile = System.IO.File.Exists(path1);
+                        if (isDirectory || isFile)
+                        {
+                            async Task ProgressChange(int p)
+                            {
+                                await args.UpdateTask(task => task.Percentage = p);
+                            }
+
+                            if (isDirectory)
+                            {
+                                await DirectoryUtils.CopyAsync(path1, targetPath, false, ProgressChange,
+                                    PauseToken.None,
+                                    args.CancellationToken);
+                            }
+                            else
+                            {
+                                await FileUtils.CopyAsync(path1, targetPath, false, ProgressChange, PauseToken.None,
+                                    args.CancellationToken);
+                            }
+                        }
+                    },
+                    ConflictKeys = [taskId]
+                });
+            }
+
+            return BaseResponseBuilder.Ok;
+        }
+
+        private static async Task<(string[] Files, string[] Directories)> _getSameNameEntriesInWorkingDirectory(
+            RemoveSameEntryInWorkingDirectoryRequestModel model)
+        {
+            var allFiles = Directory.GetFiles(model.WorkingDir, "*.*", SearchOption.AllDirectories);
+            var allDirectories = Directory.GetDirectories(model.WorkingDir, "*.*", SearchOption.AllDirectories);
+
+            var files = new List<string>();
+            var directories = new List<string>();
+
+            foreach (var entryPath in model.EntryPaths)
+            {
+                var name = Path.GetFileName(entryPath);
+                if (System.IO.File.Exists(entryPath))
+                {
+                    files.AddRange(allFiles.Where(t => t.EndsWith(name, StringComparison.OrdinalIgnoreCase)).ToArray());
+                }
+
+                if (Directory.Exists(entryPath))
+                {
+                    var dirs = allDirectories
+                        .Where(t => t.EndsWith(name, StringComparison.OrdinalIgnoreCase)).OrderBy(t => t.Length)
+                        .ThenBy(t => t).ToArray();
+                    // Remove sub dirs
+                    foreach (var d in dirs)
+                    {
+                        if (directories.Any(d.StartsWith))
+                        {
+                            continue;
+                        }
+
+                        directories.Add(d);
+                    }
+                }
+            }
+
+            return (files.ToArray(), directories.ToArray());
+        }
+
+        [HttpPost("same-name-entries-in-working-directory")]
+        [SwaggerOperation(OperationId = "GetSameNameEntriesInWorkingDirectory")]
+        public async Task<ListResponse<FileSystemEntryNameViewModel>> GetSameNameEntriesInWorkingDirectory(
+            [FromBody] RemoveSameEntryInWorkingDirectoryRequestModel model)
+        {
+            model.WorkingDir = model.WorkingDir.StandardizePath()!;
+
+            var (files, directories) = await _getSameNameEntriesInWorkingDirectory(model);
+
+            var viewModels = files
+                .Select(f =>
+                    new FileSystemEntryNameViewModel(f.StandardizePath()!,
+                        f.StandardizePath()!.Replace(model.WorkingDir, null), false))
+                .Concat(directories.Select(d =>
+                    new FileSystemEntryNameViewModel(d.StandardizePath()!,
+                        d.StandardizePath()!.Replace(model.WorkingDir, null), true)))
+                .OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase);
+
+            return new ListResponse<FileSystemEntryNameViewModel>(viewModels);
+        }
+
+        [HttpDelete("same-name-entry-in-working-directory")]
+        [SwaggerOperation(OperationId = "RemoveSameNameEntryInWorkingDirectory")]
+        public async Task<BaseResponse> RemoveSameNameEntryInWorkingDirectory(
+            [FromBody] RemoveSameEntryInWorkingDirectoryRequestModel model)
+        {
+            var paths = await _getSameNameEntriesInWorkingDirectory(model);
+            foreach (var be in paths.Files)
+            {
+                FileUtils.Delete(be, false, true);
+            }
+
+            foreach (var be in paths.Directories)
+            {
+                DirectoryUtils.Delete(be, false, true);
+            }
+
+
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpPut("standardize")]
+        [SwaggerOperation(OperationId = "StandardizeEntryName")]
+        public async Task<BaseResponse> StandardizeEntryName(string path)
+        {
+            var filename = Path.GetFileName(path);
+            var newName = await _specialTextService.Pretreatment(filename);
+            if (filename == newName)
+            {
+                return BaseResponseBuilder.NotModified;
+            }
+
+            var newFullname = Path.Combine(Path.GetDirectoryName(path), newName);
+            if (System.IO.File.Exists(newFullname) || Directory.Exists(newFullname))
+            {
+                return BaseResponseBuilder.BuildBadRequest($"New entry path {newFullname} exists");
+            }
+
+            Directory.Move(path, newFullname);
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpGet("playability")]
+        [SwaggerOperation(OperationId = "CheckFilePlayability")]
+        public async Task<SingletonResponse<FilePlayabilityViewModel>> CheckPlayability(string fullname)
+        {
+            var result = new FilePlayabilityViewModel();
+            var ext = Path.GetExtension(fullname);
+
+            // Determine media type by extension
+            if (InternalOptions.ImageExtensions.Contains(ext))
+            {
+                result.MediaType = MediaType.Image;
+                result.Playable = true;
+
+                // For images, we can try to validate by checking if the file exists
+                // and optionally use ffprobe to get dimensions
+                if (!fullname.Contains(InternalOptions.CompressedFileRootSeparator))
+                {
+                    if (!System.IO.File.Exists(fullname))
+                    {
+                        result.Playable = false;
+                        result.Error = "File not found";
+                        return new SingletonResponse<FilePlayabilityViewModel>(result);
+                    }
+
+                    try
+                    {
+                        var ffprobePath = _ffMpegService.FfProbeExecutable;
+                        var probeResult = await Cli.Wrap(ffprobePath)
+                            .WithArguments(args =>
+                            {
+                                args
+                                    .Add("-v").Add("error")
+                                    .Add("-select_streams").Add("v:0")
+                                    .Add("-show_entries").Add("stream=width,height")
+                                    .Add("-of").Add("json")
+                                    .Add(fullname);
+                            })
+                            .WithValidation(CommandResultValidation.None)
+                            .ExecuteBufferedAsync(HttpContext.RequestAborted);
+
+                        if (probeResult.ExitCode == 0 && !string.IsNullOrWhiteSpace(probeResult.StandardOutput))
+                        {
+                            var json = JsonDocument.Parse(probeResult.StandardOutput);
+                            if (json.RootElement.TryGetProperty("streams", out var streams) &&
+                                streams.GetArrayLength() > 0)
+                            {
+                                var stream = streams[0];
+                                if (stream.TryGetProperty("width", out var width))
+                                    result.Width = width.GetInt32();
+                                if (stream.TryGetProperty("height", out var height))
+                                    result.Height = height.GetInt32();
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        // Image validation via ffprobe is optional, still mark as playable
+                    }
+                }
+
+                return new SingletonResponse<FilePlayabilityViewModel>(result);
+            }
+
+            if (InternalOptions.VideoExtensions.Contains(ext))
+            {
+                result.MediaType = MediaType.Video;
+                return await ProbeMediaFile(fullname, result, true);
+            }
+
+            if (InternalOptions.AudioExtensions.Contains(ext))
+            {
+                result.MediaType = MediaType.Audio;
+                return await ProbeMediaFile(fullname, result, false);
+            }
+
+            if (InternalOptions.TextExtensions.Contains(ext))
+            {
+                result.MediaType = MediaType.Text;
+                result.Playable = true;
+
+                if (!fullname.Contains(InternalOptions.CompressedFileRootSeparator) &&
+                    !System.IO.File.Exists(fullname))
+                {
+                    result.Playable = false;
+                    result.Error = "File not found";
+                }
+
+                return new SingletonResponse<FilePlayabilityViewModel>(result);
+            }
+
+            // Unknown/unsupported extension
+            result.MediaType = MediaType.Unknown;
+            result.Playable = false;
+            result.Error = $"Unsupported file extension: {ext}";
+            return new SingletonResponse<FilePlayabilityViewModel>(result);
+        }
+
+        private async Task<SingletonResponse<FilePlayabilityViewModel>> ProbeMediaFile(
+            string fullname, FilePlayabilityViewModel result, bool isVideo)
+        {
+            // For files inside compressed archives, we can't easily probe them
+            // Mark as potentially playable and let the player handle errors
+            if (fullname.Contains(InternalOptions.CompressedFileRootSeparator))
+            {
+                result.Playable = true;
+                return new SingletonResponse<FilePlayabilityViewModel>(result);
+            }
+
+            if (!System.IO.File.Exists(fullname))
+            {
+                result.Playable = false;
+                result.Error = "File not found";
+                return new SingletonResponse<FilePlayabilityViewModel>(result);
+            }
+
+            try
+            {
+                var ffprobePath = _ffMpegService.FfProbeExecutable;
+                var streamSelector = isVideo ? "v:0" : "a:0";
+                var showEntries = isVideo
+                    ? "stream=codec_name,width,height,duration:format=duration"
+                    : "stream=codec_name,duration:format=duration";
+
+                var probeResult = await Cli.Wrap(ffprobePath)
+                    .WithArguments(args =>
+                    {
+                        args
+                            .Add("-v").Add("error")
+                            .Add("-select_streams").Add(streamSelector)
+                            .Add("-show_entries").Add(showEntries)
+                            .Add("-of").Add("json")
+                            .Add(fullname);
+                    })
+                    .WithValidation(CommandResultValidation.None)
+                    .ExecuteBufferedAsync(HttpContext.RequestAborted);
+
+                if (probeResult.ExitCode != 0)
+                {
+                    result.Playable = false;
+                    result.Error = string.IsNullOrWhiteSpace(probeResult.StandardError)
+                        ? "Failed to probe file"
+                        : probeResult.StandardError.Trim();
+                    return new SingletonResponse<FilePlayabilityViewModel>(result);
+                }
+
+                if (string.IsNullOrWhiteSpace(probeResult.StandardOutput))
+                {
+                    result.Playable = false;
+                    result.Error = "No media streams found";
+                    return new SingletonResponse<FilePlayabilityViewModel>(result);
+                }
+
+                var json = JsonDocument.Parse(probeResult.StandardOutput);
+
+                // Check for streams
+                if (!json.RootElement.TryGetProperty("streams", out var streams) ||
+                    streams.GetArrayLength() == 0)
+                {
+                    result.Playable = false;
+                    result.Error = isVideo ? "No video stream found" : "No audio stream found";
+                    return new SingletonResponse<FilePlayabilityViewModel>(result);
+                }
+
+                var stream = streams[0];
+
+                // Get codec
+                if (stream.TryGetProperty("codec_name", out var codec))
+                {
+                    result.Codec = codec.GetString();
+                }
+
+                // Check browser codec compatibility
+                if (!string.IsNullOrEmpty(result.Codec))
+                {
+                    var supportedCodecs = isVideo ? BrowserSupportedVideoCodecs : BrowserSupportedAudioCodecs;
+                    if (!supportedCodecs.Contains(result.Codec))
+                    {
+                        result.Playable = false;
+                        result.Error = _localizer.CodecNotSupportedByBrowsers(result.Codec);
+                        return new SingletonResponse<FilePlayabilityViewModel>(result);
+                    }
+                }
+
+                // Get dimensions for video
+                if (isVideo)
+                {
+                    if (stream.TryGetProperty("width", out var width))
+                        result.Width = width.GetInt32();
+                    if (stream.TryGetProperty("height", out var height))
+                        result.Height = height.GetInt32();
+                }
+
+                // Get duration - try stream first, then format
+                if (stream.TryGetProperty("duration", out var streamDuration) &&
+                    double.TryParse(streamDuration.GetString(), out var durationValue))
+                {
+                    result.Duration = durationValue;
+                }
+                else if (json.RootElement.TryGetProperty("format", out var format) &&
+                         format.TryGetProperty("duration", out var formatDuration) &&
+                         double.TryParse(formatDuration.GetString(), out var formatDurationValue))
+                {
+                    result.Duration = formatDurationValue;
+                }
+
+                result.Playable = true;
+                return new SingletonResponse<FilePlayabilityViewModel>(result);
+            }
+            catch (Exception ex)
+            {
+                result.Playable = false;
+                result.Error = ex.Message;
+                return new SingletonResponse<FilePlayabilityViewModel>(result);
+            }
+        }
+
+        [HttpGet("play")]
+        [SwaggerOperation(OperationId = "PlayFile")]
+        public async Task<IActionResult> Play(string fullname)
+        {
+            var ext = Path.GetExtension(fullname);
+            if (InternalOptions.ImageExtensions.Contains(ext) || InternalOptions.VideoExtensions.Contains(ext) ||
+                InternalOptions.AudioExtensions.Contains(ext) || InternalOptions.TextExtensions.Contains(ext))
+            {
+                if (fullname.Contains(InternalOptions.CompressedFileRootSeparator))
+                {
+                    // Find the separator position by looking for compressed file extension followed by '!'
+                    // E.g., "C:/path/archive.zip!folder/file.jpg" -> compressFilePath="C:/path/archive.zip", entryPath="folder/file.jpg"
+                    string? compressFilePath = null;
+                    string? entryPath = null;
+
+                    foreach (var compressedExt in InternalOptions.CompressedFileExtensions)
+                    {
+                        var pattern = $"{compressedExt}{InternalOptions.CompressedFileRootSeparator}";
+                        var idx = fullname.IndexOf(pattern, StringComparison.OrdinalIgnoreCase);
+                        if (idx > 0)
+                        {
+                            // Found! Split at this position
+                            var separatorPos = idx + compressedExt.Length;
+                            compressFilePath = fullname[..separatorPos];
+                            entryPath = fullname[(separatorPos + 1)..]; // +1 to skip the '!' separator
+                            break;
+                        }
+                    }
+
+                    if (compressFilePath != null && entryPath != null)
+                    {
+                        var stream = await _compressedFileService.ExtractOneEntry(compressFilePath, entryPath,
+                            HttpContext.RequestAborted);
+
+                        if (stream != null)
+                        {
+                            return File(stream, MimeTypes.GetMimeType(fullname));
+                        }
+
+                        return NotFound();
+                    }
+                }
+
+                // Handle video transcoding if needed
+                if (InternalOptions.VideoExtensions.Contains(ext))
+                {
+                    var ffprobePath = _ffMpegService.FfProbeExecutable;
+                    var ffprobeResult = await Cli.Wrap(ffprobePath)
+                        .WithArguments(args =>
+                        {
+                            args
+                                .Add("-v").Add("error")
+                                .Add("-select_streams").Add("v:0")
+                                .Add("-show_entries").Add("stream=codec_name")
+                                .Add("-of").Add("default=noprint_wrappers=1:nokey=1")
+                                .Add(fullname);
+                        })
+                        .WithValidation(CommandResultValidation.None)
+                        .ExecuteBufferedAsync(HttpContext.RequestAborted);
+                    var codecName = ffprobeResult.StandardOutput.Trim();
+
+                    // If video is already h264, stream directly
+                    if (codecName.ToLower() == "h264")
+                    {
+                        var stream = new FileStream(fullname, FileMode.Open, FileAccess.Read, FileShare.Read);
+                        HttpContext.RequestAborted.Register(() => stream.Dispose());
+                        return File(stream, "video/mp4", enableRangeProcessing: true);
+                    }
+                    else
+                    {
+                        // Get hardware acceleration info (cached)
+                        var hwAccelInfo =
+                            await _hardwareAccelerationService.GetHardwareAccelerationInfoAsync(HttpContext
+                                .RequestAborted);
+                        var preferredCodec = hwAccelInfo.PreferredCodec;
+
+                        _logger.LogInformation("Using codec {Codec} for video transcoding of {FileName}",
+                            preferredCodec, Path.GetFileName(fullname));
+
+                        // Transcode to h264 using ffmpeg with hardware acceleration if available
+                        var ffmpegPath = _ffMpegService.FfMpegExecutable;
+                        var ffmpegCmd = Cli.Wrap(ffmpegPath)
+                            .WithArguments(args =>
+                            {
+                                args
+                                    .Add("-i").Add(fullname)
+                                    .Add("-c:v").Add(preferredCodec);
+
+                                // Add hardware-specific options based on the codec
+                                if (preferredCodec == "h264_nvenc")
+                                {
+                                    args
+                                        .Add("-preset").Add("p1") // NVENC preset
+                                        .Add("-tune").Add("hq"); // High quality tuning
+                                }
+                                else if (preferredCodec == "h264_qsv")
+                                {
+                                    args
+                                        .Add("-preset").Add("veryfast") // QSV preset
+                                        .Add("-look_ahead").Add("1"); // Enable look-ahead
+                                }
+                                else if (preferredCodec == "h264_amf")
+                                {
+                                    args
+                                        .Add("-quality").Add("speed") // AMF quality preset
+                                        .Add("-rc").Add("cqp"); // Rate control
+                                }
+                                else if (preferredCodec == "h264_videotoolbox")
+                                {
+                                    args
+                                        .Add("-allow_sw").Add("1"); // Allow software fallback
+                                }
+                                else
+                                {
+                                    // Software encoding (libx264)
+                                    args
+                                        .Add("-preset").Add("ultrafast");
+                                }
+
+                                args
+                                    .Add("-b:v").Add("3M")
+                                    .Add("-maxrate").Add("4M")
+                                    .Add("-bufsize").Add("6M")
+                                    .Add("-vf").Add("scale=min(1920\\,iw):min(1080\\,ih),fps=60")
+                                    .Add("-c:a").Add("aac")
+                                    .Add("-f").Add("mp4")
+                                    .Add("-movflags").Add("frag_keyframe+empty_moov")
+                                    .Add("pipe:1");
+                            })
+                            .WithStandardOutputPipe(PipeTarget.ToStream(Response.Body, true));
+
+                        // Set response headers for streaming mp4
+                        Response.ContentType = "video/mp4";
+                        Response.Headers["Content-Disposition"] = $"inline; filename=\"{Path.GetFileName(fullname)}\"";
+                        await ffmpegCmd.ExecuteAsync(HttpContext.RequestAborted);
+                        return new EmptyResult();
+                    }
+                }
+                else
+                {
+                    // For images, audio, text: stream directly
+                    var mimeType = MimeTypes.GetMimeType(ext);
+                    var fs = System.IO.File.OpenRead(fullname);
+                    return File(fs, mimeType, true);
+                }
+            }
+
+            return StatusCode((int)HttpStatusCode.UnsupportedMediaType);
+        }
+
+        [HttpPost("decompression")]
+        [SwaggerOperation(OperationId = "DecompressFiles")]
+        public async Task<BaseResponse> DecompressFiles([FromBody] FileDecompressRequestModel model)
+        {
+            var allPaths = model.Paths.ToHashSet();
+            var parentsMappings = allPaths.GroupBy(Path.GetDirectoryName).ToDictionary(t => t.Key!, t => t.ToList())
+                .ToList();
+            for (var i = 0; i < parentsMappings.Count; i++)
+            {
+                var (parent, paths) = parentsMappings[i];
+                var dirInfo = new DirectoryInfo(parent!);
+                if (dirInfo.Exists)
+                {
+                    var groups = CompressedFileHelper.DetectCompressedFileGroups(dirInfo.GetFiles().Select(t => t.FullName).ToArray())
+                        .Where(t => t.Files.Any(paths.Contains)).ToList();
+                    var compressedFiles = groups.SelectMany(t => t.Files).ToArray();
+                    var otherFiles = paths.Except(compressedFiles).ToArray();
+                    var otherGroups = otherFiles
+                        .Select(CompressedFileGroup.FromSingleFile<IwFsCompressedFileGroup>)
+                        .ToArray();
+
+                    var allGroups = groups.Concat(otherGroups).Select(g =>
+                    {
+                        var password = model.Password ??
+                                       (g.KeyName.GetPasswordsFromPathWithoutExtension().FirstOrDefault() ??
+                                        parent.GetPasswordsFromPathWithoutExtension().FirstOrDefault());
+                        return new IwFsCompressedFileGroup
+                        {
+                            Extension = g.Extension,
+                            Files = g.Files,
+                            KeyName = g.KeyName,
+                            Password = password
+                        };
+                    }).ToList();
+
+                    var rand = new Random();
+
+                    for (var j = 0; j < allGroups.Count; j++)
+                    {
+                        var group = allGroups[j];
+                        var entry = group.Files.First();
+                        if (group.Files.Count == 1 && Path.GetExtension(entry).IsNullOrEmpty())
+                        {
+                            const string ext = ".iw-decompressing";
+                            var newFile = $"{entry}{ext}";
+                            System.IO.File.Move(entry, newFile);
+                            group.Files[0] = newFile;
+                            entry = newFile;
+                        }
+
+                        var taskId = IwFsCompressedFile.BuildDecompressionTaskName(entry);
+                        if (_taskManager.IsPending(taskId))
+                        {
+                            continue;
+                        }
+
+                        var files = group.Files.ToArray();
+
+                        _taskManager.Enqueue(new BTaskHandlerBuilder
+                        {
+                            ResourceType = BTaskResourceType.FileSystemEntry,
+                            ConflictKeys = [taskId],
+                            GetDescription = () => taskId,
+                            GetName = () => _localizer.Decompress(),
+                            Type = BTaskType.Decompress,
+                            ResourceKeys = files.Cast<object>().ToArray(),
+                            Run = async args =>
+                            {
+                                await using var scope = args.RootServiceProvider.CreateAsyncScope();
+
+                                if (group.Password.IsNotEmpty())
+                                {
+                                    var passwordService = scope.ServiceProvider.GetRequiredService<PasswordService>();
+                                    await passwordService.AddUsedTimes(group.Password!);
+                                }
+
+
+                                // var fakeDelay = rand.Next(50, 250);
+                                // for (var i = 0; i < 100; i++)
+                                // {
+                                //     await args.UpdateTask(t => t.Percentage = i + 1);
+                                //     await Task.Delay(fakeDelay, args.CancellationToken);
+                                // }
+                                //
+                                // return;
+
+                                var workingDir = Path.GetDirectoryName(entry);
+                                var targetDir = Path.Combine(workingDir,
+                                    group.KeyName);
+                                var processRegex = new Regex(@$"\d+\%");
+                                var tryPSwitch = false;
+
+                                var messageSb = new StringBuilder();
+
+                                BuildCommand:
+                                var result = await _compressedFileService.ExtractWithProgress(
+                                    entry,
+                                    targetDir,
+                                    group.Password,
+                                    usePasswordSwitch: tryPSwitch,
+                                    overwriteMode: tryPSwitch
+                                        ? CompressedFileService.OverwriteMode.SkipExisting
+                                        : CompressedFileService.OverwriteMode.None,
+                                    progressOutput: CompressedFileService.ProgressOutputTarget.StandardError,
+                                    workingDirectory: workingDir,
+                                    onStandardOutput: null,
+                                    onStandardError: async (line) =>
+                                    {
+                                        var match = processRegex.Match(line);
+                                        if (match.Success)
+                                        {
+                                            var np = int.Parse(match.Value.TrimEnd('%'));
+                                            if (np != args.Task.Percentage)
+                                            {
+                                                await args.UpdateTask(x => x.Percentage = np);
+                                            }
+                                        }
+                                    },
+                                    args.CancellationToken);
+
+                                if (result.ExitCode == 0)
+                                {
+                                    return;
+                                }
+
+                                messageSb.AppendLine($"Decompression exit with code: {result.ExitCode}");
+                                if (result.StandardOutput.Length > 0)
+                                {
+                                    messageSb.AppendLine(result.StandardOutput);
+                                }
+
+                                if (result.StandardError.Length > 0)
+                                {
+                                    messageSb.AppendLine(result.StandardError);
+                                }
+
+                                var message = messageSb.ToString();
+                                var wrongPassword = message.Contains("Wrong password");
+
+                                if (wrongPassword)
+                                {
+                                    messageSb.AppendLine(
+                                        "Wrong password error occurred, cleaning bad files(0kb, etc).");
+                                    // Clean empty files
+                                    // ERROR: Wrong password : 实际异常-原结果[未检测]-正常-fa1abb4093754661b3931c03d3f1a72a-vibration-2.wav
+                                    const string prefix = "ERROR: Wrong password : ";
+                                    var badFiles = message.Split('\n',
+                                            '\r')
+                                        .Where(a => a.StartsWith(prefix))
+                                        .Select(t => Path.Combine(targetDir,
+                                            t.Replace(prefix,
+                                                    null)
+                                                .Trim()))
+                                        .ToArray();
+                                    foreach (var f in badFiles)
+                                    {
+                                        var fi = new FileInfo(f);
+                                        if (fi.Exists && fi.Length == 0)
+                                        {
+                                            fi.Delete();
+                                            messageSb.AppendLine($"Deleting {fi.FullName}");
+                                        }
+                                    }
+
+                                    // Since we've got directories from paths of files, so we must populate the paths of directories between the files and the targetDir
+                                    var directories = badFiles.Select(Path.GetDirectoryName)
+                                        .Distinct()
+                                        .SelectMany(dir =>
+                                        {
+                                            var chain = dir.Replace(targetDir,
+                                                    null)
+                                                .Split(Path.DirectorySeparatorChar,
+                                                    Path.AltDirectorySeparatorChar)
+                                                .Where(a => a.IsNotEmpty())
+                                                .ToArray();
+                                            return chain.Select((t1,
+                                                        i) =>
+                                                    Path.Combine(new[]
+                                                        {
+                                                            targetDir
+                                                        }.Concat(chain.Take(i + 1))
+                                                        .ToArray()))
+                                                .ToList();
+                                        })
+                                        .ToList();
+                                    directories.Add(targetDir);
+                                    directories = directories.OrderByDescending(t => t.Length)
+                                        .Distinct()
+                                        .ToList();
+                                    foreach (var d in directories)
+                                    {
+                                        var di = new DirectoryInfo(d);
+                                        if (di.Exists &&
+                                            di.GetFileSystemInfos()
+                                                .Length ==
+                                            0)
+                                        {
+                                            di.Delete();
+                                            messageSb.AppendLine($"Deleting {di.FullName}");
+                                        }
+                                    }
+
+                                    // Try -p switch
+                                    if (!tryPSwitch && group.Password.IsNotEmpty())
+                                    {
+                                        tryPSwitch = true;
+                                        messageSb.AppendLine("Try to use -p switch, re-decompressing");
+                                        goto BuildCommand;
+                                    }
+
+                                    throw new BTaskException(_localizer.WrongPassword(), messageSb.ToString());
+                                }
+
+                                throw new BTaskException(null, messageSb.ToString());
+                            }
+                        });
+                    }
+                }
+            }
+
+            return BaseResponseBuilder.Ok;
+        }
+
+        private static readonly string PngContentType = MimeTypes.GetMimeType(".png");
+
+        // Browser-supported video codecs
+        // H.264/AVC: Widely supported across all browsers
+        // H.265/HEVC: Safari, partial Chrome/Edge
+        // VP8/VP9: Chrome, Firefox, Edge
+        // AV1: Modern browsers
+        // Theora: Firefox, Chrome (legacy)
+        private static readonly HashSet<string> BrowserSupportedVideoCodecs = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "h264", "avc1", "avc",           // H.264/AVC
+            "hevc", "h265", "hvc1",          // H.265/HEVC
+            "vp8", "vp9",                    // VP8/VP9
+            "av1", "av01",                   // AV1
+            "theora"                         // Theora (legacy)
+        };
+
+        // Browser-supported audio codecs
+        private static readonly HashSet<string> BrowserSupportedAudioCodecs = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "aac", "mp4a",                   // AAC
+            "mp3", "mp3float",               // MP3
+            "opus",                          // Opus
+            "vorbis",                        // Vorbis
+            "flac",                          // FLAC
+            "pcm_s16le", "pcm_s24le", "pcm_s32le", "pcm_f32le", "pcm_f64le", // PCM variants (WAV)
+            "pcm_u8", "pcm_s16be", "pcm_s24be", "pcm_s32be",
+            "alac"                           // Apple Lossless
+        };
+
+        [HttpGet("icon")]
+        [SwaggerOperation(OperationId = "GetIconData")]
+        public Task<SingletonResponse<string>> GetIcon(IconType type, string? path)
+        {
+            string? iconBase64 = null;
+            var icon = _guiAdapter.GetIcon(type, path);
+            if (icon != null)
+            {
+                iconBase64 = $@"data:{PngContentType};base64," + Convert.ToBase64String(icon);
+            }
+
+            return Task.FromResult(new SingletonResponse<string>(iconBase64));
+        }
+
+        [HttpGet("all-files")]
+        [SwaggerOperation(OperationId = "GetAllFiles")]
+        public async Task<ListResponse<string>> GetAllFiles(string path)
+        {
+            if (System.IO.File.Exists(path))
+            {
+                return new ListResponse<string>(new[] { path });
+            }
+
+            if (!Directory.Exists(path))
+            {
+                return new ListResponse<string>();
+            }
+
+            return new ListResponse<string>(Directory.GetFiles(path, "*.*", SearchOption.AllDirectories)
+                .Select(a => a.StandardizePath()!)
+                .OrderByNatural());
+        }
+
+        [HttpGet("compressed-file/entries")]
+        [SwaggerOperation(OperationId = "GetCompressedFileEntries")]
+        public async Task<ListResponse<CompressedFileEntry>> GetCompressFileEntries(string compressedFilePath)
+        {
+            var sw = Stopwatch.StartNew();
+            var rsp = await _compressedFileService.GetCompressFileEntries(compressedFilePath,
+                HttpContext.RequestAborted);
+            sw.Stop();
+            _logger.LogInformation(sw.ElapsedMilliseconds + "ms");
+            return rsp;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sampleFile">Get extensions of files with same path layer of <see cref="sampleFile"/></param>
+        /// <param name="rootPath"></param>
+        /// <returns></returns>
+        [HttpGet("file-extension-counts")]
+        [SwaggerOperation(OperationId = "GetFileExtensionCounts")]
+        public async Task<SingletonResponse<Dictionary<string, int>>> GetFileExtensionCounts(string sampleFile,
+            string rootPath)
+        {
+            var startLayer = rootPath.StandardizePath()!.SplitPathIntoSegments().Length - 1;
+            var sameLayerFiles = FileUtils.GetSameLayerFiles(sampleFile, startLayer);
+            var extensions = sameLayerFiles.Select(Path.GetExtension).Where(a => a.IsNotEmpty()).GroupBy(a => a)
+                .ToDictionary(a => a.Key, a => a.Count());
+            return new SingletonResponse<Dictionary<string, int>>(extensions);
+        }
+
+        [HttpPut("group-preview")]
+        [SwaggerOperation(OperationId = "PreviewFileSystemEntriesGroupResult")]
+        public async Task<ListResponse<FileSystemEntryGroupResultViewModel>> GroupPreview(
+            [FromBody] FileSystemEntryGroupInputModel model)
+        {
+            if (model.Paths.Length == 0)
+            {
+                return ListResponseBuilder<FileSystemEntryGroupResultViewModel>.NotFound;
+            }
+
+            var batches = new Dictionary<string, List<string>>();
+
+            if (model.GroupInternal)
+            {
+                foreach (var rootPath in model.Paths)
+                {
+                    if (System.IO.File.Exists(rootPath))
+                    {
+                        continue;
+                    }
+
+                    if (!Directory.Exists(rootPath))
+                    {
+                        return ListResponseBuilder<FileSystemEntryGroupResultViewModel>.NotFound;
+                    }
+
+                    batches[rootPath] = Directory.GetFiles(rootPath).ToList();
+                }
+            }
+            else
+            {
+                foreach (var pg in model.Paths.GroupBy(Path.GetDirectoryName))
+                {
+                    if (pg.Key.IsNotEmpty())
+                    {
+                        foreach (var path in pg)
+                        {
+                            if (System.IO.File.Exists(path) || Directory.Exists(path))
+                            {
+                                batches.GetOrAdd(pg.Key, _ => []).Add(path);
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (!batches.Any())
+            {
+                return ListResponseBuilder<FileSystemEntryGroupResultViewModel>.NotFound;
+            }
+
+            var vms = batches.Select(g =>
+            {
+                var rootPath = g.Key.StandardizePath()!;
+                var vm = new FileSystemEntryGroupResultViewModel
+                {
+                    RootPath = rootPath
+                };
+                if (model.SimilarityThreshold == 1.0m)
+                {
+                    vm.Groups = g.Value.GroupBy(Path.GetFileNameWithoutExtension)
+                        .Where(x => x.Key.IsNotEmpty()).Select(x =>
+                            new FileSystemEntryGroupResultViewModel.GroupViewModel
+                            {
+                                DirectoryName = x.Key.StandardizePath()!,
+                                Filenames = x.Select(y => Path.GetFileName(y)!).ToArray()
+                            }).ToArray();
+                }
+                else
+                {
+                    var groups = new Dictionary<string, List<string>>();
+                    foreach (var path in g.Value)
+                    {
+                        var key = Path.GetFileNameWithoutExtension(path);
+                        if (key.IsNotEmpty())
+                        {
+                            var similarKey =
+                                groups.Keys.FirstOrDefault(x => x.IsSimilarTo(key, model.SimilarityThreshold));
+                            if (similarKey.IsNotEmpty())
+                            {
+                                groups[similarKey].Add(path);
+                            }
+                            else
+                            {
+                                groups[key] = [path];
+                            }
+                        }
+                    }
+
+                    vm.Groups = groups.Select(x => new FileSystemEntryGroupResultViewModel.GroupViewModel
+                    {
+                        DirectoryName = x.Value.Select(x => Path.GetFileNameWithoutExtension(x)!).OrderByDescending(y => y.Length).First().StandardizePath()!,
+                        Filenames = x.Value.Select(y => Path.GetFileName(y)!).ToArray()
+                    }).ToArray();
+                }
+
+                return vm;
+            });
+
+            return new ListResponse<FileSystemEntryGroupResultViewModel>(vms);
+        }
+
+        [HttpPut("group")]
+        [SwaggerOperation(OperationId = "GroupFileSystemEntries")]
+        public async Task<BaseResponse> Group([FromBody] FileSystemEntryGroupInputModel model)
+        {
+            var r = await GroupPreview(model);
+            if (r.Code != 0)
+            {
+                return r;
+            }
+
+            var batches = r.Data!;
+
+            foreach (var batch in batches)
+            {
+                foreach (var group in batch.Groups)
+                {
+                    var dirFullname = Path.Combine(batch.RootPath, group.DirectoryName);
+                    Directory.CreateDirectory(dirFullname);
+                    foreach (var f in group.Filenames)
+                    {
+                        var sourceFile = Path.Combine(batch.RootPath, f);
+                        var fileFullname = Path.Combine(dirFullname, f);
+                        // Use quickly way in same drive
+                        System.IO.File.Move(sourceFile, fileFullname, false);
+                    }
+                }
+            }
+
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpPost("file-processor-watcher")]
+        [SwaggerOperation(OperationId = "StartWatchingChangesInFileProcessorWorkspace")]
+        public async Task<BaseResponse> StartWatchingChangesInFileProcessorWorkspace(string path)
+        {
+            _fileProcessorWatcher.Start(path);
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpDelete("file-processor-watcher")]
+        [SwaggerOperation(OperationId = "StopWatchingChangesInFileProcessorWorkspace")]
+        public async Task<BaseResponse> StopWatchingChangesInFileProcessorWorkspace()
+        {
+            _fileProcessorWatcher.Stop();
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpPut("file-processor-watcher/keep-alive")]
+        [SwaggerOperation(OperationId = "KeepAliveFileProcessorWatcher")]
+        public async Task<BaseResponse> KeepAliveFileProcessorWatcher()
+        {
+            _fileProcessorWatcher.KeepAlive();
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpGet("is-file")]
+        [SwaggerOperation(OperationId = "CheckPathIsFile")]
+        public async Task<SingletonResponse<bool>> CheckPathIsFile(string path)
+        {
+            return new SingletonResponse<bool>(System.IO.File.Exists(path));
+        }
+
+        [HttpGet("hardware-acceleration")]
+        [SwaggerOperation(OperationId = "GetHardwareAccelerationInfo")]
+        public async Task<SingletonResponse<HardwareAccelerationInfo>> GetHardwareAccelerationInfo()
+        {
+            var info = await _hardwareAccelerationService.GetHardwareAccelerationInfoAsync(HttpContext.RequestAborted);
+            return new SingletonResponse<HardwareAccelerationInfo>(info);
+        }
+
+        [HttpPost("hardware-acceleration/clear-cache")]
+        [SwaggerOperation(OperationId = "ClearHardwareAccelerationCache")]
+        public async Task<BaseResponse> ClearHardwareAccelerationCache()
+        {
+            _hardwareAccelerationService.ClearCache();
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpGet("first-file-by-ext")]
+        [SwaggerOperation(OperationId = "GetFirstFileByExtension")]
+        public async Task<ListResponse<string>> GetFirstFileByExtension(string path)
+        {
+            if (System.IO.File.Exists(path))
+            {
+                return new ListResponse<string>([path]);
+            }
+
+            var files = Directory.GetFiles(path, "*.*", SearchOption.AllDirectories);
+            var fileGroup = files.GroupBy(Path.GetExtension).OrderByDescending(x => x.Count()).Select(a => a.First());
+            return new ListResponse<string>(fileGroup);
+        }
+
+        [HttpPost("upload")]
+        [SwaggerOperation(OperationId = "UploadFile")]
+        [Consumes("multipart/form-data")]
+        public async Task<SingletonResponse<string>> UploadFile(IFormFile file)
+        {
+            if (file.Length == 0)
+            {
+                return SingletonResponseBuilder<string>.BuildBadRequest("File is empty");
+            }
+
+            var originalFilename = Path.GetFileName(file.FileName);
+            var safeFilename = $"{Guid.NewGuid():N}_{originalFilename}";
+
+            await using var stream = file.OpenReadStream();
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms, HttpContext.RequestAborted);
+
+            var savedPath = await _fileManager.Save(_fileManager.GetAttachmentPath(safeFilename), ms.ToArray(),
+                HttpContext.RequestAborted);
+            return new SingletonResponse<string>(savedPath);
+        }
+    }
+}

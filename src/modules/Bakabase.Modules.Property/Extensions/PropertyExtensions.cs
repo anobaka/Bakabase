@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Text.Json;
+using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Exceptions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
@@ -124,12 +125,17 @@ public static class PropertyExtensions
     public static CustomPropertyValueDbModel ToDbModel(this CustomPropertyValue domain,
         StandardValueType valueType)
     {
+        // Relativize is safe to apply to any List<string> value: paths under AppData get
+        // converted to relative form; UUIDs / non-absolute strings are returned unchanged.
+        var valueForDb = domain.Value is List<string> paths
+            ? AppDataPaths.RelativizeAll(paths)
+            : domain.Value;
         return new CustomPropertyValueDbModel
         {
             Id = domain.Id,
             PropertyId = domain.PropertyId,
             ResourceId = domain.ResourceId,
-            Value = domain.Value?.SerializeAsStandardValue(valueType),
+            Value = valueForDb?.SerializeAsStandardValue(valueType),
             Scope = domain.Scope
         };
     }
@@ -137,6 +143,14 @@ public static class PropertyExtensions
     public static CustomPropertyValue ToDomainModel(this CustomPropertyValueDbModel dbModel,
         PropertyType type)
     {
+        var rawValue = dbModel.Value?.DeserializeAsStandardValue(PropertySystem.Property.GetDescriptor(type).DbValueType);
+        // Resolve only when we know the value contains paths (Attachment).
+        // Other ListString-typed properties (Tags, Multilevel, MultipleChoice) store UUIDs;
+        // resolving them would wrongly prepend the AppData root.
+        if (type == PropertyType.Attachment && rawValue is List<string> paths)
+        {
+            rawValue = AppDataPaths.ResolveAll(paths);
+        }
         return new CustomPropertyValue
         {
             Id = dbModel.Id,
@@ -145,7 +159,7 @@ public static class PropertyExtensions
             PropertyId = dbModel.PropertyId,
             ResourceId = dbModel.ResourceId,
             Scope = dbModel.Scope,
-            Value = dbModel.Value?.DeserializeAsStandardValue(PropertySystem.Property.GetDescriptor(type).DbValueType)
+            Value = rawValue
         };
     }
 

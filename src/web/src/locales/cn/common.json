@@ -211,6 +211,7 @@
   "menu.thirdPartyIntegration": "第三方集成",
   "menu.postParser": "帖子解析",
   "menu.ai": "AI",
+  "menu.ai.chat": "对话",
   "menu.ai.configuration": "AI 配置",
   "menu.ai.usage": "用量统计",
   "menu.ai.auditLog": "审计日志",

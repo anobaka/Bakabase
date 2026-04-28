@@ -216,6 +216,9 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
                 .GetRequiredService<IReservedPropertyValueService>();
             var resourceOrm = scope.ServiceProvider
                 .GetRequiredService<IResourceService>();
+            // Optional: HealthScore reader is registered only when the HealthScore module is wired up.
+            var healthScoreReader = scope.ServiceProvider
+                .GetService<IResourceHealthScoreReader>();
             var mediaLibraryResourceMappingService = scope.ServiceProvider
                 .GetRequiredService<IMediaLibraryResourceMappingService>();
 
@@ -264,6 +267,17 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
                 if (dbModel != null)
                 {
                     IndexInternalProperties(resourceId, dbModel, mediaLibraryMappings, sourceLinkMappings, indexKeys);
+                }
+
+                // Index aggregated health score (sourced from the HealthScore module's in-memory cache).
+                var hs = healthScoreReader?.GetAggregatedScore(resourceId);
+                if (hs.HasValue)
+                {
+                    AddToValueIndex(PropertyPool.Internal, (int)InternalProperty.HealthScore,
+                        hs.Value.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                        resourceId, indexKeys);
+                    AddToRangeIndex(PropertyPool.Internal, (int)InternalProperty.HealthScore,
+                        hs.Value, resourceId, indexKeys);
                 }
 
                 // Index reserved properties
@@ -451,6 +465,13 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
                 AddToValueIndex(PropertyPool.Reserved, (int)Abstractions.Models.Domain.Constants.ReservedProperty.Cover,
                     coverPath, resourceId, indexKeys);
             }
+        }
+
+        // Name
+        if (!string.IsNullOrEmpty(value.Name))
+        {
+            AddToValueIndex(PropertyPool.Reserved, (int)Abstractions.Models.Domain.Constants.ReservedProperty.Name,
+                value.Name, resourceId, indexKeys);
         }
     }
 

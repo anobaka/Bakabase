@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Models.Db;
@@ -23,8 +24,9 @@ public static class ResourceCacheExtensions
         {
             if (model.CoverPaths.IsNotEmpty())
             {
-                rc.CoverPaths =
-                    model.CoverPaths.DeserializeAsStandardValue<List<string>>(StandardValueType.ListString);
+                // CoverPaths are written by LocalFileCoverProvider into AppData → resolve to absolute.
+                rc.CoverPaths = AppDataPaths.ResolveAll(
+                    model.CoverPaths.DeserializeAsStandardValue<List<string>>(StandardValueType.ListString));
             }
         }
 
@@ -32,6 +34,7 @@ public static class ResourceCacheExtensions
         {
             if (model.PlayableFilePaths.IsNotEmpty())
             {
+                // PlayableFilePaths point to user-disk content (resource folders), not AppData.
                 rc.PlayableFilePaths =
                     model.PlayableFilePaths.DeserializeAsStandardValue<List<string>>(StandardValueType.ListString);
             }

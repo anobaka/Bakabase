@@ -11,6 +11,7 @@ import {
   FireOutlined,
   FolderOpenOutlined,
   FullscreenOutlined,
+  LayoutOutlined,
   PlayCircleOutlined,
   ProductOutlined,
   PushpinOutlined,
@@ -30,6 +31,7 @@ import { Slider } from "@heroui/react";
 import { Button, Checkbox, Chip, Divider, Modal, ButtonGroup, Input, Tab, Tabs } from "@/components/bakaui";
 import { CoverFit, PropertyPool } from "@/sdk/constants";
 import QuickSetPropertyConfig from "@/components/Resource/components/QuickSetPropertyConfig";
+import ResourceDetailLayoutConfigModal from "@/components/ResourceDetailLayoutConfigModal";
 import { useFilterOptionsThreshold, DEFAULT_FILTER_OPTIONS_THRESHOLD } from "@/hooks/useFilterOptionsThreshold";
 import BApi from "@/sdk/BApi";
 import { useUiOptionsStore, useUiStyleOptionsStore } from "@/stores/options";
@@ -186,6 +188,18 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
         >
           <div className={"flex items-center gap-1"}>
             {t<string>("resource.display.hideResourceBorder")}
+          </div>
+        </Checkbox>
+      </div>
+
+      <div>
+        <Checkbox
+          size="sm"
+          isSelected={!!resourceUiOptions?.hideHealthScore}
+          onValueChange={(checked) => patchOptions({ hideHealthScore: checked })}
+        >
+          <div className={"flex items-center gap-1"}>
+            {t<string>("resource.display.hideHealthScore")}
           </div>
         </Checkbox>
       </div>
@@ -407,6 +421,24 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
     </div>
   );
 
+  const renderDetailLayoutTab = () => (
+    <div className={"flex flex-col items-start gap-2"}>
+      <div className={"text-xs text-default-500 leading-5"}>
+        {t<string>("resource.detailLayout.description")}
+      </div>
+      <Button
+        size={"sm"}
+        startContent={<LayoutOutlined className={"text-base"} />}
+        variant={"flat"}
+        onPress={() => {
+          createPortal(ResourceDetailLayoutConfigModal, {});
+        }}
+      >
+        {t<string>("resource.detailLayout.adjustLayout")}
+      </Button>
+    </div>
+  );
+
   const renderStyleTab = () => (
     <div className={"flex flex-col gap-4"}>
       {cssVariableGroups.map((group) => (
@@ -480,6 +512,9 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
             </Tab>
             <Tab key="cover" title={t<string>("resource.display.tab.cover")}>
               {renderCoverTab()}
+            </Tab>
+            <Tab key="detailLayout" title={t<string>("resource.display.tab.detailLayout")}>
+              {renderDetailLayoutTab()}
             </Tab>
             <Tab key="contextMenu" title={t<string>("resource.display.tab.contextMenu")}>
               {renderContextMenuTab()}

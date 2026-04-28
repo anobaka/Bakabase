@@ -26,9 +26,7 @@ const CustomPropertyPage = () => {
   const loadProperties = async () => {
     // @ts-ignore
     const rsp = await BApi.customProperty.getAllCustomProperties({
-      additionalItems:
-        CustomPropertyAdditionalItem.Category |
-        CustomPropertyAdditionalItem.ValueCount,
+      additionalItems: CustomPropertyAdditionalItem.ValueCount,
     });
 
     // @ts-ignore
@@ -132,6 +130,7 @@ const CustomPropertyPage = () => {
                         editable
                         hidePool
                         hideType
+                        openEditModalOnClick
                         removable
                         property={p}
                         onDialogDestroyed={loadProperties}

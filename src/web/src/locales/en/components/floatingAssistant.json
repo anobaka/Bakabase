@@ -19,6 +19,7 @@
   "floatingAssistant.tip.removeFromList": "Remove from list",
   "floatingAssistant.tip.persistentScheduledTask": "Persistent scheduled task",
   "floatingAssistant.tip.estimatedCompletion": "Estimated completion",
+  "floatingAssistant.tip.willRunAutomatically": "I will run automatically later",
   "floatingAssistant.empty.noBackgroundTask": "No background task",
   "floatingAssistant.empty.noTasksMatchFilter": "No tasks match the filter",
   "floatingAssistant.taskType.all": "All",

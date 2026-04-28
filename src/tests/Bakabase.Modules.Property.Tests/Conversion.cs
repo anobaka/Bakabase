@@ -1,3 +1,4 @@
+using Bakabase.Abstractions.Components.Events;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Dto;
 using Bakabase.Infrastructures.Components.Orm;
@@ -35,6 +36,9 @@ namespace Bakabase.Modules.Property.Tests
             sc.AddSingleton<NoneCustomDateTimeParser>();
             sc.AddStandardValue<NoneCustomDateTimeParser>();
             sc.AddReservedProperty();
+            sc.AddSingleton<ResourceDataChangeEventHub>();
+            sc.AddSingleton<IResourceDataChangeEvent>(sp => sp.GetRequiredService<ResourceDataChangeEventHub>());
+            sc.AddSingleton<IResourceDataChangeEventPublisher>(sp => sp.GetRequiredService<ResourceDataChangeEventHub>());
             sc.AddBootstrapServices<BakabaseDbContext>(c => c.UseBootstrapSqLite(Path.GetDirectoryName(dbFilePath), Path.GetFileNameWithoutExtension(dbFilePath)));
             sc.AddProperty<BakabaseDbContext>();
             sc.AddTransient<BakabaseLocalizer>();

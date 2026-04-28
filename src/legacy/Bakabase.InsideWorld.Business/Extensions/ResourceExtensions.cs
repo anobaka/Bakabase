@@ -1,6 +1,7 @@
 ﻿using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Linq;
+using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue;
@@ -27,8 +28,8 @@ namespace Bakabase.InsideWorld.Business.Extensions
                 MediaLibraryId = dbModel.MediaLibraryId,
                 CreatedAt = dbModel.CreateDt,
                 UpdatedAt = dbModel.UpdateDt,
-                FileCreatedAt = dbModel.FileCreateDt,
-                FileModifiedAt = dbModel.FileModifyDt,
+                FileCreatedAt = dbModel.FileCreateDt.TruncateToMilliseconds(),
+                FileModifiedAt = dbModel.FileModifyDt.TruncateToMilliseconds(),
                 IsFile = dbModel.IsFile,
                 ParentId = dbModel.ParentId,
                 // 直接设置 Path，避免 Directory/FileName 分别设置触发两次 StandardizePath
@@ -48,8 +49,8 @@ namespace Bakabase.InsideWorld.Business.Extensions
                 CreateDt = domainModel.CreatedAt,
                 MediaLibraryId = domainModel.MediaLibraryId,
                 UpdateDt = domainModel.UpdatedAt,
-                FileCreateDt = domainModel.FileCreatedAt,
-                FileModifyDt = domainModel.FileModifiedAt,
+                FileCreateDt = domainModel.FileCreatedAt.TruncateToMilliseconds(),
+                FileModifyDt = domainModel.FileModifiedAt.TruncateToMilliseconds(),
                 ParentId = domainModel.Parent?.Id ?? domainModel.ParentId,
                 IsFile = domainModel.IsFile,
                 Path = domainModel.Path,
@@ -88,16 +89,19 @@ namespace Bakabase.InsideWorld.Business.Extensions
                 changed = true;
             }
 
-            if (current.FileCreatedAt != patches.FileCreatedAt ||
-                current.FileModifiedAt != patches.FileModifiedAt)
+            var patchFileCreated = patches.FileCreatedAt.TruncateToMilliseconds();
+            var patchFileModified = patches.FileModifiedAt.TruncateToMilliseconds();
+            if (patchFileCreated != default &&
+                current.FileCreatedAt.TruncateToMilliseconds().Ticks != patchFileCreated.Ticks)
             {
-                current.FileCreatedAt = patches.FileCreatedAt;
+                current.FileCreatedAt = patchFileCreated;
                 changed = true;
             }
 
-            if (current.FileModifiedAt != patches.FileModifiedAt)
+            if (patchFileModified != default &&
+                current.FileModifiedAt.TruncateToMilliseconds().Ticks != patchFileModified.Ticks)
             {
-                current.FileModifiedAt = patches.FileModifiedAt;
+                current.FileModifiedAt = patchFileModified;
                 changed = true;
             }
 

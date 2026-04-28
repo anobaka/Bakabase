@@ -1,5 +1,7 @@
 import type { ValueEditorProps } from "../ValueEditor/models";
 
+export type ValueRendererSize = "sm" | "md" | "lg";
+
 export type ValueRendererProps<TBizValue, TDbValue = TBizValue> = {
   // db value
   value?: TBizValue;

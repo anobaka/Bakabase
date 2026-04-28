@@ -505,6 +505,9 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.Property<string>("Introduction")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Name")
+                        .HasColumnType("TEXT");
+
                     b.Property<decimal?>("Rating")
                         .HasColumnType("TEXT");
 
@@ -1016,6 +1019,73 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.ToTable("AiFeatureConfigs");
                 });
 
+            modelBuilder.Entity("Bakabase.Modules.AI.Models.Db.ChatConversationDbModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Title")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("IsArchived");
+
+                    b.ToTable("ChatConversations");
+                });
+
+            modelBuilder.Entity("Bakabase.Modules.AI.Models.Db.ChatMessageDbModel", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Content")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ConversationId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RichContent")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("TokenUsage")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ToolCalls")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ToolResults")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConversationId");
+
+                    b.HasIndex("ConversationId", "CreatedAt");
+
+                    b.ToTable("ChatMessages");
+                });
+
             modelBuilder.Entity("Bakabase.Modules.AI.Models.Db.LlmCallCacheEntryDbModel", b =>
                 {
                     b.Property<long>("Id")
@@ -1091,6 +1161,27 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.HasIndex("ProviderType");
 
                     b.ToTable("LlmProviderConfigs");
+                });
+
+            modelBuilder.Entity("Bakabase.Modules.AI.Models.Db.LlmToolConfigDbModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ToolName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ToolName")
+                        .IsUnique();
+
+                    b.ToTable("LlmToolConfigs");
                 });
 
             modelBuilder.Entity("Bakabase.Modules.AI.Models.Db.LlmUsageLogDbModel", b =>
@@ -1417,6 +1508,166 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.HasIndex("PlanId", "Order");
 
                     b.ToTable("ComparisonRules");
+                });
+
+            modelBuilder.Entity("Bakabase.Modules.DataCard.Abstractions.Models.Db.DataCardDbModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TypeId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TypeId");
+
+                    b.ToTable("DataCards");
+                });
+
+            modelBuilder.Entity("Bakabase.Modules.DataCard.Abstractions.Models.Db.DataCardPropertyValueDbModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("CardId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("PropertyId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Scope")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Value")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CardId");
+
+                    b.HasIndex("PropertyId");
+
+                    b.HasIndex("PropertyId", "Value");
+
+                    b.HasIndex("CardId", "PropertyId", "Scope")
+                        .IsUnique();
+
+                    b.ToTable("DataCardPropertyValues");
+                });
+
+            modelBuilder.Entity("Bakabase.Modules.DataCard.Abstractions.Models.Db.DataCardTypeDbModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DisplayTemplate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("IdentityPropertyIds")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MatchRules")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("NameTemplate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PropertyIds")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("DataCardTypes");
+                });
+
+            modelBuilder.Entity("Bakabase.Modules.HealthScore.Models.Db.HealthScoreProfileDbModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("BaseScore")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("MembershipFilterJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("RulesJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("HealthScoreProfiles");
+                });
+
+            modelBuilder.Entity("Bakabase.Modules.HealthScore.Models.Db.ResourceHealthScoreDbModel", b =>
+                {
+                    b.Property<int>("ResourceId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ProfileId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("EvaluatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MatchedRulesJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ProfileHash")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("Score")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("ResourceId", "ProfileId");
+
+                    b.HasIndex("ResourceId");
+
+                    b.HasIndex("ProfileId", "ProfileHash");
+
+                    b.ToTable("ResourceHealthScores");
                 });
 
             modelBuilder.Entity("Bakabase.Modules.Property.Abstractions.Models.Db.CustomPropertyDbModel", b =>

@@ -1,0 +1,41 @@
+<Window
+    x:Class="Bakabase.Windows.CookieCaptureWindow"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="clr-namespace:Bakabase.Controls;assembly=Bakabase"
+    Icon="/Assets/favicon.png"
+    Title="Cookie Capture"
+    Width="1024"
+    Height="720"
+    WindowStartupLocation="CenterScreen">
+    <DockPanel>
+        <!-- Top address bar -->
+        <Border DockPanel.Dock="Top" Padding="8" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
+            <DockPanel>
+                <Button Name="GoBtn" DockPanel.Dock="Right" Content="&#x2192;" Margin="4,0,0,0"
+                        VerticalAlignment="Center" MinWidth="36" HorizontalContentAlignment="Center" />
+                <TextBox Name="AddressBar" VerticalAlignment="Center" FontSize="13"
+                         Watermark="https://" />
+            </DockPanel>
+        </Border>
+
+        <!-- Bottom bar with Confirm/Cancel buttons -->
+        <Border DockPanel.Dock="Bottom" Padding="12" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
+            <DockPanel VerticalAlignment="Center">
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <Button Name="CancelBtn" VerticalAlignment="Center" />
+                    <Button Name="ConfirmBtn" Classes="accent" VerticalAlignment="Center" />
+                </StackPanel>
+                <TextBlock Name="StatusText"
+                           VerticalAlignment="Center"
+                           Margin="0,0,16,0"
+                           FontSize="13"
+                           TextTrimming="CharacterEllipsis"
+                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+            </DockPanel>
+        </Border>
+
+        <!-- WebView fills the rest -->
+        <controls:NativeWebViewHost Name="CaptureWebView" />
+    </DockPanel>
+</Window>

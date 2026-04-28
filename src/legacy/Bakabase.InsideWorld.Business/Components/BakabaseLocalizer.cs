@@ -191,36 +191,6 @@ namespace Bakabase.InsideWorld.Business.Components
             return this[nameof(PostParser_ParseAll_TaskName)];
         }
 
-        public string SyncMediaLibrary(string name)
-        {
-            return this[nameof(SyncMediaLibrary), name];
-        }
-
-        public string SyncMediaLibrary_TaskProcess_DiscoverResources(string name)
-        {
-            return this[nameof(SyncMediaLibrary_TaskProcess_DiscoverResources), name];
-        }
-
-        public string SyncMediaLibrary_TaskProcess_CleanupResources(string name)
-        {
-            return this[nameof(SyncMediaLibrary_TaskProcess_CleanupResources), name];
-        }
-
-        public string SyncMediaLibrary_TaskProcess_AddResources(string name)
-        {
-            return this[nameof(SyncMediaLibrary_TaskProcess_AddResources), name];
-        }
-
-        public string SyncMediaLibrary_TaskProcess_UpdateResources(string name)
-        {
-            return this[nameof(SyncMediaLibrary_TaskProcess_UpdateResources), name];
-        }
-
-        public string SyncMediaLibrary_TaskProcess_AlmostComplete(string name)
-        {
-            return this[nameof(SyncMediaLibrary_TaskProcess_AlmostComplete), name];
-        }
-
         public string MediaType(MediaType type)
         {
             return this[$"{nameof(MediaType)}_{type}"];

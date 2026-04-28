@@ -9,7 +9,6 @@ using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using Bakabase.Modules.Search.Models.Db;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Doc.Swagger;
-using static Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ResourceOptions.SynchronizationCategoryOptions;
 
 namespace Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain
 {
@@ -124,41 +123,11 @@ namespace Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain
 
         public record SynchronizationOptionsModel
         {
-            public int? MaxThreads { get; set; }
-            public bool? DeleteResourcesWithUnknownPath { get; set; }
-            public bool? DeleteResourcesWithUnknownMediaLibrary { get; set; }
-            [Obsolete] public Dictionary<int, SynchronizationCategoryOptions>? CategoryOptionsMap { get; set; }
-            public Dictionary<int, SynchronizationEnhancerOptions>? EnhancerOptionsMap { get; set; }
-
-            /// <summary>
-            /// V2
-            /// </summary>
-            public Dictionary<int, SynchronizationMediaLibraryOptions>? MediaLibraryOptionsMap { get; set; }
-
             /// <summary>
             /// When enabled, path marks will be synced immediately when created or modified.
             /// When disabled, marks will be collected and synced manually or during the next sync operation.
             /// </summary>
             public bool? SyncMarksImmediately { get; set; } = true;
-        }
-
-        public record SynchronizationCategoryOptions
-        {
-            public bool? DeleteResourcesWithUnknownPath { get; set; }
-            public Dictionary<int, SynchronizationEnhancerOptions>? EnhancerOptionsMap { get; set; }
-            public Dictionary<int, SynchronizationMediaLibraryOptions>? MediaLibraryOptionsMap { get; set; }
-        }
-
-        public record SynchronizationMediaLibraryOptions
-        {
-            public bool? DeleteResourcesWithUnknownPath { get; set; }
-            public Dictionary<int, SynchronizationEnhancerOptions>? EnhancerOptionsMap { get; set; }
-        }
-
-        public record SynchronizationEnhancerOptions
-        {
-            public bool? ReApply { get; set; }
-            public bool? ReEnhance { get; set; }
         }
     }
 }

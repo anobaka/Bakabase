@@ -42,5 +42,16 @@ namespace Bakabase.InsideWorld.Models.Constants
         /// MultipleChoice - a resource can be linked to multiple sources.
         /// </summary>
         Source = 26,
+        /// <summary>
+        /// Resource name. Reserved property auto-populated during sync:
+        /// - PathMark: filename without extension
+        /// - External sources (Steam, DLsite, ExHentai): display name from resolver
+        /// </summary>
+        Name = 27,
+        /// <summary>
+        /// Aggregated health score (Number). Computed by the HealthScore module from
+        /// matching ScoringProfiles; null when no profile has scored the resource.
+        /// </summary>
+        HealthScore = 28,
     }
 }

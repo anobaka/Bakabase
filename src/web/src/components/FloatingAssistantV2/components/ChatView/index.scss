@@ -1,0 +1,503 @@
+// ============================================================
+// ChatView - shared between popover and page modes
+// ============================================================
+
+.baka-chat-view {
+  display: flex;
+  height: 100%;
+  overflow: hidden;
+}
+
+// -- Page mode has sidebar --
+.baka-chat-view-page {
+  .baka-chat-sidebar {
+    width: 240px;
+    border-right: 1px solid rgba(0, 0, 0, 0.08);
+    display: flex;
+    flex-direction: column;
+
+    .dark & {
+      border-right-color: rgba(255, 255, 255, 0.08);
+    }
+  }
+
+  .baka-chat-main {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+// -- Popover mode fills its container --
+.baka-chat-view-popover {
+  flex-direction: column;
+
+  .baka-chat-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+}
+
+// -- Sidebar --
+.baka-chat-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+
+  .dark & { border-bottom-color: rgba(255, 255, 255, 0.06); }
+}
+
+.baka-chat-sidebar-title {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.baka-chat-sidebar-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.baka-chat-sidebar-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.15s;
+
+  &:hover { background: rgba(0, 0, 0, 0.04); }
+  &.active { background: rgba(0, 0, 0, 0.08); font-weight: 500; }
+
+  .dark &:hover { background: rgba(255, 255, 255, 0.06); }
+  .dark &.active { background: rgba(255, 255, 255, 0.1); }
+
+  .baka-chat-sidebar-item-title {
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .baka-chat-sidebar-item-delete {
+    display: none;
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px 4px;
+    margin-left: 4px;
+    border-radius: 4px;
+    color: var(--theme-text-subtle, #999);
+    font-size: 12px;
+    transition: color 0.15s, background 0.15s;
+
+    &:hover {
+      color: hsl(var(--heroui-danger, 0 80% 50%));
+      background: rgba(255, 0, 0, 0.06);
+    }
+  }
+
+  &:hover .baka-chat-sidebar-item-delete {
+    display: flex;
+  }
+}
+
+// -- Main chat area --
+.baka-chat-main {
+  display: flex;
+  flex-direction: column;
+}
+
+.baka-chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  flex-shrink: 0;
+
+  .dark & { border-bottom-color: rgba(255, 255, 255, 0.06); }
+}
+
+.baka-chat-title {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.baka-chat-header-actions {
+  display: flex;
+  gap: 4px;
+}
+
+// -- Config panel (settings popover) --
+.baka-chat-config-panel {
+  min-width: 280px;
+  max-width: 360px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.baka-chat-icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 4px;
+  color: var(--heroui-foreground, #666);
+  transition: background 0.15s;
+
+  &:hover { background: rgba(0, 0, 0, 0.06); }
+}
+
+// -- AI warning --
+.baka-chat-warning {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  font-size: 11px;
+  color: var(--theme-color-warning, #cd7600);
+  background: rgba(205, 118, 0, 0.06);
+  flex-shrink: 0;
+}
+
+.baka-chat-warning-icon {
+  font-size: 12px;
+}
+
+.baka-chat-warning-close {
+  margin-left: auto;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--theme-color-warning, #cd7600);
+  padding: 2px;
+  font-size: 10px;
+  line-height: 1;
+  border-radius: 2px;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+
+  &:hover { opacity: 1; }
+}
+
+// -- Messages --
+.baka-chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+}
+
+.baka-chat-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--theme-text-subtle, #999);
+  font-size: 13px;
+
+  &.baka-chat-not-configured {
+    flex-direction: column;
+    gap: 4px;
+    padding: 24px;
+    text-align: center;
+    color: var(--theme-color-warning, #cd7600);
+  }
+}
+
+.baka-chat-msg {
+  display: flex;
+  flex-direction: column;
+
+  &.baka-chat-msg-user {
+    align-items: flex-end;
+
+    .baka-chat-bubble {
+      background: hsl(var(--heroui-primary, 220 90% 56%));
+      color: #fff;
+      border-radius: 14px 14px 4px 14px;
+    }
+  }
+
+  &.baka-chat-msg-assistant {
+    align-items: flex-start;
+
+    .baka-chat-bubble {
+      background: rgba(0, 0, 0, 0.06);
+      color: var(--heroui-foreground, #333);
+      border-radius: 14px 14px 14px 4px;
+
+      .dark & { background: rgba(255, 255, 255, 0.08); }
+    }
+  }
+}
+
+.baka-chat-bubble {
+  max-width: 85%;
+  padding: 8px 12px;
+  font-size: 13px;
+  line-height: 1.6;
+  word-break: break-word;
+  white-space: pre-wrap;
+
+  // Markdown content styling (assistant messages)
+  &.baka-chat-markdown {
+    white-space: normal;
+
+    p {
+      margin: 0 0 0.5em;
+
+      &:last-child { margin-bottom: 0; }
+    }
+
+    ul, ol {
+      margin: 0.25em 0;
+      padding-left: 1.5em;
+    }
+
+    li { margin: 0.15em 0; }
+
+    code {
+      font-size: 12px;
+      padding: 1px 4px;
+      border-radius: 3px;
+      background: rgba(0, 0, 0, 0.06);
+
+      .dark & { background: rgba(255, 255, 255, 0.1); }
+    }
+
+    pre {
+      margin: 0.5em 0;
+      padding: 8px;
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.06);
+      overflow-x: auto;
+      font-size: 12px;
+
+      .dark & { background: rgba(255, 255, 255, 0.06); }
+
+      code {
+        padding: 0;
+        background: none;
+      }
+    }
+
+    blockquote {
+      margin: 0.5em 0;
+      padding-left: 10px;
+      border-left: 3px solid rgba(0, 0, 0, 0.15);
+      color: var(--theme-text-subtle, #666);
+
+      .dark & { border-left-color: rgba(255, 255, 255, 0.2); }
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+      margin: 0.5em 0 0.25em;
+      line-height: 1.3;
+    }
+
+    h1 { font-size: 1.3em; }
+    h2 { font-size: 1.2em; }
+    h3 { font-size: 1.1em; }
+
+    table {
+      border-collapse: collapse;
+      margin: 0.5em 0;
+      font-size: 12px;
+
+      th, td {
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        padding: 4px 8px;
+
+        .dark & { border-color: rgba(255, 255, 255, 0.1); }
+      }
+
+      th {
+        background: rgba(0, 0, 0, 0.04);
+
+        .dark & { background: rgba(255, 255, 255, 0.06); }
+      }
+    }
+
+    a {
+      color: hsl(var(--heroui-primary, 220 90% 56%));
+      text-decoration: none;
+
+      &:hover { text-decoration: underline; }
+    }
+
+    hr {
+      border: none;
+      border-top: 1px solid rgba(0, 0, 0, 0.1);
+      margin: 0.5em 0;
+
+      .dark & { border-top-color: rgba(255, 255, 255, 0.1); }
+    }
+  }
+}
+
+.baka-chat-cursor {
+  animation: baka-cursor-blink 0.8s infinite;
+}
+
+@keyframes baka-cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+// -- Tool calls --
+.baka-chat-tool-call {
+  margin-top: 4px;
+  padding: 4px 8px;
+  font-size: 11px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.03);
+  max-width: 85%;
+
+  .dark & { background: rgba(255, 255, 255, 0.04); }
+}
+
+.baka-chat-tool-name {
+  font-weight: 500;
+  color: var(--theme-text-subtle, #666);
+}
+
+.baka-chat-tool-args {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 3px;
+}
+
+.baka-chat-tool-arg {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-size: 11px;
+
+  .dark & { background: rgba(255, 255, 255, 0.06); }
+}
+
+.baka-chat-tool-arg-key {
+  color: var(--theme-text-subtle, #888);
+
+  &::after {
+    content: ':';
+    margin-right: 2px;
+  }
+}
+
+.baka-chat-tool-arg-value {
+  color: var(--heroui-foreground, #333);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.baka-chat-tool-result {
+  margin-top: 4px;
+
+  summary {
+    cursor: pointer;
+    color: var(--theme-text-primary, #2f81f7);
+    font-size: 11px;
+  }
+
+  pre {
+    margin-top: 4px;
+    font-size: 11px;
+    max-height: 120px;
+    overflow: auto;
+    background: rgba(0, 0, 0, 0.04);
+    padding: 6px;
+    border-radius: 4px;
+    white-space: pre-wrap;
+    word-break: break-all;
+
+    .dark & { background: rgba(255, 255, 255, 0.04); }
+  }
+}
+
+// -- Resource cards in tool results --
+.baka-chat-resource-loading {
+  padding: 4px 8px;
+  font-size: 11px;
+  color: var(--theme-text-subtle, #999);
+}
+
+.baka-chat-resource-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+  max-width: 85%;
+}
+
+.baka-chat-error {
+  margin-top: 4px;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: hsl(var(--heroui-danger, 0 80% 50%));
+  border-radius: 4px;
+  background: rgba(255, 0, 0, 0.06);
+}
+
+// -- Input --
+.baka-chat-input-area {
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  flex-shrink: 0;
+
+  .dark & { border-top-color: rgba(255, 255, 255, 0.06); }
+}
+
+.baka-chat-input {
+  flex: 1;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 18px;
+  padding: 6px 14px;
+  font-size: 13px;
+  outline: none;
+  background: transparent;
+  color: var(--heroui-foreground, #333);
+  transition: border-color 0.2s;
+
+  &:focus { border-color: hsl(var(--heroui-primary, 220 90% 56%)); }
+  &:disabled { opacity: 0.5; }
+  .dark & { border-color: rgba(255, 255, 255, 0.15); }
+}
+
+.baka-chat-send {
+  background: hsl(var(--heroui-primary, 220 90% 56%));
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  flex-shrink: 0;
+  transition: opacity 0.2s;
+
+  &:hover { opacity: 0.85; }
+  &:disabled { opacity: 0.4; cursor: not-allowed; }
+}

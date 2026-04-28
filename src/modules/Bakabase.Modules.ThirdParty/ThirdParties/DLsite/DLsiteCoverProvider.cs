@@ -64,7 +64,7 @@ public class DLsiteCoverProvider : ICoverProvider
     {
         if (link.CoverUrls is not { Count: > 0 }) return null;
 
-        var coverDir = _fileManager.BuildAbsolutePath("cache", "cover", "source", $"{link.ResourceId}_{link.Source}");
+        var coverDir = _fileManager.GetSourceCoverDir(link.Source.ToString(), link.ResourceId);
         Directory.CreateDirectory(coverDir);
 
         var httpClient = _httpClientFactory.CreateClient(InternalOptions.HttpClientNames.DLsite);

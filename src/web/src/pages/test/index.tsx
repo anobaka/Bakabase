@@ -27,6 +27,7 @@ import ComparisonRuleTest from "./cases/ComparisonRuleTest";
 import PropertyValueRendererTestPage from "./cases/PropertyValueRenderer";
 import PlayControlAndCoverTest from "./cases/PlayControlAndCoverTest";
 import ContextMenuQuickSetTest from "./cases/ContextMenuQuickSet";
+import ResourceDetailLayoutEditorTest from "./cases/ResourceDetailLayoutEditorTest";
 
 import ErrorBoundaryTestPage from "@/pages/test/cases/ErrorBoundaryTest";
 import { Listbox } from "@/components/bakaui";
@@ -44,6 +45,7 @@ import DeprecatedChip from "@/components/Chips/DeprecatedChip";
 import { FileSystemSelectorButton } from "@/components/FileSystemSelector";
 
 const components = {
+  ResourceDetailLayoutEditor: <ResourceDetailLayoutEditorTest />,
   ContextMenuQuickSet: <ContextMenuQuickSetTest />,
   PlayControlAndCover: <PlayControlAndCoverTest />,
   PropertyValueRenderer: <PropertyValueRendererTestPage />,

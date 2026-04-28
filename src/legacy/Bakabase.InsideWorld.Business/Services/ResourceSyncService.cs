@@ -39,6 +39,7 @@ public class ResourceSyncService : ScopedService
     private readonly IBakabaseLocalizer _localizer;
     private readonly ILogger<ResourceSyncService> _logger;
     private readonly IEnumerable<IResourceResolver> _resourceResolvers;
+    private readonly IReservedPropertyValueService _reservedPropertyValueService;
 
     public ResourceSyncService(
         IServiceProvider serviceProvider,
@@ -48,7 +49,8 @@ public class ResourceSyncService : ScopedService
         IBOptions<ResourceOptions> resourceOptions,
         IBakabaseLocalizer localizer,
         ILogger<ResourceSyncService> logger,
-        IEnumerable<IResourceResolver> resourceResolvers) : base(serviceProvider)
+        IEnumerable<IResourceResolver> resourceResolvers,
+        IReservedPropertyValueService reservedPropertyValueService) : base(serviceProvider)
     {
         _resourceService = resourceService;
         _sourceLinkService = sourceLinkService;
@@ -57,6 +59,7 @@ public class ResourceSyncService : ScopedService
         _localizer = localizer;
         _logger = logger;
         _resourceResolvers = resourceResolvers;
+        _reservedPropertyValueService = reservedPropertyValueService;
     }
 
     /// <summary>
@@ -168,6 +171,12 @@ public class ResourceSyncService : ScopedService
                     }
                 }
             }
+        }
+
+        // ===== Step 2.5: Auto-populate Name reserved property =====
+        if (resourcesToCreateOrUpdate.Count > 0)
+        {
+            await PopulateResourceNames(source, discoveredEntries, ct);
         }
 
         // ===== Step 3: Update resource statuses for resolver sources (75-80%) =====
@@ -387,14 +396,14 @@ public class ResourceSyncService : ScopedService
             if (isFile)
             {
                 var fi = new FileInfo(entry.EffectivePath);
-                fileCreatedAt = fi.CreationTime;
-                fileModifiedAt = fi.LastWriteTime;
+                fileCreatedAt = fi.CreationTime.TruncateToMilliseconds();
+                fileModifiedAt = fi.LastWriteTime.TruncateToMilliseconds();
             }
             else
             {
                 var di = new DirectoryInfo(entry.EffectivePath);
-                fileCreatedAt = di.CreationTime;
-                fileModifiedAt = di.LastWriteTime;
+                fileCreatedAt = di.CreationTime.TruncateToMilliseconds();
+                fileModifiedAt = di.LastWriteTime.TruncateToMilliseconds();
             }
 
             return new Resource
@@ -415,6 +424,111 @@ public class ResourceSyncService : ScopedService
     #endregion
 
     #region Post-Discovery Actions
+
+    /// <summary>
+    /// Auto-populates the Name reserved property for discovered resources.
+    /// - PathMark: filename without extension (fallback only — does not overwrite existing Name,
+    ///   which may have been set by a user-configured property PathMark targeting Reserved.Name)
+    /// - External sources: DisplayName from resolver (always updates)
+    /// </summary>
+    private async Task PopulateResourceNames(
+        ResourceSource source,
+        List<DiscoveredResourceEntry> discoveredEntries,
+        CancellationToken ct)
+    {
+        // Reload resources to get assigned IDs
+        var allResources = await _resourceService.GetAll();
+        var pathToResource = new Dictionary<string, Resource>(StringComparer.OrdinalIgnoreCase);
+        foreach (var r in allResources)
+        {
+            if (!string.IsNullOrEmpty(r.Path))
+                pathToResource[r.Path] = r;
+        }
+
+        var scope = source.GetPropertyValueScope();
+
+        // Collect resource IDs that need Name populated
+        var resourceNames = new Dictionary<int, string>();
+
+        foreach (var entry in discoveredEntries)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            // Find the resource by its effective path or local path
+            Resource? resource = null;
+            if (!string.IsNullOrEmpty(entry.EffectivePath))
+                pathToResource.TryGetValue(entry.EffectivePath, out resource);
+            if (resource == null && !string.IsNullOrEmpty(entry.LocalPath))
+                pathToResource.TryGetValue(entry.LocalPath, out resource);
+
+            if (resource == null || resource.Id == 0) continue;
+
+            string? name;
+            if (source == ResourceSource.PathMark)
+            {
+                // For PathMark: filename without extension
+                name = !string.IsNullOrEmpty(resource.Path)
+                    ? Path.GetFileNameWithoutExtension(resource.Path)
+                    : null;
+            }
+            else
+            {
+                // For external sources: DisplayName from resolver
+                name = entry.DisplayName;
+            }
+
+            if (!string.IsNullOrEmpty(name))
+            {
+                resourceNames[resource.Id] = name;
+            }
+        }
+
+        if (resourceNames.Count == 0) return;
+
+        // Load existing Name reserved property values
+        var resourceIds = resourceNames.Keys.ToList();
+        var existingValues = await _reservedPropertyValueService.GetAll(
+            v => resourceIds.Contains(v.ResourceId) && v.Scope == (int)scope);
+        var existingMap = existingValues.ToDictionary(v => v.ResourceId, v => v);
+
+        var toAdd = new List<ReservedPropertyValue>();
+        var toUpdate = new List<ReservedPropertyValue>();
+
+        foreach (var (resourceId, name) in resourceNames)
+        {
+            if (existingMap.TryGetValue(resourceId, out var existing))
+            {
+                // For PathMark: this is a fallback — do not overwrite existing Name
+                // (it may have been set by a user-configured property PathMark targeting Reserved.Name)
+                if (source == ResourceSource.PathMark)
+                    continue;
+
+                if (existing.Name != name)
+                {
+                    existing.Name = name;
+                    toUpdate.Add(existing);
+                }
+            }
+            else
+            {
+                toAdd.Add(new ReservedPropertyValue
+                {
+                    ResourceId = resourceId,
+                    Scope = (int)scope,
+                    Name = name
+                });
+            }
+        }
+
+        if (toAdd.Count > 0)
+            await _reservedPropertyValueService.AddRange(toAdd);
+        if (toUpdate.Count > 0)
+            await _reservedPropertyValueService.UpdateRange(toUpdate);
+
+        _logger.LogInformation(
+            "[ResourceSync] Populated Name for {Total} resources (added: {Added}, updated: {Updated})",
+            resourceNames.Count, toAdd.Count, toUpdate.Count);
+    }
 
     /// <summary>
     /// Updates resource statuses based on resolver discovery results.
@@ -476,9 +590,22 @@ public class ResourceSyncService : ScopedService
     }
 
     /// <summary>
-    /// Deletes resources that were previously discovered by this source but are no longer present.
-    /// For FileSystem: uses effect tracking (handled by PathMarkSyncService).
-    /// For resolvers: compares discovered keys with existing source links.
+    /// Cleans up resources tied to resource marks that the user just soft-deleted with the
+    /// "remove effects" choice (controller maps that to <see cref="IPathMarkService.SoftDelete"/>,
+    /// which sets <c>SyncStatus = PendingDelete</c>).
+    ///
+    /// Triggers ONLY on PendingDelete marks — never on the mere absence of coverage. That way:
+    /// - User soft-deletes mark with removeEffects=true  → mark is PendingDelete → cleanup here.
+    /// - User soft-deletes mark with removeEffects=false → controller calls HardDelete, the mark
+    ///   row is gone, no PendingDelete entry exists, this method does NOTHING. Resource is kept
+    ///   so the user can later merge it into a new resource (intentional UX).
+    /// - Resource's file disappears from disk but mark still active → not handled here at all.
+    ///
+    /// Shared-resource protection: a path that's also covered by some other active resource mark
+    /// is kept. Multi-source resources (also linked to Steam / DLsite / …) are kept too.
+    ///
+    /// Returns 0 for non-PathMark sources — resolvers mark missing items Absent and the user
+    /// can decide what to do.
     /// </summary>
     private async Task<int> DeleteOrphanedResources(
         ResourceSource source,
@@ -486,13 +613,69 @@ public class ResourceSyncService : ScopedService
         ResourceSyncContext ctx,
         CancellationToken ct)
     {
-        // For FileSystem, orphan detection is handled via effect tracking in PathMarkSyncService
-        if (source == ResourceSource.PathMark) return 0;
+        if (source != ResourceSource.PathMark)
+        {
+            return 0;
+        }
 
-        // For resolver sources, resources marked as Absent that have no other active source links
-        // could potentially be deleted, but we keep them as Absent for now.
-        // This is a conservative approach - actual deletion can be triggered by user action.
-        return 0;
+        var resolver = _resourceResolvers.FirstOrDefault(r => r.Source == ResourceSource.PathMark) as FileSystemResolver;
+        if (resolver == null) return 0;
+
+        var allMarks = await _pathMarkService.GetAll();
+        var pendingDeleteMarks = allMarks
+            .Where(m => m.Type == PathMarkType.Resource &&
+                        m.SyncStatus == PathMarkSyncStatus.PendingDelete)
+            .ToList();
+        if (pendingDeleteMarks.Count == 0) return 0;
+
+        // Paths the user just asked us to clean up.
+        var pendingDeletePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var d in await resolver.DiscoverFromMarks(pendingDeleteMarks, ct))
+        {
+            pendingDeletePaths.Add(d.Path);
+        }
+        if (pendingDeletePaths.Count == 0) return 0;
+
+        // Paths still covered by some other active mark — protect them from deletion.
+        var activeResourceMarks = allMarks
+            .Where(m => m.Type == PathMarkType.Resource &&
+                        m.SyncStatus != PathMarkSyncStatus.PendingDelete)
+            .ToList();
+        var stillCoveredPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (activeResourceMarks.Count > 0)
+        {
+            foreach (var d in await resolver.DiscoverFromMarks(activeResourceMarks, ct))
+            {
+                stillCoveredPaths.Add(d.Path);
+            }
+        }
+
+        var orphanIds = new List<int>();
+        foreach (var resource in ctx.IdToResource.Values)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            if (string.IsNullOrEmpty(resource.Path)) continue;
+            if (!pendingDeletePaths.Contains(resource.Path)) continue;
+            if (stillCoveredPaths.Contains(resource.Path)) continue;
+
+            if (resource.SourceLinks == null || resource.SourceLinks.Count == 0) continue;
+            if (!resource.SourceLinks.Any(l => l.Source == ResourceSource.PathMark)) continue;
+            // Multi-source resource → keep; the resolver still owns part of its identity.
+            if (resource.SourceLinks.Any(l => l.Source != ResourceSource.PathMark)) continue;
+
+            orphanIds.Add(resource.Id);
+        }
+
+        if (orphanIds.Count > 0)
+        {
+            await _resourceService.DeleteByKeys(orphanIds.ToArray());
+            _logger.LogInformation(
+                "[ResourceSync] Deleted {Count} resources whose owning path mark was soft-deleted with cleanup",
+                orphanIds.Count);
+        }
+
+        return orphanIds.Count;
     }
 
     /// <summary>

@@ -7,8 +7,11 @@ import { PropertyType, SearchOperation } from "@/sdk/constants";
 export const SimpleFilterOperationMap: Record<PropertyType, SearchOperation | [SearchOperation, SearchOperation]> = {
   [PropertyType.SingleLineText]: SearchOperation.Contains,
   [PropertyType.MultilineText]: SearchOperation.Contains,
+  // Choice / Multilevel / Tags default to `In` — picking from a known set of
+  // values is the natural UX, and matches the multi-select editors these types
+  // already render. `Contains` (substring against ids) was the wrong default.
   [PropertyType.SingleChoice]: SearchOperation.In,
-  [PropertyType.MultipleChoice]: SearchOperation.Contains,
+  [PropertyType.MultipleChoice]: SearchOperation.In,
   [PropertyType.Number]: [SearchOperation.GreaterThanOrEquals, SearchOperation.LessThanOrEquals],
   [PropertyType.Percentage]: [SearchOperation.GreaterThanOrEquals, SearchOperation.LessThanOrEquals],
   [PropertyType.Rating]: [SearchOperation.GreaterThanOrEquals, SearchOperation.LessThanOrEquals],
@@ -19,8 +22,8 @@ export const SimpleFilterOperationMap: Record<PropertyType, SearchOperation | [S
   [PropertyType.DateTime]: [SearchOperation.GreaterThanOrEquals, SearchOperation.LessThanOrEquals],
   [PropertyType.Time]: [SearchOperation.GreaterThanOrEquals, SearchOperation.LessThanOrEquals],
   [PropertyType.Formula]: SearchOperation.Contains,
-  [PropertyType.Multilevel]: SearchOperation.Contains,
-  [PropertyType.Tags]: SearchOperation.Contains,
+  [PropertyType.Multilevel]: SearchOperation.In,
+  [PropertyType.Tags]: SearchOperation.In,
 };
 
 /**
