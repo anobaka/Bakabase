@@ -33,6 +33,10 @@ Bakabase helps you manage your local media — anime, comics, audio dramas, douj
 - [Stable](https://github.com/anobaka/Bakabase/releases/latest)
 - [Beta](https://github.com/anobaka/Bakabase/releases) — includes new features that aren't fully stable yet
 
+> ## ⚠️ Important: Notice for 2.3-beta Users
+>
+> **Do not** use the in-app updater on any `2.3-beta.*` version — it will wipe your AppData. Back up your data folder (path: **Settings → System Information → App Data Path**) to a location outside the Bakabase install folder immediately. Users on `< 2.3` should hold off upgrading. Details & fix progress: [#1070](https://github.com/anobaka/Bakabase/issues/1070). macOS is not affected.
+
 ## Beta Features
 
 ### Data Cards
