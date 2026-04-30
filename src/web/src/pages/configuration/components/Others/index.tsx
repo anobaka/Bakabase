@@ -178,24 +178,6 @@ const Others: React.FC<OthersProps> = ({ applyPatches }) => {
       },
     },
     {
-      label: "configuration.others.enablePreRelease",
-      tip: "configuration.others.enablePreRelease.tip",
-      renderValue: () => {
-        return (
-          <Switch
-            isSelected={appOptions.enablePreReleaseChannel}
-            size="sm"
-            onValueChange={(checked) => {
-              applyPatches(
-                BApi.options.patchAppOptions,
-                { enablePreReleaseChannel: checked },
-              );
-            }}
-          />
-        );
-      },
-    },
-    {
       label: "configuration.others.enableTracking",
       tip: "configuration.others.enableTracking.tip",
       renderValue: () => {

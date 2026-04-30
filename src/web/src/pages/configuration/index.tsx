@@ -45,7 +45,7 @@ const ConfigurationPage: React.FC = () => {
       <Dependency />
       <Functional applyPatches={applyPatches} />
       <Others applyPatches={applyPatches} />
-      <AppInfo appInfo={appInfo} />
+      <AppInfo appInfo={appInfo} applyPatches={applyPatches} />
       <Development />
       <ContactUs />
     </div>

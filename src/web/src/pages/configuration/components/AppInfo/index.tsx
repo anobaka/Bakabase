@@ -8,13 +8,15 @@ import type {
 import Markdown from "react-markdown";
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FolderOpenOutlined } from "@ant-design/icons";
+import { CheckCircleOutlined, FolderOpenOutlined } from "@ant-design/icons";
+import { AiOutlineQuestionCircle } from "react-icons/ai";
 
-import { Popover, Divider, Icon, Progress, Snippet } from "@/components/bakaui";
+import { Popover, Divider, Icon, Progress, Snippet, Tooltip } from "@/components/bakaui";
 import { UpdaterStatus, DataPathSource } from "@/sdk/constants";
 import ExternalLink from "@/components/ExternalLink";
 import { bytesToSize } from "@/components/utils";
 import { useAppUpdaterStateStore } from "@/stores/appUpdaterState";
+import { useAppOptionsStore } from "@/stores/options";
 import {
   Button,
   Table,
@@ -25,6 +27,7 @@ import {
   TableHeader,
   Chip,
   Modal,
+  Switch,
 } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
@@ -33,13 +36,15 @@ import { LegacyAppDataNoticeBanner } from "@/pages/configuration/components/AppI
 
 interface AppInfoProps {
   appInfo: Partial<BakabaseInfrastructuresComponentsAppModelsResponseModelsAppInfo>;
+  applyPatches: <T>(api: (patches: T) => Promise<{ code?: number }>, patches: T, success?: (rsp: unknown) => void) => void;
 }
 
-const AppInfo: React.FC<AppInfoProps> = ({ appInfo }) => {
+const AppInfo: React.FC<AppInfoProps> = ({ appInfo, applyPatches }) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const [newVersion, setNewVersion] = useState<BakabaseInfrastructuresComponentsAppUpgradeAbstractionsAppVersionInfo>();
   const appUpdaterState = useAppUpdaterStateStore((state) => state);
+  const appOptions = useAppOptionsStore((state) => state.data);
 
   const checkNewAppVersion = () => {
     BApi.updater.getNewAppVersion().then((a) => {
@@ -52,14 +57,24 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo }) => {
     return () => {};
   }, []);
 
+  const upToDateIndicator = (
+    <span className="flex items-center gap-1 text-success">
+      <CheckCircleOutlined className="text-base" />
+      {t("configuration.appInfo.upToDate")}
+    </span>
+  );
+
   const renderNewVersion = () => {
-    switch (appUpdaterState.status) {
+    // When the API has returned a concrete new version, trust it over a
+    // possibly-stale UpToDate status carried by the backend singleton.
+    const effectiveStatus = newVersion?.version
+      && (appUpdaterState.status === undefined
+        || appUpdaterState.status === UpdaterStatus.UpToDate)
+      ? UpdaterStatus.Idle
+      : appUpdaterState.status;
+    switch (effectiveStatus) {
       case UpdaterStatus.UpToDate:
-        return (
-          <Chip radius="sm" variant="light" color="default">
-            {t("configuration.appInfo.upToDate")}
-          </Chip>
-        );
+        return upToDateIndicator;
       case UpdaterStatus.Idle:
         if (newVersion) {
           if (newVersion.version) {
@@ -131,18 +146,10 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo }) => {
               </div>
             );
           } else {
-            return (
-              <Chip radius="sm" variant="light" color="default">
-                {t("configuration.appInfo.upToDate")}
-              </Chip>
-            );
+            return upToDateIndicator;
           }
         } else {
-          return (
-            <Chip radius="sm" variant="light" color="default">
-              {t("configuration.appInfo.upToDate")}
-            </Chip>
-          );
+          return upToDateIndicator;
         }
       case UpdaterStatus.Running:
         return (
@@ -317,7 +324,36 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo }) => {
       },
       {
         label: "configuration.appInfo.latestVersion",
-        value: renderNewVersion(),
+        value: (
+          <div className="flex items-center gap-3 flex-wrap">
+            {renderNewVersion()}
+            <Divider orientation="vertical" />
+            <div className="flex items-center gap-1">
+              <Tooltip
+                className="max-w-[300px]"
+                color="secondary"
+                content={t("configuration.others.enablePreRelease.tip")}
+                placement="top"
+              >
+                <div className="flex items-center gap-1 text-foreground-500">
+                  <span className="text-sm">{t("configuration.others.enablePreRelease")}</span>
+                  <AiOutlineQuestionCircle className="text-base" />
+                </div>
+              </Tooltip>
+              <Switch
+                isSelected={appOptions.enablePreReleaseChannel}
+                size="sm"
+                onValueChange={(checked) => {
+                  applyPatches(
+                    BApi.options.patchAppOptions,
+                    { enablePreReleaseChannel: checked },
+                    () => checkNewAppVersion(),
+                  );
+                }}
+              />
+            </div>
+          </div>
+        ),
       },
     ];
 
