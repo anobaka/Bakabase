@@ -1,34 +1,45 @@
-﻿using System.IO;
-using System.Linq;
+using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Infrastructures.Components.App;
-using Bakabase.Infrastructures.Components.App.Models.RequestModels;
 using Bakabase.Infrastructures.Components.App.Models.ResponseModels;
-using Bakabase.InsideWorld.Business;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
-using Bootstrap.Extensions;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace Bakabase.Service.Controllers
 {
     [Route("~/app")]
-    public class AppController(AppService appService, AppDataMover appDataMover) : Controller
+    public class AppController : Controller
     {
+        private readonly AppService _appService;
+        private readonly IHostApplicationLifetime _lifetime;
+        private readonly ILogger<AppController> _logger;
+
+        public AppController(
+            AppService appService,
+            IHostApplicationLifetime lifetime,
+            ILogger<AppController> logger)
+        {
+            _appService = appService;
+            _lifetime = lifetime;
+            _logger = logger;
+        }
+
         [HttpGet("initialized")]
         [SwaggerOperation(OperationId = "CheckAppInitialized")]
         public async Task<SingletonResponse<InitializationContentType>> Initialized()
         {
-            if (appService.NotAcceptTerms)
+            if (_appService.NotAcceptTerms)
             {
                 return new SingletonResponse<InitializationContentType>(InitializationContentType.NotAcceptTerms);
             }
 
-            if (appService.NeedRestart)
+            if (_appService.NeedRestart)
             {
                 return new SingletonResponse<InitializationContentType>(InitializationContentType.NeedRestart);
             }
@@ -40,37 +51,66 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "GetAppInfo")]
         public async Task<SingletonResponse<AppInfo>> Info()
         {
-            return new SingletonResponse<AppInfo>(appService.AppInfo);
+            return new SingletonResponse<AppInfo>(_appService.AppInfo);
         }
 
         [HttpPost("terms")]
         [SwaggerOperation(OperationId = "AcceptTerms")]
         public async Task<BaseResponse> AcceptTerms()
         {
-            appService.NotAcceptTerms = false;
+            _appService.NotAcceptTerms = false;
             return BaseResponseBuilder.Ok;
         }
 
-        [HttpPut("data-path")]
-        [SwaggerOperation(OperationId = "MoveCoreData")]
-        public async Task<BaseResponse> MoveCoreData([FromBody] CoreDataMoveRequestModel model)
+        /// <summary>
+        /// Plain-restart endpoint: spawns a fresh copy of the current EXE and asks the host to
+        /// stop. Used by the relocation flow (and any future "restart please" UX) so we don't
+        /// hijack the Velopack updater for a non-update restart.
+        ///
+        /// Dev / Visual Studio caveat: when running under a debugger, the spawned child shares
+        /// the parent's console and VS keeps the parent alive — so the user sees the parent
+        /// linger. We can't fix that from the server; the FE is expected to message this for
+        /// debug builds.
+        /// </summary>
+        [HttpPost("restart")]
+        [SwaggerOperation(OperationId = "RestartApp")]
+        public BaseResponse Restart()
         {
-            if (model.DataPath.IsNotEmpty())
+            var exePath = Environment.ProcessPath;
+            if (string.IsNullOrWhiteSpace(exePath))
             {
-                var dir = new DirectoryInfo(model.DataPath);
-                if (dir.Exists)
-                {
-                    if (dir.GetFileSystemInfos().Any())
-                    {
-                        return BaseResponseBuilder.BuildBadRequest("The target folder is not empty");
-                    }
-                }
-
-                await appDataMover.CopyCoreData(model.DataPath);
-                return BaseResponseBuilder.Ok;
+                _logger.LogError("Cannot determine current process path; cannot restart.");
+                return BaseResponseBuilder.BuildBadRequest("Cannot determine current process path.");
             }
 
-            return BaseResponseBuilder.BuildBadRequest("Invalid path");
+            // Fire-and-forget so the HTTP response gets back to the FE first; then we spawn
+            // and ask the host to stop. The brief delay is intentional — we want the response
+            // headers flushed before the host starts tearing down sockets.
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await Task.Delay(500);
+                    _logger.LogInformation("Restarting via spawn-then-stop. exe={Exe}", exePath);
+
+                    var psi = new ProcessStartInfo(exePath)
+                    {
+                        UseShellExecute = true,
+                        WorkingDirectory = System.IO.Path.GetDirectoryName(exePath) ?? string.Empty,
+                    };
+                    Process.Start(psi);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to spawn replacement process; will still stop the host.");
+                }
+                finally
+                {
+                    _lifetime.StopApplication();
+                }
+            });
+
+            return BaseResponseBuilder.Ok;
         }
     }
 }

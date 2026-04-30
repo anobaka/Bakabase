@@ -4,22 +4,42 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    Title=""
-    Width="500"
-    Height="150"
+    Title="Bakabase"
+    Width="560"
+    Height="220"
     CanResize="False"
+    SystemDecorations="BorderOnly"
     WindowStartupLocation="CenterScreen"
     Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
     mc:Ignorable="d">
-    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-        <StackPanel Orientation="Horizontal">
-            <TextBlock
-                x:Name="ProcessName"
-                MaxWidth="300"
-                MaxHeight="80"
-                VerticalAlignment="Center"
-                FontSize="32"
-                TextWrapping="Wrap" />
-        </StackPanel>
+    <StackPanel
+        Margin="32"
+        VerticalAlignment="Center"
+        Spacing="14">
+        <TextBlock
+            x:Name="TitleText"
+            FontSize="26"
+            FontWeight="SemiBold"
+            Text="Bakabase" />
+
+        <TextBlock
+            x:Name="PhaseText"
+            FontSize="16"
+            Opacity="0.85"
+            TextTrimming="CharacterEllipsis" />
+
+        <ProgressBar
+            x:Name="Progress"
+            Height="8"
+            IsIndeterminate="True"
+            Minimum="0"
+            Maximum="100"
+            Value="0" />
+
+        <TextBlock
+            x:Name="DetailText"
+            FontSize="12"
+            Opacity="0.6"
+            TextTrimming="CharacterEllipsis" />
     </StackPanel>
 </Window>

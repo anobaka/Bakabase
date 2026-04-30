@@ -3760,6 +3760,69 @@ export const UpdaterStatusLabel: Record<UpdaterStatus, string> = {
   [UpdaterStatus.Failed]: 'Failed'
 };
 
+export enum RelocationMode {
+  UseTarget = 1,
+  MergeOverwrite = 3
+}
+
+export const relocationModes = [
+  { label: 'UseTarget', value: RelocationMode.UseTarget },
+  { label: 'MergeOverwrite', value: RelocationMode.MergeOverwrite }
+] as const;
+
+export const RelocationModeLabel: Record<RelocationMode, string> = {
+  [RelocationMode.UseTarget]: 'UseTarget',
+  [RelocationMode.MergeOverwrite]: 'MergeOverwrite'
+};
+
+export enum RelocationOutcomeKind {
+  NoOp = 0,
+  Success = 1,
+  Error = 2,
+  UnknownSchemaVersion = 3
+}
+
+export const relocationOutcomeKinds = [
+  { label: 'NoOp', value: RelocationOutcomeKind.NoOp },
+  { label: 'Success', value: RelocationOutcomeKind.Success },
+  { label: 'Error', value: RelocationOutcomeKind.Error },
+  { label: 'UnknownSchemaVersion', value: RelocationOutcomeKind.UnknownSchemaVersion }
+] as const;
+
+export const RelocationOutcomeKindLabel: Record<RelocationOutcomeKind, string> = {
+  [RelocationOutcomeKind.NoOp]: 'NoOp',
+  [RelocationOutcomeKind.Success]: 'Success',
+  [RelocationOutcomeKind.Error]: 'Error',
+  [RelocationOutcomeKind.UnknownSchemaVersion]: 'UnknownSchemaVersion'
+};
+
+export enum RelocationPhase {
+  Starting = 0,
+  Copying = 1,
+  Validating = 2,
+  Replacing = 3,
+  Finalizing = 4,
+  Done = 5
+}
+
+export const relocationPhases = [
+  { label: 'Starting', value: RelocationPhase.Starting },
+  { label: 'Copying', value: RelocationPhase.Copying },
+  { label: 'Validating', value: RelocationPhase.Validating },
+  { label: 'Replacing', value: RelocationPhase.Replacing },
+  { label: 'Finalizing', value: RelocationPhase.Finalizing },
+  { label: 'Done', value: RelocationPhase.Done }
+] as const;
+
+export const RelocationPhaseLabel: Record<RelocationPhase, string> = {
+  [RelocationPhase.Starting]: 'Starting',
+  [RelocationPhase.Copying]: 'Copying',
+  [RelocationPhase.Validating]: 'Validating',
+  [RelocationPhase.Replacing]: 'Replacing',
+  [RelocationPhase.Finalizing]: 'Finalizing',
+  [RelocationPhase.Done]: 'Done'
+};
+
 export enum AppDistributionType {
   WindowsApp = 0,
   MacOsApp = 1,
@@ -3788,6 +3851,24 @@ export const AppDistributionTypeLabel: Record<AppDistributionType, string> = {
   [AppDistributionType.Ios]: 'Ios',
   [AppDistributionType.WindowsServer]: 'WindowsServer',
   [AppDistributionType.LinuxServer]: 'LinuxServer'
+};
+
+export enum DataPathSource {
+  Default = 0,
+  UserConfigured = 1,
+  Environment = 2
+}
+
+export const dataPathSources = [
+  { label: 'Default', value: DataPathSource.Default },
+  { label: 'UserConfigured', value: DataPathSource.UserConfigured },
+  { label: 'Environment', value: DataPathSource.Environment }
+] as const;
+
+export const DataPathSourceLabel: Record<DataPathSource, string> = {
+  [DataPathSource.Default]: 'Default',
+  [DataPathSource.UserConfigured]: 'UserConfigured',
+  [DataPathSource.Environment]: 'Environment'
 };
 
 export enum MigrationTiming {

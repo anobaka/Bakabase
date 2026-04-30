@@ -122,8 +122,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0.313'
-          dotnet-quality: ''
+          global-json-file: ./global.json
       - name: Check dotnet info
         run: dotnet --info
       - name: Cache NuGet packages

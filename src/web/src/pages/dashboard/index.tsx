@@ -52,6 +52,7 @@ import {
 import Resource from "@/components/Resource";
 import { serializeStandardValue } from "@/components/StandardValue";
 import { OnboardingModal, useOnboarding } from "@/components/Onboarding";
+import { DataMigrationHintModal } from "@/pages/dashboard/components/DataMigrationHintModal";
 
 // Register Chart.js components
 ChartJS.register(
@@ -337,6 +338,7 @@ const DashboardPage = () => {
   return (
     <div className="h-full flex flex-col gap-5 p-5 overflow-auto">
       <OnboardingModal visible={showOnboarding} onComplete={completeOnboarding} />
+      <DataMigrationHintModal />
 
       {/* Stats Row */}
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

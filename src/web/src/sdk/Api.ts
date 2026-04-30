@@ -1045,6 +1045,12 @@ export interface BakabaseAbstractionsModelsViewThirdPartyContentTrackerStatusVie
   hasUpdate: boolean;
 }
 
+/**
+ * [0: Default, 1: UserConfigured, 2: Environment]
+ * @format int32
+ */
+export type BakabaseInfrastructuresComponentsAppModelsConstantsDataPathSource = 0 | 1 | 2;
+
 export interface BakabaseInfrastructuresComponentsAppModelsRequestModelsAppOptionsPatchRequestModel {
   language?: string;
   enablePreReleaseChannel?: boolean;
@@ -1061,13 +1067,13 @@ export interface BakabaseInfrastructuresComponentsAppModelsRequestModelsAppOptio
   timeZoneId?: string;
 }
 
-export interface BakabaseInfrastructuresComponentsAppModelsRequestModelsCoreDataMoveRequestModel {
-  /** @minLength 1 */
-  dataPath: string;
-}
-
 export interface BakabaseInfrastructuresComponentsAppModelsResponseModelsAppInfo {
   appDataPath: string;
+  anchorPath: string;
+  defaultDataPath: string;
+  /** [0: Default, 1: UserConfigured, 2: Environment] */
+  dataPathSource: BakabaseInfrastructuresComponentsAppModelsConstantsDataPathSource;
+  envVarName: string;
   coreVersion: string;
   logPath?: string;
   backupPath: string;
@@ -1075,7 +1081,35 @@ export interface BakabaseInfrastructuresComponentsAppModelsResponseModelsAppInfo
   dataPath: string;
   notAcceptTerms: boolean;
   needRestart: boolean;
+  mayHaveLegacyData: boolean;
 }
+
+/**
+ * [0: None, 1: RelativePath, 2: InvalidChars, 3: SameAsCurrent, 4: InsideInstall, 5: CircularContainment, 6: SystemPath, 7: NoWritePermission, 8: InsufficientSpace]
+ * @format int32
+ */
+export type BakabaseInfrastructuresComponentsAppRelocationDataPathValidatorRefusalReason =
+  | 0
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5
+  | 6
+  | 7
+  | 8;
+
+/**
+ * [0: NeedsCopy, 1: HasBakabaseData]
+ * @format int32
+ */
+export type BakabaseInfrastructuresComponentsAppRelocationDataPathValidatorTargetState = 0 | 1;
+
+/**
+ * [1: UseTarget, 3: MergeOverwrite]
+ * @format int32
+ */
+export type BakabaseInfrastructuresComponentsAppRelocationRelocationMode = 1 | 3;
 
 export interface BakabaseInfrastructuresComponentsAppUpgradeAbstractionsAppVersionInfo {
   version: string;
@@ -1113,6 +1147,8 @@ export interface BakabaseInfrastructuresComponentsConfigurationsAppAppOptions {
   /** @format int32 */
   effectiveMaxParallelism: number;
   timeZoneId?: string;
+  /** @format date-time */
+  legacyInstallNoticeDismissedAt?: string;
   effectiveTimeZone: SystemTimeZoneInfo;
 }
 
@@ -3548,6 +3584,31 @@ export interface BakabaseModulesThirdPartyThirdPartiesBilibiliModelsFavorites {
   mediaCount: number;
 }
 
+export interface BakabaseServiceControllersAppDataPathControllerRelocateRequest {
+  targetPath: string;
+  /** [1: UseTarget, 3: MergeOverwrite] */
+  mode: BakabaseInfrastructuresComponentsAppRelocationRelocationMode;
+}
+
+export interface BakabaseServiceControllersAppDataPathControllerValidateRequest {
+  targetPath: string;
+}
+
+export interface BakabaseServiceControllersAppDataPathControllerValidateResponse {
+  valid: boolean;
+  /** [0: None, 1: RelativePath, 2: InvalidChars, 3: SameAsCurrent, 4: InsideInstall, 5: CircularContainment, 6: SystemPath, 7: NoWritePermission, 8: InsufficientSpace] */
+  reason: BakabaseInfrastructuresComponentsAppRelocationDataPathValidatorRefusalReason;
+  /** [0: NeedsCopy, 1: HasBakabaseData] */
+  targetState: BakabaseInfrastructuresComponentsAppRelocationDataPathValidatorTargetState;
+  targetAppVersion?: string;
+  /** @format int64 */
+  freeSpaceBytes: number;
+  /** @format int64 */
+  minFreeBytes: number;
+  currentPath: string;
+  defaultPath: string;
+}
+
 export interface BakabaseServiceControllersChatControllerChatToolViewModel {
   name: string;
   description: string;
@@ -5136,6 +5197,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesP
   code: number;
   message?: string;
   data?: BakabaseModulesPropertyModelsViewPropertyViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceControllersAppDataPathControllerValidateResponse {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceControllersAppDataPathControllerValidateResponse;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceControllersCookieCaptureResult {
@@ -7478,16 +7546,45 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags App
-     * @name MoveCoreData
-     * @request PUT:/app/data-path
+     * @name RestartApp
+     * @request POST:/app/restart
      */
-    moveCoreData: (
-      data: BakabaseInfrastructuresComponentsAppModelsRequestModelsCoreDataMoveRequestModel,
+    restartApp: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/app/restart`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for restartApp
+     * @name restartAppUrl
+     */
+    restartAppUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/app/restart`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AppDataPath
+     * @name ValidateAppDataPath
+     * @request POST:/app/data-path/validate
+     */
+    validateAppDataPath: (
+      data: BakabaseServiceControllersAppDataPathControllerValidateRequest,
       params: RequestParams = {},
     ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/app/data-path`,
-        method: "PUT",
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceControllersAppDataPathControllerValidateResponse,
+        any
+      >({
+        path: `/app/data-path/validate`,
+        method: "POST",
         body: data,
         type: ContentType.Json,
         format: "json",
@@ -7495,12 +7592,95 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }),
 
     /**
-     * @description Build URL for moveCoreData
-     * @name moveCoreDataUrl
+     * @description Build URL for validateAppDataPath
+     * @name validateAppDataPathUrl
      */
-    moveCoreDataUrl: () => {
+    validateAppDataPathUrl: () => {
       const baseUrl = this.baseUrl || "";
-      let path = `/app/data-path`;
+      let path = `/app/data-path/validate`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AppDataPath
+     * @name RelocateAppDataPath
+     * @request POST:/app/data-path/relocate
+     */
+    relocateAppDataPath: (
+      data: BakabaseServiceControllersAppDataPathControllerRelocateRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/app/data-path/relocate`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for relocateAppDataPath
+     * @name relocateAppDataPathUrl
+     */
+    relocateAppDataPathUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/app/data-path/relocate`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AppDataPath
+     * @name CancelAppDataPathRelocation
+     * @request DELETE:/app/data-path/relocate
+     */
+    cancelAppDataPathRelocation: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/app/data-path/relocate`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for cancelAppDataPathRelocation
+     * @name cancelAppDataPathRelocationUrl
+     */
+    cancelAppDataPathRelocationUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/app/data-path/relocate`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AppDataPath
+     * @name DismissLegacyInstallNotice
+     * @request POST:/app/data-path/legacy-notice/dismiss
+     */
+    dismissLegacyInstallNotice: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/app/data-path/legacy-notice/dismiss`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for dismissLegacyInstallNotice
+     * @name dismissLegacyInstallNoticeUrl
+     */
+    dismissLegacyInstallNoticeUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/app/data-path/legacy-notice/dismiss`;
       
       return baseUrl + path;
     },

@@ -61,11 +61,10 @@ public class AvaloniaGuiAdapter : GuiAdapter, ITrayIconController
     }
 
     [GuiContextInterceptor]
-    public override void ShowInitializationWindow(string processName)
+    public override void ShowInitializationWindow(string processName, string? detail = null, double? fraction = null)
     {
         _initializationWindow ??= new InitializationWindow();
-        _initializationWindow.Title = processName;
-        _initializationWindow.FindControl<TextBlock>("ProcessName")!.Text = processName;
+        _initializationWindow.SetPhase(processName, detail, fraction);
         _initializationWindow.Show();
     }
 

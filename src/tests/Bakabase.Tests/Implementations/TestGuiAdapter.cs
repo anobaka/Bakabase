@@ -12,7 +12,7 @@ public class TestGuiAdapter : IGuiAdapter
         throw new NotImplementedException();
     }
 
-    public void ShowInitializationWindow(string processName)
+    public void ShowInitializationWindow(string processName, string? detail = null, double? fraction = null)
     {
         throw new NotImplementedException();
     }

@@ -452,7 +452,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/app/data-path": {
+    "/app/restart": {
         parameters: {
             query?: never;
             header?: never;
@@ -460,8 +460,56 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        put: operations["MoveCoreData"];
-        post?: never;
+        put?: never;
+        post: operations["RestartApp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/app/data-path/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ValidateAppDataPath"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/app/data-path/relocate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RelocateAppDataPath"];
+        delete: operations["CancelAppDataPathRelocation"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/app/data-path/legacy-notice/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["DismissLegacyInstallNotice"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6125,6 +6173,12 @@ export interface components {
             readonly isViewed: boolean;
             readonly hasUpdate: boolean;
         };
+        /**
+         * Format: int32
+         * @description [0: Default, 1: UserConfigured, 2: Environment]
+         * @enum {integer}
+         */
+        "Bakabase.Infrastructures.Components.App.Models.Constants.DataPathSource": 0 | 1 | 2;
         "Bakabase.Infrastructures.Components.App.Models.RequestModels.AppOptionsPatchRequestModel": {
             language?: string;
             enablePreReleaseChannel?: boolean;
@@ -6138,11 +6192,12 @@ export interface components {
             maxParallelism?: number;
             timeZoneId?: string;
         };
-        "Bakabase.Infrastructures.Components.App.Models.RequestModels.CoreDataMoveRequestModel": {
-            dataPath: string;
-        };
         "Bakabase.Infrastructures.Components.App.Models.ResponseModels.AppInfo": {
             appDataPath: string;
+            anchorPath: string;
+            defaultDataPath: string;
+            dataPathSource: components["schemas"]["Bakabase.Infrastructures.Components.App.Models.Constants.DataPathSource"];
+            envVarName: string;
             coreVersion: string;
             logPath?: string;
             backupPath: string;
@@ -6150,7 +6205,26 @@ export interface components {
             dataPath: string;
             notAcceptTerms: boolean;
             needRestart: boolean;
+            mayHaveLegacyData: boolean;
         };
+        /**
+         * Format: int32
+         * @description [0: None, 1: RelativePath, 2: InvalidChars, 3: SameAsCurrent, 4: InsideInstall, 5: CircularContainment, 6: SystemPath, 7: NoWritePermission, 8: InsufficientSpace]
+         * @enum {integer}
+         */
+        "Bakabase.Infrastructures.Components.App.Relocation.DataPathValidator+RefusalReason": 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+        /**
+         * Format: int32
+         * @description [0: NeedsCopy, 1: HasBakabaseData]
+         * @enum {integer}
+         */
+        "Bakabase.Infrastructures.Components.App.Relocation.DataPathValidator+TargetState": 0 | 1;
+        /**
+         * Format: int32
+         * @description [1: UseTarget, 3: MergeOverwrite]
+         * @enum {integer}
+         */
+        "Bakabase.Infrastructures.Components.App.Relocation.RelocationMode": 1 | 3;
         "Bakabase.Infrastructures.Components.App.Upgrade.Abstractions.AppVersionInfo": {
             version: string;
             installers: components["schemas"]["Bakabase.Infrastructures.Components.App.Upgrade.Abstractions.AppVersionInfo+Installer"][];
@@ -6182,6 +6256,8 @@ export interface components {
             /** Format: int32 */
             readonly effectiveMaxParallelism: number;
             timeZoneId?: string;
+            /** Format: date-time */
+            legacyInstallNoticeDismissedAt?: string;
             effectiveTimeZone: components["schemas"]["System.TimeZoneInfo"];
         };
         /**
@@ -8174,6 +8250,25 @@ export interface components {
             /** Format: int32 */
             mediaCount: number;
         };
+        "Bakabase.Service.Controllers.AppDataPathController+RelocateRequest": {
+            targetPath: string;
+            mode: components["schemas"]["Bakabase.Infrastructures.Components.App.Relocation.RelocationMode"];
+        };
+        "Bakabase.Service.Controllers.AppDataPathController+ValidateRequest": {
+            targetPath: string;
+        };
+        "Bakabase.Service.Controllers.AppDataPathController+ValidateResponse": {
+            valid: boolean;
+            reason: components["schemas"]["Bakabase.Infrastructures.Components.App.Relocation.DataPathValidator+RefusalReason"];
+            targetState: components["schemas"]["Bakabase.Infrastructures.Components.App.Relocation.DataPathValidator+TargetState"];
+            targetAppVersion?: string;
+            /** Format: int64 */
+            freeSpaceBytes: number;
+            /** Format: int64 */
+            minFreeBytes: number;
+            currentPath: string;
+            defaultPath: string;
+        };
         "Bakabase.Service.Controllers.ChatController+ChatToolViewModel": {
             name: string;
             description: string;
@@ -9529,6 +9624,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.Property.Models.View.PropertyViewModel"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.AppDataPathController+ValidateResponse]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Controllers.AppDataPathController+ValidateResponse"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.CookieCaptureResult]": {
             /** Format: int32 */
@@ -11232,7 +11333,29 @@ export interface operations {
             };
         };
     };
-    MoveCoreData: {
+    RestartApp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    ValidateAppDataPath: {
         parameters: {
             query?: never;
             header?: never;
@@ -11241,12 +11364,85 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Infrastructures.Components.App.Models.RequestModels.CoreDataMoveRequestModel"];
-                "application/json": components["schemas"]["Bakabase.Infrastructures.Components.App.Models.RequestModels.CoreDataMoveRequestModel"];
-                "text/json": components["schemas"]["Bakabase.Infrastructures.Components.App.Models.RequestModels.CoreDataMoveRequestModel"];
-                "application/*+json": components["schemas"]["Bakabase.Infrastructures.Components.App.Models.RequestModels.CoreDataMoveRequestModel"];
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.AppDataPathController+ValidateRequest"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.AppDataPathController+ValidateRequest"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.AppDataPathController+ValidateRequest"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.AppDataPathController+ValidateRequest"];
             };
         };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.AppDataPathController+ValidateResponse]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.AppDataPathController+ValidateResponse]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.AppDataPathController+ValidateResponse]"];
+                };
+            };
+        };
+    };
+    RelocateAppDataPath: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.AppDataPathController+RelocateRequest"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.AppDataPathController+RelocateRequest"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.AppDataPathController+RelocateRequest"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.AppDataPathController+RelocateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    CancelAppDataPathRelocation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    DismissLegacyInstallNotice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description OK */
             200: {

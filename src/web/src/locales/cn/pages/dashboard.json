@@ -1,4 +1,8 @@
 {
+  "dashboard.dataMigrationHint.title": "检测到旧版本数据",
+  "dashboard.dataMigrationHint.body": "我们在旧的安装目录中发现了上一版本的 Bakabase 数据。如果你想把这些数据迁移到当前位置，可以打开系统设置进行操作。否则可以直接忽略此提示。",
+  "dashboard.dataMigrationHint.goToSettings": "前往设置",
+  "dashboard.dataMigrationHint.dismiss": "我知道了",
   "dashboard.stat.totalResources": "资源总数",
   "dashboard.stat.libraryCount": "{{count}} 个媒体库",
   "dashboard.stat.thisWeek": "本周",

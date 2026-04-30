@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json.schemastore.org/launchsettings.json",
+  "profiles": {
+    "init": {
+      "commandName": "Project",
+      "commandLineArgs": "init"
+    },
+    "splash (zh-CN, merge)": {
+      "commandName": "Project",
+      "commandLineArgs": "splash"
+    },
+    "splash (en-US, merge)": {
+      "commandName": "Project",
+      "commandLineArgs": "splash --lang en-US"
+    },
+    "splash (use-target, no copy)": {
+      "commandName": "Project",
+      "commandLineArgs": "splash --mode use"
+    },
+    "splash (fast preview, 30 files)": {
+      "commandName": "Project",
+      "commandLineArgs": "splash --files 30"
+    },
+    "splash (stress, 1000 files)": {
+      "commandName": "Project",
+      "commandLineArgs": "splash --files 1000"
+    },
+    "list": {
+      "commandName": "Project",
+      "commandLineArgs": "list"
+    }
+  }
+}

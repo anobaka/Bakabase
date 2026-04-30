@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Tasks;
+using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.App.Upgrade;
 using Bakabase.Infrastructures.Components.App.Upgrade.Abstractions;
 using Bakabase.Infrastructures.Components.Configurations;
@@ -49,6 +50,18 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
         Task GetAppUpdaterState(UpdaterState state);
         Task UpdateThirdPartyRequestStatistics(ThirdPartyRequestStatistics[] statistics);
         Task OnNotification(AppNotificationMessageViewModel notification);
+
+        /// <summary>
+        /// Pushed after the user confirms a data-path relocation. The UI shows a
+        /// non-dismissable "restart now" modal in response.
+        /// </summary>
+        Task RelocationPending(object payload);
+
+        /// <summary>
+        /// Pushed once on startup if a populated legacy AppData directory was detected
+        /// inside the Velopack install root. Dismissible by the user.
+        /// </summary>
+        Task LegacyInstallAppDataDetected(object payload);
     }
 
     public class WebGuiHub : Hub<IWebGuiClient>
@@ -63,12 +76,14 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
         private readonly BTaskManager _bTaskManager;
         private readonly IPostParserTaskService _postParserTaskService;
         private readonly IThirdPartyService _thirdPartyService;
+        private readonly LegacyInstallNoticeState _legacyInstallNoticeState;
 
         public WebGuiHub(
             DownloadTaskService downloadTaskService,
             BakabaseOptionsManagerPool optionsManagerPool, ILogger<WebGuiHub> logger,
             IEnumerable<IDependentComponentService> dependentComponentServices, IFileMover fileMover,
-            AppUpdater appUpdater, AppContext appContext, BTaskManager bTaskManager, IPostParserTaskService postParserTaskService, IThirdPartyService thirdPartyService)
+            AppUpdater appUpdater, AppContext appContext, BTaskManager bTaskManager, IPostParserTaskService postParserTaskService, IThirdPartyService thirdPartyService,
+            LegacyInstallNoticeState legacyInstallNoticeState)
         {
             _downloadTaskService = downloadTaskService;
             _optionsManagerPool = optionsManagerPool;
@@ -80,6 +95,7 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
             _bTaskManager = bTaskManager;
             _postParserTaskService = postParserTaskService;
             _thirdPartyService = thirdPartyService;
+            _legacyInstallNoticeState = legacyInstallNoticeState;
         }
 
         public async Task GetInitialData()
@@ -112,8 +128,14 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
             await Clients.Caller.GetData("BTask", _bTaskManager.GetTasksViewModel());
 
             await Clients.Caller.GetData(nameof(PostParserTask), await _postParserTaskService.GetAll());
-            
+
             await Clients.Caller.GetData(nameof(ThirdPartyRequestStatistics), _thirdPartyService.GetAllThirdPartyRequestStatistics());
+
+            // Replay legacy-install notice for late-connecting clients.
+            if (_legacyInstallNoticeState.PendingPath is { } legacyPath)
+            {
+                await Clients.Caller.LegacyInstallAppDataDetected(new { path = legacyPath });
+            }
         }
     }
 }

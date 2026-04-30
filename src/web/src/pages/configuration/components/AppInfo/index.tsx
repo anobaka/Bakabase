@@ -8,10 +8,10 @@ import type {
 import Markdown from "react-markdown";
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FolderOpenOutlined, InfoCircleOutlined } from "@ant-design/icons";
+import { FolderOpenOutlined } from "@ant-design/icons";
 
 import { Popover, Divider, Icon, Progress, Snippet } from "@/components/bakaui";
-import { UpdaterStatus } from "@/sdk/constants";
+import { UpdaterStatus, DataPathSource } from "@/sdk/constants";
 import ExternalLink from "@/components/ExternalLink";
 import { bytesToSize } from "@/components/utils";
 import { useAppUpdaterStateStore } from "@/stores/appUpdaterState";
@@ -28,6 +28,8 @@ import {
 } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import { RelocationButton, RelocationRestartGate } from "@/pages/configuration/components/AppInfo/Relocation";
+import { LegacyAppDataNoticeBanner } from "@/pages/configuration/components/AppInfo/LegacyNotice";
 
 interface AppInfoProps {
   appInfo: Partial<BakabaseInfrastructuresComponentsAppModelsResponseModelsAppInfo>;
@@ -207,59 +209,34 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo }) => {
     </div>
   );
 
-  const renderMigrationGuide = () => {
-    createPortal(Modal, {
-      size: "lg",
-      title: t("configuration.appInfo.migrationGuide.title"),
-      defaultVisible: true,
-      children: (
-        <div className="flex flex-col gap-4">
-          <p>{t("configuration.appInfo.migrationGuide.description")}</p>
+  const renderDataPathSource = () => {
+    const source = appInfo.dataPathSource;
+    const envVarName = appInfo.envVarName ?? "BAKABASE_DATA_DIR";
 
-          <div className="flex flex-col gap-2">
-            <p className="font-semibold">{t("configuration.appInfo.migrationGuide.stepsTitle")}</p>
-            <ol className="list-decimal list-inside flex flex-col gap-2">
-              <li>{t("configuration.appInfo.migrationGuide.step1")}</li>
-              <li>
-                {t("configuration.appInfo.migrationGuide.step2")}
-                <div className="mt-1 ml-4 flex items-center gap-1">
-                  <Snippet hideSymbol size="sm" variant="bordered">
-                    {appInfo.appDataPath}
-                  </Snippet>
-                  <Button
-                    isIconOnly
-                    size="sm"
-                    variant="light"
-                    color="primary"
-                    onPress={() => BApi.tool.openFileOrDirectory({ path: appInfo.appDataPath })}
-                  >
-                    <FolderOpenOutlined className="text-base" />
-                  </Button>
-                </div>
-              </li>
-              <li>{t("configuration.appInfo.migrationGuide.step3")}</li>
-              <li>{t("configuration.appInfo.migrationGuide.step4")}</li>
-            </ol>
-          </div>
+    let label: string;
+    let color: "default" | "primary" | "warning" = "default";
 
-          <div className="bg-warning-50 border border-warning-200 rounded-lg p-3 flex flex-col gap-2">
-            <p className="font-semibold flex items-center gap-1">
-              <InfoCircleOutlined className="text-warning" />
-              {t("configuration.appInfo.migrationGuide.validationTitle")}
-            </p>
-            <p>{t("configuration.appInfo.migrationGuide.validationDescription")}</p>
-            <ul className="list-disc list-inside ml-2 flex flex-col gap-1 text-sm">
-              <li><code>bakabase_insideworld.db</code> — {t("configuration.appInfo.migrationGuide.validationDb")}</li>
-              <li><code>configs/</code> — {t("configuration.appInfo.migrationGuide.validationConfigs")}</li>
-            </ul>
-            <p className="text-sm text-foreground-500">
-              {t("configuration.appInfo.migrationGuide.validationNote")}
-            </p>
-          </div>
-        </div>
-      ),
-      footer: { actions: ["cancel"] },
-    });
+    switch (source) {
+      case DataPathSource.Environment:
+        label = t("configuration.appInfo.dataPathSource.environment", { name: envVarName });
+        color = "warning";
+        break;
+      case DataPathSource.UserConfigured:
+        label = t("configuration.appInfo.dataPathSource.userConfigured");
+        color = "primary";
+        break;
+      case DataPathSource.Default:
+      default:
+        label = t("configuration.appInfo.dataPathSource.default");
+        color = "default";
+        break;
+    }
+
+    return (
+      <Chip radius="sm" size="sm" variant="flat" color={color}>
+        {label}
+      </Chip>
+    );
   };
 
   const buildAppInfoDataSource = () => {
@@ -268,7 +245,7 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo }) => {
         label: "configuration.appInfo.appDataPath",
         value: (
           <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 flex-wrap">
               <Snippet hideSymbol size="sm" variant="bordered">
                 {appInfo.appDataPath}
               </Snippet>
@@ -281,22 +258,27 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo }) => {
               >
                 <FolderOpenOutlined className="text-base" />
               </Button>
+              {renderDataPathSource()}
               <Divider orientation="vertical" className="mx-1" />
-              <Button
-                size="sm"
-                variant="light"
-                color="warning"
-                onPress={renderMigrationGuide}
-              >
-                {t("configuration.appInfo.migrationGuide.button")}
-              </Button>
+              {appInfo.appDataPath && (
+                <RelocationButton currentDataPath={appInfo.appDataPath} />
+              )}
             </div>
             <span className="text-xs text-foreground-400">
               {t("configuration.appInfo.tip.appDataPath")}
             </span>
+            <span className="text-xs text-foreground-400">
+              {t("configuration.appInfo.tip.appDataPath.manualMerge")}
+            </span>
           </div>
         ),
       },
+      ...((appInfo.anchorPath && appInfo.anchorPath !== appInfo.appDataPath)
+        ? [{
+          label: "configuration.appInfo.anchorPath",
+          value: renderPathValue(appInfo.anchorPath),
+        }]
+        : []),
       {
         label: "configuration.appInfo.dataPath",
         value: renderPathValue(
@@ -344,6 +326,8 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo }) => {
 
   return (
     <div className="group">
+      <RelocationRestartGate />
+      <LegacyAppDataNoticeBanner />
       <div className="settings">
         <Table isCompact removeWrapper>
           <TableHeader>

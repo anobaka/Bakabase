@@ -1,0 +1,44 @@
+<Window
+    x:Class="Bakabase.Windows.RelocationSplashWindow"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Title="Bakabase"
+    Width="560"
+    Height="220"
+    CanResize="False"
+    SystemDecorations="BorderOnly"
+    WindowStartupLocation="CenterScreen"
+    Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+    mc:Ignorable="d">
+    <StackPanel
+        Margin="32"
+        VerticalAlignment="Center"
+        Spacing="14">
+        <TextBlock
+            x:Name="TitleText"
+            FontSize="22"
+            FontWeight="SemiBold"
+            TextTrimming="CharacterEllipsis" />
+
+        <TextBlock
+            x:Name="PhaseText"
+            FontSize="16"
+            Opacity="0.85"
+            TextTrimming="CharacterEllipsis" />
+
+        <ProgressBar
+            x:Name="Progress"
+            Height="8"
+            Minimum="0"
+            Maximum="100"
+            Value="0" />
+
+        <TextBlock
+            x:Name="CurrentFileText"
+            FontSize="12"
+            Opacity="0.6"
+            TextTrimming="CharacterEllipsis" />
+    </StackPanel>
+</Window>

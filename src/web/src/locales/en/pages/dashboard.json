@@ -1,4 +1,8 @@
 {
+  "dashboard.dataMigrationHint.title": "Legacy data detected",
+  "dashboard.dataMigrationHint.body": "We found data from a previous version of Bakabase in an old install directory. If you'd like to migrate it to the current location, head to the settings page. Otherwise feel free to dismiss this.",
+  "dashboard.dataMigrationHint.goToSettings": "Go to settings",
+  "dashboard.dataMigrationHint.dismiss": "Got it",
   "dashboard.stat.totalResources": "Total Resources",
   "dashboard.stat.libraryCount": "{{count}} libraries",
   "dashboard.stat.thisWeek": "This Week",

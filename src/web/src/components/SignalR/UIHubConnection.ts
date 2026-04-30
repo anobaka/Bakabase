@@ -154,6 +154,22 @@ export const UIHubConnection = () => {
         .updateStatistics(statistics);
     });
 
+    conn.on("RelocationPending", (payload: any) => {
+      log("RelocationPending", payload);
+      // Lazy-import the store to avoid pulling React modules into the hub init path
+      // when the user hasn't visited any page that uses this state yet.
+      import("@/stores/relocationPending").then(({ useRelocationPendingStore }) => {
+        useRelocationPendingStore.getState().set(payload);
+      });
+    });
+
+    conn.on("LegacyInstallAppDataDetected", (payload: any) => {
+      log("LegacyInstallAppDataDetected", payload);
+      import("@/stores/legacyInstallNotice").then(({ useLegacyInstallNoticeStore }) => {
+        useLegacyInstallNoticeStore.getState().set(payload);
+      });
+    });
+
     conn.on("OnNotification", (notification: AppNotificationMessageViewModel) => {
       log("OnNotification", notification);
 

@@ -144,6 +144,15 @@ namespace Bakabase.Service.Components
             services.AddSingleton<ResourceDiscoveryService>();
             services.AddHostedService(sp => sp.GetRequiredService<ResourceDiscoveryService>());
 
+            // Legacy install AppData detector — fires the dismissable notice on startup.
+            // Detection state is held in a singleton so late-connecting hub clients can pick
+            // up the notice via WebGuiHub.GetInitialData (rather than relying solely on a
+            // one-time SignalR push that races with client connect time).
+            services.AddSingleton<Bakabase.Infrastructures.Components.App.LegacyInstallNoticeState>();
+            services.AddSingleton<Bakabase.Infrastructures.Components.App.ILegacyInstallNotifier,
+                HubLegacyInstallNotifier>();
+            services.AddHostedService<Bakabase.Infrastructures.Components.App.LegacyInstallAppDataDetector>();
+
             // Add MiniProfiler for performance tracking
             services.AddMiniProfiler(options =>
             {
@@ -169,7 +178,12 @@ namespace Bakabase.Service.Components
         public override void Configure(IApplicationBuilder app, IHostApplicationLifetime lifetime)
         {
             var logger = app.ApplicationServices.GetRequiredService<ILogger<BakabaseStartup>>();
-            logger.LogInformation($"Using app data directory: {AppService.DefaultAppDataDirectory}");
+            var appService = app.ApplicationServices.GetRequiredService<AppService>();
+            logger.LogInformation(
+                "AppData anchor: {Anchor}; effective data dir: {Data} (source: {Source})",
+                appService.AnchorPath,
+                appService.AppDataDirectory,
+                appService.DataPathSource);
 
             // Enable MiniProfiler - should be early in the pipeline
             app.UseMiniProfiler();

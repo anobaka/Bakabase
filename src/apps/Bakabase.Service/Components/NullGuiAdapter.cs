@@ -12,7 +12,7 @@ public class NullGuiAdapter : IGuiAdapter
 
     }
 
-    public void ShowInitializationWindow(string processName)
+    public void ShowInitializationWindow(string processName, string? detail = null, double? fraction = null)
     {
 
     }
