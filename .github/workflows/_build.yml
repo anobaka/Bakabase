@@ -139,14 +139,6 @@ jobs:
         with:
           name: fe
           path: ./publish/web
-      - name: Ensure config directory exists
-        run: mkdir -p ./publish/AppData/configs
-      - name: create-json
-        uses: jsdaniell/create-json@v1.2.3
-        with:
-          name: "updater.json"
-          json: ${{ secrets.UPDATER_JSON }}
-          dir: ./publish/AppData/configs
       - name: Install Velopack CLI
         if: matrix.runtimeMode == 'WINFORMS' || matrix.runtimeMode == 'MACOS'
         run: dotnet tool install -g vpk

@@ -5,6 +5,7 @@ using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Services;
 using Bakabase.Infrastructures.Components.App;
+using Bakabase.Infrastructures.Components.App.Upgrade.Abstractions;
 using Bakabase.Infrastructures.Components.Orm;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components;
@@ -61,6 +62,11 @@ namespace Bakabase.Service.Components
         protected override void ConfigureServicesBeforeOthers(IServiceCollection services)
         {
             services.AddInsideWorldBusinesses();
+
+            // The Velopack feed URL is a Bakabase deployment detail, kept out of the
+            // generic Bakabase.Infrastructures lib. AppUpdater consumes it via the
+            // IAppUpdateSource abstraction.
+            services.AddSingleton<IAppUpdateSource, BakabaseUpdateSource>();
 
             //services.TryAddSingleton<SimpleBiliBiliFavoritesCollector>();
             services.AddSingleton<OneDriveService>();

@@ -26,6 +26,15 @@ public class AvaloniaGuiAdapter : GuiAdapter, ITrayIconController
     private MainWindow? _mainWindow;
     private ExitConfirmationDialog? _exitConfirmationDialog;
 
+    /// <summary>
+    /// Set when the app is exiting via <see cref="Shutdown"/> — i.e. programmatic exit
+    /// (CloseBehavior.Exit, tray Exit, /restart endpoint, fatal error). Lets the main
+    /// window's Closing handler distinguish "user clicked the X" from "we're already on
+    /// our way out" and skip the TryToExit prompt in the latter case. Showing the prompt
+    /// while Avalonia is tearing down produces a frozen dialog.
+    /// </summary>
+    private bool _isShuttingDown;
+
     public AvaloniaGuiAdapter(App app)
     {
         _app = app;
@@ -88,6 +97,12 @@ public class AvaloniaGuiAdapter : GuiAdapter, ITrayIconController
 
             _mainWindow.Closing += async (_, args) =>
             {
+                // Programmatic shutdown (CloseBehavior.Exit, tray Exit, /restart) goes
+                // through Shutdown() → desktop.Shutdown() → this Closing event. The user's
+                // intent to leave is already established, and showing the TryToExit prompt
+                // during Avalonia teardown produces a frozen dialog.
+                if (_isShuttingDown) return;
+
                 args.Cancel = true;
                 await onClosing();
             };
@@ -116,6 +131,7 @@ public class AvaloniaGuiAdapter : GuiAdapter, ITrayIconController
     [GuiContextInterceptor]
     public override void Shutdown()
     {
+        _isShuttingDown = true;
         if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             desktop.Shutdown();
