@@ -33,9 +33,13 @@ Bakabase helps you manage your local media — anime, comics, audio dramas, douj
 - [Stable](https://github.com/anobaka/Bakabase/releases/latest)
 - [Beta](https://github.com/anobaka/Bakabase/releases) — includes new features that aren't fully stable yet
 
-> ## ⚠️ Important: Notice for 2.3-beta Users
+> ## ✅ AppData loss risk fully resolved (2.3.0-beta.75)
 >
-> **Do not** use the in-app updater on any `2.3-beta.*` version — it will wipe your AppData. Back up your data folder (path: **Settings → System Information → App Data Path**) to a location outside the Bakabase install folder immediately. Users on `< 2.3` should hold off upgrading. Details & fix progress: [#1070](https://github.com/anobaka/Bakabase/issues/1070). macOS is not affected.
+> Starting with `2.3.0-beta.75`, the Windows default AppData directory moved from `%LocalAppData%\Bakabase` (which coincided with the Velopack install root) to `%LocalAppData%\Bakabase.AppData`. **Upgrades, uninstalls, and installer "Repair" no longer touch user data.** **Most users need to do nothing.**
+>
+> **Edge case (~1.5 day window)**: if you ran any of `2.3.0-beta.69` ~ `2.3.0-beta.74` and **did not** customise the app data path in Settings, after upgrading to `≥ 2.3.0-beta.75` the app will appear "freshly installed" — your data is intact but no longer auto-loaded. To recover: go to **Settings → System Information → App Data Path → Modify**, point it at `%LocalAppData%\Bakabase`, and restart.
+>
+> Versions older than `2.3.0-beta.69` still carry the original in-app upgrade data loss risk; back up before upgrading per [#1070](https://github.com/anobaka/Bakabase/issues/1070). macOS and Linux are unaffected by either issue.
 
 ## Beta Features
 

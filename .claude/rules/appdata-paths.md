@@ -17,10 +17,19 @@ User data — DB, configs, covers, caches, anything written at runtime — must
 live at `IAppService.AppDataDirectory`. **Never** under the application's
 install directory.
 
-Why: on Windows the installer is Velopack, which on every upgrade
-**atomically replaces** `{install_root}/current/` with the new release. Any
-user file inside `current/` is destroyed. Issue #1070 is the production
-incident this caused.
+Why: on Windows the installer is Velopack, which:
+- On every **upgrade**, atomically replaces `{install_root}/current/` with
+  the new release. Any user file inside `current/` is destroyed.
+- On **uninstall** or installer **Repair**, removes the entire install root
+  wholesale. Any user file under `{install_root}/` is destroyed.
+
+Issue #1070 is the production incident the upgrade variant caused. To make
+both paths safe by construction, the Windows default AppData directory is
+**`%LocalAppData%\Bakabase.AppData`** — distinct from the install root
+(`%LocalAppData%\Bakabase`) so neither upgrade nor uninstall/repair can
+touch it. macOS and Linux use platform-conventional locations under
+`~/Library/Application Support/Bakabase` and `$XDG_DATA_HOME/Bakabase`
+respectively, both already outside any install tree.
 
 ## Do
 

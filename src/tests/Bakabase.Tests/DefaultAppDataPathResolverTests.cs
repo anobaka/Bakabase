@@ -74,7 +74,13 @@ public class DefaultAppDataPathResolverTests
                 [Environment.SpecialFolder.LocalApplicationData] = @"C:\Users\foo\AppData\Local"
             }),
             "Bakabase");
-        Assert.AreEqual(Path.Combine(@"C:\Users\foo\AppData\Local", "Bakabase"), path);
+        // Distinct from FolderName ("Bakabase") so the anchor sits OUTSIDE Velopack's install
+        // root — uninstall / repair both nuke the install dir, and we don't want them taking
+        // user data with them.
+        Assert.AreEqual(
+            Path.Combine(@"C:\Users\foo\AppData\Local", DefaultAppDataPathResolver.WindowsAppDataFolderName),
+            path);
+        Assert.AreEqual("Bakabase.AppData", DefaultAppDataPathResolver.WindowsAppDataFolderName);
     }
 
     [TestMethod]
