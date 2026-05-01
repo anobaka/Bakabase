@@ -1,3 +1,5 @@
+using System;
+using System.IO;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -78,7 +80,9 @@ public partial class App : Application
     private static async System.Threading.Tasks.Task RunPendingRelocationIfAnyAsync()
     {
         var anchor = AppService.DefaultAppDataDirectory;
-        var currentDataDir = AppOptionsManager.Default.Value.DataPath ?? anchor;
+        // app.json + redirect have already been migrated into the new layout by
+        // AppService's static ctor, so EffectiveAppDataResolver is the source of truth.
+        var currentDataDir = EffectiveAppDataResolver.Resolve(anchor).DataDir;
         var marker = PendingRelocation.TryReadFrom(currentDataDir);
         if (marker == null) return;
 
@@ -107,14 +111,42 @@ public partial class App : Application
 
         var outcome = await PendingRelocationRunner.TryRunAsync(
             anchor,
-            () => AppOptionsManager.Default.Value.DataPath ?? anchor,
-            async (newPath, prevDataDir) =>
+            () => EffectiveAppDataResolver.Resolve(anchor).DataDir,
+            async (newDataDir, prevDataDir) =>
             {
-                await AppOptionsManager.Default.SaveAsync(o =>
+                // Step 1: flip the pointer at the anchor. After this line, AppOptionsManager
+                // resolves to {newDataDir}/app.json (or to the anchor when the redirect was
+                // deleted because newDataDir == anchor).
+                if (string.Equals(
+                        Path.TrimEndingDirectorySeparator(Path.GetFullPath(newDataDir)),
+                        Path.TrimEndingDirectorySeparator(Path.GetFullPath(anchor)),
+                        StringComparison.OrdinalIgnoreCase))
                 {
-                    if (prevDataDir != null) o.PrevDataPath = prevDataDir;
-                    o.DataPath = newPath;
-                });
+                    AnchorRedirect.Delete(anchor);
+                }
+                else
+                {
+                    AnchorRedirect.Write(anchor, newDataDir);
+                }
+
+                // Step 2: persist PrevDataPath into the destination's app.json so
+                // IAppDataPathRelocator can rebase stored absolute paths on next boot.
+                if (prevDataDir != null)
+                {
+                    await AppOptionsManager.Default.SaveAsync(o => o.PrevDataPath = prevDataDir);
+                }
+
+                // Step 3: clean up any anchor-side app.json left behind by the legacy
+                // layout — leaving it would only be confusing; nothing reads it once the
+                // redirect is in place.
+                if (AnchorRedirect.Exists(anchor))
+                {
+                    var legacyAnchorAppJson = Path.Combine(anchor, EffectiveAppDataResolver.AppOptionsFileName);
+                    if (System.IO.File.Exists(legacyAnchorAppJson))
+                    {
+                        System.IO.File.Delete(legacyAnchorAppJson);
+                    }
+                }
             },
             progress);
 

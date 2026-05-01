@@ -174,15 +174,11 @@ public class PendingRelocationRunnerTests
     }
 
     [TestMethod]
-    public async Task ExcludesAppJsonAndMarkerFromCopy()
+    public async Task MergeOverwrite_CopiesAppJsonWhenTargetHasNone()
     {
         using var h = new RelocationTestHarness();
         h.WithFile("data/file1.bin", new byte[] { 1 })
-         .WithFile("app.json", "{}");
-
-        var copyable = PendingRelocationRunner.EnumerateCopyableFiles(h.CurrentDataDir).ToList();
-        Assert.AreEqual(1, copyable.Count, "app.json must not appear in the copyable list");
-        StringAssert.EndsWith(copyable[0], "file1.bin");
+         .WithFile("app.json", "{\"app\":{\"version\":\"1.2.3\"}}");
 
         h.WithMarker(new PendingRelocation
         {
@@ -193,10 +189,49 @@ public class PendingRelocationRunnerTests
         var outcome = await h.RunAsync();
         Assert.AreEqual(RelocationOutcomeKind.Success, outcome.Kind, outcome.ErrorMessage);
 
-        Assert.IsFalse(File.Exists(Path.Combine(h.TargetDir, "app.json")),
-            "app.json must not be copied — it lives at the anchor only");
+        Assert.IsTrue(File.Exists(Path.Combine(h.TargetDir, "app.json")),
+            "app.json must follow data when target has no existing app.json");
+        Assert.AreEqual("{\"app\":{\"version\":\"1.2.3\"}}",
+            File.ReadAllText(Path.Combine(h.TargetDir, "app.json")));
         Assert.IsFalse(File.Exists(
             Path.Combine(h.TargetDir, PendingRelocation.FileName)));
+    }
+
+    [TestMethod]
+    public async Task MergeOverwrite_TargetAppJsonWins()
+    {
+        using var h = new RelocationTestHarness();
+        h.WithFile("data/file1.bin", new byte[] { 1 })
+         .WithFile("app.json", "{\"app\":{\"version\":\"NEW\"}}")
+         .WithExistingTargetFile("app.json", "{\"app\":{\"version\":\"OLD\"}}");
+
+        h.WithMarker(new PendingRelocation
+        {
+            Mode = RelocationMode.MergeOverwrite,
+            Target = h.TargetDir,
+        });
+
+        var outcome = await h.RunAsync();
+        Assert.AreEqual(RelocationOutcomeKind.Success, outcome.Kind, outcome.ErrorMessage);
+
+        // Target's pre-existing app.json is preserved as-is — its (older) Version is the
+        // signal IMigrators need on the next boot. Source's app.json is left behind.
+        Assert.AreEqual("{\"app\":{\"version\":\"OLD\"}}",
+            File.ReadAllText(Path.Combine(h.TargetDir, "app.json")));
+    }
+
+    [TestMethod]
+    public void EnumerateCopyableFiles_ExcludesBookkeepingByDefault()
+    {
+        using var h = new RelocationTestHarness();
+        h.WithFile("data/file1.bin", new byte[] { 1 })
+         .WithFile(PendingRelocation.FileName, "{}")
+         .WithFile(".redirect", "/tmp/somewhere");
+
+        var copyable = PendingRelocationRunner.EnumerateCopyableFiles(h.CurrentDataDir).ToList();
+        Assert.AreEqual(1, copyable.Count,
+            "marker and .redirect must be excluded by default; app.json now follows data");
+        StringAssert.EndsWith(copyable[0], "file1.bin");
     }
 
     [TestMethod]
