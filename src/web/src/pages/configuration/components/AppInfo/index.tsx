@@ -288,7 +288,10 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo, applyPatches }) => {
       ...((appInfo.anchorPath && appInfo.anchorPath !== appInfo.appDataPath)
         ? [{
           label: "configuration.appInfo.anchorPath",
-          value: renderPathValue(appInfo.anchorPath),
+          value: renderPathValue(
+            appInfo.anchorPath,
+            t("configuration.appInfo.tip.anchorPath"),
+          ),
         }]
         : []),
       {

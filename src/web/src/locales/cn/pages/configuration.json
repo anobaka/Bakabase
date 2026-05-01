@@ -85,11 +85,12 @@
   "configuration.appInfo.dataPathSource.default": "平台默认位置",
   "configuration.appInfo.dataPathSource.userConfigured": "用户自定义",
   "configuration.appInfo.dataPathSource.environment": "环境变量 {{name}}",
-  "configuration.appInfo.anchorPath": "配置锚点（app.json 所在位置）",
+  "configuration.appInfo.anchorPath": "路径锚点",
 
   "configuration.appInfo.tip.appDataPath": "这是存储核心数据文件的位置，如非必要请勿更改。[系统] - [日志] 中的日志保存在 bootstrap_log.* 文件中，可以安全删除。",
   "configuration.appInfo.tip.appDataPath.manualMerge": "如果想在保持当前路径的前提下导入旧数据，也可以手动操作：1) 点击右侧文件夹图标打开当前目录；2) 完全关闭 Bakabase；3) 把旧 AppData 内的所有文件复制覆盖到当前目录；4) 重新打开 Bakabase。",
   "configuration.appInfo.tip.appDataPath.installRootRiskNotice": "若数据保存在程序安装目录内，通过卸载程序卸载 Bakabase 或在安装包中执行\"修复\"时，这些数据会被一并删除。如需保留数据，请先将路径改到安装目录之外。",
+  "configuration.appInfo.tip.anchorPath": "应用数据路径的指针文件所在位置。当你自定义应用数据路径时，应用会在这里写一个指针文件，下次启动时根据它定位到你设置的路径。",
   "configuration.appInfo.tip.dataPath": "这是存储用户文件、封面等数据的目录。",
   "configuration.appInfo.tip.tempFilesPath": "这是存储临时文件的目录。",
   "configuration.appInfo.tip.logPath": "描述应用运行状态的详细信息。如果应用运行异常，您可以将日志文件发送给开发者；如果一切正常，也可以删除它们。",
