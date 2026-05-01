@@ -115,8 +115,11 @@ jobs:
         id: cdn-refresh
         run: |
           VERSION="${{ needs.prepare.outputs.version }}"
+          OBJECT_PATH="https://cdn-public.anobaka.com/app/bakabase/releases/
+          https://cdn-public.anobaka.com/app/bakabase/archives/${VERSION}/
+          https://cdn-public.anobaka.com/app/bakabase/scripts/"
           RESULT=$(./aliyun cdn RefreshObjectCaches \
-            --ObjectPath "https://cdn-public.anobaka.com/app/bakabase/releases/\nhttps://cdn-public.anobaka.com/app/bakabase/archives/${VERSION}/\nhttps://cdn-public.anobaka.com/app/bakabase/scripts/" \
+            --ObjectPath "$OBJECT_PATH" \
             --ObjectType Directory)
           echo "$RESULT"
           TASK_ID=$(echo "$RESULT" | jq -r '.RefreshTaskId')
@@ -142,3 +145,41 @@ jobs:
           done
           echo "CDN refresh timed out after 2 minutes (task may still be processing)"
           exit 1
+
+      - name: Verify CDN serves new version
+        run: |
+          VERSION="${{ needs.prepare.outputs.version }}"
+          v=$(echo "$VERSION" | tr '[:upper:]' '[:lower:]')
+          if [[ "$v" == *beta* ]]; then
+            MANIFEST=releases.beta.json
+          elif [[ "$v" == *rc* ]]; then
+            MANIFEST=releases.rc.json
+          else
+            MANIFEST=releases.json
+          fi
+          echo "Verifying manifest: $MANIFEST, expected version: $VERSION"
+
+          PLATFORMS=(win-x64 osx-x64 osx-arm64)
+          FAILED=()
+          for plat in "${PLATFORMS[@]}"; do
+            URL="https://cdn-public.anobaka.com/app/bakabase/releases/${plat}/${MANIFEST}"
+            OK=0
+            for i in $(seq 1 6); do
+              ACTUAL=$(curl -fsSL "$URL" | jq -r '.Assets[0].Version // empty' 2>/dev/null || echo "")
+              echo "[$plat] attempt $i: got version='$ACTUAL', expected='$VERSION'"
+              if [ "$ACTUAL" = "$VERSION" ]; then
+                OK=1
+                break
+              fi
+              sleep 5
+            done
+            if [ "$OK" -ne 1 ]; then
+              FAILED+=("$plat")
+            fi
+          done
+
+          if [ "${#FAILED[@]}" -gt 0 ]; then
+            echo "::error::CDN still serves stale manifest after 30s for: ${FAILED[*]}"
+            exit 1
+          fi
+          echo "All platforms serve version $VERSION"
