@@ -37,7 +37,7 @@ Bakabase helps you manage your local media — anime, comics, audio dramas, douj
 >
 > Starting with `2.3.0-beta.75`, the Windows default AppData directory moved from `%LocalAppData%\Bakabase` (which coincided with the Velopack install root) to `%LocalAppData%\Bakabase.AppData`. **Upgrades, uninstalls, and installer "Repair" no longer touch user data.** **Most users need to do nothing.**
 >
-> **Edge case (~1.5 day window)**: if you ran any of `2.3.0-beta.69` ~ `2.3.0-beta.74` and **did not** customise the app data path in Settings, after upgrading to `≥ 2.3.0-beta.75` the app will appear "freshly installed" — your data is intact but no longer auto-loaded. To recover: go to **Settings → System Information → App Data Path → Modify**, point it at `%LocalAppData%\Bakabase`, and restart.
+> **Edge case**: if you ran any of `2.3.0-beta.69` ~ `2.3.0-beta.74` and **did not** customise the app data path in Settings, after upgrading to `≥ 2.3.0-beta.75` the app will appear "freshly installed" — your data is intact but no longer auto-loaded. To recover: type `%LocalAppData%\Bakabase` into the Windows Explorer address bar, press Enter, copy the expanded full path from the address bar (looks like `C:\Users\<you>\AppData\Local\Bakabase`), then paste it into Bakabase **Settings → System Information → App Data Path → Modify** and restart.
 >
 > Versions older than `2.3.0-beta.69` still carry the original in-app upgrade data loss risk; back up before upgrading per [#1070](https://github.com/anobaka/Bakabase/issues/1070). macOS and Linux are unaffected by either issue.
 
