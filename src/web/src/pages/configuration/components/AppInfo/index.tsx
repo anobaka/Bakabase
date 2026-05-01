@@ -277,6 +277,11 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo, applyPatches }) => {
             <span className="text-xs text-foreground-400">
               {t("configuration.appInfo.tip.appDataPath.manualMerge")}
             </span>
+            {appInfo.dataPathSource === DataPathSource.Default && (
+              <span className="text-xs text-warning-500">
+                {t("configuration.appInfo.tip.appDataPath.uninstallNotice")}
+              </span>
+            )}
           </div>
         ),
       },
