@@ -74,7 +74,7 @@
   "configuration.dataPath.validation.relativePath": "Use an absolute path.",
   "configuration.dataPath.validation.invalidChars": "Path contains invalid characters.",
   "configuration.dataPath.validation.sameAsCurrent": "Target equals the current path.",
-  "configuration.dataPath.validation.insideInstall": "Cannot place data inside the install directory's current/ or packages/ subfolders — these are managed by Velopack and replaced or pruned on upgrade; any data inside would be lost.",
+  "configuration.dataPath.validation.insideInstall": "This path is inside the Bakabase install directory ({{installRoot}}). Upgrades replace files inside it, and uninstall or Repair wipes the install directory wholesale — any data here will be lost with it. Choose a location outside the install directory.",
   "configuration.dataPath.validation.circularContainment": "Target and current path contain each other.",
   "configuration.dataPath.validation.systemPath": "System directories are not allowed.",
   "configuration.dataPath.validation.noWritePermission": "No write permission for the target.",

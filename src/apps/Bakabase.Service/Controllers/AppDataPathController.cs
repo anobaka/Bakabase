@@ -54,6 +54,12 @@ namespace Bakabase.Service.Controllers
             public long MinFreeBytes { get; set; }
             public string CurrentPath { get; set; } = null!;
             public string DefaultPath { get; set; } = null!;
+
+            /// <summary>
+            /// Velopack install root, when running inside one. Surfaced so the FE can
+            /// render a concrete path in the <c>insideInstall</c> refusal message.
+            /// </summary>
+            public string? InstallRoot { get; set; }
         }
 
         public class RelocateRequest
@@ -90,6 +96,7 @@ namespace Bakabase.Service.Controllers
                 MinFreeBytes = result.MinFreeBytes,
                 CurrentPath = currentDataDir,
                 DefaultPath = AppService.DefaultAppDataDirectory,
+                InstallRoot = result.InstallRoot,
             });
         }
 

@@ -57,12 +57,14 @@ export const RelocationButton: React.FC<RelocationButtonProps> = ({ currentDataP
     const data = (resp as any).data;
     if (!data?.valid) {
       const reasonKey = `configuration.dataPath.validation.${camelize(data?.reason)}`;
+      // Some reason messages interpolate runtime values (e.g. insideInstall renders the
+      // detected install root). Pass the whole response in — i18next ignores unused keys.
       createPortal(Modal, {
         size: "md",
         title: t("configuration.dataPath.error.title"),
         children: (
           <div className="flex flex-col gap-2">
-            <p>{t(reasonKey)}</p>
+            <p>{t(reasonKey, { installRoot: data?.installRoot ?? "" })}</p>
             <p className="text-xs text-foreground-400">
               {t("configuration.dataPath.error.targetWas")}: <code>{target}</code>
             </p>

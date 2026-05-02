@@ -6206,6 +6206,7 @@ export interface components {
             notAcceptTerms: boolean;
             needRestart: boolean;
             mayHaveLegacyData: boolean;
+            dataInInstallRoot: boolean;
         };
         /**
          * Format: int32
@@ -6244,7 +6245,6 @@ export interface components {
             enablePreReleaseChannel: boolean;
             enableAnonymousDataTracking: boolean;
             wwwRootPath: string;
-            dataPath?: string;
             prevDataPath: string;
             closeBehavior: components["schemas"]["Bakabase.Infrastructures.Components.Gui.CloseBehavior"];
             uiTheme: components["schemas"]["Bakabase.Infrastructures.Components.Gui.UiTheme"];
@@ -8268,6 +8268,7 @@ export interface components {
             minFreeBytes: number;
             currentPath: string;
             defaultPath: string;
+            installRoot?: string;
         };
         "Bakabase.Service.Controllers.ChatController+ChatToolViewModel": {
             name: string;

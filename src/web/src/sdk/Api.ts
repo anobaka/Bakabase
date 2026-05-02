@@ -1082,6 +1082,7 @@ export interface BakabaseInfrastructuresComponentsAppModelsResponseModelsAppInfo
   notAcceptTerms: boolean;
   needRestart: boolean;
   mayHaveLegacyData: boolean;
+  dataInInstallRoot: boolean;
 }
 
 /**
@@ -1133,7 +1134,6 @@ export interface BakabaseInfrastructuresComponentsConfigurationsAppAppOptions {
   enablePreReleaseChannel: boolean;
   enableAnonymousDataTracking: boolean;
   wwwRootPath: string;
-  dataPath?: string;
   prevDataPath: string;
   /** [0: Prompt, 1: Exit, 2: Minimize, 1000: Cancel] */
   closeBehavior: BakabaseInfrastructuresComponentsGuiCloseBehavior;
@@ -3607,6 +3607,7 @@ export interface BakabaseServiceControllersAppDataPathControllerValidateResponse
   minFreeBytes: number;
   currentPath: string;
   defaultPath: string;
+  installRoot?: string;
 }
 
 export interface BakabaseServiceControllersChatControllerChatToolViewModel {
