@@ -74,7 +74,7 @@
   "configuration.dataPath.validation.relativePath": "请使用绝对路径。",
   "configuration.dataPath.validation.invalidChars": "路径含有非法字符。",
   "configuration.dataPath.validation.sameAsCurrent": "目标路径与当前路径相同。",
-  "configuration.dataPath.validation.insideInstall": "不能选择安装目录内部，从 2.3 版本开始升级时会清空旧的安装目录，放在里面的数据会丢失。",
+  "configuration.dataPath.validation.insideInstall": "不能选择安装目录中的 current/ 或 packages/ 子目录——这些目录由 Velopack 管理，会在升级时被替换或清理，放在里面的数据会丢失。",
   "configuration.dataPath.validation.circularContainment": "目标路径与当前路径互相包含。",
   "configuration.dataPath.validation.systemPath": "不能使用系统目录。",
   "configuration.dataPath.validation.noWritePermission": "目标路径没有写入权限。",

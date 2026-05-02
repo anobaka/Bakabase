@@ -92,6 +92,7 @@ public class DataPathValidatorTests
     [TestMethod]
     public void Validate_InsideVelopackInstall_Refused()
     {
+        // Inside current/ — atomically replaced on upgrade, must be refused.
         var installRoot = Path.Combine(_root, "Bakabase-install");
         var target = Path.Combine(installRoot, "current", "AppData");
         var current = Path.Combine(_root, "elsewhere");
@@ -100,6 +101,52 @@ public class DataPathValidatorTests
         var result = DataPathValidator.Validate(input);
         Assert.IsFalse(result.Valid);
         Assert.AreEqual(DataPathValidator.RefusalReason.InsideInstall, result.Reason);
+    }
+
+    [TestMethod]
+    public void Validate_InsideVelopackPackages_Refused()
+    {
+        // packages/ holds Velopack download cache — pruned on upgrade, must be refused.
+        var installRoot = Path.Combine(_root, "Bakabase-install");
+        var target = Path.Combine(installRoot, "packages", "data");
+        var current = Path.Combine(_root, "elsewhere");
+        Directory.CreateDirectory(current);
+        var input = MakeInput(target, current, installRoot: installRoot);
+        var result = DataPathValidator.Validate(input);
+        Assert.IsFalse(result.Valid);
+        Assert.AreEqual(DataPathValidator.RefusalReason.InsideInstall, result.Reason);
+    }
+
+    [TestMethod]
+    public void Validate_TargetEqualsInstallRoot_Allowed()
+    {
+        // Install root itself — survives upgrade (Velopack only swaps current/), so it is
+        // not refused. This is the recovery target for users coming from 2.3.0-beta.69~74
+        // whose default DataPath physically lived at the install root. The orthogonal
+        // uninstall / Repair risk is surfaced via AppInfo.DataInInstallRoot.
+        var installRoot = Path.Combine(_root, "Bakabase-install");
+        Directory.CreateDirectory(installRoot);
+        var current = Path.Combine(_root, "elsewhere");
+        Directory.CreateDirectory(current);
+        var input = MakeInput(installRoot, current, installRoot: installRoot);
+        var result = DataPathValidator.Validate(input);
+        Assert.IsTrue(result.Valid, $"Expected valid, got {result.Reason}");
+    }
+
+    [TestMethod]
+    public void Validate_InstallRootSiblingDir_Allowed()
+    {
+        // A non-Velopack-managed dir under the install root (e.g. user-stored data
+        // folder at the install root level) is also safe from upgrade and must be
+        // allowed.
+        var installRoot = Path.Combine(_root, "Bakabase-install");
+        var target = Path.Combine(installRoot, "my-data");
+        Directory.CreateDirectory(target);
+        var current = Path.Combine(_root, "elsewhere");
+        Directory.CreateDirectory(current);
+        var input = MakeInput(target, current, installRoot: installRoot);
+        var result = DataPathValidator.Validate(input);
+        Assert.IsTrue(result.Valid, $"Expected valid, got {result.Reason}");
     }
 
     [TestMethod]

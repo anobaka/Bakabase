@@ -74,7 +74,7 @@
   "configuration.dataPath.validation.relativePath": "Use an absolute path.",
   "configuration.dataPath.validation.invalidChars": "Path contains invalid characters.",
   "configuration.dataPath.validation.sameAsCurrent": "Target equals the current path.",
-  "configuration.dataPath.validation.insideInstall": "Cannot place data inside the install directory — starting with 2.3 the previous install directory is wiped on upgrade and any data inside is lost.",
+  "configuration.dataPath.validation.insideInstall": "Cannot place data inside the install directory's current/ or packages/ subfolders — these are managed by Velopack and replaced or pruned on upgrade; any data inside would be lost.",
   "configuration.dataPath.validation.circularContainment": "Target and current path contain each other.",
   "configuration.dataPath.validation.systemPath": "System directories are not allowed.",
   "configuration.dataPath.validation.noWritePermission": "No write permission for the target.",
