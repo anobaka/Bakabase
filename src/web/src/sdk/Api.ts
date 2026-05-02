@@ -1124,8 +1124,6 @@ export interface BakabaseInfrastructuresComponentsAppUpgradeAbstractionsAppVersi
   osArchitecture: SystemRuntimeInteropServicesArchitecture;
   name: string;
   url: string;
-  /** @format int64 */
-  size: number;
 }
 
 export interface BakabaseInfrastructuresComponentsConfigurationsAppAppOptions {

@@ -6236,8 +6236,6 @@ export interface components {
             osArchitecture: components["schemas"]["System.Runtime.InteropServices.Architecture"];
             name: string;
             url: string;
-            /** Format: int64 */
-            size: number;
         };
         "Bakabase.Infrastructures.Components.Configurations.App.AppOptions": {
             language: string;

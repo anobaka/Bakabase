@@ -14,7 +14,6 @@ import { AiOutlineQuestionCircle } from "react-icons/ai";
 import { Popover, Divider, Icon, Progress, Snippet, Tooltip } from "@/components/bakaui";
 import { UpdaterStatus, DataPathSource } from "@/sdk/constants";
 import ExternalLink from "@/components/ExternalLink";
-import { bytesToSize } from "@/components/utils";
 import { useAppUpdaterStateStore } from "@/stores/appUpdaterState";
 import { useAppOptionsStore } from "@/stores/options";
 import {
@@ -136,7 +135,7 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo, applyPatches }) => {
                       {newVersion.installers.map((i) => (
                         <div key={i.url}>
                           <ExternalLink href={i.url}>
-                            {i.name}({bytesToSize(i.size)})
+                            {i.name}
                           </ExternalLink>
                         </div>
                       ))}
