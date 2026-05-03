@@ -216,17 +216,17 @@ const ContextMenu = ({ selectedEntries, capabilities, root, renderExtraContextMe
     }
 
     if (capabilities?.includes("group")) {
-      const fileEntries = selectedEntries.filter((x) => !x.isDirectoryOrDrive);
+      const groupableEntries = selectedEntries.filter((e) => !e.isDrive);
 
-      if (fileEntries.length > 1) {
+      if (groupableEntries.length > 1) {
         items.push({
           icon: <GroupOutlined className={"text-base"} />,
-          label: t<string>("fileExplorer.contextMenu.autoGroupSelectedFiles", {
-            count: fileEntries.length,
+          label: t<string>("fileExplorer.contextMenu.autoGroupSelectedEntries", {
+            count: groupableEntries.length,
           }),
           onClick: () => {
             createPortal(GroupModal, {
-              entries: fileEntries,
+              entries: groupableEntries,
               groupInternal: false,
             });
           },
@@ -243,7 +243,7 @@ const ContextMenu = ({ selectedEntries, capabilities, root, renderExtraContextMe
           }),
           onClick: () => {
             createPortal(GroupModal, {
-              entries: selectedEntries,
+              entries: directoryEntries,
               groupInternal: true,
             });
           },

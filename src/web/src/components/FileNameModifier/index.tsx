@@ -7,6 +7,7 @@ import {
   AiOutlineEdit,
   AiOutlineEye,
   AiOutlineEyeInvisible,
+  AiOutlineFolderAdd,
   AiOutlinePlusCircle,
   AiOutlineUndo,
 } from "react-icons/ai";
@@ -34,6 +35,7 @@ import { useFileNameModifier, OperationWithId } from "./useFileNameModifier";
 
 import BApi from "@/sdk/BApi";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import { FileSystemSelectorModal } from "@/components/FileSystemSelector";
 
 export interface FileNameModificationResult {
   originalPath: string;
@@ -63,6 +65,7 @@ const createDefaultOperation = (): OperationWithId => ({
   alphabetStartChar: "A",
   alphabetCount: 0,
   replaceEntire: false,
+  regex: false,
 });
 
 interface FileNameModifierProps {
@@ -184,6 +187,27 @@ const FileNameModifier: React.FC<FileNameModifierProps> = ({
     setFilePaths((paths) =>
       Array.from(new Set(paths.map((f) => f.trim()).filter(Boolean))),
     );
+  };
+
+  const handleAddPathsFromFileSystem = () => {
+    createPortal(FileSystemSelectorModal, {
+      multiple: true,
+      onMultipleSelected: (entries) => {
+        const incoming = entries.map((e) => e.path).filter(Boolean) as string[];
+        setFilePaths((prev) => {
+          const existing = new Set(prev.map((p) => p.trim()).filter(Boolean));
+          const merged = [...prev];
+          for (const p of incoming) {
+            const trimmed = p.trim();
+            if (trimmed && !existing.has(trimmed)) {
+              existing.add(trimmed);
+              merged.push(trimmed);
+            }
+          }
+          return merged;
+        });
+      },
+    });
   };
   // 预览区公共前缀
   const commonPrefix = useMemo(
@@ -446,15 +470,26 @@ const FileNameModifier: React.FC<FileNameModifierProps> = ({
             )}
           </h5>
           {!showTextarea && (
-            <Button
-              aria-label={t<string>("FileNameModifier.EditFileList")}
-              size="sm"
-              variant="light"
-              onClick={handleShowFileListEdit}
-            >
-              <AiOutlineEdit className="text-base" />
-              {t<string>("FileNameModifier.EditFileList")}
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                aria-label={t<string>("FileNameModifier.AddFromFileSystem")}
+                size="sm"
+                variant="light"
+                onClick={handleAddPathsFromFileSystem}
+              >
+                <AiOutlineFolderAdd className="text-base" />
+                {t<string>("FileNameModifier.AddFromFileSystem")}
+              </Button>
+              <Button
+                aria-label={t<string>("FileNameModifier.EditFileList")}
+                size="sm"
+                variant="light"
+                onClick={handleShowFileListEdit}
+              >
+                <AiOutlineEdit className="text-base" />
+                {t<string>("FileNameModifier.EditFileList")}
+              </Button>
+            </div>
           )}
         </div>
         <div className="flex-1 rounded min-h-0">
@@ -477,6 +512,15 @@ const FileNameModifier: React.FC<FileNameModifierProps> = ({
                   onClick={handleConfirmPaths}
                 >
                   {t<string>("FileNameModifier.ConfirmPaths")}
+                </Button>
+                <Button
+                  aria-label={t<string>("FileNameModifier.AddFromFileSystem")}
+                  size="sm"
+                  variant="light"
+                  onClick={handleAddPathsFromFileSystem}
+                >
+                  <AiOutlineFolderAdd className="text-base" />
+                  {t<string>("FileNameModifier.AddFromFileSystem")}
                 </Button>
                 <Button
                   aria-label={t<string>("FileNameModifier.Deduplicate")}

@@ -1,0 +1,9 @@
+{
+  "FileChangePreview.Calculating": "计算中...",
+  "FileChangePreview.NothingToChange": "没有需要变更的项目",
+  "FileChangePreview.SummaryGroups": "个分组",
+  "FileChangePreview.SummaryMoving": "项移动",
+  "FileChangePreview.SummaryUntouched": "项保持不动",
+  "FileChangePreview.MoreEntries": "还有 {{count}} 项",
+  "FileChangePreview.UntouchedCount": "{{count}} 项不会被处理"
+}

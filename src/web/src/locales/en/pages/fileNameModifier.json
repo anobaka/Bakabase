@@ -12,6 +12,7 @@
   "FileNameModifier.FilePathsTextarea": "File Paths Input",
   "FileNameModifier.FilePathsPlaceholder": "Enter file paths, one per line",
   "FileNameModifier.ConfirmPaths": "Confirm Paths",
+  "FileNameModifier.AddFromFileSystem": "Add from File System",
   "FileNameModifier.Deduplicate": "Deduplicate",
   "FileNameModifier.Cancel": "Cancel",
   "FileNameModifier.Loading": "Loading...",

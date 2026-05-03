@@ -57,6 +57,12 @@ const FileSystemSelectorModal = (props: IProps) => {
             fsProps.onSelected(e);
           }
         }}
+        onMultipleSelected={(entries) => {
+          close();
+          if (fsProps.onMultipleSelected) {
+            fsProps.onMultipleSelected(entries);
+          }
+        }}
       />
     </Modal>
   );

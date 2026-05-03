@@ -22,13 +22,15 @@ import type { BTask } from "@/core/models/BTask";
 
 export interface SyncProgressModalProps extends DestroyableProps {
   visible?: boolean;
+  /** If true, resets every mark to pending and re-syncs the whole repo. Defaults to false (sync currently-pending marks only). */
+  forceResync?: boolean;
   onClose?: () => void;
   onComplete?: () => void;
 }
 
 const SyncTaskId = "SyncPathMarks";
 
-const SyncProgressModal = ({ visible = true, onClose, onComplete, onDestroyed }: SyncProgressModalProps) => {
+const SyncProgressModal = ({ visible = true, forceResync = false, onClose, onComplete, onDestroyed }: SyncProgressModalProps) => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(visible);
   const bTasks = useBTasksStore((state) => state.tasks);
@@ -49,9 +51,12 @@ const SyncProgressModal = ({ visible = true, onClose, onComplete, onDestroyed }:
   // Start sync when modal opens
   useEffect(() => {
     if (visible) {
-      BApi.pathMark.startPathMarkSyncAll().catch(console.error);
+      const trigger = forceResync
+        ? BApi.pathMark.forceResyncAllPathMarks
+        : BApi.pathMark.startPathMarkSyncAll;
+      trigger().catch(console.error);
     }
-  }, [visible]);
+  }, [visible, forceResync]);
 
   // Detect completion
   useEffect(() => {

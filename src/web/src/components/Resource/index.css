@@ -20,6 +20,7 @@
 }
 
 .resource-limited-content:hover {
+  display: block;
   overflow: unset;
   text-overflow: unset;
   -webkit-line-clamp: unset;

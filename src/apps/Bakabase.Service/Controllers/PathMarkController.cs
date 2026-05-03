@@ -251,6 +251,30 @@ public class PathMarkController(IPathMarkService service, IPathMarkSyncService s
     }
 
     /// <summary>
+    /// Force a full re-sync of every existing path mark — re-marks them as Pending
+    /// (except those already PendingDelete or actively Syncing) and triggers a sync.
+    /// Use this to recover from any state where the index of effects has drifted.
+    /// </summary>
+    [HttpPost("sync/force-all")]
+    [SwaggerOperation(OperationId = "ForceResyncAllPathMarks")]
+    public async Task<BaseResponse> ForceResyncAll()
+    {
+        var allMarks = await service.GetAll(m => !m.IsDeleted);
+        var markIds = allMarks
+            .Where(m => m.SyncStatus != PathMarkSyncStatus.Syncing)
+            .Select(m => m.Id)
+            .ToArray();
+
+        if (markIds.Length == 0)
+        {
+            return BaseResponseBuilder.Ok;
+        }
+
+        await syncService.EnqueueSync(markIds);
+        return BaseResponseBuilder.Ok;
+    }
+
+    /// <summary>
     /// Start resource synchronization for a specific source (e.g., Steam, DLsite, ExHentai).
     /// This triggers resource discovery from the source, and if new resources are found,
     /// related property/media library marks are automatically set to pending for sync.

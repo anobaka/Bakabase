@@ -24,12 +24,15 @@ const Panel = (props: FileSystemSelectorProps) => {
     startPath,
     targetType,
     onSelected,
+    onMultipleSelected,
     onCancel,
     filter: propsFilter = (e) => true,
     defaultSelectedPath,
+    multiple = false,
   } = props;
 
   const [selected, setSelected] = useState<Entry>();
+  const [selectedMany, setSelectedMany] = useState<Entry[]>([]);
   const [currentDirPath, setCurrentDirPath] = useState<string>();
   const rootRef = useRef<FileExplorerRef | null>(null);
 
@@ -85,11 +88,21 @@ const Panel = (props: FileSystemSelectorProps) => {
 
   const trySelectRootOrClearSelection = () => {
     if (rootRef.current?.root && filter(rootRef.current.root, "select")) {
-      setSelected(rootRef.current.root);
+      if (multiple) {
+        setSelectedMany([rootRef.current.root]);
+      } else {
+        setSelected(rootRef.current.root);
+      }
     } else {
-      setSelected(undefined);
+      if (multiple) {
+        setSelectedMany([]);
+      } else {
+        setSelected(undefined);
+      }
     }
   };
+
+  const hasSelection = multiple ? selectedMany.length > 0 : !!selected;
 
   return (
     <div className={"flex flex-col gap-2 grow max-h-full"}>
@@ -104,7 +117,7 @@ const Panel = (props: FileSystemSelectorProps) => {
           custom: (e) => filter(e, "visible"),
         }}
         rootPath={startPath}
-        selectable={"single"}
+        selectable={multiple ? "multiple" : "single"}
         onInitialized={() => {
           log("onInitialized", rootRef.current?.root);
           if (rootRef.current?.root) {
@@ -115,22 +128,26 @@ const Panel = (props: FileSystemSelectorProps) => {
           }
         }}
         onSelected={(es) => {
-          const e = es[0];
-
           log(rootRef.current);
 
-          if (e) {
-            if (filter(e, "select")) {
-              setSelected(e);
-            } else {
-              setSelected(undefined);
-            }
+          if (multiple) {
+            const valid = es.filter((e) => filter(e, "select"));
+            setSelectedMany(valid);
           } else {
-            trySelectRootOrClearSelection();
+            const e = es[0];
+            if (e) {
+              if (filter(e, "select")) {
+                setSelected(e);
+              } else {
+                setSelected(undefined);
+              }
+            } else {
+              trySelectRootOrClearSelection();
+            }
           }
         }}
       />
-      {selected && (
+      {!multiple && selected && (
         <div className="flex items-center gap-2">
           <Chip color={"success"} radius={"sm"} size={"sm"} variant={"light"}>
             {t<string>("Selected")}
@@ -144,6 +161,25 @@ const Panel = (props: FileSystemSelectorProps) => {
           >
             {selected.path}
           </Chip>
+        </div>
+      )}
+      {multiple && selectedMany.length > 0 && (
+        <div className="flex flex-wrap items-start gap-2 max-h-32 overflow-auto">
+          <Chip color={"success"} radius={"sm"} size={"sm"} variant={"light"}>
+            {t<string>("Selected")} ({selectedMany.length})
+          </Chip>
+          {selectedMany.map((e) => (
+            <Chip
+              key={e.path}
+              className={"whitespace-break-spaces h-auto"}
+              color={"success"}
+              radius={"sm"}
+              size={"sm"}
+              variant={"light"}
+            >
+              {e.path}
+            </Chip>
+          ))}
         </div>
       )}
       <div className="flex items-center justify-between mb-2">
@@ -161,9 +197,13 @@ const Panel = (props: FileSystemSelectorProps) => {
           <Button
             color={"primary"}
             // size={'small'}
-            disabled={!selected}
+            disabled={!hasSelection}
             onClick={() => {
-              onSelected?.(selected!);
+              if (multiple) {
+                onMultipleSelected?.(selectedMany);
+              } else {
+                onSelected?.(selected!);
+              }
             }}
           >
             {t<string>("OK")}

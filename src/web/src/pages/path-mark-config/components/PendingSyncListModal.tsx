@@ -179,16 +179,44 @@ const PendingSyncListModal = ({
     }
   }, []);
 
-  const handleSyncAll = useCallback(() => {
-    // Open the sync progress modal
-    createPortal(SyncProgressModal, {
-      visible: true,
-      onComplete: () => {
-        loadPendingMarks();
-        onSyncComplete?.();
+  const startSync = useCallback(
+    (forceResync: boolean) => {
+      createPortal(SyncProgressModal, {
+        visible: true,
+        forceResync,
+        onComplete: () => {
+          loadPendingMarks();
+          onSyncComplete?.();
+        },
+      });
+    },
+    [createPortal, loadPendingMarks, onSyncComplete],
+  );
+
+  const handleSyncPending = useCallback(() => startSync(false), [startSync]);
+
+  const handleForceResyncAll = useCallback(() => {
+    const modal = createPortal(Modal, {
+      defaultVisible: true,
+      title: t("pathMarkConfig.confirm.forceResyncAllTitle"),
+      children: (
+        <p className="whitespace-pre-line text-sm">
+          {t("pathMarkConfig.confirm.forceResyncAllBody")}
+        </p>
+      ),
+      footer: {
+        actions: ["cancel", "ok"],
+        okProps: {
+          color: "warning",
+          children: t("pathMarkConfig.action.forceResyncAll"),
+        },
+      },
+      onOk: () => {
+        modal.destroy();
+        startSync(true);
       },
     });
-  }, [createPortal, loadPendingMarks, onSyncComplete]);
+  }, [createPortal, startSync, t]);
 
   // Calculate total pending using store marks for latest status
   const totalPending = React.useMemo(() => {
@@ -210,7 +238,7 @@ const PendingSyncListModal = ({
       size="lg"
       title={
         <div className="flex items-center gap-2">
-          <span>{t("pathMarkConfig.modal.pendingSyncMarks")}</span>
+          <span>{t("pathMarkConfig.modal.syncMarksTitle")}</span>
           {totalPending > 0 && (
             <Chip color="warning" size="sm" variant="flat">
               {totalPending}
@@ -219,15 +247,29 @@ const PendingSyncListModal = ({
         </div>
       }
       footer={
-        <div className="flex items-center justify-between w-full">
-          <Button
-            color="primary"
-            startContent={<AiOutlineSync />}
-            isDisabled={pendingMarks.length === 0 || loading}
-            onPress={handleSyncAll}
-          >
-            {t("pathMarkConfig.action.syncAll")}
-          </Button>
+        <div className="flex items-center justify-between w-full gap-2">
+          <div className="flex items-center gap-2">
+            <Button
+              color="primary"
+              startContent={<AiOutlineSync />}
+              isDisabled={loading || totalPending === 0}
+              onPress={handleSyncPending}
+            >
+              {t("pathMarkConfig.action.syncPending")}
+              {totalPending > 0 && (
+                <span className="ml-1 opacity-70">({totalPending})</span>
+              )}
+            </Button>
+            <Button
+              color="warning"
+              variant="flat"
+              startContent={<AiOutlineSync />}
+              isDisabled={loading}
+              onPress={handleForceResyncAll}
+            >
+              {t("pathMarkConfig.action.forceResyncAll")}
+            </Button>
+          </div>
           <Button color="default" variant="light" onPress={handleClose}>
             {t("common.action.close")}
           </Button>

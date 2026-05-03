@@ -55,6 +55,7 @@ namespace Bakabase.Service.Extensions
             services.AddScoped<PasswordService>();
 
             services.TryAddSingleton<IwFsWatcher>();
+            services.AddSingleton<Bakabase.Service.Services.FileSystemEntryGroupingService>();
 
             #region Optimized after V190
 

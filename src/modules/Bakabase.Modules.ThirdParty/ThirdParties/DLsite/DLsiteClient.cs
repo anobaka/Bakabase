@@ -33,11 +33,24 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
     protected override string HttpClientName => InternalOptions.HttpClientNames.DLsite;
 
     /// <summary>
-    /// We can always use a random category (/books part) to get any detail page by id.
+    /// Detail page URL — the category segment must match the work id prefix, otherwise
+    /// DLsite issues a 30x redirect that the handler does not auto-follow
+    /// (<see cref="DLsiteHttpMessageHandler{TDLsiteOptions}"/> sets AllowAutoRedirect=false
+    /// for the manual download flow).
     /// </summary>
-    private const string WorkDetailUrlTemplate = "https://www.dlsite.com/books/work/=/product_id/{0}.html";
+    private const string WorkDetailUrlTemplate = "https://www.dlsite.com/{0}/work/=/product_id/{1}.html";
 
-    private const string InfoJsonUrlTemplate = "https://www.dlsite.com/books/product/info/ajax?product_id={0}&cdn_cache_min=1";
+    private const string InfoJsonUrlTemplate = "https://www.dlsite.com/{0}/product/info/ajax?product_id={1}&cdn_cache_min=1";
+
+    /// <summary>
+    /// Cookie that bypasses DLsite's age-verification interlude for R-18 works. Without
+    /// it, R-18 detail pages render an "are you 18+?" interstitial that has none of the
+    /// expected selectors (<c>#work_name</c>, <c>.product-slider-data</c>), producing
+    /// an empty <see cref="DLsiteProductDetail"/>.
+    /// </summary>
+    private const string AgeBypassCookie = "adultchecked=1; locale=ja-jp";
+
+    private const int MaxRedirectHops = 5;
 
     // Play API endpoints
     private const string PlayApiContentCount = "https://play.dlsite.com/api/v3/content/count";
@@ -50,84 +63,184 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
     private HttpClient PlayHttpClient => _playHttpClient ??= httpClientFactory.CreateClient(InternalOptions.HttpClientNames.Default);
 
     /// <summary>
-    ///
+    /// Maps a DLsite work id prefix to the category segment used in its URL.
     /// </summary>
-    /// <param name="id">Something like RJxxxxxxx</param>
-    /// <returns></returns>
+    /// <remarks>
+    /// Hitting the wrong category yields a 30x redirect (which the production handler
+    /// does not auto-follow, so the response body is empty) or in some cases a
+    /// non-canonical page that lacks the expected selectors. Routing up front avoids
+    /// both failure modes.
+    /// </remarks>
+    public static string GetCategoryByWorkId(string id)
+    {
+        if (string.IsNullOrEmpty(id) || id.Length < 2) return "home";
+        var prefix = id[..2].ToUpperInvariant();
+        return prefix switch
+        {
+            "RJ" => "maniax",   // R-18 doujin
+            "VJ" => "pro",      // Commercial games
+            "BJ" => "books",    // Commercial books
+            _ => "home"
+        };
+    }
+
+    /// <summary>
+    /// Fetches and parses a DLsite work detail page.
+    /// </summary>
+    /// <param name="id">Work id, e.g. RJ01248749 / BJxxxxxx / VJxxxxxx.</param>
+    /// <returns>
+    /// Parsed detail, or <c>null</c> when the work doesn't exist, the page has been
+    /// redirected away from a canonical detail URL, or the page rendered without the
+    /// expected selectors (e.g. served behind an unbypassed age gate).
+    /// </returns>
     public async Task<DLsiteProductDetail?> ParseWorkDetailById(string id)
     {
-        var url = string.Format(WorkDetailUrlTemplate, id);
-        var rsp = await HttpClient.GetAsync(url);
-        if (rsp.StatusCode == HttpStatusCode.NotFound)
+        if (string.IsNullOrEmpty(id))
         {
             return null;
         }
 
-        var html = await rsp.Content.ReadAsStringAsync();
-        var cq = new CQ(html);
+        var category = GetCategoryByWorkId(id);
+        var url = string.Format(WorkDetailUrlTemplate, category, id);
 
-        var detail = new DLsiteProductDetail
+        var rsp = await SendDetailRequestAsync(url);
+        try
         {
-            Name = cq["#work_name"].Text().Trim(),
-            Introduction = cq[".work_parts_container"].Html(),
-        };
-
-        if (detail.Introduction.IsNotEmpty())
-        {
-            detail.Introduction = StringHelpers.MinifyHtml(WebUtility.HtmlDecode(detail.Introduction));
-        }
-
-        var coverUrls = cq[".product-slider-data"].Children().Select(x => x.Cq().Data<string>("src"))
-            .Where(x => x.IsNotEmpty()).ToList();
-        if (coverUrls.Any())
-        {
-            detail.CoverUrls = coverUrls.Select(c => c.AddSchemaSafely()).ToArray();
-        }
-
-        var properties = cq["#work_maker>tbody>tr,#work_outline>tbody>tr"].Select(t => t.Cq())
-            .ToDictionary(t => t.Children("th").Text().Trim(),
-                t =>
+            for (var hops = 0; hops < MaxRedirectHops && IsRedirect(rsp); hops++)
+            {
+                var location = rsp.Headers.Location;
+                if (location == null) return null;
+                var nextUrl = location.IsAbsoluteUri
+                    ? location.AbsoluteUri
+                    : new Uri(new Uri(url), location).AbsoluteUri;
+                // Anything that leaves the canonical detail URL shape (e.g. landing on
+                // a category index or search page) means the work id doesn't exist
+                // under any category.
+                if (!nextUrl.Contains("/work/=/product_id/", StringComparison.OrdinalIgnoreCase))
                 {
-                    var list = t.Children("td").Children();
-                    if (list == null)
-                    {
-                        return null;
-                    }
+                    return null;
+                }
 
-                    var data = new List<object>();
-                    foreach (var item in list)
+                rsp.Dispose();
+                url = nextUrl;
+                rsp = await SendDetailRequestAsync(url);
+            }
+
+            if (rsp.StatusCode == HttpStatusCode.NotFound)
+            {
+                return null;
+            }
+
+            rsp.EnsureSuccessStatusCode();
+
+            var html = await rsp.Content.ReadAsStringAsync();
+            var cq = new CQ(html);
+
+            var name = cq["#work_name"].Text().Trim();
+            if (string.IsNullOrEmpty(name))
+            {
+                // No #work_name on the response means we either hit an age-verification
+                // interlude or an unrelated page. Returning null lets callers retry
+                // rather than caching an empty shell.
+                return null;
+            }
+
+            var detail = new DLsiteProductDetail
+            {
+                Name = name,
+                Introduction = cq[".work_parts_container"].Html(),
+            };
+
+            if (detail.Introduction.IsNotEmpty())
+            {
+                detail.Introduction = StringHelpers.MinifyHtml(WebUtility.HtmlDecode(detail.Introduction));
+            }
+
+            var coverUrls = cq[".product-slider-data"].Children().Select(x => x.Cq().Data<string>("src"))
+                .Where(x => x.IsNotEmpty()).ToList();
+            if (coverUrls.Any())
+            {
+                detail.CoverUrls = coverUrls.Select(c => c.AddSchemaSafely()).ToArray();
+            }
+
+            var properties = cq["#work_maker>tbody>tr,#work_outline>tbody>tr"].Select(t => t.Cq())
+                .ToDictionary(t => t.Children("th").Text().Trim(),
+                    t =>
                     {
-                        if (!item.ClassName.Contains("btn_follow"))
+                        var list = t.Children("td").Children();
+                        if (list == null)
                         {
-                            var itemCq = item.Cq();
-                            var links = itemCq.Children("a");
-                            if (links?.Length > 0)
+                            return null;
+                        }
+
+                        var data = new List<object>();
+                        foreach (var item in list)
+                        {
+                            if (!item.ClassName.Contains("btn_follow"))
                             {
-                                foreach (var link in links)
+                                var itemCq = item.Cq();
+                                var links = itemCq.Children("a");
+                                if (links?.Length > 0)
                                 {
-                                    data.Add(link.Cq().Text().Trim());
+                                    foreach (var link in links)
+                                    {
+                                        data.Add(link.Cq().Text().Trim());
+                                    }
+                                }
+                                else
+                                {
+                                    data.Add(itemCq.Text().Trim());
                                 }
                             }
-                            else
-                            {
-                                data.Add(itemCq.Text().Trim());
-                            }
                         }
+
+                        return data.Select(d => d.ToString()!).Where(x => x.IsNotEmpty()).ToList();
+                    }).Where(x => x.Value?.Any() == true).ToDictionary(d => d.Key, d => d.Value!);
+            detail.PropertiesOnTheRightSideOfCover = properties;
+
+            var infoUrl = string.Format(InfoJsonUrlTemplate, category, id);
+            try
+            {
+                using var infoReq = new HttpRequestMessage(HttpMethod.Get, infoUrl);
+                infoReq.Headers.Add("Cookie", AgeBypassCookie);
+                using var infoRsp = await HttpClient.SendAsync(infoReq);
+                if (infoRsp.IsSuccessStatusCode)
+                {
+                    var productInfoStr = await infoRsp.Content.ReadAsStringAsync();
+                    var productInfo = JsonConvert.DeserializeObject<Dictionary<string, DLsiteProductInfo>>(productInfoStr);
+                    var rating = productInfo?.GetValueOrDefault(id)?.RateAverage2Dp;
+                    if (rating.HasValue)
+                    {
+                        detail.Rating = rating.Value;
                     }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Rating is best-effort; swallow so a missing/changed ajax endpoint
+                // doesn't fail the whole parse.
+                Logger.LogWarning(ex, "Failed to fetch DLsite rating for {WorkId}", id);
+            }
 
-                    return data.Select(d => d.ToString()!).Where(x => x.IsNotEmpty()).ToList();
-                }).Where(x => x.Value?.Any() == true).ToDictionary(d => d.Key, d => d.Value!);
-        detail.PropertiesOnTheRightSideOfCover = properties;
-
-        var productInfoStr = await HttpClient.GetStringAsync(string.Format(InfoJsonUrlTemplate, id));
-        var productInfo = JsonConvert.DeserializeObject<Dictionary<string, DLsiteProductInfo>>(productInfoStr);
-        var rating = productInfo?.GetValueOrDefault(id)?.RateAverage2Dp;
-        if (rating.HasValue)
-        {
-            detail.Rating = rating.Value;
+            return detail;
         }
+        finally
+        {
+            rsp.Dispose();
+        }
+    }
 
-        return detail;
+    /// <summary>
+    /// Sends a GET to a DLsite public page with the age-bypass cookie set inline.
+    /// Setting the Cookie header here pre-empts the handler's automatic cookie
+    /// injection — acceptable for public detail/info pages, since user auth cookies
+    /// only matter for the play.dlsite.com Play API.
+    /// </summary>
+    private async Task<HttpResponseMessage> SendDetailRequestAsync(string url)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Get, url);
+        req.Headers.Add("Cookie", AgeBypassCookie);
+        return await HttpClient.SendAsync(req);
     }
 
     #region Play API

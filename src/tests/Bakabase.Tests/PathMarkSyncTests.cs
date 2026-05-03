@@ -1468,4 +1468,302 @@ public class PathMarkSyncTests
     }
 
     #endregion
+
+    #region Cross-Path Sync Isolation Tests (regression for #PerPathSyncWipingOtherPaths)
+
+    /// <summary>
+    /// 回归用例：两条路径都有 MediaLibrary mark，先做一次全量同步把映射写齐，
+    /// 然后只针对其中一条路径触发同步。修复前 bug：另一条路径贡献的媒体库映射会被误删。
+    /// 修复后：另一条路径的映射应当保持完好。
+    /// </summary>
+    [TestMethod]
+    public async Task SyncByPath_DoesNotDeleteMediaLibraryMappingsContributedByOtherPaths()
+    {
+        // Arrange: two independent path roots, each containing a single resource directory.
+        var pathA = Path.Combine(_testRoot, "PathA");
+        var resourceA = Path.Combine(pathA, "ResA");
+        var pathB = Path.Combine(_testRoot, "PathB");
+        var resourceB = Path.Combine(pathB, "ResB");
+        Directory.CreateDirectory(resourceA);
+        Directory.CreateDirectory(resourceB);
+
+        var pathMarkService = _sp.GetRequiredService<IPathMarkService>();
+        var syncService = _sp.GetRequiredService<IPathMarkSyncService>();
+        var mediaLibraryService = _sp.GetRequiredService<IMediaLibraryV2Service>();
+        var mappingService = _sp.GetRequiredService<IMediaLibraryResourceMappingService>();
+        var resourceService = _sp.GetRequiredService<IResourceService>();
+
+        var libraryA = await mediaLibraryService.Add(
+            new MediaLibraryV2AddOrPutInputModel("LibraryForPathA", []));
+        var libraryB = await mediaLibraryService.Add(
+            new MediaLibraryV2AddOrPutInputModel("LibraryForPathB", []));
+
+        // Resource marks (one per path)
+        await pathMarkService.Add(new PathMark
+        {
+            Path = pathA,
+            Type = PathMarkType.Resource,
+            ConfigJson = JsonConvert.SerializeObject(new ResourceMarkConfig
+            {
+                MatchMode = PathMatchMode.Layer,
+                Layer = 1,
+                FsTypeFilter = PathFilterFsType.Directory,
+                ApplyScope = PathMarkApplyScope.MatchedOnly
+            }),
+            Priority = 100
+        });
+        await pathMarkService.Add(new PathMark
+        {
+            Path = pathB,
+            Type = PathMarkType.Resource,
+            ConfigJson = JsonConvert.SerializeObject(new ResourceMarkConfig
+            {
+                MatchMode = PathMatchMode.Layer,
+                Layer = 1,
+                FsTypeFilter = PathFilterFsType.Directory,
+                ApplyScope = PathMarkApplyScope.MatchedOnly
+            }),
+            Priority = 100
+        });
+
+        // MediaLibrary marks (one per path, mapping each resource to its library)
+        var markA = await pathMarkService.Add(new PathMark
+        {
+            Path = pathA,
+            Type = PathMarkType.MediaLibrary,
+            ConfigJson = JsonConvert.SerializeObject(new MediaLibraryMarkConfig
+            {
+                MatchMode = PathMatchMode.Layer,
+                Layer = 1,
+                ValueType = PropertyValueType.Fixed,
+                MediaLibraryId = libraryA.Id,
+                ApplyScope = PathMarkApplyScope.MatchedOnly
+            }),
+            Priority = 50
+        });
+        var markB = await pathMarkService.Add(new PathMark
+        {
+            Path = pathB,
+            Type = PathMarkType.MediaLibrary,
+            ConfigJson = JsonConvert.SerializeObject(new MediaLibraryMarkConfig
+            {
+                MatchMode = PathMatchMode.Layer,
+                Layer = 1,
+                ValueType = PropertyValueType.Fixed,
+                MediaLibraryId = libraryB.Id,
+                ApplyScope = PathMarkApplyScope.MatchedOnly
+            }),
+            Priority = 50
+        });
+
+        // Initial full sync
+        await EnqueueAndWaitSync(syncService);
+
+        var resources = await resourceService.GetAll();
+        var rA = resources.Single(r => r.Path != null && r.Path.EndsWith("ResA"));
+        var rB = resources.Single(r => r.Path != null && r.Path.EndsWith("ResB"));
+        (await mappingService.GetMediaLibraryIdsByResourceId(rA.Id)).Should().Contain(libraryA.Id);
+        (await mappingService.GetMediaLibraryIdsByResourceId(rB.Id)).Should().Contain(libraryB.Id);
+
+        // Act: sync only PATH_A's marks (re-mark them as pending then sync)
+        await EnqueueAndWaitSync(syncService, markA.Id);
+
+        // Assert: PATH_A's mapping intact AND PATH_B's mapping must NOT be wiped.
+        var aMappings = await mappingService.GetMediaLibraryIdsByResourceId(rA.Id);
+        var bMappings = await mappingService.GetMediaLibraryIdsByResourceId(rB.Id);
+        aMappings.Should().Contain(libraryA.Id, "PATH_A's mark just re-synced — its mapping must remain");
+        bMappings.Should().Contain(libraryB.Id,
+            "PATH_B was not in scope for this run — its mapping must not be touched");
+    }
+
+    /// <summary>
+    /// 回归用例：两条路径都有 Property mark 写到不同资源，单独同步其中一条不应该删掉另一条的属性值。
+    /// 修复前 bug：ComputeFinalPropertyState 会对 ContextOldEffects 也进行删除判定。
+    /// </summary>
+    [TestMethod]
+    public async Task SyncByPath_DoesNotDeletePropertyValuesContributedByOtherPaths()
+    {
+        var pathA = Path.Combine(_testRoot, "PathA");
+        var resourceA = Path.Combine(pathA, "ResA");
+        var pathB = Path.Combine(_testRoot, "PathB");
+        var resourceB = Path.Combine(pathB, "ResB");
+        Directory.CreateDirectory(resourceA);
+        Directory.CreateDirectory(resourceB);
+
+        var pathMarkService = _sp.GetRequiredService<IPathMarkService>();
+        var syncService = _sp.GetRequiredService<IPathMarkSyncService>();
+        var resourceService = _sp.GetRequiredService<IResourceService>();
+        var customPropertyService = _sp.GetRequiredService<ICustomPropertyService>();
+        var propertyValueService = _sp.GetRequiredService<ICustomPropertyValueService>();
+
+        var prop = await customPropertyService.Add(new CustomPropertyAddOrPutDto
+        {
+            Name = "CrossPathTestProp",
+            Type = PropertyType.SingleLineText
+        });
+
+        // Resource marks for both paths
+        foreach (var p in new[] { pathA, pathB })
+        {
+            await pathMarkService.Add(new PathMark
+            {
+                Path = p,
+                Type = PathMarkType.Resource,
+                ConfigJson = JsonConvert.SerializeObject(new ResourceMarkConfig
+                {
+                    MatchMode = PathMatchMode.Layer,
+                    Layer = 1,
+                    FsTypeFilter = PathFilterFsType.Directory,
+                    ApplyScope = PathMarkApplyScope.MatchedOnly
+                }),
+                Priority = 100
+            });
+        }
+
+        // Property marks: A writes "from-A", B writes "from-B"
+        var markA = await pathMarkService.Add(new PathMark
+        {
+            Path = pathA,
+            Type = PathMarkType.Property,
+            ConfigJson = JsonConvert.SerializeObject(new PropertyMarkConfig
+            {
+                MatchMode = PathMatchMode.Layer,
+                Layer = 1,
+                Pool = PropertyPool.Custom,
+                PropertyId = prop.Id,
+                ValueType = PropertyValueType.Fixed,
+                FixedValue = "from-A",
+                ApplyScope = PathMarkApplyScope.MatchedOnly
+            }),
+            Priority = 50
+        });
+        await pathMarkService.Add(new PathMark
+        {
+            Path = pathB,
+            Type = PathMarkType.Property,
+            ConfigJson = JsonConvert.SerializeObject(new PropertyMarkConfig
+            {
+                MatchMode = PathMatchMode.Layer,
+                Layer = 1,
+                Pool = PropertyPool.Custom,
+                PropertyId = prop.Id,
+                ValueType = PropertyValueType.Fixed,
+                FixedValue = "from-B",
+                ApplyScope = PathMarkApplyScope.MatchedOnly
+            }),
+            Priority = 50
+        });
+
+        await EnqueueAndWaitSync(syncService);
+
+        var resources = await resourceService.GetAll();
+        var rA = resources.Single(r => r.Path != null && r.Path.EndsWith("ResA"));
+        var rB = resources.Single(r => r.Path != null && r.Path.EndsWith("ResB"));
+
+        var bValuesBefore = await propertyValueService.GetAllDbModels(v =>
+            v.ResourceId == rB.Id && v.PropertyId == prop.Id);
+        bValuesBefore.Should().NotBeEmpty("PATH_B's property value should exist after the initial sync");
+
+        // Sync PATH_A only
+        await EnqueueAndWaitSync(syncService, markA.Id);
+
+        var aValuesAfter = await propertyValueService.GetAllDbModels(v =>
+            v.ResourceId == rA.Id && v.PropertyId == prop.Id);
+        var bValuesAfter = await propertyValueService.GetAllDbModels(v =>
+            v.ResourceId == rB.Id && v.PropertyId == prop.Id);
+
+        aValuesAfter.Should().NotBeEmpty("PATH_A's property value should still exist after re-sync");
+        bValuesAfter.Should().NotBeEmpty(
+            "PATH_B was not in scope — its property value must not be deleted");
+    }
+
+    /// <summary>
+    /// 回归用例：单独同步一个路径不能删掉其他路径已持久化的 effect 记录。
+    /// effect 记录是后续增量 diff 的依据，被错误清掉会让后续同步退化成全量重写或丢历史。
+    /// </summary>
+    [TestMethod]
+    public async Task SyncByPath_DoesNotDeleteEffectRecordsOfOtherPaths()
+    {
+        var pathA = Path.Combine(_testRoot, "PathA");
+        var resourceA = Path.Combine(pathA, "ResA");
+        var pathB = Path.Combine(_testRoot, "PathB");
+        var resourceB = Path.Combine(pathB, "ResB");
+        Directory.CreateDirectory(resourceA);
+        Directory.CreateDirectory(resourceB);
+
+        var pathMarkService = _sp.GetRequiredService<IPathMarkService>();
+        var syncService = _sp.GetRequiredService<IPathMarkSyncService>();
+        var customPropertyService = _sp.GetRequiredService<ICustomPropertyService>();
+        var effectService = _sp.GetRequiredService<IPathMarkEffectService>();
+
+        var prop = await customPropertyService.Add(new CustomPropertyAddOrPutDto
+        {
+            Name = "CrossPathEffectsProp",
+            Type = PropertyType.SingleLineText
+        });
+
+        foreach (var p in new[] { pathA, pathB })
+        {
+            await pathMarkService.Add(new PathMark
+            {
+                Path = p,
+                Type = PathMarkType.Resource,
+                ConfigJson = JsonConvert.SerializeObject(new ResourceMarkConfig
+                {
+                    MatchMode = PathMatchMode.Layer,
+                    Layer = 1,
+                    FsTypeFilter = PathFilterFsType.Directory,
+                    ApplyScope = PathMarkApplyScope.MatchedOnly
+                }),
+                Priority = 100
+            });
+        }
+
+        var markA = await pathMarkService.Add(new PathMark
+        {
+            Path = pathA,
+            Type = PathMarkType.Property,
+            ConfigJson = JsonConvert.SerializeObject(new PropertyMarkConfig
+            {
+                MatchMode = PathMatchMode.Layer,
+                Layer = 1,
+                Pool = PropertyPool.Custom,
+                PropertyId = prop.Id,
+                ValueType = PropertyValueType.Fixed,
+                FixedValue = "from-A",
+                ApplyScope = PathMarkApplyScope.MatchedOnly
+            }),
+            Priority = 50
+        });
+        var markB = await pathMarkService.Add(new PathMark
+        {
+            Path = pathB,
+            Type = PathMarkType.Property,
+            ConfigJson = JsonConvert.SerializeObject(new PropertyMarkConfig
+            {
+                MatchMode = PathMatchMode.Layer,
+                Layer = 1,
+                Pool = PropertyPool.Custom,
+                PropertyId = prop.Id,
+                ValueType = PropertyValueType.Fixed,
+                FixedValue = "from-B",
+                ApplyScope = PathMarkApplyScope.MatchedOnly
+            }),
+            Priority = 50
+        });
+
+        await EnqueueAndWaitSync(syncService);
+
+        var bEffectsBefore = await effectService.GetPropertyEffectsByMarkIds(new[] { markB.Id });
+        bEffectsBefore.Should().NotBeEmpty("PATH_B's mark should have produced effect records");
+
+        // Sync PATH_A only
+        await EnqueueAndWaitSync(syncService, markA.Id);
+
+        var bEffectsAfter = await effectService.GetPropertyEffectsByMarkIds(new[] { markB.Id });
+        bEffectsAfter.Should().NotBeEmpty(
+            "PATH_B's effect records must survive a sync that didn't include its mark");
+    }
+
+    #endregion
 }

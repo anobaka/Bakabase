@@ -42,9 +42,19 @@ internal class SyncContext
     // ===== Phase 1: Collect Effects =====
     public List<PropertyMarkEffect> CollectedPropertyEffects { get; } = new();
 
-    // Old effects loaded at start of sync (for diff calculation)
-    // Key: MarkId
-    public Dictionary<int, List<PropertyMarkEffect>> OldPropertyEffectsByMarkId { get; } = new();
+    // Mark IDs being synced this run (Pending or PendingDelete at sync start).
+    // Anything outside this set is "context": its effects are loaded for accuracy
+    // but never overwritten / deleted by this run.
+    public HashSet<int> RunMarkIds { get; } = new();
+
+    // Old effects of marks that ARE being synced this run.
+    // Iterated for delete-candidates and effect-record diff.
+    public Dictionary<int, List<PropertyMarkEffect>> RunOldEffectsByMarkId { get; } = new();
+
+    // Old effects of already-synced marks loaded purely for context — used to
+    // recompute combined property values and to protect media library mappings
+    // contributed by other marks. NEVER deleted, never re-keyed.
+    public Dictionary<int, List<PropertyMarkEffect>> ContextOldEffectsByMarkId { get; } = new();
 
     // ===== Phase 2: Compute Final State =====
     // Final computed property values after combining all effects

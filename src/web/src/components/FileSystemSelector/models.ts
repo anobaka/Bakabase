@@ -7,4 +7,6 @@ export type FileSystemSelectorProps = {
   onCancel?: () => any;
   filter?: (entry: Entry) => boolean;
   defaultSelectedPath?: string;
+  multiple?: boolean;
+  onMultipleSelected?: (entries: Entry[]) => any;
 };

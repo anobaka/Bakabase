@@ -574,15 +574,15 @@ const Resource = React.forwardRef((props: Props, ref) => {
           </div>
         )}
         {(() => {
-          const nonFsSources = [...new Set(
+          const externalSources = [...new Set(
             resource.sourceLinks
               ?.map(l => l.source)
-              .filter(s => s !== ResourceSource.FileSystem) ?? []
+              .filter(s => s !== ResourceSource.PathMark) ?? []
           )];
-          if (nonFsSources.length === 0) return null;
+          if (externalSources.length === 0) return null;
           return (
             <div className="absolute right-1 bottom-1 z-[1] flex items-end gap-0.5 pointer-events-none">
-              {nonFsSources.map(source => (
+              {externalSources.map(source => (
                 <div key={source} className="flex items-center justify-center w-6 h-6 rounded-md bg-black/60 text-white text-sm [&_img]:h-3.5">
                   <ResourceSourceIcon source={source} />
                 </div>

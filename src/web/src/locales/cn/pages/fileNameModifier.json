@@ -12,6 +12,7 @@
   "FileNameModifier.FilePathsTextarea": "文件路径输入",
   "FileNameModifier.FilePathsPlaceholder": "请输入文件路径，每行一个",
   "FileNameModifier.ConfirmPaths": "确认路径",
+  "FileNameModifier.AddFromFileSystem": "从文件系统添加",
   "FileNameModifier.Deduplicate": "去重",
   "FileNameModifier.Cancel": "取消",
   "FileNameModifier.Loading": "加载中...",

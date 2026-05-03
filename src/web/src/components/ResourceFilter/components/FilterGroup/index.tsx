@@ -2,7 +2,7 @@
 
 "use strict";
 
-import type { SearchFilterGroup } from "../../models";
+import type { SearchFilter, SearchFilterGroup } from "../../models";
 import type { FilterLayout } from "../Filter";
 
 import { FilterDisplayMode } from "@/sdk/constants";
@@ -40,6 +40,28 @@ type Props = {
 };
 
 const log = buildLogger("FilterGroup");
+
+// Stable per-filter React keys. Index-based keys cause Filter component reuse
+// across positions when filters are added/removed, which leaks stale internal
+// state (e.g. value display). Lazy-attaching a key to each filter on first
+// render gives every filter a stable identity that survives spread-edits.
+let __filterKeySeq = 0;
+const getStableFilterKey = (f: SearchFilter): string => {
+  const anyF = f as SearchFilter & { __clientKey?: string };
+  if (!anyF.__clientKey) {
+    anyF.__clientKey = `__fk${++__filterKeySeq}`;
+  }
+  return anyF.__clientKey;
+};
+
+let __groupKeySeq = 0;
+const getStableGroupKey = (g: SearchFilterGroup): string => {
+  const anyG = g as SearchFilterGroup & { __clientKey?: string };
+  if (!anyG.__clientKey) {
+    anyG.__clientKey = `__gk${++__groupKeySeq}`;
+  }
+  return anyG.__clientKey;
+};
 
 const FilterGroup = ({
   group: propsGroup,
@@ -122,7 +144,7 @@ const FilterGroup = ({
       const isNewFilter = newFilterIndex === i;
       const filterElement = (
         <Filter
-          key={`f-${i}`}
+          key={getStableFilterKey(f)}
           filter={f}
           filterDisplayMode={filterDisplayMode}
           layout={filterLayout}
@@ -164,7 +186,7 @@ const FilterGroup = ({
       (groups || []).map((g, i) => {
         const groupElement = (
           <FilterGroup
-            key={`g-${i}`}
+            key={getStableGroupKey(g)}
             group={g}
             filterDisplayMode={filterDisplayMode}
             filterLayout={filterLayout}

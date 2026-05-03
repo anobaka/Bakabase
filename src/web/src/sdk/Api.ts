@@ -3767,16 +3767,39 @@ export interface BakabaseServiceModelsInputFileNameModifierProcessInputModel {
   operations: BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFileNameModifierOperation[];
 }
 
+/**
+ * [0: Prefix, 1: Suffix, 2: Both]
+ * @format int32
+ */
+export type BakabaseServiceModelsInputFileSystemEntryGroupAffixDirection = 0 | 1 | 2;
+
 export interface BakabaseServiceModelsInputFileSystemEntryGroupInputModel {
   paths: string[];
   groupInternal: boolean;
+  /** [0: Similarity, 1: KeyExtraction, 2: Affix] */
+  strategyType: BakabaseServiceModelsInputFileSystemEntryGroupStrategyType;
   /**
    * @format double
    * @min 0
    * @max 1
    */
   similarityThreshold: number;
+  keyExtractionRegex?: string;
+  /** [0: Prefix, 1: Suffix, 2: Both] */
+  affixDirection: BakabaseServiceModelsInputFileSystemEntryGroupAffixDirection;
+  /**
+   * @format int32
+   * @min 1
+   * @max 1000
+   */
+  affixMinLength: number;
 }
+
+/**
+ * [0: Similarity, 1: KeyExtraction, 2: Affix]
+ * @format int32
+ */
+export type BakabaseServiceModelsInputFileSystemEntryGroupStrategyType = 0 | 1 | 2;
 
 export interface BakabaseServiceModelsInputIdBasedDataSortInputModel {
   ids: number[];
@@ -4036,11 +4059,27 @@ export interface BakabaseServiceModelsViewFileRenameResult {
 export interface BakabaseServiceModelsViewFileSystemEntryGroupResultViewModel {
   rootPath: string;
   groups: BakabaseServiceModelsViewFileSystemEntryGroupResultViewModelGroupViewModel[];
+  untouchedEntries: BakabaseServiceModelsViewFileSystemEntryGroupResultViewModelEntryViewModel[];
+}
+
+export interface BakabaseServiceModelsViewFileSystemEntryGroupResultViewModelEntryViewModel {
+  name: string;
+  isDirectory: boolean;
+  matchSpans: BakabaseServiceModelsViewFileSystemEntryGroupResultViewModelMatchSpan[];
 }
 
 export interface BakabaseServiceModelsViewFileSystemEntryGroupResultViewModelGroupViewModel {
   directoryName: string;
-  filenames: string[];
+  entries: BakabaseServiceModelsViewFileSystemEntryGroupResultViewModelEntryViewModel[];
+  existingFolderTarget?: string;
+  renamedSourceName?: string;
+}
+
+export interface BakabaseServiceModelsViewFileSystemEntryGroupResultViewModelMatchSpan {
+  /** @format int32 */
+  start: number;
+  /** @format int32 */
+  length: number;
 }
 
 export interface BakabaseServiceModelsViewFileSystemEntryNameViewModel {
@@ -4561,6 +4600,13 @@ export interface BootstrapModelsResponseModelsListResponse1SystemCollectionsGene
   code: number;
   message?: string;
   data?: string[][];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1SystemDecimal {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: number[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1SystemInt32 {
@@ -13207,6 +13253,37 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags File
+     * @name GetFileSystemEntriesGroupSimilarityBreakpoints
+     * @request PUT:/file/group-similarity-breakpoints
+     */
+    getFileSystemEntriesGroupSimilarityBreakpoints: (
+      data: BakabaseServiceModelsInputFileSystemEntryGroupInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsListResponse1SystemDecimal, any>({
+        path: `/file/group-similarity-breakpoints`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getFileSystemEntriesGroupSimilarityBreakpoints
+     * @name getFileSystemEntriesGroupSimilarityBreakpointsUrl
+     */
+    getFileSystemEntriesGroupSimilarityBreakpointsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/file/group-similarity-breakpoints`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags File
      * @name GroupFileSystemEntries
      * @request PUT:/file/group
      */
@@ -17295,6 +17372,32 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PathMark
+     * @name ForceResyncAllPathMarks
+     * @request POST:/path-mark/sync/force-all
+     */
+    forceResyncAllPathMarks: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/path-mark/sync/force-all`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for forceResyncAllPathMarks
+     * @name forceResyncAllPathMarksUrl
+     */
+    forceResyncAllPathMarksUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/path-mark/sync/force-all`;
       
       return baseUrl + path;
     },

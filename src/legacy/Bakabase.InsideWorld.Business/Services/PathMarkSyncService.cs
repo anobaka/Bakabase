@@ -148,21 +148,23 @@ public class PathMarkSyncService : ScopedService
                 .Where(m => m.SyncStatus != PathMarkSyncStatus.PendingDelete)
                 .ToList();
 
-            // Load old effects for diff calculation
-            var allMarkIds = pendingMarks.Select(m => m.Id).ToList();
-            await LoadOldEffects(allMarkIds, ctx);
+            // Load old effects for marks being synced this run (delete-candidates + effect diff).
+            var runMarkIds = pendingMarks.Select(m => m.Id).ToList();
+            foreach (var id in runMarkIds) ctx.RunMarkIds.Add(id);
+            await LoadOldEffects(runMarkIds, ctx.RunOldEffectsByMarkId);
 
-            // Also load old effects from all synced marks that might be relevant
-            // (to correctly compute final state considering all marks, not just pending ones)
-            var syncedMarkIds = allMarks
+            // Load old effects from already-synced Property/MediaLibrary marks as
+            // *context only* — used to recompute combined values and to protect
+            // mappings contributed by other marks. Never written or deleted.
+            var contextMarkIds = allMarks
                 .Where(m => m.SyncStatus == PathMarkSyncStatus.Synced
                             && m.Type is PathMarkType.Property or PathMarkType.MediaLibrary)
                 .Select(m => m.Id)
-                .Where(id => !allMarkIds.Contains(id))
+                .Where(id => !ctx.RunMarkIds.Contains(id))
                 .ToList();
-            if (syncedMarkIds.Count > 0)
+            if (contextMarkIds.Count > 0)
             {
-                await LoadOldEffects(syncedMarkIds, ctx);
+                await LoadOldEffects(contextMarkIds, ctx.ContextOldEffectsByMarkId);
             }
 
             await ReportProgress(onProgressChange, onProcessChange, 5,
@@ -280,15 +282,17 @@ public class PathMarkSyncService : ScopedService
         return result;
     }
 
-    private async Task LoadOldEffects(List<int> markIds, SyncContext ctx)
+    private async Task LoadOldEffects(
+        List<int> markIds,
+        Dictionary<int, List<PropertyMarkEffect>> target)
     {
         var oldPropertyEffects = await _effectService.GetPropertyEffectsByMarkIds(markIds);
         foreach (var effect in oldPropertyEffects)
         {
-            if (!ctx.OldPropertyEffectsByMarkId.TryGetValue(effect.MarkId, out var list))
+            if (!target.TryGetValue(effect.MarkId, out var list))
             {
                 list = new List<PropertyMarkEffect>();
-                ctx.OldPropertyEffectsByMarkId[effect.MarkId] = list;
+                target[effect.MarkId] = list;
             }
 
             list.Add(effect);
@@ -454,11 +458,36 @@ public class PathMarkSyncService : ScopedService
 
     /// <summary>
     /// Computes final property values by combining all effects using PropertySystem.Combine.
+    ///
+    /// Effective effects = freshly collected effects of run marks (succeeded ones) + old
+    /// effects of failed run marks (preserve previous contribution) + old effects of context
+    /// marks (their contribution is assumed unchanged because they weren't re-collected).
+    ///
+    /// Deletion only fires when a run mark previously contributed to a (resource, property)
+    /// key but the merged effective effects no longer produce any value for it.
     /// </summary>
     private async Task ComputeFinalPropertyState(SyncContext ctx)
     {
+        var successfulRunMarkIds = ctx.SuccessfulMarkIds.ToHashSet();
+
+        // Build the "effective" effect list: what every active mark currently contributes.
+        var effectiveEffects = new List<PropertyMarkEffect>(ctx.CollectedPropertyEffects);
+
+        // Failed run marks: preserve their previous contributions.
+        foreach (var (markId, oldEffects) in ctx.RunOldEffectsByMarkId)
+        {
+            if (successfulRunMarkIds.Contains(markId)) continue;
+            effectiveEffects.AddRange(oldEffects);
+        }
+
+        // Context marks: carry over their last-known contributions.
+        foreach (var oldEffects in ctx.ContextOldEffectsByMarkId.Values)
+        {
+            effectiveEffects.AddRange(oldEffects);
+        }
+
         // Group effects by (ResourceId, PropertyPool, PropertyId)
-        var groupedEffects = ctx.CollectedPropertyEffects
+        var groupedEffects = effectiveEffects
             .GroupBy(e => (e.ResourceId, e.PropertyPool, e.PropertyId))
             .ToList();
 
@@ -473,8 +502,12 @@ public class PathMarkSyncService : ScopedService
             ? (await _customPropertyService.GetByKeys(customPropertyIds)).ToDictionary(p => p.Id)
             : new Dictionary<int, CustomProperty>();
 
-        // Pre-load existing property values for comparison
-        var resourceIds = groupedEffects.Select(g => g.Key.ResourceId).Distinct().ToList();
+        // Pre-load existing property values for comparison. Include resources that previously
+        // had effects from run marks too so we can correctly upsert / leave-alone.
+        var resourceIds = groupedEffects.Select(g => g.Key.ResourceId)
+            .Concat(ctx.RunOldEffectsByMarkId.Values.SelectMany(v => v).Select(e => e.ResourceId))
+            .Distinct()
+            .ToList();
         var existingValues = resourceIds.Count > 0
             ? await _customPropertyValueService.GetAllDbModels(x =>
                 resourceIds.Contains(x.ResourceId) &&
@@ -536,8 +569,9 @@ public class PathMarkSyncService : ScopedService
             }
         }
 
-        // Find properties to delete: existed before but no longer have any effects
-        foreach (var (markId, oldEffects) in ctx.OldPropertyEffectsByMarkId)
+        // Delete property values only when a run mark previously contributed to a key AND
+        // no effective effect produces it anymore. Context marks alone keep the value alive.
+        foreach (var (markId, oldEffects) in ctx.RunOldEffectsByMarkId)
         {
             foreach (var effect in oldEffects)
             {
@@ -552,19 +586,43 @@ public class PathMarkSyncService : ScopedService
     }
 
     /// <summary>
-    /// Computes final media library mappings from collected effects.
+    /// Computes final media library mappings from effective effects.
+    ///
+    /// Effective effects = freshly collected effects of run marks (succeeded ones) +
+    /// old effects of failed run marks (preserve previous contribution) + old effects
+    /// of context marks (their contribution is assumed unchanged).
+    ///
+    /// Deletion only fires when a run mark previously contributed a (resource, library)
+    /// mapping but the merged effective effects no longer produce it.
     /// </summary>
-    private async Task ComputeFinalMediaLibraryState(SyncContext ctx)
+    private Task ComputeFinalMediaLibraryState(SyncContext ctx)
     {
         const int mediaLibraryPropertyId = 25;
 
-        // Filter media library effects (Internal pool, PropertyId = 25)
-        var mediaLibraryEffects = ctx.CollectedPropertyEffects
-            .Where(e => e.PropertyPool == PropertyPool.Internal && e.PropertyId == mediaLibraryPropertyId)
-            .ToList();
+        var successfulRunMarkIds = ctx.SuccessfulMarkIds.ToHashSet();
 
-        // Group by ResourceId and aggregate all media library IDs
-        var groupedEffects = mediaLibraryEffects
+        bool IsMediaLibraryEffect(PropertyMarkEffect e) =>
+            e.PropertyPool == PropertyPool.Internal && e.PropertyId == mediaLibraryPropertyId;
+
+        // Build effective effects (run-collected + failed run carry-over + context carry-over),
+        // restricted to media library effects.
+        var effectiveMediaLibraryEffects = new List<PropertyMarkEffect>();
+        effectiveMediaLibraryEffects.AddRange(
+            ctx.CollectedPropertyEffects.Where(IsMediaLibraryEffect));
+
+        foreach (var (markId, oldEffects) in ctx.RunOldEffectsByMarkId)
+        {
+            if (successfulRunMarkIds.Contains(markId)) continue;
+            effectiveMediaLibraryEffects.AddRange(oldEffects.Where(IsMediaLibraryEffect));
+        }
+
+        foreach (var oldEffects in ctx.ContextOldEffectsByMarkId.Values)
+        {
+            effectiveMediaLibraryEffects.AddRange(oldEffects.Where(IsMediaLibraryEffect));
+        }
+
+        // Group by ResourceId and aggregate all media library IDs.
+        var groupedEffects = effectiveMediaLibraryEffects
             .GroupBy(e => e.ResourceId)
             .ToList();
 
@@ -585,7 +643,6 @@ public class PathMarkSyncService : ScopedService
             {
                 ctx.FinalMediaLibraryMappings[resourceId] = mediaLibraryIds;
 
-                // Add to final mappings list
                 foreach (var mlId in mediaLibraryIds)
                 {
                     ctx.FinalMappingsToEnsure.Add((resourceId, mlId));
@@ -593,59 +650,26 @@ public class PathMarkSyncService : ScopedService
             }
         }
 
-        // Find media library mappings to delete: existed before but no longer have any effects
+        // Delete a mapping only when a run mark previously contributed it AND the merged
+        // effective state no longer produces it. Context marks alone keep it alive.
         var currentMappings = new HashSet<(int ResourceId, int MediaLibraryId)>(ctx.FinalMappingsToEnsure);
 
-        var potentialDeletes = new HashSet<(int ResourceId, int MediaLibraryId)>();
-
-        foreach (var (markId, oldEffects) in ctx.OldPropertyEffectsByMarkId)
+        foreach (var (markId, oldEffects) in ctx.RunOldEffectsByMarkId)
         {
             foreach (var effect in oldEffects)
             {
-                if (effect.PropertyPool != PropertyPool.Internal || effect.PropertyId != mediaLibraryPropertyId)
-                    continue;
-
-                if (!int.TryParse(effect.Value, out var mediaLibraryId))
-                    continue;
+                if (!IsMediaLibraryEffect(effect)) continue;
+                if (!int.TryParse(effect.Value, out var mediaLibraryId)) continue;
 
                 var mapping = (effect.ResourceId, mediaLibraryId);
-
                 if (!currentMappings.Contains(mapping))
-                {
-                    potentialDeletes.Add(mapping);
-                }
-            }
-        }
-
-        // For each potential delete, check if there are other marks that still need this mapping
-        if (potentialDeletes.Count > 0)
-        {
-            var syncedMarkIds = ctx.OldPropertyEffectsByMarkId.Keys.ToHashSet();
-            var resourceIds = potentialDeletes.Select(m => m.ResourceId).Distinct().ToList();
-
-            var allEffects = await _effectService.GetPropertyEffectsByResources(resourceIds, PropertyPool.Internal,
-                mediaLibraryPropertyId);
-
-            var mappingsStillNeeded = new HashSet<(int ResourceId, int MediaLibraryId)>();
-            foreach (var effect in allEffects)
-            {
-                if (syncedMarkIds.Contains(effect.MarkId))
-                    continue;
-
-                if (int.TryParse(effect.Value, out var mediaLibraryId))
-                {
-                    mappingsStillNeeded.Add((effect.ResourceId, mediaLibraryId));
-                }
-            }
-
-            foreach (var mapping in potentialDeletes)
-            {
-                if (!mappingsStillNeeded.Contains(mapping))
                 {
                     ctx.MediaLibraryMappingsToDelete.Add(mapping);
                 }
             }
         }
+
+        return Task.CompletedTask;
     }
 
     #endregion
@@ -766,8 +790,10 @@ public class PathMarkSyncService : ScopedService
     /// </summary>
     private Task ComputeEffectDiff(SyncContext ctx)
     {
-        // Property effects to add: in collected but not in old
-        var oldPropertyKeys = ctx.OldPropertyEffectsByMarkId
+        // Property effects to add: in collected but not already known for the same key.
+        // Effect records for context marks are NEVER touched here (they belong to
+        // marks that weren't synced this run).
+        var runOldKeys = ctx.RunOldEffectsByMarkId
             .SelectMany(kvp => kvp.Value.Select(e => (e.MarkId, e.PropertyPool, e.PropertyId, e.ResourceId)))
             .ToHashSet();
 
@@ -777,15 +803,19 @@ public class PathMarkSyncService : ScopedService
         foreach (var effect in ctx.CollectedPropertyEffects)
         {
             var key = (effect.MarkId, effect.PropertyPool, effect.PropertyId, effect.ResourceId);
-            if (!oldPropertyKeys.Contains(key) && addedPropertyKeys.Add(key))
+            if (!runOldKeys.Contains(key) && addedPropertyKeys.Add(key))
             {
                 ctx.PropertyEffectsToAdd.Add(effect);
             }
         }
 
-        // Property effects to delete: in old but not in collected
-        foreach (var (markId, oldEffects) in ctx.OldPropertyEffectsByMarkId)
+        // Effect records to delete: only for run marks that successfully re-collected this
+        // run. Failed run marks keep their old records (they didn't produce new ones).
+        // Context marks keep theirs (they weren't synced).
+        var successfulRunMarkIds = ctx.SuccessfulMarkIds.ToHashSet();
+        foreach (var (markId, oldEffects) in ctx.RunOldEffectsByMarkId)
         {
+            if (!successfulRunMarkIds.Contains(markId)) continue;
             foreach (var effect in oldEffects)
             {
                 if (!ctx.CurrentPropertyEffectKeys.Contains((effect.MarkId, effect.PropertyPool, effect.PropertyId,

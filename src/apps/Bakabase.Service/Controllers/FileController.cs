@@ -72,13 +72,15 @@ namespace Bakabase.Service.Controllers
         private readonly ISystemPlayer _systemPlayer;
         private readonly IFileManager _fileManager;
         private readonly AppService _appService;
+        private readonly Bakabase.Service.Services.FileSystemEntryGroupingService _groupingService;
 
         public FileController(ISpecialTextService specialTextService, IWebHostEnvironment env,
             CompressedFileService compressedFileService, IBOptionsManager<FileSystemOptions> fsOptionsManager,
             IwFsWatcher fileProcessorWatcher, PasswordService passwordService, ILogger<FileController> logger,
             BakabaseLocalizer localizer, BTaskManager taskManager, IGuiAdapter guiAdapter,
             FfMpegService ffMpegService, HardwareAccelerationService hardwareAccelerationService,
-            ISystemPlayer systemPlayer, IFileManager fileManager, AppService appService)
+            ISystemPlayer systemPlayer, IFileManager fileManager, AppService appService,
+            Bakabase.Service.Services.FileSystemEntryGroupingService groupingService)
         {
             _specialTextService = specialTextService;
             _env = env;
@@ -95,6 +97,7 @@ namespace Bakabase.Service.Controllers
             _systemPlayer = systemPlayer;
             _fileManager = fileManager;
             _appService = appService;
+            _groupingService = groupingService;
         }
 
         private static bool IsHiddenEntry(string path)
@@ -1790,96 +1793,26 @@ namespace Bakabase.Service.Controllers
                 return ListResponseBuilder<FileSystemEntryGroupResultViewModel>.NotFound;
             }
 
-            var batches = new Dictionary<string, List<string>>();
-
-            if (model.GroupInternal)
-            {
-                foreach (var rootPath in model.Paths)
-                {
-                    if (System.IO.File.Exists(rootPath))
-                    {
-                        continue;
-                    }
-
-                    if (!Directory.Exists(rootPath))
-                    {
-                        return ListResponseBuilder<FileSystemEntryGroupResultViewModel>.NotFound;
-                    }
-
-                    batches[rootPath] = Directory.GetFiles(rootPath).ToList();
-                }
-            }
-            else
-            {
-                foreach (var pg in model.Paths.GroupBy(Path.GetDirectoryName))
-                {
-                    if (pg.Key.IsNotEmpty())
-                    {
-                        foreach (var path in pg)
-                        {
-                            if (System.IO.File.Exists(path) || Directory.Exists(path))
-                            {
-                                batches.GetOrAdd(pg.Key, _ => []).Add(path);
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (!batches.Any())
+            var results = _groupingService.Preview(model);
+            if (results.Count == 0)
             {
                 return ListResponseBuilder<FileSystemEntryGroupResultViewModel>.NotFound;
             }
 
-            var vms = batches.Select(g =>
+            return new ListResponse<FileSystemEntryGroupResultViewModel>(results);
+        }
+
+        [HttpPut("group-similarity-breakpoints")]
+        [SwaggerOperation(OperationId = "GetFileSystemEntriesGroupSimilarityBreakpoints")]
+        public async Task<ListResponse<decimal>> GroupSimilarityBreakpoints(
+            [FromBody] FileSystemEntryGroupInputModel model)
+        {
+            if (model.Paths.Length == 0)
             {
-                var rootPath = g.Key.StandardizePath()!;
-                var vm = new FileSystemEntryGroupResultViewModel
-                {
-                    RootPath = rootPath
-                };
-                if (model.SimilarityThreshold == 1.0m)
-                {
-                    vm.Groups = g.Value.GroupBy(Path.GetFileNameWithoutExtension)
-                        .Where(x => x.Key.IsNotEmpty()).Select(x =>
-                            new FileSystemEntryGroupResultViewModel.GroupViewModel
-                            {
-                                DirectoryName = x.Key.StandardizePath()!,
-                                Filenames = x.Select(y => Path.GetFileName(y)!).ToArray()
-                            }).ToArray();
-                }
-                else
-                {
-                    var groups = new Dictionary<string, List<string>>();
-                    foreach (var path in g.Value)
-                    {
-                        var key = Path.GetFileNameWithoutExtension(path);
-                        if (key.IsNotEmpty())
-                        {
-                            var similarKey =
-                                groups.Keys.FirstOrDefault(x => x.IsSimilarTo(key, model.SimilarityThreshold));
-                            if (similarKey.IsNotEmpty())
-                            {
-                                groups[similarKey].Add(path);
-                            }
-                            else
-                            {
-                                groups[key] = [path];
-                            }
-                        }
-                    }
+                return new ListResponse<decimal>(new[] { 0m, 1m });
+            }
 
-                    vm.Groups = groups.Select(x => new FileSystemEntryGroupResultViewModel.GroupViewModel
-                    {
-                        DirectoryName = x.Value.Select(x => Path.GetFileNameWithoutExtension(x)!).OrderByDescending(y => y.Length).First().StandardizePath()!,
-                        Filenames = x.Value.Select(y => Path.GetFileName(y)!).ToArray()
-                    }).ToArray();
-                }
-
-                return vm;
-            });
-
-            return new ListResponse<FileSystemEntryGroupResultViewModel>(vms);
+            return new ListResponse<decimal>(_groupingService.ComputeSimilarityBreakpoints(model));
         }
 
         [HttpPut("group")]
@@ -1892,24 +1825,7 @@ namespace Bakabase.Service.Controllers
                 return r;
             }
 
-            var batches = r.Data!;
-
-            foreach (var batch in batches)
-            {
-                foreach (var group in batch.Groups)
-                {
-                    var dirFullname = Path.Combine(batch.RootPath, group.DirectoryName);
-                    Directory.CreateDirectory(dirFullname);
-                    foreach (var f in group.Filenames)
-                    {
-                        var sourceFile = Path.Combine(batch.RootPath, f);
-                        var fileFullname = Path.Combine(dirFullname, f);
-                        // Use quickly way in same drive
-                        System.IO.File.Move(sourceFile, fileFullname, false);
-                    }
-                }
-            }
-
+            _groupingService.Execute(model, r.Data!.ToList());
             return BaseResponseBuilder.Ok;
         }
 

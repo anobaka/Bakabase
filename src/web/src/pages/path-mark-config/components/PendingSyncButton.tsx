@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useImperativeHandle, forwardRef, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { AiOutlineClockCircle } from "react-icons/ai";
+import { AiOutlineSync } from "react-icons/ai";
 
 import type { BTask } from "@/core/models/BTask";
 
@@ -104,11 +104,11 @@ const PendingSyncButton = forwardRef<PendingSyncButtonRef, PendingSyncButtonProp
             className={className}
             color={pendingSyncCount > 0 ? "warning" : "default"}
             size={buttonSize}
-            startContent={<AiOutlineClockCircle />}
+            startContent={<AiOutlineSync />}
             variant="flat"
             onPress={() => setShowPendingSyncModal(true)}
           >
-            {t("pathMarkConfig.action.pendingSync")}
+            {t("pathMarkConfig.action.syncMarks")}
           </Button>
         </Badge>
 

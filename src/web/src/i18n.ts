@@ -52,6 +52,7 @@ import enResourceComponent from "@/locales/en/components/resource.json";
 import enFloatingAssistant from "@/locales/en/components/floatingAssistant.json";
 import enCookieValidator from "@/locales/en/components/cookieValidator.json";
 import enFileSystemSelector from "@/locales/en/components/fileSystemSelector.json";
+import enFileChangePreview from "@/locales/en/components/fileChangePreview.json";
 import enPlaylist from "@/locales/en/components/playlist.json";
 import enResourceTransfer from "@/locales/en/components/resourceTransfer.json";
 import enBakaChat from "@/locales/en/components/bakaChat.json";
@@ -107,6 +108,7 @@ import cnResourceComponent from "@/locales/cn/components/resource.json";
 import cnFloatingAssistant from "@/locales/cn/components/floatingAssistant.json";
 import cnCookieValidator from "@/locales/cn/components/cookieValidator.json";
 import cnFileSystemSelector from "@/locales/cn/components/fileSystemSelector.json";
+import cnFileChangePreview from "@/locales/cn/components/fileChangePreview.json";
 import cnPlaylist from "@/locales/cn/components/playlist.json";
 import cnResourceTransfer from "@/locales/cn/components/resourceTransfer.json";
 import cnBakaChat from "@/locales/cn/components/bakaChat.json";
@@ -161,6 +163,7 @@ const enResources = {
   ...enFloatingAssistant,
   ...enCookieValidator,
   ...enFileSystemSelector,
+  ...enFileChangePreview,
   ...enPlaylist,
   ...enResourceTransfer,
   ...enBakaChat,
@@ -216,6 +219,7 @@ const cnResources = {
   ...cnFloatingAssistant,
   ...cnCookieValidator,
   ...cnFileSystemSelector,
+  ...cnFileChangePreview,
   ...cnPlaylist,
   ...cnResourceTransfer,
   ...cnBakaChat,

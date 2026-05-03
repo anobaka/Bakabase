@@ -1,14 +1,5 @@
 using Bakabase.Abstractions.Components.Configuration;
-using Bakabase.Abstractions.Components.Network;
-using Bakabase.Abstractions.Extensions;
-using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
-using Bakabase.InsideWorld.Models.Configs;
-using Bakabase.Modules.ThirdParty.Abstractions.Http;
-using Bakabase.Modules.ThirdParty.Components.Http;
 using Bakabase.Modules.ThirdParty.ThirdParties.DLsite;
-using Bakabase.Service.Extensions;
-using Bootstrap.Components.Configuration;
-using Bootstrap.Components.Configuration.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 
@@ -17,29 +8,65 @@ namespace Bakabase.Modules.ThirdParty.Tests
     [TestClass]
     public class DLsiteTests
     {
+        // Pure-function tests — safe to run in CI.
+        [DataTestMethod]
+        [DataRow("RJ01248749", "maniax")]
+        [DataRow("RJ01348097", "maniax")]
+        [DataRow("rj01348097", "maniax")] // case-insensitive
+        [DataRow("BJ01345678", "books")]
+        [DataRow("VJ006100", "pro")]
+        [DataRow("XX12345678", "home")] // unknown prefix → fallback
+        [DataRow("", "home")]
+        [DataRow("R", "home")]
+        public void GetCategoryByWorkId_RoutesByPrefix(string id, string expected)
+        {
+            Assert.AreEqual(expected, DLsiteClient.GetCategoryByWorkId(id));
+        }
+
+        // Integration tests — hit live DLsite. Ignored by default; remove [Ignore] to
+        // run manually after a parser/auth change. The DI wiring intentionally bypasses
+        // the production DLsiteHttpMessageHandler so the test does not require
+        // ThirdPartyHttpRequestLogger / IThirdPartyCookieContainer / a real options
+        // manager. The fix in ParseWorkDetailById handles redirects manually, so the
+        // default HttpClient (AllowAutoRedirect=true) and the production handler
+        // (AllowAutoRedirect=false) both produce the same result.
+        [DataTestMethod]
+        [DataRow("RJ01248749")]
+        [DataRow("RJ01348097")]
+        [Ignore("Manual integration test against live DLsite. Run locally to verify parser changes.")]
+        public async Task ParseWorkDetailById_ReturnsPopulatedDetail(string id)
+        {
+            var client = BuildClient();
+
+            var detail = await client.ParseWorkDetailById(id);
+
+            Console.WriteLine(JsonConvert.SerializeObject(detail, Formatting.Indented));
+
+            Assert.IsNotNull(detail, $"Expected non-null detail for {id}");
+            Assert.IsFalse(string.IsNullOrWhiteSpace(detail.Name), $"Expected non-empty Name for {id}");
+            Assert.IsTrue((detail.CoverUrls?.Length ?? 0) > 0, $"Expected at least one cover URL for {id}");
+        }
+
         [TestMethod]
-        [Ignore("Manual integration test against live DLsite. The DI wiring references the abstract " +
-                "BakabaseOptionsBasedThirdPartyHttpMessageHandler base after the July-2025 refactor and " +
-                "additionally requires real account cookies. Run manually after restoring local DI + cookies.")]
-        public async Task TestParse()
+        [Ignore("Manual integration test against live DLsite.")]
+        public async Task ParseWorkDetailById_NonExistentId_ReturnsNull()
+        {
+            var client = BuildClient();
+
+            var detail = await client.ParseWorkDetailById("RJ99999999");
+
+            Assert.IsNull(detail);
+        }
+
+        private static DLsiteClient BuildClient()
         {
             var di = new ServiceCollection();
             di.AddLogging();
-            di.AddSingleton<ThirdPartyHttpRequestLogger>();
-            var networkOptions = new MemoryOptionsManager<NetworkOptions>();
-            await networkOptions.SaveAsync(new NetworkOptions
-                { Proxy = new NetworkOptions.ProxyModel { Mode = NetworkOptions.ProxyMode.UseSystem } });
-            di.AddSingleton<IBOptions<NetworkOptions>>(networkOptions);
-            di.AddSingleton<BakabaseWebProxy>();
-            di.AddBakabaseHttpClient<BakabaseOptionsBasedThirdPartyHttpMessageHandler<DLsiteOptions>>(InternalOptions
-                .HttpClientNames.DLsite);
+            di.AddHttpClient(InternalOptions.HttpClientNames.DLsite,
+                c => c.DefaultRequestHeaders.Add("User-Agent", InternalOptions.DefaultHttpUserAgent));
             di.AddSingleton<DLsiteClient>();
 
-            var services = di.BuildServiceProvider();
-            var client = services.GetRequiredService<DLsiteClient>();
-            var id = "RJ01248749";
-            var detail = await client.ParseWorkDetailById(id);
-            Console.WriteLine(JsonConvert.SerializeObject(detail));
+            return di.BuildServiceProvider().GetRequiredService<DLsiteClient>();
         }
     }
 }

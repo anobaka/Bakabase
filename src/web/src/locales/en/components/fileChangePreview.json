@@ -1,0 +1,9 @@
+{
+  "FileChangePreview.Calculating": "Calculating...",
+  "FileChangePreview.NothingToChange": "Nothing to change",
+  "FileChangePreview.SummaryGroups": "groups",
+  "FileChangePreview.SummaryMoving": "entries moving",
+  "FileChangePreview.SummaryUntouched": "entries untouched",
+  "FileChangePreview.MoreEntries": "{{count}} more",
+  "FileChangePreview.UntouchedCount": "{{count}} entries will not be touched"
+}
