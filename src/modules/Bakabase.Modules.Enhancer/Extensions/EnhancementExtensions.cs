@@ -1,20 +1,30 @@
-﻿using Bakabase.Abstractions.Components.FileSystem;
+using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
-using Bakabase.Modules.Enhancer.Abstractions.Components;
-using Bakabase.Modules.Enhancer.Models.Domain;
 using Bakabase.Modules.StandardValue.Extensions;
 
 namespace Bakabase.Modules.Enhancer.Extensions;
 
+/// <summary>
+/// DB ↔ in-memory boundary. The target's PropertyType (read from the EnhancerTarget attribute,
+/// not the runtime property mapping) decides whether the List&lt;string&gt; value is paths or
+/// not. Other List&lt;string&gt; targets carry UUIDs or labels containing '/' (e.g. DLsite tag
+/// "人外娘/モンス夕一娘") and must NOT go through AppData transforms; the original #1082 bug
+/// was a blind <c>ResolveAll</c> at this layer. AppData transforms are no-ops for non-AppData
+/// absolute paths, so user-disk files (e.g. existing covers found by BakabaseEnhancer) pass
+/// through unchanged.
+/// </summary>
 public static class EnhancementExtensions
 {
-    public static Enhancement ToDomainModel(this Bakabase.Abstractions.Models.Db.EnhancementDbModel dbModel)
+    public static Enhancement ToDomainModel(this Bakabase.Abstractions.Models.Db.EnhancementDbModel dbModel,
+        PropertyType? targetPropertyType)
     {
         var rawValue = dbModel.Value?.DeserializeAsStandardValue(dbModel.ValueType);
-        // Path-shape guard inside ResolveAll ensures non-path tokens (UUIDs etc.) pass through.
-        if (rawValue is List<string> paths) rawValue = AppDataPaths.ResolveAll(paths);
+        if (targetPropertyType == PropertyType.Attachment && rawValue is List<string> paths)
+        {
+            rawValue = AppDataPaths.ResolveAll(paths);
+        }
         return new Enhancement
         {
             EnhancerId = dbModel.EnhancerId,
@@ -30,9 +40,10 @@ public static class EnhancementExtensions
         };
     }
 
-    public static Bakabase.Abstractions.Models.Db.EnhancementDbModel ToDbModel(this Enhancement domainModel)
+    public static Bakabase.Abstractions.Models.Db.EnhancementDbModel ToDbModel(this Enhancement domainModel,
+        PropertyType? targetPropertyType)
     {
-        var valueForDb = domainModel.Value is List<string> paths
+        var valueForDb = targetPropertyType == PropertyType.Attachment && domainModel.Value is List<string> paths
             ? AppDataPaths.RelativizeAll(paths)
             : domainModel.Value;
         var dbModel = new Bakabase.Abstractions.Models.Db.EnhancementDbModel

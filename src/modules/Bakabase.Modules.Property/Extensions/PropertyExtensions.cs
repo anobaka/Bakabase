@@ -122,12 +122,16 @@ public static class PropertyExtensions
         return result;
     }
 
-    public static CustomPropertyValueDbModel ToDbModel(this CustomPropertyValue domain,
-        StandardValueType valueType)
+    /// <summary>
+    /// DB ↔ in-memory boundary. Only Attachment values are paths — the rest of ListString
+    /// types (Tags / Multilevel / MultipleChoice) carry UUIDs or labels containing '/' (e.g.
+    /// DLsite tag "人外娘/モンス夕一娘") and must NOT go through AppData transforms; doing so
+    /// blindly was the original #1082 bug. AppData transforms are no-ops for non-AppData
+    /// absolute paths, so user-picked external attachments pass through unchanged.
+    /// </summary>
+    public static CustomPropertyValueDbModel ToDbModel(this CustomPropertyValue domain, PropertyType type)
     {
-        // Relativize is safe to apply to any List<string> value: paths under AppData get
-        // converted to relative form; UUIDs / non-absolute strings are returned unchanged.
-        var valueForDb = domain.Value is List<string> paths
+        var valueForDb = type == PropertyType.Attachment && domain.Value is List<string> paths
             ? AppDataPaths.RelativizeAll(paths)
             : domain.Value;
         return new CustomPropertyValueDbModel
@@ -135,18 +139,14 @@ public static class PropertyExtensions
             Id = domain.Id,
             PropertyId = domain.PropertyId,
             ResourceId = domain.ResourceId,
-            Value = valueForDb?.SerializeAsStandardValue(valueType),
+            Value = valueForDb?.SerializeAsStandardValue(type.GetDbValueType()),
             Scope = domain.Scope
         };
     }
 
-    public static CustomPropertyValue ToDomainModel(this CustomPropertyValueDbModel dbModel,
-        PropertyType type)
+    public static CustomPropertyValue ToDomainModel(this CustomPropertyValueDbModel dbModel, PropertyType type)
     {
         var rawValue = dbModel.Value?.DeserializeAsStandardValue(PropertySystem.Property.GetDescriptor(type).DbValueType);
-        // Resolve only when we know the value contains paths (Attachment).
-        // Other ListString-typed properties (Tags, Multilevel, MultipleChoice) store UUIDs;
-        // resolving them would wrongly prepend the AppData root.
         if (type == PropertyType.Attachment && rawValue is List<string> paths)
         {
             rawValue = AppDataPaths.ResolveAll(paths);

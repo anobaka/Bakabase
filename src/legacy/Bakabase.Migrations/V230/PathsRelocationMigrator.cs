@@ -8,6 +8,7 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Infrastructures.Components.App.Migrations;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Models.Db;
+using Bakabase.Modules.Enhancer.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Models.Db;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bootstrap.Components.Orm;
@@ -59,35 +60,50 @@ public class PathsRelocationMigrator(IServiceProvider serviceProvider) : Abstrac
 
         var totalRowsTouched = 0;
 
+        // Path-only columns: every entry is a filesystem path by contract, so rewrite unconditionally.
         totalRowsTouched += await Rewrite(
             "ReservedPropertyValue.CoverPaths",
             dbCtx.ReservedPropertyValues,
             r => r.CoverPaths,
-            (r, v) => r.CoverPaths = v);
+            (r, v) => r.CoverPaths = v,
+            _ => true);
 
         totalRowsTouched += await Rewrite(
             "ResourceCache.CoverPaths",
             dbCtx.ResourceCaches,
             r => r.CoverPaths,
-            (r, v) => r.CoverPaths = v);
+            (r, v) => r.CoverPaths = v,
+            _ => true);
 
         totalRowsTouched += await Rewrite(
             "ResourceSourceLink.LocalCoverPaths",
             dbCtx.ResourceSourceLinks,
             r => r.LocalCoverPaths,
-            (r, v) => r.LocalCoverPaths = v);
+            (r, v) => r.LocalCoverPaths = v,
+            _ => true);
 
+        // Mixed columns: gate by per-row property type so tag UUIDs and labels containing '/'
+        // (e.g. DLsite "人外娘/モンス夕一娘") are left untouched. Rows whose property type is
+        // unknown (orphaned PropertyId / missing EnhancerDescriptor) are conservatively skipped:
+        // we'd rather leave a stale absolute path in the DB than wrongly mutate a non-path value.
+        var customPropertyTypeMap = await dbCtx.CustomProperties
+            .AsNoTracking()
+            .ToDictionaryAsync(p => p.Id, p => p.Type);
         totalRowsTouched += await Rewrite(
             "CustomPropertyValue.Value",
             dbCtx.CustomPropertyValues,
             r => r.Value,
-            (r, v) => r.Value = v);
+            (r, v) => r.Value = v,
+            r => customPropertyTypeMap.TryGetValue(r.PropertyId, out var t) && t == PropertyType.Attachment);
 
+        var enhancerDescriptors = GetService<IEnhancerDescriptors>();
         totalRowsTouched += await Rewrite(
             "Enhancement.Value",
             dbCtx.Enhancements,
             r => r.Value,
-            (r, v) => r.Value = v);
+            (r, v) => r.Value = v,
+            r => GetEnhancerTargetPropertyType(enhancerDescriptors, r.EnhancerId, r.Target)
+                 == PropertyType.Attachment);
 
         if (totalRowsTouched > 0)
         {
@@ -106,16 +122,22 @@ public class PathsRelocationMigrator(IServiceProvider serviceProvider) : Abstrac
             totalRowsTouched);
     }
 
+    private static PropertyType? GetEnhancerTargetPropertyType(IEnhancerDescriptors? descriptors, int enhancerId,
+        int target) =>
+        descriptors?.TryGet(enhancerId)?.Targets.FirstOrDefault(t => t.Id == target)?.PropertyType;
+
     /// <summary>
     /// Loads every row in the table, rewrites the target ListString column entry-by-entry
-    /// (resolve → relativize round trip; non-path tokens pass through), and lets EF
-    /// change-tracking pick up modifications for the caller to commit via SaveChangesAsync.
+    /// (resolve → relativize round trip) for rows whose <paramref name="shouldRewrite"/> predicate
+    /// returns true, and lets EF change-tracking pick up modifications for the caller to commit via
+    /// SaveChangesAsync.
     /// </summary>
     private async Task<int> Rewrite<TDbModel>(
         string label,
         DbSet<TDbModel> dbSet,
         Func<TDbModel, string?> getValue,
-        Action<TDbModel, string?> setValue) where TDbModel : class
+        Action<TDbModel, string?> setValue,
+        Func<TDbModel, bool> shouldRewrite) where TDbModel : class
     {
         var all = await dbSet.ToListAsync();
         if (all.Count == 0) return 0;
@@ -123,6 +145,8 @@ public class PathsRelocationMigrator(IServiceProvider serviceProvider) : Abstrac
         var changedCount = 0;
         foreach (var row in all)
         {
+            if (!shouldRewrite(row)) continue;
+
             var serialized = getValue(row);
             if (string.IsNullOrEmpty(serialized)) continue;
 

@@ -10,6 +10,7 @@ using Bakabase.Abstractions.Helpers;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
+using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Business.Models.Db;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.Property.Components;
@@ -110,9 +111,8 @@ public class LocalFileCoverProvider : ICoverProvider
         var isNewCache = cache == null;
         cache ??= new ResourceCacheDbModel { ResourceId = resourceId };
 
-        var coversForDb = AppDataPaths.RelativizeAll(coverPath.IsNullOrEmpty() ? null : [coverPath]);
-        var serializedCoverPaths = new ListStringValueBuilder(coversForDb).Value!
-            .SerializeAsStandardValue(StandardValueType.ListString);
+        var serializedCoverPaths = ResourceCacheExtensions.SerializeCoverPathsForDb(
+            coverPath.IsNullOrEmpty() ? null : [coverPath]);
 
         if (cache.CoverPaths != serializedCoverPaths ||
             !cache.CachedTypes.HasFlag(ResourceCacheType.Covers))

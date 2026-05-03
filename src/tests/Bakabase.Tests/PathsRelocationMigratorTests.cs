@@ -10,6 +10,7 @@ using Bakabase.Infrastructures.Components.Orm;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Models.Db;
 using Bakabase.Migrations.V230;
+using Bakabase.Modules.Enhancer.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Models.Db;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bootstrap.Components.Orm;
@@ -65,6 +66,64 @@ public class PathsRelocationMigratorTests
         }
     }
 
+    /// <summary>
+    /// Minimal stub: maps a fixed (enhancerId, targetId) → PropertyType so the migrator's
+    /// "rewrite Enhancement.Value only when target is Attachment" gate can be exercised.
+    /// </summary>
+    private sealed class StubEnhancerTargetDescriptor : IEnhancerTargetDescriptor
+    {
+        public StubEnhancerTargetDescriptor(int id, PropertyType propertyType)
+        {
+            Id = id;
+            PropertyType = propertyType;
+        }
+
+        public int Id { get; }
+        public string Name => "stub";
+        public Enum EnumId => StandardValueType.String;
+        public StandardValueType ValueType => StandardValueType.ListString;
+        public PropertyType PropertyType { get; }
+        public bool IsDynamic => false;
+        public string? Description => null;
+        public int[]? OptionsItems => null;
+        public IEnhancementConverter? EnhancementConverter => null;
+        public ReservedProperty? ReservedPropertyCandidate => null;
+    }
+
+    private sealed class StubEnhancerDescriptor : IEnhancerDescriptor
+    {
+        public StubEnhancerDescriptor(int id, IEnhancerTargetDescriptor[] targets)
+        {
+            Id = id;
+            Targets = targets;
+        }
+
+        public int Id { get; }
+        public string Name => "stub";
+        public string? Description => null;
+        public IEnhancerTargetDescriptor[] Targets { get; }
+        public int PropertyValueScope => 0;
+
+        public IEnhancerTargetDescriptor this[int target] =>
+            Targets.FirstOrDefault(t => t.Id == target) ??
+            throw new KeyNotFoundException($"target {target} not found");
+    }
+
+    private sealed class StubEnhancerDescriptors : IEnhancerDescriptors
+    {
+        private readonly Dictionary<int, IEnhancerDescriptor> _byId;
+
+        public StubEnhancerDescriptors(params IEnhancerDescriptor[] descriptors)
+        {
+            Descriptors = descriptors;
+            _byId = descriptors.ToDictionary(d => d.Id);
+        }
+
+        public IEnhancerDescriptor[] Descriptors { get; }
+        public IEnhancerDescriptor? TryGet(int enhancerId) => _byId.GetValueOrDefault(enhancerId);
+        public IEnhancerDescriptor this[int enhancerId] => _byId[enhancerId];
+    }
+
     private string _testDir = null!;
     private ServiceProvider _sp = null!;
 
@@ -78,6 +137,9 @@ public class PathsRelocationMigratorTests
         services.AddLogging(b => b.SetMinimumLevel(LogLevel.Warning));
         services.AddBootstrapServices<BakabaseDbContext>(c => c.UseBootstrapSqLite(_testDir, "test"));
         services.AddSingleton<IAppDataPathRelocator, StubRelocator>();
+        // EnhancerId=1, Target=0 → Attachment, so the seeded Enhancement row is treated as a path.
+        services.AddSingleton<IEnhancerDescriptors>(new StubEnhancerDescriptors(
+            new StubEnhancerDescriptor(1, [new StubEnhancerTargetDescriptor(0, PropertyType.Attachment)])));
 
         _sp = services.BuildServiceProvider();
 
@@ -111,6 +173,9 @@ public class PathsRelocationMigratorTests
         await using (var seed = _sp.CreateAsyncScope())
         {
             var ctx = seed.ServiceProvider.GetRequiredService<BakabaseDbContext>();
+            // CustomPropertyValue rewrite is gated on the property being Attachment.
+            ctx.CustomProperties.Add(new CustomPropertyDbModel
+                { Id = 100, Name = "covers", Type = PropertyType.Attachment });
             ctx.ReservedPropertyValues.Add(new ReservedPropertyValue
                 { ResourceId = 1, Scope = 1, CoverPaths = serialized });
             ctx.ResourceCaches.Add(new ResourceCacheDbModel
@@ -139,6 +204,42 @@ public class PathsRelocationMigratorTests
         CollectionAssert.AreEqual(expected, Deserialize((await v.ResourceSourceLinks.AsNoTracking().FirstAsync()).LocalCoverPaths));
         CollectionAssert.AreEqual(expected, Deserialize((await v.CustomPropertyValues.AsNoTracking().FirstAsync()).Value));
         CollectionAssert.AreEqual(expected, Deserialize((await v.Enhancements.AsNoTracking().FirstAsync()).Value));
+    }
+
+    [TestMethod]
+    public async Task LeavesNonAttachmentMixedColumns_Untouched()
+    {
+        // CustomPropertyValue with PropertyType.Tags stores tag UUIDs (and could carry labels with
+        // '/' before normalization); Enhancement with a non-Attachment target stores raw labels.
+        // Neither must be touched by the path migrator — even when the value happens to look like
+        // an old absolute AppData path.
+        const string oldAbs = "/old/AppData/data/covers/cover.jpg";
+        var tagSerialized = Serialize("group/tag", oldAbs);
+
+        await using (var seed = _sp.CreateAsyncScope())
+        {
+            var ctx = seed.ServiceProvider.GetRequiredService<BakabaseDbContext>();
+            // Tags property — not Attachment, so its values must pass through.
+            ctx.CustomProperties.Add(new CustomPropertyDbModel
+                { Id = 200, Name = "tags", Type = PropertyType.Tags });
+            ctx.CustomPropertyValues.Add(new CustomPropertyValueDbModel
+                { ResourceId = 1, PropertyId = 200, Scope = 1, Value = tagSerialized });
+            // Unknown enhancer/target — gate falls through to "not Attachment", row preserved.
+            ctx.Enhancements.Add(new EnhancementDbModel
+            {
+                ResourceId = 2, EnhancerId = 999, Target = 999, Key = "k",
+                ValueType = StandardValueType.ListString, Value = tagSerialized,
+            });
+            await ctx.SaveChangesAsync();
+        }
+
+        var migrator = new PathsRelocationMigrator(_sp);
+        await migrator.MigrateAfterDbMigration();
+
+        await using var verify = _sp.CreateAsyncScope();
+        var v = verify.ServiceProvider.GetRequiredService<BakabaseDbContext>();
+        Assert.AreEqual(tagSerialized, (await v.CustomPropertyValues.AsNoTracking().FirstAsync()).Value);
+        Assert.AreEqual(tagSerialized, (await v.Enhancements.AsNoTracking().FirstAsync()).Value);
     }
 
     [TestMethod]

@@ -41,7 +41,7 @@ namespace Bakabase.Modules.Enhancer.Services
             EnhancementAdditionalItem additionalItem = EnhancementAdditionalItem.None)
         {
             var data = await base.GetAll(exp);
-            var doModels = data.Select(d => d.ToDomainModel()).ToList();
+            var doModels = data.Select(d => d.ToDomainModel(GetTargetPropertyType(d.EnhancerId, d.Target))).ToList();
             await Populate(doModels, additionalItem);
             return doModels;
         }
@@ -117,7 +117,8 @@ namespace Bakabase.Modules.Enhancer.Services
 
         public async Task AddRange(List<Enhancement> enhancements)
         {
-            var dbValuesMap = enhancements.ToDictionary(e => e.ToDbModel(), e => e);
+            var dbValuesMap = enhancements.ToDictionary(
+                e => e.ToDbModel(GetTargetPropertyType(e.EnhancerId, e.Target)), e => e);
             var keys = dbValuesMap.Keys.Select(d => d.Key);
             await base.RemoveAll(x => keys.Contains(x.Key));
             await base.AddRange(dbValuesMap.Keys.ToList());
@@ -129,9 +130,19 @@ namespace Bakabase.Modules.Enhancer.Services
 
         public async Task UpdateRange(List<Enhancement> enhancements)
         {
-            var dbValues = enhancements.Select(e => e.ToDbModel());
+            var dbValues = enhancements.Select(e => e.ToDbModel(GetTargetPropertyType(e.EnhancerId, e.Target)));
             await base.UpdateRange(dbValues);
         }
+
+        /// <summary>
+        /// Look up the target's PropertyType (static metadata from <c>EnhancerTargetAttribute</c>)
+        /// for the DB ↔ in-memory path conversion in <see cref="EnhancementExtensions"/>.
+        /// Returns null when the enhancer/target is unregistered, in which case the layer skips
+        /// the transform (safe — leaves stale absolute paths in DB rather than mutating values).
+        /// </summary>
+        private PropertyType? GetTargetPropertyType(int enhancerId, int target) =>
+            EnhancerDescriptors.TryGet(enhancerId)?.Targets
+                .FirstOrDefault(t => t.Id == target)?.PropertyType;
 
         public async Task<BaseResponse> RemoveAll(
             Expression<Func<Bakabase.Abstractions.Models.Db.EnhancementDbModel, bool>> selector,

@@ -8,6 +8,6 @@
         <RootNamespace>Bakabase.Cli</RootNamespace>
     </PropertyGroup>
     <ItemGroup>
-        <ProjectReference Include="..\Bakabase.Service\Bakabase.Service.csproj" />
+      <ProjectReference Include="..\Bakabase.Service\Bakabase.Service.csproj" />
     </ItemGroup>
 </Project>

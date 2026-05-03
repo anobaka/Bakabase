@@ -42,4 +42,15 @@ public static class ResourceCacheExtensions
 
         return rc;
     }
+
+    /// <summary>
+    /// Serialize in-memory absolute cover paths into the form stored in
+    /// <see cref="ResourceCacheDbModel.CoverPaths"/>: relativize AppData paths, then encode as
+    /// a ListString. Symmetric to the resolve in <see cref="ToDomainModel"/>.
+    /// </summary>
+    public static string? SerializeCoverPathsForDb(IEnumerable<string>? absolutePaths)
+    {
+        var relative = AppDataPaths.RelativizeAll(absolutePaths);
+        return relative is null ? null : ((object)relative).SerializeAsStandardValue(StandardValueType.ListString);
+    }
 }

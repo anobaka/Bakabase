@@ -124,7 +124,7 @@ namespace Bakabase.Modules.Property.Services
             var pIds = customPropertyValues.Select(v => v.PropertyId).ToHashSet();
             var propertyMap = (await CustomPropertyService.GetByKeys(pIds)).ToDictionary(d => d.Id, d => d);
             var dbModelsMap =
-                customPropertyValues.ToDictionary(v => v.ToDbModel(propertyMap[v.PropertyId].Type.GetDbValueType())!,
+                customPropertyValues.ToDictionary(v => v.ToDbModel(propertyMap[v.PropertyId].Type)!,
                     v => v);
             await AddRange(dbModelsMap.Keys.ToList());
             eventPublisher.PublishResourcesChanged(customPropertyValues.Select(v => v.ResourceId));
@@ -138,7 +138,7 @@ namespace Bakabase.Modules.Property.Services
             var pIds = customPropertyValues.Select(v => v.PropertyId).ToHashSet();
             var propertyMap = (await CustomPropertyService.GetByKeys(pIds)).ToDictionary(d => d.Id, d => d);
             var dbModels = customPropertyValues
-                .Select(v => v.ToDbModel(propertyMap[v.PropertyId].Type.GetDbValueType())!)
+                .Select(v => v.ToDbModel(propertyMap[v.PropertyId].Type)!)
                 .ToList();
             await UpdateRange(dbModels);
             eventPublisher.PublishResourcesChanged(customPropertyValues.Select(v => v.ResourceId));
@@ -278,7 +278,7 @@ namespace Bakabase.Modules.Property.Services
                                 {
                                     var pv = cp.Type.InitializeCustomPropertyValue(rawDbValue, resourceId,
                                         propertyId, v.Scope);
-                                    var t = pv.ToDbModel(cp.Type.GetDbValueType())!;
+                                    var t = pv.ToDbModel(cp.Type)!;
                                     valuesToAdd.Add(t);
                                     // newValuesDbValuesMap[t] = rawDbValue;
                                 }

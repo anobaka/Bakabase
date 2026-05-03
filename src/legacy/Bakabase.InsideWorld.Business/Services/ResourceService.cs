@@ -1506,8 +1506,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
                 if (existingCovers?.Any() == true)
                 {
-                    cache.CoverPaths = new ListStringValueBuilder(AppDataPaths.RelativizeAll(existingCovers)).Value
-                        ?.SerializeAsStandardValue(StandardValueType.ListString);
+                    cache.CoverPaths = ResourceCacheExtensions.SerializeCoverPathsForDb(existingCovers);
                 }
                 else
                 {
@@ -1521,8 +1520,7 @@ namespace Bakabase.InsideWorld.Business.Services
                         coverPath = covers?.FirstOrDefault();
                     }
                     cache.CoverPaths = coverPath.IsNotEmpty()
-                        ? new ListStringValueBuilder(AppDataPaths.RelativizeAll([coverPath!])).Value
-                            ?.SerializeAsStandardValue(StandardValueType.ListString)
+                        ? ResourceCacheExtensions.SerializeCoverPathsForDb([coverPath!])
                         : null;
                 }
 

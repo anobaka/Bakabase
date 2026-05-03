@@ -5,6 +5,12 @@ using Bakabase.Modules.StandardValue.Extensions;
 
 namespace Bakabase.Modules.Property.Extensions;
 
+/// <summary>
+/// DB ↔ in-memory boundary. CoverPaths is by-contract a paths field, so the layer translates:
+/// stored relative ↔ in-memory absolute. AppData transforms are no-ops for paths that don't
+/// match any candidate root, so user-picked external absolutes (e.g. via bulk update API)
+/// pass through unchanged in both directions.
+/// </summary>
 public static class ReservedPropertyValueExtensions
 {
     public static ReservedPropertyValue ToDomainModel(
