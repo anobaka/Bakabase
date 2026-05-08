@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
+using Bakabase.Modules.ThirdParty.Helpers;
 using Bakabase.Modules.ThirdParty.ThirdParties.Fc2club.Models;
 using CsQuery;
 using Microsoft.Extensions.Logging;
@@ -52,7 +53,7 @@ public class Fc2clubClient(IHttpClientFactory httpClientFactory, ILoggerFactory 
             var cover = extrafanart.FirstOrDefault() ?? "";
 
             // Studio (seller)
-            var studio = doc.Select("strong:contains('卖家信息')").Parent().Find("a").Text().Trim();
+            var studio = doc.Select("strong:contains('卖家信息')").Parent().Find("a").JoinDistinctText();
             studio = studio.Replace("本资源官网地址", "").Trim();
 
             // Score

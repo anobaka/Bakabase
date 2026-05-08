@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
 using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.Modules.ThirdParty.Helpers;
 using Bakabase.Modules.ThirdParty.ThirdParties.Avsex.Models;
 using Bootstrap.Extensions;
 using CsQuery;
@@ -186,8 +187,9 @@ public class AvsexClient(IHttpClientFactory httpClientFactory, ILoggerFactory lo
 
     private static string GetStudio(CQ html)
     {
-        var text = html["dt:contains('製作商') + dd"].Text();
-        return text.Trim();
+        return html["dt:contains('製作商') + dd"]
+            .Select(e => e.InnerText)
+            .JoinDistinctText();
     }
 
     private static int GetRuntime(CQ html)

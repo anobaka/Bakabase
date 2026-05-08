@@ -1,5 +1,6 @@
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
+using Bakabase.Modules.ThirdParty.Helpers;
 using Bakabase.Modules.ThirdParty.ThirdParties.Javdb.Models;
 using Microsoft.Extensions.Logging;
 using CsQuery;
@@ -176,33 +177,32 @@ public class JavdbClient(IHttpClientFactory httpClientFactory, ILoggerFactory lo
     private static string GetSeries(CQ html)
     {
         // Iterate per anchor instead of calling .Text() on the set: when the page
-        // renders the same series link in both mobile and desktop DOM, .Text()
-        // concatenates them ("SeriesNameSeriesName"). Mirrors GetTag/GetActor.
+        // renders the same link in both mobile and desktop DOM, .Text() silently
+        // concatenates the duplicate innerText into "NameName". Mirrors GetTag/GetActor.
         var a1 = html["div.panel-block strong:contains('系列:')"].Parent().Find("span a").Select(a => a.InnerText);
         var a2 = html["div.panel-block strong:contains('Series:')"].Parent().Find("span a").Select(a => a.InnerText);
-        var anchors = (a1.Any() ? a1 : a2).Select(s => s?.Trim()).Where(s => !string.IsNullOrEmpty(s)).Distinct();
-        return string.Join(",", anchors);
+        return (a1.Any() ? a1 : a2).JoinDistinctText();
     }
 
     private static string GetDirector(CQ html)
     {
-        var d1 = html["div.panel-block strong:contains('導演:')"].Parent().Find("span a").Text();
-        var d2 = html["div.panel-block strong:contains('Director:')"].Parent().Find("span a").Text();
-        return string.IsNullOrWhiteSpace(d1) ? d2 : d1;
+        var a1 = html["div.panel-block strong:contains('導演:')"].Parent().Find("span a").Select(a => a.InnerText);
+        var a2 = html["div.panel-block strong:contains('Director:')"].Parent().Find("span a").Select(a => a.InnerText);
+        return (a1.Any() ? a1 : a2).JoinDistinctText();
     }
 
     private static string GetStudio(CQ html)
     {
-        var s1 = html["div.panel-block strong:contains('片商:')"].Parent().Find("span a").Text();
-        var s2 = html["div.panel-block strong:contains('Maker:')"].Parent().Find("span a").Text();
-        return string.IsNullOrWhiteSpace(s1) ? s2 : s1;
+        var a1 = html["div.panel-block strong:contains('片商:')"].Parent().Find("span a").Select(a => a.InnerText);
+        var a2 = html["div.panel-block strong:contains('Maker:')"].Parent().Find("span a").Select(a => a.InnerText);
+        return (a1.Any() ? a1 : a2).JoinDistinctText();
     }
 
     private static string GetPublisher(CQ html)
     {
-        var p1 = html["div.panel-block strong:contains('發行:')"].Parent().Find("span a").Text();
-        var p2 = html["div.panel-block strong:contains('Publisher:')"].Parent().Find("span a").Text();
-        return string.IsNullOrWhiteSpace(p1) ? p2 : p1;
+        var a1 = html["div.panel-block strong:contains('發行:')"].Parent().Find("span a").Select(a => a.InnerText);
+        var a2 = html["div.panel-block strong:contains('Publisher:')"].Parent().Find("span a").Select(a => a.InnerText);
+        return (a1.Any() ? a1 : a2).JoinDistinctText();
     }
 
     private static string GetRealUrl(CQ searchHtml, string number)

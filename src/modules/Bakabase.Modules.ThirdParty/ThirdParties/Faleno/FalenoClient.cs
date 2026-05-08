@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
+using Bakabase.Modules.ThirdParty.Helpers;
 using Bakabase.Modules.ThirdParty.ThirdParties.Faleno.Models;
 using CsQuery;
 using Microsoft.Extensions.Logging;
@@ -129,8 +130,11 @@ public class FalenoClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
             var runtimeMatch = Regex.Match(runtimeText ?? "", @"(\d+)");
             var runtime = runtimeMatch.Success ? runtimeMatch.Groups[1].Value : "";
 
-            // Series
-            var series = doc.Select("span:contains('系列')").Parent().Text().Replace("系列", "").Trim();
+            // Series — read each label parent's text separately so a duplicate
+            // mobile/desktop render does not concat into "NameName".
+            var series = doc.Select("span:contains('系列')").Parent()
+                .Select(p => p.Cq().Text().Replace("系列", "").Trim())
+                .JoinDistinctText();
 
             // Director (导演/導演/監督)
             string director = "";
@@ -141,7 +145,9 @@ public class FalenoClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
             }
 
             // Publisher/Studio
-            var studio = doc.Select("span:contains('メーカー')").Parent().Text().Replace("メーカー", "").Trim();
+            var studio = doc.Select("span:contains('メーカー')").Parent()
+                .Select(p => p.Cq().Text().Replace("メーカー", "").Trim())
+                .JoinDistinctText();
             if (string.IsNullOrWhiteSpace(studio)) studio = "FALENO";
             var publisher = studio;
 

@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
+using Bakabase.Modules.ThirdParty.Helpers;
 using Bakabase.Modules.ThirdParty.ThirdParties.Lulubar.Models;
 using CsQuery;
 using Microsoft.Extensions.Logging;
@@ -69,7 +70,7 @@ public class LulubarClient(IHttpClientFactory httpClientFactory, ILoggerFactory 
             var outline = doc.Select("p.video_container_info").Text().Trim();
             var actor = string.Join(",", doc.Select("div.tag_box a[title='女优']").Select(a => a.Cq().Text().Trim()));
             var actorPhoto = actor.Split(',', StringSplitOptions.RemoveEmptyEntries).ToDictionary(a => a, _ => "");
-            var studio = doc.Select("div.tag_box a[title='片商']").Text().Trim();
+            var studio = doc.Select("div.tag_box a[title='片商']").JoinDistinctText();
             var cover = doc.Select("a.notVipAd.imgBoxW img").Attr("src") ?? "";
             if (!string.IsNullOrWhiteSpace(cover) && !cover.StartsWith("http", StringComparison.OrdinalIgnoreCase)) cover = "https://lulubar.co" + cover;
             var tag = string.Join(",", doc.Select("div.tag_box a.tag[href*='bytagdetail']").Select(a => a.Cq().Text().Trim()));

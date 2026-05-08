@@ -1,5 +1,6 @@
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
+using Bakabase.Modules.ThirdParty.Helpers;
 using Bakabase.Modules.ThirdParty.ThirdParties.Iqqtv.Models;
 using Microsoft.Extensions.Logging;
 using CsQuery;
@@ -55,8 +56,8 @@ public class IqqtvClient(IHttpClientFactory httpClientFactory, ILoggerFactory lo
             var year = Regex.Match(release ?? string.Empty, @"\d{4}").Value;
             var tag = string.Join(",", cq[".tag-info a[href*='tag']"].Select(a => a.InnerText));
             var mosaic = GetMosaic(tag);
-            var studio = cq["a[href*='fac'] div[itemprop]"].Text().Trim();
-            var series = cq["a[href*='series']"].Text().Trim();
+            var studio = cq["a[href*='fac'] div[itemprop]"].JoinDistinctText();
+            var series = cq["a[href*='series']"].JoinDistinctText();
             var extrafanart = cq[".cover img[data-src]"].Select(img => img.GetAttribute("data-src")).ToArray();
 
             return new IqqtvVideoDetail
