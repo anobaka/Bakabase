@@ -6,4 +6,5 @@ public enum ResourceSource
     Steam = 2,
     DLsite = 3,
     ExHentai = 4,
+    Aigc = 5,
 }

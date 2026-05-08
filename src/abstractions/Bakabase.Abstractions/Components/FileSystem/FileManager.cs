@@ -38,4 +38,13 @@ public class FileManager(AppService appService) : IFileManager
 
     public string GetAttachmentPath(string fileName) =>
         BuildAbsolutePath("attachments", fileName);
+
+    public string GetAigcGeneratorDir(int generatorId) =>
+        BuildAbsolutePath("aigc", $"g{generatorId}");
+
+    public string GetAigcRunDir(int generatorId, int runId) =>
+        BuildAbsolutePath("aigc", $"g{generatorId}", $"r{runId}");
+
+    public string GetAigcArtifactRelativePath(int generatorId, int runId, string fileName) =>
+        Path.Combine("aigc", $"g{generatorId}", $"r{runId}", fileName).StandardizePath()!;
 }

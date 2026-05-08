@@ -68,6 +68,9 @@ import ChatPage from "@/pages/chat";
 import AiUsagePage from "@/pages/ai-usage";
 import AiAuditLogPage from "@/pages/ai-audit-log";
 import AiCachePage from "@/pages/ai-cache";
+import AigcProvidersPage from "@/pages/aigc-providers";
+import AigcGeneratorsPage from "@/pages/aigc-generators";
+import AigcRunsPage from "@/pages/aigc-runs";
 import SteamAppsPage from "@/pages/steam-apps";
 import DLsiteWorksPage from "@/pages/dlsite-works";
 import ExHentaiGalleriesPage from "@/pages/exhentai-galleries";
@@ -360,6 +363,38 @@ export const routesMenuConfig: RouteMenuItem[] = [
         path: "/ai/cache",
         component: AiCachePage,
         icon: AiOutlineHdd,
+        layout: "basic",
+        menu: true,
+      },
+    ],
+  },
+  {
+    name: "menu.aigc",
+    icon: AiOutlinePicture,
+    menu: true,
+    isBeta: true,
+    children: [
+      {
+        name: "menu.aigc.providers",
+        path: "/aigc/providers",
+        component: AigcProvidersPage,
+        icon: AiOutlineCloudServer,
+        layout: "basic",
+        menu: true,
+      },
+      {
+        name: "menu.aigc.generators",
+        path: "/aigc/generators",
+        component: AigcGeneratorsPage,
+        icon: AiOutlineSetting,
+        layout: "basic",
+        menu: true,
+      },
+      {
+        name: "menu.aigc.runs",
+        path: "/aigc/runs",
+        component: AigcRunsPage,
+        icon: AiOutlineHistory,
         layout: "basic",
         menu: true,
       },

@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Bakabase.Modules.AI.Components.Aigc;
+using Bakabase.Modules.AI.Components.Aigc.Invokers;
 using Bakabase.Modules.AI.Components.Cache;
 using Bakabase.Modules.AI.Components.Enhancer;
 using Bakabase.Modules.AI.Components.Observation;
@@ -60,6 +62,33 @@ public static class ServiceCollectionExtensions
 
         // Enhancement post-processors
         services.TryAddScoped<IEnhancementPostProcessor, TranslationPostProcessor>();
+
+        // ===== AIGC =====
+        // HttpClient for invokers
+        services.AddHttpClient();
+
+        // Provider invokers (one per kind)
+        services.AddSingleton<IAigcProviderInvoker, StableDiffusionWebUIInvoker>();
+        services.AddSingleton<IAigcProviderInvoker, ComfyUIInvoker>();
+        services.AddSingleton<IAigcProviderInvoker, OpenAIImageInvoker>();
+        services.AddSingleton<IAigcProviderInvoker, GeminiImageInvoker>();
+        services.AddSingleton<IAigcProviderInvoker, HttpCustomInvoker>();
+
+        // ORM
+        services.AddScoped<ResourceService<TDbContext, AigcProviderConfigDbModel, int>>();
+        services.AddScoped<ResourceService<TDbContext, AigcGeneratorDbModel, int>>();
+        services.AddScoped<ResourceService<TDbContext, AigcGeneratorPropertyPresetDbModel, int>>();
+        services.AddScoped<ResourceService<TDbContext, AigcGenerationRunDbModel, int>>();
+        services.AddScoped<ResourceService<TDbContext, AigcArtifactDbModel, int>>();
+
+        // Pipeline + executor
+        services.TryAddScoped<AigcArtifactPipeline<TDbContext>>();
+        services.TryAddScoped<IAigcRunExecutor, AigcRunExecutor<TDbContext>>();
+
+        // Services
+        services.TryAddScoped<IAigcProviderService, AigcProviderService<TDbContext>>();
+        services.TryAddScoped<IAigcGeneratorService, AigcGeneratorService<TDbContext>>();
+        services.TryAddScoped<IAigcArtifactService, AigcArtifactService<TDbContext>>();
 
         return services;
     }

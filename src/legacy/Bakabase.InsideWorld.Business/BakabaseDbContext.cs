@@ -74,6 +74,13 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<ChatMessageDbModel> ChatMessages { get; set; }
         public DbSet<LlmToolConfigDbModel> LlmToolConfigs { get; set; }
 
+        // AIGC tables
+        public DbSet<AigcProviderConfigDbModel> AigcProviderConfigs { get; set; }
+        public DbSet<AigcGeneratorDbModel> AigcGenerators { get; set; }
+        public DbSet<AigcGeneratorPropertyPresetDbModel> AigcGeneratorPropertyPresets { get; set; }
+        public DbSet<AigcGenerationRunDbModel> AigcGenerationRuns { get; set; }
+        public DbSet<AigcArtifactDbModel> AigcArtifacts { get; set; }
+
         // Resource source tables
         public DbSet<ResourceSourceLinkDbModel> ResourceSourceLinks { get; set; }
         public DbSet<SourceMetadataMappingDbModel> SourceMetadataMappings { get; set; }
@@ -264,6 +271,39 @@ namespace Bakabase.InsideWorld.Business
             modelBuilder.Entity<LlmToolConfigDbModel>(t =>
             {
                 t.HasIndex(x => x.ToolName).IsUnique();
+            });
+
+            // AIGC tables
+            modelBuilder.Entity<AigcProviderConfigDbModel>(t =>
+            {
+                t.HasIndex(x => x.Kind);
+                t.HasIndex(x => x.IsEnabled);
+            });
+
+            modelBuilder.Entity<AigcGeneratorDbModel>(t =>
+            {
+                t.HasIndex(x => x.ProviderId);
+                t.HasIndex(x => x.IsEnabled);
+            });
+
+            modelBuilder.Entity<AigcGeneratorPropertyPresetDbModel>(t =>
+            {
+                t.HasIndex(x => x.GeneratorId);
+                t.HasIndex(x => new { x.GeneratorId, x.Pool, x.PropertyId }).IsUnique();
+            });
+
+            modelBuilder.Entity<AigcGenerationRunDbModel>(t =>
+            {
+                t.HasIndex(x => x.GeneratorId);
+                t.HasIndex(x => x.Status);
+                t.HasIndex(x => x.CreatedAt);
+            });
+
+            modelBuilder.Entity<AigcArtifactDbModel>(t =>
+            {
+                t.HasIndex(x => x.RunId);
+                t.HasIndex(x => x.GeneratorId);
+                t.HasIndex(x => x.ResourceId);
             });
 
             // Resource source link table
