@@ -12,6 +12,7 @@ import {
 
 import { AiFeature } from "@/sdk/constants";
 import AiProviderPanel from "@/components/AiProviderPanel";
+import AigcProviderPanel from "@/components/AigcProviderPanel";
 import AiFeaturePanel from "@/components/AiFeaturePanel";
 import ToolConfigPanel from "@/components/FloatingAssistantV2/components/ChatView/ToolConfigPanel";
 import QuotaSettings from "./QuotaSettings";
@@ -32,6 +33,10 @@ const AISettings = () => {
     <div className="group">
       <div className="settings">
         <AiProviderPanel />
+
+        <div className="mt-4">
+          <AigcProviderPanel />
+        </div>
 
         <div className="mt-4">
           <AiFeaturePanel features={aiSettingsFeatures} />

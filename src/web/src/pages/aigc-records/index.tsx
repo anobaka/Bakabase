@@ -29,15 +29,15 @@ type Run = BakabaseModulesAIModelsDbAigcGenerationRunDbModel;
 type Artifact = BakabaseModulesAIModelsDbAigcArtifactDbModel;
 type Generator = BakabaseModulesAIModelsDbAigcGeneratorDbModel;
 
-const StatusLabels: Record<number, { label: string; color: "default" | "primary" | "success" | "danger" | "warning" }> = {
-  1: { label: "Pending", color: "default" },
-  2: { label: "Running", color: "primary" },
-  3: { label: "Succeeded", color: "success" },
-  4: { label: "Failed", color: "danger" },
-  5: { label: "Imported", color: "warning" },
+const STATUS_COLORS: Record<number, "default" | "primary" | "success" | "danger" | "warning"> = {
+  1: "default",
+  2: "primary",
+  3: "success",
+  4: "danger",
+  5: "warning",
 };
 
-const AigcRunsPage = () => {
+const AigcRecordsPage = () => {
   const { t } = useTranslation();
   const [runs, setRuns] = useState<Run[]>([]);
   const [artifactsByRun, setArtifactsByRun] = useState<Record<number, Artifact[]>>({});
@@ -68,12 +68,13 @@ const AigcRunsPage = () => {
   };
 
   const generatorName = (id: number) => generators.find((g) => g.id === id)?.name ?? `#${id}`;
+  const tStatus = (n: number) => t<string>(`aigc.runStatus.${n}`);
 
   const handleDeleteRun = async (id: number) => {
-    if (!confirm("Delete this run, its artifacts and the related resources/files?")) return;
+    if (!confirm(t<string>("aigc.records.confirmDeleteRun"))) return;
     const r = await BApi.aigc.deleteAigcRun(id);
     if (!r.code) {
-      toast.success("Deleted");
+      toast.success(t<string>("common.success.saved"));
       setArtifactsByRun((prev) => {
         const n = { ...prev };
         delete n[id];
@@ -84,10 +85,10 @@ const AigcRunsPage = () => {
   };
 
   const handleDeleteArtifact = async (runId: number, artifactId: number) => {
-    if (!confirm("Delete this artifact (and its resource/file)?")) return;
+    if (!confirm(t<string>("aigc.records.confirmDeleteArtifact"))) return;
     const r = await BApi.aigc.deleteAigcArtifact(artifactId);
     if (!r.code) {
-      toast.success("Deleted");
+      toast.success(t<string>("common.success.saved"));
       setArtifactsByRun((prev) => {
         const n = { ...prev };
         delete n[runId];
@@ -100,17 +101,18 @@ const AigcRunsPage = () => {
   return (
     <div className="flex flex-col gap-4 p-4">
       <div className="flex items-center justify-between gap-4">
-        <h1 className="text-xl font-semibold">AIGC Runs</h1>
+        <h1 className="text-xl font-semibold">{t<string>("aigc.records.title")}</h1>
         <div className="w-64">
           <Select
-            label="Filter by generator"
+            label={t<string>("aigc.records.filterByConfig")}
+            size="sm"
             selectedKeys={filterGeneratorId ? [String(filterGeneratorId)] : []}
             onSelectionChange={(keys) => {
               const v = Array.from(keys)[0];
               setFilterGeneratorId(v ? Number(v) : null);
             }}
             dataSource={[
-              { label: "All", value: "" },
+              { label: t<string>("aigc.records.allConfigs"), value: "" },
               ...generators.map((g) => ({ label: g.name, value: String(g.id) })),
             ]}
           />
@@ -126,7 +128,6 @@ const AigcRunsPage = () => {
         }}
       >
         {runs.map((r) => {
-          const status = StatusLabels[r.status] ?? { label: String(r.status), color: "default" as const };
           const arts = artifactsByRun[r.id] ?? [];
           return (
             <AccordionItem
@@ -135,7 +136,9 @@ const AigcRunsPage = () => {
               title={
                 <div className="flex items-center gap-3 flex-wrap">
                   <span className="font-mono">#{r.id}</span>
-                  <Chip size="sm" color={status.color} variant="dot">{status.label}</Chip>
+                  <Chip size="sm" color={STATUS_COLORS[r.status] ?? "default"} variant="dot">
+                    {tStatus(r.status)}
+                  </Chip>
                   <span className="text-sm text-default-500">{generatorName(r.generatorId)}</span>
                   {r.createdAt && (
                     <span className="text-xs text-default-400">
@@ -151,15 +154,17 @@ const AigcRunsPage = () => {
               <div className="flex flex-col gap-3">
                 {r.prompt && (
                   <div>
-                    <div className="text-xs text-default-400">Prompt</div>
+                    <div className="text-xs text-default-400">
+                      {t<string>("aigc.records.prompt")}
+                    </div>
                     <div className="text-sm whitespace-pre-wrap">{r.prompt}</div>
                   </div>
                 )}
                 <Table removeWrapper aria-label={`artifacts for run ${r.id}`}>
                   <TableHeader>
                     <TableColumn>#</TableColumn>
-                    <TableColumn>Path</TableColumn>
-                    <TableColumn>Resource</TableColumn>
+                    <TableColumn>{t<string>("aigc.records.path")}</TableColumn>
+                    <TableColumn>{t<string>("aigc.records.resource")}</TableColumn>
                     <TableColumn>&nbsp;</TableColumn>
                   </TableHeader>
                   <TableBody emptyContent={t<string>("common.empty")}>
@@ -178,7 +183,7 @@ const AigcRunsPage = () => {
                             startContent={<AiOutlineDelete />}
                             onPress={() => handleDeleteArtifact(r.id, a.id)}
                           >
-                            Delete
+                            {t<string>("common.action.delete")}
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -193,7 +198,7 @@ const AigcRunsPage = () => {
                     startContent={<AiOutlineDelete />}
                     onPress={() => handleDeleteRun(r.id)}
                   >
-                    Delete run
+                    {t<string>("aigc.records.deleteRun")}
                   </Button>
                 </div>
               </div>
@@ -205,4 +210,4 @@ const AigcRunsPage = () => {
   );
 };
 
-export default AigcRunsPage;
+export default AigcRecordsPage;

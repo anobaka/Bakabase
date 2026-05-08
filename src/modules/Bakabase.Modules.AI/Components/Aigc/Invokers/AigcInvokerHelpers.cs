@@ -8,6 +8,23 @@ namespace Bakabase.Modules.AI.Components.Aigc.Invokers;
 /// </summary>
 internal static class AigcInvokerHelpers
 {
+    /// <summary>
+    /// JSON parse options that tolerate `//` comments in user-supplied config payloads.
+    /// The frontend may also strip them before save, but backend tolerance keeps things robust.
+    /// </summary>
+    public static readonly JsonDocumentOptions LenientJsonDocumentOptions = new()
+    {
+        CommentHandling = JsonCommentHandling.Skip,
+        AllowTrailingCommas = true,
+    };
+
+    public static JsonNode? ParseLenient(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try { return JsonNode.Parse(json, documentOptions: LenientJsonDocumentOptions); }
+        catch { return null; }
+    }
+
     public static T? GetParam<T>(this IReadOnlyDictionary<string, object?> parameters, string key, T? fallback = default)
     {
         if (!parameters.TryGetValue(key, out var raw) || raw is null) return fallback;

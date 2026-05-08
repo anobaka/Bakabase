@@ -147,12 +147,8 @@ public class ComfyUIInvoker(IHttpClientFactory httpClientFactory, ILogger<ComfyU
     private static string? ReadDefaultWorkflow(AigcProviderConfigDbModel config)
     {
         if (string.IsNullOrEmpty(config.ConfigJson)) return null;
-        try
-        {
-            var parsed = JsonNode.Parse(config.ConfigJson);
-            return parsed?["defaultWorkflow"]?.ToJsonString();
-        }
-        catch { return null; }
+        var parsed = AigcInvokerHelpers.ParseLenient(config.ConfigJson);
+        return parsed?["defaultWorkflow"]?.ToJsonString();
     }
 
     private static string JsonEscape(string s)

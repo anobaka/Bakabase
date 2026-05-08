@@ -50,15 +50,8 @@ public class HttpCustomInvoker(IHttpClientFactory httpClientFactory, ILogger<Htt
     {
         // No standardized health-check for arbitrary endpoints; consider configured if the JSON parses.
         if (string.IsNullOrEmpty(config.ConfigJson)) return Task.FromResult(false);
-        try
-        {
-            var node = JsonNode.Parse(config.ConfigJson);
-            return Task.FromResult(node?["urlTemplate"]?.GetValue<string>() is { Length: > 0 });
-        }
-        catch
-        {
-            return Task.FromResult(false);
-        }
+        var node = AigcInvokerHelpers.ParseLenient(config.ConfigJson);
+        return Task.FromResult(node?["urlTemplate"]?.GetValue<string>() is { Length: > 0 });
     }
 
     public async Task<AigcInvocationResult> InvokeAsync(AigcProviderConfigDbModel config,
@@ -67,7 +60,7 @@ public class HttpCustomInvoker(IHttpClientFactory httpClientFactory, ILogger<Htt
         if (string.IsNullOrEmpty(config.ConfigJson))
             throw new InvalidOperationException("HttpCustom provider has no ConfigJson.");
 
-        var cfg = JsonNode.Parse(config.ConfigJson)
+        var cfg = AigcInvokerHelpers.ParseLenient(config.ConfigJson)
                   ?? throw new InvalidOperationException("HttpCustom ConfigJson is not valid JSON.");
 
         var tokens = BuildTokens(config, request);
@@ -87,7 +80,7 @@ public class HttpCustomInvoker(IHttpClientFactory httpClientFactory, ILogger<Htt
         if (!resp.IsSuccessStatusCode)
             throw new InvalidOperationException($"HttpCustom returned {(int)resp.StatusCode}: {rawText}");
 
-        var responseNode = TryParseJson(rawText);
+        var responseNode = AigcInvokerHelpers.ParseLenient(rawText);
 
         // Optional polling
         var asyncMode = cfg["asyncMode"]?.GetValue<string>();
@@ -196,7 +189,7 @@ public class HttpCustomInvoker(IHttpClientFactory httpClientFactory, ILogger<Htt
             var resp = await client.GetAsync(statusUrl, ct);
             if (!resp.IsSuccessStatusCode) continue;
             var text = await resp.Content.ReadAsStringAsync(ct);
-            var node = TryParseJson(text);
+            var node = AigcInvokerHelpers.ParseLenient(text);
             var status = AigcInvokerHelpers.SelectNodes(node, donePath).FirstOrDefault()?.ToString();
             if (string.Equals(status, doneEquals, StringComparison.OrdinalIgnoreCase))
             {
@@ -209,12 +202,6 @@ public class HttpCustomInvoker(IHttpClientFactory httpClientFactory, ILogger<Htt
         }
         ct.ThrowIfCancellationRequested();
         return submitResponse;
-    }
-
-    private static JsonNode? TryParseJson(string raw)
-    {
-        try { return JsonNode.Parse(raw); }
-        catch { return null; }
     }
 
     private static Dictionary<string, string?> BuildTokens(AigcProviderConfigDbModel config, AigcInvocationRequest request)

@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using Bakabase.Abstractions.Components.FileSystem;
+using Bakabase.Modules.AI.Components.Aigc.Invokers;
 using Bakabase.Modules.AI.Models.Db;
 using Bakabase.Modules.AI.Models.Domain;
 using Bootstrap.Components.Orm.Infrastructures;
@@ -116,7 +117,12 @@ public class AigcRunExecutor<TDbContext>(
         if (string.IsNullOrEmpty(json)) return new Dictionary<string, object?>();
         try
         {
-            var dict = JsonSerializer.Deserialize<Dictionary<string, object?>>(json);
+            var opts = new JsonSerializerOptions
+            {
+                ReadCommentHandling = JsonCommentHandling.Skip,
+                AllowTrailingCommas = true,
+            };
+            var dict = JsonSerializer.Deserialize<Dictionary<string, object?>>(json, opts);
             return dict ?? new Dictionary<string, object?>();
         }
         catch

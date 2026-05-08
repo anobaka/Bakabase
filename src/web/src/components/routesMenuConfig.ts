@@ -68,9 +68,8 @@ import ChatPage from "@/pages/chat";
 import AiUsagePage from "@/pages/ai-usage";
 import AiAuditLogPage from "@/pages/ai-audit-log";
 import AiCachePage from "@/pages/ai-cache";
-import AigcProvidersPage from "@/pages/aigc-providers";
-import AigcGeneratorsPage from "@/pages/aigc-generators";
-import AigcRunsPage from "@/pages/aigc-runs";
+import AigcConfigsPage from "@/pages/aigc-configs";
+import AigcRecordsPage from "@/pages/aigc-records";
 import SteamAppsPage from "@/pages/steam-apps";
 import DLsiteWorksPage from "@/pages/dlsite-works";
 import ExHentaiGalleriesPage from "@/pages/exhentai-galleries";
@@ -366,37 +365,23 @@ export const routesMenuConfig: RouteMenuItem[] = [
         layout: "basic",
         menu: true,
       },
-    ],
-  },
-  {
-    name: "menu.aigc",
-    icon: AiOutlinePicture,
-    menu: true,
-    isBeta: true,
-    children: [
       {
-        name: "menu.aigc.providers",
-        path: "/aigc/providers",
-        component: AigcProvidersPage,
-        icon: AiOutlineCloudServer,
+        name: "menu.ai.aigc.configs",
+        path: "/aigc/configs",
+        component: AigcConfigsPage,
+        icon: AiOutlinePicture,
         layout: "basic",
         menu: true,
+        isBeta: true,
       },
       {
-        name: "menu.aigc.generators",
-        path: "/aigc/generators",
-        component: AigcGeneratorsPage,
-        icon: AiOutlineSetting,
-        layout: "basic",
-        menu: true,
-      },
-      {
-        name: "menu.aigc.runs",
-        path: "/aigc/runs",
-        component: AigcRunsPage,
+        name: "menu.ai.aigc.records",
+        path: "/aigc/records",
+        component: AigcRecordsPage,
         icon: AiOutlineHistory,
         layout: "basic",
         menu: true,
+        isBeta: true,
       },
     ],
   },
