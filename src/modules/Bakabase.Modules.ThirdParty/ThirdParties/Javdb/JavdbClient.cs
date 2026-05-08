@@ -175,9 +175,13 @@ public class JavdbClient(IHttpClientFactory httpClientFactory, ILoggerFactory lo
 
     private static string GetSeries(CQ html)
     {
-        var s1 = html["div.panel-block strong:contains('系列:')"].Parent().Find("span a").Text();
-        var s2 = html["div.panel-block strong:contains('Series:')"].Parent().Find("span a").Text();
-        return string.IsNullOrWhiteSpace(s1) ? s2 : s1;
+        // Iterate per anchor instead of calling .Text() on the set: when the page
+        // renders the same series link in both mobile and desktop DOM, .Text()
+        // concatenates them ("SeriesNameSeriesName"). Mirrors GetTag/GetActor.
+        var a1 = html["div.panel-block strong:contains('系列:')"].Parent().Find("span a").Select(a => a.InnerText);
+        var a2 = html["div.panel-block strong:contains('Series:')"].Parent().Find("span a").Select(a => a.InnerText);
+        var anchors = (a1.Any() ? a1 : a2).Select(s => s?.Trim()).Where(s => !string.IsNullOrEmpty(s)).Distinct();
+        return string.Join(",", anchors);
     }
 
     private static string GetDirector(CQ html)
