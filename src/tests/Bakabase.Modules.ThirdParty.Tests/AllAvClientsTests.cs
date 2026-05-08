@@ -42,6 +42,7 @@ using Bakabase.Modules.ThirdParty.ThirdParties.ThePornDBMovies;
 using Bakabase.Modules.ThirdParty.ThirdParties.Xcity;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
+using System.Runtime.CompilerServices;
 
 namespace Bakabase.Modules.ThirdParty.Tests
 {
@@ -65,12 +66,98 @@ namespace Bakabase.Modules.ThirdParty.Tests
         public Task SearchAndParseVideo_AllSources_NoFieldDuplication()
             => RunAllSources(DefaultNumber);
 
-        public static async Task RunAllSources(string number)
+        // Snapshot-style fixture tests. Workflow:
+        //   1) Unignore GenerateFixture, run once for each number you want to track.
+        //      It hits every live source, builds an expected dict per source, and
+        //      writes Fixtures/Av/<number>.json next to this test file.
+        //   2) Inspect the generated JSON, prune entries you don't trust (or for
+        //      sources that returned junk that day) — anything left in the file
+        //      becomes the expected baseline.
+        //   3) Unignore VerifyAgainstFixture and add a [DataRow] for the number.
+        //      Each run dispatches all clients in parallel and compares parsed
+        //      output to the fixture, aggregating per-source/per-field mismatches
+        //      into a single Assert.Fail. URL fields are checked as non-empty
+        //      booleans only so CDN/path drift doesn't constantly invalidate the
+        //      fixture.
+        [DataTestMethod]
+        [DataRow(DefaultNumber)]
+        [Ignore("Manual integration test — generates Fixtures/Av/<number>.json from live sources. Remove [Ignore] to refresh.")]
+        public async Task GenerateFixture(string number)
+        {
+            var results = await DispatchAll(number);
+            var fixture = results
+                .Where(r => r.Detail != null)
+                .ToDictionary(r => r.Source, r => AvFixtureEntry.FromDetail(r.Detail!));
+
+            Console.WriteLine($"=== {number}: capturing {fixture.Count}/{results.Length} sources ===");
+            foreach (var r in results.OrderBy(r => r.Source))
+            {
+                Console.WriteLine(r.Detail != null
+                    ? $"  [OK]   {r.Source}"
+                    : $"  [MISS] {r.Source} {(r.Error ?? "no result")}");
+            }
+
+            var path = ResolveFixturePath(number);
+            await AvFixtureIO.WriteAsync(path, fixture);
+            Console.WriteLine($"Fixture written: {path}");
+        }
+
+        [DataTestMethod]
+        [DataRow(DefaultNumber)]
+        [Ignore("Manual integration test — verifies live AV sources match Fixtures/Av/<number>.json. Remove [Ignore] to run.")]
+        public async Task VerifyAgainstFixture(string number)
+        {
+            var path = ResolveFixturePath(number);
+            Assert.IsTrue(File.Exists(path),
+                $"Fixture missing: {path}. Run GenerateFixture for '{number}' first.");
+
+            var expected = await AvFixtureIO.ReadAsync(path);
+            var results = await DispatchAll(number);
+            var actualBySource = results
+                .Where(r => r.Detail != null)
+                .ToDictionary(r => r.Source, r => AvFixtureEntry.FromDetail(r.Detail!));
+
+            var failures = new List<string>();
+            foreach (var (source, expectedEntry) in expected)
+            {
+                if (!actualBySource.TryGetValue(source, out var actualEntry))
+                {
+                    var error = results.FirstOrDefault(r => r.Source == source).Error;
+                    failures.Add($"[{source}] missing — expected non-null detail but got: {error ?? "no result"}");
+                    continue;
+                }
+                failures.AddRange(expectedEntry.CompareTo(actualEntry, source));
+            }
+
+            // Sources present in current run but absent from fixture are reported
+            // as a notice, not a failure — the user may have added a source after
+            // generating the fixture. Run GenerateFixture again to refresh.
+            var newSources = actualBySource.Keys.Except(expected.Keys).ToList();
+            if (newSources.Any())
+            {
+                Console.WriteLine($"Note: {newSources.Count} source(s) returned details that aren't in the fixture: {string.Join(", ", newSources)}. Re-run GenerateFixture to capture them.");
+            }
+
+            if (failures.Any())
+            {
+                Assert.Fail($"Fixture mismatch ({failures.Count} fields):\n  " + string.Join("\n  ", failures));
+            }
+        }
+
+        // Resolves the on-disk fixture path next to this test file. Uses
+        // [CallerFilePath] so the path tracks where the source actually lives,
+        // not the test bin output directory.
+        private static string ResolveFixturePath(string number, [CallerFilePath] string? callerFile = null)
+        {
+            var dir = Path.GetDirectoryName(callerFile)!;
+            return Path.Combine(dir, "Fixtures", "Av", $"{number}.json");
+        }
+
+        private static async Task<SourceResult[]> DispatchAll(string number)
         {
             var sp = BuildServiceProvider();
             var dispatchers = BuildDispatchers(sp);
-
-            var results = await Task.WhenAll(dispatchers.Select(async kvp =>
+            return await Task.WhenAll(dispatchers.Select(async kvp =>
             {
                 try
                 {
@@ -82,7 +169,11 @@ namespace Bakabase.Modules.ThirdParty.Tests
                     return new SourceResult(kvp.Key, Detail: null, Error: ex.Message);
                 }
             }));
+        }
 
+        public static async Task RunAllSources(string number)
+        {
+            var results = await DispatchAll(number);
             var hits = results.Where(r => r.Detail != null).ToList();
             var misses = results.Where(r => r.Detail == null).ToList();
 
