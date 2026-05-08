@@ -274,10 +274,10 @@ export type BakabaseAbstractionsModelsDomainConstantsResourceCacheType = 1 | 2 |
 export type BakabaseAbstractionsModelsDomainConstantsResourceDataType = 1 | 2 | 3;
 
 /**
- * [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai]
+ * [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc]
  * @format int32
  */
-export type BakabaseAbstractionsModelsDomainConstantsResourceSource = 1 | 2 | 3 | 4;
+export type BakabaseAbstractionsModelsDomainConstantsResourceSource = 1 | 2 | 3 | 4 | 5;
 
 /**
  * [1: Active, 2: Absent, 3: Unavailable]
@@ -777,7 +777,7 @@ export interface BakabaseAbstractionsModelsDomainResourceSourceLink {
   id: number;
   /** @format int32 */
   resourceId: number;
-  /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai] */
+  /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc] */
   source: BakabaseAbstractionsModelsDomainConstantsResourceSource;
   sourceKey: string;
   /** @format date-time */
@@ -809,7 +809,7 @@ export interface BakabaseAbstractionsModelsDomainSourceMetadataFieldInfo {
 export interface BakabaseAbstractionsModelsDomainSourceMetadataMapping {
   /** @format int32 */
   id: number;
-  /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai] */
+  /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc] */
   source: BakabaseAbstractionsModelsDomainConstantsResourceSource;
   metadataField: string;
   /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
@@ -2484,6 +2484,90 @@ export interface BakabaseModulesAIModelsDbAiFeatureConfigDbModel {
   topP?: number;
 }
 
+export interface BakabaseModulesAIModelsDbAigcArtifactDbModel {
+  /** @format int32 */
+  id: number;
+  /** @format int32 */
+  runId: number;
+  /** @format int32 */
+  generatorId: number;
+  /** @format int32 */
+  ordinalInRun: number;
+  relativePath: string;
+  /** @format int32 */
+  resourceId?: number;
+  /** @format date-time */
+  createdAt: string;
+}
+
+export interface BakabaseModulesAIModelsDbAigcGenerationRunDbModel {
+  /** @format int32 */
+  id: number;
+  /** @format int32 */
+  generatorId: number;
+  /** [1: Pending, 2: Running, 3: Succeeded, 4: Failed, 5: Imported] */
+  status: BakabaseModulesAIModelsDomainAigcGenerationStatus;
+  prompt?: string;
+  negativePrompt?: string;
+  requestPayload?: string;
+  responsePayload?: string;
+  errorMessage?: string;
+  /** @format date-time */
+  createdAt: string;
+  /** @format date-time */
+  completedAt?: string;
+}
+
+export interface BakabaseModulesAIModelsDbAigcGeneratorDbModel {
+  /** @format int32 */
+  id: number;
+  name: string;
+  /** @format int32 */
+  providerId: number;
+  /** [1: Image, 2: Text, 3: Audio, 4: Video, 99: Other] */
+  mediaType: BakabaseModulesAIModelsDomainAigcMediaType;
+  promptTemplate?: string;
+  negativePromptTemplate?: string;
+  parametersJson?: string;
+  filenameTemplate: string;
+  /** [1: PerArtifact, 2: PerRun] */
+  resourceMode: BakabaseModulesAIModelsDomainAigcArtifactResourceMode;
+  allowDeletion: boolean;
+  isEnabled: boolean;
+  /** @format date-time */
+  createdAt: string;
+  /** @format date-time */
+  updatedAt: string;
+}
+
+export interface BakabaseModulesAIModelsDbAigcGeneratorPropertyPresetDbModel {
+  /** @format int32 */
+  id: number;
+  /** @format int32 */
+  generatorId: number;
+  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
+  pool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
+  /** @format int32 */
+  propertyId: number;
+  serializedBizValue?: string;
+}
+
+export interface BakabaseModulesAIModelsDbAigcProviderConfigDbModel {
+  /** @format int32 */
+  id: number;
+  /** [1: StableDiffusionWebUI, 2: ComfyUI, 3: OpenAIImage, 4: GeminiImage, 99: HttpCustom] */
+  kind: BakabaseModulesAIModelsDomainAigcProviderKind;
+  name: string;
+  endpoint?: string;
+  apiKey?: string;
+  isEnabled: boolean;
+  configJson?: string;
+  /** @format date-time */
+  createdAt: string;
+  /** @format date-time */
+  updatedAt: string;
+}
+
 export interface BakabaseModulesAIModelsDbChatConversationDbModel {
   /** @format int32 */
   id: number;
@@ -2574,6 +2658,45 @@ export interface BakabaseModulesAIModelsDbLlmUsageLogDbModel {
 export type BakabaseModulesAIModelsDomainAiFeature = 0 | 1 | 2 | 3 | 4 | 5;
 
 /**
+ * [1: PerArtifact, 2: PerRun]
+ * @format int32
+ */
+export type BakabaseModulesAIModelsDomainAigcArtifactResourceMode = 1 | 2;
+
+/**
+ * [1: Pending, 2: Running, 3: Succeeded, 4: Failed, 5: Imported]
+ * @format int32
+ */
+export type BakabaseModulesAIModelsDomainAigcGenerationStatus = 1 | 2 | 3 | 4 | 5;
+
+export interface BakabaseModulesAIModelsDomainAigcGeneratorView {
+  generator: BakabaseModulesAIModelsDbAigcGeneratorDbModel;
+  propertyPresets: BakabaseModulesAIModelsDbAigcGeneratorPropertyPresetDbModel[];
+}
+
+/**
+ * [1: Image, 2: Text, 3: Audio, 4: Video, 99: Other]
+ * @format int32
+ */
+export type BakabaseModulesAIModelsDomainAigcMediaType = 1 | 2 | 3 | 4 | 99;
+
+/**
+ * [1: StableDiffusionWebUI, 2: ComfyUI, 3: OpenAIImage, 4: GeminiImage, 99: HttpCustom]
+ * @format int32
+ */
+export type BakabaseModulesAIModelsDomainAigcProviderKind = 1 | 2 | 3 | 4 | 99;
+
+export interface BakabaseModulesAIModelsDomainAigcProviderKindInfo {
+  /** [1: StableDiffusionWebUI, 2: ComfyUI, 3: OpenAIImage, 4: GeminiImage, 99: HttpCustom] */
+  kind: BakabaseModulesAIModelsDomainAigcProviderKind;
+  displayName: string;
+  supportedMediaTypes: BakabaseModulesAIModelsDomainAigcMediaType[];
+  requiresApiKey: boolean;
+  requiresEndpoint: boolean;
+  defaultEndpoint?: string;
+}
+
+/**
  * [1: Success, 2: Error, 3: Timeout, 4: Cancelled]
  * @format int32
  */
@@ -2650,6 +2773,78 @@ export interface BakabaseModulesAIModelsInputAiFeatureConfigInputModel {
   maxTokens?: number;
   /** @format float */
   topP?: number;
+}
+
+export interface BakabaseModulesAIModelsInputAigcArtifactImportInputModel {
+  sourceFilePaths: string[];
+}
+
+export interface BakabaseModulesAIModelsInputAigcGenerationTriggerInputModel {
+  promptOverride?: string;
+  negativePromptOverride?: string;
+  parameterOverrides?: Record<string, any>;
+}
+
+export interface BakabaseModulesAIModelsInputAigcGeneratorAddInputModel {
+  name: string;
+  /** @format int32 */
+  providerId: number;
+  /** [1: Image, 2: Text, 3: Audio, 4: Video, 99: Other] */
+  mediaType: BakabaseModulesAIModelsDomainAigcMediaType;
+  promptTemplate?: string;
+  negativePromptTemplate?: string;
+  parametersJson?: string;
+  filenameTemplate: string;
+  /** [1: PerArtifact, 2: PerRun] */
+  resourceMode: BakabaseModulesAIModelsDomainAigcArtifactResourceMode;
+  allowDeletion: boolean;
+  isEnabled: boolean;
+  propertyPresets?: BakabaseModulesAIModelsInputAigcGeneratorPropertyPresetInputModel[];
+}
+
+export interface BakabaseModulesAIModelsInputAigcGeneratorPropertyPresetInputModel {
+  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
+  pool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
+  /** @format int32 */
+  propertyId: number;
+  serializedBizValue?: string;
+}
+
+export interface BakabaseModulesAIModelsInputAigcGeneratorUpdateInputModel {
+  name?: string;
+  /** @format int32 */
+  providerId?: number;
+  /** [1: Image, 2: Text, 3: Audio, 4: Video, 99: Other] */
+  mediaType?: BakabaseModulesAIModelsDomainAigcMediaType;
+  promptTemplate?: string;
+  negativePromptTemplate?: string;
+  parametersJson?: string;
+  filenameTemplate?: string;
+  /** [1: PerArtifact, 2: PerRun] */
+  resourceMode?: BakabaseModulesAIModelsDomainAigcArtifactResourceMode;
+  allowDeletion?: boolean;
+  isEnabled?: boolean;
+  propertyPresets?: BakabaseModulesAIModelsInputAigcGeneratorPropertyPresetInputModel[];
+}
+
+export interface BakabaseModulesAIModelsInputAigcProviderConfigAddInputModel {
+  /** [1: StableDiffusionWebUI, 2: ComfyUI, 3: OpenAIImage, 4: GeminiImage, 99: HttpCustom] */
+  kind: BakabaseModulesAIModelsDomainAigcProviderKind;
+  name: string;
+  endpoint?: string;
+  apiKey?: string;
+  configJson?: string;
+  isEnabled: boolean;
+}
+
+export interface BakabaseModulesAIModelsInputAigcProviderConfigUpdateInputModel {
+  /** [1: StableDiffusionWebUI, 2: ComfyUI, 3: OpenAIImage, 4: GeminiImage, 99: HttpCustom] */
+  kind?: BakabaseModulesAIModelsDomainAigcProviderKind;
+  name?: string;
+  endpoint?: string;
+  apiKey?: string;
+  configJson?: string;
+  isEnabled?: boolean;
 }
 
 export interface BakabaseModulesAIModelsInputApplyFileOperationsInputModel {
@@ -4518,6 +4713,27 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesAIMode
   data?: BakabaseModulesAIModelsDbAiFeatureConfigDbModel[];
 }
 
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDbAigcArtifactDbModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesAIModelsDbAigcArtifactDbModel[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDbAigcGenerationRunDbModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesAIModelsDbAigcGenerationRunDbModel[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDbAigcProviderConfigDbModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesAIModelsDbAigcProviderConfigDbModel[];
+}
+
 export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDbChatConversationDbModel {
   /** @format int32 */
   code: number;
@@ -4551,6 +4767,20 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesAIMode
   code: number;
   message?: string;
   data?: BakabaseModulesAIModelsDbLlmUsageLogDbModel[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDomainAigcGeneratorView {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesAIModelsDomainAigcGeneratorView[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDomainAigcProviderKindInfo {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesAIModelsDomainAigcProviderKindInfo[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDomainLlmModelInfo {
@@ -5244,6 +5474,20 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesA
   data?: BakabaseModulesAIModelsDbAiFeatureConfigDbModel;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIModelsDbAigcGenerationRunDbModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesAIModelsDbAigcGenerationRunDbModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIModelsDbAigcProviderConfigDbModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesAIModelsDbAigcProviderConfigDbModel;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIModelsDbChatConversationDbModel {
   /** @format int32 */
   code: number;
@@ -5256,6 +5500,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesA
   code: number;
   message?: string;
   data?: BakabaseModulesAIModelsDbLlmProviderConfigDbModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIModelsDomainAigcGeneratorView {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesAIModelsDomainAigcGeneratorView;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIModelsDomainResourceTranslationResult {
@@ -7309,6 +7560,483 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       return baseUrl + path;
     },
+  };
+  aigc = {
+    /**
+     * No description
+     *
+     * @tags Aigc
+     * @name GetAllAigcProviders
+     * @request GET:/aigc/providers
+     */
+    getAllAigcProviders: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDbAigcProviderConfigDbModel,
+        any
+      >({
+        path: `/aigc/providers`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getAllAigcProviders
+     * @name getAllAigcProvidersUrl
+     */
+    getAllAigcProvidersUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/aigc/providers`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Aigc
+     * @name AddAigcProvider
+     * @request POST:/aigc/providers
+     */
+    addAigcProvider: (
+      data: BakabaseModulesAIModelsInputAigcProviderConfigAddInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIModelsDbAigcProviderConfigDbModel,
+        any
+      >({
+        path: `/aigc/providers`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for addAigcProvider
+     * @name addAigcProviderUrl
+     */
+    addAigcProviderUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/aigc/providers`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Aigc
+     * @name GetAigcProvider
+     * @request GET:/aigc/providers/{id}
+     */
+    getAigcProvider: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIModelsDbAigcProviderConfigDbModel,
+        any
+      >({
+        path: `/aigc/providers/${id}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Aigc
+     * @name UpdateAigcProvider
+     * @request PUT:/aigc/providers/{id}
+     */
+    updateAigcProvider: (
+      id: number,
+      data: BakabaseModulesAIModelsInputAigcProviderConfigUpdateInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIModelsDbAigcProviderConfigDbModel,
+        any
+      >({
+        path: `/aigc/providers/${id}`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Aigc
+     * @name DeleteAigcProvider
+     * @request DELETE:/aigc/providers/{id}
+     */
+    deleteAigcProvider: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/aigc/providers/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Aigc
+     * @name TestAigcProvider
+     * @request POST:/aigc/providers/{id}/test
+     */
+    testAigcProvider: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemBoolean, any>({
+        path: `/aigc/providers/${id}/test`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Aigc
+     * @name GetAigcProviderKinds
+     * @request GET:/aigc/provider-kinds
+     */
+    getAigcProviderKinds: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDomainAigcProviderKindInfo,
+        any
+      >({
+        path: `/aigc/provider-kinds`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getAigcProviderKinds
+     * @name getAigcProviderKindsUrl
+     */
+    getAigcProviderKindsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/aigc/provider-kinds`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Aigc
+     * @name GetAllAigcGenerators
+     * @request GET:/aigc/generators
+     */
+    getAllAigcGenerators: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDomainAigcGeneratorView,
+        any
+      >({
+        path: `/aigc/generators`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getAllAigcGenerators
+     * @name getAllAigcGeneratorsUrl
+     */
+    getAllAigcGeneratorsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/aigc/generators`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Aigc
+     * @name AddAigcGenerator
+     * @request POST:/aigc/generators
+     */
+    addAigcGenerator: (
+      data: BakabaseModulesAIModelsInputAigcGeneratorAddInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIModelsDomainAigcGeneratorView,
+        any
+      >({
+        path: `/aigc/generators`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for addAigcGenerator
+     * @name addAigcGeneratorUrl
+     */
+    addAigcGeneratorUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/aigc/generators`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Aigc
+     * @name GetAigcGenerator
+     * @request GET:/aigc/generators/{id}
+     */
+    getAigcGenerator: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIModelsDomainAigcGeneratorView,
+        any
+      >({
+        path: `/aigc/generators/${id}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Aigc
+     * @name UpdateAigcGenerator
+     * @request PUT:/aigc/generators/{id}
+     */
+    updateAigcGenerator: (
+      id: number,
+      data: BakabaseModulesAIModelsInputAigcGeneratorUpdateInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIModelsDomainAigcGeneratorView,
+        any
+      >({
+        path: `/aigc/generators/${id}`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Aigc
+     * @name DeleteAigcGenerator
+     * @request DELETE:/aigc/generators/{id}
+     */
+    deleteAigcGenerator: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/aigc/generators/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Aigc
+     * @name TriggerAigcGeneration
+     * @request POST:/aigc/generators/{id}/run
+     */
+    triggerAigcGeneration: (
+      id: number,
+      data: BakabaseModulesAIModelsInputAigcGenerationTriggerInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemInt32, any>({
+        path: `/aigc/generators/${id}/run`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Aigc
+     * @name ImportAigcArtifacts
+     * @request POST:/aigc/generators/{id}/import
+     */
+    importAigcArtifacts: (
+      id: number,
+      data: BakabaseModulesAIModelsInputAigcArtifactImportInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemInt32, any>({
+        path: `/aigc/generators/${id}/import`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Aigc
+     * @name GetAigcRuns
+     * @request GET:/aigc/runs
+     */
+    getAigcRuns: (
+      query?: {
+        /** @format int32 */
+        generatorId?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDbAigcGenerationRunDbModel,
+        any
+      >({
+        path: `/aigc/runs`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getAigcRuns
+     * @name getAigcRunsUrl
+     */
+    getAigcRunsUrl: (query?: {
+        /** @format int32 */
+        generatorId?: number;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/aigc/runs`;
+      
+      // Build query string
+      if (query) {
+        const queryString = Object.keys(query)
+          .filter(key => query[key] !== undefined && query[key] !== null)
+          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Aigc
+     * @name GetAigcRun
+     * @request GET:/aigc/runs/{id}
+     */
+    getAigcRun: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIModelsDbAigcGenerationRunDbModel,
+        any
+      >({
+        path: `/aigc/runs/${id}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Aigc
+     * @name DeleteAigcRun
+     * @request DELETE:/aigc/runs/{id}
+     */
+    deleteAigcRun: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/aigc/runs/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Aigc
+     * @name GetAigcArtifacts
+     * @request GET:/aigc/artifacts
+     */
+    getAigcArtifacts: (
+      query?: {
+        /** @format int32 */
+        generatorId?: number;
+        /** @format int32 */
+        runId?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDbAigcArtifactDbModel,
+        any
+      >({
+        path: `/aigc/artifacts`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getAigcArtifacts
+     * @name getAigcArtifactsUrl
+     */
+    getAigcArtifactsUrl: (query?: {
+        /** @format int32 */
+        generatorId?: number;
+        /** @format int32 */
+        runId?: number;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/aigc/artifacts`;
+      
+      // Build query string
+      if (query) {
+        const queryString = Object.keys(query)
+          .filter(key => query[key] !== undefined && query[key] !== null)
+          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Aigc
+     * @name DeleteAigcArtifact
+     * @request DELETE:/aigc/artifacts/{id}
+     */
+    deleteAigcArtifact: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/aigc/artifacts/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
   };
   alias = {
     /**
@@ -17814,7 +18542,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     startSyncBySource: (
       query?: {
-        /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai] */
+        /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc] */
         source?: BakabaseAbstractionsModelsDomainConstantsResourceSource;
       },
       params: RequestParams = {},
@@ -17832,7 +18560,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name startSyncBySourceUrl
      */
     startSyncBySourceUrl: (query?: {
-        /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai] */
+        /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc] */
         source?: BakabaseAbstractionsModelsDomainConstantsResourceSource;
       }) => {
       const baseUrl = this.baseUrl || "";

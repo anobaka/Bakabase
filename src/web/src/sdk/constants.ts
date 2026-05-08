@@ -896,21 +896,24 @@ export enum ResourceSource {
   PathMark = 1,
   Steam = 2,
   DLsite = 3,
-  ExHentai = 4
+  ExHentai = 4,
+  Aigc = 5
 }
 
 export const resourceSources = [
   { label: 'PathMark', value: ResourceSource.PathMark },
   { label: 'Steam', value: ResourceSource.Steam },
   { label: 'DLsite', value: ResourceSource.DLsite },
-  { label: 'ExHentai', value: ResourceSource.ExHentai }
+  { label: 'ExHentai', value: ResourceSource.ExHentai },
+  { label: 'Aigc', value: ResourceSource.Aigc }
 ] as const;
 
 export const ResourceSourceLabel: Record<ResourceSource, string> = {
   [ResourceSource.PathMark]: 'PathMark',
   [ResourceSource.Steam]: 'Steam',
   [ResourceSource.DLsite]: 'DLsite',
-  [ResourceSource.ExHentai]: 'ExHentai'
+  [ResourceSource.ExHentai]: 'ExHentai',
+  [ResourceSource.Aigc]: 'Aigc'
 };
 
 export enum ResourceStatus {
@@ -3503,6 +3506,93 @@ export const AiFeatureLabel: Record<AiFeature, string> = {
   [AiFeature.FileProcessor]: 'FileProcessor',
   [AiFeature.PostParser]: 'PostParser',
   [AiFeature.Chat]: 'Chat'
+};
+
+export enum AigcArtifactResourceMode {
+  PerArtifact = 1,
+  PerRun = 2
+}
+
+export const aigcArtifactResourceModes = [
+  { label: 'PerArtifact', value: AigcArtifactResourceMode.PerArtifact },
+  { label: 'PerRun', value: AigcArtifactResourceMode.PerRun }
+] as const;
+
+export const AigcArtifactResourceModeLabel: Record<AigcArtifactResourceMode, string> = {
+  [AigcArtifactResourceMode.PerArtifact]: 'PerArtifact',
+  [AigcArtifactResourceMode.PerRun]: 'PerRun'
+};
+
+export enum AigcGenerationStatus {
+  Pending = 1,
+  Running = 2,
+  Succeeded = 3,
+  Failed = 4,
+  Imported = 5
+}
+
+export const aigcGenerationStatuses = [
+  { label: 'Pending', value: AigcGenerationStatus.Pending },
+  { label: 'Running', value: AigcGenerationStatus.Running },
+  { label: 'Succeeded', value: AigcGenerationStatus.Succeeded },
+  { label: 'Failed', value: AigcGenerationStatus.Failed },
+  { label: 'Imported', value: AigcGenerationStatus.Imported }
+] as const;
+
+export const AigcGenerationStatusLabel: Record<AigcGenerationStatus, string> = {
+  [AigcGenerationStatus.Pending]: 'Pending',
+  [AigcGenerationStatus.Running]: 'Running',
+  [AigcGenerationStatus.Succeeded]: 'Succeeded',
+  [AigcGenerationStatus.Failed]: 'Failed',
+  [AigcGenerationStatus.Imported]: 'Imported'
+};
+
+export enum AigcMediaType {
+  Image = 1,
+  Text = 2,
+  Audio = 3,
+  Video = 4,
+  Other = 99
+}
+
+export const aigcMediaTypes = [
+  { label: 'Image', value: AigcMediaType.Image },
+  { label: 'Text', value: AigcMediaType.Text },
+  { label: 'Audio', value: AigcMediaType.Audio },
+  { label: 'Video', value: AigcMediaType.Video },
+  { label: 'Other', value: AigcMediaType.Other }
+] as const;
+
+export const AigcMediaTypeLabel: Record<AigcMediaType, string> = {
+  [AigcMediaType.Image]: 'Image',
+  [AigcMediaType.Text]: 'Text',
+  [AigcMediaType.Audio]: 'Audio',
+  [AigcMediaType.Video]: 'Video',
+  [AigcMediaType.Other]: 'Other'
+};
+
+export enum AigcProviderKind {
+  StableDiffusionWebUI = 1,
+  ComfyUI = 2,
+  OpenAIImage = 3,
+  GeminiImage = 4,
+  HttpCustom = 99
+}
+
+export const aigcProviderKinds = [
+  { label: 'StableDiffusionWebUI', value: AigcProviderKind.StableDiffusionWebUI },
+  { label: 'ComfyUI', value: AigcProviderKind.ComfyUI },
+  { label: 'OpenAIImage', value: AigcProviderKind.OpenAIImage },
+  { label: 'GeminiImage', value: AigcProviderKind.GeminiImage },
+  { label: 'HttpCustom', value: AigcProviderKind.HttpCustom }
+] as const;
+
+export const AigcProviderKindLabel: Record<AigcProviderKind, string> = {
+  [AigcProviderKind.StableDiffusionWebUI]: 'StableDiffusionWebUI',
+  [AigcProviderKind.ComfyUI]: 'ComfyUI',
+  [AigcProviderKind.OpenAIImage]: 'OpenAIImage',
+  [AigcProviderKind.GeminiImage]: 'GeminiImage',
+  [AigcProviderKind.HttpCustom]: 'HttpCustom'
 };
 
 export enum LlmCallStatus {
