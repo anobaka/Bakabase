@@ -59,7 +59,7 @@ namespace Bakabase.Modules.ThirdParty.Tests
         // Replace with a number you want to verify; a code that several sources index
         // produces the most useful coverage. The test is [Ignore]'d by default so CI
         // does not hit live sites.
-        private const string DefaultNumber = "SSIS-001";
+        private const string DefaultNumber = "RBK-130";
 
         [TestMethod]
         [Ignore("Manual integration test — hits every live AV source in parallel. Remove [Ignore] to run.")]
