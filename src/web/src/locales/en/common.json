@@ -219,6 +219,7 @@
   "menu.system": "System",
   "menu.configuration": "Configuration",
   "menu.thirdParty": "Third Party Config",
+  "menu.avSources": "AV Sources",
   "menu.backgroundTask": "Background Task",
   "menu.performanceProfiler": "Performance Profiler",
   "menu.log": "Log",

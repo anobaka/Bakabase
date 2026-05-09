@@ -109,6 +109,10 @@ namespace Bakabase.Service.Extensions
             services
                 .AddThirdParty<BilibiliOptions, BangumiOptions, DLsiteOptions, ExHentaiOptions, PixivOptions,
                     SoulPlusOptions, TmdbOptions>();
+            // Replace the fallback resolver registered by AddThirdParty with one backed by
+            // AvSourceOptions so user configuration in third-party-av-sources.json takes effect.
+            services.Replace(ServiceDescriptor.Singleton<Bakabase.Modules.ThirdParty.ThirdParties.Av.IAvSourceOptionsProvider,
+                Bakabase.InsideWorld.Business.Components.Configurations.AvSourceOptionsProvider>());
 
             services.AddDownloaders();
             services.AddResourceResolvers();

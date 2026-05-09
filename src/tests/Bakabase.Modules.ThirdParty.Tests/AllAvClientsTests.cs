@@ -239,6 +239,9 @@ namespace Bakabase.Modules.ThirdParty.Tests
             di.AddHttpClient(InternalOptions.HttpClientNames.Default,
                 c => c.DefaultRequestHeaders.Add("User-Agent", InternalOptions.DefaultHttpUserAgent));
 
+            di.AddSingleton<Bakabase.Modules.ThirdParty.ThirdParties.Av.IAvSourceOptionsProvider,
+                Bakabase.Modules.ThirdParty.ThirdParties.Av.DefaultAvSourceOptionsProvider>();
+
             di.AddSingleton<AiravClient>();
             di.AddSingleton<AiravCCClient>();
             di.AddSingleton<AvsexClient>();

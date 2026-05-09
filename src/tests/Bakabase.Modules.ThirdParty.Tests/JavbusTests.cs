@@ -1,4 +1,5 @@
 using Bakabase.Abstractions.Components.Configuration;
+using Bakabase.Modules.ThirdParty.ThirdParties.Av;
 using Bakabase.Modules.ThirdParty.ThirdParties.Javbus;
 using Bakabase.Modules.ThirdParty.ThirdParties.Javbus.Models;
 using Microsoft.Extensions.DependencyInjection;
@@ -55,6 +56,7 @@ namespace Bakabase.Modules.ThirdParty.Tests
             di.AddLogging();
             di.AddHttpClient(InternalOptions.HttpClientNames.Default,
                 c => c.DefaultRequestHeaders.Add("User-Agent", InternalOptions.DefaultHttpUserAgent));
+            di.AddSingleton<IAvSourceOptionsProvider, DefaultAvSourceOptionsProvider>();
             di.AddSingleton<JavbusClient>();
 
             return di.BuildServiceProvider().GetRequiredService<JavbusClient>();

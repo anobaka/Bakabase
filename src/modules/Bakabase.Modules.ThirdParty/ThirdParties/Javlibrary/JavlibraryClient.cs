@@ -1,5 +1,6 @@
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
+using Bakabase.Modules.ThirdParty.ThirdParties.Av;
 using Bakabase.Modules.ThirdParty.ThirdParties.Javlibrary.Models;
 using Microsoft.Extensions.Logging;
 using CsQuery;
@@ -7,7 +8,10 @@ using System.Text.RegularExpressions;
 
 namespace Bakabase.Modules.ThirdParty.ThirdParties.Javlibrary;
 
-public class JavlibraryClient(IHttpClientFactory httpClientFactory, ILoggerFactory loggerFactory)
+public class JavlibraryClient(
+    IHttpClientFactory httpClientFactory,
+    ILoggerFactory loggerFactory,
+    IAvSourceOptionsProvider avOptionsProvider)
     : BakabaseHttpClient(httpClientFactory, loggerFactory)
 {
     protected override string HttpClientName => InternalOptions.HttpClientNames.Default;
@@ -16,21 +20,30 @@ public class JavlibraryClient(IHttpClientFactory httpClientFactory, ILoggerFacto
     {
         try
         {
-            var domain = baseDomain ?? "https://www.javlibrary.com";
+            var config = avOptionsProvider.Resolve("javlibrary");
+            if (!config.Enabled) return null;
+
+            var domain = baseDomain ?? config.BaseUrl ?? "https://www.javlibrary.com";
             string langPath = language switch { "zh_cn" => "/cn", "zh_tw" => "/tw", _ => "/ja" };
             var searchUrl = $"{domain}{langPath}/vl_searchbyid.php?keyword={Uri.EscapeDataString(number)}";
             var realUrl = appointUrl;
 
             if (string.IsNullOrEmpty(realUrl))
             {
-                var searchHtml = await HttpClient.GetStringAsync(searchUrl);
+                using var searchRequest = AvHttpRequestBuilder.BuildGet(searchUrl, config);
+                using var searchResponse = await HttpClient.SendAsync(searchRequest);
+                searchResponse.EnsureSuccessStatusCode();
+                var searchHtml = await searchResponse.Content.ReadAsStringAsync();
                 if (searchHtml.Contains("Cloudflare")) return null;
                 var real = GetRealUrl(new CQ(searchHtml), number, domain + langPath);
                 if (string.IsNullOrEmpty(real)) return null;
                 realUrl = real;
             }
 
-            var detailHtml = await HttpClient.GetStringAsync(realUrl);
+            using var detailRequest = AvHttpRequestBuilder.BuildGet(realUrl, config);
+            using var detailResponse = await HttpClient.SendAsync(detailRequest);
+            detailResponse.EnsureSuccessStatusCode();
+            var detailHtml = await detailResponse.Content.ReadAsStringAsync();
             if (detailHtml.Contains("Cloudflare")) return null;
             var cq = new CQ(detailHtml);
 

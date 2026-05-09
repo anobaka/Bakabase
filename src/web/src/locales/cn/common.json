@@ -219,6 +219,7 @@
   "menu.system": "系统",
   "menu.configuration": "配置",
   "menu.thirdParty": "第三方配置",
+  "menu.avSources": "AV 数据源",
   "menu.backgroundTask": "后台任务",
   "menu.performanceProfiler": "性能分析器",
   "menu.log": "日志",

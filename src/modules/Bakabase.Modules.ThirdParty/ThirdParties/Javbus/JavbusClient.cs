@@ -1,5 +1,6 @@
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
+using Bakabase.Modules.ThirdParty.ThirdParties.Av;
 using Bakabase.Modules.ThirdParty.ThirdParties.Javbus.Models;
 using Microsoft.Extensions.Logging;
 using CsQuery;
@@ -7,7 +8,10 @@ using System.Text.RegularExpressions;
 
 namespace Bakabase.Modules.ThirdParty.ThirdParties.Javbus;
 
-public class JavbusClient(IHttpClientFactory httpClientFactory, ILoggerFactory loggerFactory)
+public class JavbusClient(
+    IHttpClientFactory httpClientFactory,
+    ILoggerFactory loggerFactory,
+    IAvSourceOptionsProvider avOptionsProvider)
     : BakabaseHttpClient(httpClientFactory, loggerFactory)
 {
     protected override string HttpClientName => InternalOptions.HttpClientNames.Default;
@@ -16,7 +20,10 @@ public class JavbusClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
     {
         try
         {
-            var javbusUrl = baseUrl ?? "https://www.javbus.com";
+            var config = avOptionsProvider.Resolve("javbus");
+            if (!config.Enabled) return null;
+
+            var javbusUrl = baseUrl ?? config.BaseUrl ?? "https://www.javbus.com";
             var realUrl = appointUrl;
 
             if (string.IsNullOrEmpty(realUrl))
@@ -25,7 +32,10 @@ public class JavbusClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
                 realUrl = $"{javbusUrl}/{number}";
             }
 
-            var html = await HttpClient.GetStringAsync(realUrl);
+            using var request = AvHttpRequestBuilder.BuildGet(realUrl, config);
+            using var response = await HttpClient.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+            var html = await response.Content.ReadAsStringAsync();
             if (string.IsNullOrWhiteSpace(html))
             {
                 return null;
