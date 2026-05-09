@@ -72,7 +72,7 @@ type SourceState =
   | { phase: "loading" }
   | { phase: "done"; result: AvSourceTestResult };
 
-const AvSourcesPage = () => {
+export const AvSourcesConfigPanel = () => {
   const { t } = useTranslation();
   const [sources, setSources] = useState<AvSourceInfo[]>([]);
   const [configs, setConfigs] = useState<Record<string, AvSourceConfig>>({});
@@ -399,4 +399,4 @@ const Field = ({ label, value }: { label: string; value?: string | null }) => {
   );
 };
 
-export default AvSourcesPage;
+export default AvSourcesConfigPanel;

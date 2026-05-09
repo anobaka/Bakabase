@@ -1,4 +1,5 @@
 {
+  "avSources.tab.label": "AV 数据源",
   "avSources.input.numberPlaceholder": "输入番号，例如 SSIS-001",
   "avSources.button.testAll": "测试全部数据源",
   "avSources.button.test": "测试",

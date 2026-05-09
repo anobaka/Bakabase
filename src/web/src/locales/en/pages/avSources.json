@@ -1,4 +1,5 @@
 {
+  "avSources.tab.label": "AV Sources",
   "avSources.input.numberPlaceholder": "Enter a number, e.g. SSIS-001",
   "avSources.button.testAll": "Test all sources",
   "avSources.button.test": "Test",

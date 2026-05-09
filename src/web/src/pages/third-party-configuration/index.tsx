@@ -3,9 +3,11 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Tab, Tabs } from "@heroui/react";
+import { AiOutlineVideoCamera } from "react-icons/ai";
 
 import ThirdPartyIcon from "@/components/ThirdPartyIcon";
 import {
+  AvSourcesConfigPanel,
   BangumiConfigPanel,
   BilibiliConfigPanel,
   CienConfigPanel,
@@ -36,6 +38,11 @@ const THIRD_PARTY_TAB_KEY_TO_ID: Record<string, ThirdPartyId> = {
   tmdb: ThirdPartyId.Tmdb,
 };
 
+// Tabs that don't map to a single ThirdPartyId — render with a local icon instead.
+const CUSTOM_TAB_ICONS: Record<string, React.ReactNode> = {
+  avSources: <AiOutlineVideoCamera className="text-base" />,
+};
+
 function ThirdPartyTabTip({ tipKey }: { tipKey?: string }) {
   const { t } = useTranslation();
   if (!tipKey) return null;
@@ -49,6 +56,7 @@ function ThirdPartyTabTip({ tipKey }: { tipKey?: string }) {
 }
 
 export default function ThirdPartyConfigurationPage() {
+  const { t } = useTranslation();
   const thirdPartySettings = useMemo(
     () => [
       { key: "bilibili", label: "Bilibili", tip: "thirdPartyConfig.tip.bilibili", content: <BilibiliConfigPanel fields="all" /> },
@@ -63,8 +71,9 @@ export default function ThirdPartyConfigurationPage() {
       { key: "fantia", label: "Fantia", tip: "thirdPartyConfig.tip.fantia", content: <FantiaConfigPanel fields="all" /> },
       { key: "patreon", label: "Patreon", tip: "thirdPartyConfig.tip.patreon", content: <PatreonConfigPanel fields="all" /> },
       { key: "tmdb", label: "TMDB", tip: "thirdPartyConfig.tip.tmdb", content: <TmdbConfigPanel fields="all" /> },
+      { key: "avSources", label: t("avSources.tab.label", "AV Sources"), content: <AvSourcesConfigPanel /> },
     ],
-    [],
+    [t],
   );
 
   return (
@@ -74,7 +83,11 @@ export default function ThirdPartyConfigurationPage() {
           key={s.key}
           title={
             <div className="flex items-center gap-2">
-              <ThirdPartyIcon size="sm" thirdPartyId={THIRD_PARTY_TAB_KEY_TO_ID[s.key]} />
+              {THIRD_PARTY_TAB_KEY_TO_ID[s.key] !== undefined ? (
+                <ThirdPartyIcon size="sm" thirdPartyId={THIRD_PARTY_TAB_KEY_TO_ID[s.key]} />
+              ) : (
+                CUSTOM_TAB_ICONS[s.key] ?? null
+              )}
               <span>{s.label}</span>
             </div>
           }

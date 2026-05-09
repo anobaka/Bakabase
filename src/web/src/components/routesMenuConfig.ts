@@ -57,7 +57,6 @@ import DownloaderPage from "@/pages/downloader";
 import FileMoverPage from "@/pages/file-mover";
 import FileNameModifier from "@/pages/file-name-modifier";
 import ThirdPartyIntegrationPage from "@/pages/third-party-integration";
-import AvSourcesPage from "@/pages/av-sources";
 import PostParserPage from "@/pages/post-parser";
 import ResourceProfilePage from "@/pages/resource-profile";
 import PathRuleConfigPage from "@/pages/path-mark-config";
@@ -386,15 +385,6 @@ export const routesMenuConfig: RouteMenuItem[] = [
         icon: TbToolsKitchen,
         layout: "basic",
         menu: true,
-      },
-      {
-        name: "menu.avSources",
-        path: "/av-sources",
-        component: AvSourcesPage,
-        icon: AiOutlineRadarChart,
-        layout: "basic",
-        menu: true,
-        isBeta: true,
       },
       {
         name: "menu.backgroundTask",
