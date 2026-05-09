@@ -8,6 +8,7 @@ using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.App.Upgrade.Abstractions;
 using Bakabase.Infrastructures.Components.Orm;
 using Bakabase.InsideWorld.Business;
+using Sentry;
 using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Compression;
 using Bakabase.InsideWorld.Business.Components.Configurations;
@@ -178,6 +179,30 @@ namespace Bakabase.Service.Components
             services.AddSingleton<IDeviceIdService, DeviceIdService>();
             // Scoped because TelemetrySnapshotService consumes the scoped BakabaseDbContext.
             services.AddScoped<ITelemetrySnapshotService, TelemetrySnapshotService>();
+
+            // Sentry backend SDK. Initialised programmatically (rather than via the more
+            // common WebHostBuilder.UseSentry() pattern) because our IHostBuilder is built
+            // by the Bakabase.Infrastructures library and we don't have a clean hook there.
+            // SentrySdk.Init wires up the global unhandled-exception handlers; the
+            // Sentry.AspNetCore HostingStartup attribute auto-attaches the diagnostic
+            // listener that captures HTTP request errors. Backend DSN is intentionally
+            // separate from the frontend's (per design decision §16, item 2 — two projects).
+            var backendSentryDsn = Configuration["Analytics:Sentry:BackendDsn"];
+            if (!string.IsNullOrWhiteSpace(backendSentryDsn))
+            {
+                SentrySdk.Init(o =>
+                {
+                    o.Dsn = backendSentryDsn;
+                    o.Release = AppService.CoreVersion.ToString();
+                    o.Environment = Env.EnvironmentName;
+                    // Performance tracing off — we want errors only, to stay within free tier.
+                    o.TracesSampleRate = 0;
+                });
+                SentrySdk.ConfigureScope(scope =>
+                {
+                    scope.SetTag("release_channel", ReleaseChannelDetector.Detect(Env));
+                });
+            }
         }
 
         protected override void ConfigureEndpointsAtFirst(IEndpointRouteBuilder routeBuilder)
@@ -199,6 +224,14 @@ namespace Bakabase.Service.Components
                 appService.AnchorPath,
                 appService.AppDataDirectory,
                 appService.DataPathSource);
+
+            // Attach the anonymous device id to the Sentry global scope. SentryHub treats
+            // user.id specially for "Crash-free Users" calculations.
+            if (SentrySdk.IsEnabled)
+            {
+                var deviceId = app.ApplicationServices.GetRequiredService<IDeviceIdService>().GetOrCreate();
+                SentrySdk.ConfigureScope(scope => scope.User = new SentryUser { Id = deviceId });
+            }
 
             // Enable MiniProfiler - should be early in the pipeline
             app.UseMiniProfiler();
