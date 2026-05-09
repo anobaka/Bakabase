@@ -2484,6 +2484,24 @@ export interface BakabaseModulesAIModelsDbAiFeatureConfigDbModel {
   topP?: number;
 }
 
+export interface BakabaseModulesAIModelsDbAiProviderDbModel {
+  /** @format int32 */
+  id: number;
+  /** [1: OpenAI, 2: Claude, 3: Ollama, 4: DashScope, 5: Gemini, 100: StableDiffusionWebUI, 101: ComfyUI, 199: HttpCustom] */
+  kind: BakabaseModulesAIModelsDomainAiProviderKind;
+  name: string;
+  endpoint?: string;
+  apiKey?: string;
+  isEnabled: boolean;
+  llmEnabled: boolean;
+  aigcEnabled: boolean;
+  aigcConfigJson?: string;
+  /** @format date-time */
+  createdAt: string;
+  /** @format date-time */
+  updatedAt: string;
+}
+
 export interface BakabaseModulesAIModelsDbAigcArtifactDbModel {
   /** @format int32 */
   id: number;
@@ -2552,22 +2570,6 @@ export interface BakabaseModulesAIModelsDbAigcGeneratorPropertyPresetDbModel {
   serializedBizValue?: string;
 }
 
-export interface BakabaseModulesAIModelsDbAigcProviderConfigDbModel {
-  /** @format int32 */
-  id: number;
-  /** [1: StableDiffusionWebUI, 2: ComfyUI, 3: OpenAIImage, 4: GeminiImage, 99: HttpCustom] */
-  kind: BakabaseModulesAIModelsDomainAigcProviderKind;
-  name: string;
-  endpoint?: string;
-  apiKey?: string;
-  isEnabled: boolean;
-  configJson?: string;
-  /** @format date-time */
-  createdAt: string;
-  /** @format date-time */
-  updatedAt: string;
-}
-
 export interface BakabaseModulesAIModelsDbChatConversationDbModel {
   /** @format int32 */
   id: number;
@@ -2611,21 +2613,6 @@ export interface BakabaseModulesAIModelsDbLlmCallCacheEntryDbModel {
   hitCount: number;
 }
 
-export interface BakabaseModulesAIModelsDbLlmProviderConfigDbModel {
-  /** @format int32 */
-  id: number;
-  /** [1: OpenAI, 2: Claude, 3: Ollama, 4: DashScope, 5: Gemini] */
-  providerType: BakabaseModulesAIModelsDomainLlmProviderType;
-  name: string;
-  endpoint?: string;
-  apiKey?: string;
-  isEnabled: boolean;
-  /** @format date-time */
-  createdAt: string;
-  /** @format date-time */
-  updatedAt: string;
-}
-
 export interface BakabaseModulesAIModelsDbLlmUsageLogDbModel {
   /** @format int64 */
   id: number;
@@ -2658,6 +2645,30 @@ export interface BakabaseModulesAIModelsDbLlmUsageLogDbModel {
 export type BakabaseModulesAIModelsDomainAiFeature = 0 | 1 | 2 | 3 | 4 | 5;
 
 /**
+ * [0: None, 1: Llm, 2: Aigc]
+ * @format int32
+ */
+export type BakabaseModulesAIModelsDomainAiProviderCapability = 0 | 1 | 2;
+
+/**
+ * [1: OpenAI, 2: Claude, 3: Ollama, 4: DashScope, 5: Gemini, 100: StableDiffusionWebUI, 101: ComfyUI, 199: HttpCustom]
+ * @format int32
+ */
+export type BakabaseModulesAIModelsDomainAiProviderKind = 1 | 2 | 3 | 4 | 5 | 100 | 101 | 199;
+
+export interface BakabaseModulesAIModelsDomainAiProviderKindInfo {
+  /** [1: OpenAI, 2: Claude, 3: Ollama, 4: DashScope, 5: Gemini, 100: StableDiffusionWebUI, 101: ComfyUI, 199: HttpCustom] */
+  kind: BakabaseModulesAIModelsDomainAiProviderKind;
+  displayName: string;
+  /** [0: None, 1: Llm, 2: Aigc] */
+  capabilities: BakabaseModulesAIModelsDomainAiProviderCapability;
+  requiresApiKey: boolean;
+  requiresEndpoint: boolean;
+  defaultEndpoint?: string;
+  supportedAigcMediaTypes: BakabaseModulesAIModelsDomainAigcMediaType[];
+}
+
+/**
  * [1: PerArtifact, 2: PerRun]
  * @format int32
  */
@@ -2681,22 +2692,6 @@ export interface BakabaseModulesAIModelsDomainAigcGeneratorView {
 export type BakabaseModulesAIModelsDomainAigcMediaType = 1 | 2 | 3 | 4 | 99;
 
 /**
- * [1: StableDiffusionWebUI, 2: ComfyUI, 3: OpenAIImage, 4: GeminiImage, 99: HttpCustom]
- * @format int32
- */
-export type BakabaseModulesAIModelsDomainAigcProviderKind = 1 | 2 | 3 | 4 | 99;
-
-export interface BakabaseModulesAIModelsDomainAigcProviderKindInfo {
-  /** [1: StableDiffusionWebUI, 2: ComfyUI, 3: OpenAIImage, 4: GeminiImage, 99: HttpCustom] */
-  kind: BakabaseModulesAIModelsDomainAigcProviderKind;
-  displayName: string;
-  supportedMediaTypes: BakabaseModulesAIModelsDomainAigcMediaType[];
-  requiresApiKey: boolean;
-  requiresEndpoint: boolean;
-  defaultEndpoint?: string;
-}
-
-/**
  * [1: Success, 2: Error, 3: Timeout, 4: Cancelled]
  * @format int32
  */
@@ -2713,23 +2708,6 @@ export interface BakabaseModulesAIModelsDomainLlmModelInfo {
   displayName: string;
   /** [0: None, 1: Chat, 2: ToolCalling, 4: Vision, 8: Streaming, 16: Embedding, 32: JsonMode] */
   capabilities: BakabaseModulesAIModelsDomainLlmCapabilities;
-}
-
-/**
- * [1: OpenAI, 2: Claude, 3: Ollama, 4: DashScope, 5: Gemini]
- * @format int32
- */
-export type BakabaseModulesAIModelsDomainLlmProviderType = 1 | 2 | 3 | 4 | 5;
-
-export interface BakabaseModulesAIModelsDomainLlmProviderTypeInfo {
-  /** [1: OpenAI, 2: Claude, 3: Ollama, 4: DashScope, 5: Gemini] */
-  type: BakabaseModulesAIModelsDomainLlmProviderType;
-  displayName: string;
-  /** [0: None, 1: Chat, 2: ToolCalling, 4: Vision, 8: Streaming, 16: Embedding, 32: JsonMode] */
-  defaultCapabilities: BakabaseModulesAIModelsDomainLlmCapabilities;
-  requiresApiKey: boolean;
-  requiresEndpoint: boolean;
-  defaultEndpoint?: string;
 }
 
 export interface BakabaseModulesAIModelsDomainLlmQuotaConfig {
@@ -2773,6 +2751,37 @@ export interface BakabaseModulesAIModelsInputAiFeatureConfigInputModel {
   maxTokens?: number;
   /** @format float */
   topP?: number;
+}
+
+export interface BakabaseModulesAIModelsInputAiProviderAddInputModel {
+  /** [1: OpenAI, 2: Claude, 3: Ollama, 4: DashScope, 5: Gemini, 100: StableDiffusionWebUI, 101: ComfyUI, 199: HttpCustom] */
+  kind: BakabaseModulesAIModelsDomainAiProviderKind;
+  name: string;
+  endpoint?: string;
+  apiKey?: string;
+  isEnabled: boolean;
+  llmEnabled: boolean;
+  aigcEnabled: boolean;
+  aigcConfigJson?: string;
+}
+
+export interface BakabaseModulesAIModelsInputAiProviderTestResult {
+  llm?: boolean;
+  aigc?: boolean;
+  llmMessage?: string;
+  aigcMessage?: string;
+}
+
+export interface BakabaseModulesAIModelsInputAiProviderUpdateInputModel {
+  /** [1: OpenAI, 2: Claude, 3: Ollama, 4: DashScope, 5: Gemini, 100: StableDiffusionWebUI, 101: ComfyUI, 199: HttpCustom] */
+  kind?: BakabaseModulesAIModelsDomainAiProviderKind;
+  name?: string;
+  endpoint?: string;
+  apiKey?: string;
+  isEnabled?: boolean;
+  llmEnabled?: boolean;
+  aigcEnabled?: boolean;
+  aigcConfigJson?: string;
 }
 
 export interface BakabaseModulesAIModelsInputAigcArtifactImportInputModel {
@@ -2827,26 +2836,6 @@ export interface BakabaseModulesAIModelsInputAigcGeneratorUpdateInputModel {
   propertyPresets?: BakabaseModulesAIModelsInputAigcGeneratorPropertyPresetInputModel[];
 }
 
-export interface BakabaseModulesAIModelsInputAigcProviderConfigAddInputModel {
-  /** [1: StableDiffusionWebUI, 2: ComfyUI, 3: OpenAIImage, 4: GeminiImage, 99: HttpCustom] */
-  kind: BakabaseModulesAIModelsDomainAigcProviderKind;
-  name: string;
-  endpoint?: string;
-  apiKey?: string;
-  configJson?: string;
-  isEnabled: boolean;
-}
-
-export interface BakabaseModulesAIModelsInputAigcProviderConfigUpdateInputModel {
-  /** [1: StableDiffusionWebUI, 2: ComfyUI, 3: OpenAIImage, 4: GeminiImage, 99: HttpCustom] */
-  kind?: BakabaseModulesAIModelsDomainAigcProviderKind;
-  name?: string;
-  endpoint?: string;
-  apiKey?: string;
-  configJson?: string;
-  isEnabled?: boolean;
-}
-
 export interface BakabaseModulesAIModelsInputApplyFileOperationsInputModel {
   operations: BakabaseModulesAIServicesFileOperation[];
 }
@@ -2867,24 +2856,6 @@ export interface BakabaseModulesAIModelsInputFileProcessorPathsInputModel {
   filePaths: string[];
   workingDirectory?: string;
   referencePaths?: string[];
-}
-
-export interface BakabaseModulesAIModelsInputLlmProviderConfigAddInputModel {
-  /** [1: OpenAI, 2: Claude, 3: Ollama, 4: DashScope, 5: Gemini] */
-  providerType: BakabaseModulesAIModelsDomainLlmProviderType;
-  name: string;
-  endpoint?: string;
-  apiKey?: string;
-  isEnabled: boolean;
-}
-
-export interface BakabaseModulesAIModelsInputLlmProviderConfigUpdateInputModel {
-  /** [1: OpenAI, 2: Claude, 3: Ollama, 4: DashScope, 5: Gemini] */
-  providerType?: BakabaseModulesAIModelsDomainLlmProviderType;
-  name?: string;
-  endpoint?: string;
-  apiKey?: string;
-  isEnabled?: boolean;
 }
 
 export interface BakabaseModulesAIModelsInputPathSimilarityGroupInputModel {
@@ -4713,6 +4684,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesAIMode
   data?: BakabaseModulesAIModelsDbAiFeatureConfigDbModel[];
 }
 
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDbAiProviderDbModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesAIModelsDbAiProviderDbModel[];
+}
+
 export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDbAigcArtifactDbModel {
   /** @format int32 */
   code: number;
@@ -4725,13 +4703,6 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesAIMode
   code: number;
   message?: string;
   data?: BakabaseModulesAIModelsDbAigcGenerationRunDbModel[];
-}
-
-export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDbAigcProviderConfigDbModel {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseModulesAIModelsDbAigcProviderConfigDbModel[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDbChatConversationDbModel {
@@ -4755,18 +4726,18 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesAIMode
   data?: BakabaseModulesAIModelsDbLlmCallCacheEntryDbModel[];
 }
 
-export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDbLlmProviderConfigDbModel {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseModulesAIModelsDbLlmProviderConfigDbModel[];
-}
-
 export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDbLlmUsageLogDbModel {
   /** @format int32 */
   code: number;
   message?: string;
   data?: BakabaseModulesAIModelsDbLlmUsageLogDbModel[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDomainAiProviderKindInfo {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesAIModelsDomainAiProviderKindInfo[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDomainAigcGeneratorView {
@@ -4776,25 +4747,11 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesAIMode
   data?: BakabaseModulesAIModelsDomainAigcGeneratorView[];
 }
 
-export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDomainAigcProviderKindInfo {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseModulesAIModelsDomainAigcProviderKindInfo[];
-}
-
 export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDomainLlmModelInfo {
   /** @format int32 */
   code: number;
   message?: string;
   data?: BakabaseModulesAIModelsDomainLlmModelInfo[];
-}
-
-export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDomainLlmProviderTypeInfo {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseModulesAIModelsDomainLlmProviderTypeInfo[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesDataCardAbstractionsModelsDomainDataCardType {
@@ -5474,6 +5431,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesA
   data?: BakabaseModulesAIModelsDbAiFeatureConfigDbModel;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIModelsDbAiProviderDbModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesAIModelsDbAiProviderDbModel;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIModelsDbAigcGenerationRunDbModel {
   /** @format int32 */
   code: number;
@@ -5481,25 +5445,11 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesA
   data?: BakabaseModulesAIModelsDbAigcGenerationRunDbModel;
 }
 
-export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIModelsDbAigcProviderConfigDbModel {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseModulesAIModelsDbAigcProviderConfigDbModel;
-}
-
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIModelsDbChatConversationDbModel {
   /** @format int32 */
   code: number;
   message?: string;
   data?: BakabaseModulesAIModelsDbChatConversationDbModel;
-}
-
-export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIModelsDbLlmProviderConfigDbModel {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseModulesAIModelsDbLlmProviderConfigDbModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIModelsDomainAigcGeneratorView {
@@ -5514,6 +5464,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesA
   code: number;
   message?: string;
   data?: BakabaseModulesAIModelsDomainResourceTranslationResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIModelsInputAiProviderTestResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesAIModelsInputAiProviderTestResult;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIServicesApplyOperationsResult {
@@ -6815,15 +6772,15 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags AI
-     * @name AddLlmProvider
+     * @name AddAiProvider
      * @request POST:/ai/providers
      */
-    addLlmProvider: (
-      data: BakabaseModulesAIModelsInputLlmProviderConfigAddInputModel,
+    addAiProvider: (
+      data: BakabaseModulesAIModelsInputAiProviderAddInputModel,
       params: RequestParams = {},
     ) =>
       this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIModelsDbLlmProviderConfigDbModel,
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIModelsDbAiProviderDbModel,
         any
       >({
         path: `/ai/providers`,
@@ -6835,10 +6792,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }),
 
     /**
-     * @description Build URL for addLlmProvider
-     * @name addLlmProviderUrl
+     * @description Build URL for addAiProvider
+     * @name addAiProviderUrl
      */
-    addLlmProviderUrl: () => {
+    addAiProviderUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/ai/providers`;
       
@@ -6849,12 +6806,12 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags AI
-     * @name GetAllLlmProviders
+     * @name GetAllAiProviders
      * @request GET:/ai/providers
      */
-    getAllLlmProviders: (params: RequestParams = {}) =>
+    getAllAiProviders: (params: RequestParams = {}) =>
       this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDbLlmProviderConfigDbModel,
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDbAiProviderDbModel,
         any
       >({
         path: `/ai/providers`,
@@ -6864,10 +6821,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }),
 
     /**
-     * @description Build URL for getAllLlmProviders
-     * @name getAllLlmProvidersUrl
+     * @description Build URL for getAllAiProviders
+     * @name getAllAiProvidersUrl
      */
-    getAllLlmProvidersUrl: () => {
+    getAllAiProvidersUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/ai/providers`;
       
@@ -6878,12 +6835,12 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags AI
-     * @name GetLlmProvider
+     * @name GetAiProvider
      * @request GET:/ai/providers/{id}
      */
-    getLlmProvider: (id: number, params: RequestParams = {}) =>
+    getAiProvider: (id: number, params: RequestParams = {}) =>
       this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIModelsDbLlmProviderConfigDbModel,
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIModelsDbAiProviderDbModel,
         any
       >({
         path: `/ai/providers/${id}`,
@@ -6896,16 +6853,16 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags AI
-     * @name UpdateLlmProvider
+     * @name UpdateAiProvider
      * @request PUT:/ai/providers/{id}
      */
-    updateLlmProvider: (
+    updateAiProvider: (
       id: number,
-      data: BakabaseModulesAIModelsInputLlmProviderConfigUpdateInputModel,
+      data: BakabaseModulesAIModelsInputAiProviderUpdateInputModel,
       params: RequestParams = {},
     ) =>
       this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIModelsDbLlmProviderConfigDbModel,
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIModelsDbAiProviderDbModel,
         any
       >({
         path: `/ai/providers/${id}`,
@@ -6920,10 +6877,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags AI
-     * @name DeleteLlmProvider
+     * @name DeleteAiProvider
      * @request DELETE:/ai/providers/{id}
      */
-    deleteLlmProvider: (id: number, params: RequestParams = {}) =>
+    deleteAiProvider: (id: number, params: RequestParams = {}) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/ai/providers/${id}`,
         method: "DELETE",
@@ -6935,11 +6892,14 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags AI
-     * @name TestLlmProvider
+     * @name TestAiProvider
      * @request POST:/ai/providers/{id}/test
      */
-    testLlmProvider: (id: number, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemBoolean, any>({
+    testAiProvider: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIModelsInputAiProviderTestResult,
+        any
+      >({
         path: `/ai/providers/${id}/test`,
         method: "POST",
         format: "json",
@@ -6950,10 +6910,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags AI
-     * @name GetLlmProviderModels
+     * @name GetAiProviderLlmModels
      * @request GET:/ai/providers/{id}/models
      */
-    getLlmProviderModels: (id: number, params: RequestParams = {}) =>
+    getAiProviderLlmModels: (id: number, params: RequestParams = {}) =>
       this.request<
         BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDomainLlmModelInfo,
         any
@@ -6968,27 +6928,27 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags AI
-     * @name GetLlmProviderTypes
-     * @request GET:/ai/provider-types
+     * @name GetAiProviderKinds
+     * @request GET:/ai/provider-kinds
      */
-    getLlmProviderTypes: (params: RequestParams = {}) =>
+    getAiProviderKinds: (params: RequestParams = {}) =>
       this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDomainLlmProviderTypeInfo,
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDomainAiProviderKindInfo,
         any
       >({
-        path: `/ai/provider-types`,
+        path: `/ai/provider-kinds`,
         method: "GET",
         format: "json",
         ...params,
       }),
 
     /**
-     * @description Build URL for getLlmProviderTypes
-     * @name getLlmProviderTypesUrl
+     * @description Build URL for getAiProviderKinds
+     * @name getAiProviderKindsUrl
      */
-    getLlmProviderTypesUrl: () => {
+    getAiProviderKindsUrl: () => {
       const baseUrl = this.baseUrl || "";
-      let path = `/ai/provider-types`;
+      let path = `/ai/provider-kinds`;
       
       return baseUrl + path;
     },
@@ -7566,12 +7526,12 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Aigc
-     * @name GetAllAigcProviders
+     * @name GetEnabledAigcProviders
      * @request GET:/aigc/providers
      */
-    getAllAigcProviders: (params: RequestParams = {}) =>
+    getEnabledAigcProviders: (params: RequestParams = {}) =>
       this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDbAigcProviderConfigDbModel,
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDbAiProviderDbModel,
         any
       >({
         path: `/aigc/providers`,
@@ -7581,147 +7541,12 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }),
 
     /**
-     * @description Build URL for getAllAigcProviders
-     * @name getAllAigcProvidersUrl
+     * @description Build URL for getEnabledAigcProviders
+     * @name getEnabledAigcProvidersUrl
      */
-    getAllAigcProvidersUrl: () => {
+    getEnabledAigcProvidersUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/aigc/providers`;
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Aigc
-     * @name AddAigcProvider
-     * @request POST:/aigc/providers
-     */
-    addAigcProvider: (
-      data: BakabaseModulesAIModelsInputAigcProviderConfigAddInputModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIModelsDbAigcProviderConfigDbModel,
-        any
-      >({
-        path: `/aigc/providers`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for addAigcProvider
-     * @name addAigcProviderUrl
-     */
-    addAigcProviderUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/aigc/providers`;
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Aigc
-     * @name GetAigcProvider
-     * @request GET:/aigc/providers/{id}
-     */
-    getAigcProvider: (id: number, params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIModelsDbAigcProviderConfigDbModel,
-        any
-      >({
-        path: `/aigc/providers/${id}`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Aigc
-     * @name UpdateAigcProvider
-     * @request PUT:/aigc/providers/{id}
-     */
-    updateAigcProvider: (
-      id: number,
-      data: BakabaseModulesAIModelsInputAigcProviderConfigUpdateInputModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIModelsDbAigcProviderConfigDbModel,
-        any
-      >({
-        path: `/aigc/providers/${id}`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Aigc
-     * @name DeleteAigcProvider
-     * @request DELETE:/aigc/providers/{id}
-     */
-    deleteAigcProvider: (id: number, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/aigc/providers/${id}`,
-        method: "DELETE",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Aigc
-     * @name TestAigcProvider
-     * @request POST:/aigc/providers/{id}/test
-     */
-    testAigcProvider: (id: number, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemBoolean, any>({
-        path: `/aigc/providers/${id}/test`,
-        method: "POST",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Aigc
-     * @name GetAigcProviderKinds
-     * @request GET:/aigc/provider-kinds
-     */
-    getAigcProviderKinds: (params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDomainAigcProviderKindInfo,
-        any
-      >({
-        path: `/aigc/provider-kinds`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for getAigcProviderKinds
-     * @name getAigcProviderKindsUrl
-     */
-    getAigcProviderKindsUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/aigc/provider-kinds`;
       
       return baseUrl + path;
     },

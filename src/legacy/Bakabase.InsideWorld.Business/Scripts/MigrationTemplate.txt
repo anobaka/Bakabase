@@ -1,12 +1,5 @@
-﻿dotnet ef migrations add Init --verbose --project legacy/Bakabase.InsideWorld.Business --startup-project Bakabase.Service --context BakabaseDbContext
+﻿dotnet ef migrations add Init --verbose --project legacy/Bakabase.InsideWorld.Business --startup-project apps/Bakabase.Service --context BakabaseDbContext
 
-Add-Migration Init -v -p Bakabase.InsideWorld.Business -s Bakabase.Service -Context BakabaseDbContext;
+Add-Migration Init -v -p legacy/Bakabase.InsideWorld.Business -s apps/Bakabase.Service -Context BakabaseDbContext;
 
-Remove-Migration -v -c BakabaseDbContext -p Bakabase.InsideWorld.Business -s Bakabase.Service;
-
-
-
-Add-Migration Init -v -p Bakabase.InsideWorld.Business -s Bakabase.InsideWorld.App -Context NotificationDbContext;
-Add-Migration Init -v -p Bakabase.InsideWorld.Business -s Bakabase.InsideWorld.App -Context LogDbContext;
-Add-Migration Init -v -p Bakabase.InsideWorld.Business -s Bakabase.InsideWorld.App -Context SystemPropertyDbContext;
-Add-Migration Init -v -p Bakabase.InsideWorld.Business -s Bakabase.InsideWorld.App -Context StorageDbContext;
+Remove-Migration -v -c BakabaseDbContext -p legacy/Bakabase.InsideWorld.Business -s apps/Bakabase.Service;

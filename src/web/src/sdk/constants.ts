@@ -3571,28 +3571,55 @@ export const AigcMediaTypeLabel: Record<AigcMediaType, string> = {
   [AigcMediaType.Other]: 'Other'
 };
 
-export enum AigcProviderKind {
-  StableDiffusionWebUI = 1,
-  ComfyUI = 2,
-  OpenAIImage = 3,
-  GeminiImage = 4,
-  HttpCustom = 99
+export enum AiProviderCapability {
+  None = 0,
+  Llm = 1,
+  Aigc = 2
 }
 
-export const aigcProviderKinds = [
-  { label: 'StableDiffusionWebUI', value: AigcProviderKind.StableDiffusionWebUI },
-  { label: 'ComfyUI', value: AigcProviderKind.ComfyUI },
-  { label: 'OpenAIImage', value: AigcProviderKind.OpenAIImage },
-  { label: 'GeminiImage', value: AigcProviderKind.GeminiImage },
-  { label: 'HttpCustom', value: AigcProviderKind.HttpCustom }
+export const aiProviderCapabilities = [
+  { label: 'None', value: AiProviderCapability.None },
+  { label: 'Llm', value: AiProviderCapability.Llm },
+  { label: 'Aigc', value: AiProviderCapability.Aigc }
 ] as const;
 
-export const AigcProviderKindLabel: Record<AigcProviderKind, string> = {
-  [AigcProviderKind.StableDiffusionWebUI]: 'StableDiffusionWebUI',
-  [AigcProviderKind.ComfyUI]: 'ComfyUI',
-  [AigcProviderKind.OpenAIImage]: 'OpenAIImage',
-  [AigcProviderKind.GeminiImage]: 'GeminiImage',
-  [AigcProviderKind.HttpCustom]: 'HttpCustom'
+export const AiProviderCapabilityLabel: Record<AiProviderCapability, string> = {
+  [AiProviderCapability.None]: 'None',
+  [AiProviderCapability.Llm]: 'Llm',
+  [AiProviderCapability.Aigc]: 'Aigc'
+};
+
+export enum AiProviderKind {
+  OpenAI = 1,
+  Claude = 2,
+  Ollama = 3,
+  DashScope = 4,
+  Gemini = 5,
+  StableDiffusionWebUI = 100,
+  ComfyUI = 101,
+  HttpCustom = 199
+}
+
+export const aiProviderKinds = [
+  { label: 'OpenAI', value: AiProviderKind.OpenAI },
+  { label: 'Claude', value: AiProviderKind.Claude },
+  { label: 'Ollama', value: AiProviderKind.Ollama },
+  { label: 'DashScope', value: AiProviderKind.DashScope },
+  { label: 'Gemini', value: AiProviderKind.Gemini },
+  { label: 'StableDiffusionWebUI', value: AiProviderKind.StableDiffusionWebUI },
+  { label: 'ComfyUI', value: AiProviderKind.ComfyUI },
+  { label: 'HttpCustom', value: AiProviderKind.HttpCustom }
+] as const;
+
+export const AiProviderKindLabel: Record<AiProviderKind, string> = {
+  [AiProviderKind.OpenAI]: 'OpenAI',
+  [AiProviderKind.Claude]: 'Claude',
+  [AiProviderKind.Ollama]: 'Ollama',
+  [AiProviderKind.DashScope]: 'DashScope',
+  [AiProviderKind.Gemini]: 'Gemini',
+  [AiProviderKind.StableDiffusionWebUI]: 'StableDiffusionWebUI',
+  [AiProviderKind.ComfyUI]: 'ComfyUI',
+  [AiProviderKind.HttpCustom]: 'HttpCustom'
 };
 
 export enum LlmCallStatus {
@@ -3644,30 +3671,6 @@ export const LlmCapabilitiesLabel: Record<LlmCapabilities, string> = {
   [LlmCapabilities.Streaming]: 'Streaming',
   [LlmCapabilities.Embedding]: 'Embedding',
   [LlmCapabilities.JsonMode]: 'JsonMode'
-};
-
-export enum LlmProviderType {
-  OpenAI = 1,
-  Claude = 2,
-  Ollama = 3,
-  DashScope = 4,
-  Gemini = 5
-}
-
-export const llmProviderTypes = [
-  { label: 'OpenAI', value: LlmProviderType.OpenAI },
-  { label: 'Claude', value: LlmProviderType.Claude },
-  { label: 'Ollama', value: LlmProviderType.Ollama },
-  { label: 'DashScope', value: LlmProviderType.DashScope },
-  { label: 'Gemini', value: LlmProviderType.Gemini }
-] as const;
-
-export const LlmProviderTypeLabel: Record<LlmProviderType, string> = {
-  [LlmProviderType.OpenAI]: 'OpenAI',
-  [LlmProviderType.Claude]: 'Claude',
-  [LlmProviderType.Ollama]: 'Ollama',
-  [LlmProviderType.DashScope]: 'DashScope',
-  [LlmProviderType.Gemini]: 'Gemini'
 };
 
 export enum BulkModificationProcessorOptionsItemsFilterBy {

@@ -11,9 +11,9 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["GetAllLlmProviders"];
+        get: operations["GetAllAiProviders"];
         put?: never;
-        post: operations["AddLlmProvider"];
+        post: operations["AddAiProvider"];
         delete?: never;
         options?: never;
         head?: never;
@@ -27,10 +27,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["GetLlmProvider"];
-        put: operations["UpdateLlmProvider"];
+        get: operations["GetAiProvider"];
+        put: operations["UpdateAiProvider"];
         post?: never;
-        delete: operations["DeleteLlmProvider"];
+        delete: operations["DeleteAiProvider"];
         options?: never;
         head?: never;
         patch?: never;
@@ -45,7 +45,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["TestLlmProvider"];
+        post: operations["TestAiProvider"];
         delete?: never;
         options?: never;
         head?: never;
@@ -59,7 +59,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["GetLlmProviderModels"];
+        get: operations["GetAiProviderLlmModels"];
         put?: never;
         post?: never;
         delete?: never;
@@ -68,14 +68,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/ai/provider-types": {
+    "/ai/provider-kinds": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["GetLlmProviderTypes"];
+        get: operations["GetAiProviderKinds"];
         put?: never;
         post?: never;
         delete?: never;
@@ -319,6 +319,150 @@ export interface paths {
         put?: never;
         post: operations["AiApplyFileOperations"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/aigc/providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetEnabledAigcProviders"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/aigc/generators": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAllAigcGenerators"];
+        put?: never;
+        post: operations["AddAigcGenerator"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/aigc/generators/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAigcGenerator"];
+        put: operations["UpdateAigcGenerator"];
+        post?: never;
+        delete: operations["DeleteAigcGenerator"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/aigc/generators/{id}/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["TriggerAigcGeneration"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/aigc/generators/{id}/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ImportAigcArtifacts"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/aigc/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAigcRuns"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/aigc/runs/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAigcRun"];
+        put?: never;
+        post?: never;
+        delete: operations["DeleteAigcRun"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/aigc/artifacts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAigcArtifacts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/aigc/artifacts/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["DeleteAigcArtifact"];
         options?: never;
         head?: never;
         patch?: never;
@@ -5684,10 +5828,10 @@ export interface components {
         "Bakabase.Abstractions.Models.Domain.Constants.ResourceDataType": 1 | 2 | 3;
         /**
          * Format: int32
-         * @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai]
+         * @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc]
          * @enum {integer}
          */
-        "Bakabase.Abstractions.Models.Domain.Constants.ResourceSource": 1 | 2 | 3 | 4;
+        "Bakabase.Abstractions.Models.Domain.Constants.ResourceSource": 1 | 2 | 3 | 4 | 5;
         /**
          * Format: int32
          * @description [1: Active, 2: Absent, 3: Unavailable]
@@ -7542,6 +7686,82 @@ export interface components {
             /** Format: float */
             topP?: number;
         };
+        "Bakabase.Modules.AI.Models.Db.AiProviderDbModel": {
+            /** Format: int32 */
+            id: number;
+            kind: components["schemas"]["Bakabase.Modules.AI.Models.Domain.AiProviderKind"];
+            name: string;
+            endpoint?: string;
+            apiKey?: string;
+            isEnabled: boolean;
+            llmEnabled: boolean;
+            aigcEnabled: boolean;
+            aigcConfigJson?: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        "Bakabase.Modules.AI.Models.Db.AigcArtifactDbModel": {
+            /** Format: int32 */
+            id: number;
+            /** Format: int32 */
+            runId: number;
+            /** Format: int32 */
+            generatorId: number;
+            /** Format: int32 */
+            ordinalInRun: number;
+            relativePath: string;
+            /** Format: int32 */
+            resourceId?: number;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        "Bakabase.Modules.AI.Models.Db.AigcGenerationRunDbModel": {
+            /** Format: int32 */
+            id: number;
+            /** Format: int32 */
+            generatorId: number;
+            status: components["schemas"]["Bakabase.Modules.AI.Models.Domain.AigcGenerationStatus"];
+            prompt?: string;
+            negativePrompt?: string;
+            requestPayload?: string;
+            responsePayload?: string;
+            errorMessage?: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            completedAt?: string;
+        };
+        "Bakabase.Modules.AI.Models.Db.AigcGeneratorDbModel": {
+            /** Format: int32 */
+            id: number;
+            name: string;
+            /** Format: int32 */
+            providerId: number;
+            mediaType: components["schemas"]["Bakabase.Modules.AI.Models.Domain.AigcMediaType"];
+            promptTemplate?: string;
+            negativePromptTemplate?: string;
+            parametersJson?: string;
+            filenameTemplate: string;
+            resourceMode: components["schemas"]["Bakabase.Modules.AI.Models.Domain.AigcArtifactResourceMode"];
+            allowDeletion: boolean;
+            isEnabled: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        "Bakabase.Modules.AI.Models.Db.AigcGeneratorPropertyPresetDbModel": {
+            /** Format: int32 */
+            id: number;
+            /** Format: int32 */
+            generatorId: number;
+            pool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
+            /** Format: int32 */
+            propertyId: number;
+            serializedBizValue?: string;
+        };
         "Bakabase.Modules.AI.Models.Db.ChatConversationDbModel": {
             /** Format: int32 */
             id: number;
@@ -7582,19 +7802,6 @@ export interface components {
             /** Format: int32 */
             hitCount: number;
         };
-        "Bakabase.Modules.AI.Models.Db.LlmProviderConfigDbModel": {
-            /** Format: int32 */
-            id: number;
-            providerType: components["schemas"]["Bakabase.Modules.AI.Models.Domain.LlmProviderType"];
-            name: string;
-            endpoint?: string;
-            apiKey?: string;
-            isEnabled: boolean;
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            updatedAt: string;
-        };
         "Bakabase.Modules.AI.Models.Db.LlmUsageLogDbModel": {
             /** Format: int64 */
             id: number;
@@ -7626,6 +7833,49 @@ export interface components {
         "Bakabase.Modules.AI.Models.Domain.AiFeature": 0 | 1 | 2 | 3 | 4 | 5;
         /**
          * Format: int32
+         * @description [0: None, 1: Llm, 2: Aigc]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.AI.Models.Domain.AiProviderCapability": 0 | 1 | 2;
+        /**
+         * Format: int32
+         * @description [1: OpenAI, 2: Claude, 3: Ollama, 4: DashScope, 5: Gemini, 100: StableDiffusionWebUI, 101: ComfyUI, 199: HttpCustom]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.AI.Models.Domain.AiProviderKind": 1 | 2 | 3 | 4 | 5 | 100 | 101 | 199;
+        "Bakabase.Modules.AI.Models.Domain.AiProviderKindInfo": {
+            kind: components["schemas"]["Bakabase.Modules.AI.Models.Domain.AiProviderKind"];
+            displayName: string;
+            capabilities: components["schemas"]["Bakabase.Modules.AI.Models.Domain.AiProviderCapability"];
+            requiresApiKey: boolean;
+            requiresEndpoint: boolean;
+            defaultEndpoint?: string;
+            supportedAigcMediaTypes: components["schemas"]["Bakabase.Modules.AI.Models.Domain.AigcMediaType"][];
+        };
+        /**
+         * Format: int32
+         * @description [1: PerArtifact, 2: PerRun]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.AI.Models.Domain.AigcArtifactResourceMode": 1 | 2;
+        /**
+         * Format: int32
+         * @description [1: Pending, 2: Running, 3: Succeeded, 4: Failed, 5: Imported]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.AI.Models.Domain.AigcGenerationStatus": 1 | 2 | 3 | 4 | 5;
+        "Bakabase.Modules.AI.Models.Domain.AigcGeneratorView": {
+            generator: components["schemas"]["Bakabase.Modules.AI.Models.Db.AigcGeneratorDbModel"];
+            propertyPresets: components["schemas"]["Bakabase.Modules.AI.Models.Db.AigcGeneratorPropertyPresetDbModel"][];
+        };
+        /**
+         * Format: int32
+         * @description [1: Image, 2: Text, 3: Audio, 4: Video, 99: Other]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.AI.Models.Domain.AigcMediaType": 1 | 2 | 3 | 4 | 99;
+        /**
+         * Format: int32
          * @description [1: Success, 2: Error, 3: Timeout, 4: Cancelled]
          * @enum {integer}
          */
@@ -7640,20 +7890,6 @@ export interface components {
             modelId: string;
             displayName: string;
             capabilities: components["schemas"]["Bakabase.Modules.AI.Models.Domain.LlmCapabilities"];
-        };
-        /**
-         * Format: int32
-         * @description [1: OpenAI, 2: Claude, 3: Ollama, 4: DashScope, 5: Gemini]
-         * @enum {integer}
-         */
-        "Bakabase.Modules.AI.Models.Domain.LlmProviderType": 1 | 2 | 3 | 4 | 5;
-        "Bakabase.Modules.AI.Models.Domain.LlmProviderTypeInfo": {
-            type: components["schemas"]["Bakabase.Modules.AI.Models.Domain.LlmProviderType"];
-            displayName: string;
-            defaultCapabilities: components["schemas"]["Bakabase.Modules.AI.Models.Domain.LlmCapabilities"];
-            requiresApiKey: boolean;
-            requiresEndpoint: boolean;
-            defaultEndpoint?: string;
         };
         "Bakabase.Modules.AI.Models.Domain.LlmQuotaConfig": {
             /** Format: int32 */
@@ -7690,6 +7926,76 @@ export interface components {
             /** Format: float */
             topP?: number;
         };
+        "Bakabase.Modules.AI.Models.Input.AiProviderAddInputModel": {
+            kind: components["schemas"]["Bakabase.Modules.AI.Models.Domain.AiProviderKind"];
+            name: string;
+            endpoint?: string;
+            apiKey?: string;
+            isEnabled: boolean;
+            llmEnabled: boolean;
+            aigcEnabled: boolean;
+            aigcConfigJson?: string;
+        };
+        "Bakabase.Modules.AI.Models.Input.AiProviderTestResult": {
+            llm?: boolean;
+            aigc?: boolean;
+            llmMessage?: string;
+            aigcMessage?: string;
+        };
+        "Bakabase.Modules.AI.Models.Input.AiProviderUpdateInputModel": {
+            kind?: components["schemas"]["Bakabase.Modules.AI.Models.Domain.AiProviderKind"];
+            name?: string;
+            endpoint?: string;
+            apiKey?: string;
+            isEnabled?: boolean;
+            llmEnabled?: boolean;
+            aigcEnabled?: boolean;
+            aigcConfigJson?: string;
+        };
+        "Bakabase.Modules.AI.Models.Input.AigcArtifactImportInputModel": {
+            sourceFilePaths: string[];
+        };
+        "Bakabase.Modules.AI.Models.Input.AigcGenerationTriggerInputModel": {
+            promptOverride?: string;
+            negativePromptOverride?: string;
+            parameterOverrides?: {
+                [key: string]: unknown;
+            };
+        };
+        "Bakabase.Modules.AI.Models.Input.AigcGeneratorAddInputModel": {
+            name: string;
+            /** Format: int32 */
+            providerId: number;
+            mediaType: components["schemas"]["Bakabase.Modules.AI.Models.Domain.AigcMediaType"];
+            promptTemplate?: string;
+            negativePromptTemplate?: string;
+            parametersJson?: string;
+            filenameTemplate: string;
+            resourceMode: components["schemas"]["Bakabase.Modules.AI.Models.Domain.AigcArtifactResourceMode"];
+            allowDeletion: boolean;
+            isEnabled: boolean;
+            propertyPresets?: components["schemas"]["Bakabase.Modules.AI.Models.Input.AigcGeneratorPropertyPresetInputModel"][];
+        };
+        "Bakabase.Modules.AI.Models.Input.AigcGeneratorPropertyPresetInputModel": {
+            pool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
+            /** Format: int32 */
+            propertyId: number;
+            serializedBizValue?: string;
+        };
+        "Bakabase.Modules.AI.Models.Input.AigcGeneratorUpdateInputModel": {
+            name?: string;
+            /** Format: int32 */
+            providerId?: number;
+            mediaType?: components["schemas"]["Bakabase.Modules.AI.Models.Domain.AigcMediaType"];
+            promptTemplate?: string;
+            negativePromptTemplate?: string;
+            parametersJson?: string;
+            filenameTemplate?: string;
+            resourceMode?: components["schemas"]["Bakabase.Modules.AI.Models.Domain.AigcArtifactResourceMode"];
+            allowDeletion?: boolean;
+            isEnabled?: boolean;
+            propertyPresets?: components["schemas"]["Bakabase.Modules.AI.Models.Input.AigcGeneratorPropertyPresetInputModel"][];
+        };
         "Bakabase.Modules.AI.Models.Input.ApplyFileOperationsInputModel": {
             operations: components["schemas"]["Bakabase.Modules.AI.Services.FileOperation"][];
         };
@@ -7707,20 +8013,6 @@ export interface components {
             filePaths: string[];
             workingDirectory?: string;
             referencePaths?: string[];
-        };
-        "Bakabase.Modules.AI.Models.Input.LlmProviderConfigAddInputModel": {
-            providerType: components["schemas"]["Bakabase.Modules.AI.Models.Domain.LlmProviderType"];
-            name: string;
-            endpoint?: string;
-            apiKey?: string;
-            isEnabled: boolean;
-        };
-        "Bakabase.Modules.AI.Models.Input.LlmProviderConfigUpdateInputModel": {
-            providerType?: components["schemas"]["Bakabase.Modules.AI.Models.Domain.LlmProviderType"];
-            name?: string;
-            endpoint?: string;
-            apiKey?: string;
-            isEnabled?: boolean;
         };
         "Bakabase.Modules.AI.Models.Input.PathSimilarityGroupInputModel": {
             filePaths: string[];
@@ -9166,6 +9458,24 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.AI.Models.Db.AiFeatureConfigDbModel"][];
         };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.AiProviderDbModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.AI.Models.Db.AiProviderDbModel"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.AigcArtifactDbModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.AI.Models.Db.AigcArtifactDbModel"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.AigcGenerationRunDbModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.AI.Models.Db.AigcGenerationRunDbModel"][];
+        };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.ChatConversationDbModel]": {
             /** Format: int32 */
             code: number;
@@ -9184,29 +9494,29 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.AI.Models.Db.LlmCallCacheEntryDbModel"][];
         };
-        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.LlmProviderConfigDbModel]": {
-            /** Format: int32 */
-            code: number;
-            message?: string;
-            data?: components["schemas"]["Bakabase.Modules.AI.Models.Db.LlmProviderConfigDbModel"][];
-        };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.LlmUsageLogDbModel]": {
             /** Format: int32 */
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.AI.Models.Db.LlmUsageLogDbModel"][];
         };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Domain.AiProviderKindInfo]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.AI.Models.Domain.AiProviderKindInfo"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Domain.AigcGeneratorView]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.AI.Models.Domain.AigcGeneratorView"][];
+        };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Domain.LlmModelInfo]": {
             /** Format: int32 */
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.AI.Models.Domain.LlmModelInfo"][];
-        };
-        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Domain.LlmProviderTypeInfo]": {
-            /** Format: int32 */
-            code: number;
-            message?: string;
-            data?: components["schemas"]["Bakabase.Modules.AI.Models.Domain.LlmProviderTypeInfo"][];
         };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCardType]": {
             /** Format: int32 */
@@ -9796,23 +10106,41 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.AI.Models.Db.AiFeatureConfigDbModel"];
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.AiProviderDbModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.AI.Models.Db.AiProviderDbModel"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.AigcGenerationRunDbModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.AI.Models.Db.AigcGenerationRunDbModel"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.ChatConversationDbModel]": {
             /** Format: int32 */
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.AI.Models.Db.ChatConversationDbModel"];
         };
-        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.LlmProviderConfigDbModel]": {
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Domain.AigcGeneratorView]": {
             /** Format: int32 */
             code: number;
             message?: string;
-            data?: components["schemas"]["Bakabase.Modules.AI.Models.Db.LlmProviderConfigDbModel"];
+            data?: components["schemas"]["Bakabase.Modules.AI.Models.Domain.AigcGeneratorView"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Domain.ResourceTranslationResult]": {
             /** Format: int32 */
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.AI.Models.Domain.ResourceTranslationResult"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Input.AiProviderTestResult]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.AI.Models.Input.AiProviderTestResult"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Services.ApplyOperationsResult]": {
             /** Format: int32 */
@@ -10686,7 +11014,7 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    GetAllLlmProviders: {
+    GetAllAiProviders: {
         parameters: {
             query?: never;
             header?: never;
@@ -10701,14 +11029,14 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.LlmProviderConfigDbModel]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.LlmProviderConfigDbModel]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.LlmProviderConfigDbModel]"];
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.AiProviderDbModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.AiProviderDbModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.AiProviderDbModel]"];
                 };
             };
         };
     };
-    AddLlmProvider: {
+    AddAiProvider: {
         parameters: {
             query?: never;
             header?: never;
@@ -10717,10 +11045,10 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Modules.AI.Models.Input.LlmProviderConfigAddInputModel"];
-                "application/json": components["schemas"]["Bakabase.Modules.AI.Models.Input.LlmProviderConfigAddInputModel"];
-                "text/json": components["schemas"]["Bakabase.Modules.AI.Models.Input.LlmProviderConfigAddInputModel"];
-                "application/*+json": components["schemas"]["Bakabase.Modules.AI.Models.Input.LlmProviderConfigAddInputModel"];
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.AI.Models.Input.AiProviderAddInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.AI.Models.Input.AiProviderAddInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.AI.Models.Input.AiProviderAddInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.AI.Models.Input.AiProviderAddInputModel"];
             };
         };
         responses: {
@@ -10730,14 +11058,14 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.LlmProviderConfigDbModel]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.LlmProviderConfigDbModel]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.LlmProviderConfigDbModel]"];
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.AiProviderDbModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.AiProviderDbModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.AiProviderDbModel]"];
                 };
             };
         };
     };
-    GetLlmProvider: {
+    GetAiProvider: {
         parameters: {
             query?: never;
             header?: never;
@@ -10754,14 +11082,14 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.LlmProviderConfigDbModel]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.LlmProviderConfigDbModel]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.LlmProviderConfigDbModel]"];
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.AiProviderDbModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.AiProviderDbModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.AiProviderDbModel]"];
                 };
             };
         };
     };
-    UpdateLlmProvider: {
+    UpdateAiProvider: {
         parameters: {
             query?: never;
             header?: never;
@@ -10772,10 +11100,10 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Modules.AI.Models.Input.LlmProviderConfigUpdateInputModel"];
-                "application/json": components["schemas"]["Bakabase.Modules.AI.Models.Input.LlmProviderConfigUpdateInputModel"];
-                "text/json": components["schemas"]["Bakabase.Modules.AI.Models.Input.LlmProviderConfigUpdateInputModel"];
-                "application/*+json": components["schemas"]["Bakabase.Modules.AI.Models.Input.LlmProviderConfigUpdateInputModel"];
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.AI.Models.Input.AiProviderUpdateInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.AI.Models.Input.AiProviderUpdateInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.AI.Models.Input.AiProviderUpdateInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.AI.Models.Input.AiProviderUpdateInputModel"];
             };
         };
         responses: {
@@ -10785,14 +11113,14 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.LlmProviderConfigDbModel]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.LlmProviderConfigDbModel]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.LlmProviderConfigDbModel]"];
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.AiProviderDbModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.AiProviderDbModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.AiProviderDbModel]"];
                 };
             };
         };
     };
-    DeleteLlmProvider: {
+    DeleteAiProvider: {
         parameters: {
             query?: never;
             header?: never;
@@ -10816,7 +11144,7 @@ export interface operations {
             };
         };
     };
-    TestLlmProvider: {
+    TestAiProvider: {
         parameters: {
             query?: never;
             header?: never;
@@ -10833,14 +11161,14 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Boolean]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Boolean]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Boolean]"];
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Input.AiProviderTestResult]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Input.AiProviderTestResult]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Input.AiProviderTestResult]"];
                 };
             };
         };
     };
-    GetLlmProviderModels: {
+    GetAiProviderLlmModels: {
         parameters: {
             query?: never;
             header?: never;
@@ -10864,7 +11192,7 @@ export interface operations {
             };
         };
     };
-    GetLlmProviderTypes: {
+    GetAiProviderKinds: {
         parameters: {
             query?: never;
             header?: never;
@@ -10879,9 +11207,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Domain.LlmProviderTypeInfo]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Domain.LlmProviderTypeInfo]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Domain.LlmProviderTypeInfo]"];
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Domain.AiProviderKindInfo]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Domain.AiProviderKindInfo]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Domain.AiProviderKindInfo]"];
                 };
             };
         };
@@ -11369,6 +11697,341 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Services.ApplyOperationsResult]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Services.ApplyOperationsResult]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Services.ApplyOperationsResult]"];
+                };
+            };
+        };
+    };
+    GetEnabledAigcProviders: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.AiProviderDbModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.AiProviderDbModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.AiProviderDbModel]"];
+                };
+            };
+        };
+    };
+    GetAllAigcGenerators: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Domain.AigcGeneratorView]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Domain.AigcGeneratorView]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Domain.AigcGeneratorView]"];
+                };
+            };
+        };
+    };
+    AddAigcGenerator: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.AI.Models.Input.AigcGeneratorAddInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.AI.Models.Input.AigcGeneratorAddInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.AI.Models.Input.AigcGeneratorAddInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.AI.Models.Input.AigcGeneratorAddInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Domain.AigcGeneratorView]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Domain.AigcGeneratorView]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Domain.AigcGeneratorView]"];
+                };
+            };
+        };
+    };
+    GetAigcGenerator: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Domain.AigcGeneratorView]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Domain.AigcGeneratorView]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Domain.AigcGeneratorView]"];
+                };
+            };
+        };
+    };
+    UpdateAigcGenerator: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.AI.Models.Input.AigcGeneratorUpdateInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.AI.Models.Input.AigcGeneratorUpdateInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.AI.Models.Input.AigcGeneratorUpdateInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.AI.Models.Input.AigcGeneratorUpdateInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Domain.AigcGeneratorView]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Domain.AigcGeneratorView]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Domain.AigcGeneratorView]"];
+                };
+            };
+        };
+    };
+    DeleteAigcGenerator: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    TriggerAigcGeneration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.AI.Models.Input.AigcGenerationTriggerInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.AI.Models.Input.AigcGenerationTriggerInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.AI.Models.Input.AigcGenerationTriggerInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.AI.Models.Input.AigcGenerationTriggerInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Int32]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Int32]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Int32]"];
+                };
+            };
+        };
+    };
+    ImportAigcArtifacts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.AI.Models.Input.AigcArtifactImportInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.AI.Models.Input.AigcArtifactImportInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.AI.Models.Input.AigcArtifactImportInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.AI.Models.Input.AigcArtifactImportInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Int32]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Int32]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Int32]"];
+                };
+            };
+        };
+    };
+    GetAigcRuns: {
+        parameters: {
+            query?: {
+                generatorId?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.AigcGenerationRunDbModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.AigcGenerationRunDbModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.AigcGenerationRunDbModel]"];
+                };
+            };
+        };
+    };
+    GetAigcRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.AigcGenerationRunDbModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.AigcGenerationRunDbModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.AigcGenerationRunDbModel]"];
+                };
+            };
+        };
+    };
+    DeleteAigcRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetAigcArtifacts: {
+        parameters: {
+            query?: {
+                generatorId?: number;
+                runId?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.AigcArtifactDbModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.AigcArtifactDbModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.AigcArtifactDbModel]"];
+                };
+            };
+        };
+    };
+    DeleteAigcArtifact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                 };
             };
         };
@@ -19523,7 +20186,7 @@ export interface operations {
     StartSyncBySource: {
         parameters: {
             query?: {
-                /** @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai] */
+                /** @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc] */
                 source?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceSource"];
             };
             header?: never;
@@ -21333,7 +21996,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai] */
+                /** @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc] */
                 source: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceSource"];
             };
             cookie?: never;
@@ -21358,7 +22021,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai] */
+                /** @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc] */
                 source: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceSource"];
             };
             cookie?: never;
@@ -21390,7 +22053,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai] */
+                /** @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc] */
                 source: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceSource"];
             };
             cookie?: never;
@@ -21415,7 +22078,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai] */
+                /** @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc] */
                 source: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceSource"];
             };
             cookie?: never;
