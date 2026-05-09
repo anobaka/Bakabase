@@ -22,7 +22,8 @@ namespace Bakabase.Service.Controllers;
 
 [Route("~/ai")]
 public class AIController(
-    ILlmProviderService providerService,
+    IAiProviderService aiProviderService,
+    ILlmProviderService llmProviderService,
     ILlmUsageService usageService,
     ILlmCacheService cacheService,
     IAiFeatureService featureService,
@@ -31,65 +32,65 @@ public class AIController(
     IResourceService resourceService
 ) : Controller
 {
-    // === Provider Management ===
+    // === Provider Management (unified across LLM + AIGC capabilities) ===
 
     [HttpPost("providers")]
-    [SwaggerOperation(OperationId = "AddLlmProvider")]
-    public async Task<SingletonResponse<LlmProviderConfigDbModel>> AddProvider(
-        [FromBody] LlmProviderConfigAddInputModel model, CancellationToken ct)
+    [SwaggerOperation(OperationId = "AddAiProvider")]
+    public async Task<SingletonResponse<AiProviderDbModel>> AddProvider(
+        [FromBody] AiProviderAddInputModel model, CancellationToken ct)
     {
-        return new(await providerService.AddProviderAsync(model, ct));
+        return new(await aiProviderService.AddAsync(model, ct));
     }
 
     [HttpGet("providers")]
-    [SwaggerOperation(OperationId = "GetAllLlmProviders")]
-    public async Task<ListResponse<LlmProviderConfigDbModel>> GetAllProviders(CancellationToken ct)
+    [SwaggerOperation(OperationId = "GetAllAiProviders")]
+    public async Task<ListResponse<AiProviderDbModel>> GetAllProviders(CancellationToken ct)
     {
-        return new(await providerService.GetAllProvidersAsync(ct));
+        return new(await aiProviderService.GetAllAsync(ct));
     }
 
     [HttpGet("providers/{id:int}")]
-    [SwaggerOperation(OperationId = "GetLlmProvider")]
-    public async Task<SingletonResponse<LlmProviderConfigDbModel?>> GetProvider(int id, CancellationToken ct)
+    [SwaggerOperation(OperationId = "GetAiProvider")]
+    public async Task<SingletonResponse<AiProviderDbModel?>> GetProvider(int id, CancellationToken ct)
     {
-        return new(await providerService.GetProviderAsync(id, ct));
+        return new(await aiProviderService.GetAsync(id, ct));
     }
 
     [HttpPut("providers/{id:int}")]
-    [SwaggerOperation(OperationId = "UpdateLlmProvider")]
-    public async Task<SingletonResponse<LlmProviderConfigDbModel>> UpdateProvider(
-        int id, [FromBody] LlmProviderConfigUpdateInputModel model, CancellationToken ct)
+    [SwaggerOperation(OperationId = "UpdateAiProvider")]
+    public async Task<SingletonResponse<AiProviderDbModel>> UpdateProvider(
+        int id, [FromBody] AiProviderUpdateInputModel model, CancellationToken ct)
     {
-        return new(await providerService.UpdateProviderAsync(id, model, ct));
+        return new(await aiProviderService.UpdateAsync(id, model, ct));
     }
 
     [HttpDelete("providers/{id:int}")]
-    [SwaggerOperation(OperationId = "DeleteLlmProvider")]
+    [SwaggerOperation(OperationId = "DeleteAiProvider")]
     public async Task<BaseResponse> DeleteProvider(int id, CancellationToken ct)
     {
-        await providerService.DeleteProviderAsync(id, ct);
+        await aiProviderService.DeleteAsync(id, ct);
         return BaseResponseBuilder.Ok;
     }
 
     [HttpPost("providers/{id:int}/test")]
-    [SwaggerOperation(OperationId = "TestLlmProvider")]
-    public async Task<SingletonResponse<bool>> TestProvider(int id, CancellationToken ct)
+    [SwaggerOperation(OperationId = "TestAiProvider")]
+    public async Task<SingletonResponse<AiProviderTestResult>> TestProvider(int id, CancellationToken ct)
     {
-        return new(await providerService.TestConnectionAsync(id, ct));
+        return new(await aiProviderService.TestAsync(id, ct));
     }
 
     [HttpGet("providers/{id:int}/models")]
-    [SwaggerOperation(OperationId = "GetLlmProviderModels")]
+    [SwaggerOperation(OperationId = "GetAiProviderLlmModels")]
     public async Task<ListResponse<LlmModelInfo>> GetProviderModels(int id, CancellationToken ct)
     {
-        return new(await providerService.GetModelsAsync(id, ct));
+        return new(await llmProviderService.GetModelsAsync(id, ct));
     }
 
-    [HttpGet("provider-types")]
-    [SwaggerOperation(OperationId = "GetLlmProviderTypes")]
-    public ListResponse<LlmProviderTypeInfo> GetProviderTypes()
+    [HttpGet("provider-kinds")]
+    [SwaggerOperation(OperationId = "GetAiProviderKinds")]
+    public ListResponse<AiProviderKindInfo> GetProviderKinds()
     {
-        return new(providerService.GetProviderTypes());
+        return new(aiProviderService.GetKinds());
     }
 
     // === Usage & Audit ===

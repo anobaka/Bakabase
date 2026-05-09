@@ -15,14 +15,12 @@ namespace Bakabase.Modules.AI.Components.Aigc.Invokers;
 public class OpenAIImageInvoker(IHttpClientFactory httpClientFactory, ILogger<OpenAIImageInvoker> logger)
     : IAigcProviderInvoker
 {
-    public AigcProviderKind Kind => AigcProviderKind.OpenAIImage;
-    public string DisplayName => "OpenAI Image";
+    public AiProviderKind Kind => AiProviderKind.OpenAI;
     public AigcMediaType[] SupportedMediaTypes => [AigcMediaType.Image];
-    public bool RequiresApiKey => true;
-    public bool RequiresEndpoint => false;
-    public string? DefaultEndpoint => "https://api.openai.com";
 
-    public async Task<bool> TestConnectionAsync(AigcProviderConfigDbModel config, CancellationToken ct)
+    private const string DefaultEndpoint = "https://api.openai.com";
+
+    public async Task<bool> TestConnectionAsync(AiProviderDbModel config, CancellationToken ct)
     {
         if (string.IsNullOrEmpty(config.ApiKey)) return false;
         try
@@ -38,7 +36,7 @@ public class OpenAIImageInvoker(IHttpClientFactory httpClientFactory, ILogger<Op
         }
     }
 
-    public async Task<AigcInvocationResult> InvokeAsync(AigcProviderConfigDbModel config,
+    public async Task<AigcInvocationResult> InvokeAsync(AiProviderDbModel config,
         AigcInvocationRequest request, CancellationToken ct)
     {
         if (string.IsNullOrEmpty(config.ApiKey))
@@ -96,10 +94,10 @@ public class OpenAIImageInvoker(IHttpClientFactory httpClientFactory, ILogger<Op
         };
     }
 
-    private HttpClient CreateClient(AigcProviderConfigDbModel config)
+    private HttpClient CreateClient(AiProviderDbModel config)
     {
         var client = httpClientFactory.CreateClient("aigc-openai-image");
-        client.BaseAddress = new Uri(string.IsNullOrEmpty(config.Endpoint) ? DefaultEndpoint! : config.Endpoint);
+        client.BaseAddress = new Uri(string.IsNullOrEmpty(config.Endpoint) ? DefaultEndpoint : config.Endpoint);
         client.Timeout = TimeSpan.FromMinutes(5);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", config.ApiKey);
         return client;

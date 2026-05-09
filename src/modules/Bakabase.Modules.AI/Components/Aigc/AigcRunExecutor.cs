@@ -13,14 +13,14 @@ namespace Bakabase.Modules.AI.Components.Aigc;
 public class AigcRunExecutor<TDbContext>(
     ResourceService<TDbContext, AigcGenerationRunDbModel, int> runOrm,
     ResourceService<TDbContext, AigcGeneratorDbModel, int> generatorOrm,
-    ResourceService<TDbContext, AigcProviderConfigDbModel, int> providerOrm,
+    ResourceService<TDbContext, AiProviderDbModel, int> providerOrm,
     AigcArtifactPipeline<TDbContext> pipeline,
     IFileManager fileManager,
     IEnumerable<IAigcProviderInvoker> invokers,
     ILogger<AigcRunExecutor<TDbContext>> logger
 ) : IAigcRunExecutor where TDbContext : DbContext
 {
-    private readonly Dictionary<AigcProviderKind, IAigcProviderInvoker> _invokerMap =
+    private readonly Dictionary<AiProviderKind, IAigcProviderInvoker> _invokerMap =
         invokers.ToDictionary(i => i.Kind);
 
     public async Task ExecuteAsync(int runId, Func<int, string?, CancellationToken, Task>? onProgress,
@@ -32,8 +32,10 @@ public class AigcRunExecutor<TDbContext>(
                         ?? throw new InvalidOperationException($"Aigc generator {run.GeneratorId} not found");
         var provider = await providerOrm.GetByKey(generator.ProviderId)
                        ?? throw new InvalidOperationException($"Aigc provider {generator.ProviderId} not found");
+        if (!provider.IsEnabled || !provider.AigcEnabled)
+            throw new InvalidOperationException($"Provider {provider.Id} ({provider.Name}) does not have AIGC capability enabled.");
         if (!_invokerMap.TryGetValue(provider.Kind, out var invoker))
-            throw new InvalidOperationException($"No invoker registered for {provider.Kind}");
+            throw new InvalidOperationException($"No AIGC invoker registered for {provider.Kind}");
 
         run.Status = AigcGenerationStatus.Running;
         await runOrm.Update(run);

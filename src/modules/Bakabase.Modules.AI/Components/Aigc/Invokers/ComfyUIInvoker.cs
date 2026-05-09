@@ -10,20 +10,16 @@ namespace Bakabase.Modules.AI.Components.Aigc.Invokers;
 /// <summary>
 /// ComfyUI: submit a workflow JSON, poll /history/{prompt_id} until present, fetch outputs via /view.
 /// The workflow JSON is supplied via <c>generator.ParametersJson["workflow"]</c> or
-/// provider-default <c>config.ConfigJson["defaultWorkflow"]</c>. Tokens "{prompt}", "{negativePrompt}",
+/// provider-default <c>config.AigcConfigJson["defaultWorkflow"]</c>. Tokens "{prompt}", "{negativePrompt}",
 /// "{seed}" inside the workflow string are substituted before submission.
 /// </summary>
 public class ComfyUIInvoker(IHttpClientFactory httpClientFactory, ILogger<ComfyUIInvoker> logger)
     : IAigcProviderInvoker
 {
-    public AigcProviderKind Kind => AigcProviderKind.ComfyUI;
-    public string DisplayName => "ComfyUI";
+    public AiProviderKind Kind => AiProviderKind.ComfyUI;
     public AigcMediaType[] SupportedMediaTypes => [AigcMediaType.Image, AigcMediaType.Video];
-    public bool RequiresApiKey => false;
-    public bool RequiresEndpoint => true;
-    public string? DefaultEndpoint => "http://127.0.0.1:8188";
 
-    public async Task<bool> TestConnectionAsync(AigcProviderConfigDbModel config, CancellationToken ct)
+    public async Task<bool> TestConnectionAsync(AiProviderDbModel config, CancellationToken ct)
     {
         if (string.IsNullOrEmpty(config.Endpoint)) return false;
         try
@@ -39,7 +35,7 @@ public class ComfyUIInvoker(IHttpClientFactory httpClientFactory, ILogger<ComfyU
         }
     }
 
-    public async Task<AigcInvocationResult> InvokeAsync(AigcProviderConfigDbModel config,
+    public async Task<AigcInvocationResult> InvokeAsync(AiProviderDbModel config,
         AigcInvocationRequest request, CancellationToken ct)
     {
         if (string.IsNullOrEmpty(config.Endpoint))
@@ -144,10 +140,10 @@ public class ComfyUIInvoker(IHttpClientFactory httpClientFactory, ILogger<ComfyU
         };
     }
 
-    private static string? ReadDefaultWorkflow(AigcProviderConfigDbModel config)
+    private static string? ReadDefaultWorkflow(AiProviderDbModel config)
     {
-        if (string.IsNullOrEmpty(config.ConfigJson)) return null;
-        var parsed = AigcInvokerHelpers.ParseLenient(config.ConfigJson);
+        if (string.IsNullOrEmpty(config.AigcConfigJson)) return null;
+        var parsed = AigcInvokerHelpers.ParseLenient(config.AigcConfigJson);
         return parsed?["defaultWorkflow"]?.ToJsonString();
     }
 
@@ -156,7 +152,7 @@ public class ComfyUIInvoker(IHttpClientFactory httpClientFactory, ILogger<ComfyU
         return JsonEncodedText.Encode(s).Value;
     }
 
-    private HttpClient CreateClient(AigcProviderConfigDbModel config)
+    private HttpClient CreateClient(AiProviderDbModel config)
     {
         var client = httpClientFactory.CreateClient("aigc-comfyui");
         client.BaseAddress = new Uri(config.Endpoint!);

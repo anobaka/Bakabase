@@ -36,7 +36,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ILlmProviderFactory, GeminiProviderFactory>();
 
         // ORM for all AI DB models
-        services.AddScoped<ResourceService<TDbContext, LlmProviderConfigDbModel, int>>();
+        services.AddScoped<ResourceService<TDbContext, AiProviderDbModel, int>>();
         services.AddScoped<ResourceService<TDbContext, LlmUsageLogDbModel, long>>();
         services.AddScoped<ResourceService<TDbContext, LlmCallCacheEntryDbModel, long>>();
         services.AddScoped<ResourceService<TDbContext, AiFeatureConfigDbModel, int>>();
@@ -53,6 +53,7 @@ public static class ServiceCollectionExtensions
         services.TryAddScoped<LlmToolRegistry, LlmToolRegistry<TDbContext>>();
 
         // Services
+        services.TryAddScoped<IAiProviderService, AiProviderService<TDbContext>>();
         services.TryAddScoped<ILlmProviderService, LlmProviderService<TDbContext>>();
         services.TryAddScoped<IAiFeatureService, AiFeatureService<TDbContext>>();
         services.TryAddScoped<ILlmService, LlmService>();
@@ -75,7 +76,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IAigcProviderInvoker, HttpCustomInvoker>();
 
         // ORM
-        services.AddScoped<ResourceService<TDbContext, AigcProviderConfigDbModel, int>>();
         services.AddScoped<ResourceService<TDbContext, AigcGeneratorDbModel, int>>();
         services.AddScoped<ResourceService<TDbContext, AigcGeneratorPropertyPresetDbModel, int>>();
         services.AddScoped<ResourceService<TDbContext, AigcGenerationRunDbModel, int>>();

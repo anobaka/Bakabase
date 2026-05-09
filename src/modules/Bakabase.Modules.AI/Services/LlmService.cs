@@ -9,7 +9,8 @@ using CachingChatClient = Bakabase.Modules.AI.Components.Cache.CachingChatClient
 namespace Bakabase.Modules.AI.Services;
 
 public class LlmService(
-    ILlmProviderService providerService,
+    IAiProviderService aiProviderService,
+    ILlmProviderService llmProviderService,
     ILlmUsageService usageService,
     ILlmCacheService cacheService,
     LlmQuotaManager quotaManager,
@@ -28,13 +29,13 @@ public class LlmService(
     {
         await quotaManager.CheckQuotaAsync(ct);
 
-        var config = await providerService.GetProviderAsync(providerConfigId, ct);
+        var config = await aiProviderService.GetAsync(providerConfigId, ct);
         if (config == null)
             throw new InvalidOperationException($"Provider config with id {providerConfigId} not found");
         if (!config.IsEnabled)
             throw new InvalidOperationException($"Provider '{config.Name}' is disabled");
 
-        var rawClient = providerService.CreateChatClient(config, modelId);
+        var rawClient = llmProviderService.CreateChatClient(config, modelId);
         var client = BuildPipeline(rawClient, providerConfigId, modelId, feature);
 
         var chatOptions = new ChatOptions();
@@ -121,13 +122,13 @@ public class LlmService(
             throw new InvalidOperationException(
                 $"No provider/model configured for feature '{feature}' and no default configured.");
 
-        var config = await providerService.GetProviderAsync(providerConfigId.Value, ct);
+        var config = await aiProviderService.GetAsync(providerConfigId.Value, ct);
         if (config == null)
             throw new InvalidOperationException($"Provider config with id {providerConfigId} not found");
         if (!config.IsEnabled)
             throw new InvalidOperationException($"Provider '{config.Name}' is disabled");
 
-        var rawClient = providerService.CreateChatClient(config, modelId);
+        var rawClient = llmProviderService.CreateChatClient(config, modelId);
         // For streaming, skip cache but keep observation
         IChatClient client = new ObservationChatClient(rawClient, usageService, providerConfigId.Value, modelId,
             feature.ToString(), aiOptions.CurrentValue.AuditLogRequestContent);

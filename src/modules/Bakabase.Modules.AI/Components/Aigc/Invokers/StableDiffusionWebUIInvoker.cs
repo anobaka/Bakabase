@@ -13,14 +13,10 @@ namespace Bakabase.Modules.AI.Components.Aigc.Invokers;
 public class StableDiffusionWebUIInvoker(IHttpClientFactory httpClientFactory, ILogger<StableDiffusionWebUIInvoker> logger)
     : IAigcProviderInvoker
 {
-    public AigcProviderKind Kind => AigcProviderKind.StableDiffusionWebUI;
-    public string DisplayName => "Stable Diffusion WebUI";
+    public AiProviderKind Kind => AiProviderKind.StableDiffusionWebUI;
     public AigcMediaType[] SupportedMediaTypes => [AigcMediaType.Image];
-    public bool RequiresApiKey => false;
-    public bool RequiresEndpoint => true;
-    public string? DefaultEndpoint => "http://127.0.0.1:7860";
 
-    public async Task<bool> TestConnectionAsync(AigcProviderConfigDbModel config, CancellationToken ct)
+    public async Task<bool> TestConnectionAsync(AiProviderDbModel config, CancellationToken ct)
     {
         if (string.IsNullOrEmpty(config.Endpoint)) return false;
         try
@@ -36,7 +32,7 @@ public class StableDiffusionWebUIInvoker(IHttpClientFactory httpClientFactory, I
         }
     }
 
-    public async Task<AigcInvocationResult> InvokeAsync(AigcProviderConfigDbModel config,
+    public async Task<AigcInvocationResult> InvokeAsync(AiProviderDbModel config,
         AigcInvocationRequest request, CancellationToken ct)
     {
         if (string.IsNullOrEmpty(config.Endpoint))
@@ -98,7 +94,7 @@ public class StableDiffusionWebUIInvoker(IHttpClientFactory httpClientFactory, I
         };
     }
 
-    private HttpClient CreateClient(AigcProviderConfigDbModel config)
+    private HttpClient CreateClient(AiProviderDbModel config)
     {
         var client = httpClientFactory.CreateClient("aigc-sd-webui");
         client.BaseAddress = new Uri(config.Endpoint!);

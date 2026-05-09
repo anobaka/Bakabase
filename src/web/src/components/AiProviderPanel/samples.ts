@@ -3,9 +3,10 @@
  * content (with `//` comments) when the user has no ConfigJson yet. The backend
  * invokers strip these comments via JsonCommentHandling.Skip.
  */
+// Keys are AiProviderKind values (see AiProviderKind enum in constants.ts).
 export const AigcProviderConfigSamples: Record<number, { header: string; body: string }> = {
-  // StableDiffusionWebUI
-  1: {
+  // StableDiffusionWebUI = 100
+  100: {
     header:
       `// Stable Diffusion WebUI: defaults are sent in the request body if not\n` +
       `// overridden by the generator's parametersJson. All fields are optional.`,
@@ -17,8 +18,8 @@ export const AigcProviderConfigSamples: Record<number, { header: string; body: s
   "height": 512
 }`,
   },
-  // ComfyUI
-  2: {
+  // ComfyUI = 101
+  101: {
     header:
       `// ComfyUI: provide a default workflow JSON. Tokens "{prompt}",\n` +
       `// "{negativePrompt}" and "{seed}" are substituted before submission.\n` +
@@ -32,8 +33,8 @@ export const AigcProviderConfigSamples: Record<number, { header: string; body: s
   }
 }`,
   },
-  // OpenAIImage
-  3: {
+  // OpenAI = 1 (image generation capability)
+  1: {
     header:
       `// OpenAI Image: optional defaults. Override per-generator via\n` +
       `// parametersJson (model, size, quality, n).`,
@@ -42,8 +43,8 @@ export const AigcProviderConfigSamples: Record<number, { header: string; body: s
   "defaultSize": "1024x1024"
 }`,
   },
-  // GeminiImage (Nano Banana)
-  4: {
+  // Gemini = 5 (image generation capability, "Nano Banana")
+  5: {
     header:
       `// Gemini Image: optional defaults. Override the model per-generator via\n` +
       `// parametersJson.model (e.g. "gemini-2.5-flash-image-preview").`,
@@ -51,8 +52,8 @@ export const AigcProviderConfigSamples: Record<number, { header: string; body: s
   "defaultModel": "gemini-2.5-flash-image-preview"
 }`,
   },
-  // HttpCustom
-  99: {
+  // HttpCustom = 199
+  199: {
     header:
       `// Custom HTTP: a generic invoker driven by templates. Tokens supported\n` +
       `// inside any template string: {prompt} {negativePrompt} {apiKey} {seed}\n` +
@@ -80,8 +81,10 @@ export const AigcProviderConfigSamples: Record<number, { header: string; body: s
   },
 };
 
+// Keys are AiProviderKind values.
 export const AigcGeneratorParametersSamples: Record<number, { header: string; body: string }> = {
-  1: {
+  // StableDiffusionWebUI
+  100: {
     header: `// Stable Diffusion WebUI parameters`,
     body: `{
   "width": 768,
@@ -93,7 +96,8 @@ export const AigcGeneratorParametersSamples: Record<number, { header: string; bo
   "n_iter": 1
 }`,
   },
-  2: {
+  // ComfyUI
+  101: {
     header:
       `// ComfyUI: usually leave empty so the provider's defaultWorkflow is used.\n` +
       `// You can paste a per-generator workflow under "workflow".`,
@@ -101,7 +105,8 @@ export const AigcGeneratorParametersSamples: Record<number, { header: string; bo
   "seed": 0
 }`,
   },
-  3: {
+  // OpenAI (image)
+  1: {
     header: `// OpenAI Image parameters`,
     body: `{
   "model": "dall-e-3",
@@ -110,13 +115,15 @@ export const AigcGeneratorParametersSamples: Record<number, { header: string; bo
   "n": 1
 }`,
   },
-  4: {
+  // Gemini (image)
+  5: {
     header: `// Gemini Image parameters`,
     body: `{
   "model": "gemini-2.5-flash-image-preview"
 }`,
   },
-  99: {
+  // HttpCustom
+  199: {
     header: `// Custom HTTP: free-form. Anything here is exposed as {token} in templates.`,
     body: `{
   "seed": 12345

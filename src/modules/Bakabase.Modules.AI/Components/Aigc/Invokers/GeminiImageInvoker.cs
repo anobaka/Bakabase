@@ -14,14 +14,12 @@ namespace Bakabase.Modules.AI.Components.Aigc.Invokers;
 public class GeminiImageInvoker(IHttpClientFactory httpClientFactory, ILogger<GeminiImageInvoker> logger)
     : IAigcProviderInvoker
 {
-    public AigcProviderKind Kind => AigcProviderKind.GeminiImage;
-    public string DisplayName => "Gemini Image (Nano Banana)";
+    public AiProviderKind Kind => AiProviderKind.Gemini;
     public AigcMediaType[] SupportedMediaTypes => [AigcMediaType.Image];
-    public bool RequiresApiKey => true;
-    public bool RequiresEndpoint => false;
-    public string? DefaultEndpoint => "https://generativelanguage.googleapis.com";
 
-    public async Task<bool> TestConnectionAsync(AigcProviderConfigDbModel config, CancellationToken ct)
+    private const string DefaultEndpoint = "https://generativelanguage.googleapis.com";
+
+    public async Task<bool> TestConnectionAsync(AiProviderDbModel config, CancellationToken ct)
     {
         if (string.IsNullOrEmpty(config.ApiKey)) return false;
         try
@@ -37,7 +35,7 @@ public class GeminiImageInvoker(IHttpClientFactory httpClientFactory, ILogger<Ge
         }
     }
 
-    public async Task<AigcInvocationResult> InvokeAsync(AigcProviderConfigDbModel config,
+    public async Task<AigcInvocationResult> InvokeAsync(AiProviderDbModel config,
         AigcInvocationRequest request, CancellationToken ct)
     {
         if (string.IsNullOrEmpty(config.ApiKey))
@@ -106,10 +104,10 @@ public class GeminiImageInvoker(IHttpClientFactory httpClientFactory, ILogger<Ge
         };
     }
 
-    private HttpClient CreateClient(AigcProviderConfigDbModel config)
+    private HttpClient CreateClient(AiProviderDbModel config)
     {
         var client = httpClientFactory.CreateClient("aigc-gemini-image");
-        client.BaseAddress = new Uri(string.IsNullOrEmpty(config.Endpoint) ? DefaultEndpoint! : config.Endpoint);
+        client.BaseAddress = new Uri(string.IsNullOrEmpty(config.Endpoint) ? DefaultEndpoint : config.Endpoint);
         client.Timeout = TimeSpan.FromMinutes(5);
         return client;
     }

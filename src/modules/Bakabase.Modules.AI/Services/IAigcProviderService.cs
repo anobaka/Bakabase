@@ -1,16 +1,13 @@
 using Bakabase.Modules.AI.Models.Db;
-using Bakabase.Modules.AI.Models.Domain;
-using Bakabase.Modules.AI.Models.Input;
 
 namespace Bakabase.Modules.AI.Services;
 
+/// <summary>
+/// AIGC-specific operations on AI providers. CRUD lives on <see cref="IAiProviderService"/>;
+/// this interface is for things only AIGC-capable providers can do.
+/// </summary>
 public interface IAigcProviderService
 {
-    Task<IReadOnlyList<AigcProviderConfigDbModel>> GetAllAsync(CancellationToken ct = default);
-    Task<AigcProviderConfigDbModel?> GetAsync(int id, CancellationToken ct = default);
-    Task<AigcProviderConfigDbModel> AddAsync(AigcProviderConfigAddInputModel input, CancellationToken ct = default);
-    Task<AigcProviderConfigDbModel> UpdateAsync(int id, AigcProviderConfigUpdateInputModel input, CancellationToken ct = default);
-    Task DeleteAsync(int id, CancellationToken ct = default);
-    Task<bool> TestConnectionAsync(int id, CancellationToken ct = default);
-    IReadOnlyList<AigcProviderKindInfo> GetProviderKinds();
+    /// <summary>Returns all enabled providers with the AIGC capability turned on.</summary>
+    Task<IReadOnlyList<AiProviderDbModel>> GetEnabledAigcProvidersAsync(CancellationToken ct = default);
 }

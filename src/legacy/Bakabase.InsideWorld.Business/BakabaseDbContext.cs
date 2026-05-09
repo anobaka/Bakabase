@@ -65,8 +65,8 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<ResourceMarkEffectDbModel> ResourceMarkEffects { get; set; }
         public DbSet<PropertyMarkEffectDbModel> PropertyMarkEffects { get; set; }
 
-        // AI module tables
-        public DbSet<LlmProviderConfigDbModel> LlmProviderConfigs { get; set; }
+        // AI module tables (provider unified across LLM and AIGC capabilities)
+        public DbSet<AiProviderDbModel> AiProviders { get; set; }
         public DbSet<LlmUsageLogDbModel> LlmUsageLogs { get; set; }
         public DbSet<LlmCallCacheEntryDbModel> LlmCallCacheEntries { get; set; }
         public DbSet<AiFeatureConfigDbModel> AiFeatureConfigs { get; set; }
@@ -75,7 +75,6 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<LlmToolConfigDbModel> LlmToolConfigs { get; set; }
 
         // AIGC tables
-        public DbSet<AigcProviderConfigDbModel> AigcProviderConfigs { get; set; }
         public DbSet<AigcGeneratorDbModel> AigcGenerators { get; set; }
         public DbSet<AigcGeneratorPropertyPresetDbModel> AigcGeneratorPropertyPresets { get; set; }
         public DbSet<AigcGenerationRunDbModel> AigcGenerationRuns { get; set; }
@@ -231,10 +230,12 @@ namespace Bakabase.InsideWorld.Business
             });
 
             // AI module tables
-            modelBuilder.Entity<LlmProviderConfigDbModel>(t =>
+            modelBuilder.Entity<AiProviderDbModel>(t =>
             {
-                t.HasIndex(x => x.ProviderType);
+                t.HasIndex(x => x.Kind);
                 t.HasIndex(x => x.IsEnabled);
+                t.HasIndex(x => x.LlmEnabled);
+                t.HasIndex(x => x.AigcEnabled);
             });
 
             modelBuilder.Entity<LlmUsageLogDbModel>(t =>
@@ -274,12 +275,6 @@ namespace Bakabase.InsideWorld.Business
             });
 
             // AIGC tables
-            modelBuilder.Entity<AigcProviderConfigDbModel>(t =>
-            {
-                t.HasIndex(x => x.Kind);
-                t.HasIndex(x => x.IsEnabled);
-            });
-
             modelBuilder.Entity<AigcGeneratorDbModel>(t =>
             {
                 t.HasIndex(x => x.ProviderId);

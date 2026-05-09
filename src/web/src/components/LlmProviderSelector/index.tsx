@@ -4,10 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Select, SelectItem } from "@heroui/react";
 
 import BApi from "@/sdk/BApi";
-import type { BakabaseModulesAIModelsDbLlmProviderConfigDbModel } from "@/sdk/Api";
-import { LlmProviderTypeLabel } from "@/sdk/constants";
+import type { BakabaseModulesAIModelsDbAiProviderDbModel } from "@/sdk/Api";
+import { AiProviderKindLabel } from "@/sdk/constants";
 
-type Provider = BakabaseModulesAIModelsDbLlmProviderConfigDbModel;
+type Provider = BakabaseModulesAIModelsDbAiProviderDbModel;
 
 interface LlmProviderSelectorProps {
   value?: number;
@@ -17,13 +17,17 @@ interface LlmProviderSelectorProps {
   className?: string;
 }
 
+/**
+ * Hook returning AI providers that have the LLM capability enabled. Use this from
+ * any UI that wants to pick an LLM-capable provider.
+ */
 export function useLlmProviders() {
   const [providers, setProviders] = useState<Provider[]>([]);
 
   const load = useCallback(async () => {
-    const r = await BApi.ai.getAllLlmProviders();
+    const r = await BApi.ai.getAllAiProviders();
     if (!r.code && r.data) {
-      setProviders(r.data);
+      setProviders(r.data.filter((p) => p.llmEnabled));
     }
   }, []);
 
@@ -43,8 +47,8 @@ export function useLlmProviders() {
     (providerId: number) => {
       const p = providerMap[providerId];
       if (!p) return `#${providerId}`;
-      const typeLabel = LlmProviderTypeLabel[p.providerType] ?? "";
-      return `${p.name} (${typeLabel})`;
+      const kindLabel = AiProviderKindLabel[p.kind] ?? "";
+      return `${p.name} (${kindLabel})`;
     },
     [providerMap],
   );
@@ -75,7 +79,7 @@ const LlmProviderSelector = ({
     >
       {providers.map((p) => (
         <SelectItem key={String(p.id)}>
-          {`${p.name} (${LlmProviderTypeLabel[p.providerType] ?? ""})`}
+          {`${p.name} (${AiProviderKindLabel[p.kind] ?? ""})`}
         </SelectItem>
       ))}
     </Select>

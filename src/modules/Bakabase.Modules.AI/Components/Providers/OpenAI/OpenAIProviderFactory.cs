@@ -9,7 +9,7 @@ namespace Bakabase.Modules.AI.Components.Providers.OpenAI;
 
 public class OpenAIProviderFactory(ILogger<OpenAIProviderFactory> logger) : ILlmProviderFactory
 {
-    public LlmProviderType ProviderType => LlmProviderType.OpenAI;
+    public AiProviderKind Kind => AiProviderKind.OpenAI;
     public string DisplayName => "OpenAI";
 
     public LlmCapabilities DefaultCapabilities =>
@@ -20,7 +20,7 @@ public class OpenAIProviderFactory(ILogger<OpenAIProviderFactory> logger) : ILlm
     public bool RequiresEndpoint => false;
     public string? DefaultEndpoint => null;
 
-    public IChatClient CreateClient(LlmProviderConfigDbModel config, string modelId)
+    public IChatClient CreateClient(AiProviderDbModel config, string modelId)
     {
         var options = new OpenAIClientOptions();
         if (!string.IsNullOrEmpty(config.Endpoint))
@@ -32,7 +32,7 @@ public class OpenAIProviderFactory(ILogger<OpenAIProviderFactory> logger) : ILlm
         return client.GetChatClient(modelId).AsIChatClient();
     }
 
-    public async Task<IReadOnlyList<LlmModelInfo>> GetModelsAsync(LlmProviderConfigDbModel config,
+    public async Task<IReadOnlyList<LlmModelInfo>> GetModelsAsync(AiProviderDbModel config,
         CancellationToken ct = default)
     {
         try
@@ -64,7 +64,7 @@ public class OpenAIProviderFactory(ILogger<OpenAIProviderFactory> logger) : ILlm
         }
     }
 
-    public async Task<bool> TestConnectionAsync(LlmProviderConfigDbModel config, CancellationToken ct = default)
+    public async Task<bool> TestConnectionAsync(AiProviderDbModel config, CancellationToken ct = default)
     {
         try
         {

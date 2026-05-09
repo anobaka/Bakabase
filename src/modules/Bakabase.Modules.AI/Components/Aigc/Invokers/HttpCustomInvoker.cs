@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 namespace Bakabase.Modules.AI.Components.Aigc.Invokers;
 
 /// <summary>
-/// Generic HTTP invoker driven entirely by <see cref="AigcProviderConfigDbModel.ConfigJson"/>.
+/// Generic HTTP invoker driven entirely by <see cref="AiProviderDbModel.AigcConfigJson"/>.
 ///
 /// Schema:
 /// {
@@ -39,28 +39,28 @@ namespace Bakabase.Modules.AI.Components.Aigc.Invokers;
 public class HttpCustomInvoker(IHttpClientFactory httpClientFactory, ILogger<HttpCustomInvoker> logger)
     : IAigcProviderInvoker
 {
-    public AigcProviderKind Kind => AigcProviderKind.HttpCustom;
-    public string DisplayName => "Custom HTTP";
-    public AigcMediaType[] SupportedMediaTypes => [AigcMediaType.Image, AigcMediaType.Text, AigcMediaType.Audio, AigcMediaType.Video, AigcMediaType.Other];
-    public bool RequiresApiKey => false;
-    public bool RequiresEndpoint => false;
-    public string? DefaultEndpoint => null;
+    public AiProviderKind Kind => AiProviderKind.HttpCustom;
+    public AigcMediaType[] SupportedMediaTypes =>
+    [
+        AigcMediaType.Image, AigcMediaType.Text,
+        AigcMediaType.Audio, AigcMediaType.Video, AigcMediaType.Other
+    ];
 
-    public Task<bool> TestConnectionAsync(AigcProviderConfigDbModel config, CancellationToken ct)
+    public Task<bool> TestConnectionAsync(AiProviderDbModel config, CancellationToken ct)
     {
         // No standardized health-check for arbitrary endpoints; consider configured if the JSON parses.
-        if (string.IsNullOrEmpty(config.ConfigJson)) return Task.FromResult(false);
-        var node = AigcInvokerHelpers.ParseLenient(config.ConfigJson);
+        if (string.IsNullOrEmpty(config.AigcConfigJson)) return Task.FromResult(false);
+        var node = AigcInvokerHelpers.ParseLenient(config.AigcConfigJson);
         return Task.FromResult(node?["urlTemplate"]?.GetValue<string>() is { Length: > 0 });
     }
 
-    public async Task<AigcInvocationResult> InvokeAsync(AigcProviderConfigDbModel config,
+    public async Task<AigcInvocationResult> InvokeAsync(AiProviderDbModel config,
         AigcInvocationRequest request, CancellationToken ct)
     {
-        if (string.IsNullOrEmpty(config.ConfigJson))
+        if (string.IsNullOrEmpty(config.AigcConfigJson))
             throw new InvalidOperationException("HttpCustom provider has no ConfigJson.");
 
-        var cfg = AigcInvokerHelpers.ParseLenient(config.ConfigJson)
+        var cfg = AigcInvokerHelpers.ParseLenient(config.AigcConfigJson)
                   ?? throw new InvalidOperationException("HttpCustom ConfigJson is not valid JSON.");
 
         var tokens = BuildTokens(config, request);
@@ -204,7 +204,7 @@ public class HttpCustomInvoker(IHttpClientFactory httpClientFactory, ILogger<Htt
         return submitResponse;
     }
 
-    private static Dictionary<string, string?> BuildTokens(AigcProviderConfigDbModel config, AigcInvocationRequest request)
+    private static Dictionary<string, string?> BuildTokens(AiProviderDbModel config, AigcInvocationRequest request)
     {
         var tokens = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
         {

@@ -8,7 +8,7 @@ namespace Bakabase.Modules.AI.Components.Providers.Ollama;
 
 public class OllamaProviderFactory(ILogger<OllamaProviderFactory> logger) : ILlmProviderFactory
 {
-    public LlmProviderType ProviderType => LlmProviderType.Ollama;
+    public AiProviderKind Kind => AiProviderKind.Ollama;
     public string DisplayName => "Ollama";
 
     public LlmCapabilities DefaultCapabilities =>
@@ -18,14 +18,14 @@ public class OllamaProviderFactory(ILogger<OllamaProviderFactory> logger) : ILlm
     public bool RequiresEndpoint => true;
     public string? DefaultEndpoint => "http://localhost:11434";
 
-    public IChatClient CreateClient(LlmProviderConfigDbModel config, string modelId)
+    public IChatClient CreateClient(AiProviderDbModel config, string modelId)
     {
         var endpoint = config.Endpoint ?? DefaultEndpoint!;
         var client = new OllamaApiClient(endpoint, modelId);
         return client;
     }
 
-    public async Task<IReadOnlyList<LlmModelInfo>> GetModelsAsync(LlmProviderConfigDbModel config,
+    public async Task<IReadOnlyList<LlmModelInfo>> GetModelsAsync(AiProviderDbModel config,
         CancellationToken ct = default)
     {
         try
@@ -50,7 +50,7 @@ public class OllamaProviderFactory(ILogger<OllamaProviderFactory> logger) : ILlm
         }
     }
 
-    public async Task<bool> TestConnectionAsync(LlmProviderConfigDbModel config, CancellationToken ct = default)
+    public async Task<bool> TestConnectionAsync(AiProviderDbModel config, CancellationToken ct = default)
     {
         try
         {

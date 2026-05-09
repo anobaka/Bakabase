@@ -15,7 +15,7 @@ public class GeminiProviderFactory(ILogger<GeminiProviderFactory> logger) : ILlm
 {
     private const string DefaultGeminiEndpoint = "https://generativelanguage.googleapis.com/v1beta/openai/";
 
-    public LlmProviderType ProviderType => LlmProviderType.Gemini;
+    public AiProviderKind Kind => AiProviderKind.Gemini;
     public string DisplayName => "Google Gemini";
 
     public LlmCapabilities DefaultCapabilities =>
@@ -26,7 +26,7 @@ public class GeminiProviderFactory(ILogger<GeminiProviderFactory> logger) : ILlm
     public bool RequiresEndpoint => false;
     public string? DefaultEndpoint => DefaultGeminiEndpoint;
 
-    public IChatClient CreateClient(LlmProviderConfigDbModel config, string modelId)
+    public IChatClient CreateClient(AiProviderDbModel config, string modelId)
     {
         var endpoint = config.Endpoint ?? DefaultGeminiEndpoint;
         var client = new OpenAIClient(
@@ -35,7 +35,7 @@ public class GeminiProviderFactory(ILogger<GeminiProviderFactory> logger) : ILlm
         return client.GetChatClient(modelId).AsIChatClient();
     }
 
-    public Task<IReadOnlyList<LlmModelInfo>> GetModelsAsync(LlmProviderConfigDbModel config,
+    public Task<IReadOnlyList<LlmModelInfo>> GetModelsAsync(AiProviderDbModel config,
         CancellationToken ct = default)
     {
         IReadOnlyList<LlmModelInfo> models =
@@ -68,7 +68,7 @@ public class GeminiProviderFactory(ILogger<GeminiProviderFactory> logger) : ILlm
         return Task.FromResult(models);
     }
 
-    public async Task<bool> TestConnectionAsync(LlmProviderConfigDbModel config, CancellationToken ct = default)
+    public async Task<bool> TestConnectionAsync(AiProviderDbModel config, CancellationToken ct = default)
     {
         try
         {

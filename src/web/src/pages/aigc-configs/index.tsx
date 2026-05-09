@@ -32,17 +32,17 @@ import { Select, toast } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 import type {
   BakabaseModulesAIModelsDbAigcGeneratorDbModel,
-  BakabaseModulesAIModelsDbAigcProviderConfigDbModel,
+  BakabaseModulesAIModelsDbAiProviderDbModel,
   BakabaseModulesAIModelsDomainAigcGeneratorView,
   BakabaseModulesAIModelsInputAigcGeneratorAddInputModel,
   BakabaseModulesAIModelsInputAigcGeneratorUpdateInputModel,
 } from "@/sdk/Api";
 import JsonEditor, { stripJsonComments } from "@/components/JsonEditor";
-import { AigcGeneratorParametersSamples } from "@/components/AigcProviderPanel/samples";
+import { AigcGeneratorParametersSamples } from "@/components/AiProviderPanel/samples";
 
 type Generator = BakabaseModulesAIModelsDbAigcGeneratorDbModel;
 type GeneratorView = BakabaseModulesAIModelsDomainAigcGeneratorView;
-type Provider = BakabaseModulesAIModelsDbAigcProviderConfigDbModel;
+type Provider = BakabaseModulesAIModelsDbAiProviderDbModel;
 
 const MEDIA_TYPES = [1, 2, 3, 4, 99];
 const RESOURCE_MODES = [1, 2];
@@ -74,7 +74,7 @@ const AigcConfigsPage = () => {
   const load = useCallback(async () => {
     const [gr, pr] = await Promise.all([
       BApi.aigc.getAllAigcGenerators(),
-      BApi.aigc.getAllAigcProviders(),
+      BApi.aigc.getEnabledAigcProviders(),
     ]);
     if (!gr.code && gr.data) setViews(gr.data);
     if (!pr.code && pr.data) setProviders(pr.data);

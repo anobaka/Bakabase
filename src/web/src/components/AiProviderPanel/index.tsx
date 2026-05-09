@@ -4,164 +4,194 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Button,
+  Chip,
+  Input,
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  Switch,
   Table,
   TableBody,
   TableCell,
   TableColumn,
   TableHeader,
   TableRow,
-  Input,
-  Switch,
-  Chip,
-  Modal,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
   useDisclosure,
 } from "@heroui/react";
 import { AiOutlineDelete, AiOutlinePlus } from "react-icons/ai";
 
-import { toast, Select } from "@/components/bakaui";
+import { Select, toast } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 import type {
-  BakabaseModulesAIModelsDbLlmProviderConfigDbModel,
-  BakabaseModulesAIModelsDomainLlmProviderTypeInfo,
+  BakabaseModulesAIModelsDbAiProviderDbModel,
+  BakabaseModulesAIModelsDomainAiProviderKindInfo,
+  BakabaseModulesAIModelsDomainAiProviderTestResult,
+  BakabaseModulesAIModelsInputAiProviderAddInputModel,
+  BakabaseModulesAIModelsInputAiProviderUpdateInputModel,
   BakabaseModulesAIModelsDomainLlmModelInfo,
-  BakabaseModulesAIModelsInputLlmProviderConfigAddInputModel,
-  BakabaseModulesAIModelsInputLlmProviderConfigUpdateInputModel,
 } from "@/sdk/Api";
-import { LlmProviderTypeLabel } from "@/sdk/constants";
+import { AiProviderCapability } from "@/sdk/constants";
+import JsonEditor, { stripJsonComments } from "@/components/JsonEditor";
+import { AigcProviderConfigSamples } from "./samples";
 
-type LlmProviderConfig = BakabaseModulesAIModelsDbLlmProviderConfigDbModel;
-type LlmProviderTypeInfo = BakabaseModulesAIModelsDomainLlmProviderTypeInfo;
+type AiProvider = BakabaseModulesAIModelsDbAiProviderDbModel;
+type KindInfo = BakabaseModulesAIModelsDomainAiProviderKindInfo;
+type TestResult = BakabaseModulesAIModelsDomainAiProviderTestResult;
 type LlmModelInfo = BakabaseModulesAIModelsDomainLlmModelInfo;
+
+const supportsLlm = (caps: number) =>
+  (caps & AiProviderCapability.Llm) === AiProviderCapability.Llm;
+const supportsAigc = (caps: number) =>
+  (caps & AiProviderCapability.Aigc) === AiProviderCapability.Aigc;
 
 const AiProviderPanel = () => {
   const { t } = useTranslation();
   const { isOpen, onOpen, onClose } = useDisclosure();
 
-  const [providers, setProviders] = useState<LlmProviderConfig[]>([]);
-  const [providerTypes, setProviderTypes] = useState<LlmProviderTypeInfo[]>([]);
-  const [editingProvider, setEditingProvider] = useState<Partial<LlmProviderConfig> | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const [testingIds, setTestingIds] = useState<Set<number>>(new Set());
+  const [providers, setProviders] = useState<AiProvider[]>([]);
+  const [kinds, setKinds] = useState<KindInfo[]>([]);
+  const [editing, setEditing] = useState<Partial<AiProvider> | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [testing, setTesting] = useState<Set<number>>(new Set());
   const [loadingModels, setLoadingModels] = useState<Record<number, boolean>>({});
   const [providerModels, setProviderModels] = useState<Record<number, LlmModelInfo[]>>({});
 
-  const loadProviders = useCallback(async () => {
-    const r = await BApi.ai.getAllLlmProviders();
-    if (!r.code && r.data) {
-      setProviders(r.data);
-    }
-  }, []);
-
-  const loadProviderTypes = useCallback(async () => {
-    const r = await BApi.ai.getLlmProviderTypes();
-    if (!r.code && r.data) {
-      setProviderTypes(r.data);
-    }
+  const load = useCallback(async () => {
+    const [pr, kr] = await Promise.all([
+      BApi.ai.getAllAiProviders(),
+      BApi.ai.getAiProviderKinds(),
+    ]);
+    if (!pr.code && pr.data) setProviders(pr.data);
+    if (!kr.code && kr.data) setKinds(kr.data);
   }, []);
 
   useEffect(() => {
-    loadProviders();
-    loadProviderTypes();
+    load();
   }, []);
 
-  const getProviderTypeInfo = (type: number): LlmProviderTypeInfo | undefined =>
-    providerTypes.find((pt) => pt.type === type);
+  const kindInfo = (kind: number | undefined) => kinds.find((k) => k.kind === kind);
+  const kindLabel = (kind: number) => kindInfo(kind)?.displayName ?? `#${kind}`;
 
   const handleAdd = () => {
-    setEditingProvider({
+    const firstKind = kinds[0];
+    setEditing({
+      kind: firstKind?.kind,
       name: "",
-      endpoint: "",
+      endpoint: firstKind?.defaultEndpoint ?? "",
       apiKey: "",
       isEnabled: true,
+      llmEnabled: firstKind ? supportsLlm(firstKind.capabilities) : false,
+      aigcEnabled: false,
+      aigcConfigJson: "",
     });
-    setIsEditing(false);
+    setIsEditMode(false);
     onOpen();
   };
 
-  const handleEdit = (provider: LlmProviderConfig) => {
-    setEditingProvider({ ...provider });
-    setIsEditing(true);
+  const handleEdit = (p: AiProvider) => {
+    setEditing({ ...p });
+    setIsEditMode(true);
     onOpen();
   };
 
   const handleSave = async () => {
-    if (!editingProvider) return;
-
-    if (!editingProvider.providerType) {
-      toast.danger(t<string>("configuration.ai.providerType") + " is required");
+    if (!editing) return;
+    if (!editing.kind) {
+      toast.danger(t<string>("aiProvider.error.kindRequired"));
+      return;
+    }
+    if (!editing.name?.trim()) {
+      toast.danger(t<string>("aiProvider.error.nameRequired"));
+      return;
+    }
+    const ki = kindInfo(editing.kind);
+    if (!editing.llmEnabled && !editing.aigcEnabled) {
+      toast.danger(t<string>("aiProvider.error.atLeastOneCapability"));
+      return;
+    }
+    if (ki?.requiresApiKey && !editing.apiKey?.trim()) {
+      toast.danger(t<string>("aiProvider.error.apiKeyRequired"));
+      return;
+    }
+    if (ki?.requiresEndpoint && !editing.endpoint?.trim()) {
+      toast.danger(t<string>("aiProvider.error.endpointRequired"));
       return;
     }
 
-    if (!editingProvider.name?.trim()) {
-      toast.danger(t<string>("configuration.ai.providerName") + " is required");
-      return;
-    }
+    const cleanAigcConfig = editing.aigcEnabled && editing.aigcConfigJson
+      ? stripJsonComments(editing.aigcConfigJson)
+      : null;
 
-    const typeInfo = getProviderTypeInfo(editingProvider.providerType);
-    if (typeInfo?.requiresEndpoint && !editingProvider.endpoint?.trim()) {
-      toast.danger(t<string>("configuration.ai.endpoint") + " is required");
-      return;
-    }
-
-    if (isEditing && editingProvider.id) {
-      const r = await BApi.ai.updateLlmProvider(editingProvider.id, {
-        providerType: editingProvider.providerType,
-        name: editingProvider.name,
-        endpoint: editingProvider.endpoint,
-        apiKey: editingProvider.apiKey,
-        isEnabled: editingProvider.isEnabled,
-      } as BakabaseModulesAIModelsInputLlmProviderConfigUpdateInputModel);
+    if (isEditMode && editing.id) {
+      const r = await BApi.ai.updateAiProvider(editing.id, {
+        kind: editing.kind,
+        name: editing.name,
+        endpoint: editing.endpoint,
+        apiKey: editing.apiKey,
+        isEnabled: editing.isEnabled,
+        llmEnabled: editing.llmEnabled,
+        aigcEnabled: editing.aigcEnabled,
+        aigcConfigJson: cleanAigcConfig,
+      } as BakabaseModulesAIModelsInputAiProviderUpdateInputModel);
       if (!r.code) {
         toast.success(t<string>("common.success.saved"));
         onClose();
-        setEditingProvider(null);
-        await loadProviders();
+        await load();
       }
     } else {
-      const r = await BApi.ai.addLlmProvider({
-        providerType: editingProvider.providerType,
-        name: editingProvider.name!,
-        endpoint: editingProvider.endpoint,
-        apiKey: editingProvider.apiKey,
-        isEnabled: editingProvider.isEnabled ?? true,
-      } as BakabaseModulesAIModelsInputLlmProviderConfigAddInputModel);
+      const r = await BApi.ai.addAiProvider({
+        kind: editing.kind,
+        name: editing.name!,
+        endpoint: editing.endpoint,
+        apiKey: editing.apiKey,
+        isEnabled: editing.isEnabled ?? true,
+        llmEnabled: editing.llmEnabled ?? false,
+        aigcEnabled: editing.aigcEnabled ?? false,
+        aigcConfigJson: cleanAigcConfig,
+      } as BakabaseModulesAIModelsInputAiProviderAddInputModel);
       if (!r.code) {
         toast.success(t<string>("common.success.saved"));
         onClose();
-        setEditingProvider(null);
-        await loadProviders();
+        await load();
       }
     }
   };
 
   const handleDelete = async (id: number) => {
-    const r = await BApi.ai.deleteLlmProvider(id);
+    if (!confirm(t<string>("aiProvider.confirmDelete"))) return;
+    const r = await BApi.ai.deleteAiProvider(id);
     if (!r.code) {
       toast.success(t<string>("common.success.saved"));
-      await loadProviders();
+      await load();
     }
   };
 
   const handleTest = async (id: number) => {
-    setTestingIds((prev) => new Set([...prev, id]));
+    setTesting((prev) => new Set([...prev, id]));
     try {
-      const r = await BApi.ai.testLlmProvider(id);
+      const r = await BApi.ai.testAiProvider(id);
       if (!r.code && r.data) {
-        toast.success(t<string>("configuration.ai.testSuccess"));
+        const result = r.data as TestResult;
+        const lines: string[] = [];
+        if (result.llm !== null && result.llm !== undefined) {
+          lines.push(`LLM: ${result.llm ? "✓" : "✗"}${result.llmMessage ? ` (${result.llmMessage})` : ""}`);
+        }
+        if (result.aigc !== null && result.aigc !== undefined) {
+          lines.push(`AIGC: ${result.aigc ? "✓" : "✗"}${result.aigcMessage ? ` (${result.aigcMessage})` : ""}`);
+        }
+        const ok = (result.llm ?? true) && (result.aigc ?? true);
+        const msg = lines.join("\n") || t<string>("aiProvider.testNoCapability");
+        if (ok) toast.success(msg); else toast.danger(msg);
       } else {
-        toast.danger(t<string>("configuration.ai.testFailed"));
+        toast.danger(t<string>("aiProvider.testFailed"));
       }
-    } catch {
-      toast.danger(t<string>("configuration.ai.testFailed"));
     } finally {
-      setTestingIds((prev) => {
-        const next = new Set(prev);
-        next.delete(id);
-        return next;
+      setTesting((prev) => {
+        const n = new Set(prev);
+        n.delete(id);
+        return n;
       });
     }
   };
@@ -169,7 +199,7 @@ const AiProviderPanel = () => {
   const handleLoadModels = async (id: number) => {
     setLoadingModels((prev) => ({ ...prev, [id]: true }));
     try {
-      const r = await BApi.ai.getLlmProviderModels(id);
+      const r = await BApi.ai.getAiProviderLlmModels(id);
       if (!r.code && r.data) {
         setProviderModels((prev) => ({ ...prev, [id]: r.data! }));
       }
@@ -178,75 +208,78 @@ const AiProviderPanel = () => {
     }
   };
 
-  const handleProviderTypeChange = (type: number) => {
-    if (!editingProvider) return;
-    const typeInfo = getProviderTypeInfo(type);
-    setEditingProvider({
-      ...editingProvider,
-      providerType: type as LlmProviderConfig["providerType"],
-      endpoint: typeInfo?.defaultEndpoint ?? editingProvider.endpoint ?? "",
+  const handleKindChange = (kind: number) => {
+    if (!editing) return;
+    const ki = kindInfo(kind);
+    setEditing({
+      ...editing,
+      kind: kind as AiProvider["kind"],
+      endpoint: ki?.defaultEndpoint ?? editing.endpoint ?? "",
+      llmEnabled: ki ? supportsLlm(ki.capabilities) && (editing.llmEnabled ?? false) : false,
+      aigcEnabled: ki ? supportsAigc(ki.capabilities) && (editing.aigcEnabled ?? false) : false,
     });
   };
 
-  const renderProviderCell = (provider: LlmProviderConfig) => {
-    const typeName = LlmProviderTypeLabel[provider.providerType] ?? "Unknown";
-    const models = providerModels[provider.id];
+  const editingKi = kindInfo(editing?.kind);
+  const editingSupportsLlm = editingKi ? supportsLlm(editingKi.capabilities) : false;
+  const editingSupportsAigc = editingKi ? supportsAigc(editingKi.capabilities) : false;
+  const aigcSample = editing?.kind ? AigcProviderConfigSamples[editing.kind] : undefined;
 
+  const renderProviderRow = (p: AiProvider) => {
+    const models = providerModels[p.id];
     return (
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2 flex-wrap">
-          <Chip size="sm" variant="flat">{typeName}</Chip>
-          <Chip size="sm" variant="dot" color={provider.isEnabled ? "success" : "default"}>
-            {provider.isEnabled ? t<string>("configuration.ai.enabled") : t<string>("configuration.ai.disabled")}
+          <Chip size="sm" variant="flat">{kindLabel(p.kind)}</Chip>
+          <Chip size="sm" color={p.isEnabled ? "success" : "default"} variant="dot">
+            {p.isEnabled ? t<string>("common.enabled") : t<string>("common.disabled")}
           </Chip>
-          {provider.endpoint && (
-            <span className="text-xs text-default-400 font-mono">{provider.endpoint}</span>
+          {p.llmEnabled && <Chip size="sm" color="primary" variant="flat">LLM</Chip>}
+          {p.aigcEnabled && <Chip size="sm" color="secondary" variant="flat">AIGC</Chip>}
+          {p.endpoint && (
+            <span className="text-xs text-default-400 font-mono">{p.endpoint}</span>
           )}
         </div>
 
-        {models && models.length > 0 && (
+        {p.llmEnabled && models && models.length > 0 && (
           <div className="flex flex-wrap gap-1">
             {models.map((m) => (
               <Chip key={m.modelId} size="sm" variant="flat">{m.displayName}</Chip>
             ))}
           </div>
         )}
-        {models && models.length === 0 && (
-          <div className="text-xs text-default-400">{t<string>("configuration.ai.noModels")}</div>
+        {p.llmEnabled && models && models.length === 0 && (
+          <div className="text-xs text-default-400">{t<string>("aiProvider.noModels")}</div>
         )}
 
-        <div className="flex gap-2">
-          <Button size="sm" variant="flat" onPress={() => handleEdit(provider)}>
+        <div className="flex gap-2 flex-wrap">
+          <Button size="sm" variant="flat" onPress={() => handleEdit(p)}>
             {t<string>("common.action.edit")}
           </Button>
           <Button
             size="sm"
             variant="flat"
-            isLoading={testingIds.has(provider.id)}
-            onPress={() => handleTest(provider.id)}
+            isLoading={testing.has(p.id)}
+            onPress={() => handleTest(p.id)}
           >
-            {testingIds.has(provider.id)
-              ? t<string>("configuration.ai.testing")
-              : t<string>("configuration.ai.testConnection")}
+            {testing.has(p.id) ? t<string>("aiProvider.testing") : t<string>("aiProvider.testConnection")}
           </Button>
-          <Button
-            size="sm"
-            variant="flat"
-            isLoading={loadingModels[provider.id]}
-            onPress={() => handleLoadModels(provider.id)}
-          >
-            {t<string>("configuration.ai.loadModels")}
-          </Button>
+          {p.llmEnabled && (
+            <Button
+              size="sm"
+              variant="flat"
+              isLoading={loadingModels[p.id]}
+              onPress={() => handleLoadModels(p.id)}
+            >
+              {t<string>("aiProvider.loadModels")}
+            </Button>
+          )}
           <Button
             size="sm"
             variant="flat"
             color="danger"
             startContent={<AiOutlineDelete />}
-            onPress={() => {
-              if (confirm(t<string>("configuration.ai.deleteConfirm"))) {
-                handleDelete(provider.id);
-              }
-            }}
+            onPress={() => handleDelete(p.id)}
           >
             {t<string>("common.action.delete")}
           </Button>
@@ -259,23 +292,18 @@ const AiProviderPanel = () => {
     <>
       <Table removeWrapper>
         <TableHeader>
-          <TableColumn width={200}>
-            {t<string>("configuration.ai.providers")}
-          </TableColumn>
+          <TableColumn width={200}>{t<string>("aiProvider.title")}</TableColumn>
           <TableColumn>&nbsp;</TableColumn>
         </TableHeader>
         <TableBody>
-          {providers.map((provider) => (
-            <TableRow key={provider.id} className="hover:bg-[var(--bakaui-overlap-background)]">
+          {providers.map((p) => (
+            <TableRow key={p.id} className="hover:bg-[var(--bakaui-overlap-background)]">
               <TableCell>
-                <div className="flex items-center">
-                  {provider.name}
-                </div>
+                <div className="flex items-center font-medium">{p.name}</div>
               </TableCell>
-              <TableCell>{renderProviderCell(provider)}</TableCell>
+              <TableCell>{renderProviderRow(p)}</TableCell>
             </TableRow>
           ))}
-
           <TableRow className="hover:bg-[var(--bakaui-overlap-background)]">
             <TableCell>
               <Button
@@ -284,7 +312,7 @@ const AiProviderPanel = () => {
                 startContent={<AiOutlinePlus />}
                 onPress={handleAdd}
               >
-                {t<string>("configuration.ai.addProvider")}
+                {t<string>("aiProvider.add")}
               </Button>
             </TableCell>
             <TableCell>&nbsp;</TableCell>
@@ -292,106 +320,122 @@ const AiProviderPanel = () => {
         </TableBody>
       </Table>
 
-      {/* Add/Edit Provider Modal */}
-      <Modal isOpen={isOpen} onClose={onClose} size="lg">
+      <Modal isOpen={isOpen} onClose={onClose} size="3xl" scrollBehavior="inside">
         <ModalContent>
           <ModalHeader>
-            {isEditing
-              ? t<string>("configuration.ai.editProvider")
-              : t<string>("configuration.ai.addProvider")}
+            {isEditMode ? t<string>("aiProvider.edit") : t<string>("aiProvider.add")}
           </ModalHeader>
           <ModalBody>
-            {editingProvider && (
-              <div className="flex flex-col gap-4">
-                <Input
-                  label={t<string>("configuration.ai.providerName")}
-                  size="sm"
-                  value={editingProvider.name ?? ""}
-                  isRequired
-                  onValueChange={(v) =>
-                    setEditingProvider({ ...editingProvider, name: v })
-                  }
-                />
-
-                <Select
-                  label={t<string>("configuration.ai.providerType")}
-                  size="sm"
-                  isRequired
-                  dataSource={providerTypes.map((pt) => ({
-                    label: pt.displayName,
-                    value: String(pt.type),
-                  }))}
-                  selectedKeys={
-                    editingProvider.providerType
-                      ? [String(editingProvider.providerType)]
-                      : undefined
-                  }
-                  onSelectionChange={(keys) => {
-                    const arr = Array.from(keys);
-                    if (arr.length > 0) handleProviderTypeChange(Number(arr[0]));
-                  }}
-                />
-
-                {(() => {
-                  const typeInfo = getProviderTypeInfo(
-                    editingProvider.providerType ?? 1,
-                  );
-                  return (
-                    <>
-                      {typeInfo?.requiresEndpoint !== false && (
-                        <Input
-                          label={t<string>("configuration.ai.endpoint")}
-                          size="sm"
-                          isRequired={typeInfo?.requiresEndpoint ?? false}
-                          placeholder={typeInfo?.defaultEndpoint ?? ""}
-                          value={editingProvider.endpoint ?? ""}
-                          onValueChange={(v) =>
-                            setEditingProvider({
-                              ...editingProvider,
-                              endpoint: v,
-                            })
-                          }
-                        />
-                      )}
-
-                      {typeInfo?.requiresApiKey && (
-                        <Input
-                          label={t<string>("configuration.ai.apiKey")}
-                          size="sm"
-                          type="password"
-                          value={editingProvider.apiKey ?? ""}
-                          onValueChange={(v) =>
-                            setEditingProvider({
-                              ...editingProvider,
-                              apiKey: v,
-                            })
-                          }
-                        />
-                      )}
-                    </>
-                  );
-                })()}
-
-                <div className="flex items-center gap-2">
-                  <Switch
+            {editing && (
+              <div className="flex flex-col gap-3">
+                {/* Row 1: Kind + Name */}
+                <div className="grid grid-cols-2 gap-3">
+                  <Select
+                    label={t<string>("aiProvider.kind")}
                     size="sm"
-                    isSelected={editingProvider.isEnabled ?? true}
-                    onValueChange={(v) =>
-                      setEditingProvider({ ...editingProvider, isEnabled: v })
-                    }
+                    isRequired
+                    selectedKeys={editing.kind ? [String(editing.kind)] : []}
+                    onSelectionChange={(keys) => {
+                      const v = Array.from(keys)[0];
+                      if (v) handleKindChange(Number(v));
+                    }}
+                    dataSource={kinds.map((k) => ({ label: k.displayName, value: String(k.kind) }))}
                   />
-                  <span className="text-sm">
-                    {t<string>("configuration.ai.enabled")}
-                  </span>
+                  <Input
+                    label={t<string>("aiProvider.name")}
+                    size="sm"
+                    isRequired
+                    value={editing.name ?? ""}
+                    onValueChange={(v) => setEditing({ ...editing, name: v })}
+                  />
                 </div>
+
+                {/* Row 2: Endpoint + API Key */}
+                <div className="grid grid-cols-2 gap-3">
+                  <Input
+                    label={t<string>("aiProvider.endpoint")}
+                    size="sm"
+                    isRequired={editingKi?.requiresEndpoint}
+                    placeholder={editingKi?.defaultEndpoint ?? ""}
+                    value={editing.endpoint ?? ""}
+                    onValueChange={(v) => setEditing({ ...editing, endpoint: v })}
+                  />
+                  <Input
+                    label={t<string>("aiProvider.apiKey")}
+                    size="sm"
+                    type="password"
+                    isRequired={editingKi?.requiresApiKey}
+                    value={editing.apiKey ?? ""}
+                    onValueChange={(v) => setEditing({ ...editing, apiKey: v })}
+                  />
+                </div>
+
+                {/* Row 3: Capabilities */}
+                <div className="flex items-center gap-6">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      size="sm"
+                      isSelected={editing.isEnabled ?? true}
+                      onValueChange={(v) => setEditing({ ...editing, isEnabled: v })}
+                    />
+                    <span className="text-sm">{t<string>("common.enabled")}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      size="sm"
+                      isDisabled={!editingSupportsLlm}
+                      isSelected={editing.llmEnabled ?? false}
+                      onValueChange={(v) => setEditing({ ...editing, llmEnabled: v })}
+                    />
+                    <span className="text-sm">{t<string>("aiProvider.useForLlm")}</span>
+                    {!editingSupportsLlm && (
+                      <span className="text-xs text-default-400">
+                        ({t<string>("aiProvider.notSupportedByKind")})
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      size="sm"
+                      isDisabled={!editingSupportsAigc}
+                      isSelected={editing.aigcEnabled ?? false}
+                      onValueChange={(v) => setEditing({ ...editing, aigcEnabled: v })}
+                    />
+                    <span className="text-sm">{t<string>("aiProvider.useForAigc")}</span>
+                    {!editingSupportsAigc && (
+                      <span className="text-xs text-default-400">
+                        ({t<string>("aiProvider.notSupportedByKind")})
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* AIGC config (only visible if AIGC capability enabled) */}
+                {editing.aigcEnabled && editingSupportsAigc && (
+                  <div>
+                    <div className="text-xs text-default-500 mb-1">
+                      {t<string>("aiProvider.aigcConfigJson")}
+                      <span className="ml-2 text-default-400">
+                        {t<string>("aiProvider.aigcConfigJsonHelp")}
+                      </span>
+                    </div>
+                    <JsonEditor
+                      key={`aigc-config-${editing.kind ?? 0}-${editing.id ?? "new"}`}
+                      value={editing.aigcConfigJson ?? ""}
+                      onChange={(v) => setEditing({ ...editing, aigcConfigJson: v })}
+                      sampleHeader={aigcSample?.header}
+                      sampleBody={aigcSample?.body}
+                    />
+                  </div>
+                )}
               </div>
             )}
           </ModalBody>
           <ModalFooter>
-            <Button size="sm" variant="flat" onPress={onClose}>
+            <Button variant="flat" onPress={onClose}>
               {t<string>("common.action.cancel")}
             </Button>
-            <Button color="primary" size="sm" onPress={handleSave}>
+            <Button color="primary" onPress={handleSave}>
               {t<string>("common.action.save")}
             </Button>
           </ModalFooter>
@@ -400,7 +444,5 @@ const AiProviderPanel = () => {
     </>
   );
 };
-
-AiProviderPanel.displayName = "AiProviderPanel";
 
 export default AiProviderPanel;

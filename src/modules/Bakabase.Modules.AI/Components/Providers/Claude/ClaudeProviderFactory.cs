@@ -15,7 +15,7 @@ public class ClaudeProviderFactory(ILogger<ClaudeProviderFactory> logger) : ILlm
 {
     private const string DefaultClaudeEndpoint = "https://api.anthropic.com/v1/";
 
-    public LlmProviderType ProviderType => LlmProviderType.Claude;
+    public AiProviderKind Kind => AiProviderKind.Claude;
     public string DisplayName => "Claude";
 
     public LlmCapabilities DefaultCapabilities =>
@@ -26,7 +26,7 @@ public class ClaudeProviderFactory(ILogger<ClaudeProviderFactory> logger) : ILlm
     public bool RequiresEndpoint => false;
     public string? DefaultEndpoint => DefaultClaudeEndpoint;
 
-    public IChatClient CreateClient(LlmProviderConfigDbModel config, string modelId)
+    public IChatClient CreateClient(AiProviderDbModel config, string modelId)
     {
         // Use OpenAI-compatible endpoint (Anthropic provides one)
         // When Anthropic C# SDK has stable IChatClient support, this can be replaced
@@ -37,7 +37,7 @@ public class ClaudeProviderFactory(ILogger<ClaudeProviderFactory> logger) : ILlm
         return client.GetChatClient(modelId).AsIChatClient();
     }
 
-    public Task<IReadOnlyList<LlmModelInfo>> GetModelsAsync(LlmProviderConfigDbModel config,
+    public Task<IReadOnlyList<LlmModelInfo>> GetModelsAsync(AiProviderDbModel config,
         CancellationToken ct = default)
     {
         // Anthropic does not expose a model listing API.
@@ -66,7 +66,7 @@ public class ClaudeProviderFactory(ILogger<ClaudeProviderFactory> logger) : ILlm
         return Task.FromResult(models);
     }
 
-    public async Task<bool> TestConnectionAsync(LlmProviderConfigDbModel config, CancellationToken ct = default)
+    public async Task<bool> TestConnectionAsync(AiProviderDbModel config, CancellationToken ct = default)
     {
         try
         {

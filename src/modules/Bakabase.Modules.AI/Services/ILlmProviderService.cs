@@ -1,19 +1,19 @@
 using Bakabase.Modules.AI.Models.Db;
 using Bakabase.Modules.AI.Models.Domain;
-using Bakabase.Modules.AI.Models.Input;
 using Microsoft.Extensions.AI;
 
 namespace Bakabase.Modules.AI.Services;
 
+/// <summary>
+/// LLM-specific operations on AI providers. CRUD lives on <see cref="IAiProviderService"/>;
+/// this interface is for things only LLM-capable providers can do.
+/// </summary>
 public interface ILlmProviderService
 {
-    Task<IReadOnlyList<LlmProviderConfigDbModel>> GetAllProvidersAsync(CancellationToken ct = default);
-    Task<LlmProviderConfigDbModel?> GetProviderAsync(int id, CancellationToken ct = default);
-    Task<LlmProviderConfigDbModel> AddProviderAsync(LlmProviderConfigAddInputModel input, CancellationToken ct = default);
-    Task<LlmProviderConfigDbModel> UpdateProviderAsync(int id, LlmProviderConfigUpdateInputModel input, CancellationToken ct = default);
-    Task DeleteProviderAsync(int id, CancellationToken ct = default);
-    Task<bool> TestConnectionAsync(int id, CancellationToken ct = default);
-    Task<IReadOnlyList<LlmModelInfo>> GetModelsAsync(int id, CancellationToken ct = default);
-    IReadOnlyList<LlmProviderTypeInfo> GetProviderTypes();
-    IChatClient CreateChatClient(LlmProviderConfigDbModel config, string modelId);
+    /// <summary>Returns all enabled providers with the LLM capability turned on.</summary>
+    Task<IReadOnlyList<AiProviderDbModel>> GetEnabledLlmProvidersAsync(CancellationToken ct = default);
+
+    Task<IReadOnlyList<LlmModelInfo>> GetModelsAsync(int providerId, CancellationToken ct = default);
+
+    IChatClient CreateChatClient(AiProviderDbModel config, string modelId);
 }

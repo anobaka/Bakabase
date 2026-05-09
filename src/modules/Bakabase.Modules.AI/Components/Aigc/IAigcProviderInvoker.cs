@@ -4,22 +4,19 @@ using Bakabase.Modules.AI.Models.Domain;
 namespace Bakabase.Modules.AI.Components.Aigc;
 
 /// <summary>
-/// Concrete implementation per <see cref="AigcProviderKind"/>. Registered as singletons
-/// and selected by Kind at runtime, mirroring <c>ILlmProviderFactory</c>.
+/// Concrete implementation per <see cref="AiProviderKind"/> capable of AIGC. Registered as
+/// singletons and selected by Kind at runtime. Different from <c>ILlmProviderFactory</c>:
+/// invokers produce file bytes (with optional polling) rather than chat completions.
 /// </summary>
 public interface IAigcProviderInvoker
 {
-    AigcProviderKind Kind { get; }
-    string DisplayName { get; }
+    AiProviderKind Kind { get; }
     AigcMediaType[] SupportedMediaTypes { get; }
-    bool RequiresApiKey { get; }
-    bool RequiresEndpoint { get; }
-    string? DefaultEndpoint { get; }
 
-    Task<bool> TestConnectionAsync(AigcProviderConfigDbModel config, CancellationToken ct);
+    Task<bool> TestConnectionAsync(AiProviderDbModel config, CancellationToken ct);
 
     Task<AigcInvocationResult> InvokeAsync(
-        AigcProviderConfigDbModel config,
+        AiProviderDbModel config,
         AigcInvocationRequest request,
         CancellationToken ct);
 }

@@ -7,12 +7,12 @@ import { Chip } from "@heroui/react";
 import BApi from "@/sdk/BApi";
 import type {
   BakabaseModulesAIComponentsObservationLlmUsageSummary,
-  BakabaseModulesAIModelsDbLlmProviderConfigDbModel,
+  BakabaseModulesAIModelsDbAiProviderDbModel,
 } from "@/sdk/Api";
-import { LlmProviderTypeLabel } from "@/sdk/constants";
+import { AiProviderKindLabel } from "@/sdk/constants";
 
 type UsageSummary = BakabaseModulesAIComponentsObservationLlmUsageSummary;
-type LlmProviderConfig = BakabaseModulesAIModelsDbLlmProviderConfigDbModel;
+type LlmProviderConfig = BakabaseModulesAIModelsDbAiProviderDbModel;
 
 // Feature string (from backend) → i18n key mapping
 const featureI18nKey: Record<string, string> = {
@@ -30,7 +30,7 @@ const AiUsagePage = () => {
   const load = useCallback(async () => {
     const [summaryRes, providersRes] = await Promise.all([
       BApi.ai.getLlmUsageSummary(),
-      BApi.ai.getAllLlmProviders(),
+      BApi.ai.getAllAiProviders(),
     ]);
     if (!summaryRes.code && summaryRes.data) {
       setSummary(summaryRes.data);
@@ -47,7 +47,7 @@ const AiUsagePage = () => {
   const getProviderLabel = (providerConfigId: number): string => {
     const p = providers.find((pr) => pr.id === providerConfigId);
     if (!p) return `#${providerConfigId}`;
-    const typeName = LlmProviderTypeLabel[p.providerType] ?? "";
+    const typeName = AiProviderKindLabel[p.kind] ?? "";
     return `${p.name}${typeName ? ` (${typeName})` : ""}`;
   };
 

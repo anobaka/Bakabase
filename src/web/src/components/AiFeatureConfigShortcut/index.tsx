@@ -15,13 +15,13 @@ import { toast, Select, RadioGroup, Radio, Autocomplete, AutocompleteItem } from
 import BApi from "@/sdk/BApi";
 import type {
   BakabaseModulesAIModelsDbAiFeatureConfigDbModel,
-  BakabaseModulesAIModelsDbLlmProviderConfigDbModel,
+  BakabaseModulesAIModelsDbAiProviderDbModel,
   BakabaseModulesAIModelsDomainLlmModelInfo,
 } from "@/sdk/Api";
 import { AiFeature, AiFeatureLabel } from "@/sdk/constants";
 
 type FeatureConfig = BakabaseModulesAIModelsDbAiFeatureConfigDbModel;
-type LlmProviderConfig = BakabaseModulesAIModelsDbLlmProviderConfigDbModel;
+type LlmProviderConfig = BakabaseModulesAIModelsDbAiProviderDbModel;
 type LlmModelInfo = BakabaseModulesAIModelsDomainLlmModelInfo;
 
 type ConfigMode = "default" | "custom";
@@ -76,7 +76,11 @@ const AiFeatureConfigShortcut = ({ feature, label }: Props) => {
   }, []);
 
   const loadProviders = useCallback(async () => {
-    const r = await BApi.ai.getAllLlmProviders();
+    const r = await BApi.ai.getAllAiProviders();
+    if (!r.code && r.data) {
+      // Filter to LLM-capable providers only — feature configs reference LLM models.
+      r.data = r.data.filter((p) => p.llmEnabled);
+    }
     if (!r.code && r.data) {
       setProviders(r.data.filter((p) => p.isEnabled));
     }
@@ -85,7 +89,7 @@ const AiFeatureConfigShortcut = ({ feature, label }: Props) => {
   const loadModels = useCallback(async (providerId: number) => {
     setLoadingModels(true);
     try {
-      const r = await BApi.ai.getLlmProviderModels(providerId);
+      const r = await BApi.ai.getAiProviderLlmModels(providerId);
       if (!r.code && r.data) {
         setModels(r.data);
       }

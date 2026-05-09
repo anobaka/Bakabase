@@ -11,54 +11,23 @@ using Swashbuckle.AspNetCore.Annotations;
 
 namespace Bakabase.Service.Controllers;
 
+/// <summary>
+/// Provider CRUD lives on <c>AIController</c> (~/ai/providers); AIGC providers are just
+/// AI providers with the AIGC capability flag enabled.
+/// </summary>
 [Route("~/aigc")]
 public class AigcController(
-    IAigcProviderService providerService,
+    IAigcProviderService aigcProviderService,
     IAigcGeneratorService generatorService,
     IAigcArtifactService artifactService
 ) : Controller
 {
-    // ===== Providers =====
+    // ===== AIGC-capable providers (filtered subset; CRUD lives at /ai/providers) =====
 
     [HttpGet("providers")]
-    [SwaggerOperation(OperationId = "GetAllAigcProviders")]
-    public async Task<ListResponse<AigcProviderConfigDbModel>> GetAllProviders(CancellationToken ct) =>
-        new(await providerService.GetAllAsync(ct));
-
-    [HttpGet("providers/{id:int}")]
-    [SwaggerOperation(OperationId = "GetAigcProvider")]
-    public async Task<SingletonResponse<AigcProviderConfigDbModel?>> GetProvider(int id, CancellationToken ct) =>
-        new(await providerService.GetAsync(id, ct));
-
-    [HttpPost("providers")]
-    [SwaggerOperation(OperationId = "AddAigcProvider")]
-    public async Task<SingletonResponse<AigcProviderConfigDbModel>> AddProvider(
-        [FromBody] AigcProviderConfigAddInputModel model, CancellationToken ct) =>
-        new(await providerService.AddAsync(model, ct));
-
-    [HttpPut("providers/{id:int}")]
-    [SwaggerOperation(OperationId = "UpdateAigcProvider")]
-    public async Task<SingletonResponse<AigcProviderConfigDbModel>> UpdateProvider(
-        int id, [FromBody] AigcProviderConfigUpdateInputModel model, CancellationToken ct) =>
-        new(await providerService.UpdateAsync(id, model, ct));
-
-    [HttpDelete("providers/{id:int}")]
-    [SwaggerOperation(OperationId = "DeleteAigcProvider")]
-    public async Task<BaseResponse> DeleteProvider(int id, CancellationToken ct)
-    {
-        await providerService.DeleteAsync(id, ct);
-        return BaseResponseBuilder.Ok;
-    }
-
-    [HttpPost("providers/{id:int}/test")]
-    [SwaggerOperation(OperationId = "TestAigcProvider")]
-    public async Task<SingletonResponse<bool>> TestProvider(int id, CancellationToken ct) =>
-        new(await providerService.TestConnectionAsync(id, ct));
-
-    [HttpGet("provider-kinds")]
-    [SwaggerOperation(OperationId = "GetAigcProviderKinds")]
-    public ListResponse<AigcProviderKindInfo> GetProviderKinds() =>
-        new(providerService.GetProviderKinds());
+    [SwaggerOperation(OperationId = "GetEnabledAigcProviders")]
+    public async Task<ListResponse<AiProviderDbModel>> GetEnabledProviders(CancellationToken ct) =>
+        new(await aigcProviderService.GetEnabledAigcProvidersAsync(ct));
 
     // ===== Generators =====
 

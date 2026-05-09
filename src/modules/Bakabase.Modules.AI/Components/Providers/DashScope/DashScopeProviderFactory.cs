@@ -14,7 +14,7 @@ public class DashScopeProviderFactory(ILogger<DashScopeProviderFactory> logger) 
 {
     private const string DefaultDashScopeEndpoint = "https://dashscope.aliyuncs.com/compatible-mode/v1";
 
-    public LlmProviderType ProviderType => LlmProviderType.DashScope;
+    public AiProviderKind Kind => AiProviderKind.DashScope;
     public string DisplayName => "阿里云百炼";
 
     public LlmCapabilities DefaultCapabilities =>
@@ -24,7 +24,7 @@ public class DashScopeProviderFactory(ILogger<DashScopeProviderFactory> logger) 
     public bool RequiresEndpoint => false;
     public string? DefaultEndpoint => DefaultDashScopeEndpoint;
 
-    public IChatClient CreateClient(LlmProviderConfigDbModel config, string modelId)
+    public IChatClient CreateClient(AiProviderDbModel config, string modelId)
     {
         var endpoint = config.Endpoint ?? DefaultDashScopeEndpoint;
         var client = new OpenAIClient(
@@ -33,7 +33,7 @@ public class DashScopeProviderFactory(ILogger<DashScopeProviderFactory> logger) 
         return client.GetChatClient(modelId).AsIChatClient();
     }
 
-    public async Task<IReadOnlyList<LlmModelInfo>> GetModelsAsync(LlmProviderConfigDbModel config,
+    public async Task<IReadOnlyList<LlmModelInfo>> GetModelsAsync(AiProviderDbModel config,
         CancellationToken ct = default)
     {
         try
@@ -62,7 +62,7 @@ public class DashScopeProviderFactory(ILogger<DashScopeProviderFactory> logger) 
         }
     }
 
-    public async Task<bool> TestConnectionAsync(LlmProviderConfigDbModel config, CancellationToken ct = default)
+    public async Task<bool> TestConnectionAsync(AiProviderDbModel config, CancellationToken ct = default)
     {
         try
         {
