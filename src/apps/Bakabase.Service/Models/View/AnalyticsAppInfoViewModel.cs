@@ -15,6 +15,11 @@ public record AnalyticsAppInfoViewModel
     /// GA4 client_id so the three views can be cross-referenced.</summary>
     public string DeviceId { get; init; } = string.Empty;
 
+    /// <summary>The running app version. Surfaced here (rather than only on the telemetry
+    /// snapshot) because Sentry needs <c>release</c> at init time, before the first error
+    /// is captured.</summary>
+    public string AppVersion { get; init; } = string.Empty;
+
     /// <summary>One of <c>"stable"</c>, <c>"beta"</c>, <c>"dev"</c>. Derived server-side
     /// from the SemVer prerelease suffix; used as a GA4 user property and Sentry tag.</summary>
     public string ReleaseChannel { get; init; } = string.Empty;

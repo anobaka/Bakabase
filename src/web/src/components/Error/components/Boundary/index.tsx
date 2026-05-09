@@ -1,6 +1,7 @@
 import type { ReactNode, ErrorInfo } from "react";
 
 import React from "react";
+import * as Sentry from "@sentry/react";
 
 import ErrorModal from "../Modal";
 
@@ -34,6 +35,14 @@ class ErrorBoundary extends React.Component<
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     console.error("Error caught by ErrorBoundary:", error, errorInfo);
+
+    // Forward to Sentry. captureException is a no-op until Sentry.init runs in
+    // initAnalytics, so this is safe regardless of init order.
+    Sentry.captureException(error, {
+      contexts: {
+        react: { componentStack: errorInfo.componentStack },
+      },
+    });
 
     // Update state with error info
     this.setState({ errorInfo });

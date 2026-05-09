@@ -1,4 +1,5 @@
 import Clarity from "@microsoft/clarity";
+import * as Sentry from "@sentry/react";
 
 import envConfig from "@/config/env";
 
@@ -12,6 +13,7 @@ import envConfig from "@/config/env";
 type AnalyticsAppInfo = {
   enableAnonymousDataTracking: boolean;
   deviceId: string;
+  appVersion: string;
   releaseChannel: string;
   clarityProjectId: string | null;
   ga4MeasurementId: string | null;
@@ -154,6 +156,27 @@ export async function initAnalytics(): Promise<void> {
 
   if (!info || !info.enableAnonymousDataTracking) return;
 
+  // Sentry first — so its error handlers catch anything that goes wrong in subsequent
+  // SDK init.
+  if (info.sentryDsn) {
+    try {
+      Sentry.init({
+        dsn: info.sentryDsn,
+        release: info.appVersion,
+        environment: import.meta.env.MODE,
+        // Performance + Replay are off — Clarity already records sessions and we don't
+        // want to double the data volume / Sentry quota.
+        tracesSampleRate: 0,
+        replaysSessionSampleRate: 0,
+        replaysOnErrorSampleRate: 0,
+      });
+      Sentry.setUser({ id: info.deviceId });
+      Sentry.setTag("release_channel", info.releaseChannel);
+    } catch (e) {
+      console.warn("[analytics] Sentry init failed", e);
+    }
+  }
+
   // Clarity — qualitative recording / heatmaps
   if (info.clarityProjectId) {
     try {
@@ -174,8 +197,6 @@ export async function initAnalytics(): Promise<void> {
       console.warn("[analytics] GA4 init failed", e);
     }
   }
-
-  // Sentry init lives here once P5 lands.
 }
 
 /**

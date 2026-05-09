@@ -91,6 +91,7 @@ namespace Bakabase.Service.Controllers
             {
                 EnableAnonymousDataTracking = _appOptions.Value.EnableAnonymousDataTracking,
                 DeviceId = _deviceIdService.GetOrCreate(),
+                AppVersion = AppService.CoreVersion.ToString(),
                 ReleaseChannel = ReleaseChannelDetector.Detect(_env),
                 ClarityProjectId = string.IsNullOrWhiteSpace(cfg.Clarity.ProjectId) ? null : cfg.Clarity.ProjectId,
                 Ga4MeasurementId = string.IsNullOrWhiteSpace(cfg.Ga4.MeasurementId) ? null : cfg.Ga4.MeasurementId,
