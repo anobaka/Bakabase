@@ -248,6 +248,7 @@
   "aiProvider.error.atLeastOneCapability": "Enable at least one of LLM / AIGC",
 
   "aigc.configs.title": "AIGC Configurations",
+  "aigc.configs.intro": "Create as many configurations as you like — for different prompts, parameters, models, or providers. Each configuration can be invoked any number of times to generate new resources, and every generated artifact is tracked in AIGC Records.",
   "aigc.configs.add": "Add AIGC Configuration",
   "aigc.configs.edit": "Edit AIGC Configuration",
   "aigc.configs.name": "Name",

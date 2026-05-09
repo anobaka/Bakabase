@@ -248,6 +248,7 @@
   "aiProvider.error.atLeastOneCapability": "请至少启用 LLM 或 AIGC 中的一种能力",
 
   "aigc.configs.title": "AIGC 配置",
+  "aigc.configs.intro": "你可以根据喜好创建任意多个 AIGC 配置——不同的提示词、参数、模型或服务方都可以单独配置。每个配置都可以反复调用对应的服务方来生成资源，所有产出都会自动记录在「AIGC 记录」中。",
   "aigc.configs.add": "新增 AIGC 配置",
   "aigc.configs.edit": "编辑 AIGC 配置",
   "aigc.configs.name": "名称",

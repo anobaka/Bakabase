@@ -239,6 +239,9 @@ const AigcConfigsPage = () => {
           {t<string>("common.action.add")}
         </Button>
       </div>
+      <p className="text-sm text-default-500 leading-relaxed">
+        {t<string>("aigc.configs.intro")}
+      </p>
 
       <Table removeWrapper>
         <TableHeader>
