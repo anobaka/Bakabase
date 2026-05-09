@@ -218,6 +218,7 @@ src/apps/Bakabase.Service/Controllers/OptionsController.cs:99-102
 | Key | Type | 来源 | 用途 |
 |---|---|---|---|
 | `app_version` | string | `IAppService.AppInfo.CoreVersion` | 需求 1（版本分布） |
+| `release_channel` | string | 解析 `app_version` 的 semver 预发布后缀；值: `stable` / `beta` / `dev` | 需求 1 子维度（区分预发布与正式版） |
 | `os` | string | `RuntimeInformation.OSDescription`，归一化为 `windows`/`macos`/`linux` | 平台分布 |
 | `locale` | string | UI 设置 | 语言分布 |
 | `enabled_enhancers` | string (csv) | `EnhancerService` 启用列表，按 ID 字典序排序后逗号拼接 | 需求 5 |
@@ -225,6 +226,28 @@ src/apps/Bakabase.Service/Controllers/OptionsController.cs:99-102
 | `has_media_library` | bool | `mediaLibraryCount > 0` | 反向指标"什么都没建"用 |
 
 > **不上报** `enabled_enhancer_count` 这种派生字段 — 在 GA4 端用 `enabled_enhancers` 计算。
+
+#### `release_channel` 的归类规则
+
+由后端从 `CoreVersion` 解析（在 `TelemetrySnapshotService` 内）：
+
+| 版本号示例 | `release_channel` |
+|---|---|
+| `1.4.2` | `stable` |
+| `1.4.2-beta.3` / `1.4.2-rc.1` / 任何含 `-` 的 SemVer 预发布后缀 | `beta` |
+| `0.0.0-dev` / 调试 build / `EnvironmentName == Development` | `dev` |
+
+只在后端解析一次、放进 `TelemetrySnapshot.releaseChannel`，前端不重复实现。
+
+#### `environment` 维度
+
+环境维度（`production` / `development`）走 GA4 **event-scoped** 路径，区别于 user-scoped 的 `release_channel`：
+
+```typescript
+gtag('set', { environment: import.meta.env.MODE });
+```
+
+这样所有 event 自动带上 `environment` param，看板里可独立切片。Sentry 端用其原生 `environment` 配置（详见 §10.2）。
 
 ### 6.3 Events
 
@@ -274,6 +297,7 @@ GET /api/app/telemetry-snapshot
 Response 200:
 {
   "appVersion": "1.4.2",
+  "releaseChannel": "stable",
   "os": "windows",
   "locale": "zh-CN",
   "mediaLibraryCount": 15,
@@ -363,12 +387,15 @@ async function initAnalytics(appInfo: AppInfo) {
       client_id: appInfo.deviceId,
       anonymize_ip: true,
     });
+    // event-scoped, applies to every subsequent event
+    gtag('set', { environment: import.meta.env.MODE });
 
     const snapshot = await BApi.app.getTelemetrySnapshot();
     const hash = sha256(JSON.stringify(snapshot)).slice(0, 16);
     if (hash !== localStorage.getItem('telemetry_last_hash')) {
       gtag('set', 'user_properties', {
         app_version: snapshot.appVersion,
+        release_channel: snapshot.releaseChannel,
         os: snapshot.os,
         locale: snapshot.locale,
         enabled_enhancers: snapshot.enabledEnhancers.join(','),
@@ -660,22 +687,20 @@ Sentry SaaS 免费档 **5k errors/月**。Bakabase 用户基数估算 ≥1000，
 
 ---
 
-## 16. 待决策项
+## 16. 决策记录
 
-需要在动手前明确：
-
-| # | 问题 | 备选 |
-|---|---|---|
-| 1 | GA4 Property 是用一个还是按 dev/prod 分两个 | 推荐一个 Property + environment 维度区分 |
-| 2 | Sentry 项目用一个还是按前后端分两个 | 推荐**两个**（前后端 stack trace 来源不同，分开管理 issue 队列更清晰） |
-| 3 | 启动上报频率 | 推荐：仅在 snapshot hash 变化时发；`feature_used` 实时不节流 |
-| 4 | 离线时事件如何处理 | 推荐：丢弃（GA4 / Sentry SDK 自带的本地缓冲已足够，不额外做） |
-| 5 | `enabled_enhancers` 取值口径 | 推荐：**已配置启用**（启动时 read），另用 `enhancer_triggered` event 反映实际触发 |
-| 6 | 哪些操作埋 `feature_used` | 推荐**首版只埋页面级**（按路由），后续按需补充按钮级 |
-| 7 | 凭证（GA4 ID / Sentry DSN）的注入方式 | 推荐：默认值写 `appsettings.json`（开源、所有人共享一个），需要私有看板时通过 ENV 覆盖 |
-| 8 | `appsettings.json` 中的默认凭证是否提交到 git | 推荐：**提交**，让所有用户上报到同一个聚合视图（这就是数据价值所在）；提供 ENV 覆盖给二次开发者 |
-| 9 | 配置页是否分两层开关（错误诊断 vs 行为分析） | 首版**不分**，单一开关；分层属 future enhancement |
-| 10 | DeviceId 存哪 | 推荐：SQLite `app_meta` 表（与现有数据库一致，避免散文件） |
+| # | 问题 | 决定 | 备注 |
+|---|---|---|---|
+| 1 | GA4 Property 数量 | **一个 Property** + 两个区分维度 | `environment`（event-scoped, `production` / `development`）+ `release_channel`（user-scoped, `stable` / `beta` / `dev`）。后者由后端从版本号 semver 后缀解析，详见 §6.2 |
+| 2 | Sentry 项目数量 | **前后端各一个** | stack trace 来源不同，分队列管理更清晰 |
+| 3 | 启动上报频率 | **snapshot hash 变化时才发**；`feature_used` 实时不节流 | 见 §6.5 节流策略 |
+| 4 | 离线事件处理 | **丢弃** | 走 GA4 / Sentry SDK 自带本地缓冲，不额外做 |
+| 5 | `enabled_enhancers` 取值口径 | **已配置启用**（user property） + `enhancer_triggered` event 反映实际触发 | 启用 ≠ 触发，两个口径都有价值 |
+| 6 | `feature_used` 埋点范围 | **首版仅页面级**（按路由） | 后续按需加按钮级 |
+| 7 | 凭证注入方式 | `appsettings.json` 写默认 + ENV 覆盖 | 二次开发者可指向自己的看板 |
+| 8 | 默认凭证是否提交 git | **提交** | 让所有用户上报到同一聚合视图 — 这就是数据价值所在 |
+| 9 | 隐私开关分层 | **首版单一开关** | 分层（错误诊断 vs 行为分析）属 future enhancement |
+| 10 | DeviceId 存储位置 | **SQLite `app_meta` 表** | 与现有数据库一致，避免散文件；需新增 EF migration |
 
 ---
 
