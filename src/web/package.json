@@ -79,6 +79,7 @@
     "moment": "^2.29.1",
     "openapi-fetch": "^0.13.4",
     "patch-package": "^6.5.1",
+    "posthog-js": "^1.181.0",
     "postinstall-postinstall": "^2.1.0",
     "prop-types": "^15.7.2",
     "qs": "^6.11.0",

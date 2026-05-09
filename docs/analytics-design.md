@@ -20,6 +20,7 @@
 | 重置匿名 ID 按钮 | 配置页加按钮 + 后端 reset 端点 | 已移除 | 用户决定不需要；toggle 一个开关够用，且老 ID 跨会话稳定有助于排查 |
 | 后端 ILogger → Sentry | 设计为 Serilog sink，标记为后续 | 直接接入 MSEL (`ILoggingBuilder.AddSentry`) | Serilog 在 submodule 里构造改不动；MSEL 是独立 provider，等价覆盖 |
 | 前端 SDK 调用 | 通过 `BApi.app.*` typed SDK 调用 | 用 `fetch` 直接调，等待用户本地跑 `yarn gen-sdk` 后可迁移 | 沙盒环境无法跑 gen-sdk |
+| **量化分析工具数量** | 单一工具 GA4（§2.1 选型表） | **GA4 + PostHog 双线并行** | GA4 在国内时常被墙 / Property 偶尔进入脏状态 → 单点失败风险高；PostHog 国内访问稳、无需注册 Custom Definition、UI 友好。两者同时上报，谁通用谁；都通就以 PostHog 为准 |
 
 ---
 

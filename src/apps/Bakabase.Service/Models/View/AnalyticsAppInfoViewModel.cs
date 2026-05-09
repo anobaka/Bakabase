@@ -29,4 +29,12 @@ public record AnalyticsAppInfoViewModel
 
     /// <summary>Sentry DSN for the frontend project. Distinct from the backend DSN.</summary>
     public string? SentryDsn { get; init; }
+
+    /// <summary>PostHog project API key (starts with <c>phc_</c>). Runs alongside GA4 —
+    /// same events / user properties get mirrored to both.</summary>
+    public string? PostHogApiKey { get; init; }
+
+    /// <summary>PostHog ingestion endpoint (cloud or self-hosted). Always non-null when
+    /// <see cref="PostHogApiKey"/> is set; defaults to US cloud otherwise.</summary>
+    public string PostHogApiHost { get; init; } = string.Empty;
 }

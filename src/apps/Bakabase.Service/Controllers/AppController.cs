@@ -96,6 +96,8 @@ namespace Bakabase.Service.Controllers
                 ClarityProjectId = string.IsNullOrWhiteSpace(cfg.Clarity.ProjectId) ? null : cfg.Clarity.ProjectId,
                 Ga4MeasurementId = string.IsNullOrWhiteSpace(cfg.Ga4.MeasurementId) ? null : cfg.Ga4.MeasurementId,
                 SentryDsn = string.IsNullOrWhiteSpace(cfg.Sentry.FrontendDsn) ? null : cfg.Sentry.FrontendDsn,
+                PostHogApiKey = string.IsNullOrWhiteSpace(cfg.PostHog.ApiKey) ? null : cfg.PostHog.ApiKey,
+                PostHogApiHost = cfg.PostHog.ApiHost,
             };
             return new SingletonResponse<AnalyticsAppInfoViewModel>(vm);
         }

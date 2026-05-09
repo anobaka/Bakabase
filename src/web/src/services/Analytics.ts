@@ -1,5 +1,6 @@
 import Clarity from "@microsoft/clarity";
 import * as Sentry from "@sentry/react";
+import posthog from "posthog-js";
 
 import envConfig from "@/config/env";
 
@@ -18,6 +19,8 @@ type AnalyticsAppInfo = {
   clarityProjectId: string | null;
   ga4MeasurementId: string | null;
   sentryDsn: string | null;
+  posthogApiKey: string | null;
+  posthogApiHost: string;
 };
 
 /** Mirrors `Bakabase.Service.Models.View.TelemetrySnapshotViewModel`. */
@@ -43,6 +46,7 @@ declare global {
 }
 
 let initialized = false;
+let posthogInitialized = false;
 
 async function fetchJson<T>(
   path: string,
@@ -93,6 +97,31 @@ function loadGtag(measurementId: string, deviceId: string): void {
   window.gtag("set", { environment: import.meta.env.MODE });
 }
 
+function loadPostHog(
+  apiKey: string,
+  apiHost: string,
+  deviceId: string,
+  releaseChannel: string,
+): void {
+  posthog.init(apiKey, {
+    api_host: apiHost,
+    // We always identify with a deviceId, so don't waste profile quota on anonymous users.
+    person_profiles: "identified_only",
+    // SPA route changes need manual fires (we do this in trackPageView). PostHog's
+    // history-change auto-tracking has caveats with hash routing.
+    capture_pageview: false,
+    // Don't auto-capture click/input — we want explicit events only, matching GA4.
+    autocapture: false,
+    // Clarity already records sessions; we don't want PostHog doing the same.
+    disable_session_recording: true,
+    loaded: (ph) => {
+      if (import.meta.env.DEV) ph.debug();
+    },
+  });
+  posthog.identify(deviceId, { release_channel: releaseChannel });
+  posthogInitialized = true;
+}
+
 /**
  * DJB2 variant. Non-cryptographic but stable and sync; sufficient for "did the snapshot
  * change since last launch?".
@@ -110,7 +139,8 @@ function snapshotHash(serialized: string): string {
 async function pushSnapshotIfChanged(): Promise<void> {
   const snapshot = await fetchJson<TelemetrySnapshot>("/app/telemetry-snapshot");
 
-  if (!snapshot || !window.gtag) return;
+  if (!snapshot) return;
+  if (!window.gtag && !posthogInitialized) return;
 
   // Stable serialization: enabledEnhancers is sorted server-side; other fields are
   // either scalars or arrays whose order is fixed.
@@ -125,19 +155,41 @@ async function pushSnapshotIfChanged(): Promise<void> {
 
   if (hash === lastHash) return;
 
-  window.gtag("set", "user_properties", {
-    app_version: snapshot.appVersion,
-    release_channel: snapshot.releaseChannel,
-    os: snapshot.os,
-    locale: snapshot.locale,
-    enabled_enhancers: snapshot.enabledEnhancers.join(","),
-    ai_enabled: snapshot.aiEnabled,
-    has_media_library: snapshot.hasMediaLibrary,
-  });
-  window.gtag("event", "app_snapshot", {
-    media_library_count: snapshot.mediaLibraryCount,
-    resource_count: snapshot.resourceCount,
-  });
+  if (window.gtag) {
+    window.gtag("set", "user_properties", {
+      app_version: snapshot.appVersion,
+      release_channel: snapshot.releaseChannel,
+      os: snapshot.os,
+      locale: snapshot.locale,
+      enabled_enhancers: snapshot.enabledEnhancers.join(","),
+      ai_enabled: snapshot.aiEnabled,
+      has_media_library: snapshot.hasMediaLibrary,
+    });
+    window.gtag("event", "app_snapshot", {
+      media_library_count: snapshot.mediaLibraryCount,
+      resource_count: snapshot.resourceCount,
+    });
+  }
+
+  if (posthogInitialized) {
+    // PostHog stores numbers natively, so we put counts on the person profile too —
+    // no need for a separate "metric" type registration the way GA4 needs.
+    posthog.setPersonProperties({
+      app_version: snapshot.appVersion,
+      release_channel: snapshot.releaseChannel,
+      os: snapshot.os,
+      locale: snapshot.locale,
+      enabled_enhancers: snapshot.enabledEnhancers,
+      ai_enabled: snapshot.aiEnabled,
+      has_media_library: snapshot.hasMediaLibrary,
+      media_library_count: snapshot.mediaLibraryCount,
+      resource_count: snapshot.resourceCount,
+    });
+    posthog.capture("app_snapshot", {
+      media_library_count: snapshot.mediaLibraryCount,
+      resource_count: snapshot.resourceCount,
+    });
+  }
 
   try {
     localStorage.setItem(SNAPSHOT_HASH_KEY, hash);
@@ -191,14 +243,33 @@ export async function initAnalytics(): Promise<void> {
     }
   }
 
-  // GA4 — quantitative cohorts / event metrics
+  // GA4 — quantitative cohorts / event metrics. Mirrors PostHog below.
   if (info.ga4MeasurementId) {
     try {
       loadGtag(info.ga4MeasurementId, info.deviceId);
-      await pushSnapshotIfChanged();
     } catch (e) {
       console.warn("[analytics] GA4 init failed", e);
     }
+  }
+
+  // PostHog — same dimensions / events as GA4, runs in parallel. Useful as a fallback
+  // when GA4 is broken / unreachable, and as a primary in regions where GA4 is blocked.
+  if (info.posthogApiKey && info.posthogApiHost) {
+    try {
+      loadPostHog(
+        info.posthogApiKey,
+        info.posthogApiHost,
+        info.deviceId,
+        info.releaseChannel,
+      );
+    } catch (e) {
+      console.warn("[analytics] PostHog init failed", e);
+    }
+  }
+
+  // Snapshot push runs after both GA4 and PostHog so it can fan out to whichever is up.
+  if (window.gtag || posthogInitialized) {
+    await pushSnapshotIfChanged();
   }
 }
 
@@ -207,25 +278,49 @@ export async function initAnalytics(): Promise<void> {
  * automatically — see https://developers.google.com/analytics/devguides/collection/ga4/single-page-applications.
  */
 export function trackPageView(path: string): void {
-  if (!initialized || typeof window === "undefined" || !window.gtag) return;
-  window.gtag("event", "page_view", {
-    page_path: path,
-    page_location: typeof window !== "undefined" ? window.location.href : path,
-  });
+  if (!initialized || typeof window === "undefined") return;
+
+  if (window.gtag) {
+    window.gtag("event", "page_view", {
+      page_path: path,
+      page_location: window.location.href,
+    });
+  }
+  if (posthogInitialized) {
+    posthog.capture("$pageview", {
+      $current_url: window.location.href,
+      page_path: path,
+    });
+  }
 }
 
 export function trackFeatureUsed(featureId: string): void {
-  if (!initialized || typeof window === "undefined" || !window.gtag) return;
-  window.gtag("event", "feature_used", { feature_id: featureId });
+  if (!initialized || typeof window === "undefined") return;
+
+  if (window.gtag) {
+    window.gtag("event", "feature_used", { feature_id: featureId });
+  }
+  if (posthogInitialized) {
+    posthog.capture("feature_used", { feature_id: featureId });
+  }
 }
 
 export function trackEnhancerTriggered(
   enhancerId: string,
   success: boolean,
 ): void {
-  if (!initialized || typeof window === "undefined" || !window.gtag) return;
-  window.gtag("event", "enhancer_triggered", {
-    enhancer_id: enhancerId,
-    success,
-  });
+  if (!initialized || typeof window === "undefined") return;
+
+  if (window.gtag) {
+    window.gtag("event", "enhancer_triggered", {
+      enhancer_id: enhancerId,
+      success,
+    });
+  }
+  if (posthogInitialized) {
+    posthog.capture("enhancer_triggered", {
+      enhancer_id: enhancerId,
+      success,
+    });
+  }
 }
