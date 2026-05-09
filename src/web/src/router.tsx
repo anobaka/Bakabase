@@ -11,6 +11,7 @@ import { routesMenuConfig } from "@/components/routesMenuConfig";
 import BasicLayout from "@/layouts/BasicLayout";
 import BlankLayout from "@/layouts/BlankLayout";
 import { buildLogger } from "@/components/utils";
+import { trackPageView } from "@/services/Analytics";
 
 const log = buildLogger("App");
 
@@ -69,6 +70,7 @@ export default function AppRouter() {
 
   useEffect(() => {
     log("Current route:", location.pathname);
+    trackPageView(location.pathname);
   }, [location]);
 
   const routes = flattenRoutes(routesMenuConfig);

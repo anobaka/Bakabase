@@ -178,6 +178,18 @@ export async function initAnalytics(): Promise<void> {
   // Sentry init lives here once P5 lands.
 }
 
+/**
+ * Manually fires the GA4 `page_view` event. SPA navigations don't trigger one
+ * automatically — see https://developers.google.com/analytics/devguides/collection/ga4/single-page-applications.
+ */
+export function trackPageView(path: string): void {
+  if (!initialized || typeof window === "undefined" || !window.gtag) return;
+  window.gtag("event", "page_view", {
+    page_path: path,
+    page_location: typeof window !== "undefined" ? window.location.href : path,
+  });
+}
+
 export function trackFeatureUsed(featureId: string): void {
   if (!initialized || typeof window === "undefined" || !window.gtag) return;
   window.gtag("event", "feature_used", { feature_id: featureId });
