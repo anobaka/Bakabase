@@ -101,18 +101,6 @@ namespace Bakabase.Service.Controllers
         }
 
         /// <summary>
-        /// Generates a fresh anonymous device id. Used by the configuration page's
-        /// "reset anonymous id" UX so users can break the linkage to their historical data.
-        /// </summary>
-        [HttpPost("analytics-info/reset-device-id")]
-        [SwaggerOperation(OperationId = "ResetAnalyticsDeviceId")]
-        public SingletonResponse<string> ResetDeviceId()
-        {
-            var id = _deviceIdService.Reset();
-            return new SingletonResponse<string>(id);
-        }
-
-        /// <summary>
         /// Per-install state used to populate GA4 user properties + event metrics. Counts
         /// only — never paths, names, or PII. Frontend hashes the response and uploads only
         /// when changed (see design §6.5).

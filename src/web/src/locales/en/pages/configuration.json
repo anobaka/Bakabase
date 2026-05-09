@@ -105,7 +105,7 @@
   "configuration.others.enablePreRelease": "Enable beta channel",
   "configuration.others.enablePreRelease.tip": "Prefer beta version which has new features but less stability",
   "configuration.others.enableTracking": "Enable anonymous data tracking",
-  "configuration.others.enableTracking.tip": "We are using Microsoft Clarity to track anonymous data, which will help us to improve our product experience.",
+  "configuration.others.enableTracking.tip": "We use Microsoft Clarity (session recordings / heatmaps), Google Analytics 4 (feature usage / version distribution), and Sentry (error diagnostics) to improve product quality. We never collect file paths, file names, library contents, or account information. You can turn this off at any time.",
   "configuration.others.maxParallelism": "CPU utilization",
   "configuration.others.maxParallelism.tip": "Degree of parallelism for CPU-intensive operations. Set to 1 for minimum utilization. Leave empty for default (half of CPU cores).",
 

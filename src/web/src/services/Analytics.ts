@@ -226,10 +226,3 @@ export function trackEnhancerTriggered(
     success,
   });
 }
-
-/** Backs the "reset anonymous id" button in the configuration page. */
-export async function resetAnonymousDeviceId(): Promise<string | null> {
-  return fetchJson<string>("/app/analytics-info/reset-device-id", {
-    method: "POST",
-  });
-}

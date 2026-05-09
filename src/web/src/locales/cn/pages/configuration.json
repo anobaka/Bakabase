@@ -105,7 +105,7 @@
   "configuration.others.enablePreRelease": "启用测试版本渠道",
   "configuration.others.enablePreRelease.tip": "优先使用具有新功能但稳定性较低的测试版本",
   "configuration.others.enableTracking": "启用匿名数据追踪",
-  "configuration.others.enableTracking.tip": "我们使用 Microsoft Clarity 追踪匿名数据，这将帮助我们改进产品体验。",
+  "configuration.others.enableTracking.tip": "我们使用 Microsoft Clarity（会话录像/热图）、Google Analytics 4（功能使用 / 版本分布）和 Sentry（错误诊断）来改进产品质量。不会收集您的文件路径、文件名、媒体库内容或任何账号信息。您可以随时关闭此开关。",
   "configuration.others.maxParallelism": "CPU 线程数",
   "configuration.others.maxParallelism.tip": "CPU 密集型操作的并行线程数。设为 1 表示单线程。留空使用默认值（CPU 核心数的一半）。",
 

@@ -15,10 +15,6 @@ public interface IDeviceIdService
 {
     /// <summary>Reads the persisted id, or generates and persists a new one.</summary>
     string GetOrCreate();
-
-    /// <summary>Deletes the persisted id and returns a freshly generated one. Used by the
-    /// "reset anonymous id" UX so users can break the linkage to their historical data.</summary>
-    string Reset();
 }
 
 public class DeviceIdService(AppService appService, ILogger<DeviceIdService> logger) : IDeviceIdService
@@ -71,26 +67,6 @@ public class DeviceIdService(AppService appService, ILogger<DeviceIdService> log
 
             _cached = id;
             return _cached;
-        }
-    }
-
-    public string Reset()
-    {
-        lock (_lock)
-        {
-            var dir = appService.RequestAppDataDirectory(SubDir);
-            var path = Path.Combine(dir, FileName);
-            try
-            {
-                if (File.Exists(path)) File.Delete(path);
-            }
-            catch (Exception e)
-            {
-                logger.LogError(e, "Failed to delete device-id at {Path}; new id will overwrite", path);
-            }
-
-            _cached = null;
-            return GetOrCreate();
         }
     }
 }
