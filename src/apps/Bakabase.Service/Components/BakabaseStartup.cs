@@ -169,6 +169,13 @@ namespace Bakabase.Service.Components
                 // Track SQL if using EF
                 options.TrackConnectionOpenClose = true;
             });
+
+            // Analytics (Clarity / GA4 / Sentry) — credentials bound from the "Analytics"
+            // section of appsettings.json + ENV overrides. The device-id service emits a
+            // stable per-install UUID that all three SDKs share, so frontend recordings,
+            // backend errors, and behaviour events can be cross-referenced for the same user.
+            services.Configure<AnalyticsConfiguration>(Configuration.GetSection("Analytics"));
+            services.AddSingleton<IDeviceIdService, DeviceIdService>();
         }
 
         protected override void ConfigureEndpointsAtFirst(IEndpointRouteBuilder routeBuilder)
