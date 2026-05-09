@@ -85,6 +85,9 @@ function loadGtag(measurementId: string, deviceId: string): void {
   window.gtag("config", measurementId, {
     client_id: deviceId,
     anonymize_ip: true,
+    // Auto-flag every event in dev builds so they show up in GA4 DebugView without
+    // needing a browser extension. Stripped from production builds via import.meta.env.DEV.
+    ...(import.meta.env.DEV ? { debug_mode: true } : {}),
   });
   // event-scoped param applied to every subsequent event
   window.gtag("set", { environment: import.meta.env.MODE });
