@@ -9,6 +9,7 @@ using Bakabase.Infrastructures.Components.App.Upgrade.Abstractions;
 using Bakabase.Infrastructures.Components.Orm;
 using Bakabase.InsideWorld.Business;
 using Sentry;
+using Sentry.Extensions.Logging;
 using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Compression;
 using Bakabase.InsideWorld.Business.Components.Configurations;
@@ -202,6 +203,22 @@ namespace Bakabase.Service.Components
                 {
                     scope.SetTag("release_channel", ReleaseChannelDetector.Detect(Env));
                 });
+
+                // Forward Microsoft.Extensions.Logging output into Sentry so any
+                // `_logger.LogError(...)` / `_logger.LogCritical(...)` flows into the
+                // same dashboard as unhandled exceptions. Lower levels become
+                // breadcrumbs to give context to subsequent events.
+                //
+                // We use MSEL rather than Serilog because the static Serilog logger is
+                // constructed inside Bakabase.Infrastructures (submodule we don't own)
+                // and threading a Sentry sink through there would require an upstream
+                // change. The MSEL provider is independent and works regardless.
+                services.AddLogging(builder => builder.AddSentry(o =>
+                {
+                    o.InitializeSdk = false; // SentrySdk.Init above already did this
+                    o.MinimumEventLevel = LogLevel.Error;
+                    o.MinimumBreadcrumbLevel = LogLevel.Information;
+                }));
             }
         }
 
