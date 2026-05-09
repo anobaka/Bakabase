@@ -30,6 +30,7 @@ namespace Bakabase.Service.Controllers
         private readonly IBOptions<AppOptions> _appOptions;
         private readonly IOptions<AnalyticsConfiguration> _analyticsConfig;
         private readonly IWebHostEnvironment _env;
+        private readonly ITelemetrySnapshotService _telemetrySnapshotService;
 
         public AppController(
             AppService appService,
@@ -38,7 +39,8 @@ namespace Bakabase.Service.Controllers
             IDeviceIdService deviceIdService,
             IBOptions<AppOptions> appOptions,
             IOptions<AnalyticsConfiguration> analyticsConfig,
-            IWebHostEnvironment env)
+            IWebHostEnvironment env,
+            ITelemetrySnapshotService telemetrySnapshotService)
         {
             _appService = appService;
             _lifetime = lifetime;
@@ -47,6 +49,7 @@ namespace Bakabase.Service.Controllers
             _appOptions = appOptions;
             _analyticsConfig = analyticsConfig;
             _env = env;
+            _telemetrySnapshotService = telemetrySnapshotService;
         }
 
         [HttpGet("initialized")]
@@ -106,6 +109,19 @@ namespace Bakabase.Service.Controllers
         {
             var id = _deviceIdService.Reset();
             return new SingletonResponse<string>(id);
+        }
+
+        /// <summary>
+        /// Per-install state used to populate GA4 user properties + event metrics. Counts
+        /// only — never paths, names, or PII. Frontend hashes the response and uploads only
+        /// when changed (see design §6.5).
+        /// </summary>
+        [HttpGet("telemetry-snapshot")]
+        [SwaggerOperation(OperationId = "GetAppTelemetrySnapshot")]
+        public async Task<SingletonResponse<TelemetrySnapshotViewModel>> TelemetrySnapshot()
+        {
+            var snapshot = await _telemetrySnapshotService.GenerateAsync();
+            return new SingletonResponse<TelemetrySnapshotViewModel>(snapshot);
         }
 
         [HttpPost("terms")]

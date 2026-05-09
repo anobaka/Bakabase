@@ -176,6 +176,8 @@ namespace Bakabase.Service.Components
             // backend errors, and behaviour events can be cross-referenced for the same user.
             services.Configure<AnalyticsConfiguration>(Configuration.GetSection("Analytics"));
             services.AddSingleton<IDeviceIdService, DeviceIdService>();
+            // Scoped because TelemetrySnapshotService consumes the scoped BakabaseDbContext.
+            services.AddScoped<ITelemetrySnapshotService, TelemetrySnapshotService>();
         }
 
         protected override void ConfigureEndpointsAtFirst(IEndpointRouteBuilder routeBuilder)
