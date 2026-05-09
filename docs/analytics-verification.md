@@ -26,41 +26,207 @@ cd src/web && yarn dev
 
 ---
 
-## 1. 凭证填写
+## 1. 申请并配置三个平台
+
+### 1.0 概览
+
+| 平台 | 用途 | 你需要拿到 | 难度 |
+|---|---|---|---|
+| Google Analytics 4 | 量化指标 / cohort 分析 | Measurement ID `G-XXXXXXXXXX` | 中（最容易踩坑） |
+| Sentry | 错误聚合 / Release Health | 两个 DSN（前端 project + 后端 project） | 低 |
+| Microsoft Clarity | 录像 / 热图 | Project ID（10 字符短码） | 低 — 主仓库已有 `r5xlbsu4fl`，**fork 才需要重做** |
+
+---
+
+### 1.1 GA4 配置
+
+#### 1.1.1 创建 Account + Property
+
+1. 访问 https://analytics.google.com → 用 Google 账号登录
+2. 左下角 ⚙️（**Admin**）→ "Create" 下拉 → **"Account"**
+   - Account name: e.g., `Bakabase`
+   - Data sharing settings: 默认即可
+3. 同一向导继续到 **"Create a property"**
+   - Property name: e.g., `Bakabase`
+   - Reporting time zone / Currency: 选你的
+   - Industry / Business size: 随便填，不影响功能
+4. 点 "Create" → 跳转到 "Data collection" 步骤
+
+#### 1.1.2 创建 Data Stream
+
+1. 选 **Web** 平台（Bakabase 是 WebView，本质是网页 SDK）
+2. **Stream URL** ⚠️：GA4 这里要求填一个网站 URL，但**完全不会校验内容**。Bakabase 跑在 localhost，所以填一个占位符即可：
+   ```
+   https://app.bakabase.local
+   ```
+   这个值只在 GA4 报表里用作流的标识，不影响数据收集。
+3. **Stream name**: e.g., `Desktop App`
+4. **Enhanced measurement**: 关掉或留默认都行 — 我们手动发 `page_view`，不依赖 GA4 自动追踪。如果担心 GA4 自动事件污染数据，**关掉**。
+5. "Create stream" → 跳到 stream 详情页
+
+#### 1.1.3 拿 Measurement ID
+
+Stream 详情页顶部显示：
+
+```
+Measurement ID: G-XXXXXXXXXX  [📋 Copy]
+```
+
+复制下来，§1.4 要用。
+
+#### 1.1.4 注册 Custom Definitions（**关键步骤**）
+
+⚠️ **不做这步，需求 1 / 4 / 5 在 GA4 报表里看不到。** 我们在代码里发的字段如果没在 GA4 后台注册成 Custom Dimension / Metric，就只是事件附带数据，报表/Explorations 里没法当维度用。
+
+1. ⚙️ Admin → Property 列里找 **"Custom definitions"**
+2. 顶部有两个 tab：**"Custom dimensions"** 和 **"Custom metrics"**
+3. 按下表逐个建（每条点 "Create custom dimension/metric"）：
+
+| 在哪个 tab | Display name | Scope | Event/User parameter | Unit |
+|---|---|---|---|---|
+| Custom metrics | `media_library_count` | Event | `media_library_count` | Standard |
+| Custom metrics | `resource_count` | Event | `resource_count` | Standard |
+| Custom dimensions | `app_version` | **User** | `app_version` | — |
+| Custom dimensions | `release_channel` | **User** | `release_channel` | — |
+| Custom dimensions | `os` | **User** | `os` | — |
+| Custom dimensions | `locale` | **User** | `locale` | — |
+| Custom dimensions | `enabled_enhancers` | **User** | `enabled_enhancers` | — |
+| Custom dimensions | `ai_enabled` | **User** | `ai_enabled` | — |
+| Custom dimensions | `has_media_library` | **User** | `has_media_library` | — |
+| Custom dimensions | `feature_id` | Event | `feature_id` | — |
+| Custom dimensions | `enhancer_id` | Event | `enhancer_id` | — |
+| Custom dimensions | `environment` | Event | `environment` | — |
+
+**踩坑点**：
+- `Event/User parameter` 一栏必须填**和我们前端代码里 `gtag('set', 'user_properties', { app_version: ... })` / `gtag('event', 'app_snapshot', { media_library_count: ... })` 完全一样的 key**（区分大小写、下划线分隔）
+- Scope 选错（User 选了 Event 或反之）→ 报表里这个字段会一直空
+- 注册后**有 24h 延迟才生效**：之前发的事件用不了新维度
+
+#### 1.1.5 数据保留期（推荐改）
+
+GA4 免费档默认数据保留 **2 个月**，建议改到上限 **14 个月**（仍免费）：
+
+⚙️ Admin → Property 列 → **"Data Settings"** → **"Data Retention"** → 改为 `14 months` → Save
+
+#### 1.1.6 调试用：DebugView
+
+GA4 的常规报表延迟 24-48h，调试期间用 **DebugView** 实时看事件。
+
+启用方式（任选一种）：
+1. **推荐**：浏览器装 [GA Debugger 扩展](https://chrome.google.com/webstore/detail/google-analytics-debugger/jnkmfdileelhofjcijamephohjechhna) → 工具栏一键开关
+2. 在 URL 末尾加 `?debug_mode=1`
+3. 在前端 `gtag('config', ..., { debug_mode: true })` —— **不推荐**，会带到生产
+
+启用后：⚙️ Admin → Property 列 → **"DebugView"** → 你的设备会出现在左侧列表，点进去看实时事件。
+
+#### 1.1.7 GA4 常见踩坑速览
+
+| 症状 | 原因 |
+|---|---|
+| 报表里看不到任何数据 | 24-48h 才同步；用 Realtime / DebugView 验证立即收到没 |
+| Custom Dimension 永远空 | 1) 没注册；2) Scope 填错；3) Parameter name 大小写不一致；4) 注册后 24h 内 |
+| 字段值变成 `(other)` | 单维度独立值 >500/天/property（我们字段都是低基数，不会触发） |
+| Realtime 也没事件 | adblock / 隐私插件拦截 `googletagmanager.com`；用无痕窗口测 |
+| Realtime 有事件但 Reports 没 | 正常的 24-48h 延迟 |
+
+---
+
+### 1.2 Sentry 配置
+
+#### 1.2.1 注册
+
+1. https://sentry.io/signup/ → Sign up（推荐用 GitHub 登录，免密码管理）
+2. Organization name: e.g., `Bakabase`
+3. 落到 onboarding 页面会让你选第一个 project 平台 — 选 **React**（先建前端 project）
+
+#### 1.2.2 创建前端 project
+
+按 onboarding 引导走，或在 Sentry 后台 **Projects → Create Project**：
+
+1. **Platform**: Browser → **React**
+2. **Alert frequency**: "Alert me on every new issue"（后续可调）
+3. **Project name**: e.g., `bakabase-web`
+4. **Team**: 默认或新建
+5. "Create Project"
+6. 创建完会跳到一页 "Configure SDK" 指引 — **暂时跳过**，因为我们代码里已经写好了；你只需要复制顶部的 **DSN**：
+   ```
+   https://<random>@oXXXXXX.ingest.sentry.io/YYYYYY
+   ```
+
+#### 1.2.3 创建后端 project
+
+重复上面：
+
+1. **Projects → Create Project**
+2. **Platform**: Server → **ASP.NET Core (.NET)**
+3. **Project name**: e.g., `bakabase-service`
+4. 拿 DSN
+
+→ 现在你应该有 **两个 DSN**，分别对应前后端。**不要混用**（错误会进错 project，难定位）。
+
+#### 1.2.4 配额配置（可选但推荐）
+
+免费档 5k errors/月。代码里我们已关掉 Performance 和 Replay (`tracesSampleRate=0`)，所以不会消耗那两类配额。
+
+设个用量提醒，避免无声超限：
+
+**Settings → Subscription → Usage** → 点 "Set up spend limit / alerts" → 设到 **80% 用量**邮件提醒
+
+#### 1.2.5 Release Health 自动生效
+
+代码里已设 `release: appVersion` 和 `environment: production/development`，Sentry 自动按 release 聚类。
+
+进 **Releases** tab → 点具体 release → 看 "Crash-free Sessions / Crash-free Users" 即错误率指标。
+
+#### 1.2.6 Sentry 常见踩坑
+
+| 症状 | 原因 |
+|---|---|
+| Issues 里完全没东西 | DSN 填错了 / DSN 和 project 不对应（前端 DSN 写到 backend 配置了或反之） |
+| 错误显示但没 stack trace | 浏览器有 source map 问题；后端 release build 没上传 PDB（这级深度先不做） |
+| 大量重复噪音 (`ResizeObserver loop`、`AbortError`) | 用 `Sentry.init({ beforeSend })` 过滤；先观察 1-2 周看哪些是真噪音再加规则 |
+
+---
+
+### 1.3 Clarity 配置（fork 才需要）
+
+主仓库已有 Project ID `r5xlbsu4fl`，**普通用户/二次开发不需要换**。如果你 fork 后想用自己的看板：
+
+1. https://clarity.microsoft.com → Sign in（Microsoft / GitHub / Facebook 任一）
+2. 顶部 **"+ New project"**
+3. Project name + Website URL（同 GA4，URL 占位即可，e.g., `https://app.bakabase.local`）
+4. Site category: 随便选
+5. 创建完拿顶部的 **Project ID**（10 字符短码）
+
+---
+
+### 1.4 把凭证填进 appsettings.json
 
 编辑 `src/apps/Bakabase.Service/appsettings.json` 的 `Analytics` 段：
 
 ```json
 "Analytics": {
-  "Clarity": { "ProjectId": "r5xlbsu4fl" },           // 已存在
-  "Ga4":     { "MeasurementId": "G-XXXXXXXXXX" },     // ← 填
+  "Clarity": { "ProjectId": "r5xlbsu4fl" },           // 已存在；fork 改这里
+  "Ga4":     { "MeasurementId": "G-XXXXXXXXXX" },     // ← §1.1.3 拿到的
   "Sentry":  {
-    "FrontendDsn": "https://<key>@<id>.ingest.sentry.io/<proj>",  // ← 填（前端 project）
-    "BackendDsn":  "https://<key>@<id>.ingest.sentry.io/<proj>"   // ← 填（后端 project）
+    "FrontendDsn": "https://<key>@<id>.ingest.sentry.io/<proj>",  // ← §1.2.2 前端 project
+    "BackendDsn":  "https://<key>@<id>.ingest.sentry.io/<proj>"   // ← §1.2.3 后端 project
   }
 }
 ```
 
-任何一个留空（`null` 或 `""`）→ 对应 SDK 自动跳过初始化，不报错。
+**任何一项留空（`null` 或 `""`）→ 对应 SDK 自动跳过初始化，不报错。** 这样你可以增量配置：先只配 Sentry 调试错误，过几天再加 GA4。
 
-**GA4 后台一次性配置**（`Admin → Custom definitions`）：
+也可以走环境变量覆盖（CI / 私有部署常用）：
 
-| 类型 | Name | Event/User param |
-|---|---|---|
-| Custom Metric (number) | `media_library_count` | event param on `app_snapshot` |
-| Custom Metric (number) | `resource_count` | event param on `app_snapshot` |
-| Custom Dimension (text) | `app_version` | user-scoped |
-| Custom Dimension (text) | `release_channel` | user-scoped |
-| Custom Dimension (text) | `os` | user-scoped |
-| Custom Dimension (text) | `locale` | user-scoped |
-| Custom Dimension (text) | `enabled_enhancers` | user-scoped |
-| Custom Dimension (boolean) | `ai_enabled` | user-scoped |
-| Custom Dimension (boolean) | `has_media_library` | user-scoped |
-| Custom Dimension (text) | `feature_id` | event-scoped (on `feature_used`) |
-| Custom Dimension (text) | `enhancer_id` | event-scoped (on `enhancer_triggered`) |
-| Custom Dimension (text) | `environment` | event-scoped |
+```bash
+export Analytics__Clarity__ProjectId=xxx
+export Analytics__Ga4__MeasurementId=G-XXX
+export Analytics__Sentry__FrontendDsn=https://...
+export Analytics__Sentry__BackendDsn=https://...
+```
 
-不注册不会报错，只是这些字段不会作为可分析维度出现在报表里。
+ENV 优先级高于 `appsettings.json`。
 
 ---
 
