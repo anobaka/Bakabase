@@ -6,7 +6,6 @@ import type { BakabaseInfrastructuresComponentsConfigurationsAppAppOptions } fro
 import type { WindowOptions } from "@/components/Window";
 
 import { HeroUIProvider, Spinner, ToastProvider } from "@heroui/react";
-import Clarity from "@microsoft/clarity";
 import { ConfigProvider, theme } from "antd";
 import { useContext, createContext, useEffect, useRef, useState, useMemo, Fragment } from "react";
 import { useHref, useLocation, useNavigate } from "react-router-dom";
@@ -22,6 +21,7 @@ import i18n from "@/i18n";
 import BApi from "@/sdk/BApi";
 import Window from "@/components/Window";
 import { ErrorBoundary } from "@/components/Error";
+import { initAnalytics } from "@/services/Analytics";
 
 dayjs.extend(duration);
 
@@ -194,8 +194,8 @@ const BakabaseContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
     });
 
     console.log("bakabase context provider initialized");
-    // Clarity.init is now gated by appOptions.enableAnonymousDataTracking
-    // and runs in the appOptions effect below.
+    // Analytics SDKs init in the appOptions effect below — they need the toggle value
+    // and (via initAnalytics) the device id / project ids returned by /app/analytics-info.
 
     return () => {
       console.log("bakabase context provider is unmounting");
@@ -214,8 +214,9 @@ const BakabaseContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
       if (!firstTimeGotAppOptionsRef.current) {
         firstTimeGotAppOptionsRef.current = true;
         if (appOptions.enableAnonymousDataTracking) {
-          Clarity.init("r5xlbsu4fl");
-          Clarity.setTag("appVersion", appOptions.version);
+          // initAnalytics fetches /app/analytics-info, double-checks the toggle,
+          // then bootstraps Clarity / GA4 / Sentry per the configured project ids.
+          void initAnalytics();
         }
         i18n.changeLanguage(appOptions.language);
       }
