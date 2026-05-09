@@ -194,7 +194,8 @@ const BakabaseContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
     });
 
     console.log("bakabase context provider initialized");
-    Clarity.init("r5xlbsu4fl");
+    // Clarity.init is now gated by appOptions.enableAnonymousDataTracking
+    // and runs in the appOptions effect below.
 
     return () => {
       console.log("bakabase context provider is unmounting");
@@ -212,7 +213,10 @@ const BakabaseContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
       console.log("appOptions", appOptions, firstTimeGotAppOptionsRef.current);
       if (!firstTimeGotAppOptionsRef.current) {
         firstTimeGotAppOptionsRef.current = true;
-        Clarity.setTag("appVersion", appOptions.version);
+        if (appOptions.enableAnonymousDataTracking) {
+          Clarity.init("r5xlbsu4fl");
+          Clarity.setTag("appVersion", appOptions.version);
+        }
         i18n.changeLanguage(appOptions.language);
       }
 
