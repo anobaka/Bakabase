@@ -1,5 +1,6 @@
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
+using Bakabase.Modules.ThirdParty.Helpers;
 using Bakabase.Modules.ThirdParty.ThirdParties.Madouqu.Models;
 using CsQuery;
 using Microsoft.Extensions.Logging;
@@ -53,7 +54,7 @@ public class MadouquClient(IHttpClientFactory httpClientFactory, ILoggerFactory 
             // cover
             var cover = docDetail.Select("div.entry-content img").Attr("src") ?? "";
             // studio/category
-            var studio = docDetail.Select("span.meta-category").Text().Trim();
+            var studio = docDetail.Select("span.meta-category").JoinDistinctText();
             // release/year from <time datetime>
             var datetime = docDetail.Select("time[datetime]").Attr("datetime") ?? "";
             string release = "", year = "";

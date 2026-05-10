@@ -66,3 +66,4 @@ export {
   TmdbConfigModal,
   TmdbConfigField,
 } from "./platforms/TmdbConfig";
+export { AvSourcesConfigPanel } from "./platforms/AvSourcesConfig";

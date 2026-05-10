@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
 using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.Modules.ThirdParty.Helpers;
 using Bakabase.Modules.ThirdParty.ThirdParties.Avsox.Models;
 using Bootstrap.Extensions;
 using CsQuery;
@@ -217,11 +218,11 @@ public class AvsoxClient(IHttpClientFactory httpClientFactory, ILoggerFactory lo
 
     private static string GetSeries(CQ html)
     {
-        return html["p a[href*='/series/']"].Text().Trim();
+        return html["p a[href*='/series/']"].JoinDistinctText();
     }
 
     private static string GetStudio(CQ html)
     {
-        return html["p a[href*='/studio/']"].Text().Trim();
+        return html["p a[href*='/studio/']"].JoinDistinctText();
     }
 }

@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
+using Bakabase.Modules.ThirdParty.Helpers;
 using Bakabase.Modules.ThirdParty.ThirdParties.Fantastica.Models;
 using CsQuery;
 using Microsoft.Extensions.Logging;
@@ -78,8 +79,11 @@ public class FantasticaClient(IHttpClientFactory httpClientFactory, ILoggerFacto
             var runtimeMatch = Regex.Match(runtimeRaw ?? "", @"(\d+)");
             var runtime = runtimeMatch.Success ? runtimeMatch.Groups[1].Value : "";
 
-            // Series
-            var series = doc.Select("span:contains('シリーズ')").Parent().Text().Replace("シリーズ", "").Trim();
+            // Series — read each label parent's text separately so a duplicate
+            // mobile/desktop render does not concat into "NameName".
+            var series = doc.Select("span:contains('シリーズ')").Parent()
+                .Select(p => p.Cq().Text().Replace("シリーズ", "").Trim())
+                .JoinDistinctText();
 
             // Tags
             var tags = string.Join(",", doc.Select("th:contains('ジャンル')").Parent().Find("a").Select(a => a.Cq().Text().Trim()).Where(t => !string.IsNullOrWhiteSpace(t)));

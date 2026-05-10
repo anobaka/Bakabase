@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
+using Bakabase.Modules.ThirdParty.Helpers;
 using Bakabase.Modules.ThirdParty.ThirdParties.Fc2ppvdb.Models;
 using CsQuery;
 using Microsoft.Extensions.Logging;
@@ -38,7 +39,7 @@ public class Fc2ppvdbClient(IHttpClientFactory httpClientFactory, ILoggerFactory
             var year = string.IsNullOrWhiteSpace(release) ? "" : release.Substring(0, Math.Min(4, release.Length));
             var actor = string.Join(",", doc.Select("div:contains('女優：') span a").Select(a => a.Cq().Text().Trim()));
             var tag = string.Join(",", doc.Select("div:contains('タグ：') span a").Select(a => a.Cq().Text().Trim()));
-            var studio = doc.Select("div:contains('販売者：') span a").Text().Trim();
+            var studio = doc.Select("div:contains('販売者：') span a").JoinDistinctText();
             var mosaicStr = doc.Select("div:contains('モザイク：') span").Text().Trim();
             var mosaic = mosaicStr == "無" ? "无码" : "有码";
             var trailer = doc.Select("a:contains('サンプル動画')").Attr("href") ?? "";

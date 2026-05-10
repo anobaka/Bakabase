@@ -1467,5 +1467,26 @@ namespace Bakabase.Service.Controllers
             });
             return BaseResponseBuilder.Ok;
         }
+
+        [HttpGet("av-sources")]
+        [SwaggerOperation(OperationId = "GetAvSourceOptions")]
+        public SingletonResponse<AvSourceOptions> GetAvSourceOptions()
+        {
+            return new SingletonResponse<AvSourceOptions>(_bakabaseOptionsManager.Get<AvSourceOptions>().Value);
+        }
+
+        [HttpPatch("av-sources")]
+        [SwaggerOperation(OperationId = "PatchAvSourceOptions")]
+        public async Task<BaseResponse> PatchAvSourceOptions([FromBody] AvSourceOptionsPatchInputModel model)
+        {
+            await _bakabaseOptionsManager.Get<AvSourceOptions>().SaveAsync(options =>
+            {
+                if (model.Sources != null)
+                {
+                    options.Sources = model.Sources;
+                }
+            });
+            return BaseResponseBuilder.Ok;
+        }
     }
 }

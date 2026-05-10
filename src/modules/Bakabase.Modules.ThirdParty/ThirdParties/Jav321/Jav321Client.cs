@@ -1,5 +1,6 @@
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
+using Bakabase.Modules.ThirdParty.Helpers;
 using Bakabase.Modules.ThirdParty.ThirdParties.Jav321.Models;
 using Microsoft.Extensions.Logging;
 using CsQuery;
@@ -47,8 +48,8 @@ public class Jav321Client(IHttpClientFactory httpClientFactory, ILoggerFactory l
             var outline = detailPage["div.col-md-9 div[itemprop] + div"].Text();
             var tags = Regex.Matches(response, @"<a href=""/genre/\S+"">(\S+)</a>").Select(m => m.Groups[1].Value);
             var score = ExtractScore(response);
-            var studio = detailPage["a[href*='/company/']"].Text();
-            var series = detailPage["a[href*='/series/']"].Text();
+            var studio = detailPage["a[href*='/company/']"].JoinDistinctText();
+            var series = detailPage["a[href*='/series/']"].JoinDistinctText();
             var extraFanart = detailPage["div.col-md-3 img.img-responsive"].Select(img => img.GetAttribute("src")).ToArray();
             var mosaic = "有码";
 

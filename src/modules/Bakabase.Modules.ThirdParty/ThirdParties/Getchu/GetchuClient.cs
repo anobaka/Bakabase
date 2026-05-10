@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
+using Bakabase.Modules.ThirdParty.Helpers;
 using Bakabase.Modules.ThirdParty.ThirdParties.Getchu.Models;
 using CsQuery;
 using Microsoft.Extensions.Logging;
@@ -63,9 +64,9 @@ public class GetchuClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
             var year = Regex.Match(release ?? string.Empty, @"\d{4}").Value;
 
             // director and runtime
-            string director = doc.Select("td:contains('監督：')").Next().Text();
-            if (string.IsNullOrWhiteSpace(director)) director = doc.Select("a[href*='person=']").Text();
-            if (string.IsNullOrWhiteSpace(director)) director = doc.Select("td:contains('キャラデザイン：')").Next().Text();
+            string director = doc.Select("td:contains('監督：')").Next().Select(e => e.InnerText).JoinDistinctText();
+            if (string.IsNullOrWhiteSpace(director)) director = doc.Select("a[href*='person=']").JoinDistinctText();
+            if (string.IsNullOrWhiteSpace(director)) director = doc.Select("td:contains('キャラデザイン：')").Next().Select(e => e.InnerText).JoinDistinctText();
             var runtimeRaw = doc.Select("td:contains('時間：')").Next().Text();
             var runtimeMatch = Regex.Match(runtimeRaw ?? string.Empty, @"(\d+)");
             var runtime = runtimeMatch.Success ? runtimeMatch.Groups[1].Value : "";
@@ -77,7 +78,7 @@ public class GetchuClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
                 .Find("a").Select(a => a.Cq().Text().Trim()));
 
             // studio
-            var studio = doc.Select("a.glance").Text();
+            var studio = doc.Select("a.glance").JoinDistinctText();
 
             // extrafanart
             var extrafanart = doc.Select("div:contains('サンプル画像')").Next().Find("a").Select(a => a.GetAttribute("href") ?? "").Select(h => h.Replace("./", baseUrl + "/")).ToList();

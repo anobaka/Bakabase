@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
 using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.Modules.ThirdParty.Helpers;
 using Bakabase.Modules.ThirdParty.ThirdParties.Airav.Models;
 using Bootstrap.Extensions;
 using CsQuery;
@@ -134,8 +135,7 @@ public class AiravClient(IHttpClientFactory httpClientFactory, ILoggerFactory lo
 
     private static string GetStudio(CQ html)
     {
-        var result = html["a[href*='video_factory']"].Text().Trim();
-        return result;
+        return html["a[href*='video_factory']"].JoinDistinctText();
     }
 
     private static string GetRelease(CQ html)

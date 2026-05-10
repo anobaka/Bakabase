@@ -40,6 +40,7 @@ import enComparison from "@/locales/en/pages/comparison.json";
 import enResourceSource from "@/locales/en/pages/resourceSource.json";
 import enDataCard from "@/locales/en/pages/dataCard.json";
 import enHealthScore from "@/locales/en/pages/healthScore.json";
+import enAvSources from "@/locales/en/pages/avSources.json";
 
 // English - Components
 import enFileExplorer from "@/locales/en/components/fileExplorer.json";
@@ -96,6 +97,7 @@ import cnComparison from "@/locales/cn/pages/comparison.json";
 import cnResourceSource from "@/locales/cn/pages/resourceSource.json";
 import cnDataCard from "@/locales/cn/pages/dataCard.json";
 import cnHealthScore from "@/locales/cn/pages/healthScore.json";
+import cnAvSources from "@/locales/cn/pages/avSources.json";
 
 // Chinese - Components
 import cnFileExplorer from "@/locales/cn/components/fileExplorer.json";
@@ -152,6 +154,7 @@ const enResources = {
   ...enResourceSource,
   ...enDataCard,
   ...enHealthScore,
+  ...enAvSources,
   // Components
   ...enFileExplorer,
   ...enResourceFilter,
@@ -208,6 +211,7 @@ const cnResources = {
   ...cnResourceSource,
   ...cnDataCard,
   ...cnHealthScore,
+  ...cnAvSources,
   // Components
   ...cnFileExplorer,
   ...cnResourceFilter,

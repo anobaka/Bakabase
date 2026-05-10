@@ -1,5 +1,7 @@
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
+using Bakabase.Modules.ThirdParty.Helpers;
+using Bakabase.Modules.ThirdParty.ThirdParties.Av;
 using Bakabase.Modules.ThirdParty.ThirdParties.Javdb.Models;
 using Microsoft.Extensions.Logging;
 using CsQuery;
@@ -7,7 +9,10 @@ using System.Text.RegularExpressions;
 
 namespace Bakabase.Modules.ThirdParty.ThirdParties.Javdb;
 
-public class JavdbClient(IHttpClientFactory httpClientFactory, ILoggerFactory loggerFactory)
+public class JavdbClient(
+    IHttpClientFactory httpClientFactory,
+    ILoggerFactory loggerFactory,
+    IAvSourceOptionsProvider avOptionsProvider)
     : BakabaseHttpClient(httpClientFactory, loggerFactory)
 {
     protected override string HttpClientName => InternalOptions.HttpClientNames.Default;
@@ -16,14 +21,20 @@ public class JavdbClient(IHttpClientFactory httpClientFactory, ILoggerFactory lo
     {
         try
         {
-            var site = baseUrl ?? "https://javdb.com";
+            var config = avOptionsProvider.Resolve("javdb");
+            if (!config.Enabled) return null;
+
+            var site = baseUrl ?? config.BaseUrl ?? "https://javdb.com";
             string realUrl = appointUrl ?? "";
             string? searchUrl = null;
 
             if (string.IsNullOrWhiteSpace(realUrl))
             {
                 searchUrl = $"{site}/search?q={Uri.EscapeDataString(number)}&locale=zh";
-                var searchHtml = await HttpClient.GetStringAsync(searchUrl);
+                using var searchRequest = AvHttpRequestBuilder.BuildGet(searchUrl, config);
+                using var searchResponse = await HttpClient.SendAsync(searchRequest);
+                searchResponse.EnsureSuccessStatusCode();
+                var searchHtml = await searchResponse.Content.ReadAsStringAsync();
                 var searchCq = new CQ(searchHtml);
 
                 realUrl = GetRealUrl(searchCq, number);
@@ -38,7 +49,10 @@ public class JavdbClient(IHttpClientFactory httpClientFactory, ILoggerFactory lo
                 }
             }
 
-            var detailHtml = await HttpClient.GetStringAsync(realUrl);
+            using var detailRequest = AvHttpRequestBuilder.BuildGet(realUrl, config);
+            using var detailResponse = await HttpClient.SendAsync(detailRequest);
+            detailResponse.EnsureSuccessStatusCode();
+            var detailHtml = await detailResponse.Content.ReadAsStringAsync();
             if (detailHtml.Contains("Cloudflare") || detailHtml.Contains("owner of this website has banned"))
             {
                 return null;
@@ -175,30 +189,33 @@ public class JavdbClient(IHttpClientFactory httpClientFactory, ILoggerFactory lo
 
     private static string GetSeries(CQ html)
     {
-        var s1 = html["div.panel-block strong:contains('系列:')"].Parent().Find("span a").Text();
-        var s2 = html["div.panel-block strong:contains('Series:')"].Parent().Find("span a").Text();
-        return string.IsNullOrWhiteSpace(s1) ? s2 : s1;
+        // Iterate per anchor instead of calling .Text() on the set: when the page
+        // renders the same link in both mobile and desktop DOM, .Text() silently
+        // concatenates the duplicate innerText into "NameName". Mirrors GetTag/GetActor.
+        var a1 = html["div.panel-block strong:contains('系列:')"].Parent().Find("span a").Select(a => a.InnerText);
+        var a2 = html["div.panel-block strong:contains('Series:')"].Parent().Find("span a").Select(a => a.InnerText);
+        return (a1.Any() ? a1 : a2).JoinDistinctText();
     }
 
     private static string GetDirector(CQ html)
     {
-        var d1 = html["div.panel-block strong:contains('導演:')"].Parent().Find("span a").Text();
-        var d2 = html["div.panel-block strong:contains('Director:')"].Parent().Find("span a").Text();
-        return string.IsNullOrWhiteSpace(d1) ? d2 : d1;
+        var a1 = html["div.panel-block strong:contains('導演:')"].Parent().Find("span a").Select(a => a.InnerText);
+        var a2 = html["div.panel-block strong:contains('Director:')"].Parent().Find("span a").Select(a => a.InnerText);
+        return (a1.Any() ? a1 : a2).JoinDistinctText();
     }
 
     private static string GetStudio(CQ html)
     {
-        var s1 = html["div.panel-block strong:contains('片商:')"].Parent().Find("span a").Text();
-        var s2 = html["div.panel-block strong:contains('Maker:')"].Parent().Find("span a").Text();
-        return string.IsNullOrWhiteSpace(s1) ? s2 : s1;
+        var a1 = html["div.panel-block strong:contains('片商:')"].Parent().Find("span a").Select(a => a.InnerText);
+        var a2 = html["div.panel-block strong:contains('Maker:')"].Parent().Find("span a").Select(a => a.InnerText);
+        return (a1.Any() ? a1 : a2).JoinDistinctText();
     }
 
     private static string GetPublisher(CQ html)
     {
-        var p1 = html["div.panel-block strong:contains('發行:')"].Parent().Find("span a").Text();
-        var p2 = html["div.panel-block strong:contains('Publisher:')"].Parent().Find("span a").Text();
-        return string.IsNullOrWhiteSpace(p1) ? p2 : p1;
+        var a1 = html["div.panel-block strong:contains('發行:')"].Parent().Find("span a").Select(a => a.InnerText);
+        var a2 = html["div.panel-block strong:contains('Publisher:')"].Parent().Find("span a").Select(a => a.InnerText);
+        return (a1.Any() ? a1 : a2).JoinDistinctText();
     }
 
     private static string GetRealUrl(CQ searchHtml, string number)

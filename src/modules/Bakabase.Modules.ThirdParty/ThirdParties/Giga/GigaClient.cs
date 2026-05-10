@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
+using Bakabase.Modules.ThirdParty.Helpers;
 using Bakabase.Modules.ThirdParty.ThirdParties.Giga.Models;
 using CsQuery;
 using Microsoft.Extensions.Logging;
@@ -74,7 +75,9 @@ public class GigaClient(IHttpClientFactory httpClientFactory, ILoggerFactory log
             var score = Regex.Match(html, @"5点満点中 <b>(.+)<").Groups[1].Value;
             var tag = string.Join(",", doc.Select("#tag_main a").Select(a => a.Cq().Text().Trim()));
             var series = "";
-            var director = doc.Select("dt:contains('監督')").Next().Text().Trim();
+            var director = doc.Select("dt:contains('監督')").Next()
+                .Select(e => e.InnerText)
+                .JoinDistinctText();
             var studio = "GIGA";
             var publisher = "GIGA";
             var extrafanart = doc.Select("div.gasatsu_images_pc div div a").Select(a => "https://www.giga-web.jp" + (a.GetAttribute("href") ?? "")).ToList();

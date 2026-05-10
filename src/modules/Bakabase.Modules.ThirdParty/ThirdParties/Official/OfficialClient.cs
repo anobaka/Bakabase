@@ -1,5 +1,6 @@
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
+using Bakabase.Modules.ThirdParty.Helpers;
 using Bakabase.Modules.ThirdParty.ThirdParties.Official.Models;
 using Microsoft.Extensions.Logging;
 using CsQuery;
@@ -42,7 +43,7 @@ public class OfficialClient(IHttpClientFactory httpClientFactory, ILoggerFactory
             var outline = cq["p.p-workPage__text"].Text().Trim();
             var actor = string.Join(",", cq["a.c-tag.c-main-bg-hover.c-main-font.c-main-bd[href*='/actress/']"].Select(a => a.InnerText).Select(x => x.Trim()));
             var (publisher, studio) = GetPublisher(cq);
-            var series = cq["div.th:contains('シリーズ')"].Parent().Find("a").Text().Trim();
+            var series = cq["div.th:contains('シリーズ')"].Parent().Find("a").JoinDistinctText();
             var runtime = cq["div.th:contains('収録時間')"].Parent().Find("div div p").Text().Replace("分", "").Trim();
             var trailer = cq["div.video video"].Attr("src") ?? string.Empty;
             var release = cq["div:contains('発売日')"].Parent().Find("div div a").Text().Replace("年", "-").Replace("月", "-").Replace("日", "").Trim();
@@ -97,7 +98,7 @@ public class OfficialClient(IHttpClientFactory httpClientFactory, ILoggerFactory
         var m = Regex.Match(desc, "【公式】([^\\(]+)\\(([^\\)]+)\\)");
         var publisher = m.Success ? m.Groups[1].Value : string.Empty;
         var studio = m.Success ? m.Groups[2].Value : string.Empty;
-        var label = html["div.th:contains('レーベル')"].Parent().Find("a").Text().Trim();
+        var label = html["div.th:contains('レーベル')"].Parent().Find("a").JoinDistinctText();
         if (!string.IsNullOrEmpty(label)) publisher = label;
         publisher = publisher.Replace("　", " ");
         return (publisher, studio);

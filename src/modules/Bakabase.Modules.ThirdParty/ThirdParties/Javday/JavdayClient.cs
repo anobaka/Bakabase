@@ -1,5 +1,6 @@
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
+using Bakabase.Modules.ThirdParty.Helpers;
 using Bakabase.Modules.ThirdParty.ThirdParties.Javday.Models;
 using Microsoft.Extensions.Logging;
 using CsQuery;
@@ -37,7 +38,7 @@ public class JavdayClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
             var cq = new CQ(html);
             var title = cq["h1.h4.b"].First().Text().Trim();
             if (string.IsNullOrEmpty(title)) return null;
-            var series = cq["#videoInfo div div p:nth-child(3) span:nth-child(2) a"].Text().Trim();
+            var series = cq["#videoInfo div div p:nth-child(3) span:nth-child(2) a"].JoinDistinctText();
             var tags = cq["#videoInfo div div p:nth-child(1) span:nth-child(2) a"].Select(a => a.InnerText);
             var tag = string.Join(",", tags);
             var actor = string.Join(",", cq["#videoInfo div div p:nth-child(1) span:nth-child(2) a"].Select(a => a.InnerText));

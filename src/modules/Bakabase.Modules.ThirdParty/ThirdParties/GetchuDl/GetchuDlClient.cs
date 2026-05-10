@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
+using Bakabase.Modules.ThirdParty.Helpers;
 using Bakabase.Modules.ThirdParty.ThirdParties.GetchuDl.Models;
 using CsQuery;
 using Microsoft.Extensions.Logging;
@@ -57,7 +58,9 @@ public class GetchuDlClient(IHttpClientFactory httpClientFactory, ILoggerFactory
             if (string.IsNullOrWhiteSpace(title)) return null;
 
             var cover = doc.Select("meta[property='og:image']").Attr("content") ?? "";
-            var studio = doc.Select("td:contains('サークル')").Next().Text().Trim();
+            var studio = doc.Select("td:contains('サークル')").Next()
+                .Select(e => e.InnerText)
+                .JoinDistinctText();
             var release = doc.Select("td:contains('配信開始日')").Next().Text().Trim().Replace("/", "-");
             var year = Regex.Match(release ?? string.Empty, @"\d{4}").Value;
             var author = doc.Select("td:contains('作者')").Next().Text().Trim();

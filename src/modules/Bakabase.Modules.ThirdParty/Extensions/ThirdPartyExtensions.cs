@@ -7,6 +7,7 @@ using Bakabase.Modules.ThirdParty.Abstractions.Logging;
 using Bakabase.Modules.ThirdParty.Components.Http;
 using Bakabase.Modules.ThirdParty.Components.Localization;
 using Bakabase.Modules.ThirdParty.Services;
+using Bakabase.Modules.ThirdParty.ThirdParties.Av;
 using Bakabase.Modules.ThirdParty.ThirdParties.Bangumi;
 using Bakabase.Modules.ThirdParty.ThirdParties.Bilibili;
 using Bakabase.Modules.ThirdParty.ThirdParties.Airav;
@@ -161,6 +162,9 @@ public static class ThirdPartyExtensions
         services.AddTransient<IThirdPartyLocalizer, ThirdPartyLocalizer>();
         services.TryAddSingleton<ThirdPartyHttpRequestLogger>();
         services.TryAddSingleton<IThirdPartyCookieContainer, ThirdPartyCookieContainer>();
+        // Fallback resolver — supplies the built-in age-gate cookies for known AV
+        // sources when nothing higher-level (e.g. AvSourceOptions) is registered.
+        services.TryAddSingleton<IAvSourceOptionsProvider, DefaultAvSourceOptionsProvider>();
 
         services.AddSingleton<IThirdPartyService, ThirdPartyService>();
 

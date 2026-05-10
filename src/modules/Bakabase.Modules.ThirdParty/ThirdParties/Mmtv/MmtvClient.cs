@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
+using Bakabase.Modules.ThirdParty.Helpers;
 using Bakabase.Modules.ThirdParty.ThirdParties.Mmtv.Models;
 using CsQuery;
 using Microsoft.Extensions.Logging;
@@ -89,9 +90,9 @@ public class MmtvClient(IHttpClientFactory httpClientFactory, ILoggerFactory log
                 originalplot = intro.First();
             }
             var year = Regex.Match(release ?? string.Empty, @"\d{4}").Value;
-            var director = doc.Select("div.col-auto.flex-shrink-1.flex-grow-1 a[href*='director']").Text().Trim();
-            var studio = doc.Select("div.col-auto.flex-shrink-1.flex-grow-1 a[href*='makersr']").Text().Trim();
-            var publisher = doc.Select("div.col-auto.flex-shrink-1.flex-grow-1 a[href*='issuer']").Text().Trim();
+            var director = doc.Select("div.col-auto.flex-shrink-1.flex-grow-1 a[href*='director']").JoinDistinctText();
+            var studio = doc.Select("div.col-auto.flex-shrink-1.flex-grow-1 a[href*='makersr']").JoinDistinctText();
+            var publisher = doc.Select("div.col-auto.flex-shrink-1.flex-grow-1 a[href*='issuer']").JoinDistinctText();
             var tag = string.Join(",", doc.Select("div.d-flex.flex-wrap.categories a").Select(a => a.Cq().Text().Trim()));
             var extrafanart = new List<string>();
             extrafanart.AddRange(doc.Select("span img.lazyload").Select(i => i.GetAttribute("data-src") ?? ""));
