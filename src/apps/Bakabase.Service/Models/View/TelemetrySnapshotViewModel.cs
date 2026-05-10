@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace Bakabase.Service.Models.View;
 
 /// <summary>

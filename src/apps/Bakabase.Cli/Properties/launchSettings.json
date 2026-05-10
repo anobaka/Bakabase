@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "swagger": {
+      "commandName": "Project",
+      "commandLineArgs": "swagger ..\\..\\web\\.sdk-cache\\swagger.json"
+    },
+    "constants": {
+      "commandName": "Project",
+      "commandLineArgs": "constants ..\\..\\web\\src\\sdk\\constants.ts"
+    }
+  }
+}

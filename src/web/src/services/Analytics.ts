@@ -2,39 +2,7 @@ import Clarity from "@microsoft/clarity";
 import * as Sentry from "@sentry/react";
 import posthog from "posthog-js";
 
-import envConfig from "@/config/env";
-
-/**
- * Frontend bootstrapping payload mirrored from
- * `Bakabase.Service.Models.View.AnalyticsAppInfoViewModel`.
- *
- * Hand-typed because the typed SDK regen (`yarn gen-sdk`) is deferred until the C# side
- * lands; once it's run, this can be replaced with the generated type.
- */
-type AnalyticsAppInfo = {
-  enableAnonymousDataTracking: boolean;
-  deviceId: string;
-  appVersion: string;
-  releaseChannel: string;
-  clarityProjectId: string | null;
-  ga4MeasurementId: string | null;
-  sentryDsn: string | null;
-  posthogApiKey: string | null;
-  posthogApiHost: string;
-};
-
-/** Mirrors `Bakabase.Service.Models.View.TelemetrySnapshotViewModel`. */
-type TelemetrySnapshot = {
-  appVersion: string;
-  releaseChannel: string;
-  os: string;
-  locale: string;
-  mediaLibraryCount: number;
-  resourceCount: number;
-  enabledEnhancers: string[];
-  aiEnabled: boolean;
-  hasMediaLibrary: boolean;
-};
+import BApi from "@/sdk/BApi";
 
 const SNAPSHOT_HASH_KEY = "telemetry_last_hash";
 
@@ -47,28 +15,6 @@ declare global {
 
 let initialized = false;
 let posthogInitialized = false;
-
-async function fetchJson<T>(
-  path: string,
-  init?: RequestInit,
-): Promise<T | null> {
-  try {
-    const res = await fetch(`${envConfig.apiEndpoint}${path}`, init);
-
-    if (!res.ok) return null;
-    const body = await res.json();
-
-    // Bakabase wraps responses as { code, message, data }; code 0 means success.
-    if (body == null) return null;
-    if (typeof body.code === "number" && body.code !== 0) return null;
-
-    return (body.data ?? body) as T;
-  } catch (e) {
-    console.warn(`[analytics] fetch ${path} failed`, e);
-
-    return null;
-  }
-}
 
 function loadGtag(measurementId: string, deviceId: string): void {
   if (typeof window === "undefined") return;
@@ -137,7 +83,7 @@ function snapshotHash(serialized: string): string {
 }
 
 async function pushSnapshotIfChanged(): Promise<void> {
-  const snapshot = await fetchJson<TelemetrySnapshot>("/app/telemetry-snapshot");
+  const snapshot = await BApi.app.getAppTelemetrySnapshot().then((r) => r.data).catch(() => null);
 
   if (!snapshot) return;
   if (!window.gtag && !posthogInitialized) return;
@@ -207,7 +153,7 @@ export async function initAnalytics(): Promise<void> {
   if (initialized) return;
   initialized = true;
 
-  const info = await fetchJson<AnalyticsAppInfo>("/app/analytics-info");
+  const info = await BApi.app.getAnalyticsAppInfo().then((r) => r.data).catch(() => null);
 
   if (!info || !info.enableAnonymousDataTracking) return;
 
@@ -254,14 +200,9 @@ export async function initAnalytics(): Promise<void> {
 
   // PostHog — same dimensions / events as GA4, runs in parallel. Useful as a fallback
   // when GA4 is broken / unreachable, and as a primary in regions where GA4 is blocked.
-  if (info.posthogApiKey && info.posthogApiHost) {
+  if (info.postHogApiKey && info.postHogApiHost) {
     try {
-      loadPostHog(
-        info.posthogApiKey,
-        info.posthogApiHost,
-        info.deviceId,
-        info.releaseChannel,
-      );
+      loadPostHog(info.postHogApiKey, info.postHogApiHost, info.deviceId, info.releaseChannel);
     } catch (e) {
       console.warn("[analytics] PostHog init failed", e);
     }
@@ -305,10 +246,7 @@ export function trackFeatureUsed(featureId: string): void {
   }
 }
 
-export function trackEnhancerTriggered(
-  enhancerId: string,
-  success: boolean,
-): void {
+export function trackEnhancerTriggered(enhancerId: string, success: boolean): void {
   if (!initialized || typeof window === "undefined") return;
 
   if (window.gtag) {

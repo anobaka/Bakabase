@@ -1,6 +1,237 @@
 // AUTO-GENERATED FROM server enums. Do not edit manually.
 /* eslint-disable */
 
+export enum CloseBehavior {
+  Prompt = 0,
+  Exit = 1,
+  Minimize = 2,
+  Cancel = 1000
+}
+
+export const closeBehaviors = [
+  { label: 'Prompt', value: CloseBehavior.Prompt },
+  { label: 'Exit', value: CloseBehavior.Exit },
+  { label: 'Minimize', value: CloseBehavior.Minimize },
+  { label: 'Cancel', value: CloseBehavior.Cancel }
+] as const;
+
+export const CloseBehaviorLabel: Record<CloseBehavior, string> = {
+  [CloseBehavior.Prompt]: 'Prompt',
+  [CloseBehavior.Exit]: 'Exit',
+  [CloseBehavior.Minimize]: 'Minimize',
+  [CloseBehavior.Cancel]: 'Cancel'
+};
+
+export enum IconType {
+  UnknownFile = 1,
+  Directory = 2,
+  Dynamic = 3
+}
+
+export const iconTypes = [
+  { label: 'UnknownFile', value: IconType.UnknownFile },
+  { label: 'Directory', value: IconType.Directory },
+  { label: 'Dynamic', value: IconType.Dynamic }
+] as const;
+
+export const IconTypeLabel: Record<IconType, string> = {
+  [IconType.UnknownFile]: 'UnknownFile',
+  [IconType.Directory]: 'Directory',
+  [IconType.Dynamic]: 'Dynamic'
+};
+
+export enum UiTheme {
+  FollowSystem = 0,
+  Light = 1,
+  Dark = 2
+}
+
+export const uiThemes = [
+  { label: 'FollowSystem', value: UiTheme.FollowSystem },
+  { label: 'Light', value: UiTheme.Light },
+  { label: 'Dark', value: UiTheme.Dark }
+] as const;
+
+export const UiThemeLabel: Record<UiTheme, string> = {
+  [UiTheme.FollowSystem]: 'FollowSystem',
+  [UiTheme.Light]: 'Light',
+  [UiTheme.Dark]: 'Dark'
+};
+
+export enum UpdaterStatus {
+  Idle = 1,
+  Running = 2,
+  PendingRestart = 3,
+  UpToDate = 4,
+  Failed = 5
+}
+
+export const updaterStatuses = [
+  { label: 'Idle', value: UpdaterStatus.Idle },
+  { label: 'Running', value: UpdaterStatus.Running },
+  { label: 'PendingRestart', value: UpdaterStatus.PendingRestart },
+  { label: 'UpToDate', value: UpdaterStatus.UpToDate },
+  { label: 'Failed', value: UpdaterStatus.Failed }
+] as const;
+
+export const UpdaterStatusLabel: Record<UpdaterStatus, string> = {
+  [UpdaterStatus.Idle]: 'Idle',
+  [UpdaterStatus.Running]: 'Running',
+  [UpdaterStatus.PendingRestart]: 'PendingRestart',
+  [UpdaterStatus.UpToDate]: 'UpToDate',
+  [UpdaterStatus.Failed]: 'Failed'
+};
+
+export enum RelocationMode {
+  UseTarget = 1,
+  MergeOverwrite = 3
+}
+
+export const relocationModes = [
+  { label: 'UseTarget', value: RelocationMode.UseTarget },
+  { label: 'MergeOverwrite', value: RelocationMode.MergeOverwrite }
+] as const;
+
+export const RelocationModeLabel: Record<RelocationMode, string> = {
+  [RelocationMode.UseTarget]: 'UseTarget',
+  [RelocationMode.MergeOverwrite]: 'MergeOverwrite'
+};
+
+export enum RelocationOutcomeKind {
+  NoOp = 0,
+  Success = 1,
+  Error = 2,
+  UnknownSchemaVersion = 3
+}
+
+export const relocationOutcomeKinds = [
+  { label: 'NoOp', value: RelocationOutcomeKind.NoOp },
+  { label: 'Success', value: RelocationOutcomeKind.Success },
+  { label: 'Error', value: RelocationOutcomeKind.Error },
+  { label: 'UnknownSchemaVersion', value: RelocationOutcomeKind.UnknownSchemaVersion }
+] as const;
+
+export const RelocationOutcomeKindLabel: Record<RelocationOutcomeKind, string> = {
+  [RelocationOutcomeKind.NoOp]: 'NoOp',
+  [RelocationOutcomeKind.Success]: 'Success',
+  [RelocationOutcomeKind.Error]: 'Error',
+  [RelocationOutcomeKind.UnknownSchemaVersion]: 'UnknownSchemaVersion'
+};
+
+export enum RelocationPhase {
+  Starting = 0,
+  Copying = 1,
+  Validating = 2,
+  Replacing = 3,
+  Finalizing = 4,
+  Done = 5
+}
+
+export const relocationPhases = [
+  { label: 'Starting', value: RelocationPhase.Starting },
+  { label: 'Copying', value: RelocationPhase.Copying },
+  { label: 'Validating', value: RelocationPhase.Validating },
+  { label: 'Replacing', value: RelocationPhase.Replacing },
+  { label: 'Finalizing', value: RelocationPhase.Finalizing },
+  { label: 'Done', value: RelocationPhase.Done }
+] as const;
+
+export const RelocationPhaseLabel: Record<RelocationPhase, string> = {
+  [RelocationPhase.Starting]: 'Starting',
+  [RelocationPhase.Copying]: 'Copying',
+  [RelocationPhase.Validating]: 'Validating',
+  [RelocationPhase.Replacing]: 'Replacing',
+  [RelocationPhase.Finalizing]: 'Finalizing',
+  [RelocationPhase.Done]: 'Done'
+};
+
+export enum AppDistributionType {
+  WindowsApp = 0,
+  MacOsApp = 1,
+  LinuxApp = 2,
+  Android = 3,
+  Ios = 4,
+  WindowsServer = 5,
+  LinuxServer = 6
+}
+
+export const appDistributionTypes = [
+  { label: 'WindowsApp', value: AppDistributionType.WindowsApp },
+  { label: 'MacOsApp', value: AppDistributionType.MacOsApp },
+  { label: 'LinuxApp', value: AppDistributionType.LinuxApp },
+  { label: 'Android', value: AppDistributionType.Android },
+  { label: 'Ios', value: AppDistributionType.Ios },
+  { label: 'WindowsServer', value: AppDistributionType.WindowsServer },
+  { label: 'LinuxServer', value: AppDistributionType.LinuxServer }
+] as const;
+
+export const AppDistributionTypeLabel: Record<AppDistributionType, string> = {
+  [AppDistributionType.WindowsApp]: 'WindowsApp',
+  [AppDistributionType.MacOsApp]: 'MacOsApp',
+  [AppDistributionType.LinuxApp]: 'LinuxApp',
+  [AppDistributionType.Android]: 'Android',
+  [AppDistributionType.Ios]: 'Ios',
+  [AppDistributionType.WindowsServer]: 'WindowsServer',
+  [AppDistributionType.LinuxServer]: 'LinuxServer'
+};
+
+export enum DataPathSource {
+  Default = 0,
+  UserConfigured = 1,
+  Environment = 2
+}
+
+export const dataPathSources = [
+  { label: 'Default', value: DataPathSource.Default },
+  { label: 'UserConfigured', value: DataPathSource.UserConfigured },
+  { label: 'Environment', value: DataPathSource.Environment }
+] as const;
+
+export const DataPathSourceLabel: Record<DataPathSource, string> = {
+  [DataPathSource.Default]: 'Default',
+  [DataPathSource.UserConfigured]: 'UserConfigured',
+  [DataPathSource.Environment]: 'Environment'
+};
+
+export enum MigrationTiming {
+  BeforeDbMigration = 1,
+  AfterDbMigration = 2
+}
+
+export const migrationTimings = [
+  { label: 'BeforeDbMigration', value: MigrationTiming.BeforeDbMigration },
+  { label: 'AfterDbMigration', value: MigrationTiming.AfterDbMigration }
+] as const;
+
+export const MigrationTimingLabel: Record<MigrationTiming, string> = {
+  [MigrationTiming.BeforeDbMigration]: 'BeforeDbMigration',
+  [MigrationTiming.AfterDbMigration]: 'AfterDbMigration'
+};
+
+export enum OsPlatform {
+  Unknown = 0,
+  Windows = 1,
+  Osx = 2,
+  Linux = 3,
+  FreeBsd = 4
+}
+
+export const osPlatforms = [
+  { label: 'Unknown', value: OsPlatform.Unknown },
+  { label: 'Windows', value: OsPlatform.Windows },
+  { label: 'Osx', value: OsPlatform.Osx },
+  { label: 'Linux', value: OsPlatform.Linux },
+  { label: 'FreeBsd', value: OsPlatform.FreeBsd }
+] as const;
+
+export const OsPlatformLabel: Record<OsPlatform, string> = {
+  [OsPlatform.Unknown]: 'Unknown',
+  [OsPlatform.Windows]: 'Windows',
+  [OsPlatform.Osx]: 'Osx',
+  [OsPlatform.Linux]: 'Linux',
+  [OsPlatform.FreeBsd]: 'FreeBsd'
+};
+
 export enum CategoryResourceDisplayNameSegmentType {
   StaticText = 1,
   Property = 2,
@@ -1006,1422 +1237,6 @@ export const BTaskTypeLabel: Record<BTaskType, string> = {
   [BTaskType.Any]: 'Any'
 };
 
-export enum AttachmentLayout {
-  Tile = 0,
-  Carousel = 1
-}
-
-export const attachmentLayouts = [
-  { label: 'Tile', value: AttachmentLayout.Tile },
-  { label: 'Carousel', value: AttachmentLayout.Carousel }
-] as const;
-
-export const AttachmentLayoutLabel: Record<AttachmentLayout, string> = {
-  [AttachmentLayout.Tile]: 'Tile',
-  [AttachmentLayout.Carousel]: 'Carousel'
-};
-
-export enum ComparisonMode {
-  StrictEqual = 0,
-  TextSimilarity = 2,
-  RegexExtractNumber = 3,
-  FixedTolerance = 4,
-  RelativeTolerance = 5,
-  SetIntersection = 6,
-  Subset = 7,
-  TimeWindow = 8,
-  SameDay = 9,
-  ExtensionMap = 10
-}
-
-export const comparisonModes = [
-  { label: 'StrictEqual', value: ComparisonMode.StrictEqual },
-  { label: 'TextSimilarity', value: ComparisonMode.TextSimilarity },
-  { label: 'RegexExtractNumber', value: ComparisonMode.RegexExtractNumber },
-  { label: 'FixedTolerance', value: ComparisonMode.FixedTolerance },
-  { label: 'RelativeTolerance', value: ComparisonMode.RelativeTolerance },
-  { label: 'SetIntersection', value: ComparisonMode.SetIntersection },
-  { label: 'Subset', value: ComparisonMode.Subset },
-  { label: 'TimeWindow', value: ComparisonMode.TimeWindow },
-  { label: 'SameDay', value: ComparisonMode.SameDay },
-  { label: 'ExtensionMap', value: ComparisonMode.ExtensionMap }
-] as const;
-
-export const ComparisonModeLabel: Record<ComparisonMode, string> = {
-  [ComparisonMode.StrictEqual]: 'StrictEqual',
-  [ComparisonMode.TextSimilarity]: 'TextSimilarity',
-  [ComparisonMode.RegexExtractNumber]: 'RegexExtractNumber',
-  [ComparisonMode.FixedTolerance]: 'FixedTolerance',
-  [ComparisonMode.RelativeTolerance]: 'RelativeTolerance',
-  [ComparisonMode.SetIntersection]: 'SetIntersection',
-  [ComparisonMode.Subset]: 'Subset',
-  [ComparisonMode.TimeWindow]: 'TimeWindow',
-  [ComparisonMode.SameDay]: 'SameDay',
-  [ComparisonMode.ExtensionMap]: 'ExtensionMap'
-};
-
-export enum NullValueBehavior {
-  Skip = 0,
-  Fail = 1,
-  Pass = 2
-}
-
-export const nullValueBehaviors = [
-  { label: 'Skip', value: NullValueBehavior.Skip },
-  { label: 'Fail', value: NullValueBehavior.Fail },
-  { label: 'Pass', value: NullValueBehavior.Pass }
-] as const;
-
-export const NullValueBehaviorLabel: Record<NullValueBehavior, string> = {
-  [NullValueBehavior.Skip]: 'Skip',
-  [NullValueBehavior.Fail]: 'Fail',
-  [NullValueBehavior.Pass]: 'Pass'
-};
-
-export enum CaptchaType {
-  Image = 1,
-  SmsMessage = 2
-}
-
-export const captchaTypes = [
-  { label: 'Image', value: CaptchaType.Image },
-  { label: 'SmsMessage', value: CaptchaType.SmsMessage }
-] as const;
-
-export const CaptchaTypeLabel: Record<CaptchaType, string> = {
-  [CaptchaType.Image]: 'Image',
-  [CaptchaType.SmsMessage]: 'SmsMessage'
-};
-
-export enum DingSysLevel {
-  Other = 0,
-  MainAdministrator = 1,
-  SubAdministrator = 2,
-  Boss = 100
-}
-
-export const dingSysLevels = [
-  { label: 'Other', value: DingSysLevel.Other },
-  { label: 'MainAdministrator', value: DingSysLevel.MainAdministrator },
-  { label: 'SubAdministrator', value: DingSysLevel.SubAdministrator },
-  { label: 'Boss', value: DingSysLevel.Boss }
-] as const;
-
-export const DingSysLevelLabel: Record<DingSysLevel, string> = {
-  [DingSysLevel.Other]: 'Other',
-  [DingSysLevel.MainAdministrator]: 'MainAdministrator',
-  [DingSysLevel.SubAdministrator]: 'SubAdministrator',
-  [DingSysLevel.Boss]: 'Boss'
-};
-
-export enum ResponseCode {
-  Success = 0,
-  NotModified = 304,
-  InvalidPayloadOrOperation = 400,
-  Unauthenticated = 401,
-  Unauthorized = 403,
-  NotFound = 404,
-  Conflict = 409,
-  SystemError = 500,
-  Timeout = 504,
-  InvalidCaptcha = 100400
-}
-
-export const responseCodes = [
-  { label: 'Success', value: ResponseCode.Success },
-  { label: 'NotModified', value: ResponseCode.NotModified },
-  { label: 'InvalidPayloadOrOperation', value: ResponseCode.InvalidPayloadOrOperation },
-  { label: 'Unauthenticated', value: ResponseCode.Unauthenticated },
-  { label: 'Unauthorized', value: ResponseCode.Unauthorized },
-  { label: 'NotFound', value: ResponseCode.NotFound },
-  { label: 'Conflict', value: ResponseCode.Conflict },
-  { label: 'SystemError', value: ResponseCode.SystemError },
-  { label: 'Timeout', value: ResponseCode.Timeout },
-  { label: 'InvalidCaptcha', value: ResponseCode.InvalidCaptcha }
-] as const;
-
-export const ResponseCodeLabel: Record<ResponseCode, string> = {
-  [ResponseCode.Success]: 'Success',
-  [ResponseCode.NotModified]: 'NotModified',
-  [ResponseCode.InvalidPayloadOrOperation]: 'InvalidPayloadOrOperation',
-  [ResponseCode.Unauthenticated]: 'Unauthenticated',
-  [ResponseCode.Unauthorized]: 'Unauthorized',
-  [ResponseCode.NotFound]: 'NotFound',
-  [ResponseCode.Conflict]: 'Conflict',
-  [ResponseCode.SystemError]: 'SystemError',
-  [ResponseCode.Timeout]: 'Timeout',
-  [ResponseCode.InvalidCaptcha]: 'InvalidCaptcha'
-};
-
-export enum RuntimeMode {
-  Dev = 0,
-  WinForms = 1,
-  Docker = 2,
-  MacOS = 3
-}
-
-export const runtimeModes = [
-  { label: 'Dev', value: RuntimeMode.Dev },
-  { label: 'WinForms', value: RuntimeMode.WinForms },
-  { label: 'Docker', value: RuntimeMode.Docker },
-  { label: 'MacOS', value: RuntimeMode.MacOS }
-] as const;
-
-export const RuntimeModeLabel: Record<RuntimeMode, string> = {
-  [RuntimeMode.Dev]: 'Dev',
-  [RuntimeMode.WinForms]: 'WinForms',
-  [RuntimeMode.Docker]: 'Docker',
-  [RuntimeMode.MacOS]: 'MacOS'
-};
-
-export enum Operation {
-  DELETE = 0,
-  INSERT = 1,
-  EQUAL = 2
-}
-
-export const operations = [
-  { label: 'DELETE', value: Operation.DELETE },
-  { label: 'INSERT', value: Operation.INSERT },
-  { label: 'EQUAL', value: Operation.EQUAL }
-] as const;
-
-export const OperationLabel: Record<Operation, string> = {
-  [Operation.DELETE]: 'DELETE',
-  [Operation.INSERT]: 'INSERT',
-  [Operation.EQUAL]: 'EQUAL'
-};
-
-export enum ProgressorClientAction {
-  Start = 1,
-  Stop = 2,
-  Initialize = 3
-}
-
-export const progressorClientActions = [
-  { label: 'Start', value: ProgressorClientAction.Start },
-  { label: 'Stop', value: ProgressorClientAction.Stop },
-  { label: 'Initialize', value: ProgressorClientAction.Initialize }
-] as const;
-
-export const ProgressorClientActionLabel: Record<ProgressorClientAction, string> = {
-  [ProgressorClientAction.Start]: 'Start',
-  [ProgressorClientAction.Stop]: 'Stop',
-  [ProgressorClientAction.Initialize]: 'Initialize'
-};
-
-export enum ProgressorEvent {
-  StateChanged = 1,
-  ProgressChanged = 2,
-  ErrorOccurred = 3
-}
-
-export const progressorEvents = [
-  { label: 'StateChanged', value: ProgressorEvent.StateChanged },
-  { label: 'ProgressChanged', value: ProgressorEvent.ProgressChanged },
-  { label: 'ErrorOccurred', value: ProgressorEvent.ErrorOccurred }
-] as const;
-
-export const ProgressorEventLabel: Record<ProgressorEvent, string> = {
-  [ProgressorEvent.StateChanged]: 'StateChanged',
-  [ProgressorEvent.ProgressChanged]: 'ProgressChanged',
-  [ProgressorEvent.ErrorOccurred]: 'ErrorOccurred'
-};
-
-export enum ProgressorStatus {
-  Idle = 1,
-  Running = 2,
-  Complete = 3,
-  Suspended = 4
-}
-
-export const progressorStatuses = [
-  { label: 'Idle', value: ProgressorStatus.Idle },
-  { label: 'Running', value: ProgressorStatus.Running },
-  { label: 'Complete', value: ProgressorStatus.Complete },
-  { label: 'Suspended', value: ProgressorStatus.Suspended }
-] as const;
-
-export const ProgressorStatusLabel: Record<ProgressorStatus, string> = {
-  [ProgressorStatus.Idle]: 'Idle',
-  [ProgressorStatus.Running]: 'Running',
-  [ProgressorStatus.Complete]: 'Complete',
-  [ProgressorStatus.Suspended]: 'Suspended'
-};
-
-export enum FileStorageUploadResponseCode {
-  Success = 0,
-  Error = 500
-}
-
-export const fileStorageUploadResponseCodes = [
-  { label: 'Success', value: FileStorageUploadResponseCode.Success },
-  { label: 'Error', value: FileStorageUploadResponseCode.Error }
-] as const;
-
-export const FileStorageUploadResponseCodeLabel: Record<FileStorageUploadResponseCode, string> = {
-  [FileStorageUploadResponseCode.Success]: 'Success',
-  [FileStorageUploadResponseCode.Error]: 'Error'
-};
-
-export enum MessageStatus {
-  ToBeSent = 0,
-  Succeed = 1,
-  Failed = 2
-}
-
-export const messageStatuses = [
-  { label: 'ToBeSent', value: MessageStatus.ToBeSent },
-  { label: 'Succeed', value: MessageStatus.Succeed },
-  { label: 'Failed', value: MessageStatus.Failed }
-] as const;
-
-export const MessageStatusLabel: Record<MessageStatus, string> = {
-  [MessageStatus.ToBeSent]: 'ToBeSent',
-  [MessageStatus.Succeed]: 'Succeed',
-  [MessageStatus.Failed]: 'Failed'
-};
-
-export enum NotificationType {
-  Os = 1,
-  Email = 2,
-  OsAndEmail = 3,
-  WeChat = 4,
-  Sms = 8
-}
-
-export const notificationTypes = [
-  { label: 'Os', value: NotificationType.Os },
-  { label: 'Email', value: NotificationType.Email },
-  { label: 'OsAndEmail', value: NotificationType.OsAndEmail },
-  { label: 'WeChat', value: NotificationType.WeChat },
-  { label: 'Sms', value: NotificationType.Sms }
-] as const;
-
-export const NotificationTypeLabel: Record<NotificationType, string> = {
-  [NotificationType.Os]: 'Os',
-  [NotificationType.Email]: 'Email',
-  [NotificationType.OsAndEmail]: 'OsAndEmail',
-  [NotificationType.WeChat]: 'WeChat',
-  [NotificationType.Sms]: 'Sms'
-};
-
-export enum AdbDeviceState {
-  Device = 1,
-  Offline = 2,
-  NoDevice = 3
-}
-
-export const adbDeviceStates = [
-  { label: 'Device', value: AdbDeviceState.Device },
-  { label: 'Offline', value: AdbDeviceState.Offline },
-  { label: 'NoDevice', value: AdbDeviceState.NoDevice }
-] as const;
-
-export const AdbDeviceStateLabel: Record<AdbDeviceState, string> = {
-  [AdbDeviceState.Device]: 'Device',
-  [AdbDeviceState.Offline]: 'Offline',
-  [AdbDeviceState.NoDevice]: 'NoDevice'
-};
-
-export enum AdbExceptionCode {
-  Error = 1,
-  InvalidExitCode = 2
-}
-
-export const adbExceptionCodes = [
-  { label: 'Error', value: AdbExceptionCode.Error },
-  { label: 'InvalidExitCode', value: AdbExceptionCode.InvalidExitCode }
-] as const;
-
-export const AdbExceptionCodeLabel: Record<AdbExceptionCode, string> = {
-  [AdbExceptionCode.Error]: 'Error',
-  [AdbExceptionCode.InvalidExitCode]: 'InvalidExitCode'
-};
-
-export enum AdbInternalError {
-  Error = 1,
-  INSTALL_FAILED_ALREADY_EXISTS = 100,
-  DELETE_FAILED_INTERNAL_ERROR = 101,
-  FailedToConnectDevice = 200
-}
-
-export const adbInternalErrors = [
-  { label: 'Error', value: AdbInternalError.Error },
-  { label: 'INSTALL_FAILED_ALREADY_EXISTS', value: AdbInternalError.INSTALL_FAILED_ALREADY_EXISTS },
-  { label: 'DELETE_FAILED_INTERNAL_ERROR', value: AdbInternalError.DELETE_FAILED_INTERNAL_ERROR },
-  { label: 'FailedToConnectDevice', value: AdbInternalError.FailedToConnectDevice }
-] as const;
-
-export const AdbInternalErrorLabel: Record<AdbInternalError, string> = {
-  [AdbInternalError.Error]: 'Error',
-  [AdbInternalError.INSTALL_FAILED_ALREADY_EXISTS]: 'INSTALL_FAILED_ALREADY_EXISTS',
-  [AdbInternalError.DELETE_FAILED_INTERNAL_ERROR]: 'DELETE_FAILED_INTERNAL_ERROR',
-  [AdbInternalError.FailedToConnectDevice]: 'FailedToConnectDevice'
-};
-
-export enum AdditionalCoverDiscoveringSource {
-  CompressedFile = 1,
-  Video = 2
-}
-
-export const additionalCoverDiscoveringSources = [
-  { label: 'CompressedFile', value: AdditionalCoverDiscoveringSource.CompressedFile },
-  { label: 'Video', value: AdditionalCoverDiscoveringSource.Video }
-] as const;
-
-export const AdditionalCoverDiscoveringSourceLabel: Record<AdditionalCoverDiscoveringSource, string> = {
-  [AdditionalCoverDiscoveringSource.CompressedFile]: 'CompressedFile',
-  [AdditionalCoverDiscoveringSource.Video]: 'Video'
-};
-
-export enum CookieValidatorTarget {
-  BiliBili = 1,
-  ExHentai = 2,
-  Pixiv = 3,
-  Bangumi = 4,
-  SoulPlus = 5,
-  DLsite = 6,
-  Fanbox = 7,
-  Fantia = 8,
-  Cien = 9,
-  Patreon = 10
-}
-
-export const cookieValidatorTargets = [
-  { label: 'BiliBili', value: CookieValidatorTarget.BiliBili },
-  { label: 'ExHentai', value: CookieValidatorTarget.ExHentai },
-  { label: 'Pixiv', value: CookieValidatorTarget.Pixiv },
-  { label: 'Bangumi', value: CookieValidatorTarget.Bangumi },
-  { label: 'SoulPlus', value: CookieValidatorTarget.SoulPlus },
-  { label: 'DLsite', value: CookieValidatorTarget.DLsite },
-  { label: 'Fanbox', value: CookieValidatorTarget.Fanbox },
-  { label: 'Fantia', value: CookieValidatorTarget.Fantia },
-  { label: 'Cien', value: CookieValidatorTarget.Cien },
-  { label: 'Patreon', value: CookieValidatorTarget.Patreon }
-] as const;
-
-export const CookieValidatorTargetLabel: Record<CookieValidatorTarget, string> = {
-  [CookieValidatorTarget.BiliBili]: 'BiliBili',
-  [CookieValidatorTarget.ExHentai]: 'ExHentai',
-  [CookieValidatorTarget.Pixiv]: 'Pixiv',
-  [CookieValidatorTarget.Bangumi]: 'Bangumi',
-  [CookieValidatorTarget.SoulPlus]: 'SoulPlus',
-  [CookieValidatorTarget.DLsite]: 'DLsite',
-  [CookieValidatorTarget.Fanbox]: 'Fanbox',
-  [CookieValidatorTarget.Fantia]: 'Fantia',
-  [CookieValidatorTarget.Cien]: 'Cien',
-  [CookieValidatorTarget.Patreon]: 'Patreon'
-};
-
-export enum CoverFit {
-  Contain = 1,
-  Cover = 2
-}
-
-export const coverFits = [
-  { label: 'Contain', value: CoverFit.Contain },
-  { label: 'Cover', value: CoverFit.Cover }
-] as const;
-
-export const CoverFitLabel: Record<CoverFit, string> = {
-  [CoverFit.Contain]: 'Contain',
-  [CoverFit.Cover]: 'Cover'
-};
-
-export enum CoverSaveMode {
-  Replace = 1,
-  Prepend = 2
-}
-
-export const coverSaveModes = [
-  { label: 'Replace', value: CoverSaveMode.Replace },
-  { label: 'Prepend', value: CoverSaveMode.Prepend }
-] as const;
-
-export const CoverSaveModeLabel: Record<CoverSaveMode, string> = {
-  [CoverSaveMode.Replace]: 'Replace',
-  [CoverSaveMode.Prepend]: 'Prepend'
-};
-
-export enum CoverSelectOrder {
-  FilenameAscending = 1,
-  FileModifyDtDescending = 2
-}
-
-export const coverSelectOrders = [
-  { label: 'FilenameAscending', value: CoverSelectOrder.FilenameAscending },
-  { label: 'FileModifyDtDescending', value: CoverSelectOrder.FileModifyDtDescending }
-] as const;
-
-export const CoverSelectOrderLabel: Record<CoverSelectOrder, string> = {
-  [CoverSelectOrder.FilenameAscending]: 'FilenameAscending',
-  [CoverSelectOrder.FileModifyDtDescending]: 'FileModifyDtDescending'
-};
-
-export enum MatchResultType {
-  Layer = 1,
-  Regex = 2
-}
-
-export const matchResultTypes = [
-  { label: 'Layer', value: MatchResultType.Layer },
-  { label: 'Regex', value: MatchResultType.Regex }
-] as const;
-
-export const MatchResultTypeLabel: Record<MatchResultType, string> = {
-  [MatchResultType.Layer]: 'Layer',
-  [MatchResultType.Regex]: 'Regex'
-};
-
-export enum MediaLibrarySyncStep {
-  Filtering = 0,
-  AcquireFileSystemInfo = 1,
-  CleanResources = 2,
-  CompareResources = 3,
-  SaveResources = 4
-}
-
-export const mediaLibrarySyncSteps = [
-  { label: 'Filtering', value: MediaLibrarySyncStep.Filtering },
-  { label: 'AcquireFileSystemInfo', value: MediaLibrarySyncStep.AcquireFileSystemInfo },
-  { label: 'CleanResources', value: MediaLibrarySyncStep.CleanResources },
-  { label: 'CompareResources', value: MediaLibrarySyncStep.CompareResources },
-  { label: 'SaveResources', value: MediaLibrarySyncStep.SaveResources }
-] as const;
-
-export const MediaLibrarySyncStepLabel: Record<MediaLibrarySyncStep, string> = {
-  [MediaLibrarySyncStep.Filtering]: 'Filtering',
-  [MediaLibrarySyncStep.AcquireFileSystemInfo]: 'AcquireFileSystemInfo',
-  [MediaLibrarySyncStep.CleanResources]: 'CleanResources',
-  [MediaLibrarySyncStep.CompareResources]: 'CompareResources',
-  [MediaLibrarySyncStep.SaveResources]: 'SaveResources'
-};
-
-export enum MediaType {
-  Image = 1,
-  Audio = 2,
-  Video = 3,
-  Text = 4,
-  Application = 5,
-  Unknown = 1000
-}
-
-export const mediaTypes = [
-  { label: 'Image', value: MediaType.Image },
-  { label: 'Audio', value: MediaType.Audio },
-  { label: 'Video', value: MediaType.Video },
-  { label: 'Text', value: MediaType.Text },
-  { label: 'Application', value: MediaType.Application },
-  { label: 'Unknown', value: MediaType.Unknown }
-] as const;
-
-export const MediaTypeLabel: Record<MediaType, string> = {
-  [MediaType.Image]: 'Image',
-  [MediaType.Audio]: 'Audio',
-  [MediaType.Video]: 'Video',
-  [MediaType.Text]: 'Text',
-  [MediaType.Application]: 'Application',
-  [MediaType.Unknown]: 'Unknown'
-};
-
-export enum PlaylistItemType {
-  Resource = 1,
-  Video = 2,
-  Image = 3,
-  Audio = 4
-}
-
-export const playlistItemTypes = [
-  { label: 'Resource', value: PlaylistItemType.Resource },
-  { label: 'Video', value: PlaylistItemType.Video },
-  { label: 'Image', value: PlaylistItemType.Image },
-  { label: 'Audio', value: PlaylistItemType.Audio }
-] as const;
-
-export const PlaylistItemTypeLabel: Record<PlaylistItemType, string> = {
-  [PlaylistItemType.Resource]: 'Resource',
-  [PlaylistItemType.Video]: 'Video',
-  [PlaylistItemType.Image]: 'Image',
-  [PlaylistItemType.Audio]: 'Audio'
-};
-
-export enum ResourceMatcherValueType {
-  Layer = 1,
-  Regex = 2,
-  FixedText = 3
-}
-
-export const resourceMatcherValueTypes = [
-  { label: 'Layer', value: ResourceMatcherValueType.Layer },
-  { label: 'Regex', value: ResourceMatcherValueType.Regex },
-  { label: 'FixedText', value: ResourceMatcherValueType.FixedText }
-] as const;
-
-export const ResourceMatcherValueTypeLabel: Record<ResourceMatcherValueType, string> = {
-  [ResourceMatcherValueType.Layer]: 'Layer',
-  [ResourceMatcherValueType.Regex]: 'Regex',
-  [ResourceMatcherValueType.FixedText]: 'FixedText'
-};
-
-export enum ResourceProperty {
-  RootPath = 1,
-  ParentResource = 2,
-  Resource = 3,
-  Introduction = 12,
-  Rating = 13,
-  CustomProperty = 14,
-  Filename = 15,
-  DirectoryPath = 16,
-  CreatedAt = 17,
-  FileCreatedAt = 18,
-  FileModifiedAt = 19,
-  Cover = 22,
-  PlayedAt = 23,
-  MediaLibraryV2 = 24,
-  MediaLibraryV2Multi = 25,
-  Source = 26,
-  Name = 27,
-  HealthScore = 28
-}
-
-export const resourceProperties = [
-  { label: 'RootPath', value: ResourceProperty.RootPath },
-  { label: 'ParentResource', value: ResourceProperty.ParentResource },
-  { label: 'Resource', value: ResourceProperty.Resource },
-  { label: 'Introduction', value: ResourceProperty.Introduction },
-  { label: 'Rating', value: ResourceProperty.Rating },
-  { label: 'CustomProperty', value: ResourceProperty.CustomProperty },
-  { label: 'Filename', value: ResourceProperty.Filename },
-  { label: 'DirectoryPath', value: ResourceProperty.DirectoryPath },
-  { label: 'CreatedAt', value: ResourceProperty.CreatedAt },
-  { label: 'FileCreatedAt', value: ResourceProperty.FileCreatedAt },
-  { label: 'FileModifiedAt', value: ResourceProperty.FileModifiedAt },
-  { label: 'Cover', value: ResourceProperty.Cover },
-  { label: 'PlayedAt', value: ResourceProperty.PlayedAt },
-  { label: 'MediaLibraryV2', value: ResourceProperty.MediaLibraryV2 },
-  { label: 'MediaLibraryV2Multi', value: ResourceProperty.MediaLibraryV2Multi },
-  { label: 'Source', value: ResourceProperty.Source },
-  { label: 'Name', value: ResourceProperty.Name },
-  { label: 'HealthScore', value: ResourceProperty.HealthScore }
-] as const;
-
-export const ResourcePropertyLabel: Record<ResourceProperty, string> = {
-  [ResourceProperty.RootPath]: 'RootPath',
-  [ResourceProperty.ParentResource]: 'ParentResource',
-  [ResourceProperty.Resource]: 'Resource',
-  [ResourceProperty.Introduction]: 'Introduction',
-  [ResourceProperty.Rating]: 'Rating',
-  [ResourceProperty.CustomProperty]: 'CustomProperty',
-  [ResourceProperty.Filename]: 'Filename',
-  [ResourceProperty.DirectoryPath]: 'DirectoryPath',
-  [ResourceProperty.CreatedAt]: 'CreatedAt',
-  [ResourceProperty.FileCreatedAt]: 'FileCreatedAt',
-  [ResourceProperty.FileModifiedAt]: 'FileModifiedAt',
-  [ResourceProperty.Cover]: 'Cover',
-  [ResourceProperty.PlayedAt]: 'PlayedAt',
-  [ResourceProperty.MediaLibraryV2]: 'MediaLibraryV2',
-  [ResourceProperty.MediaLibraryV2Multi]: 'MediaLibraryV2Multi',
-  [ResourceProperty.Source]: 'Source',
-  [ResourceProperty.Name]: 'Name',
-  [ResourceProperty.HealthScore]: 'HealthScore'
-};
-
-export enum SearchableReservedProperty {
-  Introduction = 12,
-  Rating = 13,
-  FileName = 15,
-  DirectoryPath = 16,
-  CreatedAt = 17,
-  FileCreatedAt = 18,
-  FileModifiedAt = 19,
-  Cover = 22,
-  MediaLibraryV2 = 24,
-  MediaLibraryV2Multi = 25,
-  Source = 26,
-  Name = 27
-}
-
-export const searchableReservedProperties = [
-  { label: 'Introduction', value: SearchableReservedProperty.Introduction },
-  { label: 'Rating', value: SearchableReservedProperty.Rating },
-  { label: 'FileName', value: SearchableReservedProperty.FileName },
-  { label: 'DirectoryPath', value: SearchableReservedProperty.DirectoryPath },
-  { label: 'CreatedAt', value: SearchableReservedProperty.CreatedAt },
-  { label: 'FileCreatedAt', value: SearchableReservedProperty.FileCreatedAt },
-  { label: 'FileModifiedAt', value: SearchableReservedProperty.FileModifiedAt },
-  { label: 'Cover', value: SearchableReservedProperty.Cover },
-  { label: 'MediaLibraryV2', value: SearchableReservedProperty.MediaLibraryV2 },
-  { label: 'MediaLibraryV2Multi', value: SearchableReservedProperty.MediaLibraryV2Multi },
-  { label: 'Source', value: SearchableReservedProperty.Source },
-  { label: 'Name', value: SearchableReservedProperty.Name }
-] as const;
-
-export const SearchableReservedPropertyLabel: Record<SearchableReservedProperty, string> = {
-  [SearchableReservedProperty.Introduction]: 'Introduction',
-  [SearchableReservedProperty.Rating]: 'Rating',
-  [SearchableReservedProperty.FileName]: 'FileName',
-  [SearchableReservedProperty.DirectoryPath]: 'DirectoryPath',
-  [SearchableReservedProperty.CreatedAt]: 'CreatedAt',
-  [SearchableReservedProperty.FileCreatedAt]: 'FileCreatedAt',
-  [SearchableReservedProperty.FileModifiedAt]: 'FileModifiedAt',
-  [SearchableReservedProperty.Cover]: 'Cover',
-  [SearchableReservedProperty.MediaLibraryV2]: 'MediaLibraryV2',
-  [SearchableReservedProperty.MediaLibraryV2Multi]: 'MediaLibraryV2Multi',
-  [SearchableReservedProperty.Source]: 'Source',
-  [SearchableReservedProperty.Name]: 'Name'
-};
-
-export enum StartupPage {
-  Default = 0,
-  Resource = 1
-}
-
-export const startupPages = [
-  { label: 'Default', value: StartupPage.Default },
-  { label: 'Resource', value: StartupPage.Resource }
-] as const;
-
-export const StartupPageLabel: Record<StartupPage, string> = {
-  [StartupPage.Default]: 'Default',
-  [StartupPage.Resource]: 'Resource'
-};
-
-export enum ThirdPartyId {
-  Bilibili = 1,
-  ExHentai = 2,
-  Pixiv = 3,
-  Bangumi = 4,
-  SoulPlus = 5,
-  DLsite = 6,
-  Fanbox = 7,
-  Fantia = 8,
-  Cien = 9,
-  Patreon = 10,
-  Tmdb = 11,
-  Steam = 12
-}
-
-export const thirdPartyIds = [
-  { label: 'Bilibili', value: ThirdPartyId.Bilibili },
-  { label: 'ExHentai', value: ThirdPartyId.ExHentai },
-  { label: 'Pixiv', value: ThirdPartyId.Pixiv },
-  { label: 'Bangumi', value: ThirdPartyId.Bangumi },
-  { label: 'SoulPlus', value: ThirdPartyId.SoulPlus },
-  { label: 'DLsite', value: ThirdPartyId.DLsite },
-  { label: 'Fanbox', value: ThirdPartyId.Fanbox },
-  { label: 'Fantia', value: ThirdPartyId.Fantia },
-  { label: 'Cien', value: ThirdPartyId.Cien },
-  { label: 'Patreon', value: ThirdPartyId.Patreon },
-  { label: 'Tmdb', value: ThirdPartyId.Tmdb },
-  { label: 'Steam', value: ThirdPartyId.Steam }
-] as const;
-
-export const ThirdPartyIdLabel: Record<ThirdPartyId, string> = {
-  [ThirdPartyId.Bilibili]: 'Bilibili',
-  [ThirdPartyId.ExHentai]: 'ExHentai',
-  [ThirdPartyId.Pixiv]: 'Pixiv',
-  [ThirdPartyId.Bangumi]: 'Bangumi',
-  [ThirdPartyId.SoulPlus]: 'SoulPlus',
-  [ThirdPartyId.DLsite]: 'DLsite',
-  [ThirdPartyId.Fanbox]: 'Fanbox',
-  [ThirdPartyId.Fantia]: 'Fantia',
-  [ThirdPartyId.Cien]: 'Cien',
-  [ThirdPartyId.Patreon]: 'Patreon',
-  [ThirdPartyId.Tmdb]: 'Tmdb',
-  [ThirdPartyId.Steam]: 'Steam'
-};
-
-export enum PasswordSearchOrder {
-  Latest = 1,
-  Frequency = 2
-}
-
-export const passwordSearchOrders = [
-  { label: 'Latest', value: PasswordSearchOrder.Latest },
-  { label: 'Frequency', value: PasswordSearchOrder.Frequency }
-] as const;
-
-export const PasswordSearchOrderLabel: Record<PasswordSearchOrder, string> = {
-  [PasswordSearchOrder.Latest]: 'Latest',
-  [PasswordSearchOrder.Frequency]: 'Frequency'
-};
-
-export enum ResourceSearchSortableProperty {
-  FileCreateDt = 1,
-  FileModifyDt = 2,
-  Filename = 3,
-  AddDt = 6,
-  PlayedAt = 11,
-  HealthScore = 12
-}
-
-export const resourceSearchSortableProperties = [
-  { label: 'FileCreateDt', value: ResourceSearchSortableProperty.FileCreateDt },
-  { label: 'FileModifyDt', value: ResourceSearchSortableProperty.FileModifyDt },
-  { label: 'Filename', value: ResourceSearchSortableProperty.Filename },
-  { label: 'AddDt', value: ResourceSearchSortableProperty.AddDt },
-  { label: 'PlayedAt', value: ResourceSearchSortableProperty.PlayedAt },
-  { label: 'HealthScore', value: ResourceSearchSortableProperty.HealthScore }
-] as const;
-
-export const ResourceSearchSortablePropertyLabel: Record<ResourceSearchSortableProperty, string> = {
-  [ResourceSearchSortableProperty.FileCreateDt]: 'FileCreateDt',
-  [ResourceSearchSortableProperty.FileModifyDt]: 'FileModifyDt',
-  [ResourceSearchSortableProperty.Filename]: 'Filename',
-  [ResourceSearchSortableProperty.AddDt]: 'AddDt',
-  [ResourceSearchSortableProperty.PlayedAt]: 'PlayedAt',
-  [ResourceSearchSortableProperty.HealthScore]: 'HealthScore'
-};
-
-export enum CustomPropertyAdditionalItem {
-  None = 0,
-  ValueCount = 2
-}
-
-export const customPropertyAdditionalItems = [
-  { label: 'None', value: CustomPropertyAdditionalItem.None },
-  { label: 'ValueCount', value: CustomPropertyAdditionalItem.ValueCount }
-] as const;
-
-export const CustomPropertyAdditionalItemLabel: Record<CustomPropertyAdditionalItem, string> = {
-  [CustomPropertyAdditionalItem.None]: 'None',
-  [CustomPropertyAdditionalItem.ValueCount]: 'ValueCount'
-};
-
-export enum CustomPropertyValueAdditionalItem {
-  None = 0,
-  BizValue = 1
-}
-
-export const customPropertyValueAdditionalItems = [
-  { label: 'None', value: CustomPropertyValueAdditionalItem.None },
-  { label: 'BizValue', value: CustomPropertyValueAdditionalItem.BizValue }
-] as const;
-
-export const CustomPropertyValueAdditionalItemLabel: Record<CustomPropertyValueAdditionalItem, string> = {
-  [CustomPropertyValueAdditionalItem.None]: 'None',
-  [CustomPropertyValueAdditionalItem.BizValue]: 'BizValue'
-};
-
-export enum ResourceAdditionalItem {
-  None = 0,
-  Properties = 32,
-  Alias = 64,
-  DisplayName = 288,
-  HasChildren = 512,
-  MediaLibraryName = 2048,
-  Cover = 16416,
-  PlayableItem = 32768,
-  All = 52064
-}
-
-export const resourceAdditionalItems = [
-  { label: 'None', value: ResourceAdditionalItem.None },
-  { label: 'Properties', value: ResourceAdditionalItem.Properties },
-  { label: 'Alias', value: ResourceAdditionalItem.Alias },
-  { label: 'DisplayName', value: ResourceAdditionalItem.DisplayName },
-  { label: 'HasChildren', value: ResourceAdditionalItem.HasChildren },
-  { label: 'MediaLibraryName', value: ResourceAdditionalItem.MediaLibraryName },
-  { label: 'Cover', value: ResourceAdditionalItem.Cover },
-  { label: 'PlayableItem', value: ResourceAdditionalItem.PlayableItem },
-  { label: 'All', value: ResourceAdditionalItem.All }
-] as const;
-
-export const ResourceAdditionalItemLabel: Record<ResourceAdditionalItem, string> = {
-  [ResourceAdditionalItem.None]: 'None',
-  [ResourceAdditionalItem.Properties]: 'Properties',
-  [ResourceAdditionalItem.Alias]: 'Alias',
-  [ResourceAdditionalItem.DisplayName]: 'DisplayName',
-  [ResourceAdditionalItem.HasChildren]: 'HasChildren',
-  [ResourceAdditionalItem.MediaLibraryName]: 'MediaLibraryName',
-  [ResourceAdditionalItem.Cover]: 'Cover',
-  [ResourceAdditionalItem.PlayableItem]: 'PlayableItem',
-  [ResourceAdditionalItem.All]: 'All'
-};
-
-export enum EnhancerId {
-  Bakabase = 1,
-  ExHentai = 2,
-  Bangumi = 3,
-  DLsite = 4,
-  Regex = 5,
-  Kodi = 6,
-  Tmdb = 7,
-  Av = 8,
-  AI = 9
-}
-
-export const enhancerIds = [
-  { label: 'Bakabase', value: EnhancerId.Bakabase },
-  { label: 'ExHentai', value: EnhancerId.ExHentai },
-  { label: 'Bangumi', value: EnhancerId.Bangumi },
-  { label: 'DLsite', value: EnhancerId.DLsite },
-  { label: 'Regex', value: EnhancerId.Regex },
-  { label: 'Kodi', value: EnhancerId.Kodi },
-  { label: 'Tmdb', value: EnhancerId.Tmdb },
-  { label: 'Av', value: EnhancerId.Av },
-  { label: 'AI', value: EnhancerId.AI }
-] as const;
-
-export const EnhancerIdLabel: Record<EnhancerId, string> = {
-  [EnhancerId.Bakabase]: 'Bakabase',
-  [EnhancerId.ExHentai]: 'ExHentai',
-  [EnhancerId.Bangumi]: 'Bangumi',
-  [EnhancerId.DLsite]: 'DLsite',
-  [EnhancerId.Regex]: 'Regex',
-  [EnhancerId.Kodi]: 'Kodi',
-  [EnhancerId.Tmdb]: 'Tmdb',
-  [EnhancerId.Av]: 'Av',
-  [EnhancerId.AI]: 'AI'
-};
-
-export enum EnhancerTag {
-  UseRegex = 1,
-  UseKeyword = 2
-}
-
-export const enhancerTags = [
-  { label: 'UseRegex', value: EnhancerTag.UseRegex },
-  { label: 'UseKeyword', value: EnhancerTag.UseKeyword }
-] as const;
-
-export const EnhancerTagLabel: Record<EnhancerTag, string> = {
-  [EnhancerTag.UseRegex]: 'UseRegex',
-  [EnhancerTag.UseKeyword]: 'UseKeyword'
-};
-
-export enum TmdbEnhancerTarget {
-  Title = 1,
-  OriginalTitle = 2,
-  Overview = 3,
-  Rating = 4,
-  VoteCount = 5,
-  ReleaseDate = 6,
-  Runtime = 7,
-  Genres = 8,
-  ProductionCountries = 9,
-  SpokenLanguages = 10,
-  Status = 11,
-  Tagline = 12,
-  Budget = 13,
-  Revenue = 14,
-  Cover = 15,
-  Backdrop = 16
-}
-
-export const tmdbEnhancerTargets = [
-  { label: 'Title', value: TmdbEnhancerTarget.Title },
-  { label: 'OriginalTitle', value: TmdbEnhancerTarget.OriginalTitle },
-  { label: 'Overview', value: TmdbEnhancerTarget.Overview },
-  { label: 'Rating', value: TmdbEnhancerTarget.Rating },
-  { label: 'VoteCount', value: TmdbEnhancerTarget.VoteCount },
-  { label: 'ReleaseDate', value: TmdbEnhancerTarget.ReleaseDate },
-  { label: 'Runtime', value: TmdbEnhancerTarget.Runtime },
-  { label: 'Genres', value: TmdbEnhancerTarget.Genres },
-  { label: 'ProductionCountries', value: TmdbEnhancerTarget.ProductionCountries },
-  { label: 'SpokenLanguages', value: TmdbEnhancerTarget.SpokenLanguages },
-  { label: 'Status', value: TmdbEnhancerTarget.Status },
-  { label: 'Tagline', value: TmdbEnhancerTarget.Tagline },
-  { label: 'Budget', value: TmdbEnhancerTarget.Budget },
-  { label: 'Revenue', value: TmdbEnhancerTarget.Revenue },
-  { label: 'Cover', value: TmdbEnhancerTarget.Cover },
-  { label: 'Backdrop', value: TmdbEnhancerTarget.Backdrop }
-] as const;
-
-export const TmdbEnhancerTargetLabel: Record<TmdbEnhancerTarget, string> = {
-  [TmdbEnhancerTarget.Title]: 'Title',
-  [TmdbEnhancerTarget.OriginalTitle]: 'OriginalTitle',
-  [TmdbEnhancerTarget.Overview]: 'Overview',
-  [TmdbEnhancerTarget.Rating]: 'Rating',
-  [TmdbEnhancerTarget.VoteCount]: 'VoteCount',
-  [TmdbEnhancerTarget.ReleaseDate]: 'ReleaseDate',
-  [TmdbEnhancerTarget.Runtime]: 'Runtime',
-  [TmdbEnhancerTarget.Genres]: 'Genres',
-  [TmdbEnhancerTarget.ProductionCountries]: 'ProductionCountries',
-  [TmdbEnhancerTarget.SpokenLanguages]: 'SpokenLanguages',
-  [TmdbEnhancerTarget.Status]: 'Status',
-  [TmdbEnhancerTarget.Tagline]: 'Tagline',
-  [TmdbEnhancerTarget.Budget]: 'Budget',
-  [TmdbEnhancerTarget.Revenue]: 'Revenue',
-  [TmdbEnhancerTarget.Cover]: 'Cover',
-  [TmdbEnhancerTarget.Backdrop]: 'Backdrop'
-};
-
-export enum RegexEnhancerTarget {
-  CaptureGroups = 0
-}
-
-export const regexEnhancerTargets = [
-  { label: 'CaptureGroups', value: RegexEnhancerTarget.CaptureGroups }
-] as const;
-
-export const RegexEnhancerTargetLabel: Record<RegexEnhancerTarget, string> = {
-  [RegexEnhancerTarget.CaptureGroups]: 'CaptureGroups'
-};
-
-export enum KodiEnhancerTarget {
-  Title = 1,
-  OriginalTitle = 2,
-  SortTitle = 3,
-  ShowTitle = 4,
-  Outline = 5,
-  Plot = 6,
-  Tagline = 7,
-  Runtime = 8,
-  Mpaa = 9,
-  PlayCount = 10,
-  LastPlayed = 11,
-  Id = 12,
-  Genres = 13,
-  Countries = 14,
-  Tags = 15,
-  VideoAssetTitle = 16,
-  VideoAssetId = 17,
-  VideoAssetType = 18,
-  HasVideoVersions = 19,
-  HasVideoExtras = 20,
-  IsDefaultVideoVersion = 21,
-  Credits = 22,
-  Director = 23,
-  Premiered = 24,
-  Year = 25,
-  Status = 26,
-  Studio = 27,
-  Trailer = 28,
-  Season = 29,
-  Episode = 30,
-  DisplaySeason = 31,
-  DisplayEpisode = 32,
-  Genre = 33,
-  Code = 34,
-  Aired = 35,
-  DateAdded = 36,
-  Top250 = 37,
-  UserRating = 38,
-  Thumbs = 39,
-  FanartThumbs = 40,
-  UniqueIds = 41,
-  Actors = 42,
-  NamedSeasons = 43,
-  Ratings = 44,
-  Set = 45,
-  Resume = 46,
-  Artist = 47,
-  Album = 48,
-  MusicVideo = 49,
-  Episodes = 50,
-  Directors = 51,
-  Track = 52,
-  Style = 53,
-  Mood = 54,
-  Themes = 55,
-  Compilation = 56,
-  BoxSet = 57,
-  Review = 58,
-  Type = 59,
-  ReleaseStatus = 60,
-  ReleaseDate = 61,
-  OriginalReleaseDate = 62,
-  Label = 63,
-  Duration = 64,
-  Path = 65,
-  Votes = 66,
-  ReleaseType = 67,
-  Rating = 68,
-  SortName = 69,
-  Gender = 70,
-  Disambiguation = 71,
-  Styles = 72,
-  Moods = 73,
-  YearsActive = 74,
-  Born = 75,
-  Formed = 76,
-  Biography = 77,
-  Died = 78,
-  Disbanded = 79,
-  AlbumArtistCredits = 80
-}
-
-export const kodiEnhancerTargets = [
-  { label: 'Title', value: KodiEnhancerTarget.Title },
-  { label: 'OriginalTitle', value: KodiEnhancerTarget.OriginalTitle },
-  { label: 'SortTitle', value: KodiEnhancerTarget.SortTitle },
-  { label: 'ShowTitle', value: KodiEnhancerTarget.ShowTitle },
-  { label: 'Outline', value: KodiEnhancerTarget.Outline },
-  { label: 'Plot', value: KodiEnhancerTarget.Plot },
-  { label: 'Tagline', value: KodiEnhancerTarget.Tagline },
-  { label: 'Runtime', value: KodiEnhancerTarget.Runtime },
-  { label: 'Mpaa', value: KodiEnhancerTarget.Mpaa },
-  { label: 'PlayCount', value: KodiEnhancerTarget.PlayCount },
-  { label: 'LastPlayed', value: KodiEnhancerTarget.LastPlayed },
-  { label: 'Id', value: KodiEnhancerTarget.Id },
-  { label: 'Genres', value: KodiEnhancerTarget.Genres },
-  { label: 'Countries', value: KodiEnhancerTarget.Countries },
-  { label: 'Tags', value: KodiEnhancerTarget.Tags },
-  { label: 'VideoAssetTitle', value: KodiEnhancerTarget.VideoAssetTitle },
-  { label: 'VideoAssetId', value: KodiEnhancerTarget.VideoAssetId },
-  { label: 'VideoAssetType', value: KodiEnhancerTarget.VideoAssetType },
-  { label: 'HasVideoVersions', value: KodiEnhancerTarget.HasVideoVersions },
-  { label: 'HasVideoExtras', value: KodiEnhancerTarget.HasVideoExtras },
-  { label: 'IsDefaultVideoVersion', value: KodiEnhancerTarget.IsDefaultVideoVersion },
-  { label: 'Credits', value: KodiEnhancerTarget.Credits },
-  { label: 'Director', value: KodiEnhancerTarget.Director },
-  { label: 'Premiered', value: KodiEnhancerTarget.Premiered },
-  { label: 'Year', value: KodiEnhancerTarget.Year },
-  { label: 'Status', value: KodiEnhancerTarget.Status },
-  { label: 'Studio', value: KodiEnhancerTarget.Studio },
-  { label: 'Trailer', value: KodiEnhancerTarget.Trailer },
-  { label: 'Season', value: KodiEnhancerTarget.Season },
-  { label: 'Episode', value: KodiEnhancerTarget.Episode },
-  { label: 'DisplaySeason', value: KodiEnhancerTarget.DisplaySeason },
-  { label: 'DisplayEpisode', value: KodiEnhancerTarget.DisplayEpisode },
-  { label: 'Genre', value: KodiEnhancerTarget.Genre },
-  { label: 'Code', value: KodiEnhancerTarget.Code },
-  { label: 'Aired', value: KodiEnhancerTarget.Aired },
-  { label: 'DateAdded', value: KodiEnhancerTarget.DateAdded },
-  { label: 'Top250', value: KodiEnhancerTarget.Top250 },
-  { label: 'UserRating', value: KodiEnhancerTarget.UserRating },
-  { label: 'Thumbs', value: KodiEnhancerTarget.Thumbs },
-  { label: 'FanartThumbs', value: KodiEnhancerTarget.FanartThumbs },
-  { label: 'UniqueIds', value: KodiEnhancerTarget.UniqueIds },
-  { label: 'Actors', value: KodiEnhancerTarget.Actors },
-  { label: 'NamedSeasons', value: KodiEnhancerTarget.NamedSeasons },
-  { label: 'Ratings', value: KodiEnhancerTarget.Ratings },
-  { label: 'Set', value: KodiEnhancerTarget.Set },
-  { label: 'Resume', value: KodiEnhancerTarget.Resume },
-  { label: 'Artist', value: KodiEnhancerTarget.Artist },
-  { label: 'Album', value: KodiEnhancerTarget.Album },
-  { label: 'MusicVideo', value: KodiEnhancerTarget.MusicVideo },
-  { label: 'Episodes', value: KodiEnhancerTarget.Episodes },
-  { label: 'Directors', value: KodiEnhancerTarget.Directors },
-  { label: 'Track', value: KodiEnhancerTarget.Track },
-  { label: 'Style', value: KodiEnhancerTarget.Style },
-  { label: 'Mood', value: KodiEnhancerTarget.Mood },
-  { label: 'Themes', value: KodiEnhancerTarget.Themes },
-  { label: 'Compilation', value: KodiEnhancerTarget.Compilation },
-  { label: 'BoxSet', value: KodiEnhancerTarget.BoxSet },
-  { label: 'Review', value: KodiEnhancerTarget.Review },
-  { label: 'Type', value: KodiEnhancerTarget.Type },
-  { label: 'ReleaseStatus', value: KodiEnhancerTarget.ReleaseStatus },
-  { label: 'ReleaseDate', value: KodiEnhancerTarget.ReleaseDate },
-  { label: 'OriginalReleaseDate', value: KodiEnhancerTarget.OriginalReleaseDate },
-  { label: 'Label', value: KodiEnhancerTarget.Label },
-  { label: 'Duration', value: KodiEnhancerTarget.Duration },
-  { label: 'Path', value: KodiEnhancerTarget.Path },
-  { label: 'Votes', value: KodiEnhancerTarget.Votes },
-  { label: 'ReleaseType', value: KodiEnhancerTarget.ReleaseType },
-  { label: 'Rating', value: KodiEnhancerTarget.Rating },
-  { label: 'SortName', value: KodiEnhancerTarget.SortName },
-  { label: 'Gender', value: KodiEnhancerTarget.Gender },
-  { label: 'Disambiguation', value: KodiEnhancerTarget.Disambiguation },
-  { label: 'Styles', value: KodiEnhancerTarget.Styles },
-  { label: 'Moods', value: KodiEnhancerTarget.Moods },
-  { label: 'YearsActive', value: KodiEnhancerTarget.YearsActive },
-  { label: 'Born', value: KodiEnhancerTarget.Born },
-  { label: 'Formed', value: KodiEnhancerTarget.Formed },
-  { label: 'Biography', value: KodiEnhancerTarget.Biography },
-  { label: 'Died', value: KodiEnhancerTarget.Died },
-  { label: 'Disbanded', value: KodiEnhancerTarget.Disbanded },
-  { label: 'AlbumArtistCredits', value: KodiEnhancerTarget.AlbumArtistCredits }
-] as const;
-
-export const KodiEnhancerTargetLabel: Record<KodiEnhancerTarget, string> = {
-  [KodiEnhancerTarget.Title]: 'Title',
-  [KodiEnhancerTarget.OriginalTitle]: 'OriginalTitle',
-  [KodiEnhancerTarget.SortTitle]: 'SortTitle',
-  [KodiEnhancerTarget.ShowTitle]: 'ShowTitle',
-  [KodiEnhancerTarget.Outline]: 'Outline',
-  [KodiEnhancerTarget.Plot]: 'Plot',
-  [KodiEnhancerTarget.Tagline]: 'Tagline',
-  [KodiEnhancerTarget.Runtime]: 'Runtime',
-  [KodiEnhancerTarget.Mpaa]: 'Mpaa',
-  [KodiEnhancerTarget.PlayCount]: 'PlayCount',
-  [KodiEnhancerTarget.LastPlayed]: 'LastPlayed',
-  [KodiEnhancerTarget.Id]: 'Id',
-  [KodiEnhancerTarget.Genres]: 'Genres',
-  [KodiEnhancerTarget.Countries]: 'Countries',
-  [KodiEnhancerTarget.Tags]: 'Tags',
-  [KodiEnhancerTarget.VideoAssetTitle]: 'VideoAssetTitle',
-  [KodiEnhancerTarget.VideoAssetId]: 'VideoAssetId',
-  [KodiEnhancerTarget.VideoAssetType]: 'VideoAssetType',
-  [KodiEnhancerTarget.HasVideoVersions]: 'HasVideoVersions',
-  [KodiEnhancerTarget.HasVideoExtras]: 'HasVideoExtras',
-  [KodiEnhancerTarget.IsDefaultVideoVersion]: 'IsDefaultVideoVersion',
-  [KodiEnhancerTarget.Credits]: 'Credits',
-  [KodiEnhancerTarget.Director]: 'Director',
-  [KodiEnhancerTarget.Premiered]: 'Premiered',
-  [KodiEnhancerTarget.Year]: 'Year',
-  [KodiEnhancerTarget.Status]: 'Status',
-  [KodiEnhancerTarget.Studio]: 'Studio',
-  [KodiEnhancerTarget.Trailer]: 'Trailer',
-  [KodiEnhancerTarget.Season]: 'Season',
-  [KodiEnhancerTarget.Episode]: 'Episode',
-  [KodiEnhancerTarget.DisplaySeason]: 'DisplaySeason',
-  [KodiEnhancerTarget.DisplayEpisode]: 'DisplayEpisode',
-  [KodiEnhancerTarget.Genre]: 'Genre',
-  [KodiEnhancerTarget.Code]: 'Code',
-  [KodiEnhancerTarget.Aired]: 'Aired',
-  [KodiEnhancerTarget.DateAdded]: 'DateAdded',
-  [KodiEnhancerTarget.Top250]: 'Top250',
-  [KodiEnhancerTarget.UserRating]: 'UserRating',
-  [KodiEnhancerTarget.Thumbs]: 'Thumbs',
-  [KodiEnhancerTarget.FanartThumbs]: 'FanartThumbs',
-  [KodiEnhancerTarget.UniqueIds]: 'UniqueIds',
-  [KodiEnhancerTarget.Actors]: 'Actors',
-  [KodiEnhancerTarget.NamedSeasons]: 'NamedSeasons',
-  [KodiEnhancerTarget.Ratings]: 'Ratings',
-  [KodiEnhancerTarget.Set]: 'Set',
-  [KodiEnhancerTarget.Resume]: 'Resume',
-  [KodiEnhancerTarget.Artist]: 'Artist',
-  [KodiEnhancerTarget.Album]: 'Album',
-  [KodiEnhancerTarget.MusicVideo]: 'MusicVideo',
-  [KodiEnhancerTarget.Episodes]: 'Episodes',
-  [KodiEnhancerTarget.Directors]: 'Directors',
-  [KodiEnhancerTarget.Track]: 'Track',
-  [KodiEnhancerTarget.Style]: 'Style',
-  [KodiEnhancerTarget.Mood]: 'Mood',
-  [KodiEnhancerTarget.Themes]: 'Themes',
-  [KodiEnhancerTarget.Compilation]: 'Compilation',
-  [KodiEnhancerTarget.BoxSet]: 'BoxSet',
-  [KodiEnhancerTarget.Review]: 'Review',
-  [KodiEnhancerTarget.Type]: 'Type',
-  [KodiEnhancerTarget.ReleaseStatus]: 'ReleaseStatus',
-  [KodiEnhancerTarget.ReleaseDate]: 'ReleaseDate',
-  [KodiEnhancerTarget.OriginalReleaseDate]: 'OriginalReleaseDate',
-  [KodiEnhancerTarget.Label]: 'Label',
-  [KodiEnhancerTarget.Duration]: 'Duration',
-  [KodiEnhancerTarget.Path]: 'Path',
-  [KodiEnhancerTarget.Votes]: 'Votes',
-  [KodiEnhancerTarget.ReleaseType]: 'ReleaseType',
-  [KodiEnhancerTarget.Rating]: 'Rating',
-  [KodiEnhancerTarget.SortName]: 'SortName',
-  [KodiEnhancerTarget.Gender]: 'Gender',
-  [KodiEnhancerTarget.Disambiguation]: 'Disambiguation',
-  [KodiEnhancerTarget.Styles]: 'Styles',
-  [KodiEnhancerTarget.Moods]: 'Moods',
-  [KodiEnhancerTarget.YearsActive]: 'YearsActive',
-  [KodiEnhancerTarget.Born]: 'Born',
-  [KodiEnhancerTarget.Formed]: 'Formed',
-  [KodiEnhancerTarget.Biography]: 'Biography',
-  [KodiEnhancerTarget.Died]: 'Died',
-  [KodiEnhancerTarget.Disbanded]: 'Disbanded',
-  [KodiEnhancerTarget.AlbumArtistCredits]: 'AlbumArtistCredits'
-};
-
-export enum ExHentaiEnhancerTarget {
-  Name = 1,
-  Introduction = 2,
-  Rating = 3,
-  Tags = 4,
-  Cover = 5
-}
-
-export const exHentaiEnhancerTargets = [
-  { label: 'Name', value: ExHentaiEnhancerTarget.Name },
-  { label: 'Introduction', value: ExHentaiEnhancerTarget.Introduction },
-  { label: 'Rating', value: ExHentaiEnhancerTarget.Rating },
-  { label: 'Tags', value: ExHentaiEnhancerTarget.Tags },
-  { label: 'Cover', value: ExHentaiEnhancerTarget.Cover }
-] as const;
-
-export const ExHentaiEnhancerTargetLabel: Record<ExHentaiEnhancerTarget, string> = {
-  [ExHentaiEnhancerTarget.Name]: 'Name',
-  [ExHentaiEnhancerTarget.Introduction]: 'Introduction',
-  [ExHentaiEnhancerTarget.Rating]: 'Rating',
-  [ExHentaiEnhancerTarget.Tags]: 'Tags',
-  [ExHentaiEnhancerTarget.Cover]: 'Cover'
-};
-
-export enum DLsiteEnhancerTarget {
-  Name = 0,
-  Cover = 1,
-  PropertiesOnTheRightSideOfCover = 2,
-  Introduction = 3,
-  Rating = 4
-}
-
-export const dLsiteEnhancerTargets = [
-  { label: 'Name', value: DLsiteEnhancerTarget.Name },
-  { label: 'Cover', value: DLsiteEnhancerTarget.Cover },
-  { label: 'PropertiesOnTheRightSideOfCover', value: DLsiteEnhancerTarget.PropertiesOnTheRightSideOfCover },
-  { label: 'Introduction', value: DLsiteEnhancerTarget.Introduction },
-  { label: 'Rating', value: DLsiteEnhancerTarget.Rating }
-] as const;
-
-export const DLsiteEnhancerTargetLabel: Record<DLsiteEnhancerTarget, string> = {
-  [DLsiteEnhancerTarget.Name]: 'Name',
-  [DLsiteEnhancerTarget.Cover]: 'Cover',
-  [DLsiteEnhancerTarget.PropertiesOnTheRightSideOfCover]: 'PropertiesOnTheRightSideOfCover',
-  [DLsiteEnhancerTarget.Introduction]: 'Introduction',
-  [DLsiteEnhancerTarget.Rating]: 'Rating'
-};
-
-export enum BangumiEnhancerTarget {
-  Name = 1,
-  Tags = 2,
-  Introduction = 3,
-  Rating = 4,
-  OtherPropertiesInLeftPanel = 5,
-  Cover = 6
-}
-
-export const bangumiEnhancerTargets = [
-  { label: 'Name', value: BangumiEnhancerTarget.Name },
-  { label: 'Tags', value: BangumiEnhancerTarget.Tags },
-  { label: 'Introduction', value: BangumiEnhancerTarget.Introduction },
-  { label: 'Rating', value: BangumiEnhancerTarget.Rating },
-  { label: 'OtherPropertiesInLeftPanel', value: BangumiEnhancerTarget.OtherPropertiesInLeftPanel },
-  { label: 'Cover', value: BangumiEnhancerTarget.Cover }
-] as const;
-
-export const BangumiEnhancerTargetLabel: Record<BangumiEnhancerTarget, string> = {
-  [BangumiEnhancerTarget.Name]: 'Name',
-  [BangumiEnhancerTarget.Tags]: 'Tags',
-  [BangumiEnhancerTarget.Introduction]: 'Introduction',
-  [BangumiEnhancerTarget.Rating]: 'Rating',
-  [BangumiEnhancerTarget.OtherPropertiesInLeftPanel]: 'OtherPropertiesInLeftPanel',
-  [BangumiEnhancerTarget.Cover]: 'Cover'
-};
-
-export enum BakabaseEnhancerTarget {
-  Name = 1,
-  Publisher = 2,
-  ReleaseDt = 3,
-  VolumeName = 4,
-  VolumeTitle = 5,
-  Originals = 6,
-  Language = 7,
-  Cover = 8
-}
-
-export const bakabaseEnhancerTargets = [
-  { label: 'Name', value: BakabaseEnhancerTarget.Name },
-  { label: 'Publisher', value: BakabaseEnhancerTarget.Publisher },
-  { label: 'ReleaseDt', value: BakabaseEnhancerTarget.ReleaseDt },
-  { label: 'VolumeName', value: BakabaseEnhancerTarget.VolumeName },
-  { label: 'VolumeTitle', value: BakabaseEnhancerTarget.VolumeTitle },
-  { label: 'Originals', value: BakabaseEnhancerTarget.Originals },
-  { label: 'Language', value: BakabaseEnhancerTarget.Language },
-  { label: 'Cover', value: BakabaseEnhancerTarget.Cover }
-] as const;
-
-export const BakabaseEnhancerTargetLabel: Record<BakabaseEnhancerTarget, string> = {
-  [BakabaseEnhancerTarget.Name]: 'Name',
-  [BakabaseEnhancerTarget.Publisher]: 'Publisher',
-  [BakabaseEnhancerTarget.ReleaseDt]: 'ReleaseDt',
-  [BakabaseEnhancerTarget.VolumeName]: 'VolumeName',
-  [BakabaseEnhancerTarget.VolumeTitle]: 'VolumeTitle',
-  [BakabaseEnhancerTarget.Originals]: 'Originals',
-  [BakabaseEnhancerTarget.Language]: 'Language',
-  [BakabaseEnhancerTarget.Cover]: 'Cover'
-};
-
-export enum AvEnhancerTarget {
-  Number = 0,
-  Title = 1,
-  OriginalTitle = 2,
-  Actor = 3,
-  Tags = 4,
-  Release = 5,
-  Year = 6,
-  Studio = 7,
-  Publisher = 8,
-  Series = 9,
-  Runtime = 10,
-  Director = 11,
-  Source = 12,
-  Cover = 13,
-  Poster = 14,
-  Website = 15,
-  Mosaic = 16
-}
-
-export const avEnhancerTargets = [
-  { label: 'Number', value: AvEnhancerTarget.Number },
-  { label: 'Title', value: AvEnhancerTarget.Title },
-  { label: 'OriginalTitle', value: AvEnhancerTarget.OriginalTitle },
-  { label: 'Actor', value: AvEnhancerTarget.Actor },
-  { label: 'Tags', value: AvEnhancerTarget.Tags },
-  { label: 'Release', value: AvEnhancerTarget.Release },
-  { label: 'Year', value: AvEnhancerTarget.Year },
-  { label: 'Studio', value: AvEnhancerTarget.Studio },
-  { label: 'Publisher', value: AvEnhancerTarget.Publisher },
-  { label: 'Series', value: AvEnhancerTarget.Series },
-  { label: 'Runtime', value: AvEnhancerTarget.Runtime },
-  { label: 'Director', value: AvEnhancerTarget.Director },
-  { label: 'Source', value: AvEnhancerTarget.Source },
-  { label: 'Cover', value: AvEnhancerTarget.Cover },
-  { label: 'Poster', value: AvEnhancerTarget.Poster },
-  { label: 'Website', value: AvEnhancerTarget.Website },
-  { label: 'Mosaic', value: AvEnhancerTarget.Mosaic }
-] as const;
-
-export const AvEnhancerTargetLabel: Record<AvEnhancerTarget, string> = {
-  [AvEnhancerTarget.Number]: 'Number',
-  [AvEnhancerTarget.Title]: 'Title',
-  [AvEnhancerTarget.OriginalTitle]: 'OriginalTitle',
-  [AvEnhancerTarget.Actor]: 'Actor',
-  [AvEnhancerTarget.Tags]: 'Tags',
-  [AvEnhancerTarget.Release]: 'Release',
-  [AvEnhancerTarget.Year]: 'Year',
-  [AvEnhancerTarget.Studio]: 'Studio',
-  [AvEnhancerTarget.Publisher]: 'Publisher',
-  [AvEnhancerTarget.Series]: 'Series',
-  [AvEnhancerTarget.Runtime]: 'Runtime',
-  [AvEnhancerTarget.Director]: 'Director',
-  [AvEnhancerTarget.Source]: 'Source',
-  [AvEnhancerTarget.Cover]: 'Cover',
-  [AvEnhancerTarget.Poster]: 'Poster',
-  [AvEnhancerTarget.Website]: 'Website',
-  [AvEnhancerTarget.Mosaic]: 'Mosaic'
-};
-
-export enum AiEnhancerTarget {
-  Properties = 1
-}
-
-export const aiEnhancerTargets = [
-  { label: 'Properties', value: AiEnhancerTarget.Properties }
-] as const;
-
-export const AiEnhancerTargetLabel: Record<AiEnhancerTarget, string> = {
-  [AiEnhancerTarget.Properties]: 'Properties'
-};
-
-export enum EnhancementAdditionalItem {
-  None = 0,
-  GeneratedPropertyValue = 1
-}
-
-export const enhancementAdditionalItems = [
-  { label: 'None', value: EnhancementAdditionalItem.None },
-  { label: 'GeneratedPropertyValue', value: EnhancementAdditionalItem.GeneratedPropertyValue }
-] as const;
-
-export const EnhancementAdditionalItemLabel: Record<EnhancementAdditionalItem, string> = {
-  [EnhancementAdditionalItem.None]: 'None',
-  [EnhancementAdditionalItem.GeneratedPropertyValue]: 'GeneratedPropertyValue'
-};
-
-export enum EnhancerTargetOptionsItem {
-  AutoBindProperty = 1,
-  AutoMatchMultilevelString = 2,
-  CoverSelectOrder = 3
-}
-
-export const enhancerTargetOptionsItems = [
-  { label: 'AutoBindProperty', value: EnhancerTargetOptionsItem.AutoBindProperty },
-  { label: 'AutoMatchMultilevelString', value: EnhancerTargetOptionsItem.AutoMatchMultilevelString },
-  { label: 'CoverSelectOrder', value: EnhancerTargetOptionsItem.CoverSelectOrder }
-] as const;
-
-export const EnhancerTargetOptionsItemLabel: Record<EnhancerTargetOptionsItem, string> = {
-  [EnhancerTargetOptionsItem.AutoBindProperty]: 'AutoBindProperty',
-  [EnhancerTargetOptionsItem.AutoMatchMultilevelString]: 'AutoMatchMultilevelString',
-  [EnhancerTargetOptionsItem.CoverSelectOrder]: 'CoverSelectOrder'
-};
-
 export enum BackgroundTaskName {
   SyncMediaLibrary = 1,
   PrepareCache = 2,
@@ -3205,6 +2020,1422 @@ export const DependentComponentStatusLabel: Record<DependentComponentStatus, str
   [DependentComponentStatus.Installing]: 'Installing'
 };
 
+export enum CaptchaType {
+  Image = 1,
+  SmsMessage = 2
+}
+
+export const captchaTypes = [
+  { label: 'Image', value: CaptchaType.Image },
+  { label: 'SmsMessage', value: CaptchaType.SmsMessage }
+] as const;
+
+export const CaptchaTypeLabel: Record<CaptchaType, string> = {
+  [CaptchaType.Image]: 'Image',
+  [CaptchaType.SmsMessage]: 'SmsMessage'
+};
+
+export enum DingSysLevel {
+  Other = 0,
+  MainAdministrator = 1,
+  SubAdministrator = 2,
+  Boss = 100
+}
+
+export const dingSysLevels = [
+  { label: 'Other', value: DingSysLevel.Other },
+  { label: 'MainAdministrator', value: DingSysLevel.MainAdministrator },
+  { label: 'SubAdministrator', value: DingSysLevel.SubAdministrator },
+  { label: 'Boss', value: DingSysLevel.Boss }
+] as const;
+
+export const DingSysLevelLabel: Record<DingSysLevel, string> = {
+  [DingSysLevel.Other]: 'Other',
+  [DingSysLevel.MainAdministrator]: 'MainAdministrator',
+  [DingSysLevel.SubAdministrator]: 'SubAdministrator',
+  [DingSysLevel.Boss]: 'Boss'
+};
+
+export enum ResponseCode {
+  Success = 0,
+  NotModified = 304,
+  InvalidPayloadOrOperation = 400,
+  Unauthenticated = 401,
+  Unauthorized = 403,
+  NotFound = 404,
+  Conflict = 409,
+  SystemError = 500,
+  Timeout = 504,
+  InvalidCaptcha = 100400
+}
+
+export const responseCodes = [
+  { label: 'Success', value: ResponseCode.Success },
+  { label: 'NotModified', value: ResponseCode.NotModified },
+  { label: 'InvalidPayloadOrOperation', value: ResponseCode.InvalidPayloadOrOperation },
+  { label: 'Unauthenticated', value: ResponseCode.Unauthenticated },
+  { label: 'Unauthorized', value: ResponseCode.Unauthorized },
+  { label: 'NotFound', value: ResponseCode.NotFound },
+  { label: 'Conflict', value: ResponseCode.Conflict },
+  { label: 'SystemError', value: ResponseCode.SystemError },
+  { label: 'Timeout', value: ResponseCode.Timeout },
+  { label: 'InvalidCaptcha', value: ResponseCode.InvalidCaptcha }
+] as const;
+
+export const ResponseCodeLabel: Record<ResponseCode, string> = {
+  [ResponseCode.Success]: 'Success',
+  [ResponseCode.NotModified]: 'NotModified',
+  [ResponseCode.InvalidPayloadOrOperation]: 'InvalidPayloadOrOperation',
+  [ResponseCode.Unauthenticated]: 'Unauthenticated',
+  [ResponseCode.Unauthorized]: 'Unauthorized',
+  [ResponseCode.NotFound]: 'NotFound',
+  [ResponseCode.Conflict]: 'Conflict',
+  [ResponseCode.SystemError]: 'SystemError',
+  [ResponseCode.Timeout]: 'Timeout',
+  [ResponseCode.InvalidCaptcha]: 'InvalidCaptcha'
+};
+
+export enum RuntimeMode {
+  Dev = 0,
+  WinForms = 1,
+  Docker = 2,
+  MacOS = 3
+}
+
+export const runtimeModes = [
+  { label: 'Dev', value: RuntimeMode.Dev },
+  { label: 'WinForms', value: RuntimeMode.WinForms },
+  { label: 'Docker', value: RuntimeMode.Docker },
+  { label: 'MacOS', value: RuntimeMode.MacOS }
+] as const;
+
+export const RuntimeModeLabel: Record<RuntimeMode, string> = {
+  [RuntimeMode.Dev]: 'Dev',
+  [RuntimeMode.WinForms]: 'WinForms',
+  [RuntimeMode.Docker]: 'Docker',
+  [RuntimeMode.MacOS]: 'MacOS'
+};
+
+export enum Operation {
+  DELETE = 0,
+  INSERT = 1,
+  EQUAL = 2
+}
+
+export const operations = [
+  { label: 'DELETE', value: Operation.DELETE },
+  { label: 'INSERT', value: Operation.INSERT },
+  { label: 'EQUAL', value: Operation.EQUAL }
+] as const;
+
+export const OperationLabel: Record<Operation, string> = {
+  [Operation.DELETE]: 'DELETE',
+  [Operation.INSERT]: 'INSERT',
+  [Operation.EQUAL]: 'EQUAL'
+};
+
+export enum ProgressorClientAction {
+  Start = 1,
+  Stop = 2,
+  Initialize = 3
+}
+
+export const progressorClientActions = [
+  { label: 'Start', value: ProgressorClientAction.Start },
+  { label: 'Stop', value: ProgressorClientAction.Stop },
+  { label: 'Initialize', value: ProgressorClientAction.Initialize }
+] as const;
+
+export const ProgressorClientActionLabel: Record<ProgressorClientAction, string> = {
+  [ProgressorClientAction.Start]: 'Start',
+  [ProgressorClientAction.Stop]: 'Stop',
+  [ProgressorClientAction.Initialize]: 'Initialize'
+};
+
+export enum ProgressorEvent {
+  StateChanged = 1,
+  ProgressChanged = 2,
+  ErrorOccurred = 3
+}
+
+export const progressorEvents = [
+  { label: 'StateChanged', value: ProgressorEvent.StateChanged },
+  { label: 'ProgressChanged', value: ProgressorEvent.ProgressChanged },
+  { label: 'ErrorOccurred', value: ProgressorEvent.ErrorOccurred }
+] as const;
+
+export const ProgressorEventLabel: Record<ProgressorEvent, string> = {
+  [ProgressorEvent.StateChanged]: 'StateChanged',
+  [ProgressorEvent.ProgressChanged]: 'ProgressChanged',
+  [ProgressorEvent.ErrorOccurred]: 'ErrorOccurred'
+};
+
+export enum ProgressorStatus {
+  Idle = 1,
+  Running = 2,
+  Complete = 3,
+  Suspended = 4
+}
+
+export const progressorStatuses = [
+  { label: 'Idle', value: ProgressorStatus.Idle },
+  { label: 'Running', value: ProgressorStatus.Running },
+  { label: 'Complete', value: ProgressorStatus.Complete },
+  { label: 'Suspended', value: ProgressorStatus.Suspended }
+] as const;
+
+export const ProgressorStatusLabel: Record<ProgressorStatus, string> = {
+  [ProgressorStatus.Idle]: 'Idle',
+  [ProgressorStatus.Running]: 'Running',
+  [ProgressorStatus.Complete]: 'Complete',
+  [ProgressorStatus.Suspended]: 'Suspended'
+};
+
+export enum FileStorageUploadResponseCode {
+  Success = 0,
+  Error = 500
+}
+
+export const fileStorageUploadResponseCodes = [
+  { label: 'Success', value: FileStorageUploadResponseCode.Success },
+  { label: 'Error', value: FileStorageUploadResponseCode.Error }
+] as const;
+
+export const FileStorageUploadResponseCodeLabel: Record<FileStorageUploadResponseCode, string> = {
+  [FileStorageUploadResponseCode.Success]: 'Success',
+  [FileStorageUploadResponseCode.Error]: 'Error'
+};
+
+export enum MessageStatus {
+  ToBeSent = 0,
+  Succeed = 1,
+  Failed = 2
+}
+
+export const messageStatuses = [
+  { label: 'ToBeSent', value: MessageStatus.ToBeSent },
+  { label: 'Succeed', value: MessageStatus.Succeed },
+  { label: 'Failed', value: MessageStatus.Failed }
+] as const;
+
+export const MessageStatusLabel: Record<MessageStatus, string> = {
+  [MessageStatus.ToBeSent]: 'ToBeSent',
+  [MessageStatus.Succeed]: 'Succeed',
+  [MessageStatus.Failed]: 'Failed'
+};
+
+export enum NotificationType {
+  Os = 1,
+  Email = 2,
+  OsAndEmail = 3,
+  WeChat = 4,
+  Sms = 8
+}
+
+export const notificationTypes = [
+  { label: 'Os', value: NotificationType.Os },
+  { label: 'Email', value: NotificationType.Email },
+  { label: 'OsAndEmail', value: NotificationType.OsAndEmail },
+  { label: 'WeChat', value: NotificationType.WeChat },
+  { label: 'Sms', value: NotificationType.Sms }
+] as const;
+
+export const NotificationTypeLabel: Record<NotificationType, string> = {
+  [NotificationType.Os]: 'Os',
+  [NotificationType.Email]: 'Email',
+  [NotificationType.OsAndEmail]: 'OsAndEmail',
+  [NotificationType.WeChat]: 'WeChat',
+  [NotificationType.Sms]: 'Sms'
+};
+
+export enum AdbDeviceState {
+  Device = 1,
+  Offline = 2,
+  NoDevice = 3
+}
+
+export const adbDeviceStates = [
+  { label: 'Device', value: AdbDeviceState.Device },
+  { label: 'Offline', value: AdbDeviceState.Offline },
+  { label: 'NoDevice', value: AdbDeviceState.NoDevice }
+] as const;
+
+export const AdbDeviceStateLabel: Record<AdbDeviceState, string> = {
+  [AdbDeviceState.Device]: 'Device',
+  [AdbDeviceState.Offline]: 'Offline',
+  [AdbDeviceState.NoDevice]: 'NoDevice'
+};
+
+export enum AdbExceptionCode {
+  Error = 1,
+  InvalidExitCode = 2
+}
+
+export const adbExceptionCodes = [
+  { label: 'Error', value: AdbExceptionCode.Error },
+  { label: 'InvalidExitCode', value: AdbExceptionCode.InvalidExitCode }
+] as const;
+
+export const AdbExceptionCodeLabel: Record<AdbExceptionCode, string> = {
+  [AdbExceptionCode.Error]: 'Error',
+  [AdbExceptionCode.InvalidExitCode]: 'InvalidExitCode'
+};
+
+export enum AdbInternalError {
+  Error = 1,
+  INSTALL_FAILED_ALREADY_EXISTS = 100,
+  DELETE_FAILED_INTERNAL_ERROR = 101,
+  FailedToConnectDevice = 200
+}
+
+export const adbInternalErrors = [
+  { label: 'Error', value: AdbInternalError.Error },
+  { label: 'INSTALL_FAILED_ALREADY_EXISTS', value: AdbInternalError.INSTALL_FAILED_ALREADY_EXISTS },
+  { label: 'DELETE_FAILED_INTERNAL_ERROR', value: AdbInternalError.DELETE_FAILED_INTERNAL_ERROR },
+  { label: 'FailedToConnectDevice', value: AdbInternalError.FailedToConnectDevice }
+] as const;
+
+export const AdbInternalErrorLabel: Record<AdbInternalError, string> = {
+  [AdbInternalError.Error]: 'Error',
+  [AdbInternalError.INSTALL_FAILED_ALREADY_EXISTS]: 'INSTALL_FAILED_ALREADY_EXISTS',
+  [AdbInternalError.DELETE_FAILED_INTERNAL_ERROR]: 'DELETE_FAILED_INTERNAL_ERROR',
+  [AdbInternalError.FailedToConnectDevice]: 'FailedToConnectDevice'
+};
+
+export enum EnhancerId {
+  Bakabase = 1,
+  ExHentai = 2,
+  Bangumi = 3,
+  DLsite = 4,
+  Regex = 5,
+  Kodi = 6,
+  Tmdb = 7,
+  Av = 8,
+  AI = 9
+}
+
+export const enhancerIds = [
+  { label: 'Bakabase', value: EnhancerId.Bakabase },
+  { label: 'ExHentai', value: EnhancerId.ExHentai },
+  { label: 'Bangumi', value: EnhancerId.Bangumi },
+  { label: 'DLsite', value: EnhancerId.DLsite },
+  { label: 'Regex', value: EnhancerId.Regex },
+  { label: 'Kodi', value: EnhancerId.Kodi },
+  { label: 'Tmdb', value: EnhancerId.Tmdb },
+  { label: 'Av', value: EnhancerId.Av },
+  { label: 'AI', value: EnhancerId.AI }
+] as const;
+
+export const EnhancerIdLabel: Record<EnhancerId, string> = {
+  [EnhancerId.Bakabase]: 'Bakabase',
+  [EnhancerId.ExHentai]: 'ExHentai',
+  [EnhancerId.Bangumi]: 'Bangumi',
+  [EnhancerId.DLsite]: 'DLsite',
+  [EnhancerId.Regex]: 'Regex',
+  [EnhancerId.Kodi]: 'Kodi',
+  [EnhancerId.Tmdb]: 'Tmdb',
+  [EnhancerId.Av]: 'Av',
+  [EnhancerId.AI]: 'AI'
+};
+
+export enum EnhancerTag {
+  UseRegex = 1,
+  UseKeyword = 2
+}
+
+export const enhancerTags = [
+  { label: 'UseRegex', value: EnhancerTag.UseRegex },
+  { label: 'UseKeyword', value: EnhancerTag.UseKeyword }
+] as const;
+
+export const EnhancerTagLabel: Record<EnhancerTag, string> = {
+  [EnhancerTag.UseRegex]: 'UseRegex',
+  [EnhancerTag.UseKeyword]: 'UseKeyword'
+};
+
+export enum TmdbEnhancerTarget {
+  Title = 1,
+  OriginalTitle = 2,
+  Overview = 3,
+  Rating = 4,
+  VoteCount = 5,
+  ReleaseDate = 6,
+  Runtime = 7,
+  Genres = 8,
+  ProductionCountries = 9,
+  SpokenLanguages = 10,
+  Status = 11,
+  Tagline = 12,
+  Budget = 13,
+  Revenue = 14,
+  Cover = 15,
+  Backdrop = 16
+}
+
+export const tmdbEnhancerTargets = [
+  { label: 'Title', value: TmdbEnhancerTarget.Title },
+  { label: 'OriginalTitle', value: TmdbEnhancerTarget.OriginalTitle },
+  { label: 'Overview', value: TmdbEnhancerTarget.Overview },
+  { label: 'Rating', value: TmdbEnhancerTarget.Rating },
+  { label: 'VoteCount', value: TmdbEnhancerTarget.VoteCount },
+  { label: 'ReleaseDate', value: TmdbEnhancerTarget.ReleaseDate },
+  { label: 'Runtime', value: TmdbEnhancerTarget.Runtime },
+  { label: 'Genres', value: TmdbEnhancerTarget.Genres },
+  { label: 'ProductionCountries', value: TmdbEnhancerTarget.ProductionCountries },
+  { label: 'SpokenLanguages', value: TmdbEnhancerTarget.SpokenLanguages },
+  { label: 'Status', value: TmdbEnhancerTarget.Status },
+  { label: 'Tagline', value: TmdbEnhancerTarget.Tagline },
+  { label: 'Budget', value: TmdbEnhancerTarget.Budget },
+  { label: 'Revenue', value: TmdbEnhancerTarget.Revenue },
+  { label: 'Cover', value: TmdbEnhancerTarget.Cover },
+  { label: 'Backdrop', value: TmdbEnhancerTarget.Backdrop }
+] as const;
+
+export const TmdbEnhancerTargetLabel: Record<TmdbEnhancerTarget, string> = {
+  [TmdbEnhancerTarget.Title]: 'Title',
+  [TmdbEnhancerTarget.OriginalTitle]: 'OriginalTitle',
+  [TmdbEnhancerTarget.Overview]: 'Overview',
+  [TmdbEnhancerTarget.Rating]: 'Rating',
+  [TmdbEnhancerTarget.VoteCount]: 'VoteCount',
+  [TmdbEnhancerTarget.ReleaseDate]: 'ReleaseDate',
+  [TmdbEnhancerTarget.Runtime]: 'Runtime',
+  [TmdbEnhancerTarget.Genres]: 'Genres',
+  [TmdbEnhancerTarget.ProductionCountries]: 'ProductionCountries',
+  [TmdbEnhancerTarget.SpokenLanguages]: 'SpokenLanguages',
+  [TmdbEnhancerTarget.Status]: 'Status',
+  [TmdbEnhancerTarget.Tagline]: 'Tagline',
+  [TmdbEnhancerTarget.Budget]: 'Budget',
+  [TmdbEnhancerTarget.Revenue]: 'Revenue',
+  [TmdbEnhancerTarget.Cover]: 'Cover',
+  [TmdbEnhancerTarget.Backdrop]: 'Backdrop'
+};
+
+export enum RegexEnhancerTarget {
+  CaptureGroups = 0
+}
+
+export const regexEnhancerTargets = [
+  { label: 'CaptureGroups', value: RegexEnhancerTarget.CaptureGroups }
+] as const;
+
+export const RegexEnhancerTargetLabel: Record<RegexEnhancerTarget, string> = {
+  [RegexEnhancerTarget.CaptureGroups]: 'CaptureGroups'
+};
+
+export enum KodiEnhancerTarget {
+  Title = 1,
+  OriginalTitle = 2,
+  SortTitle = 3,
+  ShowTitle = 4,
+  Outline = 5,
+  Plot = 6,
+  Tagline = 7,
+  Runtime = 8,
+  Mpaa = 9,
+  PlayCount = 10,
+  LastPlayed = 11,
+  Id = 12,
+  Genres = 13,
+  Countries = 14,
+  Tags = 15,
+  VideoAssetTitle = 16,
+  VideoAssetId = 17,
+  VideoAssetType = 18,
+  HasVideoVersions = 19,
+  HasVideoExtras = 20,
+  IsDefaultVideoVersion = 21,
+  Credits = 22,
+  Director = 23,
+  Premiered = 24,
+  Year = 25,
+  Status = 26,
+  Studio = 27,
+  Trailer = 28,
+  Season = 29,
+  Episode = 30,
+  DisplaySeason = 31,
+  DisplayEpisode = 32,
+  Genre = 33,
+  Code = 34,
+  Aired = 35,
+  DateAdded = 36,
+  Top250 = 37,
+  UserRating = 38,
+  Thumbs = 39,
+  FanartThumbs = 40,
+  UniqueIds = 41,
+  Actors = 42,
+  NamedSeasons = 43,
+  Ratings = 44,
+  Set = 45,
+  Resume = 46,
+  Artist = 47,
+  Album = 48,
+  MusicVideo = 49,
+  Episodes = 50,
+  Directors = 51,
+  Track = 52,
+  Style = 53,
+  Mood = 54,
+  Themes = 55,
+  Compilation = 56,
+  BoxSet = 57,
+  Review = 58,
+  Type = 59,
+  ReleaseStatus = 60,
+  ReleaseDate = 61,
+  OriginalReleaseDate = 62,
+  Label = 63,
+  Duration = 64,
+  Path = 65,
+  Votes = 66,
+  ReleaseType = 67,
+  Rating = 68,
+  SortName = 69,
+  Gender = 70,
+  Disambiguation = 71,
+  Styles = 72,
+  Moods = 73,
+  YearsActive = 74,
+  Born = 75,
+  Formed = 76,
+  Biography = 77,
+  Died = 78,
+  Disbanded = 79,
+  AlbumArtistCredits = 80
+}
+
+export const kodiEnhancerTargets = [
+  { label: 'Title', value: KodiEnhancerTarget.Title },
+  { label: 'OriginalTitle', value: KodiEnhancerTarget.OriginalTitle },
+  { label: 'SortTitle', value: KodiEnhancerTarget.SortTitle },
+  { label: 'ShowTitle', value: KodiEnhancerTarget.ShowTitle },
+  { label: 'Outline', value: KodiEnhancerTarget.Outline },
+  { label: 'Plot', value: KodiEnhancerTarget.Plot },
+  { label: 'Tagline', value: KodiEnhancerTarget.Tagline },
+  { label: 'Runtime', value: KodiEnhancerTarget.Runtime },
+  { label: 'Mpaa', value: KodiEnhancerTarget.Mpaa },
+  { label: 'PlayCount', value: KodiEnhancerTarget.PlayCount },
+  { label: 'LastPlayed', value: KodiEnhancerTarget.LastPlayed },
+  { label: 'Id', value: KodiEnhancerTarget.Id },
+  { label: 'Genres', value: KodiEnhancerTarget.Genres },
+  { label: 'Countries', value: KodiEnhancerTarget.Countries },
+  { label: 'Tags', value: KodiEnhancerTarget.Tags },
+  { label: 'VideoAssetTitle', value: KodiEnhancerTarget.VideoAssetTitle },
+  { label: 'VideoAssetId', value: KodiEnhancerTarget.VideoAssetId },
+  { label: 'VideoAssetType', value: KodiEnhancerTarget.VideoAssetType },
+  { label: 'HasVideoVersions', value: KodiEnhancerTarget.HasVideoVersions },
+  { label: 'HasVideoExtras', value: KodiEnhancerTarget.HasVideoExtras },
+  { label: 'IsDefaultVideoVersion', value: KodiEnhancerTarget.IsDefaultVideoVersion },
+  { label: 'Credits', value: KodiEnhancerTarget.Credits },
+  { label: 'Director', value: KodiEnhancerTarget.Director },
+  { label: 'Premiered', value: KodiEnhancerTarget.Premiered },
+  { label: 'Year', value: KodiEnhancerTarget.Year },
+  { label: 'Status', value: KodiEnhancerTarget.Status },
+  { label: 'Studio', value: KodiEnhancerTarget.Studio },
+  { label: 'Trailer', value: KodiEnhancerTarget.Trailer },
+  { label: 'Season', value: KodiEnhancerTarget.Season },
+  { label: 'Episode', value: KodiEnhancerTarget.Episode },
+  { label: 'DisplaySeason', value: KodiEnhancerTarget.DisplaySeason },
+  { label: 'DisplayEpisode', value: KodiEnhancerTarget.DisplayEpisode },
+  { label: 'Genre', value: KodiEnhancerTarget.Genre },
+  { label: 'Code', value: KodiEnhancerTarget.Code },
+  { label: 'Aired', value: KodiEnhancerTarget.Aired },
+  { label: 'DateAdded', value: KodiEnhancerTarget.DateAdded },
+  { label: 'Top250', value: KodiEnhancerTarget.Top250 },
+  { label: 'UserRating', value: KodiEnhancerTarget.UserRating },
+  { label: 'Thumbs', value: KodiEnhancerTarget.Thumbs },
+  { label: 'FanartThumbs', value: KodiEnhancerTarget.FanartThumbs },
+  { label: 'UniqueIds', value: KodiEnhancerTarget.UniqueIds },
+  { label: 'Actors', value: KodiEnhancerTarget.Actors },
+  { label: 'NamedSeasons', value: KodiEnhancerTarget.NamedSeasons },
+  { label: 'Ratings', value: KodiEnhancerTarget.Ratings },
+  { label: 'Set', value: KodiEnhancerTarget.Set },
+  { label: 'Resume', value: KodiEnhancerTarget.Resume },
+  { label: 'Artist', value: KodiEnhancerTarget.Artist },
+  { label: 'Album', value: KodiEnhancerTarget.Album },
+  { label: 'MusicVideo', value: KodiEnhancerTarget.MusicVideo },
+  { label: 'Episodes', value: KodiEnhancerTarget.Episodes },
+  { label: 'Directors', value: KodiEnhancerTarget.Directors },
+  { label: 'Track', value: KodiEnhancerTarget.Track },
+  { label: 'Style', value: KodiEnhancerTarget.Style },
+  { label: 'Mood', value: KodiEnhancerTarget.Mood },
+  { label: 'Themes', value: KodiEnhancerTarget.Themes },
+  { label: 'Compilation', value: KodiEnhancerTarget.Compilation },
+  { label: 'BoxSet', value: KodiEnhancerTarget.BoxSet },
+  { label: 'Review', value: KodiEnhancerTarget.Review },
+  { label: 'Type', value: KodiEnhancerTarget.Type },
+  { label: 'ReleaseStatus', value: KodiEnhancerTarget.ReleaseStatus },
+  { label: 'ReleaseDate', value: KodiEnhancerTarget.ReleaseDate },
+  { label: 'OriginalReleaseDate', value: KodiEnhancerTarget.OriginalReleaseDate },
+  { label: 'Label', value: KodiEnhancerTarget.Label },
+  { label: 'Duration', value: KodiEnhancerTarget.Duration },
+  { label: 'Path', value: KodiEnhancerTarget.Path },
+  { label: 'Votes', value: KodiEnhancerTarget.Votes },
+  { label: 'ReleaseType', value: KodiEnhancerTarget.ReleaseType },
+  { label: 'Rating', value: KodiEnhancerTarget.Rating },
+  { label: 'SortName', value: KodiEnhancerTarget.SortName },
+  { label: 'Gender', value: KodiEnhancerTarget.Gender },
+  { label: 'Disambiguation', value: KodiEnhancerTarget.Disambiguation },
+  { label: 'Styles', value: KodiEnhancerTarget.Styles },
+  { label: 'Moods', value: KodiEnhancerTarget.Moods },
+  { label: 'YearsActive', value: KodiEnhancerTarget.YearsActive },
+  { label: 'Born', value: KodiEnhancerTarget.Born },
+  { label: 'Formed', value: KodiEnhancerTarget.Formed },
+  { label: 'Biography', value: KodiEnhancerTarget.Biography },
+  { label: 'Died', value: KodiEnhancerTarget.Died },
+  { label: 'Disbanded', value: KodiEnhancerTarget.Disbanded },
+  { label: 'AlbumArtistCredits', value: KodiEnhancerTarget.AlbumArtistCredits }
+] as const;
+
+export const KodiEnhancerTargetLabel: Record<KodiEnhancerTarget, string> = {
+  [KodiEnhancerTarget.Title]: 'Title',
+  [KodiEnhancerTarget.OriginalTitle]: 'OriginalTitle',
+  [KodiEnhancerTarget.SortTitle]: 'SortTitle',
+  [KodiEnhancerTarget.ShowTitle]: 'ShowTitle',
+  [KodiEnhancerTarget.Outline]: 'Outline',
+  [KodiEnhancerTarget.Plot]: 'Plot',
+  [KodiEnhancerTarget.Tagline]: 'Tagline',
+  [KodiEnhancerTarget.Runtime]: 'Runtime',
+  [KodiEnhancerTarget.Mpaa]: 'Mpaa',
+  [KodiEnhancerTarget.PlayCount]: 'PlayCount',
+  [KodiEnhancerTarget.LastPlayed]: 'LastPlayed',
+  [KodiEnhancerTarget.Id]: 'Id',
+  [KodiEnhancerTarget.Genres]: 'Genres',
+  [KodiEnhancerTarget.Countries]: 'Countries',
+  [KodiEnhancerTarget.Tags]: 'Tags',
+  [KodiEnhancerTarget.VideoAssetTitle]: 'VideoAssetTitle',
+  [KodiEnhancerTarget.VideoAssetId]: 'VideoAssetId',
+  [KodiEnhancerTarget.VideoAssetType]: 'VideoAssetType',
+  [KodiEnhancerTarget.HasVideoVersions]: 'HasVideoVersions',
+  [KodiEnhancerTarget.HasVideoExtras]: 'HasVideoExtras',
+  [KodiEnhancerTarget.IsDefaultVideoVersion]: 'IsDefaultVideoVersion',
+  [KodiEnhancerTarget.Credits]: 'Credits',
+  [KodiEnhancerTarget.Director]: 'Director',
+  [KodiEnhancerTarget.Premiered]: 'Premiered',
+  [KodiEnhancerTarget.Year]: 'Year',
+  [KodiEnhancerTarget.Status]: 'Status',
+  [KodiEnhancerTarget.Studio]: 'Studio',
+  [KodiEnhancerTarget.Trailer]: 'Trailer',
+  [KodiEnhancerTarget.Season]: 'Season',
+  [KodiEnhancerTarget.Episode]: 'Episode',
+  [KodiEnhancerTarget.DisplaySeason]: 'DisplaySeason',
+  [KodiEnhancerTarget.DisplayEpisode]: 'DisplayEpisode',
+  [KodiEnhancerTarget.Genre]: 'Genre',
+  [KodiEnhancerTarget.Code]: 'Code',
+  [KodiEnhancerTarget.Aired]: 'Aired',
+  [KodiEnhancerTarget.DateAdded]: 'DateAdded',
+  [KodiEnhancerTarget.Top250]: 'Top250',
+  [KodiEnhancerTarget.UserRating]: 'UserRating',
+  [KodiEnhancerTarget.Thumbs]: 'Thumbs',
+  [KodiEnhancerTarget.FanartThumbs]: 'FanartThumbs',
+  [KodiEnhancerTarget.UniqueIds]: 'UniqueIds',
+  [KodiEnhancerTarget.Actors]: 'Actors',
+  [KodiEnhancerTarget.NamedSeasons]: 'NamedSeasons',
+  [KodiEnhancerTarget.Ratings]: 'Ratings',
+  [KodiEnhancerTarget.Set]: 'Set',
+  [KodiEnhancerTarget.Resume]: 'Resume',
+  [KodiEnhancerTarget.Artist]: 'Artist',
+  [KodiEnhancerTarget.Album]: 'Album',
+  [KodiEnhancerTarget.MusicVideo]: 'MusicVideo',
+  [KodiEnhancerTarget.Episodes]: 'Episodes',
+  [KodiEnhancerTarget.Directors]: 'Directors',
+  [KodiEnhancerTarget.Track]: 'Track',
+  [KodiEnhancerTarget.Style]: 'Style',
+  [KodiEnhancerTarget.Mood]: 'Mood',
+  [KodiEnhancerTarget.Themes]: 'Themes',
+  [KodiEnhancerTarget.Compilation]: 'Compilation',
+  [KodiEnhancerTarget.BoxSet]: 'BoxSet',
+  [KodiEnhancerTarget.Review]: 'Review',
+  [KodiEnhancerTarget.Type]: 'Type',
+  [KodiEnhancerTarget.ReleaseStatus]: 'ReleaseStatus',
+  [KodiEnhancerTarget.ReleaseDate]: 'ReleaseDate',
+  [KodiEnhancerTarget.OriginalReleaseDate]: 'OriginalReleaseDate',
+  [KodiEnhancerTarget.Label]: 'Label',
+  [KodiEnhancerTarget.Duration]: 'Duration',
+  [KodiEnhancerTarget.Path]: 'Path',
+  [KodiEnhancerTarget.Votes]: 'Votes',
+  [KodiEnhancerTarget.ReleaseType]: 'ReleaseType',
+  [KodiEnhancerTarget.Rating]: 'Rating',
+  [KodiEnhancerTarget.SortName]: 'SortName',
+  [KodiEnhancerTarget.Gender]: 'Gender',
+  [KodiEnhancerTarget.Disambiguation]: 'Disambiguation',
+  [KodiEnhancerTarget.Styles]: 'Styles',
+  [KodiEnhancerTarget.Moods]: 'Moods',
+  [KodiEnhancerTarget.YearsActive]: 'YearsActive',
+  [KodiEnhancerTarget.Born]: 'Born',
+  [KodiEnhancerTarget.Formed]: 'Formed',
+  [KodiEnhancerTarget.Biography]: 'Biography',
+  [KodiEnhancerTarget.Died]: 'Died',
+  [KodiEnhancerTarget.Disbanded]: 'Disbanded',
+  [KodiEnhancerTarget.AlbumArtistCredits]: 'AlbumArtistCredits'
+};
+
+export enum ExHentaiEnhancerTarget {
+  Name = 1,
+  Introduction = 2,
+  Rating = 3,
+  Tags = 4,
+  Cover = 5
+}
+
+export const exHentaiEnhancerTargets = [
+  { label: 'Name', value: ExHentaiEnhancerTarget.Name },
+  { label: 'Introduction', value: ExHentaiEnhancerTarget.Introduction },
+  { label: 'Rating', value: ExHentaiEnhancerTarget.Rating },
+  { label: 'Tags', value: ExHentaiEnhancerTarget.Tags },
+  { label: 'Cover', value: ExHentaiEnhancerTarget.Cover }
+] as const;
+
+export const ExHentaiEnhancerTargetLabel: Record<ExHentaiEnhancerTarget, string> = {
+  [ExHentaiEnhancerTarget.Name]: 'Name',
+  [ExHentaiEnhancerTarget.Introduction]: 'Introduction',
+  [ExHentaiEnhancerTarget.Rating]: 'Rating',
+  [ExHentaiEnhancerTarget.Tags]: 'Tags',
+  [ExHentaiEnhancerTarget.Cover]: 'Cover'
+};
+
+export enum DLsiteEnhancerTarget {
+  Name = 0,
+  Cover = 1,
+  PropertiesOnTheRightSideOfCover = 2,
+  Introduction = 3,
+  Rating = 4
+}
+
+export const dLsiteEnhancerTargets = [
+  { label: 'Name', value: DLsiteEnhancerTarget.Name },
+  { label: 'Cover', value: DLsiteEnhancerTarget.Cover },
+  { label: 'PropertiesOnTheRightSideOfCover', value: DLsiteEnhancerTarget.PropertiesOnTheRightSideOfCover },
+  { label: 'Introduction', value: DLsiteEnhancerTarget.Introduction },
+  { label: 'Rating', value: DLsiteEnhancerTarget.Rating }
+] as const;
+
+export const DLsiteEnhancerTargetLabel: Record<DLsiteEnhancerTarget, string> = {
+  [DLsiteEnhancerTarget.Name]: 'Name',
+  [DLsiteEnhancerTarget.Cover]: 'Cover',
+  [DLsiteEnhancerTarget.PropertiesOnTheRightSideOfCover]: 'PropertiesOnTheRightSideOfCover',
+  [DLsiteEnhancerTarget.Introduction]: 'Introduction',
+  [DLsiteEnhancerTarget.Rating]: 'Rating'
+};
+
+export enum BangumiEnhancerTarget {
+  Name = 1,
+  Tags = 2,
+  Introduction = 3,
+  Rating = 4,
+  OtherPropertiesInLeftPanel = 5,
+  Cover = 6
+}
+
+export const bangumiEnhancerTargets = [
+  { label: 'Name', value: BangumiEnhancerTarget.Name },
+  { label: 'Tags', value: BangumiEnhancerTarget.Tags },
+  { label: 'Introduction', value: BangumiEnhancerTarget.Introduction },
+  { label: 'Rating', value: BangumiEnhancerTarget.Rating },
+  { label: 'OtherPropertiesInLeftPanel', value: BangumiEnhancerTarget.OtherPropertiesInLeftPanel },
+  { label: 'Cover', value: BangumiEnhancerTarget.Cover }
+] as const;
+
+export const BangumiEnhancerTargetLabel: Record<BangumiEnhancerTarget, string> = {
+  [BangumiEnhancerTarget.Name]: 'Name',
+  [BangumiEnhancerTarget.Tags]: 'Tags',
+  [BangumiEnhancerTarget.Introduction]: 'Introduction',
+  [BangumiEnhancerTarget.Rating]: 'Rating',
+  [BangumiEnhancerTarget.OtherPropertiesInLeftPanel]: 'OtherPropertiesInLeftPanel',
+  [BangumiEnhancerTarget.Cover]: 'Cover'
+};
+
+export enum BakabaseEnhancerTarget {
+  Name = 1,
+  Publisher = 2,
+  ReleaseDt = 3,
+  VolumeName = 4,
+  VolumeTitle = 5,
+  Originals = 6,
+  Language = 7,
+  Cover = 8
+}
+
+export const bakabaseEnhancerTargets = [
+  { label: 'Name', value: BakabaseEnhancerTarget.Name },
+  { label: 'Publisher', value: BakabaseEnhancerTarget.Publisher },
+  { label: 'ReleaseDt', value: BakabaseEnhancerTarget.ReleaseDt },
+  { label: 'VolumeName', value: BakabaseEnhancerTarget.VolumeName },
+  { label: 'VolumeTitle', value: BakabaseEnhancerTarget.VolumeTitle },
+  { label: 'Originals', value: BakabaseEnhancerTarget.Originals },
+  { label: 'Language', value: BakabaseEnhancerTarget.Language },
+  { label: 'Cover', value: BakabaseEnhancerTarget.Cover }
+] as const;
+
+export const BakabaseEnhancerTargetLabel: Record<BakabaseEnhancerTarget, string> = {
+  [BakabaseEnhancerTarget.Name]: 'Name',
+  [BakabaseEnhancerTarget.Publisher]: 'Publisher',
+  [BakabaseEnhancerTarget.ReleaseDt]: 'ReleaseDt',
+  [BakabaseEnhancerTarget.VolumeName]: 'VolumeName',
+  [BakabaseEnhancerTarget.VolumeTitle]: 'VolumeTitle',
+  [BakabaseEnhancerTarget.Originals]: 'Originals',
+  [BakabaseEnhancerTarget.Language]: 'Language',
+  [BakabaseEnhancerTarget.Cover]: 'Cover'
+};
+
+export enum AvEnhancerTarget {
+  Number = 0,
+  Title = 1,
+  OriginalTitle = 2,
+  Actor = 3,
+  Tags = 4,
+  Release = 5,
+  Year = 6,
+  Studio = 7,
+  Publisher = 8,
+  Series = 9,
+  Runtime = 10,
+  Director = 11,
+  Source = 12,
+  Cover = 13,
+  Poster = 14,
+  Website = 15,
+  Mosaic = 16
+}
+
+export const avEnhancerTargets = [
+  { label: 'Number', value: AvEnhancerTarget.Number },
+  { label: 'Title', value: AvEnhancerTarget.Title },
+  { label: 'OriginalTitle', value: AvEnhancerTarget.OriginalTitle },
+  { label: 'Actor', value: AvEnhancerTarget.Actor },
+  { label: 'Tags', value: AvEnhancerTarget.Tags },
+  { label: 'Release', value: AvEnhancerTarget.Release },
+  { label: 'Year', value: AvEnhancerTarget.Year },
+  { label: 'Studio', value: AvEnhancerTarget.Studio },
+  { label: 'Publisher', value: AvEnhancerTarget.Publisher },
+  { label: 'Series', value: AvEnhancerTarget.Series },
+  { label: 'Runtime', value: AvEnhancerTarget.Runtime },
+  { label: 'Director', value: AvEnhancerTarget.Director },
+  { label: 'Source', value: AvEnhancerTarget.Source },
+  { label: 'Cover', value: AvEnhancerTarget.Cover },
+  { label: 'Poster', value: AvEnhancerTarget.Poster },
+  { label: 'Website', value: AvEnhancerTarget.Website },
+  { label: 'Mosaic', value: AvEnhancerTarget.Mosaic }
+] as const;
+
+export const AvEnhancerTargetLabel: Record<AvEnhancerTarget, string> = {
+  [AvEnhancerTarget.Number]: 'Number',
+  [AvEnhancerTarget.Title]: 'Title',
+  [AvEnhancerTarget.OriginalTitle]: 'OriginalTitle',
+  [AvEnhancerTarget.Actor]: 'Actor',
+  [AvEnhancerTarget.Tags]: 'Tags',
+  [AvEnhancerTarget.Release]: 'Release',
+  [AvEnhancerTarget.Year]: 'Year',
+  [AvEnhancerTarget.Studio]: 'Studio',
+  [AvEnhancerTarget.Publisher]: 'Publisher',
+  [AvEnhancerTarget.Series]: 'Series',
+  [AvEnhancerTarget.Runtime]: 'Runtime',
+  [AvEnhancerTarget.Director]: 'Director',
+  [AvEnhancerTarget.Source]: 'Source',
+  [AvEnhancerTarget.Cover]: 'Cover',
+  [AvEnhancerTarget.Poster]: 'Poster',
+  [AvEnhancerTarget.Website]: 'Website',
+  [AvEnhancerTarget.Mosaic]: 'Mosaic'
+};
+
+export enum AiEnhancerTarget {
+  Properties = 1
+}
+
+export const aiEnhancerTargets = [
+  { label: 'Properties', value: AiEnhancerTarget.Properties }
+] as const;
+
+export const AiEnhancerTargetLabel: Record<AiEnhancerTarget, string> = {
+  [AiEnhancerTarget.Properties]: 'Properties'
+};
+
+export enum EnhancementAdditionalItem {
+  None = 0,
+  GeneratedPropertyValue = 1
+}
+
+export const enhancementAdditionalItems = [
+  { label: 'None', value: EnhancementAdditionalItem.None },
+  { label: 'GeneratedPropertyValue', value: EnhancementAdditionalItem.GeneratedPropertyValue }
+] as const;
+
+export const EnhancementAdditionalItemLabel: Record<EnhancementAdditionalItem, string> = {
+  [EnhancementAdditionalItem.None]: 'None',
+  [EnhancementAdditionalItem.GeneratedPropertyValue]: 'GeneratedPropertyValue'
+};
+
+export enum EnhancerTargetOptionsItem {
+  AutoBindProperty = 1,
+  AutoMatchMultilevelString = 2,
+  CoverSelectOrder = 3
+}
+
+export const enhancerTargetOptionsItems = [
+  { label: 'AutoBindProperty', value: EnhancerTargetOptionsItem.AutoBindProperty },
+  { label: 'AutoMatchMultilevelString', value: EnhancerTargetOptionsItem.AutoMatchMultilevelString },
+  { label: 'CoverSelectOrder', value: EnhancerTargetOptionsItem.CoverSelectOrder }
+] as const;
+
+export const EnhancerTargetOptionsItemLabel: Record<EnhancerTargetOptionsItem, string> = {
+  [EnhancerTargetOptionsItem.AutoBindProperty]: 'AutoBindProperty',
+  [EnhancerTargetOptionsItem.AutoMatchMultilevelString]: 'AutoMatchMultilevelString',
+  [EnhancerTargetOptionsItem.CoverSelectOrder]: 'CoverSelectOrder'
+};
+
+export enum AttachmentLayout {
+  Tile = 0,
+  Carousel = 1
+}
+
+export const attachmentLayouts = [
+  { label: 'Tile', value: AttachmentLayout.Tile },
+  { label: 'Carousel', value: AttachmentLayout.Carousel }
+] as const;
+
+export const AttachmentLayoutLabel: Record<AttachmentLayout, string> = {
+  [AttachmentLayout.Tile]: 'Tile',
+  [AttachmentLayout.Carousel]: 'Carousel'
+};
+
+export enum ComparisonMode {
+  StrictEqual = 0,
+  TextSimilarity = 2,
+  RegexExtractNumber = 3,
+  FixedTolerance = 4,
+  RelativeTolerance = 5,
+  SetIntersection = 6,
+  Subset = 7,
+  TimeWindow = 8,
+  SameDay = 9,
+  ExtensionMap = 10
+}
+
+export const comparisonModes = [
+  { label: 'StrictEqual', value: ComparisonMode.StrictEqual },
+  { label: 'TextSimilarity', value: ComparisonMode.TextSimilarity },
+  { label: 'RegexExtractNumber', value: ComparisonMode.RegexExtractNumber },
+  { label: 'FixedTolerance', value: ComparisonMode.FixedTolerance },
+  { label: 'RelativeTolerance', value: ComparisonMode.RelativeTolerance },
+  { label: 'SetIntersection', value: ComparisonMode.SetIntersection },
+  { label: 'Subset', value: ComparisonMode.Subset },
+  { label: 'TimeWindow', value: ComparisonMode.TimeWindow },
+  { label: 'SameDay', value: ComparisonMode.SameDay },
+  { label: 'ExtensionMap', value: ComparisonMode.ExtensionMap }
+] as const;
+
+export const ComparisonModeLabel: Record<ComparisonMode, string> = {
+  [ComparisonMode.StrictEqual]: 'StrictEqual',
+  [ComparisonMode.TextSimilarity]: 'TextSimilarity',
+  [ComparisonMode.RegexExtractNumber]: 'RegexExtractNumber',
+  [ComparisonMode.FixedTolerance]: 'FixedTolerance',
+  [ComparisonMode.RelativeTolerance]: 'RelativeTolerance',
+  [ComparisonMode.SetIntersection]: 'SetIntersection',
+  [ComparisonMode.Subset]: 'Subset',
+  [ComparisonMode.TimeWindow]: 'TimeWindow',
+  [ComparisonMode.SameDay]: 'SameDay',
+  [ComparisonMode.ExtensionMap]: 'ExtensionMap'
+};
+
+export enum NullValueBehavior {
+  Skip = 0,
+  Fail = 1,
+  Pass = 2
+}
+
+export const nullValueBehaviors = [
+  { label: 'Skip', value: NullValueBehavior.Skip },
+  { label: 'Fail', value: NullValueBehavior.Fail },
+  { label: 'Pass', value: NullValueBehavior.Pass }
+] as const;
+
+export const NullValueBehaviorLabel: Record<NullValueBehavior, string> = {
+  [NullValueBehavior.Skip]: 'Skip',
+  [NullValueBehavior.Fail]: 'Fail',
+  [NullValueBehavior.Pass]: 'Pass'
+};
+
+export enum AdditionalCoverDiscoveringSource {
+  CompressedFile = 1,
+  Video = 2
+}
+
+export const additionalCoverDiscoveringSources = [
+  { label: 'CompressedFile', value: AdditionalCoverDiscoveringSource.CompressedFile },
+  { label: 'Video', value: AdditionalCoverDiscoveringSource.Video }
+] as const;
+
+export const AdditionalCoverDiscoveringSourceLabel: Record<AdditionalCoverDiscoveringSource, string> = {
+  [AdditionalCoverDiscoveringSource.CompressedFile]: 'CompressedFile',
+  [AdditionalCoverDiscoveringSource.Video]: 'Video'
+};
+
+export enum CookieValidatorTarget {
+  BiliBili = 1,
+  ExHentai = 2,
+  Pixiv = 3,
+  Bangumi = 4,
+  SoulPlus = 5,
+  DLsite = 6,
+  Fanbox = 7,
+  Fantia = 8,
+  Cien = 9,
+  Patreon = 10
+}
+
+export const cookieValidatorTargets = [
+  { label: 'BiliBili', value: CookieValidatorTarget.BiliBili },
+  { label: 'ExHentai', value: CookieValidatorTarget.ExHentai },
+  { label: 'Pixiv', value: CookieValidatorTarget.Pixiv },
+  { label: 'Bangumi', value: CookieValidatorTarget.Bangumi },
+  { label: 'SoulPlus', value: CookieValidatorTarget.SoulPlus },
+  { label: 'DLsite', value: CookieValidatorTarget.DLsite },
+  { label: 'Fanbox', value: CookieValidatorTarget.Fanbox },
+  { label: 'Fantia', value: CookieValidatorTarget.Fantia },
+  { label: 'Cien', value: CookieValidatorTarget.Cien },
+  { label: 'Patreon', value: CookieValidatorTarget.Patreon }
+] as const;
+
+export const CookieValidatorTargetLabel: Record<CookieValidatorTarget, string> = {
+  [CookieValidatorTarget.BiliBili]: 'BiliBili',
+  [CookieValidatorTarget.ExHentai]: 'ExHentai',
+  [CookieValidatorTarget.Pixiv]: 'Pixiv',
+  [CookieValidatorTarget.Bangumi]: 'Bangumi',
+  [CookieValidatorTarget.SoulPlus]: 'SoulPlus',
+  [CookieValidatorTarget.DLsite]: 'DLsite',
+  [CookieValidatorTarget.Fanbox]: 'Fanbox',
+  [CookieValidatorTarget.Fantia]: 'Fantia',
+  [CookieValidatorTarget.Cien]: 'Cien',
+  [CookieValidatorTarget.Patreon]: 'Patreon'
+};
+
+export enum CoverFit {
+  Contain = 1,
+  Cover = 2
+}
+
+export const coverFits = [
+  { label: 'Contain', value: CoverFit.Contain },
+  { label: 'Cover', value: CoverFit.Cover }
+] as const;
+
+export const CoverFitLabel: Record<CoverFit, string> = {
+  [CoverFit.Contain]: 'Contain',
+  [CoverFit.Cover]: 'Cover'
+};
+
+export enum CoverSaveMode {
+  Replace = 1,
+  Prepend = 2
+}
+
+export const coverSaveModes = [
+  { label: 'Replace', value: CoverSaveMode.Replace },
+  { label: 'Prepend', value: CoverSaveMode.Prepend }
+] as const;
+
+export const CoverSaveModeLabel: Record<CoverSaveMode, string> = {
+  [CoverSaveMode.Replace]: 'Replace',
+  [CoverSaveMode.Prepend]: 'Prepend'
+};
+
+export enum CoverSelectOrder {
+  FilenameAscending = 1,
+  FileModifyDtDescending = 2
+}
+
+export const coverSelectOrders = [
+  { label: 'FilenameAscending', value: CoverSelectOrder.FilenameAscending },
+  { label: 'FileModifyDtDescending', value: CoverSelectOrder.FileModifyDtDescending }
+] as const;
+
+export const CoverSelectOrderLabel: Record<CoverSelectOrder, string> = {
+  [CoverSelectOrder.FilenameAscending]: 'FilenameAscending',
+  [CoverSelectOrder.FileModifyDtDescending]: 'FileModifyDtDescending'
+};
+
+export enum MatchResultType {
+  Layer = 1,
+  Regex = 2
+}
+
+export const matchResultTypes = [
+  { label: 'Layer', value: MatchResultType.Layer },
+  { label: 'Regex', value: MatchResultType.Regex }
+] as const;
+
+export const MatchResultTypeLabel: Record<MatchResultType, string> = {
+  [MatchResultType.Layer]: 'Layer',
+  [MatchResultType.Regex]: 'Regex'
+};
+
+export enum MediaLibrarySyncStep {
+  Filtering = 0,
+  AcquireFileSystemInfo = 1,
+  CleanResources = 2,
+  CompareResources = 3,
+  SaveResources = 4
+}
+
+export const mediaLibrarySyncSteps = [
+  { label: 'Filtering', value: MediaLibrarySyncStep.Filtering },
+  { label: 'AcquireFileSystemInfo', value: MediaLibrarySyncStep.AcquireFileSystemInfo },
+  { label: 'CleanResources', value: MediaLibrarySyncStep.CleanResources },
+  { label: 'CompareResources', value: MediaLibrarySyncStep.CompareResources },
+  { label: 'SaveResources', value: MediaLibrarySyncStep.SaveResources }
+] as const;
+
+export const MediaLibrarySyncStepLabel: Record<MediaLibrarySyncStep, string> = {
+  [MediaLibrarySyncStep.Filtering]: 'Filtering',
+  [MediaLibrarySyncStep.AcquireFileSystemInfo]: 'AcquireFileSystemInfo',
+  [MediaLibrarySyncStep.CleanResources]: 'CleanResources',
+  [MediaLibrarySyncStep.CompareResources]: 'CompareResources',
+  [MediaLibrarySyncStep.SaveResources]: 'SaveResources'
+};
+
+export enum MediaType {
+  Image = 1,
+  Audio = 2,
+  Video = 3,
+  Text = 4,
+  Application = 5,
+  Unknown = 1000
+}
+
+export const mediaTypes = [
+  { label: 'Image', value: MediaType.Image },
+  { label: 'Audio', value: MediaType.Audio },
+  { label: 'Video', value: MediaType.Video },
+  { label: 'Text', value: MediaType.Text },
+  { label: 'Application', value: MediaType.Application },
+  { label: 'Unknown', value: MediaType.Unknown }
+] as const;
+
+export const MediaTypeLabel: Record<MediaType, string> = {
+  [MediaType.Image]: 'Image',
+  [MediaType.Audio]: 'Audio',
+  [MediaType.Video]: 'Video',
+  [MediaType.Text]: 'Text',
+  [MediaType.Application]: 'Application',
+  [MediaType.Unknown]: 'Unknown'
+};
+
+export enum PlaylistItemType {
+  Resource = 1,
+  Video = 2,
+  Image = 3,
+  Audio = 4
+}
+
+export const playlistItemTypes = [
+  { label: 'Resource', value: PlaylistItemType.Resource },
+  { label: 'Video', value: PlaylistItemType.Video },
+  { label: 'Image', value: PlaylistItemType.Image },
+  { label: 'Audio', value: PlaylistItemType.Audio }
+] as const;
+
+export const PlaylistItemTypeLabel: Record<PlaylistItemType, string> = {
+  [PlaylistItemType.Resource]: 'Resource',
+  [PlaylistItemType.Video]: 'Video',
+  [PlaylistItemType.Image]: 'Image',
+  [PlaylistItemType.Audio]: 'Audio'
+};
+
+export enum ResourceMatcherValueType {
+  Layer = 1,
+  Regex = 2,
+  FixedText = 3
+}
+
+export const resourceMatcherValueTypes = [
+  { label: 'Layer', value: ResourceMatcherValueType.Layer },
+  { label: 'Regex', value: ResourceMatcherValueType.Regex },
+  { label: 'FixedText', value: ResourceMatcherValueType.FixedText }
+] as const;
+
+export const ResourceMatcherValueTypeLabel: Record<ResourceMatcherValueType, string> = {
+  [ResourceMatcherValueType.Layer]: 'Layer',
+  [ResourceMatcherValueType.Regex]: 'Regex',
+  [ResourceMatcherValueType.FixedText]: 'FixedText'
+};
+
+export enum ResourceProperty {
+  RootPath = 1,
+  ParentResource = 2,
+  Resource = 3,
+  Introduction = 12,
+  Rating = 13,
+  CustomProperty = 14,
+  Filename = 15,
+  DirectoryPath = 16,
+  CreatedAt = 17,
+  FileCreatedAt = 18,
+  FileModifiedAt = 19,
+  Cover = 22,
+  PlayedAt = 23,
+  MediaLibraryV2 = 24,
+  MediaLibraryV2Multi = 25,
+  Source = 26,
+  Name = 27,
+  HealthScore = 28
+}
+
+export const resourceProperties = [
+  { label: 'RootPath', value: ResourceProperty.RootPath },
+  { label: 'ParentResource', value: ResourceProperty.ParentResource },
+  { label: 'Resource', value: ResourceProperty.Resource },
+  { label: 'Introduction', value: ResourceProperty.Introduction },
+  { label: 'Rating', value: ResourceProperty.Rating },
+  { label: 'CustomProperty', value: ResourceProperty.CustomProperty },
+  { label: 'Filename', value: ResourceProperty.Filename },
+  { label: 'DirectoryPath', value: ResourceProperty.DirectoryPath },
+  { label: 'CreatedAt', value: ResourceProperty.CreatedAt },
+  { label: 'FileCreatedAt', value: ResourceProperty.FileCreatedAt },
+  { label: 'FileModifiedAt', value: ResourceProperty.FileModifiedAt },
+  { label: 'Cover', value: ResourceProperty.Cover },
+  { label: 'PlayedAt', value: ResourceProperty.PlayedAt },
+  { label: 'MediaLibraryV2', value: ResourceProperty.MediaLibraryV2 },
+  { label: 'MediaLibraryV2Multi', value: ResourceProperty.MediaLibraryV2Multi },
+  { label: 'Source', value: ResourceProperty.Source },
+  { label: 'Name', value: ResourceProperty.Name },
+  { label: 'HealthScore', value: ResourceProperty.HealthScore }
+] as const;
+
+export const ResourcePropertyLabel: Record<ResourceProperty, string> = {
+  [ResourceProperty.RootPath]: 'RootPath',
+  [ResourceProperty.ParentResource]: 'ParentResource',
+  [ResourceProperty.Resource]: 'Resource',
+  [ResourceProperty.Introduction]: 'Introduction',
+  [ResourceProperty.Rating]: 'Rating',
+  [ResourceProperty.CustomProperty]: 'CustomProperty',
+  [ResourceProperty.Filename]: 'Filename',
+  [ResourceProperty.DirectoryPath]: 'DirectoryPath',
+  [ResourceProperty.CreatedAt]: 'CreatedAt',
+  [ResourceProperty.FileCreatedAt]: 'FileCreatedAt',
+  [ResourceProperty.FileModifiedAt]: 'FileModifiedAt',
+  [ResourceProperty.Cover]: 'Cover',
+  [ResourceProperty.PlayedAt]: 'PlayedAt',
+  [ResourceProperty.MediaLibraryV2]: 'MediaLibraryV2',
+  [ResourceProperty.MediaLibraryV2Multi]: 'MediaLibraryV2Multi',
+  [ResourceProperty.Source]: 'Source',
+  [ResourceProperty.Name]: 'Name',
+  [ResourceProperty.HealthScore]: 'HealthScore'
+};
+
+export enum SearchableReservedProperty {
+  Introduction = 12,
+  Rating = 13,
+  FileName = 15,
+  DirectoryPath = 16,
+  CreatedAt = 17,
+  FileCreatedAt = 18,
+  FileModifiedAt = 19,
+  Cover = 22,
+  MediaLibraryV2 = 24,
+  MediaLibraryV2Multi = 25,
+  Source = 26,
+  Name = 27
+}
+
+export const searchableReservedProperties = [
+  { label: 'Introduction', value: SearchableReservedProperty.Introduction },
+  { label: 'Rating', value: SearchableReservedProperty.Rating },
+  { label: 'FileName', value: SearchableReservedProperty.FileName },
+  { label: 'DirectoryPath', value: SearchableReservedProperty.DirectoryPath },
+  { label: 'CreatedAt', value: SearchableReservedProperty.CreatedAt },
+  { label: 'FileCreatedAt', value: SearchableReservedProperty.FileCreatedAt },
+  { label: 'FileModifiedAt', value: SearchableReservedProperty.FileModifiedAt },
+  { label: 'Cover', value: SearchableReservedProperty.Cover },
+  { label: 'MediaLibraryV2', value: SearchableReservedProperty.MediaLibraryV2 },
+  { label: 'MediaLibraryV2Multi', value: SearchableReservedProperty.MediaLibraryV2Multi },
+  { label: 'Source', value: SearchableReservedProperty.Source },
+  { label: 'Name', value: SearchableReservedProperty.Name }
+] as const;
+
+export const SearchableReservedPropertyLabel: Record<SearchableReservedProperty, string> = {
+  [SearchableReservedProperty.Introduction]: 'Introduction',
+  [SearchableReservedProperty.Rating]: 'Rating',
+  [SearchableReservedProperty.FileName]: 'FileName',
+  [SearchableReservedProperty.DirectoryPath]: 'DirectoryPath',
+  [SearchableReservedProperty.CreatedAt]: 'CreatedAt',
+  [SearchableReservedProperty.FileCreatedAt]: 'FileCreatedAt',
+  [SearchableReservedProperty.FileModifiedAt]: 'FileModifiedAt',
+  [SearchableReservedProperty.Cover]: 'Cover',
+  [SearchableReservedProperty.MediaLibraryV2]: 'MediaLibraryV2',
+  [SearchableReservedProperty.MediaLibraryV2Multi]: 'MediaLibraryV2Multi',
+  [SearchableReservedProperty.Source]: 'Source',
+  [SearchableReservedProperty.Name]: 'Name'
+};
+
+export enum StartupPage {
+  Default = 0,
+  Resource = 1
+}
+
+export const startupPages = [
+  { label: 'Default', value: StartupPage.Default },
+  { label: 'Resource', value: StartupPage.Resource }
+] as const;
+
+export const StartupPageLabel: Record<StartupPage, string> = {
+  [StartupPage.Default]: 'Default',
+  [StartupPage.Resource]: 'Resource'
+};
+
+export enum ThirdPartyId {
+  Bilibili = 1,
+  ExHentai = 2,
+  Pixiv = 3,
+  Bangumi = 4,
+  SoulPlus = 5,
+  DLsite = 6,
+  Fanbox = 7,
+  Fantia = 8,
+  Cien = 9,
+  Patreon = 10,
+  Tmdb = 11,
+  Steam = 12
+}
+
+export const thirdPartyIds = [
+  { label: 'Bilibili', value: ThirdPartyId.Bilibili },
+  { label: 'ExHentai', value: ThirdPartyId.ExHentai },
+  { label: 'Pixiv', value: ThirdPartyId.Pixiv },
+  { label: 'Bangumi', value: ThirdPartyId.Bangumi },
+  { label: 'SoulPlus', value: ThirdPartyId.SoulPlus },
+  { label: 'DLsite', value: ThirdPartyId.DLsite },
+  { label: 'Fanbox', value: ThirdPartyId.Fanbox },
+  { label: 'Fantia', value: ThirdPartyId.Fantia },
+  { label: 'Cien', value: ThirdPartyId.Cien },
+  { label: 'Patreon', value: ThirdPartyId.Patreon },
+  { label: 'Tmdb', value: ThirdPartyId.Tmdb },
+  { label: 'Steam', value: ThirdPartyId.Steam }
+] as const;
+
+export const ThirdPartyIdLabel: Record<ThirdPartyId, string> = {
+  [ThirdPartyId.Bilibili]: 'Bilibili',
+  [ThirdPartyId.ExHentai]: 'ExHentai',
+  [ThirdPartyId.Pixiv]: 'Pixiv',
+  [ThirdPartyId.Bangumi]: 'Bangumi',
+  [ThirdPartyId.SoulPlus]: 'SoulPlus',
+  [ThirdPartyId.DLsite]: 'DLsite',
+  [ThirdPartyId.Fanbox]: 'Fanbox',
+  [ThirdPartyId.Fantia]: 'Fantia',
+  [ThirdPartyId.Cien]: 'Cien',
+  [ThirdPartyId.Patreon]: 'Patreon',
+  [ThirdPartyId.Tmdb]: 'Tmdb',
+  [ThirdPartyId.Steam]: 'Steam'
+};
+
+export enum PasswordSearchOrder {
+  Latest = 1,
+  Frequency = 2
+}
+
+export const passwordSearchOrders = [
+  { label: 'Latest', value: PasswordSearchOrder.Latest },
+  { label: 'Frequency', value: PasswordSearchOrder.Frequency }
+] as const;
+
+export const PasswordSearchOrderLabel: Record<PasswordSearchOrder, string> = {
+  [PasswordSearchOrder.Latest]: 'Latest',
+  [PasswordSearchOrder.Frequency]: 'Frequency'
+};
+
+export enum ResourceSearchSortableProperty {
+  FileCreateDt = 1,
+  FileModifyDt = 2,
+  Filename = 3,
+  AddDt = 6,
+  PlayedAt = 11,
+  HealthScore = 12
+}
+
+export const resourceSearchSortableProperties = [
+  { label: 'FileCreateDt', value: ResourceSearchSortableProperty.FileCreateDt },
+  { label: 'FileModifyDt', value: ResourceSearchSortableProperty.FileModifyDt },
+  { label: 'Filename', value: ResourceSearchSortableProperty.Filename },
+  { label: 'AddDt', value: ResourceSearchSortableProperty.AddDt },
+  { label: 'PlayedAt', value: ResourceSearchSortableProperty.PlayedAt },
+  { label: 'HealthScore', value: ResourceSearchSortableProperty.HealthScore }
+] as const;
+
+export const ResourceSearchSortablePropertyLabel: Record<ResourceSearchSortableProperty, string> = {
+  [ResourceSearchSortableProperty.FileCreateDt]: 'FileCreateDt',
+  [ResourceSearchSortableProperty.FileModifyDt]: 'FileModifyDt',
+  [ResourceSearchSortableProperty.Filename]: 'Filename',
+  [ResourceSearchSortableProperty.AddDt]: 'AddDt',
+  [ResourceSearchSortableProperty.PlayedAt]: 'PlayedAt',
+  [ResourceSearchSortableProperty.HealthScore]: 'HealthScore'
+};
+
+export enum CustomPropertyAdditionalItem {
+  None = 0,
+  ValueCount = 2
+}
+
+export const customPropertyAdditionalItems = [
+  { label: 'None', value: CustomPropertyAdditionalItem.None },
+  { label: 'ValueCount', value: CustomPropertyAdditionalItem.ValueCount }
+] as const;
+
+export const CustomPropertyAdditionalItemLabel: Record<CustomPropertyAdditionalItem, string> = {
+  [CustomPropertyAdditionalItem.None]: 'None',
+  [CustomPropertyAdditionalItem.ValueCount]: 'ValueCount'
+};
+
+export enum CustomPropertyValueAdditionalItem {
+  None = 0,
+  BizValue = 1
+}
+
+export const customPropertyValueAdditionalItems = [
+  { label: 'None', value: CustomPropertyValueAdditionalItem.None },
+  { label: 'BizValue', value: CustomPropertyValueAdditionalItem.BizValue }
+] as const;
+
+export const CustomPropertyValueAdditionalItemLabel: Record<CustomPropertyValueAdditionalItem, string> = {
+  [CustomPropertyValueAdditionalItem.None]: 'None',
+  [CustomPropertyValueAdditionalItem.BizValue]: 'BizValue'
+};
+
+export enum ResourceAdditionalItem {
+  None = 0,
+  Properties = 32,
+  Alias = 64,
+  DisplayName = 288,
+  HasChildren = 512,
+  MediaLibraryName = 2048,
+  Cover = 16416,
+  PlayableItem = 32768,
+  All = 52064
+}
+
+export const resourceAdditionalItems = [
+  { label: 'None', value: ResourceAdditionalItem.None },
+  { label: 'Properties', value: ResourceAdditionalItem.Properties },
+  { label: 'Alias', value: ResourceAdditionalItem.Alias },
+  { label: 'DisplayName', value: ResourceAdditionalItem.DisplayName },
+  { label: 'HasChildren', value: ResourceAdditionalItem.HasChildren },
+  { label: 'MediaLibraryName', value: ResourceAdditionalItem.MediaLibraryName },
+  { label: 'Cover', value: ResourceAdditionalItem.Cover },
+  { label: 'PlayableItem', value: ResourceAdditionalItem.PlayableItem },
+  { label: 'All', value: ResourceAdditionalItem.All }
+] as const;
+
+export const ResourceAdditionalItemLabel: Record<ResourceAdditionalItem, string> = {
+  [ResourceAdditionalItem.None]: 'None',
+  [ResourceAdditionalItem.Properties]: 'Properties',
+  [ResourceAdditionalItem.Alias]: 'Alias',
+  [ResourceAdditionalItem.DisplayName]: 'DisplayName',
+  [ResourceAdditionalItem.HasChildren]: 'HasChildren',
+  [ResourceAdditionalItem.MediaLibraryName]: 'MediaLibraryName',
+  [ResourceAdditionalItem.Cover]: 'Cover',
+  [ResourceAdditionalItem.PlayableItem]: 'PlayableItem',
+  [ResourceAdditionalItem.All]: 'All'
+};
+
 export enum FileOperationType {
   Rename = 1,
   Move = 2,
@@ -3677,237 +3908,6 @@ export const aliasExceptionTypes = [
 
 export const AliasExceptionTypeLabel: Record<AliasExceptionType, string> = {
   [AliasExceptionType.ConflictAliasGroup]: 'ConflictAliasGroup'
-};
-
-export enum CloseBehavior {
-  Prompt = 0,
-  Exit = 1,
-  Minimize = 2,
-  Cancel = 1000
-}
-
-export const closeBehaviors = [
-  { label: 'Prompt', value: CloseBehavior.Prompt },
-  { label: 'Exit', value: CloseBehavior.Exit },
-  { label: 'Minimize', value: CloseBehavior.Minimize },
-  { label: 'Cancel', value: CloseBehavior.Cancel }
-] as const;
-
-export const CloseBehaviorLabel: Record<CloseBehavior, string> = {
-  [CloseBehavior.Prompt]: 'Prompt',
-  [CloseBehavior.Exit]: 'Exit',
-  [CloseBehavior.Minimize]: 'Minimize',
-  [CloseBehavior.Cancel]: 'Cancel'
-};
-
-export enum IconType {
-  UnknownFile = 1,
-  Directory = 2,
-  Dynamic = 3
-}
-
-export const iconTypes = [
-  { label: 'UnknownFile', value: IconType.UnknownFile },
-  { label: 'Directory', value: IconType.Directory },
-  { label: 'Dynamic', value: IconType.Dynamic }
-] as const;
-
-export const IconTypeLabel: Record<IconType, string> = {
-  [IconType.UnknownFile]: 'UnknownFile',
-  [IconType.Directory]: 'Directory',
-  [IconType.Dynamic]: 'Dynamic'
-};
-
-export enum UiTheme {
-  FollowSystem = 0,
-  Light = 1,
-  Dark = 2
-}
-
-export const uiThemes = [
-  { label: 'FollowSystem', value: UiTheme.FollowSystem },
-  { label: 'Light', value: UiTheme.Light },
-  { label: 'Dark', value: UiTheme.Dark }
-] as const;
-
-export const UiThemeLabel: Record<UiTheme, string> = {
-  [UiTheme.FollowSystem]: 'FollowSystem',
-  [UiTheme.Light]: 'Light',
-  [UiTheme.Dark]: 'Dark'
-};
-
-export enum UpdaterStatus {
-  Idle = 1,
-  Running = 2,
-  PendingRestart = 3,
-  UpToDate = 4,
-  Failed = 5
-}
-
-export const updaterStatuses = [
-  { label: 'Idle', value: UpdaterStatus.Idle },
-  { label: 'Running', value: UpdaterStatus.Running },
-  { label: 'PendingRestart', value: UpdaterStatus.PendingRestart },
-  { label: 'UpToDate', value: UpdaterStatus.UpToDate },
-  { label: 'Failed', value: UpdaterStatus.Failed }
-] as const;
-
-export const UpdaterStatusLabel: Record<UpdaterStatus, string> = {
-  [UpdaterStatus.Idle]: 'Idle',
-  [UpdaterStatus.Running]: 'Running',
-  [UpdaterStatus.PendingRestart]: 'PendingRestart',
-  [UpdaterStatus.UpToDate]: 'UpToDate',
-  [UpdaterStatus.Failed]: 'Failed'
-};
-
-export enum RelocationMode {
-  UseTarget = 1,
-  MergeOverwrite = 3
-}
-
-export const relocationModes = [
-  { label: 'UseTarget', value: RelocationMode.UseTarget },
-  { label: 'MergeOverwrite', value: RelocationMode.MergeOverwrite }
-] as const;
-
-export const RelocationModeLabel: Record<RelocationMode, string> = {
-  [RelocationMode.UseTarget]: 'UseTarget',
-  [RelocationMode.MergeOverwrite]: 'MergeOverwrite'
-};
-
-export enum RelocationOutcomeKind {
-  NoOp = 0,
-  Success = 1,
-  Error = 2,
-  UnknownSchemaVersion = 3
-}
-
-export const relocationOutcomeKinds = [
-  { label: 'NoOp', value: RelocationOutcomeKind.NoOp },
-  { label: 'Success', value: RelocationOutcomeKind.Success },
-  { label: 'Error', value: RelocationOutcomeKind.Error },
-  { label: 'UnknownSchemaVersion', value: RelocationOutcomeKind.UnknownSchemaVersion }
-] as const;
-
-export const RelocationOutcomeKindLabel: Record<RelocationOutcomeKind, string> = {
-  [RelocationOutcomeKind.NoOp]: 'NoOp',
-  [RelocationOutcomeKind.Success]: 'Success',
-  [RelocationOutcomeKind.Error]: 'Error',
-  [RelocationOutcomeKind.UnknownSchemaVersion]: 'UnknownSchemaVersion'
-};
-
-export enum RelocationPhase {
-  Starting = 0,
-  Copying = 1,
-  Validating = 2,
-  Replacing = 3,
-  Finalizing = 4,
-  Done = 5
-}
-
-export const relocationPhases = [
-  { label: 'Starting', value: RelocationPhase.Starting },
-  { label: 'Copying', value: RelocationPhase.Copying },
-  { label: 'Validating', value: RelocationPhase.Validating },
-  { label: 'Replacing', value: RelocationPhase.Replacing },
-  { label: 'Finalizing', value: RelocationPhase.Finalizing },
-  { label: 'Done', value: RelocationPhase.Done }
-] as const;
-
-export const RelocationPhaseLabel: Record<RelocationPhase, string> = {
-  [RelocationPhase.Starting]: 'Starting',
-  [RelocationPhase.Copying]: 'Copying',
-  [RelocationPhase.Validating]: 'Validating',
-  [RelocationPhase.Replacing]: 'Replacing',
-  [RelocationPhase.Finalizing]: 'Finalizing',
-  [RelocationPhase.Done]: 'Done'
-};
-
-export enum AppDistributionType {
-  WindowsApp = 0,
-  MacOsApp = 1,
-  LinuxApp = 2,
-  Android = 3,
-  Ios = 4,
-  WindowsServer = 5,
-  LinuxServer = 6
-}
-
-export const appDistributionTypes = [
-  { label: 'WindowsApp', value: AppDistributionType.WindowsApp },
-  { label: 'MacOsApp', value: AppDistributionType.MacOsApp },
-  { label: 'LinuxApp', value: AppDistributionType.LinuxApp },
-  { label: 'Android', value: AppDistributionType.Android },
-  { label: 'Ios', value: AppDistributionType.Ios },
-  { label: 'WindowsServer', value: AppDistributionType.WindowsServer },
-  { label: 'LinuxServer', value: AppDistributionType.LinuxServer }
-] as const;
-
-export const AppDistributionTypeLabel: Record<AppDistributionType, string> = {
-  [AppDistributionType.WindowsApp]: 'WindowsApp',
-  [AppDistributionType.MacOsApp]: 'MacOsApp',
-  [AppDistributionType.LinuxApp]: 'LinuxApp',
-  [AppDistributionType.Android]: 'Android',
-  [AppDistributionType.Ios]: 'Ios',
-  [AppDistributionType.WindowsServer]: 'WindowsServer',
-  [AppDistributionType.LinuxServer]: 'LinuxServer'
-};
-
-export enum DataPathSource {
-  Default = 0,
-  UserConfigured = 1,
-  Environment = 2
-}
-
-export const dataPathSources = [
-  { label: 'Default', value: DataPathSource.Default },
-  { label: 'UserConfigured', value: DataPathSource.UserConfigured },
-  { label: 'Environment', value: DataPathSource.Environment }
-] as const;
-
-export const DataPathSourceLabel: Record<DataPathSource, string> = {
-  [DataPathSource.Default]: 'Default',
-  [DataPathSource.UserConfigured]: 'UserConfigured',
-  [DataPathSource.Environment]: 'Environment'
-};
-
-export enum MigrationTiming {
-  BeforeDbMigration = 1,
-  AfterDbMigration = 2
-}
-
-export const migrationTimings = [
-  { label: 'BeforeDbMigration', value: MigrationTiming.BeforeDbMigration },
-  { label: 'AfterDbMigration', value: MigrationTiming.AfterDbMigration }
-] as const;
-
-export const MigrationTimingLabel: Record<MigrationTiming, string> = {
-  [MigrationTiming.BeforeDbMigration]: 'BeforeDbMigration',
-  [MigrationTiming.AfterDbMigration]: 'AfterDbMigration'
-};
-
-export enum OsPlatform {
-  Unknown = 0,
-  Windows = 1,
-  Osx = 2,
-  Linux = 3,
-  FreeBsd = 4
-}
-
-export const osPlatforms = [
-  { label: 'Unknown', value: OsPlatform.Unknown },
-  { label: 'Windows', value: OsPlatform.Windows },
-  { label: 'Osx', value: OsPlatform.Osx },
-  { label: 'Linux', value: OsPlatform.Linux },
-  { label: 'FreeBsd', value: OsPlatform.FreeBsd }
-] as const;
-
-export const OsPlatformLabel: Record<OsPlatform, string> = {
-  [OsPlatform.Unknown]: 'Unknown',
-  [OsPlatform.Windows]: 'Windows',
-  [OsPlatform.Osx]: 'Osx',
-  [OsPlatform.Linux]: 'Linux',
-  [OsPlatform.FreeBsd]: 'FreeBsd'
 };
 
 export enum SteamMetadataField {

@@ -3874,6 +3874,18 @@ export interface BakabaseServiceModelsInputSavedSearchAddInputModel {
   displayMode: BakabaseAbstractionsModelsDomainConstantsFilterDisplayMode;
 }
 
+export interface BakabaseServiceModelsViewAnalyticsAppInfoViewModel {
+  enableAnonymousDataTracking: boolean;
+  deviceId: string;
+  appVersion: string;
+  releaseChannel: string;
+  clarityProjectId?: string;
+  ga4MeasurementId?: string;
+  sentryDsn?: string;
+  postHogApiKey?: string;
+  postHogApiHost: string;
+}
+
 export interface BakabaseServiceModelsViewBulkModificationDiffViewModel {
   /** @format int32 */
   id: number;
@@ -4224,6 +4236,20 @@ export interface BakabaseServiceModelsViewSavedSearchViewModel {
   name: string;
   /** [1: Simple, 2: Advanced] */
   displayMode: BakabaseAbstractionsModelsDomainConstantsFilterDisplayMode;
+}
+
+export interface BakabaseServiceModelsViewTelemetrySnapshotViewModel {
+  appVersion: string;
+  releaseChannel: string;
+  os: string;
+  locale: string;
+  /** @format int32 */
+  mediaLibraryCount: number;
+  /** @format int32 */
+  resourceCount: number;
+  enabledEnhancers: string[];
+  aiEnabled: boolean;
+  hasMediaLibrary: boolean;
 }
 
 export interface BootstrapComponentsLoggingLogServiceModelsEntitiesLog {
@@ -5272,6 +5298,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceC
   data?: BakabaseServiceControllersPathMarkSyncStatusResponse;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewAnalyticsAppInfoViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewAnalyticsAppInfoViewModel;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewBulkModificationViewModel {
   /** @format int32 */
   code: number;
@@ -5326,6 +5359,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceM
   code: number;
   message?: string;
   data?: BakabaseServiceModelsViewSavedSearchViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewTelemetrySnapshotViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewTelemetrySnapshotViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1SystemBoolean {
@@ -7557,6 +7597,64 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAppInfoUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/app/info`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags App
+     * @name GetAnalyticsAppInfo
+     * @request GET:/app/analytics-info
+     */
+    getAnalyticsAppInfo: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewAnalyticsAppInfoViewModel,
+        any
+      >({
+        path: `/app/analytics-info`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getAnalyticsAppInfo
+     * @name getAnalyticsAppInfoUrl
+     */
+    getAnalyticsAppInfoUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/app/analytics-info`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags App
+     * @name GetAppTelemetrySnapshot
+     * @request GET:/app/telemetry-snapshot
+     */
+    getAppTelemetrySnapshot: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewTelemetrySnapshotViewModel,
+        any
+      >({
+        path: `/app/telemetry-snapshot`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getAppTelemetrySnapshot
+     * @name getAppTelemetrySnapshotUrl
+     */
+    getAppTelemetrySnapshotUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/app/telemetry-snapshot`;
       
       return baseUrl + path;
     },

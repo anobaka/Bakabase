@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import { AiOutlineRadarChart } from "react-icons/ai";
 
 import { Chip } from "@/components/bakaui";
@@ -30,31 +31,30 @@ interface Props {
  * Unified health-score chip used wherever a resource's score is displayed.
  * Renders "—" (neutral chip) when the score is missing.
  */
-export const HealthScoreBadge = ({
-  score,
-  showIcon = true,
-  onClick,
-  className,
-  size = "sm",
-}: Props) => {
-  const color = getHealthScoreColor(score);
-  const label = score == null ? "—" : Math.round(score).toString();
+export const HealthScoreBadge = forwardRef<HTMLDivElement, Props>(
+  ({ score, showIcon = true, onClick, className, size = "sm" }, ref) => {
+    const color = getHealthScoreColor(score);
+    const label = score == null ? "—" : Math.round(score).toString();
 
-  return (
-    <Chip
-      className={`${onClick ? "cursor-pointer" : ""} ${className ?? ""}`.trim()}
-      color={color}
-      radius="sm"
-      size={size}
-      variant="flat"
-      onClick={onClick}
-    >
-      <div className="flex items-center gap-1">
-        {showIcon && <AiOutlineRadarChart />}
-        {label}
-      </div>
-    </Chip>
-  );
-};
+    return (
+      <Chip
+        ref={ref}
+        className={`${onClick ? "cursor-pointer" : ""} ${className ?? ""}`.trim()}
+        color={color}
+        radius="sm"
+        size={size}
+        variant="flat"
+        onClick={onClick}
+      >
+        <div className="flex items-center gap-1">
+          {showIcon && <AiOutlineRadarChart />}
+          {label}
+        </div>
+      </Chip>
+    );
+  }
+);
+
+HealthScoreBadge.displayName = "HealthScoreBadge";
 
 export default HealthScoreBadge;

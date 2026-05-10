@@ -265,11 +265,10 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
                     removeWrapper
                     className={`${dynamicClassName} max-w-full max-h-full`}
                     loading={"eager"}
-                    // @ts-ignore - fetchPriority is supported but not in all type defs
-                    fetchPriority={"low"}
                     src={url}
                     onLoad={handleImageLoad}
                     onError={() => handleImageError(url)}
+                    {...({ fetchpriority: "low" } as any)}
                   />
                 )}
               </div>
