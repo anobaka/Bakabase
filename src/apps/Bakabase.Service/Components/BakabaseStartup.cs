@@ -12,6 +12,7 @@ using Sentry;
 using Sentry.Extensions.Logging;
 using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Compression;
+using Bakabase.InsideWorld.Business.Components.CookieCapture;
 using Bakabase.InsideWorld.Business.Components.Configurations;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
@@ -112,6 +113,7 @@ namespace Bakabase.Service.Components
             services.TryAddSingleton<BangumiCookieCaptureFlow>();
             services.TryAddSingleton<SoulPlusCookieCaptureFlow>();
             services.RegisterAllRegisteredTypeAs<ICookieCaptureFlow>();
+            services.AddTransient<CookieCaptureOrchestrator>();
 
             services.TryAddSingleton<FfMpegService>();
             services.TryAddSingleton<HardwareAccelerationService>();

@@ -301,36 +301,28 @@ public class AvaloniaGuiAdapter : GuiAdapter, ITrayIconController
         return null;
     }
 
-    public override Task<string?> CaptureWebViewCookiesAsync(string loginUrl, string title, string[] cookieUrls,
-        Dictionary<string, string>? labels = null)
+    public override IWebViewSession CreateWebViewSession(WebViewSessionOptions options)
     {
-        var tcs = new TaskCompletionSource<string?>();
-
-        Dispatcher.UIThread.Invoke(() =>
+        return Dispatcher.UIThread.Invoke(() =>
         {
-            CookieCaptureWindowLabels? windowLabels = null;
-            if (labels != null)
-            {
-                windowLabels = new CookieCaptureWindowLabels
-                {
-                    Confirm = labels.GetValueOrDefault("confirm", CookieCaptureWindowLabels.Default.Confirm),
-                    Cancel = labels.GetValueOrDefault("cancel", CookieCaptureWindowLabels.Default.Cancel),
-                    WaitingForLogin = labels.GetValueOrDefault("waitingForLogin", CookieCaptureWindowLabels.Default.WaitingForLogin),
-                    ExtractingCookies = labels.GetValueOrDefault("extractingCookies", CookieCaptureWindowLabels.Default.ExtractingCookies),
-                    Error = labels.GetValueOrDefault("error", CookieCaptureWindowLabels.Default.Error),
-                };
-            }
-            var window = new CookieCaptureWindow(loginUrl, title, cookieUrls, tcs, windowLabels);
+            var window = new CookieCaptureWindow(
+                options.Title,
+                options.ConfirmButtonText,
+                options.CancelButtonText,
+                options.InitialStatusText);
+
             if (_mainWindow != null)
             {
-                window.ShowDialog(_mainWindow);
+                // ShowDialog blocks until close; Show() is non-blocking and lets the caller
+                // drive the lifecycle via the returned IWebViewSession.
+                window.Show(_mainWindow);
             }
             else
             {
                 window.Show();
             }
-        });
 
-        return tcs.Task;
+            return (IWebViewSession)new AvaloniaWebViewSession(window);
+        });
     }
 }

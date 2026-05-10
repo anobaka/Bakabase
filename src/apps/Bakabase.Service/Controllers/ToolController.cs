@@ -16,6 +16,7 @@ using Bakabase.Abstractions.Services;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.Gui;
 using Bakabase.InsideWorld.Business.Components.Compression;
+using Bakabase.InsideWorld.Business.Components.CookieCapture;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.Modules.ThirdParty.Abstractions.Http.Cookie;
@@ -48,7 +49,7 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "CaptureCookie")]
         public async Task<SingletonResponse<CookieCaptureResult>> CaptureCookie(
             CookieValidatorTarget target,
-            [FromServices] IGuiAdapter guiAdapter,
+            [FromServices] CookieCaptureOrchestrator orchestrator,
             [FromServices] IEnumerable<ICookieCaptureFlow> captureFlows,
             [FromServices] IBakabaseLocalizer localizer)
         {
@@ -59,20 +60,7 @@ namespace Bakabase.Service.Controllers
                     $"Cookie capture is not supported for target: {target}");
             }
 
-            var labels = new Dictionary<string, string>
-            {
-                ["confirm"] = localizer["CookieCapture_Confirm"],
-                ["cancel"] = localizer["CookieCapture_Cancel"],
-                ["waitingForLogin"] = localizer["CookieCapture_WaitingForLogin"],
-                ["extractingCookies"] = localizer["CookieCapture_ExtractingCookies"],
-                ["error"] = localizer["CookieCapture_Error"],
-            };
-
-            var cookie = await guiAdapter.CaptureWebViewCookiesAsync(
-                flow.StartUrl,
-                localizer["CookieCapture_LoginTo", flow.PlatformName],
-                flow.CookieUrls,
-                labels);
+            var cookie = await orchestrator.CaptureAsync(flow);
 
             if (cookie == null)
             {
@@ -84,7 +72,6 @@ namespace Bakabase.Service.Controllers
                 };
             }
 
-            // Return cookie along with the WebView's User-Agent and inferred TLS preset
             var webViewUserAgent = GetWebViewUserAgent();
             var tlsPreset = TlsPresetHelper.InferPresetFromUserAgent(webViewUserAgent);
 

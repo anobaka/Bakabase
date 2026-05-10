@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Bakabase.Infrastructures.Components.Gui;
 
@@ -68,9 +67,6 @@ public class TestGuiAdapter : IGuiAdapter
         throw new NotImplementedException();
     }
 
-    public Task<string?> CaptureWebViewCookiesAsync(string loginUrl, string title, string[] cookieUrls,
-        Dictionary<string, string>? labels = null)
-    {
-        return Task.FromResult<string?>(null);
-    }
+    public IWebViewSession CreateWebViewSession(WebViewSessionOptions options) =>
+        CancelledWebViewSession.Instance;
 }

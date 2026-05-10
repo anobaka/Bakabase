@@ -1,7 +1,6 @@
 using Bakabase.Infrastructures.Components.Gui;
 using System.Threading.Tasks;
 using System;
-using System.Collections.Generic;
 
 namespace Bakabase.Service.Components;
 
@@ -69,9 +68,6 @@ public class NullGuiAdapter : IGuiAdapter
         return null;
     }
 
-    public Task<string?> CaptureWebViewCookiesAsync(string loginUrl, string title, string[] cookieUrls,
-        Dictionary<string, string>? labels = null)
-    {
-        return Task.FromResult<string?>(null);
-    }
+    public IWebViewSession CreateWebViewSession(WebViewSessionOptions options) =>
+        CancelledWebViewSession.Instance;
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Avalonia.Platform;
@@ -105,10 +106,20 @@ public partial class NativeWebViewHost
                 System.Diagnostics.Debug.WriteLine($"Failed to set WebView2 UserAgent: {ex.Message}");
             }
 
+            // Hook SourceChanged so the public Navigated event actually fires. Without this, the
+            // address bar in CookieCaptureWindow never updates and any chain navigation logic
+            // tied to Navigated is dead code.
+            HookSourceChangedWindows();
+
             // Resize to fill parent
             ResizeWebView2();
 
             _winWebView2Ready = true;
+
+            // Drain queued cookie deletes BEFORE the first navigation so flows that need to
+            // wipe stale markers (e.g. exhentai's yay=louder Sad Panda cookie) don't get
+            // short-circuited by them on the very first page load.
+            DrainPendingCookieDeletesWindows();
 
             // Navigate if URL was set before WebView2 was ready
             if (_pendingUrl != null)
@@ -117,6 +128,208 @@ public partial class NativeWebViewHost
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"WebView2 initialization failed: {ex}");
+        }
+    }
+
+    /// <summary>
+    /// Subscribe to CoreWebView2.SourceChanged via reflection (we don't have a hard ref to
+    /// Microsoft.Web.WebView2.Core). The event is EventHandler&lt;CoreWebView2SourceChangedEventArgs&gt;,
+    /// so we build a delegate of that exact type via Expression Trees and route it back to
+    /// <see cref="OnWindowsSourceChanged"/>.
+    /// </summary>
+    private void HookSourceChangedWindows()
+    {
+        if (_winWebView == null) return;
+        try
+        {
+            var sourceChangedEvent = _winWebView.GetType().GetEvent("SourceChanged");
+            if (sourceChangedEvent == null) return;
+            var handlerType = sourceChangedEvent.EventHandlerType;
+            if (handlerType == null) return;
+            var genericArgs = handlerType.GetGenericArguments();
+            if (genericArgs.Length != 1) return;
+            var argsType = genericArgs[0];
+
+            var senderParam = Expression.Parameter(typeof(object), "sender");
+            var argsParam = Expression.Parameter(argsType, "e");
+            var instanceExpr = Expression.Constant(this, typeof(NativeWebViewHost));
+            var methodCall = Expression.Call(instanceExpr, nameof(OnWindowsSourceChanged), Type.EmptyTypes);
+            var lambda = Expression.Lambda(handlerType, methodCall, senderParam, argsParam);
+            var handler = lambda.Compile();
+
+            sourceChangedEvent.AddEventHandler(_winWebView, handler);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"HookSourceChangedWindows failed: {ex}");
+        }
+    }
+
+    private void OnWindowsSourceChanged()
+    {
+        var url = GetCurrentUrlWindows();
+        if (string.IsNullOrEmpty(url)) return;
+
+        // CoreWebView2 events are raised on the UI thread already, but post defensively
+        // so subscribers (which mutate Avalonia controls) always see the marshalled context.
+        Dispatcher.UIThread.Post(() => Navigated?.Invoke(url));
+    }
+
+    /// <summary>
+    /// Reflectively invokes CoreWebView2.CookieManager.DeleteCookies(name, uri) for each
+    /// pending entry. Scoping by URI prevents same-named cookies on unrelated domains
+    /// from being collateral-damaged.
+    /// </summary>
+    private void DrainPendingCookieDeletesWindows()
+    {
+        if (_pendingCookieDeletes.Count == 0) return;
+        var snapshot = _pendingCookieDeletes.ToArray();
+        _pendingCookieDeletes.Clear();
+        DeleteCookiesWindowsCore(snapshot);
+    }
+
+    /// <summary>
+    /// Delete a set of cookies right now. Used by chain navigation logic to wipe
+    /// stale "blocked" markers (e.g. exhentai's `yay=louder`) immediately before the
+    /// chain hop into the protected domain — defensive, in case the marker got re-set
+    /// during a chain step that ran while we were waiting for init.
+    /// Falls through to the pending queue if WebView2 isn't ready yet.
+    /// </summary>
+    public void DeleteCookiesNowWindows(IEnumerable<(string Url, string Name)> cookies)
+    {
+        var arr = cookies as (string Url, string Name)[] ?? cookies.ToArray();
+        if (arr.Length == 0) return;
+        if (!_winWebView2Ready)
+        {
+            _pendingCookieDeletes.AddRange(arr);
+            return;
+        }
+        DeleteCookiesWindowsCore(arr);
+    }
+
+    /// <summary>
+    /// Reads cookies on <paramref name="sourceUrl"/>, then for each name in
+    /// <paramref name="cookieNames"/> creates a fresh CoreWebView2Cookie scoped to
+    /// <paramref name="targetDomain"/> and writes it back via AddOrUpdateCookie. Domain is
+    /// not writable on an existing cookie, so we have to mint a new one and copy attrs.
+    /// </summary>
+    private async Task MirrorCookiesWindowsAsync(string sourceUrl, string targetDomain, string[] cookieNames)
+    {
+        if (_winWebView == null || !_winWebView2Ready) return;
+        try
+        {
+            var cookieManager = _winWebView.GetType().GetProperty("CookieManager")?.GetValue(_winWebView);
+            if (cookieManager == null)
+            {
+                Console.WriteLine("[NativeWebViewHost] Mirror: CookieManager not available");
+                return;
+            }
+
+            var getCookiesMethod = cookieManager.GetType().GetMethod("GetCookiesAsync", new[] { typeof(string) });
+            var createCookieMethod = cookieManager.GetType().GetMethod("CreateCookie",
+                new[] { typeof(string), typeof(string), typeof(string), typeof(string) });
+            var addCookieMethod = cookieManager.GetType().GetMethod("AddOrUpdateCookie");
+            if (getCookiesMethod == null || createCookieMethod == null || addCookieMethod == null)
+            {
+                Console.WriteLine("[NativeWebViewHost] Mirror: required CookieManager method missing");
+                return;
+            }
+
+            var task = (Task)getCookiesMethod.Invoke(cookieManager, new object[] { sourceUrl })!;
+            await task;
+            var cookieList = task.GetType().GetProperty("Result")?.GetValue(task) as System.Collections.IEnumerable;
+            if (cookieList == null) return;
+
+            var nameSet = new HashSet<string>(cookieNames, StringComparer.Ordinal);
+            var mirrored = 0;
+            foreach (var srcCookie in cookieList)
+            {
+                var t = srcCookie.GetType();
+                var name = t.GetProperty("Name")?.GetValue(srcCookie)?.ToString();
+                if (name == null || !nameSet.Contains(name)) continue;
+                var value = t.GetProperty("Value")?.GetValue(srcCookie)?.ToString();
+                if (value == null) continue;
+                var path = t.GetProperty("Path")?.GetValue(srcCookie)?.ToString() ?? "/";
+
+                var newCookie = createCookieMethod.Invoke(cookieManager,
+                    new object[] { name, value, targetDomain, path });
+                if (newCookie == null) continue;
+
+                // Best-effort copy of security/lifetime attrs so the mirrored cookie behaves
+                // identically to the source on the target domain.
+                CopyCookieAttribute(srcCookie, newCookie, "IsSecure");
+                CopyCookieAttribute(srcCookie, newCookie, "IsHttpOnly");
+                CopyCookieAttribute(srcCookie, newCookie, "SameSite");
+                CopyCookieAttribute(srcCookie, newCookie, "Expires");
+
+                addCookieMethod.Invoke(cookieManager, new[] { newCookie });
+                mirrored++;
+                Console.WriteLine(
+                    $"[NativeWebViewHost] Mirror OK: name={name} {sourceUrl} -> domain={targetDomain} path={path}");
+            }
+
+            if (mirrored == 0)
+            {
+                Console.WriteLine(
+                    $"[NativeWebViewHost] Mirror: no source cookies matched [{string.Join(",", cookieNames)}] on {sourceUrl}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[NativeWebViewHost] MirrorCookiesWindowsAsync FAILED: {ex}");
+        }
+    }
+
+    private static void CopyCookieAttribute(object src, object dst, string propName)
+    {
+        try
+        {
+            var srcProp = src.GetType().GetProperty(propName);
+            var dstProp = dst.GetType().GetProperty(propName);
+            if (srcProp == null || dstProp == null || !dstProp.CanWrite) return;
+            dstProp.SetValue(dst, srcProp.GetValue(src));
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"CopyCookieAttribute({propName}) failed: {ex.Message}");
+        }
+    }
+
+    private void DeleteCookiesWindowsCore((string Url, string Name)[] cookies)
+    {
+        if (_winWebView == null) return;
+        try
+        {
+            var cookieManager = _winWebView.GetType().GetProperty("CookieManager")?.GetValue(_winWebView);
+            if (cookieManager == null)
+            {
+                Console.WriteLine("[NativeWebViewHost] DeleteCookies: CookieManager not available");
+                return;
+            }
+            var deleteMethod = cookieManager.GetType()
+                .GetMethod("DeleteCookies", new[] { typeof(string), typeof(string) });
+            if (deleteMethod == null)
+            {
+                Console.WriteLine("[NativeWebViewHost] DeleteCookies: DeleteCookies(string,string) method not found");
+                return;
+            }
+
+            foreach (var (url, name) in cookies)
+            {
+                try
+                {
+                    deleteMethod.Invoke(cookieManager, new object?[] { name, url });
+                    Console.WriteLine($"[NativeWebViewHost] DeleteCookies OK: name={name} uri={url}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[NativeWebViewHost] DeleteCookies FAILED: name={name} uri={url} err={ex.Message}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[NativeWebViewHost] DeleteCookiesWindowsCore FAILED: {ex}");
         }
     }
 

@@ -18,6 +18,7 @@ public partial class NativeWebViewHost : NativeControlHost
 {
     private string? _pendingUrl;
     private bool _initialized;
+    private readonly List<(string Url, string Name)> _pendingCookieDeletes = new();
 
     /// <summary>
     /// Fired when the WebView navigates to a new URL.
@@ -30,6 +31,51 @@ public partial class NativeWebViewHost : NativeControlHost
         _pendingUrl = url;
         if (_initialized)
             PlatformNavigate(url);
+    }
+
+    /// <summary>
+    /// Queues a cookie to be deleted from the WebView's cookie store before the first
+    /// navigation runs. Used to wipe stale "blocked" markers (e.g. exhentai's `yay=louder`
+    /// Sad Panda cookie) that would short-circuit auth on subsequent visits.
+    /// Calls made after init has run are still drained on the next platform navigate.
+    /// </summary>
+    public void QueueDeleteCookieBeforeFirstNavigate(string url, string name)
+    {
+        _pendingCookieDeletes.Add((url, name));
+    }
+
+    /// <summary>
+    /// Synchronously deletes the given cookies from the WebView's cookie store if
+    /// the platform WebView is ready; otherwise queues them for the next drain.
+    /// Used by chain navigation logic to re-wipe stale markers immediately before
+    /// each chain hop, in case a previous step caused the server to re-issue them.
+    /// </summary>
+    public void DeleteCookiesNow(IEnumerable<(string Url, string Name)> cookies)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            DeleteCookiesNowWindows(cookies);
+            return;
+        }
+
+        // Platforms without a current implementation just fall back to the queue, so the
+        // request isn't silently lost if a future build wires it up.
+        foreach (var c in cookies) _pendingCookieDeletes.Add(c);
+    }
+
+    /// <summary>
+    /// Copies named cookies from <paramref name="sourceUrl"/>'s cookie store onto
+    /// <paramref name="targetDomain"/>. Lets us bridge auth cookies across sibling TLDs
+    /// the browser otherwise treats as fully isolated (e.g. e-hentai.org → exhentai.org).
+    /// Cookies not present on the source are silently skipped.
+    /// </summary>
+    public Task MirrorCookiesAsync(string sourceUrl, string targetDomain, string[] cookieNames)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return MirrorCookiesWindowsAsync(sourceUrl, targetDomain, cookieNames);
+        }
+        return Task.CompletedTask;
     }
 
     /// <summary>
