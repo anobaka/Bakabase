@@ -65,6 +65,43 @@ export const findNodeChainInMultilevelData = <V>(
 };
 
 /**
+ * Parse a .NET TimeSpan-formatted string to milliseconds.
+ * Accepts both "c" format ("[-][d.]hh:mm:ss[.fffffff]") and
+ * "g" format ("[-][d:]h:mm:ss[.FFFFFFF]"), as well as a raw
+ * numeric string of milliseconds.
+ */
+const parseTimeSpanToMs = (value: string): number | undefined => {
+  const numeric = Number(value);
+
+  if (Number.isFinite(numeric) && !value.includes(":")) {
+    return numeric;
+  }
+
+  const match = value.match(
+    /^(-)?(?:(\d+)[.:])?(\d{1,2}):(\d{2}):(\d{2})(?:\.(\d{1,7}))?$/,
+  );
+
+  if (!match) {
+    return undefined;
+  }
+
+  const sign = match[1] ? -1 : 1;
+  const days = parseInt(match[2] ?? "0", 10);
+  const hours = parseInt(match[3], 10);
+  const minutes = parseInt(match[4], 10);
+  const seconds = parseInt(match[5], 10);
+  let ms = (((days * 24 + hours) * 60 + minutes) * 60 + seconds) * 1000;
+
+  if (match[6]) {
+    const padded = (match[6] + "000").slice(0, 3);
+
+    ms += parseInt(padded, 10);
+  }
+
+  return sign * ms;
+};
+
+/**
  * Convert API value to the correct runtime type.
  * Use convertFromApiValueTyped for type-safe access.
  */
@@ -86,9 +123,24 @@ export const convertFromApiValue = (
     case StandardValueType.ListTag:
       return value;
     case StandardValueType.DateTime:
-      return dayjs(value);
-    case StandardValueType.Time:
+      return dayjs.isDayjs(value) ? value : dayjs(value);
+    case StandardValueType.Time: {
+      if (typeof (value as any)?.asMilliseconds === "function") {
+        return value;
+      }
+
+      if (typeof value === "number") {
+        return dayjs.duration(value);
+      }
+
+      if (typeof value === "string") {
+        const ms = parseTimeSpanToMs(value);
+
+        return ms == undefined ? undefined : dayjs.duration(ms);
+      }
+
       return dayjs.duration(value);
+    }
   }
 };
 

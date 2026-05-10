@@ -11,7 +11,10 @@ import { useUpdate } from "react-use";
 import { propertyValueScopes } from "@/sdk/constants";
 import PropertyValueRenderer from "@/components/Property/components/PropertyValueRenderer";
 import { buildLogger } from "@/components/utils";
-import { serializeStandardValue } from "@/components/StandardValue/helpers";
+import {
+  convertFromApiValue,
+  serializeStandardValue,
+} from "@/components/StandardValue/helpers";
 import BriefProperty from "@/components/Chips/Property/BriefProperty";
 
 export type PropertyContainerProps = {
@@ -94,8 +97,14 @@ const PropertyContainer = (props: PropertyContainerProps) => {
         )}
         <div className={`flex items-center gap-2 break-all ${classNames?.value}`}>
           <PropertyValueRenderer
-            bizValue={serializeStandardValue(bizValue, property.bizValueType)}
-            dbValue={serializeStandardValue(dbValue, property.dbValueType)}
+            bizValue={serializeStandardValue(
+              convertFromApiValue(bizValue, property.bizValueType),
+              property.bizValueType,
+            )}
+            dbValue={serializeStandardValue(
+              convertFromApiValue(dbValue, property.dbValueType),
+              property.dbValueType,
+            )}
             property={property}
             variant={"default"}
             onValueChange={onValueChange}

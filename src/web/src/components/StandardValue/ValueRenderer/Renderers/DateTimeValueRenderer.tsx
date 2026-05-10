@@ -79,7 +79,7 @@ const DateTimeValueRenderer = (props: DateTimeValueRendererProps) => {
       size={size}
       onBlur={() => {
         log("onBlur", value);
-        editor?.onValueChange?.(value);
+        editor?.onValueChange?.(value, value);
         setEditing(false);
       }}
       onChange={(d) => {

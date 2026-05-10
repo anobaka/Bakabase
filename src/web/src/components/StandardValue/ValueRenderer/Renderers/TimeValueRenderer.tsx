@@ -3,7 +3,7 @@
 import type { Duration } from "dayjs/plugin/duration";
 import type { ValueRendererProps } from "../models";
 
-import { useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { TimeInput } from "@/components/bakaui";
 import NotSet from "@/components/StandardValue/ValueRenderer/Renderers/components/LightText";
@@ -12,7 +12,7 @@ type TimeValueRendererProps = ValueRendererProps<Duration, Duration> & {
   size?: "sm" | "md" | "lg";
 };
 const TimeValueRenderer = ({
-  value,
+  value: propsValue,
   format,
   variant,
   editor,
@@ -22,7 +22,11 @@ const TimeValueRenderer = ({
   ...props
 }: TimeValueRendererProps) => {
   const [editing, setEditing] = useState(false);
-  const editingValueRef = useRef<Duration>();
+  const [value, setValue] = useState<Duration | undefined>(propsValue);
+
+  useEffect(() => {
+    setValue(propsValue);
+  }, [propsValue]);
 
   // Default isReadonly to false
   const isReadonly = propsIsReadonly ?? false;
@@ -32,7 +36,6 @@ const TimeValueRenderer = ({
   // Don't allow starting edit mode if isEditing is explicitly set to false
   const startEditing = !isReadonly && editor && isEditing !== false
     ? () => {
-        editingValueRef.current = value;
         setEditing(true);
       }
     : undefined;
@@ -45,7 +48,7 @@ const TimeValueRenderer = ({
         value={value}
         size={size}
         onChange={(x) => {
-          editingValueRef.current = x;
+          setValue(x);
           editor.onValueChange?.(x, x);
         }}
       />
@@ -58,14 +61,11 @@ const TimeValueRenderer = ({
         isReadOnly={!editor}
         value={value}
         size={size}
-        onBlur={(x) => {
-          editor?.onValueChange?.(
-            editingValueRef.current,
-            editingValueRef.current,
-          );
+        onBlur={() => {
+          editor?.onValueChange?.(value, value);
           setEditing(false);
         }}
-        onChange={(x) => (editingValueRef.current = x)}
+        onChange={(x) => setValue(x)}
       />
     );
   }

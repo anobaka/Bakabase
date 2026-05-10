@@ -105,7 +105,13 @@ const PropertyValueRenderer = (props: Props) => {
           log("OnValueChange:Serialization:dv", dv, sdv);
           log("OnValueChange:Serialization:bv", bv, sbv);
 
-          return onValueChange(sdv, sbv);
+          // Empty serialized payload (cleared text / empty list / etc.)
+          // is sent as undefined so the Manual scope record becomes
+          // "no value" and the scope priority fallback kicks in.
+          return onValueChange(
+            sdv === "" ? undefined : sdv,
+            sbv === "" ? undefined : sbv,
+          );
         }
       : undefined;
 

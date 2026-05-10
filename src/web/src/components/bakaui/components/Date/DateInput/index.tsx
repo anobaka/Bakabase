@@ -5,7 +5,7 @@ import type { Dayjs } from "dayjs";
 
 import { DateInput as HeroDateInput } from "@heroui/react";
 import dayjs from "dayjs";
-import { CalendarDateTime } from "@internationalized/date";
+import { CalendarDateTime, getLocalTimeZone } from "@internationalized/date";
 import { useEffect, useState } from "react";
 
 import { buildLogger } from "@/components/utils";
@@ -37,6 +37,9 @@ const convertToCalendarDateTime = (
     date.getMilliseconds(),
   );
 };
+const calendarDateTimeToDayjs = (v: CalendarDateTime): Dayjs =>
+  dayjs(v.toDate(getLocalTimeZone()));
+
 const DateInput = ({
   value: propsValue,
   onChange,
@@ -61,7 +64,7 @@ const DateInput = ({
       hourCycle={24}
       value={value}
       onChange={(v) => {
-        onChange?.(v ? dayjs(v.toString()) : undefined);
+        onChange?.(v ? calendarDateTimeToDayjs(v as CalendarDateTime) : undefined);
       }}
       {...props}
     />

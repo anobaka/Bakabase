@@ -15,7 +15,7 @@ interface TimeInputProps
   extends Omit<NextUITimeInputProps, "value" | "onChange" | "defaultValue"> {
   value?: Duration;
   defaultValue?: Duration;
-  onChange?: (value: Duration) => void;
+  onChange?: (value?: Duration) => void;
 }
 const TimeInput = ({
   value,
@@ -32,7 +32,7 @@ const TimeInput = ({
       hourCycle={24}
       value={v}
       onChange={(v) => {
-        onChange?.(convertTimeToDuration(v as Time));
+        onChange?.(v ? convertTimeToDuration(v as Time) : undefined);
       }}
       {...props}
     />
