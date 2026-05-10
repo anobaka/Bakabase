@@ -1,5 +1,6 @@
 ﻿using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.FileSystem;
+using Bakabase.Abstractions.Components.Network;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -18,11 +19,13 @@ public static class ServiceCollectionExtensions
         string name) where THttpClientHandler : HttpClientHandler
     {
         services.TryAddSingleton<THttpClientHandler>();
+        services.TryAddTransient<HttpInteractionCaptureHandler>();
         services.AddHttpClient(name,
                 t => { t.DefaultRequestHeaders.Add("User-Agent", InternalOptions.DefaultHttpUserAgent); })
-            // todo: let http client factory handle its lifetime automatically after changing queue mechanism of inside world handler 
+            // todo: let http client factory handle its lifetime automatically after changing queue mechanism of inside world handler
             .SetHandlerLifetime(TimeSpan.FromDays(30))
-            .ConfigurePrimaryHttpMessageHandler(sp => sp.GetRequiredService<THttpClientHandler>());
+            .ConfigurePrimaryHttpMessageHandler(sp => sp.GetRequiredService<THttpClientHandler>())
+            .AddHttpMessageHandler<HttpInteractionCaptureHandler>();
 
         return services;
     }

@@ -19,9 +19,10 @@ public class FalenoClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
         {
             var lowered = number.ToLowerInvariant();
             var loweredNoDash = lowered.Replace("-", "");
-            var loweredSpaced = lowered.Replace("-", " ");
 
-            // Resolve detail URL
+            // faleno.jp redirected its catalogue to falenogroup.com; the canonical detail page is
+            //   https://falenogroup.com/works/<lower-number>/
+            // 404 returns a "ページが見つかりませんでした" page that we detect and skip.
             var candidateUrls = new List<string>();
             if (!string.IsNullOrWhiteSpace(appointUrl))
             {
@@ -29,21 +30,16 @@ public class FalenoClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
             }
             else
             {
-                if (number.ToUpperInvariant().StartsWith("FLN"))
+                candidateUrls.Add($"https://falenogroup.com/works/{lowered}/");
+                if (loweredNoDash != lowered)
                 {
-                    candidateUrls.Add($"https://faleno.jp/top/works/{loweredNoDash}/");
-                    candidateUrls.Add($"https://faleno.jp/top/works/{lowered}/");
-                    candidateUrls.Add($"https://falenogroup.com/works/{lowered}/");
                     candidateUrls.Add($"https://falenogroup.com/works/{loweredNoDash}/");
                 }
-
-                // Search pages
-                candidateUrls.Add($"https://faleno.jp/top/?s={Uri.EscapeDataString(loweredSpaced)}");
-                candidateUrls.Add($"https://falenogroup.com/top/?s={Uri.EscapeDataString(loweredSpaced)}");
             }
 
             string? realUrl = null;
             string posterUrl = "";
+            string? detailHtml = null;
 
             foreach (var url in candidateUrls)
             {
@@ -57,43 +53,17 @@ public class FalenoClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
                     continue;
                 }
 
-                // If this is a search page, try to extract the first matching result
-                if (url.Contains("/top/?s=") || url.Contains("/top/?s=") || url.Contains("/top/?s="))
-                {
-                    var cq = new CQ(html);
-                    var firstAnchor = cq.Select("div.text_name a").FirstOrDefault();
-                    var firstPoster = cq.Select("div.text_name").Parent().Find("a img").FirstOrDefault();
-                    if (firstAnchor != null)
-                    {
-                        var href = firstAnchor.GetAttribute("href") ?? "";
-                        if (!string.IsNullOrWhiteSpace(href))
-                        {
-                            if (!href.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-                            {
-                                var baseDomain = url.Contains("faleno.jp") ? "https://faleno.jp" : "https://falenogroup.com";
-                                href = baseDomain.TrimEnd('/') + href;
-                            }
-                            realUrl = href;
-                            posterUrl = firstPoster?.GetAttribute("src") ?? "";
-                            break;
-                        }
-                    }
-                }
-                else
-                {
-                    // Already a detail page
-                    realUrl = url;
-                    break;
-                }
+                if (IsNotFoundPage(html)) continue;
+                realUrl = url;
+                detailHtml = html;
+                break;
             }
 
-            if (string.IsNullOrWhiteSpace(realUrl))
+            if (string.IsNullOrWhiteSpace(realUrl) || detailHtml == null)
             {
                 return null;
             }
 
-            // Load detail page
-            var detailHtml = await HttpClient.GetStringAsync(realUrl);
             var doc = new CQ(detailHtml);
 
             string GetTextAfterLabel(string labelContains)
@@ -172,7 +142,7 @@ public class FalenoClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
             var extrafanart = doc.Select("a.pop_img").Select(a => a.GetAttribute("href")).Where(h => !string.IsNullOrWhiteSpace(h)).ToList();
             var trailer = doc.Select("a.pop_sample").Attr("href") ?? "";
 
-            var searchUrl = $"https://faleno.jp/top/?s={Uri.EscapeDataString(loweredSpaced)}";
+            var searchUrl = realUrl;
             var detail = new FalenoVideoDetail
             {
                 Number = number,
@@ -201,6 +171,9 @@ public class FalenoClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
             return null;
         }
     }
+
+    private static bool IsNotFoundPage(string html) =>
+        !string.IsNullOrEmpty(html) && html.Contains("ページが見つかりませんでした");
 }
 
 

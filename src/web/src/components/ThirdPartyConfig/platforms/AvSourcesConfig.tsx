@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { AiOutlinePlayCircle, AiOutlineReload, AiOutlineSetting } from "react-icons/ai";
+import i18next from "i18next";
+import { AiOutlineCopy, AiOutlinePlayCircle, AiOutlineReload, AiOutlineSetting } from "react-icons/ai";
 
 import {
   Accordion,
@@ -21,6 +22,8 @@ import {
 } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 import { ContentType } from "@/sdk/Api";
+
+const TEST_NUMBER_STORAGE_KEY = "avSources.testNumber";
 
 interface AvSourceInfo {
   id: string;
@@ -59,12 +62,28 @@ interface AvSourceTestDetail {
   searchUrl?: string | null;
 }
 
+interface AvSourceHttpInteraction {
+  method: string;
+  url: string;
+  requestHeaders?: Record<string, string>;
+  requestBody?: string | null;
+  requestContentType?: string | null;
+  responseStatusCode?: number | null;
+  responseReasonPhrase?: string | null;
+  responseHeaders?: Record<string, string> | null;
+  responseContentType?: string | null;
+  responseContentLength?: number | null;
+  error?: string | null;
+  durationMs: number;
+}
+
 interface AvSourceTestResult {
   source: string;
   detail?: AvSourceTestDetail | null;
   error?: string | null;
   skipped?: boolean;
   durationMs: number;
+  interactions?: AvSourceHttpInteraction[] | null;
 }
 
 type SourceState =
@@ -76,7 +95,10 @@ export const AvSourcesConfigPanel = () => {
   const { t } = useTranslation();
   const [sources, setSources] = useState<AvSourceInfo[]>([]);
   const [configs, setConfigs] = useState<Record<string, AvSourceConfig>>({});
-  const [number, setNumber] = useState("");
+  const [number, setNumber] = useState(() => {
+    if (typeof window === "undefined") return "";
+    return localStorage.getItem(TEST_NUMBER_STORAGE_KEY) || "";
+  });
   const [running, setRunning] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [results, setResults] = useState<Record<string, SourceState>>({});
@@ -142,7 +164,7 @@ export const AvSourcesConfigPanel = () => {
       const rsp = await BApi.request<{ data?: AvSourceTestResult[] }>({
         path: "/av/test",
         method: "POST",
-        body: { number: number.trim() },
+        body: { number: number.trim(), language: i18next.language },
         type: ContentType.Json,
         format: "json",
       });
@@ -171,7 +193,7 @@ export const AvSourcesConfigPanel = () => {
       const rsp = await BApi.request<{ data?: AvSourceTestResult[] }>({
         path: "/av/test",
         method: "POST",
-        body: { number: number.trim(), sources: [id] },
+        body: { number: number.trim(), sources: [id], language: i18next.language },
         type: ContentType.Json,
         format: "json",
       });
@@ -203,7 +225,10 @@ export const AvSourcesConfigPanel = () => {
               size="sm"
               placeholder={t("avSources.input.numberPlaceholder", "Enter a number, e.g. SSIS-001")}
               value={number}
-              onValueChange={setNumber}
+              onValueChange={(v) => {
+                setNumber(v);
+                localStorage.setItem(TEST_NUMBER_STORAGE_KEY, v);
+              }}
             />
             <Button
               color="primary"
@@ -247,7 +272,7 @@ export const AvSourcesConfigPanel = () => {
                   )}
                   {s.defaultCookie ? (
                     <Chip size="sm" color="success" variant="flat">
-                      {t("avSources.chip.bypass", "auto bypass")}
+                      {t("avSources.chip.bypass", "auto bypass detection")}
                     </Chip>
                   ) : null}
                 </div>
@@ -319,6 +344,7 @@ export const AvSourcesConfigPanel = () => {
                   </AccordionItem>
                 </Accordion>
                 <ResultPanel state={state} />
+                <InteractionsPanel state={state} />
               </CardBody>
             </Card>
           );
@@ -395,6 +421,122 @@ const Field = ({ label, value }: { label: string; value?: string | null }) => {
     <div className="flex gap-2">
       <span className="shrink-0 text-default-500">{label}:</span>
       <span className="break-all">{value}</span>
+    </div>
+  );
+};
+
+const copyToClipboard = (text: string) => {
+  if (typeof navigator !== "undefined" && navigator.clipboard) {
+    void navigator.clipboard.writeText(text).then(
+      () => toast.success("Copied"),
+      () => toast.danger("Copy failed"),
+    );
+  }
+};
+
+const buildCurl = (i: AvSourceHttpInteraction) => {
+  const parts: string[] = ["curl"];
+  if (i.method && i.method.toUpperCase() !== "GET") parts.push(`-X ${i.method.toUpperCase()}`);
+  for (const [k, v] of Object.entries(i.requestHeaders || {})) {
+    parts.push(`-H '${k}: ${String(v).replace(/'/g, "'\\''")}'`);
+  }
+  if (i.requestBody) {
+    parts.push(`--data-raw '${i.requestBody.replace(/'/g, "'\\''")}'`);
+  }
+  parts.push(`'${i.url}'`);
+  return parts.join(" ");
+};
+
+const InteractionsPanel = ({ state }: { state?: SourceState }) => {
+  const { t } = useTranslation();
+  if (!state || state.phase !== "done") return null;
+  const interactions = state.result.interactions;
+  if (!interactions || interactions.length === 0) return null;
+  return (
+    <Accordion isCompact>
+      <AccordionItem
+        key="requests"
+        aria-label={t("avSources.accordion.requests", "HTTP requests")}
+        title={
+          <span className="text-sm">
+            {t("avSources.accordion.requests", "HTTP requests")}
+            <span className="ml-1 text-default-400">({interactions.length})</span>
+          </span>
+        }
+      >
+        <div className="space-y-3 pt-1">
+          {interactions.map((i, idx) => (
+            <InteractionItem key={idx} index={idx} i={i} />
+          ))}
+        </div>
+      </AccordionItem>
+    </Accordion>
+  );
+};
+
+const InteractionItem = ({ index, i }: { index: number; i: AvSourceHttpInteraction }) => {
+  const { t } = useTranslation();
+  const statusColor =
+    i.error || (i.responseStatusCode && i.responseStatusCode >= 400)
+      ? "danger"
+      : i.responseStatusCode && i.responseStatusCode >= 300
+        ? "warning"
+        : "success";
+  return (
+    <div className="rounded-md border border-default-200 p-2 text-xs space-y-2">
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-default-400">#{index + 1}</span>
+        <Chip size="sm" variant="flat">
+          {i.method.toUpperCase()}
+        </Chip>
+        {i.responseStatusCode != null && (
+          <Chip size="sm" color={statusColor} variant="flat">
+            {i.responseStatusCode} {i.responseReasonPhrase}
+          </Chip>
+        )}
+        {i.error && (
+          <Chip size="sm" color="danger" variant="flat">
+            {t("avSources.interaction.failed", "failed")}
+          </Chip>
+        )}
+        <span className="text-default-500">{i.durationMs}ms</span>
+        <Button
+          size="sm"
+          variant="light"
+          startContent={<AiOutlineCopy />}
+          onPress={() => copyToClipboard(buildCurl(i))}
+        >
+          curl
+        </Button>
+      </div>
+      <a
+        href={i.url}
+        target="_blank"
+        rel="noreferrer"
+        className="block break-all text-primary underline"
+      >
+        {i.url}
+      </a>
+      {i.requestHeaders && Object.keys(i.requestHeaders).length > 0 && (
+        <div>
+          <div className="text-default-500 mb-0.5">{t("avSources.interaction.headers", "Headers")}</div>
+          <div className="rounded bg-default-100 p-2 font-mono whitespace-pre-wrap break-all">
+            {Object.entries(i.requestHeaders)
+              .map(([k, v]) => `${k}: ${v}`)
+              .join("\n")}
+          </div>
+        </div>
+      )}
+      {i.requestBody && (
+        <div>
+          <div className="text-default-500 mb-0.5">
+            {t("avSources.interaction.body", "Body")}
+            {i.requestContentType ? <span className="ml-1 text-default-400">({i.requestContentType})</span> : null}
+          </div>
+          <div className="rounded bg-default-100 p-2 font-mono whitespace-pre-wrap break-all">{i.requestBody}</div>
+        </div>
+      )}
+      {i.error && <div className="text-danger break-all">{i.error}</div>}
     </div>
   );
 };

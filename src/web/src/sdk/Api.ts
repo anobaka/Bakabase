@@ -1187,6 +1187,20 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
   auditLogRequestContent: boolean;
 }
 
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainAvSourceConfig {
+  enabled?: boolean;
+  baseUrl?: string;
+  cookie?: string;
+  userAgent?: string;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainAvSourceOptions {
+  sources?: Record<
+    string,
+    BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainAvSourceConfig
+  >;
+}
+
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainBangumiOptions {
   accounts?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainThirdPartyAccount[];
   cookie?: string;
@@ -1444,6 +1458,13 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputA
   /** @format int32 */
   defaultCacheTtlDays?: number;
   auditLogRequestContent?: boolean;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputAvSourceOptionsPatchInputModel {
+  sources?: Record<
+    string,
+    BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainAvSourceConfig
+  >;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputBangumiOptionsPatchInputModel {
@@ -3678,6 +3699,11 @@ export interface BakabaseServiceControllersResourceHealthScoreRowViewModel {
   evaluatedAt: string;
 }
 
+export interface BakabaseServiceModelsInputAvSourceTestInputModel {
+  number?: string;
+  sources?: string[];
+}
+
 export interface BakabaseServiceModelsInputBulkModificationPatchInputModel {
   name?: string;
   isActive?: boolean;
@@ -3884,6 +3910,45 @@ export interface BakabaseServiceModelsViewAnalyticsAppInfoViewModel {
   sentryDsn?: string;
   postHogApiKey?: string;
   postHogApiHost: string;
+}
+
+export interface BakabaseServiceModelsViewAvSourceInfoViewModel {
+  id: string;
+  defaultBaseUrl?: string;
+  defaultCookie?: string;
+  resolvedBaseUrl?: string;
+  resolvedCookie?: string;
+  enabled: boolean;
+}
+
+export interface BakabaseServiceModelsViewAvSourceTestDetailViewModel {
+  number?: string;
+  title?: string;
+  originalTitle?: string;
+  actor?: string;
+  tag?: string;
+  release?: string;
+  year?: string;
+  studio?: string;
+  publisher?: string;
+  series?: string;
+  runtime?: string;
+  director?: string;
+  source?: string;
+  coverUrl?: string;
+  posterUrl?: string;
+  website?: string;
+  mosaic?: string;
+  searchUrl?: string;
+}
+
+export interface BakabaseServiceModelsViewAvSourceTestResultViewModel {
+  source: string;
+  detail?: BakabaseServiceModelsViewAvSourceTestDetailViewModel;
+  error?: string;
+  skipped: boolean;
+  /** @format int64 */
+  durationMs: number;
 }
 
 export interface BakabaseServiceModelsViewBulkModificationDiffViewModel {
@@ -4537,6 +4602,20 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceContro
   data?: BakabaseServiceControllersResourceHealthScoreRowViewModel[];
 }
 
+export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewAvSourceInfoViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewAvSourceInfoViewModel[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewAvSourceTestResultViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewAvSourceTestResultViewModel[];
+}
+
 export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewBulkModificationViewModel {
   /** @format int32 */
   code: number;
@@ -4911,6 +4990,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWo
   code: number;
   message?: string;
   data?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainAiOptions;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainAvSourceOptions {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainAvSourceOptions;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainBangumiOptions {
@@ -7824,6 +7910,70 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     dismissLegacyInstallNoticeUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/app/data-path/legacy-notice/dismiss`;
+      
+      return baseUrl + path;
+    },
+  };
+  av = {
+    /**
+     * No description
+     *
+     * @tags Av
+     * @name GetAvSources
+     * @request GET:/av/sources
+     */
+    getAvSources: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewAvSourceInfoViewModel,
+        any
+      >({
+        path: `/av/sources`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getAvSources
+     * @name getAvSourcesUrl
+     */
+    getAvSourcesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/av/sources`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Av
+     * @name TestAvSources
+     * @request POST:/av/test
+     */
+    testAvSources: (
+      data: BakabaseServiceModelsInputAvSourceTestInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewAvSourceTestResultViewModel,
+        any
+      >({
+        path: `/av/test`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for testAvSources
+     * @name testAvSourcesUrl
+     */
+    testAvSourcesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/av/test`;
       
       return baseUrl + path;
     },
@@ -16702,6 +16852,66 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchTmdbOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/tmdb`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Options
+     * @name GetAvSourceOptions
+     * @request GET:/options/av-sources
+     */
+    getAvSourceOptions: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainAvSourceOptions,
+        any
+      >({
+        path: `/options/av-sources`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getAvSourceOptions
+     * @name getAvSourceOptionsUrl
+     */
+    getAvSourceOptionsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/options/av-sources`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Options
+     * @name PatchAvSourceOptions
+     * @request PATCH:/options/av-sources
+     */
+    patchAvSourceOptions: (
+      data: BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputAvSourceOptionsPatchInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/options/av-sources`,
+        method: "PATCH",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for patchAvSourceOptions
+     * @name patchAvSourceOptionsUrl
+     */
+    patchAvSourceOptionsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/options/av-sources`;
       
       return baseUrl + path;
     },

@@ -1,9 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Tab, Tabs } from "@heroui/react";
 import { AiOutlineVideoCamera } from "react-icons/ai";
+
+const SELECTED_TAB_STORAGE_KEY = "thirdPartyConfig.selectedTab";
 
 import ThirdPartyIcon from "@/components/ThirdPartyIcon";
 import {
@@ -57,6 +59,10 @@ function ThirdPartyTabTip({ tipKey }: { tipKey?: string }) {
 
 export default function ThirdPartyConfigurationPage() {
   const { t } = useTranslation();
+  const [selectedTab, setSelectedTab] = useState<string>(() => {
+    if (typeof window === "undefined") return "bilibili";
+    return localStorage.getItem(SELECTED_TAB_STORAGE_KEY) || "bilibili";
+  });
   const thirdPartySettings = useMemo(
     () => [
       { key: "bilibili", label: "Bilibili", tip: "thirdPartyConfig.tip.bilibili", content: <BilibiliConfigPanel fields="all" /> },
@@ -77,7 +83,16 @@ export default function ThirdPartyConfigurationPage() {
   );
 
   return (
-    <Tabs isVertical classNames={{ panel: "flex-1 w-0" }}>
+    <Tabs
+      isVertical
+      classNames={{ panel: "flex-1 w-0" }}
+      selectedKey={selectedTab}
+      onSelectionChange={(key) => {
+        const next = String(key);
+        setSelectedTab(next);
+        localStorage.setItem(SELECTED_TAB_STORAGE_KEY, next);
+      }}
+    >
       {thirdPartySettings.map((s) => (
         <Tab
           key={s.key}

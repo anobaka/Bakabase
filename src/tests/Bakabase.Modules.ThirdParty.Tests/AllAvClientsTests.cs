@@ -1,45 +1,25 @@
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Modules.ThirdParty.ThirdParties.Airav;
-using Bakabase.Modules.ThirdParty.ThirdParties.AiravCC;
 using Bakabase.Modules.ThirdParty.ThirdParties.Avsex;
 using Bakabase.Modules.ThirdParty.ThirdParties.Avsox;
-using Bakabase.Modules.ThirdParty.ThirdParties.CableAV;
 using Bakabase.Modules.ThirdParty.ThirdParties.CNMDB;
 using Bakabase.Modules.ThirdParty.ThirdParties.Dahlia;
 using Bakabase.Modules.ThirdParty.ThirdParties.Dmm;
 using Bakabase.Modules.ThirdParty.ThirdParties.FC2;
 using Bakabase.Modules.ThirdParty.ThirdParties.Faleno;
 using Bakabase.Modules.ThirdParty.ThirdParties.Fantastica;
-using Bakabase.Modules.ThirdParty.ThirdParties.Fc2club;
 using Bakabase.Modules.ThirdParty.ThirdParties.Fc2hub;
-using Bakabase.Modules.ThirdParty.ThirdParties.Fc2ppvdb;
 using Bakabase.Modules.ThirdParty.ThirdParties.Freejavbt;
-using Bakabase.Modules.ThirdParty.ThirdParties.Getchu;
 using Bakabase.Modules.ThirdParty.ThirdParties.GetchuDl;
-using Bakabase.Modules.ThirdParty.ThirdParties.Giga;
-using Bakabase.Modules.ThirdParty.ThirdParties.Hdouban;
-using Bakabase.Modules.ThirdParty.ThirdParties.Hscangku;
 using Bakabase.Modules.ThirdParty.ThirdParties.Iqqtv;
-using Bakabase.Modules.ThirdParty.ThirdParties.IqqtvNew;
 using Bakabase.Modules.ThirdParty.ThirdParties.Jav321;
 using Bakabase.Modules.ThirdParty.ThirdParties.Javbus;
 using Bakabase.Modules.ThirdParty.ThirdParties.Javday;
 using Bakabase.Modules.ThirdParty.ThirdParties.Javdb;
 using Bakabase.Modules.ThirdParty.ThirdParties.Javlibrary;
-using Bakabase.Modules.ThirdParty.ThirdParties.Kin8;
-using Bakabase.Modules.ThirdParty.ThirdParties.Love6;
 using Bakabase.Modules.ThirdParty.ThirdParties.Lulubar;
-using Bakabase.Modules.ThirdParty.ThirdParties.Madouqu;
-using Bakabase.Modules.ThirdParty.ThirdParties.Mdtv;
-using Bakabase.Modules.ThirdParty.ThirdParties.Mgstage;
 using Bakabase.Modules.ThirdParty.ThirdParties.Mmtv;
-using Bakabase.Modules.ThirdParty.ThirdParties.Mywife;
-using Bakabase.Modules.ThirdParty.ThirdParties.Official;
-using Bakabase.Modules.ThirdParty.ThirdParties.Prestige;
-using Bakabase.Modules.ThirdParty.ThirdParties.ThePornDB;
-using Bakabase.Modules.ThirdParty.ThirdParties.ThePornDBMovies;
-using Bakabase.Modules.ThirdParty.ThirdParties.Xcity;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using System.Runtime.CompilerServices;
@@ -243,45 +223,25 @@ namespace Bakabase.Modules.ThirdParty.Tests
                 Bakabase.Modules.ThirdParty.ThirdParties.Av.DefaultAvSourceOptionsProvider>();
 
             di.AddSingleton<AiravClient>();
-            di.AddSingleton<AiravCCClient>();
             di.AddSingleton<AvsexClient>();
             di.AddSingleton<AvsoxClient>();
-            di.AddSingleton<CableAVClient>();
             di.AddSingleton<CNMDBClient>();
             di.AddSingleton<DmmClient>();
             di.AddSingleton<DahliaClient>();
             di.AddSingleton<FC2Client>();
             di.AddSingleton<FalenoClient>();
             di.AddSingleton<FantasticaClient>();
-            di.AddSingleton<Fc2clubClient>();
             di.AddSingleton<Fc2hubClient>();
-            di.AddSingleton<Fc2ppvdbClient>();
             di.AddSingleton<FreejavbtClient>();
-            di.AddSingleton<GetchuClient>();
             di.AddSingleton<GetchuDlClient>();
-            di.AddSingleton<GigaClient>();
-            di.AddSingleton<HdoubanClient>();
-            di.AddSingleton<HscangkuClient>();
             di.AddSingleton<IqqtvClient>();
-            di.AddSingleton<IqqtvNewClient>();
             di.AddSingleton<Jav321Client>();
             di.AddSingleton<JavbusClient>();
             di.AddSingleton<JavdayClient>();
             di.AddSingleton<JavdbClient>();
             di.AddSingleton<JavlibraryClient>();
-            di.AddSingleton<Kin8Client>();
-            di.AddSingleton<Love6Client>();
             di.AddSingleton<LulubarClient>();
-            di.AddSingleton<MadouquClient>();
-            di.AddSingleton<MdtvClient>();
-            di.AddSingleton<MgstageClient>();
             di.AddSingleton<MmtvClient>();
-            di.AddSingleton<MywifeClient>();
-            di.AddSingleton<OfficialClient>();
-            di.AddSingleton<PrestigeClient>();
-            di.AddSingleton<ThePornDBClient>();
-            di.AddSingleton<ThePornDBMoviesClient>();
-            di.AddSingleton<XcityClient>();
 
             return di.BuildServiceProvider();
         }
@@ -292,45 +252,25 @@ namespace Bakabase.Modules.ThirdParty.Tests
             return new Dictionary<string, Func<string, Task<IAvDetail?>>>
             {
                 { "airav",          n => Wrap(sp.GetRequiredService<AiravClient>().SearchAndParseVideo(n)) },
-                { "airavcc",        n => Wrap(sp.GetRequiredService<AiravCCClient>().SearchAndParseVideo(n)) },
                 { "avsex",          n => Wrap(sp.GetRequiredService<AvsexClient>().SearchAndParseVideo(n)) },
                 { "avsox",          n => Wrap(sp.GetRequiredService<AvsoxClient>().SearchAndParseVideo(n)) },
-                { "cableav",        n => Wrap(sp.GetRequiredService<CableAVClient>().SearchAndParseVideo(n)) },
                 { "cnmdb",          n => Wrap(sp.GetRequiredService<CNMDBClient>().SearchAndParseVideo(n)) },
                 { "dmm",            n => Wrap(sp.GetRequiredService<DmmClient>().SearchAndParseVideo(n)) },
                 { "dahlia",         n => Wrap(sp.GetRequiredService<DahliaClient>().SearchAndParseVideo(n)) },
                 { "fc2",            n => Wrap(sp.GetRequiredService<FC2Client>().SearchAndParseVideo(n)) },
                 { "faleno",         n => Wrap(sp.GetRequiredService<FalenoClient>().SearchAndParseVideo(n)) },
                 { "fantastica",     n => Wrap(sp.GetRequiredService<FantasticaClient>().SearchAndParseVideo(n)) },
-                { "fc2club",        n => Wrap(sp.GetRequiredService<Fc2clubClient>().SearchAndParseVideo(n)) },
                 { "fc2hub",         n => Wrap(sp.GetRequiredService<Fc2hubClient>().SearchAndParseVideo(n)) },
-                { "fc2ppvdb",       n => Wrap(sp.GetRequiredService<Fc2ppvdbClient>().SearchAndParseVideo(n)) },
                 { "freejavbt",      n => Wrap(sp.GetRequiredService<FreejavbtClient>().SearchAndParseVideo(n)) },
-                { "getchu",         n => Wrap(sp.GetRequiredService<GetchuClient>().SearchAndParseVideo(n)) },
                 { "getchudl",       n => Wrap(sp.GetRequiredService<GetchuDlClient>().SearchAndParseVideo(n)) },
-                { "giga",           n => Wrap(sp.GetRequiredService<GigaClient>().SearchAndParseVideo(n)) },
-                { "hdouban",        n => Wrap(sp.GetRequiredService<HdoubanClient>().SearchAndParseVideo(n)) },
-                { "hscangku",       n => Wrap(sp.GetRequiredService<HscangkuClient>().SearchAndParseVideo(n)) },
                 { "iqqtv",          n => Wrap(sp.GetRequiredService<IqqtvClient>().SearchAndParseVideo(n)) },
-                { "iqqtvnew",       n => Wrap(sp.GetRequiredService<IqqtvNewClient>().SearchAndParseVideo(n)) },
                 { "jav321",         n => Wrap(sp.GetRequiredService<Jav321Client>().SearchAndParseVideo(n)) },
                 { "javbus",         n => Wrap(sp.GetRequiredService<JavbusClient>().SearchAndParseVideo(n)) },
                 { "javday",         n => Wrap(sp.GetRequiredService<JavdayClient>().SearchAndParseVideo(n)) },
                 { "javdb",          n => Wrap(sp.GetRequiredService<JavdbClient>().SearchAndParseVideo(n)) },
                 { "javlibrary",     n => Wrap(sp.GetRequiredService<JavlibraryClient>().SearchAndParseVideo(n)) },
-                { "kin8",           n => Wrap(sp.GetRequiredService<Kin8Client>().SearchAndParseVideo(n)) },
-                { "love6",          n => Wrap(sp.GetRequiredService<Love6Client>().SearchAndParseVideo(n)) },
                 { "lulubar",        n => Wrap(sp.GetRequiredService<LulubarClient>().SearchAndParseVideo(n)) },
-                { "madouqu",        n => Wrap(sp.GetRequiredService<MadouquClient>().SearchAndParseVideo(n)) },
-                { "mdtv",           n => Wrap(sp.GetRequiredService<MdtvClient>().SearchAndParseVideo(n)) },
-                { "mgstage",        n => Wrap(sp.GetRequiredService<MgstageClient>().SearchAndParseVideo(n)) },
                 { "mmtv",           n => Wrap(sp.GetRequiredService<MmtvClient>().SearchAndParseVideo(n)) },
-                { "mywife",         n => Wrap(sp.GetRequiredService<MywifeClient>().SearchAndParseVideo(n)) },
-                { "official",       n => Wrap(sp.GetRequiredService<OfficialClient>().SearchAndParseVideo(n)) },
-                { "prestige",       n => Wrap(sp.GetRequiredService<PrestigeClient>().SearchAndParseVideo(n)) },
-                { "theporndb",      n => Wrap(sp.GetRequiredService<ThePornDBClient>().SearchAndParseVideo(n)) },
-                { "theporndbmovies",n => Wrap(sp.GetRequiredService<ThePornDBMoviesClient>().SearchAndParseVideo(n)) },
-                { "xcity",          n => Wrap(sp.GetRequiredService<XcityClient>().SearchAndParseVideo(n)) },
             };
         }
 

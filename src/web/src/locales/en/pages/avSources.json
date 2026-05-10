@@ -6,7 +6,7 @@
   "avSources.button.refresh": "Refresh",
   "avSources.helper.summary": "{{count}} sources discovered",
   "avSources.chip.disabled": "disabled",
-  "avSources.chip.bypass": "auto bypass",
+  "avSources.chip.bypass": "auto bypass detection",
   "avSources.accordion.config": "Configuration",
   "avSources.field.enabled": "Enabled",
   "avSources.field.baseUrl": "Base URL",
@@ -30,5 +30,9 @@
   "avSources.result.empty": "No data ({{ms}}ms)",
   "avSources.result.ok": "OK",
   "avSources.toast.saved": "Saved",
-  "avSources.toast.numberRequired": "Please enter a number first"
+  "avSources.toast.numberRequired": "Please enter a number first",
+  "avSources.accordion.requests": "HTTP requests",
+  "avSources.interaction.failed": "failed",
+  "avSources.interaction.headers": "Headers",
+  "avSources.interaction.body": "Body"
 }

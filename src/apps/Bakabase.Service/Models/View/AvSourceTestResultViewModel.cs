@@ -1,4 +1,22 @@
+using System.Collections.Generic;
+
 namespace Bakabase.Service.Models.View;
+
+public class AvSourceHttpInteractionViewModel
+{
+    public string Method { get; set; } = null!;
+    public string Url { get; set; } = null!;
+    public Dictionary<string, string> RequestHeaders { get; set; } = new();
+    public string? RequestBody { get; set; }
+    public string? RequestContentType { get; set; }
+    public int? ResponseStatusCode { get; set; }
+    public string? ResponseReasonPhrase { get; set; }
+    public Dictionary<string, string>? ResponseHeaders { get; set; }
+    public string? ResponseContentType { get; set; }
+    public long? ResponseContentLength { get; set; }
+    public string? Error { get; set; }
+    public long DurationMs { get; set; }
+}
 
 public class AvSourceTestDetailViewModel
 {
@@ -29,6 +47,7 @@ public class AvSourceTestResultViewModel
     public string? Error { get; set; }
     public bool Skipped { get; set; }
     public long DurationMs { get; set; }
+    public List<AvSourceHttpInteractionViewModel>? Interactions { get; set; }
 }
 
 public class AvSourceInfoViewModel

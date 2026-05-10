@@ -1,6 +1,7 @@
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
 using Bakabase.Modules.ThirdParty.Helpers;
+using Bakabase.Modules.ThirdParty.ThirdParties.Av;
 using Bakabase.Modules.ThirdParty.ThirdParties.Iqqtv.Models;
 using Microsoft.Extensions.Logging;
 using CsQuery;
@@ -8,7 +9,10 @@ using System.Text.RegularExpressions;
 
 namespace Bakabase.Modules.ThirdParty.ThirdParties.Iqqtv;
 
-public class IqqtvClient(IHttpClientFactory httpClientFactory, ILoggerFactory loggerFactory)
+public class IqqtvClient(
+    IHttpClientFactory httpClientFactory,
+    ILoggerFactory loggerFactory,
+    IAvSourceOptionsProvider avOptionsProvider)
     : BakabaseHttpClient(httpClientFactory, loggerFactory)
 {
     protected override string HttpClientName => InternalOptions.HttpClientNames.Default;
@@ -17,13 +21,23 @@ public class IqqtvClient(IHttpClientFactory httpClientFactory, ILoggerFactory lo
     {
         try
         {
+            var config = avOptionsProvider.Resolve("iqqtv");
+            if (!config.Enabled) return null;
+
             if (!Regex.IsMatch(number ?? string.Empty, @"^n\d{4}$"))
             {
                 number = number?.ToUpper();
             }
 
-            var site = (baseUrl ?? "https://iqq5.xyz").TrimEnd('/');
-            var prefix = language switch { "zh_cn" => "/cn", "zh_tw" => "", _ => "/jp" };
+            var site = (baseUrl ?? config.BaseUrl ?? "https://iqqtv.cloud").TrimEnd('/');
+            // iqqtv URL prefix: /cn (Simplified) | "" (Traditional) | /jp (Japanese) | /en (English)
+            var prefix = language switch
+            {
+                "zh_cn" => "/cn",
+                "zh_tw" => "",
+                "en" => "/en",
+                _ => "/jp",
+            };
             var iqqtvUrl = site + prefix + "/";
 
             string realUrl;
@@ -45,11 +59,13 @@ public class IqqtvClient(IHttpClientFactory httpClientFactory, ILoggerFactory lo
             var html = await HttpClient.GetStringAsync(realUrl);
             var cq = new CQ(html);
 
-            var title = cq["#videoInfo h1.h4.b"].First().Text().Trim();
+            // Detail page header: <h1 class="h4 b" itemprop="name">…</h1>; the legacy
+            // "#videoInfo h1.h4.b" selector no longer matches the surrounding wrapper.
+            var title = cq["h1.h4.b"].First().Text().Trim();
             if (string.IsNullOrEmpty(title)) return null;
             var webNumber = GetWebNumberFromTitle(title, number ?? string.Empty);
             title = title.Replace($" {webNumber}", "").Trim();
-            var actor = string.Join(",", cq["#videoInfo p span:nth-child(2) a"].Select(a => a.InnerText));
+            var actor = string.Join(",", cq["p span:nth-child(2) a[href*='actor']"].Select(a => a.InnerText));
             var cover = cq["meta[property='og:image']"].Attr("content") ?? string.Empty;
             var outline = GetOutline(cq);
             var release = cq["div.date"].Text().Replace("/", "-").Trim();

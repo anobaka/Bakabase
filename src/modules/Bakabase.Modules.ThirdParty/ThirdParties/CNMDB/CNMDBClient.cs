@@ -55,18 +55,18 @@ public class CNMDBClient(IHttpClientFactory httpClientFactory, ILoggerFactory lo
                 var numberList = GetNumberList(number, appointNumber, filePath);
 
                 bool found = false;
-                
-                // Try direct number search first
+
                 foreach (var searchNumber in numberList)
                 {
-                    var directUrl = $"{BaseUrl}/{searchNumber}";
-                    
+                    // cnmdb keyword-search URL pattern: /search/keyword-<NUMBER>.html
+                    searchUrl = $"{BaseUrl}/search/keyword-{HttpUtility.UrlPathEncode(searchNumber)}.html";
+
                     try
                     {
-                        var html = await HttpClient.GetStringAsync(directUrl);
+                        var html = await HttpClient.GetStringAsync(searchUrl);
                         var cq = new CQ(html);
-                        var (success, parsedNumber, parsedTitle, parsedActor, parsedUrl, parsedCover, parsedStudio, parsedSeries) = GetDetailInfo(cq, directUrl);
-                        
+                        var (success, parsedNumber, parsedTitle, parsedActor, parsedUrl, parsedCover, parsedStudio, parsedSeries) = GetSearchInfo(cq, numberList);
+
                         if (success)
                         {
                             number = parsedNumber;
@@ -82,47 +82,7 @@ public class CNMDBClient(IHttpClientFactory httpClientFactory, ILoggerFactory lo
                     }
                     catch
                     {
-                        // Continue to next number or search method
-                    }
-                }
-
-                if (!found && !string.IsNullOrEmpty(filePath))
-                {
-                    // Fallback to filename-based search
-                    var filenameList = Regex.Split(filePath, @"[\.,，]");
-                    
-                    foreach (var searchTerm in filenameList)
-                    {
-                        if (searchTerm.Length < 5 || searchTerm.Contains("传媒") || searchTerm.Contains("麻豆"))
-                        {
-                            continue;
-                        }
-
-                        searchUrl = $"{BaseUrl}/s0?q={HttpUtility.UrlEncode(searchTerm)}";
-                        
-                        try
-                        {
-                            var html = await HttpClient.GetStringAsync(searchUrl);
-                            var cq = new CQ(html);
-                            var (success, parsedNumber, parsedTitle, parsedActor, parsedUrl, parsedCover, parsedStudio, parsedSeries) = GetSearchInfo(cq, numberList);
-                            
-                            if (success)
-                            {
-                                number = parsedNumber;
-                                title = parsedTitle;
-                                actor = parsedActor;
-                                realUrl = parsedUrl;
-                                coverUrl = parsedCover;
-                                studio = parsedStudio;
-                                series = parsedSeries;
-                                found = true;
-                                break;
-                            }
-                        }
-                        catch
-                        {
-                            continue;
-                        }
+                        // Try the next number
                     }
                 }
 
@@ -228,35 +188,30 @@ public class CNMDBClient(IHttpClientFactory httpClientFactory, ILoggerFactory lo
     {
         try
         {
-            var itemList = html["div.post-item"];
-            
+            // cnmdb 2024+ search result layout: div.loop-entry > div.loop-entry-inner > a.loop-entry-img-link[title="..."][href="/<NUMBER>"] > img
+            var itemList = html["div.loop-entry a.loop-entry-img-link"];
+
             foreach (var item in itemList)
             {
-                var itemCq = new CQ(item);
-                var titleElements = itemCq["h3 a"];
-                
-                if (!titleElements.Any()) continue;
-                
-                var titleText = titleElements.First().Text();
-                
+                var itemCq = item.Cq();
+                var href = itemCq.Attr("href") ?? "";
+                var titleText = itemCq.Attr("title") ?? itemCq.Find("img").Attr("alt") ?? "";
+                if (string.IsNullOrEmpty(href) || string.IsNullOrEmpty(titleText)) continue;
+
                 foreach (var searchNumber in numberList)
                 {
-                    if (titleText.ToUpper().Contains(searchNumber.ToUpper()))
-                    {
-                        var realUrl = itemCq["h3 a"].Attr("href") ?? "";
-                        var cover = itemCq["div.post-item-image a div img"].Attr("src") ?? "";
-                        var studioUrl = itemCq["a"].Attr("href") ?? "";
-                        var studio = itemCq["a span"].Text() ?? "";
-                        
-                        if (studioUrl.Contains("麻豆"))
-                        {
-                            studio = "麻豆";
-                        }
+                    if (!titleText.ToUpper().Contains(searchNumber.ToUpper())) continue;
 
-                        var (parsedTitle, parsedNumber, actor, series) = GetActorTitle(titleText, searchNumber, studio);
-                        
-                        return (true, parsedNumber, parsedTitle, actor, realUrl, cover, studio, series);
-                    }
+                    var realUrl = href.StartsWith("http", StringComparison.OrdinalIgnoreCase)
+                        ? href
+                        : BaseUrl.TrimEnd('/') + (href.StartsWith("/") ? href : "/" + href);
+                    var cover = itemCq.Find("img").Attr("src") ?? "";
+                    if (!string.IsNullOrEmpty(cover) && cover.StartsWith("//")) cover = "https:" + cover;
+
+                    var studio = titleText.Contains("麻豆") ? "麻豆" : "";
+                    var (parsedTitle, parsedNumber, actor, series) = GetActorTitle(titleText, searchNumber, studio);
+
+                    return (true, parsedNumber, parsedTitle, actor, realUrl, cover, studio, series);
                 }
             }
 

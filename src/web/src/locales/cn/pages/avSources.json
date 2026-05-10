@@ -6,7 +6,7 @@
   "avSources.button.refresh": "刷新",
   "avSources.helper.summary": "已识别 {{count}} 个数据源",
   "avSources.chip.disabled": "已禁用",
-  "avSources.chip.bypass": "已内置绕过",
+  "avSources.chip.bypass": "自动绕过检测",
   "avSources.accordion.config": "配置",
   "avSources.field.enabled": "启用",
   "avSources.field.baseUrl": "基础 URL",
@@ -30,5 +30,9 @@
   "avSources.result.empty": "无数据（{{ms}}ms）",
   "avSources.result.ok": "成功",
   "avSources.toast.saved": "已保存",
-  "avSources.toast.numberRequired": "请先输入番号"
+  "avSources.toast.numberRequired": "请先输入番号",
+  "avSources.accordion.requests": "HTTP 请求",
+  "avSources.interaction.failed": "失败",
+  "avSources.interaction.headers": "请求头",
+  "avSources.interaction.body": "请求体"
 }

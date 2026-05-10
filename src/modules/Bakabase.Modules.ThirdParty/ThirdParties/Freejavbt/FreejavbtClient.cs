@@ -44,8 +44,15 @@ public class FreejavbtClient(IHttpClientFactory httpClientFactory, ILoggerFactor
                     parsedNumber = numberMatch.Groups[1].Value;
                     var titlePart = cleaned.Substring(numberMatch.Length).Trim();
 
+                    // The freejavbt <title> often repeats the number ("RBK-130 RBK-130 …"); strip
+                    // each leading repeat first so the duplication check below doesn't trim everything.
+                    while (titlePart.StartsWith(parsedNumber, StringComparison.OrdinalIgnoreCase))
+                    {
+                        titlePart = titlePart.Substring(parsedNumber.Length).TrimStart();
+                    }
+
                     // Handle CsQuery .Text() duplication (mobile+desktop concatenated)
-                    // If the number appears again, the content is duplicated - take only the first copy
+                    // If the number reappears later, the content is duplicated — take only the first copy.
                     var secondIdx = titlePart.IndexOf(parsedNumber, StringComparison.OrdinalIgnoreCase);
                     if (secondIdx >= 0)
                     {
