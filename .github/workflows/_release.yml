@@ -144,21 +144,40 @@ jobs:
               labelGroups[cfg.name] = { emoji: cfg.emoji, title: cfg.title, issues: [] };
             }
 
-            // Collect all issue numbers from commit links
+            // Match GitHub's auto-close keyword grammar (fix/close/resolve + variants),
+            // optionally followed by ':' before '#N'. Bare '#N' is intentionally NOT matched
+            // to avoid false positives from free-text references like "metric #4" or "step #5".
+            const ISSUE_RE = /\b(?:fix(?:e[sd])?|close[sd]?|resolve[sd]?)\b[:\s]+#(\d+)/gi;
+            const collectMatches = (text) => {
+              const out = new Set();
+              if (!text) return out;
+              ISSUE_RE.lastIndex = 0;
+              let m;
+              while ((m = ISSUE_RE.exec(text)) !== null) {
+                out.add(m[1]);
+              }
+              return out;
+            };
+
+            // Per-commit issue numbers, collected from commit message and from PR descriptions.
+            const commitIssues = {};
             const numberSet = new Set();
+
+            // Collect from commit messages (subject + body + raw).
             for (const commit of Array.isArray(initial.commits) ? initial.commits : []) {
-              const links = Array.isArray(commit.links) ? commit.links : [];
-              for (const link of links) {
-                const m = /#(\d+)/.exec(link.text || '');
-                if (m) {
-                  numberSet.add(m[1]);
+              const text = [commit.raw_message, commit.message, commit.body]
+                .filter(Boolean).join('\n');
+              const found = collectMatches(text);
+              if (found.size > 0) {
+                commitIssues[commit.id] ??= new Set();
+                for (const n of found) {
+                  numberSet.add(n);
+                  commitIssues[commit.id].add(n);
                 }
               }
             }
 
-            // Also collect issue numbers from PR descriptions (fix/close/resolve keywords)
-            // commitPrIssues maps commit id -> set of issue numbers found via PR
-            const commitPrIssues = {};
+            // Also collect from PR descriptions associated with each commit.
             const prChecked = new Set();
             for (const commit of Array.isArray(initial.commits) ? initial.commits : []) {
               if (!commit.id || prChecked.has(commit.id)) continue;
@@ -168,13 +187,13 @@ jobs:
                   owner, repo, commit_sha: commit.id
                 });
                 for (const pr of prs) {
-                  if (!pr.body) continue;
-                  const regex = /(?:fix(?:e[sd])?|close[sd]?|resolve[sd]?)\s+#(\d+)/gi;
-                  let match;
-                  while ((match = regex.exec(pr.body)) !== null) {
-                    numberSet.add(match[1]);
-                    commitPrIssues[commit.id] ??= new Set();
-                    commitPrIssues[commit.id].add(match[1]);
+                  const found = collectMatches(pr.body);
+                  if (found.size > 0) {
+                    commitIssues[commit.id] ??= new Set();
+                    for (const n of found) {
+                      numberSet.add(n);
+                      commitIssues[commit.id].add(n);
+                    }
                   }
                 }
               } catch (e) {
@@ -219,23 +238,11 @@ jobs:
               }
             }
 
-            // Attach issues to commits (from both commit links and PR descriptions)
+            // Attach issues to commits (per-commit numbers collected above).
             for (const commit of Array.isArray(initial.commits) ? initial.commits : []) {
-              const linkedNums = new Set();
               const list = [];
-              // From commit message links
-              const links = Array.isArray(commit.links) ? commit.links : [];
-              for (const link of links) {
-                const m = /#(\d+)/.exec(link.text || '');
-                if (m) linkedNums.add(m[1]);
-              }
-              // From PR descriptions
-              if (commit.id && commitPrIssues[commit.id]) {
-                for (const n of commitPrIssues[commit.id]) {
-                  linkedNums.add(n);
-                }
-              }
-              for (const n of linkedNums) {
+              const nums = (commit.id && commitIssues[commit.id]) || new Set();
+              for (const n of nums) {
                 const issue = issues[n] || issues['#' + n] || null;
                 if (issue) list.push(issue);
               }

@@ -3,9 +3,10 @@ conventional_commits = true
 filter_unconventional = false
 topo_order = false
 protect_breaking_commits = true
-link_parsers = [
-  { pattern = "#(\\d+)", href = "https://github.com/anobaka/Bakabase/issues/$1"}
-]
+# Issue references are extracted in _release.yml using a keyword-gated regex
+# (fix/close/resolve + #N). Cliff's link_parsers blindly catches every '#N',
+# which causes false positives on free-text refs like "metric #4", so it is
+# intentionally not configured here.
 filter_commits = false
 
 commit_parsers = [
