@@ -15,6 +15,8 @@
   "downloader.action.createTask": "创建任务",
   "downloader.action.startAll": "全部开始",
   "downloader.action.stopAll": "全部停止",
+  "downloader.toast.startingAll": "正在开始全部任务……",
+  "downloader.toast.stoppingAll": "正在停止全部任务……",
   "downloader.action.cleanup": "清理",
   "downloader.action.deleteCompleted": "删除所有已完成的任务",
   "downloader.action.deleteFailed": "删除所有失败的任务",
@@ -73,5 +75,8 @@
   "downloader.bilibili.selectFavorites": "选择收藏夹",
   "downloader.bilibili.noFavorites": "无法获取 Bilibili 收藏夹。请确认 Cookie 设置正确且至少创建了一个收藏夹。",
   "downloader.bilibili.setupNow": "立即设置",
-  "downloader.label.configurations": "下载器配置"
+  "downloader.label.configurations": "下载器配置",
+  "downloader.config.tab.general": "通用",
+  "downloader.config.autoStartAfterCreation.label": "创建后自动开始下载",
+  "downloader.config.autoStartAfterCreation.description": "开启后，新建的下载任务将自动开始，无需手动启动。"
 }

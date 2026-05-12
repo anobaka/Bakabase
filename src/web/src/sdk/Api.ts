@@ -1277,6 +1277,10 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
   autoSyncIntervalMinutes?: number;
 }
 
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainDownloaderGlobalOptions {
+  autoStartAfterCreation: boolean;
+}
+
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainExHentaiAccount {
   name?: string;
   cookie?: string;
@@ -1531,6 +1535,10 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputD
   requestTimeout?: number;
   showCover?: boolean;
   deleteArchiveAfterExtraction?: boolean;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputDownloaderGlobalOptionsPatchInputModel {
+  autoStartAfterCreation?: boolean;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputExHentaiOptionsPatchInputModel {
@@ -3702,6 +3710,7 @@ export interface BakabaseServiceControllersResourceHealthScoreRowViewModel {
 export interface BakabaseServiceModelsInputAvSourceTestInputModel {
   number?: string;
   sources?: string[];
+  language?: string;
 }
 
 export interface BakabaseServiceModelsInputBulkModificationPatchInputModel {
@@ -3912,6 +3921,24 @@ export interface BakabaseServiceModelsViewAnalyticsAppInfoViewModel {
   postHogApiHost: string;
 }
 
+export interface BakabaseServiceModelsViewAvSourceHttpInteractionViewModel {
+  method: string;
+  url: string;
+  requestHeaders: Record<string, string>;
+  requestBody?: string;
+  requestContentType?: string;
+  /** @format int32 */
+  responseStatusCode?: number;
+  responseReasonPhrase?: string;
+  responseHeaders?: Record<string, string>;
+  responseContentType?: string;
+  /** @format int64 */
+  responseContentLength?: number;
+  error?: string;
+  /** @format int64 */
+  durationMs: number;
+}
+
 export interface BakabaseServiceModelsViewAvSourceInfoViewModel {
   id: string;
   defaultBaseUrl?: string;
@@ -3949,6 +3976,7 @@ export interface BakabaseServiceModelsViewAvSourceTestResultViewModel {
   skipped: boolean;
   /** @format int64 */
   durationMs: number;
+  interactions?: BakabaseServiceModelsViewAvSourceHttpInteractionViewModel[];
 }
 
 export interface BakabaseServiceModelsViewBulkModificationDiffViewModel {
@@ -5025,6 +5053,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWo
   code: number;
   message?: string;
   data?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainDLsiteOptions;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainDownloaderGlobalOptions {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainDownloaderGlobalOptions;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainExHentaiOptions {
@@ -15506,6 +15541,66 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchUiStyleOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/ui-style`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Options
+     * @name GetDownloaderGlobalOptions
+     * @request GET:/options/downloader
+     */
+    getDownloaderGlobalOptions: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainDownloaderGlobalOptions,
+        any
+      >({
+        path: `/options/downloader`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getDownloaderGlobalOptions
+     * @name getDownloaderGlobalOptionsUrl
+     */
+    getDownloaderGlobalOptionsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/options/downloader`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Options
+     * @name PatchDownloaderGlobalOptions
+     * @request PATCH:/options/downloader
+     */
+    patchDownloaderGlobalOptions: (
+      data: BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputDownloaderGlobalOptionsPatchInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/options/downloader`,
+        method: "PATCH",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for patchDownloaderGlobalOptions
+     * @name patchDownloaderGlobalOptionsUrl
+     */
+    patchDownloaderGlobalOptionsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/options/downloader`;
       
       return baseUrl + path;
     },

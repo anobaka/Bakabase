@@ -11,8 +11,9 @@ import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ButtonGroup, Input, Textarea } from "@heroui/react";
 
-import { ThirdPartyId } from "@/sdk/constants";
+import { DownloadTaskActionOnConflict, ThirdPartyId } from "@/sdk/constants";
 import { Alert, Button, Modal } from "@/components/bakaui";
+import { useDownloaderGlobalOptionsStore } from "@/stores/options";
 import NavigateButton from "@/components/NavigateButton";
 import { isThirdPartyDeveloping } from "@/pages/downloader/models";
 import DevelopingChip from "@/components/Chips/DevelopingChip";
@@ -45,6 +46,9 @@ type Props = {
 const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
+  const autoStartAfterCreation = useDownloaderGlobalOptionsStore(
+    (s) => s.data?.autoStartAfterCreation ?? false,
+  );
 
   const isAdding = !(id && id > 0);
   const [form, setForm] = useState<Partial<Form>>({ autoRetry: true });
@@ -150,7 +154,7 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
       form.thirdPartyId &&
       form.downloadPath &&
       form.keys &&
-      form.keys.length > 0 &&
+      form.keys.some((k) => k.trim()) &&
       form.type
     ) {
       return true;
@@ -197,10 +201,7 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
                 onValueChange={(v) => {
                   setForm({
                     ...form,
-                    keys: v
-                      .split("\n")
-                      .map((k) => k.trim())
-                      .filter((k) => k),
+                    keys: v.split("\n"),
                   });
                 }}
               />
@@ -343,7 +344,10 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
         }
         onDestroyed={onDestroyed}
         onOk={async () => {
-          const validForm = form as Form;
+          const validForm = {
+            ...form,
+            keys: form.keys?.map((k) => k.trim()).filter(Boolean),
+          } as Form;
 
           console.log(form, validForm);
 
@@ -352,6 +356,18 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
 
             if (r.code) {
               throw new Error(r.message);
+            }
+
+            if (autoStartAfterCreation) {
+              const newIds = (r.data ?? [])
+                .map((task) => task.id)
+                .filter((tid): tid is number => typeof tid === "number");
+              if (newIds.length > 0) {
+                await BApi.downloadTask.startDownloadTasks({
+                  ids: newIds,
+                  actionOnConflict: DownloadTaskActionOnConflict.Ignore,
+                });
+              }
             }
           } else {
             const r = await BApi.downloadTask.putDownloadTask(id, validForm);

@@ -406,7 +406,7 @@ export default function EnhancerOptionsModal({
       <div className={"flex flex-col gap-y-2"}>
         {/* Embed third-party account & data-fetch config for platform-linked enhancers */}
         {enhancer.id === EnhancerId.ExHentai && (
-          <ExHentaiConfigPanel fields={[ExHentaiConfigField.Accounts, ExHentaiConfigField.DataFetch]} showFooter={false} />
+          <ExHentaiConfigPanel fields={[ExHentaiConfigField.Accounts, ExHentaiConfigField.DataFetch]} />
         )}
         {enhancer.id === EnhancerId.DLsite && (
           <DLsiteConfigPanel fields={[DLsiteConfigField.Accounts, DLsiteConfigField.DataFetch]} showFooter={false} />

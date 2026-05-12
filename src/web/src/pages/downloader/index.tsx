@@ -37,6 +37,7 @@ import {
   Listbox,
   ListboxItem,
   Modal,
+  toast,
 } from "@/components/bakaui";
 import "@szhsin/react-menu/dist/index.css";
 import "@szhsin/react-menu/dist/transitions/slide.css";
@@ -485,6 +486,7 @@ const DownloaderPage = () => {
             size={"small"}
             variant={"flat"}
             onPress={() => {
+              toast.success(t<string>("downloader.toast.startingAll"));
               startTasksManually([], DownloadTaskActionOnConflict.Ignore);
             }}
           >
@@ -496,6 +498,7 @@ const DownloaderPage = () => {
             size={"small"}
             variant={"flat"}
             onPress={() => {
+              toast.success(t<string>("downloader.toast.stoppingAll"));
               BApi.downloadTask.stopDownloadTasks([]);
             }}
           >
@@ -666,13 +669,15 @@ const DownloaderPage = () => {
                         <div className={"mr-8 flex items-center gap-2"}>
                           <Chip
                             color={DownloadTaskStatusIceLabelStatusMap[task.status]}
-                            // size={"lg"}
-                            // size={"sm"}
                             variant={"light"}
                           >
                             {t<string>(DownloadTaskStatus[task.status])}
-                            {task.current}
                           </Chip>
+                          {task.current && (
+                            <span className="text-xs text-default-400">
+                              {task.current}
+                            </span>
+                          )}
                           {task.status == DownloadTaskStatus.Failed && (
                             <Button
                               isIconOnly
@@ -823,7 +828,6 @@ const DownloaderPage = () => {
           </Listbox>
         )}
       </div>
-      ß
     </div>
   );
 };

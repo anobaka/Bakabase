@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type FC } from "react";
+import { useEffect, useMemo, useState, type FC } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Textarea } from "@heroui/react";
+import { Textarea } from "@heroui/react";
 
 import { Chip, NumberInput, toast } from "@/components/bakaui";
 import { FileSystemSelectorButton } from "@/components/FileSystemSelector";
@@ -27,20 +27,14 @@ export enum ExHentaiConfigField {
 
 export interface ExHentaiConfigPanelProps {
   fields?: ExHentaiConfigField[] | "all";
-  /** Show Save (and optional Cancel). Default true. */
-  showFooter?: boolean;
-  onCancel?: () => void;
 }
 
 export const ExHentaiConfigPanel: FC<ExHentaiConfigPanelProps> = ({
   fields = "all",
-  showFooter = true,
-  onCancel,
 }) => {
   const { t } = useTranslation();
   const options = useExHentaiOptionsStore((s) => s.data);
   const patch = useExHentaiOptionsStore((s) => s.patch);
-  const [saving, setSaving] = useState(false);
   const [namingDefinition, setNamingDefinition] = useState<any>();
 
   const showDownload = fields === "all" || (Array.isArray(fields) && fields.includes(ExHentaiConfigField.Download));
@@ -51,7 +45,6 @@ export const ExHentaiConfigPanel: FC<ExHentaiConfigPanelProps> = ({
       if (def) setNamingDefinition(def);
     });
   }, [showDownload]);
-  const pendingAccountsRef = useRef<any[] | null>(null);
 
   const accountFields: AccountField[] = useMemo(
     () => [
@@ -67,21 +60,9 @@ export const ExHentaiConfigPanel: FC<ExHentaiConfigPanelProps> = ({
     [t],
   );
 
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      const updates: any = {};
-      if (pendingAccountsRef.current !== null) {
-        updates.accounts = pendingAccountsRef.current;
-      }
-      if (Object.keys(updates).length > 0) {
-        await patch(updates);
-      }
-      toast.success(t("thirdPartyConfig.success.saved"));
-      onCancel?.();
-    } finally {
-      setSaving(false);
-    }
+  const handleAccountsSave = async (accounts: any[]) => {
+    await patch({ accounts });
+    toast.success(t("thirdPartyConfig.success.saved"));
   };
 
   const tabs: ConfigFieldTab<ExHentaiConfigField>[] = useMemo(
@@ -94,11 +75,7 @@ export const ExHentaiConfigPanel: FC<ExHentaiConfigPanelProps> = ({
           <AccountsPanel
             accounts={options?.accounts || []}
             fields={accountFields}
-            hideFooter
-            onAccountsChange={(accs) => {
-              pendingAccountsRef.current = accs;
-            }}
-            onSave={async () => {}}
+            onSave={handleAccountsSave}
           />
         ),
       },
@@ -214,23 +191,7 @@ export const ExHentaiConfigPanel: FC<ExHentaiConfigPanelProps> = ({
     [options, accountFields, t, patch],
   );
 
-  return (
-    <>
-      <ConfigurableThirdPartyPanel fields={fields} tabs={tabs} />
-      {showFooter && (
-        <div className="mt-4 flex justify-end gap-2 border-t border-default-200 pt-4">
-          {onCancel ? (
-            <Button variant="light" onPress={onCancel}>
-              {t("common.action.cancel")}
-            </Button>
-          ) : null}
-          <Button color="primary" isLoading={saving} onPress={handleSave}>
-            {t("common.action.save")}
-          </Button>
-        </div>
-      )}
-    </>
-  );
+  return <ConfigurableThirdPartyPanel fields={fields} tabs={tabs} />;
 };
 
 export interface ExHentaiConfigModalProps {
@@ -254,7 +215,7 @@ export const ExHentaiConfigModal: FC<ExHentaiConfigModalProps> = ({
       isOpen={isOpen}
       onClose={handleClose}
     >
-      <ExHentaiConfigPanel fields={fields} onCancel={handleClose} />
+      <ExHentaiConfigPanel fields={fields} />
     </ThirdPartyConfigModal>
   );
 };

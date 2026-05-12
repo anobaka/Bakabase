@@ -15,6 +15,8 @@
   "downloader.action.createTask": "Create task",
   "downloader.action.startAll": "Start all",
   "downloader.action.stopAll": "Stop all",
+  "downloader.toast.startingAll": "Starting all tasks...",
+  "downloader.toast.stoppingAll": "Stopping all tasks...",
   "downloader.action.cleanup": "Cleanup",
   "downloader.action.deleteCompleted": "Delete all completed tasks",
   "downloader.action.deleteFailed": "Delete all failed tasks",
@@ -73,5 +75,8 @@
   "downloader.bilibili.selectFavorites": "Select favorites",
   "downloader.bilibili.noFavorites": "Unable to retrieve Bilibili favorites. Please ensure your cookie is correctly set and that you have at least one favorite created.",
   "downloader.bilibili.setupNow": "Setup now",
-  "downloader.label.configurations": "Downloader Configurations"
+  "downloader.label.configurations": "Downloader Configurations",
+  "downloader.config.tab.general": "General",
+  "downloader.config.autoStartAfterCreation.label": "Auto-start tasks after creation",
+  "downloader.config.autoStartAfterCreation.description": "When enabled, newly created download tasks will be started automatically without manual action."
 }

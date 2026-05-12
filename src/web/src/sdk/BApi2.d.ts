@@ -436,6 +436,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/app/analytics-info": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAnalyticsAppInfo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/app/telemetry-snapshot": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAppTelemetrySnapshot"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/app/terms": {
         parameters: {
             query?: never;
@@ -510,6 +542,38 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["DismissLegacyInstallNotice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/av/sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAvSources"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/av/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["TestAvSources"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2436,6 +2500,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/file/group-similarity-breakpoints": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["GetFileSystemEntriesGroupSimilarityBreakpoints"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/file/group": {
         parameters: {
             query?: never;
@@ -3264,6 +3344,22 @@ export interface paths {
         patch: operations["PatchUIStyleOptions"];
         trace?: never;
     };
+    "/options/downloader": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDownloaderGlobalOptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["PatchDownloaderGlobalOptions"];
+        trace?: never;
+    };
     "/options/bilibili": {
         parameters: {
             query?: never;
@@ -3616,6 +3712,22 @@ export interface paths {
         patch: operations["PatchTmdbOptions"];
         trace?: never;
     };
+    "/options/av-sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAvSourceOptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["PatchAvSourceOptions"];
+        trace?: never;
+    };
     "/password": {
         parameters: {
             query?: never;
@@ -3962,6 +4074,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["StartPathMarkSyncByPath"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/path-mark/sync/force-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ForceResyncAllPathMarks"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6293,6 +6421,17 @@ export interface components {
             defaultCacheTtlDays: number;
             auditLogRequestContent: boolean;
         };
+        "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.AvSourceConfig": {
+            enabled?: boolean;
+            baseUrl?: string;
+            cookie?: string;
+            userAgent?: string;
+        };
+        "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.AvSourceOptions": {
+            sources?: {
+                [key: string]: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.AvSourceConfig"];
+            };
+        };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.BangumiOptions": {
             accounts?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ThirdPartyAccount"][];
             cookie?: string;
@@ -6369,6 +6508,9 @@ export interface components {
             deleteArchiveAfterExtraction: boolean;
             /** Format: int32 */
             autoSyncIntervalMinutes?: number;
+        };
+        "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.DownloaderGlobalOptions": {
+            autoStartAfterCreation: boolean;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ExHentaiAccount": {
             name?: string;
@@ -6542,6 +6684,11 @@ export interface components {
             defaultCacheTtlDays?: number;
             auditLogRequestContent?: boolean;
         };
+        "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.AvSourceOptionsPatchInputModel": {
+            sources?: {
+                [key: string]: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.AvSourceConfig"];
+            };
+        };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.BangumiOptionsPatchInputModel": {
             accounts?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ThirdPartyAccount"][];
             /** Format: int32 */
@@ -6607,6 +6754,9 @@ export interface components {
             requestTimeout?: number;
             showCover?: boolean;
             deleteArchiveAfterExtraction?: boolean;
+        };
+        "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.DownloaderGlobalOptionsPatchInputModel": {
+            autoStartAfterCreation?: boolean;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.ExHentaiOptionsPatchInputModel": {
             accounts?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ExHentaiAccount"][];
@@ -8325,6 +8475,11 @@ export interface components {
             /** Format: date-time */
             evaluatedAt: string;
         };
+        "Bakabase.Service.Models.Input.AvSourceTestInputModel": {
+            number?: string;
+            sources?: string[];
+            language?: string;
+        };
         "Bakabase.Service.Models.Input.BulkModificationPatchInputModel": {
             name?: string;
             isActive?: boolean;
@@ -8399,12 +8554,29 @@ export interface components {
             filePaths: string[];
             operations: components["schemas"]["Bakabase.InsideWorld.Business.Components.FileNameModifier.Models.FileNameModifierOperation"][];
         };
+        /**
+         * Format: int32
+         * @description [0: Prefix, 1: Suffix, 2: Both]
+         * @enum {integer}
+         */
+        "Bakabase.Service.Models.Input.FileSystemEntryGroupAffixDirection": 0 | 1 | 2;
         "Bakabase.Service.Models.Input.FileSystemEntryGroupInputModel": {
             paths: string[];
             groupInternal: boolean;
+            strategyType: components["schemas"]["Bakabase.Service.Models.Input.FileSystemEntryGroupStrategyType"];
             /** Format: double */
             similarityThreshold: number;
+            keyExtractionRegex?: string;
+            affixDirection: components["schemas"]["Bakabase.Service.Models.Input.FileSystemEntryGroupAffixDirection"];
+            /** Format: int32 */
+            affixMinLength: number;
         };
+        /**
+         * Format: int32
+         * @description [0: Similarity, 1: KeyExtraction, 2: Affix]
+         * @enum {integer}
+         */
+        "Bakabase.Service.Models.Input.FileSystemEntryGroupStrategyType": 0 | 1 | 2;
         "Bakabase.Service.Models.Input.IdBasedDataSortInputModel": {
             ids: number[];
         };
@@ -8463,6 +8635,75 @@ export interface components {
         "Bakabase.Service.Models.Input.SavedSearchAddInputModel": {
             search: components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
             displayMode: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.FilterDisplayMode"];
+        };
+        "Bakabase.Service.Models.View.AnalyticsAppInfoViewModel": {
+            enableAnonymousDataTracking: boolean;
+            deviceId: string;
+            appVersion: string;
+            releaseChannel: string;
+            clarityProjectId?: string;
+            ga4MeasurementId?: string;
+            sentryDsn?: string;
+            postHogApiKey?: string;
+            postHogApiHost: string;
+        };
+        "Bakabase.Service.Models.View.AvSourceHttpInteractionViewModel": {
+            method: string;
+            url: string;
+            requestHeaders: {
+                [key: string]: string;
+            };
+            requestBody?: string;
+            requestContentType?: string;
+            /** Format: int32 */
+            responseStatusCode?: number;
+            responseReasonPhrase?: string;
+            responseHeaders?: {
+                [key: string]: string;
+            };
+            responseContentType?: string;
+            /** Format: int64 */
+            responseContentLength?: number;
+            error?: string;
+            /** Format: int64 */
+            durationMs: number;
+        };
+        "Bakabase.Service.Models.View.AvSourceInfoViewModel": {
+            id: string;
+            defaultBaseUrl?: string;
+            defaultCookie?: string;
+            resolvedBaseUrl?: string;
+            resolvedCookie?: string;
+            enabled: boolean;
+        };
+        "Bakabase.Service.Models.View.AvSourceTestDetailViewModel": {
+            number?: string;
+            title?: string;
+            originalTitle?: string;
+            actor?: string;
+            tag?: string;
+            release?: string;
+            year?: string;
+            studio?: string;
+            publisher?: string;
+            series?: string;
+            runtime?: string;
+            director?: string;
+            source?: string;
+            coverUrl?: string;
+            posterUrl?: string;
+            website?: string;
+            mosaic?: string;
+            searchUrl?: string;
+        };
+        "Bakabase.Service.Models.View.AvSourceTestResultViewModel": {
+            source: string;
+            detail?: components["schemas"]["Bakabase.Service.Models.View.AvSourceTestDetailViewModel"];
+            error?: string;
+            skipped: boolean;
+            /** Format: int64 */
+            durationMs: number;
+            interactions?: components["schemas"]["Bakabase.Service.Models.View.AvSourceHttpInteractionViewModel"][];
         };
         "Bakabase.Service.Models.View.BulkModificationDiffViewModel": {
             /** Format: int32 */
@@ -8624,10 +8865,24 @@ export interface components {
         "Bakabase.Service.Models.View.FileSystemEntryGroupResultViewModel": {
             rootPath: string;
             groups: components["schemas"]["Bakabase.Service.Models.View.FileSystemEntryGroupResultViewModel+GroupViewModel"][];
+            untouchedEntries: components["schemas"]["Bakabase.Service.Models.View.FileSystemEntryGroupResultViewModel+EntryViewModel"][];
+        };
+        "Bakabase.Service.Models.View.FileSystemEntryGroupResultViewModel+EntryViewModel": {
+            name: string;
+            isDirectory: boolean;
+            matchSpans: components["schemas"]["Bakabase.Service.Models.View.FileSystemEntryGroupResultViewModel+MatchSpan"][];
         };
         "Bakabase.Service.Models.View.FileSystemEntryGroupResultViewModel+GroupViewModel": {
             directoryName: string;
-            filenames: string[];
+            entries: components["schemas"]["Bakabase.Service.Models.View.FileSystemEntryGroupResultViewModel+EntryViewModel"][];
+            existingFolderTarget?: string;
+            renamedSourceName?: string;
+        };
+        "Bakabase.Service.Models.View.FileSystemEntryGroupResultViewModel+MatchSpan": {
+            /** Format: int32 */
+            start: number;
+            /** Format: int32 */
+            length: number;
         };
         "Bakabase.Service.Models.View.FileSystemEntryNameViewModel": {
             path: string;
@@ -8749,6 +9004,19 @@ export interface components {
             search: components["schemas"]["Bakabase.Service.Models.View.ResourceSearchViewModel"];
             name: string;
             displayMode: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.FilterDisplayMode"];
+        };
+        "Bakabase.Service.Models.View.TelemetrySnapshotViewModel": {
+            appVersion: string;
+            releaseChannel: string;
+            os: string;
+            locale: string;
+            /** Format: int32 */
+            mediaLibraryCount: number;
+            /** Format: int32 */
+            resourceCount: number;
+            enabledEnhancers: string[];
+            aiEnabled: boolean;
+            hasMediaLibrary: boolean;
         };
         "Bootstrap.Components.Logging.LogService.Models.Entities.Log": {
             /** Format: int32 */
@@ -8994,6 +9262,18 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Controllers.ResourceHealthScoreRowViewModel"][];
         };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.AvSourceInfoViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.AvSourceInfoViewModel"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.AvSourceTestResultViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.AvSourceTestResultViewModel"][];
+        };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.BulkModificationViewModel]": {
             /** Format: int32 */
             code: number;
@@ -9071,6 +9351,12 @@ export interface components {
             code: number;
             message?: string;
             data?: string[][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[System.Decimal]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: number[];
         };
         "Bootstrap.Models.ResponseModels.ListResponse`1[System.Int32]": {
             /** Format: int32 */
@@ -9318,6 +9604,12 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.AiOptions"];
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.AvSourceOptions]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.AvSourceOptions"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.BangumiOptions]": {
             /** Format: int32 */
             code: number;
@@ -9341,6 +9633,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.DLsiteOptions"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.DownloaderGlobalOptions]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.DownloaderGlobalOptions"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ExHentaiOptions]": {
             /** Format: int32 */
@@ -9648,6 +9946,12 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Controllers.PathMarkSyncStatusResponse"];
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.AnalyticsAppInfoViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.AnalyticsAppInfoViewModel"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.BulkModificationViewModel]": {
             /** Format: int32 */
             code: number;
@@ -9695,6 +9999,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Models.View.SavedSearchViewModel"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.TelemetrySnapshotViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.TelemetrySnapshotViewModel"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Boolean]": {
             /** Format: int32 */
@@ -11310,6 +11620,50 @@ export interface operations {
             };
         };
     };
+    GetAnalyticsAppInfo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.AnalyticsAppInfoViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.AnalyticsAppInfoViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.AnalyticsAppInfoViewModel]"];
+                };
+            };
+        };
+    };
+    GetAppTelemetrySnapshot: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.TelemetrySnapshotViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.TelemetrySnapshotViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.TelemetrySnapshotViewModel]"];
+                };
+            };
+        };
+    };
     AcceptTerms: {
         parameters: {
             query?: never;
@@ -11452,6 +11806,57 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetAvSources: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.AvSourceInfoViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.AvSourceInfoViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.AvSourceInfoViewModel]"];
+                };
+            };
+        };
+    };
+    TestAvSources: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.AvSourceTestInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.AvSourceTestInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.AvSourceTestInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.AvSourceTestInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.AvSourceTestResultViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.AvSourceTestResultViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.AvSourceTestResultViewModel]"];
                 };
             };
         };
@@ -15344,6 +15749,35 @@ export interface operations {
             };
         };
     };
+    GetFileSystemEntriesGroupSimilarityBreakpoints: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.FileSystemEntryGroupInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.FileSystemEntryGroupInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.FileSystemEntryGroupInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.FileSystemEntryGroupInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.Decimal]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.Decimal]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.Decimal]"];
+                };
+            };
+        };
+    };
     GroupFileSystemEntries: {
         parameters: {
             query?: never;
@@ -17150,6 +17584,57 @@ export interface operations {
             };
         };
     };
+    GetDownloaderGlobalOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.DownloaderGlobalOptions]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.DownloaderGlobalOptions]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.DownloaderGlobalOptions]"];
+                };
+            };
+        };
+    };
+    PatchDownloaderGlobalOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.DownloaderGlobalOptionsPatchInputModel"];
+                "application/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.DownloaderGlobalOptionsPatchInputModel"];
+                "text/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.DownloaderGlobalOptionsPatchInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.DownloaderGlobalOptionsPatchInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
     GetBilibiliOptions: {
         parameters: {
             query?: never;
@@ -18304,6 +18789,57 @@ export interface operations {
             };
         };
     };
+    GetAvSourceOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.AvSourceOptions]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.AvSourceOptions]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.AvSourceOptions]"];
+                };
+            };
+        };
+    };
+    PatchAvSourceOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.AvSourceOptionsPatchInputModel"];
+                "application/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.AvSourceOptionsPatchInputModel"];
+                "text/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.AvSourceOptionsPatchInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.AvSourceOptionsPatchInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
     SearchPasswords: {
         parameters: {
             query?: {
@@ -18943,6 +19479,28 @@ export interface operations {
             query?: {
                 path?: string;
             };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    ForceResyncAllPathMarks: {
+        parameters: {
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;

@@ -248,6 +248,27 @@ namespace Bakabase.Service.Controllers
             return BaseResponseBuilder.Ok;
         }
 
+        [HttpGet("downloader")]
+        [SwaggerOperation(OperationId = "GetDownloaderGlobalOptions")]
+        public async Task<SingletonResponse<DownloaderGlobalOptions>> GetDownloaderGlobalOptions()
+        {
+            return new SingletonResponse<DownloaderGlobalOptions>(_bakabaseOptionsManager.Get<DownloaderGlobalOptions>().Value);
+        }
+
+        [HttpPatch("downloader")]
+        [SwaggerOperation(OperationId = "PatchDownloaderGlobalOptions")]
+        public async Task<BaseResponse> PatchDownloaderGlobalOptions([FromBody] DownloaderGlobalOptionsPatchInputModel model)
+        {
+            await _bakabaseOptionsManager.Get<DownloaderGlobalOptions>().SaveAsync(options =>
+            {
+                if (model.AutoStartAfterCreation.HasValue)
+                {
+                    options.AutoStartAfterCreation = model.AutoStartAfterCreation.Value;
+                }
+            });
+            return BaseResponseBuilder.Ok;
+        }
+
         [HttpGet("bilibili")]
         [SwaggerOperation(OperationId = "GetBilibiliOptions")]
         public async Task<SingletonResponse<BilibiliOptions>> GetBilibiliOptions()

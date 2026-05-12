@@ -5,6 +5,7 @@ import type { ThirdPartyId } from "@/sdk/constants";
 
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Switch } from "@heroui/react";
 
 import { Modal, Tab, Tabs } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
@@ -12,6 +13,7 @@ import ThirdPartyIcon from "@/components/ThirdPartyIcon";
 import { isThirdPartyDeveloping } from "@/pages/downloader/models";
 import DevelopingChip from "@/components/Chips/DevelopingChip";
 import { ThirdPartyId as ThirdPartyIdEnum, CookieValidatorTarget } from "@/sdk/constants";
+import { useDownloaderGlobalOptionsStore } from "@/stores/options";
 import {
   ExHentaiConfigPanel,
   ExHentaiConfigField,
@@ -37,7 +39,7 @@ type Props = {
  * with the appropriate fields for the downloader context.
  */
 const platformRenderers: Record<number, () => React.ReactNode> = {
-  [ThirdPartyIdEnum.ExHentai]: () => <ExHentaiConfigPanel fields={[ExHentaiConfigField.Accounts, ExHentaiConfigField.DataFetch, ExHentaiConfigField.Download]} showFooter={false} />,
+  [ThirdPartyIdEnum.ExHentai]: () => <ExHentaiConfigPanel fields={[ExHentaiConfigField.Accounts, ExHentaiConfigField.DataFetch, ExHentaiConfigField.Download]} />,
   [ThirdPartyIdEnum.DLsite]: () => <DLsiteConfigPanel fields={[DLsiteConfigField.Accounts, DLsiteConfigField.DataFetch, DLsiteConfigField.Download]} showFooter={false} />,
   [ThirdPartyIdEnum.Steam]: () => <SteamConfigPanel fields={[SteamConfigField.Accounts]} />,
   [ThirdPartyIdEnum.Bilibili]: () => <BilibiliConfigPanel fields="all" />,
@@ -49,11 +51,39 @@ const platformRenderers: Record<number, () => React.ReactNode> = {
   [ThirdPartyIdEnum.Bangumi]: () => <BangumiConfigPanel fields="all" />,
 };
 
+const GENERAL_TAB_KEY = "general";
+
+const GeneralPanel = () => {
+  const { t } = useTranslation();
+  const options = useDownloaderGlobalOptionsStore((s) => s.data);
+  const patch = useDownloaderGlobalOptionsStore((s) => s.patch);
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-start gap-3">
+        <Switch
+          isSelected={options?.autoStartAfterCreation ?? false}
+          onValueChange={(v) => patch({ autoStartAfterCreation: v })}
+        >
+          <div className="flex flex-col">
+            <span className="text-sm font-medium">
+              {t<string>("downloader.config.autoStartAfterCreation.label")}
+            </span>
+            <span className="text-xs text-default-400">
+              {t<string>("downloader.config.autoStartAfterCreation.description")}
+            </span>
+          </div>
+        </Switch>
+      </div>
+    </div>
+  );
+};
+
 const ConfigurationsModal = ({ onSubmitted, onDestroyed }: Props) => {
   const { t } = useTranslation();
 
   const [thirdPartyIds, setThirdPartyIds] = useState<ThirdPartyId[]>([]);
-  const [selectedTab, setSelectedTab] = useState<ThirdPartyId | "">("")
+  const [selectedTab, setSelectedTab] = useState<string>(GENERAL_TAB_KEY);
 
   useEffect(() => {
     BApi.downloadTask.getAllDownloaderDefinitions().then((res) => {
@@ -64,7 +94,6 @@ const ConfigurationsModal = ({ onSubmitted, onDestroyed }: Props) => {
           return aDev - bDev;
         });
       setThirdPartyIds(ids);
-      if (ids.length > 0 && !selectedTab) setSelectedTab(ids[0]);
     });
   }, []);
 
@@ -81,9 +110,19 @@ const ConfigurationsModal = ({ onSubmitted, onDestroyed }: Props) => {
         isVertical
         disableAnimation
         classNames={{ panel: "flex-1 w-0" }}
-        selectedKey={selectedTab.toString()}
-        onSelectionChange={(key) => setSelectedTab(parseInt(key as string, 10) as ThirdPartyId)}
+        selectedKey={selectedTab}
+        onSelectionChange={(key) => setSelectedTab(key as string)}
       >
+        <Tab
+          key={GENERAL_TAB_KEY}
+          title={
+            <div className="flex items-center gap-2 justify-start">
+              {t<string>("downloader.config.tab.general")}
+            </div>
+          }
+        >
+          <GeneralPanel />
+        </Tab>
         {thirdPartyIds.map((thirdPartyId) => {
           const isDeveloping = isThirdPartyDeveloping(thirdPartyId);
           const thirdPartyName = ThirdPartyIdEnum[thirdPartyId] || `Third Party ${thirdPartyId}`;
@@ -91,7 +130,7 @@ const ConfigurationsModal = ({ onSubmitted, onDestroyed }: Props) => {
 
           return (
             <Tab
-              key={thirdPartyId}
+              key={thirdPartyId.toString()}
               title={
                 <div className="flex items-center gap-2 justify-start">
                   <ThirdPartyIcon thirdPartyId={thirdPartyId} />

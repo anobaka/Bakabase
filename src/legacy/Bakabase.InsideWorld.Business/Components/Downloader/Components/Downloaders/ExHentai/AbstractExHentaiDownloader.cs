@@ -68,7 +68,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                     .ThenByDescending(t => t.UpdatedAt)
                     .First();
 
-                var path = Path.Combine(downloadPath, $"{betterName.RemoveInvalidFilePathChars()}.torrent");
+                var path = Path.Combine(downloadPath, $"{betterName.RemoveInvalidFileNameChars()}.torrent");
 
                 if (onCurrentChanged != null)
                 {
