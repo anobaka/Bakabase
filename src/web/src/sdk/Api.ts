@@ -2523,7 +2523,7 @@ export interface BakabaseModulesAIModelsDbAigcGenerationRunDbModel {
   id: number;
   /** @format int32 */
   generatorId: number;
-  /** [1: Pending, 2: Running, 3: Succeeded, 4: Failed, 5: Imported] */
+  /** [1: Pending, 2: Running, 3: Succeeded, 4: Failed, 5: Imported, 6: Cancelled] */
   status: BakabaseModulesAIModelsDomainAigcGenerationStatus;
   prompt?: string;
   negativePrompt?: string;
@@ -2675,10 +2675,10 @@ export interface BakabaseModulesAIModelsDomainAiProviderKindInfo {
 export type BakabaseModulesAIModelsDomainAigcArtifactResourceMode = 1 | 2;
 
 /**
- * [1: Pending, 2: Running, 3: Succeeded, 4: Failed, 5: Imported]
+ * [1: Pending, 2: Running, 3: Succeeded, 4: Failed, 5: Imported, 6: Cancelled]
  * @format int32
  */
-export type BakabaseModulesAIModelsDomainAigcGenerationStatus = 1 | 2 | 3 | 4 | 5;
+export type BakabaseModulesAIModelsDomainAigcGenerationStatus = 1 | 2 | 3 | 4 | 5 | 6;
 
 export interface BakabaseModulesAIModelsDomainAigcGeneratorView {
   generator: BakabaseModulesAIModelsDbAigcGeneratorDbModel;
@@ -2810,6 +2810,37 @@ export interface BakabaseModulesAIModelsInputAigcGeneratorAddInputModel {
   isEnabled: boolean;
   propertyPresets?: BakabaseModulesAIModelsInputAigcGeneratorPropertyPresetInputModel[];
 }
+
+export interface BakabaseModulesAIModelsInputAigcGeneratorComfyUIImportInputModel {
+  /** @format int32 */
+  providerId: number;
+  paths: string[];
+}
+
+export interface BakabaseModulesAIModelsInputAigcGeneratorComfyUIImportItemResult {
+  path: string;
+  /** [1: Imported, 2: SkippedDuplicate, 3: SkippedInvalidJson, 4: SkippedNotComfyUIWorkflow, 5: Failed] */
+  status: BakabaseModulesAIModelsInputAigcGeneratorComfyUIImportStatus;
+  reason?: string;
+  /** @format int32 */
+  generatorId?: number;
+}
+
+export interface BakabaseModulesAIModelsInputAigcGeneratorComfyUIImportResult {
+  /** @format int32 */
+  importedCount: number;
+  /** @format int32 */
+  skippedCount: number;
+  /** @format int32 */
+  failedCount: number;
+  items: BakabaseModulesAIModelsInputAigcGeneratorComfyUIImportItemResult[];
+}
+
+/**
+ * [1: Imported, 2: SkippedDuplicate, 3: SkippedInvalidJson, 4: SkippedNotComfyUIWorkflow, 5: Failed]
+ * @format int32
+ */
+export type BakabaseModulesAIModelsInputAigcGeneratorComfyUIImportStatus = 1 | 2 | 3 | 4 | 5;
 
 export interface BakabaseModulesAIModelsInputAigcGeneratorPropertyPresetInputModel {
   /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
@@ -5473,6 +5504,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesA
   data?: BakabaseModulesAIModelsInputAiProviderTestResult;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIModelsInputAigcGeneratorComfyUIImportResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesAIModelsInputAigcGeneratorComfyUIImportResult;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIServicesApplyOperationsResult {
   /** @format int32 */
   code: number;
@@ -7717,6 +7755,40 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Aigc
+     * @name ImportComfyUiWorkflows
+     * @request POST:/aigc/generators/import-comfyui
+     */
+    importComfyUiWorkflows: (
+      data: BakabaseModulesAIModelsInputAigcGeneratorComfyUIImportInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIModelsInputAigcGeneratorComfyUIImportResult,
+        any
+      >({
+        path: `/aigc/generators/import-comfyui`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for importComfyUiWorkflows
+     * @name importComfyUiWorkflowsUrl
+     */
+    importComfyUiWorkflowsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/aigc/generators/import-comfyui`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Aigc
      * @name GetAigcRuns
      * @request GET:/aigc/runs
      */
@@ -7791,6 +7863,21 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/aigc/runs/${id}`,
         method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Aigc
+     * @name StopAigcRun
+     * @request POST:/aigc/runs/{id}/stop
+     */
+    stopAigcRun: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/aigc/runs/${id}/stop`,
+        method: "POST",
         format: "json",
         ...params,
       }),

@@ -3,10 +3,13 @@
 import React, { useEffect, useRef, useState } from "react";
 
 import { Button, Icon, Input } from "@/components/bakaui";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import ConfirmModal from "@/components/ConfirmModal";
 
 import "./index.scss";
 import i18n from "i18next";
 const EditableTree = ({ defaultValue = [], onChange = (tree) => {} }) => {
+  const { createPortal } = useBakabaseContext();
   const [value, setValue] = useState(JSON.parse(JSON.stringify(defaultValue)));
   const [editingKey, setEditingKey] = useState();
   const [editingValue, setEditingValue] = useState();
@@ -107,9 +110,16 @@ const EditableTree = ({ defaultValue = [], onChange = (tree) => {} }) => {
                     onClick={() => {
                       if (editing) {
                         exitEditingMode();
-                      } else if (confirm("Sure to delete and its children?")) {
-                        dataSource.splice(idx, 1);
-                        setValue([...value]);
+                      } else {
+                        createPortal(ConfirmModal, {
+                          title: i18n.t("Delete"),
+                          message: i18n.t("Sure to delete and its children?"),
+                          destructive: true,
+                          onConfirm: () => {
+                            dataSource.splice(idx, 1);
+                            setValue([...value]);
+                          },
+                        });
                       }
                     }}
                   />

@@ -43,6 +43,7 @@ import {
   DecompressionStatus,
 } from "@/sdk/constants";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import ConfirmModal from "@/components/ConfirmModal";
 import BApi from "@/sdk/BApi";
 import { BakabaseServiceModelsViewCompressedFileDetectionResultViewModel, BakabaseServiceModelsViewDecompressionResultViewModel } from "@/sdk/Api";
 import BetaChip from "../Chips/BetaChip";
@@ -622,10 +623,18 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
       visible={visible}
       onClose={() => {
         if (detecting || abortDecompressingRef.current) {
-          if (!confirm(t<string>("bulkDecompression.confirm.closeWhileRunning"))) return;
-          stopDetecting();
-          abortDecompressingRef.current?.abort();
-          abortDecompressingRef.current = null;
+          createPortal(ConfirmModal, {
+            title: t<string>("bulkDecompression.modal.title"),
+            message: t<string>("bulkDecompression.confirm.closeWhileRunning"),
+            destructive: true,
+            onConfirm: () => {
+              stopDetecting();
+              abortDecompressingRef.current?.abort();
+              abortDecompressingRef.current = null;
+              close();
+            },
+          });
+          return;
         }
         close();
       }}

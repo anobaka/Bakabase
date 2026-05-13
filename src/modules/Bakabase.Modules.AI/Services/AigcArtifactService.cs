@@ -1,7 +1,9 @@
 using Bakabase.Abstractions.Components.FileSystem;
+using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Services;
 using Bakabase.Modules.AI.Components.Aigc;
 using Bakabase.Modules.AI.Models.Db;
+using Bakabase.Modules.AI.Models.Domain;
 using Bootstrap.Components.Orm.Infrastructures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -14,6 +16,7 @@ public class AigcArtifactService<TDbContext>(
     ResourceService<TDbContext, AigcGeneratorDbModel, int> generatorOrm,
     IResourceService resourceService,
     IFileManager fileManager,
+    BTaskManager taskManager,
     ILogger<AigcArtifactService<TDbContext>> logger
 ) : IAigcArtifactService where TDbContext : DbContext
 {
@@ -52,6 +55,34 @@ public class AigcArtifactService<TDbContext>(
 
         await artifactOrm.RemoveAll(a => a.RunId == runId);
         await runOrm.RemoveByKey(runId);
+    }
+
+    public async Task StopRunAsync(int runId, CancellationToken ct = default)
+    {
+        var run = await runOrm.GetByKey(runId)
+                  ?? throw new InvalidOperationException($"Run {runId} not found");
+
+        // Already terminal — nothing to do.
+        if (run.Status is AigcGenerationStatus.Succeeded
+                       or AigcGenerationStatus.Failed
+                       or AigcGenerationStatus.Imported
+                       or AigcGenerationStatus.Cancelled)
+        {
+            return;
+        }
+
+        // Best-effort cancel: BTaskManager.Stop signals the CancellationToken on the running
+        // task and (for pending tasks) removes them from the queue. Wrapped because Stop
+        // throws if the id is unknown — that can legitimately happen if the daemon already
+        // cleaned the task up, in which case we still want to flip the DB status below.
+        var taskId = $"AigcGenerationRun:{runId}";
+        try { await taskManager.Stop(taskId); }
+        catch (Exception ex) { logger.LogWarning(ex, "BTask {Task} stop failed (may already be gone)", taskId); }
+
+        run.Status = AigcGenerationStatus.Cancelled;
+        run.CompletedAt = DateTime.Now;
+        if (string.IsNullOrEmpty(run.ErrorMessage)) run.ErrorMessage = "Cancelled by user";
+        await runOrm.Update(run);
     }
 
     public async Task<IReadOnlyList<AigcArtifactDbModel>> GetArtifactsAsync(int? generatorId, int? runId, CancellationToken ct = default)

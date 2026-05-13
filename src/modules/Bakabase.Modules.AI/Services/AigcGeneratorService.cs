@@ -1,8 +1,13 @@
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.AI.Components.Aigc;
+using Bakabase.Modules.AI.Components.Aigc.Invokers;
 using Bakabase.Modules.AI.Models.Db;
 using Bakabase.Modules.AI.Models.Domain;
 using Bakabase.Modules.AI.Models.Input;
@@ -17,6 +22,7 @@ public class AigcGeneratorService<TDbContext>(
     ResourceService<TDbContext, AigcGeneratorDbModel, int> generatorOrm,
     ResourceService<TDbContext, AigcGeneratorPropertyPresetDbModel, int> presetOrm,
     ResourceService<TDbContext, AigcGenerationRunDbModel, int> runOrm,
+    ResourceService<TDbContext, AiProviderDbModel, int> providerOrm,
     AigcArtifactPipeline<TDbContext> pipeline,
     BTaskManager taskManager,
     IBakabaseLocalizer localizer,
@@ -212,6 +218,208 @@ public class AigcGeneratorService<TDbContext>(
         await pipeline.RegisterAsync(generator, saved, landed, ct);
 
         return runId;
+    }
+
+    public async Task<AigcGeneratorComfyUIImportResult> ImportComfyUIWorkflowsAsync(
+        AigcGeneratorComfyUIImportInputModel input, CancellationToken ct = default)
+    {
+        var provider = await providerOrm.GetByKey(input.ProviderId)
+                       ?? throw new InvalidOperationException($"AI provider {input.ProviderId} not found");
+        if (provider.Kind != AiProviderKind.ComfyUI)
+            throw new InvalidOperationException($"Provider {provider.Name} is not a ComfyUI provider.");
+
+        var files = EnumerateJsonFiles(input.Paths).ToList();
+
+        // Dedup keys for this provider. Mixed pool: seeded from existing DB rows, augmented
+        // as we create new generators within this import batch — so collisions are caught
+        // both against history and within-batch with a single check.
+        var existing = await generatorOrm.GetAll(g => g.ProviderId == provider.Id);
+        var knownHashes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var knownNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var g in existing)
+        {
+            knownNames.Add(g.Name);
+            var hash = ExtractWorkflowHash(g.ParametersJson);
+            if (!string.IsNullOrEmpty(hash)) knownHashes.Add(hash);
+        }
+
+        var items = new List<AigcGeneratorComfyUIImportItemResult>();
+
+        foreach (var file in files)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            JsonNode? root;
+            try
+            {
+                var text = await File.ReadAllTextAsync(file, ct);
+                root = AigcInvokerHelpers.ParseLenient(text);
+                if (root is null)
+                {
+                    items.Add(new AigcGeneratorComfyUIImportItemResult
+                    {
+                        Path = file,
+                        Status = AigcGeneratorComfyUIImportStatus.SkippedInvalidJson,
+                        Reason = "Failed to parse JSON"
+                    });
+                    continue;
+                }
+            }
+            catch (Exception ex)
+            {
+                items.Add(new AigcGeneratorComfyUIImportItemResult
+                {
+                    Path = file,
+                    Status = AigcGeneratorComfyUIImportStatus.Failed,
+                    Reason = ex.Message
+                });
+                continue;
+            }
+
+            var workflow = ExtractComfyUIWorkflow(root);
+            if (workflow is null)
+            {
+                items.Add(new AigcGeneratorComfyUIImportItemResult
+                {
+                    Path = file,
+                    Status = AigcGeneratorComfyUIImportStatus.SkippedNotComfyUIWorkflow,
+                    Reason = "JSON is not a ComfyUI API-format workflow (no node with class_type found)"
+                });
+                continue;
+            }
+
+            var canonical = workflow.ToJsonString();
+            var hash = ComputeSha256(canonical);
+
+            var baseName = Path.GetFileNameWithoutExtension(file);
+            if (string.IsNullOrWhiteSpace(baseName)) baseName = "ComfyUI Workflow";
+
+            var nameDup = knownNames.Contains(baseName);
+            var contentDup = knownHashes.Contains(hash);
+            if (nameDup || contentDup)
+            {
+                items.Add(new AigcGeneratorComfyUIImportItemResult
+                {
+                    Path = file,
+                    Status = AigcGeneratorComfyUIImportStatus.SkippedDuplicate,
+                    Reason = (nameDup, contentDup) switch
+                    {
+                        (true, true) => $"A configuration named '{baseName}' with identical workflow content already exists",
+                        (true, false) => $"A configuration named '{baseName}' already exists",
+                        _ => "A configuration with identical workflow content already exists",
+                    }
+                });
+                continue;
+            }
+
+            var parametersJson = JsonSerializer.Serialize(new
+            {
+                workflow = workflow,
+                workflowHash = hash,
+            });
+
+            try
+            {
+                var added = (await generatorOrm.Add(new AigcGeneratorDbModel
+                {
+                    Name = baseName,
+                    ProviderId = provider.Id,
+                    MediaType = AigcMediaType.Image,
+                    ParametersJson = parametersJson,
+                    FilenameTemplate = "{run}_{ordinal}_{timestamp}",
+                    ResourceMode = AigcArtifactResourceMode.PerArtifact,
+                    AllowDeletion = true,
+                    IsEnabled = true,
+                    CreatedAt = DateTime.Now,
+                    UpdatedAt = DateTime.Now,
+                })).Data!;
+                knownHashes.Add(hash);
+                knownNames.Add(baseName);
+                items.Add(new AigcGeneratorComfyUIImportItemResult
+                {
+                    Path = file,
+                    Status = AigcGeneratorComfyUIImportStatus.Imported,
+                    GeneratorId = added.Id
+                });
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to create AigcGenerator from {File}", file);
+                items.Add(new AigcGeneratorComfyUIImportItemResult
+                {
+                    Path = file,
+                    Status = AigcGeneratorComfyUIImportStatus.Failed,
+                    Reason = ex.Message
+                });
+            }
+        }
+
+        return new AigcGeneratorComfyUIImportResult
+        {
+            Items = items,
+            ImportedCount = items.Count(i => i.Status == AigcGeneratorComfyUIImportStatus.Imported),
+            SkippedCount = items.Count(i =>
+                i.Status == AigcGeneratorComfyUIImportStatus.SkippedDuplicate ||
+                i.Status == AigcGeneratorComfyUIImportStatus.SkippedInvalidJson ||
+                i.Status == AigcGeneratorComfyUIImportStatus.SkippedNotComfyUIWorkflow),
+            FailedCount = items.Count(i => i.Status == AigcGeneratorComfyUIImportStatus.Failed),
+        };
+    }
+
+    private static IEnumerable<string> EnumerateJsonFiles(IEnumerable<string> paths)
+    {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var path in paths)
+        {
+            if (string.IsNullOrWhiteSpace(path)) continue;
+            if (File.Exists(path))
+            {
+                if (path.EndsWith(".json", StringComparison.OrdinalIgnoreCase) && seen.Add(path))
+                    yield return path;
+            }
+            else if (Directory.Exists(path))
+            {
+                foreach (var f in Directory.EnumerateFiles(path, "*.json", SearchOption.AllDirectories))
+                {
+                    if (seen.Add(f)) yield return f;
+                }
+            }
+        }
+    }
+
+    private static JsonObject? ExtractComfyUIWorkflow(JsonNode root)
+    {
+        // Bare API-format workflow: any value is an object with class_type
+        if (root is JsonObject obj &&
+            obj.Any(kv => kv.Value is JsonObject n && n.ContainsKey("class_type")))
+        {
+            return obj;
+        }
+
+        // ComfyUI's "Save" (non-API) format wraps the prompt in {"prompt": {...}} with a node graph;
+        // we accept that shape only if its inner object looks like API-format.
+        if (root is JsonObject wrapper && wrapper["prompt"] is JsonObject prompt &&
+            prompt.Any(kv => kv.Value is JsonObject n && n.ContainsKey("class_type")))
+        {
+            // Detach from parent so it can be re-parented elsewhere.
+            wrapper.Remove("prompt");
+            return prompt;
+        }
+
+        return null;
+    }
+
+    private static string? ExtractWorkflowHash(string? parametersJson)
+    {
+        if (string.IsNullOrEmpty(parametersJson)) return null;
+        var parsed = AigcInvokerHelpers.ParseLenient(parametersJson);
+        return parsed?["workflowHash"]?.GetValue<string>();
+    }
+
+    private static string ComputeSha256(string s)
+    {
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(s));
+        return Convert.ToHexString(bytes).ToLowerInvariant();
     }
 
     private async Task ReplacePresetsAsync(int generatorId, List<AigcGeneratorPropertyPresetInputModel> presets)

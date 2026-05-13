@@ -17,6 +17,7 @@ import type { EnhancerDescriptor } from "@/components/EnhancerSelectorV2/models"
 import type { IProperty } from "@/components/Property/models";
 import { Button, Input, Table, TableHeader, TableBody, TableColumn, TableRow, TableCell, Chip, Tooltip, Popover, Listbox, ListboxItem, Spinner } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import ConfirmModal from "@/components/ConfirmModal";
 import ResourceProfileModal from "./components/ResourceProfileModal";
 import ResourceProfileTestModal from "./components/ResourceProfileTestModal";
 import DisplayNameTemplateEditorModal from "./components/DisplayNameTemplateEditorModal";
@@ -134,16 +135,20 @@ const ResourceProfilePage = () => {
       p.name?.toLowerCase().includes(keyword.toLowerCase())
   );
 
-  const handleDelete = async (id: number) => {
-    if (!window.confirm(t("resourceProfile.confirm.delete"))) {
-      return;
-    }
-    try {
-      await BApi.resourceProfile.deleteResourceProfile(id);
-      loadProfiles();
-    } catch (e) {
-      console.error("Failed to delete resource profile", e);
-    }
+  const handleDelete = (id: number) => {
+    createPortal(ConfirmModal, {
+      title: t<string>("common.action.delete"),
+      message: t<string>("resourceProfile.confirm.delete"),
+      destructive: true,
+      onConfirm: async () => {
+        try {
+          await BApi.resourceProfile.deleteResourceProfile(id);
+          loadProfiles();
+        } catch (e) {
+          console.error("Failed to delete resource profile", e);
+        }
+      },
+    });
   };
 
   const handleDuplicate = async (profile: ResourceProfile) => {

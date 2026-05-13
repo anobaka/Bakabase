@@ -404,6 +404,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/aigc/generators/import-comfyui": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ImportComfyUIWorkflows"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/aigc/runs": {
         parameters: {
             query?: never;
@@ -431,6 +447,22 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["DeleteAigcRun"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/aigc/runs/{id}/stop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["StopAigcRun"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -7860,10 +7892,10 @@ export interface components {
         "Bakabase.Modules.AI.Models.Domain.AigcArtifactResourceMode": 1 | 2;
         /**
          * Format: int32
-         * @description [1: Pending, 2: Running, 3: Succeeded, 4: Failed, 5: Imported]
+         * @description [1: Pending, 2: Running, 3: Succeeded, 4: Failed, 5: Imported, 6: Cancelled]
          * @enum {integer}
          */
-        "Bakabase.Modules.AI.Models.Domain.AigcGenerationStatus": 1 | 2 | 3 | 4 | 5;
+        "Bakabase.Modules.AI.Models.Domain.AigcGenerationStatus": 1 | 2 | 3 | 4 | 5 | 6;
         "Bakabase.Modules.AI.Models.Domain.AigcGeneratorView": {
             generator: components["schemas"]["Bakabase.Modules.AI.Models.Db.AigcGeneratorDbModel"];
             propertyPresets: components["schemas"]["Bakabase.Modules.AI.Models.Db.AigcGeneratorPropertyPresetDbModel"][];
@@ -7976,6 +8008,33 @@ export interface components {
             isEnabled: boolean;
             propertyPresets?: components["schemas"]["Bakabase.Modules.AI.Models.Input.AigcGeneratorPropertyPresetInputModel"][];
         };
+        "Bakabase.Modules.AI.Models.Input.AigcGeneratorComfyUIImportInputModel": {
+            /** Format: int32 */
+            providerId: number;
+            paths: string[];
+        };
+        "Bakabase.Modules.AI.Models.Input.AigcGeneratorComfyUIImportItemResult": {
+            path: string;
+            status: components["schemas"]["Bakabase.Modules.AI.Models.Input.AigcGeneratorComfyUIImportStatus"];
+            reason?: string;
+            /** Format: int32 */
+            generatorId?: number;
+        };
+        "Bakabase.Modules.AI.Models.Input.AigcGeneratorComfyUIImportResult": {
+            /** Format: int32 */
+            importedCount: number;
+            /** Format: int32 */
+            skippedCount: number;
+            /** Format: int32 */
+            failedCount: number;
+            items: components["schemas"]["Bakabase.Modules.AI.Models.Input.AigcGeneratorComfyUIImportItemResult"][];
+        };
+        /**
+         * Format: int32
+         * @description [1: Imported, 2: SkippedDuplicate, 3: SkippedInvalidJson, 4: SkippedNotComfyUIWorkflow, 5: Failed]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.AI.Models.Input.AigcGeneratorComfyUIImportStatus": 1 | 2 | 3 | 4 | 5;
         "Bakabase.Modules.AI.Models.Input.AigcGeneratorPropertyPresetInputModel": {
             pool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
             /** Format: int32 */
@@ -10142,6 +10201,12 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.AI.Models.Input.AiProviderTestResult"];
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Input.AigcGeneratorComfyUIImportResult]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.AI.Models.Input.AigcGeneratorComfyUIImportResult"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Services.ApplyOperationsResult]": {
             /** Format: int32 */
             code: number;
@@ -11915,6 +11980,35 @@ export interface operations {
             };
         };
     };
+    ImportComfyUIWorkflows: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.AI.Models.Input.AigcGeneratorComfyUIImportInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.AI.Models.Input.AigcGeneratorComfyUIImportInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.AI.Models.Input.AigcGeneratorComfyUIImportInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.AI.Models.Input.AigcGeneratorComfyUIImportInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Input.AigcGeneratorComfyUIImportResult]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Input.AigcGeneratorComfyUIImportResult]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Input.AigcGeneratorComfyUIImportResult]"];
+                };
+            };
+        };
+    };
     GetAigcRuns: {
         parameters: {
             query?: {
@@ -11964,6 +12058,30 @@ export interface operations {
         };
     };
     DeleteAigcRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    StopAigcRun: {
         parameters: {
             query?: never;
             header?: never;

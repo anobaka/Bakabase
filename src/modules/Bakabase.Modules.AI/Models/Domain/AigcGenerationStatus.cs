@@ -6,5 +6,6 @@ public enum AigcGenerationStatus
     Running = 2,
     Succeeded = 3,
     Failed = 4,
-    Imported = 5
+    Imported = 5,
+    Cancelled = 6,
 }

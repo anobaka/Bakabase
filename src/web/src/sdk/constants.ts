@@ -3481,6 +3481,30 @@ export const ChatStreamEventTypeLabel: Record<ChatStreamEventType, string> = {
   [ChatStreamEventType.Error]: 'Error'
 };
 
+export enum AigcGeneratorComfyUIImportStatus {
+  Imported = 1,
+  SkippedDuplicate = 2,
+  SkippedInvalidJson = 3,
+  SkippedNotComfyUIWorkflow = 4,
+  Failed = 5
+}
+
+export const aigcGeneratorComfyUIImportStatuses = [
+  { label: 'Imported', value: AigcGeneratorComfyUIImportStatus.Imported },
+  { label: 'SkippedDuplicate', value: AigcGeneratorComfyUIImportStatus.SkippedDuplicate },
+  { label: 'SkippedInvalidJson', value: AigcGeneratorComfyUIImportStatus.SkippedInvalidJson },
+  { label: 'SkippedNotComfyUIWorkflow', value: AigcGeneratorComfyUIImportStatus.SkippedNotComfyUIWorkflow },
+  { label: 'Failed', value: AigcGeneratorComfyUIImportStatus.Failed }
+] as const;
+
+export const AigcGeneratorComfyUIImportStatusLabel: Record<AigcGeneratorComfyUIImportStatus, string> = {
+  [AigcGeneratorComfyUIImportStatus.Imported]: 'Imported',
+  [AigcGeneratorComfyUIImportStatus.SkippedDuplicate]: 'SkippedDuplicate',
+  [AigcGeneratorComfyUIImportStatus.SkippedInvalidJson]: 'SkippedInvalidJson',
+  [AigcGeneratorComfyUIImportStatus.SkippedNotComfyUIWorkflow]: 'SkippedNotComfyUIWorkflow',
+  [AigcGeneratorComfyUIImportStatus.Failed]: 'Failed'
+};
+
 export enum AiFeature {
   Default = 0,
   Enhancer = 1,
@@ -3528,7 +3552,8 @@ export enum AigcGenerationStatus {
   Running = 2,
   Succeeded = 3,
   Failed = 4,
-  Imported = 5
+  Imported = 5,
+  Cancelled = 6
 }
 
 export const aigcGenerationStatuses = [
@@ -3536,7 +3561,8 @@ export const aigcGenerationStatuses = [
   { label: 'Running', value: AigcGenerationStatus.Running },
   { label: 'Succeeded', value: AigcGenerationStatus.Succeeded },
   { label: 'Failed', value: AigcGenerationStatus.Failed },
-  { label: 'Imported', value: AigcGenerationStatus.Imported }
+  { label: 'Imported', value: AigcGenerationStatus.Imported },
+  { label: 'Cancelled', value: AigcGenerationStatus.Cancelled }
 ] as const;
 
 export const AigcGenerationStatusLabel: Record<AigcGenerationStatus, string> = {
@@ -3544,7 +3570,8 @@ export const AigcGenerationStatusLabel: Record<AigcGenerationStatus, string> = {
   [AigcGenerationStatus.Running]: 'Running',
   [AigcGenerationStatus.Succeeded]: 'Succeeded',
   [AigcGenerationStatus.Failed]: 'Failed',
-  [AigcGenerationStatus.Imported]: 'Imported'
+  [AigcGenerationStatus.Imported]: 'Imported',
+  [AigcGenerationStatus.Cancelled]: 'Cancelled'
 };
 
 export enum AigcMediaType {

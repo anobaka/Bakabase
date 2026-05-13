@@ -32,6 +32,7 @@ import { toast } from "@/components/bakaui";
 import { useExHentaiOptionsStore } from "@/stores/options";
 import { ExHentaiConfig } from "@/components/ThirdPartyConfig";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import ConfirmModal from "@/components/ConfirmModal";
 import { useBTasksStore } from "@/stores/bTasks";
 import { BTaskStatus } from "@/sdk/constants";
 import ExHentaiTable from "./components/ExHentaiTable";
@@ -132,17 +133,25 @@ export default function ExHentaiGalleriesPage() {
     await BApi.tool.openFileOrDirectory({ path: localPath, openInDirectory: false });
   };
 
-  const handleDeleteLocal = async (galleryId: number, galleryToken: string) => {
-    if (!confirm(t("resourceSource.exhentai.action.deleteLocalConfirm"))) return;
-    const rsp = await BApi.exhentaiGallery.deleteExHentaiGalleryLocalFiles(galleryId, galleryToken);
-    if (!rsp.code) {
-      setGalleries((prev) => prev.map((g) =>
-        g.galleryId === galleryId && g.galleryToken === galleryToken
-          ? { ...g, isDownloaded: false, localPath: undefined }
-          : g,
-      ));
-      toast.success(t("common.state.saved"));
-    }
+  const handleDeleteLocal = (galleryId: number, galleryToken: string) => {
+    createPortal(ConfirmModal, {
+      title: t<string>("common.action.delete"),
+      message: t<string>("resourceSource.exhentai.action.deleteLocalConfirm"),
+      destructive: true,
+      onConfirm: async () => {
+        const rsp = await BApi.exhentaiGallery.deleteExHentaiGalleryLocalFiles(galleryId, galleryToken);
+        if (!rsp.code) {
+          setGalleries((prev) => prev.map((g) =>
+            g.galleryId === galleryId && g.galleryToken === galleryToken
+              ? { ...g, isDownloaded: false, localPath: undefined }
+              : g,
+          ));
+          toast.success(t<string>("common.state.saved"));
+        } else if (rsp.message) {
+          toast.danger(rsp.message);
+        }
+      },
+    });
   };
 
   const handleDelete = async (id: number) => {

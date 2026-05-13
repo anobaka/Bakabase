@@ -12,7 +12,7 @@ import {
 
 import { HealthScoreProfileEditor } from "./components/HealthScoreProfileEditor";
 import { ScoreNowButton } from "./components/ScoreNowButton";
-import ConfirmModal from "./components/ConfirmModal";
+import ConfirmModal from "@/components/ConfirmModal";
 
 import { Button, Chip, Spinner, Switch, Tooltip } from "@/components/bakaui";
 import {

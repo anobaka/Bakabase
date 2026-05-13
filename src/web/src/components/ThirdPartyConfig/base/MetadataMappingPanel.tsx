@@ -13,6 +13,7 @@ import {
 } from "@/sdk/constants";
 import PropertySelector from "@/components/PropertySelector";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import ConfirmModal from "@/components/ConfirmModal";
 import BriefProperty from "@/components/Chips/Property/BriefProperty";
 import type { IProperty } from "@/components/Property/models";
 import BApi from "@/sdk/BApi";
@@ -138,15 +139,20 @@ export default function MetadataMappingPanel({ source }: Props) {
     saveMappings(updated);
   };
 
-  const handleReapply = async () => {
-    if (!confirm(t("resourceSource.metadataMapping.reapplyConfirm"))) return;
-    setApplying(true);
-    try {
-      await fetchApi(`/source/${source}/metadata-mapping/apply-all`, { method: "POST" });
-      toast.success(t("resourceSource.metadataMapping.reapplyStarted"));
-    } finally {
-      setApplying(false);
-    }
+  const handleReapply = () => {
+    createPortal(ConfirmModal, {
+      title: t<string>("resourceSource.metadataMapping.reapplyConfirm"),
+      message: t<string>("resourceSource.metadataMapping.reapplyConfirm"),
+      onConfirm: async () => {
+        setApplying(true);
+        try {
+          await fetchApi(`/source/${source}/metadata-mapping/apply-all`, { method: "POST" });
+          toast.success(t<string>("resourceSource.metadataMapping.reapplyStarted"));
+        } finally {
+          setApplying(false);
+        }
+      },
+    });
   };
 
   const openPropertySelector = (onSelect: (p: IProperty) => void) => {

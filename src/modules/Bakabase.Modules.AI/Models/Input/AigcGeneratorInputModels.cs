@@ -56,3 +56,38 @@ public record AigcArtifactImportInputModel
     /// <summary>Absolute file paths to import. Files are moved into the generator's directory.</summary>
     public required List<string> SourceFilePaths { get; init; }
 }
+
+public record AigcGeneratorComfyUIImportInputModel
+{
+    /// <summary>Target ComfyUI AI provider. All imported generators will be bound to this provider.</summary>
+    public required int ProviderId { get; init; }
+
+    /// <summary>Absolute paths to files or folders. Folders are walked recursively for *.json files.</summary>
+    public required List<string> Paths { get; init; }
+}
+
+public enum AigcGeneratorComfyUIImportStatus
+{
+    Imported = 1,
+    SkippedDuplicate = 2,
+    SkippedInvalidJson = 3,
+    SkippedNotComfyUIWorkflow = 4,
+    Failed = 5,
+}
+
+public record AigcGeneratorComfyUIImportItemResult
+{
+    public required string Path { get; init; }
+    public required AigcGeneratorComfyUIImportStatus Status { get; init; }
+    /// <summary>Human-readable reason for non-Imported statuses; the generator id when Imported.</summary>
+    public string? Reason { get; init; }
+    public int? GeneratorId { get; init; }
+}
+
+public record AigcGeneratorComfyUIImportResult
+{
+    public int ImportedCount { get; init; }
+    public int SkippedCount { get; init; }
+    public int FailedCount { get; init; }
+    public required List<AigcGeneratorComfyUIImportItemResult> Items { get; init; }
+}

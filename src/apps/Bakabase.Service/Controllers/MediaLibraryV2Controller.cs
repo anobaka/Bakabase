@@ -96,7 +96,7 @@ public class MediaLibraryV2Controller(
     public async Task<SingletonResponse<int>> GetResourceCount(int id)
     {
         var mappings = await mappingService.GetByMediaLibraryId(id);
-        return new SingletonResponse<int>(mappings.Count);
+        return new SingletonResponse<int>(data: mappings.Count);
     }
 
     /// <summary>

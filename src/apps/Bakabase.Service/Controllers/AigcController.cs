@@ -65,13 +65,22 @@ public class AigcController(
     [SwaggerOperation(OperationId = "TriggerAigcGeneration")]
     public async Task<SingletonResponse<int>> TriggerRun(
         int id, [FromBody] AigcGenerationTriggerInputModel? model, CancellationToken ct) =>
-        new(await generatorService.TriggerRunAsync(id, model, ct));
+        // SingletonResponse<int> has both (T? data) and (int code) ctors — passing a bare int
+        // resolves to (int code), which would set Code=runId, Data=0. Use the named argument
+        // to force the data ctor.
+        new(data: await generatorService.TriggerRunAsync(id, model, ct));
 
     [HttpPost("generators/{id:int}/import")]
     [SwaggerOperation(OperationId = "ImportAigcArtifacts")]
     public async Task<SingletonResponse<int>> ImportArtifacts(
         int id, [FromBody] AigcArtifactImportInputModel model, CancellationToken ct) =>
-        new(await generatorService.ImportArtifactsAsync(id, model, ct));
+        new(data: await generatorService.ImportArtifactsAsync(id, model, ct));
+
+    [HttpPost("generators/import-comfyui")]
+    [SwaggerOperation(OperationId = "ImportComfyUIWorkflows")]
+    public async Task<SingletonResponse<AigcGeneratorComfyUIImportResult>> ImportComfyUIWorkflows(
+        [FromBody] AigcGeneratorComfyUIImportInputModel model, CancellationToken ct) =>
+        new(await generatorService.ImportComfyUIWorkflowsAsync(model, ct));
 
     // ===== Runs =====
 
@@ -91,6 +100,14 @@ public class AigcController(
     public async Task<BaseResponse> DeleteRun(int id, CancellationToken ct)
     {
         await artifactService.DeleteRunAsync(id, ct);
+        return BaseResponseBuilder.Ok;
+    }
+
+    [HttpPost("runs/{id:int}/stop")]
+    [SwaggerOperation(OperationId = "StopAigcRun")]
+    public async Task<BaseResponse> StopRun(int id, CancellationToken ct)
+    {
+        await artifactService.StopRunAsync(id, ct);
         return BaseResponseBuilder.Ok;
     }
 

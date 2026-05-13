@@ -16,9 +16,9 @@ interface Props extends DestroyableProps {
 }
 
 /**
- * Local confirm dialog for the health-score page. We intentionally avoid
- * <c>window.confirm</c> because the Electron host suppresses it, which is
- * why "delete profile" appeared to do nothing.
+ * Shared confirm dialog. Use instead of <c>window.confirm</c> — the Electron
+ * host suppresses native browser confirm/alert dialogs, so anything gated on
+ * <c>if (!confirm(...)) return;</c> silently no-ops.
  */
 const ConfirmModal = ({
   title,

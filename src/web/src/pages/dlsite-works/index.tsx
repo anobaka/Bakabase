@@ -35,6 +35,7 @@ import { toast } from "@/components/bakaui";
 import { useDLsiteOptionsStore } from "@/stores/options";
 import { DLsiteConfig } from "@/components/ThirdPartyConfig";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import ConfirmModal from "@/components/ConfirmModal";
 import { useBTasksStore } from "@/stores/bTasks";
 import { BTaskStatus } from "@/sdk/constants";
 
@@ -190,13 +191,21 @@ export default function DLsiteWorksPage() {
     }
   };
 
-  const handleDeleteLocal = async (workId: string) => {
-    if (!confirm(t("resourceSource.dlsite.action.deleteLocalConfirm"))) return;
-    const rsp = await BApi.dlsiteWork.deleteDLsiteWorkLocalFiles(workId);
-    if (!rsp.code) {
-      setWorks((prev) => prev.map((w) => w.workId === workId ? { ...w, isDownloaded: false, localPath: undefined } : w));
-      toast.success(t("common.state.saved"));
-    }
+  const handleDeleteLocal = (workId: string) => {
+    createPortal(ConfirmModal, {
+      title: t<string>("common.action.delete"),
+      message: t<string>("resourceSource.dlsite.action.deleteLocalConfirm"),
+      destructive: true,
+      onConfirm: async () => {
+        const rsp = await BApi.dlsiteWork.deleteDLsiteWorkLocalFiles(workId);
+        if (!rsp.code) {
+          setWorks((prev) => prev.map((w) => w.workId === workId ? { ...w, isDownloaded: false, localPath: undefined } : w));
+          toast.success(t<string>("common.state.saved"));
+        } else if (rsp.message) {
+          toast.danger(rsp.message);
+        }
+      },
+    });
   };
 
   const handleToggleHidden = async (workId: string, isHidden: boolean) => {

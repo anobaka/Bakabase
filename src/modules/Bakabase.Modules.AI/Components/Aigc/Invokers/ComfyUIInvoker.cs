@@ -41,7 +41,7 @@ public class ComfyUIInvoker(IHttpClientFactory httpClientFactory, ILogger<ComfyU
         if (string.IsNullOrEmpty(config.Endpoint))
             throw new InvalidOperationException("ComfyUI endpoint is not configured.");
 
-        var workflowText = request.Parameters.GetParam<string?>("workflow");
+        var workflowText = ReadGeneratorWorkflow(request);
         if (string.IsNullOrEmpty(workflowText))
         {
             workflowText = ReadDefaultWorkflow(config);
@@ -73,9 +73,19 @@ public class ComfyUIInvoker(IHttpClientFactory httpClientFactory, ILogger<ComfyU
         if (!submit.IsSuccessStatusCode)
             throw new InvalidOperationException($"ComfyUI /prompt returned {(int)submit.StatusCode}: {submitText}");
 
-        var promptId = JsonNode.Parse(submitText)?["prompt_id"]?.GetValue<string>();
+        var submitParsed = JsonNode.Parse(submitText);
+        var promptId = submitParsed?["prompt_id"]?.GetValue<string>();
         if (string.IsNullOrEmpty(promptId))
             throw new InvalidOperationException("ComfyUI did not return prompt_id: " + submitText);
+
+        // ComfyUI returns 200 + prompt_id even when the workflow has validation errors —
+        // the prompt is accepted into the queue but never executed. Detect that here so
+        // we don't end up polling history forever for a prompt that won't run.
+        if (submitParsed?["node_errors"] is JsonObject nodeErrors && nodeErrors.Count > 0)
+        {
+            throw new InvalidOperationException(
+                $"ComfyUI rejected the workflow with node_errors (prompt_id={promptId}): {nodeErrors.ToJsonString()}");
+        }
 
         // Poll history until our prompt_id appears
         JsonNode? history = null;
@@ -103,6 +113,17 @@ public class ComfyUIInvoker(IHttpClientFactory httpClientFactory, ILogger<ComfyU
         ct.ThrowIfCancellationRequested();
         if (history is null)
             throw new InvalidOperationException("ComfyUI polling ended without history entry.");
+
+        // ComfyUI history entry has a "status" object that says whether the run actually
+        // succeeded (status_str = "success" / "error"). When it errored, "messages" carries
+        // the per-node failures — surface them.
+        var statusObj = history["status"] as JsonObject;
+        var statusStr = statusObj?["status_str"]?.GetValue<string>();
+        if (statusStr == "error")
+        {
+            throw new InvalidOperationException(
+                $"ComfyUI execution failed (prompt_id={promptId}). Status: {statusObj?.ToJsonString() ?? "<none>"}");
+        }
 
         var outputsNode = history["outputs"] as JsonObject;
         var outputs = new List<AigcGenerationOutput>();
@@ -132,6 +153,32 @@ public class ComfyUIInvoker(IHttpClientFactory httpClientFactory, ILogger<ComfyU
             }
         }
 
+        if (outputs.Count == 0)
+        {
+            // Status said success but we got nothing. The most common cause is ComfyUI
+            // caching the entire output chain when the workflow is byte-identical to a
+            // previous submission — surfaced via the "execution_cached" status message.
+            var cachedNodes = ExtractCachedNodes(statusObj);
+            if (cachedNodes.Count > 0)
+            {
+                logger.LogWarning(
+                    "ComfyUI cached all output nodes ({Nodes}). prompt_id={PromptId}, history entry: {Entry}",
+                    string.Join(",", cachedNodes), promptId, history.ToJsonString());
+                throw new InvalidOperationException(
+                    $"ComfyUI cached all output-producing nodes ([{string.Join(",", cachedNodes)}]) so no new files were saved. " +
+                    $"This happens when the submitted workflow is byte-identical to a previous one. " +
+                    $"Fix: add a {{seed}} token to some node input (e.g. SaveImage's filename_prefix: \"ComfyUI_{{seed}}\") " +
+                    $"so each run differs and ComfyUI re-executes the chain.");
+            }
+
+            logger.LogWarning("ComfyUI returned status={Status} but zero image outputs. " +
+                              "prompt_id={PromptId}, full history entry: {Entry}",
+                statusStr ?? "<missing>", promptId, history.ToJsonString());
+            throw new InvalidOperationException(
+                $"ComfyUI completed but produced no image outputs (prompt_id={promptId}, status={statusStr ?? "<missing>"}). " +
+                $"Full history entry: {history.ToJsonString()}");
+        }
+
         return new AigcInvocationResult
         {
             Outputs = outputs,
@@ -140,11 +187,71 @@ public class ComfyUIInvoker(IHttpClientFactory httpClientFactory, ILogger<ComfyU
         };
     }
 
+    /// <summary>
+    /// Read the per-generator workflow from request.Parameters. Accepts either a string
+    /// (legacy / template-with-tokens) or a JsonElement object (current import flow stores
+    /// the workflow as a structured object).
+    /// </summary>
+    private static string? ReadGeneratorWorkflow(AigcInvocationRequest request)
+    {
+        if (!request.Parameters.TryGetValue("workflow", out var raw) || raw is null) return null;
+        return raw switch
+        {
+            string s => s,
+            JsonElement je => je.ValueKind switch
+            {
+                JsonValueKind.String => je.GetString(),
+                JsonValueKind.Object or JsonValueKind.Array => je.GetRawText(),
+                _ => null
+            },
+            JsonNode jn => jn.ToJsonString(),
+            _ => raw.ToString()
+        };
+    }
+
+    /// <summary>
+    /// Pull cached-node ids out of a ComfyUI history-entry status object. The shape is:
+    ///   { "messages": [ ["execution_cached", { "nodes": ["1","2"], ... }], ... ] }
+    /// </summary>
+    private static List<string> ExtractCachedNodes(JsonObject? statusObj)
+    {
+        var result = new List<string>();
+        if (statusObj?["messages"] is not JsonArray messages) return result;
+
+        foreach (var msg in messages)
+        {
+            if (msg is not JsonArray arr || arr.Count < 2) continue;
+            if (arr[0]?.GetValue<string>() != "execution_cached") continue;
+            if (arr[1] is not JsonObject info) continue;
+            if (info["nodes"] is not JsonArray nodes) continue;
+
+            foreach (var n in nodes)
+            {
+                var s = n?.GetValue<string>();
+                if (!string.IsNullOrEmpty(s)) result.Add(s);
+            }
+        }
+        return result;
+    }
+
     private static string? ReadDefaultWorkflow(AiProviderDbModel config)
     {
         if (string.IsNullOrEmpty(config.AigcConfigJson)) return null;
         var parsed = AigcInvokerHelpers.ParseLenient(config.AigcConfigJson);
-        return parsed?["defaultWorkflow"]?.ToJsonString();
+        if (parsed is null) return null;
+
+        // Wrapped form: { "defaultWorkflow": { ... } }
+        if (parsed["defaultWorkflow"] is { } wrapped) return wrapped.ToJsonString();
+
+        // Bare form: user pasted the Export (API) JSON directly.
+        // A ComfyUI API-format workflow is an object whose values carry "class_type".
+        if (parsed is JsonObject obj &&
+            obj.Any(kv => kv.Value is JsonObject n && n.ContainsKey("class_type")))
+        {
+            return obj.ToJsonString();
+        }
+
+        return null;
     }
 
     private static string JsonEscape(string s)

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Accordion,
@@ -14,9 +14,12 @@ import {
   TableHeader,
   TableRow,
 } from "@heroui/react";
-import { AiOutlineDelete } from "react-icons/ai";
+import { AiOutlineDelete, AiOutlineStop } from "react-icons/ai";
 
 import { Select, toast } from "@/components/bakaui";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import ConfirmModal from "@/components/ConfirmModal";
+import { selectTasks, useBTasksStore } from "@/stores/bTasks";
 import BApi from "@/sdk/BApi";
 import type {
   BakabaseModulesAIModelsDbAigcArtifactDbModel,
@@ -30,15 +33,24 @@ type Artifact = BakabaseModulesAIModelsDbAigcArtifactDbModel;
 type Generator = BakabaseModulesAIModelsDbAigcGeneratorDbModel;
 
 const STATUS_COLORS: Record<number, "default" | "primary" | "success" | "danger" | "warning"> = {
-  1: "default",
-  2: "primary",
-  3: "success",
-  4: "danger",
-  5: "warning",
+  1: "default",   // Pending
+  2: "primary",   // Running
+  3: "success",   // Succeeded
+  4: "danger",    // Failed
+  5: "warning",   // Imported
+  6: "default",   // Cancelled
 };
+
+const RUN_STATUS_PENDING = 1;
+const RUN_STATUS_RUNNING = 2;
+const isStoppable = (status: number) =>
+  status === RUN_STATUS_PENDING || status === RUN_STATUS_RUNNING;
+
+const AIGC_RUN_BTASK_PREFIX = "AigcGenerationRun:";
 
 const AigcRecordsPage = () => {
   const { t } = useTranslation();
+  const { createPortal } = useBakabaseContext();
   const [runs, setRuns] = useState<Run[]>([]);
   const [artifactsByRun, setArtifactsByRun] = useState<Record<number, Artifact[]>>({});
   const [generators, setGenerators] = useState<Generator[]>([]);
@@ -59,6 +71,28 @@ const AigcRecordsPage = () => {
     load();
   }, [load]);
 
+  // Real-time refresh hook: every AigcGenerationRun has a 1:1 BTask
+  // (id = "AigcGenerationRun:<runId>") whose state is pushed via WebGuiHub SignalR
+  // into the BTasks store. We watch the set + statuses of those tasks; whenever the
+  // fingerprint changes (new run appears, status transitions Pending→Running→…), we
+  // reload. Percentage ticks don't change the fingerprint, so we don't re-fetch on
+  // every progress update.
+  const bTasks = useBTasksStore(selectTasks);
+  const aigcBTaskFingerprint = useMemo(
+    () =>
+      bTasks
+        .filter((t) => typeof t.id === "string" && t.id.startsWith(AIGC_RUN_BTASK_PREFIX))
+        .map((t) => `${t.id}:${t.status}`)
+        .sort()
+        .join("|"),
+    [bTasks],
+  );
+  useEffect(() => {
+    // Skip the initial-empty render so we don't double-fire alongside the mount load above.
+    if (!aigcBTaskFingerprint) return;
+    load();
+  }, [aigcBTaskFingerprint, load]);
+
   const loadArtifacts = async (runId: number) => {
     if (artifactsByRun[runId]) return;
     const r = await BApi.aigc.getAigcArtifacts({ runId } as any);
@@ -71,7 +105,6 @@ const AigcRecordsPage = () => {
   const tStatus = (n: number) => t<string>(`aigc.runStatus.${n}`);
 
   const handleDeleteRun = async (id: number) => {
-    if (!confirm(t<string>("aigc.records.confirmDeleteRun"))) return;
     const r = await BApi.aigc.deleteAigcRun(id);
     if (!r.code) {
       toast.success(t<string>("common.success.saved"));
@@ -81,21 +114,41 @@ const AigcRecordsPage = () => {
         return n;
       });
       await load();
+    } else {
+      toast.danger(r.message || t<string>("aigc.records.deleteFailed"));
     }
   };
 
-  const handleDeleteArtifact = async (runId: number, artifactId: number) => {
-    if (!confirm(t<string>("aigc.records.confirmDeleteArtifact"))) return;
-    const r = await BApi.aigc.deleteAigcArtifact(artifactId);
+  const handleStopRun = async (id: number) => {
+    const r = await BApi.aigc.stopAigcRun(id);
     if (!r.code) {
-      toast.success(t<string>("common.success.saved"));
-      setArtifactsByRun((prev) => {
-        const n = { ...prev };
-        delete n[runId];
-        return n;
-      });
+      toast.success(t<string>("aigc.records.stopRequested"));
       await load();
+    } else {
+      toast.danger(r.message || t<string>("aigc.records.stopFailed"));
     }
+  };
+
+  const handleDeleteArtifact = (runId: number, artifactId: number) => {
+    createPortal(ConfirmModal, {
+      title: t<string>("common.action.delete"),
+      message: t<string>("aigc.records.confirmDeleteArtifact"),
+      destructive: true,
+      onConfirm: async () => {
+        const r = await BApi.aigc.deleteAigcArtifact(artifactId);
+        if (!r.code) {
+          toast.success(t<string>("common.success.saved"));
+          setArtifactsByRun((prev) => {
+            const n = { ...prev };
+            delete n[runId];
+            return n;
+          });
+          await load();
+        } else {
+          toast.danger(r.message || t<string>("aigc.records.deleteFailed"));
+        }
+      },
+    });
   };
 
   return (
@@ -136,6 +189,31 @@ const AigcRecordsPage = () => {
               title={
                 <div className="flex items-center gap-3 flex-wrap">
                   <span className="font-mono">#{r.id}</span>
+                  {/* Inline actions. Wrapper stops propagation so clicks don't toggle the accordion. */}
+                  <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                    {isStoppable(r.status) && (
+                      <Button
+                        size="sm"
+                        isIconOnly
+                        variant="light"
+                        color="warning"
+                        title={t<string>("aigc.records.stopRun")}
+                        onPress={() => handleStopRun(r.id)}
+                      >
+                        <AiOutlineStop className="text-lg" />
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      isIconOnly
+                      variant="light"
+                      color="danger"
+                      title={t<string>("aigc.records.deleteRun")}
+                      onPress={() => handleDeleteRun(r.id)}
+                    >
+                      <AiOutlineDelete className="text-lg" />
+                    </Button>
+                  </div>
                   <Chip size="sm" color={STATUS_COLORS[r.status] ?? "default"} variant="dot">
                     {tStatus(r.status)}
                   </Chip>
@@ -190,17 +268,6 @@ const AigcRecordsPage = () => {
                     ))}
                   </TableBody>
                 </Table>
-                <div>
-                  <Button
-                    size="sm"
-                    variant="flat"
-                    color="danger"
-                    startContent={<AiOutlineDelete />}
-                    onPress={() => handleDeleteRun(r.id)}
-                  >
-                    {t<string>("aigc.records.deleteRun")}
-                  </Button>
-                </div>
               </div>
             </AccordionItem>
           );

@@ -21,15 +21,16 @@ export const AigcProviderConfigSamples: Record<number, { header: string; body: s
   // ComfyUI = 101
   101: {
     header:
-      `// ComfyUI: provide a default workflow JSON. Tokens "{prompt}",\n` +
-      `// "{negativePrompt}" and "{seed}" are substituted before submission.\n` +
-      `// You can also override per-generator via parametersJson.workflow.`,
+      `// ComfyUI: paste the workflow JSON exported via "Export (API)" in ComfyUI\n` +
+      `// (enable dev mode in ComfyUI Settings to see that menu item). Or click\n` +
+      `// "Upload JSON" above to load it from a file.\n` +
+      `// Optional tokens substituted before submission: "{prompt}",\n` +
+      `// "{negativePrompt}", "{seed}". Leave them out to keep prompts inside\n` +
+      `// the workflow itself.`,
     body: `{
-  "defaultWorkflow": {
-    "3": {
-      "inputs": { "seed": "{seed}", "steps": 20, "cfg": 7, "sampler_name": "euler", "scheduler": "normal", "denoise": 1, "model": ["4", 0], "positive": ["6", 0], "negative": ["7", 0], "latent_image": ["5", 0] },
-      "class_type": "KSampler"
-    }
+  "3": {
+    "inputs": { "seed": "{seed}", "steps": 20, "cfg": 7, "sampler_name": "euler", "scheduler": "normal", "denoise": 1, "model": ["4", 0], "positive": ["6", 0], "negative": ["7", 0], "latent_image": ["5", 0] },
+    "class_type": "KSampler"
   }
 }`,
   },

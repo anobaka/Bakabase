@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Button,
@@ -20,14 +20,16 @@ import {
   TableRow,
   useDisclosure,
 } from "@heroui/react";
-import { AiOutlineDelete, AiOutlinePlus } from "react-icons/ai";
+import { AiOutlineDelete, AiOutlinePlus, AiOutlineUpload } from "react-icons/ai";
 
 import { Select, toast } from "@/components/bakaui";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import ConfirmModal from "@/components/ConfirmModal";
 import BApi from "@/sdk/BApi";
 import type {
   BakabaseModulesAIModelsDbAiProviderDbModel,
   BakabaseModulesAIModelsDomainAiProviderKindInfo,
-  BakabaseModulesAIModelsDomainAiProviderTestResult,
+  BakabaseModulesAIModelsInputAiProviderTestResult,
   BakabaseModulesAIModelsInputAiProviderAddInputModel,
   BakabaseModulesAIModelsInputAiProviderUpdateInputModel,
   BakabaseModulesAIModelsDomainLlmModelInfo,
@@ -38,7 +40,7 @@ import { AigcProviderConfigSamples } from "./samples";
 
 type AiProvider = BakabaseModulesAIModelsDbAiProviderDbModel;
 type KindInfo = BakabaseModulesAIModelsDomainAiProviderKindInfo;
-type TestResult = BakabaseModulesAIModelsDomainAiProviderTestResult;
+type TestResult = BakabaseModulesAIModelsInputAiProviderTestResult;
 type LlmModelInfo = BakabaseModulesAIModelsDomainLlmModelInfo;
 
 const supportsLlm = (caps: number) =>
@@ -48,6 +50,7 @@ const supportsAigc = (caps: number) =>
 
 const AiProviderPanel = () => {
   const { t } = useTranslation();
+  const { createPortal } = useBakabaseContext();
   const { isOpen, onOpen, onClose } = useDisclosure();
 
   const [providers, setProviders] = useState<AiProvider[]>([]);
@@ -57,6 +60,7 @@ const AiProviderPanel = () => {
   const [testing, setTesting] = useState<Set<number>>(new Set());
   const [loadingModels, setLoadingModels] = useState<Record<number, boolean>>({});
   const [providerModels, setProviderModels] = useState<Record<number, LlmModelInfo[]>>({});
+  const aigcFileInputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     const [pr, kr] = await Promise.all([
@@ -159,13 +163,21 @@ const AiProviderPanel = () => {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm(t<string>("aiProvider.confirmDelete"))) return;
-    const r = await BApi.ai.deleteAiProvider(id);
-    if (!r.code) {
-      toast.success(t<string>("common.success.saved"));
-      await load();
-    }
+  const handleDelete = (id: number) => {
+    createPortal(ConfirmModal, {
+      title: t<string>("common.action.delete"),
+      message: t<string>("aiProvider.confirmDelete"),
+      destructive: true,
+      onConfirm: async () => {
+        const r = await BApi.ai.deleteAiProvider(id);
+        if (!r.code) {
+          toast.success(t<string>("common.success.saved"));
+          await load();
+        } else if (r.message) {
+          toast.danger(r.message);
+        }
+      },
+    });
   };
 
   const handleTest = async (id: number) => {
@@ -206,6 +218,18 @@ const AiProviderPanel = () => {
     } finally {
       setLoadingModels((prev) => ({ ...prev, [id]: false }));
     }
+  };
+
+  const handleUploadAigcConfig = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = reader.result;
+      if (typeof text !== "string" || !editing) return;
+      setEditing({ ...editing, aigcConfigJson: text });
+      toast.success(t<string>("aiProvider.aigcConfigUploaded"));
+    };
+    reader.onerror = () => toast.danger(t<string>("aiProvider.aigcConfigUploadFailed"));
+    reader.readAsText(file);
   };
 
   const handleKindChange = (kind: number) => {
@@ -413,11 +437,32 @@ const AiProviderPanel = () => {
                 {/* AIGC config (only visible if AIGC capability enabled) */}
                 {editing.aigcEnabled && editingSupportsAigc && (
                   <div>
-                    <div className="text-xs text-default-500 mb-1">
-                      {t<string>("aiProvider.aigcConfigJson")}
-                      <span className="ml-2 text-default-400">
-                        {t<string>("aiProvider.aigcConfigJsonHelp")}
-                      </span>
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="text-xs text-default-500">
+                        {t<string>("aiProvider.aigcConfigJson")}
+                        <span className="ml-2 text-default-400">
+                          {t<string>("aiProvider.aigcConfigJsonHelp")}
+                        </span>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="flat"
+                        startContent={<AiOutlineUpload />}
+                        onPress={() => aigcFileInputRef.current?.click()}
+                      >
+                        {t<string>("aiProvider.uploadJson")}
+                      </Button>
+                      <input
+                        ref={aigcFileInputRef}
+                        type="file"
+                        accept="application/json,.json"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) handleUploadAigcConfig(f);
+                          e.target.value = "";
+                        }}
+                      />
                     </div>
                     <JsonEditor
                       key={`aigc-config-${editing.kind ?? 0}-${editing.id ?? "new"}`}
