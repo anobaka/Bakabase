@@ -33,7 +33,7 @@ import { Select, toast } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { FileSystemSelectorModal } from "@/components/FileSystemSelector";
 import BApi from "@/sdk/BApi";
-import { AiProviderKind } from "@/sdk/constants";
+import { AiProviderKind, AiProviderKindLabel } from "@/sdk/constants";
 import type {
   BakabaseModulesAIModelsDbAigcGeneratorDbModel,
   BakabaseModulesAIModelsDbAiProviderDbModel,
@@ -53,6 +53,12 @@ type Provider = BakabaseModulesAIModelsDbAiProviderDbModel;
 
 const MEDIA_TYPES = [1, 2, 3, 4, 99];
 const RESOURCE_MODES = [1, 2];
+
+// Provider kinds that support importing AIGC configs from external artifacts.
+// Add a kind here once its backend import endpoint exists and the i18n entries
+// `aigc.configs.import.kind.{kindName}.{title,description,providerLabel,noProvider}`
+// (and an optional `.status.4`) are defined.
+const IMPORTABLE_KINDS: readonly AiProviderKind[] = [AiProviderKind.ComfyUI];
 
 const presetSampleHeader =
   `// Property presets are applied to every Resource produced by this AIGC config.\n` +
@@ -116,15 +122,22 @@ const AigcConfigsPage = () => {
   /** ComfyUI workflow JSON shown in the editor for ComfyUI-kind generators (raw text, possibly invalid). */
   const [comfyuiWorkflowText, setComfyuiWorkflowText] = useState("");
   /** Import dialog state. */
+  const [importKind, setImportKind] = useState<AiProviderKind>(IMPORTABLE_KINDS[0]);
   const [importProviderId, setImportProviderId] = useState<number | undefined>(undefined);
   const [importPaths, setImportPaths] = useState<string[]>([]);
   const [importInFlight, setImportInFlight] = useState(false);
   const [importResult, setImportResult] = useState<BakabaseModulesAIModelsInputAigcGeneratorComfyUIImportResult | null>(null);
+  /** Kind that produced the currently-displayed result, used to localize per-kind statuses. */
+  const [importResultKind, setImportResultKind] = useState<AiProviderKind | null>(null);
 
-  const comfyuiProviders = useMemo(
-    () => providers.filter((p) => p.kind === AiProviderKind.ComfyUI && p.aigcEnabled),
-    [providers],
-  );
+  const importableProvidersByKind = useMemo(() => {
+    const map = new Map<AiProviderKind, Provider[]>();
+    for (const k of IMPORTABLE_KINDS) {
+      map.set(k, providers.filter((p) => p.kind === k && p.aigcEnabled));
+    }
+    return map;
+  }, [providers]);
+  const providersForImportKind = importableProvidersByKind.get(importKind) ?? [];
 
   const load = useCallback(async () => {
     const [gr, pr] = await Promise.all([
@@ -276,15 +289,29 @@ const AigcConfigsPage = () => {
     }
   };
 
-  // === Import flow (ComfyUI only) ===
+  // === Import flow ===
   const handleOpenImport = () => {
-    if (comfyuiProviders.length === 0) {
-      toast.danger(t<string>("aigc.configs.import.noComfyUIProvider"));
+    // Pick the first importable kind that has at least one enabled provider so the
+    // modal opens on a usable state. If none, fall back to a generic toast — the
+    // per-kind noProvider toast would be misleading if multiple kinds had no providers.
+    const firstReady = IMPORTABLE_KINDS.find(
+      (k) => (importableProvidersByKind.get(k)?.length ?? 0) > 0,
+    );
+    if (firstReady == null) {
+      toast.danger(t<string>("aigc.configs.import.noImportableProvider"));
       return;
     }
-    setImportProviderId(comfyuiProviders[0]?.id);
+    const kindProviders = importableProvidersByKind.get(firstReady) ?? [];
+    setImportKind(firstReady);
+    setImportProviderId(kindProviders[0]?.id);
     setImportPaths([]);
     onImportOpen();
+  };
+
+  const handleImportKindChange = (k: AiProviderKind) => {
+    setImportKind(k);
+    const kindProviders = importableProvidersByKind.get(k) ?? [];
+    setImportProviderId(kindProviders[0]?.id);
   };
 
   const handlePickImportPaths = () => {
@@ -309,16 +336,24 @@ const AigcConfigsPage = () => {
     if (importPaths.length === 0) return;
     setImportInFlight(true);
     try {
-      const r = await BApi.aigc.importComfyUiWorkflows({
-        providerId: importProviderId,
-        paths: importPaths,
-      });
-      if (!r.code && r.data) {
-        setImportResult(r.data);
-        onImportClose();
-        onImportResultOpen();
-        await load();
+      // Dispatch by kind. Each importable kind has its own backend endpoint;
+      // add a branch here when wiring a new one.
+      let result: BakabaseModulesAIModelsInputAigcGeneratorComfyUIImportResult | null = null;
+      if (importKind === AiProviderKind.ComfyUI) {
+        const r = await BApi.aigc.importComfyUiWorkflows({
+          providerId: importProviderId,
+          paths: importPaths,
+        });
+        if (r.code || !r.data) return;
+        result = r.data;
+      } else {
+        return;
       }
+      setImportResult(result);
+      setImportResultKind(importKind);
+      onImportClose();
+      onImportResultOpen();
+      await load();
     } finally {
       setImportInFlight(false);
     }
@@ -615,17 +650,33 @@ const editingProviderKind = editing?.providerId ? providerKind(editing.providerI
         </ModalContent>
       </Modal>
 
-      {/* Import (ComfyUI workflows) */}
+      {/* Import */}
       <Modal isOpen={isImportOpen} onClose={onImportClose} size="2xl" scrollBehavior="inside">
         <ModalContent>
-          <ModalHeader>{t<string>("aigc.configs.import.title")}</ModalHeader>
+          <ModalHeader>
+            {t<string>(`aigc.configs.import.kind.${AiProviderKindLabel[importKind]}.title`)}
+          </ModalHeader>
           <ModalBody>
             <div className="flex flex-col gap-3">
+              <Select
+                label={t<string>("aigc.configs.import.sourceLabel")}
+                size="sm"
+                isRequired
+                selectedKeys={[String(importKind)]}
+                onSelectionChange={(keys) => {
+                  const v = Array.from(keys)[0];
+                  if (v) handleImportKindChange(Number(v) as AiProviderKind);
+                }}
+                dataSource={IMPORTABLE_KINDS.map((k) => ({
+                  label: AiProviderKindLabel[k],
+                  value: String(k),
+                }))}
+              />
               <p className="text-sm text-default-500">
-                {t<string>("aigc.configs.import.description")}
+                {t<string>(`aigc.configs.import.kind.${AiProviderKindLabel[importKind]}.description`)}
               </p>
               <Select
-                label={t<string>("aigc.configs.import.provider")}
+                label={t<string>(`aigc.configs.import.kind.${AiProviderKindLabel[importKind]}.providerLabel`)}
                 size="sm"
                 isRequired
                 selectedKeys={importProviderId ? [String(importProviderId)] : []}
@@ -633,7 +684,7 @@ const editingProviderKind = editing?.providerId ? providerKind(editing.providerI
                   const v = Array.from(keys)[0];
                   if (v) setImportProviderId(Number(v));
                 }}
-                dataSource={comfyuiProviders.map((p) => ({ label: p.name, value: String(p.id) }))}
+                dataSource={providersForImportKind.map((p) => ({ label: p.name, value: String(p.id) }))}
               />
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between">
@@ -730,7 +781,11 @@ const editingProviderKind = editing?.providerId ? providerKind(editing.providerI
                         <TableRow key={idx}>
                           <TableCell>
                             <Chip size="sm" color={importStatusColor(it.status)} variant="flat">
-                              {t<string>(`aigc.configs.import.status.${it.status}`)}
+                              {t<string>(
+                                it.status === 4 && importResultKind != null
+                                  ? `aigc.configs.import.kind.${AiProviderKindLabel[importResultKind]}.status.4`
+                                  : `aigc.configs.import.status.${it.status}`,
+                              )}
                             </Chip>
                           </TableCell>
                           <TableCell>

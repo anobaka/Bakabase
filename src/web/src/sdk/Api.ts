@@ -7949,6 +7949,28 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
+
+    /**
+     * No description
+     *
+     * @tags Aigc
+     * @name OpenAigcArtifact
+     * @request POST:/aigc/artifacts/{id}/open
+     */
+    openAigcArtifact: (
+      id: number,
+      query?: {
+        openInDirectory?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/aigc/artifacts/${id}/open`,
+        method: "POST",
+        query: query,
+        format: "json",
+        ...params,
+      }),
   };
   alias = {
     /**

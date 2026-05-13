@@ -15,27 +15,36 @@ namespace Bakabase.InsideWorld.Business.Components.FileExplorer.Information
         {
             if (type is IwFsType.Directory or IwFsType.Drive)
             {
-                if (showHiddenFiles)
+                try
                 {
-                    ChildrenCount = Directory.GetFileSystemEntries(path).Length;
+                    if (showHiddenFiles)
+                    {
+                        ChildrenCount = Directory.GetFileSystemEntries(path).Length;
+                    }
+                    else
+                    {
+                        ChildrenCount = Directory.GetFileSystemEntries(path)
+                            .Count(e =>
+                            {
+                                var name = Path.GetFileName(e);
+                                if (string.IsNullOrEmpty(name)) name = e;
+                                if (name.StartsWith('.')) return false;
+                                try
+                                {
+                                    return (File.GetAttributes(e) & FileAttributes.Hidden) == 0;
+                                }
+                                catch
+                                {
+                                    return true;
+                                }
+                            });
+                    }
                 }
-                else
+                catch (UnauthorizedAccessException)
                 {
-                    ChildrenCount = Directory.GetFileSystemEntries(path)
-                        .Count(e =>
-                        {
-                            var name = Path.GetFileName(e);
-                            if (string.IsNullOrEmpty(name)) name = e;
-                            if (name.StartsWith('.')) return false;
-                            try
-                            {
-                                return (File.GetAttributes(e) & FileAttributes.Hidden) == 0;
-                            }
-                            catch
-                            {
-                                return true;
-                            }
-                        });
+                }
+                catch (IOException)
+                {
                 }
             }
 

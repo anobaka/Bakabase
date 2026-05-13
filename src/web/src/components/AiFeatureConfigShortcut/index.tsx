@@ -197,9 +197,10 @@ const AiFeatureConfigShortcut = ({ feature, label }: Props) => {
     ? providers.find((p) => p.id === displayConfig.providerConfigId)?.name
     : null;
 
-  const statusLabel = displayConfig?.providerConfigId
+  const isUnconfigured = !displayConfig?.providerConfigId;
+  const statusLabel = !isUnconfigured
     ? (effectivelyUsingDefault ? `${t<string>("configuration.ai.feature.useDefault")}: ` : "")
-      + `${providerName ?? displayConfig.providerConfigId} / ${displayConfig.modelId ?? ""}`
+      + `${providerName ?? displayConfig!.providerConfigId} / ${displayConfig!.modelId ?? ""}`
     : feature === AiFeature.Default
       ? t<string>("configuration.ai.feature.notConfigured")
       : t<string>("configuration.ai.feature.useDefault");
@@ -284,7 +285,16 @@ const AiFeatureConfigShortcut = ({ feature, label }: Props) => {
       {resolvedLabel && <span className="text-sm text-default-500">{resolvedLabel}</span>}
       <Popover isOpen={isOpen} onOpenChange={setIsOpen} placement="bottom">
         <PopoverTrigger>
-          <Button size="sm" variant="flat" startContent={<AiOutlineSetting className="text-lg" />}>
+          <Button
+            size="sm"
+            variant="flat"
+            color={isUnconfigured ? "warning" : "default"}
+            startContent={
+              isUnconfigured
+                ? <AiOutlineWarning className="text-lg" />
+                : <AiOutlineSetting className="text-lg" />
+            }
+          >
             <span className="text-xs">{statusLabel}</span>
           </Button>
         </PopoverTrigger>

@@ -255,4 +255,7 @@
   <data name="ResourceSourceName_ExHentai" xml:space="preserve">
     <value>ExHentai</value>
   </data>
+  <data name="ResourceSourceName_Aigc" xml:space="preserve">
+    <value>AIGC</value>
+  </data>
 </root>

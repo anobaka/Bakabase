@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@heroui/react";
-import { AiOutlineDelete, AiOutlineStop } from "react-icons/ai";
+import { AiOutlineDelete, AiOutlineFolderOpen, AiOutlineStop } from "react-icons/ai";
 
 import { Select, toast } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
@@ -250,7 +250,21 @@ const AigcRecordsPage = () => {
                       <TableRow key={a.id}>
                         <TableCell>{a.ordinalInRun}</TableCell>
                         <TableCell>
-                          <span className="font-mono text-xs">{a.relativePath}</span>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              size="sm"
+                              isIconOnly
+                              variant="light"
+                              title={t<string>("aigc.records.openArtifact")}
+                              onPress={async () => {
+                                const rsp = await BApi.aigc.openAigcArtifact(a.id);
+                                if (rsp.code) toast.danger(rsp.message || String(rsp.code));
+                              }}
+                            >
+                              <AiOutlineFolderOpen className="text-base" />
+                            </Button>
+                            <span className="font-mono text-xs break-all">{a.relativePath}</span>
+                          </div>
                         </TableCell>
                         <TableCell>{a.resourceId ? `#${a.resourceId}` : "-"}</TableCell>
                         <TableCell>

@@ -101,6 +101,12 @@ public class AigcArtifactService<TDbContext>(
             .OrderByDescending(a => a.CreatedAt).ToList();
     }
 
+    public async Task<string?> GetArtifactAbsolutePathAsync(int artifactId, CancellationToken ct = default)
+    {
+        var artifact = await artifactOrm.GetByKey(artifactId);
+        return artifact == null ? null : Path.Combine(fileManager.BaseDir, artifact.RelativePath);
+    }
+
     public async Task DeleteArtifactAsync(int artifactId, CancellationToken ct = default)
     {
         var artifact = await artifactOrm.GetByKey(artifactId)

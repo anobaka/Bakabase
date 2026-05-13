@@ -3,8 +3,10 @@ using System.Threading.Tasks;
 using Bakabase.Modules.AI.Models.Db;
 using Bakabase.Modules.AI.Models.Domain;
 using Bakabase.Modules.AI.Models.Input;
+using Bakabase.Infrastructures.Components.App;
 using Bakabase.Modules.AI.Services;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
+using Bootstrap.Models.Constants;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
@@ -124,6 +126,17 @@ public class AigcController(
     public async Task<BaseResponse> DeleteArtifact(int id, CancellationToken ct)
     {
         await artifactService.DeleteArtifactAsync(id, ct);
+        return BaseResponseBuilder.Ok;
+    }
+
+    [HttpPost("artifacts/{id:int}/open")]
+    [SwaggerOperation(OperationId = "OpenAigcArtifact")]
+    public async Task<BaseResponse> OpenArtifact(int id, [FromQuery] bool openInDirectory, CancellationToken ct)
+    {
+        var path = await artifactService.GetArtifactAbsolutePathAsync(id, ct);
+        if (path == null)
+            return BaseResponseBuilder.Build(ResponseCode.NotFound, $"Artifact {id} not found");
+        OsShell.Open(path, openInDirectory);
         return BaseResponseBuilder.Ok;
     }
 }

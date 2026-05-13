@@ -16,4 +16,10 @@ public interface IAigcArtifactService
 
     Task<IReadOnlyList<AigcArtifactDbModel>> GetArtifactsAsync(int? generatorId, int? runId, CancellationToken ct = default);
     Task DeleteArtifactAsync(int artifactId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Resolve the artifact's stored relative path against the current BaseDir.
+    /// Returns null if the artifact doesn't exist.
+    /// </summary>
+    Task<string?> GetArtifactAbsolutePathAsync(int artifactId, CancellationToken ct = default);
 }
