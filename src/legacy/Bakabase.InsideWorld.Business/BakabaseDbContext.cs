@@ -48,6 +48,7 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<ResourceCacheDbModel> ResourceCaches { get; set; }
 
         public DbSet<PlayHistoryDbModel> PlayHistories { get; set; }
+        public DbSet<PropertyValueScopePreferenceDbModel> PropertyValueScopePreferences { get; set; }
         public DbSet<ThirdPartyContentTrackerDbModel> ThirdPartyContentTrackers { get; set; }
 
         public DbSet<ExtensionGroupDbModel> ExtensionGroups { get; set; }
@@ -179,6 +180,12 @@ namespace Bakabase.InsideWorld.Business
             {
                 a.HasIndex(x => x.ResourceId);
                 a.HasIndex(x => x.PlayedAt);
+            });
+
+            modelBuilder.Entity<PropertyValueScopePreferenceDbModel>(t =>
+            {
+                t.HasIndex(x => x.ResourceId);
+                t.HasIndex(x => new { x.ResourceId, x.PropertyPool, x.PropertyId }).IsUnique();
             });
 
             modelBuilder.Entity<ThirdPartyContentTrackerDbModel>(t =>

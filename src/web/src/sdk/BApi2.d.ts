@@ -4816,6 +4816,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/resource/{id}/property-value-scope-preference": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetResourcePropertyValueScopePreferences"];
+        put: operations["PutResourcePropertyValueScopePreference"];
+        post?: never;
+        delete: operations["DeleteResourcePropertyValueScopePreference"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/resource/bulk/property-value": {
         parameters: {
             query?: never;
@@ -6161,6 +6177,15 @@ export interface components {
             readonly isResourceProperty: boolean;
             readonly isValid: boolean;
         };
+        "Bakabase.Abstractions.Models.Domain.PropertyValueScopePreference": {
+            /** Format: int32 */
+            resourceId: number;
+            propertyPool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
+            /** Format: int32 */
+            propertyId: number;
+            priorities?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyValueScope"][];
+            fallbackOnEmpty: boolean;
+        };
         "Bakabase.Abstractions.Models.Domain.ReservedPropertyValue": {
             /** Format: int32 */
             id: number;
@@ -6207,6 +6232,7 @@ export interface components {
                     [key: string]: components["schemas"]["Bakabase.Abstractions.Models.Domain.Resource+Property"];
                 };
             };
+            scopePreferences?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PropertyValueScopePreference"][];
             readonly pinned: boolean;
             /** Format: date-time */
             playedAt?: string;
@@ -6414,6 +6440,13 @@ export interface components {
             isCustomProperty: boolean;
             value?: string;
             isBizValue: boolean;
+        };
+        "Bakabase.Abstractions.Models.Input.ResourcePropertyValueScopePreferencePutInputModel": {
+            propertyPool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
+            /** Format: int32 */
+            propertyId: number;
+            priorities?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyValueScope"][];
+            fallbackOnEmpty: boolean;
         };
         "Bakabase.Abstractions.Models.Input.ResourceSearchOrderInputModel": {
             property: components["schemas"]["Bakabase.InsideWorld.Models.Constants.Aos.ResourceSearchSortableProperty"];
@@ -9472,6 +9505,12 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PlayableItem"][];
         };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.PropertyValueScopePreference]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PropertyValueScopePreference"][];
+        };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.ResourceSourceLink]": {
             /** Format: int32 */
             code: number;
@@ -9951,6 +9990,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PathMark"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.PropertyValueScopePreference]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PropertyValueScopePreference"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ResourceFileSystemCache]": {
             /** Format: int32 */
@@ -21426,6 +21471,89 @@ export interface operations {
                 "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Input.ResourcePropertyValuePutInputModel"];
             };
         };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetResourcePropertyValueScopePreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.PropertyValueScopePreference]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.PropertyValueScopePreference]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.PropertyValueScopePreference]"];
+                };
+            };
+        };
+    };
+    PutResourcePropertyValueScopePreference: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Input.ResourcePropertyValueScopePreferencePutInputModel"];
+                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Input.ResourcePropertyValueScopePreferencePutInputModel"];
+                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Input.ResourcePropertyValueScopePreferencePutInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Input.ResourcePropertyValueScopePreferencePutInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.PropertyValueScopePreference]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.PropertyValueScopePreference]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.PropertyValueScopePreference]"];
+                };
+            };
+        };
+    };
+    DeleteResourcePropertyValueScopePreference: {
+        parameters: {
+            query?: {
+                /** @description [1: Internal, 2: Reserved, 4: Custom, 7: All] */
+                propertyPool?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
+                propertyId?: number;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description OK */
             200: {

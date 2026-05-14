@@ -41,6 +41,16 @@ export type ResourceDataState = {
   status: DataStatus;
 };
 
+export type PropertyValueScopePreference = {
+  resourceId: number;
+  propertyPool: PropertyPool;
+  propertyId: number;
+  /** Ordered scopes; null = no override (falls through to profile/global) */
+  priorities?: PropertyValueScope[];
+  /** When the top-priority scope is empty, whether to try the next one or render blank */
+  fallbackOnEmpty: boolean;
+};
+
 export type ResourceSourceLink = {
   id: number;
   resourceId: number;
@@ -87,4 +97,7 @@ export type Resource = {
   covers?: string[];
   /** Final resolved playable items from all sources */
   playableItems?: PlayableItem[];
+
+  /** Per-(propertyPool, propertyId) scope priority overrides for this resource */
+  scopePreferences?: PropertyValueScopePreference[];
 };

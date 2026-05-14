@@ -614,6 +614,17 @@ export interface BakabaseAbstractionsModelsDomainPropertyPathSegmentMatcherValue
   isValid: boolean;
 }
 
+export interface BakabaseAbstractionsModelsDomainPropertyValueScopePreference {
+  /** @format int32 */
+  resourceId: number;
+  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
+  propertyPool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
+  /** @format int32 */
+  propertyId: number;
+  priorities?: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope[];
+  fallbackOnEmpty: boolean;
+}
+
 export interface BakabaseAbstractionsModelsDomainReservedPropertyValue {
   /** @format int32 */
   id: number;
@@ -658,6 +669,7 @@ export interface BakabaseAbstractionsModelsDomainResource {
   tags: BakabaseAbstractionsModelsDomainConstantsResourceTag[];
   parent?: BakabaseAbstractionsModelsDomainResource;
   properties?: Record<string, Record<string, BakabaseAbstractionsModelsDomainResourceProperty>>;
+  scopePreferences?: BakabaseAbstractionsModelsDomainPropertyValueScopePreference[];
   pinned: boolean;
   /** @format date-time */
   playedAt?: string;
@@ -922,6 +934,15 @@ export interface BakabaseAbstractionsModelsInputResourcePropertyValuePutInputMod
   isCustomProperty: boolean;
   value?: string;
   isBizValue: boolean;
+}
+
+export interface BakabaseAbstractionsModelsInputResourcePropertyValueScopePreferencePutInputModel {
+  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
+  propertyPool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
+  /** @format int32 */
+  propertyId: number;
+  priorities?: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope[];
+  fallbackOnEmpty: boolean;
 }
 
 export interface BakabaseAbstractionsModelsInputResourceSearchOrderInputModel {
@@ -4625,6 +4646,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsM
   data?: BakabaseAbstractionsModelsDomainPlayableItem[];
 }
 
+export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainPropertyValueScopePreference {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDomainPropertyValueScopePreference[];
+}
+
 export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainResourceSourceLink {
   /** @format int32 */
   code: number;
@@ -5174,6 +5202,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstract
   code: number;
   message?: string;
   data?: BakabaseAbstractionsModelsDomainPathMark;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainPropertyValueScopePreference {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDomainPropertyValueScopePreference;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainResourceFileSystemCache {
@@ -11981,6 +12016,73 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         method: "PUT",
         body: data,
         type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name GetResourcePropertyValueScopePreferences
+     * @request GET:/resource/{id}/property-value-scope-preference
+     */
+    getResourcePropertyValueScopePreferences: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainPropertyValueScopePreference,
+        any
+      >({
+        path: `/resource/${id}/property-value-scope-preference`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name PutResourcePropertyValueScopePreference
+     * @request PUT:/resource/{id}/property-value-scope-preference
+     */
+    putResourcePropertyValueScopePreference: (
+      id: number,
+      data: BakabaseAbstractionsModelsInputResourcePropertyValueScopePreferencePutInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainPropertyValueScopePreference,
+        any
+      >({
+        path: `/resource/${id}/property-value-scope-preference`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name DeleteResourcePropertyValueScopePreference
+     * @request DELETE:/resource/{id}/property-value-scope-preference
+     */
+    deleteResourcePropertyValueScopePreference: (
+      id: number,
+      query?: {
+        /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
+        propertyPool?: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
+        /** @format int32 */
+        propertyId?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/${id}/property-value-scope-preference`,
+        method: "DELETE",
+        query: query,
         format: "json",
         ...params,
       }),

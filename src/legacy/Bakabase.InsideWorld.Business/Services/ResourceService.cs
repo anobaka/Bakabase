@@ -428,6 +428,7 @@ namespace Bakabase.InsideWorld.Business.Services
                                         List<Property>? reservedProperties = null;
                                         List<CustomPropertyValue>? customPropertyValues = null;
                                         List<CustomProperty>? customPropertiesResult = null;
+                                        List<PropertyValueScopePreference>? scopePreferences = null;
 
                                         using (MiniProfiler.Current.Step("Execute parallel queries"))
                                         {
@@ -459,6 +460,12 @@ namespace Bakabase.InsideWorld.Business.Services
                                                     await using var scope = scopeFactory.CreateAsyncScope();
                                                     var service = scope.ServiceProvider.GetRequiredService<ICustomPropertyService>();
                                                     customPropertiesResult = await service.GetAll(null, CustomPropertyAdditionalItem.None, asNoTracking);
+                                                },
+                                                async () =>
+                                                {
+                                                    await using var scope = scopeFactory.CreateAsyncScope();
+                                                    var service = scope.ServiceProvider.GetRequiredService<IPropertyValueScopePreferenceService>();
+                                                    scopePreferences = await service.GetByResourceIds(resourceIds);
                                                 }
                                             };
 
@@ -508,6 +515,11 @@ namespace Bakabase.InsideWorld.Business.Services
                                                 kv => kv.Key,
                                                 kv => kv.Value.ToProperty());
                                         }
+
+                                        var scopePreferencesByResource = scopePreferences?
+                                            .GroupBy(p => p.ResourceId)
+                                            .ToDictionary(g => g.Key, g => g.ToList())
+                                            ?? new Dictionary<int, List<PropertyValueScopePreference>>();
 
                                         // Process all properties in parallel (each resource is independent)
                                         using (MiniProfiler.Current.Step("Process properties (parallel)"))
@@ -606,6 +618,12 @@ namespace Bakabase.InsideWorld.Business.Services
                                                 // Sort property values by scope for this resource (with per-property overrides)
                                                 resourceProfilePropertyOptions.TryGetValue(r.Id, out var profilePropOptions);
                                                 SortPropertyValuesByScope(r, scopePriorityMap, profilePropOptions);
+
+                                                // Attach per-resource scope preferences (most granular layer; frontend resolves the chain).
+                                                if (scopePreferencesByResource.TryGetValue(r.Id, out var prefs))
+                                                {
+                                                    r.ScopePreferences = prefs;
+                                                }
 
                                                 return ValueTask.CompletedTask;
                                             });
@@ -2300,6 +2318,8 @@ namespace Bakabase.InsideWorld.Business.Services
             await _customPropertyValueService.RemoveAll(x => ids.Contains(x.ResourceId));
             var sourceLinkService = GetRequiredService<IResourceSourceLinkService>();
             await sourceLinkService.DeleteByResourceIds(ids);
+            var scopePreferenceService = GetRequiredService<IPropertyValueScopePreferenceService>();
+            await scopePreferenceService.RemoveByResourceIds(ids);
         }
 
         public string BuildDisplayNameForResource(Resource resource, string template,

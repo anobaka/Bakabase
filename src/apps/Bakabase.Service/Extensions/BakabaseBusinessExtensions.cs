@@ -98,6 +98,8 @@ namespace Bakabase.Service.Extensions
             services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, ResourceCacheDbModel, int>>();
             services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, PlayHistoryDbModel, int>>();
             services.AddScoped<IPlayHistoryService, PlayHistoryService>();
+            services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, PropertyValueScopePreferenceDbModel, int>>();
+            services.AddScoped<IPropertyValueScopePreferenceService, PropertyValueScopePreferenceService>();
             services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, ThirdPartyContentTrackerDbModel, int>>();
             services.AddScoped<IThirdPartyContentTrackerService, ThirdPartyContentTrackerService>();
 

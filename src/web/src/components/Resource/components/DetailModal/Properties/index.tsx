@@ -218,8 +218,26 @@ const Properties = (props: Props) => {
     return renderContext.sort((a, b) => a.order - b.order);
   };
 
+  const preferenceMap = React.useMemo(() => {
+    const map = new Map<string, NonNullable<Resource["scopePreferences"]>[number]>();
+
+    for (const p of resource.scopePreferences ?? []) {
+      map.set(`${p.propertyPool}-${p.propertyId}`, p);
+    }
+
+    return map;
+  }, [resource.scopePreferences]);
+
   const renderProperty = (pCtx: PropertyRenderContext) => {
     const { property, propertyValues, propertyPool } = pCtx;
+    const preference = preferenceMap.get(`${propertyPool}-${property.id}`);
+    let effectivePriority = valueScopePriority;
+
+    if (preference?.priorities && preference.priorities.length > 0) {
+      effectivePriority = preference.fallbackOnEmpty
+        ? preference.priorities
+        : [preference.priorities[0]];
+    }
 
     // log(pCtx);
     return (
@@ -231,7 +249,10 @@ const Properties = (props: Props) => {
         isLinked={pCtx.visible}
         layout="vertical"
         property={property}
-        valueScopePriority={valueScopePriority}
+        propertyPool={propertyPool}
+        resourceId={resource.id}
+        scopePreference={preference}
+        valueScopePriority={effectivePriority}
         values={propertyValues.values}
         onValueChange={(sdv, sbv) => {
           const dv = deserializeStandardValue(sdv ?? null, property!.dbValueType!);

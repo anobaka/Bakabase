@@ -1,7 +1,7 @@
 "use client";
 
-import type { PropertyValueScope } from "@/sdk/constants";
-import type { Property } from "@/core/models/Resource";
+import type { PropertyPool, PropertyValueScope } from "@/sdk/constants";
+import type { Property, PropertyValueScopePreference } from "@/core/models/Resource";
 import type { IProperty } from "@/components/Property/models";
 
 import React from "react";
@@ -17,6 +17,8 @@ import {
 } from "@/components/StandardValue/helpers";
 import BriefProperty from "@/components/Chips/Property/BriefProperty";
 
+import ScopePreferencePopover from "./ScopePreferencePopover";
+
 export type PropertyContainerProps = {
   valueScopePriority: PropertyValueScope[];
   onValueScopePriorityChange: (priority: PropertyValueScope[]) => any;
@@ -31,6 +33,9 @@ export type PropertyContainerProps = {
   isLinked?: boolean;
   categoryId: number;
   layout?: "horizontal" | "vertical";
+  resourceId?: number;
+  propertyPool?: PropertyPool;
+  scopePreference?: PropertyValueScopePreference;
 };
 
 const log = buildLogger("PropertyContainer");
@@ -49,10 +54,14 @@ const PropertyContainer = (props: PropertyContainerProps) => {
     isLinked: propsIsLinked,
     categoryId,
     layout = "horizontal",
+    resourceId,
+    propertyPool,
+    scopePreference,
   } = props;
   const { t } = useTranslation();
 
   const [isLinked, setIsLinked] = React.useState(propsIsLinked);
+  const [isScopePopoverOpen, setIsScopePopoverOpen] = React.useState(false);
 
   const scopedValueCandidates = propertyValueScopes.map((s) => {
     return {
@@ -82,19 +91,50 @@ const PropertyContainer = (props: PropertyContainerProps) => {
   }
   scope ??= valueScopePriority[0];
 
+  const canShowPopover =
+    !hidePropertyName && resourceId !== undefined && propertyPool !== undefined;
+
+  const titleNode = (
+    <div className={`flex items-center gap-1 ${classNames?.name ?? ""}`}>
+      <BriefProperty
+        chipProps={
+          layout === "vertical"
+            ? {
+                variant: "light",
+                className: "px-0 leading-none",
+                classNames: { content: "px-0", base: "h-auto" },
+              }
+            : undefined
+        }
+        fields={["pool", "name"]}
+        property={property}
+        showPoolChip={false}
+      />
+      {canShowPopover && (
+        <span
+          className={`transition-opacity duration-150 ${
+            isScopePopoverOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100 focus-within:opacity-100"
+          }`}
+        >
+          <ScopePreferencePopover
+            effectivePriority={valueScopePriority}
+            preference={scopePreference}
+            propertyId={property.id}
+            propertyPool={propertyPool!}
+            resourceId={resourceId!}
+            values={values}
+            onChanged={() => onValueScopePriorityChange(valueScopePriority)}
+            onOpenChange={setIsScopePopoverOpen}
+          />
+        </span>
+      )}
+    </div>
+  );
+
   if (layout === "vertical") {
     return (
-      <div className="flex flex-col gap-0.5">
-        {!hidePropertyName && (
-          <div className={classNames?.name}>
-            <BriefProperty
-              chipProps={{ variant: "light", className: "px-0 leading-none", classNames: { content: "px-0", base: "h-auto"} }}
-              fields={["pool", "name"]}
-              property={property}
-              showPoolChip={false}
-            />
-          </div>
-        )}
+      <div className="flex flex-col gap-0.5 group">
+        {!hidePropertyName && titleNode}
         <div className={`flex items-center gap-2 break-all ${classNames?.value}`}>
           <PropertyValueRenderer
             bizValue={serializeStandardValue(
@@ -115,12 +155,8 @@ const PropertyContainer = (props: PropertyContainerProps) => {
   }
 
   return (
-    <div className="flex flex-col gap-0.5">
-      {!hidePropertyName && (
-        <div className={classNames?.name}>
-          <BriefProperty fields={["pool", "name"]} property={property} showPoolChip={false} />
-        </div>
-      )}
+    <div className="flex flex-col gap-0.5 group">
+      {!hidePropertyName && titleNode}
       <div className={`flex items-center gap-2 break-all ${classNames?.value}`}>
         <PropertyValueRenderer
           bizValue={serializeStandardValue(bizValue, property.bizValueType)}

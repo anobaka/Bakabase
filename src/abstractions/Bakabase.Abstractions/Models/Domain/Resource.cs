@@ -49,6 +49,12 @@ public record Resource
     /// </summary>
     public Dictionary<int, Dictionary<int, Property>>? Properties { get; set; }
 
+    /// <summary>
+    /// Per-(propertyPool, propertyId) value scope preferences for this resource. Most granular layer
+    /// in the resolution chain (per-resource → profile → global). Populated alongside Properties.
+    /// </summary>
+    public List<PropertyValueScopePreference>? ScopePreferences { get; set; }
+
     public bool Pinned => Tags.Contains(ResourceTag.Pinned);
     public DateTime? PlayedAt { get; set; }
 

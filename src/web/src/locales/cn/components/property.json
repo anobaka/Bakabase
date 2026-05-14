@@ -63,5 +63,20 @@
   "Colon can be added between group and name, and tags will be separated by line breaks.": "可在分组和名称之间添加冒号，标签将以换行符分隔。",
   "Once you click the submit button, new tags will be added to the list, and missing tags will be deleted.": "点击提交后，新标签将被添加到列表中，缺失的标签将被删除。",
   "Be cautions: once you modify the text in one line, it will be treated as a new tag, and the original tag will be deleted.": "注意：一旦修改某行文本，该行将被视为新标签，原标签将被删除。",
-  "property.tip.resourceValueCount": "{{count}} 个资源设置了此属性值"
+  "property.tip.resourceValueCount": "{{count}} 个资源设置了此属性值",
+  "property.scopePreference.title": "属性值来源优先级",
+  "property.scopePreference.tooltip": "为该资源定制显示哪个来源的值",
+  "property.scopePreference.currentlyShowing": "当前展示：{{scope}}",
+  "property.scopePreference.currentlyBlank": "当前为空",
+  "property.scopePreference.viaOverride": "来自资源覆盖",
+  "property.scopePreference.viaDefault": "来自默认规则",
+  "property.scopePreference.noValues": "暂无任何来源有值",
+  "property.scopePreference.fallbackOnEmpty": "当前来源为空时回退到下一个",
+  "property.scopePreference.addToList": "加入优先级列表",
+  "property.scopePreference.moveUp": "上移",
+  "property.scopePreference.moveDown": "下移",
+  "property.scopePreference.removeFromList": "从列表移除",
+  "property.scopePreference.reset": "恢复默认",
+  "property.scopePreference.save": "保存",
+  "property.scopePreference.cancel": "取消"
 }

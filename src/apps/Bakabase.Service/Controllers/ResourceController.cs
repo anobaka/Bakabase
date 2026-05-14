@@ -66,7 +66,8 @@ namespace Bakabase.Service.Controllers
         IMediaLibraryResourceMappingService mappingService,
         IBakabaseLocalizer localizer,
         BTaskManager taskManager,
-        IBOptionsManager<FileSystemOptions> fsOptionsManager)
+        IBOptionsManager<FileSystemOptions> fsOptionsManager,
+        IPropertyValueScopePreferenceService scopePreferenceService)
         : Controller
     {
         [HttpGet("search-operation")]
@@ -428,6 +429,39 @@ namespace Bakabase.Service.Controllers
         public async Task<BaseResponse> PutPropertyValue(int id, [FromBody] ResourcePropertyValuePutInputModel model)
         {
             return await service.PutPropertyValue(id, model);
+        }
+
+        [HttpGet("{id:int}/property-value-scope-preference")]
+        [SwaggerOperation(OperationId = "GetResourcePropertyValueScopePreferences")]
+        public async Task<ListResponse<PropertyValueScopePreference>> GetPropertyValueScopePreferences(int id)
+        {
+            var prefs = await scopePreferenceService.GetByResourceIds(new[] {id});
+            return new ListResponse<PropertyValueScopePreference>(prefs);
+        }
+
+        [HttpPut("{id:int}/property-value-scope-preference")]
+        [SwaggerOperation(OperationId = "PutResourcePropertyValueScopePreference")]
+        public async Task<SingletonResponse<PropertyValueScopePreference>> PutPropertyValueScopePreference(
+            int id, [FromBody] ResourcePropertyValueScopePreferencePutInputModel model)
+        {
+            var pref = await scopePreferenceService.Upsert(new PropertyValueScopePreference
+            {
+                ResourceId = id,
+                PropertyPool = model.PropertyPool,
+                PropertyId = model.PropertyId,
+                Priorities = model.Priorities is {Length: > 0} ? model.Priorities : null,
+                FallbackOnEmpty = model.FallbackOnEmpty
+            });
+            return new SingletonResponse<PropertyValueScopePreference>(pref);
+        }
+
+        [HttpDelete("{id:int}/property-value-scope-preference")]
+        [SwaggerOperation(OperationId = "DeleteResourcePropertyValueScopePreference")]
+        public async Task<BaseResponse> DeletePropertyValueScopePreference(int id,
+            [FromQuery] PropertyPool propertyPool, [FromQuery] int propertyId)
+        {
+            await scopePreferenceService.Delete(id, propertyPool, propertyId);
+            return BaseResponseBuilder.Ok;
         }
 
         /// <summary>

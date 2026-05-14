@@ -193,23 +193,14 @@ const BulkPropertyEditor: React.FC<Props> = ({
             bizValue = resource.mediaLibraries.map(ml => ml.name);
           }
         } else {
+          // Bulk edit only operates on scope=Manual values; other scopes are not surfaced here
+          // because bulkPutResourcePropertyValue writes to Manual and they would be effectively read-only.
           const resourceProp = resource.properties?.[property.pool]?.[property.id];
+          const manualValue = resourceProp?.values?.find((v) => v.scope === PropertyValueScope.Manual);
 
-          // Get manual value (or first non-empty value)
-          if (resourceProp?.values) {
-            // Prefer manual scope
-            const manualValue = resourceProp.values.find((v) => v.scope === PropertyValueScope.Manual);
-            if (manualValue?.value !== undefined) {
-              dbValue = manualValue.value;
-              bizValue = manualValue.bizValue ?? manualValue.aliasAppliedBizValue;
-            } else {
-              // Find first non-empty value
-              const firstValue = resourceProp.values.find((v) => v.value !== undefined);
-              if (firstValue) {
-                dbValue = firstValue.value;
-                bizValue = firstValue.bizValue ?? firstValue.aliasAppliedBizValue;
-              }
-            }
+          if (manualValue?.value !== undefined) {
+            dbValue = manualValue.value;
+            bizValue = manualValue.bizValue ?? manualValue.aliasAppliedBizValue;
           }
         }
 
@@ -495,7 +486,7 @@ const BulkPropertyEditor: React.FC<Props> = ({
     return (
       <div
         key={key}
-        className={`grid gap-2 items-center py-1 px-2 rounded transition-colors hover:bg-default-100 ${
+        className={`group grid gap-2 items-center py-1 px-2 rounded transition-colors hover:bg-default-100 ${
           isUpdating ? "opacity-50 pointer-events-none" : ""
         }`}
         style={{ gridTemplateColumns: "160px 1fr" }}
