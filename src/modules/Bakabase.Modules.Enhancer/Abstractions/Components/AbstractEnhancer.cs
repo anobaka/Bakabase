@@ -99,7 +99,7 @@ namespace Bakabase.Modules.Enhancer.Abstractions.Components
             logCollector.LogInfo(EnhancementLogEvent.ContextBuilt, "Context built successfully");
             Logger.LogInformation($"Got context: {context.ToJson()}");
 
-            var targetValues = await ConvertContextByTargets(context, logCollector, ct);
+            var targetValues = await ConvertContextByTargets(context, (TEnhancerOptions)(object)options, logCollector, ct);
             if (targetValues?.Any(x => x.ValueBuilder != null) != true)
             {
                 logCollector.LogWarning(EnhancementLogEvent.TargetConverted,
@@ -185,6 +185,6 @@ namespace Bakabase.Modules.Enhancer.Abstractions.Components
         /// The value of the dictionary MUST be the standard value, which can be generated safely via <see cref="IStandardValueBuilder{TValue}"/>
         /// </returns>
         protected abstract Task<List<EnhancementTargetValue<TEnumTarget>>> ConvertContextByTargets(TContext context,
-            EnhancementLogCollector logCollector, CancellationToken ct);
+            TEnhancerOptions options, EnhancementLogCollector logCollector, CancellationToken ct);
     }
 }

@@ -93,6 +93,7 @@ namespace Bakabase.Service.Components
             services.TryAddSingleton<CienCookieValidator>();
             services.TryAddSingleton<PatreonCookieValidator>();
             services.TryAddSingleton<SoulPlusCookieValidator>();
+            services.TryAddSingleton<BangumiCookieValidator>();
 
             services.AddSingleton<BakabaseOptionsManagerPool>();
 

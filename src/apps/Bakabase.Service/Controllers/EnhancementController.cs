@@ -123,6 +123,24 @@ namespace Bakabase.Service.Controllers
             return BaseResponseBuilder.Ok;
         }
 
+        /// <summary>
+        /// Deletes all enhancement results for the supplied resources across every enhancer.
+        /// The Enhancement BTask will re-enhance them on its next tick.
+        /// </summary>
+        [HttpDelete("~/resources/enhancements")]
+        [SwaggerOperation(OperationId = "DeleteEnhancementsByResources")]
+        public async Task<BaseResponse> DeleteEnhancementRecordsByResources([FromBody] int[] resourceIds)
+        {
+            if (resourceIds.Length == 0)
+            {
+                return BaseResponseBuilder.Ok;
+            }
+
+            await enhancementService.RemoveAll(t => resourceIds.Contains(t.ResourceId), true);
+            await enhancementRecordService.DeleteAll(t => resourceIds.Contains(t.ResourceId));
+            return BaseResponseBuilder.Ok;
+        }
+
         [HttpPost("~/resource/{resourceId:int}/enhancer/{enhancerId:int}/enhancement/apply")]
         [SwaggerOperation(OperationId = "ApplyEnhancementContextDataForResourceByEnhancer")]
         public async Task<BaseResponse> ApplyEnhancementContextDataForResourceByEnhancer(int resourceId, int enhancerId)

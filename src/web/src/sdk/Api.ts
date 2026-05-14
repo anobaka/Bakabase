@@ -397,6 +397,7 @@ export interface BakabaseAbstractionsModelsDomainEnhancerTargetFullOptions {
   propertyId: number;
   property?: BakabaseAbstractionsModelsDomainProperty;
   customPrompt?: string;
+  preferredSources?: string[];
 }
 
 export interface BakabaseAbstractionsModelsDomainExtensionGroup {
@@ -12609,6 +12610,35 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     subscribeResourceDiscoveryBatchUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource/discovery/subscribe/batch`;
+      
+      return baseUrl + path;
+    },
+  };
+  resources = {
+    /**
+     * No description
+     *
+     * @tags Enhancement
+     * @name DeleteEnhancementsByResources
+     * @request DELETE:/resources/enhancements
+     */
+    deleteEnhancementsByResources: (data: number[], params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resources/enhancements`,
+        method: "DELETE",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for deleteEnhancementsByResources
+     * @name deleteEnhancementsByResourcesUrl
+     */
+    deleteEnhancementsByResourcesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resources/enhancements`;
       
       return baseUrl + path;
     },

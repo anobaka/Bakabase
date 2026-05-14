@@ -151,7 +151,7 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai
         protected override EnhancerId TypedId => EnhancerId.ExHentai;
 
         protected override async Task<List<EnhancementTargetValue<ExHentaiEnhancerTarget>>> ConvertContextByTargets(
-            ExHentaiEnhancerContext context, EnhancementLogCollector logCollector, CancellationToken ct)
+            ExHentaiEnhancerContext context, IKeywordEnhancerOptions options, EnhancementLogCollector logCollector, CancellationToken ct)
         {
             var enhancements = new List<EnhancementTargetValue<ExHentaiEnhancerTarget>>();
             foreach (var target in SpecificEnumUtils<ExHentaiEnhancerTarget>.Values)

@@ -191,7 +191,7 @@ public class KodiEnhancer(ILoggerFactory loggerFactory, IFileManager fileManager
     protected override EnhancerId TypedId => EnhancerId.Kodi;
 
     protected override async Task<List<EnhancementTargetValue<KodiEnhancerTarget>>> ConvertContextByTargets(
-        KodiEnhancerContext context, EnhancementLogCollector logCollector, CancellationToken ct)
+        KodiEnhancerContext context, object? options, EnhancementLogCollector logCollector, CancellationToken ct)
     {
         var enhancements = new List<EnhancementTargetValue<KodiEnhancerTarget>>();
 

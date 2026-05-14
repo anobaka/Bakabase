@@ -124,7 +124,7 @@ public class BangumiEnhancer(
     protected override EnhancerId TypedId => EnhancerId.Bangumi;
 
     protected override async Task<List<EnhancementTargetValue<BangumiEnhancerTarget>>> ConvertContextByTargets(
-        BangumiEnhancerContext context, EnhancementLogCollector logCollector, CancellationToken ct)
+        BangumiEnhancerContext context, IBangumiEnhancerOptions options, EnhancementLogCollector logCollector, CancellationToken ct)
     {
         var enhancements = new List<EnhancementTargetValue<BangumiEnhancerTarget>>();
         foreach (var target in SpecificEnumUtils<BangumiEnhancerTarget>.Values)

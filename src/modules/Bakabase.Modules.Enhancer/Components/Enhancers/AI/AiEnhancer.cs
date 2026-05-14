@@ -75,7 +75,7 @@ public class AiEnhancer(
     }
 
     protected override Task<List<EnhancementTargetValue<AiEnhancerTarget>>> ConvertContextByTargets(
-        AiEnhancerContext context, EnhancementLogCollector logCollector, CancellationToken ct)
+        AiEnhancerContext context, EnhancerFullOptions options, EnhancementLogCollector logCollector, CancellationToken ct)
     {
         var enhancements = new List<EnhancementTargetValue<AiEnhancerTarget>>();
 

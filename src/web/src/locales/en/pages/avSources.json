@@ -34,5 +34,14 @@
   "avSources.accordion.requests": "HTTP requests",
   "avSources.interaction.failed": "failed",
   "avSources.interaction.headers": "Headers",
-  "avSources.interaction.body": "Body"
+  "avSources.interaction.body": "Body",
+  "avSources.button.selectAll": "Select all",
+  "avSources.button.resetDefault": "Reset to default",
+  "avSources.button.configure": "Configure",
+  "avSources.column.source": "Source",
+  "avSources.helper.matrixHint": "Click a target name to select-all / clear that column. Hold Shift while scrolling to move horizontally.",
+  "avSources.modal.sourceConfig": "Source: {{id}}",
+  "avSources.empty.noSources": "No sources available",
+  "enhancementConfig.avSourcesButton": "Sources",
+  "enhancementConfig.avSourcesModalTitle": "AV Sources & Per-target Preference"
 }

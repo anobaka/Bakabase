@@ -177,7 +177,7 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase
         }
 
         protected override async Task<List<EnhancementTargetValue<BakabaseEnhancerTarget>>> ConvertContextByTargets(
-            BakabaseEnhancerContext context, EnhancementLogCollector logCollector, CancellationToken ct)
+            BakabaseEnhancerContext context, IKeywordEnhancerOptions options, EnhancementLogCollector logCollector, CancellationToken ct)
         {
             var dict = new Dictionary<BakabaseEnhancerTarget, IStandardValueBuilder>();
             foreach (var target in SpecificEnumUtils<BakabaseEnhancerTarget>.Values)

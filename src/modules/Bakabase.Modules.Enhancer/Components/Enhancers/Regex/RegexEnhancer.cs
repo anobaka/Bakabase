@@ -79,7 +79,7 @@ public class RegexEnhancer(
     protected override EnhancerId TypedId => EnhancerId.Regex;
 
     protected override async Task<List<EnhancementTargetValue<RegexEnhancerTarget>>> ConvertContextByTargets(
-        RegexEnhancerContext context, EnhancementLogCollector logCollector, CancellationToken ct)
+        RegexEnhancerContext context, IRegexEnhancerOptions options, EnhancementLogCollector logCollector, CancellationToken ct)
     {
         var enhancements = new List<EnhancementTargetValue<RegexEnhancerTarget>>();
 

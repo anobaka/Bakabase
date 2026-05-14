@@ -4740,3 +4740,26 @@ export const ExtensionMediaTypes: Record<string, MediaType> = {
   "3gp": MediaType.Video,
   "mov": MediaType.Video
 };
+
+export const AvSourceIds: readonly string[] = [
+  "airav",
+  "avsex",
+  "avsox",
+  "cnmdb",
+  "dmm",
+  "dahlia",
+  "fc2",
+  "faleno",
+  "fantastica",
+  "fc2hub",
+  "freejavbt",
+  "getchudl",
+  "iqqtv",
+  "jav321",
+  "javbus",
+  "javday",
+  "javdb",
+  "javlibrary",
+  "lulubar",
+  "mmtv"
+] as const;

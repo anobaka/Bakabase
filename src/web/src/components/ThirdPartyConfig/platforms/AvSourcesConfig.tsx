@@ -1,27 +1,33 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import i18next from "i18next";
-import { AiOutlineCopy, AiOutlinePlayCircle, AiOutlineReload, AiOutlineSetting } from "react-icons/ai";
+import {
+  AiOutlineCheck,
+  AiOutlineCopy,
+  AiOutlinePlayCircle,
+  AiOutlineReload,
+  AiOutlineSetting,
+} from "react-icons/ai";
 
 import {
   Accordion,
   AccordionItem,
   Button,
-  Card,
-  CardBody,
-  CardHeader,
   Chip,
-  Divider,
   Input,
+  Modal,
   Spinner,
   Switch,
   Textarea,
+  Tooltip,
   toast,
 } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 import { ContentType } from "@/sdk/Api";
+import { AvEnhancerTarget, AvSourceIds, avEnhancerTargets } from "@/sdk/constants";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
 const TEST_NUMBER_STORAGE_KEY = "avSources.testNumber";
 
@@ -91,8 +97,56 @@ type SourceState =
   | { phase: "loading" }
   | { phase: "done"; result: AvSourceTestResult };
 
-export const AvSourcesConfigPanel = () => {
+// Per-target ordered list of source ids; null/undefined means "use built-in default order".
+export type PreferredSourcesByTarget = Partial<Record<AvEnhancerTarget, string[]>>;
+
+interface Props {
+  /**
+   * When provided, the matrix renders interactive checkboxes/priority badges and
+   * reports user-edited preferences back via {@link onChangePreferredSources}.
+   * When absent, target columns are read-only (test results only).
+   */
+  preferredSourcesByTarget?: PreferredSourcesByTarget;
+  onChangePreferredSources?: (next: PreferredSourcesByTarget) => void;
+}
+
+// Map an AvEnhancerTarget enum value to the field on AvSourceTestDetail it represents.
+const targetToDetailField: Partial<Record<AvEnhancerTarget, keyof AvSourceTestDetail>> = {
+  [AvEnhancerTarget.Number]: "number",
+  [AvEnhancerTarget.Title]: "title",
+  [AvEnhancerTarget.OriginalTitle]: "originalTitle",
+  [AvEnhancerTarget.Actor]: "actor",
+  [AvEnhancerTarget.Tags]: "tag",
+  [AvEnhancerTarget.Release]: "release",
+  [AvEnhancerTarget.Year]: "year",
+  [AvEnhancerTarget.Studio]: "studio",
+  [AvEnhancerTarget.Publisher]: "publisher",
+  [AvEnhancerTarget.Series]: "series",
+  [AvEnhancerTarget.Runtime]: "runtime",
+  [AvEnhancerTarget.Director]: "director",
+  [AvEnhancerTarget.Source]: "source",
+  [AvEnhancerTarget.Cover]: "coverUrl",
+  [AvEnhancerTarget.Poster]: "posterUrl",
+  [AvEnhancerTarget.Website]: "website",
+  [AvEnhancerTarget.Mosaic]: "mosaic",
+};
+
+const imageTargets = new Set<AvEnhancerTarget>([AvEnhancerTarget.Cover, AvEnhancerTarget.Poster]);
+
+const cellValue = (target: AvEnhancerTarget, detail?: AvSourceTestDetail | null): string | undefined => {
+  if (!detail) return undefined;
+  const field = targetToDetailField[target];
+  if (!field) return undefined;
+  const v = detail[field];
+  return v == null || v === "" ? undefined : String(v);
+};
+
+export const AvSourcesConfigPanel = ({
+  preferredSourcesByTarget,
+  onChangePreferredSources,
+}: Props = {}) => {
   const { t } = useTranslation();
+  const { createPortal } = useBakabaseContext();
   const [sources, setSources] = useState<AvSourceInfo[]>([]);
   const [configs, setConfigs] = useState<Record<string, AvSourceConfig>>({});
   const [number, setNumber] = useState(() => {
@@ -100,52 +154,51 @@ export const AvSourcesConfigPanel = () => {
     return localStorage.getItem(TEST_NUMBER_STORAGE_KEY) || "";
   });
   const [running, setRunning] = useState(false);
-  const [savingId, setSavingId] = useState<string | null>(null);
   const [results, setResults] = useState<Record<string, SourceState>>({});
 
-  const loadSources = async () => {
+  const interactive = !!onChangePreferredSources;
+
+  const loadSources = useCallback(async () => {
     const rsp = await BApi.request<{ data?: AvSourceInfo[] }>({
       path: "/av/sources",
       method: "GET",
       format: "json",
     });
-    setSources((rsp.data || []).slice().sort((a, b) => a.id.localeCompare(b.id)));
-  };
+    const fetched = rsp.data || [];
+    // Honor AvSourceIds order (shipped via constants.ts), with stragglers appended.
+    const order = new Map(AvSourceIds.map((id, idx) => [id, idx] as const));
+    fetched.sort((a, b) => (order.get(a.id) ?? 999) - (order.get(b.id) ?? 999) || a.id.localeCompare(b.id));
+    setSources(fetched);
+  }, []);
 
-  const loadConfig = async () => {
+  const loadConfig = useCallback(async () => {
     const rsp = await BApi.request<{ data?: { sources?: Record<string, AvSourceConfig> } }>({
       path: "/options/av-sources",
       method: "GET",
       format: "json",
     });
     setConfigs(rsp.data?.sources || {});
-  };
+  }, []);
 
   useEffect(() => {
     void loadSources();
     void loadConfig();
-  }, []);
+  }, [loadSources, loadConfig]);
 
   const saveConfig = async (id: string, patch: Partial<AvSourceConfig>) => {
     const next = { ...configs };
     const merged: AvSourceConfig = { ...(next[id] || {}), ...patch };
     next[id] = merged;
     setConfigs(next);
-    setSavingId(id);
-    try {
-      await BApi.request({
-        path: "/options/av-sources",
-        method: "PATCH",
-        body: { sources: next },
-        type: ContentType.Json,
-        format: "json",
-      });
-      // Refresh resolved values so the UI reflects backend resolution.
-      await loadSources();
-      toast.success(t("avSources.toast.saved", "Saved"));
-    } finally {
-      setSavingId(null);
-    }
+    await BApi.request({
+      path: "/options/av-sources",
+      method: "PATCH",
+      body: { sources: next },
+      type: ContentType.Json,
+      format: "json",
+    });
+    await loadSources();
+    toast.success(t("avSources.toast.saved", "Saved"));
   };
 
   const runAll = async () => {
@@ -214,214 +267,516 @@ export const AvSourcesConfigPanel = () => {
     }
   };
 
-  const sortedSources = useMemo(() => sources, [sources]);
+  const orderedSourceIds = useMemo(() => sources.map((s) => s.id), [sources]);
+
+  // Per-target effective preferred list. Undefined entry => use default order (all sources).
+  const getEffectivePreferred = useCallback(
+    (target: AvEnhancerTarget): string[] => {
+      const explicit = preferredSourcesByTarget?.[target];
+      if (explicit) return explicit;
+      return orderedSourceIds;
+    },
+    [preferredSourcesByTarget, orderedSourceIds],
+  );
+
+  // Priority of a source within a target (1-based). 0 means "not selected".
+  const priorityOf = useCallback(
+    (target: AvEnhancerTarget, sourceId: string): number => {
+      const list = getEffectivePreferred(target);
+      const idx = list.indexOf(sourceId);
+      return idx < 0 ? 0 : idx + 1;
+    },
+    [getEffectivePreferred],
+  );
+
+  const toggleCell = (target: AvEnhancerTarget, sourceId: string) => {
+    if (!onChangePreferredSources) return;
+    const current = getEffectivePreferred(target);
+    const isSelected = current.includes(sourceId);
+    const nextList = isSelected
+      ? current.filter((id) => id !== sourceId)
+      : [...current, sourceId];
+    const next = { ...(preferredSourcesByTarget ?? {}), [target]: nextList };
+    onChangePreferredSources(next);
+  };
+
+  // Count of selected sources for a target (based on the effective preferred list).
+  const selectedCountForTarget = useCallback(
+    (target: AvEnhancerTarget): number => getEffectivePreferred(target).length,
+    [getEffectivePreferred],
+  );
+
+  // Click the column header to flip between "all selected" and "all cleared".
+  // - If every source has a priority for this target → set to [] (skip target).
+  // - Otherwise → set to a full explicit list in display order.
+  const toggleTargetColumn = (target: AvEnhancerTarget) => {
+    if (!onChangePreferredSources) return;
+    const count = selectedCountForTarget(target);
+    const allSelected = count === orderedSourceIds.length && count > 0;
+    const nextList = allSelected ? [] : orderedSourceIds.slice();
+    const next = { ...(preferredSourcesByTarget ?? {}), [target]: nextList };
+    onChangePreferredSources(next);
+  };
+
+  const selectAllEverything = () => {
+    if (!onChangePreferredSources) return;
+    const next: PreferredSourcesByTarget = {};
+    for (const tgt of avEnhancerTargets) {
+      next[tgt.value as AvEnhancerTarget] = orderedSourceIds.slice();
+    }
+    onChangePreferredSources(next);
+  };
+
+  const resetToDefault = () => {
+    if (!onChangePreferredSources) return;
+    onChangePreferredSources({});
+  };
+
+  // Convert shift+vertical-wheel into horizontal scroll on the matrix container.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (e.shiftKey && e.deltaY !== 0) {
+        e.preventDefault();
+        el.scrollLeft += e.deltaY;
+      }
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
+
+  const openSourceConfigModal = (s: AvSourceInfo) => {
+    createPortal(SourceConfigModal, {
+      source: s,
+      config: configs[s.id] || {},
+      onSave: async (patch: Partial<AvSourceConfig>) => {
+        await saveConfig(s.id, patch);
+      },
+    });
+  };
 
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader className="flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-2 flex-1 min-w-[280px]">
-            <Input
-              size="sm"
-              placeholder={t("avSources.input.numberPlaceholder", "Enter a number, e.g. SSIS-001")}
-              value={number}
-              onValueChange={(v) => {
-                setNumber(v);
-                localStorage.setItem(TEST_NUMBER_STORAGE_KEY, v);
-              }}
-            />
-            <Button
-              color="primary"
-              startContent={<AiOutlinePlayCircle />}
-              onPress={runAll}
-              isLoading={running}
-              isDisabled={!number.trim() || sortedSources.length === 0}
-            >
-              {t("avSources.button.testAll", "Test all sources")}
+    <div className="flex flex-col gap-3 h-full">
+      <div className="flex items-center gap-2 flex-wrap">
+        <Input
+          size="sm"
+          className="max-w-[280px]"
+          placeholder={t("avSources.input.numberPlaceholder", "Enter a number, e.g. SSIS-001")}
+          value={number}
+          onValueChange={(v) => {
+            setNumber(v);
+            localStorage.setItem(TEST_NUMBER_STORAGE_KEY, v);
+          }}
+        />
+        <Button
+          color="primary"
+          size="sm"
+          startContent={<AiOutlinePlayCircle />}
+          onPress={runAll}
+          isLoading={running}
+          isDisabled={!number.trim() || sources.length === 0}
+        >
+          {t("avSources.button.testAll", "Test all sources")}
+        </Button>
+        <Button
+          variant="flat"
+          size="sm"
+          startContent={<AiOutlineReload />}
+          onPress={() => {
+            void loadSources();
+            void loadConfig();
+          }}
+        >
+          {t("avSources.button.refresh", "Refresh")}
+        </Button>
+        {interactive && (
+          <>
+            <div className="mx-2 h-5 w-px bg-default-200" />
+            <Button size="sm" variant="flat" onPress={selectAllEverything}>
+              {t("avSources.button.selectAll", "Select all")}
             </Button>
-            <Button
-              variant="flat"
-              startContent={<AiOutlineReload />}
-              onPress={() => {
-                void loadSources();
-                void loadConfig();
-              }}
-            >
-              {t("avSources.button.refresh", "Refresh")}
+            <Button size="sm" variant="flat" onPress={resetToDefault}>
+              {t("avSources.button.resetDefault", "Reset to default")}
             </Button>
-          </div>
-          <div className="text-xs text-default-500">
-            {t("avSources.helper.summary", "{{count}} sources discovered", { count: sortedSources.length })}
-          </div>
-        </CardHeader>
-      </Card>
+          </>
+        )}
+        <div className="ml-auto text-xs text-default-500">
+          {t("avSources.helper.summary", "{{count}} sources discovered", { count: sources.length })}
+        </div>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-        {sortedSources.map((s) => {
-          const state = results[s.id];
-          const cfg = configs[s.id] || {};
-          return (
-            <Card key={s.id} shadow="sm">
-              <CardHeader className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">{s.id}</span>
-                  {!s.enabled && (
-                    <Chip size="sm" color="default" variant="flat">
-                      {t("avSources.chip.disabled", "disabled")}
-                    </Chip>
-                  )}
-                  {s.defaultCookie ? (
-                    <Chip size="sm" color="success" variant="flat">
-                      {t("avSources.chip.bypass", "auto bypass detection")}
-                    </Chip>
-                  ) : null}
-                </div>
-                <div className="flex items-center gap-1">
-                  <Button
-                    size="sm"
-                    variant="flat"
-                    isLoading={state?.phase === "loading"}
-                    isDisabled={!number.trim()}
-                    onPress={() => runOne(s.id)}
-                    startContent={<AiOutlinePlayCircle />}
+      {interactive && (
+        <div className="text-xs text-default-500">
+          {t(
+            "avSources.helper.matrixHint",
+            "Click a target name to select-all / clear that column. Hold Shift while scrolling to move horizontally.",
+          )}
+        </div>
+      )}
+
+      <div ref={scrollRef} className="flex-1 overflow-auto border border-default-200 rounded-md">
+        <table className="text-xs border-collapse min-w-full">
+          <thead>
+            <tr>
+              <th className="sticky left-0 top-0 z-30 bg-default-100 px-3 py-2 text-left border-b border-r border-default-200 min-w-[220px]">
+                {t("avSources.column.source", "Source")}
+              </th>
+              {avEnhancerTargets.map((tgt) => {
+                const target = tgt.value as AvEnhancerTarget;
+                const count = interactive ? selectedCountForTarget(target) : 0;
+                const total = orderedSourceIds.length;
+                const allSelected = count === total && count > 0;
+                const allCleared = count === 0;
+                return (
+                  <th
+                    key={tgt.value}
+                    onClick={interactive ? () => toggleTargetColumn(target) : undefined}
+                    className={`sticky top-0 z-20 bg-default-100 px-2 py-2 text-left border-b border-r border-default-200 min-w-[140px] select-none ${
+                      interactive ? "cursor-pointer hover:bg-default-200" : ""
+                    }`}
                   >
-                    {t("avSources.button.test", "Test")}
-                  </Button>
-                </div>
-              </CardHeader>
-              <Divider />
-              <CardBody className="space-y-3">
-                <Accordion isCompact>
-                  <AccordionItem
-                    key="config"
-                    aria-label={t("avSources.accordion.config", "Configuration")}
-                    title={
-                      <span className="flex items-center gap-2 text-sm">
-                        <AiOutlineSetting /> {t("avSources.accordion.config", "Configuration")}
-                      </span>
-                    }
-                  >
-                    <div className="space-y-2 pt-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs">{t("avSources.field.enabled", "Enabled")}</span>
-                        <Switch
-                          size="sm"
-                          isSelected={cfg.enabled ?? true}
-                          isDisabled={savingId === s.id}
-                          onValueChange={(v) => void saveConfig(s.id, { enabled: v })}
-                        />
-                      </div>
-                      <Input
-                        size="sm"
-                        label={t("avSources.field.baseUrl", "Base URL")}
-                        placeholder={s.defaultBaseUrl}
-                        value={cfg.baseUrl ?? ""}
-                        onValueChange={(v) => void saveConfig(s.id, { baseUrl: v || null })}
-                      />
-                      <Textarea
-                        size="sm"
-                        minRows={2}
-                        label={t("avSources.field.cookie", "Cookie")}
-                        placeholder={s.defaultCookie || t("avSources.field.cookiePlaceholder", "name=value; ...")}
-                        description={
-                          s.defaultCookie
-                            ? t("avSources.field.cookieDefaultHint", "Default applied: {{cookie}}", {
-                                cookie: s.defaultCookie,
-                              })
-                            : undefined
-                        }
-                        value={cfg.cookie ?? ""}
-                        onValueChange={(v) => void saveConfig(s.id, { cookie: v || null })}
-                      />
-                      <Input
-                        size="sm"
-                        label={t("avSources.field.userAgent", "User-Agent")}
-                        placeholder={t("avSources.field.userAgentPlaceholder", "Optional override")}
-                        value={cfg.userAgent ?? ""}
-                        onValueChange={(v) => void saveConfig(s.id, { userAgent: v || null })}
-                      />
+                    <div className="flex items-center gap-1 justify-between">
+                      <span className="font-medium">{tgt.label}</span>
+                      {interactive && (
+                        <span
+                          className={`text-[10px] tabular-nums ${
+                            allSelected
+                              ? "text-primary"
+                              : allCleared
+                                ? "text-default-400"
+                                : "text-warning"
+                          }`}
+                        >
+                          {count}/{total}
+                        </span>
+                      )}
                     </div>
-                  </AccordionItem>
-                </Accordion>
-                <ResultPanel state={state} />
-                <InteractionsPanel state={state} />
-              </CardBody>
-            </Card>
-          );
-        })}
+                  </th>
+                );
+              })}
+            </tr>
+          </thead>
+          <tbody>
+            {sources.map((s) => {
+              const state = results[s.id];
+              const cfg = configs[s.id] || {};
+              const disabledByConfig = cfg.enabled === false || !s.enabled;
+              const rowError = state?.phase === "done" ? state.result.error : undefined;
+              const rowSkipped = state?.phase === "done" ? state.result.skipped : false;
+              const isLoading = state?.phase === "loading";
+              const detail = state?.phase === "done" ? state.result.detail : undefined;
+              return (
+                <tr
+                  key={s.id}
+                  className={
+                    disabledByConfig
+                      ? "opacity-40"
+                      : rowError
+                        ? "bg-danger-50/40"
+                        : rowSkipped
+                          ? "bg-default-100/60"
+                          : "hover:bg-default-50"
+                  }
+                >
+                  <th className="sticky left-0 z-10 bg-background px-3 py-2 text-left border-b border-r border-default-200 align-top">
+                    <SourceCell
+                      source={s}
+                      config={cfg}
+                      state={state}
+                      onTest={() => runOne(s.id)}
+                      onConfigure={() => openSourceConfigModal(s)}
+                      numberSet={!!number.trim()}
+                    />
+                  </th>
+                  {avEnhancerTargets.map((tgt) => {
+                    const target = tgt.value as AvEnhancerTarget;
+                    const priority = priorityOf(target, s.id);
+                    const checked = priority > 0;
+                    const value = cellValue(target, detail);
+                    return (
+                      <td
+                        key={tgt.value}
+                        className="px-2 py-2 border-b border-r border-default-200 align-top"
+                      >
+                        <Cell
+                          target={target}
+                          value={value}
+                          isImage={imageTargets.has(target)}
+                          checked={checked}
+                          priority={priority}
+                          interactive={interactive && !disabledByConfig}
+                          loading={isLoading}
+                          rowError={rowError}
+                          rowSkipped={rowSkipped}
+                          onToggle={() => toggleCell(target, s.id)}
+                        />
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+            {sources.length === 0 && (
+              <tr>
+                <td
+                  colSpan={avEnhancerTargets.length + 1}
+                  className="px-3 py-6 text-center text-default-500"
+                >
+                  {t("avSources.empty.noSources", "No sources available")}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   );
 };
 
-const ResultPanel = ({ state }: { state?: SourceState }) => {
+interface SourceCellProps {
+  source: AvSourceInfo;
+  config: AvSourceConfig;
+  state?: SourceState;
+  onTest: () => void;
+  onConfigure: () => void;
+  numberSet: boolean;
+}
+
+const SourceCell = ({ source, config, state, onTest, onConfigure, numberSet }: SourceCellProps) => {
   const { t } = useTranslation();
-  if (!state || state.phase === "idle") {
-    return <div className="text-xs text-default-400">{t("avSources.result.idle", "Not tested yet")}</div>;
-  }
-  if (state.phase === "loading") {
-    return (
-      <div className="flex items-center gap-2 text-xs text-default-500">
-        <Spinner size="sm" /> {t("avSources.result.loading", "Querying...")}
-      </div>
-    );
-  }
-  const r = state.result;
-  if (r.skipped) {
-    return <div className="text-xs text-default-400">{t("avSources.result.skipped", "Skipped (disabled)")}</div>;
-  }
-  if (r.error) {
-    return (
-      <div className="rounded-md bg-danger-50 p-2 text-xs text-danger">
-        <div>{t("avSources.result.error", "Error")} ({r.durationMs}ms)</div>
-        <div className="mt-1 break-all">{r.error}</div>
-      </div>
-    );
-  }
-  if (!r.detail) {
-    return (
-      <div className="rounded-md bg-warning-50 p-2 text-xs text-warning">
-        {t("avSources.result.empty", "No data ({{ms}}ms)", { ms: r.durationMs })}
-      </div>
-    );
-  }
-  const d = r.detail;
+  const disabledByConfig = config.enabled === false || !source.enabled;
+  const error = state?.phase === "done" ? state.result.error : undefined;
+  const skipped = state?.phase === "done" ? state.result.skipped : false;
+  const duration = state?.phase === "done" ? state.result.durationMs : undefined;
+  const interactions = state?.phase === "done" ? state.result.interactions ?? [] : [];
+
   return (
-    <div className="space-y-1 text-xs">
-      <div className="flex items-center gap-2">
-        <Chip size="sm" color="success" variant="flat">
-          {t("avSources.result.ok", "OK")}
-        </Chip>
-        <span className="text-default-500">{r.durationMs}ms</span>
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <Tooltip content={t("avSources.button.configure", "Configure")}>
+          <Button
+            isIconOnly
+            size="sm"
+            variant="light"
+            onPress={onConfigure}
+            aria-label={t("avSources.button.configure", "Configure")}
+          >
+            <AiOutlineSetting className="text-lg" />
+          </Button>
+        </Tooltip>
+        <Tooltip content={t("avSources.button.test", "Test")}>
+          <Button
+            isIconOnly
+            size="sm"
+            variant="light"
+            isDisabled={!numberSet}
+            isLoading={state?.phase === "loading"}
+            onPress={onTest}
+            aria-label={t("avSources.button.test", "Test")}
+          >
+            <AiOutlinePlayCircle className="text-lg" />
+          </Button>
+        </Tooltip>
+        <span className="font-medium">{source.id}</span>
+        {disabledByConfig && (
+          <Chip size="sm" variant="flat" color="default">
+            {t("avSources.chip.disabled", "disabled")}
+          </Chip>
+        )}
+        {duration != null && (
+          <span className="text-[10px] text-default-500">{duration}ms</span>
+        )}
       </div>
-      {d.coverUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={d.coverUrl} alt="cover" className="max-h-32 rounded-md object-contain" />
-      ) : null}
-      <Field label={t("avSources.field.number", "Number")} value={d.number} />
-      <Field label={t("avSources.field.title", "Title")} value={d.title} />
-      <Field label={t("avSources.field.actor", "Actor")} value={d.actor} />
-      <Field label={t("avSources.field.tag", "Tag")} value={d.tag} />
-      <Field label={t("avSources.field.studio", "Studio")} value={d.studio} />
-      <Field label={t("avSources.field.publisher", "Publisher")} value={d.publisher} />
-      <Field label={t("avSources.field.release", "Release")} value={d.release} />
-      <Field label={t("avSources.field.runtime", "Runtime")} value={d.runtime} />
-      {d.website ? (
-        <a className="text-primary underline break-all" href={d.website} target="_blank" rel="noreferrer">
-          {d.website}
-        </a>
-      ) : null}
+      {error && (
+        <Tooltip content={error}>
+          <span className="text-[10px] text-danger truncate max-w-[200px]" title={error}>
+            {error}
+          </span>
+        </Tooltip>
+      )}
+      {skipped && !error && (
+        <span className="text-[10px] text-default-500">
+          {t("avSources.result.skipped", "Skipped (disabled)")}
+        </span>
+      )}
+      {interactions.length > 0 && (
+        <Accordion isCompact>
+          <AccordionItem
+            key="reqs"
+            aria-label={t("avSources.accordion.requests", "HTTP requests")}
+            classNames={{ trigger: "py-0", title: "text-[11px] text-default-500" }}
+            title={
+              <span>
+                {t("avSources.accordion.requests", "HTTP requests")}
+                <span className="ml-1 text-default-400">({interactions.length})</span>
+              </span>
+            }
+          >
+            <div className="space-y-2 pt-1">
+              {interactions.map((i, idx) => (
+                <InteractionItem key={idx} index={idx} i={i} />
+              ))}
+            </div>
+          </AccordionItem>
+        </Accordion>
+      )}
     </div>
   );
 };
 
-const Field = ({ label, value }: { label: string; value?: string | null }) => {
-  if (!value) return null;
+interface CellProps {
+  target: AvEnhancerTarget;
+  value?: string;
+  isImage: boolean;
+  checked: boolean;
+  priority: number;
+  interactive: boolean;
+  loading: boolean;
+  rowError?: string | null;
+  rowSkipped?: boolean;
+  onToggle: () => void;
+}
+
+const Cell = ({
+  value,
+  isImage,
+  checked,
+  priority,
+  interactive,
+  loading,
+  rowError,
+  rowSkipped,
+  onToggle,
+}: CellProps) => {
   return (
-    <div className="flex gap-2">
-      <span className="shrink-0 text-default-500">{label}:</span>
-      <span className="break-all">{value}</span>
+    <div className="flex flex-col gap-1">
+      {interactive && (
+        <button
+          type="button"
+          onClick={onToggle}
+          className={`self-start inline-flex items-center gap-1 rounded px-1.5 py-0.5 border text-[10px] transition-colors ${
+            checked
+              ? "border-primary text-primary bg-primary-50"
+              : "border-default-300 text-default-500 hover:border-default-400"
+          }`}
+        >
+          {checked ? (
+            <>
+              <AiOutlineCheck className="text-[10px]" />
+              <span>#{priority}</span>
+            </>
+          ) : (
+            <span>·</span>
+          )}
+        </button>
+      )}
+      <CellBody loading={loading} rowError={rowError} rowSkipped={rowSkipped} value={value} isImage={isImage} />
     </div>
+  );
+};
+
+interface CellBodyProps {
+  loading: boolean;
+  rowError?: string | null;
+  rowSkipped?: boolean;
+  value?: string;
+  isImage: boolean;
+}
+
+const CellBody = ({ loading, rowError, rowSkipped, value, isImage }: CellBodyProps) => {
+  if (loading) return <Spinner size="sm" />;
+  if (rowError) return <span className="text-danger text-base leading-none">✕</span>;
+  if (rowSkipped) return <span className="text-default-300 text-base leading-none">·</span>;
+  if (!value) return <span className="text-default-300">—</span>;
+
+  if (isImage) {
+    return (
+      <a href={value} target="_blank" rel="noreferrer" className="block">
+        <img src={value} alt="" className="max-h-16 max-w-[120px] rounded object-contain" />
+      </a>
+    );
+  }
+
+  // Truncate long text with tooltip showing full content
+  if (value.length > 32) {
+    return (
+      <Tooltip content={<div className="max-w-[400px] whitespace-pre-wrap break-all">{value}</div>}>
+        <span className="break-all line-clamp-3">{value}</span>
+      </Tooltip>
+    );
+  }
+
+  return <span className="break-all">{value}</span>;
+};
+
+interface SourceConfigModalProps {
+  source: AvSourceInfo;
+  config: AvSourceConfig;
+  onSave: (patch: Partial<AvSourceConfig>) => Promise<void>;
+  onDestroyed?: () => void;
+}
+
+const SourceConfigModal = ({ source, config, onSave, onDestroyed }: SourceConfigModalProps) => {
+  const { t } = useTranslation();
+  const [enabled, setEnabled] = useState(config.enabled ?? true);
+  const [baseUrl, setBaseUrl] = useState(config.baseUrl ?? "");
+  const [cookie, setCookie] = useState(config.cookie ?? "");
+  const [userAgent, setUserAgent] = useState(config.userAgent ?? "");
+
+  return (
+    <Modal
+      defaultVisible
+      size="lg"
+      title={t("avSources.modal.sourceConfig", "Source: {{id}}", { id: source.id })}
+      onDestroyed={onDestroyed}
+      footer={{ actions: ["cancel", "ok"] }}
+      onOk={async () => {
+        await onSave({
+          enabled,
+          baseUrl: baseUrl || null,
+          cookie: cookie || null,
+          userAgent: userAgent || null,
+        });
+      }}
+    >
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <span className="text-sm">{t("avSources.field.enabled", "Enabled")}</span>
+          <Switch size="sm" isSelected={enabled} onValueChange={setEnabled} />
+        </div>
+        <Input
+          size="sm"
+          label={t("avSources.field.baseUrl", "Base URL")}
+          placeholder={source.defaultBaseUrl}
+          value={baseUrl}
+          onValueChange={setBaseUrl}
+        />
+        <Textarea
+          size="sm"
+          minRows={2}
+          label={t("avSources.field.cookie", "Cookie")}
+          placeholder={source.defaultCookie || t("avSources.field.cookiePlaceholder", "name=value; ...")}
+          description={
+            source.defaultCookie
+              ? t("avSources.field.cookieDefaultHint", "Default applied: {{cookie}}", {
+                  cookie: source.defaultCookie,
+                })
+              : undefined
+          }
+          value={cookie}
+          onValueChange={setCookie}
+        />
+        <Input
+          size="sm"
+          label={t("avSources.field.userAgent", "User-Agent")}
+          placeholder={t("avSources.field.userAgentPlaceholder", "Optional override")}
+          value={userAgent}
+          onValueChange={setUserAgent}
+        />
+      </div>
+    </Modal>
   );
 };
 
@@ -447,33 +802,6 @@ const buildCurl = (i: AvSourceHttpInteraction) => {
   return parts.join(" ");
 };
 
-const InteractionsPanel = ({ state }: { state?: SourceState }) => {
-  const { t } = useTranslation();
-  if (!state || state.phase !== "done") return null;
-  const interactions = state.result.interactions;
-  if (!interactions || interactions.length === 0) return null;
-  return (
-    <Accordion isCompact>
-      <AccordionItem
-        key="requests"
-        aria-label={t("avSources.accordion.requests", "HTTP requests")}
-        title={
-          <span className="text-sm">
-            {t("avSources.accordion.requests", "HTTP requests")}
-            <span className="ml-1 text-default-400">({interactions.length})</span>
-          </span>
-        }
-      >
-        <div className="space-y-3 pt-1">
-          {interactions.map((i, idx) => (
-            <InteractionItem key={idx} index={idx} i={i} />
-          ))}
-        </div>
-      </AccordionItem>
-    </Accordion>
-  );
-};
-
 const InteractionItem = ({ index, i }: { index: number; i: AvSourceHttpInteraction }) => {
   const { t } = useTranslation();
   const statusColor =
@@ -483,30 +811,26 @@ const InteractionItem = ({ index, i }: { index: number; i: AvSourceHttpInteracti
         ? "warning"
         : "success";
   return (
-    <div className="rounded-md border border-default-200 p-2 text-xs space-y-2">
-      <div className="flex items-center gap-2 flex-wrap">
+    <div className="rounded-md border border-default-200 p-2 text-[11px] space-y-1">
+      <div className="flex items-center gap-1 flex-wrap">
         <span className="text-default-400">#{index + 1}</span>
         <Chip size="sm" variant="flat">
           {i.method.toUpperCase()}
         </Chip>
         {i.responseStatusCode != null && (
           <Chip size="sm" color={statusColor} variant="flat">
-            {i.responseStatusCode} {i.responseReasonPhrase}
-          </Chip>
-        )}
-        {i.error && (
-          <Chip size="sm" color="danger" variant="flat">
-            {t("avSources.interaction.failed", "failed")}
+            {i.responseStatusCode}
           </Chip>
         )}
         <span className="text-default-500">{i.durationMs}ms</span>
         <Button
           size="sm"
           variant="light"
-          startContent={<AiOutlineCopy />}
+          isIconOnly
           onPress={() => copyToClipboard(buildCurl(i))}
+          aria-label="curl"
         >
-          curl
+          <AiOutlineCopy />
         </Button>
       </div>
       <a
@@ -517,25 +841,6 @@ const InteractionItem = ({ index, i }: { index: number; i: AvSourceHttpInteracti
       >
         {i.url}
       </a>
-      {i.requestHeaders && Object.keys(i.requestHeaders).length > 0 && (
-        <div>
-          <div className="text-default-500 mb-0.5">{t("avSources.interaction.headers", "Headers")}</div>
-          <div className="rounded bg-default-100 p-2 font-mono whitespace-pre-wrap break-all">
-            {Object.entries(i.requestHeaders)
-              .map(([k, v]) => `${k}: ${v}`)
-              .join("\n")}
-          </div>
-        </div>
-      )}
-      {i.requestBody && (
-        <div>
-          <div className="text-default-500 mb-0.5">
-            {t("avSources.interaction.body", "Body")}
-            {i.requestContentType ? <span className="ml-1 text-default-400">({i.requestContentType})</span> : null}
-          </div>
-          <div className="rounded bg-default-100 p-2 font-mono whitespace-pre-wrap break-all">{i.requestBody}</div>
-        </div>
-      )}
       {i.error && <div className="text-danger break-all">{i.error}</div>}
     </div>
   );

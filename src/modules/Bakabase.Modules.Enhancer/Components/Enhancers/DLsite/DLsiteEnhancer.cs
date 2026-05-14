@@ -119,7 +119,7 @@ public class DLsiteEnhancer : AbstractKeywordEnhancer<DLsiteEnhancerTarget, DLsi
     protected override EnhancerId TypedId => EnhancerId.DLsite;
 
     protected override async Task<List<EnhancementTargetValue<DLsiteEnhancerTarget>>> ConvertContextByTargets(
-        DLsiteEnhancerContext context, EnhancementLogCollector logCollector, CancellationToken ct)
+        DLsiteEnhancerContext context, IKeywordEnhancerOptions options, EnhancementLogCollector logCollector, CancellationToken ct)
     {
         var enhancements = new List<EnhancementTargetValue<DLsiteEnhancerTarget>>();
         foreach (var target in SpecificEnumUtils<DLsiteEnhancerTarget>.Values)

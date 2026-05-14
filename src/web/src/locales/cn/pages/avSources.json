@@ -34,5 +34,14 @@
   "avSources.accordion.requests": "HTTP 请求",
   "avSources.interaction.failed": "失败",
   "avSources.interaction.headers": "请求头",
-  "avSources.interaction.body": "请求体"
+  "avSources.interaction.body": "请求体",
+  "avSources.button.selectAll": "全选",
+  "avSources.button.resetDefault": "恢复默认",
+  "avSources.button.configure": "配置",
+  "avSources.column.source": "数据源",
+  "avSources.helper.matrixHint": "点击目标列名可全选 / 清空该列；按住 Shift 滚动鼠标可横向滚动。",
+  "avSources.modal.sourceConfig": "数据源：{{id}}",
+  "avSources.empty.noSources": "暂无数据源",
+  "enhancementConfig.avSourcesButton": "数据源",
+  "enhancementConfig.avSourcesModalTitle": "AV 数据源与目标偏好"
 }

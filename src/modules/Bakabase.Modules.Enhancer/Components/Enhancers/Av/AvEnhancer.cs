@@ -11,6 +11,7 @@ using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Bakabase.Modules.StandardValue.Abstractions.Services;
 using Bakabase.Modules.ThirdParty.ThirdParties.Airav;
+using Bakabase.Modules.ThirdParty.ThirdParties.Av;
 using Bakabase.Modules.ThirdParty.ThirdParties.Avsex;
 using Bakabase.Modules.ThirdParty.ThirdParties.Avsox;
 using Bakabase.Modules.ThirdParty.ThirdParties.CNMDB;
@@ -58,6 +59,7 @@ public class AvEnhancer(
     JavlibraryClient javlibraryClient,
     LulubarClient lulubarClient,
     MmtvClient mmtvClient,
+    IAvSourceOptionsProvider avOptionsProvider,
     IStandardValueService standardValueService, ISpecialTextService specialTextService, IServiceProvider serviceProvider)
     : AbstractKeywordEnhancer<AvEnhancerTarget, AvEnhancerContext, IKeywordEnhancerOptions>(loggerFactory, fileManager, standardValueService, specialTextService, serviceProvider)
 {
@@ -93,9 +95,31 @@ public class AvEnhancer(
                 { "mmtv", (num, url) => mmtvClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
             };
 
+            var disabledSources = clients.Keys
+                .Where(k => !avOptionsProvider.Resolve(k).Enabled)
+                .ToArray();
+            foreach (var k in disabledSources)
+            {
+                clients.Remove(k);
+            }
+
+            if (clients.Count == 0)
+            {
+                logCollector.LogInfo(EnhancementLogEvent.HttpRequest,
+                    "All AV data sources are disabled; skipping search",
+                    new { Keyword = keyword, DisabledSources = disabledSources });
+                return null;
+            }
+
             logCollector.LogInfo(EnhancementLogEvent.HttpRequest,
                 $"Searching AV with keyword: {keyword} using {clients.Count} data sources",
-                new { Keyword = keyword, SourceCount = clients.Count, Sources = clients.Keys.ToArray() });
+                new
+                {
+                    Keyword = keyword,
+                    SourceCount = clients.Count,
+                    Sources = clients.Keys.ToArray(),
+                    DisabledSources = disabledSources,
+                });
 
             var context = new AvEnhancerContext();
 
@@ -257,74 +281,85 @@ public class AvEnhancer(
     }
 
     protected override async Task<List<EnhancementTargetValue<AvEnhancerTarget>>> ConvertContextByTargets(
-        AvEnhancerContext context, EnhancementLogCollector logCollector, CancellationToken ct)
+        AvEnhancerContext context, IKeywordEnhancerOptions options, EnhancementLogCollector logCollector, CancellationToken ct)
     {
         var enhancements = new List<EnhancementTargetValue<AvEnhancerTarget>>();
 
+        var preferredSourcesByTarget = options.TargetOptions?
+            .Where(o => o.PreferredSources != null)
+            .GroupBy(o => (AvEnhancerTarget)o.Target)
+            .ToDictionary(g => g.Key, g => g.First().PreferredSources!);
+
         foreach (var target in SpecificEnumUtils<AvEnhancerTarget>.Values)
         {
+            var orderedDetails = OrderDetailsForTarget(context.Details, target, preferredSourcesByTarget);
+
             switch (target)
             {
                 case AvEnhancerTarget.Number:
-                    AddStringEnhancement(context.Details, d => d.Number, target, enhancements);
+                    AddStringEnhancement(orderedDetails, d => d.Number, target, enhancements);
                     break;
                 case AvEnhancerTarget.Title:
-                    AddStringEnhancement(context.Details, d => d.Title, target, enhancements);
+                    AddStringEnhancement(orderedDetails, d => d.Title, target, enhancements);
                     break;
                 case AvEnhancerTarget.OriginalTitle:
-                    AddStringEnhancement(context.Details, d => d.OriginalTitle, target, enhancements);
+                    AddStringEnhancement(orderedDetails, d => d.OriginalTitle, target, enhancements);
                     break;
                 case AvEnhancerTarget.Actor:
-                    AddListStringEnhancement(context.Details, d => d.Actor?.Split(',', StringSplitOptions.RemoveEmptyEntries), target, enhancements);
+                    AddListStringEnhancement(orderedDetails, d => d.Actor?.Split(',', StringSplitOptions.RemoveEmptyEntries), target, enhancements);
                     break;
                 case AvEnhancerTarget.Tags:
-                    AddListStringEnhancement(context.Details, d => d.Tag?.Split(',', StringSplitOptions.RemoveEmptyEntries), target, enhancements);
+                    AddListStringEnhancement(orderedDetails, d => d.Tag?.Split(',', StringSplitOptions.RemoveEmptyEntries), target, enhancements);
                     break;
                 case AvEnhancerTarget.Release:
-                    AddStringEnhancement(context.Details, d => d.Release, target, enhancements);
+                    AddStringEnhancement(orderedDetails, d => d.Release, target, enhancements);
                     break;
                 case AvEnhancerTarget.Year:
-                    AddStringEnhancement(context.Details, d => d.Year, target, enhancements);
+                    AddStringEnhancement(orderedDetails, d => d.Year, target, enhancements);
                     break;
                 case AvEnhancerTarget.Studio:
-                    AddStringEnhancement(context.Details, d => d.Studio, target, enhancements);
+                    AddStringEnhancement(orderedDetails, d => d.Studio, target, enhancements);
                     break;
                 case AvEnhancerTarget.Publisher:
-                    AddListStringEnhancement(context.Details, d => d.Publisher?.Split(',', StringSplitOptions.RemoveEmptyEntries), target, enhancements);
+                    AddListStringEnhancement(orderedDetails, d => d.Publisher?.Split(',', StringSplitOptions.RemoveEmptyEntries), target, enhancements);
                     break;
                 case AvEnhancerTarget.Series:
-                    AddListStringEnhancement(context.Details, d => d.Series?.Split(',', StringSplitOptions.RemoveEmptyEntries), target, enhancements);
+                    AddListStringEnhancement(orderedDetails, d => d.Series?.Split(',', StringSplitOptions.RemoveEmptyEntries), target, enhancements);
                     break;
                 case AvEnhancerTarget.Runtime:
-                    AddStringEnhancement(context.Details, d => d.Runtime, target, enhancements);
+                    AddStringEnhancement(orderedDetails, d => d.Runtime, target, enhancements);
                     break;
                 case AvEnhancerTarget.Director:
-                    AddListStringEnhancement(context.Details, d => d.Director?.Split(',', StringSplitOptions.RemoveEmptyEntries), target, enhancements);
+                    AddListStringEnhancement(orderedDetails, d => d.Director?.Split(',', StringSplitOptions.RemoveEmptyEntries), target, enhancements);
                     break;
                 case AvEnhancerTarget.Source:
-                    AddStringEnhancement(context.Details, d => d.Source, target, enhancements);
+                    AddStringEnhancement(orderedDetails, d => d.Source, target, enhancements);
                     break;
                 case AvEnhancerTarget.Cover:
-                    if (context.CoverPaths.Any())
+                {
+                    var coverPaths = OrderPathsForTarget(context.CoverPaths, target, preferredSourcesByTarget);
+                    if (coverPaths.Count > 0)
                     {
-                        var coverPaths = context.CoverPaths.Values.ToList();
-                        enhancements.Add(new EnhancementTargetValue<AvEnhancerTarget>(target, null, 
+                        enhancements.Add(new EnhancementTargetValue<AvEnhancerTarget>(target, null,
                             new ListStringValueBuilder(coverPaths)));
                     }
                     break;
+                }
                 case AvEnhancerTarget.Poster:
-                    if (context.PosterPaths.Any())
+                {
+                    var posterPaths = OrderPathsForTarget(context.PosterPaths, target, preferredSourcesByTarget);
+                    if (posterPaths.Count > 0)
                     {
-                        var posterPaths = context.PosterPaths.Values.ToList();
                         enhancements.Add(new EnhancementTargetValue<AvEnhancerTarget>(target, null,
                             new ListStringValueBuilder(posterPaths)));
                     }
                     break;
+                }
                 case AvEnhancerTarget.Website:
-                    AddStringEnhancement(context.Details, d => d.Website, target, enhancements);
+                    AddStringEnhancement(orderedDetails, d => d.Website, target, enhancements);
                     break;
                 case AvEnhancerTarget.Mosaic:
-                    AddStringEnhancement(context.Details, d => d.Mosaic, target, enhancements);
+                    AddStringEnhancement(orderedDetails, d => d.Mosaic, target, enhancements);
                     break;
             }
         }
@@ -332,7 +367,61 @@ public class AvEnhancer(
         return enhancements;
     }
 
-    private static void AddStringEnhancement(List<IAvDetail> details, Func<IAvDetail, string?> selector,
+    /// <summary>
+    /// Reorders/filters the search results for one target according to the user's per-target
+    /// PreferredSources list. When PreferredSources is unset for the target, the original
+    /// context order is preserved (effectively the built-in source order).
+    /// </summary>
+    private static IReadOnlyList<IAvDetail> OrderDetailsForTarget(
+        IReadOnlyList<IAvDetail> details,
+        AvEnhancerTarget target,
+        Dictionary<AvEnhancerTarget, List<string>>? preferredSourcesByTarget)
+    {
+        if (preferredSourcesByTarget == null ||
+            !preferredSourcesByTarget.TryGetValue(target, out var preferred))
+        {
+            return details;
+        }
+
+        var bySource = details
+            .Where(d => !string.IsNullOrEmpty(d.Source))
+            .GroupBy(d => d.Source!, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+
+        var ordered = new List<IAvDetail>(preferred.Count);
+        foreach (var src in preferred)
+        {
+            if (bySource.TryGetValue(src, out var d))
+            {
+                ordered.Add(d);
+            }
+        }
+        return ordered;
+    }
+
+    private static List<string> OrderPathsForTarget(
+        Dictionary<string, string> pathsBySource,
+        AvEnhancerTarget target,
+        Dictionary<AvEnhancerTarget, List<string>>? preferredSourcesByTarget)
+    {
+        if (preferredSourcesByTarget == null ||
+            !preferredSourcesByTarget.TryGetValue(target, out var preferred))
+        {
+            return pathsBySource.Values.ToList();
+        }
+
+        var ordered = new List<string>(preferred.Count);
+        foreach (var src in preferred)
+        {
+            if (pathsBySource.TryGetValue(src, out var p))
+            {
+                ordered.Add(p);
+            }
+        }
+        return ordered;
+    }
+
+    private static void AddStringEnhancement(IReadOnlyList<IAvDetail> details, Func<IAvDetail, string?> selector,
         AvEnhancerTarget target, List<EnhancementTargetValue<AvEnhancerTarget>> enhancements)
     {
         var value = details.Select(selector).FirstOrDefault(v => !string.IsNullOrEmpty(v));
@@ -385,7 +474,7 @@ public class AvEnhancer(
         return value;
     }
 
-    private static void AddListStringEnhancement(List<IAvDetail> details, Func<IAvDetail, string[]?> selector,
+    private static void AddListStringEnhancement(IReadOnlyList<IAvDetail> details, Func<IAvDetail, string[]?> selector,
         AvEnhancerTarget target, List<EnhancementTargetValue<AvEnhancerTarget>> enhancements)
     {
         var values = details.SelectMany(d => selector(d) ?? []).Select(v => v.Trim()).Where(v => !string.IsNullOrEmpty(v)).Distinct().ToList();

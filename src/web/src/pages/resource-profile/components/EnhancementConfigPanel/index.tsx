@@ -8,11 +8,16 @@ import type { DestroyableProps } from "@/components/bakaui/types";
 import type { BakabaseAbstractionsModelsDomainEnhancerFullOptions } from "@/sdk/Api";
 import type { PropertyRow, SourceState } from "./utils";
 import type { IProperty } from "@/components/Property/models";
-import type { EnhancerId, PropertyPool } from "@/sdk/constants";
+import type { PropertyPool } from "@/sdk/constants";
 
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { AiOutlineSetting, AiOutlineWarning, AiOutlineInfoCircle } from "react-icons/ai";
+import {
+  AiOutlineCloudServer,
+  AiOutlineInfoCircle,
+  AiOutlineSetting,
+  AiOutlineWarning,
+} from "react-icons/ai";
 import { ExperimentOutlined } from "@ant-design/icons";
 
 import {
@@ -53,13 +58,22 @@ import {
   Tooltip,
 } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
-import { CoverSelectOrder, EnhancerTargetOptionsItem } from "@/sdk/constants";
+import {
+  AvEnhancerTarget,
+  CoverSelectOrder,
+  EnhancerId,
+  EnhancerTargetOptionsItem,
+} from "@/sdk/constants";
 import BriefEnhancer from "@/components/Chips/Enhancer/BriefEnhancer";
 import EnhancerIcon from "@/components/EnhancerIcon";
 import PropertyTypeIcon from "@/components/Property/components/PropertyTypeIcon";
 import PropertyMatcher from "@/components/PropertyMatcher";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import EnhancerOptionsModal from "@/components/EnhancerSelectorV2/components/EnhancerOptionsModal";
+import {
+  AvSourcesConfigPanel,
+  type PreferredSourcesByTarget,
+} from "@/components/ThirdPartyConfig/platforms/AvSourcesConfig";
 
 type ApiEnhancerOptions = BakabaseAbstractionsModelsDomainEnhancerFullOptions;
 
@@ -415,6 +429,51 @@ const EnhancementConfigPanel = ({
     });
   };
 
+  // Open the AV sources matrix modal (sources × targets).
+  const openAvSourcesConfig = (enhancer: EnhancerDescriptor) => {
+    // Snapshot current per-target preferred sources (only entries that explicitly diverge from default).
+    const initial: PreferredSourcesByTarget = {};
+    for (const [, state] of sourceStates) {
+      if (state.enhancerId !== EnhancerId.Av) continue;
+      const prefs = state.config?.preferredSources;
+      if (prefs !== undefined) {
+        initial[state.targetId as AvEnhancerTarget] = prefs;
+      }
+    }
+
+    const handleChange = (next: PreferredSourcesByTarget) => {
+      setSourceStates((prev) => {
+        const out = new Map(prev);
+        for (const [key, state] of out) {
+          if (state.enhancerId !== EnhancerId.Av) continue;
+          const target = state.targetId as AvEnhancerTarget;
+          const newPrefs = next[target];
+          if (newPrefs === state.config?.preferredSources) continue;
+          out.set(key, {
+            ...state,
+            config: { ...state.config, preferredSources: newPrefs },
+          });
+        }
+        return out;
+      });
+    };
+
+    createPortal(Modal, {
+      defaultVisible: true,
+      size: "full",
+      title: (
+        <div className="flex items-center gap-x-2">
+          <BriefEnhancer enhancer={enhancer} />
+          <span>{t<string>("enhancementConfig.avSourcesModalTitle")}</span>
+        </div>
+      ),
+      footer: { actions: ["ok"] as ("ok" | "cancel")[] },
+      children: (
+        <AvSourcesConfigModalBody initial={initial} onChange={handleChange} />
+      ),
+    });
+  };
+
   const getCurrentOptions = useCallback(() => {
     return convertStatesToEnhancerOptions(sourceStates, enhancerLevelConfigs);
   }, [sourceStates, enhancerLevelConfigs]);
@@ -758,6 +817,19 @@ const EnhancementConfigPanel = ({
                         {t<string>("enhancementConfig.needsConfig")}
                       </Chip>
                     )}
+                    {enhancer.id === EnhancerId.Av && (
+                      <Tooltip content={t<string>("enhancementConfig.avSourcesButton")}>
+                        <Button
+                          isIconOnly
+                          color="primary"
+                          size="sm"
+                          variant="light"
+                          onPress={() => openAvSourcesConfig(enhancer)}
+                        >
+                          <AiOutlineCloudServer className="text-lg" />
+                        </Button>
+                      </Tooltip>
+                    )}
                     <Button
                       isIconOnly
                       color="primary"
@@ -779,5 +851,24 @@ const EnhancementConfigPanel = ({
 };
 
 EnhancementConfigPanel.displayName = "EnhancementConfigPanel";
+
+const AvSourcesConfigModalBody = ({
+  initial,
+  onChange,
+}: {
+  initial: PreferredSourcesByTarget;
+  onChange: (next: PreferredSourcesByTarget) => void;
+}) => {
+  const [prefs, setPrefs] = useState<PreferredSourcesByTarget>(initial);
+  return (
+    <AvSourcesConfigPanel
+      preferredSourcesByTarget={prefs}
+      onChangePreferredSources={(next) => {
+        setPrefs(next);
+        onChange(next);
+      }}
+    />
+  );
+};
 
 export default EnhancementConfigPanel;

@@ -12,6 +12,7 @@ import {
   ReloadOutlined,
   SendOutlined,
   SettingOutlined,
+  ThunderboltOutlined,
   VideoCameraAddOutlined,
 } from "@ant-design/icons";
 import { AiOutlinePicture } from "react-icons/ai";
@@ -22,7 +23,7 @@ import { EnhancementAdditionalItem, PropertyPool, ResourceAdditionalItem } from 
 import ResourceTransferModal from "@/components/ResourceTransferModal";
 import ResourceEnhancementsModal from "@/components/Resource/components/ResourceEnhancementsModal";
 import { PlaylistCollection } from "@/components/Playlist";
-import { Modal, toast } from "@/components/bakaui";
+import { Modal, Tooltip, toast } from "@/components/bakaui";
 import { buildLogger } from "@/components/utils";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import BApi from "@/sdk/BApi";
@@ -329,6 +330,43 @@ const ContextMenuItems = ({
             ? t<string>("resource.contextMenu.bulkEditProperties")
             : t<string>("resource.contextMenu.editProperties")}
         </div>
+      </MenuItem>
+      <MenuItem
+        onClick={() => {
+          const count = selectedResourceIds.length;
+          createPortal(Modal, {
+            defaultVisible: true,
+            title:
+              count > 1
+                ? t<string>("resource.contextMenu.reEnhanceCount", { count })
+                : t<string>("resource.contextMenu.reEnhance"),
+            children: (
+              <div className={"text-sm text-default-700"}>
+                {t<string>("resource.contextMenu.reEnhance.confirm", { count })}
+              </div>
+            ),
+            footer: { actions: ["cancel", "ok"] },
+            onOk: async () => {
+              const rsp = await BApi.resources.deleteEnhancementsByResources(selectedResourceIds);
+              if (!rsp.code) {
+                toast.success(t<string>("resource.contextMenu.reEnhance.scheduled"));
+                onSelectedResourcesChanged?.(selectedResourceIds);
+              }
+            },
+          });
+        }}
+      >
+        <Tooltip
+          placement={"right"}
+          content={t<string>("resource.contextMenu.reEnhance.tooltip")}
+        >
+          <div className={"flex items-center gap-2"}>
+            <ThunderboltOutlined className={"text-base"} />
+            {selectedResourceIds.length > 1
+              ? t<string>("resource.contextMenu.reEnhanceCount", { count: selectedResourceIds.length })
+              : t<string>("resource.contextMenu.reEnhance")}
+          </div>
+        </Tooltip>
       </MenuItem>
       <MenuItem
         onClick={() => {

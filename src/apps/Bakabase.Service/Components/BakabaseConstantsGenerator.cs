@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Text;
 using Bakabase.Abstractions.Components.Configuration;
+using Bakabase.Modules.ThirdParty.ThirdParties.Av;
 using Bootstrap.Components.Miscellaneous;
 
 namespace Bakabase.Service.Components
@@ -15,6 +16,8 @@ namespace Bakabase.Service.Components
             sb.Append(Environment.NewLine);
             sb.Append(Environment.NewLine);
             sb.Append(GenerateExtensionMediaTypeMap());
+            sb.Append(Environment.NewLine);
+            sb.Append(GenerateAvSourceIds());
             return sb.ToString();
         }
 
@@ -31,6 +34,16 @@ namespace Bakabase.Service.Components
                 $"export const ExtensionMediaTypes: Record<string, MediaType> = {{{nl}" +
                 string.Join("," + nl, entries) + nl +
                 "};" + nl;
+        }
+
+        private static string GenerateAvSourceIds()
+        {
+            var nl = Environment.NewLine;
+            var entries = AvSourceDefaults.AllSources.Select(s => $"  \"{s}\"").ToList();
+            return
+                $"export const AvSourceIds: readonly string[] = [{nl}" +
+                string.Join("," + nl, entries) + nl +
+                "] as const;" + nl;
         }
     }
 }

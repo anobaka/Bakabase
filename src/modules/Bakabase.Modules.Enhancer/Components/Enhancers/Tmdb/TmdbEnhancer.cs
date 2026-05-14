@@ -122,7 +122,7 @@ public class TmdbEnhancer(ILoggerFactory loggerFactory, TmdbClient client, IFile
     protected override EnhancerId TypedId => EnhancerId.Tmdb;
 
     protected override async Task<List<EnhancementTargetValue<TmdbEnhancerTarget>>> ConvertContextByTargets(
-        TmdbEnhancerContext context, EnhancementLogCollector logCollector, CancellationToken ct)
+        TmdbEnhancerContext context, IKeywordEnhancerOptions options, EnhancementLogCollector logCollector, CancellationToken ct)
     {
         var enhancements = new List<EnhancementTargetValue<TmdbEnhancerTarget>>();
         foreach (var target in SpecificEnumUtils<TmdbEnhancerTarget>.Values)

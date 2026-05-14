@@ -500,6 +500,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/aigc/artifacts/{id}/open": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["OpenAigcArtifact"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/alias": {
         parameters: {
             query?: never;
@@ -2031,6 +2047,22 @@ export interface paths {
         put?: never;
         post: operations["EnhanceResourceByEnhancer"];
         delete: operations["DeleteResourceEnhancement"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resources/enhancements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["DeleteEnhancementsByResources"];
         options?: never;
         head?: never;
         patch?: never;
@@ -5949,6 +5981,7 @@ export interface components {
             propertyId: number;
             property?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Property"];
             customPrompt?: string;
+            preferredSources?: string[];
         };
         "Bakabase.Abstractions.Models.Domain.ExtensionGroup": {
             /** Format: int32 */
@@ -12154,6 +12187,32 @@ export interface operations {
             };
         };
     };
+    OpenAigcArtifact: {
+        parameters: {
+            query?: {
+                openInDirectory?: boolean;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
     SearchAliasGroups: {
         parameters: {
             query?: {
@@ -15399,6 +15458,35 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    DeleteEnhancementsByResources: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": number[];
+                "application/json": number[];
+                "text/json": number[];
+                "application/*+json": number[];
+            };
+        };
         responses: {
             /** @description OK */
             200: {
