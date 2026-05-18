@@ -71,6 +71,7 @@ const ScopePreferencePopover = ({
   const [open, setOpen] = useState(false);
   const [priorities, setPriorities] = useState<PropertyValueScopePriority[] | null>(null);
   const [dirty, setDirty] = useState(false);
+  const [showEmpty, setShowEmpty] = useState(false);
 
   const initialize = () => {
     setPriorities(preference?.priorities ?? null);
@@ -78,23 +79,22 @@ const ScopePreferencePopover = ({
   };
 
   const nonEmptyScopes = useMemo(() => {
-    const allWithValues = propertyValueScopes
-      .map((s) => ({
-        scope: s.value,
-        label: PropertyValueScopeLabel[s.value],
-        value: values?.find((v) => v.scope === s.value),
-      }))
-      .filter((s) => hasValue(s.value));
-    const byScope = new Map(allWithValues.map((s) => [s.scope, s]));
+    const all = propertyValueScopes.map((s) => ({
+      scope: s.value,
+      label: PropertyValueScopeLabel[s.value],
+      value: values?.find((v) => v.scope === s.value),
+    }));
+    const visible = showEmpty ? all : all.filter((s) => hasValue(s.value));
+    const byScope = new Map(visible.map((s) => [s.scope, s]));
     // Priorities first (in their configured order); remaining scopes after, in enum order.
     const inList = (priorities ?? [])
       .map((p) => byScope.get(p.scope))
-      .filter((s): s is (typeof allWithValues)[number] => s !== undefined);
+      .filter((s): s is (typeof visible)[number] => s !== undefined);
     const inListSet = new Set(inList.map((s) => s.scope));
-    const rest = allWithValues.filter((s) => !inListSet.has(s.scope));
+    const rest = visible.filter((s) => !inListSet.has(s.scope));
 
     return [...inList, ...rest];
-  }, [values, priorities]);
+  }, [values, priorities, showEmpty]);
 
   const effectiveScope = useMemo(() => {
     for (const s of effectivePriority) {
@@ -188,10 +188,22 @@ const ScopePreferencePopover = ({
       }
     >
       <div className="flex flex-col gap-2 p-1 min-w-[340px] max-w-[460px]">
-        <div className="text-xs opacity-60">
-          {effectiveScope !== undefined
-            ? `${t("property.scopePreference.currentlyShowing", { scope: PropertyValueScopeLabel[effectiveScope] })} · ${preference ? t("property.scopePreference.viaOverride") : t("property.scopePreference.viaDefault")}`
-            : t("property.scopePreference.currentlyBlank")}
+        <div className="flex items-center justify-between gap-2 text-xs">
+          <span className="opacity-60">
+            {effectiveScope !== undefined
+              ? `${t("property.scopePreference.currentlyShowing", { scope: PropertyValueScopeLabel[effectiveScope] })} · ${preference ? t("property.scopePreference.viaOverride") : t("property.scopePreference.viaDefault")}`
+              : t("property.scopePreference.currentlyBlank")}
+          </span>
+          <label className="flex items-center gap-1 shrink-0 cursor-pointer">
+            <Switch
+              isSelected={showEmpty}
+              size="sm"
+              onValueChange={setShowEmpty}
+            />
+            <span className="opacity-60">
+              {t("property.scopePreference.showEmpty")}
+            </span>
+          </label>
         </div>
 
         <div className="flex flex-col gap-1">
