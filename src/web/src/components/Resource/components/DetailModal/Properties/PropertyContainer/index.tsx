@@ -7,7 +7,9 @@ import type { IProperty } from "@/components/Property/models";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { useUpdate } from "react-use";
+import { AiOutlinePlusCircle } from "react-icons/ai";
 
+import BApi from "@/sdk/BApi";
 import { propertyValueScopes } from "@/sdk/constants";
 import PropertyValueRenderer from "@/components/Property/components/PropertyValueRenderer";
 import { buildLogger } from "@/components/utils";
@@ -16,6 +18,7 @@ import {
   serializeStandardValue,
 } from "@/components/StandardValue/helpers";
 import BriefProperty from "@/components/Chips/Property/BriefProperty";
+import { Tooltip } from "@/components/bakaui";
 
 import ScopePreferencePopover from "./ScopePreferencePopover";
 
@@ -93,6 +96,17 @@ const PropertyContainer = (props: PropertyContainerProps) => {
 
   const canShowPopover =
     !hidePropertyName && resourceId !== undefined && propertyPool !== undefined;
+  const canBindToProfiles =
+    !hidePropertyName && !isLinked && resourceId !== undefined && propertyPool !== undefined;
+
+  const handleBindToProfiles = async () => {
+    if (resourceId === undefined || propertyPool === undefined) return;
+    await BApi.resourceProfile.bindPropertyToMatchingProfiles(resourceId, {
+      pool: propertyPool,
+      id: property.id,
+    });
+    onValueScopePriorityChange(valueScopePriority);
+  };
 
   const titleNode = (
     <div className={`flex items-center gap-1 ${classNames?.name ?? ""}`}>
@@ -110,6 +124,18 @@ const PropertyContainer = (props: PropertyContainerProps) => {
         property={property}
         showPoolChip={false}
       />
+      {canBindToProfiles && (
+        <Tooltip color={"foreground"} content={t("property.bindToProfiles.title")}>
+          <button
+            aria-label={t<string>("property.bindToProfiles.title")}
+            className="inline-flex items-center justify-center leading-none p-0 m-0 cursor-pointer text-secondary hover:opacity-80 outline-none focus-visible:opacity-100"
+            type="button"
+            onClick={handleBindToProfiles}
+          >
+            <AiOutlinePlusCircle size={14} />
+          </button>
+        </Tooltip>
+      )}
       {canShowPopover && (
         <span
           className={`transition-opacity duration-150 ${

@@ -265,8 +265,27 @@ const ResourceProfilePage = () => {
       createPortal(EnhancementConfigPanel, {
         enhancerOptions: enhancerOptions,
         onSubmit: (options: BakabaseAbstractionsModelsDomainEnhancerFullOptions[]) => {
+          // Merge enhancer target properties into bound properties (add only, never remove).
+          const existingRefs = profile.propertyOptions?.properties ?? [];
+          const seen = new Set(existingRefs.map((r) => `${r.pool}-${r.id}`));
+          const merged = [...existingRefs];
+
+          for (const e of options) {
+            for (const to of e.targetOptions ?? []) {
+              if (!to.propertyPool || !to.propertyId) continue;
+              const key = `${to.propertyPool}-${to.propertyId}`;
+              if (seen.has(key)) continue;
+              seen.add(key);
+              merged.push({ pool: to.propertyPool, id: to.propertyId });
+            }
+          }
+
           updateProfile(profile, {
             enhancerOptions: options.length > 0 ? { enhancers: options } : undefined,
+            propertyOptions:
+              merged.length > existingRefs.length
+                ? { properties: merged }
+                : profile.propertyOptions,
           });
         },
       });

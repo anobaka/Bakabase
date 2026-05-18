@@ -75,6 +75,7 @@
   "property.scopePreference.fallbackDisabledOnLast": "已是最后一项，没有下一个来源可回退",
   "property.scopePreference.cutOff": "已被上方某项的「不回退」截断",
   "property.scopePreference.showEmpty": "显示空来源",
+  "property.bindToProfiles.title": "将此属性加入到所有匹配的资源配置档案",
   "property.scopePreference.addToList": "加入优先级列表",
   "property.scopePreference.moveUp": "上移",
   "property.scopePreference.moveDown": "下移",

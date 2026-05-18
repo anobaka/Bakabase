@@ -3936,6 +3936,13 @@ export interface BakabaseServiceModelsInputAvSourceTestInputModel {
   language?: string;
 }
 
+export interface BakabaseServiceModelsInputBindPropertyToMatchingProfilesInputModel {
+  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
+  pool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
+  /** @format int32 */
+  id: number;
+}
+
 export interface BakabaseServiceModelsInputBulkModificationPatchInputModel {
   name?: string;
   isActive?: boolean;
@@ -13036,6 +13043,27 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       >({
         path: `/resource-profile/by-resource/${resourceId}`,
         method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceProfile
+     * @name BindPropertyToMatchingProfiles
+     * @request POST:/resource-profile/by-resource/{resourceId}/bind-property
+     */
+    bindPropertyToMatchingProfiles: (
+      resourceId: number,
+      data: BakabaseServiceModelsInputBindPropertyToMatchingProfilesInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource-profile/by-resource/${resourceId}/bind-property`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),

@@ -6,6 +6,7 @@ using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.Modules.Property.Abstractions.Components;
+using Bakabase.Modules.Search.Extensions;
 using Bakabase.Service.Extensions;
 using Bakabase.Service.Models.Input;
 using Bakabase.Service.Models.View;
@@ -120,6 +121,47 @@ public class ResourceProfileController(IResourceProfileService service, IPropert
         }
         var profiles = await service.GetMatchingProfiles(resource);
         return new ListResponse<ResourceProfileViewModel>(profiles.Select(p => p.ToViewModel(propertyLocalizer)).ToList());
+    }
+
+    [HttpPost("by-resource/{resourceId:int}/bind-property")]
+    [SwaggerOperation(OperationId = "BindPropertyToMatchingProfiles")]
+    public async Task<BaseResponse> BindPropertyToMatchingProfiles(
+        int resourceId,
+        [FromBody] BindPropertyToMatchingProfilesInputModel model,
+        [FromServices] IResourceService resourceService)
+    {
+        var resource = await resourceService.Get(resourceId, ResourceAdditionalItem.None);
+        if (resource == null)
+        {
+            return BaseResponseBuilder.Ok;
+        }
+
+        var profiles = await service.GetMatchingProfiles(resource);
+        foreach (var profile in profiles)
+        {
+            var properties = profile.PropertyOptions?.Properties?.ToList() ?? new List<PropertyKeyWithScopePriority>();
+            if (properties.Any(p => p.Pool == model.Pool && p.Id == model.Id))
+            {
+                continue;
+            }
+
+            properties.Add(new PropertyKeyWithScopePriority { Pool = model.Pool, Id = model.Id });
+            var nextPropertyOptions = new ResourceProfilePropertyOptions { Properties = properties };
+
+            var searchJson = JsonConvert.SerializeObject(profile.Search.ToDbModel());
+            await service.Update(
+                profile.Id,
+                profile.Name,
+                searchJson,
+                profile.NameTemplate,
+                profile.EnhancerOptions,
+                profile.PlayableFileOptions,
+                profile.PlayerOptions,
+                nextPropertyOptions,
+                profile.Priority);
+        }
+
+        return BaseResponseBuilder.Ok;
     }
 
     // Note: For testing search criteria, use ResourceController.Search directly

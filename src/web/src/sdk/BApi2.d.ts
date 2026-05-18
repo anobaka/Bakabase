@@ -5216,6 +5216,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/resource-profile/by-resource/{resourceId}/bind-property": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["BindPropertyToMatchingProfiles"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/source/{source}/metadata-mapping": {
         parameters: {
             query?: never;
@@ -8898,6 +8914,11 @@ export interface components {
             number?: string;
             sources?: string[];
             language?: string;
+        };
+        "Bakabase.Service.Models.Input.BindPropertyToMatchingProfilesInputModel": {
+            pool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
+            /** Format: int32 */
+            id: number;
         };
         "Bakabase.Service.Models.Input.BulkModificationPatchInputModel": {
             name?: string;
@@ -22332,6 +22353,37 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourceProfileViewModel]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourceProfileViewModel]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourceProfileViewModel]"];
+                };
+            };
+        };
+    };
+    BindPropertyToMatchingProfiles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                resourceId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.BindPropertyToMatchingProfilesInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.BindPropertyToMatchingProfilesInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.BindPropertyToMatchingProfilesInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.BindPropertyToMatchingProfilesInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                 };
             };
         };
