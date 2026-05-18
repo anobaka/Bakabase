@@ -8905,6 +8905,7 @@ export interface components {
             variables?: components["schemas"]["Bakabase.Service.Models.Input.BulkModificationVariableInputModel"][];
             search?: components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
             processes?: components["schemas"]["Bakabase.Service.Models.Input.BulkModificationProcessInputModel"][];
+            scopePreferenceConfigs?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PropertyValueScopePreference"][];
             deleteResources?: boolean;
             deleteFiles?: boolean;
         };
@@ -9166,6 +9167,7 @@ export interface components {
             variables?: components["schemas"]["Bakabase.Service.Models.View.BulkModificationVariableViewModel"][];
             search?: components["schemas"]["Bakabase.Service.Models.View.ResourceSearchViewModel"];
             processes?: components["schemas"]["Bakabase.Service.Models.View.BulkModificationProcessViewModel"][];
+            scopePreferenceConfigs?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PropertyValueScopePreference"][];
             deleteResources: boolean;
             deleteFiles: boolean;
             filteredResourceIds?: number[];

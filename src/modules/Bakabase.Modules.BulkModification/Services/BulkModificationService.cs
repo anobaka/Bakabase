@@ -37,6 +37,8 @@ namespace Bakabase.Modules.BulkModification.Services
     {
         protected IResourceService ResourceService => GetRequiredService<IResourceService>();
         protected IPropertyService PropertyService => GetRequiredService<IPropertyService>();
+        protected IPropertyValueScopePreferenceService ScopePreferenceService =>
+            GetRequiredService<IPropertyValueScopePreferenceService>();
 
         public async Task<Abstractions.Models.BulkModification?> Get(int id)
         {
@@ -83,6 +85,7 @@ namespace Bakabase.Modules.BulkModification.Services
                 bm.Search = model.Search ?? bm.Search;
                 bm.Variables = model.Variables ?? bm.Variables;
                 bm.Processes = model.Processes ?? bm.Processes;
+                bm.ScopePreferenceConfigs = model.ScopePreferenceConfigs ?? bm.ScopePreferenceConfigs;
                 bm.DeleteResources = model.DeleteResources ?? bm.DeleteResources;
                 bm.DeleteFiles = model.DeleteFiles ?? bm.DeleteFiles;
                 await Put(bm);
@@ -280,11 +283,13 @@ namespace Bakabase.Modules.BulkModification.Services
                 return;
             }
 
-            if (bm.ResourceDiffCount == 0)
+            var hasScopePreferenceConfigs = bm.ScopePreferenceConfigs is {Count: > 0};
+            if (bm.ResourceDiffCount == 0 && !hasScopePreferenceConfigs)
             {
-                throw new Exception("No resource diff is found, please calculate diffs first.");
+                throw new Exception("No resource diff or scope preference config is found, nothing to apply.");
             }
 
+            if (bm.ResourceDiffCount > 0)
             {
                 var dbBmDiffs = await diffOrm.GetAll(x => x.BulkModificationId == id);
                 var bmDiffs = await dbBmDiffs.ToDomainModels(PropertyService);
@@ -329,17 +334,40 @@ namespace Bakabase.Modules.BulkModification.Services
                 }
 
                 await ResourceService.AddOrPutRange(resourcesMap.Values.ToList());
+            }
 
-                if (apply)
-                {
-                    bm.AppliedAt = DateTime.Now;
-                }
-                else
-                {
-                    bm.AppliedAt = null;
-                }
+            if (hasScopePreferenceConfigs)
+            {
+                await ApplyScopePreferenceConfigs(bm.FilteredResourceIds ?? [],
+                    bm.ScopePreferenceConfigs!, apply);
+            }
 
-                await Put(bm);
+            bm.AppliedAt = apply ? DateTime.Now : null;
+            await Put(bm);
+        }
+
+        private async Task ApplyScopePreferenceConfigs(IEnumerable<int> resourceIds,
+            List<PropertyValueScopePreference> configs, bool apply)
+        {
+            foreach (var resourceId in resourceIds)
+            {
+                foreach (var config in configs)
+                {
+                    if (apply && config.Priorities is {Length: > 0})
+                    {
+                        await ScopePreferenceService.Upsert(new PropertyValueScopePreference
+                        {
+                            ResourceId = resourceId,
+                            PropertyPool = config.PropertyPool,
+                            PropertyId = config.PropertyId,
+                            Priorities = config.Priorities
+                        });
+                    }
+                    else
+                    {
+                        await ScopePreferenceService.Delete(resourceId, config.PropertyPool, config.PropertyId);
+                    }
+                }
             }
         }
     }

@@ -99,12 +99,22 @@
   "bulkModification.tip.variables": "您可以在此定义和预处理变量，然后在处理步骤中使用。",
   "bulkModification.tip.processes": "您可以在此定义处理步骤，并在步骤中使用变量，以修改所有筛选出的资源。",
   "bulkModification.tip.changes": "在应用批量修改之前，您必须在此计算并检查更改。",
+  "bulkModification.tip.scopePreferences": "可选：为每个筛选出的资源按属性覆盖来源优先级。直接生效，无需预览。",
 
   "bulkModification.block.filters": "筛选器",
   "bulkModification.block.variables": "变量",
   "bulkModification.block.processes": "处理",
+  "bulkModification.block.scopePreferences": "来源优先级",
   "bulkModification.block.changes": "更改",
   "bulkModification.block.finalStep": "最后一步",
+
+  "bulkModification.scopePreference.title.new": "新建来源优先级配置",
+  "bulkModification.scopePreference.title.forProperty": "来源优先级 — {{property}}",
+  "bulkModification.scopePreference.tip": "按展示顺序选择来源；每项右侧开关控制为空时是否回退到下一个来源。",
+  "bulkModification.scopePreference.willClear": "将清除已有覆盖",
+  "bulkModification.scopePreference.action.add": "添加来源优先级配置",
+  "bulkModification.scopePreference.action.delete": "删除来源优先级配置",
+  "bulkModification.scopePreference.confirm.delete": "确认删除 {{name}} 的来源优先级配置？",
 
   "bulkModificationGuide.welcome.title": "欢迎使用批量修改",
   "bulkModificationGuide.welcome.description": "批量修改功能可以帮助您快速、高效地修改大量资源的属性。您可以使用任意筛选条件筛选出资源，然后批量设置这些资源的属性值。",

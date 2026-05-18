@@ -63,6 +63,8 @@ public static class BulkModificationExtensions
                 FilteredResourceIds = dbModel.FilteredResourceIds.JsonDeserializeOrDefault<List<int>>(),
                 Search = search,
                 Processes = processesDbModels[i]?.Select(p => p.ToDomainModel(propertyMap)).ToList(),
+                ScopePreferenceConfigs =
+                    dbModel.ScopePreferenceConfigs.JsonDeserializeOrDefault<List<PropertyValueScopePreference>>(),
                 DeleteResources = dbModel.DeleteResources,
                 DeleteFiles = dbModel.DeleteFiles,
                 Variables = variablesDbModels[i]?.Select(v => v.ToDomainModel(propertyMap)).ToList(),
@@ -172,6 +174,7 @@ public static class BulkModificationExtensions
             IsActive = domainModel.IsActive,
             SearchJson = domainModel.Search?.ToDbModel().ToJson(),
             Processes = domainModel.Processes?.Select(p => p.ToDbModel()).ToJson(),
+            ScopePreferenceConfigs = domainModel.ScopePreferenceConfigs?.ToJson(),
             DeleteResources = domainModel.DeleteResources,
             DeleteFiles = domainModel.DeleteFiles,
             Variables = domainModel.Variables?.Select(v => v.ToDbModel()).ToJson(),

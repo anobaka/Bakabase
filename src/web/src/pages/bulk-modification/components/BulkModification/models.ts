@@ -31,6 +31,13 @@ export type BulkModificationProcess = {
   property: IProperty;
 };
 
+export type BulkModificationScopePreferenceConfig = {
+  propertyPool: PropertyPool;
+  propertyId: number;
+  property?: IProperty;
+  priorities?: { scope: PropertyValueScope; fallbackOnEmpty: boolean }[];
+};
+
 export type BulkModificationProcessValue = {
   type: BulkModificationProcessorValueType;
   editorPropertyType?: PropertyType;

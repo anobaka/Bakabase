@@ -42,6 +42,7 @@ public static class BulkModificationExtensions
             DeleteResources = domainModel.DeleteResources,
             DeleteFiles = domainModel.DeleteFiles,
             Variables = domainModel.Variables?.Select(p => p.ToViewModel(propertyLocalizer)).ToList(),
+            ScopePreferenceConfigs = domainModel.ScopePreferenceConfigs,
             AppliedAt = domainModel.AppliedAt,
             ResourceDiffCount = domainModel.ResourceDiffCount
         };
@@ -67,6 +68,7 @@ public static class BulkModificationExtensions
             DeleteResources = domainModel.DeleteResources,
             DeleteFiles = domainModel.DeleteFiles,
             Variables = domainModel.Variables?.Select(p => p.ToViewModel(propertyLocalizer)).ToList(),
+            ScopePreferenceConfigs = domainModel.ScopePreferenceConfigs,
             AppliedAt = domainModel.AppliedAt,
             ResourceDiffCount = domainModel.ResourceDiffCount
         };
@@ -116,6 +118,7 @@ public static class BulkModificationExtensions
             Name = inputModel.Name,
             Processes = inputModel.Processes?.Select(p => p.ToDomainModel(propertyMap))
                 .OfType<BulkModificationProcess>().ToList(),
+            ScopePreferenceConfigs = inputModel.ScopePreferenceConfigs,
             DeleteResources = inputModel.DeleteResources,
             DeleteFiles = inputModel.DeleteFiles,
             Variables = inputModel.Variables?.Select(p => p.ToDomainModel(propertyMap))

@@ -3942,6 +3942,7 @@ export interface BakabaseServiceModelsInputBulkModificationPatchInputModel {
   variables?: BakabaseServiceModelsInputBulkModificationVariableInputModel[];
   search?: BakabaseServiceModelsInputResourceSearchInputModel;
   processes?: BakabaseServiceModelsInputBulkModificationProcessInputModel[];
+  scopePreferenceConfigs?: BakabaseAbstractionsModelsDomainPropertyValueScopePreference[];
   deleteResources?: boolean;
   deleteFiles?: boolean;
 }
@@ -4251,6 +4252,7 @@ export interface BakabaseServiceModelsViewBulkModificationViewModel {
   variables?: BakabaseServiceModelsViewBulkModificationVariableViewModel[];
   search?: BakabaseServiceModelsViewResourceSearchViewModel;
   processes?: BakabaseServiceModelsViewBulkModificationProcessViewModel[];
+  scopePreferenceConfigs?: BakabaseAbstractionsModelsDomainPropertyValueScopePreference[];
   deleteResources: boolean;
   deleteFiles: boolean;
   filteredResourceIds?: number[];

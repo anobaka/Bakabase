@@ -2,6 +2,7 @@
 
 import type {
   BulkModificationProcess,
+  BulkModificationScopePreferenceConfig,
   BulkModificationVariable,
 } from "@/pages/bulk-modification/components/BulkModification/models";
 import type { ReactNode } from "react";
@@ -12,6 +13,7 @@ import { AiOutlineArrowDown } from "react-icons/ai";
 
 import Variables from "./Variables";
 import Processes from "./Processes";
+import ScopePreferences from "./ScopePreferences";
 
 import { Button, Modal } from "@/components/bakaui";
 import { ResourceFilterController } from "@/components/ResourceFilter";
@@ -30,6 +32,7 @@ export type BulkModification = {
   variables?: BulkModificationVariable[];
   search?: SearchCriteria;
   processes?: BulkModificationProcess[];
+  scopePreferenceConfigs?: BulkModificationScopePreferenceConfig[];
   deleteResources?: boolean;
   deleteFiles?: boolean;
   filteredResourceIds?: number[];
@@ -42,7 +45,13 @@ type Props = {
   onChange: (bm: BulkModification) => any;
 };
 
-type BlockKey = "Filters" | "Variables" | "Processes" | "Changes" | "FinalStep";
+type BlockKey =
+  | "Filters"
+  | "Variables"
+  | "Processes"
+  | "ScopePreferences"
+  | "Changes"
+  | "FinalStep";
 
 interface BlockConfig {
   key: BlockKey;
@@ -55,8 +64,9 @@ const BlockConfigs: BlockConfig[] = [
   { key: "Filters", i18nKey: "bulkModification.block.filters", tipKey: "bulkModification.tip.filters", stepNumber: 1 },
   { key: "Variables", i18nKey: "bulkModification.block.variables", tipKey: "bulkModification.tip.variables", stepNumber: 2 },
   { key: "Processes", i18nKey: "bulkModification.block.processes", tipKey: "bulkModification.tip.processes", stepNumber: 3 },
-  { key: "Changes", i18nKey: "bulkModification.block.changes", tipKey: "bulkModification.tip.changes", stepNumber: 4 },
-  { key: "FinalStep", i18nKey: "bulkModification.block.finalStep", stepNumber: 5 },
+  { key: "ScopePreferences", i18nKey: "bulkModification.block.scopePreferences", tipKey: "bulkModification.tip.scopePreferences", stepNumber: 4 },
+  { key: "Changes", i18nKey: "bulkModification.block.changes", tipKey: "bulkModification.tip.changes", stepNumber: 5 },
+  { key: "FinalStep", i18nKey: "bulkModification.block.finalStep", stepNumber: 6 },
 ];
 
 const BulkModification = ({ bm, onChange }: Props) => {
@@ -204,6 +214,25 @@ const BulkModification = ({ bm, onChange }: Props) => {
           />
         );
 
+      case "ScopePreferences":
+        return (
+          <ScopePreferences
+            configs={bm.scopePreferenceConfigs}
+            disabled={bm.deleteResources}
+            onChange={(cs) => {
+              onChange({ ...bm, scopePreferenceConfigs: cs });
+              BApi.bulkModification.patchBulkModification(bm.id, {
+                scopePreferenceConfigs: cs.map((c) => ({
+                  resourceId: 0,
+                  propertyPool: c.propertyPool,
+                  propertyId: c.propertyId,
+                  priorities: c.priorities,
+                })),
+              });
+            }}
+          />
+        );
+
       case "Changes":
         if (bm.deleteResources) {
           return (
@@ -262,7 +291,8 @@ const BulkModification = ({ bm, onChange }: Props) => {
               isDisabled={
                 bm.deleteResources
                   ? !bm.filteredResourceIds || bm.filteredResourceIds.length === 0
-                  : (!bm.processes || bm.processes.length === 0) || bm.resourceDiffCount === 0
+                  : (!bm.scopePreferenceConfigs || bm.scopePreferenceConfigs.length === 0) &&
+                    ((!bm.processes || bm.processes.length === 0) || bm.resourceDiffCount === 0)
               }
               size="sm"
               onPress={() => {
