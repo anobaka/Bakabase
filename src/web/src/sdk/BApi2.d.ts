@@ -9147,6 +9147,13 @@ export interface components {
             property: components["schemas"]["Bakabase.Modules.Property.Models.View.PropertyViewModel"];
             steps?: components["schemas"]["Bakabase.Service.Models.View.BulkModificationProcessStepViewModel"][];
         };
+        "Bakabase.Service.Models.View.BulkModificationScopePreferenceConfigViewModel": {
+            propertyPool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
+            /** Format: int32 */
+            propertyId: number;
+            property?: components["schemas"]["Bakabase.Modules.Property.Models.View.PropertyViewModel"];
+            priorities?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PropertyValueScopePriority"][];
+        };
         "Bakabase.Service.Models.View.BulkModificationVariableViewModel": {
             scope: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyValueScope"];
             propertyPool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
@@ -9167,7 +9174,7 @@ export interface components {
             variables?: components["schemas"]["Bakabase.Service.Models.View.BulkModificationVariableViewModel"][];
             search?: components["schemas"]["Bakabase.Service.Models.View.ResourceSearchViewModel"];
             processes?: components["schemas"]["Bakabase.Service.Models.View.BulkModificationProcessViewModel"][];
-            scopePreferenceConfigs?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PropertyValueScopePreference"][];
+            scopePreferenceConfigs?: components["schemas"]["Bakabase.Service.Models.View.BulkModificationScopePreferenceConfigViewModel"][];
             deleteResources: boolean;
             deleteFiles: boolean;
             filteredResourceIds?: number[];

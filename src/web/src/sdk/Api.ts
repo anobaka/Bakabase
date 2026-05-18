@@ -4229,6 +4229,15 @@ export interface BakabaseServiceModelsViewBulkModificationProcessViewModel {
   steps?: BakabaseServiceModelsViewBulkModificationProcessStepViewModel[];
 }
 
+export interface BakabaseServiceModelsViewBulkModificationScopePreferenceConfigViewModel {
+  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
+  propertyPool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
+  /** @format int32 */
+  propertyId: number;
+  property?: BakabaseModulesPropertyModelsViewPropertyViewModel;
+  priorities?: BakabaseAbstractionsModelsDomainPropertyValueScopePriority[];
+}
+
 export interface BakabaseServiceModelsViewBulkModificationVariableViewModel {
   /** [0: Manual, 1: Synchronization, 1000: Bakabase, 1001: ExHentai, 1002: Bangumi, 1003: DLsite, 1004: Regex, 1005: Kodi, 1006: Tmdb, 1007: Av, 1008: Ai, 1009: Steam] */
   scope: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope;
@@ -4252,7 +4261,7 @@ export interface BakabaseServiceModelsViewBulkModificationViewModel {
   variables?: BakabaseServiceModelsViewBulkModificationVariableViewModel[];
   search?: BakabaseServiceModelsViewResourceSearchViewModel;
   processes?: BakabaseServiceModelsViewBulkModificationProcessViewModel[];
-  scopePreferenceConfigs?: BakabaseAbstractionsModelsDomainPropertyValueScopePreference[];
+  scopePreferenceConfigs?: BakabaseServiceModelsViewBulkModificationScopePreferenceConfigViewModel[];
   deleteResources: boolean;
   deleteFiles: boolean;
   filteredResourceIds?: number[];

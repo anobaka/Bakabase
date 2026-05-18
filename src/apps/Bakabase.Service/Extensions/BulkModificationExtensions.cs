@@ -42,7 +42,8 @@ public static class BulkModificationExtensions
             DeleteResources = domainModel.DeleteResources,
             DeleteFiles = domainModel.DeleteFiles,
             Variables = domainModel.Variables?.Select(p => p.ToViewModel(propertyLocalizer)).ToList(),
-            ScopePreferenceConfigs = domainModel.ScopePreferenceConfigs,
+            ScopePreferenceConfigs = domainModel.ScopePreferenceConfigs
+                ?.Select(c => c.ToBulkModificationConfigViewModel(null, propertyLocalizer)).ToList(),
             AppliedAt = domainModel.AppliedAt,
             ResourceDiffCount = domainModel.ResourceDiffCount
         };
@@ -54,6 +55,7 @@ public static class BulkModificationExtensions
     public static async Task<BulkModificationViewModel> ToViewModelAsync(this BulkModification domainModel,
         IPropertyService propertyService, IPropertyLocalizer propertyLocalizer, IResourceService resourceService)
     {
+        var propertyMap = (await propertyService.GetProperties(PropertyPool.All)).ToMap();
         return new BulkModificationViewModel
         {
             Id = domainModel.Id,
@@ -68,9 +70,27 @@ public static class BulkModificationExtensions
             DeleteResources = domainModel.DeleteResources,
             DeleteFiles = domainModel.DeleteFiles,
             Variables = domainModel.Variables?.Select(p => p.ToViewModel(propertyLocalizer)).ToList(),
-            ScopePreferenceConfigs = domainModel.ScopePreferenceConfigs,
+            ScopePreferenceConfigs = domainModel.ScopePreferenceConfigs?.Select(c =>
+            {
+                var property = propertyMap.GetValueOrDefault(c.PropertyPool)?.GetValueOrDefault(c.PropertyId);
+                return c.ToBulkModificationConfigViewModel(property, propertyLocalizer);
+            }).ToList(),
             AppliedAt = domainModel.AppliedAt,
             ResourceDiffCount = domainModel.ResourceDiffCount
+        };
+    }
+
+    public static BulkModificationScopePreferenceConfigViewModel ToBulkModificationConfigViewModel(
+        this PropertyValueScopePreference domainModel,
+        Bakabase.Abstractions.Models.Domain.Property? property,
+        IPropertyLocalizer propertyLocalizer)
+    {
+        return new BulkModificationScopePreferenceConfigViewModel
+        {
+            PropertyPool = domainModel.PropertyPool,
+            PropertyId = domainModel.PropertyId,
+            Property = property?.ToViewModel(propertyLocalizer),
+            Priorities = domainModel.Priorities
         };
     }
 
