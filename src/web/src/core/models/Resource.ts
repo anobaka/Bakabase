@@ -41,14 +41,18 @@ export type ResourceDataState = {
   status: DataStatus;
 };
 
+export type PropertyValueScopePriority = {
+  scope: PropertyValueScope;
+  /** When this scope is empty, whether to continue with the next scope or stop and render blank. Ignored on the last entry. */
+  fallbackOnEmpty: boolean;
+};
+
 export type PropertyValueScopePreference = {
   resourceId: number;
   propertyPool: PropertyPool;
   propertyId: number;
-  /** Ordered scopes; null = no override (falls through to profile/global) */
-  priorities?: PropertyValueScope[];
-  /** When the top-priority scope is empty, whether to try the next one or render blank */
-  fallbackOnEmpty: boolean;
+  /** Ordered scope priorities with per-scope fallback flag; null = no override (falls through to profile/global) */
+  priorities?: PropertyValueScopePriority[];
 };
 
 export type ResourceSourceLink = {

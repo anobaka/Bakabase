@@ -72,6 +72,7 @@
   "property.scopePreference.viaDefault": "来自默认规则",
   "property.scopePreference.noValues": "暂无任何来源有值",
   "property.scopePreference.fallbackOnEmpty": "当前来源为空时回退到下一个",
+  "property.scopePreference.fallbackDisabledOnLast": "已是最后一项，没有下一个来源可回退",
   "property.scopePreference.addToList": "加入优先级列表",
   "property.scopePreference.moveUp": "上移",
   "property.scopePreference.moveDown": "下移",

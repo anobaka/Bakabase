@@ -72,6 +72,7 @@
   "property.scopePreference.viaDefault": "from default",
   "property.scopePreference.noValues": "No scope has a value yet",
   "property.scopePreference.fallbackOnEmpty": "Fall back to next scope when empty",
+  "property.scopePreference.fallbackDisabledOnLast": "Last entry — no further scope to fall back to",
   "property.scopePreference.addToList": "Add to priority list",
   "property.scopePreference.moveUp": "Move up",
   "property.scopePreference.moveDown": "Move down",

@@ -449,8 +449,7 @@ namespace Bakabase.Service.Controllers
                 ResourceId = id,
                 PropertyPool = model.PropertyPool,
                 PropertyId = model.PropertyId,
-                Priorities = model.Priorities is {Length: > 0} ? model.Priorities : null,
-                FallbackOnEmpty = model.FallbackOnEmpty
+                Priorities = model.Priorities is {Length: > 0} ? model.Priorities : null
             });
             return new SingletonResponse<PropertyValueScopePreference>(pref);
         }

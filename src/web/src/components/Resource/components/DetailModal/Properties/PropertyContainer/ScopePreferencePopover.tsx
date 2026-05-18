@@ -1,6 +1,10 @@
 "use client";
 
-import type { Property, PropertyValueScopePreference } from "@/core/models/Resource";
+import type {
+  Property,
+  PropertyValueScopePreference,
+  PropertyValueScopePriority,
+} from "@/core/models/Resource";
 
 import React, { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -65,13 +69,11 @@ const ScopePreferencePopover = ({
 }: Props) => {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
-  const [priorities, setPriorities] = useState<PropertyValueScope[] | null>(null);
-  const [fallbackOnEmpty, setFallbackOnEmpty] = useState(true);
+  const [priorities, setPriorities] = useState<PropertyValueScopePriority[] | null>(null);
   const [dirty, setDirty] = useState(false);
 
   const initialize = () => {
     setPriorities(preference?.priorities ?? null);
-    setFallbackOnEmpty(preference?.fallbackOnEmpty ?? true);
     setDirty(false);
   };
 
@@ -95,27 +97,45 @@ const ScopePreferencePopover = ({
     return undefined;
   }, [effectivePriority, values]);
 
+  const indexOfScope = (scope: PropertyValueScope) =>
+    priorities?.findIndex((p) => p.scope === scope) ?? -1;
+
   const addScope = (scope: PropertyValueScope) => {
-    setPriorities([...(priorities ?? []), scope]);
+    setPriorities([...(priorities ?? []), { scope, fallbackOnEmpty: true }]);
     setDirty(true);
   };
 
   const removeScope = (scope: PropertyValueScope) => {
     if (!priorities) return;
-    const next = priorities.filter((s) => s !== scope);
+    const next = priorities.filter((p) => p.scope !== scope);
+
     setPriorities(next.length === 0 ? null : next);
     setDirty(true);
   };
 
   const moveScope = (scope: PropertyValueScope, dir: -1 | 1) => {
     if (!priorities) return;
-    const idx = priorities.indexOf(scope);
+    const idx = priorities.findIndex((p) => p.scope === scope);
+
     if (idx < 0) return;
     const target = idx + dir;
+
     if (target < 0 || target >= priorities.length) return;
     const next = [...priorities];
 
     [next[idx], next[target]] = [next[target], next[idx]];
+    setPriorities(next);
+    setDirty(true);
+  };
+
+  const setFallback = (scope: PropertyValueScope, fallbackOnEmpty: boolean) => {
+    if (!priorities) return;
+    const idx = priorities.findIndex((p) => p.scope === scope);
+
+    if (idx < 0) return;
+    const next = [...priorities];
+
+    next[idx] = { ...next[idx], fallbackOnEmpty };
     setPriorities(next);
     setDirty(true);
   };
@@ -125,7 +145,6 @@ const ScopePreferencePopover = ({
       propertyPool,
       propertyId,
       priorities: priorities ?? undefined,
-      fallbackOnEmpty,
     });
     setOpen(false);
     onChanged();
@@ -139,6 +158,8 @@ const ScopePreferencePopover = ({
     setOpen(false);
     onChanged();
   };
+
+  const priorityLen = priorities?.length ?? 0;
 
   return (
     <Popover
@@ -159,7 +180,7 @@ const ScopePreferencePopover = ({
         </button>
       }
     >
-      <div className="flex flex-col gap-2 p-1 min-w-[300px] max-w-[420px]">
+      <div className="flex flex-col gap-2 p-1 min-w-[340px] max-w-[460px]">
         <div className="text-xs opacity-60">
           {effectiveScope !== undefined
             ? `${t("property.scopePreference.currentlyShowing", { scope: PropertyValueScopeLabel[effectiveScope] })} · ${preference ? t("property.scopePreference.viaOverride") : t("property.scopePreference.viaDefault")}`
@@ -168,8 +189,10 @@ const ScopePreferencePopover = ({
 
         <div className="flex flex-col gap-1">
           {nonEmptyScopes.map((s) => {
-            const idx = priorities?.indexOf(s.scope) ?? -1;
+            const idx = indexOfScope(s.scope);
             const inList = idx >= 0;
+            const isLast = inList && idx === priorityLen - 1;
+            const entry = inList ? priorities![idx] : undefined;
 
             return (
               <div className="flex items-center gap-1 text-sm" key={s.scope}>
@@ -190,7 +213,7 @@ const ScopePreferencePopover = ({
                     </Button>
                     <Button
                       isIconOnly
-                      isDisabled={idx === (priorities?.length ?? 0) - 1}
+                      isDisabled={isLast}
                       size="sm"
                       title={t("property.scopePreference.moveDown")}
                       variant="light"
@@ -223,6 +246,19 @@ const ScopePreferencePopover = ({
                   <span className="font-medium">{s.label}</span>
                   <span className="opacity-60 ml-2">{previewText(s.value)}</span>
                 </span>
+                {inList && (
+                  <Switch
+                    isDisabled={isLast}
+                    isSelected={isLast ? true : entry!.fallbackOnEmpty}
+                    size="sm"
+                    title={
+                      isLast
+                        ? t("property.scopePreference.fallbackDisabledOnLast")
+                        : t("property.scopePreference.fallbackOnEmpty")
+                    }
+                    onValueChange={(v) => setFallback(s.scope, v)}
+                  />
+                )}
               </div>
             );
           })}
@@ -231,19 +267,6 @@ const ScopePreferencePopover = ({
               {t("property.scopePreference.noValues")}
             </div>
           )}
-        </div>
-
-        <div className="flex items-center justify-between text-xs gap-2">
-          <span>{t("property.scopePreference.fallbackOnEmpty")}</span>
-          <Switch
-            isDisabled={!priorities || priorities.length <= 1}
-            isSelected={fallbackOnEmpty}
-            size="sm"
-            onValueChange={(v) => {
-              setFallbackOnEmpty(v);
-              setDirty(true);
-            }}
-          />
         </div>
 
         <div className="flex justify-between gap-2 mt-1">

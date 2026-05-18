@@ -234,9 +234,13 @@ const Properties = (props: Props) => {
     let effectivePriority = valueScopePriority;
 
     if (preference?.priorities && preference.priorities.length > 0) {
-      effectivePriority = preference.fallbackOnEmpty
-        ? preference.priorities
-        : [preference.priorities[0]];
+      const chain: PropertyValueScope[] = [];
+
+      for (const p of preference.priorities) {
+        chain.push(p.scope);
+        if (!p.fallbackOnEmpty) break;
+      }
+      effectivePriority = chain;
     }
 
     // log(pCtx);

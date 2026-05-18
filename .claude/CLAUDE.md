@@ -35,7 +35,12 @@ cd Bakabase/src/web && yarn run gen-sdk  # Regenerate API SDK (offline, no runni
 dotnet build                                    # Build solution
 dotnet run --project Bakabase/src/apps/Bakabase  # Run desktop app
 
-# Database Migration (NEVER create migration files manually, always use this command)
+# Database Migration
+# - ALWAYS generate via the command below; never hand-write or hand-edit a migration file.
+# - Keep the generated migration pure-schema. Do NOT add `migrationBuilder.Sql(...)`
+#   calls or any data-migration code inside it — we'd rather accept legacy data
+#   loss (especially during beta) than ship a backfill that has to be reasoned
+#   about, tested, and maintained alongside the schema change.
 dotnet ef migrations add {MigrationName} --verbose --project src/legacy/Bakabase.InsideWorld.Business --startup-project src/apps/Bakabase.Service --context BakabaseDbContext
 ```
 
