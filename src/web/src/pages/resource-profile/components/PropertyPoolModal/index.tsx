@@ -89,7 +89,7 @@ const PropertyPoolModal = ({
   const handleAddProperties = () => {
     createPortal(PropertySelector, {
       v2: true,
-      pool: PropertyPool.Reserved | PropertyPool.Custom,
+      pool: PropertyPool.Custom,
       multiple: true,
       selection: propertyRefs.map((ref) => ({ pool: ref.pool!, id: ref.id! })),
       onSubmit: async (selectedProperties: IProperty[]) => {

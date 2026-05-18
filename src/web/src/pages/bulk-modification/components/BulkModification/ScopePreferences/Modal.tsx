@@ -149,8 +149,15 @@ const ScopePreferenceConfigModal = ({ onDestroyed, config: propsConfig, onSubmit
             {t<string>("bulkModification.scopePreference.tip")}
           </div>
           <div className="flex flex-col gap-1">
-            {propertyValueScopes.map((s) => {
-              const scope = s.value as PropertyValueScope;
+            {(() => {
+              const inListScopes = priorities.map((p) => p.scope);
+              const inListSet = new Set(inListScopes);
+              const restScopes = propertyValueScopes
+                .map((s) => s.value as PropertyValueScope)
+                .filter((s) => !inListSet.has(s));
+
+              return [...inListScopes, ...restScopes];
+            })().map((scope) => {
               const idx = indexOfScope(scope);
               const inList = idx >= 0;
               const isLast = inList && idx === priorityLen - 1;

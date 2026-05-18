@@ -77,17 +77,24 @@ const ScopePreferencePopover = ({
     setDirty(false);
   };
 
-  const nonEmptyScopes = useMemo(
-    () =>
-      propertyValueScopes
-        .map((s) => ({
-          scope: s.value,
-          label: PropertyValueScopeLabel[s.value],
-          value: values?.find((v) => v.scope === s.value),
-        }))
-        .filter((s) => hasValue(s.value)),
-    [values],
-  );
+  const nonEmptyScopes = useMemo(() => {
+    const allWithValues = propertyValueScopes
+      .map((s) => ({
+        scope: s.value,
+        label: PropertyValueScopeLabel[s.value],
+        value: values?.find((v) => v.scope === s.value),
+      }))
+      .filter((s) => hasValue(s.value));
+    const byScope = new Map(allWithValues.map((s) => [s.scope, s]));
+    // Priorities first (in their configured order); remaining scopes after, in enum order.
+    const inList = (priorities ?? [])
+      .map((p) => byScope.get(p.scope))
+      .filter((s): s is (typeof allWithValues)[number] => s !== undefined);
+    const inListSet = new Set(inList.map((s) => s.scope));
+    const rest = allWithValues.filter((s) => !inListSet.has(s.scope));
+
+    return [...inList, ...rest];
+  }, [values, priorities]);
 
   const effectiveScope = useMemo(() => {
     for (const s of effectivePriority) {
