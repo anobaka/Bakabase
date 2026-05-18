@@ -193,9 +193,17 @@ const ScopePreferencePopover = ({
             const inList = idx >= 0;
             const isLast = inList && idx === priorityLen - 1;
             const entry = inList ? priorities![idx] : undefined;
+            // A non-last entry with fallbackOnEmpty=false cuts off the chain; anything after it is inert.
+            const cutoffIdx = priorities?.findIndex(
+              (p, i) => !p.fallbackOnEmpty && i < priorityLen - 1,
+            ) ?? -1;
+            const isCutOff = inList && cutoffIdx >= 0 && idx > cutoffIdx;
 
             return (
-              <div className="flex items-center gap-1 text-sm" key={s.scope}>
+              <div
+                className={`flex items-center gap-1 text-sm ${isCutOff ? "opacity-40" : ""}`}
+                key={s.scope}
+              >
                 {inList ? (
                   <>
                     <span className="font-mono text-xs opacity-60 w-5 text-right">
@@ -203,7 +211,7 @@ const ScopePreferencePopover = ({
                     </span>
                     <Button
                       isIconOnly
-                      isDisabled={idx === 0}
+                      isDisabled={isCutOff || idx === 0}
                       size="sm"
                       title={t("property.scopePreference.moveUp")}
                       variant="light"
@@ -213,7 +221,7 @@ const ScopePreferencePopover = ({
                     </Button>
                     <Button
                       isIconOnly
-                      isDisabled={isLast}
+                      isDisabled={isCutOff || isLast}
                       size="sm"
                       title={t("property.scopePreference.moveDown")}
                       variant="light"
@@ -223,6 +231,7 @@ const ScopePreferencePopover = ({
                     </Button>
                     <Button
                       isIconOnly
+                      isDisabled={isCutOff}
                       size="sm"
                       title={t("property.scopePreference.removeFromList")}
                       variant="light"
@@ -248,13 +257,15 @@ const ScopePreferencePopover = ({
                 </span>
                 {inList && (
                   <Switch
-                    isDisabled={isLast}
+                    isDisabled={isCutOff || isLast}
                     isSelected={isLast ? true : entry!.fallbackOnEmpty}
                     size="sm"
                     title={
-                      isLast
-                        ? t("property.scopePreference.fallbackDisabledOnLast")
-                        : t("property.scopePreference.fallbackOnEmpty")
+                      isCutOff
+                        ? t("property.scopePreference.cutOff")
+                        : isLast
+                          ? t("property.scopePreference.fallbackDisabledOnLast")
+                          : t("property.scopePreference.fallbackOnEmpty")
                     }
                     onValueChange={(v) => setFallback(s.scope, v)}
                   />

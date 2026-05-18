@@ -155,15 +155,23 @@ const ScopePreferenceConfigModal = ({ onDestroyed, config: propsConfig, onSubmit
               const inList = idx >= 0;
               const isLast = inList && idx === priorityLen - 1;
               const entry = inList ? priorities[idx] : undefined;
+              // A non-last entry with fallbackOnEmpty=false cuts off the chain; anything after it is inert.
+              const cutoffIdx = priorities.findIndex(
+                (p, i) => !p.fallbackOnEmpty && i < priorityLen - 1,
+              );
+              const isCutOff = inList && cutoffIdx >= 0 && idx > cutoffIdx;
 
               return (
-                <div className="flex items-center gap-1 text-sm" key={scope}>
+                <div
+                  className={`flex items-center gap-1 text-sm ${isCutOff ? "opacity-40" : ""}`}
+                  key={scope}
+                >
                   {inList ? (
                     <>
                       <span className="font-mono text-xs opacity-60 w-5 text-right">{idx + 1}.</span>
                       <Button
                         isIconOnly
-                        isDisabled={idx === 0}
+                        isDisabled={isCutOff || idx === 0}
                         size="sm"
                         title={t<string>("property.scopePreference.moveUp")}
                         variant="light"
@@ -173,7 +181,7 @@ const ScopePreferenceConfigModal = ({ onDestroyed, config: propsConfig, onSubmit
                       </Button>
                       <Button
                         isIconOnly
-                        isDisabled={isLast}
+                        isDisabled={isCutOff || isLast}
                         size="sm"
                         title={t<string>("property.scopePreference.moveDown")}
                         variant="light"
@@ -183,6 +191,7 @@ const ScopePreferenceConfigModal = ({ onDestroyed, config: propsConfig, onSubmit
                       </Button>
                       <Button
                         isIconOnly
+                        isDisabled={isCutOff}
                         size="sm"
                         title={t<string>("property.scopePreference.removeFromList")}
                         variant="light"
@@ -207,13 +216,15 @@ const ScopePreferenceConfigModal = ({ onDestroyed, config: propsConfig, onSubmit
                   </span>
                   {inList && (
                     <Switch
-                      isDisabled={isLast}
+                      isDisabled={isCutOff || isLast}
                       isSelected={isLast ? true : entry!.fallbackOnEmpty}
                       size="sm"
                       title={
-                        isLast
-                          ? t<string>("property.scopePreference.fallbackDisabledOnLast")
-                          : t<string>("property.scopePreference.fallbackOnEmpty")
+                        isCutOff
+                          ? t<string>("property.scopePreference.cutOff")
+                          : isLast
+                            ? t<string>("property.scopePreference.fallbackDisabledOnLast")
+                            : t<string>("property.scopePreference.fallbackOnEmpty")
                       }
                       onValueChange={(v) => setFallback(scope, v)}
                     />

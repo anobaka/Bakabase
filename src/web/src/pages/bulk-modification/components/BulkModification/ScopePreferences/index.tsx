@@ -10,7 +10,7 @@ import ScopePreferenceConfigModal from "./Modal";
 
 import { Button, Card, CardBody, Chip, Modal } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import { PropertyLabel } from "@/components/Property";
+import BriefProperty from "@/components/Chips/Property/BriefProperty";
 import { PropertyValueScopeLabel } from "@/sdk/constants";
 
 type Props = {
@@ -84,7 +84,7 @@ const ScopePreferences = ({ configs: propsConfigs, disabled, onChange }: Props) 
                 openDelete();
               }}
             >
-              {c.property ? <PropertyLabel showPool property={c.property} /> : `#${c.propertyId}`}
+              {c.property ? <BriefProperty property={c.property} /> : `#${c.propertyId}`}
             </Chip>
             <span className="text-xs opacity-70 truncate">{summary}</span>
           </div>
