@@ -106,7 +106,11 @@ public class FC2Client(IHttpClientFactory httpClientFactory, ILoggerFactory logg
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error parsing FC2 video {Number}: {Message}", number, ex.Message);
+            // Third-party scraping failures (network hiccup, site layout
+            // change, captcha) are expected — return null so the caller can
+            // try the next source, and log at Warning so Sentry's
+            // Error-level event sink doesn't pick it up.
+            Logger.LogWarning(ex, "Error parsing FC2 video {Number}: {Message}", number, ex.Message);
             return null;
         }
     }

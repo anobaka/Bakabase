@@ -130,7 +130,10 @@ public class CNMDBClient(IHttpClientFactory httpClientFactory, ILoggerFactory lo
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error parsing CNMDB video: {Message}", ex.Message);
+            // Third-party scraping failures (network hiccup, site layout
+            // change, captcha) are expected — Warning keeps Sentry quiet
+            // while preserving the local diagnostic.
+            Logger.LogWarning(ex, "Error parsing CNMDB video: {Message}", ex.Message);
             return null;
         }
     }

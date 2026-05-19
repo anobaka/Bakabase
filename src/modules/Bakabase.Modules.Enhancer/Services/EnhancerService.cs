@@ -501,6 +501,19 @@ namespace Bakabase.Modules.Enhancer.Services
                     {
                         foreach (var req in t.Options.Requirements)
                         {
+                            // Self-referencing requirements (e.g. Av declares Av
+                            // as a dependency) used to slip into the graph and
+                            // get caught only at DFS time as an "8->8" cycle,
+                            // which then killed the whole EnhanceAll BTask.
+                            // It's never a meaningful edge — drop it here.
+                            if ((int)req == t.Enhancer.Id)
+                            {
+                                _logger.LogWarning(
+                                    "Enhancer {EnhancerId} declared itself as a requirement for resource {ResourceId}; skipping self-edge",
+                                    t.Enhancer.Id, r.Id);
+                                continue;
+                            }
+
                             if (enhancerTaskMap.TryGetValue((int)req, out var dependencyTask))
                             {
                                 t.Dependencies.Add(dependencyTask);
@@ -510,19 +523,37 @@ namespace Bakabase.Modules.Enhancer.Services
                     }
                 }
 
-                // Detect dependency cycles within this resource's tasks
+                // Detect dependency cycles within this resource's tasks. Real
+                // cycles (A->B->A) are a config-side issue, but a single bad
+                // resource shouldn't tank the rest of the batch — drop just
+                // the affected resource's tasks and continue.
                 var visited = new HashSet<ContextCreationTask>();
                 var stack = new Stack<ContextCreationTask>();
+                string? detectedCycle = null;
 
                 foreach (var node in groupTasks.Where(node => !visited.Contains(node)))
                 {
                     Dfs(node);
+                    if (detectedCycle != null) break;
+                }
+
+                if (detectedCycle != null)
+                {
+                    _logger.LogWarning(
+                        "Dependency cycle detected among enhancers for resource {ResourceId}: {Cycle}; dropping its enhancement tasks",
+                        r.Id, detectedCycle);
+                    foreach (var groupTask in groupTasks)
+                    {
+                        tasks.Remove(groupTask);
+                    }
                 }
 
                 continue;
 
                 void Dfs(ContextCreationTask node)
                 {
+                    if (detectedCycle != null) return;
+
                     if (stack.Contains(node))
                     {
                         var cycleNodes = new List<ContextCreationTask>();
@@ -534,9 +565,8 @@ namespace Bakabase.Modules.Enhancer.Services
 
                         cycleNodes.Reverse();
                         cycleNodes.Add(node);
-                        var cycleIds = string.Join("->", cycleNodes.Select(x => x.Enhancer.Id));
-                        throw new DevException(
-                            $"Dependency cycle detected among enhancers for resource {r.Id}: {cycleIds}");
+                        detectedCycle = string.Join("->", cycleNodes.Select(x => x.Enhancer.Id));
+                        return;
                     }
 
                     if (!visited.Add(node))
