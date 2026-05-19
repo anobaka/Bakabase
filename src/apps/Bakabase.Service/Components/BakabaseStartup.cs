@@ -201,6 +201,12 @@ namespace Bakabase.Service.Components
                     o.Environment = Env.EnvironmentName;
                     // Performance tracing off — we want errors only, to stay within free tier.
                     o.TracesSampleRate = 0;
+                    // We already log every failed third-party HTTP request via
+                    // the scraper's own try/catch and surface them as user-facing
+                    // messages. Sentry's HttpClient auto-handler turns each
+                    // non-2xx response from CableAV / Fc2 / etc. into a separate
+                    // event, which is noise — turn it off.
+                    o.CaptureFailedRequests = false;
                     // Drop a couple of known-benign exceptions before they hit
                     // Sentry, otherwise they drown out actionable errors:
                     //   * OperationCanceledException — ASP.NET's signal for a

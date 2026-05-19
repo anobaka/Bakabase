@@ -105,7 +105,19 @@ public class AigcRunExecutor<TDbContext>(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Aigc run {RunId} failed", run.Id);
+            // "No outputs" / "no image outputs" are expected user-facing
+            // failures (prompt produced nothing, provider workflow rejected
+            // the input, ...). We record run.ErrorMessage so the UI can
+            // surface them, but they don't belong in the error dashboard.
+            // Anything else is a real bug — keep LogError so we hear about it.
+            if (ex is InvalidOperationException)
+            {
+                logger.LogWarning(ex, "Aigc run {RunId} failed", run.Id);
+            }
+            else
+            {
+                logger.LogError(ex, "Aigc run {RunId} failed", run.Id);
+            }
             run.Status = AigcGenerationStatus.Failed;
             run.ErrorMessage = ex.Message;
             run.CompletedAt = DateTime.Now;

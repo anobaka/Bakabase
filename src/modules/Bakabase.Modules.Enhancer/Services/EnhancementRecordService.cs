@@ -21,6 +21,21 @@ public class EnhancementRecordService<TDbContext>(
 
     public async Task Add(EnhancementRecord record)
     {
+        // EnhancementRecords has a UNIQUE constraint on (EnhancerId, ResourceId).
+        // When two enhancement requests for the same (resource, enhancer) race —
+        // e.g. the user clicks "Enhance" while a background bulk re-enhance is
+        // already running on the same resource — both loaders see "no record"
+        // and both Add() blow up with SqliteException 19. Upsert by the unique
+        // pair instead.
+        var existing = (await orm.GetAll(x =>
+            x.ResourceId == record.ResourceId && x.EnhancerId == record.EnhancerId)).FirstOrDefault();
+        if (existing != null)
+        {
+            record.Id = existing.Id;
+            await orm.Update(record.ToDbModel());
+            return;
+        }
+
         await orm.Add(record.ToDbModel());
     }
 

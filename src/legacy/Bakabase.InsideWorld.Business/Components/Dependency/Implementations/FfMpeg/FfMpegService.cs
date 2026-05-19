@@ -154,9 +154,22 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Ff
                     $"stderr: {(string.IsNullOrEmpty(errorText) ? "<empty>" : errorText)}");
             }
 
-            var jObject = JObject.Parse(output.ToString());
-            var seconds = jObject["format"]!["duration"]!.Value<double>();
-            return seconds;
+            var stdout = output.ToString();
+            if (string.IsNullOrWhiteSpace(stdout))
+            {
+                throw new Exception(
+                    $"ffprobe returned empty stdout for '{path}'. stderr: {error}");
+            }
+
+            var jObject = JObject.Parse(stdout);
+            var duration = jObject["format"]?["duration"]?.Value<double>();
+            if (duration == null)
+            {
+                throw new Exception(
+                    $"ffprobe produced JSON without format.duration for '{path}': {stdout}");
+            }
+
+            return duration.Value;
         }
 
         /// <summary>

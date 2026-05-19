@@ -638,7 +638,28 @@ namespace Bakabase.Service.Controllers
         public async Task<SingletonResponse<IwFsEntryLazyInfo>> GetIwFsInfo(string path, IwFsType type,
             bool showHiddenFiles = false)
         {
-            return new SingletonResponse<IwFsEntryLazyInfo>(new IwFsEntryLazyInfo(path, type, showHiddenFiles));
+            // The frontend hands us whatever path the user typed / clicked,
+            // including hidden Windows junction points (`Application Data`,
+            // `My Documents`) that throw UnauthorizedAccessException, and
+            // already-deleted directories that throw DirectoryNotFoundException.
+            // Both are user-level conditions, not bugs — return a 400 with the
+            // localised message instead of letting them surface as Sentry 500s.
+            try
+            {
+                return new SingletonResponse<IwFsEntryLazyInfo>(new IwFsEntryLazyInfo(path, type, showHiddenFiles));
+            }
+            catch (DirectoryNotFoundException ex)
+            {
+                return SingletonResponseBuilder<IwFsEntryLazyInfo>.BuildBadRequest(ex.Message);
+            }
+            catch (FileNotFoundException ex)
+            {
+                return SingletonResponseBuilder<IwFsEntryLazyInfo>.BuildBadRequest(ex.Message);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return SingletonResponseBuilder<IwFsEntryLazyInfo>.BuildBadRequest(ex.Message);
+            }
         }
 
         [HttpGet("iwfs-entry")]
@@ -884,6 +905,25 @@ namespace Bakabase.Service.Controllers
         {
             var paths = model.EntryPaths.FindTopLevelPaths();
             // Directory.CreateDirectory(model.DestDir);
+
+            // Reject moving a folder into its own subtree up-front, instead of
+            // letting the BTask blow up later with an Exception that lands in
+            // Sentry. The same check runs again inside DirectoryUtils.MoveAsync
+            // for safety, but catching it here also gives the user a 400.
+            var normalizedDest = Path.GetFullPath(model.DestDir).TrimEnd(
+                Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            foreach (var path in paths)
+            {
+                var normalizedSource = Path.GetFullPath(path).TrimEnd(
+                    Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                if (string.Equals(normalizedSource, normalizedDest, StringComparison.OrdinalIgnoreCase) ||
+                    normalizedDest.StartsWith(normalizedSource + Path.DirectorySeparatorChar,
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    return BaseResponseBuilder.BuildBadRequest(
+                        $"Cannot move '{path}' into its own subdirectory '{model.DestDir}'.");
+                }
+            }
 
             await _fsOptionsManager.SaveAsync(options =>
             {

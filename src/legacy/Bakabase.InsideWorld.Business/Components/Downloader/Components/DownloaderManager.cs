@@ -95,7 +95,11 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
         private async Task<BaseResponse> _tryStart(DownloadTask task, bool stopConflicts)
         {
             var helper = _downloaderFactory.GetHelper(task.ThirdPartyId, task.Type);
-            await helper.ValidateOptionsAsync();
+            var validation = await helper.ValidateOptionsAsync();
+            if (!validation.IsSuccess())
+            {
+                return validation;
+            }
 
             var activeConflictDownloaders = _downloaders.Where(a => a.Key != task.Id)
                 .Where(a => a.Value.ThirdPartyId == task.ThirdPartyId && a.Value.IsOccupyingDownloadTaskSource())

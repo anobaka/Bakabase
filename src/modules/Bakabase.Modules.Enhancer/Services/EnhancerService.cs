@@ -195,7 +195,10 @@ namespace Bakabase.Modules.Enhancer.Services
                         case PropertyPool.Internal:
                         case PropertyPool.All:
                         default:
-                            throw new ArgumentOutOfRangeException();
+                            throw new ArgumentOutOfRangeException(
+                                nameof(targetOptions.PropertyPool),
+                                targetOptions.PropertyPool,
+                                $"Unexpected property pool for enhancement (enhancer={enhancement.EnhancerId}, target={enhancement.Target}, resource={enhancement.ResourceId}, propertyId={targetOptions.PropertyId}). Only Reserved and Custom are supported.");
                     }
 
                     if (propertyDescriptor == null)
@@ -243,7 +246,10 @@ namespace Bakabase.Modules.Enhancer.Services
                                     break;
                                 }
                                 default:
-                                    throw new ArgumentOutOfRangeException();
+                                    throw new ArgumentOutOfRangeException(
+                                        nameof(targetOptions.PropertyId),
+                                        targetOptions.PropertyId,
+                                        $"Reserved property {(ReservedProperty)targetOptions.PropertyId} is not supported by ApplyEnhancementsToResources (enhancer={enhancement.EnhancerId}, target={enhancement.Target}, resource={enhancement.ResourceId}).");
                             }
 
                             break;
@@ -275,7 +281,10 @@ namespace Bakabase.Modules.Enhancer.Services
                         case PropertyPool.Internal:
                         case PropertyPool.All:
                         default:
-                            throw new ArgumentOutOfRangeException();
+                            throw new ArgumentOutOfRangeException(
+                                nameof(targetOptions.PropertyPool),
+                                targetOptions.PropertyPool,
+                                $"Unexpected property pool when writing enhancement value (enhancer={enhancement.EnhancerId}, target={enhancement.Target}, resource={enhancement.ResourceId}).");
                     }
                 }
             }

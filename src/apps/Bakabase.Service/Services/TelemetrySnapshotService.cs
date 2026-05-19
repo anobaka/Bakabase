@@ -53,7 +53,10 @@ public class TelemetrySnapshotService(
         }
         catch (Exception e)
         {
-            logger.LogError(e, "Telemetry: failed to count media libraries / resources");
+            // Telemetry is a best-effort dashboard signal — a disk I/O hiccup
+            // or partial migration shouldn't fire a Sentry event. Drop to
+            // Warning so it stays in local logs but isn't escalated.
+            logger.LogWarning(e, "Telemetry: failed to count media libraries / resources");
         }
 
         // Sorted ordinally so the snapshot hash is stable across profile-ordering changes.
@@ -75,7 +78,7 @@ public class TelemetrySnapshotService(
         }
         catch (Exception e)
         {
-            logger.LogError(e, "Telemetry: failed to enumerate enabled enhancers");
+            logger.LogWarning(e, "Telemetry: failed to enumerate enabled enhancers");
         }
 
         var aiEnabled = aiOptions.Value.DefaultProviderConfigId.HasValue;

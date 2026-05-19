@@ -151,6 +151,18 @@ public class LocalFilePlayableItemProvider : IPlayableItemProvider
     public async Task PlayAsync(DomainResource resource, Abstractions.Models.Domain.PlayableItem item, CancellationToken ct)
     {
         var file = item.Key;
+
+        // Resource locations move/disappear between the time we cached
+        // PlayableFiles and the time the user clicks play. Without an upfront
+        // check, the OS Process.Start blows up with a Win32Exception that
+        // lands in Sentry; turning it into a thrown InvalidOperationException
+        // here gives the caller a clean, user-facing message instead.
+        if (!File.Exists(file) && !Directory.Exists(file))
+        {
+            throw new InvalidOperationException(
+                $"Playable file no longer exists: {file}");
+        }
+
         var playedByCustomPlayer = false;
 
         var playerOptions = await _resourceProfileService.GetEffectivePlayerOptions(resource);
@@ -163,29 +175,49 @@ public class LocalFilePlayableItemProvider : IPlayableItemProvider
                 playerOptions.Players.FirstOrDefault(x => x.Extensions?.Any() != true);
             if (player != null)
             {
+                // Custom player path may be a .lnk (Windows shortcut) — those
+                // are only launchable with UseShellExecute=true. Otherwise the
+                // OS rejects them with Win32Exception "The specified executable
+                // is not a valid Win32 application". Also catch + log any
+                // start failure inside the fire-and-forget Task so it doesn't
+                // surface later as an unobserved AggregateException.
+                var executablePath = player.ExecutablePath;
+                var useShellExecute = executablePath != null &&
+                                      Path.GetExtension(executablePath).Equals(
+                                          ".lnk", StringComparison.OrdinalIgnoreCase);
+
                 _ = Task.Run(async () =>
                 {
-                    var template = string.IsNullOrEmpty(player.Command) ? "{0}" : player.Command;
-                    var escapedFile = file.Replace("\"", "\\\"");
-                    var args = Regex.Replace(template, @"([""']?)\{(\d+)\}([""']?)", match =>
+                    try
                     {
-                        var prefix = match.Groups[1].Value;
-                        var suffix = match.Groups[3].Value;
-                        var alreadyQuoted = (prefix == "\"" && suffix == "\"") ||
-                                            (prefix == "'" && suffix == "'");
-                        return alreadyQuoted
-                            ? $"{prefix}{escapedFile}{suffix}"
-                            : $"\"{escapedFile}\"";
-                    });
-                    var process = new Process
-                    {
-                        StartInfo = new ProcessStartInfo(player.ExecutablePath, args)
+                        var template = string.IsNullOrEmpty(player.Command) ? "{0}" : player.Command;
+                        var escapedFile = file.Replace("\"", "\\\"");
+                        var args = Regex.Replace(template, @"([""']?)\{(\d+)\}([""']?)", match =>
                         {
-                            UseShellExecute = false
-                        }
-                    };
-                    process.Start();
-                    await process.WaitForExitAsync();
+                            var prefix = match.Groups[1].Value;
+                            var suffix = match.Groups[3].Value;
+                            var alreadyQuoted = (prefix == "\"" && suffix == "\"") ||
+                                                (prefix == "'" && suffix == "'");
+                            return alreadyQuoted
+                                ? $"{prefix}{escapedFile}{suffix}"
+                                : $"\"{escapedFile}\"";
+                        });
+                        var process = new Process
+                        {
+                            StartInfo = new ProcessStartInfo(player.ExecutablePath, args)
+                            {
+                                UseShellExecute = useShellExecute
+                            }
+                        };
+                        process.Start();
+                        await process.WaitForExitAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex,
+                            "Custom player '{Executable}' failed to launch for {File}",
+                            player.ExecutablePath, file);
+                    }
                 });
                 playedByCustomPlayer = true;
             }

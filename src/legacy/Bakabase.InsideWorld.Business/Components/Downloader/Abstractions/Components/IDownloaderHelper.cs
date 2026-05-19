@@ -11,7 +11,7 @@ public interface IDownloaderHelper
 {
     Task<DownloaderOptions> GetOptionsAsync();
     Task PutOptionsAsync(DownloaderOptions options);
-    Task ValidateOptionsAsync();
+    Task<BaseResponse> ValidateOptionsAsync();
 
     Task<DownloadTask[]> BuildTasks(DownloadTaskAddInputModel model);
 }

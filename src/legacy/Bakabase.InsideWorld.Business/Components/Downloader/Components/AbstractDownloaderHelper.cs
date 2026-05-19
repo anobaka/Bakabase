@@ -239,13 +239,14 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
             });
         }
 
-        public async Task ValidateOptionsAsync()
+        public async Task<BaseResponse> ValidateOptionsAsync()
         {
-            var result = await ValidateAsync();
-            if (!result.IsSuccess())
-            {
-                throw new InvalidOperationException(result.Message);
-            }
+            // Used to `throw new InvalidOperationException(...)` here, which
+            // turned expected user-config failures (cookie expired, missing
+            // download path, ...) into Sentry-recorded 500s. Returning the
+            // BaseResponse instead lets the caller surface a localised 400
+            // to the user without polluting the error dashboard.
+            return await ValidateAsync();
         }
 
         private async Task<BaseResponse> ValidateAsync()
