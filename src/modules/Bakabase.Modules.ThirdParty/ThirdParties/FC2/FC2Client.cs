@@ -126,12 +126,15 @@ public class FC2Client(IHttpClientFactory httpClientFactory, ILoggerFactory logg
         // XPath: //div[@data-section="userInfo"]//h3/span/../text()
         var titleElements = html["div[data-section='userInfo'] h3 span"].First().Parent();
         var title = titleElements.Text().Trim();
-        
+
         // Remove the span content to get just the text nodes
         var span = html["div[data-section='userInfo'] h3 span"];
         var spanText = span.Text();
-        title = title.Replace(spanText, "").Trim();
-        
+        if (!string.IsNullOrEmpty(spanText))
+        {
+            title = title.Replace(spanText, "").Trim();
+        }
+
         return title;
     }
 

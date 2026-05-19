@@ -164,6 +164,24 @@ const MediaRenderer = forwardRef<MediaRendererRef, MediaRendererProps>((props, r
               onEnded: () => {
                 onVideoEnded?.();
               },
+              onError: (err: any) => {
+                // AbortError happens when the element is removed mid-play()
+                // or when pause() interrupts play() — both are browser-normal
+                // and not actionable. NotSupportedError surfaces here when the
+                // codec/container is unsupported; we surface it to the user via
+                // onPlayabilityError instead of bubbling up to Sentry.
+                const name = err?.name || err?.error?.name;
+                if (name === "AbortError") {
+                  log("Video play aborted (normal)", err);
+                  return;
+                }
+                const message =
+                  err?.message ||
+                  err?.error?.message ||
+                  (typeof err === "string" ? err : t("Cannot play this file"));
+                log("Video error", err);
+                onPlayabilityError?.(message);
+              },
               onPause: () => {
                 log("Video pause");
                 onVideoPause?.();
