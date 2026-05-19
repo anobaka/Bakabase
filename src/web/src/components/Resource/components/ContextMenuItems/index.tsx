@@ -381,7 +381,7 @@ const ContextMenuItems = ({
               />
             ),
             onOk: async () => {
-              await BApi.resource.deleteResourcesByKeys({ ids: selectedResourceIds, deleteFiles });
+              await BApi.resource.bulkDeleteResources({ ids: selectedResourceIds, deleteFiles });
             },
           });
         }}

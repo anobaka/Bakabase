@@ -1300,6 +1300,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/component/{id}/discover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["DiscoverDependentComponent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/component/{id}/install": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["InstallDependentComponent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/component/{id}/latest-version": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDependentComponentLatestVersion"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/custom-property/all": {
         parameters: {
             query?: never;
@@ -4912,7 +4960,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/resource/ids": {
+    "/resource/bulk-delete": {
         parameters: {
             query?: never;
             header?: never;
@@ -4921,8 +4969,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post?: never;
-        delete: operations["DeleteResourcesByKeys"];
+        post: operations["BulkDeleteResources"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -6389,6 +6437,10 @@ export interface components {
             type: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyType"];
             options?: string;
         };
+        "Bakabase.Abstractions.Models.Input.BulkDeleteResourcesInputModel": {
+            ids: number[];
+            deleteFiles: boolean;
+        };
         "Bakabase.Abstractions.Models.Input.ExtensionGroupAddInputModel": {
             name: string;
             extensions?: string[];
@@ -7159,6 +7211,11 @@ export interface components {
             cssVariableOverwrites?: {
                 [key: string]: string;
             };
+        };
+        "Bakabase.InsideWorld.Business.Components.Dependency.Abstractions.DependentComponentVersion": {
+            version: string;
+            description?: string;
+            canUpdate: boolean;
         };
         "Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg.HardwareAccelerationInfo": {
             isDetected: boolean;
@@ -10167,6 +10224,12 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.TmdbOptions"];
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Dependency.Abstractions.DependentComponentVersion]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Dependency.Abstractions.DependentComponentVersion"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg.HardwareAccelerationInfo]": {
             /** Format: int32 */
             code: number;
@@ -10852,10 +10915,10 @@ export interface components {
         };
         /**
          * Format: int32
-         * @description [0: IL, 0: IL, 1: Native, 2: OPTIL, 3: CodeTypeMask, 3: CodeTypeMask, 4: ManagedMask, 4: ManagedMask, 8: NoInlining, 16: ForwardRef, 32: Synchronized, 64: NoOptimization, 128: PreserveSig, 256: AggressiveInlining, 512: AggressiveOptimization, 4096: InternalCall, 8192: Async, 65535: MaxMethodImplVal]
+         * @description [0: IL, 0: IL, 1: Native, 2: OPTIL, 3: CodeTypeMask, 3: CodeTypeMask, 4: ManagedMask, 4: ManagedMask, 8: NoInlining, 16: ForwardRef, 32: Synchronized, 64: NoOptimization, 128: PreserveSig, 256: AggressiveInlining, 512: AggressiveOptimization, 4096: InternalCall, 65535: MaxMethodImplVal]
          * @enum {integer}
          */
-        "System.Reflection.MethodImplAttributes": 0 | 1 | 2 | 3 | 4 | 8 | 16 | 32 | 64 | 128 | 256 | 512 | 4096 | 8192 | 65535;
+        "System.Reflection.MethodImplAttributes": 0 | 1 | 2 | 3 | 4 | 8 | 16 | 32 | 64 | 128 | 256 | 512 | 4096 | 65535;
         "System.Reflection.MethodInfo": {
             readonly name: string;
             declaringType?: components["schemas"]["System.Type"];
@@ -13946,6 +14009,78 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    DiscoverDependentComponent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    InstallDependentComponent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetDependentComponentLatestVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Dependency.Abstractions.DependentComponentVersion]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Dependency.Abstractions.DependentComponentVersion]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Dependency.Abstractions.DependentComponentVersion]"];
                 };
             };
         };
@@ -21729,17 +21864,21 @@ export interface operations {
             };
         };
     };
-    DeleteResourcesByKeys: {
+    BulkDeleteResources: {
         parameters: {
-            query?: {
-                ids?: number[];
-                deleteFiles?: boolean;
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Input.BulkDeleteResourcesInputModel"];
+                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Input.BulkDeleteResourcesInputModel"];
+                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Input.BulkDeleteResourcesInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Input.BulkDeleteResourcesInputModel"];
+            };
+        };
         responses: {
             /** @description OK */
             200: {

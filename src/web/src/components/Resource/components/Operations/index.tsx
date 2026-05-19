@@ -141,7 +141,7 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
         },
       },
       onOk: async () => {
-        await BApi.resource.deleteResourcesByKeys({
+        await BApi.resource.bulkDeleteResources({
           ids: [resource.id],
           deleteFiles,
         });

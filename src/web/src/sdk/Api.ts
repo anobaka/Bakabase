@@ -852,6 +852,11 @@ export interface BakabaseAbstractionsModelsDtoCustomPropertyAddOrPutDto {
   options?: string;
 }
 
+export interface BakabaseAbstractionsModelsInputBulkDeleteResourcesInputModel {
+  ids: number[];
+  deleteFiles: boolean;
+}
+
 export interface BakabaseAbstractionsModelsInputExtensionGroupAddInputModel {
   name: string;
   /** @uniqueItems true */
@@ -1721,6 +1726,12 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputU
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputUIStyleOptionsPatchRequestModel {
   cssVariableOverwrites?: Record<string, string>;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsDependencyAbstractionsDependentComponentVersion {
+  version: string;
+  description?: string;
+  canUpdate: boolean;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsDependencyImplementationsFfMpegHardwareAccelerationInfo {
@@ -5394,6 +5405,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWo
   data?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainTmdbOptions;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsDependencyAbstractionsDependentComponentVersion {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsDependencyAbstractionsDependentComponentVersion;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsDependencyImplementationsFfMpegHardwareAccelerationInfo {
   /** @format int32 */
   code: number;
@@ -5940,7 +5958,7 @@ export interface SystemReflectionConstructorInfo {
   metadataToken: number;
   /** [0: PrivateScope, 0: PrivateScope, 1: Private, 2: FamANDAssem, 3: Assembly, 4: Family, 5: FamORAssem, 6: Public, 7: MemberAccessMask, 8: UnmanagedExport, 16: Static, 32: Final, 64: Virtual, 128: HideBySig, 256: VtableLayoutMask, 256: VtableLayoutMask, 512: CheckAccessOnOverride, 1024: Abstract, 2048: SpecialName, 4096: RTSpecialName, 8192: PinvokeImpl, 16384: HasSecurity, 32768: RequireSecObject, 53248: ReservedMask] */
   attributes: SystemReflectionMethodAttributes;
-  /** [0: IL, 0: IL, 1: Native, 2: OPTIL, 3: CodeTypeMask, 3: CodeTypeMask, 4: ManagedMask, 4: ManagedMask, 8: NoInlining, 16: ForwardRef, 32: Synchronized, 64: NoOptimization, 128: PreserveSig, 256: AggressiveInlining, 512: AggressiveOptimization, 4096: InternalCall, 8192: Async, 65535: MaxMethodImplVal] */
+  /** [0: IL, 0: IL, 1: Native, 2: OPTIL, 3: CodeTypeMask, 3: CodeTypeMask, 4: ManagedMask, 4: ManagedMask, 8: NoInlining, 16: ForwardRef, 32: Synchronized, 64: NoOptimization, 128: PreserveSig, 256: AggressiveInlining, 512: AggressiveOptimization, 4096: InternalCall, 65535: MaxMethodImplVal] */
   methodImplementationFlags: SystemReflectionMethodImplAttributes;
   /** [1: Standard, 2: VarArgs, 3: Any, 32: HasThis, 64: ExplicitThis] */
   callingConvention: SystemReflectionCallingConventions;
@@ -6141,7 +6159,7 @@ export interface SystemReflectionMethodBase {
   metadataToken: number;
   /** [0: PrivateScope, 0: PrivateScope, 1: Private, 2: FamANDAssem, 3: Assembly, 4: Family, 5: FamORAssem, 6: Public, 7: MemberAccessMask, 8: UnmanagedExport, 16: Static, 32: Final, 64: Virtual, 128: HideBySig, 256: VtableLayoutMask, 256: VtableLayoutMask, 512: CheckAccessOnOverride, 1024: Abstract, 2048: SpecialName, 4096: RTSpecialName, 8192: PinvokeImpl, 16384: HasSecurity, 32768: RequireSecObject, 53248: ReservedMask] */
   attributes: SystemReflectionMethodAttributes;
-  /** [0: IL, 0: IL, 1: Native, 2: OPTIL, 3: CodeTypeMask, 3: CodeTypeMask, 4: ManagedMask, 4: ManagedMask, 8: NoInlining, 16: ForwardRef, 32: Synchronized, 64: NoOptimization, 128: PreserveSig, 256: AggressiveInlining, 512: AggressiveOptimization, 4096: InternalCall, 8192: Async, 65535: MaxMethodImplVal] */
+  /** [0: IL, 0: IL, 1: Native, 2: OPTIL, 3: CodeTypeMask, 3: CodeTypeMask, 4: ManagedMask, 4: ManagedMask, 8: NoInlining, 16: ForwardRef, 32: Synchronized, 64: NoOptimization, 128: PreserveSig, 256: AggressiveInlining, 512: AggressiveOptimization, 4096: InternalCall, 65535: MaxMethodImplVal] */
   methodImplementationFlags: SystemReflectionMethodImplAttributes;
   /** [1: Standard, 2: VarArgs, 3: Any, 32: HasThis, 64: ExplicitThis] */
   callingConvention: SystemReflectionCallingConventions;
@@ -6169,7 +6187,7 @@ export interface SystemReflectionMethodBase {
 }
 
 /**
- * [0: IL, 0: IL, 1: Native, 2: OPTIL, 3: CodeTypeMask, 3: CodeTypeMask, 4: ManagedMask, 4: ManagedMask, 8: NoInlining, 16: ForwardRef, 32: Synchronized, 64: NoOptimization, 128: PreserveSig, 256: AggressiveInlining, 512: AggressiveOptimization, 4096: InternalCall, 8192: Async, 65535: MaxMethodImplVal]
+ * [0: IL, 0: IL, 1: Native, 2: OPTIL, 3: CodeTypeMask, 3: CodeTypeMask, 4: ManagedMask, 4: ManagedMask, 8: NoInlining, 16: ForwardRef, 32: Synchronized, 64: NoOptimization, 128: PreserveSig, 256: AggressiveInlining, 512: AggressiveOptimization, 4096: InternalCall, 65535: MaxMethodImplVal]
  * @format int32
  */
 export type SystemReflectionMethodImplAttributes =
@@ -6186,7 +6204,6 @@ export type SystemReflectionMethodImplAttributes =
   | 256
   | 512
   | 4096
-  | 8192
   | 65535;
 
 export interface SystemReflectionMethodInfo {
@@ -6200,7 +6217,7 @@ export interface SystemReflectionMethodInfo {
   metadataToken: number;
   /** [0: PrivateScope, 0: PrivateScope, 1: Private, 2: FamANDAssem, 3: Assembly, 4: Family, 5: FamORAssem, 6: Public, 7: MemberAccessMask, 8: UnmanagedExport, 16: Static, 32: Final, 64: Virtual, 128: HideBySig, 256: VtableLayoutMask, 256: VtableLayoutMask, 512: CheckAccessOnOverride, 1024: Abstract, 2048: SpecialName, 4096: RTSpecialName, 8192: PinvokeImpl, 16384: HasSecurity, 32768: RequireSecObject, 53248: ReservedMask] */
   attributes: SystemReflectionMethodAttributes;
-  /** [0: IL, 0: IL, 1: Native, 2: OPTIL, 3: CodeTypeMask, 3: CodeTypeMask, 4: ManagedMask, 4: ManagedMask, 8: NoInlining, 16: ForwardRef, 32: Synchronized, 64: NoOptimization, 128: PreserveSig, 256: AggressiveInlining, 512: AggressiveOptimization, 4096: InternalCall, 8192: Async, 65535: MaxMethodImplVal] */
+  /** [0: IL, 0: IL, 1: Native, 2: OPTIL, 3: CodeTypeMask, 3: CodeTypeMask, 4: ManagedMask, 4: ManagedMask, 8: NoInlining, 16: ForwardRef, 32: Synchronized, 64: NoOptimization, 128: PreserveSig, 256: AggressiveInlining, 512: AggressiveOptimization, 4096: InternalCall, 65535: MaxMethodImplVal] */
   methodImplementationFlags: SystemReflectionMethodImplAttributes;
   /** [1: Standard, 2: VarArgs, 3: Any, 32: HasThis, 64: ExplicitThis] */
   callingConvention: SystemReflectionCallingConventions;
@@ -9709,6 +9726,55 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         ...params,
       }),
   };
+  component = {
+    /**
+     * No description
+     *
+     * @tags Component
+     * @name DiscoverDependentComponent
+     * @request POST:/component/{id}/discover
+     */
+    discoverDependentComponent: (id: string, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/component/${id}/discover`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Component
+     * @name InstallDependentComponent
+     * @request POST:/component/{id}/install
+     */
+    installDependentComponent: (id: string, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/component/${id}/install`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Component
+     * @name GetDependentComponentLatestVersion
+     * @request GET:/component/{id}/latest-version
+     */
+    getDependentComponentLatestVersion: (id: string, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsDependencyAbstractionsDependentComponentVersion,
+        any
+      >({
+        path: `/component/${id}/latest-version`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+  };
   customProperty = {
     /**
      * No description
@@ -12235,46 +12301,29 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Resource
-     * @name DeleteResourcesByKeys
-     * @request DELETE:/resource/ids
+     * @name BulkDeleteResources
+     * @request POST:/resource/bulk-delete
      */
-    deleteResourcesByKeys: (
-      query?: {
-        ids?: number[];
-        /** @default false */
-        deleteFiles?: boolean;
-      },
+    bulkDeleteResources: (
+      data: BakabaseAbstractionsModelsInputBulkDeleteResourcesInputModel,
       params: RequestParams = {},
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/ids`,
-        method: "DELETE",
-        query: query,
+        path: `/resource/bulk-delete`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),
 
     /**
-     * @description Build URL for deleteResourcesByKeys
-     * @name deleteResourcesByKeysUrl
+     * @description Build URL for bulkDeleteResources
+     * @name bulkDeleteResourcesUrl
      */
-    deleteResourcesByKeysUrl: (query?: {
-        ids?: number[];
-        /** @default false */
-        deleteFiles?: boolean;
-      }) => {
+    bulkDeleteResourcesUrl: () => {
       const baseUrl = this.baseUrl || "";
-      let path = `/resource/ids`;
-      
-      // Build query string
-      if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
-          .join("&");
-
-        return baseUrl + path + (queryString ? `?${queryString}` : "");
-      }
+      let path = `/resource/bulk-delete`;
       
       return baseUrl + path;
     },

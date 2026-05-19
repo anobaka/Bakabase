@@ -1,4 +1,5 @@
-﻿using Bakabase.Abstractions.Components.Configuration;
+﻿using System;
+using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Components.Network;
 using Bakabase.Abstractions.Components.Tasks;

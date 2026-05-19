@@ -151,7 +151,8 @@ namespace Bakabase.Service.Components
             var localizer = Host.Services.GetRequiredService<AppLocalizer>();
             var tasks = taskManager?.GetTasksViewModel();
             return Task.FromResult(tasks?.Any(t =>
-                t is {Status: BTaskStatus.Running, Level: BTaskLevel.Critical}) == true
+                t.Level == BTaskLevel.Critical &&
+                t.Status is BTaskStatus.Running or BTaskStatus.Cancelling) == true
                 ? localizer.App_CriticalTasksRunningOnExit()
                 : null);
         }

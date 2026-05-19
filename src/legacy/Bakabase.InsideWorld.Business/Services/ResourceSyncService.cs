@@ -133,7 +133,10 @@ public class ResourceSyncService : ScopedService
 
         if (resourcesToCreateOrUpdate.Count > 0)
         {
-            var batches = resourcesToCreateOrUpdate.Chunk(500).ToList();
+            // 100/batch keeps each AddOrPutRange short enough that a Stop click
+            // is observed within seconds rather than minutes when the import
+            // is tens of thousands of resources (issue #1098).
+            var batches = resourcesToCreateOrUpdate.Chunk(100).ToList();
             for (var i = 0; i < batches.Count; i++)
             {
                 ct.ThrowIfCancellationRequested();

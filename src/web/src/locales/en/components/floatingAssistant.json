@@ -11,6 +11,8 @@
   "floatingAssistant.status.paused": "Paused",
   "floatingAssistant.status.resumed": "Resumed",
   "floatingAssistant.status.stopped": "Stopped",
+  "floatingAssistant.status.stopRequested": "Stop requested",
+  "floatingAssistant.status.cancelling": "Cancelling…",
   "floatingAssistant.status.running": "Running",
   "floatingAssistant.status.pending": "Pending",
   "floatingAssistant.status.completed": "Completed",

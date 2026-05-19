@@ -92,6 +92,14 @@ const TaskStatusIcon = ({ task, onShowError }: { task: BTask; onShowError: () =>
           <LoadingOutlined className="text-base" />
         </Chip>
       );
+    case BTaskStatus.Cancelling:
+      return (
+        <Tooltip content={t("floatingAssistant.status.cancelling")} placement="top">
+          <Chip color="warning" size="sm" variant="light">
+            <LoadingOutlined className="text-base" />
+          </Chip>
+        </Tooltip>
+      );
     case BTaskStatus.Completed:
       return (
         <Chip color="success" size="sm" variant="light">
@@ -144,6 +152,7 @@ export function TaskTable({ tasks }: TaskTableProps) {
     tasks.forEach((task) => {
       switch (task.status) {
         case BTaskStatus.Running:
+        case BTaskStatus.Cancelling:
           counts.running++;
           break;
         case BTaskStatus.NotStarted:
@@ -176,7 +185,7 @@ export function TaskTable({ tasks }: TaskTableProps) {
       result = result.filter((task) => {
         switch (filter) {
           case "running":
-            return task.status === BTaskStatus.Running;
+            return task.status === BTaskStatus.Running || task.status === BTaskStatus.Cancelling;
           case "pending":
             return task.status === BTaskStatus.NotStarted || task.status === BTaskStatus.Paused;
           case "completed":
@@ -252,7 +261,10 @@ export function TaskTable({ tasks }: TaskTableProps) {
       case TaskAction.Start: return t("floatingAssistant.status.started");
       case TaskAction.Pause: return t("floatingAssistant.status.paused");
       case TaskAction.Resume: return t("floatingAssistant.status.resumed");
-      case TaskAction.Stop: return t("floatingAssistant.status.stopped");
+      // The API call only requests cancellation; the task may still be running
+      // when the toast fires. The status chip updates to "Cancelling" until
+      // the task actually exits.
+      case TaskAction.Stop: return t("floatingAssistant.status.stopRequested");
       default: return "";
     }
   };

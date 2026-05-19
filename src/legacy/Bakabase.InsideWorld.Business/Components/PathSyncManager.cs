@@ -181,7 +181,7 @@ public class PathSyncManager : BackgroundService, IPathMarkSyncService
         if (existingTask != null)
         {
             var status = existingTask.Status;
-            if (status is BTaskStatus.Running or BTaskStatus.Paused or BTaskStatus.NotStarted)
+            if (status is BTaskStatus.Running or BTaskStatus.Paused or BTaskStatus.NotStarted or BTaskStatus.Cancelling)
             {
                 return;
             }
@@ -230,7 +230,7 @@ public class PathSyncManager : BackgroundService, IPathMarkSyncService
         if (existingTask != null)
         {
             var status = existingTask.Status;
-            if (status is BTaskStatus.Running or BTaskStatus.Paused or BTaskStatus.NotStarted)
+            if (status is BTaskStatus.Running or BTaskStatus.Paused or BTaskStatus.NotStarted or BTaskStatus.Cancelling)
             {
                 return;
             }

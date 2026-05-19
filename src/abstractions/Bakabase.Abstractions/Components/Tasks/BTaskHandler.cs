@@ -260,9 +260,17 @@ public class BTaskHandler
 
     public async Task Stop()
     {
-        if (_cts != null)
+        if (_cts == null) return;
+
+        // Reflect the intent in the UI immediately. The actual transition to
+        // Cancelled happens in the task's catch block once it observes the
+        // CancellationToken — until then the user sees "Cancelling" instead
+        // of "Running" with a misleading success toast.
+        if (Task.Status is BTaskStatus.Running or BTaskStatus.Paused)
         {
-            await _cts.CancelAsync();
+            await UpdateTask(t => t.Status = BTaskStatus.Cancelling);
         }
+
+        await _cts.CancelAsync();
     }
 }

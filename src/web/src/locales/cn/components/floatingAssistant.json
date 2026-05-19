@@ -11,6 +11,8 @@
   "floatingAssistant.status.paused": "已暂停",
   "floatingAssistant.status.resumed": "已恢复",
   "floatingAssistant.status.stopped": "已停止",
+  "floatingAssistant.status.stopRequested": "已请求停止",
+  "floatingAssistant.status.cancelling": "正在停止…",
   "floatingAssistant.status.running": "运行中",
   "floatingAssistant.status.pending": "等待中",
   "floatingAssistant.status.completed": "已完成",

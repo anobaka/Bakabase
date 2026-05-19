@@ -541,11 +541,14 @@ namespace Bakabase.Service.Controllers
             return await service.PlayRandomResource();
         }
 
-        [HttpDelete("ids")]
-        [SwaggerOperation(OperationId = "DeleteResourcesByKeys")]
-        public async Task<BaseResponse> DeleteByKeys(int[] ids, bool deleteFiles = false)
+        [HttpPost("bulk-delete")]
+        [SwaggerOperation(OperationId = "BulkDeleteResources")]
+        public async Task<BaseResponse> BulkDelete([FromBody] BulkDeleteResourcesInputModel model)
         {
-            await service.DeleteByKeys(ids, deleteFiles);
+            // Previously DELETE /resource/ids?ids=... — for selections in the tens
+            // of thousands the URL outgrew browser/Kestrel limits and the request
+            // never left the client (issue #1098).
+            await service.DeleteByKeys(model.Ids, model.DeleteFiles);
             return BaseResponseBuilder.Ok;
         }
 

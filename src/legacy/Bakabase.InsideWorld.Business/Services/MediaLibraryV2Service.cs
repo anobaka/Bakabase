@@ -221,6 +221,12 @@ public class MediaLibraryV2Service<TDbContext>(
 
     public async Task Delete(int id)
     {
+        // Cascade-clean the resource↔library mapping table first so resources
+        // don't keep a dangling reference (no FK constraint at the DB layer).
+        // Resource rows themselves are intentionally preserved — a user who
+        // recreates the library can re-bind them.
+        var mappingService = GetRequiredService<IMediaLibraryResourceMappingService>();
+        await mappingService.DeleteByMediaLibraryId(id);
         await orm.RemoveByKey(id);
     }
 

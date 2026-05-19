@@ -41,9 +41,17 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "StopBackgroundTask")]
         public async Task<BaseResponse> Stop(string id, bool confirm = false)
         {
+            var task = btm.GetTaskViewModel(id);
+
+            // Already cancelling — short-circuit so the user doesn't see another
+            // confirm prompt or a redundant cancel request.
+            if (task?.Status == BTaskStatus.Cancelling)
+            {
+                return BaseResponseBuilder.Ok;
+            }
+
             if (!confirm)
             {
-                var task = btm.GetTaskViewModel(id);
                 if (task?.Status is BTaskStatus.Running or BTaskStatus.Paused && !string.IsNullOrEmpty(task.MessageOnInterruption))
                 {
                     return BaseResponseBuilder.Build((ResponseCode) 202, task.MessageOnInterruption);

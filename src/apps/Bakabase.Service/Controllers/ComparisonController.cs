@@ -108,7 +108,7 @@ namespace Bakabase.Service.Controllers
         {
             // Check if there's already a running task for this plan
             var existingTask = taskManager.GetTaskViewModel($"Comparison:{id}");
-            if (existingTask?.Status == BTaskStatus.Running)
+            if (existingTask?.Status is BTaskStatus.Running or BTaskStatus.Cancelling)
             {
                 return new SingletonResponse<string>((int)ResponseCode.Conflict, "A comparison task for this plan is already running");
             }

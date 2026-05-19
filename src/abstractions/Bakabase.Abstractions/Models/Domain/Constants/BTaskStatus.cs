@@ -7,5 +7,6 @@ public enum BTaskStatus
     Paused = 3,
     Error = 4,
     Completed = 5,
-    Cancelled = 6
+    Cancelled = 6,
+    Cancelling = 7
 }
