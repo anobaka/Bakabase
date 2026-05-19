@@ -59,7 +59,6 @@ import {
 } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 import {
-  AvEnhancerTarget,
   CoverSelectOrder,
   EnhancerId,
   EnhancerTargetOptionsItem,
@@ -70,10 +69,7 @@ import PropertyTypeIcon from "@/components/Property/components/PropertyTypeIcon"
 import PropertyMatcher from "@/components/PropertyMatcher";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import EnhancerOptionsModal from "@/components/EnhancerSelectorV2/components/EnhancerOptionsModal";
-import {
-  AvSourcesConfigPanel,
-  type PreferredSourcesByTarget,
-} from "@/components/ThirdPartyConfig/platforms/AvSourcesConfig";
+import { AvSourcesConfigPanel } from "@/components/ThirdPartyConfig/platforms/AvSourcesConfig";
 
 type ApiEnhancerOptions = BakabaseAbstractionsModelsDomainEnhancerFullOptions;
 
@@ -429,35 +425,9 @@ const EnhancementConfigPanel = ({
     });
   };
 
-  // Open the AV sources matrix modal (sources × targets).
+  // Open the global AV sources matrix modal. The panel manages its own state and persists
+  // changes immediately via /options/av-sources, so user edits affect every resource profile.
   const openAvSourcesConfig = (enhancer: EnhancerDescriptor) => {
-    // Snapshot current per-target preferred sources (only entries that explicitly diverge from default).
-    const initial: PreferredSourcesByTarget = {};
-    for (const [, state] of sourceStates) {
-      if (state.enhancerId !== EnhancerId.Av) continue;
-      const prefs = state.config?.preferredSources;
-      if (prefs !== undefined) {
-        initial[state.targetId as AvEnhancerTarget] = prefs;
-      }
-    }
-
-    const handleChange = (next: PreferredSourcesByTarget) => {
-      setSourceStates((prev) => {
-        const out = new Map(prev);
-        for (const [key, state] of out) {
-          if (state.enhancerId !== EnhancerId.Av) continue;
-          const target = state.targetId as AvEnhancerTarget;
-          const newPrefs = next[target];
-          if (newPrefs === state.config?.preferredSources) continue;
-          out.set(key, {
-            ...state,
-            config: { ...state.config, preferredSources: newPrefs },
-          });
-        }
-        return out;
-      });
-    };
-
     createPortal(Modal, {
       defaultVisible: true,
       size: "full",
@@ -468,9 +438,7 @@ const EnhancementConfigPanel = ({
         </div>
       ),
       footer: { actions: ["ok"] as ("ok" | "cancel")[] },
-      children: (
-        <AvSourcesConfigModalBody initial={initial} onChange={handleChange} />
-      ),
+      children: <AvSourcesConfigPanel />,
     });
   };
 
@@ -851,24 +819,5 @@ const EnhancementConfigPanel = ({
 };
 
 EnhancementConfigPanel.displayName = "EnhancementConfigPanel";
-
-const AvSourcesConfigModalBody = ({
-  initial,
-  onChange,
-}: {
-  initial: PreferredSourcesByTarget;
-  onChange: (next: PreferredSourcesByTarget) => void;
-}) => {
-  const [prefs, setPrefs] = useState<PreferredSourcesByTarget>(initial);
-  return (
-    <AvSourcesConfigPanel
-      preferredSourcesByTarget={prefs}
-      onChangePreferredSources={(next) => {
-        setPrefs(next);
-        onChange(next);
-      }}
-    />
-  );
-};
 
 export default EnhancementConfigPanel;

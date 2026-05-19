@@ -6,4 +6,5 @@ namespace Bakabase.InsideWorld.Business.Components.Configurations.Models.Input;
 public class AvSourceOptionsPatchInputModel
 {
     public Dictionary<string, AvSourceConfig>? Sources { get; set; }
+    public Dictionary<int, List<string>>? PreferredSourcesByTarget { get; set; }
 }
