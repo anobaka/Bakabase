@@ -14,4 +14,6 @@ public class DefaultAvSourceOptionsProvider : IAvSourceOptionsProvider
         AvSourceDefaults.DefaultCookies.TryGetValue(key, out var cookie);
         return new AvSourceResolvedConfig(true, baseUrl, cookie, null);
     }
+
+    public IReadOnlyDictionary<int, IReadOnlyList<string>>? GetPreferredSourcesByTarget() => null;
 }
