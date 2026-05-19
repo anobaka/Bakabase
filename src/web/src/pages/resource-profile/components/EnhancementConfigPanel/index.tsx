@@ -446,7 +446,26 @@ const EnhancementConfigPanel = ({
     return convertStatesToEnhancerOptions(sourceStates, enhancerLevelConfigs);
   }, [sourceStates, enhancerLevelConfigs]);
 
+  // Targets the user has enabled but never bound to a property. If persisted they
+  // round-trip through the backend as `propertyPool=0, propertyId=0` rows that
+  // contribute nothing to enhancement; the backend strips them on read
+  // (ResourceProfileExtensions.StripInvalidEnhancerTargetOptions) but the user
+  // sees a phantom "checked" target that does nothing. Block submission so the
+  // user resolves the binding intent before we persist. Iterates every source
+  // state, not just the rows currently visible — a stale unbound entry can live
+  // in a group the user hasn't selected this session.
+  const unboundCount = useMemo(() => {
+    let count = 0;
+    for (const [, state] of sourceStates) {
+      if (state.enabled && !state.targetMapping) count++;
+    }
+    return count;
+  }, [sourceStates]);
+
+  const hasUnbound = unboundCount > 0;
+
   const handleSubmit = () => {
+    if (hasUnbound) return;
     const result = getCurrentOptions();
 
     onSubmit?.(result);
@@ -627,7 +646,11 @@ const EnhancementConfigPanel = ({
             <Button color="default" variant="light" onPress={() => onDestroyed?.()}>
               {t<string>("common.action.cancel")}
             </Button>
-            <Button color="primary" onPress={handleSubmit}>
+            <Button
+              color="primary"
+              isDisabled={hasUnbound}
+              onPress={handleSubmit}
+            >
               {t<string>("common.action.confirm")}
             </Button>
           </div>
@@ -812,6 +835,16 @@ const EnhancementConfigPanel = ({
               );
             })}
           </div>
+          {hasUnbound && (
+            <div className="mt-2 text-xs text-danger flex items-start gap-1.5">
+              <AiOutlineWarning className="text-base flex-shrink-0 mt-0.5" />
+              <span>
+                {t("enhancementConfig.unboundBlockHint", {
+                  count: unboundCount,
+                })}
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </Modal>
