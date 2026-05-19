@@ -47,7 +47,6 @@ public class OpenAIProviderFactory(ILogger<OpenAIProviderFactory> logger) : ILlm
             var models = await client.GetOpenAIModelClient().GetModelsAsync(ct);
 
             return models.Value
-                .Where(m => m.Id.Contains("gpt") || m.Id.Contains("o1") || m.Id.Contains("o3") || m.Id.Contains("chatgpt"))
                 .OrderByDescending(m => m.CreatedAt)
                 .Select(m => new LlmModelInfo
                 {

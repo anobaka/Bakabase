@@ -214,6 +214,8 @@ const AiProviderPanel = () => {
       const r = await BApi.ai.getAiProviderLlmModels(id);
       if (!r.code && r.data) {
         setProviderModels((prev) => ({ ...prev, [id]: r.data! }));
+      } else if (r.message) {
+        toast.danger(r.message);
       }
     } finally {
       setLoadingModels((prev) => ({ ...prev, [id]: false }));
