@@ -54,6 +54,40 @@ public static class ResourceProfileExtensions
             .ToList();
     }
 
+    /// <summary>
+    /// Drops <see cref="EnhancerTargetFullOptions"/> entries that have no property binding
+    /// (<c>PropertyPool == 0 || PropertyId == 0</c>).
+    ///
+    /// These entries are legacy zombies from the pre-8d755c2 AV-source-priority layout, where
+    /// the panel persisted a target row solely to carry a <c>PreferredSources</c> preference
+    /// even before any property was bound to it. The field is now gone (moved to the global
+    /// AV sources options), but the entries themselves survived deserialization — only the
+    /// removed field is silently ignored by Newtonsoft, not the whole record.
+    ///
+    /// Left in place, they trip
+    /// <see cref="Models.Domain.EnhancerFullOptions.TargetOptions"/> handling inside
+    /// <c>ApplyEnhancementsToResources</c>'s <c>switch (targetOptions.PropertyPool)</c>
+    /// (default arm → <see cref="ArgumentOutOfRangeException"/>) and tank the Enhancement
+    /// BTask on every cycle.
+    ///
+    /// Returns the number of entries dropped (for diagnostics; callers may log).
+    /// </summary>
+    public static int StripInvalidEnhancerTargetOptions(this ResourceProfileEnhancerOptions options)
+    {
+        if (options.Enhancers == null) return 0;
+        var dropped = 0;
+        foreach (var enhancer in options.Enhancers)
+        {
+            if (enhancer.TargetOptions == null) continue;
+            var before = enhancer.TargetOptions.Count;
+            enhancer.TargetOptions = enhancer.TargetOptions
+                .Where(t => (int)t.PropertyPool > 0 && t.PropertyId > 0)
+                .ToList();
+            dropped += before - enhancer.TargetOptions.Count;
+        }
+        return dropped;
+    }
+
     public static ResourceProfileDbModel ToDbModel(this ResourceProfile model, string? searchJson)
     {
         return new ResourceProfileDbModel
@@ -99,6 +133,7 @@ public static class ResourceProfileExtensions
             {
                 domain.EnhancerOptions =
                     JsonConvert.DeserializeObject<ResourceProfileEnhancerOptions>(dbModel.EnhancerSettingsJson);
+                domain.EnhancerOptions?.StripInvalidEnhancerTargetOptions();
             }
             catch (Exception)
             {

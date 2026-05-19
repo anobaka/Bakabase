@@ -422,6 +422,7 @@ namespace Bakabase.Modules.Enhancer.Services
                             PropertyPool = t.PropertyPool,
                             DynamicTarget = t.DynamicTarget,
                             Target = t.Target,
+                            CustomPrompt = t.CustomPrompt,
                         }).ToList(),
                         Expressions = x.Expressions,
                         Requirements = x.Requirements?.Select(r => r).ToList(),

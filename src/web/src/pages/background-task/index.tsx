@@ -235,20 +235,26 @@ const BackgroundTaskPage = () => {
                 </div>
               </TableCell>
               <TableCell>
-                {t<string>(`backgroundTask.status.${BTaskStatus[task.status].charAt(0).toLowerCase() + BTaskStatus[task.status].slice(1)}`)}
-                {task.error && (
-                  <Tooltip color={"danger"} content={task.error}>
-                    <QuestionCircleOutlined />
-                  </Tooltip>
-                )}
-                {task.reasonForUnableToStart && (
-                  <Tooltip
-                    color={"warning"}
-                    content={task.reasonForUnableToStart}
-                  >
-                    <QuestionCircleOutlined className={"text-base"} />
-                  </Tooltip>
-                )}
+                <div className={"flex flex-col gap-0.5"}>
+                  <div className={"flex items-center gap-1"}>
+                    {t<string>(`backgroundTask.status.${BTaskStatus[task.status].charAt(0).toLowerCase() + BTaskStatus[task.status].slice(1)}`)}
+                    {task.reasonForUnableToStart && (
+                      <Tooltip
+                        color={"warning"}
+                        content={task.reasonForUnableToStart}
+                      >
+                        <QuestionCircleOutlined className={"text-base"} />
+                      </Tooltip>
+                    )}
+                  </div>
+                  {(task.briefError || task.error) && (
+                    <Tooltip color={"danger"} content={task.error || task.briefError}>
+                      <span className={"text-xs text-danger max-w-[280px] truncate cursor-help"}>
+                        {task.briefError || task.error?.split("\n")[0]}
+                      </span>
+                    </Tooltip>
+                  )}
+                </div>
               </TableCell>
               <TableCell>
                 <div className={"relative"}>
