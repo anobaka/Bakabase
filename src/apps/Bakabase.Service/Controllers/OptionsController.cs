@@ -1506,6 +1506,11 @@ namespace Bakabase.Service.Controllers
                 {
                     options.Sources = model.Sources;
                 }
+
+                if (model.PreferredSourcesByTarget != null)
+                {
+                    options.PreferredSourcesByTarget = model.PreferredSourcesByTarget;
+                }
             });
             return BaseResponseBuilder.Ok;
         }

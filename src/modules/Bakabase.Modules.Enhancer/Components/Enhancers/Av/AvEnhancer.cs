@@ -285,10 +285,7 @@ public class AvEnhancer(
     {
         var enhancements = new List<EnhancementTargetValue<AvEnhancerTarget>>();
 
-        var preferredSourcesByTarget = options.TargetOptions?
-            .Where(o => o.PreferredSources != null)
-            .GroupBy(o => (AvEnhancerTarget)o.Target)
-            .ToDictionary(g => g.Key, g => g.First().PreferredSources!);
+        var preferredSourcesByTarget = avOptionsProvider.GetPreferredSourcesByTarget();
 
         foreach (var target in SpecificEnumUtils<AvEnhancerTarget>.Values)
         {
@@ -368,17 +365,17 @@ public class AvEnhancer(
     }
 
     /// <summary>
-    /// Reorders/filters the search results for one target according to the user's per-target
-    /// PreferredSources list. When PreferredSources is unset for the target, the original
-    /// context order is preserved (effectively the built-in source order).
+    /// Reorders/filters the search results for one target according to the global per-target
+    /// preferred source list (from <see cref="IAvSourceOptionsProvider"/>). When no preference
+    /// is set for the target, the original context order is preserved (built-in source order).
     /// </summary>
     private static IReadOnlyList<IAvDetail> OrderDetailsForTarget(
         IReadOnlyList<IAvDetail> details,
         AvEnhancerTarget target,
-        Dictionary<AvEnhancerTarget, List<string>>? preferredSourcesByTarget)
+        IReadOnlyDictionary<int, IReadOnlyList<string>>? preferredSourcesByTarget)
     {
         if (preferredSourcesByTarget == null ||
-            !preferredSourcesByTarget.TryGetValue(target, out var preferred))
+            !preferredSourcesByTarget.TryGetValue((int)target, out var preferred))
         {
             return details;
         }
@@ -402,10 +399,10 @@ public class AvEnhancer(
     private static List<string> OrderPathsForTarget(
         Dictionary<string, string> pathsBySource,
         AvEnhancerTarget target,
-        Dictionary<AvEnhancerTarget, List<string>>? preferredSourcesByTarget)
+        IReadOnlyDictionary<int, IReadOnlyList<string>>? preferredSourcesByTarget)
     {
         if (preferredSourcesByTarget == null ||
-            !preferredSourcesByTarget.TryGetValue(target, out var preferred))
+            !preferredSourcesByTarget.TryGetValue((int)target, out var preferred))
         {
             return pathsBySource.Values.ToList();
         }

@@ -97,18 +97,8 @@ type SourceState =
   | { phase: "loading" }
   | { phase: "done"; result: AvSourceTestResult };
 
-// Per-target ordered list of source ids; null/undefined means "use built-in default order".
+// Per-target ordered list of source ids; missing entry means "use built-in default order".
 export type PreferredSourcesByTarget = Partial<Record<AvEnhancerTarget, string[]>>;
-
-interface Props {
-  /**
-   * When provided, the matrix renders interactive checkboxes/priority badges and
-   * reports user-edited preferences back via {@link onChangePreferredSources}.
-   * When absent, target columns are read-only (test results only).
-   */
-  preferredSourcesByTarget?: PreferredSourcesByTarget;
-  onChangePreferredSources?: (next: PreferredSourcesByTarget) => void;
-}
 
 // Map an AvEnhancerTarget enum value to the field on AvSourceTestDetail it represents.
 const targetToDetailField: Partial<Record<AvEnhancerTarget, keyof AvSourceTestDetail>> = {
@@ -141,22 +131,34 @@ const cellValue = (target: AvEnhancerTarget, detail?: AvSourceTestDetail | null)
   return v == null || v === "" ? undefined : String(v);
 };
 
-export const AvSourcesConfigPanel = ({
-  preferredSourcesByTarget,
-  onChangePreferredSources,
-}: Props = {}) => {
+// Normalize API response: JSON object keys come back as strings — convert to numeric enum keys.
+const parsePreferredFromApi = (
+  raw: Record<string, string[]> | null | undefined,
+): PreferredSourcesByTarget => {
+  if (!raw) return {};
+  const out: PreferredSourcesByTarget = {};
+  for (const [k, v] of Object.entries(raw)) {
+    const target = Number.parseInt(k, 10);
+    if (!Number.isNaN(target) && Array.isArray(v)) {
+      out[target as AvEnhancerTarget] = v;
+    }
+  }
+  return out;
+};
+
+export const AvSourcesConfigPanel = () => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const [sources, setSources] = useState<AvSourceInfo[]>([]);
   const [configs, setConfigs] = useState<Record<string, AvSourceConfig>>({});
+  const [preferredSourcesByTarget, setPreferredSourcesByTarget] =
+    useState<PreferredSourcesByTarget>({});
   const [number, setNumber] = useState(() => {
     if (typeof window === "undefined") return "";
     return localStorage.getItem(TEST_NUMBER_STORAGE_KEY) || "";
   });
   const [running, setRunning] = useState(false);
   const [results, setResults] = useState<Record<string, SourceState>>({});
-
-  const interactive = !!onChangePreferredSources;
 
   const loadSources = useCallback(async () => {
     const rsp = await BApi.request<{ data?: AvSourceInfo[] }>({
@@ -172,12 +174,18 @@ export const AvSourcesConfigPanel = ({
   }, []);
 
   const loadConfig = useCallback(async () => {
-    const rsp = await BApi.request<{ data?: { sources?: Record<string, AvSourceConfig> } }>({
+    const rsp = await BApi.request<{
+      data?: {
+        sources?: Record<string, AvSourceConfig>;
+        preferredSourcesByTarget?: Record<string, string[]>;
+      };
+    }>({
       path: "/options/av-sources",
       method: "GET",
       format: "json",
     });
     setConfigs(rsp.data?.sources || {});
+    setPreferredSourcesByTarget(parsePreferredFromApi(rsp.data?.preferredSourcesByTarget));
   }, []);
 
   useEffect(() => {
@@ -199,6 +207,17 @@ export const AvSourcesConfigPanel = ({
     });
     await loadSources();
     toast.success(t("avSources.toast.saved", "Saved"));
+  };
+
+  const savePreferredSources = async (next: PreferredSourcesByTarget) => {
+    setPreferredSourcesByTarget(next);
+    await BApi.request({
+      path: "/options/av-sources",
+      method: "PATCH",
+      body: { preferredSourcesByTarget: next },
+      type: ContentType.Json,
+      format: "json",
+    });
   };
 
   const runAll = async () => {
@@ -269,10 +288,10 @@ export const AvSourcesConfigPanel = ({
 
   const orderedSourceIds = useMemo(() => sources.map((s) => s.id), [sources]);
 
-  // Per-target effective preferred list. Undefined entry => use default order (all sources).
+  // Per-target effective preferred list. Missing entry => use default order (all sources).
   const getEffectivePreferred = useCallback(
     (target: AvEnhancerTarget): string[] => {
-      const explicit = preferredSourcesByTarget?.[target];
+      const explicit = preferredSourcesByTarget[target];
       if (explicit) return explicit;
       return orderedSourceIds;
     },
@@ -290,14 +309,12 @@ export const AvSourcesConfigPanel = ({
   );
 
   const toggleCell = (target: AvEnhancerTarget, sourceId: string) => {
-    if (!onChangePreferredSources) return;
     const current = getEffectivePreferred(target);
     const isSelected = current.includes(sourceId);
     const nextList = isSelected
       ? current.filter((id) => id !== sourceId)
       : [...current, sourceId];
-    const next = { ...(preferredSourcesByTarget ?? {}), [target]: nextList };
-    onChangePreferredSources(next);
+    void savePreferredSources({ ...preferredSourcesByTarget, [target]: nextList });
   };
 
   // Count of selected sources for a target (based on the effective preferred list).
@@ -310,26 +327,22 @@ export const AvSourcesConfigPanel = ({
   // - If every source has a priority for this target → set to [] (skip target).
   // - Otherwise → set to a full explicit list in display order.
   const toggleTargetColumn = (target: AvEnhancerTarget) => {
-    if (!onChangePreferredSources) return;
     const count = selectedCountForTarget(target);
     const allSelected = count === orderedSourceIds.length && count > 0;
     const nextList = allSelected ? [] : orderedSourceIds.slice();
-    const next = { ...(preferredSourcesByTarget ?? {}), [target]: nextList };
-    onChangePreferredSources(next);
+    void savePreferredSources({ ...preferredSourcesByTarget, [target]: nextList });
   };
 
   const selectAllEverything = () => {
-    if (!onChangePreferredSources) return;
     const next: PreferredSourcesByTarget = {};
     for (const tgt of avEnhancerTargets) {
       next[tgt.value as AvEnhancerTarget] = orderedSourceIds.slice();
     }
-    onChangePreferredSources(next);
+    void savePreferredSources(next);
   };
 
   const resetToDefault = () => {
-    if (!onChangePreferredSources) return;
-    onChangePreferredSources({});
+    void savePreferredSources({});
   };
 
   // Convert shift+vertical-wheel into horizontal scroll on the matrix container.
@@ -391,30 +404,24 @@ export const AvSourcesConfigPanel = ({
         >
           {t("avSources.button.refresh", "Refresh")}
         </Button>
-        {interactive && (
-          <>
-            <div className="mx-2 h-5 w-px bg-default-200" />
-            <Button size="sm" variant="flat" onPress={selectAllEverything}>
-              {t("avSources.button.selectAll", "Select all")}
-            </Button>
-            <Button size="sm" variant="flat" onPress={resetToDefault}>
-              {t("avSources.button.resetDefault", "Reset to default")}
-            </Button>
-          </>
-        )}
+        <div className="mx-2 h-5 w-px bg-default-200" />
+        <Button size="sm" variant="flat" onPress={selectAllEverything}>
+          {t("avSources.button.selectAll", "Select all")}
+        </Button>
+        <Button size="sm" variant="flat" onPress={resetToDefault}>
+          {t("avSources.button.resetDefault", "Reset to default")}
+        </Button>
         <div className="ml-auto text-xs text-default-500">
           {t("avSources.helper.summary", "{{count}} sources discovered", { count: sources.length })}
         </div>
       </div>
 
-      {interactive && (
-        <div className="text-xs text-default-500">
-          {t(
-            "avSources.helper.matrixHint",
-            "Click a target name to select-all / clear that column. Hold Shift while scrolling to move horizontally.",
-          )}
-        </div>
-      )}
+      <div className="text-xs text-default-500">
+        {t(
+          "avSources.helper.matrixHint",
+          "Click a target name to select-all / clear that column. Hold Shift while scrolling to move horizontally.",
+        )}
+      </div>
 
       <div ref={scrollRef} className="flex-1 overflow-auto border border-default-200 rounded-md">
         <table className="text-xs border-collapse min-w-full">
@@ -425,33 +432,29 @@ export const AvSourcesConfigPanel = ({
               </th>
               {avEnhancerTargets.map((tgt) => {
                 const target = tgt.value as AvEnhancerTarget;
-                const count = interactive ? selectedCountForTarget(target) : 0;
+                const count = selectedCountForTarget(target);
                 const total = orderedSourceIds.length;
                 const allSelected = count === total && count > 0;
                 const allCleared = count === 0;
                 return (
                   <th
                     key={tgt.value}
-                    onClick={interactive ? () => toggleTargetColumn(target) : undefined}
-                    className={`sticky top-0 z-20 bg-default-100 px-2 py-2 text-left border-b border-r border-default-200 min-w-[140px] select-none ${
-                      interactive ? "cursor-pointer hover:bg-default-200" : ""
-                    }`}
+                    onClick={() => toggleTargetColumn(target)}
+                    className="sticky top-0 z-20 bg-default-100 px-2 py-2 text-left border-b border-r border-default-200 min-w-[140px] select-none cursor-pointer hover:bg-default-200"
                   >
                     <div className="flex items-center gap-1 justify-between">
                       <span className="font-medium">{tgt.label}</span>
-                      {interactive && (
-                        <span
-                          className={`text-[10px] tabular-nums ${
-                            allSelected
-                              ? "text-primary"
-                              : allCleared
-                                ? "text-default-400"
-                                : "text-warning"
-                          }`}
-                        >
-                          {count}/{total}
-                        </span>
-                      )}
+                      <span
+                        className={`text-[10px] tabular-nums ${
+                          allSelected
+                            ? "text-primary"
+                            : allCleared
+                              ? "text-default-400"
+                              : "text-warning"
+                        }`}
+                      >
+                        {count}/{total}
+                      </span>
                     </div>
                   </th>
                 );
@@ -506,7 +509,7 @@ export const AvSourcesConfigPanel = ({
                           isImage={imageTargets.has(target)}
                           checked={checked}
                           priority={priority}
-                          interactive={interactive && !disabledByConfig}
+                          interactive={!disabledByConfig}
                           loading={isLoading}
                           rowError={rowError}
                           rowSkipped={rowSkipped}

@@ -18,4 +18,11 @@ public class AvSourceConfig
 public class AvSourceOptions
 {
     public Dictionary<string, AvSourceConfig>? Sources { get; set; }
+
+    /// <summary>
+    /// Per-target ordered source preference. Key is the int value of AvEnhancerTarget;
+    /// value is the ordered list of source ids the AV enhancer should walk when picking
+    /// a value for that target. Targets absent from this map use the built-in source order.
+    /// </summary>
+    public Dictionary<int, List<string>>? PreferredSourcesByTarget { get; set; }
 }

@@ -1,4 +1,4 @@
-﻿using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Newtonsoft.Json;
 
@@ -19,11 +19,4 @@ public record EnhancerTargetFullOptions() : EnhancerTargetOptions
     /// User-provided prompt hint for AI enhancer, describing how to extract this target.
     /// </summary>
     public string? CustomPrompt { get; set; }
-
-    /// <summary>
-    /// Ordered list of data-source identifiers consulted for this target (AV enhancer only).
-    /// The selector walks this list in order and uses the first source that supplied
-    /// a non-empty value for this target. Null/empty falls back to the built-in source order.
-    /// </summary>
-    public List<string>? PreferredSources { get; set; }
 }

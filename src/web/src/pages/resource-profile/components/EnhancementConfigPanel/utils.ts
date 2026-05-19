@@ -91,7 +91,6 @@ export interface SourceState {
     coverSelectOrder?: number;
     autoBindProperty?: boolean;
     autoMatchMultilevelString?: boolean;
-    preferredSources?: string[];
   };
 }
 
@@ -129,7 +128,6 @@ export function buildSourceStates(
                   autoBindProperty: toAny.autoBindProperty,
                   autoMatchMultilevelString: toAny.autoMatchMultilevelString,
                   coverSelectOrder: toAny.coverSelectOrder,
-                  preferredSources: toAny.preferredSources,
                 },
               });
             }
@@ -159,7 +157,6 @@ export function buildSourceStates(
               autoBindProperty: toAny?.autoBindProperty,
               autoMatchMultilevelString: toAny?.autoMatchMultilevelString,
               coverSelectOrder: toAny?.coverSelectOrder,
-              preferredSources: toAny?.preferredSources,
             }
           : {},
       });
@@ -390,16 +387,10 @@ export function convertStatesToEnhancerOptions(
     pool?: PropertyPool;
     propertyId?: number;
     coverSelectOrder?: number;
-    preferredSources?: string[];
   }[]>();
 
   for (const [, state] of sourceStates) {
-    // Persist either: enabled target options, OR AV targets carrying a non-default
-    // preferredSources preference (so the per-target source preference survives even
-    // before the target is bound to a property).
-    const carriesAvPref =
-      state.enhancerId === EnhancerId.Av && state.config?.preferredSources !== undefined;
-    if (!state.enabled && !carriesAvPref) continue;
+    if (!state.enabled) continue;
     const targets = enhancerTargets.get(state.enhancerId) ?? [];
     targets.push({
       target: state.targetId,
@@ -407,7 +398,6 @@ export function convertStatesToEnhancerOptions(
       pool: state.targetMapping?.pool,
       propertyId: state.targetMapping?.id,
       coverSelectOrder: state.config?.coverSelectOrder,
-      preferredSources: state.config?.preferredSources,
     });
     enhancerTargets.set(state.enhancerId, targets);
   }
@@ -424,7 +414,6 @@ export function convertStatesToEnhancerOptions(
         propertyPool: t.pool,
         propertyId: t.propertyId,
         coverSelectOrder: t.coverSelectOrder,
-        preferredSources: t.preferredSources,
       })),
     });
   }
