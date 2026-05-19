@@ -6061,7 +6061,6 @@ export interface components {
             propertyId: number;
             property?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Property"];
             customPrompt?: string;
-            preferredSources?: string[];
         };
         "Bakabase.Abstractions.Models.Domain.ExtensionGroup": {
             /** Format: int32 */
@@ -6743,6 +6742,9 @@ export interface components {
             sources?: {
                 [key: string]: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.AvSourceConfig"];
             };
+            preferredSourcesByTarget?: {
+                [key: string]: string[];
+            };
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.BangumiOptions": {
             accounts?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ThirdPartyAccount"][];
@@ -6999,6 +7001,9 @@ export interface components {
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.AvSourceOptionsPatchInputModel": {
             sources?: {
                 [key: string]: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.AvSourceConfig"];
+            };
+            preferredSourcesByTarget?: {
+                [key: string]: string[];
             };
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.BangumiOptionsPatchInputModel": {

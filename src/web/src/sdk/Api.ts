@@ -397,7 +397,6 @@ export interface BakabaseAbstractionsModelsDomainEnhancerTargetFullOptions {
   propertyId: number;
   property?: BakabaseAbstractionsModelsDomainProperty;
   customPrompt?: string;
-  preferredSources?: string[];
 }
 
 export interface BakabaseAbstractionsModelsDomainExtensionGroup {
@@ -1230,6 +1229,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
     string,
     BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainAvSourceConfig
   >;
+  preferredSourcesByTarget?: Record<string, string[]>;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainBangumiOptions {
@@ -1500,6 +1500,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputA
     string,
     BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainAvSourceConfig
   >;
+  preferredSourcesByTarget?: Record<string, string[]>;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputBangumiOptionsPatchInputModel {
