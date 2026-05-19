@@ -6183,7 +6183,10 @@ export interface components {
             propertyPool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
             /** Format: int32 */
             propertyId: number;
-            priorities?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyValueScope"][];
+            priorities?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PropertyValueScopePriority"][];
+        };
+        "Bakabase.Abstractions.Models.Domain.PropertyValueScopePriority": {
+            scope: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyValueScope"];
             fallbackOnEmpty: boolean;
         };
         "Bakabase.Abstractions.Models.Domain.ReservedPropertyValue": {
@@ -6445,8 +6448,7 @@ export interface components {
             propertyPool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
             /** Format: int32 */
             propertyId: number;
-            priorities?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyValueScope"][];
-            fallbackOnEmpty: boolean;
+            priorities?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PropertyValueScopePriority"][];
         };
         "Bakabase.Abstractions.Models.Input.ResourceSearchOrderInputModel": {
             property: components["schemas"]["Bakabase.InsideWorld.Models.Constants.Aos.ResourceSearchSortableProperty"];
@@ -8903,6 +8905,7 @@ export interface components {
             variables?: components["schemas"]["Bakabase.Service.Models.Input.BulkModificationVariableInputModel"][];
             search?: components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
             processes?: components["schemas"]["Bakabase.Service.Models.Input.BulkModificationProcessInputModel"][];
+            scopePreferenceConfigs?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PropertyValueScopePreference"][];
             deleteResources?: boolean;
             deleteFiles?: boolean;
         };
@@ -9144,6 +9147,13 @@ export interface components {
             property: components["schemas"]["Bakabase.Modules.Property.Models.View.PropertyViewModel"];
             steps?: components["schemas"]["Bakabase.Service.Models.View.BulkModificationProcessStepViewModel"][];
         };
+        "Bakabase.Service.Models.View.BulkModificationScopePreferenceConfigViewModel": {
+            propertyPool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
+            /** Format: int32 */
+            propertyId: number;
+            property?: components["schemas"]["Bakabase.Modules.Property.Models.View.PropertyViewModel"];
+            priorities?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PropertyValueScopePriority"][];
+        };
         "Bakabase.Service.Models.View.BulkModificationVariableViewModel": {
             scope: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyValueScope"];
             propertyPool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
@@ -9164,6 +9174,7 @@ export interface components {
             variables?: components["schemas"]["Bakabase.Service.Models.View.BulkModificationVariableViewModel"][];
             search?: components["schemas"]["Bakabase.Service.Models.View.ResourceSearchViewModel"];
             processes?: components["schemas"]["Bakabase.Service.Models.View.BulkModificationProcessViewModel"][];
+            scopePreferenceConfigs?: components["schemas"]["Bakabase.Service.Models.View.BulkModificationScopePreferenceConfigViewModel"][];
             deleteResources: boolean;
             deleteFiles: boolean;
             filteredResourceIds?: number[];
@@ -10820,10 +10831,10 @@ export interface components {
         };
         /**
          * Format: int32
-         * @description [0: IL, 0: IL, 1: Native, 2: OPTIL, 3: CodeTypeMask, 3: CodeTypeMask, 4: ManagedMask, 4: ManagedMask, 8: NoInlining, 16: ForwardRef, 32: Synchronized, 64: NoOptimization, 128: PreserveSig, 256: AggressiveInlining, 512: AggressiveOptimization, 4096: InternalCall, 65535: MaxMethodImplVal]
+         * @description [0: IL, 0: IL, 1: Native, 2: OPTIL, 3: CodeTypeMask, 3: CodeTypeMask, 4: ManagedMask, 4: ManagedMask, 8: NoInlining, 16: ForwardRef, 32: Synchronized, 64: NoOptimization, 128: PreserveSig, 256: AggressiveInlining, 512: AggressiveOptimization, 4096: InternalCall, 8192: Async, 65535: MaxMethodImplVal]
          * @enum {integer}
          */
-        "System.Reflection.MethodImplAttributes": 0 | 1 | 2 | 3 | 4 | 8 | 16 | 32 | 64 | 128 | 256 | 512 | 4096 | 65535;
+        "System.Reflection.MethodImplAttributes": 0 | 1 | 2 | 3 | 4 | 8 | 16 | 32 | 64 | 128 | 256 | 512 | 4096 | 8192 | 65535;
         "System.Reflection.MethodInfo": {
             readonly name: string;
             declaringType?: components["schemas"]["System.Type"];

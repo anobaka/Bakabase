@@ -10,13 +10,8 @@ public class PropertyValueScopePreference
 
     /// <summary>
     /// Ordered scope priorities for this (resource, property). Null = no override.
-    /// When non-null, lower-priority layers (profile/global) are not consulted.
+    /// Each entry carries a FallbackOnEmpty flag: when that scope has no value,
+    /// the chain continues only if the flag is true; otherwise it stops and renders blank.
     /// </summary>
-    public PropertyValueScope[]? Priorities { get; set; }
-
-    /// <summary>
-    /// When the highest-priority scope's value is empty, whether to fall back to the next scope in Priorities.
-    /// False = render blank rather than fall back.
-    /// </summary>
-    public bool FallbackOnEmpty { get; set; }
+    public PropertyValueScopePriority[]? Priorities { get; set; }
 }

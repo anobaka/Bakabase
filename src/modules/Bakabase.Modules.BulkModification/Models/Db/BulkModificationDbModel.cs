@@ -14,6 +14,11 @@ namespace Bakabase.Modules.BulkModification.Models.Db
         /// </summary>
         public string? SearchJson { get; set; }
         public string? Processes { get; set; }
+        /// <summary>
+        /// JSON-serialized List&lt;PropertyValueScopePreference&gt;: per (PropertyPool, PropertyId) priority chain
+        /// applied to every filtered resource on Apply. Each item with empty Priorities clears the preference.
+        /// </summary>
+        public string? ScopePreferenceConfigs { get; set; }
         public bool DeleteResources { get; set; }
         public bool DeleteFiles { get; set; }
         public string? Variables { get; set; }

@@ -14,6 +14,11 @@ public record BulkModification
     /// </summary>
     public ResourceSearch? Search { get; set; }
     public List<BulkModificationProcess>? Processes { get; set; }
+    /// <summary>
+    /// Scope priority overrides applied to every filtered resource on Apply.
+    /// Each entry targets one (PropertyPool, PropertyId); empty Priorities clears the preference.
+    /// </summary>
+    public List<PropertyValueScopePreference>? ScopePreferenceConfigs { get; set; }
     public bool DeleteResources { get; set; }
     public bool DeleteFiles { get; set; }
     public List<int>? FilteredResourceIds { get; set; }

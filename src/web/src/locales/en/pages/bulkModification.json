@@ -99,12 +99,22 @@
   "bulkModification.tip.variables": "You can define and preprocess variables here, then use it in process steps.",
   "bulkModification.tip.processes": "You can define process steps here, and use variables in steps, to modify all filtered resources.",
   "bulkModification.tip.changes": "Before applying bulk modification, you must calculate and check the changes here.",
+  "bulkModification.tip.scopePreferences": "Optionally override scope priorities per property for every filtered resource. Applied directly, no preview needed.",
 
   "bulkModification.block.filters": "Filters",
   "bulkModification.block.variables": "Variables",
   "bulkModification.block.processes": "Processes",
+  "bulkModification.block.scopePreferences": "Scope priorities",
   "bulkModification.block.changes": "Changes",
   "bulkModification.block.finalStep": "Final Step",
+
+  "bulkModification.scopePreference.title.new": "New scope priority config",
+  "bulkModification.scopePreference.title.forProperty": "Scope priority — {{property}}",
+  "bulkModification.scopePreference.tip": "Pick scopes in display order. Toggle the switch on each entry to control whether an empty value falls through to the next scope.",
+  "bulkModification.scopePreference.willClear": "Will clear any existing override",
+  "bulkModification.scopePreference.action.add": "Add scope priority config",
+  "bulkModification.scopePreference.action.delete": "Delete scope priority config",
+  "bulkModification.scopePreference.confirm.delete": "Delete the scope priority config for {{name}}?",
 
   "bulkModificationGuide.welcome.title": "Welcome to Bulk Modification",
   "bulkModificationGuide.welcome.description": "Bulk modification helps you quickly and efficiently modify properties of multiple resources. You can filter resources using any criteria and then batch update their property values.",

@@ -621,7 +621,12 @@ export interface BakabaseAbstractionsModelsDomainPropertyValueScopePreference {
   propertyPool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
   /** @format int32 */
   propertyId: number;
-  priorities?: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope[];
+  priorities?: BakabaseAbstractionsModelsDomainPropertyValueScopePriority[];
+}
+
+export interface BakabaseAbstractionsModelsDomainPropertyValueScopePriority {
+  /** [0: Manual, 1: Synchronization, 1000: Bakabase, 1001: ExHentai, 1002: Bangumi, 1003: DLsite, 1004: Regex, 1005: Kodi, 1006: Tmdb, 1007: Av, 1008: Ai, 1009: Steam] */
+  scope: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope;
   fallbackOnEmpty: boolean;
 }
 
@@ -941,8 +946,7 @@ export interface BakabaseAbstractionsModelsInputResourcePropertyValueScopePrefer
   propertyPool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
   /** @format int32 */
   propertyId: number;
-  priorities?: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope[];
-  fallbackOnEmpty: boolean;
+  priorities?: BakabaseAbstractionsModelsDomainPropertyValueScopePriority[];
 }
 
 export interface BakabaseAbstractionsModelsInputResourceSearchOrderInputModel {
@@ -3938,6 +3942,7 @@ export interface BakabaseServiceModelsInputBulkModificationPatchInputModel {
   variables?: BakabaseServiceModelsInputBulkModificationVariableInputModel[];
   search?: BakabaseServiceModelsInputResourceSearchInputModel;
   processes?: BakabaseServiceModelsInputBulkModificationProcessInputModel[];
+  scopePreferenceConfigs?: BakabaseAbstractionsModelsDomainPropertyValueScopePreference[];
   deleteResources?: boolean;
   deleteFiles?: boolean;
 }
@@ -4224,6 +4229,15 @@ export interface BakabaseServiceModelsViewBulkModificationProcessViewModel {
   steps?: BakabaseServiceModelsViewBulkModificationProcessStepViewModel[];
 }
 
+export interface BakabaseServiceModelsViewBulkModificationScopePreferenceConfigViewModel {
+  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
+  propertyPool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
+  /** @format int32 */
+  propertyId: number;
+  property?: BakabaseModulesPropertyModelsViewPropertyViewModel;
+  priorities?: BakabaseAbstractionsModelsDomainPropertyValueScopePriority[];
+}
+
 export interface BakabaseServiceModelsViewBulkModificationVariableViewModel {
   /** [0: Manual, 1: Synchronization, 1000: Bakabase, 1001: ExHentai, 1002: Bangumi, 1003: DLsite, 1004: Regex, 1005: Kodi, 1006: Tmdb, 1007: Av, 1008: Ai, 1009: Steam] */
   scope: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope;
@@ -4247,6 +4261,7 @@ export interface BakabaseServiceModelsViewBulkModificationViewModel {
   variables?: BakabaseServiceModelsViewBulkModificationVariableViewModel[];
   search?: BakabaseServiceModelsViewResourceSearchViewModel;
   processes?: BakabaseServiceModelsViewBulkModificationProcessViewModel[];
+  scopePreferenceConfigs?: BakabaseServiceModelsViewBulkModificationScopePreferenceConfigViewModel[];
   deleteResources: boolean;
   deleteFiles: boolean;
   filteredResourceIds?: number[];
@@ -5918,7 +5933,7 @@ export interface SystemReflectionConstructorInfo {
   metadataToken: number;
   /** [0: PrivateScope, 0: PrivateScope, 1: Private, 2: FamANDAssem, 3: Assembly, 4: Family, 5: FamORAssem, 6: Public, 7: MemberAccessMask, 8: UnmanagedExport, 16: Static, 32: Final, 64: Virtual, 128: HideBySig, 256: VtableLayoutMask, 256: VtableLayoutMask, 512: CheckAccessOnOverride, 1024: Abstract, 2048: SpecialName, 4096: RTSpecialName, 8192: PinvokeImpl, 16384: HasSecurity, 32768: RequireSecObject, 53248: ReservedMask] */
   attributes: SystemReflectionMethodAttributes;
-  /** [0: IL, 0: IL, 1: Native, 2: OPTIL, 3: CodeTypeMask, 3: CodeTypeMask, 4: ManagedMask, 4: ManagedMask, 8: NoInlining, 16: ForwardRef, 32: Synchronized, 64: NoOptimization, 128: PreserveSig, 256: AggressiveInlining, 512: AggressiveOptimization, 4096: InternalCall, 65535: MaxMethodImplVal] */
+  /** [0: IL, 0: IL, 1: Native, 2: OPTIL, 3: CodeTypeMask, 3: CodeTypeMask, 4: ManagedMask, 4: ManagedMask, 8: NoInlining, 16: ForwardRef, 32: Synchronized, 64: NoOptimization, 128: PreserveSig, 256: AggressiveInlining, 512: AggressiveOptimization, 4096: InternalCall, 8192: Async, 65535: MaxMethodImplVal] */
   methodImplementationFlags: SystemReflectionMethodImplAttributes;
   /** [1: Standard, 2: VarArgs, 3: Any, 32: HasThis, 64: ExplicitThis] */
   callingConvention: SystemReflectionCallingConventions;
@@ -6119,7 +6134,7 @@ export interface SystemReflectionMethodBase {
   metadataToken: number;
   /** [0: PrivateScope, 0: PrivateScope, 1: Private, 2: FamANDAssem, 3: Assembly, 4: Family, 5: FamORAssem, 6: Public, 7: MemberAccessMask, 8: UnmanagedExport, 16: Static, 32: Final, 64: Virtual, 128: HideBySig, 256: VtableLayoutMask, 256: VtableLayoutMask, 512: CheckAccessOnOverride, 1024: Abstract, 2048: SpecialName, 4096: RTSpecialName, 8192: PinvokeImpl, 16384: HasSecurity, 32768: RequireSecObject, 53248: ReservedMask] */
   attributes: SystemReflectionMethodAttributes;
-  /** [0: IL, 0: IL, 1: Native, 2: OPTIL, 3: CodeTypeMask, 3: CodeTypeMask, 4: ManagedMask, 4: ManagedMask, 8: NoInlining, 16: ForwardRef, 32: Synchronized, 64: NoOptimization, 128: PreserveSig, 256: AggressiveInlining, 512: AggressiveOptimization, 4096: InternalCall, 65535: MaxMethodImplVal] */
+  /** [0: IL, 0: IL, 1: Native, 2: OPTIL, 3: CodeTypeMask, 3: CodeTypeMask, 4: ManagedMask, 4: ManagedMask, 8: NoInlining, 16: ForwardRef, 32: Synchronized, 64: NoOptimization, 128: PreserveSig, 256: AggressiveInlining, 512: AggressiveOptimization, 4096: InternalCall, 8192: Async, 65535: MaxMethodImplVal] */
   methodImplementationFlags: SystemReflectionMethodImplAttributes;
   /** [1: Standard, 2: VarArgs, 3: Any, 32: HasThis, 64: ExplicitThis] */
   callingConvention: SystemReflectionCallingConventions;
@@ -6147,7 +6162,7 @@ export interface SystemReflectionMethodBase {
 }
 
 /**
- * [0: IL, 0: IL, 1: Native, 2: OPTIL, 3: CodeTypeMask, 3: CodeTypeMask, 4: ManagedMask, 4: ManagedMask, 8: NoInlining, 16: ForwardRef, 32: Synchronized, 64: NoOptimization, 128: PreserveSig, 256: AggressiveInlining, 512: AggressiveOptimization, 4096: InternalCall, 65535: MaxMethodImplVal]
+ * [0: IL, 0: IL, 1: Native, 2: OPTIL, 3: CodeTypeMask, 3: CodeTypeMask, 4: ManagedMask, 4: ManagedMask, 8: NoInlining, 16: ForwardRef, 32: Synchronized, 64: NoOptimization, 128: PreserveSig, 256: AggressiveInlining, 512: AggressiveOptimization, 4096: InternalCall, 8192: Async, 65535: MaxMethodImplVal]
  * @format int32
  */
 export type SystemReflectionMethodImplAttributes =
@@ -6164,6 +6179,7 @@ export type SystemReflectionMethodImplAttributes =
   | 256
   | 512
   | 4096
+  | 8192
   | 65535;
 
 export interface SystemReflectionMethodInfo {
@@ -6177,7 +6193,7 @@ export interface SystemReflectionMethodInfo {
   metadataToken: number;
   /** [0: PrivateScope, 0: PrivateScope, 1: Private, 2: FamANDAssem, 3: Assembly, 4: Family, 5: FamORAssem, 6: Public, 7: MemberAccessMask, 8: UnmanagedExport, 16: Static, 32: Final, 64: Virtual, 128: HideBySig, 256: VtableLayoutMask, 256: VtableLayoutMask, 512: CheckAccessOnOverride, 1024: Abstract, 2048: SpecialName, 4096: RTSpecialName, 8192: PinvokeImpl, 16384: HasSecurity, 32768: RequireSecObject, 53248: ReservedMask] */
   attributes: SystemReflectionMethodAttributes;
-  /** [0: IL, 0: IL, 1: Native, 2: OPTIL, 3: CodeTypeMask, 3: CodeTypeMask, 4: ManagedMask, 4: ManagedMask, 8: NoInlining, 16: ForwardRef, 32: Synchronized, 64: NoOptimization, 128: PreserveSig, 256: AggressiveInlining, 512: AggressiveOptimization, 4096: InternalCall, 65535: MaxMethodImplVal] */
+  /** [0: IL, 0: IL, 1: Native, 2: OPTIL, 3: CodeTypeMask, 3: CodeTypeMask, 4: ManagedMask, 4: ManagedMask, 8: NoInlining, 16: ForwardRef, 32: Synchronized, 64: NoOptimization, 128: PreserveSig, 256: AggressiveInlining, 512: AggressiveOptimization, 4096: InternalCall, 8192: Async, 65535: MaxMethodImplVal] */
   methodImplementationFlags: SystemReflectionMethodImplAttributes;
   /** [1: Standard, 2: VarArgs, 3: Any, 32: HasThis, 64: ExplicitThis] */
   callingConvention: SystemReflectionCallingConventions;

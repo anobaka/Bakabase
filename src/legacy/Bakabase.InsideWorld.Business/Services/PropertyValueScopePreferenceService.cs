@@ -44,14 +44,12 @@ public class PropertyValueScopePreferenceService(
                 ResourceId = preference.ResourceId,
                 PropertyPool = preference.PropertyPool,
                 PropertyId = preference.PropertyId,
-                Priorities = serialized,
-                FallbackOnEmpty = preference.FallbackOnEmpty
+                Priorities = serialized
             });
             return ToDomain(inserted.Data!);
         }
 
         existing.Priorities = serialized;
-        existing.FallbackOnEmpty = preference.FallbackOnEmpty;
         await orm.Update(existing);
         return ToDomain(existing);
     }
@@ -69,14 +67,24 @@ public class PropertyValueScopePreferenceService(
         await orm.RemoveAll(x => ids.Contains(x.ResourceId));
     }
 
-    private static string? SerializePriorities(PropertyValueScope[]? priorities) =>
-        priorities == null ? null : string.Join(',', priorities.Select(s => ((int)s).ToString()));
+    private static string? SerializePriorities(PropertyValueScopePriority[]? priorities) =>
+        priorities is not {Length: > 0}
+            ? null
+            : string.Join(',', priorities.Select(p => $"{(int) p.Scope}:{(p.FallbackOnEmpty ? 1 : 0)}"));
 
-    private static PropertyValueScope[]? DeserializePriorities(string? serialized)
+    private static PropertyValueScopePriority[]? DeserializePriorities(string? serialized)
     {
         if (string.IsNullOrEmpty(serialized)) return null;
         return serialized.Split(',', System.StringSplitOptions.RemoveEmptyEntries)
-            .Select(s => (PropertyValueScope)int.Parse(s))
+            .Select(entry =>
+            {
+                var parts = entry.Split(':');
+                return new PropertyValueScopePriority
+                {
+                    Scope = (PropertyValueScope) int.Parse(parts[0]),
+                    FallbackOnEmpty = parts.Length > 1 && parts[1] == "1"
+                };
+            })
             .ToArray();
     }
 
@@ -85,7 +93,6 @@ public class PropertyValueScopePreferenceService(
         ResourceId = row.ResourceId,
         PropertyPool = row.PropertyPool,
         PropertyId = row.PropertyId,
-        Priorities = DeserializePriorities(row.Priorities),
-        FallbackOnEmpty = row.FallbackOnEmpty
+        Priorities = DeserializePriorities(row.Priorities)
     };
 }

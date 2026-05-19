@@ -13,6 +13,7 @@ public record BulkModificationViewModel
     public List<BulkModificationVariableViewModel>? Variables { get; set; }
     public ResourceSearchViewModel? Search { get; set; }
     public List<BulkModificationProcessViewModel>? Processes { get; set; }
+    public List<BulkModificationScopePreferenceConfigViewModel>? ScopePreferenceConfigs { get; set; }
     public bool DeleteResources { get; set; }
     public bool DeleteFiles { get; set; }
     public List<int>? FilteredResourceIds { get; set; }
