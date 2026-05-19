@@ -9,6 +9,7 @@ using Bakabase.InsideWorld.Models.Constants.Aos;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bootstrap.Components.Orm.Infrastructures;
 using Bootstrap.Models.ResponseModels;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Bakabase.InsideWorld.Business.Services
@@ -42,23 +43,47 @@ namespace Bakabase.InsideWorld.Business.Services
 
         public async Task AddUsedTimes(string password)
         {
-            try
+            // Two decompression tasks (or two retries of the same one) sharing
+            // a password race on the same (non-existing) row: both branches
+            // see `p == null`, both Add() it, second SaveChangesAsync fails
+            // with "UNIQUE constraint failed: Passwords.Text". On conflict,
+            // reload the row and keep going — it just means somebody else
+            // beat us to the insert.
+            for (var attempt = 0; attempt < 2; attempt++)
             {
-                var p = await GetByKey(password);
-                if (p == null)
+                try
                 {
-                    p = new PasswordDbModel {Text = password};
-                    DbContext.Add(p);
-                }
+                    var p = await GetByKey(password);
+                    if (p == null)
+                    {
+                        p = new PasswordDbModel {Text = password};
+                        DbContext.Add(p);
+                    }
 
-                p.LastUsedAt = DateTime.Now;
-                p.UsedTimes++;
-                await DbContext.SaveChangesAsync();
-            }
-            catch (Exception e)
-            {
-                Logger.LogError(e, $"An error occurred adding used times for password: {password}");
+                    p.LastUsedAt = DateTime.Now;
+                    p.UsedTimes++;
+                    await DbContext.SaveChangesAsync();
+                    return;
+                }
+                catch (DbUpdateException ex)
+                    when (attempt == 0 && IsUniqueConstraintViolation(ex))
+                {
+                    // Detach the conflicting tracked entity and retry — the
+                    // second pass will load the row that won the race.
+                    foreach (var entry in DbContext.ChangeTracker.Entries<PasswordDbModel>().ToList())
+                    {
+                        entry.State = EntityState.Detached;
+                    }
+                }
+                catch (Exception e)
+                {
+                    Logger.LogError(e, $"An error occurred adding used times for password: {password}");
+                    return;
+                }
             }
         }
+
+        private static bool IsUniqueConstraintViolation(DbUpdateException ex) =>
+            ex.InnerException is Microsoft.Data.Sqlite.SqliteException { SqliteErrorCode: 19 };
     }
 }

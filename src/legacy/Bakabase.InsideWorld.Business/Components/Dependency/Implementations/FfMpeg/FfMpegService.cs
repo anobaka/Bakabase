@@ -148,12 +148,28 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Ff
             var rsp = await cmd.ExecuteAsync(ct);
             if (rsp.ExitCode != 0)
             {
-                throw new Exception(error.ToString());
+                var errorText = error.ToString().Trim();
+                throw new Exception(
+                    $"ffprobe exited with code {rsp.ExitCode} for '{path}'. " +
+                    $"stderr: {(string.IsNullOrEmpty(errorText) ? "<empty>" : errorText)}");
             }
 
-            var jObject = JObject.Parse(output.ToString());
-            var seconds = jObject["format"]!["duration"]!.Value<double>();
-            return seconds;
+            var stdout = output.ToString();
+            if (string.IsNullOrWhiteSpace(stdout))
+            {
+                throw new Exception(
+                    $"ffprobe returned empty stdout for '{path}'. stderr: {error}");
+            }
+
+            var jObject = JObject.Parse(stdout);
+            var duration = jObject["format"]?["duration"]?.Value<double>();
+            if (duration == null)
+            {
+                throw new Exception(
+                    $"ffprobe produced JSON without format.duration for '{path}': {stdout}");
+            }
+
+            return duration.Value;
         }
 
         /// <summary>
@@ -171,13 +187,14 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Ff
             //     screenshotTime));
             // var r = await c.Start(ct);
             // ffmpeg -i input.mp4 -ss 00:00:05 -vframes 1 frame_out.jpg1.
-            var output = new StringBuilder();
             var error = new StringBuilder();
             var image = new MemoryStream();
             var timeString = $"{time.Hours:D2}:{time.Minutes:D2}:{time.Seconds:D2}";
 
-            var errorCts = new CancellationTokenSource();
-
+            // ffmpeg writes warnings (e.g. "low_delay flag set incorrectly,
+            // clearing it") to stderr even on successful runs, so we only treat a
+            // non-zero exit code as a failure rather than aborting on any stderr
+            // output.
             var cmd = Cli.Wrap(FfMpegExecutable)
                 .WithArguments(new[]
                 {
@@ -193,30 +210,16 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Ff
                 }, true)
                 .WithValidation(CommandResultValidation.None)
                 .WithStandardOutputPipe(PipeTarget.ToStream(image))
-                .WithStandardErrorPipe(PipeTarget.ToDelegate(e =>
-                {
-                    error.AppendLine(e);
-                    errorCts.Cancel();
-                }, Encoding.UTF8));
+                .WithStandardErrorPipe(
+                    PipeTarget.ToStringBuilder(error, Encoding.UTF8));
 
-            var mixedCts = CancellationTokenSource.CreateLinkedTokenSource(errorCts.Token, ct);
-
-            try
+            var rsp = await cmd.ExecuteAsync(ct);
+            if (rsp.ExitCode != 0)
             {
-                var rsp = await cmd.ExecuteAsync(mixedCts.Token);
-                if (rsp.ExitCode != 0)
-                {
-                    throw new Exception(error.ToString());
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                if (errorCts.Token.IsCancellationRequested)
-                {
-                    throw new Exception(error.ToString());
-                }
-
-                throw;
+                var errorText = error.ToString().Trim();
+                throw new Exception(
+                    $"ffmpeg exited with code {rsp.ExitCode} for '{videoFilePath}'. " +
+                    $"stderr: {(string.IsNullOrEmpty(errorText) ? "<empty>" : errorText)}");
             }
 
             image.Seek(0, SeekOrigin.Begin);

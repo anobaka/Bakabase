@@ -50,9 +50,20 @@ public class AvaloniaGuiAdapter : GuiAdapter, ITrayIconController
     {
         Dispatcher.UIThread.Invoke(() =>
         {
-            var assetName = isRunning ? "tray-running" : "favicon";
-            _app.AppTrayIcon.Icon = new WindowIcon(
-                AssetLoader.Open(new Uri($"avares://Bakabase/Assets/{assetName}.ico")));
+            try
+            {
+                var assetName = isRunning ? "tray-running" : "favicon";
+                _app.AppTrayIcon.Icon = new WindowIcon(
+                    AssetLoader.Open(new Uri($"avares://Bakabase/Assets/{assetName}.ico")));
+            }
+            catch (System.ComponentModel.Win32Exception)
+            {
+                // Avalonia's Win32Icon.CreateIcon throws Win32Exception
+                // "操作成功完成" (GetLastError() == 0) on some Windows
+                // machines when the tray icon is updated under contention.
+                // Updating the icon is purely cosmetic, so swallowing the
+                // failure is fine and avoids spamming the error dashboard.
+            }
         });
     }
 

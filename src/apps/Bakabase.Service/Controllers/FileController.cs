@@ -638,7 +638,28 @@ namespace Bakabase.Service.Controllers
         public async Task<SingletonResponse<IwFsEntryLazyInfo>> GetIwFsInfo(string path, IwFsType type,
             bool showHiddenFiles = false)
         {
-            return new SingletonResponse<IwFsEntryLazyInfo>(new IwFsEntryLazyInfo(path, type, showHiddenFiles));
+            // The frontend hands us whatever path the user typed / clicked,
+            // including hidden Windows junction points (`Application Data`,
+            // `My Documents`) that throw UnauthorizedAccessException, and
+            // already-deleted directories that throw DirectoryNotFoundException.
+            // Both are user-level conditions, not bugs — return a 400 with the
+            // localised message instead of letting them surface as Sentry 500s.
+            try
+            {
+                return new SingletonResponse<IwFsEntryLazyInfo>(new IwFsEntryLazyInfo(path, type, showHiddenFiles));
+            }
+            catch (DirectoryNotFoundException ex)
+            {
+                return SingletonResponseBuilder<IwFsEntryLazyInfo>.BuildBadRequest(ex.Message);
+            }
+            catch (FileNotFoundException ex)
+            {
+                return SingletonResponseBuilder<IwFsEntryLazyInfo>.BuildBadRequest(ex.Message);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return SingletonResponseBuilder<IwFsEntryLazyInfo>.BuildBadRequest(ex.Message);
+            }
         }
 
         [HttpGet("iwfs-entry")]
@@ -884,6 +905,25 @@ namespace Bakabase.Service.Controllers
         {
             var paths = model.EntryPaths.FindTopLevelPaths();
             // Directory.CreateDirectory(model.DestDir);
+
+            // Reject moving a folder into its own subtree up-front, instead of
+            // letting the BTask blow up later with an Exception that lands in
+            // Sentry. The same check runs again inside DirectoryUtils.MoveAsync
+            // for safety, but catching it here also gives the user a 400.
+            var normalizedDest = Path.GetFullPath(model.DestDir).TrimEnd(
+                Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            foreach (var path in paths)
+            {
+                var normalizedSource = Path.GetFullPath(path).TrimEnd(
+                    Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                if (string.Equals(normalizedSource, normalizedDest, StringComparison.OrdinalIgnoreCase) ||
+                    normalizedDest.StartsWith(normalizedSource + Path.DirectorySeparatorChar,
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    return BaseResponseBuilder.BuildBadRequest(
+                        $"Cannot move '{path}' into its own subdirectory '{model.DestDir}'.");
+                }
+            }
 
             await _fsOptionsManager.SaveAsync(options =>
             {
@@ -1363,20 +1403,30 @@ namespace Bakabase.Service.Controllers
                 // Handle video transcoding if needed
                 if (InternalOptions.VideoExtensions.Contains(ext))
                 {
-                    var ffprobePath = _ffMpegService.FfProbeExecutable;
-                    var ffprobeResult = await Cli.Wrap(ffprobePath)
-                        .WithArguments(args =>
-                        {
-                            args
-                                .Add("-v").Add("error")
-                                .Add("-select_streams").Add("v:0")
-                                .Add("-show_entries").Add("stream=codec_name")
-                                .Add("-of").Add("default=noprint_wrappers=1:nokey=1")
-                                .Add(fullname);
-                        })
-                        .WithValidation(CommandResultValidation.None)
-                        .ExecuteBufferedAsync(HttpContext.RequestAborted);
-                    var codecName = ffprobeResult.StandardOutput.Trim();
+                    string codecName;
+                    try
+                    {
+                        var ffprobePath = _ffMpegService.FfProbeExecutable;
+                        var ffprobeResult = await Cli.Wrap(ffprobePath)
+                            .WithArguments(args =>
+                            {
+                                args
+                                    .Add("-v").Add("error")
+                                    .Add("-select_streams").Add("v:0")
+                                    .Add("-show_entries").Add("stream=codec_name")
+                                    .Add("-of").Add("default=noprint_wrappers=1:nokey=1")
+                                    .Add(fullname);
+                            })
+                            .WithValidation(CommandResultValidation.None)
+                            .ExecuteBufferedAsync(HttpContext.RequestAborted);
+                        codecName = ffprobeResult.StandardOutput.Trim();
+                    }
+                    catch (OperationCanceledException)
+                        when (HttpContext.RequestAborted.IsCancellationRequested)
+                    {
+                        // Client navigated away while probing; nothing more to do.
+                        return new EmptyResult();
+                    }
 
                     // If video is already h264, stream directly
                     if (codecName.ToLower() == "h264")
@@ -1448,10 +1498,23 @@ namespace Bakabase.Service.Controllers
                             })
                             .WithStandardOutputPipe(PipeTarget.ToStream(Response.Body, true));
 
-                        // Set response headers for streaming mp4
+                        // The file name may contain non-ASCII characters (e.g. CJK),
+                        // which would throw when written as a raw header value, so
+                        // encode per RFC 5987.
                         Response.ContentType = "video/mp4";
-                        Response.Headers["Content-Disposition"] = $"inline; filename=\"{Path.GetFileName(fullname)}\"";
-                        await ffmpegCmd.ExecuteAsync(HttpContext.RequestAborted);
+                        var displayName = Path.GetFileName(fullname);
+                        var encodedName = Uri.EscapeDataString(displayName);
+                        Response.Headers["Content-Disposition"] =
+                            $"inline; filename*=UTF-8''{encodedName}";
+                        try
+                        {
+                            await ffmpegCmd.ExecuteAsync(HttpContext.RequestAborted);
+                        }
+                        catch (OperationCanceledException)
+                            when (HttpContext.RequestAborted.IsCancellationRequested)
+                        {
+                            // Client navigated away / closed tab; not an error.
+                        }
                         return new EmptyResult();
                     }
                 }
@@ -1590,6 +1653,15 @@ namespace Bakabase.Service.Controllers
                                 if (result.ExitCode == 0)
                                 {
                                     return;
+                                }
+
+                                // 7z exit code 255 is "user break" (Ctrl+C / Break signaled).
+                                // When our CancellationToken fires it's not an unexpected error,
+                                // so let the BTask host handle it as a normal cancellation.
+                                if (result.ExitCode == 255 &&
+                                    args.CancellationToken.IsCancellationRequested)
+                                {
+                                    args.CancellationToken.ThrowIfCancellationRequested();
                                 }
 
                                 messageSb.AppendLine($"Decompression exit with code: {result.ExitCode}");

@@ -361,9 +361,24 @@ export const serializeStandardValue = (
       return dt.valueOf().toString();
     }
     case StandardValueType.Time: {
-      const dur = value as Duration;
+      // Value may arrive already as a Duration, but during edits/roundtrips it
+      // can also reach us as a number (ms), a parseable string, or a moment
+      // Duration shape — normalise before serialising so we never blow up on
+      // `dur.asMilliseconds is not a function`.
+      if (typeof (value as any)?.asMilliseconds === "function") {
+        return ((value as any).asMilliseconds() as number).toString();
+      }
 
-      return dur.asMilliseconds().toString();
+      if (typeof value === "number") {
+        return value.toString();
+      }
+
+      if (typeof value === "string") {
+        const ms = parseTimeSpanToMs(value);
+        return ms == undefined ? undefined : ms.toString();
+      }
+
+      return undefined;
     }
   }
 };

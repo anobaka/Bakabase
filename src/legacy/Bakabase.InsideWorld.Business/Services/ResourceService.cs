@@ -2143,7 +2143,12 @@ namespace Bakabase.InsideWorld.Business.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to play item from {Origin} for resource {ResourceId}", origin, resourceId);
+                // Most play failures are user-environment issues (file moved,
+                // shortcut broken, codec missing, ...). Logging them as
+                // Warning keeps the BaseResponse user-facing without
+                // sending each click to Sentry. A real backend bug here
+                // would still surface via the BadRequest body.
+                _logger.LogWarning(ex, "Failed to play item from {Origin} for resource {ResourceId}", origin, resourceId);
                 return BaseResponseBuilder.BuildBadRequest($"Failed to play: {ex.Message}");
             }
 

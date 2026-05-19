@@ -170,6 +170,15 @@ export async function initAnalytics(): Promise<void> {
         tracesSampleRate: 0,
         replaysSessionSampleRate: 0,
         replaysOnErrorSampleRate: 0,
+        // Drop benign HTMLMediaElement noise so it doesn't dominate the issue list.
+        // AbortError / NotSupportedError are surfaced to the user via the player's
+        // onError path; we don't need a Sentry event for each occurrence.
+        ignoreErrors: [
+          "AbortError: The play() request was interrupted",
+          "AbortError: The fetching process for the media resource was aborted",
+          "NotSupportedError: Failed to load because no supported source was found",
+          "NotSupportedError: The element has no supported sources",
+        ],
       });
       Sentry.setUser({ id: info.deviceId });
       Sentry.setTag("release_channel", info.releaseChannel);

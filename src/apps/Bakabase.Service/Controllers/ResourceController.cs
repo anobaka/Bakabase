@@ -312,6 +312,15 @@ namespace Bakabase.Service.Controllers
                 rawFileOrDirectoryName = resource.Directory;
             }
 
+            // Resource path can be stale (folder moved/deleted outside Bakabase).
+            // GetAttributes throws DirectoryNotFoundException in that case;
+            // surface a 400 with the missing path instead of a 500.
+            if (!System.IO.File.Exists(rawFileOrDirectoryName) && !Directory.Exists(rawFileOrDirectoryName))
+            {
+                return BaseResponseBuilder.BuildBadRequest(
+                    $"Could not find a part of the path '{rawFileOrDirectoryName}'.");
+            }
+
             var rawAttributes = System.IO.File.GetAttributes(rawFileOrDirectoryName);
             OsShell.Open(rawFileOrDirectoryName,
                 (rawAttributes & FileAttributes.Directory) != FileAttributes.Directory);

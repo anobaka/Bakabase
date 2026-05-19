@@ -117,8 +117,17 @@ namespace Bakabase.Modules.Enhancer.Services
 
         public async Task AddRange(List<Enhancement> enhancements)
         {
-            var dbValuesMap = enhancements.ToDictionary(
-                e => e.ToDbModel(GetTargetPropertyType(e.EnhancerId, e.Target)), e => e);
+            // Two enhancements with the same composite key (ResourceId +
+            // EnhancerId + Target + DynamicTarget + ValueType + Value) collapse
+            // to one DbModel.Key. Two AV scrapers returning the same poster
+            // URL for the same Cover target is a real case we hit. Dedupe
+            // before building the dictionary so we don't blow up with
+            // "An item with the same key has already been added".
+            var dbValuesMap = enhancements
+                .Select(e => (Db: e.ToDbModel(GetTargetPropertyType(e.EnhancerId, e.Target)), Biz: e))
+                .GroupBy(p => p.Db.Key)
+                .Select(g => g.First())
+                .ToDictionary(p => p.Db, p => p.Biz);
             var keys = dbValuesMap.Keys.Select(d => d.Key);
             await base.RemoveAll(x => keys.Contains(x.Key));
             await base.AddRange(dbValuesMap.Keys.ToList());

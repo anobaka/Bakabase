@@ -106,7 +106,11 @@ public class FC2Client(IHttpClientFactory httpClientFactory, ILoggerFactory logg
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error parsing FC2 video {Number}: {Message}", number, ex.Message);
+            // Third-party scraping failures (network hiccup, site layout
+            // change, captcha) are expected — return null so the caller can
+            // try the next source, and log at Warning so Sentry's
+            // Error-level event sink doesn't pick it up.
+            Logger.LogWarning(ex, "Error parsing FC2 video {Number}: {Message}", number, ex.Message);
             return null;
         }
     }
@@ -126,12 +130,15 @@ public class FC2Client(IHttpClientFactory httpClientFactory, ILoggerFactory logg
         // XPath: //div[@data-section="userInfo"]//h3/span/../text()
         var titleElements = html["div[data-section='userInfo'] h3 span"].First().Parent();
         var title = titleElements.Text().Trim();
-        
+
         // Remove the span content to get just the text nodes
         var span = html["div[data-section='userInfo'] h3 span"];
         var spanText = span.Text();
-        title = title.Replace(spanText, "").Trim();
-        
+        if (!string.IsNullOrEmpty(spanText))
+        {
+            title = title.Replace(spanText, "").Trim();
+        }
+
         return title;
     }
 
