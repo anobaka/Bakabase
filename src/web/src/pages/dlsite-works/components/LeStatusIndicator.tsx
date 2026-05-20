@@ -29,7 +29,7 @@ export function LeStatusIndicator() {
   const isInstalled = leContext?.status === DependentComponentStatus.Installed;
 
   const handleInstall = async () => {
-    await BApi.component.installDependentComponent({ id: dependentComponentIds.LocaleEmulator });
+    await BApi.component.installDependentComponent(dependentComponentIds.LocaleEmulator);
   };
 
   if (isInstalling) {

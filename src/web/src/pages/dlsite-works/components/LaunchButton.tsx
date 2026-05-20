@@ -33,7 +33,7 @@ export function LaunchButton({
   const launchDisabled = useLocaleEmulator && (!isLeAvailable || !isLeInstalled);
 
   const handleInstallLe = async () => {
-    await BApi.component.installDependentComponent({ id: dependentComponentIds.LocaleEmulator });
+    await BApi.component.installDependentComponent(dependentComponentIds.LocaleEmulator);
   };
 
   const renderLeStatus = () => {

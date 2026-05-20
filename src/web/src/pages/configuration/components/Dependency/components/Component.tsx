@@ -45,7 +45,7 @@ const Component = ({ id }: { id: string }) => {
     }
 
     try {
-      await BApi.component.discoverDependentComponent({ id });
+      await BApi.component.discoverDependentComponent(id);
     } finally {
       setDiscovering(false);
     }
@@ -57,7 +57,7 @@ const Component = ({ id }: { id: string }) => {
       setFindingNewVersion(true);
       try {
         const latestVersionRsp =
-          await BApi.component.getDependentComponentLatestVersion({ id });
+          await BApi.component.getDependentComponentLatestVersion(id);
 
         if (!latestVersionRsp.code) {
           // @ts-ignore
@@ -120,7 +120,7 @@ const Component = ({ id }: { id: string }) => {
                 color={"primary"}
                 variant={"light"}
                 onClick={() => {
-                  BApi.component.installDependentComponent({ id });
+                  BApi.component.installDependentComponent(id);
                 }}
               >
                 {t<string>("configuration.dependency.clickToUpdate")}:{" "}
