@@ -84,10 +84,8 @@ export const useResourceSearch = (): UseResourceSearchResult => {
 
       setLoading(true);
       setLoadingDetails(false);
-
-      if (mode === "replace") {
-        setResources([]);
-      }
+      // Keep old results during "replace" (stale-while-revalidate) — avoids tearing
+      // down the virtualized grid on every search.
 
       try {
         // Step 1: Quick search with Cache for fast initial response

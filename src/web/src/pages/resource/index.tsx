@@ -18,13 +18,15 @@ type SavedSearch =
 
 type SearchForm = components["schemas"]["Bakabase.Modules.Search.Models.Db.ResourceSearchDbModel"];
 
+const MaxMountedTabs = 10;
+
 const ResourcePage = () => {
   const { t } = useTranslation();
   const [savedSearches, setSavedSearches] = useState<IdName<string>[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState<string>("");
   const [activeSearchId, setActiveSearchId] = useState<string>();
-  const [creatingTab, setCreatingTab] = useState(false);
+  const [mountedTabIds, setMountedTabIds] = useState<string[]>([]);
   const [removingTabId, setRemovingTabId] = useState<string | null>(null);
   const [recentlyPlayedOpen, setRecentlyPlayedOpen] = useState(false);
   const resourceOptions = useResourceOptionsStore();
@@ -32,7 +34,7 @@ const ResourcePage = () => {
   const consumePendingSearch = usePendingSearchStore((s) => s.consumePendingSearch);
   const optionsInitialized = useRef(false);
 
-  const activatedSearchIds = useRef(new Set<string>());
+  const creatingTabRef = useRef(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -43,11 +45,16 @@ const ResourcePage = () => {
   }, [editingId]);
 
   const changeTab = useCallback((searchId: string) => {
-    activatedSearchIds.current.add(searchId);
+    // LRU of mounted tabs: bounds memory while still caching recently used tabs.
+    setMountedTabIds((prev) =>
+      [searchId, ...prev.filter((id) => id !== searchId)].slice(0, MaxMountedTabs),
+    );
     setActiveSearchId(searchId);
     // Save to localStorage for persistence across page refreshes
     localStorage.setItem("resource-active-tab-id", searchId);
   }, []);
+
+  const handleOpenRecentlyPlayed = useCallback(() => setRecentlyPlayedOpen(true), []);
 
   // Handle initial options loading
   useEffect(() => {
@@ -84,25 +91,20 @@ const ResourcePage = () => {
     }
   }, [pendingSearch]);
 
-  const searchInNewTab = async (f: SearchForm) => {
-    if (creatingTab) return;
-    setCreatingTab(true);
+  const searchInNewTab = useCallback(async (f: SearchForm) => {
+    if (creatingTabRef.current) return;
+    creatingTabRef.current = true;
 
     try {
-      const nrs = {
-        search: f,
-        // id: uuidv4().slice(0, 6),
-      };
-
-      const newSearch = (await BApi.resource.saveNewResourceSearch(nrs)).data;
+      const newSearch = (await BApi.resource.saveNewResourceSearch({ search: f })).data;
       if (!newSearch) return;
 
       setSavedSearches((prev) => [...prev, newSearch]);
       changeTab(newSearch.id);
     } finally {
-      setCreatingTab(false);
+      creatingTabRef.current = false;
     }
-  };
+  }, [changeTab]);
 
   const beginRename = (id: string) => {
     const current = savedSearches.find((x) => x.id == id);
@@ -149,6 +151,7 @@ const ResourcePage = () => {
       const next = savedSearches[idx + 1];
 
       setSavedSearches((prevSearches) => prevSearches.filter((s) => s.id != id));
+      setMountedTabIds((prevIds) => prevIds.filter((mid) => mid !== id));
 
       const newActiveTab = (prev ?? next)?.id;
       if (newActiveTab) {
@@ -261,12 +264,12 @@ const ResourcePage = () => {
 
         return (
           <div key={s.id} className={`grow min-h-0 ${isActive ? "" : "hidden"}`}>
-            {activatedSearchIds.current.has(s.id) && (
+            {mountedTabIds.includes(s.id) && (
               <ResourceTabContent
                 activated={isActive}
                 searchId={s.id}
                 searchInNewTab={searchInNewTab}
-                onOpenRecentlyPlayed={() => setRecentlyPlayedOpen(true)}
+                onOpenRecentlyPlayed={handleOpenRecentlyPlayed}
               />
             )}
           </div>

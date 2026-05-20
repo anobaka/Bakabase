@@ -3,7 +3,7 @@
 import type { ResourcesRef } from "./Resources";
 import type { SearchForm } from "@/pages/resource/models";
 
-import React, { useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
+import React, { useCallback, useDeferredValue, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { usePrevious, useUpdate } from "react-use";
 import { SearchOutlined, FolderOpenOutlined } from "@ant-design/icons";
@@ -62,6 +62,8 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
     reloadResources,
   } = useResourceSearch();
   const resourcesRef = useRef(resources);
+  // Deferred resources keep the heavy grid render low-priority so filter edits stay responsive.
+  const displayResources = useDeferredValue(resources);
 
   const uiOptionsStore = useUiOptionsStore();
   const uiOptions = uiOptionsStore.data;
@@ -414,13 +416,13 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
       // console.log("123456789");
       const index = rowIndex * columnCount + columnIndex;
 
-      if (index >= resources.length) {
+      if (index >= displayResources.length) {
         return null;
       }
-      const resource = resources[index];
+      const resource = displayResources[index];
       const selected = selectedIdsRef.current.includes(resource.id);
       // Get selected resources data for context menu
-      const selectedResources = resources.filter(r => selectedIdsRef.current.includes(r.id));
+      const selectedResources = displayResources.filter(r => selectedIdsRef.current.includes(r.id));
 
       return (
         <div
@@ -449,7 +451,7 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
         </div>
       );
     },
-    [resources, columnCount],
+    [displayResources, columnCount],
   );
 
   useImperativeHandle(ref, () => ({
@@ -480,7 +482,7 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
 
   const rightPanelContent = (
     <div className="flex flex-col h-full overflow-hidden">
-        {columnCount > 0 && resources.length > 0 && (
+        {columnCount > 0 && displayResources.length > 0 && (
           <>
             {pageable && pageable.pageSize != undefined && Math.ceil(pageable.totalCount / pageable.pageSize) > 1 && (
               <div className={"flex items-center justify-end py-2"}>
@@ -505,7 +507,7 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
             ref={(r) => {
               resourcesComponentRef.current = r;
             }}
-            cellCount={resources.length}
+            cellCount={displayResources.length}
             columnCount={columnCount}
             renderCell={renderCell}
             onScroll={(e) => {
@@ -553,7 +555,7 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
                 }
                 const centerResourceId = parseInt(closest.getAttribute("data-id"), 10);
                 const pageOffset = Math.floor(
-                  resources.findIndex((r) => r.id == centerResourceId) / (searchFormRef.current?.pageSize ?? BasePageSize),
+                  displayResources.findIndex((r) => r.id == centerResourceId) / (searchFormRef.current?.pageSize ?? BasePageSize),
                 );
                 const currentPage = pageOffset + initStartPageRef.current;
 
@@ -689,4 +691,4 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
 
 ResourceTabContent.displayName = "ResourceTabContent";
 
-export default ResourceTabContent;
+export default React.memo(ResourceTabContent);

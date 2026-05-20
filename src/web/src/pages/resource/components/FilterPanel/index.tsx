@@ -40,6 +40,7 @@ interface IProps {
 const MinResourceColCount = 3;
 const DefaultResourceColCount = 6;
 const DefaultMaxResourceColCount = 10;
+const AutoSearchDebounceMs = 1000;
 
 const defaultSearchForm = (): SearchForm => ({
   page: 1,
@@ -135,6 +136,29 @@ const FilterPanel = (props: IProps) => {
     }
   };
 
+  const searchFormRef = useRef(searchForm);
+  searchFormRef.current = searchForm;
+
+  const autoSearchTimerRef = useRef<ReturnType<typeof setTimeout>>();
+
+  const cancelPendingAutoSearch = () => {
+    if (autoSearchTimerRef.current) {
+      clearTimeout(autoSearchTimerRef.current);
+      autoSearchTimerRef.current = undefined;
+    }
+  };
+
+  // Debounce filter-driven searches so rapid edits don't each fire a full search.
+  const scheduleAutoSearch = () => {
+    cancelPendingAutoSearch();
+    autoSearchTimerRef.current = setTimeout(() => {
+      autoSearchTimerRef.current = undefined;
+      search({ ...searchFormRef.current, page: 1 });
+    }, AutoSearchDebounceMs);
+  };
+
+  useEffect(() => cancelPendingAutoSearch, []);
+
   console.log("resource page filter panel rerender", searchForm);
 
   return (
@@ -192,16 +216,11 @@ const FilterPanel = (props: IProps) => {
           }}
           group={searchForm.group}
           onGroupChange={(group) => {
-            const newSearchForm = {
+            setSearchForm({
               ...searchForm,
               group,
-            };
-            setSearchForm(newSearchForm);
-            // Auto-search when filter changes
-            search({
-              ...newSearchForm,
-              page: 1,
             });
+            scheduleAutoSearch();
           }}
           tags={searchForm.tags}
           onTagsChange={(tags) => {
@@ -231,6 +250,7 @@ const FilterPanel = (props: IProps) => {
               };
 
               setSearchForm(nf);
+              cancelPendingAutoSearch();
               search(nf);
             }}
           />
@@ -316,6 +336,7 @@ const FilterPanel = (props: IProps) => {
               size={"sm"}
               className="flex-1"
               onPress={async () => {
+                cancelPendingAutoSearch();
                 await search({
                   ...searchForm,
                   page: 1,
