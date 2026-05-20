@@ -147,6 +147,9 @@
   <data name="BuiltinPropertyName_Rating" xml:space="preserve">
     <value>评分</value>
   </data>
+  <data name="BuiltinPropertyName_Name" xml:space="preserve">
+    <value>名称</value>
+  </data>
   <data name="BuiltinPropertyName_CustomProperty" xml:space="preserve">
     <value>自定义属性</value>
   </data>
