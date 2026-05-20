@@ -3,6 +3,7 @@ import { Button } from '@heroui/button';
 import { Tooltip } from '@heroui/tooltip';
 import { MdOutlineHistory } from 'react-icons/md';
 import type { ContentStatus } from '../types';
+import { getOverlayRoot } from '../overlay';
 import { t, onLocaleChange } from '../i18n';
 
 function formatTime(date: Date | null): string {
@@ -19,7 +20,7 @@ export function ContentTrackerBadge({ status }: { status: ContentStatus }) {
   const tooltip = `${t('lastViewedAt')}: ${formatTime(status.viewedAt)}`;
 
   return (
-    <Tooltip content={tooltip} placement="top" size="sm" color="foreground">
+    <Tooltip content={tooltip} placement="top" size="sm" color="foreground" portalContainer={getOverlayRoot()}>
       <Button
         size="sm"
         color={status.hasUpdate ? 'warning' : 'success'}

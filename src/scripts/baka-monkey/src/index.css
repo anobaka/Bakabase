@@ -1,5 +1,82 @@
-@import "tailwindcss";
+@layer theme, base, components, utilities;
+
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
 @config "../tailwind.config.js";
+
+/* Baka-monkey runs as a userscript injected into third-party pages. Tailwind's
+   global preflight is intentionally NOT imported above: its universal and
+   bare-element selectors (e.g. `* { margin: 0; padding: 0 }`) would reset the
+   host page's spacing and box model and wreck its layout. The scoped reset
+   below gives HeroUI the resets it needs, confined to Baka's own DOM roots.
+   It lives in the `base` layer (like the real preflight) and uses `:where()`
+   to keep specificity at 0 so Tailwind/HeroUI utility classes still win. */
+@layer base {
+  :where(#bk-app, #bk-overlay-root, .bk-marker) {
+    line-height: 1.5;
+
+    &,
+    & *,
+    & *::before,
+    & *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      border: 0 solid;
+    }
+
+    & :is(h1, h2, h3, h4, h5, h6) {
+      font-size: inherit;
+      font-weight: inherit;
+    }
+
+    & a {
+      color: inherit;
+      text-decoration: inherit;
+    }
+
+    & :is(ol, ul, menu) {
+      list-style: none;
+    }
+
+    & :is(button, input, select, optgroup, textarea) {
+      font: inherit;
+      font-feature-settings: inherit;
+      font-variation-settings: inherit;
+      letter-spacing: inherit;
+      color: inherit;
+      border-radius: 0;
+      background-color: transparent;
+      opacity: 1;
+    }
+
+    & button,
+    & input:where([type="button"], [type="reset"], [type="submit"]) {
+      appearance: button;
+      -webkit-appearance: button;
+    }
+
+    & :is(button, [role="button"]) {
+      cursor: pointer;
+    }
+
+    & :is(img, svg, video, canvas) {
+      display: block;
+      vertical-align: middle;
+    }
+
+    & :is(img, video) {
+      max-width: 100%;
+      height: auto;
+    }
+
+    & ::placeholder {
+      opacity: 1;
+      color: color-mix(in oklab, currentColor 50%, transparent);
+    }
+  }
+}
 
 /* Zoom our containers so HeroUI's rem-based sizing looks consistent
    across host pages with different <html> font-size values.
@@ -8,5 +85,10 @@
 #bk-app,
 .bk-marker {
   zoom: calc(16 / var(--bk-html-fs, 16));
+}
+
+#bk-app,
+#bk-overlay-root,
+.bk-marker {
   background: transparent !important;
 }

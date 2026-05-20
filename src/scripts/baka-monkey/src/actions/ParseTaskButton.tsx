@@ -5,6 +5,7 @@ import { MdOutlineDocumentScanner, MdOutlineDownloading, MdOutlineRefresh } from
 import type { ParseTaskAdapter } from '../types';
 import { getApiBaseUrl, httpRequest } from '../api';
 import { showToast } from '../components/Toast';
+import { getOverlayRoot } from '../overlay';
 import { t, onLocaleChange } from '../i18n';
 import { createBatcher } from '../utils/batcher';
 
@@ -101,7 +102,7 @@ export function ParseTaskButton({ adapter, postUrl }: { adapter: ParseTaskAdapte
   const isClickable = !disabled && !loading;
 
   return (
-    <Tooltip content={label} placement="top" size="sm" color="foreground">
+    <Tooltip content={label} placement="top" size="sm" color="foreground" portalContainer={getOverlayRoot()}>
       <Button
         size="sm"
         color={color}
