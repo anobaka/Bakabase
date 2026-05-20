@@ -3,10 +3,10 @@
 import type { CSSProperties } from "react";
 import type { IResourceCoverRef } from "@/components/Resource/components/ResourceCover";
 import type SimpleSearchEngine from "@/core/models/SimpleSearchEngine";
-import type { Property, Resource as ResourceModel } from "@/core/models/Resource";
+import type { Property, Resource as ResourceModel, PropertyValueScopePreference } from "@/core/models/Resource";
 import type { TagValue } from "@/components/StandardValue/models";
 
-import React, { useCallback, useImperativeHandle, useReducer, useRef, useState } from "react";
+import React, { useCallback, useImperativeHandle, useMemo, useReducer, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ApartmentOutlined,
@@ -42,6 +42,8 @@ import {
   DataOrigin,
   PropertyPool,
   PropertyType,
+  PropertyValueScope,
+  propertyValueScopes,
   ResourceAdditionalItem,
   ResourceProperty,
   ResourceSource,
@@ -50,7 +52,7 @@ import {
   ResourceTag,
   StandardValueType,
 } from "@/sdk/constants";
-import { useUiOptionsStore } from "@/stores/options";
+import { useResourceOptionsStore, useUiOptionsStore } from "@/stores/options";
 import PlayControl from "@/components/Resource/components/PlayControl";
 import type { PlayControlPortalProps, PlayControlRef, FsDiscoveryStatus } from "@/components/Resource/components/PlayControl";
 import ContextMenuItems from "@/components/Resource/components/ContextMenuItems";
@@ -71,6 +73,37 @@ const renderSourceIcon = (origin: DataOrigin, className: string): React.ReactNod
     default:
       return <PlayCircleOutlined className={className} />;
   }
+};
+
+// Mirrors DetailModal's PropertyContainer value selection so cover and modal stay consistent.
+const selectValueByScopePriority = (
+  values: Property["values"],
+  globalScopePriority: PropertyValueScope[],
+  preference?: PropertyValueScopePreference,
+): NonNullable<Property["values"]>[number] | undefined => {
+  let effectivePriority = globalScopePriority;
+
+  if (preference?.priorities && preference.priorities.length > 0) {
+    const chain: PropertyValueScope[] = [];
+
+    for (const p of preference.priorities) {
+      chain.push(p.scope);
+      if (!p.fallbackOnEmpty) {
+        break;
+      }
+    }
+    effectivePriority = chain;
+  }
+
+  for (const scope of effectivePriority) {
+    const value = values?.find((v) => v.scope == scope);
+
+    if (value && (value.aliasAppliedBizValue ?? value.bizValue)) {
+      return value;
+    }
+  }
+
+  return undefined;
 };
 
 type MenuEntry = {
@@ -291,6 +324,37 @@ const Resource = React.forwardRef((props: Props, ref) => {
   renderedTimes.current += 1;
 
   const uiOptions = useUiOptionsStore((state) => state.data);
+  const resourceOptions = useResourceOptionsStore((state) => state.data);
+
+  const valueScopePriority = useMemo<PropertyValueScope[]>(() => {
+    const configured = resourceOptions.propertyValueScopePriority;
+    const vsp =
+      configured && configured.length > 0
+        ? configured.slice()
+        : propertyValueScopes.map((s) => s.value);
+
+    for (const scope of propertyValueScopes) {
+      if (!vsp.includes(scope.value)) {
+        if (scope.value == PropertyValueScope.Manual) {
+          vsp.splice(0, 0, scope.value);
+        } else {
+          vsp.push(scope.value);
+        }
+      }
+    }
+
+    return vsp;
+  }, [resourceOptions.propertyValueScopePriority]);
+
+  const scopePreferenceMap = useMemo(() => {
+    const map = new Map<string, PropertyValueScopePreference>();
+
+    for (const p of resource.scopePreferences ?? []) {
+      map.set(`${p.propertyPool}-${p.propertyId}`, p);
+    }
+
+    return map;
+  }, [resource.scopePreferences]);
 
   // Use useReducer for stable forceUpdate reference
   const [, forceUpdate] = useReducer(x => x + 1, 0);
@@ -538,14 +602,24 @@ const Resource = React.forwardRef((props: Props, ref) => {
                     }
                     break;
                   case PropertyPool.Reserved:
-                  case PropertyPool.Custom:
+                  case PropertyPool.Custom: {
                     const property = resource.properties?.[dpk.pool as PropertyPool]?.[dpk.id];
+                    const selectedValue = selectValueByScopePriority(
+                      property?.values,
+                      valueScopePriority,
+                      scopePreferenceMap.get(`${dpk.pool}-${dpk.id}`),
+                    );
+                    const rawBizValue =
+                      selectedValue?.aliasAppliedBizValue ?? selectedValue?.bizValue;
 
-                    const rawBizValue = property?.values?.find((x) => x.bizValue)?.bizValue;
                     bizValueType = property?.bizValueType;
                     propertyType = property?.type;
-                    bizValue = bizValueType != undefined ? convertFromApiValue(rawBizValue, bizValueType) : rawBizValue;
+                    bizValue =
+                      bizValueType != undefined
+                        ? convertFromApiValue(rawBizValue, bizValueType)
+                        : rawBizValue;
                     break;
+                  }
                 }
               } catch (error) {
                 log("error occurred while rendering display property", error);
@@ -611,21 +685,23 @@ const Resource = React.forwardRef((props: Props, ref) => {
       const p: Property = customPropertyValues[id];
 
       if (p.bizValueType == StandardValueType.ListTag) {
-        const values = p.values?.find((v) => (v.aliasAppliedBizValue as TagValue[])?.length > 0);
+        const selectedValue = selectValueByScopePriority(
+          p.values,
+          valueScopePriority,
+          scopePreferenceMap.get(`${PropertyPool.Custom}-${id}`),
+        );
+        const tags = (selectedValue?.aliasAppliedBizValue ??
+          selectedValue?.bizValue) as TagValue[] | undefined;
 
         if (
-          values &&
+          tags &&
+          tags.length > 0 &&
           displayPropertyKeys.some((dpk) => dpk.pool == PropertyPool.Custom && dpk.id == id)
         ) {
-          firstTagsValue = (values.aliasAppliedBizValue as TagValue[]).map((id, i) => {
-            const bvs = values.aliasAppliedBizValue as TagValue[];
-            const bv = bvs?.[i];
-
-            return {
-              value: id,
-              ...bv,
-            };
-          });
+          firstTagsValue = tags.map((tag) => ({
+            value: tag,
+            ...tag,
+          }));
           firstTagsValuePropertyId = id;
 
           return true;
