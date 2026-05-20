@@ -6,6 +6,7 @@ public interface IAvDetail
     string? Title { get; set; }
     string? OriginalTitle { get; set; }
     string? Actor { get; set; }
+    string? Outline { get; set; }
     string? Tag { get; set; }
     string? Release { get; set; }
     string? Year { get; set; }

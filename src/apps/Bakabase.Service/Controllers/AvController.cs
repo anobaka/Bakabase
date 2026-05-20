@@ -218,6 +218,7 @@ public class AvController(
         Title = d.Title,
         OriginalTitle = d.OriginalTitle,
         Actor = d.Actor,
+        Outline = d.Outline,
         Tag = d.Tag,
         Release = d.Release,
         Year = d.Year,

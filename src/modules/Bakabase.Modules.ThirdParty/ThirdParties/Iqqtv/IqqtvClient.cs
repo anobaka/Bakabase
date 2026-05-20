@@ -82,6 +82,7 @@ public class IqqtvClient(
                 Title = title,
                 OriginalTitle = title,
                 Actor = actor,
+                Outline = outline,
                 Tag = tag.Replace("无码片", "").Replace("無碼片", "").Replace("無修正", ""),
                 Release = release,
                 Year = year,

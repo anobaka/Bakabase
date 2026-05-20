@@ -67,6 +67,7 @@ public class Fc2hubClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
                 Title = title,
                 OriginalTitle = title,
                 Actor = studio,
+                Outline = outline,
                 Tag = tag,
                 Release = "",
                 Year = "",

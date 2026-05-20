@@ -6,6 +6,7 @@ public record Fc2hubVideoDetail : Bakabase.Abstractions.Models.Domain.IAvDetail
     public string? Title { get; set; }
     public string? OriginalTitle { get; set; }
     public string? Actor { get; set; }
+    public string? Outline { get; set; }
     public string? Tag { get; set; }
     public string? Release { get; set; }
     public string? Year { get; set; }

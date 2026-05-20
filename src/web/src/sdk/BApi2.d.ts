@@ -9184,6 +9184,7 @@ export interface components {
             title?: string;
             originalTitle?: string;
             actor?: string;
+            outline?: string;
             tag?: string;
             release?: string;
             year?: string;

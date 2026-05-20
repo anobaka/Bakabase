@@ -106,6 +106,7 @@ const targetToDetailField: Partial<Record<AvEnhancerTarget, keyof AvSourceTestDe
   [AvEnhancerTarget.Title]: "title",
   [AvEnhancerTarget.OriginalTitle]: "originalTitle",
   [AvEnhancerTarget.Actor]: "actor",
+  [AvEnhancerTarget.Introduction]: "outline",
   [AvEnhancerTarget.Tags]: "tag",
   [AvEnhancerTarget.Release]: "release",
   [AvEnhancerTarget.Year]: "year",
