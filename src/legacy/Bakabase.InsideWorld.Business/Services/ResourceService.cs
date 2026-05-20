@@ -561,6 +561,13 @@ namespace Bakabase.InsideWorld.Business.Services
                                                     }).ToList(),
                                                     true);
 
+                                                reservedProperties[(int)ResourceProperty.Name] = new Resource.Property(
+                                                    reservedPropertyMap.GetValueOrDefault((int)ResourceProperty.Name)?.Name,
+                                                    reservedPropertyMap.GetValueOrDefault((int)ResourceProperty.Name)?.Type ?? default,
+                                                    dbReservedProperties?.Select(s =>
+                                                        new Resource.Property.PropertyValue(s.Scope, s.Name, s.Name, s.Name)).ToList(),
+                                                    true);
+
                                                 // Process custom properties
                                                 var customProperties = r.Properties.GetOrAdd((int)PropertyPool.Custom, _ => []);
 
@@ -1715,6 +1722,7 @@ namespace Bakabase.InsideWorld.Business.Services
                     case ResourceProperty.Introduction:
                     case ResourceProperty.Cover:
                     case ResourceProperty.Rating:
+                    case ResourceProperty.Name:
                     {
                         var scopeValue = await _reservedPropertyValueService.GetFirst(x =>
                             x.ResourceId == resourceId && x.Scope == (int) PropertyValueScope.Manual);
@@ -1739,6 +1747,10 @@ namespace Bakabase.InsideWorld.Business.Services
                                 scopeValue.CoverPaths =
                                     model.Value?.DeserializeDbValueAsStandardValue<List<string>>(
                                         PropertyType.Attachment);
+                                    break;
+                            case ResourceProperty.Name:
+                                scopeValue.Name =
+                                    model.Value?.DeserializeAsStandardValue<string>(StandardValueType.String);
                                     break;
                             default:
                                 throw new ArgumentOutOfRangeException();
@@ -1861,6 +1873,7 @@ namespace Bakabase.InsideWorld.Business.Services
                     case ResourceProperty.Introduction:
                     case ResourceProperty.Cover:
                     case ResourceProperty.Rating:
+                    case ResourceProperty.Name:
                     {
                         // Get all existing scope values for these resources
                         var existingValues = await _reservedPropertyValueService.GetAll(x =>
@@ -1904,6 +1917,10 @@ namespace Bakabase.InsideWorld.Business.Services
                                     scopeValue.CoverPaths =
                                         model.Value?.DeserializeDbValueAsStandardValue<List<string>>(
                                             PropertyType.Attachment);
+                                    break;
+                                case ResourceProperty.Name:
+                                    scopeValue.Name =
+                                        model.Value?.DeserializeAsStandardValue<string>(StandardValueType.String);
                                     break;
                                 default:
                                     throw new ArgumentOutOfRangeException();

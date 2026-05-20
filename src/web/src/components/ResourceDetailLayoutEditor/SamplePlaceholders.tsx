@@ -55,6 +55,14 @@ function PlaceholderContent({ id }: { id: SectionId }) {
           </div>
         </PlaceholderCard>
       );
+    case "name":
+      return (
+        <PlaceholderCard color="bg-slate-100" tone="text-slate-900">
+          <div className="text-sm font-semibold truncate">
+            {t<string>("resource.detailLayout.sample.name.value")}
+          </div>
+        </PlaceholderCard>
+      );
     case "rating":
       return (
         <PlaceholderCard color="bg-amber-100" tone="text-amber-900">
