@@ -8,12 +8,10 @@ on:
     #   - 'v*'
   # pull_request:
   #   branches: [ main, 'dev/v*' ]
+  # Manual trigger for the full build + deploy + release pipeline.
+  # [skip ci] only blocks push and pull_request, not workflow_dispatch, so this
+  # is how to run the pipeline for a commit whose push was skipped.
   workflow_dispatch:
-  #   inputs:
-  #     tag:
-  #       description: 'tag (e.g., v1.2.3, 1.2.3, v1.2.3-alpha)'
-  #       required: true
-  #       type: string
 
 permissions:
   contents: write
