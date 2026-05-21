@@ -207,16 +207,16 @@ export function MasonryCanvas({ config, renderSection, onConfigChange }: Props) 
 
     dragStateRef.current = null;
     if (!ds) return;
-    setPreviewConfig((prev) => {
-      if (prev) {
-        const compacted = settleLayout(prev.blocks, { movedId: ds.id });
+    // onConfigChange must not be called inside a setPreviewConfig updater:
+    // updater functions have to be pure, and React may re-run them, which
+    // re-triggers the parent update and causes an infinite render loop.
+    if (previewConfig) {
+      const compacted = settleLayout(previewConfig.blocks, { movedId: ds.id });
 
-        onConfigChange?.({ ...prev, blocks: compacted });
-      }
-
-      return null;
-    });
-  }, [onConfigChange]);
+      onConfigChange?.({ ...previewConfig, blocks: compacted });
+    }
+    setPreviewConfig(null);
+  }, [onConfigChange, previewConfig]);
 
   useEffect(() => {
     window.addEventListener("pointermove", onDragPointerMove);
@@ -304,16 +304,14 @@ export function MasonryCanvas({ config, renderSection, onConfigChange }: Props) 
 
     resizeStateRef.current = null;
     if (!rs) return;
-    setPreviewConfig((prev) => {
-      if (prev) {
-        const compacted = settleLayout(prev.blocks, { movedId: rs.id });
+    // See onDragPointerUp: keep onConfigChange out of the updater function.
+    if (previewConfig) {
+      const compacted = settleLayout(previewConfig.blocks, { movedId: rs.id });
 
-        onConfigChange?.({ ...prev, blocks: compacted });
-      }
-
-      return null;
-    });
-  }, [onConfigChange]);
+      onConfigChange?.({ ...previewConfig, blocks: compacted });
+    }
+    setPreviewConfig(null);
+  }, [onConfigChange, previewConfig]);
 
   useEffect(() => {
     window.addEventListener("pointermove", onResizePointerMove);

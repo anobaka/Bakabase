@@ -29,6 +29,12 @@ const Select: React.FC<SelectProps> = ({ dataSource = [], ...props }) => {
 
   const isMultiline = props.selectionMode === "multiple";
 
+  // Each item is rendered as <SelectItem key={data.value}>. An item without a
+  // usable value produces a keyless node, and react-stately throws
+  // "No key found for item" while building the collection, crashing the whole
+  // page. Drop such items — an option with no value can't be selected anyway.
+  const items = dataSource.filter((d) => d != null && d.value != null);
+
   // console.log(props.selectedKeys, dataSource);
   const baseRenderValue =
     props.renderValue ??
@@ -64,7 +70,7 @@ const Select: React.FC<SelectProps> = ({ dataSource = [], ...props }) => {
     <HeroSelect
       // aria-label={'Select'}
       isMultiline={isMultiline}
-      items={dataSource ?? []}
+      items={items}
       renderValue={renderValue}
       {...props}
     >

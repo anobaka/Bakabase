@@ -42,6 +42,7 @@ using Bootstrap.Models.Constants;
 using Bootstrap.Models.ResponseModels;
 using CliWrap;
 using CliWrap.Buffered;
+using CliWrap.Exceptions;
 using DotNext.Collections.Generic;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -1443,38 +1444,37 @@ namespace Bakabase.Service.Controllers
                                 .RequestAborted);
                         var preferredCodec = hwAccelInfo.PreferredCodec;
 
-                        _logger.LogInformation("Using codec {Codec} for video transcoding of {FileName}",
-                            preferredCodec, Path.GetFileName(fullname));
-
-                        // Transcode to h264 using ffmpeg with hardware acceleration if available
                         var ffmpegPath = _ffMpegService.FfMpegExecutable;
-                        var ffmpegCmd = Cli.Wrap(ffmpegPath)
+
+                        // Transcode to h264 using the given codec. Hardware-specific
+                        // tuning is selected based on the codec name.
+                        CliWrap.Command BuildTranscodeCommand(string codec) => Cli.Wrap(ffmpegPath)
                             .WithArguments(args =>
                             {
                                 args
                                     .Add("-i").Add(fullname)
-                                    .Add("-c:v").Add(preferredCodec);
+                                    .Add("-c:v").Add(codec);
 
                                 // Add hardware-specific options based on the codec
-                                if (preferredCodec == "h264_nvenc")
+                                if (codec == "h264_nvenc")
                                 {
                                     args
                                         .Add("-preset").Add("p1") // NVENC preset
                                         .Add("-tune").Add("hq"); // High quality tuning
                                 }
-                                else if (preferredCodec == "h264_qsv")
+                                else if (codec == "h264_qsv")
                                 {
                                     args
                                         .Add("-preset").Add("veryfast") // QSV preset
                                         .Add("-look_ahead").Add("1"); // Enable look-ahead
                                 }
-                                else if (preferredCodec == "h264_amf")
+                                else if (codec == "h264_amf")
                                 {
                                     args
                                         .Add("-quality").Add("speed") // AMF quality preset
                                         .Add("-rc").Add("cqp"); // Rate control
                                 }
-                                else if (preferredCodec == "h264_videotoolbox")
+                                else if (codec == "h264_videotoolbox")
                                 {
                                     args
                                         .Add("-allow_sw").Add("1"); // Allow software fallback
@@ -1498,6 +1498,13 @@ namespace Bakabase.Service.Controllers
                             })
                             .WithStandardOutputPipe(PipeTarget.ToStream(Response.Body, true));
 
+                        // Try the hardware-accelerated codec first; if it fails before
+                        // any output has been written, fall back to software encoding.
+                        const string softwareCodec = "libx264";
+                        var codecsToTry = preferredCodec == softwareCodec
+                            ? new[] { softwareCodec }
+                            : new[] { preferredCodec, softwareCodec };
+
                         // The file name may contain non-ASCII characters (e.g. CJK),
                         // which would throw when written as a raw header value, so
                         // encode per RFC 5987.
@@ -1506,15 +1513,49 @@ namespace Bakabase.Service.Controllers
                         var encodedName = Uri.EscapeDataString(displayName);
                         Response.Headers["Content-Disposition"] =
                             $"inline; filename*=UTF-8''{encodedName}";
-                        try
+
+                        for (var i = 0; i < codecsToTry.Length; i++)
                         {
-                            await ffmpegCmd.ExecuteAsync(HttpContext.RequestAborted);
+                            var codec = codecsToTry[i];
+                            var isLastAttempt = i == codecsToTry.Length - 1;
+
+                            _logger.LogInformation("Using codec {Codec} for video transcoding of {FileName}",
+                                codec, Path.GetFileName(fullname));
+
+                            try
+                            {
+                                await BuildTranscodeCommand(codec).ExecuteAsync(HttpContext.RequestAborted);
+                                break;
+                            }
+                            catch (OperationCanceledException)
+                                when (HttpContext.RequestAborted.IsCancellationRequested)
+                            {
+                                // Client navigated away / closed tab; not an error.
+                                break;
+                            }
+                            catch (CommandExecutionException ex)
+                            {
+                                // ffmpeg failed. If nothing has been written to the
+                                // response yet and another codec is available, retry
+                                // with it (typically hardware -> software fallback).
+                                if (!isLastAttempt && !Response.HasStarted)
+                                {
+                                    _logger.LogWarning(ex,
+                                        "Video transcoding with codec {Codec} failed for {FileName}, falling back to software encoding",
+                                        codec, Path.GetFileName(fullname));
+                                    continue;
+                                }
+
+                                // No fallback possible (response already streaming, or
+                                // this was the last codec). ffmpeg choking on a specific
+                                // file is an expected failure — log as a warning so it is
+                                // not reported as an error.
+                                _logger.LogWarning(ex, "Video transcoding failed for {FileName}",
+                                    Path.GetFileName(fullname));
+                                break;
+                            }
                         }
-                        catch (OperationCanceledException)
-                            when (HttpContext.RequestAborted.IsCancellationRequested)
-                        {
-                            // Client navigated away / closed tab; not an error.
-                        }
+
                         return new EmptyResult();
                     }
                 }
