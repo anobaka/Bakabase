@@ -7,7 +7,6 @@ import { ListboxItem, Button } from "@heroui/react";
 import { useCookie, useLocalStorage } from "react-use";
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroui/shared-icons";
 
-import PscPage from "./cases/Psc";
 import TourPage from "./cases/Tour";
 import SortablePage from "./cases/Sortable";
 import MediaPreviewerTest from "./cases/MediaPreviewer";
@@ -87,7 +86,6 @@ const components = {
   ResourceTransfer: <ResourceTransferPage />,
   ResourceFilter: <ResourceFilterPage />,
   VirtualList: <VirtualListPage />,
-  Psc: <PscPage />,
   Tour: <TourPage />,
   ResourceOrderSelector: <OrderSelector />,
   Menu: <AntdMenu />,
