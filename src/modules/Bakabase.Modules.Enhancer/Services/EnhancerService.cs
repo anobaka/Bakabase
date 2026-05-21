@@ -714,7 +714,23 @@ namespace Bakabase.Modules.Enhancer.Services
                             foreach (var task in nextTasks)
                             {
                                 var resource =
-                                    (await resourceService.Get(task.Resource.Id, ResourceAdditionalItem.All))!;
+                                    await resourceService.Get(task.Resource.Id, ResourceAdditionalItem.All);
+                                if (resource == null)
+                                {
+                                    // The resource was deleted after the task list was built.
+                                    // Skip it, but still release dependents and remove it from
+                                    // the set so the loop can keep making progress.
+                                    _logger.LogWarning(
+                                        $"Resource [{task.Resource.Id}] no longer exists, skipping enhancement by [{task.Enhancer.Id}:{(EnhancerId)task.Enhancer.Id}]");
+                                    foreach (var dep in task.Dependents)
+                                    {
+                                        dep.Dependencies?.Remove(task);
+                                    }
+
+                                    set.Remove(task);
+                                    continue;
+                                }
+
                                 List<Enhancement>? enhancements = null;
                                 List<EnhancementLog>? logs = null;
                                 string? errorMessage = null;
