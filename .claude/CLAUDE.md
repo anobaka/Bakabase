@@ -76,10 +76,11 @@ Use `AskUserQuestion` to ask what the user wants, offering:
 
 - **创建并关联 issue** — Create a concise Chinese issue describing the change,
   then reference it in the commit so GitHub auto-closes it.
-- **其他操作（我来输入）** — Let the user type instructions, e.g. "把 #12 #15
-  标记为已处理" → add closing keywords for those existing issue IDs to the
-  commit.
 - **跳过** — No issue action needed.
+
+`AskUserQuestion` already appends an **Other** option, so the user can still
+type custom instructions (e.g. "把 #12 #15 标记为已处理") without a dedicated
+choice — do not add one.
 
 ### Creating an issue
 
@@ -133,3 +134,12 @@ docs: 更新 GitHub issue 管理工作流程 [skip ci]
 
 Closes #123
 ```
+
+## 自动化 Issue 处理规范
+
+当被要求处理 GitHub Issue 时，你必须严格遵循以下 4 步流程：
+
+1. **审阅**：使用 `gh` 命令获取 Issue 详情，并结合本地代码库进行分析。
+2. **确认（强制暂停）**：向我口述排查结果和你的修改计划。此时**必须停止操作**，并明确询问我：“是否同意按此方案处理？”
+3. **处理**：只有在我明确回复同意（如"yes"、"继续"）后，你才可以新建分支并开始修改代码。
+4. **提 PR**：代码修改并测试完成后，使用 `gh pr create` 提交 Pull Request，在描述中关联 Issue 号（例如 Closes #xxx），并将 PR 的网页链接输出给我。
