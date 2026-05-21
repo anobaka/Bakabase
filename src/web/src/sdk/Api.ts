@@ -1329,6 +1329,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
   requestInterval: number;
   defaultPath?: string;
   namingConvention?: string;
+  preferTorrent: boolean;
   skipExisting: boolean;
   /** @format int32 */
   maxRetries: number;
@@ -1582,6 +1583,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputE
   requestInterval?: number;
   defaultPath?: string;
   namingConvention?: string;
+  preferTorrent?: boolean;
   skipExisting?: boolean;
   /** @format int32 */
   maxRetries?: number;

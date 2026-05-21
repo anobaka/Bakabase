@@ -9,6 +9,7 @@ import { FileSystemSelectorButton } from "@/components/FileSystemSelector";
 import BApi from "@/sdk/BApi";
 import { useExHentaiOptionsStore } from "@/stores/options";
 import { CookieValidatorTarget, ResourceSource } from "@/sdk/constants";
+import PreferTorrentField from "@/pages/downloader/components/TaskDetailModal/components/PreferTorrentField";
 import AccountsPanel, { type AccountField } from "../base/AccountsPanel";
 import ConfigurableThirdPartyPanel, { type ConfigFieldTab } from "../base/ConfigurableThirdPartyPanel";
 import MetadataMappingPanel from "../base/MetadataMappingPanel";
@@ -173,6 +174,10 @@ export const ExHentaiConfigPanel: FC<ExHentaiConfigPanelProps> = ({
               size="sm"
               value={options?.namingConvention || ""}
               onValueChange={(v) => patch({ namingConvention: v })}
+            />
+            <PreferTorrentField
+              preferTorrent={options?.preferTorrent ?? true}
+              onChange={(v) => patch({ preferTorrent: v })}
             />
           </div>
         ),

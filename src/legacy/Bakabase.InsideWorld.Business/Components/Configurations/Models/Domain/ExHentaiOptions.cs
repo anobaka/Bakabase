@@ -46,6 +46,12 @@ namespace Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain
         public int RequestInterval { get; set; } = 1000;
         public string? DefaultPath { get; set; }
         public string? NamingConvention { get; set; }
+
+        /// <summary>
+        /// Default "prefer torrent" value applied to newly created download tasks.
+        /// </summary>
+        public bool PreferTorrent { get; set; } = true;
+
         public bool SkipExisting { get; set; }
         public int MaxRetries { get; set; }
         public int RequestTimeout { get; set; }
