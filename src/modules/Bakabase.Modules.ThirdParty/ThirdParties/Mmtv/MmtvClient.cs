@@ -110,6 +110,7 @@ public class MmtvClient(IHttpClientFactory httpClientFactory, ILoggerFactory log
                 Title = title,
                 OriginalTitle = title,
                 Actor = actor,
+                Outline = outline,
                 Tag = tag,
                 Release = release,
                 Year = year,

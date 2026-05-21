@@ -439,6 +439,10 @@ function ResourceEnhancementsModal({ resourceId, ...props }: Props) {
             bizRv = rv.coverPaths;
             dbRv = rv.coverPaths;
             break;
+          case ResourceProperty.Name:
+            bizRv = rv.name;
+            dbRv = rv.name;
+            break;
           case ResourceProperty.PlayedAt:
             bizRv = new Dayjs(rv.playedAt);
             dbRv = new Dayjs(rv.playedAt);

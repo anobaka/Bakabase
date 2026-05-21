@@ -2802,7 +2802,8 @@ export enum AvEnhancerTarget {
   Cover = 13,
   Poster = 14,
   Website = 15,
-  Mosaic = 16
+  Mosaic = 16,
+  Introduction = 17
 }
 
 export const avEnhancerTargets = [
@@ -2822,7 +2823,8 @@ export const avEnhancerTargets = [
   { label: 'Cover', value: AvEnhancerTarget.Cover },
   { label: 'Poster', value: AvEnhancerTarget.Poster },
   { label: 'Website', value: AvEnhancerTarget.Website },
-  { label: 'Mosaic', value: AvEnhancerTarget.Mosaic }
+  { label: 'Mosaic', value: AvEnhancerTarget.Mosaic },
+  { label: 'Introduction', value: AvEnhancerTarget.Introduction }
 ] as const;
 
 export const AvEnhancerTargetLabel: Record<AvEnhancerTarget, string> = {
@@ -2842,7 +2844,8 @@ export const AvEnhancerTargetLabel: Record<AvEnhancerTarget, string> = {
   [AvEnhancerTarget.Cover]: 'Cover',
   [AvEnhancerTarget.Poster]: 'Poster',
   [AvEnhancerTarget.Website]: 'Website',
-  [AvEnhancerTarget.Mosaic]: 'Mosaic'
+  [AvEnhancerTarget.Mosaic]: 'Mosaic',
+  [AvEnhancerTarget.Introduction]: 'Introduction'
 };
 
 export enum AiEnhancerTarget {

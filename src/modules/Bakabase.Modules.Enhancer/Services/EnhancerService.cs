@@ -245,6 +245,11 @@ namespace Bakabase.Modules.Enhancer.Services
                                     rpv.CoverPaths = nv as List<string>;
                                     break;
                                 }
+                                case ReservedProperty.Name:
+                                {
+                                    rpv.Name = nv as string;
+                                    break;
+                                }
                                 default:
                                     throw new ArgumentOutOfRangeException(
                                         nameof(targetOptions.PropertyId),

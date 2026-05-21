@@ -626,6 +626,9 @@
   <data name="Enhancer_Av_Target_Mosaic_Name" xml:space="preserve">
     <value>Mosaic</value>
   </data>
+  <data name="Enhancer_Av_Target_Introduction_Name" xml:space="preserve">
+    <value>Introduction</value>
+  </data>
   <data name="Enhancer_AI_Name" xml:space="preserve">
     <value>AI</value>
   </data>

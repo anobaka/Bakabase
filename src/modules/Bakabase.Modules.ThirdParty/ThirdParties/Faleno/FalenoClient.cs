@@ -149,6 +149,7 @@ public class FalenoClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
                 Title = title,
                 OriginalTitle = title,
                 Actor = actor,
+                Outline = outline,
                 Tag = tags,
                 Release = release,
                 Year = year,

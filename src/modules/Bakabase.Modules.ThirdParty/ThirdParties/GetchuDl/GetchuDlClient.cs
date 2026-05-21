@@ -80,6 +80,7 @@ public class GetchuDlClient(IHttpClientFactory httpClientFactory, ILoggerFactory
                 Title = title,
                 OriginalTitle = title,
                 Actor = "",
+                Outline = outline,
                 Tag = tag,
                 Release = release,
                 Year = year,

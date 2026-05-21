@@ -153,6 +153,16 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
               <ResourceCover resource={resource} showBiggerOnHover={false} />
             </div>
           );
+        case "name":
+          return (
+            <Properties
+              columns={1}
+              reload={loadResource}
+              resource={resource}
+              restrictedPropertyIds={[ReservedProperty.Name]}
+              restrictedPropertyPool={PropertyPool.Reserved}
+            />
+          );
         case "rating":
           return (
             <Properties

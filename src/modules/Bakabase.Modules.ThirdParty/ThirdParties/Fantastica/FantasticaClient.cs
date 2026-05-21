@@ -105,6 +105,7 @@ public class FantasticaClient(IHttpClientFactory httpClientFactory, ILoggerFacto
                 Title = title,
                 OriginalTitle = title,
                 Actor = actor,
+                Outline = outline,
                 Tag = tags,
                 Release = release,
                 Year = year,

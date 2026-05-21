@@ -88,6 +88,7 @@ public class LulubarClient(IHttpClientFactory httpClientFactory, ILoggerFactory 
                 Title = title,
                 OriginalTitle = title,
                 Actor = actor,
+                Outline = outline,
                 Tag = tag,
                 Release = release,
                 Year = year,

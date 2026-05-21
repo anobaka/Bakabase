@@ -127,6 +127,7 @@ public class FreejavbtClient(IHttpClientFactory httpClientFactory, ILoggerFactor
                 Title = parsedTitle,
                 OriginalTitle = parsedTitle,
                 Actor = actor,
+                Outline = outline,
                 Tag = tag,
                 Release = release,
                 Year = year,

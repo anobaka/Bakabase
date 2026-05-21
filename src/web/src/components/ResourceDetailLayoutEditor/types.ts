@@ -1,5 +1,6 @@
 export type SectionId =
   | "cover"
+  | "name"
   | "rating"
   | "actions"
   | "basicInfo"

@@ -174,6 +174,7 @@ public class AvEnhancer(
                     ["Title"] = d.Title,
                     ["OriginalTitle"] = d.OriginalTitle,
                     ["Actor"] = d.Actor,
+                    ["Outline"] = d.Outline,
                     ["Publisher"] = d.Publisher,
                     ["Studio"] = d.Studio,
                     ["Series"] = d.Series,
@@ -357,6 +358,9 @@ public class AvEnhancer(
                     break;
                 case AvEnhancerTarget.Mosaic:
                     AddStringEnhancement(orderedDetails, d => d.Mosaic, target, enhancements);
+                    break;
+                case AvEnhancerTarget.Introduction:
+                    AddStringEnhancement(orderedDetails, d => d.Outline, target, enhancements);
                     break;
             }
         }

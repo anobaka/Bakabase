@@ -2,6 +2,7 @@ import type { BlockPlacement, DetailLayoutConfig, SectionId, SectionMeta } from 
 
 export const ALL_SECTIONS: SectionMeta[] = [
   { id: "cover", label: "Cover", heightBehavior: "fixed" },
+  { id: "name", label: "Name", heightBehavior: "fixed" },
   { id: "rating", label: "Rating", heightBehavior: "fixed" },
   { id: "actions", label: "Actions", heightBehavior: "fixed" },
   { id: "basicInfo", label: "Basic Info", heightBehavior: "fixed" },
@@ -41,10 +42,11 @@ export const DEFAULT_LAYOUT: DetailLayoutConfig = {
     { id: "basicInfo", colStart: 0, colSpan: 4, rowStart: 8, rowSpan: 2 },
     { id: "mediaLibs", colStart: 0, colSpan: 4, rowStart: 10, rowSpan: 2 },
     { id: "profiles", colStart: 0, colSpan: 4, rowStart: 12, rowSpan: 2 },
-    { id: "hierarchy", colStart: 4, colSpan: 8, rowStart: 0, rowSpan: 2 },
-    { id: "introduction", colStart: 4, colSpan: 8, rowStart: 2, rowSpan: 3 },
-    { id: "playedAt", colStart: 4, colSpan: 8, rowStart: 5, rowSpan: 1 },
-    { id: "properties", colStart: 4, colSpan: 8, rowStart: 6, rowSpan: 6 },
+    { id: "name", colStart: 4, colSpan: 8, rowStart: 0, rowSpan: 1 },
+    { id: "hierarchy", colStart: 4, colSpan: 8, rowStart: 1, rowSpan: 2 },
+    { id: "introduction", colStart: 4, colSpan: 8, rowStart: 3, rowSpan: 3 },
+    { id: "playedAt", colStart: 4, colSpan: 8, rowStart: 6, rowSpan: 1 },
+    { id: "properties", colStart: 4, colSpan: 8, rowStart: 7, rowSpan: 6 },
     { id: "relatedDataCards", colStart: 0, colSpan: 12, rowStart: 14, rowSpan: 4 },
   ],
   hidden: [],

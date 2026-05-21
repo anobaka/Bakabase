@@ -59,6 +59,7 @@ public class Jav321Client(IHttpClientFactory httpClientFactory, ILoggerFactory l
                 Title = title,
                 OriginalTitle = title,
                 Actor = actor,
+                Outline = outline,
                 Tag = string.Join(",", tags),
                 Release = release,
                 Year = year,
