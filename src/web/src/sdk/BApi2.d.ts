@@ -6844,6 +6844,7 @@ export interface components {
             requestInterval: number;
             defaultPath?: string;
             namingConvention?: string;
+            preferTorrent: boolean;
             skipExisting: boolean;
             /** Format: int32 */
             maxRetries: number;
@@ -7084,6 +7085,7 @@ export interface components {
             requestInterval?: number;
             defaultPath?: string;
             namingConvention?: string;
+            preferTorrent?: boolean;
             skipExisting?: boolean;
             /** Format: int32 */
             maxRetries?: number;

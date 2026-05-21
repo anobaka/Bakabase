@@ -386,6 +386,11 @@ namespace Bakabase.Service.Controllers
                     options.RequestTimeout = model.RequestTimeout.Value;
                 }
 
+                if (model.PreferTorrent.HasValue)
+                {
+                    options.PreferTorrent = model.PreferTorrent.Value;
+                }
+
                 if (model.ShowCover.HasValue)
                 {
                     options.ShowCover = model.ShowCover.Value;

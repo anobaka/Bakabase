@@ -13,7 +13,7 @@ import { ButtonGroup, Input, Textarea } from "@heroui/react";
 
 import { DownloadTaskActionOnConflict, ThirdPartyId } from "@/sdk/constants";
 import { Alert, Button, Modal } from "@/components/bakaui";
-import { useDownloaderGlobalOptionsStore } from "@/stores/options";
+import { useDownloaderGlobalOptionsStore, useExHentaiOptionsStore } from "@/stores/options";
 import NavigateButton from "@/components/NavigateButton";
 import { isThirdPartyDeveloping } from "@/pages/downloader/models";
 import DevelopingChip from "@/components/Chips/DevelopingChip";
@@ -48,6 +48,9 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
   const { createPortal } = useBakabaseContext();
   const autoStartAfterCreation = useDownloaderGlobalOptionsStore(
     (s) => s.data?.autoStartAfterCreation ?? false,
+  );
+  const exHentaiPreferTorrentDefault = useExHentaiOptionsStore(
+    (s) => s.data?.preferTorrent ?? true,
   );
 
   const isAdding = !(id && id > 0);
@@ -302,11 +305,9 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
             ) : null;
           case DownloadTaskFieldType.PreferTorrent: {
             const parsedOptions = form.options ? JSON.parse(form.options) : {};
-            if (parsedOptions.preferTorrent === undefined) {
-              parsedOptions.preferTorrent = true;
-              form.options = JSON.stringify(parsedOptions);
-            }
-            const preferTorrent = parsedOptions.preferTorrent;
+            const preferTorrent =
+              parsedOptions.preferTorrent ??
+              (isAdding ? exHentaiPreferTorrentDefault : true);
 
             return (
               <PreferTorrentField

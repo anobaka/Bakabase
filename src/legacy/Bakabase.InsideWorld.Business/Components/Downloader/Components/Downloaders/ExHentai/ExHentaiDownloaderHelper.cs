@@ -1,8 +1,10 @@
 using System;
 using System.Net.Http;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Components;
+using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input;
 using Bakabase.InsideWorld.Models.Constants;
 using Bootstrap.Components.Configuration.Abstractions;
@@ -18,6 +20,41 @@ public class ExHentaiDownloaderHelper(
     HttpClient httpClient) : AbstractDownloaderHelper<ExHentaiOptions>(optionsManager, localizer, httpClient)
 {
     public override ThirdPartyId ThirdPartyId => ThirdPartyId.ExHentai;
+
+    public override async Task<DownloadTask[]> BuildTasks(DownloadTaskAddInputModel model)
+    {
+        var tasks = await base.BuildTasks(model);
+        var preferTorrentDefault = optionsManager.Value.PreferTorrent;
+        foreach (var task in tasks)
+        {
+            task.Options = ApplyDefaultTaskOptions(task.Options, preferTorrentDefault);
+        }
+
+        return tasks;
+    }
+
+    // Freeze the global PreferTorrent default onto the task at creation; an explicit per-task value is kept.
+    private static string ApplyDefaultTaskOptions(string? rawOptions, bool preferTorrentDefault)
+    {
+        ExHentaiTaskOptionsPatch? patch = null;
+        if (!string.IsNullOrWhiteSpace(rawOptions))
+        {
+            try
+            {
+                patch = JsonSerializer.Deserialize<ExHentaiTaskOptionsPatch>(rawOptions, JsonSerializerOptions.Web);
+            }
+            catch (JsonException)
+            {
+                // ignored: malformed options fall back to defaults
+            }
+        }
+
+        var options = new ExHentaiTaskOptions
+        {
+            PreferTorrent = patch?.PreferTorrent ?? preferTorrentDefault
+        };
+        return JsonSerializer.Serialize(options, JsonSerializerOptions.Web);
+    }
     
     protected override string? CookieValidationUrl => "https://exhentai.org/";
     
