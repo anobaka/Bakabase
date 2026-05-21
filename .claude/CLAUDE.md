@@ -64,3 +64,72 @@ Scratch: `src/web/.sdk-cache/` (gitignored).
 For **when** to regenerate and the rule about static data (e.g.
 `ExtensionMediaTypes`) shipping via `constants.ts` instead of a runtime
 endpoint, see `.claude/rules/api-conventions.md`.
+
+## Workflow: GitHub Issue Management
+
+After completing **any self-contained change** (a feature, fix, or refactor —
+one logical unit of work), and before treating the task as done, check in with
+the user about GitHub issues. Do this **once per completed change**, not per
+file edit, and not for trivial in-progress steps.
+
+Use `AskUserQuestion` to ask what the user wants, offering:
+
+- **创建并关联 issue** — Create a concise Chinese issue describing the change,
+  then reference it in the commit so GitHub auto-closes it.
+- **其他操作（我来输入）** — Let the user type instructions, e.g. "把 #12 #15
+  标记为已处理" → add closing keywords for those existing issue IDs to the
+  commit.
+- **跳过** — No issue action needed.
+
+### Creating an issue
+
+Create issues with `gh issue create` against `anobaka/Bakabase`. Every created
+issue MUST be:
+
+- **中文** — title and body written in Chinese.
+- **简洁** — a clear one-line title plus a short body (what changed / why).
+- **Labelled** — pick appropriate label(s) from the existing repo labels.
+  Common ones: `bug`, `enhancement`, `feature`, `chores`, `documentation`,
+  `architecture optimization`, `breaking-changes`, `test`, `file-processor`,
+  `third-party`, `translation`. Check `gh label list -R anobaka/Bakabase`
+  when unsure; only create a new label if none fits.
+
+```bash
+gh issue create --repo anobaka/Bakabase \
+  --title "简洁的中文标题" \
+  --body "简要说明改动内容与原因" \
+  --label "feature"
+```
+
+### Marking issues resolved in the commit
+
+To let GitHub auto-close an issue, add a closing keyword line to the commit
+message body — one per issue:
+
+```
+Closes #123      # general changes
+Fixes #123       # bug fixes
+```
+
+Auto-close only fires when the commit reaches the **default branch** (directly
+or via a merged PR). After `gh issue create` prints the new issue number, add
+its `Closes #N` line to the commit for the change.
+
+### Skip CI for docs / `.claude` changes
+
+`deploy.yml` ("Build and Deploy") has **no path filter** — any push to
+`main` / `debug-actions` / `release/v*` triggers a full build + OSS deploy +
+GitHub release, even for non-code changes.
+
+So for commits that touch **only** documentation, `.claude/**`, or other
+non-code files, add **`[skip ci]`** to the commit message. It skips the
+pipeline but does **not** affect `Closes #N` issue auto-closing.
+
+Do **not** skip CI for `.github/**` changes — CI/CD config edits should run
+the pipeline so the change itself gets validated.
+
+```
+docs: 更新 GitHub issue 管理工作流程 [skip ci]
+
+Closes #123
+```
