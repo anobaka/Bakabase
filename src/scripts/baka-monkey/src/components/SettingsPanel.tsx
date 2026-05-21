@@ -6,6 +6,7 @@ import { Select, SelectItem } from '@heroui/select';
 import { IoSettingsSharp, IoWarning } from 'react-icons/io5';
 import { getApiBaseUrl, setApiBaseUrl, getStoredValue, setStoredValue, httpRequest } from '../api';
 import { pingNow } from '../heartbeat';
+import { getOverlayRoot } from '../overlay';
 import { showToast } from './Toast';
 import { t, getLocale, setLocale, onLocaleChange, type Locale } from '../i18n';
 
@@ -102,7 +103,7 @@ export function SettingsPanel({ siteKey, connected }: { siteKey?: string; connec
         </div>
       )}
 
-      <Popover placement="left" isOpen={isOpen} onOpenChange={setIsOpen}>
+      <Popover placement="left" isOpen={isOpen} onOpenChange={setIsOpen} portalContainer={getOverlayRoot()}>
         <PopoverTrigger>
           <Button size="sm" color={connected ? 'primary' : 'danger'} variant="solid" isIconOnly>
             <IoSettingsSharp />
@@ -152,6 +153,7 @@ export function SettingsPanel({ siteKey, connected }: { siteKey?: string; connec
             <Select
               size="sm"
               label={t('language')}
+              portalContainer={getOverlayRoot()}
               selectedKeys={[locale]}
               onSelectionChange={(keys) => {
                 const selected = [...keys][0] as Locale;

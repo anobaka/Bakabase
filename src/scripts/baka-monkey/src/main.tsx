@@ -5,6 +5,7 @@ import { ToastProvider } from '@heroui/toast';
 import { App } from './App';
 import { exhentaiConfig } from './sites/exhentai/index';
 import { soulplusConfig } from './sites/soulplus/index';
+import { OVERLAY_ROOT_ID } from './overlay';
 import './index.css';
 
 const SITE_CONFIGS = [exhentaiConfig, soulplusConfig];
@@ -18,6 +19,12 @@ function boot() {
   const rootEl = document.createElement('div');
   rootEl.id = 'bk-app';
   document.body.appendChild(rootEl);
+
+  // Dedicated container for HeroUI overlays so they are not portaled to the
+  // bare <body>, where the scoped reset in index.css would not reach them.
+  const overlayRoot = document.createElement('div');
+  overlayRoot.id = OVERLAY_ROOT_ID;
+  document.body.appendChild(overlayRoot);
 
   ReactDOM.createRoot(rootEl).render(
     <React.StrictMode>

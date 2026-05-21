@@ -4,6 +4,7 @@ import { Tooltip } from '@heroui/tooltip';
 import { MdOutlineFileDownload } from 'react-icons/md';
 import type { DownloadTaskAdapter } from '../types';
 import { showToast } from '../components/Toast';
+import { getOverlayRoot } from '../overlay';
 import { t } from '../i18n';
 
 export function DownloadTaskButton({ adapter, element }: { adapter: DownloadTaskAdapter; element: HTMLElement }) {
@@ -28,7 +29,7 @@ export function DownloadTaskButton({ adapter, element }: { adapter: DownloadTask
   };
 
   return (
-    <Tooltip content={t('download')} placement="top" size="sm" color="foreground">
+    <Tooltip content={t('download')} placement="top" size="sm" color="foreground" portalContainer={getOverlayRoot()}>
       <Button
         size="sm"
         color="primary"
