@@ -100,9 +100,6 @@ namespace Bakabase.InsideWorld.Business.Components
         public string SpecialText_HistoricalLanguageValue2ShouldBeModified() =>
             this[nameof(SpecialText_HistoricalLanguageValue2ShouldBeModified)];
 
-        public string Reserved_Resource_Property_Name(Abstractions.Models.Domain.Constants.ReservedProperty property) =>
-            this[$"{nameof(Reserved_Resource_Property_Name)}_{property}"];
-
         public string Unknown() => this[nameof(Unknown)];
         public string Failed()
         {

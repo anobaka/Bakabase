@@ -1733,28 +1733,7 @@ namespace Bakabase.InsideWorld.Business.Services
                             Scope = (int) PropertyValueScope.Manual
                         };
 
-                        switch (property)
-                        {
-                            case ResourceProperty.Introduction:
-                                scopeValue.Introduction =
-                                    model.Value?.DeserializeAsStandardValue<string>(StandardValueType.String);
-                                    break;
-                            case ResourceProperty.Rating:
-                                scopeValue.Rating =
-                                    model.Value?.DeserializeAsStandardValue<decimal>(StandardValueType.Decimal);
-                                    break;
-                            case ResourceProperty.Cover:
-                                scopeValue.CoverPaths =
-                                    model.Value?.DeserializeDbValueAsStandardValue<List<string>>(
-                                        PropertyType.Attachment);
-                                    break;
-                            case ResourceProperty.Name:
-                                scopeValue.Name =
-                                    model.Value?.DeserializeAsStandardValue<string>(StandardValueType.String);
-                                    break;
-                            default:
-                                throw new ArgumentOutOfRangeException();
-                        }
+                        ApplyReservedPropertyValue(scopeValue, property, model.Value);
 
                         var result = noValue
                             ? await _reservedPropertyValueService.Add(scopeValue)
@@ -1903,28 +1882,7 @@ namespace Bakabase.InsideWorld.Business.Services
                                 isNew = true;
                             }
 
-                            switch (property)
-                            {
-                                case ResourceProperty.Introduction:
-                                    scopeValue.Introduction =
-                                        model.Value?.DeserializeAsStandardValue<string>(StandardValueType.String);
-                                    break;
-                                case ResourceProperty.Rating:
-                                    scopeValue.Rating =
-                                        model.Value?.DeserializeAsStandardValue<decimal>(StandardValueType.Decimal);
-                                    break;
-                                case ResourceProperty.Cover:
-                                    scopeValue.CoverPaths =
-                                        model.Value?.DeserializeDbValueAsStandardValue<List<string>>(
-                                            PropertyType.Attachment);
-                                    break;
-                                case ResourceProperty.Name:
-                                    scopeValue.Name =
-                                        model.Value?.DeserializeAsStandardValue<string>(StandardValueType.String);
-                                    break;
-                                default:
-                                    throw new ArgumentOutOfRangeException();
-                            }
+                            ApplyReservedPropertyValue(scopeValue, property, model.Value);
 
                             if (isNew)
                             {
@@ -2378,6 +2336,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 replacements[key] = b switch
                 {
                     BuiltinPropertyForDisplayName.Filename => resource.FileName,
+                    BuiltinPropertyForDisplayName.Name => GetReservedNameForDisplayName(resource),
                     _ => throw new ArgumentOutOfRangeException()
                 };
             }
@@ -2422,6 +2381,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 replacements[key] = b switch
                 {
                     BuiltinPropertyForDisplayName.Filename => resource.FileName,
+                    BuiltinPropertyForDisplayName.Name => GetReservedNameForDisplayName(resource),
                     _ => throw new ArgumentOutOfRangeException()
                 };
             }
@@ -2429,6 +2389,32 @@ namespace Bakabase.InsideWorld.Business.Services
             var segments = ResourceUtils.SplitDisplayNameTemplateIntoSegments(template, replacements, wrappers);
             var displayName = string.Join("", segments.Select(a => a.Text));
             return displayName.IsNullOrEmpty() ? resource.FileName : displayName;
+        }
+
+        // Values are pre-sorted by scope priority (see SortPropertyValuesByScope); first entry is effective.
+        private static string? GetReservedNameForDisplayName(Resource resource) =>
+            resource.Properties?
+                .GetValueOrDefault((int)PropertyPool.Reserved)?
+                .GetValueOrDefault((int)ResourceProperty.Name)?
+                .Values?.FirstOrDefault()?.BizValue as string;
+
+        // Deserializes a serialized standard value and writes it to the matching reserved-property column.
+        private static void ApplyReservedPropertyValue(ReservedPropertyValue scopeValue, ResourceProperty property,
+            string? serializedValue)
+        {
+            object? value = property switch
+            {
+                ResourceProperty.Introduction => serializedValue?.DeserializeAsStandardValue<string>(
+                    StandardValueType.String),
+                ResourceProperty.Rating => serializedValue?.DeserializeAsStandardValue<decimal>(
+                    StandardValueType.Decimal),
+                ResourceProperty.Cover => serializedValue?.DeserializeDbValueAsStandardValue<List<string>>(
+                    PropertyType.Attachment),
+                ResourceProperty.Name => serializedValue?.DeserializeAsStandardValue<string>(
+                    StandardValueType.String),
+                _ => throw new ArgumentOutOfRangeException(nameof(property), property, null)
+            };
+            scopeValue.SetValue((ReservedProperty)property, value);
         }
 
         public async Task<(List<Resource> Ancestors, int ChildrenCount)> GetHierarchyContext(int resourceId)

@@ -4,5 +4,6 @@ namespace Bakabase.InsideWorld.Business.Models.Domain.Constants;
 
 public enum BuiltinPropertyForDisplayName
 {
-    Filename = ResourceProperty.Filename
+    Filename = ResourceProperty.Filename,
+    Name = ResourceProperty.Name
 }

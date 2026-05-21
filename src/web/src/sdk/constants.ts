@@ -1265,15 +1265,18 @@ export const BackgroundTaskNameLabel: Record<BackgroundTaskName, string> = {
 };
 
 export enum BuiltinPropertyForDisplayName {
-  Filename = 15
+  Filename = 15,
+  Name = 27
 }
 
 export const builtinPropertyForDisplayNames = [
-  { label: 'Filename', value: BuiltinPropertyForDisplayName.Filename }
+  { label: 'Filename', value: BuiltinPropertyForDisplayName.Filename },
+  { label: 'Name', value: BuiltinPropertyForDisplayName.Name }
 ] as const;
 
 export const BuiltinPropertyForDisplayNameLabel: Record<BuiltinPropertyForDisplayName, string> = {
-  [BuiltinPropertyForDisplayName.Filename]: 'Filename'
+  [BuiltinPropertyForDisplayName.Filename]: 'Filename',
+  [BuiltinPropertyForDisplayName.Name]: 'Name'
 };
 
 export enum IndexOperationType {

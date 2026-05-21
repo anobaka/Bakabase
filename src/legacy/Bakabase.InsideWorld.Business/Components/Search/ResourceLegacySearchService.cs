@@ -149,13 +149,9 @@ namespace Bakabase.InsideWorld.Business.Components.Search
                             (await _reservedPropertyValueService.GetAll(x =>
                                 context.AllResourceIds.Contains(x.ResourceId)))
                             .GroupBy(d => d.ResourceId).ToDictionary(d => d.Key, d => d.ToList());
-                        var getValue = SpecificEnumUtils<Bakabase.Abstractions.Models.Domain.Constants.ReservedProperty>.Values.ToDictionary(d => d, d => d switch
-                        {
-                            Bakabase.Abstractions.Models.Domain.Constants.ReservedProperty.Rating => (Func<ReservedPropertyValue, object?>) (r => r.Rating),
-                            Bakabase.Abstractions.Models.Domain.Constants.ReservedProperty.Introduction => r => r.Introduction,
-                            Bakabase.Abstractions.Models.Domain.Constants.ReservedProperty.Cover => r => r.CoverPaths,
-                            _ => null
-                        });
+                        var getValue = SpecificEnumUtils<Bakabase.Abstractions.Models.Domain.Constants.ReservedProperty>
+                            .Values.ToDictionary(d => d,
+                                d => (Func<ReservedPropertyValue, object?>)(r => r.GetValue(d)));
                         context.PropertyValueMap[PropertyPool.Reserved] = getValue.Where(x => x.Value != null)
                             .ToDictionary(d => (int) d.Key,
                                 d => context.AllResourceIds.ToDictionary(x => x,

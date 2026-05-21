@@ -1,0 +1,11 @@
+# Repo-level analyzer configuration.
+root = true
+
+# Reserved-property registry.
+# ReservedProperties.Get is a switch expression with no discard (`_`) arm, so a new
+# ReservedProperty that is not registered there produces CS8509. CS8509 is promoted to a
+# build error for this file so the omission fails compilation instead of throwing at runtime.
+# CS8524 (the theoretical unnamed enum value) is expected for a discard-less switch and silenced.
+[**/ReservedPropertyValueAccessor.cs]
+dotnet_diagnostic.CS8509.severity = error
+dotnet_diagnostic.CS8524.severity = none

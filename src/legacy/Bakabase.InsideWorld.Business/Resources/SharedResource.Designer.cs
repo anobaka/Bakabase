@@ -1084,24 +1084,6 @@ namespace Bakabase.InsideWorld.Business.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Introduction.
-        /// </summary>
-        internal static string Reserved_Resource_Property_Name_Introduction {
-            get {
-                return ResourceManager.GetString("Reserved_Resource_Property_Name_Introduction", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Rating.
-        /// </summary>
-        internal static string Reserved_Resource_Property_Name_Rating {
-            get {
-                return ResourceManager.GetString("Reserved_Resource_Property_Name_Rating", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Resource.
         /// </summary>
         internal static string Resource {

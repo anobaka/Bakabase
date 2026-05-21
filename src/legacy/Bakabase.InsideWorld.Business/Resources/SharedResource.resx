@@ -300,12 +300,6 @@
   <data name="Migration_V190_DefaultPropertyName_Cover" xml:space="preserve">
     <value>Cover</value>
   </data>
-  <data name="Reserved_Resource_Property_Name_Introduction" xml:space="preserve">
-    <value>Introduction</value>
-  </data>
-  <data name="Reserved_Resource_Property_Name_Rating" xml:space="preserve">
-    <value>Rating</value>
-  </data>
   <data name="Resource_Property_Reserved_Introduction_Name" xml:space="preserve">
     <value>Introduction</value>
   </data>

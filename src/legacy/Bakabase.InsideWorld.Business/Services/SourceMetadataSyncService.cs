@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
@@ -141,24 +142,9 @@ public class SourceMetadataSyncService<TDbContext>(
                     var nv = await standardValueService.Convert(value, valueType,
                         propertyDescriptor.Type.GetBizValueType());
 
-                    switch ((ReservedProperty)mapping.TargetPropertyId)
+                    if (rpv.TrySetValue((ReservedProperty)mapping.TargetPropertyId, nv))
                     {
-                        case ReservedProperty.Introduction:
-                            rpv.Introduction = nv as string;
-                            hasReservedChanges = true;
-                            break;
-                        case ReservedProperty.Rating:
-                            rpv.Rating = nv is decimal d ? d : null;
-                            hasReservedChanges = true;
-                            break;
-                        case ReservedProperty.Cover:
-                            rpv.CoverPaths = nv as List<string>;
-                            hasReservedChanges = true;
-                            break;
-                        case ReservedProperty.Name:
-                            rpv.Name = nv as string;
-                            hasReservedChanges = true;
-                            break;
+                        hasReservedChanges = true;
                     }
 
                     break;

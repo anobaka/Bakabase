@@ -145,6 +145,7 @@
   "enum.combinator.or": "或",
 
   "enum.builtinPropertyForDisplayName.filename": "文件名",
+  "enum.builtinPropertyForDisplayName.name": "名称",
 
   "enum.bulkModificationTimeProcessOperation.delete": "删除",
   "enum.bulkModificationTimeProcessOperation.setWithFixedValue": "设置为固定值",

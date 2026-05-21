@@ -228,33 +228,12 @@ namespace Bakabase.Modules.Enhancer.Services
                                     Scope = (int)scope,
                                 });
 
-                            switch ((ReservedProperty)targetOptions.PropertyId)
+                            if (!rpv.TrySetValue((ReservedProperty)targetOptions.PropertyId, nv))
                             {
-                                case ReservedProperty.Introduction:
-                                {
-                                    rpv.Introduction = nv as string;
-                                    break;
-                                }
-                                case ReservedProperty.Rating:
-                                {
-                                    rpv.Rating = nv is decimal nv1 ? nv1 : null;
-                                    break;
-                                }
-                                case ReservedProperty.Cover:
-                                {
-                                    rpv.CoverPaths = nv as List<string>;
-                                    break;
-                                }
-                                case ReservedProperty.Name:
-                                {
-                                    rpv.Name = nv as string;
-                                    break;
-                                }
-                                default:
-                                    throw new ArgumentOutOfRangeException(
-                                        nameof(targetOptions.PropertyId),
-                                        targetOptions.PropertyId,
-                                        $"Reserved property {(ReservedProperty)targetOptions.PropertyId} is not supported by ApplyEnhancementsToResources (enhancer={enhancement.EnhancerId}, target={enhancement.Target}, resource={enhancement.ResourceId}).");
+                                throw new ArgumentOutOfRangeException(
+                                    nameof(targetOptions.PropertyId),
+                                    targetOptions.PropertyId,
+                                    $"Reserved property {(ReservedProperty)targetOptions.PropertyId} is not supported by ApplyEnhancementsToResources (enhancer={enhancement.EnhancerId}, target={enhancement.Target}, resource={enhancement.ResourceId}).");
                             }
 
                             break;

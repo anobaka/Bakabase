@@ -132,7 +132,7 @@ const DisplayNameTemplateEditorModal = ({ template, properties, onSubmit, ...pro
     });
 
     // Add custom properties with their type
-    properties?.filter(p => p.pool != PropertyPool.Internal).forEach((cp) => {
+    properties?.filter(p => p.pool == PropertyPool.Custom).forEach((cp) => {
       if (cp.name) {
         items.push({
           name: cp.name,

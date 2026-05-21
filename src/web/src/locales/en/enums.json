@@ -145,6 +145,7 @@
   "enum.combinator.or": "Or",
 
   "enum.builtinPropertyForDisplayName.filename": "Filename",
+  "enum.builtinPropertyForDisplayName.name": "Name",
 
   "enum.bulkModificationTimeProcessOperation.delete": "Delete",
   "enum.bulkModificationTimeProcessOperation.setWithFixedValue": "Set with fixed value",

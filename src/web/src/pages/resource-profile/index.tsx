@@ -219,7 +219,7 @@ const ResourceProfilePage = () => {
     const builtinNames = builtinPropertyForDisplayNames.map((v) =>
       t(getEnumKey('BuiltinPropertyForDisplayName', v.label))
     );
-    const customNames = properties.map((p) => p.name!);
+    const customNames = properties.filter((p) => p.pool === PropertyPool.Custom).map((p) => p.name!);
     const validPropertyNames = new Set([...builtinNames, ...customNames]);
 
     // Parse template into segments

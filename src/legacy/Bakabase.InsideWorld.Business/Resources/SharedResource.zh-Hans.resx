@@ -300,12 +300,6 @@
   <data name="Migration_V190_DefaultPropertyName_Cover" xml:space="preserve">
     <value>封面</value>
   </data>
-  <data name="Reserved_Resource_Property_Name_Introduction" xml:space="preserve">
-    <value>介绍</value>
-  </data>
-  <data name="Reserved_Resource_Property_Name_Rating" xml:space="preserve">
-    <value>评分</value>
-  </data>
   <data name="Resource_Property_Reserved_Introduction_Name" xml:space="preserve">
     <value>介绍</value>
   </data>
