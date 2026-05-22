@@ -24,6 +24,12 @@ public sealed class SearchMatching
     private static readonly IPropertySearchHandler Date =
         PropertySystem.Property.TryGetSearchHandler(PropertyType.DateTime)!;
 
+    private static readonly IPropertySearchHandler SingleChoice =
+        PropertySystem.Property.TryGetSearchHandler(PropertyType.SingleChoice)!;
+
+    private static readonly IPropertySearchHandler MultipleChoice =
+        PropertySystem.Property.TryGetSearchHandler(PropertyType.MultipleChoice)!;
+
     #region Number
 
     [TestMethod]
@@ -188,6 +194,54 @@ public sealed class SearchMatching
         var d = new DateTime(2024, 6, 1);
         Assert.IsTrue(Date.IsMatch(d, SearchOperation.GreaterThanOrEquals, d));
         Assert.IsFalse(Date.IsMatch(d, SearchOperation.GreaterThan, d));
+    }
+
+    #endregion
+
+    #region SingleChoice
+
+    [TestMethod]
+    public void SingleChoice_Equals_And_NotEquals()
+    {
+        Assert.IsTrue(SingleChoice.IsMatch("uuid-1", SearchOperation.Equals, "uuid-1"));
+        Assert.IsFalse(SingleChoice.IsMatch("uuid-1", SearchOperation.Equals, "uuid-2"));
+        Assert.IsTrue(SingleChoice.IsMatch("uuid-1", SearchOperation.NotEquals, "uuid-2"));
+    }
+
+    [TestMethod]
+    public void SingleChoice_IsNull_And_IsNotNull()
+    {
+        Assert.IsTrue(SingleChoice.IsMatch(null, SearchOperation.IsNull, null));
+        Assert.IsTrue(SingleChoice.IsMatch("uuid-1", SearchOperation.IsNotNull, null));
+    }
+
+    #endregion
+
+    #region MultipleChoice
+
+    [TestMethod]
+    public void MultipleChoice_Contains_RequiresAllFilterValues()
+    {
+        var dbValue = new List<string> { "a", "b", "c" };
+        Assert.IsTrue(MultipleChoice.IsMatch(dbValue, SearchOperation.Contains, new List<string> { "a", "b" }));
+        Assert.IsFalse(MultipleChoice.IsMatch(dbValue, SearchOperation.Contains, new List<string> { "a", "x" }));
+    }
+
+    [TestMethod]
+    public void MultipleChoice_NotContains()
+    {
+        var dbValue = new List<string> { "a", "b" };
+        Assert.IsTrue(MultipleChoice.IsMatch(dbValue, SearchOperation.NotContains, new List<string> { "x", "y" }));
+        Assert.IsFalse(MultipleChoice.IsMatch(dbValue, SearchOperation.NotContains, new List<string> { "a" }));
+    }
+
+    [TestMethod]
+    public void MultipleChoice_In_RequiresEveryValueWithinFilterSet()
+    {
+        Assert.IsTrue(MultipleChoice.IsMatch(new List<string> { "a", "b" },
+            SearchOperation.In, new List<string> { "a", "b", "c" }));
+        Assert.IsFalse(MultipleChoice.IsMatch(new List<string> { "a", "x" },
+            SearchOperation.In, new List<string> { "a", "b" }));
     }
 
     #endregion
