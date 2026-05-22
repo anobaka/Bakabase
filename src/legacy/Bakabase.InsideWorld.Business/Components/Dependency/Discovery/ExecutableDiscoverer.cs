@@ -59,8 +59,8 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Discovery
                     var dir = Path.GetDirectoryName(first)!;
                     if (!DiscoverByDirectory(dir, RequiredRelativeFileNamesWithoutExtensions))
                     {
-                        Logger.LogError(
-                            $"{RelativeFileNameWithoutExtensionForAcquiringVersion} is found but some of other required files are not: {string.Join(',', RelativeFileNameWithoutExtensionForAcquiringVersion)}");
+                        Logger.LogWarning(
+                            $"{RelativeFileNameWithoutExtensionForAcquiringVersion} is found but some required files are missing. Required files: {string.Join(',', RequiredRelativeFileNamesWithoutExtensions)}");
                         return null;
                     }
 
