@@ -214,4 +214,63 @@ public sealed class ResourceSearchTests
     }
 
     #endregion
+
+    #region Scale
+
+    private const int ScaleCount = 50;
+
+    [TestMethod]
+    public async Task Search_AtScale_ReturnsEveryResource()
+    {
+        await SeedResources(ScaleCount);
+        var response = await _sp.GetRequiredService<IResourceService>()
+            .Search(new ResourceSearch { PageSize = 100 });
+        Assert.AreEqual(ScaleCount, response.TotalCount);
+        Assert.AreEqual(ScaleCount, response.Data!.Count);
+    }
+
+    [TestMethod]
+    public async Task Search_AtScale_PaginationCoversEveryResourceExactlyOnce()
+    {
+        await SeedResources(ScaleCount);
+        var resourceService = _sp.GetRequiredService<IResourceService>();
+        var seen = new HashSet<int>();
+        for (var page = 1; page <= 3; page++)
+        {
+            var resp = await resourceService.Search(new ResourceSearch { PageIndex = page, PageSize = 20 });
+            Assert.AreEqual(ScaleCount, resp.TotalCount);
+            foreach (var r in resp.Data!)
+            {
+                Assert.IsTrue(seen.Add(r.Id), $"Resource {r.Id} appeared on more than one page.");
+            }
+        }
+        Assert.AreEqual(ScaleCount, seen.Count);
+    }
+
+    [TestMethod]
+    public async Task SearchIndex_AtScale_RebuildIndexesEveryResource()
+    {
+        await SeedResources(ScaleCount);
+        var index = _sp.GetRequiredService<IResourceSearchIndexService>();
+        await index.RebuildAllAsync(CancellationToken.None);
+        await index.WaitForReadyAsync(TimeSpan.FromSeconds(30));
+        Assert.IsTrue(index.IsReady);
+        Assert.AreEqual(ScaleCount, index.GetStatus().TotalResourceCount);
+    }
+
+    [TestMethod]
+    public async Task Search_AtScale_FilenameOrderingStaysCorrect()
+    {
+        await SeedResources(ScaleCount);
+        var response = await _sp.GetRequiredService<IResourceService>().Search(new ResourceSearch
+        {
+            PageSize = 100,
+            Orders = [new ResourceSearchOrderInputModel { Property = ResourceSearchSortableProperty.Filename, Asc = true }]
+        });
+        var names = response.Data!.Select(r => r.FileName).ToList();
+        Assert.AreEqual(ScaleCount, names.Count);
+        CollectionAssert.AreEqual(names.OrderBy(n => n, StringComparer.OrdinalIgnoreCase).ToList(), names);
+    }
+
+    #endregion
 }
