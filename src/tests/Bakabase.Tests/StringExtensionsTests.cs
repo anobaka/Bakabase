@@ -109,4 +109,55 @@ public sealed class StringExtensionsTests
     }
 
     #endregion
+
+    #region StandardizePath / IsUncPath
+
+    [TestMethod]
+    public void StandardizePath_NullOrEmpty_ReturnsNull()
+    {
+        Assert.IsNull(((string?)null).StandardizePath());
+        Assert.IsNull("".StandardizePath());
+    }
+
+    [TestMethod]
+    public void StandardizePath_NormalizesSeparatorsToForwardSlash()
+    {
+        Assert.AreEqual("a/b/c", @"a\b\c".StandardizePath());
+        Assert.AreEqual("a/b/c", @"a/b\c".StandardizePath());
+    }
+
+    [TestMethod]
+    public void StandardizePath_CollapsesRepeatedSeparators()
+    {
+        Assert.AreEqual("a/b/c", "a//b///c".StandardizePath());
+    }
+
+    [TestMethod]
+    public void StandardizePath_DropsTrailingSeparator()
+    {
+        Assert.AreEqual("a/b", "a/b/".StandardizePath());
+    }
+
+    [TestMethod]
+    public void StandardizePath_PreservesLeadingSlash()
+    {
+        Assert.AreEqual("/a/b", "/a/b".StandardizePath());
+    }
+
+    [TestMethod]
+    public void StandardizePath_WindowsDriveGetsRootSlash()
+    {
+        Assert.AreEqual("C:/", "C:".StandardizePath());
+        Assert.AreEqual("C:/foo", @"C:\foo".StandardizePath());
+    }
+
+    [TestMethod]
+    public void IsUncPath_FalseForNullEmptyAndRelativePaths()
+    {
+        Assert.IsFalse(((string?)null).IsUncPath());
+        Assert.IsFalse("".IsUncPath());
+        Assert.IsFalse("a/b".IsUncPath());
+    }
+
+    #endregion
 }
