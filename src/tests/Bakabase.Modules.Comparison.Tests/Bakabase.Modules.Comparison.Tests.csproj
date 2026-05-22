@@ -1,0 +1,7 @@
+<Project Sdk="MSTest.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\modules\Bakabase.Modules.Comparison\Bakabase.Modules.Comparison.csproj" />
+  </ItemGroup>
+
+</Project>

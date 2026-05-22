@@ -51,6 +51,7 @@ jobs:
           projects=(
             "src/tests/Bakabase.Tests/Bakabase.Tests.csproj"
             "src/tests/Bakabase.Modules.BulkModification.Tests/Bakabase.Modules.BulkModification.Tests.csproj"
+            "src/tests/Bakabase.Modules.Comparison.Tests/Bakabase.Modules.Comparison.Tests.csproj"
             "src/tests/Bakabase.Modules.HealthScore.Tests/Bakabase.Modules.HealthScore.Tests.csproj"
             "src/tests/Bakabase.Modules.Property.Tests/Bakabase.Modules.Property.Tests.csproj"
             "src/tests/Bakabase.Modules.StandardValue.Tests/Bakabase.Modules.StandardValue.Tests.csproj"
