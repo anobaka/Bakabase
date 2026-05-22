@@ -57,11 +57,12 @@ public class LocalFilePlayableItemProvider : IPlayableItemProvider
 
     public async Task<PlayableItemProviderResult> GetPlayableItemsAsync(DomainResource resource, CancellationToken ct)
     {
-        // Check cache first
-        if (resource.Cache?.CachedTypes.Contains(ResourceCacheType.PlayableFiles) == true &&
-            resource.Cache.PlayableFilePaths is { } cachedPaths)
+        // Check cache first. The CachedTypes flag alone means "already discovered";
+        // PlayableFilePaths is null when the resource has zero playable files, which is
+        // still a valid cached result and must not trigger a rescan.
+        if (resource.Cache?.CachedTypes.Contains(ResourceCacheType.PlayableFiles) == true)
         {
-            var cachedItems = cachedPaths.Select(p => new Abstractions.Models.Domain.PlayableItem
+            var cachedItems = (resource.Cache.PlayableFilePaths ?? []).Select(p => new Abstractions.Models.Domain.PlayableItem
             {
                 Origin = DataOrigin.FileSystem,
                 Key = p,
