@@ -4,6 +4,7 @@ using HttpCloak;
 namespace Bakabase.Modules.ThirdParty.Tests
 {
     [TestClass]
+    [Ignore("Manual integration test — hits live NorthPlus. Remove [Ignore] to run.")]
     public class NorthPlusAuthTests
     {
         private const string TargetUrl = "https://www.north-plus.net/index.php";

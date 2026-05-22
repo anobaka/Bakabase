@@ -6,6 +6,7 @@ using Newtonsoft.Json;
 namespace Bakabase.Modules.ThirdParty.Tests
 {
     [TestClass]
+    [Ignore("Manual integration test against live Bangumi.")]
     public class BangumiTests
     {
         [TestMethod]
@@ -19,7 +20,7 @@ namespace Bakabase.Modules.ThirdParty.Tests
 
             var services = di.BuildServiceProvider();
             var client = services.GetRequiredService<BangumiClient>();
-            var keyword = "•r¡©¥Ü¥½¥Ã¤È¥í¥·¥¢ÕZ¤Ç¥Ç¥ì¤ëëO¤Î¥¢©`¥ê¥ã¤µ¤ó";
+            var keyword = "ï¿½rï¿½ï¿½ï¿½Ü¥ï¿½ï¿½Ã¤È¥ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Zï¿½Ç¥Ç¥ï¿½ï¿½ï¿½Oï¿½Î¥ï¿½ï¿½`ï¿½ï¿½ã¤µï¿½ï¿½";
             var detail = await client.SearchAndParseFirst(keyword);
             Console.WriteLine(JsonConvert.SerializeObject(detail));
         }
