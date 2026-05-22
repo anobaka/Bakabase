@@ -1,6 +1,6 @@
 using Bootstrap.Components.Configuration.Abstractions;
 
-namespace Bakabase.Tests.Implementations;
+namespace Bakabase.TestKit.Implementations;
 
 public class TestBOptions<TOptions> : IBOptions<TOptions> where TOptions : class
 {

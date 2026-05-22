@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using Bakabase.Infrastructures.Components.Gui;
 using Bakabase.Infrastructures.Components.SystemService;
 
-namespace Bakabase.Tests.Implementations;
+namespace Bakabase.TestKit.Implementations;
 
 public class TestSystemService : ISystemService
 {

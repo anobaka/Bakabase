@@ -37,7 +37,7 @@ using Bakabase.Modules.ThirdParty.ThirdParties.Bilibili;
 using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai;
 using Bakabase.Modules.ThirdParty.ThirdParties.Pixiv;
 using Bakabase.Service.Extensions;
-using Bakabase.Tests.Implementations;
+using Bakabase.TestKit.Implementations;
 using Bootstrap.Components.Configuration;
 using Bootstrap.Components.DependencyInjection;
 using Bootstrap.Components.Logging.LogService.Extensions;
@@ -49,7 +49,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace Bakabase.Tests.Utils;
+namespace Bakabase.TestKit.Utils;
 
 /// <summary>
 /// Test service builder that mirrors BakabaseStartup configuration

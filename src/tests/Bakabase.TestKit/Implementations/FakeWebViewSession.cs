@@ -6,7 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Infrastructures.Components.Gui;
 
-namespace Bakabase.Tests.Implementations;
+namespace Bakabase.TestKit.Implementations;
 
 /// <summary>
 /// Test double for <see cref="IWebViewSession"/>. Records every operation invoked on it

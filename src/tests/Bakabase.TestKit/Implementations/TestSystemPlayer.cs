@@ -1,7 +1,7 @@
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components;
 
-namespace Bakabase.Tests.Implementations;
+namespace Bakabase.TestKit.Implementations;
 
 public class TestSystemPlayer : ISystemPlayer
 {

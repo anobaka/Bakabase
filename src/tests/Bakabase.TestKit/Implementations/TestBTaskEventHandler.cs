@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Models.View;
 
-namespace Bakabase.Tests.Implementations;
+namespace Bakabase.TestKit.Implementations;
 
 public class TestBTaskEventHandler : IBTaskEventHandler
 {

@@ -15,7 +15,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Bakabase.InsideWorld.Models.Configs;
-using Bakabase.Tests.Implementations;
+using Bakabase.TestKit.Implementations;
 using Bootstrap.Components.Configuration;
 using Bootstrap.Components.Logging.LogService.Extensions;
 using FluentAssertions;
@@ -26,7 +26,7 @@ using Bakabase.Abstractions.Extensions;
 using Bakabase.Infrastructures.Components.Gui;
 using Bakabase.Infrastructures.Components.Logging;
 using Bakabase.Infrastructures.Components.Orm.Log;
-using Bakabase.Tests.Utils;
+using Bakabase.TestKit.Utils;
 using Bootstrap.Components.Logging.LogService.Services;
 using FluentAssertions.Common;
 

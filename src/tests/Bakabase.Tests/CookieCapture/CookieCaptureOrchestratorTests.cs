@@ -6,7 +6,7 @@ using Bakabase.Infrastructures.Components.Gui;
 using Bakabase.InsideWorld.Business.Components.CookieCapture;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.ThirdParty.Abstractions.Http.Cookie;
-using Bakabase.Tests.Implementations;
+using Bakabase.TestKit.Implementations;
 using FluentAssertions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 

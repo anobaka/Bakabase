@@ -13,7 +13,7 @@ using Bakabase.Abstractions.Models.Input;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.Modules.Property.Abstractions.Services;
-using Bakabase.Tests.Utils;
+using Bakabase.TestKit.Utils;
 using Bootstrap.Components.Tasks;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;

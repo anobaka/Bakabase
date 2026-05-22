@@ -1,7 +1,7 @@
 ﻿using System;
 using Microsoft.Extensions.Options;
 
-namespace Bakabase.Tests.Implementations;
+namespace Bakabase.TestKit.Implementations;
 
 public class TestOptionsMonitor<TOptions>(TOptions currentValue) : IOptionsMonitor<TOptions>
 {

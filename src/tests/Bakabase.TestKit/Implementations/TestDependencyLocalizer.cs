@@ -1,6 +1,6 @@
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
 
-namespace Bakabase.Tests.Implementations;
+namespace Bakabase.TestKit.Implementations;
 
 public class TestDependencyLocalizer : IDependencyLocalizer
 {

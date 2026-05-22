@@ -2,7 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Bakabase.Infrastructures.Components.Gui;
 
-namespace Bakabase.Tests.Implementations;
+namespace Bakabase.TestKit.Implementations;
 
 public class TestGuiAdapter : IGuiAdapter
 {

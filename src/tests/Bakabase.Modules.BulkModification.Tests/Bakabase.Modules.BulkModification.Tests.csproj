@@ -1,26 +1,13 @@
 <Project Sdk="MSTest.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    <LangVersion>latest</LangVersion>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <TestingPlatformShowTestsFailure>true</TestingPlatformShowTestsFailure>
-  </PropertyGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\..\modules\Bakabase.Modules.BulkModification\Bakabase.Modules.BulkModification.csproj" />
     <ProjectReference Include="..\..\apps\Bakabase.Service\Bakabase.Service.csproj" />
-    <ProjectReference Include="..\Bakabase.Tests\Bakabase.Tests.csproj" />
+    <ProjectReference Include="..\Bakabase.TestKit\Bakabase.TestKit.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="FluentAssertions" Version="8.0.1" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Update="Microsoft.Testing.Extensions.CodeCoverage" Version="17.14.2" />
-    <PackageReference Update="Microsoft.Testing.Extensions.TrxReport" Version="1.6.3" />
   </ItemGroup>
 
 </Project>

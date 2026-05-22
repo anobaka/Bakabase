@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Shared test-support library: the DI test harness (TestServiceBuilder), test
+    doubles (Implementations/*), and data generators. Referenced by the test
+    projects so they no longer reference each other.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\apps\Bakabase.Service\Bakabase.Service.csproj" />
+    <ProjectReference Include="..\..\legacy\Bakabase.InsideWorld.Business\Bakabase.InsideWorld.Business.csproj" />
+    <ProjectReference Include="..\..\modules\Bakabase.Modules.StandardValue\Bakabase.Modules.StandardValue.csproj" />
+  </ItemGroup>
+
+</Project>

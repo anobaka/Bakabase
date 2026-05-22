@@ -1,0 +1,23 @@
+<Project>
+
+  <!-- Shared defaults for every project under src/tests/ (test projects + Bakabase.TestKit). -->
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <!--
+      Displays test failures on the console in addition to the log file.
+      https://learn.microsoft.com/dotnet/core/testing/unit-testing-platform-integration-dotnet-test
+    -->
+    <TestingPlatformShowTestsFailure>true</TestingPlatformShowTestsFailure>
+  </PropertyGroup>
+
+  <!-- Version pins for the MSTest.Sdk testing-platform extensions (no-op for non-test projects). -->
+  <ItemGroup>
+    <PackageReference Update="Microsoft.Testing.Extensions.CodeCoverage" Version="17.14.2" />
+    <PackageReference Update="Microsoft.Testing.Extensions.TrxReport" Version="1.6.3" />
+  </ItemGroup>
+
+</Project>

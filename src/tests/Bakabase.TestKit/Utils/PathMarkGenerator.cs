@@ -6,7 +6,7 @@ using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Newtonsoft.Json;
 
-namespace Bakabase.Tests.Utils;
+namespace Bakabase.TestKit.Utils;
 
 /// <summary>
 /// Generates random PathMarks for comprehensive testing coverage.

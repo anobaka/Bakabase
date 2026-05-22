@@ -2,7 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Bootstrap.Components.Configuration.Abstractions;
 
-namespace Bakabase.Tests.Implementations;
+namespace Bakabase.TestKit.Implementations;
 
 public class TestBOptionsManager<TOptions> : IBOptionsManager<TOptions> where TOptions : class
 {

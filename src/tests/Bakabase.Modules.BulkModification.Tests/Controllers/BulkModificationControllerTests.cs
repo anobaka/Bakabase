@@ -8,7 +8,7 @@ using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Service.Controllers;
 using Bakabase.Service.Models.Input;
-using Bakabase.Tests.Utils;
+using Bakabase.TestKit.Utils;
 using Bootstrap.Models.ResponseModels;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;

@@ -4,7 +4,7 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Microsoft.Extensions.Localization;
 
-namespace Bakabase.Tests.Implementations;
+namespace Bakabase.TestKit.Implementations;
 
 public class TestBakabaseLocalizer : IBakabaseLocalizer
 {

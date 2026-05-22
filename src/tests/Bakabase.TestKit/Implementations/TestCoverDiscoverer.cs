@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Cover;
 using Bakabase.InsideWorld.Models.Constants;
 
-namespace Bakabase.Tests.Implementations;
+namespace Bakabase.TestKit.Implementations;
 
 public class TestCoverDiscoverer : ICoverDiscoverer
 {

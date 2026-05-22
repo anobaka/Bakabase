@@ -1,6 +1,6 @@
 ﻿using Bakabase.Modules.StandardValue.Abstractions.Components;
 
-namespace Bakabase.Modules.StandardValue.Tests.Components
+namespace Bakabase.TestKit.Components
 {
     public class NoneCustomDateTimeParser : ICustomDateTimeParser
     {

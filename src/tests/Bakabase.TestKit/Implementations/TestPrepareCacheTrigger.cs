@@ -1,6 +1,6 @@
 using Bakabase.Abstractions.Services;
 
-namespace Bakabase.Tests.Implementations;
+namespace Bakabase.TestKit.Implementations;
 
 /// <summary>
 /// Test implementation of IPrepareCacheTrigger that does nothing.
