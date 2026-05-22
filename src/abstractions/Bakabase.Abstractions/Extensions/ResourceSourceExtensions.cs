@@ -1,4 +1,6 @@
-namespace Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Abstractions.Models.Domain.Constants;
+
+namespace Bakabase.Abstractions.Extensions;
 
 public static class ResourceSourceExtensions
 {

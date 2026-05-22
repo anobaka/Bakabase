@@ -16,7 +16,7 @@ using Bakabase.Modules.ThirdParty.ThirdParties.Avsex;
 using Bakabase.Modules.ThirdParty.ThirdParties.Avsox;
 using Bakabase.Modules.ThirdParty.ThirdParties.CNMDB;
 using Bakabase.Modules.ThirdParty.ThirdParties.Dahlia;
-using Bakabase.Modules.ThirdParty.ThirdParties.Dmm;
+using Bakabase.Modules.ThirdParty.ThirdParties.DMM;
 using Bakabase.Modules.ThirdParty.ThirdParties.FC2;
 using Bakabase.Modules.ThirdParty.ThirdParties.Faleno;
 using Bakabase.Modules.ThirdParty.ThirdParties.Fantastica;

@@ -92,6 +92,7 @@ namespace Bakabase.Service.Extensions
             services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, ResourceDbModel, int>>();
             services.AddScoped<IResourceLegacySearchService, ResourceLegacySearchService>();
             services.AddScoped<IResourceService, ResourceService>();
+            services.AddSingleton<IPropertyValueScopeResolver, PropertyValueScopeResolver>();
             services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, SpecialText, int>>();
             services.AddScoped<SpecialTextService>();
             services.AddScoped<ISpecialTextService>(sp => sp.GetRequiredService<SpecialTextService>());

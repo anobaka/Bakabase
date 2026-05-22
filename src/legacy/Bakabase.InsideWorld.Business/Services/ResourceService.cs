@@ -77,6 +77,7 @@ namespace Bakabase.InsideWorld.Business.Services
         private readonly ILogger<ResourceService> _logger;
         private readonly SemaphoreSlim _addOrUpdateLock = new(1, 1);
         private readonly IBOptionsManager<ResourceOptions> _optionsManager;
+        private readonly IPropertyValueScopeResolver _scopeResolver;
         private readonly IBOptionsManager<AppOptions> _appOptionsManager;
         private readonly ICustomPropertyService _customPropertyService;
         private readonly ICustomPropertyValueService _customPropertyValueService;
@@ -117,7 +118,8 @@ namespace Bakabase.InsideWorld.Business.Services
             ISystemPlayer systemPlayer, IPropertyLocalizer propertyLocalizer, LogService logService,
             IResourceLegacySearchService legacySearchService,
             IPrepareCacheTrigger prepareCacheTrigger,
-            IBOptions<InsideWorld.Models.Configs.UIOptions> uiOptions) : base(serviceProvider)
+            IBOptions<InsideWorld.Models.Configs.UIOptions> uiOptions,
+            IPropertyValueScopeResolver scopeResolver) : base(serviceProvider)
         {
             _specialTextService = specialTextService;
             _aliasService = aliasService;
@@ -138,6 +140,7 @@ namespace Bakabase.InsideWorld.Business.Services
             _legacySearchService = legacySearchService;
             _prepareCacheTrigger = prepareCacheTrigger;
             _uiOptions = uiOptions;
+            _scopeResolver = scopeResolver;
             _orm = orm;
             _serviceProvider = serviceProvider;
         }
@@ -626,7 +629,8 @@ namespace Bakabase.InsideWorld.Business.Services
                                                 resourceProfilePropertyOptions.TryGetValue(r.Id, out var profilePropOptions);
                                                 SortPropertyValuesByScope(r, scopePriorityMap, profilePropOptions);
 
-                                                // Attach per-resource scope preferences (most granular layer; frontend resolves the chain).
+                                                // Attach per-resource scope preferences (most granular layer): used by the
+                                                // display-name resolver and re-resolved by the frontend per property.
                                                 if (scopePreferencesByResource.TryGetValue(r.Id, out var prefs))
                                                 {
                                                     r.ScopePreferences = prefs;
@@ -663,19 +667,13 @@ namespace Bakabase.InsideWorld.Business.Services
                                                 .ToDictionary(kv => kv.Key, kv => kv.Value.NameTemplate) ?? new Dictionary<int, string?>();
                                         }
 
-                                        // Pre-cache builtin property name mappings to avoid repeated _propertyLocalizer calls
-                                        var builtinPropertyKeyMap = SpecificEnumUtils<BuiltinPropertyForDisplayName>.Values
-                                            .ToDictionary(
-                                                b => b,
-                                                b => $"{{{_propertyLocalizer.BuiltinPropertyName((ResourceProperty)b)}}}");
-
                                         using (MiniProfiler.Current.Step("BuildDisplayName foreach"))
                                         {
                                             foreach (var resource in doList)
                                             {
                                                 if (templateMap.TryGetValue(resource.Id, out var tpl) && !string.IsNullOrEmpty(tpl))
                                                 {
-                                                    resource.DisplayName = BuildDisplayNameForResourceOptimized(resource, tpl, wrappers, builtinPropertyKeyMap);
+                                                    resource.DisplayName = BuildDisplayNameForResource(resource, tpl, wrappers);
                                                 }
                                             }
                                         }
@@ -2310,64 +2308,33 @@ namespace Bakabase.InsideWorld.Business.Services
             return displayName.IsNullOrEmpty() ? resource.FileName : displayName;
         }
 
+        // Localized "{property name}" placeholders for builtin display-name properties. The
+        // localization is culture-stable within a request and ResourceService is scoped, so it is
+        // resolved once per scope and reused across resources.
+        private Dictionary<BuiltinPropertyForDisplayName, string>? _builtinPropertyKeyMap;
+
+        private Dictionary<BuiltinPropertyForDisplayName, string> BuiltinPropertyKeyMap =>
+            _builtinPropertyKeyMap ??= SpecificEnumUtils<BuiltinPropertyForDisplayName>.Values
+                .ToDictionary(b => b, b => $"{{{_propertyLocalizer.BuiltinPropertyName((ResourceProperty)b)}}}");
+
         public Segment[] BuildDisplayNameSegmentsForResource(Resource resource, string template, (string Left, string Right)[] wrappers)
         {
-            var matcherPropertyMap = resource.Properties?.GetValueOrDefault((int)PropertyPool.Custom)?.Values
-                .GroupBy(d => d.Name)
-                .ToDictionary(d => $"{{{d.Key}}}", d => d.First()) ?? [];
-
-            var replacements = matcherPropertyMap.ToDictionary(d => d.Key,
-                d =>
+            var matcherPropertyMap = resource.Properties?.GetValueOrDefault((int)PropertyPool.Custom)?
+                .GroupBy(d => d.Value.Name)
+                .ToDictionary(g => $"{{{g.Key}}}", g =>
                 {
-                    var value = d.Value.Values?.FirstOrDefault()?.BizValue;
-                    if (value != null)
-                    {
-                        var stdValueHandler = StandardValueSystem.GetHandler(d.Value.BizValueType);
-                        return stdValueHandler.BuildDisplayValue(value);
-                    }
+                    var first = g.First();
+                    return (Id: first.Key, Property: first.Value);
+                }) ?? [];
 
-                    return null;
-                });
-
-            foreach (var b in SpecificEnumUtils<BuiltinPropertyForDisplayName>.Values)
-            {
-                var name = _propertyLocalizer.BuiltinPropertyName((ResourceProperty)b);
-                var key = $"{{{name}}}";
-                replacements[key] = b switch
-                {
-                    BuiltinPropertyForDisplayName.Filename => resource.FileName,
-                    BuiltinPropertyForDisplayName.Name => GetReservedNameForDisplayName(resource),
-                    _ => throw new ArgumentOutOfRangeException()
-                };
-            }
-
-            var segments =
-                ResourceUtils.SplitDisplayNameTemplateIntoSegments(template, replacements, wrappers);
-
-            return segments;
-        }
-
-        /// <summary>
-        /// Optimized version that accepts pre-cached builtin property key map
-        /// </summary>
-        private string BuildDisplayNameForResourceOptimized(
-            Resource resource,
-            string template,
-            (string Left, string Right)[] wrappers,
-            Dictionary<BuiltinPropertyForDisplayName, string> builtinPropertyKeyMap)
-        {
-            var matcherPropertyMap = resource.Properties?.GetValueOrDefault((int)PropertyPool.Custom)?.Values
-                .GroupBy(d => d.Name)
-                .ToDictionary(d => $"{{{d.Key}}}", d => d.First()) ?? [];
-
-            var replacements = new Dictionary<string, string?>(matcherPropertyMap.Count + builtinPropertyKeyMap.Count);
+            var replacements = new Dictionary<string, string?>(matcherPropertyMap.Count + BuiltinPropertyKeyMap.Count);
 
             foreach (var kv in matcherPropertyMap)
             {
-                var value = kv.Value.Values?.FirstOrDefault()?.BizValue;
+                var value = _scopeResolver.Resolve(resource, PropertyPool.Custom, kv.Value.Id)?.BizValue;
                 if (value != null)
                 {
-                    var stdValueHandler = StandardValueSystem.GetHandler(kv.Value.BizValueType);
+                    var stdValueHandler = StandardValueSystem.GetHandler(kv.Value.Property.BizValueType);
                     replacements[kv.Key] = stdValueHandler.BuildDisplayValue(value);
                 }
                 else
@@ -2376,7 +2343,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 }
             }
 
-            foreach (var (b, key) in builtinPropertyKeyMap)
+            foreach (var (b, key) in BuiltinPropertyKeyMap)
             {
                 replacements[key] = b switch
                 {
@@ -2386,17 +2353,13 @@ namespace Bakabase.InsideWorld.Business.Services
                 };
             }
 
-            var segments = ResourceUtils.SplitDisplayNameTemplateIntoSegments(template, replacements, wrappers);
-            var displayName = string.Join("", segments.Select(a => a.Text));
-            return displayName.IsNullOrEmpty() ? resource.FileName : displayName;
+            return ResourceUtils.SplitDisplayNameTemplateIntoSegments(template, replacements, wrappers);
         }
 
-        // Values are pre-sorted by scope priority (see SortPropertyValuesByScope); first entry is effective.
-        private static string? GetReservedNameForDisplayName(Resource resource) =>
-            resource.Properties?
-                .GetValueOrDefault((int)PropertyPool.Reserved)?
-                .GetValueOrDefault((int)ResourceProperty.Name)?
-                .Values?.FirstOrDefault()?.BizValue as string;
+        // The scope resolver applies the per-resource preference over the configured global scope
+        // priority and skips empty scopes (see IPropertyValueScopeResolver).
+        private string? GetReservedNameForDisplayName(Resource resource) =>
+            _scopeResolver.Resolve(resource, PropertyPool.Reserved, (int)ResourceProperty.Name)?.BizValue as string;
 
         // Deserializes a serialized standard value and writes it to the matching reserved-property column.
         private static void ApplyReservedPropertyValue(ReservedPropertyValue scopeValue, ResourceProperty property,

@@ -35,6 +35,7 @@ public class ComparisonService<TDbContext> : ResourceService<TDbContext, Compari
     private readonly IPropertyService _propertyService;
     private readonly BTaskManager _taskManager;
     private readonly Dictionary<ComparisonMode, IComparisonStrategy> _strategies;
+    private readonly IPropertyValueScopeResolver _scopeResolver;
 
     public ComparisonService(
         IServiceProvider serviceProvider,
@@ -45,7 +46,8 @@ public class ComparisonService<TDbContext> : ResourceService<TDbContext, Compari
         ISpecialTextService specialTextService,
         IPropertyService propertyService,
         BTaskManager taskManager,
-        IEnumerable<IComparisonStrategy> strategies)
+        IEnumerable<IComparisonStrategy> strategies,
+        IPropertyValueScopeResolver scopeResolver)
         : base(serviceProvider)
     {
         _ruleOrm = ruleOrm;
@@ -56,6 +58,7 @@ public class ComparisonService<TDbContext> : ResourceService<TDbContext, Compari
         _propertyService = propertyService;
         _taskManager = taskManager;
         _strategies = strategies.ToDictionary(s => s.Mode);
+        _scopeResolver = scopeResolver;
     }
 
     #region Plan CRUD
@@ -590,10 +593,16 @@ public class ComparisonService<TDbContext> : ResourceService<TDbContext, Compari
         return (totalScore / maxPossibleScore) * 100;
     }
 
-    private static object? GetPropertyValue(Resource resource, ComparisonRule rule)
+    private object? GetPropertyValue(Resource resource, ComparisonRule rule)
     {
-        var (_, bizValue) = resource.GetPropertyValue(rule.PropertyPool, rule.PropertyId, rule.PropertyValueScope);
-        return bizValue;
+        // Internal properties are unscoped; an explicitly pinned scope needs no resolution.
+        if (rule.PropertyPool == PropertyPool.Internal || rule.PropertyValueScope.HasValue)
+        {
+            var (_, bizValue) = resource.GetPropertyValue(rule.PropertyPool, rule.PropertyId, rule.PropertyValueScope);
+            return bizValue;
+        }
+
+        return _scopeResolver.Resolve(resource, rule.PropertyPool, rule.PropertyId)?.BizValue;
     }
 
     /// <summary>

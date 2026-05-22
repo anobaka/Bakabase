@@ -5,7 +5,7 @@ using Bakabase.Modules.ThirdParty.ThirdParties.DMM.Models;
 using CsQuery;
 using Microsoft.Extensions.Logging;
 
-namespace Bakabase.Modules.ThirdParty.ThirdParties.Dmm;
+namespace Bakabase.Modules.ThirdParty.ThirdParties.DMM;
 
 public class DmmClient(IHttpClientFactory httpClientFactory, ILoggerFactory loggerFactory)
     : BakabaseHttpClient(httpClientFactory, loggerFactory)
