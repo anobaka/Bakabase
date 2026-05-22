@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Globalization;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Models.Domain;
@@ -32,7 +33,13 @@ public static class StandardValueExtensions
                     return serializedValue.SplitWithEscapeChar(SerializationLowLevelSeparator,
                         SerializationSeparatorEscapeChar);
                 case StandardValueType.Decimal:
-                    return decimal.Parse(serializedValue);
+                    // New data is written with InvariantCulture. Legacy data may be in the
+                    // machine's culture, so fall back to CurrentCulture. NumberStyles.Float
+                    // disallows group separators, removing the "1,234" ambiguity.
+                    return decimal.TryParse(serializedValue, NumberStyles.Float, CultureInfo.InvariantCulture,
+                        out var dec)
+                        ? dec
+                        : decimal.Parse(serializedValue, NumberStyles.Float, CultureInfo.CurrentCulture);
                 case StandardValueType.Boolean:
                     return bool.Parse(serializedValue);
                 case StandardValueType.Link:
@@ -93,7 +100,11 @@ public static class StandardValueExtensions
                         : null;
                 }
                 case StandardValueType.Decimal:
-                    return rawValue.ToString();
+                    // Always write with InvariantCulture so the stored format is
+                    // culture-independent (and matches the frontend, which parses with `.`).
+                    return rawValue is decimal dec
+                        ? dec.ToString(CultureInfo.InvariantCulture)
+                        : rawValue.ToString();
                 case StandardValueType.Link:
                 {
                     return rawValue is LinkValue lv
