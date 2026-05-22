@@ -11,8 +11,11 @@ namespace Bakabase.Modules.Comparison.Tests;
 [TestClass]
 public sealed class Strategies
 {
-    // The strategies below do not read the context; null is safe.
+    // Most strategies below do not read the context; null is safe.
     private static readonly ComparisonContext Ctx = null!;
+    // RegexExtractNumber reads context.GetExtractedNumber, which does not touch
+    // the (null) special-text service.
+    private static readonly ComparisonContext RealCtx = new(null!);
     private const double Delta = 1e-9;
 
     #region StrictEqual
@@ -210,6 +213,63 @@ public sealed class Strategies
     [TestMethod]
     public void TimeWindow_NonDate_ReturnsZero()
         => Assert.AreEqual(0.0, TimeWindow.Calculate("x", "y", null, Ctx), Delta);
+
+    #endregion
+
+    #region RegexExtractNumber
+
+    private static readonly RegexExtractNumberStrategy RegexExtractNumber = new();
+
+    [TestMethod]
+    public void RegexExtractNumber_SameExtractedNumber_ReturnsOne()
+    {
+        // Default pattern extracts the digits after v/vol/ch/ep.
+        Assert.AreEqual(1.0, RegexExtractNumber.Calculate("vol.3", "vol 3", null, RealCtx), Delta);
+    }
+
+    [TestMethod]
+    public void RegexExtractNumber_DifferentExtractedNumber_ReturnsZero()
+        => Assert.AreEqual(0.0, RegexExtractNumber.Calculate("vol.3", "vol.5", null, RealCtx), Delta);
+
+    [TestMethod]
+    public void RegexExtractNumber_NoNumberExtracted_ReturnsZero()
+        => Assert.AreEqual(0.0, RegexExtractNumber.Calculate("no digits here", "vol.3", null, RealCtx), Delta);
+
+    [TestMethod]
+    public void RegexExtractNumber_CustomPattern()
+    {
+        const string param = """{"pattern": "Disc([0-9]+)"}""";
+        Assert.AreEqual(1.0, RegexExtractNumber.Calculate("Disc02", "Disc2", param, RealCtx), Delta);
+    }
+
+    #endregion
+
+    #region ExtensionMap
+
+    private static readonly ExtensionMapStrategy ExtensionMap = new();
+
+    [TestMethod]
+    public void ExtensionMap_IdenticalDistribution_ReturnsOne()
+        => Assert.AreEqual(1.0, ExtensionMap.Calculate(
+            new List<string> { "a.mp4", "b.mp4" }, new List<string> { "c.mp4", "d.mp4" }, null, Ctx), Delta);
+
+    [TestMethod]
+    public void ExtensionMap_DisjointExtensions_ReturnsZero()
+        => Assert.AreEqual(0.0, ExtensionMap.Calculate(
+            new List<string> { "a.mp4" }, new List<string> { "b.jpg" }, null, Ctx), Delta);
+
+    [TestMethod]
+    public void ExtensionMap_PartialOverlap()
+    {
+        // {mp4:1.0} vs {mp4:0.5, jpg:0.5} -> min overlap = 0.5
+        Assert.AreEqual(0.5, ExtensionMap.Calculate(
+            new List<string> { "a.mp4", "b.mp4" }, new List<string> { "c.mp4", "d.jpg" }, null, Ctx), Delta);
+    }
+
+    [TestMethod]
+    public void ExtensionMap_IsCaseInsensitive()
+        => Assert.AreEqual(1.0, ExtensionMap.Calculate(
+            new List<string> { "x.MP4" }, new List<string> { "y.mp4" }, null, Ctx), Delta);
 
     #endregion
 }
