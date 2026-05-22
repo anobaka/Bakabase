@@ -30,6 +30,27 @@ public sealed class SearchMatching
     private static readonly IPropertySearchHandler MultipleChoice =
         PropertySystem.Property.TryGetSearchHandler(PropertyType.MultipleChoice)!;
 
+    private static readonly IPropertySearchHandler Time =
+        PropertySystem.Property.TryGetSearchHandler(PropertyType.Time)!;
+
+    private static readonly IPropertySearchHandler Percentage =
+        PropertySystem.Property.TryGetSearchHandler(PropertyType.Percentage)!;
+
+    private static readonly IPropertySearchHandler Rating =
+        PropertySystem.Property.TryGetSearchHandler(PropertyType.Rating)!;
+
+    private static readonly IPropertySearchHandler Formula =
+        PropertySystem.Property.TryGetSearchHandler(PropertyType.Formula)!;
+
+    private static readonly IPropertySearchHandler Tags =
+        PropertySystem.Property.TryGetSearchHandler(PropertyType.Tags)!;
+
+    private static readonly IPropertySearchHandler Multilevel =
+        PropertySystem.Property.TryGetSearchHandler(PropertyType.Multilevel)!;
+
+    private static readonly IPropertySearchHandler Attachment =
+        PropertySystem.Property.TryGetSearchHandler(PropertyType.Attachment)!;
+
     #region Number
 
     [TestMethod]
@@ -242,6 +263,113 @@ public sealed class SearchMatching
             SearchOperation.In, new List<string> { "a", "b", "c" }));
         Assert.IsFalse(MultipleChoice.IsMatch(new List<string> { "a", "x" },
             SearchOperation.In, new List<string> { "a", "b" }));
+    }
+
+    #endregion
+
+    #region Time
+
+    [TestMethod]
+    public void Time_Equals_And_NotEquals()
+    {
+        Assert.IsTrue(Time.IsMatch(TimeSpan.FromHours(2), SearchOperation.Equals, TimeSpan.FromHours(2)));
+        Assert.IsTrue(Time.IsMatch(TimeSpan.FromHours(2), SearchOperation.NotEquals, TimeSpan.FromHours(3)));
+    }
+
+    [TestMethod]
+    public void Time_GreaterThan_And_LessThan()
+    {
+        Assert.IsTrue(Time.IsMatch(TimeSpan.FromHours(3), SearchOperation.GreaterThan, TimeSpan.FromHours(2)));
+        Assert.IsFalse(Time.IsMatch(TimeSpan.FromHours(2), SearchOperation.GreaterThan, TimeSpan.FromHours(2)));
+        Assert.IsTrue(Time.IsMatch(TimeSpan.FromHours(1), SearchOperation.LessThan, TimeSpan.FromHours(2)));
+    }
+
+    #endregion
+
+    #region Percentage / Rating
+
+    [TestMethod]
+    public void Percentage_ComparisonBoundaries()
+    {
+        Assert.IsTrue(Percentage.IsMatch(0.5m, SearchOperation.Equals, 0.5m));
+        Assert.IsTrue(Percentage.IsMatch(0.6m, SearchOperation.GreaterThan, 0.5m));
+        Assert.IsFalse(Percentage.IsMatch(0.5m, SearchOperation.GreaterThan, 0.5m));
+    }
+
+    [TestMethod]
+    public void Rating_ComparisonBoundaries()
+    {
+        Assert.IsTrue(Rating.IsMatch(4m, SearchOperation.Equals, 4m));
+        Assert.IsTrue(Rating.IsMatch(4m, SearchOperation.GreaterThanOrEquals, 4m));
+        Assert.IsFalse(Rating.IsMatch(3m, SearchOperation.GreaterThanOrEquals, 4m));
+    }
+
+    #endregion
+
+    #region Formula
+
+    [TestMethod]
+    public void Formula_Equals_IsCaseInsensitive()
+    {
+        Assert.IsTrue(Formula.IsMatch("Result", SearchOperation.Equals, "result"));
+        Assert.IsFalse(Formula.IsMatch("Result", SearchOperation.Equals, "other"));
+    }
+
+    [TestMethod]
+    public void Formula_Contains()
+    {
+        Assert.IsTrue(Formula.IsMatch("computed value", SearchOperation.Contains, "value"));
+        Assert.IsFalse(Formula.IsMatch("computed value", SearchOperation.Contains, "missing"));
+    }
+
+    #endregion
+
+    #region Tags / Multilevel
+
+    [TestMethod]
+    public void Tags_Contains_RequiresAllFilterValues()
+    {
+        var dbValue = new List<string> { "a", "b", "c" };
+        Assert.IsTrue(Tags.IsMatch(dbValue, SearchOperation.Contains, new List<string> { "a", "b" }));
+        Assert.IsFalse(Tags.IsMatch(dbValue, SearchOperation.Contains, new List<string> { "a", "x" }));
+    }
+
+    [TestMethod]
+    public void Tags_In_RequiresEveryValueWithinFilterSet()
+    {
+        Assert.IsTrue(Tags.IsMatch(new List<string> { "a" },
+            SearchOperation.In, new List<string> { "a", "b" }));
+        Assert.IsFalse(Tags.IsMatch(new List<string> { "a", "x" },
+            SearchOperation.In, new List<string> { "a", "b" }));
+    }
+
+    [TestMethod]
+    public void Multilevel_Contains_And_In()
+    {
+        var dbValue = new List<string> { "n1", "n2" };
+        Assert.IsTrue(Multilevel.IsMatch(dbValue, SearchOperation.Contains, new List<string> { "n1" }));
+        Assert.IsTrue(Multilevel.IsMatch(dbValue, SearchOperation.In, new List<string> { "n1", "n2", "n3" }));
+        Assert.IsFalse(Multilevel.IsMatch(dbValue, SearchOperation.Contains, new List<string> { "n9" }));
+    }
+
+    #endregion
+
+    #region Attachment
+
+    [TestMethod]
+    public void Attachment_Contains_MatchesPathSubstring()
+    {
+        var dbValue = new List<string> { "/photos/a.jpg", "/photos/b.png" };
+        Assert.IsTrue(Attachment.IsMatch(dbValue, SearchOperation.Contains, "b.png"));
+        Assert.IsFalse(Attachment.IsMatch(dbValue, SearchOperation.Contains, "c.gif"));
+    }
+
+    [TestMethod]
+    public void Attachment_NotContains()
+    {
+        var dbValue = new List<string> { "/photos/a.jpg" };
+        Assert.IsTrue(Attachment.IsMatch(dbValue, SearchOperation.NotContains, "missing"));
+        Assert.IsFalse(Attachment.IsMatch(dbValue, SearchOperation.NotContains, "a.jpg"));
     }
 
     #endregion

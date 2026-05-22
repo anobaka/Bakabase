@@ -61,7 +61,11 @@ namespace Bakabase.Modules.Property.Components.Properties
                 return false;
             }
 
-            var optValue = StandardValueSystem.GetHandler(expectedFilterValueType).Optimize(dbValue);
+            // Optimize the db value with the property's OWN db value type. The filter
+            // value's type can differ — e.g. Attachment stores a list but is filtered by a
+            // string substring — so expectedFilterValueType must not be used here.
+            var dbValueType = PropertySystem.Property.GetDbValueType(Type);
+            var optValue = StandardValueSystem.GetHandler(dbValueType).Optimize(dbValue);
 
             if (optValue is TDbValue tv)
             {
