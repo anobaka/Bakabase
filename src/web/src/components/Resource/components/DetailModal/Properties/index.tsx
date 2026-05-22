@@ -11,6 +11,7 @@ import { useUpdate } from "react-use";
 import { PropertyPool, PropertyValueScope, propertyValueScopes } from "@/sdk/constants";
 import { useResourceOptionsStore, useUiOptionsStore } from "@/stores/options";
 import PropertyContainer from "@/components/Resource/components/DetailModal/Properties/PropertyContainer";
+import { buildEffectiveScopePriority } from "@/core/models/Resource";
 import BApi from "@/sdk/BApi";
 import { buildLogger } from "@/components/utils";
 import { deserializeStandardValue } from "@/components/StandardValue/helpers";
@@ -231,17 +232,7 @@ const Properties = (props: Props) => {
   const renderProperty = (pCtx: PropertyRenderContext) => {
     const { property, propertyValues, propertyPool } = pCtx;
     const preference = preferenceMap.get(`${propertyPool}-${property.id}`);
-    let effectivePriority = valueScopePriority;
-
-    if (preference?.priorities && preference.priorities.length > 0) {
-      const chain: PropertyValueScope[] = [];
-
-      for (const p of preference.priorities) {
-        chain.push(p.scope);
-        if (!p.fallbackOnEmpty) break;
-      }
-      effectivePriority = chain;
-    }
+    const effectivePriority = buildEffectiveScopePriority(valueScopePriority, preference);
 
     // log(pCtx);
     return (

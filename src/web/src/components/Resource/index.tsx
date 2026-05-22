@@ -26,7 +26,7 @@ import moment from "moment";
 
 import StandardValueRenderer from "../StandardValue/ValueRenderer";
 import { convertFromApiValue } from "@/components/StandardValue/helpers";
-import { isNonEmptyValue } from "@/core/models/Resource";
+import { resolveScopedValue } from "@/core/models/Resource";
 
 import "./index.css";
 
@@ -74,37 +74,6 @@ const renderSourceIcon = (origin: DataOrigin, className: string): React.ReactNod
     default:
       return <PlayCircleOutlined className={className} />;
   }
-};
-
-// Mirrors DetailModal's PropertyContainer value selection so cover and modal stay consistent.
-const selectValueByScopePriority = (
-  values: Property["values"],
-  globalScopePriority: PropertyValueScope[],
-  preference?: PropertyValueScopePreference,
-): NonNullable<Property["values"]>[number] | undefined => {
-  let effectivePriority = globalScopePriority;
-
-  if (preference?.priorities && preference.priorities.length > 0) {
-    const chain: PropertyValueScope[] = [];
-
-    for (const p of preference.priorities) {
-      chain.push(p.scope);
-      if (!p.fallbackOnEmpty) {
-        break;
-      }
-    }
-    effectivePriority = chain;
-  }
-
-  for (const scope of effectivePriority) {
-    const value = values?.find((v) => v.scope == scope);
-
-    if (value && isNonEmptyValue(value.aliasAppliedBizValue ?? value.bizValue)) {
-      return value;
-    }
-  }
-
-  return undefined;
 };
 
 type MenuEntry = {
@@ -605,7 +574,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
                   case PropertyPool.Reserved:
                   case PropertyPool.Custom: {
                     const property = resource.properties?.[dpk.pool as PropertyPool]?.[dpk.id];
-                    const selectedValue = selectValueByScopePriority(
+                    const selectedValue = resolveScopedValue(
                       property?.values,
                       valueScopePriority,
                       scopePreferenceMap.get(`${dpk.pool}-${dpk.id}`),
@@ -686,7 +655,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
       const p: Property = customPropertyValues[id];
 
       if (p.bizValueType == StandardValueType.ListTag) {
-        const selectedValue = selectValueByScopePriority(
+        const selectedValue = resolveScopedValue(
           p.values,
           valueScopePriority,
           scopePreferenceMap.get(`${PropertyPool.Custom}-${id}`),

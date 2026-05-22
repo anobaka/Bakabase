@@ -11,7 +11,7 @@ import type {
 } from "@/sdk/constants";
 import type { PropertyPool } from "@/sdk/constants";
 
-type Value = {
+export type Value = {
   scope: PropertyValueScope;
   value?: any;
   bizValue?: any;
@@ -66,6 +66,53 @@ export type PropertyValueScopePreference = {
   /** Ordered scope priorities with per-scope fallback flag; null = no override (falls through to profile/global) */
   priorities?: PropertyValueScopePriority[];
 };
+
+/**
+ * Resolve the effective scope chain for one property. A per-resource preference, when it carries
+ * priorities, fully replaces the global priority. Within a preference an entry with
+ * `fallbackOnEmpty: false` truncates the chain there — later scopes become unreachable, so an
+ * empty value at that scope renders blank instead of falling through. The global priority has no
+ * flags and always falls through.
+ */
+export const buildEffectiveScopePriority = (
+  globalPriority: PropertyValueScope[],
+  preference?: PropertyValueScopePreference,
+): PropertyValueScope[] => {
+  if (!preference?.priorities || preference.priorities.length === 0) {
+    return globalPriority;
+  }
+
+  const chain: PropertyValueScope[] = [];
+  for (const p of preference.priorities) {
+    chain.push(p.scope);
+    if (!p.fallbackOnEmpty) break;
+  }
+
+  return chain;
+};
+
+/** Walk `effectivePriority` and return the first scope that holds a non-empty value. */
+export const selectScopedValue = (
+  values: Value[] | undefined,
+  effectivePriority: PropertyValueScope[],
+): Value | undefined => {
+  for (const scope of effectivePriority) {
+    const value = values?.find((v) => v.scope == scope);
+    if (value && isNonEmptyValue(value.aliasAppliedBizValue ?? value.bizValue)) {
+      return value;
+    }
+  }
+
+  return undefined;
+};
+
+/** Resolve a property's per-scope values down to the single value to display. */
+export const resolveScopedValue = (
+  values: Value[] | undefined,
+  globalPriority: PropertyValueScope[],
+  preference?: PropertyValueScopePreference,
+): Value | undefined =>
+  selectScopedValue(values, buildEffectiveScopePriority(globalPriority, preference));
 
 export type ResourceSourceLink = {
   id: number;

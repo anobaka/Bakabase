@@ -11,7 +11,7 @@ import { AiOutlinePlusCircle } from "react-icons/ai";
 
 import BApi from "@/sdk/BApi";
 import { propertyValueScopes } from "@/sdk/constants";
-import { isNonEmptyValue } from "@/core/models/Resource";
+import { selectScopedValue } from "@/core/models/Resource";
 import PropertyValueRenderer from "@/components/Property/components/PropertyValueRenderer";
 import { buildLogger } from "@/components/utils";
 import {
@@ -75,25 +75,9 @@ const PropertyContainer = (props: PropertyContainerProps) => {
     };
   });
 
-  let bizValue: any | undefined;
-  let dbValue: any | undefined;
-  let scope: PropertyValueScope | undefined;
-
-  for (const s of valueScopePriority) {
-    const value = values?.find((v) => v.scope == s);
-
-    if (value) {
-      const dv = value.aliasAppliedBizValue ?? value.bizValue;
-
-      if (isNonEmptyValue(dv)) {
-        bizValue = dv;
-        dbValue = value.value;
-        scope = s;
-        break;
-      }
-    }
-  }
-  scope ??= valueScopePriority[0];
+  const selectedValue = selectScopedValue(values, valueScopePriority);
+  const bizValue = selectedValue?.aliasAppliedBizValue ?? selectedValue?.bizValue;
+  const dbValue = selectedValue?.value;
 
   const canShowPopover =
     !hidePropertyName && resourceId !== undefined && propertyPool !== undefined;
