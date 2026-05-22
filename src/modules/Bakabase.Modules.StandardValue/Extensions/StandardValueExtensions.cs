@@ -104,11 +104,17 @@ public static class StandardValueExtensions
                     return rawValue.ToString();
                 case StandardValueType.DateTime:
                 {
-                    return rawValue is DateTime dt ? new DateTimeOffset(dt).ToUnixTimeMilliseconds().ToString() : null;
+                    // ToUniversalTime() first: new DateTimeOffset(dt) throws for
+                    // DateTime.Min/MaxValue once a non-UTC local offset is applied.
+                    return rawValue is DateTime dt
+                        ? new DateTimeOffset(dt.ToUniversalTime()).ToUnixTimeMilliseconds().ToString()
+                        : null;
                 }
                 case StandardValueType.Time:
                 {
-                    return rawValue is TimeSpan ts ? ((int) ts.TotalMilliseconds).ToString() : null;
+                    // long, not int: TimeSpan.TotalMilliseconds overflows Int32
+                    // for durations beyond ~24.8 days.
+                    return rawValue is TimeSpan ts ? ((long) ts.TotalMilliseconds).ToString() : null;
                 }
                 case StandardValueType.ListListString:
                 {

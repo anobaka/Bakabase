@@ -215,6 +215,15 @@ public sealed class Serialization
         Assert.AreEqual(original, result);
     }
 
+    [TestMethod]
+    public void DateTime_ExtremeValues_SerializeWithoutDataLoss()
+    {
+        // new DateTimeOffset(dt) overflows at the edges of DateTime's range once a
+        // local offset is applied; serialization must still yield a value, not null.
+        Assert.IsNotNull(DateTime.MinValue.SerializeAsStandardValue(StandardValueType.DateTime));
+        Assert.IsNotNull(DateTime.MaxValue.SerializeAsStandardValue(StandardValueType.DateTime));
+    }
+
     #endregion
 
     #region Time
@@ -238,6 +247,15 @@ public sealed class Serialization
     public void Time_WithMilliseconds_RoundTrips()
     {
         var original = new TimeSpan(0, 1, 12, 33, 500);
+        var result = (TimeSpan?)RoundTrip(original, StandardValueType.Time);
+        Assert.AreEqual(original, result);
+    }
+
+    [TestMethod]
+    public void Time_DurationBeyondInt32Milliseconds_RoundTrips()
+    {
+        // 30 days exceeds int.MaxValue milliseconds (~24.8 days).
+        var original = TimeSpan.FromDays(30);
         var result = (TimeSpan?)RoundTrip(original, StandardValueType.Time);
         Assert.AreEqual(original, result);
     }
