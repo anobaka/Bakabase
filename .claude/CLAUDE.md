@@ -65,6 +65,14 @@ For **when** to regenerate and the rule about static data (e.g.
 `ExtensionMediaTypes`) shipping via `constants.ts` instead of a runtime
 endpoint, see `.claude/rules/api-conventions.md`.
 
+## Commit & PR Conventions
+
+- **Write commit messages and pull request titles/descriptions in English.**
+  GitHub issues are the exception — those stay in Chinese (see the issue
+  workflow below).
+- Keep the conventional-commit prefixes already used in `git log`
+  (`feat`, `fix`, `chore`, `ci`, `docs`, `refactor`, …).
+
 ## Workflow: GitHub Issue Management
 
 After completing **any self-contained change** (a feature, fix, or refactor —
