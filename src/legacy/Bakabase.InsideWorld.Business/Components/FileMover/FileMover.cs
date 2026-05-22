@@ -71,6 +71,14 @@ namespace Bakabase.InsideWorld.Business.Components.FileMover
                 Directory.CreateDirectory(targetPath);
                 foreach (var s in sources)
                 {
+                    // A configured source directory may have been deleted or unmounted; skip it
+                    // rather than letting GetFiles throw and abort the whole move task.
+                    if (!Directory.Exists(s))
+                    {
+                        doneStPair++;
+                        continue;
+                    }
+
                     var files = Directory.GetFiles(s).Select(a => a.StandardizePath()!).Where(a => _shouldMove(a, maxCreatedAt))
                         .ToArray();
                     var dirs = Directory.GetDirectories(s).Select(a => a.StandardizePath()!).Where(a => _shouldMove(a, maxCreatedAt))
@@ -173,7 +181,7 @@ namespace Bakabase.InsideWorld.Business.Components.FileMover
             {
                 var dtExpired = DateTime.Now - options.Delay;
                 var hasSomethingToMove = options.Targets?.Any(a =>
-                    a.Sources?.Where(b => b.IsNotEmpty()).Any(b =>
+                    a.Sources?.Where(b => b.IsNotEmpty() && Directory.Exists(b)).Any(b =>
                         Directory.GetFileSystemEntries(b).Any(c => _shouldMove(c, dtExpired))) == true) == true;
 
                 if (hasSomethingToMove)
