@@ -1,4 +1,3 @@
-using System.Net;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.InsideWorld.Models.Constants;
@@ -13,24 +12,24 @@ public class BangumiCookieValidator(IHttpClientFactory httpClientFactory, IBakab
 
     protected override string HttpClientName => InternalOptions.HttpClientNames.Bangumi;
 
-    /// <summary>GET /v0/me returns current user when cookie is valid (Bearer-style session).</summary>
-    protected override string Url => "https://api.bgm.tv/v0/me";
+    /// <summary>
+    /// The Bangumi enhancer scrapes the bgm.tv HTML site (see <see cref="BangumiClient"/>), which is
+    /// a separate auth system from the api.bgm.tv v0 API. Validate the cookie against the same site
+    /// the enhancer actually uses — otherwise a cookie that works for the enhancer is reported invalid.
+    /// </summary>
+    protected override string Url => "https://bgm.tv/";
 
     protected override async Task<(bool Success, string? Message, string? Content)> Validate(HttpResponseMessage rsp)
     {
-        var body = await rsp.Content.ReadAsStringAsync();
-        if (rsp.StatusCode == HttpStatusCode.Unauthorized)
-        {
-            return (false, "Unauthorized", body);
-        }
-
         if (!rsp.IsSuccessStatusCode)
         {
-            return (false, rsp.StatusCode.ToString(), body);
+            return (false, rsp.StatusCode.ToString(), null);
         }
 
-        var ok = body.Contains("\"username\"", StringComparison.Ordinal) ||
-                 body.Contains("\"nickname\"", StringComparison.Ordinal);
-        return (ok, ok ? null : "Unexpected response", body);
+        var body = await rsp.Content.ReadAsStringAsync();
+        // bgm.tv renders a logout link (/logout/{hash}) on every page while the session cookie is
+        // valid; a logged-out page shows the login form instead.
+        var loggedIn = body.Contains("/logout/", StringComparison.Ordinal);
+        return (loggedIn, loggedIn ? null : "Not logged in", null);
     }
 }
