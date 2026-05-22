@@ -19,7 +19,7 @@ public class DateTimePropertyDescriptor : AbstractPropertyDescriptor<System.Date
             SearchOperation.LessThan => dbValue < fv,
             SearchOperation.GreaterThanOrEquals => dbValue >= fv,
             SearchOperation.LessThanOrEquals => dbValue <= fv,
-            _ => true
+            _ => false
         };
     }
 

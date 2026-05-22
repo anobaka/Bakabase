@@ -19,7 +19,7 @@ public class TimePropertyDescriptor : AbstractPropertyDescriptor<TimeSpan?, Time
             SearchOperation.LessThan => dbValue < fv,
             SearchOperation.GreaterThanOrEquals => dbValue >= fv,
             SearchOperation.LessThanOrEquals => dbValue <= fv,
-            _ => true
+            _ => false
         };
     }
 

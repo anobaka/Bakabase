@@ -51,7 +51,7 @@ public class MultilevelPropertyDescriptor : AbstractPropertyDescriptor<Multileve
             SearchOperation.Contains => fv.All(dbValue.Contains),
             SearchOperation.NotContains => fv.All(v => !dbValue.Contains(v)),
             SearchOperation.In => dbValue.All(fv.Contains),
-            _ => true
+            _ => false
         };
     }
 

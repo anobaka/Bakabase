@@ -28,7 +28,7 @@ public abstract class TextPropertyDescriptor<TDbValue, TBizValue> : AbstractProp
                 SearchOperation.NotEndsWith => !s.EndsWith(fv, StringComparison.OrdinalIgnoreCase),
                 SearchOperation.Matches => Regex.IsMatch(s, fv),
                 SearchOperation.NotMatches => !Regex.IsMatch(s, fv),
-                _ => true
+                _ => false
             }
         );
     }

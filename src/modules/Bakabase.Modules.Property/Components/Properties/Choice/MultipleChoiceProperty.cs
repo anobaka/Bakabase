@@ -39,7 +39,7 @@ public class MultipleChoicePropertyDescriptor
             SearchOperation.Contains => fv.All(dbValue.Contains),
             SearchOperation.NotContains => fv.All(target => !dbValue.Contains(target)),
             SearchOperation.In => dbValue.All(fv.Contains),
-            _ => true
+            _ => false
         };
     }
 
