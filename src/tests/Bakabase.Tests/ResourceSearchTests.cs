@@ -1,0 +1,146 @@
+using System;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
+using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Abstractions.Services;
+using Bakabase.InsideWorld.Business.Services;
+using Bakabase.TestKit.Utils;
+using Bootstrap.Components.Tasks;
+using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json;
+
+namespace Bakabase.Tests;
+
+/// <summary>
+/// Integration coverage for resource search: the unfiltered Search path
+/// (paging / total count), GetAllIds, and the inverted-index service lifecycle
+/// (rebuild -> ready, status, no-filter null contract).
+/// </summary>
+[TestClass]
+public sealed class ResourceSearchTests
+{
+    private string _testRoot = null!;
+    private IServiceProvider _sp = null!;
+
+    [TestInitialize]
+    public async Task Setup()
+    {
+        _sp = await TestServiceBuilder.BuildServiceProvider();
+        _testRoot = Path.Combine(
+            Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!,
+            $"ResourceSearchTests.{DateTime.Now:yyyyMMddHHmmssfff}.{Guid.NewGuid():N}");
+        Directory.CreateDirectory(_testRoot);
+    }
+
+    [TestCleanup]
+    public void Cleanup()
+    {
+        if (Directory.Exists(_testRoot))
+        {
+            try { Directory.Delete(_testRoot, true); } catch { }
+        }
+    }
+
+    /// <summary>Creates <paramref name="count"/> directory resources via a layer-1 resource mark + sync.</summary>
+    private async Task SeedResources(int count)
+    {
+        for (var i = 0; i < count; i++)
+        {
+            Directory.CreateDirectory(Path.Combine(_testRoot, $"Res{i:D2}"));
+        }
+
+        var pathMarkService = _sp.GetRequiredService<IPathMarkService>();
+        await pathMarkService.Add(new PathMark
+        {
+            Path = _testRoot,
+            Type = PathMarkType.Resource,
+            ConfigJson = JsonConvert.SerializeObject(new ResourceMarkConfig
+            {
+                MatchMode = PathMatchMode.Layer,
+                Layer = 1,
+                FsTypeFilter = PathFilterFsType.Directory
+            }),
+            Priority = 100
+        });
+
+        var resourceSyncService = _sp.GetRequiredService<ResourceSyncService>();
+        await resourceSyncService.SyncResources(
+            ResourceSource.PathMark, null, null, new PauseToken(), CancellationToken.None);
+    }
+
+    [TestMethod]
+    public async Task Search_NoFilter_ReturnsAllResources()
+    {
+        await SeedResources(5);
+        var response = await _sp.GetRequiredService<IResourceService>().Search(new ResourceSearch());
+        Assert.AreEqual(5, response.TotalCount);
+        Assert.AreEqual(5, response.Data!.Count);
+    }
+
+    [TestMethod]
+    public async Task Search_PageSize_CapsResultsButReportsFullTotal()
+    {
+        await SeedResources(5);
+        var response = await _sp.GetRequiredService<IResourceService>()
+            .Search(new ResourceSearch { PageIndex = 1, PageSize = 2 });
+        Assert.AreEqual(2, response.Data!.Count);
+        Assert.AreEqual(5, response.TotalCount);
+    }
+
+    [TestMethod]
+    public async Task Search_LastPage_ReturnsRemainder()
+    {
+        await SeedResources(5);
+        // page 3 with size 2 -> items 5..5 -> 1 result
+        var response = await _sp.GetRequiredService<IResourceService>()
+            .Search(new ResourceSearch { PageIndex = 3, PageSize = 2 });
+        Assert.AreEqual(1, response.Data!.Count);
+        Assert.AreEqual(5, response.TotalCount);
+    }
+
+    [TestMethod]
+    public async Task GetAllIds_NoFilter_ReturnsEveryResourceId()
+    {
+        await SeedResources(4);
+        var ids = await _sp.GetRequiredService<IResourceService>().GetAllIds(new ResourceSearch());
+        Assert.AreEqual(4, ids.Length);
+        Assert.AreEqual(4, ids.Distinct().Count());
+    }
+
+    [TestMethod]
+    public async Task SearchIndex_RebuildAll_BecomesReady()
+    {
+        await SeedResources(3);
+        var index = _sp.GetRequiredService<IResourceSearchIndexService>();
+        await index.RebuildAllAsync(CancellationToken.None);
+        await index.WaitForReadyAsync(TimeSpan.FromSeconds(10));
+        Assert.IsTrue(index.IsReady);
+    }
+
+    [TestMethod]
+    public async Task SearchIndex_Status_ReflectsResourceCount()
+    {
+        await SeedResources(3);
+        var resourceService = _sp.GetRequiredService<IResourceService>();
+        var index = _sp.GetRequiredService<IResourceSearchIndexService>();
+        await index.RebuildAllAsync(CancellationToken.None);
+        await index.WaitForReadyAsync(TimeSpan.FromSeconds(10));
+
+        var all = await resourceService.GetAll();
+        var status = index.GetStatus();
+        Assert.IsTrue(status.IsReady);
+        Assert.AreEqual(all.Count, status.TotalResourceCount);
+    }
+
+    [TestMethod]
+    public async Task SearchIndex_NullFilterGroup_ReturnsNull()
+    {
+        // null group => "no filter" => callers fall back to a full scan.
+        var index = _sp.GetRequiredService<IResourceSearchIndexService>();
+        Assert.IsNull(await index.SearchResourceIdsAsync(null));
+    }
+}

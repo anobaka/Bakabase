@@ -932,7 +932,8 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
             Version = _index.Version,
             LastUpdatedAt = _index.LastUpdatedAt,
             TotalResourceCount = _index.AllResourceIds.Count,
-            PendingUpdateCount = _operationChannel.Reader.Count,
+            // CanCount guard: the single-reader operation channel does not support Count.
+            PendingUpdateCount = _operationChannel.Reader.CanCount ? _operationChannel.Reader.Count : 0,
             IndexSizes = new Dictionary<string, int>
             {
                 ["ValueIndex"] = _index.GetValueIndexEntryCount(),
