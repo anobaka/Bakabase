@@ -1,5 +1,6 @@
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Property.Abstractions.Models.Domain;
+using Bakabase.Modules.StandardValue.Models.Domain;
 using DomainProperty = Bakabase.Abstractions.Models.Domain.Property;
 
 namespace Bakabase.Modules.Property.Tests;
@@ -84,4 +85,85 @@ public sealed class IndexGeneration
         Assert.AreEqual(1, entries.Count);
         Assert.AreEqual("uuid-a", entries[0].Key);
     }
+
+    [TestMethod]
+    public void MultilineText_ProducesSingleKeyWithoutRangeValue()
+    {
+        var entries = Entries(PropertyType.MultilineText, "line1\nline2");
+        Assert.AreEqual(1, entries.Count);
+        Assert.IsNull(entries[0].RangeValue);
+    }
+
+    [TestMethod]
+    public void SingleChoice_ProducesSingleKey()
+    {
+        var entries = Entries(PropertyType.SingleChoice, "uuid-x");
+        Assert.AreEqual(1, entries.Count);
+        Assert.AreEqual("uuid-x", entries[0].Key);
+    }
+
+    [TestMethod]
+    public void Formula_ProducesSingleKey()
+        => Assert.AreEqual(1, Entries(PropertyType.Formula, "computed").Count);
+
+    [TestMethod]
+    public void Percentage_ProducesComparableRangeValue()
+    {
+        var entries = Entries(PropertyType.Percentage, 0.5m);
+        Assert.AreEqual(1, entries.Count);
+        Assert.AreEqual(0.5m, entries[0].RangeValue);
+    }
+
+    [TestMethod]
+    public void Rating_ProducesComparableRangeValue()
+    {
+        var entries = Entries(PropertyType.Rating, 4m);
+        Assert.AreEqual(1, entries.Count);
+        Assert.AreEqual(4m, entries[0].RangeValue);
+    }
+
+    [TestMethod]
+    public void Date_ProducesComparableRangeValue()
+    {
+        var entries = Entries(PropertyType.Date, new DateTime(2024, 6, 1));
+        Assert.AreEqual(1, entries.Count);
+        Assert.IsNotNull(entries[0].RangeValue);
+    }
+
+    [TestMethod]
+    public void Time_ProducesComparableRangeValue()
+    {
+        var entries = Entries(PropertyType.Time, TimeSpan.FromHours(2));
+        Assert.AreEqual(1, entries.Count);
+        Assert.IsNotNull(entries[0].RangeValue);
+    }
+
+    [TestMethod]
+    public void Link_ProducesEntriesForTextAndUrl()
+    {
+        var entries = Entries(PropertyType.Link, new LinkValue("Google", "https://google.com"));
+        Assert.AreEqual(2, entries.Count);
+        CollectionAssert.AreEquivalent(
+            new List<string> { "Google", "https://google.com" }, entries.Select(e => e.Key).ToList());
+    }
+
+    [TestMethod]
+    public void Link_EmptyUrl_ProducesOnlyTextEntry()
+    {
+        var entries = Entries(PropertyType.Link, new LinkValue("OnlyText", null));
+        Assert.AreEqual(1, entries.Count);
+        Assert.AreEqual("OnlyText", entries[0].Key);
+    }
+
+    [TestMethod]
+    public void Attachment_ProducesOneEntryPerPath()
+        => Assert.AreEqual(2, Entries(PropertyType.Attachment, new List<string> { "/a.jpg", "/b.png" }).Count);
+
+    [TestMethod]
+    public void Tags_ProducesOneEntryPerTag()
+        => Assert.AreEqual(3, Entries(PropertyType.Tags, new List<string> { "t-1", "t-2", "t-3" }).Count);
+
+    [TestMethod]
+    public void Multilevel_ProducesOneEntryPerNode()
+        => Assert.AreEqual(2, Entries(PropertyType.Multilevel, new List<string> { "node-1", "node-2" }).Count);
 }
