@@ -53,6 +53,9 @@ namespace Bakabase.Modules.StandardValue.Components.ValueHandlers
 
         public override TimeSpan? ConvertToTime(TimeSpan optimizedValue) => optimizedValue;
 
-        public override DateTime? ConvertToDateTime(TimeSpan optimizedValue) => DateTime.Now.Date.Add(optimizedValue);
+        // Time has no inherent date; project it onto a fixed epoch so the conversion is
+        // deterministic (DateTime.Now.Date made the result depend on the current day).
+        public override DateTime? ConvertToDateTime(TimeSpan optimizedValue) =>
+            new DateTime(1970, 1, 1).Add(optimizedValue);
     }
 }
