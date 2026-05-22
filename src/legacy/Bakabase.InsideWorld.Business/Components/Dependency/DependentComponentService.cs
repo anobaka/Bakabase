@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -109,13 +111,39 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency
             {
                 Status = DependentComponentStatus.NotInstalled;
                 await UpdateContext(d => { d.Error = e.Message; });
-                Logger.LogError(e, $"An error occurred during installing {DisplayName}: {e.Message}");
+                var message = $"An error occurred during installing {DisplayName}: {e.Message}";
+                if (IsNetworkException(e))
+                {
+                    // Network failures (offline, DNS, TLS, blocked hosts) are environmental
+                    // rather than code defects; log as a warning so they don't flood Sentry.
+                    Logger.LogWarning(e, message);
+                }
+                else
+                {
+                    Logger.LogError(e, message);
+                }
+
                 throw;
             }
             finally
             {
                 await Discover(ct);
             }
+        }
+
+        private static bool IsNetworkException(Exception? e)
+        {
+            while (e != null)
+            {
+                if (e is HttpRequestException or SocketException or IOException or TaskCanceledException)
+                {
+                    return true;
+                }
+
+                e = e.InnerException;
+            }
+
+            return false;
         }
 
         /// <summary>

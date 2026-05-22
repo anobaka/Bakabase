@@ -236,15 +236,18 @@ public static class ResourceSearchExtensions
                 ]
             };
 
-            foreach (var (pId, p) in propertyMap[PropertyPool.Custom])
+            if (propertyMap.TryGetValue(PropertyPool.Custom, out var customProperties))
             {
-                var pd = PropertySystem.Property.TryGetSearchHandler(p.Type);
-                if (pd != null)
+                foreach (var (pId, p) in customProperties)
                 {
-                    var filter = pd.BuildSearchFilterByKeyword(p, model.Keyword);
-                    if (filter != null)
+                    var pd = PropertySystem.Property.TryGetSearchHandler(p.Type);
+                    if (pd != null)
                     {
-                        newGroup.Filters.Add(filter);
+                        var filter = pd.BuildSearchFilterByKeyword(p, model.Keyword);
+                        if (filter != null)
+                        {
+                            newGroup.Filters.Add(filter);
+                        }
                     }
                 }
             }

@@ -37,20 +37,16 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations
             var latestVersion = await GetLatestVersion(ct);
             Logger.LogInformation($"Try to install latest version: {latestVersion.Version}");
 
-            SemVersion? currentVer = null;
-            if (Context.Version.IsNotEmpty())
+            var currentVer = TryParseComponentVersion(Context.Version);
+            var latestVer = TryParseComponentVersion(latestVersion.Version);
+            if (latestVer == null)
             {
-                try
-                {
-                    currentVer = SemVersion.Parse(Context.Version, SemVersionStyles.Any);
-                }
-                catch (Exception e)
-                {
-                    Logger.LogError(e, $"An error occurred during parsing current version [{Context.Version}]: {e.Message}");
-                }
+                Logger.LogWarning(
+                    $"Unable to parse latest version [{latestVersion.Version}] of {DisplayName}, skipping installation.");
+                return;
             }
 
-            if (currentVer == null || SemVersion.Parse(latestVersion.Version, SemVersionStyles.Any).ComparePrecedenceTo(currentVer) > 0)
+            if (currentVer == null || latestVer.ComparePrecedenceTo(currentVer) > 0)
             {
                 var urlAndFileNames = await GetDownloadUrls(latestVersion, ct);
                 if (urlAndFileNames.Any())
@@ -86,6 +82,37 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations
 
                 DirectoryUtils.Delete(TempDirectory, true, false);
             }
+        }
+
+        /// <summary>
+        /// Parses a component version string tolerantly. Some components report
+        /// 4-segment versions (e.g. Locale Emulator's "2.5.0.1") that SemVer
+        /// cannot parse; those are truncated to the first three segments.
+        /// Returns null when the value still cannot be parsed.
+        /// </summary>
+        private static SemVersion? TryParseComponentVersion(string? version)
+        {
+            if (string.IsNullOrWhiteSpace(version))
+            {
+                return null;
+            }
+
+            if (SemVersion.TryParse(version, SemVersionStyles.Any, out var semVersion))
+            {
+                return semVersion;
+            }
+
+            var segments = version.Split('.');
+            if (segments.Length > 3)
+            {
+                var truncated = string.Join('.', segments.Take(3));
+                if (SemVersion.TryParse(truncated, SemVersionStyles.Any, out semVersion))
+                {
+                    return semVersion;
+                }
+            }
+
+            return null;
         }
     }
 }

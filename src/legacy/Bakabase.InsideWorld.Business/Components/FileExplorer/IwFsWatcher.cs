@@ -55,7 +55,7 @@ namespace Bakabase.InsideWorld.Business.Components.FileExplorer
 
             if (Directory.Exists(path) == false)
             {
-                _logger.LogError($"Path [{path}] does not exist or is not a directory.");
+                _logger.LogWarning($"Path [{path}] does not exist or is not a directory.");
                 return;
             }
 
