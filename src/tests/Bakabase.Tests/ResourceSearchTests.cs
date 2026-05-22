@@ -4,10 +4,13 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Abstractions.Models.Input;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Services;
+using Bakabase.InsideWorld.Models.Constants.Aos;
 using Bakabase.TestKit.Utils;
 using Bootstrap.Components.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -143,4 +146,72 @@ public sealed class ResourceSearchTests
         var index = _sp.GetRequiredService<IResourceSearchIndexService>();
         Assert.IsNull(await index.SearchResourceIdsAsync(null));
     }
+
+    #region Sorting
+
+    [TestMethod]
+    public void BuildForSearch_NoOrders_FallsBackToDefaultOrdering()
+    {
+        Assert.AreEqual(2, ((ResourceSearchOrderInputModel[]?)null).BuildForSearch().Length);
+        Assert.AreEqual(2, Array.Empty<ResourceSearchOrderInputModel>().BuildForSearch().Length);
+    }
+
+    [TestMethod]
+    public void BuildForSearch_Filename_HasCaseInsensitiveComparer()
+    {
+        var built = new[]
+        {
+            new ResourceSearchOrderInputModel { Property = ResourceSearchSortableProperty.Filename, Asc = true }
+        }.BuildForSearch();
+        Assert.AreEqual(1, built.Length);
+        Assert.IsTrue(built[0].Asc);
+        Assert.IsNotNull(built[0].Comparer);
+    }
+
+    [TestMethod]
+    public void BuildForSearch_DateProperty_HasNoCustomComparer()
+    {
+        var built = new[]
+        {
+            new ResourceSearchOrderInputModel { Property = ResourceSearchSortableProperty.AddDt, Asc = false }
+        }.BuildForSearch();
+        Assert.AreEqual(1, built.Length);
+        Assert.IsFalse(built[0].Asc);
+        Assert.IsNull(built[0].Comparer);
+    }
+
+    [TestMethod]
+    public async Task Search_OrderByFilename_Ascending()
+    {
+        await SeedResources(5);
+        var response = await _sp.GetRequiredService<IResourceService>().Search(new ResourceSearch
+        {
+            Orders = [new ResourceSearchOrderInputModel { Property = ResourceSearchSortableProperty.Filename, Asc = true }]
+        });
+        var names = response.Data!.Select(r => r.FileName).ToList();
+        CollectionAssert.AreEqual(names.OrderBy(n => n, StringComparer.OrdinalIgnoreCase).ToList(), names);
+    }
+
+    [TestMethod]
+    public async Task Search_OrderByFilename_Descending()
+    {
+        await SeedResources(5);
+        var response = await _sp.GetRequiredService<IResourceService>().Search(new ResourceSearch
+        {
+            Orders = [new ResourceSearchOrderInputModel { Property = ResourceSearchSortableProperty.Filename, Asc = false }]
+        });
+        var names = response.Data!.Select(r => r.FileName).ToList();
+        CollectionAssert.AreEqual(names.OrderByDescending(n => n, StringComparer.OrdinalIgnoreCase).ToList(), names);
+    }
+
+    [TestMethod]
+    public async Task Search_DefaultOrder_IsByIdDescending()
+    {
+        await SeedResources(5);
+        var response = await _sp.GetRequiredService<IResourceService>().Search(new ResourceSearch());
+        var ids = response.Data!.Select(r => r.Id).ToList();
+        CollectionAssert.AreEqual(ids.OrderByDescending(i => i).ToList(), ids);
+    }
+
+    #endregion
 }
