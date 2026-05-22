@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using System.Text;
 using System.Text.RegularExpressions;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.InsideWorld.Models.Constants;
@@ -109,36 +110,43 @@ public static class StringExtensions
         }
 
         var result = new List<string>();
-        var idx = 0;
-        while (idx <= str.Length)
+        var current = new StringBuilder();
+        var i = 0;
+        while (i < str.Length)
         {
-            var nextIdx = idx;
-            while (true)
+            var c = str[i];
+            if (c == escapeChar && i + 1 < str.Length)
             {
-                nextIdx = str.IndexOf(separator, nextIdx);
-                if (nextIdx > 0)
+                var next = str[i + 1];
+                // The new format escapes only the escape char itself and the separator.
+                // Legacy data never escaped the escape char, so an escape char before any
+                // other character is kept literally for backward compatibility.
+                if (next == escapeChar || next == separator)
                 {
-                    if (str[nextIdx - 1] == escapeChar)
-                    {
-                        nextIdx++;
-                        continue;
-                    }
+                    current.Append(next);
+                    i += 2;
+                    continue;
                 }
 
-                break;
+                current.Append(c);
+                i += 1;
+                continue;
             }
 
-            if (nextIdx == -1)
+            if (c == separator)
             {
-                result.Add(str[idx..]);
-                break;
+                result.Add(current.ToString());
+                current.Clear();
+                i += 1;
+                continue;
             }
 
-            result.Add(str.Substring(idx, nextIdx - idx));
-            idx = nextIdx + 1;
+            current.Append(c);
+            i += 1;
         }
 
-        return result.Select(r => r.Replace($"{escapeChar}{separator}", $"{separator}")).ToList();
+        result.Add(current.ToString());
+        return result;
     }
 
     /// <summary>
@@ -165,7 +173,11 @@ public static class StringExtensions
 
     public static string Join(this IEnumerable<string?> data, char separator, char escapeChar)
     {
-        return string.Join(separator, data.Select(d => d?.Replace(separator.ToString(), $"{escapeChar}{separator}")));
+        // Escape the escape char first, then the separator, so the escape chars introduced
+        // for separators are not themselves re-escaped.
+        return string.Join(separator, data.Select(d => d
+            ?.Replace($"{escapeChar}", $"{escapeChar}{escapeChar}")
+            .Replace($"{separator}", $"{escapeChar}{separator}")));
     }
 
     public static string? StandardizePath([NotNullIfNotNull(nameof(path))] this string? path)

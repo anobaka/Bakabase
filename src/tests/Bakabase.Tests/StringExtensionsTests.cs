@@ -63,6 +63,45 @@ public sealed class StringExtensionsTests
         CollectionAssert.AreEqual(original, joined.SplitWithEscapeChar(',', '\\'));
     }
 
+    [TestMethod]
+    public void Join_EscapesTheEscapeCharItself()
+    {
+        // "a\b" -> the lone backslash must be doubled so it is not read as an escape.
+        Assert.AreEqual("a\\\\b", new[] { "a\\b" }.Join(',', '\\'));
+    }
+
+    [TestMethod]
+    public void Join_ThenSplit_RoundTrips_ValueContainingEscapeChar()
+    {
+        var original = new List<string> { "a\\b", "c" };
+        CollectionAssert.AreEqual(original, original.Join(',', '\\').SplitWithEscapeChar(',', '\\'));
+    }
+
+    [TestMethod]
+    public void Join_ThenSplit_RoundTrips_ValueEndingWithEscapeChar()
+    {
+        // Regression: a value ending in the escape char, followed by a separator, used to
+        // be misread as an escaped separator and merged with the next value.
+        var original = new List<string> { "x\\", "y" };
+        CollectionAssert.AreEqual(original, original.Join(',', '\\').SplitWithEscapeChar(',', '\\'));
+    }
+
+    [TestMethod]
+    public void Join_ThenSplit_RoundTrips_ValueWithEscapeCharAndSeparator()
+    {
+        var original = new List<string> { "a\\,b" };
+        CollectionAssert.AreEqual(original, original.Join(',', '\\').SplitWithEscapeChar(',', '\\'));
+    }
+
+    [TestMethod]
+    public void SplitWithEscapeChar_LegacyBareBackslash_IsPreserved()
+    {
+        // Legacy data never escaped the escape char; a bare backslash not before a
+        // separator must still be read literally (e.g. a Windows path).
+        CollectionAssert.AreEqual(
+            new List<string> { "C:\\foo\\bar" }, "C:\\foo\\bar".SplitWithEscapeChar(',', '\\'));
+    }
+
     #endregion
 
     #region OrderByNatural
