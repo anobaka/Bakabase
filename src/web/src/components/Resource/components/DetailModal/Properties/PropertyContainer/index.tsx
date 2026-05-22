@@ -11,6 +11,7 @@ import { AiOutlinePlusCircle } from "react-icons/ai";
 
 import BApi from "@/sdk/BApi";
 import { propertyValueScopes } from "@/sdk/constants";
+import { isNonEmptyValue } from "@/core/models/Resource";
 import PropertyValueRenderer from "@/components/Property/components/PropertyValueRenderer";
 import { buildLogger } from "@/components/utils";
 import {
@@ -84,7 +85,7 @@ const PropertyContainer = (props: PropertyContainerProps) => {
     if (value) {
       const dv = value.aliasAppliedBizValue ?? value.bizValue;
 
-      if (dv) {
+      if (isNonEmptyValue(dv)) {
         bizValue = dv;
         dbValue = value.value;
         scope = s;

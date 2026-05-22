@@ -11,6 +11,7 @@ import {
 } from "@heroui/react";
 
 import type { Resource } from "@/core/models/Resource";
+import { isNonEmptyValue } from "@/core/models/Resource";
 import { PropertyPool, ReservedProperty, PropertyValueScope } from "@/sdk/constants";
 import { Button, Card, CardBody, Textarea } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
@@ -38,9 +39,12 @@ const IntroductionSummary = ({ resource, onReload }: Props) => {
     const introProperty = reservedProps[ReservedProperty.Introduction];
     if (!introProperty?.values?.length) return null;
 
-    // Get the first available value (considering scope priority)
-    const value = introProperty.values[0];
-    return value?.bizValue as string | null;
+    // `values` has one entry per scope, including empty ones; the highest-priority scope can be
+    // empty (e.g. a Manual-scope row from editing Rating/Cover) and would hide an enhancer value.
+    const value = introProperty.values.find((v) =>
+      isNonEmptyValue(v?.aliasAppliedBizValue ?? v?.bizValue),
+    );
+    return (value?.bizValue as string) ?? null;
   }, [resource]);
 
   const handleOpenDrawer = () => {

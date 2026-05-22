@@ -18,6 +18,18 @@ type Value = {
   aliasAppliedBizValue?: any;
 };
 
+/**
+ * Whether a scope's resolved value actually holds content. Plain truthiness is wrong here: an
+ * empty array is truthy but empty, while 0 and false are falsy but valid. Used to skip empty
+ * scopes when resolving a property's multi-scope values down to one displayed value.
+ */
+export const isNonEmptyValue = (value: any): boolean => {
+  if (value == null) return false;
+  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === "string") return value.trim().length > 0;
+  return true;
+};
+
 export type Property = {
   name?: string;
   type: PropertyType;

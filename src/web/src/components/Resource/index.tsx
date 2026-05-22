@@ -26,6 +26,7 @@ import moment from "moment";
 
 import StandardValueRenderer from "../StandardValue/ValueRenderer";
 import { convertFromApiValue } from "@/components/StandardValue/helpers";
+import { isNonEmptyValue } from "@/core/models/Resource";
 
 import "./index.css";
 
@@ -98,7 +99,7 @@ const selectValueByScopePriority = (
   for (const scope of effectivePriority) {
     const value = values?.find((v) => v.scope == scope);
 
-    if (value && (value.aliasAppliedBizValue ?? value.bizValue)) {
+    if (value && isNonEmptyValue(value.aliasAppliedBizValue ?? value.bizValue)) {
       return value;
     }
   }
