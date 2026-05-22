@@ -43,6 +43,7 @@ using Bootstrap.Components.DependencyInjection;
 using Bootstrap.Components.Logging.LogService.Extensions;
 using Bootstrap.Components.Logging.LogService.Services;
 using Bootstrap.Components.Orm.Extensions;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -128,6 +129,9 @@ public static class TestServiceBuilder
 
         // GUI Adapter - use test implementation
         services.AddSingleton<IGuiAdapter, TestGuiAdapter>();
+
+        // Web host environment - minimal stub so the compression / FfMpeg chain resolves
+        services.AddSingleton<IWebHostEnvironment>(new TestWebHostEnvironment());
 
         // Localizer - use test implementation
         services.AddTransient<IBakabaseLocalizer, TestBakabaseLocalizer>();
