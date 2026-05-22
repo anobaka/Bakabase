@@ -199,10 +199,16 @@ public class MediaLibraryV2Service<TDbContext>(
         }
     }
 
-    public async Task<MediaLibraryV2> Get(int id,
+    public async Task<MediaLibraryV2?> Get(int id,
         MediaLibraryV2AdditionalItem additionalItems = MediaLibraryV2AdditionalItem.None)
     {
-        var domainModel = (await orm.GetByKey(id)).ToDomainModel();
+        var dbModel = await orm.GetByKey(id);
+        if (dbModel == null)
+        {
+            return null;
+        }
+
+        var domainModel = dbModel.ToDomainModel();
         await Populate([domainModel], additionalItems);
         return domainModel;
     }
