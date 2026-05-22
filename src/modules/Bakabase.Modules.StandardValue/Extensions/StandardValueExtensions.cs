@@ -178,7 +178,8 @@ public static class StandardValueExtensions
         });
 
     public static StandardValueType? InferStandardValueType(this Type type) =>
-        TypeStdValueTypeMap.GetValueOrDefault(type);
+        // TryGetValue, not GetValueOrDefault: a miss must be null, not (StandardValueType)0.
+        TypeStdValueTypeMap.TryGetValue(type, out var v) ? v : null;
 
     public static StandardValueType? InferStandardValueType(this object? value)
     {
