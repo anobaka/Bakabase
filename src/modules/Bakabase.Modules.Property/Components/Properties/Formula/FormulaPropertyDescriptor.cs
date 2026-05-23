@@ -20,7 +20,7 @@ public class FormulaPropertyDescriptor : AbstractPropertyDescriptor<string, stri
             SearchOperation.NotContains => !dbValue.Contains(fv, StringComparison.OrdinalIgnoreCase),
             SearchOperation.Matches => Regex.IsMatch(dbValue, fv),
             SearchOperation.NotMatches => !Regex.IsMatch(dbValue, fv),
-            _ => true
+            _ => false
         };
     }
 

@@ -1,0 +1,107 @@
+# Runs the test suites on every pull request. Independent of the
+# build/deploy pipeline (deploy.yml) so a broken test gates a PR
+# without touching releases.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [ main, 'release/v*' ]
+  workflow_dispatch:
+
+# A newer push to the same branch / PR cancels older in-progress runs.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend-tests:
+    name: Backend tests
+    runs-on: ubuntu-latest
+    env:
+      DOTNET_MULTILEVEL_LOOKUP: 0
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          # Full history: Nerdbank.GitVersioning derives the version from commit depth.
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: ./global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      - name: Run tests
+        run: |
+          # One `dotnet test` per project so a single failure does not mask
+          # the rest. Live-network ThirdParty tests are [Ignore]d and skipped.
+          projects=(
+            "src/tests/Bakabase.Tests/Bakabase.Tests.csproj"
+            "src/tests/Bakabase.Modules.BulkModification.Tests/Bakabase.Modules.BulkModification.Tests.csproj"
+            "src/tests/Bakabase.Modules.Comparison.Tests/Bakabase.Modules.Comparison.Tests.csproj"
+            "src/tests/Bakabase.Modules.HealthScore.Tests/Bakabase.Modules.HealthScore.Tests.csproj"
+            "src/tests/Bakabase.Modules.Property.Tests/Bakabase.Modules.Property.Tests.csproj"
+            "src/tests/Bakabase.Modules.StandardValue.Tests/Bakabase.Modules.StandardValue.Tests.csproj"
+            "src/tests/Bakabase.Modules.ThirdParty.Tests/Bakabase.Modules.ThirdParty.Tests.csproj"
+          )
+          failed=()
+          for proj in "${projects[@]}"; do
+            echo "::group::dotnet test ${proj}"
+            dotnet test "${proj}" || failed+=("${proj}")
+            echo "::endgroup::"
+          done
+          if [ ${#failed[@]} -gt 0 ]; then
+            printf '::error::Test project failed: %s\n' "${failed[@]}"
+            exit 1
+          fi
+
+  frontend:
+    name: Frontend lint & tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Enable corepack
+        run: corepack enable yarn
+
+      - name: Cache Yarn
+        uses: actions/cache@v4
+        with:
+          path: |
+            src/web/.yarn/cache
+            src/web/node_modules
+          key: yarn-${{ runner.os }}-${{ hashFiles('src/web/yarn.lock') }}
+          restore-keys: |
+            yarn-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Lint
+        run: yarn lint
+
+      - name: Test
+        if: ${{ !cancelled() }}
+        run: yarn vitest run

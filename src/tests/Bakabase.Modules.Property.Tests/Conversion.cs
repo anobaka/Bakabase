@@ -12,7 +12,7 @@ using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.Property.Extensions;
 using Bakabase.Modules.StandardValue;
 using Bakabase.Modules.StandardValue.Extensions;
-using Bakabase.Modules.StandardValue.Tests.Components;
+using Bakabase.TestKit.Components;
 using Bootstrap.Components.Orm.Extensions;
 using Bootstrap.Extensions;
 using DotNext.Collections.Generic;

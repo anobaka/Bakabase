@@ -516,7 +516,7 @@ namespace Bakabase.Modules.StandardValue.Abstractions.Configurations
         public static List<(TimeSpan? FromValue, DateTime? ToValue)> TimeToDateTime =
         [
             (null, null),
-            (new TimeSpan(02, 05, 1), DateTime.Today.Add(new TimeSpan(02, 05, 1))),
+            (new TimeSpan(02, 05, 1), new DateTime(1970, 1, 1).Add(new TimeSpan(02, 05, 1))),
         ];
 
         public static List<(TimeSpan? FromValue, TimeSpan? ToValue)> TimeToTime =

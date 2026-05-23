@@ -18,8 +18,10 @@ public class SetIntersectionStrategy : IComparisonStrategy
         if (set1.Count == 0 || set2.Count == 0)
             return 0.0;
 
-        var intersection = set1.Intersect(set2).Count();
-        var union = set1.Union(set2).Count();
+        // Pass the comparer explicitly: LINQ Intersect/Union ignore the HashSet's
+        // own comparer, which would otherwise make this comparison case-sensitive.
+        var intersection = set1.Intersect(set2, StringComparer.OrdinalIgnoreCase).Count();
+        var union = set1.Union(set2, StringComparer.OrdinalIgnoreCase).Count();
 
         return union == 0 ? 0.0 : (double)intersection / union;
     }

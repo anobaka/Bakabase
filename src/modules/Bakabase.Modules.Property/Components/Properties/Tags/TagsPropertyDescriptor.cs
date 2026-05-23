@@ -86,7 +86,7 @@ public class TagsPropertyDescriptor : AbstractPropertyDescriptor<TagsPropertyOpt
             SearchOperation.Contains => fv.All(dbValue.Contains),
             SearchOperation.NotContains => !fv.Any(dbValue.Contains),
             SearchOperation.In => dbValue.All(fv.Contains),
-            _ => true
+            _ => false
         };
     }
 

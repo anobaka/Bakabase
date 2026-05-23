@@ -2,26 +2,26 @@ using System;
 using System.Collections.Generic;
 using Bakabase.InsideWorld.Business.Components.FileNameModifier.Components;
 using Bakabase.InsideWorld.Business.Components.FileNameModifier.Models;
-using Xunit;
 
 namespace Bakabase.Tests;
 
+[TestClass]
 public class FileNameModifierTests
 {
     private readonly FileNameModifier _modifier = new();
 
-    [Theory]
-    [InlineData("abc.txt", "PRE_abc.txt", FileNameModifierOperationType.Insert, FileNameModifierPosition.Start, "PRE_", null)]
-    [InlineData("abc.txt", "abc.txtPRE_", FileNameModifierOperationType.Insert, FileNameModifierPosition.End, "PRE_", null)]
-    [InlineData("abc.txt", "aPRE_bc.txt", FileNameModifierOperationType.Insert, FileNameModifierPosition.AtPosition, "PRE_", 1)]
-    [InlineData("abc.txt", "aPRE_bc.txt", FileNameModifierOperationType.Insert, FileNameModifierPosition.AfterText, "PRE_", null, "a")] // After 'a'
-    [InlineData("abc.txt", "PRE_abc.txt", FileNameModifierOperationType.AddDateTime, FileNameModifierPosition.Start, null, null, null, "yyyy", true)]
-    [InlineData("abc.txt", "abc.txtPRE_", FileNameModifierOperationType.AddDateTime, FileNameModifierPosition.End, null, null, null, "PRE_", false)]
-    [InlineData("abcdef.txt", "abef.txt", FileNameModifierOperationType.Delete, FileNameModifierPosition.Start, null, null, null, null, false, 2, 2)]
-    [InlineData("abc.txt", "xyz.txt", FileNameModifierOperationType.Replace, FileNameModifierPosition.Start, "xyz", null, null, null, false, 0, 0, true)]
-    [InlineData("abc.txt", "ABC.TXT", FileNameModifierOperationType.ChangeCase, FileNameModifierPosition.Start, null, null, null, null, false, 0, 0, false, FileNameModifierCaseType.UpperCase)]
-    [InlineData("abc.txt", "Aabc.txt", FileNameModifierOperationType.AddAlphabetSequence, FileNameModifierPosition.Start, null, null, null, null, false, 0, 0, false, FileNameModifierCaseType.TitleCase, 'A', 1)]
-    [InlineData("abc.txt", "txt.cba", FileNameModifierOperationType.Reverse, FileNameModifierPosition.Start)]
+    [TestMethod]
+    [DataRow("abc.txt", "PRE_abc.txt", FileNameModifierOperationType.Insert, FileNameModifierPosition.Start, "PRE_", null)]
+    [DataRow("abc.txt", "abc.txtPRE_", FileNameModifierOperationType.Insert, FileNameModifierPosition.End, "PRE_", null)]
+    [DataRow("abc.txt", "aPRE_bc.txt", FileNameModifierOperationType.Insert, FileNameModifierPosition.AtPosition, "PRE_", 1)]
+    [DataRow("abc.txt", "aPRE_bc.txt", FileNameModifierOperationType.Insert, FileNameModifierPosition.AfterText, "PRE_", null, "a")] // After 'a'
+    [DataRow("abc.txt", "PRE_abc.txt", FileNameModifierOperationType.AddDateTime, FileNameModifierPosition.Start, null, null, null, "yyyy", true)]
+    [DataRow("abc.txt", "abc.txtPRE_", FileNameModifierOperationType.AddDateTime, FileNameModifierPosition.End, null, null, null, "PRE_", false)]
+    [DataRow("abcdef.txt", "abef.txt", FileNameModifierOperationType.Delete, FileNameModifierPosition.Start, null, null, null, null, false, 2, 2)]
+    [DataRow("abc.txt", "xyz.txt", FileNameModifierOperationType.Replace, FileNameModifierPosition.Start, "xyz", null, null, null, false, 0, 0, true)]
+    [DataRow("abc.txt", "ABC.TXT", FileNameModifierOperationType.ChangeCase, FileNameModifierPosition.Start, null, null, null, null, false, 0, 0, false, FileNameModifierCaseType.UpperCase)]
+    [DataRow("abc.txt", "Aabc.txt", FileNameModifierOperationType.AddAlphabetSequence, FileNameModifierPosition.Start, null, null, null, null, false, 0, 0, false, FileNameModifierCaseType.TitleCase, 'A', 1)]
+    [DataRow("abc.txt", "txt.cba", FileNameModifierOperationType.Reverse, FileNameModifierPosition.Start)]
     public void Test_ModifyFileNames(
         string input,
         string expected,
@@ -59,15 +59,15 @@ public class FileNameModifierTests
         var result = _modifier.ModifyFileNames(new List<string> { input }, new List<FileNameModifierOperation> { op });
         if (addDateTime && dateTimeFormat != null)
         {
-            Assert.StartsWith(DateTime.Now.ToString(dateTimeFormat), result[0]);
+            StringAssert.StartsWith(result[0], DateTime.Now.ToString(dateTimeFormat));
         }
         else
         {
-            Assert.Equal(expected, result[0]);
+            Assert.AreEqual(expected, result[0]);
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void Test_ModifyFileNames_WithDirectories()
     {
         // Test with directory paths
@@ -85,13 +85,13 @@ public class FileNameModifierTests
         
         var result = _modifier.ModifyFileNames(directoryNames, operations);
         
-        Assert.Equal(3, result.Count);
-        Assert.Equal("Backup_MyDocuments", result[0]);
-        Assert.Equal("Backup_Photos", result[1]);
-        Assert.Equal("Backup_Videos", result[2]);
+        Assert.AreEqual(3, result.Count);
+        Assert.AreEqual("Backup_MyDocuments", result[0]);
+        Assert.AreEqual("Backup_Photos", result[1]);
+        Assert.AreEqual("Backup_Videos", result[2]);
     }
 
-    [Fact]
+    [TestMethod]
     public void Test_ModifyFileNames_MixedFilesAndDirectories()
     {
         // Test with mixed file and directory names
@@ -108,36 +108,36 @@ public class FileNameModifierTests
         
         var result = _modifier.ModifyFileNames(names, operations);
         
-        Assert.Equal(4, result.Count);
-        Assert.Equal("DOCUMENT.TXT", result[0]);
-        Assert.Equal("PHOTOS", result[1]);
-        Assert.Equal("VIDEO.MP4", result[2]);
-        Assert.Equal("DOCUMENTS", result[3]);
+        Assert.AreEqual(4, result.Count);
+        Assert.AreEqual("DOCUMENT.TXT", result[0]);
+        Assert.AreEqual("PHOTOS", result[1]);
+        Assert.AreEqual("VIDEO.MP4", result[2]);
+        Assert.AreEqual("DOCUMENTS", result[3]);
     }
 
-    [Fact]
+    [TestMethod]
     public void Test_ValidateOperation()
     {
         // Insert 需要 Text
-        Assert.False(_modifier.ValidateOperation(new FileNameModifierOperation { Operation = FileNameModifierOperationType.Insert, Text = null }));
-        Assert.True(_modifier.ValidateOperation(new FileNameModifierOperation { Operation = FileNameModifierOperationType.Insert, Text = "abc" }));
+        Assert.IsFalse(_modifier.ValidateOperation(new FileNameModifierOperation { Operation = FileNameModifierOperationType.Insert, Text = null }));
+        Assert.IsTrue(_modifier.ValidateOperation(new FileNameModifierOperation { Operation = FileNameModifierOperationType.Insert, Text = "abc" }));
         // AddDateTime 需要 DateTimeFormat
-        Assert.False(_modifier.ValidateOperation(new FileNameModifierOperation { Operation = FileNameModifierOperationType.AddDateTime, DateTimeFormat = null }));
-        Assert.True(_modifier.ValidateOperation(new FileNameModifierOperation { Operation = FileNameModifierOperationType.AddDateTime, DateTimeFormat = "yyyy" }));
+        Assert.IsFalse(_modifier.ValidateOperation(new FileNameModifierOperation { Operation = FileNameModifierOperationType.AddDateTime, DateTimeFormat = null }));
+        Assert.IsTrue(_modifier.ValidateOperation(new FileNameModifierOperation { Operation = FileNameModifierOperationType.AddDateTime, DateTimeFormat = "yyyy" }));
         // Delete 需要 DeleteCount>0, DeleteStartPosition>=0
-        Assert.False(_modifier.ValidateOperation(new FileNameModifierOperation { Operation = FileNameModifierOperationType.Delete, DeleteCount = 0, DeleteStartPosition = 0 }));
-        Assert.True(_modifier.ValidateOperation(new FileNameModifierOperation { Operation = FileNameModifierOperationType.Delete, DeleteCount = 1, DeleteStartPosition = 0 }));
+        Assert.IsFalse(_modifier.ValidateOperation(new FileNameModifierOperation { Operation = FileNameModifierOperationType.Delete, DeleteCount = 0, DeleteStartPosition = 0 }));
+        Assert.IsTrue(_modifier.ValidateOperation(new FileNameModifierOperation { Operation = FileNameModifierOperationType.Delete, DeleteCount = 1, DeleteStartPosition = 0 }));
         // Replace 需要 ReplaceEntire 或 TargetText
-        Assert.False(_modifier.ValidateOperation(new FileNameModifierOperation { Operation = FileNameModifierOperationType.Replace, Text = null, TargetText = null, ReplaceEntire = false }));
-        Assert.False(_modifier.ValidateOperation(new FileNameModifierOperation { Operation = FileNameModifierOperationType.Replace, Text = "a", TargetText = null, ReplaceEntire = false })); // Text 不足以使 Replace 有效
-        Assert.True(_modifier.ValidateOperation(new FileNameModifierOperation { Operation = FileNameModifierOperationType.Replace, Text = null, TargetText = "b" }));
-        Assert.True(_modifier.ValidateOperation(new FileNameModifierOperation { Operation = FileNameModifierOperationType.Replace, ReplaceEntire = true }));
+        Assert.IsFalse(_modifier.ValidateOperation(new FileNameModifierOperation { Operation = FileNameModifierOperationType.Replace, Text = null, TargetText = null, ReplaceEntire = false }));
+        Assert.IsFalse(_modifier.ValidateOperation(new FileNameModifierOperation { Operation = FileNameModifierOperationType.Replace, Text = "a", TargetText = null, ReplaceEntire = false })); // Text 不足以使 Replace 有效
+        Assert.IsTrue(_modifier.ValidateOperation(new FileNameModifierOperation { Operation = FileNameModifierOperationType.Replace, Text = null, TargetText = "b" }));
+        Assert.IsTrue(_modifier.ValidateOperation(new FileNameModifierOperation { Operation = FileNameModifierOperationType.Replace, ReplaceEntire = true }));
         // AddAlphabetSequence 需要 AlphabetCount>0
-        Assert.False(_modifier.ValidateOperation(new FileNameModifierOperation { Operation = FileNameModifierOperationType.AddAlphabetSequence, AlphabetCount = 0 }));
-        Assert.True(_modifier.ValidateOperation(new FileNameModifierOperation { Operation = FileNameModifierOperationType.AddAlphabetSequence, AlphabetCount = 2 }));
+        Assert.IsFalse(_modifier.ValidateOperation(new FileNameModifierOperation { Operation = FileNameModifierOperationType.AddAlphabetSequence, AlphabetCount = 0 }));
+        Assert.IsTrue(_modifier.ValidateOperation(new FileNameModifierOperation { Operation = FileNameModifierOperationType.AddAlphabetSequence, AlphabetCount = 2 }));
     }
 
-    [Fact]
+    [TestMethod]
     public void Test_All_Positions_And_Targets()
     {
         var fileName = "abc.def.txt";
@@ -149,7 +149,7 @@ public class FileNameModifierTests
         }
         var results = _modifier.ModifyFileNames(new List<string> { fileName }, ops);
         // 当前 FileNameModifier 实现为多操作依次叠加，最终只返回一个结果
-        Assert.Equal(1, results.Count);
+        Assert.AreEqual(1, results.Count);
         // AddDateTime at all positions
         ops.Clear();
         foreach (FileNameModifierPosition pos in Enum.GetValues(typeof(FileNameModifierPosition)))
@@ -158,7 +158,7 @@ public class FileNameModifierTests
         }
         results = _modifier.ModifyFileNames(new List<string> { fileName }, ops);
         // 当前 FileNameModifier 实现为多操作依次叠加，最终只返回一个结果
-        Assert.Equal(1, results.Count);
+        Assert.AreEqual(1, results.Count);
         // AddAlphabetSequence at all positions
         ops.Clear();
         foreach (FileNameModifierPosition pos in Enum.GetValues(typeof(FileNameModifierPosition)))
@@ -167,28 +167,28 @@ public class FileNameModifierTests
         }
         results = _modifier.ModifyFileNames(new List<string> { fileName }, ops);
         // 当前 FileNameModifier 实现为多操作依次叠加，最终只返回一个结果
-        Assert.Equal(1, results.Count);
+        Assert.AreEqual(1, results.Count);
     }
 
-    [Fact]
+    [TestMethod]
     public void Test_Replace_Combinations()
     {
         var fileName = "abc.txt";
         // ReplaceEntire true
         var op = new FileNameModifierOperation { Operation = FileNameModifierOperationType.Replace, ReplaceEntire = true, Text = "xyz.txt", Target = FileNameModifierFileNameTarget.FileName };
         var result = _modifier.ModifyFileNames(new List<string> { fileName }, new List<FileNameModifierOperation> { op });
-        Assert.Equal("xyz.txt", result[0]);
+        Assert.AreEqual("xyz.txt", result[0]);
         // Replace by TargetText
         op = new FileNameModifierOperation { Operation = FileNameModifierOperationType.Replace, ReplaceEntire = false, Text = "X", TargetText = "a", Target = FileNameModifierFileNameTarget.FileName };
         result = _modifier.ModifyFileNames(new List<string> { fileName }, new List<FileNameModifierOperation> { op });
-        Assert.Equal("Xbc.txt", result[0]);
+        Assert.AreEqual("Xbc.txt", result[0]);
         // Replace by TargetText not found
         op = new FileNameModifierOperation { Operation = FileNameModifierOperationType.Replace, ReplaceEntire = false, Text = "X", TargetText = "notfound", Target = FileNameModifierFileNameTarget.FileName };
         result = _modifier.ModifyFileNames(new List<string> { fileName }, new List<FileNameModifierOperation> { op });
-        Assert.Equal("abc.txt", result[0]);
+        Assert.AreEqual("abc.txt", result[0]);
     }
 
-    [Fact]
+    [TestMethod]
     public void Test_Replace_WithRegex()
     {
         // 简单正则替换
@@ -202,7 +202,7 @@ public class FileNameModifierTests
             Target = FileNameModifierFileNameTarget.FileName
         };
         var result = _modifier.ModifyFileNames(new List<string> { fileName }, new List<FileNameModifierOperation> { op });
-        Assert.Equal("abcXdefX.txt", result[0]);
+        Assert.AreEqual("abcXdefX.txt", result[0]);
 
         // 正则替换删除匹配内容（替换为空）
         op = new FileNameModifierOperation
@@ -214,7 +214,7 @@ public class FileNameModifierTests
             Target = FileNameModifierFileNameTarget.FileName
         };
         result = _modifier.ModifyFileNames(new List<string> { fileName }, new List<FileNameModifierOperation> { op });
-        Assert.Equal("abcdef.txt", result[0]);
+        Assert.AreEqual("abcdef.txt", result[0]);
 
         // 使用捕获组
         fileName = "file_2024_01_15.txt";
@@ -227,7 +227,7 @@ public class FileNameModifierTests
             Target = FileNameModifierFileNameTarget.FileName
         };
         result = _modifier.ModifyFileNames(new List<string> { fileName }, new List<FileNameModifierOperation> { op });
-        Assert.Equal("file_2024-01-15.txt", result[0]);
+        Assert.AreEqual("file_2024-01-15.txt", result[0]);
 
         // 无效正则表达式应返回原文本
         fileName = "abc.txt";
@@ -240,7 +240,7 @@ public class FileNameModifierTests
             Target = FileNameModifierFileNameTarget.FileName
         };
         result = _modifier.ModifyFileNames(new List<string> { fileName }, new List<FileNameModifierOperation> { op });
-        Assert.Equal("abc.txt", result[0]);
+        Assert.AreEqual("abc.txt", result[0]);
 
         // Regex = false 时应使用普通字符串替换
         fileName = "a.b.c.txt";
@@ -253,7 +253,7 @@ public class FileNameModifierTests
             Target = FileNameModifierFileNameTarget.FileName
         };
         result = _modifier.ModifyFileNames(new List<string> { fileName }, new List<FileNameModifierOperation> { op });
-        Assert.Equal("a_b_c_txt", result[0]);
+        Assert.AreEqual("a_b_c_txt", result[0]);
 
         // Regex = true 时 "." 匹配任意字符
         op = new FileNameModifierOperation
@@ -265,10 +265,10 @@ public class FileNameModifierTests
             Target = FileNameModifierFileNameTarget.FileName
         };
         result = _modifier.ModifyFileNames(new List<string> { fileName }, new List<FileNameModifierOperation> { op });
-        Assert.Equal("_________", result[0]);
+        Assert.AreEqual("_________", result[0]);
     }
 
-    [Fact]
+    [TestMethod]
     public void Test_ChangeCase_AllTypes()
     {
         var fileName = "abc.txt";
@@ -276,11 +276,11 @@ public class FileNameModifierTests
         {
             var op = new FileNameModifierOperation { Operation = FileNameModifierOperationType.ChangeCase, CaseType = caseType, Target = FileNameModifierFileNameTarget.FileName };
             var result = _modifier.ModifyFileNames(new List<string> { fileName }, new List<FileNameModifierOperation> { op });
-            Assert.NotNull(result[0]);
+            Assert.IsNotNull(result[0]);
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void Test_Target_AllTypes()
     {
         var fileName = "abc.def.txt";
@@ -298,10 +298,10 @@ public class FileNameModifierTests
         }
         var results = _modifier.ModifyFileNames(new List<string> { fileName }, ops);
         // 当前 FileNameModifier 实现为多操作依次叠加，最终只返回一个结果
-        Assert.Equal(1, results.Count);
+        Assert.AreEqual(1, results.Count);
     }
 
-    [Fact]
+    [TestMethod]
     public void Test_Multi_Operations()
     {
         var fileName = "abc.txt";
@@ -311,45 +311,45 @@ public class FileNameModifierTests
             new FileNameModifierOperation { Operation = FileNameModifierOperationType.Reverse, Target = FileNameModifierFileNameTarget.FileName }
         };
         var result = _modifier.ModifyFileNames(new List<string> { fileName }, ops);
-        Assert.NotNull(result[0]);
+        Assert.IsNotNull(result[0]);
     }
 
-    [Fact]
+    [TestMethod]
     public void Test_Special_And_Empty_Cases()
     {
         // 空字符串
         var op = new FileNameModifierOperation { Operation = FileNameModifierOperationType.Insert, Position = FileNameModifierPosition.Start, Text = "X", Target = FileNameModifierFileNameTarget.FileName };
         var result = _modifier.ModifyFileNames(new List<string> { "" }, new List<FileNameModifierOperation> { op });
-        Assert.Equal("X", result[0]);
+        Assert.AreEqual("X", result[0]);
         // 仅扩展名
         result = _modifier.ModifyFileNames(new List<string> { ".gitignore" }, new List<FileNameModifierOperation> { op });
-        Assert.StartsWith("X", result[0]);
+        StringAssert.StartsWith(result[0], "X");
         // 多扩展名
         result = _modifier.ModifyFileNames(new List<string> { "a.b.c.txt" }, new List<FileNameModifierOperation> { op });
-        Assert.StartsWith("X", result[0]);
+        StringAssert.StartsWith(result[0], "X");
         // 非ASCII
         result = _modifier.ModifyFileNames(new List<string> { "测试.txt" }, new List<FileNameModifierOperation> { op });
-        Assert.StartsWith("X", result[0]);
+        StringAssert.StartsWith(result[0], "X");
         // 极端长度
         var longName = new string('a', 255) + ".txt";
         result = _modifier.ModifyFileNames(new List<string> { longName }, new List<FileNameModifierOperation> { op });
-        Assert.StartsWith("X", result[0]);
+        StringAssert.StartsWith(result[0], "X");
     }
 
-    [Fact]
+    [TestMethod]
     public void Test_Exceptional_Positions()
     {
         var fileName = "abc.txt";
         // AtPosition 越界
         var op = new FileNameModifierOperation { Operation = FileNameModifierOperationType.Insert, Position = FileNameModifierPosition.AtPosition, Text = "X", PositionIndex = 100, Target = FileNameModifierFileNameTarget.FileName };
         var result = _modifier.ModifyFileNames(new List<string> { fileName }, new List<FileNameModifierOperation> { op });
-        Assert.Equal(fileName, result[0]);
+        Assert.AreEqual(fileName, result[0]);
         // AfterText/BeforeText找不到
         op = new FileNameModifierOperation { Operation = FileNameModifierOperationType.Insert, Position = FileNameModifierPosition.AfterText, Text = "X", TargetText = "notfound", Target = FileNameModifierFileNameTarget.FileName };
         result = _modifier.ModifyFileNames(new List<string> { fileName }, new List<FileNameModifierOperation> { op });
-        Assert.Equal(fileName, result[0]);
+        Assert.AreEqual(fileName, result[0]);
         op = new FileNameModifierOperation { Operation = FileNameModifierOperationType.Insert, Position = FileNameModifierPosition.BeforeText, Text = "X", TargetText = "notfound", Target = FileNameModifierFileNameTarget.FileName };
         result = _modifier.ModifyFileNames(new List<string> { fileName }, new List<FileNameModifierOperation> { op });
-        Assert.Equal(fileName, result[0]);
+        Assert.AreEqual(fileName, result[0]);
     }
 } 

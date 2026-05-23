@@ -13,7 +13,7 @@ public class BooleanPropertyDescriptor : AbstractPropertyDescriptor<bool?, bool?
         {
             SearchOperation.Equals => dbValue == fv,
             SearchOperation.NotEquals => dbValue != fv,
-            _ => true
+            _ => false
         };
     }
 

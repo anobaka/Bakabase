@@ -6,7 +6,7 @@ using Bakabase.Infrastructures.Components.Gui;
 using Bakabase.InsideWorld.Business.Components.CookieCapture;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.ThirdParty.Abstractions.Http.Cookie;
-using Bakabase.Tests.Implementations;
+using Bakabase.TestKit.Implementations;
 using FluentAssertions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -237,22 +237,30 @@ public class CookieCaptureOrchestratorTests
         var session = new FakeWebViewSession();
         var log = new List<string>();
         var entryGate = new TaskCompletionSource();
+        var firstEntered = new TaskCompletionSource();
 
         session.OnNavigated(async url =>
         {
             lock (log) log.Add($"in:{url}");
-            if (url.Contains("first")) await entryGate.Task;
+            if (url.Contains("first"))
+            {
+                firstEntered.SetResult();
+                await entryGate.Task;
+            }
             lock (log) log.Add($"out:{url}");
         });
 
-        // Start both on the threadpool so the test thread isn't blocked while the first
-        // handler waits on the gate.
+        // Raise "first" and wait until its handler has actually entered — only then is it
+        // holding the serialization gate. Starting "second" before this point would race
+        // the thread pool rather than exercise the serialization logic.
         var firstRaise = Task.Run(() => session.RaiseNavigatedAsync("first"));
+        await firstEntered.Task;
+
+        // "first" is now parked inside its handler. If serialization holds, "second"
+        // cannot record "in:second" until "first" records "out:first".
         var secondRaise = Task.Run(() => session.RaiseNavigatedAsync("second"));
 
-        // Let the first raise enter the handler and start awaiting the gate; only then
-        // release it. If serialization were broken, the second raise would have already
-        // recorded "in:second" before this point.
+        // Give "second" room to interleave if the gate were broken, then release "first".
         await Task.Delay(100);
         entryGate.SetResult();
         await Task.WhenAll(firstRaise, secondRaise);

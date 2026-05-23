@@ -753,34 +753,43 @@ export function splitStringWithEscapeChar(
   }
 
   const result: string[] = [];
-  let idx = 0;
+  let current = "";
+  let i = 0;
 
-  while (idx <= str.length) {
-    let nextIdx = idx;
+  while (i < str.length) {
+    const c = str[i];
 
-    while (true) {
-      nextIdx = str.indexOf(separator, nextIdx);
-      if (nextIdx > 0) {
-        if (str[nextIdx - 1] === escapeChar) {
-          nextIdx++;
-          continue;
-        }
+    if (c === escapeChar && i + 1 < str.length) {
+      const next = str[i + 1];
+
+      // The new format escapes only the escape char itself and the separator.
+      // Legacy data never escaped the escape char, so an escape char before any
+      // other character is kept literally for backward compatibility.
+      if (next === escapeChar || next === separator) {
+        current += next;
+        i += 2;
+        continue;
       }
-      break;
+
+      current += c;
+      i += 1;
+      continue;
     }
 
-    if (nextIdx === -1) {
-      result.push(str.substring(idx));
-      break;
+    if (c === separator) {
+      result.push(current);
+      current = "";
+      i += 1;
+      continue;
     }
 
-    result.push(str.substring(idx, nextIdx));
-    idx = nextIdx + 1;
+    current += c;
+    i += 1;
   }
 
-  return result.map((r) =>
-    r.replaceAll(`${escapeChar}${separator}`, separator),
-  );
+  result.push(current);
+
+  return result;
 }
 
 export function splitStringWithEscapeCharNested(
@@ -809,14 +818,17 @@ export function joinWithEscapeChar(
   separator: string,
   escapeChar: string,
 ): string {
-  return (
-    data
-      .map((d) =>
-        d?.replace(new RegExp(separator, "g"), `${escapeChar}${separator}`),
-      )
-      // .filter(x => (ignoreNullOrEmpty ? true : (x != undefined && x.length > 0)))
-      .join(separator)
-  );
+  return data
+    .map((d) =>
+      // Escape the escape char first, then the separator, so the escape chars
+      // introduced for separators are not themselves re-escaped.
+      d
+        ?.split(escapeChar)
+        .join(`${escapeChar}${escapeChar}`)
+        .split(separator)
+        .join(`${escapeChar}${separator}`),
+    )
+    .join(separator);
 }
 
 export const getUiTheme = (uiTheme?: UiTheme) => {

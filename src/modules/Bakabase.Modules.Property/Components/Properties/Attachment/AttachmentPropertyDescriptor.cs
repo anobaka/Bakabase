@@ -33,7 +33,7 @@ public class AttachmentPropertyDescriptor : AbstractPropertyDescriptor<Attachmen
         {
             SearchOperation.Contains => dbValue.Any(x => x.Contains(fv, StringComparison.OrdinalIgnoreCase)),
             SearchOperation.NotContains => dbValue.All(x => !x.Contains(fv, StringComparison.OrdinalIgnoreCase)),
-            _ => true
+            _ => false
         };
     }
 

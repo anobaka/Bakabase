@@ -19,7 +19,7 @@ public abstract class NumberPropertyDescriptor<TOptions> : AbstractPropertyDescr
             SearchOperation.LessThan => dbValue < fv,
             SearchOperation.GreaterThanOrEquals => dbValue >= fv,
             SearchOperation.LessThanOrEquals => dbValue <= fv,
-            _ => true
+            _ => false
         };
     }
 

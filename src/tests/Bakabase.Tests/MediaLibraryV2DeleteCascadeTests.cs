@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Input;
 using Bakabase.Abstractions.Services;
-using Bakabase.Tests.Utils;
+using Bakabase.TestKit.Utils;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;

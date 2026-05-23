@@ -1,6 +1,6 @@
 using Bakabase.Modules.BulkModification.Abstractions.Models;
 using Bakabase.Modules.BulkModification.Abstractions.Services;
-using Bakabase.Tests.Utils;
+using Bakabase.TestKit.Utils;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 

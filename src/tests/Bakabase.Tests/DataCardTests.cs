@@ -17,7 +17,7 @@ using Bakabase.Modules.Property.Components.Properties.Choice.Abstractions;
 using Bakabase.Modules.Property.Components.Properties.Multilevel;
 using Bakabase.Modules.Property.Components.Properties.Tags;
 using Bakabase.Modules.StandardValue.Extensions;
-using Bakabase.Tests.Utils;
+using Bakabase.TestKit.Utils;
 using Bootstrap.Models.Constants;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;

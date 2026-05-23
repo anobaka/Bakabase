@@ -1,0 +1,72 @@
+using System;
+using System.Threading.Tasks;
+using Bakabase.Infrastructures.Components.Gui;
+
+namespace Bakabase.TestKit.Implementations;
+
+public class TestGuiAdapter : IGuiAdapter
+{
+    public void ShowFatalErrorWindow(string message, string title = "Fatal Error")
+    {
+        throw new NotImplementedException();
+    }
+
+    public void ShowInitializationWindow(string processName, string? detail = null, double? fraction = null)
+    {
+        throw new NotImplementedException();
+    }
+
+    public void DestroyInitializationWindow()
+    {
+        throw new NotImplementedException();
+    }
+
+    public void ShowMainWebView(string url, string title, Func<Task> onClosing)
+    {
+        throw new NotImplementedException();
+    }
+
+    public void SetMainWindowTitle(string title)
+    {
+        throw new NotImplementedException();
+    }
+
+    public bool MainWebViewVisible { get; }
+    public void Shutdown()
+    {
+        throw new NotImplementedException();
+    }
+
+    public void Hide()
+    {
+        throw new NotImplementedException();
+    }
+
+    public void Show()
+    {
+        throw new NotImplementedException();
+    }
+
+    public void ShowConfirmationDialogOnFirstTimeExiting(Func<CloseBehavior, bool, Task> onClosed)
+    {
+        throw new NotImplementedException();
+    }
+
+    public bool ShowConfirmDialog(string message, string caption)
+    {
+        throw new NotImplementedException();
+    }
+
+    public void ChangeUiTheme(UiTheme theme)
+    {
+        throw new NotImplementedException();
+    }
+
+    public byte[]? GetIcon(IconType type, string? path)
+    {
+        throw new NotImplementedException();
+    }
+
+    public IWebViewSession CreateWebViewSession(WebViewSessionOptions options) =>
+        CancelledWebViewSession.Instance;
+}

@@ -15,7 +15,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Bakabase.InsideWorld.Models.Configs;
-using Bakabase.Tests.Implementations;
+using Bakabase.TestKit.Implementations;
 using Bootstrap.Components.Configuration;
 using Bootstrap.Components.Logging.LogService.Extensions;
 using FluentAssertions;
@@ -26,7 +26,7 @@ using Bakabase.Abstractions.Extensions;
 using Bakabase.Infrastructures.Components.Gui;
 using Bakabase.Infrastructures.Components.Logging;
 using Bakabase.Infrastructures.Components.Orm.Log;
-using Bakabase.Tests.Utils;
+using Bakabase.TestKit.Utils;
 using Bootstrap.Components.Logging.LogService.Services;
 using FluentAssertions.Common;
 
@@ -35,6 +35,39 @@ namespace Bakabase.Tests;
 [TestClass]
 public class FileMoverTests
 {
+    /// <summary>
+    /// Regression: a configured source directory that no longer exists must be skipped,
+    /// not crash the move with a DirectoryNotFoundException.
+    /// </summary>
+    [TestMethod]
+    public async Task MoveInternal_NonExistentSource_IsSkippedWithoutThrowing()
+    {
+        var sp = await TestServiceBuilder.BuildServiceProvider();
+        var fm = sp.GetRequiredService<TestFileMover>();
+
+        var root = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!,
+            $"Bakabase.Tests.FileMover.Missing.{DateTime.Now:yyyyMMddHHmmssfff}.{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+
+        var options = new FileSystemOptions.FileMoverOptions
+        {
+            Targets =
+            [
+                new FileSystemOptions.FileMoverOptions.Target
+                {
+                    Path = Path.Combine(root, "target"),
+                    Sources = [Path.Combine(root, "does-not-exist")]
+                }
+            ],
+            Delay = TimeSpan.Zero
+        };
+
+        // Must complete without throwing; the missing source is simply skipped.
+        await fm.TestMoving(options);
+
+        try { Directory.Delete(root, true); } catch { }
+    }
+
     [TestMethod]
     public async Task Test()
     {

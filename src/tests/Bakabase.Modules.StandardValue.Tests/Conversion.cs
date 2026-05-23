@@ -3,7 +3,7 @@ using Bakabase.InsideWorld.Business.Components;
 using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Bakabase.Modules.StandardValue.Extensions;
-using Bakabase.Modules.StandardValue.Tests.Components;
+using Bakabase.TestKit.Components;
 using Bootstrap.Extensions;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
