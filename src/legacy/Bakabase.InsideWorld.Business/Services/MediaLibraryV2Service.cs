@@ -59,7 +59,8 @@ public class MediaLibraryV2Service<TDbContext>(
 
     public async Task<MediaLibraryV2> Add(MediaLibraryV2AddOrPutInputModel model)
     {
-        var domainModel = new MediaLibraryV2 { Paths = model.Paths, Name = model.Name, Color = model.Color };
+        var paths = model.Paths.Select(p => p.StandardizePath()!).ToList();
+        var domainModel = new MediaLibraryV2 { Paths = paths, Name = model.Name, Color = model.Color };
         var dbModel = domainModel.ToDbModel();
         await orm.Add(dbModel);
         orm.DbContext.Detach(dbModel);
@@ -70,12 +71,14 @@ public class MediaLibraryV2Service<TDbContext>(
     public async Task Put(int id, MediaLibraryV2AddOrPutInputModel model)
     {
         var data = await Get(id);
+        if (data == null) return;
         data.Name = model.Name;
         data.Color = model.Color;
         data.Players = model.Players;
-        if (!data.Paths.SequenceEqual(model.Paths))
+        var paths = model.Paths.Select(p => p.StandardizePath()!).ToList();
+        if (!data.Paths.SequenceEqual(paths))
         {
-            data.Paths = model.Paths;
+            data.Paths = paths;
             data.SyncVersion = null;
         }
 
@@ -98,10 +101,11 @@ public class MediaLibraryV2Service<TDbContext>(
 
         if (model.Paths != null)
         {
-            if (!data.Paths.SequenceEqual(model.Paths))
+            var paths = model.Paths.Select(p => p.StandardizePath()!).ToList();
+            if (!data.Paths.SequenceEqual(paths))
             {
                 data.SyncVersion = null;
-                data.Paths = model.Paths;
+                data.Paths = paths;
             }
         }
 
