@@ -19,43 +19,35 @@ public static class AvSourceDefaults
     public static readonly IReadOnlyDictionary<string, string> DefaultCookies =
         new Dictionary<string, string>
         {
-            ["javbus"] = "existmag=mag; dv=1",
-            ["javdb"] = "over18=1; locale=zh; theme=auto",
-            ["javlibrary"] = "over18=18",
-            ["dmm"] = "age_check_done=1",
-            ["fc2"] = "wmode=1; contents_tag=1",
+            [AvSourceIds.Javbus] = "existmag=mag; dv=1",
+            [AvSourceIds.Javdb] = "over18=1; locale=zh; theme=auto",
+            [AvSourceIds.Javlibrary] = "over18=18",
+            [AvSourceIds.Dmm] = "age_check_done=1",
+            [AvSourceIds.Fc2] = "wmode=1; contents_tag=1",
         };
 
     public static readonly IReadOnlyDictionary<string, string> DefaultBaseUrls =
         new Dictionary<string, string>
         {
-            ["javbus"] = "https://www.javbus.com",
-            ["javdb"] = "https://javdb.com",
-            ["javlibrary"] = "https://www.javlibrary.com",
-            ["airav"] = "https://airav.io",
-            ["avsex"] = "https://gg5.co",
-            ["avsox"] = "https://avsox.com",
-            ["cnmdb"] = "https://cnmdb.net",
-            ["dmm"] = "https://www.dmm.co.jp",
-            ["dahlia"] = "https://dahlia-av.com",
-            ["fc2"] = "https://adult.contents.fc2.com",
-            ["faleno"] = "https://falenogroup.com",
-            ["fantastica"] = "https://fantastica-vr.com",
-            ["fc2hub"] = "https://fc2hub.com",
-            ["freejavbt"] = "https://freejavbt.com",
-            ["getchudl"] = "https://dl.getchu.com",
-            ["iqqtv"] = "https://iqqtv.cloud",
-            ["jav321"] = "https://www.jav321.com",
-            ["javday"] = "https://javday.tv",
-            ["lulubar"] = "https://lulubar.co",
-            ["mmtv"] = "https://mmtv.tv",
+            [AvSourceIds.Javbus] = "https://www.javbus.com",
+            [AvSourceIds.Javdb] = "https://javdb.com",
+            [AvSourceIds.Javlibrary] = "https://www.javlibrary.com",
+            [AvSourceIds.Airav] = "https://airav.io",
+            [AvSourceIds.Avsex] = "https://gg5.co",
+            [AvSourceIds.Avsox] = "https://avsox.com",
+            [AvSourceIds.Cnmdb] = "https://cnmdb.net",
+            [AvSourceIds.Dmm] = "https://www.dmm.co.jp",
+            [AvSourceIds.Dahlia] = "https://dahlia-av.com",
+            [AvSourceIds.Fc2] = "https://adult.contents.fc2.com",
+            [AvSourceIds.Faleno] = "https://falenogroup.com",
+            [AvSourceIds.Fantastica] = "https://fantastica-vr.com",
+            [AvSourceIds.Fc2Hub] = "https://fc2hub.com",
+            [AvSourceIds.Freejavbt] = "https://freejavbt.com",
+            [AvSourceIds.GetchuDl] = "https://dl.getchu.com",
+            [AvSourceIds.Iqqtv] = "https://iqqtv.cloud",
+            [AvSourceIds.Jav321] = "https://www.jav321.com",
+            [AvSourceIds.Javday] = "https://javday.tv",
+            [AvSourceIds.Lulubar] = "https://lulubar.co",
+            [AvSourceIds.Mmtv] = "https://mmtv.tv",
         };
-
-    public static readonly IReadOnlyList<string> AllSources = new[]
-    {
-        "airav", "avsex", "avsox", "cnmdb", "dmm", "dahlia",
-        "fc2", "faleno", "fantastica", "fc2hub", "freejavbt",
-        "getchudl", "iqqtv", "jav321", "javbus", "javday", "javdb",
-        "javlibrary", "lulubar", "mmtv",
-    };
 }

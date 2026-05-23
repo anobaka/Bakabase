@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
 using Bakabase.Modules.ThirdParty.Helpers;
+using Bakabase.Modules.ThirdParty.ThirdParties.Av;
 using Bakabase.Modules.ThirdParty.ThirdParties.Fantastica.Models;
 using CsQuery;
 using Microsoft.Extensions.Logging;
@@ -116,7 +117,7 @@ public class FantasticaClient(IHttpClientFactory httpClientFactory, ILoggerFacto
                 CoverUrl = cover,
                 PosterUrl = poster,
                 Website = realUrl,
-                Source = "fantastica",
+                Source = AvSourceIds.Fantastica,
                 Mosaic = "有码",
                 SearchUrl = searchUrl
             };

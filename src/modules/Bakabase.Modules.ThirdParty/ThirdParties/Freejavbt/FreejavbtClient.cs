@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
+using Bakabase.Modules.ThirdParty.ThirdParties.Av;
 using Bakabase.Modules.ThirdParty.ThirdParties.Freejavbt.Models;
 using CsQuery;
 using Microsoft.Extensions.Logging;
@@ -138,7 +139,7 @@ public class FreejavbtClient(IHttpClientFactory httpClientFactory, ILoggerFactor
                 CoverUrl = cover,
                 PosterUrl = "",
                 Website = realUrl,
-                Source = "freejavbt",
+                Source = AvSourceIds.Freejavbt,
                 Mosaic = mosaic,
                 SearchUrl = realUrl
             };

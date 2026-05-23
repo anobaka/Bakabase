@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
 using Bakabase.Modules.ThirdParty.Helpers;
+using Bakabase.Modules.ThirdParty.ThirdParties.Av;
 using Bakabase.Modules.ThirdParty.ThirdParties.GetchuDl.Models;
 using CsQuery;
 using Microsoft.Extensions.Logging;
@@ -91,7 +92,7 @@ public class GetchuDlClient(IHttpClientFactory httpClientFactory, ILoggerFactory
                 CoverUrl = cover,
                 PosterUrl = cover,
                 Website = realUrl,
-                Source = "dl_getchu",
+                Source = AvSourceIds.GetchuDl,
                 Mosaic = "同人",
                 SearchUrl = searchUrl
             };

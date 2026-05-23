@@ -20,7 +20,7 @@ public class JavlibraryClient(
     {
         try
         {
-            var config = avOptionsProvider.Resolve("javlibrary");
+            var config = avOptionsProvider.Resolve(AvSourceIds.Javlibrary);
             if (!config.Enabled) return null;
 
             var domain = baseDomain ?? config.BaseUrl ?? "https://www.javlibrary.com";
@@ -77,7 +77,7 @@ public class JavlibraryClient(
                 Runtime = runtime,
                 Studio = studio,
                 Publisher = publisher,
-                Source = "javlibrary",
+                Source = AvSourceIds.Javlibrary,
                 CoverUrl = cover,
                 PosterUrl = string.Empty,
                 Website = realUrl,

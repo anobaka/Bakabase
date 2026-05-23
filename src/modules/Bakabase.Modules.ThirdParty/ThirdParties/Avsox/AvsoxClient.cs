@@ -3,6 +3,7 @@ using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.ThirdParty.Helpers;
+using Bakabase.Modules.ThirdParty.ThirdParties.Av;
 using Bakabase.Modules.ThirdParty.ThirdParties.Avsox.Models;
 using Bootstrap.Extensions;
 using CsQuery;
@@ -78,7 +79,7 @@ public class AvsoxClient(IHttpClientFactory httpClientFactory, ILoggerFactory lo
                 Runtime = GetRuntime(detailCq),
                 Series = GetSeries(detailCq),
                 Website = realUrl,
-                Source = "avsox",
+                Source = AvSourceIds.Avsox,
                 Mosaic = "无码",
                 ImageDownload = imageDownload,
                 ImageCut = "center",

@@ -20,7 +20,7 @@ public class AiravClient(
     {
         try
         {
-            var config = avOptionsProvider.Resolve("airav");
+            var config = avOptionsProvider.Resolve(AvSourceIds.Airav);
             if (!config.Enabled) return null;
 
             var processedNumber = Regex.IsMatch(number, @"^N\d{4}$", RegexOptions.IgnoreCase)
@@ -90,7 +90,7 @@ public class AiravClient(
                 Outline = outline,
                 CoverUrl = cover,
                 Website = realUrl,
-                Source = "airav",
+                Source = AvSourceIds.Airav,
                 Mosaic = GetMosaic(tag),
                 SearchUrl = searchUrl,
             };

@@ -39,7 +39,7 @@ namespace Bakabase.Service.Components
         private static string GenerateAvSourceIds()
         {
             var nl = Environment.NewLine;
-            var entries = AvSourceDefaults.AllSources.Select(s => $"  \"{s}\"").ToList();
+            var entries = AvSourceIds.All.Select(s => $"  \"{s}\"").ToList();
             return
                 $"export const AvSourceIds: readonly string[] = [{nl}" +
                 string.Join("," + nl, entries) + nl +

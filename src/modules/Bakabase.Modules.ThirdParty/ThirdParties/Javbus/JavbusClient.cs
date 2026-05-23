@@ -20,7 +20,7 @@ public class JavbusClient(
     {
         try
         {
-            var config = avOptionsProvider.Resolve("javbus");
+            var config = avOptionsProvider.Resolve(AvSourceIds.Javbus);
             if (!config.Enabled) return null;
 
             var javbusUrl = baseUrl ?? config.BaseUrl ?? "https://www.javbus.com";
@@ -99,7 +99,7 @@ public class JavbusClient(
                 Series = series,
                 Studio = studio,
                 Publisher = publisher,
-                Source = "javbus",
+                Source = AvSourceIds.Javbus,
                 CoverUrl = coverUrl,
                 PosterUrl = posterUrl,
                 Website = realUrl,

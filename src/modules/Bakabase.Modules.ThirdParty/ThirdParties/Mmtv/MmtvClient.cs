@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
 using Bakabase.Modules.ThirdParty.Helpers;
+using Bakabase.Modules.ThirdParty.ThirdParties.Av;
 using Bakabase.Modules.ThirdParty.ThirdParties.Mmtv.Models;
 using CsQuery;
 using Microsoft.Extensions.Logging;
@@ -121,7 +122,7 @@ public class MmtvClient(IHttpClientFactory httpClientFactory, ILoggerFactory log
                 CoverUrl = cover,
                 PosterUrl = "",
                 Website = realUrl,
-                Source = "7mmtv",
+                Source = AvSourceIds.Mmtv,
                 Mosaic = mosaic,
                 SearchUrl = searchUrl
             };

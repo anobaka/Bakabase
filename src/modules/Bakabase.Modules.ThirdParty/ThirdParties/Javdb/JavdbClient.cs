@@ -21,7 +21,7 @@ public class JavdbClient(
     {
         try
         {
-            var config = avOptionsProvider.Resolve("javdb");
+            var config = avOptionsProvider.Resolve(AvSourceIds.Javdb);
             if (!config.Enabled) return null;
 
             var site = baseUrl ?? config.BaseUrl ?? "https://javdb.com";
@@ -92,7 +92,7 @@ public class JavdbClient(
                 Series = series,
                 Studio = studio,
                 Publisher = publisher,
-                Source = "javdb",
+                Source = AvSourceIds.Javdb,
                 CoverUrl = coverUrl,
                 PosterUrl = posterUrl,
                 Website = NormalizeWebsite(realUrl, site),

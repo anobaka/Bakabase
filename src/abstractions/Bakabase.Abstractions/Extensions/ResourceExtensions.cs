@@ -5,7 +5,6 @@ using Bakabase.Abstractions.Models.Input;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.Aos;
-using Velopack;
 
 namespace Bakabase.Abstractions.Extensions
 {
