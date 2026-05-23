@@ -153,7 +153,14 @@ public class CoverDiscoverer(ILoggerFactory loggerFactory, FfMpegService ffMpegS
                             }
                             catch (Exception e)
                             {
-                                _logger.LogError(e, "An error occurred during capture a frame from video file");
+                                // The candidate file is selected by extension only — common false
+                                // positives are TypeScript .d.ts (matching the .ts video extension)
+                                // and otherwise-corrupt videos. Both are user-data conditions, not
+                                // application errors: log as Warning so they don't drown the real
+                                // signal in Sentry.
+                                _logger.LogWarning(e,
+                                    "Skipping cover candidate {File}: ffmpeg/ffprobe could not read it as a video",
+                                    firstVideoFile.FullName);
                             }
                             finally
                             {
