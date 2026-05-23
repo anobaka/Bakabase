@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
 using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.Modules.ThirdParty.ThirdParties.Av;
 using Bakabase.Modules.ThirdParty.ThirdParties.CNMDB.Models;
 using Bootstrap.Extensions;
 using CsQuery;
@@ -112,7 +113,7 @@ public class CNMDBClient(IHttpClientFactory httpClientFactory, ILoggerFactory lo
                 Director = "",
                 Studio = studio,
                 Publisher = studio,
-                Source = "cnmdb",
+                Source = AvSourceIds.Cnmdb,
                 Website = realUrl,
                 ActorPhoto = actorPhoto,
                 CoverUrl = coverUrl,

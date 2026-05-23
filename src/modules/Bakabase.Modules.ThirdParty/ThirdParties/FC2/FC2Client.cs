@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
+using Bakabase.Modules.ThirdParty.ThirdParties.Av;
 using Bakabase.Modules.ThirdParty.ThirdParties.FC2.Models;
 using CsQuery;
 using Microsoft.Extensions.Logging;
@@ -87,7 +88,7 @@ public class FC2Client(IHttpClientFactory httpClientFactory, ILoggerFactory logg
                 Director = "",
                 Studio = studio,
                 Publisher = studio,
-                Source = "fc2",
+                Source = AvSourceIds.Fc2,
                 Website = realUrl,
                 ActorPhoto = actorPhoto,
                 CoverUrl = coverUrl,

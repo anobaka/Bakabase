@@ -21,7 +21,7 @@ public class IqqtvClient(
     {
         try
         {
-            var config = avOptionsProvider.Resolve("iqqtv");
+            var config = avOptionsProvider.Resolve(AvSourceIds.Iqqtv);
             if (!config.Enabled) return null;
 
             if (!Regex.IsMatch(number ?? string.Empty, @"^n\d{4}$"))
@@ -90,7 +90,7 @@ public class IqqtvClient(
                 Series = series,
                 Studio = studio,
                 Publisher = studio,
-                Source = "iqqtv",
+                Source = AvSourceIds.Iqqtv,
                 CoverUrl = cover,
                 PosterUrl = string.Empty,
                 Website = realUrl,

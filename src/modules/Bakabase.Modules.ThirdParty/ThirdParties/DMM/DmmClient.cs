@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
+using Bakabase.Modules.ThirdParty.ThirdParties.Av;
 using Bakabase.Modules.ThirdParty.ThirdParties.DMM.Models;
 using CsQuery;
 using Microsoft.Extensions.Logging;
@@ -126,7 +127,7 @@ public class DmmClient(IHttpClientFactory httpClientFactory, ILoggerFactory logg
                 Director = director,
                 Studio = studio,
                 Publisher = publisher,
-                Source = "dmm",
+                Source = AvSourceIds.Dmm,
                 Website = appointUrl,
                 ActorPhoto = string.IsNullOrWhiteSpace(actor) ? new Dictionary<string, string>() : actor.Split(',').Distinct().ToDictionary(a => a, _ => string.Empty),
                 CoverUrl = cover,

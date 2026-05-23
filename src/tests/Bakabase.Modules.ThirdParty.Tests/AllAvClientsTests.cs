@@ -1,6 +1,7 @@
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Modules.ThirdParty.ThirdParties.Airav;
+using Bakabase.Modules.ThirdParty.ThirdParties.Av;
 using Bakabase.Modules.ThirdParty.ThirdParties.Avsex;
 using Bakabase.Modules.ThirdParty.ThirdParties.Avsox;
 using Bakabase.Modules.ThirdParty.ThirdParties.CNMDB;
@@ -22,6 +23,7 @@ using Bakabase.Modules.ThirdParty.ThirdParties.Mmtv;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 using Bakabase.Modules.ThirdParty.ThirdParties.DMM;
 
 namespace Bakabase.Modules.ThirdParty.Tests
@@ -40,6 +42,77 @@ namespace Bakabase.Modules.ThirdParty.Tests
         // produces the most useful coverage. The test is [Ignore]'d by default so CI
         // does not hit live sites.
         private const string DefaultNumber = "RBK-130";
+
+        // The 20 AV-source clients dispatched by AvEnhancer / AvController.
+        // Kept beside BuildDispatchers so the two are obviously paired.
+        private static readonly Type[] AvClientTypes =
+        {
+            typeof(AiravClient), typeof(AvsexClient), typeof(AvsoxClient), typeof(CNMDBClient),
+            typeof(DmmClient), typeof(DahliaClient), typeof(FC2Client), typeof(FalenoClient),
+            typeof(FantasticaClient), typeof(Fc2hubClient), typeof(FreejavbtClient),
+            typeof(GetchuDlClient), typeof(IqqtvClient), typeof(Jav321Client), typeof(JavbusClient),
+            typeof(JavdayClient), typeof(JavdbClient), typeof(JavlibraryClient), typeof(LulubarClient),
+            typeof(MmtvClient),
+        };
+
+        /// <summary>
+        /// Regression guard for the dispatcher table: the keys registered with the
+        /// dispatcher MUST exactly cover the canonical id list. Drift here is what
+        /// allows "preferred source for target X" to silently drop everything.
+        /// </summary>
+        [TestMethod]
+        public void Dispatcher_KeysExactlyMatchAvSourceIdsAll()
+        {
+            var dispatchers = BuildDispatchers(BuildServiceProvider());
+            CollectionAssert.AreEquivalent(
+                AvSourceIds.All.ToList(),
+                dispatchers.Keys.ToList(),
+                $"Dispatcher keys must match AvSourceIds.All exactly. " +
+                $"Missing: [{string.Join(", ", AvSourceIds.All.Except(dispatchers.Keys))}]. " +
+                $"Extra: [{string.Join(", ", dispatchers.Keys.Except(AvSourceIds.All))}].");
+        }
+
+        /// <summary>
+        /// Regression guard for the original bug (issue #1161): clients used to
+        /// assign IAvDetail.Source via a string literal that drifted from the
+        /// dispatcher key (e.g. MmtvClient set "7mmtv" while the dispatcher key
+        /// was "mmtv"), causing AvEnhancer.OrderDetailsForTarget to silently
+        /// drop the parsed detail when the user picked that source as preferred.
+        /// Enforcing the AvSourceIds.* constant collapses the two strings into
+        /// one source of truth.
+        /// </summary>
+        [TestMethod]
+        public void AvClient_SourceFieldUsesAvSourceIdsConstant()
+        {
+            var thirdPartiesDir = LocateThirdPartiesDir();
+            var failures = new List<string>();
+            foreach (var type in AvClientTypes)
+            {
+                var matches = Directory.EnumerateFiles(thirdPartiesDir, $"{type.Name}.cs", SearchOption.AllDirectories).ToList();
+                Assert.AreEqual(1, matches.Count, $"Expected exactly one file named {type.Name}.cs under {thirdPartiesDir}");
+                var content = File.ReadAllText(matches[0]);
+                var literal = Regex.Match(content, @"\bSource\s*=\s*""([^""]*)""");
+                if (literal.Success)
+                {
+                    failures.Add($"{type.Name}: Source = \"{literal.Groups[1].Value}\" — use AvSourceIds.X instead");
+                }
+            }
+
+            if (failures.Any())
+            {
+                Assert.Fail("AV client(s) assign IAvDetail.Source to a string literal:\n  " + string.Join("\n  ", failures));
+            }
+        }
+
+        // Resolves the runtime path of the ThirdParties folder so the regression
+        // test above can grep client source files. Uses [CallerFilePath] so the
+        // location tracks the source tree, not the test bin directory.
+        private static string LocateThirdPartiesDir([CallerFilePath] string? callerFile = null)
+        {
+            var testDir = Path.GetDirectoryName(callerFile)!;
+            return Path.GetFullPath(Path.Combine(
+                testDir, "..", "..", "modules", "Bakabase.Modules.ThirdParty", "ThirdParties"));
+        }
 
         [TestMethod]
         [Ignore("Manual integration test — hits every live AV source in parallel. Remove [Ignore] to run.")]
@@ -184,6 +257,10 @@ namespace Bakabase.Modules.ThirdParty.Tests
             foreach (var (source, detail, _) in hits)
             {
                 if (detail == null) continue;
+                if (!string.Equals(detail.Source, source, StringComparison.Ordinal))
+                {
+                    failures.Add($"[{source}] IAvDetail.Source='{detail.Source}' does not match dispatcher key '{source}' — preferred-source filtering will silently drop this client's results");
+                }
                 CheckField(source, "Series", detail.Series, number, failures);
                 CheckField(source, "Title", detail.Title, number, failures);
                 CheckField(source, "OriginalTitle", detail.OriginalTitle, number, failures);
@@ -251,26 +328,26 @@ namespace Bakabase.Modules.ThirdParty.Tests
             // Mirrors AvEnhancer's dispatcher table — keep in sync when adding sources.
             return new Dictionary<string, Func<string, Task<IAvDetail?>>>
             {
-                { "airav",          n => Wrap(sp.GetRequiredService<AiravClient>().SearchAndParseVideo(n)) },
-                { "avsex",          n => Wrap(sp.GetRequiredService<AvsexClient>().SearchAndParseVideo(n)) },
-                { "avsox",          n => Wrap(sp.GetRequiredService<AvsoxClient>().SearchAndParseVideo(n)) },
-                { "cnmdb",          n => Wrap(sp.GetRequiredService<CNMDBClient>().SearchAndParseVideo(n)) },
-                { "dmm",            n => Wrap(sp.GetRequiredService<DmmClient>().SearchAndParseVideo(n)) },
-                { "dahlia",         n => Wrap(sp.GetRequiredService<DahliaClient>().SearchAndParseVideo(n)) },
-                { "fc2",            n => Wrap(sp.GetRequiredService<FC2Client>().SearchAndParseVideo(n)) },
-                { "faleno",         n => Wrap(sp.GetRequiredService<FalenoClient>().SearchAndParseVideo(n)) },
-                { "fantastica",     n => Wrap(sp.GetRequiredService<FantasticaClient>().SearchAndParseVideo(n)) },
-                { "fc2hub",         n => Wrap(sp.GetRequiredService<Fc2hubClient>().SearchAndParseVideo(n)) },
-                { "freejavbt",      n => Wrap(sp.GetRequiredService<FreejavbtClient>().SearchAndParseVideo(n)) },
-                { "getchudl",       n => Wrap(sp.GetRequiredService<GetchuDlClient>().SearchAndParseVideo(n)) },
-                { "iqqtv",          n => Wrap(sp.GetRequiredService<IqqtvClient>().SearchAndParseVideo(n)) },
-                { "jav321",         n => Wrap(sp.GetRequiredService<Jav321Client>().SearchAndParseVideo(n)) },
-                { "javbus",         n => Wrap(sp.GetRequiredService<JavbusClient>().SearchAndParseVideo(n)) },
-                { "javday",         n => Wrap(sp.GetRequiredService<JavdayClient>().SearchAndParseVideo(n)) },
-                { "javdb",          n => Wrap(sp.GetRequiredService<JavdbClient>().SearchAndParseVideo(n)) },
-                { "javlibrary",     n => Wrap(sp.GetRequiredService<JavlibraryClient>().SearchAndParseVideo(n)) },
-                { "lulubar",        n => Wrap(sp.GetRequiredService<LulubarClient>().SearchAndParseVideo(n)) },
-                { "mmtv",           n => Wrap(sp.GetRequiredService<MmtvClient>().SearchAndParseVideo(n)) },
+                { AvSourceIds.Airav,      n => Wrap(sp.GetRequiredService<AiravClient>().SearchAndParseVideo(n)) },
+                { AvSourceIds.Avsex,      n => Wrap(sp.GetRequiredService<AvsexClient>().SearchAndParseVideo(n)) },
+                { AvSourceIds.Avsox,      n => Wrap(sp.GetRequiredService<AvsoxClient>().SearchAndParseVideo(n)) },
+                { AvSourceIds.Cnmdb,      n => Wrap(sp.GetRequiredService<CNMDBClient>().SearchAndParseVideo(n)) },
+                { AvSourceIds.Dmm,        n => Wrap(sp.GetRequiredService<DmmClient>().SearchAndParseVideo(n)) },
+                { AvSourceIds.Dahlia,     n => Wrap(sp.GetRequiredService<DahliaClient>().SearchAndParseVideo(n)) },
+                { AvSourceIds.Fc2,        n => Wrap(sp.GetRequiredService<FC2Client>().SearchAndParseVideo(n)) },
+                { AvSourceIds.Faleno,     n => Wrap(sp.GetRequiredService<FalenoClient>().SearchAndParseVideo(n)) },
+                { AvSourceIds.Fantastica, n => Wrap(sp.GetRequiredService<FantasticaClient>().SearchAndParseVideo(n)) },
+                { AvSourceIds.Fc2Hub,     n => Wrap(sp.GetRequiredService<Fc2hubClient>().SearchAndParseVideo(n)) },
+                { AvSourceIds.Freejavbt,  n => Wrap(sp.GetRequiredService<FreejavbtClient>().SearchAndParseVideo(n)) },
+                { AvSourceIds.GetchuDl,   n => Wrap(sp.GetRequiredService<GetchuDlClient>().SearchAndParseVideo(n)) },
+                { AvSourceIds.Iqqtv,      n => Wrap(sp.GetRequiredService<IqqtvClient>().SearchAndParseVideo(n)) },
+                { AvSourceIds.Jav321,     n => Wrap(sp.GetRequiredService<Jav321Client>().SearchAndParseVideo(n)) },
+                { AvSourceIds.Javbus,     n => Wrap(sp.GetRequiredService<JavbusClient>().SearchAndParseVideo(n)) },
+                { AvSourceIds.Javday,     n => Wrap(sp.GetRequiredService<JavdayClient>().SearchAndParseVideo(n)) },
+                { AvSourceIds.Javdb,      n => Wrap(sp.GetRequiredService<JavdbClient>().SearchAndParseVideo(n)) },
+                { AvSourceIds.Javlibrary, n => Wrap(sp.GetRequiredService<JavlibraryClient>().SearchAndParseVideo(n)) },
+                { AvSourceIds.Lulubar,    n => Wrap(sp.GetRequiredService<LulubarClient>().SearchAndParseVideo(n)) },
+                { AvSourceIds.Mmtv,       n => Wrap(sp.GetRequiredService<MmtvClient>().SearchAndParseVideo(n)) },
             };
         }
 

@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
+using Bakabase.Modules.ThirdParty.ThirdParties.Av;
 using Bakabase.Modules.ThirdParty.ThirdParties.Fc2hub.Models;
 using CsQuery;
 using Microsoft.Extensions.Logging;
@@ -78,7 +79,7 @@ public class Fc2hubClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
                 CoverUrl = cover,
                 PosterUrl = "",
                 Website = realUrl,
-                Source = "fc2hub",
+                Source = AvSourceIds.Fc2Hub,
                 Mosaic = mosaic,
                 SearchUrl = searchUrl
             };

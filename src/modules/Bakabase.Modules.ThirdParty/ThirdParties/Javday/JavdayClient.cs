@@ -1,6 +1,7 @@
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
 using Bakabase.Modules.ThirdParty.Helpers;
+using Bakabase.Modules.ThirdParty.ThirdParties.Av;
 using Bakabase.Modules.ThirdParty.ThirdParties.Javday.Models;
 using Microsoft.Extensions.Logging;
 using CsQuery;
@@ -59,7 +60,7 @@ public class JavdayClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
                 Series = series,
                 Studio = studio,
                 Publisher = studio,
-                Source = "javday",
+                Source = AvSourceIds.Javday,
                 CoverUrl = cover,
                 PosterUrl = string.Empty,
                 Website = realUrl,

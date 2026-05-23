@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
 using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.Modules.ThirdParty.ThirdParties.Av;
 using Bakabase.Modules.ThirdParty.ThirdParties.Dahlia.Models;
 using CsQuery;
 using Microsoft.Extensions.Logging;
@@ -58,7 +59,7 @@ public class DahliaClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
                 ExtraFanart = GetExtraFanart(detailCq),
                 Trailer = GetTrailer(detailCq),
                 Website = realUrl,
-                Source = "dahlia",
+                Source = AvSourceIds.Dahlia,
                 SearchUrl = realUrl
             };
 

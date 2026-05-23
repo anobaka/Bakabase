@@ -3,6 +3,7 @@ using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.ThirdParty.Helpers;
+using Bakabase.Modules.ThirdParty.ThirdParties.Av;
 using Bakabase.Modules.ThirdParty.ThirdParties.Avsex.Models;
 using Bootstrap.Extensions;
 using CsQuery;
@@ -92,7 +93,7 @@ public class AvsexClient(IHttpClientFactory httpClientFactory, ILoggerFactory lo
                 Runtime = GetRuntime(detailCq).ToString(),
                 ExtraFanart = GetExtraFanart(detailCq),
                 Website = Regex.Replace(realUrl, @"http[s]?://[^/]+", actualBaseUrl),
-                Source = "avsex",
+                Source = AvSourceIds.Avsex,
                 SearchUrl = searchUrl
             };
 

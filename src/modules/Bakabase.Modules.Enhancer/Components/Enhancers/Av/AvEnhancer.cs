@@ -70,29 +70,32 @@ public class AvEnhancer(
     {
         try
         {
-            // Define all clients that implement SearchAndParseVideo returning IAvDetail
+            // Define all clients that implement SearchAndParseVideo returning IAvDetail.
+            // The key MUST match IAvDetail.Source (see AvSourceIds) — preferred-source
+            // filtering compares against d.Source and silently drops anything that
+            // can't be looked up.
             var clients = new Dictionary<string, Func<string, string?, Task<IAvDetail?>>>
             {
-                { "airav", (num, url) => airavClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
-                { "avsex", (num, url) => avsexClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
-                { "avsox", (num, url) => avsoxClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
-                { "cnmdb", (num, url) => cnmdbClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
-                { "dmm", (num, url) => dmmClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
-                { "dahlia", (num, url) => dahliaClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
-                { "fc2", (num, url) => fc2Client.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
-                { "faleno", (num, url) => falenoClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
-                { "fantastica", (num, url) => fantasticaClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
-                { "fc2hub", (num, url) => fc2hubClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
-                { "freejavbt", (num, url) => freejavbtClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
-                { "getchudl", (num, url) => getchuDlClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
-                { "iqqtv", (num, url) => iqqtvClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
-                { "jav321", (num, url) => jav321Client.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
-                { "javbus", (num, url) => javbusClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
-                { "javday", (num, url) => javdayClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
-                { "javdb", (num, url) => javdbClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
-                { "javlibrary", (num, url) => javlibraryClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
-                { "lulubar", (num, url) => lulubarClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
-                { "mmtv", (num, url) => mmtvClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
+                { AvSourceIds.Airav, (num, url) => airavClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
+                { AvSourceIds.Avsex, (num, url) => avsexClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
+                { AvSourceIds.Avsox, (num, url) => avsoxClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
+                { AvSourceIds.Cnmdb, (num, url) => cnmdbClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
+                { AvSourceIds.Dmm, (num, url) => dmmClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
+                { AvSourceIds.Dahlia, (num, url) => dahliaClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
+                { AvSourceIds.Fc2, (num, url) => fc2Client.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
+                { AvSourceIds.Faleno, (num, url) => falenoClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
+                { AvSourceIds.Fantastica, (num, url) => fantasticaClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
+                { AvSourceIds.Fc2Hub, (num, url) => fc2hubClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
+                { AvSourceIds.Freejavbt, (num, url) => freejavbtClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
+                { AvSourceIds.GetchuDl, (num, url) => getchuDlClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
+                { AvSourceIds.Iqqtv, (num, url) => iqqtvClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
+                { AvSourceIds.Jav321, (num, url) => jav321Client.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
+                { AvSourceIds.Javbus, (num, url) => javbusClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
+                { AvSourceIds.Javday, (num, url) => javdayClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
+                { AvSourceIds.Javdb, (num, url) => javdbClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
+                { AvSourceIds.Javlibrary, (num, url) => javlibraryClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
+                { AvSourceIds.Lulubar, (num, url) => lulubarClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
+                { AvSourceIds.Mmtv, (num, url) => mmtvClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
             };
 
             var disabledSources = clients.Keys

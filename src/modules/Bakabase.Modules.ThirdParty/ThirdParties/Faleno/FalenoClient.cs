@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
 using Bakabase.Modules.ThirdParty.Helpers;
+using Bakabase.Modules.ThirdParty.ThirdParties.Av;
 using Bakabase.Modules.ThirdParty.ThirdParties.Faleno.Models;
 using CsQuery;
 using Microsoft.Extensions.Logging;
@@ -160,7 +161,7 @@ public class FalenoClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
                 CoverUrl = cover,
                 PosterUrl = poster,
                 Website = realUrl,
-                Source = "faleno",
+                Source = AvSourceIds.Faleno,
                 Mosaic = "有码",
                 SearchUrl = searchUrl
             };

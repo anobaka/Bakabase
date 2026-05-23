@@ -1,6 +1,7 @@
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
 using Bakabase.Modules.ThirdParty.Helpers;
+using Bakabase.Modules.ThirdParty.ThirdParties.Av;
 using Bakabase.Modules.ThirdParty.ThirdParties.Jav321.Models;
 using Microsoft.Extensions.Logging;
 using CsQuery;
@@ -67,7 +68,7 @@ public class Jav321Client(IHttpClientFactory httpClientFactory, ILoggerFactory l
                 Series = series,
                 Studio = studio,
                 Publisher = studio,
-                Source = "jav321",
+                Source = AvSourceIds.Jav321,
                 CoverUrl = coverUrl,
                 PosterUrl = posterUrl,
                 Website = website,
