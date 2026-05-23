@@ -230,6 +230,20 @@ public sealed class SearchMatching
     }
 
     [TestMethod]
+    public void SingleChoice_In_AcceptsListFilter_AgainstScalarDbValue()
+    {
+        // SingleChoice's dbValue is a single string but the In operation declares
+        // AsType = MultipleChoice, so filterValue is a List<string>. The two types differ;
+        // IsMatch must still match the scalar dbValue against the list filter.
+        Assert.IsTrue(SingleChoice.IsMatch("uuid-1", SearchOperation.In,
+            new List<string> { "uuid-1", "uuid-2" }));
+        Assert.IsFalse(SingleChoice.IsMatch("uuid-1", SearchOperation.In,
+            new List<string> { "uuid-3", "uuid-4" }));
+        Assert.IsTrue(SingleChoice.IsMatch("uuid-1", SearchOperation.NotIn,
+            new List<string> { "uuid-3", "uuid-4" }));
+    }
+
+    [TestMethod]
     public void SingleChoice_IsNull_And_IsNotNull()
     {
         Assert.IsTrue(SingleChoice.IsMatch(null, SearchOperation.IsNull, null));
