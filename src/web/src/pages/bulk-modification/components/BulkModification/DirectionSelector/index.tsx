@@ -33,11 +33,7 @@ const DirectionSelector = ({ isReversed, onChange, subject }: Props) => {
         onChange?.(!isReversed);
       }}
     >
-      {t<string>(
-        isReversed
-          ? I18NKeyMap[subject]["backward"]
-          : I18NKeyMap[subject]["forward"],
-      )}
+      {t<string>(isReversed ? I18NKeyMap[subject]["backward"] : I18NKeyMap[subject]["forward"])}
     </Button>
   );
 };

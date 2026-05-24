@@ -3,7 +3,11 @@
 import type { PopoverProps as NextUIPopoverProps } from "@heroui/react";
 
 import { forwardRef } from "react";
-import { Popover as HeroPopover, PopoverContent as HeroPopoverContent, PopoverTrigger as HeroPopoverTrigger } from "@heroui/react";
+import {
+  Popover as HeroPopover,
+  PopoverContent as HeroPopoverContent,
+  PopoverTrigger as HeroPopoverTrigger,
+} from "@heroui/react";
 
 interface PopoverProps extends Omit<NextUIPopoverProps, "ref"> {
   trigger: any;
@@ -28,9 +32,9 @@ const PopoverComponent = forwardRef<HTMLDivElement, PopoverProps>(
   ) => {
     return (
       <HeroPopover
+        isKeyboardDismissDisabled={!closeMode?.includes("esc")}
         isOpen={visible}
         shouldCloseOnBlur={false}
-        isKeyboardDismissDisabled={!closeMode?.includes("esc")}
         {...(!closeMode?.includes("mask") ? { shouldCloseOnInteractOutside: () => false } : {})}
         onOpenChange={(isOpen) => {
           onOpenChange?.(isOpen);

@@ -15,12 +15,12 @@ const LongTabsPage = () => {
           <div className="p-4">
             <h3>Content for Tab {i}</h3>
             <p>
-              This is the content for tab number {i}. This tab has a very long
-              title to test how the UI handles overflow.
+              This is the content for tab number {i}. This tab has a very long title to test how the
+              UI handles overflow.
             </p>
             <p>
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do
-              eiusmod tempor incididunt ut labore et dolore magna aliqua.
+              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor
+              incididunt ut labore et dolore magna aliqua.
             </p>
           </div>
         </Tab>,
@@ -34,8 +34,8 @@ const LongTabsPage = () => {
     <div className="w-full space-y-8">
       <h2 className="mb-4">Testing HeroUI Tabs with Many Long Titles</h2>
       <p className="mb-4 text-sm text-default-500">
-        This test case creates 50 tabs with very long titles to test how HeroUI
-        handles overflow and scrolling behavior.
+        This test case creates 50 tabs with very long titles to test how HeroUI handles overflow and
+        scrolling behavior.
       </p>
 
       {/* 测试1: 默认样式 - 可能超出屏幕 */}
@@ -69,12 +69,7 @@ const LongTabsPage = () => {
       {/* 测试3: 使用solid变体 */}
       <div>
         <h3 className="mb-2">Test 3: Solid Variant</h3>
-        <Tabs
-          aria-label="Long tabs test - solid"
-          className="w-full"
-          size="lg"
-          variant="solid"
-        >
+        <Tabs aria-label="Long tabs test - solid" className="w-full" size="lg" variant="solid">
           {generateTabs()}
         </Tabs>
       </div>
@@ -95,12 +90,7 @@ const LongTabsPage = () => {
       {/* 测试5: 使用light变体 */}
       <div>
         <h3 className="mb-2">Test 5: Light Variant</h3>
-        <Tabs
-          aria-label="Long tabs test - light"
-          className="w-full"
-          size="lg"
-          variant="light"
-        >
+        <Tabs aria-label="Long tabs test - light" className="w-full" size="lg" variant="light">
           {generateTabs()}
         </Tabs>
       </div>
@@ -108,12 +98,7 @@ const LongTabsPage = () => {
       {/* 测试6: 使用small尺寸 */}
       <div>
         <h3 className="mb-2">Test 6: Small Size</h3>
-        <Tabs
-          aria-label="Long tabs test - small"
-          className="w-full"
-          size="sm"
-          variant="underlined"
-        >
+        <Tabs aria-label="Long tabs test - small" className="w-full" size="sm" variant="underlined">
           {generateTabs()}
         </Tabs>
       </div>

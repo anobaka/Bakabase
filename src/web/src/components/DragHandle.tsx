@@ -4,7 +4,6 @@ import type { ChipProps } from "@heroui/react";
 
 import { useTranslation } from "react-i18next";
 import { Chip } from "@heroui/react";
-import { AiOutlineDrag } from "react-icons/ai";
 import { MdOutlineDragIndicator } from "react-icons/md";
 const DragHandle = (props: ChipProps) => {
   const { style = {}, className, ...otherProps } = props || {};

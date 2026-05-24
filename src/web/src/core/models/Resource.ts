@@ -27,6 +27,7 @@ export const isNonEmptyValue = (value: any): boolean => {
   if (value == null) return false;
   if (Array.isArray(value)) return value.length > 0;
   if (typeof value === "string") return value.trim().length > 0;
+
   return true;
 };
 
@@ -83,6 +84,7 @@ export const buildEffectiveScopePriority = (
   }
 
   const chain: PropertyValueScope[] = [];
+
   for (const p of preference.priorities) {
     chain.push(p.scope);
     if (!p.fallbackOnEmpty) break;
@@ -98,6 +100,7 @@ export const selectScopedValue = (
 ): Value | undefined => {
   for (const scope of effectivePriority) {
     const value = values?.find((v) => v.scope == scope);
+
     if (value && isNonEmptyValue(value.aliasAppliedBizValue ?? value.bizValue)) {
       return value;
     }

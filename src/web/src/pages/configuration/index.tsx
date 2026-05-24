@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 
 import Dependency from "./components/Dependency";
+
 import "./index.scss";
 import AppInfo from "@/pages/configuration/components/AppInfo";
 import ContactUs from "@/pages/configuration/components/ContactUs";

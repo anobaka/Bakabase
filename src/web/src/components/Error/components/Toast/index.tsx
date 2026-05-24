@@ -4,12 +4,7 @@ import type { Toast } from "react-hot-toast";
 
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
-import {
-  CheckOutlined,
-  CloseOutlined,
-  CopyOutlined,
-  WarningOutlined,
-} from "@ant-design/icons";
+import { CheckOutlined, CloseOutlined, CopyOutlined, WarningOutlined } from "@ant-design/icons";
 import toast from "react-hot-toast";
 
 import { Button, Chip } from "@/components/bakaui";
@@ -31,9 +26,7 @@ const Toast = (props: Props) => {
       </Chip>
       <div className={"flex flex-col gap-1 break-all"}>
         <div>{title}</div>
-        {description && (
-          <pre className={"opacity-80 text-xs"}>{description}</pre>
-        )}
+        {description && <pre className={"opacity-80 text-xs"}>{description}</pre>}
       </div>
       <div className={"flex items-center"}>
         <Button
@@ -62,12 +55,7 @@ const Toast = (props: Props) => {
             <CopyOutlined className={"text-base"} />
           )}
         </Button>
-        <Button
-          isIconOnly
-          size={"sm"}
-          variant={"light"}
-          onClick={() => toast.dismiss(tst.id)}
-        >
+        <Button isIconOnly size={"sm"} variant={"light"} onClick={() => toast.dismiss(tst.id)}>
           <CloseOutlined className={"text-base"} />
         </Button>
       </div>

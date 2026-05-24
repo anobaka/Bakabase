@@ -34,16 +34,30 @@ export const LightText = (props: LightTextProps) => {
   const { children, onClick, size, faded, color } = props;
 
   const textClass = size ? sizeTextClassMap[size] : sizeTextClassMap.md;
-  const className = [
-    textClass,
-    faded ? "opacity-40" : "",
-    onClick ? "cursor-pointer" : "",
-  ].filter(Boolean).join(" ");
+  const className = [textClass, faded ? "opacity-40" : "", onClick ? "cursor-pointer" : ""]
+    .filter(Boolean)
+    .join(" ");
 
   const style = color ? { color } : undefined;
 
   return (
-    <span className={className} style={style} onClick={onClick}>
+    <span
+      className={className}
+      role={onClick ? "button" : undefined}
+      style={style}
+      tabIndex={onClick ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
+    >
       {children}
     </span>
   );

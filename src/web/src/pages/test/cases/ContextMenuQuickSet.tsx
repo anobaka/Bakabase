@@ -17,16 +17,16 @@ const ContextMenuQuickSetTest = () => {
   return (
     <div className={"p-4"} style={{ maxWidth: 800 }}>
       <QuickSetPropertyConfig
-        items={items}
-        onChange={(newItems) =>
-          uiOptionsStore.patch({
-            resource: { ...resourceOptions, customContextMenuItems: newItems },
-          })
-        }
         autoAddRecentPropertyValues={resourceOptions?.autoAddRecentPropertyValues}
+        items={items}
         onAutoAddChange={(value) =>
           uiOptionsStore.patch({
             resource: { ...resourceOptions, autoAddRecentPropertyValues: value },
+          })
+        }
+        onChange={(newItems) =>
+          uiOptionsStore.patch({
+            resource: { ...resourceOptions, customContextMenuItems: newItems },
           })
         }
       />

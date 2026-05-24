@@ -5,20 +5,15 @@ import type { DestroyableProps } from "@/components/bakaui/types";
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useLocation } from "react-router-dom";
+import { AiOutlineSearch } from "react-icons/ai";
 
 import { Modal, Spinner, Pagination, Button, Tooltip } from "@/components/bakaui";
 import Resource from "@/components/Resource";
 import { buildLogger } from "@/components/utils";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { usePendingSearchStore } from "@/stores/pendingSearch";
-import {
-  SearchCombinator,
-  SearchOperation,
-  PropertyPool,
-  InternalProperty,
-} from "@/sdk/constants";
+import { SearchCombinator, SearchOperation, PropertyPool, InternalProperty } from "@/sdk/constants";
 import { useResourceSearch } from "@/hooks/useResourceSearch";
-import { AiOutlineSearch } from "react-icons/ai";
 
 const log = buildLogger("ChildrenModal");
 
@@ -125,21 +120,16 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
       defaultVisible
       footer={false}
       size="7xl"
-      title={(
+      title={
         <div className="flex items-center gap-2">
           <span>{t<string>("resource.modal.resourceChildren")}</span>
           <Tooltip content={t("resource.tip.viewChildrenInNewTab")}>
-            <Button
-              isIconOnly
-              size="sm"
-              variant="light"
-              onPress={handleShowInNewTab}
-            >
+            <Button isIconOnly size="sm" variant="light" onPress={handleShowInNewTab}>
               <AiOutlineSearch className="text-base" />
             </Button>
           </Tooltip>
         </div>
-      )}
+      }
       onDestroyed={onDestroyed}
     >
       <div className="p-4">

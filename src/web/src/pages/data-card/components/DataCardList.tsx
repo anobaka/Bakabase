@@ -1,5 +1,6 @@
 "use client";
 
+import type { IProperty } from "@/components/Property/models";
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { DatabaseOutlined, DeleteOutlined, EditOutlined, PlusCircleOutlined, SearchOutlined } from "@ant-design/icons";
@@ -19,7 +20,6 @@ import {
   Tooltip,
 } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import type { IProperty } from "@/components/Property/models";
 
 import DataCardBody from "@/components/DataCardBody";
 import { useSearchByDataCard } from "@/hooks/useSearchByDataCard";
@@ -41,7 +41,13 @@ interface DataCardItem {
   id: number;
   typeId: number;
   name?: string;
-  propertyValues?: { id: number; cardId: number; propertyId: number; value?: string; scope: number }[];
+  propertyValues?: {
+    id: number;
+    cardId: number;
+    propertyId: number;
+    value?: string;
+    scope: number;
+  }[];
   createdAt: string;
   updatedAt: string;
 }
@@ -72,6 +78,7 @@ const DataCardList = ({ cardType, allProperties }: DataCardListProps) => {
       pageIndex: page ?? pageIndex,
       pageSize,
     });
+
     setCards((rsp.data || []) as DataCardItem[]);
     setTotalCount((rsp as any).totalCount || 0);
   };
@@ -113,16 +120,7 @@ const DataCardList = ({ cardType, allProperties }: DataCardListProps) => {
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-end">
           <Input
-            size="sm"
             className="w-40"
-            placeholder={t("dataCard.card.search.placeholder")}
-            value={keyword}
-            onValueChange={setKeyword}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                handleSearch();
-              }
-            }}
             endContent={
               <Button
                 size="sm"
@@ -133,11 +131,20 @@ const DataCardList = ({ cardType, allProperties }: DataCardListProps) => {
                 <SearchOutlined className="text-small" />
               </Button>
             }
+            placeholder={t("dataCard.card.search.placeholder")}
+            size="sm"
+            value={keyword}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                handleSearch();
+              }
+            }}
+            onValueChange={setKeyword}
           />
           <Button
-            size="sm"
-            color="primary"
             className="whitespace-nowrap"
+            color="primary"
+            size="sm"
             onPress={() => {
               createPortal(DataCardEditor, {
                 cardType,
@@ -150,10 +157,10 @@ const DataCardList = ({ cardType, allProperties }: DataCardListProps) => {
             {t("dataCard.card.create")}
           </Button>
           <Button
-            size="sm"
-            color="secondary"
-            variant="flat"
             className="whitespace-nowrap"
+            color="secondary"
+            size="sm"
+            variant="flat"
             onPress={() => {
               createPortal(CreateInitialDataModal, {
                 typeId: cardType.id,
@@ -166,11 +173,11 @@ const DataCardList = ({ cardType, allProperties }: DataCardListProps) => {
             {t("dataCard.action.createInitialData")}
           </Button>
           <Button
-            size="sm"
-            color="danger"
-            variant="light"
             className="whitespace-nowrap"
+            color="danger"
             isDisabled={totalCount === 0}
+            size="sm"
+            variant="light"
             onPress={() => {
               createPortal(Modal, {
                 defaultVisible: true,
@@ -193,9 +200,7 @@ const DataCardList = ({ cardType, allProperties }: DataCardListProps) => {
       <Divider />
       <CardBody>
         {cards.length === 0 ? (
-          <div className="text-center text-default-400 py-8">
-            {t("dataCard.card.noCards")}
-          </div>
+          <div className="text-center text-default-400 py-8">{t("dataCard.card.noCards")}</div>
         ) : (
           <>
             <div
@@ -204,39 +209,38 @@ const DataCardList = ({ cardType, allProperties }: DataCardListProps) => {
             >
               {cards.map((card) => {
                 const searchEnabled = canSearch(card, cardType, allProperties);
+
                 return (
-                <Card key={card.id} className="border border-default-200">
-                  <CardBody className="p-3">
-                    <div className="flex items-start justify-between mb-2">
-                      <span className="font-medium text-sm truncate">
-                        {card.name || "-"}
-                      </span>
-                      <div className="flex gap-1 flex-shrink-0">
-                        <Tooltip
-                          content={
-                            searchEnabled
-                              ? t<string>("dataCard.search.button.tooltip")
-                              : t<string>("dataCard.search.disabled.tooltip")
-                          }
-                        >
-                          <span>
-                            <Button
+                  <Card key={card.id} className="border border-default-200">
+                    <CardBody className="p-3">
+                      <div className="flex items-start justify-between mb-2">
+                        <span className="font-medium text-sm truncate">{card.name || "-"}</span>
+                        <div className="flex gap-1 flex-shrink-0">
+                          <Tooltip
+                            content={
+                              searchEnabled
+                                ? t<string>("dataCard.search.button.tooltip")
+                                : t<string>("dataCard.search.disabled.tooltip")
+                            }
+                          >
+                            <span>
+                              <Button
+                                isIconOnly
+                              isDisabled={!searchEnabled}
                               size="sm"
                               variant="light"
-                              isIconOnly
-                              isDisabled={!searchEnabled}
                               onPress={() =>
                                 triggerSearch(card, cardType, allProperties)
                               }
-                            >
-                              <SearchOutlined className="text-lg" />
-                            </Button>
-                          </span>
-                        </Tooltip>
-                        <Button
+                              >
+                                <SearchOutlined className="text-lg" />
+                              </Button>
+                            </span>
+                          </Tooltip>
+                          <Button
+                            isIconOnly
                           size="sm"
                           variant="light"
-                          isIconOnly
                           onPress={() => {
                             createPortal(DataCardEditor, {
                               card,
@@ -245,27 +249,23 @@ const DataCardList = ({ cardType, allProperties }: DataCardListProps) => {
                               onSaved: () => loadCards(),
                             });
                           }}
-                        >
-                          <EditOutlined className="text-lg" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="light"
-                          color="danger"
-                          isIconOnly
-                          onPress={() => handleDelete(card.id)}
-                        >
-                          <DeleteOutlined className="text-lg" />
-                        </Button>
+                          >
+                            <EditOutlined className="text-lg" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="light"
+                            color="danger"
+                            isIconOnly
+                            onPress={() => handleDelete(card.id)}
+                          >
+                            <DeleteOutlined className="text-lg" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                    <DataCardBody
-                      allProperties={allProperties}
-                      card={card}
-                      cardType={cardType}
-                    />
-                  </CardBody>
-                </Card>
+                      <DataCardBody allProperties={allProperties} card={card} cardType={cardType} />
+                    </CardBody>
+                  </Card>
                 );
               })}
             </div>
@@ -273,8 +273,8 @@ const DataCardList = ({ cardType, allProperties }: DataCardListProps) => {
             {totalPages > 1 && (
               <div className="flex justify-center mt-4">
                 <Pagination
-                  total={totalPages}
                   page={pageIndex}
+                  total={totalPages}
                   onChange={(page) => {
                     setPageIndex(page);
                     loadCards(page);

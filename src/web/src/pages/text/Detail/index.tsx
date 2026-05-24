@@ -14,9 +14,7 @@ interface Props {
 }
 const DetailPage = ({ value: propsValue, onChange }: Props) => {
   const { t } = useTranslation();
-  const [value, setValue] = useState<SpecialText>(
-    JSON.parse(JSON.stringify(propsValue)),
-  );
+  const [value, setValue] = useState<SpecialText>(JSON.parse(JSON.stringify(propsValue)));
 
   const change = (patches: Partial<SpecialText>) => {
     const nv = {

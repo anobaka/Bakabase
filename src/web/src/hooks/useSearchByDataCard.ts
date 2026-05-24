@@ -1,19 +1,15 @@
 "use client";
 
+import type { IProperty } from "@/components/Property/models";
+
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 
-import type { IProperty } from "@/components/Property/models";
-
 import { Modal } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { usePendingSearchStore } from "@/stores/pendingSearch";
-import {
-  PropertyPool,
-  SearchCombinator,
-  SearchOperation,
-} from "@/sdk/constants";
+import { PropertyPool, SearchCombinator, SearchOperation } from "@/sdk/constants";
 
 // DataCardMatchMode is not exported from constants — declared inline to keep
 // the mapping explicit. Backend enum: 1 = Any, 2 = All.
@@ -55,15 +51,13 @@ export function useSearchByDataCard() {
   const buildSearchForm = useCallback(
     (card: DataCardLike, cardType: DataCardTypeLike, allProperties: IProperty[]) => {
       const matchPropIds = cardType.matchRules?.matchProperties ?? [];
+
       if (matchPropIds.length === 0) return null;
 
       const matchMode = cardType.matchRules?.matchMode ?? MATCH_MODE_ALL;
 
       const nonNull = (card.propertyValues ?? []).filter(
-        (pv) =>
-          matchPropIds.includes(pv.propertyId) &&
-          pv.value != null &&
-          pv.value !== "",
+        (pv) => matchPropIds.includes(pv.propertyId) && pv.value != null && pv.value !== "",
       );
 
       if (nonNull.length === 0) return null;
@@ -87,10 +81,7 @@ export function useSearchByDataCard() {
 
       return {
         group: {
-          combinator:
-            matchMode === MATCH_MODE_ANY
-              ? SearchCombinator.Or
-              : SearchCombinator.And,
+          combinator: matchMode === MATCH_MODE_ANY ? SearchCombinator.Or : SearchCombinator.And,
           filters,
           disabled: false,
         },
@@ -115,6 +106,7 @@ export function useSearchByDataCard() {
       opts?: TriggerOptions,
     ) => {
       const form = buildSearchForm(card, cardType, allProperties);
+
       if (!form) return;
 
       const doSearch = () => {

@@ -44,26 +44,21 @@ const OperationSelector = ({
 }: OperationSelectorProps) => {
   const { t } = useTranslation();
 
-  const displayText = operation === undefined
-    ? t<string>("Condition")
-    : getOperationDisplay(operation, propertyType, t);
+  const displayText =
+    operation === undefined
+      ? t<string>("Condition")
+      : getOperationDisplay(operation, propertyType, t);
 
   // Readonly mode: plain text
   if (isReadonly) {
-    return (
-      <span className="text-sm text-secondary">
-        {displayText}
-      </span>
-    );
+    return <span className="text-sm text-secondary">{displayText}</span>;
   }
 
   // No property selected: disabled text with tooltip
   if (!hasProperty) {
     return (
       <Tooltip content={t<string>("Please select a property first")}>
-        <span className="text-sm text-default-400 cursor-not-allowed">
-          {displayText}
-        </span>
+        <span className="text-sm text-default-400 cursor-not-allowed">{displayText}</span>
       </Tooltip>
     );
   }
@@ -72,9 +67,7 @@ const OperationSelector = ({
   if (!availableOperations || availableOperations.length === 0) {
     return (
       <Tooltip content={t<string>("Can not operate on this property")}>
-        <span className="text-sm text-default-400 cursor-not-allowed">
-          {displayText}
-        </span>
+        <span className="text-sm text-default-400 cursor-not-allowed">{displayText}</span>
       </Tooltip>
     );
   }
@@ -84,8 +77,8 @@ const OperationSelector = ({
     <Dropdown placement="bottom-start">
       <DropdownTrigger>
         <button
-          type="button"
           className="text-sm text-secondary hover:text-secondary-600 hover:underline cursor-pointer bg-transparent border-none p-0"
+          type="button"
         >
           {displayText}
         </button>
@@ -95,15 +88,11 @@ const OperationSelector = ({
           const { displayText: itemText, description } = getOperationDropdownDisplay(
             op,
             propertyType,
-            t
+            t,
           );
 
           return (
-            <DropdownItem
-              key={op}
-              description={description}
-              onClick={() => onSelect?.(op)}
-            >
+            <DropdownItem key={op} description={description} onClick={() => onSelect?.(op)}>
               {itemText}
             </DropdownItem>
           );

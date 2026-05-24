@@ -211,9 +211,11 @@ const ProcessStepModal = ({
         },
       }}
       size={"xl"}
-      title={isPreprocess
-        ? t<string>("bulkModification.title.preprocessForProperty", { property: property.name })
-        : t<string>("bulkModification.title.processForProperty", { property: property.name })}
+      title={
+        isPreprocess
+          ? t<string>("bulkModification.title.preprocessForProperty", { property: property.name })
+          : t<string>("bulkModification.title.processForProperty", { property: property.name })
+      }
       onDestroyed={onDestroyed}
       onOk={() => {
         if (operation != undefined) {

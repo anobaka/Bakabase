@@ -1,21 +1,19 @@
 "use client";
 
+import type { IProperty } from "@/components/Property/models";
+import type { ResourceSource } from "@/sdk/constants";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, Divider, Input, Spinner } from "@heroui/react";
 import { AiOutlineDelete, AiOutlinePlus, AiOutlineSync } from "react-icons/ai";
 
 import { toast } from "@/components/bakaui";
-import {
-  PropertyPool,
-  ResourceSource,
-  ResourceSourceLabel,
-} from "@/sdk/constants";
+import { PropertyPool, ResourceSourceLabel } from "@/sdk/constants";
 import PropertySelector from "@/components/PropertySelector";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import ConfirmModal from "@/components/ConfirmModal";
 import BriefProperty from "@/components/Chips/Property/BriefProperty";
-import type { IProperty } from "@/components/Property/models";
 import BApi from "@/sdk/BApi";
 import envConfig from "@/config/env";
 
@@ -42,6 +40,7 @@ async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
     headers: { "Content-Type": "application/json" },
     ...options,
   });
+
   return res.json();
 }
 
@@ -67,8 +66,10 @@ export default function MetadataMappingPanel({ source }: Props) {
         BApi.property.getPropertiesByPool(PropertyPool.Reserved),
         BApi.property.getPropertiesByPool(PropertyPool.Custom),
       ]);
+
       setPredefinedFields(fieldsRes?.data ?? []);
       const loadedMappings: SourceMetadataMapping[] = mappingsRes?.data ?? [];
+
       setMappings(loadedMappings);
 
       // Build property lookup from loaded mappings
@@ -77,8 +78,10 @@ export default function MetadataMappingPanel({ source }: Props) {
         ...((customPropsRes?.data as any[]) ?? []),
       ];
       const propMap: Record<string, IProperty> = {};
+
       for (const m of loadedMappings) {
         const found = allProps.find((p) => p.id === m.targetPropertyId && p.pool === m.targetPool);
+
         if (found) {
           propMap[m.metadataField] = found;
         }
@@ -115,6 +118,7 @@ export default function MetadataMappingPanel({ source }: Props) {
   const setPropertyForField = (fieldName: string, property: IProperty) => {
     const existing = getMappingForField(fieldName);
     let updated: SourceMetadataMapping[];
+
     if (existing) {
       updated = mappings.map((m) =>
         m.metadataField === fieldName
@@ -124,7 +128,12 @@ export default function MetadataMappingPanel({ source }: Props) {
     } else {
       updated = [
         ...mappings,
-        { source, metadataField: fieldName, targetPool: property.pool!, targetPropertyId: property.id! },
+        {
+          source,
+          metadataField: fieldName,
+          targetPool: property.pool!,
+          targetPropertyId: property.id!,
+        },
       ];
     }
     setMappings(updated);
@@ -134,8 +143,15 @@ export default function MetadataMappingPanel({ source }: Props) {
 
   const removeMapping = (fieldName: string) => {
     const updated = mappings.filter((m) => m.metadataField !== fieldName);
+
     setMappings(updated);
-    setProperties((prev) => { const next = { ...prev }; delete next[fieldName]; return next; });
+    setProperties((prev) => {
+      const next = { ...prev };
+
+      delete next[fieldName];
+
+      return next;
+    });
     saveMappings(updated);
   };
 
@@ -157,20 +173,29 @@ export default function MetadataMappingPanel({ source }: Props) {
 
   const openPropertySelector = (onSelect: (p: IProperty) => void) => {
     createPortal(PropertySelector, {
-      v2: true, pool: 6, multiple: false,
-      onSubmit: async (selection: IProperty[]) => { if (selection[0]) onSelect(selection[0]); },
+      v2: true,
+      pool: 6,
+      multiple: false,
+      onSubmit: async (selection: IProperty[]) => {
+        if (selection[0]) onSelect(selection[0]);
+      },
     });
   };
 
   const handleAddCustomMapping = (property: IProperty) => {
     const fieldName = newFieldName.trim();
+
     if (!fieldName || mappings.some((m) => m.metadataField === fieldName)) return;
     setPropertyForField(fieldName, property);
     setNewFieldName("");
   };
 
   if (loading) {
-    return <div className="flex justify-center py-8"><Spinner size="sm" /></div>;
+    return (
+      <div className="flex justify-center py-8">
+        <Spinner size="sm" />
+      </div>
+    );
   }
 
   const sourceName = ResourceSourceLabel[source];
@@ -179,6 +204,7 @@ export default function MetadataMappingPanel({ source }: Props) {
     if (!isPredefined) return fieldName;
     const key = `metadataField.${sourceName}.${fieldName}`;
     const translated = t(key);
+
     return translated !== key ? translated : fieldName;
   };
 
@@ -188,7 +214,10 @@ export default function MetadataMappingPanel({ source }: Props) {
     const displayName = getFieldDisplayName(fieldName, isPredefined);
 
     return (
-      <div key={fieldName} className="flex items-center gap-2 border-small border-default-200 rounded-lg px-3 py-2">
+      <div
+        key={fieldName}
+        className="flex items-center gap-2 border-small border-default-200 rounded-lg px-3 py-2"
+      >
         <code
           className={`text-xs px-2 py-1 rounded min-w-[100px] ${isPredefined ? "bg-primary-50 text-primary-700" : "bg-default-100"}`}
           title={isPredefined && displayName !== fieldName ? fieldName : undefined}
@@ -207,11 +236,19 @@ export default function MetadataMappingPanel({ source }: Props) {
           ) : mapping ? (
             `${mapping.targetPool}:${mapping.targetPropertyId}`
           ) : (
-            <span className="text-default-400">{t("resourceSource.metadataMapping.notConfigured")}</span>
+            <span className="text-default-400">
+              {t("resourceSource.metadataMapping.notConfigured")}
+            </span>
           )}
         </Button>
         {mapping && (
-          <Button color="danger" isIconOnly size="sm" variant="light" onPress={() => removeMapping(fieldName)}>
+          <Button
+            isIconOnly
+            color="danger"
+            size="sm"
+            variant="light"
+            onPress={() => removeMapping(fieldName)}
+          >
             <AiOutlineDelete />
           </Button>
         )}
@@ -233,7 +270,9 @@ export default function MetadataMappingPanel({ source }: Props) {
         <>
           <Divider />
           <div className="space-y-2">
-            <span className="text-xs text-default-500">{t("resourceSource.metadataMapping.customFields")}</span>
+            <span className="text-xs text-default-500">
+              {t("resourceSource.metadataMapping.customFields")}
+            </span>
             {customMappings.map((m) => renderMappingRow(m.metadataField, false))}
           </div>
         </>
@@ -246,12 +285,12 @@ export default function MetadataMappingPanel({ source }: Props) {
           placeholder={t("resourceSource.metadataMapping.fieldPlaceholder")}
           size="sm"
           value={newFieldName}
-          onValueChange={setNewFieldName}
           onKeyDown={(e) => {
             if (e.key === "Enter" && newFieldName.trim()) {
               openPropertySelector((p) => handleAddCustomMapping(p));
             }
           }}
+          onValueChange={setNewFieldName}
         />
         <Button
           color="primary"
@@ -268,11 +307,11 @@ export default function MetadataMappingPanel({ source }: Props) {
       <div className="flex justify-end">
         <Button
           color="primary"
+          isDisabled={mappings.length === 0}
           isLoading={applying}
+          size="sm"
           startContent={<AiOutlineSync />}
           variant="flat"
-          isDisabled={mappings.length === 0}
-          size="sm"
           onPress={handleReapply}
         >
           {t("resourceSource.metadataMapping.reapply")}

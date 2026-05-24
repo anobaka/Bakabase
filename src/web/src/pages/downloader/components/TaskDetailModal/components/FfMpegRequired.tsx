@@ -10,16 +10,13 @@ import dependentComponentIds from "@/core/models/Constants/DependentComponentIds
 export default function FfMpegRequired() {
   const { t } = useTranslation();
 
-  const dependentComponentContexts = useDependentComponentContextsStore(
-    (state) => state.contexts,
-  );
+  const dependentComponentContexts = useDependentComponentContextsStore((state) => state.contexts);
 
   const ffmpegState = dependentComponentContexts?.find(
     (d) => d.id === dependentComponentIds.FFMpeg,
   );
 
-  const isFfmpegMissing =
-    ffmpegState?.status !== DependentComponentStatus.Installed;
+  const isFfmpegMissing = ffmpegState?.status !== DependentComponentStatus.Installed;
 
   // If we only want to show when missing and it's not missing, don't render
   if (!isFfmpegMissing) {

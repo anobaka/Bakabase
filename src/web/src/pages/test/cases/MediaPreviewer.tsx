@@ -10,6 +10,20 @@ const MediaPreviewerTest = () => {
   return (
     <div
       className={"media-previewer-container"}
+      onBlur={() => {
+        clearTimeout(hoverTimerRef.current);
+        hoverTimerRef.current = undefined;
+        if (previewerVisible) {
+          setPreviewerVisible(false);
+        }
+      }}
+      onFocus={() => {
+        if (!hoverTimerRef.current) {
+          hoverTimerRef.current = setTimeout(() => {
+            setPreviewerVisible(true);
+          }, 1000);
+        }
+      }}
       onMouseLeave={() => {
         clearTimeout(hoverTimerRef.current);
         hoverTimerRef.current = undefined;

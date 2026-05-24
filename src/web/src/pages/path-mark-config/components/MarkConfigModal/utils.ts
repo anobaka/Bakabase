@@ -1,9 +1,16 @@
 import type { MarkConfig } from "./types";
-import { PathMarkType, PathMatchMode, PropertyValueType, PathMarkApplyScope } from "@/sdk/constants";
+
+import {
+  PathMarkType,
+  PathMatchMode,
+  PropertyValueType,
+  PathMarkApplyScope,
+} from "@/sdk/constants";
 
 export const parseMarkConfig = (configJson?: string): MarkConfig => {
   try {
     const config = JSON.parse(configJson || "{}");
+
     return {
       matchMode: config.matchMode ?? PathMatchMode.Layer,
       layer: config.layer ?? 0,
@@ -55,9 +62,18 @@ export const buildConfigJson = (config: MarkConfig, markType: PathMarkType): str
       layer: config.layer,
       regex: config.regex,
       valueType: config.mediaLibraryValueType,
-      mediaLibraryId: config.mediaLibraryValueType === PropertyValueType.Fixed ? config.mediaLibraryId : undefined,
-      layerToMediaLibrary: config.mediaLibraryValueType === PropertyValueType.Dynamic ? config.layerToMediaLibrary : undefined,
-      regexToMediaLibrary: config.mediaLibraryValueType === PropertyValueType.Dynamic ? config.regexToMediaLibrary : undefined,
+      mediaLibraryId:
+        config.mediaLibraryValueType === PropertyValueType.Fixed
+          ? config.mediaLibraryId
+          : undefined,
+      layerToMediaLibrary:
+        config.mediaLibraryValueType === PropertyValueType.Dynamic
+          ? config.layerToMediaLibrary
+          : undefined,
+      regexToMediaLibrary:
+        config.mediaLibraryValueType === PropertyValueType.Dynamic
+          ? config.regexToMediaLibrary
+          : undefined,
       applyScope: config.applyScope ?? PathMarkApplyScope.MatchedOnly,
     });
   } else {

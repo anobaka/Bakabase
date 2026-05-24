@@ -1,4 +1,5 @@
 import type { BTask } from "@/core/models/BTask";
+
 import { BTaskStatus } from "@/sdk/constants";
 
 export const AssistantStatus = {
@@ -38,5 +39,8 @@ export const ActionsFilter: Record<TaskAction, (task: BTask) => boolean> = {
 };
 
 export const POSITION_STORAGE_KEY = "floating-assistant-position";
-export const DEFAULT_POSITION = { x: 10, y: typeof window !== "undefined" ? window.innerHeight - 68 : 100 };
+export const DEFAULT_POSITION = {
+  x: 10,
+  y: typeof window !== "undefined" ? window.innerHeight - 68 : 100,
+};
 export const POLLING_INTERVAL_MS = 2000; // 2 seconds

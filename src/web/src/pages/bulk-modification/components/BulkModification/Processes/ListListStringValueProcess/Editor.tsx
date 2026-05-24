@@ -2,6 +2,7 @@
 
 import type { ListListStringProcessOptions } from "./models";
 import type { BulkModificationVariable } from "@/pages/bulk-modification/components/BulkModification/models";
+import type { PropertyType } from "@/sdk/constants";
 
 import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
@@ -12,7 +13,6 @@ import {
   type BulkModificationProcessorValueType,
   BulkModificationListListStringProcessOperation,
   bulkModificationListListStringProcessOperations,
-  PropertyType,
 } from "@/sdk/constants";
 import { getEnumKey } from "@/i18n";
 import { ProcessValueEditor } from "@/pages/bulk-modification/components/BulkModification/ProcessValue";
@@ -47,6 +47,7 @@ const Editor = ({
 
   useEffect(() => {
     const error = validate(operation, options);
+
     onChange?.(operation, options, error == undefined ? undefined : t<string>(error));
   }, [options, operation]);
 
@@ -84,16 +85,19 @@ const Editor = ({
   return (
     <div className="flex flex-col gap-3">
       <Select
-        label={t("bulkModification.label.operation")}
         dataSource={bulkModificationListListStringProcessOperations.map((op) => ({
-          label: t(getEnumKey('BulkModificationListListStringProcessOperation', op.label)),
+          label: t(getEnumKey("BulkModificationListListStringProcessOperation", op.label)),
           value: op.value,
         }))}
+        label={t("bulkModification.label.operation")}
         selectedKeys={operation == undefined ? undefined : [operation.toString()]}
         selectionMode="single"
         onSelectionChange={(keys) => {
           changeOperation(
-            parseInt(Array.from(keys || [])[0] as string, 10) as BulkModificationListListStringProcessOperation,
+            parseInt(
+              Array.from(keys || [])[0] as string,
+              10,
+            ) as BulkModificationListListStringProcessOperation,
           );
         }}
       />

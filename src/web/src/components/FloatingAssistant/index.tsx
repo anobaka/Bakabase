@@ -10,6 +10,10 @@ import {
   PauseOutlined,
 } from "@ant-design/icons";
 
+import { AssistantStatus, POLLING_INTERVAL_MS } from "./constants";
+import { useDraggable } from "./hooks/useDraggable";
+import { TaskTable } from "./components/TaskTable";
+
 import { BTaskStatus } from "@/sdk/constants";
 import {
   Button,
@@ -23,13 +27,10 @@ import {
 } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 import { buildLogger } from "@/components/utils";
-
 import { useBTasksStore, selectTasks } from "@/stores/bTasks";
 import { useUiOptionsStore } from "@/stores/options";
-import { AssistantStatus, POLLING_INTERVAL_MS } from "./constants";
+
 import type { AssistantStatusType } from "./constants";
-import { useDraggable } from "./hooks/useDraggable";
-import { TaskTable } from "./components/TaskTable";
 
 const log = buildLogger("FloatingAssistant");
 
@@ -61,23 +62,17 @@ const FloatingAssistant = () => {
       let newStatus: AssistantStatusType = AssistantStatus.AllDone;
 
       if (tempTasks.length > 0) {
-        const ongoingTasks = tempTasks.filter(
-          (a) => a.status === BTaskStatus.Running,
-        );
+        const ongoingTasks = tempTasks.filter((a) => a.status === BTaskStatus.Running);
 
         if (ongoingTasks.length > 0) {
           newStatus = AssistantStatus.Working;
         } else {
-          const failedTasks = tempTasks.filter(
-            (a) => a.status === BTaskStatus.Error,
-          );
+          const failedTasks = tempTasks.filter((a) => a.status === BTaskStatus.Error);
 
           if (failedTasks.length > 0) {
             newStatus = AssistantStatus.Failed;
           } else {
-            const doneTasks = tempTasks.filter(
-              (a) => a.status === BTaskStatus.Completed,
-            );
+            const doneTasks = tempTasks.filter((a) => a.status === BTaskStatus.Completed);
 
             if (doneTasks.length > 0) {
               newStatus = AssistantStatus.AllDone;
@@ -106,26 +101,31 @@ const FloatingAssistant = () => {
   const handleClick = useCallback(() => {
     // Only toggle popover if we didn't drag
     if (!isDragging()) {
-      setTasksVisible(v => !v);
+      setTasksVisible((v) => !v);
     }
   }, [isDragging]);
 
-  const clearableTasks = useMemo(() =>
-    bTasks.filter(
-      (task) =>
-        !task.isPersistent &&
-        (task.status === BTaskStatus.Completed ||
-          task.status === BTaskStatus.Error ||
-          task.status === BTaskStatus.Cancelled),
-    ), [bTasks]);
+  const clearableTasks = useMemo(
+    () =>
+      bTasks.filter(
+        (task) =>
+          !task.isPersistent &&
+          (task.status === BTaskStatus.Completed ||
+            task.status === BTaskStatus.Error ||
+            task.status === BTaskStatus.Cancelled),
+      ),
+    [bTasks],
+  );
 
-  const runningTasks = useMemo(() =>
-    bTasks.filter((task) => task.status === BTaskStatus.Running),
-    [bTasks]);
+  const runningTasks = useMemo(
+    () => bTasks.filter((task) => task.status === BTaskStatus.Running),
+    [bTasks],
+  );
 
-  const pausedTasks = useMemo(() =>
-    bTasks.filter((task) => task.status === BTaskStatus.Paused),
-    [bTasks]);
+  const pausedTasks = useMemo(
+    () => bTasks.filter((task) => task.status === BTaskStatus.Paused),
+    [bTasks],
+  );
 
   const handlePauseAll = useCallback(async () => {
     for (const task of runningTasks) {
@@ -141,53 +141,51 @@ const FloatingAssistant = () => {
 
   const overallProgress = useMemo(() => {
     if (runningTasks.length === 0) return 0;
-    const totalProgress = runningTasks.reduce(
-      (sum, task) => sum + (task.percentage ?? 0),
-      0,
-    );
+    const totalProgress = runningTasks.reduce((sum, task) => sum + (task.percentage ?? 0), 0);
+
     return Math.round(totalProgress / runningTasks.length);
   }, [runningTasks]);
 
-  const statusClassName = useMemo(() =>
-    Object.keys(AssistantStatus)[status], [status]);
+  const statusClassName = useMemo(() => Object.keys(AssistantStatus)[status], [status]);
 
   return (
     <Popover
-      visible={tasksVisible}
-      onOpenChange={(visible) => {
-        // Only handle closing from outside click/esc, opening is handled by handleClick
-        if (!visible) {
-          setTasksVisible(false);
-        }
-      }}
       trigger={
         <div
           className={`portal ${statusClassName} floating-assistant ${tasksVisible ? "" : "hide"} ${isDraggingState ? "cursor-grabbing" : "cursor-grab"}`}
+          role="button"
           style={{
             left: position.x,
             top: position.y,
           }}
-          onMouseDown={handleMouseDown}
+          tabIndex={0}
           onClick={handleClick}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              handleClick();
+            }
+          }}
+          onMouseDown={handleMouseDown}
         >
           {/* Working - CircularProgress with task count */}
           <Tooltip
+            className="working-tooltip"
             content={`${runningTasks.length} ${t("floatingAssistant.status.tasksRunning")} (${overallProgress}%)`}
             placement="right"
-            className="working-tooltip"
           >
             <div className="circular-progress-wrapper">
               <CircularProgress
                 aria-label="Task progress"
-                value={overallProgress}
-                size="lg"
-                color="primary"
-                showValueLabel={false}
                 classNames={{
                   svg: "w-[44px] h-[44px]",
                   track: "stroke-default-200",
                   indicator: "stroke-primary",
                 }}
+                color="primary"
+                showValueLabel={false}
+                size="lg"
+                value={overallProgress}
               />
               <span className="task-count">{runningTasks.length}</span>
             </div>
@@ -195,12 +193,12 @@ const FloatingAssistant = () => {
           {/* AllDone */}
           <div className="tick">
             <svg
+              className={allDoneCircleDrawn}
+              enableBackground={"new 0 0 37 37"}
               version="1.1"
               viewBox="0 0 37 37"
               x="0px"
               y="0px"
-              enableBackground={"new 0 0 37 37"}
-              className={allDoneCircleDrawn}
             >
               <path
                 className="circ path"
@@ -224,9 +222,9 @@ const FloatingAssistant = () => {
           </div>
           {/* Failed */}
           <Tooltip
+            color="danger"
             content={t("floatingAssistant.status.someTasksFailed")}
             placement="right"
-            color="danger"
           >
             <div className="failed flex items-center justify-center w-[48px] h-[48px]">
               <CloseCircleOutlined className="text-4xl" />
@@ -234,9 +232,16 @@ const FloatingAssistant = () => {
           </Tooltip>
         </div>
       }
+      visible={tasksVisible}
+      onOpenChange={(visible) => {
+        // Only handle closing from outside click/esc, opening is handled by handleClick
+        if (!visible) {
+          setTasksVisible(false);
+        }
+      }}
     >
       <div className={"flex flex-col gap-2 p-2 min-w-[300px]"}>
-        <Tabs size="sm" variant="underlined" disableAnimation>
+        <Tabs disableAnimation size="sm" variant="underlined">
           <Tab key="tasks" title={t("floatingAssistant.label.taskList")}>
             <div className="flex flex-col gap-2">
               <div className="flex flex-col gap-1 max-h-[600px] overflow-auto">
@@ -247,9 +252,9 @@ const FloatingAssistant = () => {
                 {runningTasks.length > 0 && (
                   <Tooltip content={t("floatingAssistant.tip.pauseAllRunningTasks")}>
                     <Button
+                      color={"warning"}
                       size={"sm"}
                       variant={"ghost"}
-                      color={"warning"}
                       onPress={handlePauseAll}
                     >
                       <PauseOutlined className={"text-base"} />
@@ -260,9 +265,9 @@ const FloatingAssistant = () => {
                 {pausedTasks.length > 0 && (
                   <Tooltip content={t("floatingAssistant.tip.resumeAllPausedTasks")}>
                     <Button
+                      color={"secondary"}
                       size={"sm"}
                       variant={"ghost"}
-                      color={"secondary"}
                       onPress={handleResumeAll}
                     >
                       <CaretRightOutlined className={"text-base"} />
@@ -275,9 +280,7 @@ const FloatingAssistant = () => {
                     <Button
                       size={"sm"}
                       variant={"ghost"}
-                      onPress={() =>
-                        BApi.backgroundTask.cleanInactiveBackgroundTasks()
-                      }
+                      onPress={() => BApi.backgroundTask.cleanInactiveBackgroundTasks()}
                     >
                       <ClearOutlined className={"text-base"} />
                       {t("floatingAssistant.action.clearInactiveTasks")}
@@ -292,8 +295,8 @@ const FloatingAssistant = () => {
               <Tooltip content={t("floatingAssistant.tip.hideResourceCovers")} placement="bottom">
                 <div>
                   <Switch
-                    size="sm"
                     isSelected={hideResourceCovers}
+                    size="sm"
                     onValueChange={(v) => patchUiOptions({ hideResourceCovers: v })}
                   >
                     {t("floatingAssistant.label.hideResourceCovers")}

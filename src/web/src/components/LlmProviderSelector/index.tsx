@@ -1,10 +1,11 @@
 "use client";
 
+import type { BakabaseModulesAIModelsDbAiProviderDbModel } from "@/sdk/Api";
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Select, SelectItem } from "@heroui/react";
 
 import BApi from "@/sdk/BApi";
-import type { BakabaseModulesAIModelsDbAiProviderDbModel } from "@/sdk/Api";
 import { AiProviderKindLabel } from "@/sdk/constants";
 
 type Provider = BakabaseModulesAIModelsDbAiProviderDbModel;
@@ -26,6 +27,7 @@ export function useLlmProviders() {
 
   const load = useCallback(async () => {
     const r = await BApi.ai.getAllAiProviders();
+
     if (!r.code && r.data) {
       setProviders(r.data.filter((p) => p.llmEnabled));
     }
@@ -37,17 +39,21 @@ export function useLlmProviders() {
 
   const providerMap = useMemo(() => {
     const m: Record<number, Provider> = {};
+
     for (const p of providers) {
       m[p.id] = p;
     }
+
     return m;
   }, [providers]);
 
   const getProviderLabel = useCallback(
     (providerId: number) => {
       const p = providerMap[providerId];
+
       if (!p) return `#${providerId}`;
       const kindLabel = AiProviderKindLabel[p.kind] ?? "";
+
       return `${p.name} (${kindLabel})`;
     },
     [providerMap],
@@ -67,15 +73,16 @@ const LlmProviderSelector = ({
 
   return (
     <Select
-      size={size}
+      isClearable
       className={className}
       placeholder={placeholder}
       selectedKeys={value !== undefined ? new Set([String(value)]) : new Set<string>()}
+      size={size}
       onSelectionChange={(keys) => {
         const key = Array.from(keys)[0];
+
         onChange?.(key !== undefined ? Number(key) : undefined);
       }}
-      isClearable
     >
       {providers.map((p) => (
         <SelectItem key={String(p.id)}>

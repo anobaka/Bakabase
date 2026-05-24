@@ -8,10 +8,7 @@ const SimpleLabel = (props: IProps) => {
   const { children, status = "default", className, ...otherProps } = props;
 
   return (
-    <span
-      className={`simple-label ${status} ${className || ""}`}
-      {...otherProps}
-    >
+    <span className={`simple-label ${status} ${className || ""}`} {...otherProps}>
       {children}
     </span>
   );

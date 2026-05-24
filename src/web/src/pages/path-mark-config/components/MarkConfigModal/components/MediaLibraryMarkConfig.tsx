@@ -2,16 +2,19 @@
 
 import type { MarkConfig } from "../types";
 import type { PreviewResultsByPath, PathMarkPreviewResult } from "../hooks/usePreview";
+import type { PathMarkApplyScope } from "@/sdk/constants";
 
 import { useState, useEffect } from "react";
+import { EditOutlined } from "@ant-design/icons";
+
 import MatchModeSelector from "./MatchModeSelector";
 import PreviewResults from "./PreviewResults";
+
 import { Button, Chip, Input, NumberInput, RadioGroup, Radio } from "@/components/bakaui";
-import { PropertyValueType, PathMarkType, PathMarkApplyScope } from "@/sdk/constants";
+import { PropertyValueType, PathMarkType } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import MediaLibrarySelectorV2 from "@/components/MediaLibrarySelectorV2";
-import { EditOutlined } from "@ant-design/icons";
 
 type Props = {
   config: MarkConfig;
@@ -34,7 +37,14 @@ interface MediaLibrary {
   name: string;
 }
 
-const MediaLibraryMarkConfig = ({ config, updateConfig, t, priority, onPriorityChange, preview }: Props) => {
+const MediaLibraryMarkConfig = ({
+  config,
+  updateConfig,
+  t,
+  priority,
+  onPriorityChange,
+  preview,
+}: Props) => {
   const { createPortal } = useBakabaseContext();
   const [selectedLibrary, setSelectedLibrary] = useState<MediaLibrary | null>(null);
 
@@ -46,6 +56,7 @@ const MediaLibraryMarkConfig = ({ config, updateConfig, t, priority, onPriorityC
           const response = await BApi.mediaLibraryV2.getAllMediaLibraryV2();
           const libraries = response?.data || [];
           const lib = libraries.find((l) => l.id === config.mediaLibraryId);
+
           if (lib) {
             setSelectedLibrary({ id: lib.id!, name: lib.name || `Library ${lib.id}` });
           }
@@ -54,6 +65,7 @@ const MediaLibraryMarkConfig = ({ config, updateConfig, t, priority, onPriorityC
         }
       }
     };
+
     loadLibrary();
   }, []);
 
@@ -63,6 +75,7 @@ const MediaLibraryMarkConfig = ({ config, updateConfig, t, priority, onPriorityC
         // Load the library name
         const response = await BApi.mediaLibraryV2.getAllMediaLibraryV2();
         const lib = response?.data?.find((l) => l.id === id);
+
         if (lib) {
           setSelectedLibrary({ id: lib.id!, name: lib.name || `Library ${lib.id}` });
           updateConfig({ mediaLibraryId: lib.id });
@@ -87,40 +100,42 @@ const MediaLibraryMarkConfig = ({ config, updateConfig, t, priority, onPriorityC
 
       <MatchModeSelector
         config={config}
-        updateConfig={updateConfig}
-        t={t}
         markType={PathMarkType.MediaLibrary}
+        t={t}
+        updateConfig={updateConfig}
       />
 
       {/* Preview Results - placed after apply scope (part of MatchModeSelector) */}
       <PreviewResults
+        applyScope={preview.applyScope}
+        error={preview.error}
+        isMultiplePaths={preview.isMultiplePaths}
         loading={preview.loading}
+        markType={PathMarkType.MediaLibrary}
         results={preview.results}
         resultsByPath={preview.resultsByPath}
-        isMultiplePaths={preview.isMultiplePaths}
-        error={preview.error}
-        markType={PathMarkType.MediaLibrary}
         t={t}
-        applyScope={preview.applyScope}
       />
 
       <div className="border-t border-default-200 pt-2">
-        <span className="text-sm font-medium text-default-600">{t("pathMarkConfig.label.mediaLibrarySettings")}</span>
-        <div className="text-xs text-default-400 mt-1">{t("pathMark.mediaLibrary.configDescription")}</div>
+        <span className="text-sm font-medium text-default-600">
+          {t("pathMarkConfig.label.mediaLibrarySettings")}
+        </span>
+        <div className="text-xs text-default-400 mt-1">
+          {t("pathMark.mediaLibrary.configDescription")}
+        </div>
       </div>
 
       {/* Value Type - Radio Group */}
       <div className="flex flex-col gap-1">
         <span className="text-sm font-medium">{t("pathMarkConfig.label.valueType")}</span>
         <RadioGroup
+          orientation="horizontal"
+          size="sm"
           value={String(valueType)}
           onValueChange={(value) => updateConfig({ mediaLibraryValueType: Number(value) })}
-          size="sm"
-          orientation="horizontal"
         >
-          <Radio value={String(PropertyValueType.Fixed)}>
-            {t("pathMarkConfig.label.fixed")}
-          </Radio>
+          <Radio value={String(PropertyValueType.Fixed)}>{t("pathMarkConfig.label.fixed")}</Radio>
           <Radio value={String(PropertyValueType.Dynamic)}>
             {t("pathMarkConfig.label.dynamic")}
           </Radio>
@@ -145,15 +160,19 @@ const MediaLibraryMarkConfig = ({ config, updateConfig, t, priority, onPriorityC
                   {selectedLibrary.name}
                 </Chip>
               ) : (
-                <span className="text-sm text-default-400">{t("pathMarkConfig.empty.noMediaLibrarySelected")}</span>
+                <span className="text-sm text-default-400">
+                  {t("pathMarkConfig.empty.noMediaLibrarySelected")}
+                </span>
               )}
               <Button
                 size="sm"
-                variant="flat"
                 startContent={<EditOutlined />}
+                variant="flat"
                 onPress={handleSelectLibrary}
               >
-                {selectedLibrary ? t("common.action.change") : t("pathMarkConfig.action.selectMediaLibrary")}
+                {selectedLibrary
+                  ? t("common.action.change")
+                  : t("pathMarkConfig.action.selectMediaLibrary")}
               </Button>
             </div>
           </div>
@@ -171,16 +190,16 @@ const MediaLibraryMarkConfig = ({ config, updateConfig, t, priority, onPriorityC
           </div>
 
           <NumberInput
-            label={t("pathMarkConfig.label.layerToMediaLibrary")}
             description={t("pathMarkConfig.tip.layerToMediaLibraryDescription")}
+            label={t("pathMarkConfig.label.layerToMediaLibrary")}
             size="sm"
             value={config.layerToMediaLibrary ?? 0}
             onValueChange={(v) => updateConfig({ layerToMediaLibrary: v })}
           />
 
           <Input
-            label={t("pathMarkConfig.label.regexToMediaLibrary")}
             description={t("pathMarkConfig.tip.regexToMediaLibraryDescription")}
+            label={t("pathMarkConfig.label.regexToMediaLibrary")}
             placeholder={t("pathMarkConfig.tip.regexExample")}
             size="sm"
             value={config.regexToMediaLibrary ?? ""}
@@ -192,8 +211,8 @@ const MediaLibraryMarkConfig = ({ config, updateConfig, t, priority, onPriorityC
       {/* Priority at the bottom */}
       <div className="border-t border-default-200 pt-2">
         <NumberInput
-          label={t("common.label.priority")}
           description={t("pathMark.priority.description")}
+          label={t("common.label.priority")}
           size="sm"
           value={priority}
           onValueChange={(v) => onPriorityChange(v ?? 10)}

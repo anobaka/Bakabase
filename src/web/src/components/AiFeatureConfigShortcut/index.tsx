@@ -1,23 +1,25 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
-import {
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-  Button,
-  Input,
-} from "@heroui/react";
-import { AiOutlineSetting, AiOutlineWarning } from "react-icons/ai";
-
-import { toast, Select, RadioGroup, Radio, Autocomplete, AutocompleteItem } from "@/components/bakaui";
-import BApi from "@/sdk/BApi";
 import type {
   BakabaseModulesAIModelsDbAiFeatureConfigDbModel,
   BakabaseModulesAIModelsDbAiProviderDbModel,
   BakabaseModulesAIModelsDomainLlmModelInfo,
 } from "@/sdk/Api";
+
+import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Popover, PopoverTrigger, PopoverContent, Button, Input } from "@heroui/react";
+import { AiOutlineSetting, AiOutlineWarning } from "react-icons/ai";
+
+import {
+  toast,
+  Select,
+  RadioGroup,
+  Radio,
+  Autocomplete,
+  AutocompleteItem,
+} from "@/components/bakaui";
+import BApi from "@/sdk/BApi";
 import { AiFeature, AiFeatureLabel } from "@/sdk/constants";
 
 type FeatureConfig = BakabaseModulesAIModelsDbAiFeatureConfigDbModel;
@@ -34,17 +36,17 @@ type Props = {
 const configToEditing = (cfg: FeatureConfig | null): Partial<FeatureConfig> =>
   cfg
     ? {
-      providerConfigId: cfg.providerConfigId,
-      modelId: cfg.modelId,
-      temperature: cfg.temperature,
-      maxTokens: cfg.maxTokens,
-      topP: cfg.topP,
-    }
+        providerConfigId: cfg.providerConfigId,
+        modelId: cfg.modelId,
+        temperature: cfg.temperature,
+        maxTokens: cfg.maxTokens,
+        topP: cfg.topP,
+      }
     : {};
 
 const AiFeatureConfigShortcut = ({ feature, label }: Props) => {
   const { t } = useTranslation();
-  const resolvedLabel = label === false ? null : (label || t<string>("resource.ai.modelConfig"));
+  const resolvedLabel = label === false ? null : label || t<string>("resource.ai.modelConfig");
   const isDefault = feature === AiFeature.Default;
 
   const [featureConfig, setFeatureConfig] = useState<FeatureConfig | null>(null);
@@ -58,8 +60,10 @@ const AiFeatureConfigShortcut = ({ feature, label }: Props) => {
 
   const loadFeatureConfig = useCallback(async () => {
     const r = await BApi.ai.getAiFeatureConfig(feature);
+
     if (!r.code) {
       const cfg = r.data ?? null;
+
       setFeatureConfig(cfg);
       if (!isDefault) {
         // If no config or useDefault is true, use default mode
@@ -70,6 +74,7 @@ const AiFeatureConfigShortcut = ({ feature, label }: Props) => {
 
   const loadDefaultConfig = useCallback(async () => {
     const r = await BApi.ai.getAiFeatureConfig(AiFeature.Default);
+
     if (!r.code) {
       setDefaultConfig(r.data ?? null);
     }
@@ -77,6 +82,7 @@ const AiFeatureConfigShortcut = ({ feature, label }: Props) => {
 
   const loadProviders = useCallback(async () => {
     const r = await BApi.ai.getAllAiProviders();
+
     if (!r.code && r.data) {
       // Filter to LLM-capable providers only — feature configs reference LLM models.
       r.data = r.data.filter((p) => p.llmEnabled);
@@ -90,6 +96,7 @@ const AiFeatureConfigShortcut = ({ feature, label }: Props) => {
     setLoadingModels(true);
     try {
       const r = await BApi.ai.getAiProviderLlmModels(providerId);
+
       if (!r.code && r.data) {
         setModels(r.data);
       }
@@ -151,6 +158,7 @@ const AiFeatureConfigShortcut = ({ feature, label }: Props) => {
         topP: featureConfig?.topP,
       });
       const [dr, fr] = await Promise.all([defaultSave, featureSave]);
+
       if (!dr.code && !fr.code) {
         setDefaultConfig(dr.data ?? null);
         setFeatureConfig(fr.data ?? null);
@@ -167,6 +175,7 @@ const AiFeatureConfigShortcut = ({ feature, label }: Props) => {
         maxTokens: editing.maxTokens,
         topP: editing.topP,
       });
+
       if (!r.code) {
         setFeatureConfig(r.data ?? null);
         if (isDefault) setDefaultConfig(r.data ?? null);
@@ -178,6 +187,7 @@ const AiFeatureConfigShortcut = ({ feature, label }: Props) => {
 
   const handleClear = async () => {
     const r = await BApi.ai.deleteAiFeatureConfig(feature);
+
     if (!r.code) {
       toast.success(t<string>("common.success.saved"));
       setFeatureConfig(null);
@@ -199,8 +209,8 @@ const AiFeatureConfigShortcut = ({ feature, label }: Props) => {
 
   const isUnconfigured = !displayConfig?.providerConfigId;
   const statusLabel = !isUnconfigured
-    ? (effectivelyUsingDefault ? `${t<string>("configuration.ai.feature.useDefault")}: ` : "")
-      + `${providerName ?? displayConfig!.providerConfigId} / ${displayConfig!.modelId ?? ""}`
+    ? (effectivelyUsingDefault ? `${t<string>("configuration.ai.feature.useDefault")}: ` : "") +
+      `${providerName ?? displayConfig!.providerConfigId} / ${displayConfig!.modelId ?? ""}`
     : feature === AiFeature.Default
       ? t<string>("configuration.ai.feature.notConfigured")
       : t<string>("configuration.ai.feature.useDefault");
@@ -208,19 +218,16 @@ const AiFeatureConfigShortcut = ({ feature, label }: Props) => {
   const renderConfigForm = () => (
     <>
       <Select
-        label={t<string>("configuration.ai.feature.provider")}
-        size="sm"
         dataSource={providers.map((p) => ({
           label: p.name,
           value: String(p.id),
         }))}
-        selectedKeys={
-          editing.providerConfigId
-            ? [String(editing.providerConfigId)]
-            : undefined
-        }
+        label={t<string>("configuration.ai.feature.provider")}
+        selectedKeys={editing.providerConfigId ? [String(editing.providerConfigId)] : undefined}
+        size="sm"
         onSelectionChange={(keys) => {
           const arr = Array.from(keys);
+
           if (arr.length > 0) {
             setEditing({
               ...editing,
@@ -232,50 +239,42 @@ const AiFeatureConfigShortcut = ({ feature, label }: Props) => {
       />
 
       <Autocomplete
-        label={t<string>("configuration.ai.feature.model")}
-        size="sm"
-        isLoading={loadingModels}
         defaultItems={models.map((m) => ({
           label: m.displayName ?? m.modelId ?? "",
           value: m.modelId ?? "",
         }))}
+        isLoading={loadingModels}
+        label={t<string>("configuration.ai.feature.model")}
         selectedKey={editing.modelId ?? null}
+        size="sm"
         onSelectionChange={(key) => {
           if (key != null) {
             setEditing({ ...editing, modelId: String(key) });
           }
         }}
       >
-        {(item) => (
-          <AutocompleteItem key={item.value}>
-            {item.label}
-          </AutocompleteItem>
-        )}
+        {(item) => <AutocompleteItem key={item.value}>{item.label}</AutocompleteItem>}
       </Autocomplete>
 
       <Input
         label={t<string>("configuration.ai.feature.temperature")}
-        size="sm"
-        type="number"
-        step={0.1}
-        min={0}
         max={2}
+        min={0}
+        size="sm"
+        step={0.1}
+        type="number"
         value={editing.temperature != null ? String(editing.temperature) : ""}
-        onValueChange={(v) =>
-          setEditing({ ...editing, temperature: v ? Number(v) : undefined })
-        }
+        onValueChange={(v) => setEditing({ ...editing, temperature: v ? Number(v) : undefined })}
       />
 
       <Input
         label={t<string>("configuration.ai.feature.maxTokens")}
-        size="sm"
-        type="number"
-        step={1}
         min={1}
+        size="sm"
+        step={1}
+        type="number"
         value={editing.maxTokens != null ? String(editing.maxTokens) : ""}
-        onValueChange={(v) =>
-          setEditing({ ...editing, maxTokens: v ? Number(v) : undefined })
-        }
+        onValueChange={(v) => setEditing({ ...editing, maxTokens: v ? Number(v) : undefined })}
       />
     </>
   );
@@ -283,17 +282,19 @@ const AiFeatureConfigShortcut = ({ feature, label }: Props) => {
   return (
     <div className="flex items-center gap-2">
       {resolvedLabel && <span className="text-sm text-default-500">{resolvedLabel}</span>}
-      <Popover isOpen={isOpen} onOpenChange={setIsOpen} placement="bottom">
+      <Popover isOpen={isOpen} placement="bottom" onOpenChange={setIsOpen}>
         <PopoverTrigger>
           <Button
-            size="sm"
-            variant="flat"
             color={isUnconfigured ? "warning" : "default"}
+            size="sm"
             startContent={
-              isUnconfigured
-                ? <AiOutlineWarning className="text-lg" />
-                : <AiOutlineSetting className="text-lg" />
+              isUnconfigured ? (
+                <AiOutlineWarning className="text-lg" />
+              ) : (
+                <AiOutlineSetting className="text-lg" />
+              )
             }
+            variant="flat"
           >
             <span className="text-xs">{statusLabel}</span>
           </Button>
@@ -306,17 +307,13 @@ const AiFeatureConfigShortcut = ({ feature, label }: Props) => {
 
             {!isDefault && (
               <RadioGroup
-                size="sm"
                 orientation="horizontal"
+                size="sm"
                 value={mode}
                 onValueChange={(v) => setMode(v as ConfigMode)}
               >
-                <Radio value="default">
-                  {t<string>("configuration.ai.feature.useDefault")}
-                </Radio>
-                <Radio value="custom">
-                  {t<string>("configuration.ai.feature.useCustom")}
-                </Radio>
+                <Radio value="default">{t<string>("configuration.ai.feature.useDefault")}</Radio>
+                <Radio value="custom">{t<string>("configuration.ai.feature.useCustom")}</Radio>
               </RadioGroup>
             )}
 
@@ -335,7 +332,7 @@ const AiFeatureConfigShortcut = ({ feature, label }: Props) => {
                   {t<string>("common.action.clear")}
                 </Button>
               )}
-              <Button size="sm" color="primary" onPress={handleSave}>
+              <Button color="primary" size="sm" onPress={handleSave}>
                 {t<string>("common.action.save")}
               </Button>
             </div>

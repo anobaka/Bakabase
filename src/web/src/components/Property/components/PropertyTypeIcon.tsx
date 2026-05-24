@@ -11,12 +11,7 @@ import {
 } from "react-icons/md";
 import { PiImages, PiTreeView } from "react-icons/pi";
 import { TbNumber123, TbSelect } from "react-icons/tb";
-import {
-  LuCalendarClock,
-  LuCalendarDays,
-  LuLink,
-  LuTags,
-} from "react-icons/lu";
+import { LuCalendarClock, LuCalendarDays, LuLink, LuTags } from "react-icons/lu";
 import { GrTextWrap } from "react-icons/gr";
 import { FaRegStar } from "react-icons/fa6";
 import { RiFormula } from "react-icons/ri";
@@ -50,14 +45,12 @@ const PropertyTypeIconMap: Record<PropertyType, IconType> = {
   [PropertyType.DateTime]: LuCalendarClock,
   [PropertyType.Tags]: LuTags,
 };
-const PropertyTypeIcon = ({
-  type,
-  textVariant = "default",
-  ...props
-}: Props) => {
+const PropertyTypeIcon = ({ type, textVariant = "default", ...props }: Props) => {
   const { t } = useTranslation();
   const Icon = type ? PropertyTypeIconMap[type] : AiOutlineQuestionCircle;
-  const typeName = type ? t<string>(getEnumKey('PropertyType', PropertyType[type])) : t<string>("common.state.unknown");
+  const typeName = type
+    ? t<string>(getEnumKey("PropertyType", PropertyType[type]))
+    : t<string>("common.state.unknown");
 
   switch (textVariant!) {
     case "none":

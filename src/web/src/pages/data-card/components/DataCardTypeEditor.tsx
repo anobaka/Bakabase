@@ -1,21 +1,14 @@
 "use client";
 
-import React, { useMemo, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
-import { EditOutlined, PlusCircleOutlined } from "@ant-design/icons";
-
-import BApi from "@/sdk/BApi";
-import {
-  Button,
-  Checkbox,
-  Chip,
-  Input,
-  Modal,
-  Select,
-  Textarea,
-} from "@/components/bakaui";
 import type { IProperty } from "@/components/Property/models";
 import type { DestroyableProps } from "@/components/bakaui/types";
+
+import React, { useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { PlusCircleOutlined } from "@ant-design/icons";
+
+import BApi from "@/sdk/BApi";
+import { Button, Checkbox, Chip, Input, Modal, Select, Textarea } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import PropertySelector from "@/components/PropertySelector";
 import { PropertyPool } from "@/sdk/constants";
@@ -52,15 +45,11 @@ const DataCardTypeEditor = ({
   const [identityPropertyIds, setIdentityPropertyIds] = useState<number[]>(
     cardType?.identityPropertyIds || [],
   );
-  const [nameTemplate, setNameTemplate] = useState<string>(
-    cardType?.nameTemplate || "",
-  );
+  const [nameTemplate, setNameTemplate] = useState<string>(cardType?.nameTemplate || "");
   const [matchPropertyIds, setMatchPropertyIds] = useState<number[]>(
     cardType?.matchRules?.matchProperties || [],
   );
-  const [matchMode, setMatchMode] = useState<number>(
-    cardType?.matchRules?.matchMode ?? 1,
-  );
+  const [matchMode, setMatchMode] = useState<number>(cardType?.matchRules?.matchMode ?? 1);
   const [allowCreate, setAllowCreate] = useState<boolean>(
     cardType?.matchRules?.allowCreate ?? true,
   );
@@ -72,21 +61,19 @@ const DataCardTypeEditor = ({
 
   const propertyMap = useMemo(() => {
     const map = new Map<number, IProperty>();
+
     for (const p of allProperties) map.set(p.id!, p);
+
     return map;
   }, [allProperties]);
 
   const selectedProperties = useMemo(
-    () => selectedPropertyIds
-      .map((id) => propertyMap.get(id))
-      .filter(Boolean) as IProperty[],
+    () => selectedPropertyIds.map((id) => propertyMap.get(id)).filter(Boolean) as IProperty[],
     [selectedPropertyIds, propertyMap],
   );
 
   const identityProperties = useMemo(
-    () => identityPropertyIds
-      .map((id) => propertyMap.get(id))
-      .filter(Boolean) as IProperty[],
+    () => identityPropertyIds.map((id) => propertyMap.get(id)).filter(Boolean) as IProperty[],
     [identityPropertyIds, propertyMap],
   );
 
@@ -111,6 +98,7 @@ const DataCardTypeEditor = ({
       selection: selectedPropertyIds.map((id) => ({ id, pool: PropertyPool.Custom })),
       onSubmit: async (properties: IProperty[]) => {
         const ids = properties.map((p) => p.id!);
+
         setSelectedPropertyIds(ids);
         setIdentityPropertyIds((prev) => prev.filter((id) => ids.includes(id)));
         setMatchPropertyIds((prev) => prev.filter((id) => ids.includes(id)));
@@ -118,11 +106,7 @@ const DataCardTypeEditor = ({
     });
   };
 
-  const toggleId = (
-    id: number,
-    list: number[],
-    setter: (ids: number[]) => void,
-  ) => {
+  const toggleId = (id: number, list: number[], setter: (ids: number[]) => void) => {
     if (list.includes(id)) {
       setter(list.filter((x) => x !== id));
     } else {
@@ -132,13 +116,16 @@ const DataCardTypeEditor = ({
 
   const insertTokenAtCursor = (token: string) => {
     const ta = templateTextareaRef.current;
+
     if (!ta) {
       setNameTemplate((prev) => prev + token);
+
       return;
     }
     const start = ta.selectionStart;
     const end = ta.selectionEnd;
     const next = nameTemplate.slice(0, start) + token + nameTemplate.slice(end);
+
     setNameTemplate(next);
     setTimeout(() => {
       ta.focus();
@@ -152,12 +139,14 @@ const DataCardTypeEditor = ({
     const segments: Array<{ type: "text" | "property" | "invalid"; content: string }> = [];
     let last = 0;
     let m: RegExpExecArray | null;
+
     NAME_TEMPLATE_TOKEN.lastIndex = 0;
     while ((m = NAME_TEMPLATE_TOKEN.exec(nameTemplate)) !== null) {
       if (m.index > last) {
         segments.push({ type: "text", content: nameTemplate.slice(last, m.index) });
       }
       const propName = m[1];
+
       segments.push({
         type: validNames.has(propName) ? "property" : "invalid",
         content: propName,
@@ -167,15 +156,14 @@ const DataCardTypeEditor = ({
     if (last < nameTemplate.length) {
       segments.push({ type: "text", content: nameTemplate.slice(last) });
     }
+
     return segments;
   }, [nameTemplate, selectedProperties]);
 
   const handleSave = async () => {
     if (!isValid) return;
 
-    const finalMatchPropertyIds = matchPropertyIds.filter((id) =>
-      identityPropertyIds.includes(id),
-    );
+    const finalMatchPropertyIds = matchPropertyIds.filter((id) => identityPropertyIds.includes(id));
     const matchRules = {
       autoBindEnabled: finalMatchPropertyIds.length > 0,
       matchProperties: finalMatchPropertyIds,
@@ -206,10 +194,10 @@ const DataCardTypeEditor = ({
       {selectedProperties.map((p) => (
         <Chip
           key={p.id}
+          className="cursor-pointer"
+          color="primary"
           size="sm"
           variant="flat"
-          color="primary"
-          className="cursor-pointer"
           onClick={openPropertiesSelector}
         >
           {p.name}
@@ -217,8 +205,8 @@ const DataCardTypeEditor = ({
       ))}
       <Button
         size="sm"
-        variant="light"
         startContent={<PlusCircleOutlined />}
+        variant="light"
         onPress={openPropertiesSelector}
       >
         {selectedProperties.length === 0
@@ -240,13 +228,14 @@ const DataCardTypeEditor = ({
         </span>
       );
     }
+
     return (
       <div className="flex flex-wrap gap-3">
         {selectedProperties.map((p) => (
           <Checkbox
             key={p.id}
-            size="sm"
             isSelected={list.includes(p.id!)}
+            size="sm"
             onValueChange={() => toggleId(p.id!, list, setter)}
           >
             <span className="text-sm">{p.name}</span>
@@ -259,21 +248,21 @@ const DataCardTypeEditor = ({
   return (
     <Modal
       defaultVisible
+      okProps={{ isDisabled: !isValid }}
       size="5xl"
       title={isEditing ? t("dataCard.type.edit") : t("dataCard.type.create")}
-      onOk={handleSave}
-      okProps={{ isDisabled: !isValid }}
       onDestroyed={onDestroyed}
+      onOk={handleSave}
     >
       <div className="flex flex-col gap-4">
         {/* Name */}
         <Input
+          isRequired
+          errorMessage={!isNameValid ? t("dataCard.validation.nameRequired") : undefined}
+          isInvalid={!isNameValid}
           label={t("dataCard.type.name")}
           value={name}
           onValueChange={setName}
-          isRequired
-          isInvalid={!isNameValid}
-          errorMessage={!isNameValid ? t("dataCard.validation.nameRequired") : undefined}
         />
 
         {/* Properties */}
@@ -292,9 +281,7 @@ const DataCardTypeEditor = ({
 
         {/* Basic Config Section */}
         <div className="border border-default-200 rounded-lg p-4 flex flex-col gap-4">
-          <div className="text-sm font-semibold">
-            {t("dataCard.type.section.basic")}
-          </div>
+          <div className="text-sm font-semibold">{t("dataCard.type.section.basic")}</div>
 
           {/* Identity Properties (checkbox list) */}
           <div>
@@ -326,10 +313,10 @@ const DataCardTypeEditor = ({
                 {selectedProperties.map((p) => (
                   <Chip
                     key={p.id}
-                    size="sm"
-                    color="primary"
-                    variant="flat"
                     className="cursor-pointer hover:opacity-80"
+                    color="primary"
+                    size="sm"
+                    variant="flat"
                     onClick={() => insertTokenAtCursor(`{${p.name}}`)}
                   >
                     {p.name}
@@ -339,12 +326,12 @@ const DataCardTypeEditor = ({
             )}
             <Textarea
               ref={templateTextareaRef}
+              classNames={{ input: "font-mono" }}
+              maxRows={4}
+              minRows={2}
               placeholder={t("dataCard.type.nameTemplate.placeholder")}
               value={nameTemplate}
               onValueChange={setNameTemplate}
-              minRows={2}
-              maxRows={4}
-              classNames={{ input: "font-mono" }}
             />
             {nameTemplate && (
               <div className="mt-2">
@@ -356,13 +343,14 @@ const DataCardTypeEditor = ({
                     if (seg.type === "text") return <span key={idx}>{seg.content}</span>;
                     if (seg.type === "property") {
                       return (
-                        <Chip key={idx} size="sm" color="primary" variant="flat" className="h-5">
+                        <Chip key={idx} className="h-5" color="primary" size="sm" variant="flat">
                           {seg.content}
                         </Chip>
                       );
                     }
+
                     return (
-                      <Chip key={idx} size="sm" color="danger" variant="flat" className="h-5">
+                      <Chip key={idx} className="h-5" color="danger" size="sm" variant="flat">
                         {seg.content}
                       </Chip>
                     );
@@ -375,9 +363,7 @@ const DataCardTypeEditor = ({
 
         {/* Auto-associate Section */}
         <div className="border border-default-200 rounded-lg p-4 flex flex-col gap-3">
-          <div className="text-sm font-semibold">
-            {t("dataCard.type.section.autoBind")}
-          </div>
+          <div className="text-sm font-semibold">{t("dataCard.type.section.autoBind")}</div>
           <p className="text-xs text-default-400">
             {t("dataCard.matchRules.autoBind.description")}
           </p>
@@ -398,9 +384,7 @@ const DataCardTypeEditor = ({
                       key={p.id}
                       isSelected={matchPropertyIds.includes(p.id!)}
                       size="sm"
-                      onValueChange={() =>
-                        toggleId(p.id!, matchPropertyIds, setMatchPropertyIds)
-                      }
+                      onValueChange={() => toggleId(p.id!, matchPropertyIds, setMatchPropertyIds)}
                     >
                       <span className="text-sm">{p.name}</span>
                     </Checkbox>
@@ -415,6 +399,10 @@ const DataCardTypeEditor = ({
 
               {effectiveMatchPropertyIds.length > 0 && (
                 <Select
+                  dataSource={[
+                    { value: "1", label: t("dataCard.matchRules.matchMode.any") },
+                    { value: "2", label: t("dataCard.matchRules.matchMode.all") },
+                  ]}
                   description={
                     matchMode === 1
                       ? t("dataCard.matchRules.matchMode.any.description")
@@ -425,12 +413,9 @@ const DataCardTypeEditor = ({
                   size="sm"
                   onSelectionChange={(keys) => {
                     const key = Array.from(keys)[0];
+
                     if (key) setMatchMode(Number(key));
                   }}
-                  dataSource={[
-                    { value: "1", label: t("dataCard.matchRules.matchMode.any") },
-                    { value: "2", label: t("dataCard.matchRules.matchMode.all") },
-                  ]}
                 />
               )}
             </>
@@ -439,26 +424,16 @@ const DataCardTypeEditor = ({
 
         {/* Upsert Section (two checkboxes) */}
         <div className="border border-default-200 rounded-lg p-4 flex flex-col gap-3">
-          <div className="text-sm font-semibold">
-            {t("dataCard.type.section.upsert")}
-          </div>
+          <div className="text-sm font-semibold">{t("dataCard.type.section.upsert")}</div>
           <p className="text-xs text-default-400 whitespace-pre-line">
             {t("dataCard.matchRules.upsertRule.description")}
           </p>
 
           <div className="flex flex-wrap gap-6">
-            <Checkbox
-              size="sm"
-              isSelected={allowCreate}
-              onValueChange={setAllowCreate}
-            >
+            <Checkbox isSelected={allowCreate} size="sm" onValueChange={setAllowCreate}>
               <span className="text-sm">{t("dataCard.matchRules.allowCreate")}</span>
             </Checkbox>
-            <Checkbox
-              size="sm"
-              isSelected={allowUpdate}
-              onValueChange={setAllowUpdate}
-            >
+            <Checkbox isSelected={allowUpdate} size="sm" onValueChange={setAllowUpdate}>
               <span className="text-sm">{t("dataCard.matchRules.allowUpdate")}</span>
             </Checkbox>
           </div>

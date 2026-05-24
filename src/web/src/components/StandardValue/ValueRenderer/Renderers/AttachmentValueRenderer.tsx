@@ -15,7 +15,9 @@ import React, { useRef, useState } from "react";
 import { AiOutlineFile } from "react-icons/ai";
 
 import envConfig from "@/config/env";
-import NotSet, { LightText } from "@/components/StandardValue/ValueRenderer/Renderers/components/LightText";
+import NotSet, {
+  LightText,
+} from "@/components/StandardValue/ValueRenderer/Renderers/components/LightText";
 import { Button, Carousel, Popover } from "@/components/bakaui";
 import { splitPathIntoSegments } from "@/components/utils";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
@@ -23,10 +25,7 @@ import { FileSystemSelectorModal } from "@/components/FileSystemSelector";
 import { AttachmentLayout } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
 
-type AttachmentValueRendererProps = Omit<
-  ValueRendererProps<string[]>,
-  "variant"
-> & {
+type AttachmentValueRendererProps = Omit<ValueRendererProps<string[]>, "variant"> & {
   variant: ValueRendererProps<string[]>["variant"];
   size?: ValueRendererSize;
   layout?: AttachmentLayout;
@@ -79,11 +78,13 @@ const AttachmentValueRenderer = ({
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+
     if (!file) return;
 
     setIsUploading(true);
     try {
       const formData = new FormData();
+
       formData.append("file", file);
 
       const response = await fetch(`${envConfig.apiEndpoint}/file/upload`, {
@@ -93,8 +94,10 @@ const AttachmentValueRenderer = ({
 
       if (response.ok) {
         const result = await response.json();
+
         if (result.data) {
           const newValue = (value ?? []).concat([result.data]);
+
           editor?.onValueChange?.(newValue, newValue);
         }
       }
@@ -113,6 +116,7 @@ const AttachmentValueRenderer = ({
       targetType: "file",
       onSelected: (entry) => {
         const newValue = (value ?? []).concat([entry.path]);
+
         editor?.onValueChange?.(newValue, newValue);
       },
     });
@@ -124,11 +128,13 @@ const AttachmentValueRenderer = ({
 
   const removeFile = (path: string) => {
     const newValue = (value ?? []).filter((v) => v !== path);
+
     editor?.onValueChange?.(newValue, newValue);
   };
 
   const getFileName = (path: string) => {
     const segments = splitPathIntoSegments(path);
+
     return segments[segments.length - 1] || path;
   };
 
@@ -144,12 +150,12 @@ const AttachmentValueRenderer = ({
 
   const renderUploadButton = () => (
     <Button
-      size="sm"
-      variant="light"
-      startContent={isUploading ? <LoadingOutlined /> : <UploadOutlined />}
       className="justify-start"
-      onClick={triggerFileUpload}
       isDisabled={isUploading}
+      size="sm"
+      startContent={isUploading ? <LoadingOutlined /> : <UploadOutlined />}
+      variant="light"
+      onClick={triggerFileUpload}
     >
       {t("property.attachment.uploadFromLocal")}
     </Button>
@@ -157,30 +163,23 @@ const AttachmentValueRenderer = ({
 
   // Single shared hidden file input (rendered once per component instance)
   const renderHiddenFileInput = () => (
-    <input
-      ref={fileInputRef}
-      type="file"
-      className="hidden"
-      onChange={handleFileUpload}
-    />
+    <input ref={fileInputRef} className="hidden" type="file" onChange={handleFileUpload} />
   );
 
   // Shared popover content for adding files
   const renderAddPopoverContent = () => (
     <div className="flex flex-col gap-1 p-1">
       <Button
-        size="sm"
-        variant="light"
-        startContent={<FolderOpenOutlined />}
         className="justify-start"
+        size="sm"
+        startContent={<FolderOpenOutlined />}
+        variant="light"
         onClick={openFileSystemSelector}
       >
         {t("property.attachment.selectFromFileSystem")}
       </Button>
       {renderUploadButton()}
-      <div className="text-xs text-default-400 px-2">
-        {t("property.attachment.uploadHint")}
-      </div>
+      <div className="text-xs text-default-400 px-2">{t("property.attachment.uploadHint")}</div>
     </div>
   );
 
@@ -188,26 +187,20 @@ const AttachmentValueRenderer = ({
     if (!canEdit) return null;
 
     const trigger = lightVariant ? (
-      <Button
-        isIconOnly
-        color="primary"
-        size="sm"
-        variant="light"
-        className="min-w-0 w-5 h-5"
-      >
+      <Button isIconOnly className="min-w-0 w-5 h-5" color="primary" size="sm" variant="light">
         <PlusOutlined className="text-xs" />
       </Button>
     ) : (
       <Button
         isIconOnly
+        className="min-w-0"
         color="primary"
         size={presetSize}
-        variant="flat"
-        className="min-w-0"
         style={{
           width: config.thumbnail,
           height: config.thumbnail,
         }}
+        variant="flat"
       >
         <PlusOutlined className={config.iconSize} />
       </Button>
@@ -216,11 +209,7 @@ const AttachmentValueRenderer = ({
     return (
       <>
         {renderHiddenFileInput()}
-        <Popover
-          isOpen={addPopoverOpen}
-          onOpenChange={setAddPopoverOpen}
-          trigger={trigger}
-        >
+        <Popover isOpen={addPopoverOpen} trigger={trigger} onOpenChange={setAddPopoverOpen}>
           {renderAddPopoverContent()}
         </Popover>
       </>
@@ -238,15 +227,21 @@ const AttachmentValueRenderer = ({
       >
         <div
           className="cursor-pointer relative"
-          onClick={() => openFile(path)}
+          role="button"
+          tabIndex={0}
           title={path}
+          onClick={() => openFile(path)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              openFile(path);
+            }
+          }}
         >
           <Img
             alt={fileName}
             loader={<LoadingOutlined className={config.iconSize} />}
-            src={[
-              `${envConfig.apiEndpoint}/tool/thumbnail?path=${encodeURIComponent(path)}`,
-            ]}
+            src={[`${envConfig.apiEndpoint}/tool/thumbnail?path=${encodeURIComponent(path)}`]}
             style={{
               maxWidth: config.thumbnail,
               maxHeight: config.thumbnail,
@@ -265,19 +260,16 @@ const AttachmentValueRenderer = ({
             }
           />
         </div>
-        <span
-          className="text-xs text-default-500 truncate w-full text-center"
-          title={fileName}
-        >
+        <span className="text-xs text-default-500 truncate w-full text-center" title={fileName}>
           {fileName}
         </span>
         {showDelete && (
           <Button
             isIconOnly
+            className="absolute -top-1 -right-1 min-w-0 w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity"
             color="danger"
             size="sm"
             variant="flat"
-            className="absolute -top-1 -right-1 min-w-0 w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity"
             onClick={(e) => {
               e.stopPropagation();
               removeFile(path);
@@ -294,23 +286,26 @@ const AttachmentValueRenderer = ({
   // Delete button floats at top-right on hover, same as the fixed-size variant.
   const renderFillAttachment = (path: string, showDelete: boolean) => {
     const fileName = getFileName(path);
+
     return (
-      <div
-        key={path}
-        className="relative group w-full"
-        style={{ aspectRatio: "1 / 1" }}
-      >
+      <div key={path} className="relative group w-full" style={{ aspectRatio: "1 / 1" }}>
         <div
           className="cursor-pointer w-full h-full"
-          onClick={() => openFile(path)}
+          role="button"
+          tabIndex={0}
           title={path}
+          onClick={() => openFile(path)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              openFile(path);
+            }
+          }}
         >
           <Img
             alt={fileName}
             loader={<LoadingOutlined className={config.iconSize} />}
-            src={[
-              `${envConfig.apiEndpoint}/tool/thumbnail?path=${encodeURIComponent(path)}`,
-            ]}
+            src={[`${envConfig.apiEndpoint}/tool/thumbnail?path=${encodeURIComponent(path)}`]}
             style={{
               width: "100%",
               height: "100%",
@@ -326,10 +321,10 @@ const AttachmentValueRenderer = ({
         {showDelete && (
           <Button
             isIconOnly
+            className="absolute top-1 right-1 min-w-0 w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity"
             color="danger"
             size="sm"
             variant="flat"
-            className="absolute top-1 right-1 min-w-0 w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity"
             onClick={(e) => {
               e.stopPropagation();
               removeFile(path);
@@ -346,23 +341,24 @@ const AttachmentValueRenderer = ({
   // so it stays reachable regardless of how many attachments exist.
   const renderFloatingAddButton = () => {
     if (!canEdit) return null;
+
     return (
       <>
         {renderHiddenFileInput()}
         <Popover
           isOpen={addPopoverOpen}
-          onOpenChange={setAddPopoverOpen}
           trigger={
             <Button
               isIconOnly
+              className="absolute bottom-1 right-1 min-w-0 w-7 h-7 shadow-md z-10"
               color="primary"
               size="sm"
               variant="flat"
-              className="absolute bottom-1 right-1 min-w-0 w-7 h-7 shadow-md z-10"
             >
               <PlusOutlined className="text-sm" />
             </Button>
           }
+          onOpenChange={setAddPopoverOpen}
         >
           {renderAddPopoverContent()}
         </Popover>
@@ -388,7 +384,6 @@ const AttachmentValueRenderer = ({
               {renderHiddenFileInput()}
               <Popover
                 isOpen={addPopoverOpen}
-                onOpenChange={setAddPopoverOpen}
                 trigger={
                   <div
                     className="w-full flex items-center justify-center rounded border-2 border-dashed border-default-300 hover:border-primary hover:bg-default-50 cursor-pointer transition-colors"
@@ -397,14 +392,17 @@ const AttachmentValueRenderer = ({
                     <PlusOutlined className="text-3xl text-default-400" />
                   </div>
                 }
+                onOpenChange={setAddPopoverOpen}
               >
                 {renderAddPopoverContent()}
               </Popover>
             </>
           );
         }
+
         return renderAddButton();
       }
+
       // Only show click handler if has editor
       return <NotSet size={presetSize} onClick={canEdit ? handleClick : undefined} />;
     }
@@ -414,15 +412,9 @@ const AttachmentValueRenderer = ({
       if (layout === AttachmentLayout.Carousel) {
         return (
           <div className="relative w-full">
-            <Carousel
-              dots={value.length > 1}
-              infinite={false}
-              style={{ width: "100%" }}
-            >
+            <Carousel dots={value.length > 1} infinite={false} style={{ width: "100%" }}>
               {value.map((path) => (
-                <div key={path}>
-                  {renderFillAttachment(path, showEditControls)}
-                </div>
+                <div key={path}>{renderFillAttachment(path, showEditControls)}</div>
               ))}
             </Carousel>
             {showEditControls && renderFloatingAddButton()}
@@ -470,18 +462,19 @@ const AttachmentValueRenderer = ({
             {renderHiddenFileInput()}
             <Popover
               isOpen={addPopoverOpen}
-              onOpenChange={setAddPopoverOpen}
               trigger={
                 <span className="cursor-pointer">
                   <NotSet size={presetSize} onClick={() => {}} />
                 </span>
               }
+              onOpenChange={setAddPopoverOpen}
             >
               {renderAddPopoverContent()}
             </Popover>
           </>
         );
       }
+
       // Only show click handler if has editor
       return <NotSet size={presetSize} onClick={canEdit ? handleClick : undefined} />;
     }
@@ -492,7 +485,15 @@ const AttachmentValueRenderer = ({
       const filenameSpan = (
         <span
           className={`cursor-pointer hover:underline ${showEditControls ? "text-primary" : ""}`}
+          role="button"
+          tabIndex={0}
           onClick={() => openFile(path)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              openFile(path);
+            }
+          }}
         >
           {fileName}
         </span>
@@ -500,27 +501,24 @@ const AttachmentValueRenderer = ({
 
       if (showEditControls) {
         return (
-          <Popover
-            key={path}
-            trigger={filenameSpan}
-          >
+          <Popover key={path} trigger={filenameSpan}>
             <div className="flex flex-col gap-1 p-1">
               <Button
-                size="sm"
-                variant="light"
-                color="danger"
-                startContent={<DeleteOutlined />}
                 className="justify-start"
+                color="danger"
+                size="sm"
+                startContent={<DeleteOutlined />}
+                variant="light"
                 onClick={() => removeFile(path)}
               >
                 {t("Delete")}
               </Button>
               <div className="border-t border-default-200 my-1" />
               <Button
-                size="sm"
-                variant="light"
-                startContent={<FolderOpenOutlined />}
                 className="justify-start"
+                size="sm"
+                startContent={<FolderOpenOutlined />}
+                variant="light"
                 onClick={openFileSystemSelector}
               >
                 {t("property.attachment.selectFromFileSystem")}

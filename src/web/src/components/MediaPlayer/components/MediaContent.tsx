@@ -1,12 +1,14 @@
 "use client";
 
+import type { MediaPlayerEntry } from "../types";
+import type { MediaType } from "@/sdk/constants";
+
 import React, { useRef } from "react";
 
 import MediaRenderer, { type MediaRendererRef } from "./MediaRenderer";
 import MediaFooter from "./MediaFooter";
-import { IwFsType, MediaType } from "@/sdk/constants";
 
-import type { MediaPlayerEntry } from "../types";
+import { IwFsType } from "@/sdk/constants";
 
 interface MediaContentProps {
   activeEntry: MediaPlayerEntry;
@@ -65,8 +67,8 @@ const MediaContent: React.FC<MediaContentProps> = ({
   const mediaRendererRef = useRef<MediaRendererRef>(null);
   const mediaContainerRef = useRef<HTMLDivElement | null>(null);
 
-  const handlePrevClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handlePrevClick = (e?: { stopPropagation: () => void }) => {
+    e?.stopPropagation();
     // Find previous playable entry
     let prevIndex = activeIndex - 1;
 
@@ -85,8 +87,8 @@ const MediaContent: React.FC<MediaContentProps> = ({
     }
   };
 
-  const handleNextClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleNextClick = (e?: { stopPropagation: () => void }) => {
+    e?.stopPropagation();
     // Find next playable entry
     let nextIndex = activeIndex + 1;
 
@@ -110,20 +112,37 @@ const MediaContent: React.FC<MediaContentProps> = ({
       <div
         ref={mediaContainerRef}
         className="flex-1 flex items-center justify-center relative min-h-0 overflow-y-auto overflow-x-hidden media-container"
-        tabIndex={0}
       >
         {/* Left clickable area for previous */}
         {activeIndex > 0 && (
           <div
+            aria-label="Previous"
             className="absolute left-0 top-0 bottom-0 w-1/3 z-[1] cursor-pointer"
+            role="button"
+            tabIndex={0}
             onClick={handlePrevClick}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                handlePrevClick();
+              }
+            }}
           />
         )}
         {/* Right clickable area for next */}
         {activeIndex < playableEntries.length - 1 && (
           <div
+            aria-label="Next"
             className="absolute right-0 top-0 bottom-0 w-1/3 z-[1] cursor-pointer"
+            role="button"
+            tabIndex={0}
             onClick={handleNextClick}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                handleNextClick();
+              }
+            }}
           />
         )}
         <MediaRenderer

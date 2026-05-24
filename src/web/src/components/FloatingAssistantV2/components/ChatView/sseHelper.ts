@@ -1,5 +1,6 @@
-import envConfig from '@/config/env';
-import type { ChatStreamEvent } from './types';
+import type { ChatStreamEvent } from "./types";
+
+import envConfig from "@/config/env";
 
 /**
  * Send a chat message via SSE streaming.
@@ -13,37 +14,42 @@ export function sendChatMessageSSE(
   onError: (err: Error) => void,
 ): AbortController {
   const controller = new AbortController();
-  const baseUrl = envConfig.apiEndpoint || '';
+  const baseUrl = envConfig.apiEndpoint || "";
   const url = `${baseUrl}/chat/conversations/${conversationId}/messages`;
 
   fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ message }),
     signal: controller.signal,
   })
     .then(async (res) => {
       if (!res.ok || !res.body) {
         onError(new Error(`HTTP ${res.status}`));
+
         return;
       }
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
-      let buffer = '';
+      let buffer = "";
 
       while (true) {
         const { done, value } = await reader.read();
+
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
 
-        const lines = buffer.split('\n');
-        buffer = lines.pop() ?? '';
+        const lines = buffer.split("\n");
+
+        buffer = lines.pop() ?? "";
 
         for (const line of lines) {
           const trimmed = line.trim();
-          if (trimmed.startsWith('data: ')) {
+
+          if (trimmed.startsWith("data: ")) {
             try {
               const evt: ChatStreamEvent = JSON.parse(trimmed.slice(6));
+
               onEvent(evt);
             } catch {
               // skip malformed lines
@@ -53,7 +59,7 @@ export function sendChatMessageSSE(
       }
     })
     .catch((err) => {
-      if (err.name !== 'AbortError') {
+      if (err.name !== "AbortError") {
         onError(err);
       }
     });

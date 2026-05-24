@@ -26,6 +26,7 @@ export default function ConfigurableThirdPartyPanel<T extends string>({
 }: ConfigurableThirdPartyPanelProps<T>) {
   const visible = useMemo(() => {
     if (fields === "all") return allTabs;
+
     return allTabs.filter((tab) => fields.includes(tab.field));
   }, [fields, allTabs]);
 

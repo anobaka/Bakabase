@@ -80,12 +80,13 @@ const AliasPage = () => {
 
     setForm(nf);
     BApi.alias.searchAliasGroups(nf).then((a) => {
-      const data = a.data?.map((x) => ({
-        originalText: x.text!,
-        text: x.text!,
-        preferred: x.preferred ?? undefined,
-        candidates: x.candidates ?? undefined,
-      })) ?? [];
+      const data =
+        a.data?.map((x) => ({
+          originalText: x.text!,
+          text: x.text!,
+          preferred: x.preferred ?? undefined,
+          candidates: x.candidates ?? undefined,
+        })) ?? [];
 
       setAliases(data);
       setTotalCount(a.totalCount!);
@@ -93,6 +94,7 @@ const AliasPage = () => {
       // If current page has no data and not on first page, go to last available page
       if (data.length === 0 && nf.pageIndex > 0 && a.totalCount! > 0) {
         const lastPage = Math.max(0, Math.ceil(a.totalCount! / nf.pageSize) - 1);
+
         search({ pageIndex: lastPage });
       }
     });
@@ -145,9 +147,7 @@ const AliasPage = () => {
               })
             }
           />
-          <div className="text-xs text-default-500">
-            {t<string>("alias.info.description")}
-          </div>
+          <div className="text-xs text-default-500">{t<string>("alias.info.description")}</div>
         </div>
         <div className={"flex items-center gap-2"}>
           <Button
@@ -229,7 +229,9 @@ const AliasPage = () => {
                   classNames={{
                     content: "max-w-md break-all whitespace-normal",
                   }}
-                  content={t<string>("alias.tip.preferredText", { text: bulkOperationContext.preferredTexts[0] })}
+                  content={t<string>("alias.tip.preferredText", {
+                    text: bulkOperationContext.preferredTexts[0],
+                  })}
                 >
                   <Button
                     color={"secondary"}
@@ -247,7 +249,9 @@ const AliasPage = () => {
                         ),
                         children: (
                           <div className="break-all whitespace-normal">
-                            {t<string>("alias.confirm.mergeDescription", { preferred: bulkOperationContext.preferredTexts[0] })}
+                            {t<string>("alias.confirm.mergeDescription", {
+                              preferred: bulkOperationContext.preferredTexts[0],
+                            })}
                           </div>
                         ),
                         onOk: async () => {
@@ -313,6 +317,7 @@ const AliasPage = () => {
                   return (
                     <Chip
                       key={t}
+                      className="h-auto py-1"
                       classNames={{
                         base: "max-w-full",
                         content: "break-all whitespace-normal",
@@ -320,7 +325,6 @@ const AliasPage = () => {
                       color={i == 0 ? "primary" : "default"}
                       radius={"sm"}
                       size={"sm"}
-                      className="h-auto py-1"
                       onClick={() => {
                         bulkOperationContext.preferredTexts.splice(i, 1);
                         setBulkOperationContext({
@@ -399,10 +403,18 @@ const AliasPage = () => {
                     <TableCell className={"max-w-md"}>
                       <div
                         className={"flex flex-wrap gap-1"}
+                        role="button"
+                        tabIndex={0}
                         onClick={(e) => {
                           e.cancelable = true;
                           e.stopPropagation();
                           e.preventDefault();
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.stopPropagation();
+                            e.preventDefault();
+                          }
                         }}
                       >
                         {a.candidates?.map((c) => {
@@ -448,9 +460,7 @@ const AliasPage = () => {
                                       <div className="break-all whitespace-normal">
                                         <div>{t("alias.confirm.weAreDeleting")}</div>
                                         <div className="font-semibold my-2">{c}</div>
-                                        <div>
-                                          {t<string>("alias.confirm.noWayBack")}
-                                        </div>
+                                        <div>{t<string>("alias.confirm.noWayBack")}</div>
                                       </div>
                                     ),
                                     onOk: async () => {

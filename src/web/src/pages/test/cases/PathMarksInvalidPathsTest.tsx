@@ -1,10 +1,11 @@
+import type { PathMarkGroup } from "@/pages/path-mark-config/hooks/usePathMarks";
+import type { BakabaseAbstractionsModelsDomainPathMark } from "@/sdk/Api";
+
 import { useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { AiOutlineWarning } from "react-icons/ai";
 
 import PathTree from "@/pages/path-marks/components/PathTree";
-import type { PathMarkGroup } from "@/pages/path-mark-config/hooks/usePathMarks";
-import type { BakabaseAbstractionsModelsDomainPathMark } from "@/sdk/Api";
 import { PathMarkType } from "@/sdk/constants";
 import { Switch, toast } from "@/components/bakaui";
 
@@ -13,7 +14,7 @@ const createMockMark = (
   id: number,
   path: string,
   type: number,
-  priority: number
+  priority: number,
 ): BakabaseAbstractionsModelsDomainPathMark => ({
   id,
   path,
@@ -44,7 +45,9 @@ const mockGroups: PathMarkGroup[] = [
   // INVALID child under valid parent (deleted subfolder)
   {
     path: "C:/Users/Demo/Videos/Anime/DeletedSeason",
-    marks: [createMockMark(8, "C:/Users/Demo/Videos/Anime/DeletedSeason", PathMarkType.Resource, 1)],
+    marks: [
+      createMockMark(8, "C:/Users/Demo/Videos/Anime/DeletedSeason", PathMarkType.Resource, 1),
+    ],
     exists: false,
   },
   // Valid sibling
@@ -70,18 +73,29 @@ const mockGroups: PathMarkGroup[] = [
   },
   {
     path: "C:/Users/Demo/Videos/Movies/Action/2024",
-    marks: [createMockMark(11, "C:/Users/Demo/Videos/Movies/Action/2024", PathMarkType.Resource, 1)],
+    marks: [
+      createMockMark(11, "C:/Users/Demo/Videos/Movies/Action/2024", PathMarkType.Resource, 1),
+    ],
     exists: true,
   },
   {
     path: "C:/Users/Demo/Videos/Movies/Action/2024/Deleted",
-    marks: [createMockMark(12, "C:/Users/Demo/Videos/Movies/Action/2024/Deleted", PathMarkType.Resource, 1)],
+    marks: [
+      createMockMark(
+        12,
+        "C:/Users/Demo/Videos/Movies/Action/2024/Deleted",
+        PathMarkType.Resource,
+        1,
+      ),
+    ],
     exists: false,
   },
   // Valid after invalid in same branch
   {
     path: "C:/Users/Demo/Videos/Movies/Action/2023",
-    marks: [createMockMark(13, "C:/Users/Demo/Videos/Movies/Action/2023", PathMarkType.Resource, 1)],
+    marks: [
+      createMockMark(13, "C:/Users/Demo/Videos/Movies/Action/2023", PathMarkType.Resource, 1),
+    ],
     exists: true,
   },
 
@@ -128,7 +142,9 @@ const mockGroups: PathMarkGroup[] = [
   // Deeper child also invalid
   {
     path: "H:/DeletedDrive/Folder1/SubFolder/DeepFolder",
-    marks: [createMockMark(20, "H:/DeletedDrive/Folder1/SubFolder/DeepFolder", PathMarkType.Resource, 1)],
+    marks: [
+      createMockMark(20, "H:/DeletedDrive/Folder1/SubFolder/DeepFolder", PathMarkType.Resource, 1),
+    ],
     exists: false,
   },
   // Another branch, also all invalid
@@ -165,18 +181,17 @@ const PathMarksInvalidPathsTest = () => {
   const { t } = useTranslation();
   const [showOnlyInvalid, setShowOnlyInvalid] = useState(false);
 
-  const invalidPathsCount = mockGroups.filter(g => g.exists === false).length;
+  const invalidPathsCount = mockGroups.filter((g) => g.exists === false).length;
   const filteredGroups = showOnlyInvalid
-    ? mockGroups.filter(g => g.exists === false)
+    ? mockGroups.filter((g) => g.exists === false)
     : mockGroups;
 
-  const handleConfigureSubPathMarks = useCallback(
-    (path: string) => {
-      toast.success(`Configure sub-path marks: ${path} (In production this would open PathConfigModal)`);
-      console.log("Configure sub-path marks", path);
-    },
-    [],
-  );
+  const handleConfigureSubPathMarks = useCallback((path: string) => {
+    toast.success(
+      `Configure sub-path marks: ${path} (In production this would open PathConfigModal)`,
+    );
+    console.log("Configure sub-path marks", path);
+  }, []);
 
   return (
     <div className="path-marks-page h-full flex flex-col">
@@ -190,8 +205,8 @@ const PathMarksInvalidPathsTest = () => {
 
         {/* Description */}
         <div className="text-sm text-default-500">
-          This is a mock test showing how invalid paths are displayed.
-          Total {mockGroups.length} paths, {invalidPathsCount} invalid.
+          This is a mock test showing how invalid paths are displayed. Total {mockGroups.length}{" "}
+          paths, {invalidPathsCount} invalid.
         </div>
 
         {/* Invalid paths warning */}
@@ -200,16 +215,16 @@ const PathMarksInvalidPathsTest = () => {
             <AiOutlineWarning className="text-warning text-xl flex-shrink-0" />
             <div className="flex-1">
               <span className="text-warning-700">
-                {t("{{count}} path(s) no longer exist on the file system", { count: invalidPathsCount })}
+                {t("{{count}} path(s) no longer exist on the file system", {
+                  count: invalidPathsCount,
+                })}
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-default-600">{t("pathMarks.label.showOnlyInvalid")}</span>
-              <Switch
-                isSelected={showOnlyInvalid}
-                size="sm"
-                onValueChange={setShowOnlyInvalid}
-              />
+              <span className="text-sm text-default-600">
+                {t("pathMarks.label.showOnlyInvalid")}
+              </span>
+              <Switch isSelected={showOnlyInvalid} size="sm" onValueChange={setShowOnlyInvalid} />
             </div>
           </div>
         )}
@@ -227,13 +242,13 @@ const PathMarksInvalidPathsTest = () => {
               toast.success(`Deleted all marks from ${path} (mock)`);
               console.log("Delete path marks", path);
             }}
-            onSaveMark={(path, mark, oldMark) => {
-              toast.success(`Saved mark to ${path} (mock)`);
-              console.log("Save mark", path, mark, oldMark);
-            }}
             onPasteMarks={(path, marks) => {
               toast.success(`Pasted ${marks.length} marks to ${path} (mock)`);
               console.log("Paste marks", path, marks);
+            }}
+            onSaveMark={(path, mark, oldMark) => {
+              toast.success(`Saved mark to ${path} (mock)`);
+              console.log("Save mark", path, mark, oldMark);
             }}
           />
         </div>

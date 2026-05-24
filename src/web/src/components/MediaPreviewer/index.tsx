@@ -11,6 +11,7 @@ import "./index.scss";
 import BApi from "@/sdk/BApi";
 import { MediaType } from "@/sdk/constants";
 import envConfig from "@/config/env";
+
 import type { BakabaseServiceModelsViewFilePlayabilityViewModel } from "@/sdk/Api";
 
 enum PreviewerStatus {
@@ -60,12 +61,11 @@ const MediaPreviewer = (props: IProps) => {
   // Playability state
   const [playabilityError, setPlayabilityError] = useState<string | null>(null);
   const [isCheckingPlayability, setIsCheckingPlayability] = useState(false);
-  const playabilityCheckedPathsRef = useRef<Map<string, BakabaseServiceModelsViewFilePlayabilityViewModel>>(new Map());
+  const playabilityCheckedPathsRef = useRef<
+    Map<string, BakabaseServiceModelsViewFilePlayabilityViewModel>
+  >(new Map());
 
-  const isControlled = useCallback(
-    () => mouseOffsetXRef.current != undefined,
-    [],
-  );
+  const isControlled = useCallback(() => mouseOffsetXRef.current != undefined, []);
 
   const setPlayerRef = useCallback((player: HTMLVideoElement) => {
     if (!player) return;
@@ -97,10 +97,7 @@ const MediaPreviewer = (props: IProps) => {
       const percent = progressBarRef.current?.clientWidth
         ? (mouseOffsetX * 100) / progressBarRef.current.clientWidth
         : 0;
-      const totalFrameCount = items.reduce(
-        (prev, curr) => prev + curr.duration,
-        0,
-      );
+      const totalFrameCount = items.reduce((prev, curr) => prev + curr.duration, 0);
       const cf = Math.ceil((totalFrameCount * percent) / 100);
 
       if (cf != currentFrameRef.current) {
@@ -149,8 +146,7 @@ const MediaPreviewer = (props: IProps) => {
     // console.log('Current frame', currentFrame);
     currentFrameRef.current = currentFrame;
     const item = itemsRef.current.find(
-      (item) =>
-        item.startFrame <= currentFrame && item.endFrame >= currentFrame,
+      (item) => item.startFrame <= currentFrame && item.endFrame >= currentFrame,
     );
 
     if (item) {
@@ -184,6 +180,7 @@ const MediaPreviewer = (props: IProps) => {
   useEffect(() => {
     if (!currentItem || currentItem.type !== MediaType.Video) {
       setPlayabilityError(null);
+
       return;
     }
 
@@ -191,6 +188,7 @@ const MediaPreviewer = (props: IProps) => {
 
     // Check if already cached
     const cached = playabilityCheckedPathsRef.current.get(filePath);
+
     if (cached) {
       if (!cached.playable) {
         setPlayabilityError(cached.error || t("Cannot play this file"));
@@ -198,6 +196,7 @@ const MediaPreviewer = (props: IProps) => {
       } else {
         setPlayabilityError(null);
       }
+
       return;
     }
 
@@ -206,6 +205,7 @@ const MediaPreviewer = (props: IProps) => {
       setIsCheckingPlayability(true);
       try {
         const response = await BApi.file.checkFilePlayability({ fullname: filePath });
+
         if (response.data) {
           playabilityCheckedPathsRef.current.set(filePath, response.data);
           if (!response.data.playable) {
@@ -243,6 +243,7 @@ const MediaPreviewer = (props: IProps) => {
         case MediaType.Image:
           return (
             <img
+              alt=""
               src={`${envConfig.apiEndpoint}/file/play?fullname=${encodeURIComponent(currentItem.filePath)}`}
               onLoad={() => {
                 clearTimeout(autoPlayTimeoutRef.current);
@@ -286,9 +287,7 @@ const MediaPreviewer = (props: IProps) => {
               onEnded={() => {
                 // console.log('Video ended');
                 if (!isControlled()) {
-                  const nextItem = items.find(
-                    (item) => item.startFrame > currentItem.startFrame,
-                  );
+                  const nextItem = items.find((item) => item.startFrame > currentItem.startFrame);
 
                   if (nextItem) {
                     setCurrentFrame(nextItem.startFrame);
@@ -334,10 +333,7 @@ const MediaPreviewer = (props: IProps) => {
     if (!autoPlayTimeoutRef.current) {
       if (currentItemRef.current?.type == MediaType.Image) {
         autoPlayTimeoutRef.current = setTimeout(() => {
-          const totalFrameCount = itemsRef.current.reduce(
-            (prev, curr) => prev + curr.duration,
-            0,
-          );
+          const totalFrameCount = itemsRef.current.reduce((prev, curr) => prev + curr.duration, 0);
 
           if (currentFrameRef.current < totalFrameCount) {
             setCurrentFrame(currentFrameRef.current + 1);
@@ -390,8 +386,16 @@ const MediaPreviewer = (props: IProps) => {
             {status == PreviewerStatus.Paused && (
               <div
                 className={"paused-cover"}
+                role="button"
+                tabIndex={0}
                 onClick={() => {
                   setStatus(PreviewerStatus.Playing);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setStatus(PreviewerStatus.Playing);
+                  }
                 }}
               >
                 <MdAccessTime className={"text-3xl"} />
@@ -400,8 +404,16 @@ const MediaPreviewer = (props: IProps) => {
             <div
               ref={mediaRef}
               className="media"
+              role="button"
+              tabIndex={0}
               onClick={() => {
                 setStatus(PreviewerStatus.Paused);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setStatus(PreviewerStatus.Paused);
+                }
               }}
             >
               {renderMedia()}
@@ -421,8 +433,7 @@ const MediaPreviewer = (props: IProps) => {
                 if (!progressBarRef.current) {
                   return;
                 }
-                const { left } =
-                  progressBarRef.current.getBoundingClientRect()!;
+                const { left } = progressBarRef.current.getBoundingClientRect()!;
                 const offsetX = Math.ceil(e.clientX - left);
 
                 if (offsetX != mouseOffsetX) {
@@ -432,10 +443,7 @@ const MediaPreviewer = (props: IProps) => {
               }}
             >
               <div className="bar">
-                <div
-                  className="progress"
-                  style={{ width: `${percentProgress}%` }}
-                />
+                <div className="progress" style={{ width: `${percentProgress}%` }} />
               </div>
             </div>
           </div>

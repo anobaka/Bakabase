@@ -12,8 +12,8 @@ import BApi from "@/sdk/BApi";
 export function LeStatusIndicator() {
   const { t } = useTranslation();
 
-  const leContext = useDependentComponentContextsStore(
-    (s) => s.contexts.find((c) => c.id === dependentComponentIds.LocaleEmulator),
+  const leContext = useDependentComponentContextsStore((s) =>
+    s.contexts.find((c) => c.id === dependentComponentIds.LocaleEmulator),
   );
 
   // Hide entirely when LE is not available on the current platform
@@ -34,12 +34,7 @@ export function LeStatusIndicator() {
 
   if (isInstalling) {
     return (
-      <Chip
-        color="warning"
-        size="sm"
-        startContent={<Spinner size="sm" />}
-        variant="flat"
-      >
+      <Chip color="warning" size="sm" startContent={<Spinner size="sm" />} variant="flat">
         {t("resourceSource.dlsite.le.installing")}
         {leContext?.installationProgress != null && ` ${leContext.installationProgress}%`}
       </Chip>

@@ -10,11 +10,7 @@ type Props = {
   onChange?: (coverSelectOrder: CoverSelectOrderEnum) => void;
   isDisabled?: boolean;
 };
-const CoverSelectOrder = ({
-  coverSelectOrder,
-  onChange,
-  isDisabled,
-}: Props) => {
+const CoverSelectOrder = ({ coverSelectOrder, onChange, isDisabled }: Props) => {
   const { t } = useTranslation();
 
   console.log(coverSelectOrder);
@@ -33,7 +29,7 @@ const CoverSelectOrder = ({
         .filter((x) => !Number.isNaN(parseInt(x, 10)))
         .map((x) => {
           return (
-            <Radio value={x}>
+            <Radio key={x} value={x}>
               {t<string>(`CoverSelectOrder.${CoverSelectOrderEnum[parseInt(x, 10)]}`)}
             </Radio>
           );

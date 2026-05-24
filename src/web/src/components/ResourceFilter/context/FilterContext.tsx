@@ -18,18 +18,16 @@ export interface FilterProviderProps {
 export function FilterProvider({ config, children }: FilterProviderProps) {
   const value = useMemo(() => ({ config }), [config]);
 
-  return (
-    <FilterContext.Provider value={value}>
-      {children}
-    </FilterContext.Provider>
-  );
+  return <FilterContext.Provider value={value}>{children}</FilterContext.Provider>;
 }
 
 export function useFilterConfig(): FilterConfig {
   const context = useContext(FilterContext);
+
   if (!context) {
     throw new Error("useFilterConfig must be used within a FilterProvider");
   }
+
   return context.config;
 }
 
@@ -39,5 +37,6 @@ export function useFilterConfig(): FilterConfig {
  */
 export function useHasFilterContext(): boolean {
   const context = useContext(FilterContext);
+
   return context !== null;
 }

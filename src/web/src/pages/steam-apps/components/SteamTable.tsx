@@ -1,3 +1,5 @@
+import type { SteamApp } from "..";
+
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -12,12 +14,7 @@ import {
   Image,
   Tooltip,
 } from "@heroui/react";
-import {
-  AiOutlineFolderOpen,
-  AiOutlinePlayCircle,
-} from "react-icons/ai";
-
-import type { SteamApp } from "..";
+import { AiOutlineFolderOpen, AiOutlinePlayCircle } from "react-icons/ai";
 
 const getSteamHeaderImage = (appId: number) =>
   `https://cdn.akamai.steamstatic.com/steam/apps/${appId}/header.jpg`;
@@ -29,7 +26,12 @@ interface SteamTableColumn {
 }
 
 export default function SteamTable({
-  apps, showCover, onLaunch, onOpenLocal, formatPlaytime, formatDate,
+  apps,
+  showCover,
+  onLaunch,
+  onOpenLocal,
+  formatPlaytime,
+  formatDate,
 }: {
   apps: SteamApp[];
   showCover: boolean;
@@ -42,6 +44,7 @@ export default function SteamTable({
 
   const columns = useMemo<SteamTableColumn[]>(() => {
     const cols: SteamTableColumn[] = [];
+
     if (showCover) cols.push({ key: "cover", label: "", width: 240 });
     cols.push(
       { key: "appId", label: t("resourceSource.steam.label.appId") },
@@ -52,6 +55,7 @@ export default function SteamTable({
       { key: "account", label: t("resourceSource.steam.label.account") },
       { key: "actions", label: "", width: 120 },
     );
+
     return cols;
   }, [showCover, t]);
 
@@ -77,11 +81,7 @@ export default function SteamTable({
         return formatDate(app.rtimeLastPlayed);
       case "installed":
         return (
-          <Chip
-            color={app.isInstalled ? "success" : "default"}
-            size="sm"
-            variant="flat"
-          >
+          <Chip color={app.isInstalled ? "success" : "default"} size="sm" variant="flat">
             {app.isInstalled ? "Yes" : "No"}
           </Chip>
         );
@@ -90,17 +90,14 @@ export default function SteamTable({
           <Chip size="sm" variant="flat">
             {app.account}
           </Chip>
-        ) : "-";
+        ) : (
+          "-"
+        );
       case "actions":
         return (
           <div className="flex gap-1">
             <Tooltip content={t("resourceSource.steam.action.launch")}>
-              <Button
-                isIconOnly
-                size="sm"
-                variant="light"
-                onPress={() => onLaunch(app.appId)}
-              >
+              <Button isIconOnly size="sm" variant="light" onPress={() => onLaunch(app.appId)}>
                 <AiOutlinePlayCircle className="text-lg" />
               </Button>
             </Tooltip>
@@ -124,7 +121,7 @@ export default function SteamTable({
   };
 
   return (
-    <Table removeWrapper aria-label="Steam Apps" isStriped>
+    <Table isStriped removeWrapper aria-label="Steam Apps">
       <TableHeader columns={columns}>
         {(column) => (
           <TableColumn key={column.key} width={column.width}>
@@ -132,15 +129,10 @@ export default function SteamTable({
           </TableColumn>
         )}
       </TableHeader>
-      <TableBody
-        emptyContent={t("resourceSource.empty")}
-        items={apps}
-      >
+      <TableBody emptyContent={t("resourceSource.empty")} items={apps}>
         {(app) => (
           <TableRow key={app.appId}>
-            {(columnKey) => (
-              <TableCell>{renderCell(app, columnKey as string)}</TableCell>
-            )}
+            {(columnKey) => <TableCell>{renderCell(app, columnKey as string)}</TableCell>}
           </TableRow>
         )}
       </TableBody>

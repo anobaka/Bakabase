@@ -1,20 +1,18 @@
 "use client";
 
+import type { IProperty } from "@/components/Property/models";
+
 import { useState } from "react";
 import dayjs from "dayjs";
 
 import PropertyValueRenderer from "@/components/Property/components/PropertyValueRenderer";
 import { PropertyType, PropertyPool, PropertyTypeLabel, PropertyPoolLabel } from "@/sdk/constants";
-import type { IProperty } from "@/components/Property/models";
 import { serializeStandardValue } from "@/components/StandardValue";
 import { getDbValueType, getBizValueType } from "@/components/Property/PropertySystem";
 import { Tabs, Tab } from "@/components/bakaui";
 
 // Helper to create test property with all required fields
-const createTestProperty = (
-  type: PropertyType,
-  options: any = {},
-): IProperty => ({
+const createTestProperty = (type: PropertyType, options: any = {}): IProperty => ({
   id: type,
   name: PropertyTypeLabel[type],
   type,
@@ -65,9 +63,7 @@ const testProperties: IProperty[] = [
             value: "ml-1-1",
             label: "Level 1-1",
             color: "#4caf50",
-            children: [
-              { value: "ml-1-1-1", label: "Level 1-1-1" },
-            ],
+            children: [{ value: "ml-1-1-1", label: "Level 1-1-1" }],
           },
           { value: "ml-1-2", label: "Level 1-2" },
         ],
@@ -132,7 +128,10 @@ const getSampleValues = (propertyType: PropertyType): { dbValue: any; bizValue?:
 };
 
 // Serialize values for the component
-const getSerializedValues = (property: IProperty, hasValue: boolean): { dbValue?: string; bizValue?: string } => {
+const getSerializedValues = (
+  property: IProperty,
+  hasValue: boolean,
+): { dbValue?: string; bizValue?: string } => {
   if (!hasValue) {
     return { dbValue: undefined, bizValue: undefined };
   }
@@ -157,7 +156,9 @@ const isReadonlyOptions = [false, true];
 const isEditingOptions: (boolean | undefined)[] = [undefined, true, false];
 
 const PropertyValueRendererTestPage = () => {
-  const [changedValues, setChangedValues] = useState<Record<string, { dbValue?: string; bizValue?: string }>>({});
+  const [changedValues, setChangedValues] = useState<
+    Record<string, { dbValue?: string; bizValue?: string }>
+  >({});
 
   const handleValueChange = (key: string) => (dbValue?: string, bizValue?: string) => {
     setChangedValues((prev) => ({
@@ -258,10 +259,7 @@ const PropertyValueRendererTestPage = () => {
                     </td>
                   )}
                   {isEditingIdx === 0 && (
-                    <td
-                      className="border p-1 align-top"
-                      rowSpan={isEditingOptions.length}
-                    >
+                    <td className="border p-1 align-top" rowSpan={isEditingOptions.length}>
                       <span className={isReadonly ? "text-green-600" : "text-orange-600"}>
                         {isReadonly ? "true" : "false"}
                       </span>
@@ -296,15 +294,13 @@ const PropertyValueRendererTestPage = () => {
         Dimensions: hasValue x isReadonly x isEditing x size x variant
       </p>
       <p className="text-xs text-gray-400">
-        Default values: variant="default", size="md", isReadonly=false
+        Default values: variant=&quot;default&quot;, size=&quot;md&quot;, isReadonly=false
       </p>
 
       <Tabs aria-label="Property Types">
         {testProperties.map((property) => (
           <Tab key={property.type} title={property.name}>
-            <div className="pt-4">
-              {renderPropertyTable(property)}
-            </div>
+            <div className="pt-4">{renderPropertyTable(property)}</div>
           </Tab>
         ))}
       </Tabs>

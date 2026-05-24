@@ -53,9 +53,7 @@ export function ResourceDetailLayoutEditor({
         style={frameStyle}
       >
         <div className="flex items-center gap-2 px-3 py-2 border-b-1 border-default-200 dark:border-default-100 shrink-0">
-          <span className="font-semibold text-sm">
-            {t<string>("resource.detailLayout.title")}
-          </span>
+          <span className="font-semibold text-sm">{t<string>("resource.detailLayout.title")}</span>
           <span className="text-xs text-default-500">
             {config.modalWidthPercent}% × {config.modalHeightPercent}%
           </span>

@@ -181,11 +181,7 @@ const MultilevelData = ({ options: propOptions, onChange }: Props) => {
         selectable={false}
         treeData={data}
         onExpand={(keys, { expanded }) => {
-          setExpandKeys(
-            expanded
-              ? _.union(expandKeys, keys)
-              : _.intersection(expandKeys, keys),
-          );
+          setExpandKeys(expanded ? _.union(expandKeys, keys) : _.intersection(expandKeys, keys));
         }}
       />
     </div>

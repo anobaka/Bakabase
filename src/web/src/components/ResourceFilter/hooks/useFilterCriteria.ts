@@ -45,69 +45,94 @@ export function useFilterCriteria(options: UseFilterCriteriaOptions = {}): UseFi
   const { initialCriteria, onChange } = options;
   const [criteria, setCriteriaInternal] = useState<SearchCriteria>(initialCriteria ?? {});
 
-  const setCriteria = useCallback((newCriteria: SearchCriteria) => {
-    setCriteriaInternal(newCriteria);
-    onChange?.(newCriteria);
-  }, [onChange]);
+  const setCriteria = useCallback(
+    (newCriteria: SearchCriteria) => {
+      setCriteriaInternal(newCriteria);
+      onChange?.(newCriteria);
+    },
+    [onChange],
+  );
 
-  const setKeyword = useCallback((keyword: string | undefined) => {
-    setCriteria({ ...criteria, keyword });
-  }, [criteria, setCriteria]);
+  const setKeyword = useCallback(
+    (keyword: string | undefined) => {
+      setCriteria({ ...criteria, keyword });
+    },
+    [criteria, setCriteria],
+  );
 
-  const setTags = useCallback((tags: ResourceTag[]) => {
-    setCriteria({
-      ...criteria,
-      tags: tags.length > 0 ? tags : undefined,
-    });
-  }, [criteria, setCriteria]);
+  const setTags = useCallback(
+    (tags: ResourceTag[]) => {
+      setCriteria({
+        ...criteria,
+        tags: tags.length > 0 ? tags : undefined,
+      });
+    },
+    [criteria, setCriteria],
+  );
 
-  const setGroup = useCallback((group: SearchFilterGroup | undefined) => {
-    setCriteria({ ...criteria, group });
-  }, [criteria, setCriteria]);
+  const setGroup = useCallback(
+    (group: SearchFilterGroup | undefined) => {
+      setCriteria({ ...criteria, group });
+    },
+    [criteria, setCriteria],
+  );
 
-  const addFilter = useCallback((filter: SearchFilter, autoTriggerPropertySelector = false): number => {
-    const newGroup: SearchFilterGroup = criteria.group ?? createDefaultGroup();
+  const addFilter = useCallback(
+    (filter: SearchFilter, autoTriggerPropertySelector = false): number => {
+      const newGroup: SearchFilterGroup = criteria.group ?? createDefaultGroup();
 
-    if (!newGroup.filters) {
-      newGroup.filters = [];
-    }
+      if (!newGroup.filters) {
+        newGroup.filters = [];
+      }
 
-    const newIndex = newGroup.filters.length;
-    newGroup.filters.push(filter);
+      const newIndex = newGroup.filters.length;
 
-    setCriteria({ ...criteria, group: { ...newGroup } });
-    return newIndex;
-  }, [criteria, setCriteria]);
+      newGroup.filters.push(filter);
 
-  const removeFilter = useCallback((index: number) => {
-    if (!criteria.group?.filters) return;
+      setCriteria({ ...criteria, group: { ...newGroup } });
 
-    const newFilters = [...criteria.group.filters];
-    newFilters.splice(index, 1);
+      return newIndex;
+    },
+    [criteria, setCriteria],
+  );
 
-    setCriteria({
-      ...criteria,
-      group: {
-        ...criteria.group,
-        filters: newFilters,
-      },
-    });
-  }, [criteria, setCriteria]);
+  const removeFilter = useCallback(
+    (index: number) => {
+      if (!criteria.group?.filters) return;
 
-  const updateFilter = useCallback((index: number, filter: SearchFilter) => {
-    if (!criteria.group?.filters) return;
+      const newFilters = [...criteria.group.filters];
 
-    const newFilters = [...criteria.group.filters];
-    newFilters[index] = filter;
+      newFilters.splice(index, 1);
 
-    setCriteria({
-      ...criteria,
-      group: {
-        ...criteria.group,
-        filters: newFilters,
-      },
-    });
-  }, [criteria, setCriteria]);
+      setCriteria({
+        ...criteria,
+        group: {
+          ...criteria.group,
+          filters: newFilters,
+        },
+      });
+    },
+    [criteria, setCriteria],
+  );
+
+  const updateFilter = useCallback(
+    (index: number, filter: SearchFilter) => {
+      if (!criteria.group?.filters) return;
+
+      const newFilters = [...criteria.group.filters];
+
+      newFilters[index] = filter;
+
+      setCriteria({
+        ...criteria,
+        group: {
+          ...criteria.group,
+          filters: newFilters,
+        },
+      });
+    },
+    [criteria, setCriteria],
+  );
 
   const addFilterGroup = useCallback(() => {
     const newSubGroup: SearchFilterGroup = createDefaultGroup();
@@ -121,35 +146,43 @@ export function useFilterCriteria(options: UseFilterCriteriaOptions = {}): UseFi
     setCriteria({ ...criteria, group: { ...newGroup } });
   }, [criteria, setCriteria]);
 
-  const removeFilterGroup = useCallback((index: number) => {
-    if (!criteria.group?.groups) return;
+  const removeFilterGroup = useCallback(
+    (index: number) => {
+      if (!criteria.group?.groups) return;
 
-    const newGroups = [...criteria.group.groups];
-    newGroups.splice(index, 1);
+      const newGroups = [...criteria.group.groups];
 
-    setCriteria({
-      ...criteria,
-      group: {
-        ...criteria.group,
-        groups: newGroups,
-      },
-    });
-  }, [criteria, setCriteria]);
+      newGroups.splice(index, 1);
 
-  const updateFilterGroup = useCallback((index: number, group: SearchFilterGroup) => {
-    if (!criteria.group?.groups) return;
+      setCriteria({
+        ...criteria,
+        group: {
+          ...criteria.group,
+          groups: newGroups,
+        },
+      });
+    },
+    [criteria, setCriteria],
+  );
 
-    const newGroups = [...criteria.group.groups];
-    newGroups[index] = group;
+  const updateFilterGroup = useCallback(
+    (index: number, group: SearchFilterGroup) => {
+      if (!criteria.group?.groups) return;
 
-    setCriteria({
-      ...criteria,
-      group: {
-        ...criteria.group,
-        groups: newGroups,
-      },
-    });
-  }, [criteria, setCriteria]);
+      const newGroups = [...criteria.group.groups];
+
+      newGroups[index] = group;
+
+      setCriteria({
+        ...criteria,
+        group: {
+          ...criteria.group,
+          groups: newGroups,
+        },
+      });
+    },
+    [criteria, setCriteria],
+  );
 
   const clearAll = useCallback(() => {
     setCriteria({});

@@ -56,16 +56,22 @@ const ColorPicker = ({ trigger, ...props }: ColorPickerProps) => {
             className={
               "inline-block rounded cursor-pointer border border-gray-300 p-0.5 text-center"
             }
+            role="button"
+            tabIndex={0}
             onClick={() => {
               setPanelVisible(true);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                setPanelVisible(true);
+              }
             }}
           >
             <div
               className={"p-2"}
               style={{
-                backgroundColor: color
-                  ? buildColorValueString(color)
-                  : "var(--bakaui-color)",
+                backgroundColor: color ? buildColorValueString(color) : "var(--bakaui-color)",
               }}
             />
           </div>

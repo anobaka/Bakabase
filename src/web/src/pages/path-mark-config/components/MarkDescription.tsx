@@ -4,7 +4,13 @@ import type { BakabaseAbstractionsModelsDomainPathMark } from "@/sdk/Api";
 
 import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { PathMarkType, PropertyValueType, PathMatchMode, PathMarkApplyScope } from "@/sdk/constants";
+
+import {
+  PathMarkType,
+  PropertyValueType,
+  PathMatchMode,
+  PathMarkApplyScope,
+} from "@/sdk/constants";
 
 type Props = {
   mark: BakabaseAbstractionsModelsDomainPathMark;
@@ -42,6 +48,7 @@ const MarkDescription = ({ mark, className, label, priority }: Props) => {
       // For media library marks with fixed value, append library name
       if (mark.type === PathMarkType.MediaLibrary) {
         const valueType = config.valueType ?? PropertyValueType.Fixed;
+
         if (valueType === PropertyValueType.Fixed && mark.mediaLibrary?.name) {
           typeLabel = `${typeLabel}:${mark.mediaLibrary.name}`;
         }
@@ -50,6 +57,7 @@ const MarkDescription = ({ mark, className, label, priority }: Props) => {
       if (typeLabel) {
         // Add priority as subscript if > 0
         const prioritySuffix = priority && priority > 0 ? `₍${priority}₎` : "";
+
         parts.push(`[${typeLabel}]${prioritySuffix}`);
       }
 
@@ -59,6 +67,7 @@ const MarkDescription = ({ mark, className, label, priority }: Props) => {
 
       if (matchMode === PathMatchMode.Layer) {
         const layer = config.layer ?? 0;
+
         if (layer === 0) {
           if (includesSubdirs) {
             parts.push(t("markDescription.layer.currentAndSubdirs"));
@@ -67,14 +76,21 @@ const MarkDescription = ({ mark, className, label, priority }: Props) => {
           }
         } else if (layer > 0) {
           const layerText = `+${layer}${t("markDescription.layer.suffix")}`;
-          parts.push(includesSubdirs ? `${layerText}${t("markDescription.andSubdirs")}` : layerText);
+
+          parts.push(
+            includesSubdirs ? `${layerText}${t("markDescription.andSubdirs")}` : layerText,
+          );
         } else {
           const layerText = `${layer}${t("markDescription.layer.suffix")}`;
-          parts.push(includesSubdirs ? `${layerText}${t("markDescription.andSubdirs")}` : layerText);
+
+          parts.push(
+            includesSubdirs ? `${layerText}${t("markDescription.andSubdirs")}` : layerText,
+          );
         }
       } else if (matchMode === PathMatchMode.Regex) {
         const regex = config.regex ?? "";
         const regexText = t("markDescription.regex", { regex });
+
         parts.push(includesSubdirs ? `${regexText}${t("markDescription.andSubdirs")}` : regexText);
       } else if (includesSubdirs) {
         // No match mode but has subdirs scope
@@ -84,8 +100,10 @@ const MarkDescription = ({ mark, className, label, priority }: Props) => {
       // For property marks - value info
       if (mark.type === PathMarkType.Property) {
         const valueType = config.valueType;
+
         if (valueType === PropertyValueType.Fixed) {
           const fixedValue = config.fixedValue;
+
           if (fixedValue !== undefined && fixedValue !== null) {
             parts.push(`="${fixedValue}"`);
           }
@@ -99,9 +117,13 @@ const MarkDescription = ({ mark, className, label, priority }: Props) => {
             if (valueLayer === 0) {
               parts.push(t("markDescription.valueLayer.current"));
             } else if (valueLayer > 0) {
-              parts.push(`${t("markDescription.valueFrom")}+${valueLayer}${t("markDescription.layer.suffix")}`);
+              parts.push(
+                `${t("markDescription.valueFrom")}+${valueLayer}${t("markDescription.layer.suffix")}`,
+              );
             } else {
-              parts.push(`${t("markDescription.valueFrom")}${valueLayer}${t("markDescription.layer.suffix")}`);
+              parts.push(
+                `${t("markDescription.valueFrom")}${valueLayer}${t("markDescription.layer.suffix")}`,
+              );
             }
           } else if (valueRegex) {
             // Regex-based extraction
@@ -113,6 +135,7 @@ const MarkDescription = ({ mark, className, label, priority }: Props) => {
       // For media library marks - value info
       if (mark.type === PathMarkType.MediaLibrary) {
         const valueType = config.valueType ?? PropertyValueType.Fixed;
+
         if (valueType === PropertyValueType.Fixed) {
           // Fixed mode: library name is already shown in the label
         } else if (valueType === PropertyValueType.Dynamic) {
@@ -125,9 +148,13 @@ const MarkDescription = ({ mark, className, label, priority }: Props) => {
             if (layerToMediaLibrary === 0) {
               parts.push(t("markDescription.mediaLibraryLayer.current"));
             } else if (layerToMediaLibrary > 0) {
-              parts.push(`${t("markDescription.mediaLibraryFrom")}+${layerToMediaLibrary}${t("markDescription.layer.suffix")}`);
+              parts.push(
+                `${t("markDescription.mediaLibraryFrom")}+${layerToMediaLibrary}${t("markDescription.layer.suffix")}`,
+              );
             } else {
-              parts.push(`${t("markDescription.mediaLibraryFrom")}${layerToMediaLibrary}${t("markDescription.layer.suffix")}`);
+              parts.push(
+                `${t("markDescription.mediaLibraryFrom")}${layerToMediaLibrary}${t("markDescription.layer.suffix")}`,
+              );
             }
           } else if (regexToMediaLibrary) {
             // Regex-based extraction
@@ -139,6 +166,7 @@ const MarkDescription = ({ mark, className, label, priority }: Props) => {
       // For resource marks
       if (mark.type === PathMarkType.Resource) {
         const fsTypeFilter = config.fsTypeFilter;
+
         if (fsTypeFilter === 1) {
           parts.push(t("markDescription.fileOnly"));
         } else if (fsTypeFilter === 2) {
@@ -146,6 +174,7 @@ const MarkDescription = ({ mark, className, label, priority }: Props) => {
         }
 
         const extensions = config.extensions;
+
         if (extensions && extensions.length > 0) {
           parts.push(extensions.join(","));
         }
@@ -154,6 +183,7 @@ const MarkDescription = ({ mark, className, label, priority }: Props) => {
       return parts.length > 0 ? parts.join(" | ") : t("markDescription.empty");
     } catch (error) {
       console.error("Failed to parse mark config:", error);
+
       return t("markDescription.invalid");
     }
   };

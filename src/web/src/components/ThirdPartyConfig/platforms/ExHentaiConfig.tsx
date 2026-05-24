@@ -4,18 +4,21 @@ import { useEffect, useMemo, useState, type FC } from "react";
 import { useTranslation } from "react-i18next";
 import { Textarea } from "@heroui/react";
 
+import AccountsPanel, { type AccountField } from "../base/AccountsPanel";
+import ConfigurableThirdPartyPanel, {
+  type ConfigFieldTab,
+} from "../base/ConfigurableThirdPartyPanel";
+import MetadataMappingPanel from "../base/MetadataMappingPanel";
+import TampermonkeyInstallButton from "../base/TampermonkeyInstallButton";
+import AutoSyncPanel from "../base/AutoSyncPanel";
+import ThirdPartyConfigModal from "../base/ThirdPartyConfigModal";
+
 import { Chip, NumberInput, toast } from "@/components/bakaui";
 import { FileSystemSelectorButton } from "@/components/FileSystemSelector";
 import BApi from "@/sdk/BApi";
 import { useExHentaiOptionsStore } from "@/stores/options";
 import { CookieValidatorTarget, ResourceSource } from "@/sdk/constants";
 import PreferTorrentField from "@/pages/downloader/components/TaskDetailModal/components/PreferTorrentField";
-import AccountsPanel, { type AccountField } from "../base/AccountsPanel";
-import ConfigurableThirdPartyPanel, { type ConfigFieldTab } from "../base/ConfigurableThirdPartyPanel";
-import MetadataMappingPanel from "../base/MetadataMappingPanel";
-import TampermonkeyInstallButton from "../base/TampermonkeyInstallButton";
-import AutoSyncPanel from "../base/AutoSyncPanel";
-import ThirdPartyConfigModal from "../base/ThirdPartyConfigModal";
 
 export enum ExHentaiConfigField {
   Accounts = "accounts",
@@ -30,19 +33,20 @@ export interface ExHentaiConfigPanelProps {
   fields?: ExHentaiConfigField[] | "all";
 }
 
-export const ExHentaiConfigPanel: FC<ExHentaiConfigPanelProps> = ({
-  fields = "all",
-}) => {
+export const ExHentaiConfigPanel: FC<ExHentaiConfigPanelProps> = ({ fields = "all" }) => {
   const { t } = useTranslation();
   const options = useExHentaiOptionsStore((s) => s.data);
   const patch = useExHentaiOptionsStore((s) => s.patch);
   const [namingDefinition, setNamingDefinition] = useState<any>();
 
-  const showDownload = fields === "all" || (Array.isArray(fields) && fields.includes(ExHentaiConfigField.Download));
+  const showDownload =
+    fields === "all" || (Array.isArray(fields) && fields.includes(ExHentaiConfigField.Download));
+
   useEffect(() => {
     if (!showDownload) return;
     BApi.downloadTask.getAllDownloaderDefinitions().then((res) => {
       const def = (res.data || []).find((d) => d.thirdPartyId === 2); // ExHentai = 2
+
       if (def) setNamingDefinition(def);
     });
   }, [showDownload]);
@@ -104,29 +108,30 @@ export const ExHentaiConfigPanel: FC<ExHentaiConfigPanelProps> = ({
         content: (
           <div className="space-y-4">
             <NumberInput
-              label={t<string>("thirdPartyConfig.label.maxConcurrency")}
               description={t<string>("thirdPartyConfig.field.maxConcurrency.description")}
-              min={1} max={100}
+              label={t<string>("thirdPartyConfig.label.maxConcurrency")}
+              max={100}
+              min={1}
               value={options?.maxConcurrency || 1}
               onValueChange={(v) => patch({ maxConcurrency: v })}
             />
             <NumberInput
-              label={t<string>("thirdPartyConfig.label.requestInterval")}
               description={t<string>("thirdPartyConfig.field.requestInterval.description")}
+              label={t<string>("thirdPartyConfig.label.requestInterval")}
               min={0}
               value={options?.requestInterval || 1000}
               onValueChange={(v) => patch({ requestInterval: v })}
             />
             <NumberInput
-              label={t<string>("thirdPartyConfig.label.maxRetries")}
               description={t<string>("thirdPartyConfig.field.maxRetries.description")}
+              label={t<string>("thirdPartyConfig.label.maxRetries")}
               min={0}
               value={options?.maxRetries || 0}
               onValueChange={(v) => patch({ maxRetries: v })}
             />
             <NumberInput
-              label={t<string>("thirdPartyConfig.label.requestTimeout")}
               description={t<string>("thirdPartyConfig.field.requestTimeout.description")}
+              label={t<string>("thirdPartyConfig.label.requestTimeout")}
               min={0}
               value={options?.requestTimeout || 0}
               onValueChange={(v) => patch({ requestTimeout: v })}
@@ -141,7 +146,9 @@ export const ExHentaiConfigPanel: FC<ExHentaiConfigPanelProps> = ({
         content: (
           <div className="space-y-4">
             <div>
-              <span className="text-sm font-medium">{t<string>("thirdPartyConfig.field.defaultPath.label")}</span>
+              <span className="text-sm font-medium">
+                {t<string>("thirdPartyConfig.field.defaultPath.label")}
+              </span>
               <div className="mt-1">
                 <FileSystemSelectorButton
                   fileSystemSelectorProps={{
@@ -151,26 +158,40 @@ export const ExHentaiConfigPanel: FC<ExHentaiConfigPanelProps> = ({
                   }}
                 />
               </div>
-              <span className="text-xs text-default-400 mt-1 block">{t<string>("thirdPartyConfig.field.defaultPath.description")}</span>
+              <span className="text-xs text-default-400 mt-1 block">
+                {t<string>("thirdPartyConfig.field.defaultPath.description")}
+              </span>
             </div>
             <Textarea
-              label={t<string>("thirdPartyConfig.field.namingConvention.label")}
-              placeholder={namingDefinition?.defaultConvention}
               description={
                 namingDefinition?.namingFields?.length ? (
                   <div>
                     <div>{t<string>("thirdPartyConfig.field.namingConvention.description")}</div>
                     <div className="flex flex-wrap gap-1 mt-2">
                       {namingDefinition.namingFields.map((x, i) => (
-                        <Chip key={i} color="secondary" size="sm" variant="flat"
-                          onClick={() => patch({ namingConvention: (options?.namingConvention || "") + `{${x.name || x.key}}` })}>
+                        <Chip
+                          key={i}
+                          color="secondary"
+                          size="sm"
+                          variant="flat"
+                          onClick={() =>
+                            patch({
+                              namingConvention:
+                                (options?.namingConvention || "") + `{${x.name || x.key}}`,
+                            })
+                          }
+                        >
                           {x.name || x.key}
                         </Chip>
                       ))}
                     </div>
                   </div>
-                ) : t<string>("thirdPartyConfig.field.namingConvention.description")
+                ) : (
+                  t<string>("thirdPartyConfig.field.namingConvention.description")
+                )
               }
+              label={t<string>("thirdPartyConfig.field.namingConvention.label")}
+              placeholder={namingDefinition?.defaultConvention}
               size="sm"
               value={options?.namingConvention || ""}
               onValueChange={(v) => patch({ namingConvention: v })}
@@ -214,10 +235,11 @@ export const ExHentaiConfigModal: FC<ExHentaiConfigModalProps> = ({
 }) => {
   const { t } = useTranslation();
   const handleClose = onClose ?? onDestroyed;
+
   return (
     <ThirdPartyConfigModal
-      title={t("resourceSource.exhentai.title")}
       isOpen={isOpen}
+      title={t("resourceSource.exhentai.title")}
       onClose={handleClose}
     >
       <ExHentaiConfigPanel fields={fields} />
@@ -226,4 +248,5 @@ export const ExHentaiConfigModal: FC<ExHentaiConfigModalProps> = ({
 };
 
 const ExHentaiConfig = ExHentaiConfigModal;
+
 export default ExHentaiConfig;

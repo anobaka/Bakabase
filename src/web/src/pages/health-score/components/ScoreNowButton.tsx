@@ -46,6 +46,7 @@ export const ScoreNowButton = () => {
   // Running: show progress + process. Hover swaps in a stop button.
   if (task?.status === BTaskStatus.Running) {
     const pct = task.percentage ?? 0;
+
     return (
       <div
         className="min-w-[180px]"
@@ -104,7 +105,11 @@ export const ScoreNowButton = () => {
 
   // Idle (no task, or Completed/Cancelled)
   return (
-    <Button startContent={<AiOutlinePlayCircle className="text-lg" />} variant="flat" onPress={trigger}>
+    <Button
+      startContent={<AiOutlinePlayCircle className="text-lg" />}
+      variant="flat"
+      onPress={trigger}
+    >
       {t<string>("healthScore.action.runNow")}
     </Button>
   );

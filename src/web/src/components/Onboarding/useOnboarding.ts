@@ -11,6 +11,7 @@ export const useOnboarding = () => {
     }
 
     const completed = localStorage.getItem(ONBOARDING_KEY);
+
     if (!completed) {
       setShowOnboarding(true);
     }

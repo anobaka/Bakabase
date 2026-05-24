@@ -46,11 +46,7 @@ function flattenRoutes(config: RouteMenuItem[]): RouteObject[] {
           r.layout || "basic",
           isLazyComponent(r.component) ? (
             <Suspense
-              fallback={
-                <div className="flex items-center justify-center h-32">
-                  Loading...
-                </div>
-              }
+              fallback={<div className="flex items-center justify-center h-32">Loading...</div>}
             >
               {componentElement}
             </Suspense>

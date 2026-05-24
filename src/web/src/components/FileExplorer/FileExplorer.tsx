@@ -31,8 +31,11 @@ import EventListener, { SelectionMode } from "./components/EventListener";
 import ContextMenu from "./components/ContextMenu";
 import { FileSystemTreeEntryCapabilityMap } from "./models";
 import Shortcuts from "./components/Shortcuts";
-
 import FileExplorerEntry from "./FileExplorerEntry";
+import DeleteConfirmationModal from "./components/DeleteConfirmationModal";
+import WrapModal from "./components/WrapModal";
+import ExtractModal from "./components/ExtractModal";
+
 import BApi from "@/sdk/BApi";
 import { buildLogger, getStandardParentPath, standardizePath } from "@/components/utils";
 import { useFileExplorerClipboardStore } from "@/stores/fileExplorerClipboard";
@@ -40,9 +43,6 @@ import { useFileSystemOptionsStore } from "@/stores/options";
 import RootEntry from "@/core/models/FileExplorer/RootEntry";
 import { Button, Chip, Input, Tooltip, toast } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import DeleteConfirmationModal from "./components/DeleteConfirmationModal";
-import WrapModal from "./components/WrapModal";
-import ExtractModal from "./components/ExtractModal";
 import FolderSelector from "@/components/FolderSelector";
 
 export type FileExplorerProps = {
@@ -121,7 +121,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
         setDebouncedFilterValue(filterInputValue);
       },
       300,
-      [filterInputValue]
+      [filterInputValue],
     );
 
     // Context menu
@@ -233,101 +233,105 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
 
     // Memoize switchSelective to prevent unnecessary re-renders
     // Must be before early return to maintain hooks order
-    const switchSelective = useCallback((e: Entry): boolean => {
-      if (selectable == "disabled") {
-        return false;
-      }
+    const switchSelective = useCallback(
+      (e: Entry): boolean => {
+        if (selectable == "disabled") {
+          return false;
+        }
 
-      if (selectable == "single" || selectionModeRef.current == SelectionMode.Normal) {
-        shiftSelectionStartRef.current = e;
-        if (selectedEntriesRef.current.includes(e)) {
-          if (selectedEntriesRef.current.length > 1) {
-            for (const se of selectedEntriesRef.current.filter((x) => x != e)) {
+        if (selectable == "single" || selectionModeRef.current == SelectionMode.Normal) {
+          shiftSelectionStartRef.current = e;
+          if (selectedEntriesRef.current.includes(e)) {
+            if (selectedEntriesRef.current.length > 1) {
+              for (const se of selectedEntriesRef.current.filter((x) => x != e)) {
+                se.select(false);
+              }
+              setSelectedEntries([e]);
+
+              return false;
+            } else {
+              setSelectedEntries([]);
+
+              return true;
+            }
+          } else {
+            for (const se of selectedEntriesRef.current) {
               se.select(false);
             }
             setSelectedEntries([e]);
 
-            return false;
-          } else {
-            setSelectedEntries([]);
+            return true;
+          }
+        }
+
+        switch (selectionModeRef.current) {
+          case SelectionMode.Ctrl: {
+            shiftSelectionStartRef.current = e;
+            const newSelectedEntries = selectedEntriesRef.current.includes(e)
+              ? selectedEntriesRef.current.filter((x) => x != e)
+              : [...selectedEntriesRef.current, e];
+
+            setSelectedEntries(newSelectedEntries);
 
             return true;
           }
-        } else {
-          for (const se of selectedEntriesRef.current) {
-            se.select(false);
-          }
-          setSelectedEntries([e]);
+          case SelectionMode.Shift: {
+            shiftSelectionStartRef.current ??= e.parent!.filteredChildren![0]!;
+            let startParent = shiftSelectionStartRef.current.parent;
+            const startParentSet = new Set<Entry>();
 
-          return true;
-        }
-      }
-
-      switch (selectionModeRef.current) {
-        case SelectionMode.Ctrl: {
-          shiftSelectionStartRef.current = e;
-          const newSelectedEntries = selectedEntriesRef.current.includes(e)
-            ? selectedEntriesRef.current.filter((x) => x != e)
-            : [...selectedEntriesRef.current, e];
-          setSelectedEntries(newSelectedEntries);
-
-          return true;
-        }
-        case SelectionMode.Shift: {
-          shiftSelectionStartRef.current ??= e.parent!.filteredChildren![0]!;
-          let startParent = shiftSelectionStartRef.current.parent;
-          const startParentSet = new Set<Entry>();
-
-          while (startParent) {
-            startParentSet.add(startParent);
-            startParent = startParent.parent;
-          }
-
-          let endParent = e.parent;
-
-          while (endParent) {
-            if (startParentSet.has(endParent)) {
-              break;
+            while (startParent) {
+              startParentSet.add(startParent);
+              startParent = startParent.parent;
             }
-            endParent = endParent.parent;
-          }
 
-          const buildPreorderTraversal = (entry: Entry, result: Entry[]) => {
-            result.push(entry);
-            if (entry.expanded && entry.filteredChildren) {
-              for (const child of entry.filteredChildren) {
-                buildPreorderTraversal(child, result);
+            let endParent = e.parent;
+
+            while (endParent) {
+              if (startParentSet.has(endParent)) {
+                break;
+              }
+              endParent = endParent.parent;
+            }
+
+            const buildPreorderTraversal = (entry: Entry, result: Entry[]) => {
+              result.push(entry);
+              if (entry.expanded && entry.filteredChildren) {
+                for (const child of entry.filteredChildren) {
+                  buildPreorderTraversal(child, result);
+                }
+              }
+            };
+            const preorderTraversal: Entry[] = [];
+
+            buildPreorderTraversal(endParent!, preorderTraversal);
+            const startIdx = preorderTraversal.indexOf(shiftSelectionStartRef.current);
+            const endIdx = preorderTraversal.indexOf(e);
+            const minIdx = Math.min(startIdx, endIdx);
+            const maxIdx = Math.max(startIdx, endIdx);
+            const newSelectedEntries = preorderTraversal.slice(minIdx, maxIdx + 1);
+
+            for (let i = minIdx; i <= maxIdx; i++) {
+              const en = preorderTraversal[i]!;
+
+              en.select(true);
+            }
+
+            for (const se of selectedEntriesRef.current) {
+              if (!newSelectedEntries.includes(se)) {
+                se.select(false);
               }
             }
-          };
-          const preorderTraversal: Entry[] = [];
+            setSelectedEntries(newSelectedEntries);
 
-          buildPreorderTraversal(endParent!, preorderTraversal);
-          const startIdx = preorderTraversal.indexOf(shiftSelectionStartRef.current);
-          const endIdx = preorderTraversal.indexOf(e);
-          const minIdx = Math.min(startIdx, endIdx);
-          const maxIdx = Math.max(startIdx, endIdx);
-          const newSelectedEntries = preorderTraversal.slice(minIdx, maxIdx + 1);
-
-          for (let i = minIdx; i <= maxIdx; i++) {
-            const en = preorderTraversal[i]!;
-
-            en.select(true);
+            return false;
           }
-
-          for (const se of selectedEntriesRef.current) {
-            if (!newSelectedEntries.includes(se)) {
-              se.select(false);
-            }
-          }
-          setSelectedEntries(newSelectedEntries);
-
-          return false;
         }
-      }
 
-      return true;
-    }, [selectable]);
+        return true;
+      },
+      [selectable],
+    );
 
     if (!root) {
       return null;
@@ -353,9 +357,9 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
         >
           <ContextMenu
             capabilities={capabilities}
+            renderExtraContextMenuItems={renderExtraContextMenuItems}
             root={root}
             selectedEntries={selectedEntries}
-            renderExtraContextMenuItems={renderExtraContextMenuItems}
             onChangeWorkingDirectory={initialize}
           />
         </ControlledMenu>
@@ -478,7 +482,8 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
                 case "ArrowUp":
                 case "ArrowDown": {
                   evt.preventDefault();
-                  const lastSelected = selectedEntriesRef.current[selectedEntriesRef.current.length - 1];
+                  const lastSelected =
+                    selectedEntriesRef.current[selectedEntriesRef.current.length - 1];
                   const parent = lastSelected?.parent ?? rootRef.current;
 
                   if (parent && parent.filteredChildren.length > 0) {
@@ -487,13 +492,17 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
                       : -1;
 
                     let newIndex: number;
+
                     if (key === "ArrowUp") {
-                      newIndex = currentIndex <= 0 ? parent.filteredChildren.length - 1 : currentIndex - 1;
+                      newIndex =
+                        currentIndex <= 0 ? parent.filteredChildren.length - 1 : currentIndex - 1;
                     } else {
-                      newIndex = currentIndex >= parent.filteredChildren.length - 1 ? 0 : currentIndex + 1;
+                      newIndex =
+                        currentIndex >= parent.filteredChildren.length - 1 ? 0 : currentIndex + 1;
                     }
 
                     const newEntry = parent.filteredChildren[newIndex];
+
                     if (newEntry) {
                       for (const se of selectedEntriesRef.current) {
                         se.select(false);
@@ -508,6 +517,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
                 case "Enter": {
                   if (selectedEntriesRef.current.length === 1) {
                     const entry = selectedEntriesRef.current[0];
+
                     if (entry.isDirectoryOrDrive) {
                       initialize(entry.path);
                     }
@@ -519,6 +529,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
                   if ((evt.ctrlKey || evt.metaKey) && selectedEntriesRef.current.length > 0) {
                     evt.preventDefault();
                     const paths = selectedEntriesRef.current.map((e) => e.path);
+
                     clipboardStore.copy(paths);
                     toast.success(t<string>("Copied {{count}} items", { count: paths.length }));
                   }
@@ -529,6 +540,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
                   if ((evt.ctrlKey || evt.metaKey) && selectedEntriesRef.current.length > 0) {
                     evt.preventDefault();
                     const paths = selectedEntriesRef.current.map((e) => e.path);
+
                     clipboardStore.cut(paths);
                     toast.success(t<string>("Cut {{count}} items", { count: paths.length }));
                   }
@@ -542,10 +554,14 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
 
                     // Determine destination directory based on selection
                     let destDir: string | undefined;
+
                     if (selectedEntriesRef.current.length === 0) {
                       // No selection -> paste to working directory
                       destDir = rootRef.current?.path;
-                    } else if (selectedEntriesRef.current.length === 1 && selectedEntriesRef.current[0].isDirectoryOrDrive) {
+                    } else if (
+                      selectedEntriesRef.current.length === 1 &&
+                      selectedEntriesRef.current[0].isDirectoryOrDrive
+                    ) {
                       // Single directory selected -> paste into it
                       destDir = selectedEntriesRef.current[0].path;
                     }
@@ -557,19 +573,23 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
                         const allItemsAlreadyInDest = paths.every(
                           (p) => getStandardParentPath(p) === destDir,
                         );
+
                         if (allItemsAlreadyInDest) {
                           break;
                         }
                       }
 
-                      const apiCall = mode === "copy"
-                        ? BApi.file.copyEntries({ destDir, entryPaths: paths })
-                        : BApi.file.moveEntries({ destDir, entryPaths: paths });
+                      const apiCall =
+                        mode === "copy"
+                          ? BApi.file.copyEntries({ destDir, entryPaths: paths })
+                          : BApi.file.moveEntries({ destDir, entryPaths: paths });
 
                       apiCall.then(() => {
-                        const message = mode === "copy"
-                          ? t<string>("Copied {{count}} items", { count: paths.length })
-                          : t<string>("Moved {{count}} items", { count: paths.length });
+                        const message =
+                          mode === "copy"
+                            ? t<string>("Copied {{count}} items", { count: paths.length })
+                            : t<string>("Moved {{count}} items", { count: paths.length });
+
                         toast.success(message);
                         if (mode === "cut") {
                           clipboardStore.clear();
@@ -676,10 +696,10 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
           <Tooltip content={t<string>("fileExplorer.label.showHiddenFiles")}>
             <Button
               isIconOnly
+              color={showHiddenFiles ? "primary" : "default"}
               radius={"none"}
               size={"sm"}
               variant={showHiddenFiles ? "flat" : "light"}
-              color={showHiddenFiles ? "primary" : "default"}
               onPress={() => {
                 fsOptionsStore.patch({ showHiddenFiles: !showHiddenFiles });
               }}
@@ -714,7 +734,6 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
             renderAfterName={renderAfterName}
             renderBeforeRightOperations={renderBeforeRightOperations}
             switchSelective={switchSelective}
-            onEnterDirectory={initialize}
             onChildrenLoaded={(e) => {
               if (!defaultSelectedPathInitializedRef.current) {
                 defaultSelectedPathInitializedRef.current = true;
@@ -766,6 +785,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
                 }
               }
             }}
+            onEnterDirectory={initialize}
           />
         </div>
       </div>

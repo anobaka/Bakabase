@@ -25,11 +25,7 @@ const NextuiPage = () => {
             <SelectItem key={animal.key}>{animal.label}</SelectItem>
           ))}
         </Select>
-        <Select
-          fullWidth={false}
-          label="Favorite Animal"
-          placeholder="Select an animal"
-        >
+        <Select fullWidth={false} label="Favorite Animal" placeholder="Select an animal">
           {animals.map((animal) => (
             <SelectItem key={animal.key}>{animal.label}</SelectItem>
           ))}

@@ -23,6 +23,9 @@ import { CgNotes } from "react-icons/cg";
 import { MdOutlineCreateNewFolder } from "react-icons/md";
 import { LoadingOutlined } from "@ant-design/icons";
 import { ImMoveUp } from "react-icons/im";
+import _ from "lodash";
+
+import BetaChip from "../Chips/BetaChip";
 
 import {
   Button,
@@ -45,23 +48,27 @@ import {
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import ConfirmModal from "@/components/ConfirmModal";
 import BApi from "@/sdk/BApi";
-import { BakabaseServiceModelsViewCompressedFileDetectionResultViewModel, BakabaseServiceModelsViewDecompressionResultViewModel } from "@/sdk/Api";
-import BetaChip from "../Chips/BetaChip";
-import _ from "lodash";
+
+import type {
+  BakabaseServiceModelsViewCompressedFileDetectionResultViewModel,
+  BakabaseServiceModelsViewDecompressionResultViewModel,
+} from "@/sdk/Api";
 
 // Backend view model types
-type CompressedFileDetectionResultDto = BakabaseServiceModelsViewCompressedFileDetectionResultViewModel;
+type CompressedFileDetectionResultDto =
+  BakabaseServiceModelsViewCompressedFileDetectionResultViewModel;
 
 type DecompressionResultDto = BakabaseServiceModelsViewDecompressionResultViewModel;
 
-type TableItem = Omit<CompressedFileDetectionResultDto, 'status' | 'message'> & Omit<DecompressionResultDto, 'status' | 'percentage' | 'message'> & {
-  index: number;
-  detectionStatus?: CompressedFileDetectionResultStatus;
-  detectionMessage?: string;
-  decompressionStatus?: DecompressionStatus;
-  decompressionPercentage?: number;
-  decompressionMessage?: string;
-};
+type TableItem = Omit<CompressedFileDetectionResultDto, "status" | "message"> &
+  Omit<DecompressionResultDto, "status" | "percentage" | "message"> & {
+    index: number;
+    detectionStatus?: CompressedFileDetectionResultStatus;
+    detectionMessage?: string;
+    decompressionStatus?: DecompressionStatus;
+    decompressionPercentage?: number;
+    decompressionMessage?: string;
+  };
 
 type Props = { paths: string[] } & DestroyableProps;
 
@@ -211,6 +218,7 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
                 detectionStatus: result.status,
                 index: next.length,
               };
+
               next.push(mapped);
             }
 
@@ -256,6 +264,7 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
     // Check for dangerous operation combination
     const dangerousItems = detectedItems.filter((item) => {
       const op = operationMap[item.key] ?? globalOperation;
+
       return op.moveToParent && !op.decompressToNewFolder;
     });
 
@@ -271,7 +280,7 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
             </div>
           ),
           footer: {
-            actions: ['ok', 'cancel'],
+            actions: ["ok", "cancel"],
             okProps: {
               children: t("common.confirm.continueAnyway"),
               color: "danger",
@@ -280,7 +289,7 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
               children: t("common.action.cancel"),
               color: "default",
               variant: "light",
-            }
+            },
           },
           onOk: () => {
             resolve(true);
@@ -291,10 +300,9 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
           children: (
             <div className="flex flex-col gap-3">
               <p className="text-base">
-                {t(
-                  "bulkDecompression.warning.dangerousOperation",
-                  { count: dangerousItems.length }
-                )}
+                {t("bulkDecompression.warning.dangerousOperation", {
+                  count: dangerousItems.length,
+                })}
               </p>
               <ul className="list-disc list-inside space-y-1 text-sm text-danger">
                 <li>{t("bulkDecompression.warning.allEntriesWillBeMoved")}</li>
@@ -307,11 +315,9 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
                   {t("bulkDecompression.tip.recommendation")}
                 </p>
               </div>
-              <p className="text-base font-semibold">
-                {t("common.confirm.continue")}
-              </p>
+              <p className="text-base font-semibold">{t("common.confirm.continue")}</p>
             </div>
-          )
+          ),
         });
       });
 
@@ -494,7 +500,11 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
           // <Chip color="default" variant="light">
           //   <Spinner color="default" labelColor="foreground" size="sm" />
           // </Chip>
-          <CircularProgress size='sm' showValueLabel={true} value={result.decompressionPercentage} />
+          <CircularProgress
+            showValueLabel={true}
+            size="sm"
+            value={result.decompressionPercentage}
+          />
         );
       case DecompressionStatus.Success:
         return (
@@ -576,21 +586,42 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
         <div className="flex items-center gap-0">
           {showTooltip ? (
             <>
-              <Tooltip className="max-w-[320px]" color="primary" content={t("bulkDecompression.tip.extractToNewDirectory")}>
+              <Tooltip
+                className="max-w-[320px]"
+                color="primary"
+                content={t("bulkDecompression.tip.extractToNewDirectory")}
+              >
                 {decompressToNewFolderBtn}
               </Tooltip>
-              <Tooltip className="max-w-[320px]" color="danger" content={t("bulkDecompression.tip.deleteSourceAfterDecompression")}>
+              <Tooltip
+                className="max-w-[320px]"
+                color="danger"
+                content={t("bulkDecompression.tip.deleteSourceAfterDecompression")}
+              >
                 {deleteAfterDecompressionBtn}
               </Tooltip>
-              <Tooltip className="max-w-[320px]" color="success" content={t("bulkDecompression.tip.moveToParentDirectory")}>
+              <Tooltip
+                className="max-w-[320px]"
+                color="success"
+                content={t("bulkDecompression.tip.moveToParentDirectory")}
+              >
                 {moveToParentBtn}
               </Tooltip>
-              <Tooltip className="max-w-[320px]" color="warning" content={t("bulkDecompression.tip.overwriteExistingFiles")}>
+              <Tooltip
+                className="max-w-[320px]"
+                color="warning"
+                content={t("bulkDecompression.tip.overwriteExistingFiles")}
+              >
                 {overwriteExistFilesBtn}
               </Tooltip>
             </>
           ) : (
-            [decompressToNewFolderBtn, deleteAfterDecompressionBtn, moveToParentBtn, overwriteExistFilesBtn]
+            [
+              decompressToNewFolderBtn,
+              deleteAfterDecompressionBtn,
+              moveToParentBtn,
+              overwriteExistFilesBtn,
+            ]
           )}
         </div>
       );
@@ -604,22 +635,24 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
     (r) => r.detectionStatus == CompressedFileDetectionResultStatus.Complete,
   );
 
-  const someNotDecompressToNewFolder = _.values(operationMap).some(a => !a.decompressToNewFolder);
-  const someNotDeleteAfterDecompression = _.values(operationMap).some(a => !a.deleteAfterDecompression);
-  const someNotMoveToParent = _.values(operationMap).some(a => !a.moveToParent);
-  const someNotOverwriteExistFiles = _.values(operationMap).some(a => !a.overwriteExistFiles);
+  const someNotDecompressToNewFolder = _.values(operationMap).some((a) => !a.decompressToNewFolder);
+  const someNotDeleteAfterDecompression = _.values(operationMap).some(
+    (a) => !a.deleteAfterDecompression,
+  );
+  const someNotMoveToParent = _.values(operationMap).some((a) => !a.moveToParent);
+  const someNotOverwriteExistFiles = _.values(operationMap).some((a) => !a.overwriteExistFiles);
 
   return (
     <Modal
       className={"max-w-[95vw] max-h-[90vh]"}
       footer={false}
       size={"xl"}
-      title={(
+      title={
         <div className="flex items-center gap-1">
           {t<string>("bulkDecompression.modal.title")}
           <BetaChip />
         </div>
-      )}
+      }
       visible={visible}
       onClose={() => {
         if (detecting || abortDecompressingRef.current) {
@@ -634,6 +667,7 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
               close();
             },
           });
+
           return;
         }
         close();
@@ -737,7 +771,9 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
                   dataKey="index"
                   headerClassName="flex items-center justify-center"
                   label={
-                    <div className="h-8 flex items-center justify-center">{t<string>("bulkDecompression.label.index")}</div>
+                    <div className="h-8 flex items-center justify-center">
+                      {t<string>("bulkDecompression.label.index")}
+                    </div>
                   }
                   width={60}
                 />
@@ -802,15 +838,15 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
                                 </div>
                                 {(operationMap[result.key] ?? globalOperation)
                                   ?.decompressToNewFolder && (
-                                    <div>
-                                      <Chip color="success" size="sm" variant="light">
-                                        <div className="flex items-center gap-1">
-                                          <MdOutlineCreateNewFolder className="text-lg" />
-                                          {result.decompressToDirName}
-                                        </div>
-                                      </Chip>
-                                    </div>
-                                  )}
+                                  <div>
+                                    <Chip color="success" size="sm" variant="light">
+                                      <div className="flex items-center gap-1">
+                                        <MdOutlineCreateNewFolder className="text-lg" />
+                                        {result.decompressToDirName}
+                                      </div>
+                                    </Chip>
+                                  </div>
+                                )}
                                 {result.contentSampleGroups &&
                                   result.contentSampleGroups.length > 0 && (
                                     <div className="flex flex-wrap gap-1 items-center">
@@ -838,9 +874,9 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
                                                 />
                                                 {restFileCount > 0
                                                   ? t<string>(
-                                                    "bulkDecompression.label.sampleFilesAndMore",
-                                                    { sampleFilesText, restFileCount }
-                                                  )
+                                                      "bulkDecompression.label.sampleFilesAndMore",
+                                                      { sampleFilesText, restFileCount },
+                                                    )
                                                   : sampleFilesText}
                                               </div>
                                             </Chip>
@@ -859,7 +895,11 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
                   dataKey="files"
                   flexGrow={1}
                   headerClassName="flex items-center justify-start"
-                  label={<div className="h-8 flex items-center">{t<string>("bulkDecompression.label.files")}</div>}
+                  label={
+                    <div className="h-8 flex items-center">
+                      {t<string>("bulkDecompression.label.files")}
+                    </div>
+                  }
                   width={width * 0.4}
                 />
                 <Column
@@ -884,14 +924,18 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
                   )}
                   dataKey="password"
                   headerClassName="flex items-center justify-start"
-                  label={<div className="h-8 flex items-center">{t<string>("bulkDecompression.label.password")}</div>}
+                  label={
+                    <div className="h-8 flex items-center">
+                      {t<string>("bulkDecompression.label.password")}
+                    </div>
+                  }
                   width={150}
                 />
                 <Column
                   cellRenderer={({ rowData: result }) => (
                     <div className="flex items-center justify-center px-2 py-2">
                       {renderDetectionStatus(result)}
-                      {(result.detectionMessage) && (
+                      {result.detectionMessage && (
                         <Button
                           isIconOnly
                           size="sm"
@@ -901,7 +945,9 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
                               defaultVisible: true,
                               size: "xl",
                               title: t("common.label.message"),
-                              children: <pre className="whitespace-pre-wrap">{result.detectionMessage}</pre>,
+                              children: (
+                                <pre className="whitespace-pre-wrap">{result.detectionMessage}</pre>
+                              ),
                             });
                           }}
                         >
@@ -923,7 +969,7 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
                   cellRenderer={({ rowData: result }) => (
                     <div className="flex items-center justify-center px-2 py-2">
                       {renderDecompressionStatus(result)}
-                      {(result.decompressionMessage) && (
+                      {result.decompressionMessage && (
                         <Button
                           isIconOnly
                           size="sm"
@@ -933,7 +979,11 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
                               defaultVisible: true,
                               size: "xl",
                               title: t("common.label.message"),
-                              children: <pre className="whitespace-pre-wrap">{result.decompressionMessage}</pre>,
+                              children: (
+                                <pre className="whitespace-pre-wrap">
+                                  {result.decompressionMessage}
+                                </pre>
+                              ),
                             });
                           }}
                         >
@@ -957,7 +1007,7 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
                       {result.detectionStatus === CompressedFileDetectionResultStatus.Complete &&
                         renderOperations(
                           operationMap[result.key]?.decompressToNewFolder ??
-                          globalOperation.decompressToNewFolder,
+                            globalOperation.decompressToNewFolder,
                           (v) => {
                             setOperationMap((prev) => ({
                               ...prev,
@@ -965,7 +1015,7 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
                             }));
                           },
                           operationMap[result.key]?.deleteAfterDecompression ??
-                          globalOperation.deleteAfterDecompression,
+                            globalOperation.deleteAfterDecompression,
                           (v) => {
                             setOperationMap((prev) => ({
                               ...prev,
@@ -979,7 +1029,8 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
                               [result.key]: { ...prev[result.key], moveToParent: v },
                             }));
                           },
-                          operationMap[result.key]?.overwriteExistFiles ?? globalOperation.overwriteExistFiles,
+                          operationMap[result.key]?.overwriteExistFiles ??
+                            globalOperation.overwriteExistFiles,
                           (v) => {
                             setOperationMap((prev) => ({
                               ...prev,
@@ -1007,7 +1058,9 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
                   label={
                     <div className="h-8 flex items-center gap-2 px-2">
                       {renderOperations(
-                        someNotDecompressToNewFolder ? false : globalOperation.decompressToNewFolder,
+                        someNotDecompressToNewFolder
+                          ? false
+                          : globalOperation.decompressToNewFolder,
                         (v) => {
                           setGlobalOperation((prev) => ({ ...prev, decompressToNewFolder: v }));
                           setOperationMap((prev) => {
@@ -1018,7 +1071,9 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
                             return prev;
                           });
                         },
-                        someNotDeleteAfterDecompression ? false : globalOperation.deleteAfterDecompression,
+                        someNotDeleteAfterDecompression
+                          ? false
+                          : globalOperation.deleteAfterDecompression,
                         (v) => {
                           setGlobalOperation((prev) => ({ ...prev, deleteAfterDecompression: v }));
                           setOperationMap((prev) => {

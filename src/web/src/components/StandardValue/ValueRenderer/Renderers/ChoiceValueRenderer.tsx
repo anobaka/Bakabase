@@ -7,16 +7,15 @@ import { useEffect, useState, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import ChoiceValueEditor from "../../ValueEditor/Editors/ChoiceValueEditor";
+import { buildVisibleOptions, hasMoreOptions, getRemainingCount } from "../utils";
 
 import NotSet, { LightText } from "./components/LightText";
 import NoChoicesAvailable from "./components/NoChoicesAvailable";
 
 import SelectableChip from "@/components/StandardValue/ValueRenderer/Renderers/components/SelectableChip";
-
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { Button } from "@/components/bakaui";
 import { buildLogger } from "@/components/utils";
-import { buildVisibleOptions, hasMoreOptions, getRemainingCount } from "../utils";
 import { useFilterOptionsThreshold } from "@/hooks/useFilterOptionsThreshold";
 
 type Data = { label: string; value: string; color?: string };
@@ -30,8 +29,18 @@ type ChoiceValueRendererProps = ValueRendererProps<string[]> & {
 
 const log = buildLogger("ChoiceValueRenderer");
 const ChoiceValueRenderer = (props: ChoiceValueRendererProps) => {
-  const { value, editor, variant, getDataSource, multiple, valueAttributes, size, isReadonly: propsIsReadonly, isEditing: controlledIsEditing, defaultEditing = false } =
-    props;
+  const {
+    value,
+    editor,
+    variant,
+    getDataSource,
+    multiple,
+    valueAttributes,
+    size,
+    isReadonly: propsIsReadonly,
+    isEditing: controlledIsEditing,
+    defaultEditing = false,
+  } = props;
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const [dataSource, setDataSource] = useState<Data[]>([]);
@@ -61,6 +70,7 @@ const ChoiceValueRenderer = (props: ChoiceValueRendererProps) => {
     };
 
     document.addEventListener("mousedown", handleClickOutside);
+
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [controlledIsEditing, isEditing]);
 
@@ -104,33 +114,43 @@ const ChoiceValueRenderer = (props: ChoiceValueRendererProps) => {
       const newDbValues = selectedValues.includes(itemValue)
         ? selectedValues.filter((v) => v !== itemValue)
         : [...selectedValues, itemValue];
+
       // Empty array → undefined (no value)
       if (newDbValues.length === 0) {
         editor.onValueChange(undefined, undefined);
+
         return;
       }
       const newBizValues = newDbValues
         .map((v) => dataSource.find((d) => d.value === v)?.label)
         .filter((l): l is string => l !== undefined);
+
       editor.onValueChange(newDbValues, newBizValues);
     } else {
       if (selectedValues.includes(itemValue)) {
         // Deselect → no value
         editor.onValueChange(undefined, undefined);
+
         return;
       }
       const newDbValues = [itemValue];
       const newBizValues = newDbValues
         .map((v) => dataSource.find((d) => d.value === v)?.label)
         .filter((l): l is string => l !== undefined);
+
       editor.onValueChange(newDbValues, newBizValues);
     }
   };
 
   // Build visible options using shared utility
   const visibleOptions = useMemo(
-    () => buildVisibleOptions(dataSource, (item) => selectedValues.includes(item.value), optionsThreshold),
-    [dataSource, selectedValues, optionsThreshold]
+    () =>
+      buildVisibleOptions(
+        dataSource,
+        (item) => selectedValues.includes(item.value),
+        optionsThreshold,
+      ),
+    [dataSource, selectedValues, optionsThreshold],
   );
 
   const hasMore = hasMoreOptions(dataSource.length, optionsThreshold);
@@ -143,21 +163,16 @@ const ChoiceValueRenderer = (props: ChoiceValueRendererProps) => {
         {visibleOptions.map((item) => (
           <SelectableChip
             key={item.value}
+            color={item.color}
+            isSelected={selectedValues.includes(item.value)}
             itemKey={item.value}
             label={item.label}
-            isSelected={selectedValues.includes(item.value)}
-            color={item.color}
             size={size}
             onClick={() => toggleValue(item.value)}
           />
         ))}
         {hasMore && (
-          <Button
-            size="sm"
-            variant="light"
-            color="primary"
-            onClick={openFullEditor}
-          >
+          <Button color="primary" size="sm" variant="light" onClick={openFullEditor}>
             {t("common.action.more")} (+{remainingCount})
           </Button>
         )}
@@ -183,7 +198,23 @@ const ChoiceValueRenderer = (props: ChoiceValueRendererProps) => {
 
   if (validValues.length == 0) {
     return (
-      <div ref={containerRef} onClick={handleClick} className={canEdit ? "cursor-pointer" : undefined}>
+      <div
+        ref={containerRef}
+        className={canEdit ? "cursor-pointer" : undefined}
+        role={canEdit ? "button" : undefined}
+        tabIndex={canEdit ? 0 : undefined}
+        onClick={handleClick}
+        onKeyDown={
+          canEdit
+            ? (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  handleClick();
+                }
+              }
+            : undefined
+        }
+      >
         <NotSet size={size} onClick={canEdit ? handleClick : undefined} />
       </div>
     );
@@ -191,25 +222,39 @@ const ChoiceValueRenderer = (props: ChoiceValueRendererProps) => {
 
   if (variant == "light") {
     return (
-      <LightText onClick={handleClick} size={size}>
+      <LightText size={size} onClick={handleClick}>
         {value?.map((v, i) => (
           <span key={i}>
             {i != 0 && ", "}
-            <LightText color={valueAttributes?.[i]?.color} size={size}>{v}</LightText>
+            <LightText color={valueAttributes?.[i]?.color} size={size}>
+              {v}
+            </LightText>
           </span>
         ))}
       </LightText>
     );
   } else {
     return (
-      <div ref={containerRef} onClick={handleClick} className="flex flex-wrap gap-1 cursor-pointer">
+      <div
+        ref={containerRef}
+        className="flex flex-wrap gap-1 cursor-pointer"
+        role="button"
+        tabIndex={0}
+        onClick={handleClick}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            handleClick();
+          }
+        }}
+      >
         {value?.map((v, i) => (
           <SelectableChip
             key={i}
-            itemKey={`display-${i}`}
-            label={v}
             isSelected
             color={valueAttributes?.[i]?.color}
+            itemKey={`display-${i}`}
+            label={v}
             size={size}
           />
         ))}

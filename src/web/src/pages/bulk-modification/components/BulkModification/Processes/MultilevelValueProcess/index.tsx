@@ -13,9 +13,7 @@ enum MultilevelProcessorOperation {
   AddLayer = 4,
 }
 
-const multilevelProcessorOperations = Object.keys(
-  MultilevelProcessorOperation,
-).map((x) => ({
+const multilevelProcessorOperations = Object.keys(MultilevelProcessorOperation).map((x) => ({
   label: x,
   value: MultilevelProcessorOperation[x],
 }));

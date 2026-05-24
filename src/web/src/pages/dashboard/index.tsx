@@ -81,7 +81,11 @@ const DashboardPage = () => {
   const [recentlyAdded, setRecentlyAdded] = useState<ResourceModel[]>([]);
   const [recentlyPlayed, setRecentlyPlayed] = useState<ResourceModel[]>([]);
   const [pinnedResources, setPinnedResources] = useState<ResourceModel[]>([]);
-  const [resourcesLoading, setResourcesLoading] = useState({ added: true, played: true, pinned: true });
+  const [resourcesLoading, setResourcesLoading] = useState({
+    added: true,
+    played: true,
+    pinned: true,
+  });
   const [mediaLibraries, setMediaLibraries] = useState<Array<{ id: number; name: string }>>([]);
   const initializedRef = useRef(false);
 
@@ -363,7 +367,9 @@ const DashboardPage = () => {
             <AiOutlineRise className="text-2xl" />
           </div>
           <div className="flex flex-col flex-1">
-            <span className="text-sm text-[var(--theme-text-subtle)]">{t<string>("dashboard.stat.trend")}</span>
+            <span className="text-sm text-[var(--theme-text-subtle)]">
+              {t<string>("dashboard.stat.trend")}
+            </span>
             <div className="flex items-center justify-between">
               <span className="text-lg font-semibold">{t<string>("dashboard.stat.weeks")}</span>
               <TrendChart />
@@ -506,7 +512,9 @@ const DashboardPage = () => {
         {/* Library Distribution */}
         {(data.mediaLibraryResourceCounts ?? []).length > 0 && (
           <div className="bg-[var(--theme-block-background)] rounded-xl p-5">
-            <h3 className="text-lg font-semibold mb-3">{t<string>("dashboard.section.libraryDistribution")}</h3>
+            <h3 className="text-lg font-semibold mb-3">
+              {t<string>("dashboard.section.libraryDistribution")}
+            </h3>
             <div className="flex flex-wrap gap-2">
               {data.mediaLibraryResourceCounts?.map((lib) => (
                 <div

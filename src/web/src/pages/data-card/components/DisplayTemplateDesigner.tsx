@@ -1,5 +1,8 @@
 "use client";
 
+import type { IProperty } from "@/components/Property/models";
+import type { DestroyableProps } from "@/components/bakaui/types";
+
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
@@ -12,14 +15,7 @@ import {
 } from "@ant-design/icons";
 
 import BApi from "@/sdk/BApi";
-import {
-  Button,
-  Chip,
-  Input,
-  Modal,
-} from "@/components/bakaui";
-import type { IProperty } from "@/components/Property/models";
-import type { DestroyableProps } from "@/components/bakaui/types";
+import { Chip, Input, Modal } from "@/components/bakaui";
 
 interface LayoutItem {
   propertyId: number;
@@ -59,6 +55,7 @@ const DisplayTemplateDesigner = ({
   const [rows, setRows] = useState(initial?.rows || 4);
   const [layout, setLayout] = useState<LayoutItem[]>(() => {
     if (initial?.layout?.length) return initial.layout;
+
     // Default: stack each property in a row, full width
     return propertyIds.map((pid, i) => ({
       propertyId: pid,
@@ -95,6 +92,7 @@ const DisplayTemplateDesigner = ({
     const rect = gridRef.current.getBoundingClientRect();
     const gx = Math.floor((clientX - rect.left) / CELL_SIZE);
     const gy = Math.floor((clientY - rect.top) / CELL_SIZE);
+
     return { gx: Math.max(0, Math.min(gx, cols - 1)), gy: Math.max(0, Math.min(gy, rows - 1)) };
   };
 
@@ -125,9 +123,11 @@ const DisplayTemplateDesigner = ({
     e.preventDefault();
     e.stopPropagation();
     const item = layout.find((l) => l.propertyId === propertyId);
+
     if (!item) return;
 
     const { gx, gy } = cellToGrid(e.clientX, e.clientY);
+
     setDragging({
       propertyId,
       mode,
@@ -157,6 +157,7 @@ const DisplayTemplateDesigner = ({
       if (dragging.mode === "move" || dragging.mode === "place") {
         const w = dragging.startItem?.w ?? 2;
         const h = dragging.startItem?.h ?? 1;
+
         setPreview(
           clampItem({
             propertyId: dragging.propertyId,
@@ -168,6 +169,7 @@ const DisplayTemplateDesigner = ({
         );
       } else if (dragging.mode === "resize" && dragging.startItem) {
         const si = dragging.startItem;
+
         setPreview(
           clampItem({
             propertyId: dragging.propertyId,
@@ -186,17 +188,17 @@ const DisplayTemplateDesigner = ({
     if (!dragging || !preview) {
       setDragging(null);
       setPreview(null);
+
       return;
     }
 
     const clamped = clampItem(preview);
+
     if (!hasOverlap(clamped, dragging.propertyId)) {
       if (dragging.mode === "place") {
         setLayout((prev) => [...prev, clamped]);
       } else {
-        setLayout((prev) =>
-          prev.map((l) => (l.propertyId === dragging.propertyId ? clamped : l)),
-        );
+        setLayout((prev) => prev.map((l) => (l.propertyId === dragging.propertyId ? clamped : l)));
       }
     }
 
@@ -210,17 +212,13 @@ const DisplayTemplateDesigner = ({
 
   const toggleHideLabel = (propertyId: number) => {
     setLayout((prev) =>
-      prev.map((l) =>
-        l.propertyId === propertyId ? { ...l, hideLabel: !l.hideLabel } : l,
-      ),
+      prev.map((l) => (l.propertyId === propertyId ? { ...l, hideLabel: !l.hideLabel } : l)),
     );
   };
 
   const toggleHideEmpty = (propertyId: number) => {
     setLayout((prev) =>
-      prev.map((l) =>
-        l.propertyId === propertyId ? { ...l, hideEmpty: !l.hideEmpty } : l,
-      ),
+      prev.map((l) => (l.propertyId === propertyId ? { ...l, hideEmpty: !l.hideEmpty } : l)),
     );
   };
 
@@ -247,34 +245,36 @@ const DisplayTemplateDesigner = ({
       defaultVisible
       size="3xl"
       title={t("dataCard.type.displayTemplate")}
-      onOk={handleSave}
       onDestroyed={onDestroyed}
+      onOk={handleSave}
     >
       <div className="flex flex-col gap-4">
-        <p className="text-xs text-default-400">
-          {t("dataCard.displayTemplate.description")}
-        </p>
+        <p className="text-xs text-default-400">{t("dataCard.displayTemplate.description")}</p>
 
         {/* Grid size controls */}
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <span className="text-sm">{t("dataCard.displayTemplate.cols")}</span>
             <Input
-              type="number"
-              size="sm"
               className="w-20"
+              size="sm"
+              type="number"
               value={String(cols)}
-              onValueChange={(v) => setCols(Math.max(MIN_COLS, Math.min(MAX_COLS, Number(v) || MIN_COLS)))}
+              onValueChange={(v) =>
+                setCols(Math.max(MIN_COLS, Math.min(MAX_COLS, Number(v) || MIN_COLS)))
+              }
             />
           </div>
           <div className="flex items-center gap-2">
             <span className="text-sm">{t("dataCard.displayTemplate.rows")}</span>
             <Input
-              type="number"
-              size="sm"
               className="w-20"
+              size="sm"
+              type="number"
               value={String(rows)}
-              onValueChange={(v) => setRows(Math.max(MIN_ROWS, Math.min(MAX_ROWS, Number(v) || MIN_ROWS)))}
+              onValueChange={(v) =>
+                setRows(Math.max(MIN_ROWS, Math.min(MAX_ROWS, Number(v) || MIN_ROWS)))
+              }
             />
           </div>
         </div>
@@ -284,9 +284,9 @@ const DisplayTemplateDesigner = ({
           ref={gridRef}
           className="relative border border-default-300 rounded-lg bg-default-50 select-none"
           style={{ width: cols * CELL_SIZE, height: rows * CELL_SIZE }}
+          onPointerLeave={handlePointerUp}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
-          onPointerLeave={handlePointerUp}
         >
           {/* Grid lines */}
           {Array.from({ length: cols - 1 }).map((_, i) => (
@@ -307,6 +307,7 @@ const DisplayTemplateDesigner = ({
           {/* Placed items */}
           {layout.map((item) => {
             const isBeingDragged = dragging?.propertyId === item.propertyId;
+
             return (
               <div
                 key={item.propertyId}
@@ -329,43 +330,61 @@ const DisplayTemplateDesigner = ({
                 {/* Toggle hide-when-empty */}
                 <span
                   className="absolute top-0.5 right-10 text-[10px] cursor-pointer opacity-60 hover:opacity-100"
+                  role="button"
+                  tabIndex={0}
                   title={
                     item.hideEmpty
                       ? t("dataCard.displayTemplate.showEmpty")
                       : t("dataCard.displayTemplate.hideEmpty")
                   }
-                  onPointerDown={(e) => e.stopPropagation()}
                   onClick={(e) => {
                     e.stopPropagation();
                     toggleHideEmpty(item.propertyId);
                   }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      toggleHideEmpty(item.propertyId);
+                    }
+                  }}
+                  onPointerDown={(e) => e.stopPropagation()}
                 >
                   {item.hideEmpty ? <MinusCircleFilled /> : <MinusCircleOutlined />}
                 </span>
                 {/* Toggle label visibility */}
                 <span
                   className="absolute top-0.5 right-5 text-[10px] cursor-pointer opacity-60 hover:opacity-100"
+                  role="button"
+                  tabIndex={0}
                   title={
                     item.hideLabel
                       ? t("dataCard.displayTemplate.showLabel")
                       : t("dataCard.displayTemplate.hideLabel")
                   }
-                  onPointerDown={(e) => e.stopPropagation()}
                   onClick={(e) => {
                     e.stopPropagation();
                     toggleHideLabel(item.propertyId);
                   }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      toggleHideLabel(item.propertyId);
+                    }
+                  }}
+                  onPointerDown={(e) => e.stopPropagation()}
                 >
                   {item.hideLabel ? <EyeInvisibleOutlined /> : <EyeOutlined />}
                 </span>
                 {/* Remove */}
                 <CloseOutlined
                   className="absolute top-0.5 right-0.5 text-[10px] text-danger-500 cursor-pointer opacity-60 hover:opacity-100"
-                  onPointerDown={(e) => e.stopPropagation()}
                   onClick={(e) => {
                     e.stopPropagation();
                     removeFromLayout(item.propertyId);
                   }}
+                  onPointerDown={(e) => e.stopPropagation()}
                 />
                 {/* Resize handle - bottom right corner */}
                 <div
@@ -375,8 +394,18 @@ const DisplayTemplateDesigner = ({
                     handlePointerDown(e, item.propertyId, "resize");
                   }}
                 >
-                  <svg width="8" height="8" viewBox="0 0 8 8" className="text-primary-500 opacity-60 hover:opacity-100">
-                    <path d="M7 1L1 7M7 4L4 7M7 7L7 7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+                  <svg
+                    className="text-primary-500 opacity-60 hover:opacity-100"
+                    height="8"
+                    viewBox="0 0 8 8"
+                    width="8"
+                  >
+                    <path
+                      d="M7 1L1 7M7 4L4 7M7 7L7 7"
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeWidth="1.2"
+                    />
                   </svg>
                 </div>
               </div>
@@ -398,9 +427,7 @@ const DisplayTemplateDesigner = ({
                 height: preview.h * CELL_SIZE - 2,
               }}
             >
-              <span className="text-xs px-1 truncate">
-                {getPropertyName(preview.propertyId)}
-              </span>
+              <span className="text-xs px-1 truncate">{getPropertyName(preview.propertyId)}</span>
             </div>
           )}
         </div>
@@ -408,7 +435,9 @@ const DisplayTemplateDesigner = ({
         {/* Hidden-rule summary (placed properties that may be hidden) */}
         {(() => {
           const hiddenItems = layout.filter((l) => l.hideLabel || l.hideEmpty);
+
           if (hiddenItems.length === 0) return null;
+
           return (
             <div>
               <label className="text-sm text-default-500 mb-2 block">
@@ -417,16 +446,16 @@ const DisplayTemplateDesigner = ({
               <div className="flex flex-col gap-1.5">
                 {hiddenItems.map((item) => {
                   const reasons: string[] = [];
+
                   if (item.hideLabel) reasons.push(t("dataCard.displayTemplate.hideLabel"));
                   if (item.hideEmpty) reasons.push(t("dataCard.displayTemplate.hideEmpty"));
+
                   return (
                     <div key={item.propertyId} className="flex items-center gap-2">
-                      <Chip size="sm" variant="flat" color="primary">
+                      <Chip color="primary" size="sm" variant="flat">
                         {getPropertyName(item.propertyId)}
                       </Chip>
-                      <span className="text-xs text-default-500">
-                        {reasons.join(" · ")}
-                      </span>
+                      <span className="text-xs text-default-500">{reasons.join(" · ")}</span>
                     </div>
                   );
                 })}
@@ -445,9 +474,9 @@ const DisplayTemplateDesigner = ({
               {unplacedProperties.map((pid) => (
                 <Chip
                   key={pid}
+                  className="cursor-grab"
                   size="sm"
                   variant="bordered"
-                  className="cursor-grab"
                   onPointerDown={(e) => handlePalettePointerDown(e, pid)}
                 >
                   {getPropertyName(pid)}

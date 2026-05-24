@@ -8,10 +8,7 @@ const AliasAppliedChip = () => {
   const { t } = useTranslation();
 
   return (
-    <Tooltip
-      color={"foreground"}
-      content={t<string>("You can search values by aliases also")}
-    >
+    <Tooltip color={"foreground"} content={t<string>("You can search values by aliases also")}>
       <Chip size={"sm"}>{t<string>("Alias applied")}</Chip>
     </Tooltip>
   );

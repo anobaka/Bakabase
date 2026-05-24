@@ -1,20 +1,17 @@
 "use client";
 
+import type { CookieValidatorTarget } from "@/sdk/constants";
+
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  Button,
-  Input,
-  Textarea,
-  Chip,
-  Divider,
-} from "@heroui/react";
+import { Button, Input, Textarea, Chip, Divider } from "@heroui/react";
 import { AiOutlinePlus, AiOutlineDelete, AiOutlineCheck, AiOutlineClose } from "react-icons/ai";
-import type { CookieValidatorTarget } from "@/sdk/constants";
+
+import { notifyCookieCaptureDismissal } from "./notifyCookieCaptureDismissal";
+
 import { RuntimeMode } from "@/sdk/constants";
 import { useAppContextStore } from "@/stores/appContext";
 import BApi from "@/sdk/BApi";
-import { notifyCookieCaptureDismissal } from "./notifyCookieCaptureDismissal";
 
 export interface AccountField {
   key: string;
@@ -39,7 +36,11 @@ interface AccountsPanelProps {
   onAccountsChange?: (accounts: Account[]) => void;
   customFieldRenderers?: Record<
     string,
-    (account: Account, index: number, updateAccount: (index: number, key: string, value: string) => void) => React.ReactNode
+    (
+      account: Account,
+      index: number,
+      updateAccount: (index: number, key: string, value: string) => void,
+    ) => React.ReactNode
   >;
 }
 
@@ -64,11 +65,7 @@ export default function AccountsPanel({
   >({});
 
   useEffect(() => {
-    setAccounts(
-      initialAccounts.length > 0
-        ? initialAccounts.map((a) => ({ ...a }))
-        : [],
-    );
+    setAccounts(initialAccounts.length > 0 ? initialAccounts.map((a) => ({ ...a })) : []);
   }, [initialAccounts]);
 
   useEffect(() => {
@@ -76,7 +73,10 @@ export default function AccountsPanel({
   }, [accounts]);
 
   const addAccount = () => {
-    const newAccount: Account = { name: t("resourceSource.accounts.defaultName", { index: accounts.length + 1 }) };
+    const newAccount: Account = {
+      name: t("resourceSource.accounts.defaultName", { index: accounts.length + 1 }),
+    };
+
     for (const field of fields) {
       newAccount[field.key] = "";
     }
@@ -89,17 +89,17 @@ export default function AccountsPanel({
 
   const updateAccount = (index: number, key: string, value: string) => {
     const updated = [...accounts];
+
     updated[index] = { ...updated[index], [key]: value };
     setAccounts(updated);
   };
 
-  const handleValidateCookie = async (
-    index: number,
-    field: AccountField,
-  ) => {
+  const handleValidateCookie = async (index: number, field: AccountField) => {
     const cookie = accounts[index]?.[field.key];
+
     if (!cookie || !field.cookieValidatorTarget) return;
     const key = `${index}-${field.key}`;
+
     setValidationStatus((prev) => ({ ...prev, [key]: "loading" }));
     try {
       const rsp = await BApi.tool.validateCookie({
@@ -108,6 +108,7 @@ export default function AccountsPanel({
         userAgent: accounts[index]?.userAgent || undefined,
         tlsPreset: accounts[index]?.tlsPreset || undefined,
       });
+
       setValidationStatus((prev) => ({
         ...prev,
         [key]: rsp.code ? "failed" : "succeed",
@@ -117,34 +118,38 @@ export default function AccountsPanel({
     }
   };
 
-  const handleCaptureCookie = async (
-    index: number,
-    field: AccountField,
-  ) => {
+  const handleCaptureCookie = async (index: number, field: AccountField) => {
     if (!field.cookieCaptureTarget) return;
     const key = `${index}-${field.key}`;
+
     setCaptureStatus((prev) => ({ ...prev, [key]: "loading" }));
     try {
       const rsp = await BApi.tool.captureCookie({ target: field.cookieCaptureTarget });
+
       if (!rsp.code && rsp.data) {
         const captureResult = rsp.data;
+
         // Update cookie, userAgent, and tlsPreset in a single state update
         // to avoid React batching issues where only the last setAccounts wins
         setAccounts((prev) => {
           const updated = [...prev];
+
           updated[index] = {
             ...updated[index],
             [field.key]: captureResult.cookie,
             ...(captureResult.userAgent ? { userAgent: captureResult.userAgent } : {}),
             ...(captureResult.tlsPreset ? { tlsPreset: captureResult.tlsPreset } : {}),
           };
+
           return updated;
         });
         setCaptureStatus((prev) => ({ ...prev, [key]: "succeed" }));
       } else if (notifyCookieCaptureDismissal(rsp)) {
         setCaptureStatus((prev) => {
           const next = { ...prev };
+
           delete next[key];
+
           return next;
         });
       } else {
@@ -167,9 +172,7 @@ export default function AccountsPanel({
   return (
     <div className="space-y-4">
       {accounts.length > 0 && (
-        <p className="text-xs text-default-400">
-          {t("resourceSource.accounts.defaultTip")}
-        </p>
+        <p className="text-xs text-default-400">{t("resourceSource.accounts.defaultTip")}</p>
       )}
 
       {accounts.length === 0 ? (
@@ -179,10 +182,7 @@ export default function AccountsPanel({
       ) : (
         <div className="space-y-4">
           {accounts.map((account, index) => (
-            <div
-              key={index}
-              className="border-small border-default-200 rounded-lg p-3 space-y-3"
-            >
+            <div key={index} className="border-small border-default-200 rounded-lg p-3 space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   {index === 0 && (
@@ -190,13 +190,11 @@ export default function AccountsPanel({
                       {t("resourceSource.accounts.default")}
                     </Chip>
                   )}
-                  <span className="text-sm text-default-500">
-                    #{index + 1}
-                  </span>
+                  <span className="text-sm text-default-500">#{index + 1}</span>
                 </div>
                 <Button
-                  color="danger"
                   isIconOnly
+                  color="danger"
                   size="sm"
                   variant="light"
                   onPress={() => removeAccount(index)}
@@ -217,9 +215,15 @@ export default function AccountsPanel({
               {fields.map((field) => {
                 const vKey = `${index}-${field.key}`;
                 const vStatus = validationStatus[vKey];
+
                 if (field.type === "custom" && customFieldRenderers?.[field.key]) {
-                  return <div key={field.key}>{customFieldRenderers[field.key](account, index, updateAccount)}</div>;
+                  return (
+                    <div key={field.key}>
+                      {customFieldRenderers[field.key](account, index, updateAccount)}
+                    </div>
+                  );
                 }
+
                 return field.type === "textarea" ? (
                   <div key={field.key}>
                     <Textarea
@@ -228,23 +232,32 @@ export default function AccountsPanel({
                       placeholder={field.placeholder}
                       size="sm"
                       value={account[field.key] || ""}
-                      onValueChange={(v) =>
-                        updateAccount(index, field.key, v)
-                      }
+                      onValueChange={(v) => updateAccount(index, field.key, v)}
                     />
-                    {(field.cookieValidatorTarget != null || (isDesktopApp && field.cookieCaptureTarget != null)) && (
+                    {(field.cookieValidatorTarget != null ||
+                      (isDesktopApp && field.cookieCaptureTarget != null)) && (
                       <div className="flex items-center gap-2 mt-1">
                         {field.cookieValidatorTarget != null && (
                           <Button
-                            color={vStatus === "succeed" ? "success" : vStatus === "failed" ? "danger" : "primary"}
+                            color={
+                              vStatus === "succeed"
+                                ? "success"
+                                : vStatus === "failed"
+                                  ? "danger"
+                                  : "primary"
+                            }
                             isDisabled={!account[field.key]}
                             isLoading={vStatus === "loading"}
                             size="sm"
-                            variant="flat"
-                            startContent={vStatus === "succeed" ? <AiOutlineCheck /> : vStatus === "failed" ? <AiOutlineClose /> : undefined}
-                            onPress={() =>
-                              handleValidateCookie(index, field)
+                            startContent={
+                              vStatus === "succeed" ? (
+                                <AiOutlineCheck />
+                              ) : vStatus === "failed" ? (
+                                <AiOutlineClose />
+                              ) : undefined
                             }
+                            variant="flat"
+                            onPress={() => handleValidateCookie(index, field)}
                           >
                             {t("common.action.validate")}
                           </Button>
@@ -263,9 +276,7 @@ export default function AccountsPanel({
                       </div>
                     )}
                     {field.description && (
-                      <div className="mt-1 text-xs text-default-400">
-                        {field.description}
-                      </div>
+                      <div className="mt-1 text-xs text-default-400">{field.description}</div>
                     )}
                   </div>
                 ) : (
@@ -274,18 +285,12 @@ export default function AccountsPanel({
                       label={field.label}
                       placeholder={field.placeholder}
                       size="sm"
-                      type={
-                        field.type === "password" ? "password" : "text"
-                      }
+                      type={field.type === "password" ? "password" : "text"}
                       value={account[field.key] || ""}
-                      onValueChange={(v) =>
-                        updateAccount(index, field.key, v)
-                      }
+                      onValueChange={(v) => updateAccount(index, field.key, v)}
                     />
                     {field.description && (
-                      <div className="mt-1 text-xs text-default-400">
-                        {field.description}
-                      </div>
+                      <div className="mt-1 text-xs text-default-400">{field.description}</div>
                     )}
                   </div>
                 );
@@ -298,23 +303,13 @@ export default function AccountsPanel({
       )}
 
       <div className="flex gap-2">
-        <Button
-          size="sm"
-          startContent={<AiOutlinePlus />}
-          variant="flat"
-          onPress={addAccount}
-        >
+        <Button size="sm" startContent={<AiOutlinePlus />} variant="flat" onPress={addAccount}>
           {t("resourceSource.accounts.add")}
         </Button>
         {!hideFooter && (
           <>
             <div className="flex-1" />
-            <Button
-              color="primary"
-              isLoading={saving}
-              size="sm"
-              onPress={handleSave}
-            >
+            <Button color="primary" isLoading={saving} size="sm" onPress={handleSave}>
               {t("thirdPartyConfig.action.save")}
             </Button>
           </>

@@ -13,7 +13,7 @@ import { PropertyPool, ResourceProperty } from "@/sdk/constants";
  * 封装了 BApi.resource.* 和 BApi.options.* 的调用
  */
 export function createDefaultFilterConfig(
-  createPortal: (Component: any, props: any) => { destroy: () => void }
+  createPortal: (Component: any, props: any) => { destroy: () => void },
 ): FilterConfig {
   return {
     api: {
@@ -22,6 +22,7 @@ export function createDefaultFilterConfig(
           propertyPool,
           propertyId,
         });
+
         return response.data || [];
       },
 
@@ -29,6 +30,7 @@ export function createDefaultFilterConfig(
         const response = await BApi.resource.getSearchOperationsByPropertyType({
           propertyType,
         });
+
         return response.data || [];
       },
 
@@ -37,6 +39,7 @@ export function createDefaultFilterConfig(
           return undefined;
         }
         const response = await BApi.resource.getFilterValueProperty(filter);
+
         return response.data;
       },
 
@@ -53,6 +56,7 @@ export function createDefaultFilterConfig(
 
       getRecentFilters: async () => {
         const response = await BApi.options.getRecentResourceFilters();
+
         return (response.data || []) as SearchFilter[];
       },
     },
@@ -66,12 +70,14 @@ export function createDefaultFilterConfig(
             : undefined,
           onSubmit: async (selectedProperties: IProperty[]) => {
             const property = selectedProperties[0];
+
             if (property) {
               const response = await BApi.resource.getSearchOperationsForProperty({
                 propertyPool: property.pool,
                 propertyId: property.id,
               });
               const availableOperations = response.data || [];
+
               onSelect(property, availableOperations);
             }
           },
@@ -81,7 +87,8 @@ export function createDefaultFilterConfig(
           addable: false,
           editable: false,
           isDisabled: disabledProperties?.length
-            ? (p: IProperty) => disabledProperties.some(dp => dp.id === p.id && dp.pool === p.pool)
+            ? (p: IProperty) =>
+                disabledProperties.some((dp) => dp.id === p.id && dp.pool === p.pool)
             : undefined,
           pinnedProperties: [
             { id: ResourceProperty.MediaLibraryV2Multi, pool: PropertyPool.Internal },
@@ -96,12 +103,12 @@ export function createDefaultFilterConfig(
             bizValue={bizValue}
             dbValue={dbValue}
             defaultEditing={options?.defaultEditing}
+            isEditing={options?.isEditing}
+            isReadonly={options?.isReadonly}
             property={property}
             size={options?.size ?? "sm"}
             variant={options?.variant ?? "light"}
             onValueChange={onValueChange}
-            isReadonly={options?.isReadonly}
-            isEditing={options?.isEditing}
           />
         );
       },

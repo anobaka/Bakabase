@@ -41,9 +41,7 @@ export default function LogPage() {
     pageIndex: 1,
     totalCount: 0,
   });
-  const [dateRange, setDateRange] = useState<RangeValue<DateValue> | null>(
-    null,
-  );
+  const [dateRange, setDateRange] = useState<RangeValue<DateValue> | null>(null);
   const [expandedMsg, setExpandedMsg] = useState<string | null>(null);
   const { createPortal } = useBakabaseContext();
 
@@ -83,27 +81,15 @@ export default function LogPage() {
     <div className="p-4">
       <div className="flex flex-wrap gap-4 items-center mb-4">
         <div className="flex items-center gap-1 min-w-[260px]">
-          <span className="font-medium mr-2 min-w-[60px]">
-            {t<string>("log.filter.time")}
-          </span>
-          <DateRangePicker
-            className="flex-1"
-            value={dateRange}
-            onChange={handleDateRangeChange}
-          />
+          <span className="font-medium mr-2 min-w-[60px]">{t<string>("log.filter.time")}</span>
+          <DateRangePicker className="flex-1" value={dateRange} onChange={handleDateRangeChange} />
         </div>
         <div className="flex items-center gap-1 min-w-[100px]">
-          <span className="font-medium mr-2 min-w-[60px]">
-            {t<string>("log.filter.level")}
-          </span>
+          <span className="font-medium mr-2 min-w-[60px]">{t<string>("log.filter.level")}</span>
           <Select
             className="min-w-[100px]"
             placeholder={t<string>("log.filter.all")}
-            selectedKeys={
-              form.level !== undefined
-                ? new Set([String(form.level)])
-                : new Set()
-            }
+            selectedKeys={form.level !== undefined ? new Set([String(form.level)]) : new Set()}
             onSelectionChange={(keys) => {
               const key = Array.from(keys)[0];
 
@@ -118,9 +104,7 @@ export default function LogPage() {
           </Select>
         </div>
         <div className="flex items-center gap-1 min-w-[120px]">
-          <span className="font-medium mr-2 min-w-[60px]">
-            {t<string>("log.filter.logger")}
-          </span>
+          <span className="font-medium mr-2 min-w-[60px]">{t<string>("log.filter.logger")}</span>
           <Input
             className="min-w-[120px]"
             placeholder={t<string>("log.filter.logger")}
@@ -130,9 +114,7 @@ export default function LogPage() {
           />
         </div>
         <div className="flex items-center gap-1 min-w-[120px]">
-          <span className="font-medium mr-2 min-w-[60px]">
-            {t<string>("log.filter.event")}
-          </span>
+          <span className="font-medium mr-2 min-w-[60px]">{t<string>("log.filter.event")}</span>
           <Input
             className="min-w-[120px]"
             placeholder={t<string>("log.filter.event")}
@@ -142,9 +124,7 @@ export default function LogPage() {
           />
         </div>
         <div className="flex items-center gap-1 min-w-[120px]">
-          <span className="font-medium mr-2 min-w-[60px]">
-            {t<string>("log.filter.message")}
-          </span>
+          <span className="font-medium mr-2 min-w-[60px]">{t<string>("log.filter.message")}</span>
           <Input
             className="min-w-[120px]"
             placeholder={t<string>("log.filter.message")}
@@ -163,13 +143,7 @@ export default function LogPage() {
           </Button>
         </div>
       </div>
-      <Table
-        removeWrapper
-        aria-label="logs"
-        className="mb-4"
-        selectionMode="none"
-        size="sm"
-      >
+      <Table removeWrapper aria-label="logs" className="mb-4" selectionMode="none" size="sm">
         <TableHeader>
           <TableColumn>{t<string>("log.filter.time")}</TableColumn>
           <TableColumn>{t<string>("log.filter.level")}</TableColumn>
@@ -180,9 +154,7 @@ export default function LogPage() {
         <TableBody items={logs}>
           {(item) => (
             <TableRow key={item.id || item.dateTime + item.logger + item.event}>
-              <TableCell>
-                {item.dateTime ? item.dateTime.slice(5, 16) : "-"}
-              </TableCell>
+              <TableCell>{item.dateTime ? item.dateTime.slice(5, 16) : "-"}</TableCell>
               <TableCell>
                 <span
                   className={
@@ -193,9 +165,7 @@ export default function LogPage() {
                       : "text-blue-600"
                   }
                 >
-                  {item.level === LogLevel.Information
-                    ? "Info"
-                    : LogLevel[item.level]}
+                  {item.level === LogLevel.Information ? "Info" : LogLevel[item.level]}
                 </span>
               </TableCell>
               <TableCell>{item.logger}</TableCell>
@@ -214,9 +184,7 @@ export default function LogPage() {
                           title: t("log.label.log"),
                           defaultVisible: true,
                           children: (
-                            <pre className="whitespace-pre-wrap break-all">
-                              {item.message}
-                            </pre>
+                            <pre className="whitespace-pre-wrap break-all">{item.message}</pre>
                           ),
                         })
                       }
@@ -240,10 +208,7 @@ export default function LogPage() {
         />
       </div>
       {expandedMsg && (
-        <Modal
-          title={t<string>("log.label.fullMessage")}
-          onClose={() => setExpandedMsg(null)}
-        >
+        <Modal title={t<string>("log.label.fullMessage")} onClose={() => setExpandedMsg(null)}>
           <pre className="whitespace-pre-wrap break-all">{expandedMsg}</pre>
         </Modal>
       )}

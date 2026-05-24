@@ -15,9 +15,9 @@ type Props = {
 const ExternalLink = ({ href, children, size, ...otherProps }: Props) => {
   return (
     <Link
+      className="cursor-pointer gap-1"
       color="primary"
       size={size}
-      className="cursor-pointer gap-1"
       {...otherProps}
       onPress={(e) => {
         BApi.gui.openUrlInDefaultBrowser({ url: href });

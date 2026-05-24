@@ -25,7 +25,15 @@ import DeleteResourceConfirmContent from "@/components/Resource/components/Delet
 import { EnhancementAdditionalItem, IwFsType } from "@/sdk/constants";
 import { PlaylistCollection } from "@/components/Playlist";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import { Button, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Modal, toast } from "@/components/bakaui";
+import {
+  Button,
+  Dropdown,
+  DropdownTrigger,
+  DropdownMenu,
+  DropdownItem,
+  Modal,
+  toast,
+} from "@/components/bakaui";
 import { useUiOptionsStore } from "@/stores/options";
 import MediaPlayer from "@/components/MediaPlayer";
 
@@ -48,6 +56,7 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
     setRefreshingCache(true);
     try {
       const rsp = await BApi.cache.refreshResourceCache(resource.id);
+
       if (!rsp.code) {
         toast.success(t<string>("resource.action.refreshCache.success"));
         await reload?.();
@@ -166,7 +175,13 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
 
   // Aggregate mode: dropdown with icon + label items
   if (showAggregate) {
-    type MenuItem = { key: string; icon: React.ReactNode; label: string; className?: string; onAction: () => void };
+    type MenuItem = {
+      key: string;
+      icon: React.ReactNode;
+      label: string;
+      className?: string;
+      onAction: () => void;
+    };
 
     let items: MenuItem[] = [];
 
@@ -174,7 +189,9 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
       items.push({
         key: "pin",
         icon: <PushpinOutlined />,
-        label: resource.pinned ? t<string>("resource.operation.unpin") : t<string>("resource.operation.pin"),
+        label: resource.pinned
+          ? t<string>("resource.operation.unpin")
+          : t<string>("resource.operation.pin"),
         onAction: () => {
           BApi.resource.pinResource(resource.id, { pin: !resource.pinned }).then(() => reload?.());
         },
@@ -250,9 +267,13 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
         {
           key: "pin",
           icon: <PushpinOutlined />,
-          label: resource.pinned ? t<string>("resource.operation.unpin") : t<string>("resource.operation.pin"),
+          label: resource.pinned
+            ? t<string>("resource.operation.unpin")
+            : t<string>("resource.operation.pin"),
           onAction: () => {
-            BApi.resource.pinResource(resource.id, { pin: !resource.pinned }).then(() => reload?.());
+            BApi.resource
+              .pinResource(resource.id, { pin: !resource.pinned })
+              .then(() => reload?.());
           },
         },
         {
@@ -348,7 +369,11 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
         isIconOnly
         className={buttonClassName}
         color={resource.pinned ? "warning" : "default"}
-        title={resource.pinned ? t<string>("resource.operation.unpin") : t<string>("resource.operation.pin")}
+        title={
+          resource.pinned
+            ? t<string>("resource.operation.unpin")
+            : t<string>("resource.operation.pin")
+        }
         onPress={() => {
           BApi.resource.pinResource(resource.id, { pin: !resource.pinned }).then((r) => {
             reload?.();
@@ -453,11 +478,15 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
         key="refreshCache"
         isIconOnly
         className={buttonClassName}
-        title={t<string>("resource.action.refreshCache")}
         isDisabled={refreshingCache}
+        title={t<string>("resource.action.refreshCache")}
         onClick={handleRefreshCache}
       >
-        {refreshingCache ? <LoadingOutlined className={iconClassName} spin /> : <ReloadOutlined className={iconClassName} />}
+        {refreshingCache ? (
+          <LoadingOutlined spin className={iconClassName} />
+        ) : (
+          <ReloadOutlined className={iconClassName} />
+        )}
       </Button>,
     );
   }

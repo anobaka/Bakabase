@@ -31,6 +31,7 @@ const ExtensionGroupSelect = ({ value = [], onSelectionChange, size, className }
 
   return (
     <Select
+      className={className}
       dataSource={extensionGroups?.map((l) => ({
         label: l.name,
         value: l.id.toString(),
@@ -40,11 +41,8 @@ const ExtensionGroupSelect = ({ value = [], onSelectionChange, size, className }
       selectedKeys={(value ?? []).map((x) => x.toString())}
       selectionMode={"multiple"}
       size={size}
-      className={className}
       onSelectionChange={(keys) => {
-        onSelectionChange?.(
-          Array.from(keys).map((k) => parseInt(k as string, 10)),
-        );
+        onSelectionChange?.(Array.from(keys).map((k) => parseInt(k as string, 10)));
       }}
     />
   );

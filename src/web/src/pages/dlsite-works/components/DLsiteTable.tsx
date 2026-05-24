@@ -1,3 +1,5 @@
+import type { DLsiteWork } from "../types";
+
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -26,7 +28,6 @@ import {
 import { FiExternalLink } from "react-icons/fi";
 import { GoPackage } from "react-icons/go";
 
-import type { DLsiteWork } from "../types";
 import { DrmKeyCell } from "./DrmKeyCell";
 import { DownloadButton } from "./DownloadButton";
 import { LaunchButton } from "./LaunchButton";
@@ -38,9 +39,17 @@ interface DLsiteTableColumn {
 }
 
 export function DLsiteTable({
-  works, showCover, hasDownloadDir,
-  onOpenPage, onOpenLocal, onLaunch,
-  onToggleHidden, onDeleteLocal, onReExtract, onWorkUpdate, onSetWorksLocalPath,
+  works,
+  showCover,
+  hasDownloadDir,
+  onOpenPage,
+  onOpenLocal,
+  onLaunch,
+  onToggleHidden,
+  onDeleteLocal,
+  onReExtract,
+  onWorkUpdate,
+  onSetWorksLocalPath,
   onToggleUseLocaleEmulator,
 }: {
   works: DLsiteWork[];
@@ -60,6 +69,7 @@ export function DLsiteTable({
 
   const columns = useMemo<DLsiteTableColumn[]>(() => {
     const cols: DLsiteTableColumn[] = [];
+
     if (showCover) cols.push({ key: "cover", label: "", width: 160 });
     cols.push(
       { key: "workId", label: t("resourceSource.dlsite.label.workId") },
@@ -70,6 +80,7 @@ export function DLsiteTable({
       { key: "drmKey", label: t("resourceSource.dlsite.label.drmKey") },
       { key: "actions", label: "", width: 260 },
     );
+
     return cols;
   }, [showCover, t]);
 
@@ -96,9 +107,7 @@ export function DLsiteTable({
           <div>
             <span className="font-medium">{work.title || "-"}</span>
             <div className="flex items-center gap-2 mt-1">
-              {work.circle && (
-                <span className="text-xs text-default-400">{work.circle}</span>
-              )}
+              {work.circle && <span className="text-xs text-default-400">{work.circle}</span>}
               {work.workType && (
                 <Chip className="text-[10px]" color="secondary" size="sm" variant="flat">
                   {work.workType}
@@ -119,19 +128,17 @@ export function DLsiteTable({
           </div>
         );
       case "salesDate":
-        return work.salesDate
-          ? new Date(work.salesDate).toLocaleDateString()
-          : "-";
+        return work.salesDate ? new Date(work.salesDate).toLocaleDateString() : "-";
       case "purchasedAt":
-        return work.purchasedAt
-          ? new Date(work.purchasedAt).toLocaleDateString()
-          : "-";
+        return work.purchasedAt ? new Date(work.purchasedAt).toLocaleDateString() : "-";
       case "account":
         return work.account ? (
           <Chip size="sm" variant="flat">
             {work.account}
           </Chip>
-        ) : "-";
+        ) : (
+          "-"
+        );
       case "drmKey":
         return <DrmKeyCell work={work} onWorkUpdate={onWorkUpdate} />;
       case "actions": {
@@ -139,8 +146,8 @@ export function DLsiteTable({
           <div className="flex gap-1 items-center">
             {work.isDownloaded && work.localPath && (
               <LaunchButton
-                workId={work.workId}
                 useLocaleEmulator={work.useLocaleEmulator}
+                workId={work.workId}
                 onLaunch={onLaunch}
                 onToggleUseLocaleEmulator={onToggleUseLocaleEmulator}
               />
@@ -158,26 +165,30 @@ export function DLsiteTable({
               </Tooltip>
             )}
             <DownloadButton work={work} onSetWorksLocalPath={onSetWorksLocalPath} />
-            <Tooltip content={work.isHidden ? t("resourceSource.dlsite.action.unhide") : t("resourceSource.dlsite.action.hide")}>
+            <Tooltip
+              content={
+                work.isHidden
+                  ? t("resourceSource.dlsite.action.unhide")
+                  : t("resourceSource.dlsite.action.hide")
+              }
+            >
               <Button
                 isIconOnly
                 size="sm"
                 variant="light"
                 onPress={() => onToggleHidden(work.workId, !work.isHidden)}
               >
-                {work.isHidden
-                  ? <AiOutlineEye className="text-lg" />
-                  : <AiOutlineEyeInvisible className="text-lg" />}
+                {work.isHidden ? (
+                  <AiOutlineEye className="text-lg" />
+                ) : (
+                  <AiOutlineEyeInvisible className="text-lg" />
+                )}
               </Button>
             </Tooltip>
             {work.isDownloaded && work.localPath && (
               <Dropdown>
                 <DropdownTrigger>
-                  <Button
-                    isIconOnly
-                    size="sm"
-                    variant="light"
-                  >
+                  <Button isIconOnly size="sm" variant="light">
                     <AiOutlineMore className="text-lg" />
                   </Button>
                 </DropdownTrigger>
@@ -210,11 +221,7 @@ export function DLsiteTable({
   };
 
   return (
-    <Table
-      removeWrapper
-      aria-label="DLsite Works"
-      isStriped
-    >
+    <Table isStriped removeWrapper aria-label="DLsite Works">
       <TableHeader columns={columns}>
         {(column) => (
           <TableColumn key={column.key} width={column.width}>
@@ -222,15 +229,10 @@ export function DLsiteTable({
           </TableColumn>
         )}
       </TableHeader>
-      <TableBody
-        emptyContent={t("resourceSource.empty")}
-        items={works}
-      >
+      <TableBody emptyContent={t("resourceSource.empty")} items={works}>
         {(work) => (
           <TableRow key={work.workId}>
-            {(columnKey) => (
-              <TableCell>{renderCell(work, columnKey as string)}</TableCell>
-            )}
+            {(columnKey) => <TableCell>{renderCell(work, columnKey as string)}</TableCell>}
           </TableRow>
         )}
       </TableBody>

@@ -2,16 +2,16 @@ import type { components } from "@/sdk/BApi2";
 import type { IdName } from "@/components/types";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Button, Input } from "@/components/bakaui";
 import { useTranslation } from "react-i18next";
 import { AiOutlineClose } from "react-icons/ai";
+import { MdSavedSearch } from "react-icons/md";
 
+import { Button, Input } from "@/components/bakaui";
 import { useResourceOptionsStore } from "@/stores/options";
 import { usePendingSearchStore } from "@/stores/pendingSearch";
 import BApi from "@/sdk/BApi.tsx";
 import ResourceTabContent from "@/pages/resource/components/ResourceTabContent";
 import RecentlyPlayedDrawer from "@/pages/resource/components/RecentlyPlayedDrawer";
-import { MdSavedSearch } from "react-icons/md";
 
 type SavedSearch =
   components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ResourceOptions+SavedSearch"];
@@ -71,7 +71,7 @@ const ResourcePage = () => {
 
         // Try to restore the previously active tab from localStorage
         const savedActiveTabId = localStorage.getItem("resource-active-tab-id");
-        const savedTabExists = savedActiveTabId && ss1.some(s => s.id === savedActiveTabId);
+        const savedTabExists = savedActiveTabId && ss1.some((s) => s.id === savedActiveTabId);
 
         // Use saved tab if it exists, otherwise default to first tab
         changeTab(savedTabExists ? savedActiveTabId : ss1[0].id);
@@ -91,20 +91,24 @@ const ResourcePage = () => {
     }
   }, [pendingSearch]);
 
-  const searchInNewTab = useCallback(async (f: SearchForm) => {
-    if (creatingTabRef.current) return;
-    creatingTabRef.current = true;
+  const searchInNewTab = useCallback(
+    async (f: SearchForm) => {
+      if (creatingTabRef.current) return;
+      creatingTabRef.current = true;
 
-    try {
-      const newSearch = (await BApi.resource.saveNewResourceSearch({ search: f })).data;
-      if (!newSearch) return;
+      try {
+        const newSearch = (await BApi.resource.saveNewResourceSearch({ search: f })).data;
 
-      setSavedSearches((prev) => [...prev, newSearch]);
-      changeTab(newSearch.id);
-    } finally {
-      creatingTabRef.current = false;
-    }
-  }, [changeTab]);
+        if (!newSearch) return;
+
+        setSavedSearches((prev) => [...prev, newSearch]);
+        changeTab(newSearch.id);
+      } finally {
+        creatingTabRef.current = false;
+      }
+    },
+    [changeTab],
+  );
 
   const beginRename = (id: string) => {
     const current = savedSearches.find((x) => x.id == id);
@@ -154,6 +158,7 @@ const ResourcePage = () => {
       setMountedTabIds((prevIds) => prevIds.filter((mid) => mid !== id));
 
       const newActiveTab = (prev ?? next)?.id;
+
       if (newActiveTab) {
         changeTab(newActiveTab);
       } else {
@@ -186,15 +191,15 @@ const ResourcePage = () => {
             return (
               <div key={s.id} className="group flex items-center">
                 <Button
-                  size="sm"
-                  // variant="flat"
-                  color={isActive ? "primary" : "default"}
                   className="gap-1 pr-1"
                   onPress={() => {
                     if (!isActive) {
                       changeTab(s.id);
                     }
                   }}
+                  size="sm"
+                  // variant="flat"
+                  color={isActive ? "primary" : "default"}
                 >
                   <MdSavedSearch className="text-lg" />
                   <div className="relative">
@@ -212,18 +217,18 @@ const ResourcePage = () => {
                     {isEditing && (
                       <Input
                         ref={inputRef}
-                        size="sm"
                         className="absolute inset-0"
                         classNames={{
                           input: "text-sm font-medium",
                           inputWrapper: "min-h-0 h-full px-0 bg-transparent shadow-none",
                           base: "h-full",
                         }}
+                        size="sm"
                         value={editingName}
-                        onValueChange={(v) => setEditingName(v)}
                         onBlur={() => {
                           if (editingId == s.id) commitRename();
                         }}
+                        onClick={(e) => e.stopPropagation()}
                         onKeyDown={(e) => {
                           if (e.key === "Enter") {
                             e.preventDefault();
@@ -234,21 +239,31 @@ const ResourcePage = () => {
                             setEditingId(null);
                           }
                         }}
-                        onClick={(e) => e.stopPropagation()}
+                        onValueChange={(v) => setEditingName(v)}
                       />
                     )}
                   </div>
                   <div
                     className={`
                       p-0.5 rounded transition-opacity
-                      ${isActive
-                        ? "opacity-70 hover:opacity-100 hover:bg-primary/30"
-                        : "opacity-0 group-hover:opacity-60 hover:!opacity-100 hover:bg-default-300"
+                      ${
+                        isActive
+                          ? "opacity-70 hover:opacity-100 hover:bg-primary/30"
+                          : "opacity-0 group-hover:opacity-60 hover:!opacity-100 hover:bg-default-300"
                       }
                     `}
+                    role="button"
+                    tabIndex={0}
                     onClick={(e) => {
                       e.stopPropagation();
                       removeSaved(s.id);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        removeSaved(s.id);
+                      }
                     }}
                   >
                     <AiOutlineClose className="text-xs" />

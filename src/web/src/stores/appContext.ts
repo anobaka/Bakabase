@@ -10,9 +10,7 @@ interface IAppContext {
   apiEndpoints?: string[];
   bApi2: Api<unknown> | null;
   runtimeMode: RuntimeMode;
-  update: (
-    payload: Partial<IAppContext> & { serverAddresses?: string[] },
-  ) => void;
+  update: (payload: Partial<IAppContext> & { serverAddresses?: string[] }) => void;
 }
 
 export const useAppContextStore = create<IAppContext>((set, get) => ({

@@ -4,11 +4,13 @@ import { useEffect, useState, type FC } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, Input } from "@heroui/react";
 
+import ConfigurableThirdPartyPanel, {
+  type ConfigFieldTab,
+} from "../base/ConfigurableThirdPartyPanel";
+import ThirdPartyConfigModal from "../base/ThirdPartyConfigModal";
+
 import { toast } from "@/components/bakaui";
 import { useTmdbOptionsStore } from "@/stores/options";
-
-import ConfigurableThirdPartyPanel, { type ConfigFieldTab } from "../base/ConfigurableThirdPartyPanel";
-import ThirdPartyConfigModal from "../base/ThirdPartyConfigModal";
 
 export enum TmdbConfigField {
   Settings = "settings",
@@ -49,7 +51,9 @@ export const TmdbConfigPanel: FC<TmdbConfigPanelProps> = ({
 
   const formContent = (
     <div className="space-y-3">
-      <h3 className="text-small font-semibold text-default-700">{t<string>("thirdPartyConfig.group.dataFetch")}</h3>
+      <h3 className="text-small font-semibold text-default-700">
+        {t<string>("thirdPartyConfig.group.dataFetch")}
+      </h3>
       <div className="grid grid-cols-2 gap-4">
         <Input
           label={t<string>("thirdPartyConfig.label.maxConcurrency")}
@@ -124,15 +128,22 @@ export interface TmdbConfigModalProps {
   fields?: TmdbConfigField[] | "all";
 }
 
-export const TmdbConfigModal: FC<TmdbConfigModalProps> = ({ onDestroyed, onClose, isOpen, fields }) => {
+export const TmdbConfigModal: FC<TmdbConfigModalProps> = ({
+  onDestroyed,
+  onClose,
+  isOpen,
+  fields,
+}) => {
   const { t } = useTranslation();
   const handleClose = onClose ?? onDestroyed;
+
   return (
-    <ThirdPartyConfigModal title="TMDB" size="2xl" isOpen={isOpen} onClose={handleClose}>
+    <ThirdPartyConfigModal isOpen={isOpen} size="2xl" title="TMDB" onClose={handleClose}>
       <TmdbConfigPanel fields={fields} onCancel={handleClose} />
     </ThirdPartyConfigModal>
   );
 };
 
 const TmdbConfig = TmdbConfigModal;
+
 export default TmdbConfig;

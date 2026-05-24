@@ -8,11 +8,12 @@ import { useTranslation } from "react-i18next";
 import { MenuItem } from "@szhsin/react-menu";
 import { AiOutlineAim, AiOutlineCopy } from "react-icons/ai";
 
+import usePathMarks from "../hooks/usePathMarks";
+
 import PathMarks from "./PathMarks";
 import MarkConfigModal from "./MarkConfigModal";
 import PasteMarksButton from "./PasteMarksButton";
 import CopyMarksSidebar from "./CopyMarksSidebar";
-import usePathMarks from "../hooks/usePathMarks";
 
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { toast, Modal, Checkbox } from "@/components/bakaui";
@@ -27,11 +28,7 @@ interface PathMarkTreeViewProps {
   onInitialized?: (path: string | undefined) => void;
 }
 
-const PathMarkTreeView = ({
-  rootPath,
-  onMarksChanged,
-  onInitialized,
-}: PathMarkTreeViewProps) => {
+const PathMarkTreeView = ({ rootPath, onMarksChanged, onInitialized }: PathMarkTreeViewProps) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
@@ -66,7 +63,9 @@ const PathMarkTreeView = ({
           });
         }
 
-        toast.success(t(oldMark ? "pathMarkConfig.success.markUpdated" : "pathMarkConfig.success.markAdded"));
+        toast.success(
+          t(oldMark ? "pathMarkConfig.success.markUpdated" : "pathMarkConfig.success.markAdded"),
+        );
         notifyMarksChanged();
       } catch (error) {
         console.error("Failed to save mark", error);
@@ -82,6 +81,7 @@ const PathMarkTreeView = ({
 
       if (!markId) {
         console.error("Mark has no id, cannot delete");
+
         return;
       }
 
@@ -90,6 +90,7 @@ const PathMarkTreeView = ({
       const confirmed = await new Promise<boolean>((resolve) => {
         const ModalContent = () => {
           const [checked, setChecked] = React.useState(true);
+
           return (
             <div>
               <p>{t("pathMarkConfig.confirm.deleteMarkQuestion")}</p>
@@ -224,8 +225,8 @@ const PathMarkTreeView = ({
 
       return (
         <PasteMarksButton
-          targetPath={entry.path}
           existingMarks={marks}
+          targetPath={entry.path}
           onPaste={(marksToPaste) => handlePasteMarks(entry.path, marksToPaste)}
         />
       );
@@ -237,9 +238,11 @@ const PathMarkTreeView = ({
   const handleEnterCopyModeFromContextMenu = useCallback(
     (entry: Entry) => {
       const marks = getMarksForPath(entry.path);
+
       if (marks.length > 0) {
         enterCopyMode(entry.path);
         const markIds = marks.filter((m) => m.id !== undefined).map((m) => m.id!);
+
         selectAllMarks(markIds);
       }
     },
@@ -321,7 +324,13 @@ const PathMarkTreeView = ({
         </>
       );
     },
-    [createPortal, t, handleAddMarksFromContextMenu, getMarksForPath, handleEnterCopyModeFromContextMenu],
+    [
+      createPortal,
+      t,
+      handleAddMarksFromContextMenu,
+      getMarksForPath,
+      handleEnterCopyModeFromContextMenu,
+    ],
   );
 
   return (

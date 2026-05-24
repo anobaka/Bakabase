@@ -1,6 +1,8 @@
+import type { BTask } from "@/core/models/BTask";
+
 import { useEffect, useRef } from "react";
 import moment from "moment";
-import type { BTask } from "@/core/models/BTask";
+
 import { BTaskStatus } from "@/sdk/constants";
 
 interface TimingRecord {
@@ -42,8 +44,7 @@ export function useTaskTimingSimulation(tasks: BTask[]) {
         });
       } else {
         const incomingChanged =
-          rec.lastRawElapsedMs !== rawElapsedMs ||
-          rec.lastRawRemainingMs !== rawRemainingMs;
+          rec.lastRawElapsedMs !== rawElapsedMs || rec.lastRawRemainingMs !== rawRemainingMs;
 
         if (incomingChanged) {
           // Override simulation with incoming backend updates
@@ -94,6 +95,7 @@ export function useTaskTimingSimulation(tasks: BTask[]) {
     if (baseMs == null) return undefined;
     if (task.status === BTaskStatus.Running) {
       const ms = baseMs - Math.max(0, Date.now() - (rec?.lastSeenAt ?? Date.now()));
+
       return Math.max(0, ms);
     }
 

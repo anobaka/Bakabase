@@ -52,17 +52,9 @@ import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContext
 const UnderDevelopmentGroupKey = "UnderDevelopment";
 
 const PropertyTypeGroup: Record<string, PropertyType[]> = {
-  Text: [
-    PropertyType.SingleLineText,
-    PropertyType.MultilineText,
-    PropertyType.Link,
-  ],
+  Text: [PropertyType.SingleLineText, PropertyType.MultilineText, PropertyType.Link],
   Number: [PropertyType.Number, PropertyType.Percentage, PropertyType.Rating],
-  Option: [
-    PropertyType.SingleChoice,
-    PropertyType.MultipleChoice,
-    PropertyType.Multilevel,
-  ],
+  Option: [PropertyType.SingleChoice, PropertyType.MultipleChoice, PropertyType.Multilevel],
   DateTime: [PropertyType.DateTime, PropertyType.Date, PropertyType.Time],
   Other: [PropertyType.Attachment, PropertyType.Boolean, PropertyType.Tags],
   [UnderDevelopmentGroupKey]: [PropertyType.Formula],
@@ -113,10 +105,9 @@ const ModalContent = ({ validValueTypes, value, onChange }: Props) => {
 
   const checkValueUsage = property.id
     ? async (value: string) => {
-        const rsp = await BApi.customProperty.getCustomPropertyValueUsage(
-          property.id!,
-          { value: value },
-        );
+        const rsp = await BApi.customProperty.getCustomPropertyValueUsage(property.id!, {
+          value: value,
+        });
 
         return rsp.data!;
       }
@@ -194,9 +185,7 @@ const ModalContent = ({ validValueTypes, value, onChange }: Props) => {
         case PropertyType.Number: {
           const options = (property.options as NumberPropertyOptions) ?? {};
           const previewValue = 80;
-          const previewValueStr = Number(previewValue).toFixed(
-            options?.precision || 0,
-          );
+          const previewValueStr = Number(previewValue).toFixed(options?.precision || 0);
 
           // console.log(previewValue, options?.precision, previewValueStr);
           options.precision ??= 0;
@@ -216,11 +205,7 @@ const ModalContent = ({ validValueTypes, value, onChange }: Props) => {
                   });
                 }}
               />
-              <Input
-                disabled
-                label={t<string>("Preview")}
-                value={previewValueStr}
-              />
+              <Input disabled label={t<string>("Preview")} value={previewValueStr} />
             </>
           );
         }
@@ -266,19 +251,13 @@ const ModalContent = ({ validValueTypes, value, onChange }: Props) => {
                   <Progress
                     className={"max-w-[70%]"}
                     label={
-                      <div className={"text-[color:var(--bakaui-color)]"}>
-                        {previewValueStr}
-                      </div>
+                      <div className={"text-[color:var(--bakaui-color)]"}>{previewValueStr}</div>
                     }
                     value={previewValue}
                   />
                 </div>
               ) : (
-                <Input
-                  disabled
-                  label={t<string>("Preview")}
-                  value={previewValueStr}
-                />
+                <Input disabled label={t<string>("Preview")} value={previewValueStr} />
               )}
             </>
           );
@@ -347,10 +326,7 @@ const ModalContent = ({ validValueTypes, value, onChange }: Props) => {
         case PropertyType.Formula: {
           return (
             <>
-              <RadioGroup
-                label={t<string>("Formula syntax")}
-                orientation="horizontal"
-              >
+              <RadioGroup label={t<string>("Formula syntax")} orientation="horizontal">
                 <Radio value="buenos-aires">Javascript</Radio>
               </RadioGroup>
               <AceEditor
@@ -491,17 +467,14 @@ const ModalContent = ({ validValueTypes, value, onChange }: Props) => {
           <div ref={typePopoverDomRef} className={"p-2 flex flex-col gap-2"}>
             {Object.keys(PropertyTypeGroup).map((group) => {
               return (
-                <div
-                  className={
-                    "pb-2 mb-2 border-b-1 last:mb-0 last:border-b-0 last:pb-0"
-                  }
-                >
+                <div key={group} className={"pb-2 mb-2 border-b-1 last:mb-0 last:border-b-0 last:pb-0"}>
                   <div className={"mb-2 font-bold"}>{t<string>(group)}</div>
                   <div className="grid grid-cols-3 gap-x-2 text-sm leading-5">
                     {PropertyTypeGroup[group]!.map((type) => {
                       if (group == UnderDevelopmentGroupKey) {
                         return (
                           <Tooltip
+                            key={type}
                             content={
                               <FeatureStatusTip
                                 name={t<string>(PropertyType[type])}
@@ -511,15 +484,10 @@ const ModalContent = ({ validValueTypes, value, onChange }: Props) => {
                           >
                             <Button
                               className={"justify-start"}
-                              disabled={
-                                validValueTypes?.includes(type) === false
-                              }
+                              disabled={validValueTypes?.includes(type) === false}
                               variant={"light"}
                             >
-                              <PropertyTypeIcon
-                                textVariant={"default"}
-                                type={type}
-                              />
+                              <PropertyTypeIcon textVariant={"default"} type={type} />
                             </Button>
                           </Tooltip>
                         );
@@ -527,186 +495,155 @@ const ModalContent = ({ validValueTypes, value, onChange }: Props) => {
 
                       return (
                         <Button
+                          key={type}
                           className={"justify-start"}
                           disabled={validValueTypes?.includes(type) === false}
                           variant={"light"}
                           onClick={() => {
                             if (property.id != undefined && property.id > 0) {
-                              BApi.customProperty
-                                .getCustomPropertyConversionRules()
-                                .then((r) => {
-                                  const rules =
-                                    r.data?.[property.type!]?.[type] ?? [];
-                                  // change property type
-                                  const model = createPortal(Modal, {
-                                    defaultVisible: true,
-                                    title: t<string>(
-                                      "You are changing property type",
-                                    ),
-                                    children: (
+                              BApi.customProperty.getCustomPropertyConversionRules().then((r) => {
+                                const rules = r.data?.[property.type!]?.[type] ?? [];
+                                // change property type
+                                const model = createPortal(Modal, {
+                                  defaultVisible: true,
+                                  title: t<string>("You are changing property type"),
+                                  children: (
+                                    <div>
                                       <div>
-                                        <div>
-                                          {t<string>(
-                                            "Changing the property type may cause the loss of existing data. Click 'continue' to check.",
-                                          )}
-                                        </div>
-                                        {rules.length > 0 && (
-                                          <div className={"mt-2"}>
-                                            <div className={"font-bold"}>
-                                              {t<string>(
-                                                "Following rule(s) will be applied",
-                                              )}
-                                            </div>
-                                            <div
-                                              className={
-                                                "flex flex-wrap gap-2 items-center mt-1"
-                                              }
-                                            >
-                                              {rules.map((r) => {
-                                                if (r.description == null) {
-                                                  return (
-                                                    <Chip size={"sm"}>
-                                                      {r.name}
-                                                    </Chip>
-                                                  );
-                                                }
-
-                                                return (
-                                                  <Tooltip
-                                                    content={
-                                                      <pre>{r.description}</pre>
-                                                    }
-                                                  >
-                                                    <Chip size={"sm"}>
-                                                      {r.name}
-                                                    </Chip>
-                                                  </Tooltip>
-                                                );
-                                              })}
-                                            </div>
-                                          </div>
+                                        {t<string>(
+                                          "Changing the property type may cause the loss of existing data. Click 'continue' to check.",
                                         )}
                                       </div>
-                                    ),
-                                    footer: {
-                                      actions: ["ok", "cancel"],
-                                      okProps: {
-                                        children: t<string>("Continue"),
-                                      },
+                                      {rules.length > 0 && (
+                                        <div className={"mt-2"}>
+                                          <div className={"font-bold"}>
+                                            {t<string>("Following rule(s) will be applied")}
+                                          </div>
+                                          <div className={"flex flex-wrap gap-2 items-center mt-1"}>
+                                            {rules.map((r, i) => {
+                                              if (r.description == null) {
+                                                return <Chip key={i} size={"sm"}>{r.name}</Chip>;
+                                              }
+
+                                              return (
+                                                <Tooltip key={i} content={<pre>{r.description}</pre>}>
+                                                  <Chip size={"sm"}>{r.name}</Chip>
+                                                </Tooltip>
+                                              );
+                                            })}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  ),
+                                  footer: {
+                                    actions: ["ok", "cancel"],
+                                    okProps: {
+                                      children: t<string>("Continue"),
                                     },
-                                    onOk: async () => {
-                                      const rsp =
-                                        await BApi.customProperty.previewCustomPropertyTypeConversion(
-                                          property.id!,
-                                          type,
-                                        );
+                                  },
+                                  onOk: async () => {
+                                    const rsp =
+                                      await BApi.customProperty.previewCustomPropertyTypeConversion(
+                                        property.id!,
+                                        type,
+                                      );
 
-                                      if (rsp.data) {
-                                        const changes = rsp.data?.changes || [];
-                                        const { dataCount, toType, fromType } =
-                                          rsp.data;
+                                    if (rsp.data) {
+                                      const changes = rsp.data?.changes || [];
+                                      const { dataCount, toType, fromType } = rsp.data;
 
-                                        createPortal(Modal, {
-                                          defaultVisible: true,
-                                          title: t<string>("Final check"),
-                                          size:
-                                            changes.length! > 0
-                                              ? "lg"
-                                              : undefined,
-                                          children: (
-                                            <div>
-                                              <div className={"text-base"}>
-                                                {changes.length > 0
-                                                  ? t<string>(
-                                                      "Found {{count}} data, and {{changedDataCount}} data will be modified or deleted",
-                                                      {
-                                                        count: dataCount,
-                                                        changedDataCount:
-                                                          changes.length!,
-                                                      },
-                                                    )
-                                                  : t<string>(
-                                                      "Found {{count}} data, and all of them will be retained",
-                                                      { count: dataCount! },
-                                                    )}
-                                              </div>
-                                              <div className={"font-bold"}>
-                                                {t<string>(
-                                                  "Be careful, this process is irreversible",
-                                                )}
-                                              </div>
-                                              {changes.length > 0 && (
-                                                <Table>
-                                                  <TableHeader>
-                                                    <TableColumn>
-                                                      {t<string>(
-                                                        "Source value",
-                                                      )}
-                                                    </TableColumn>
-                                                    <TableColumn>
-                                                      {t<string>(
-                                                        "Converted value",
-                                                      )}
-                                                    </TableColumn>
-                                                  </TableHeader>
-                                                  <TableBody>
-                                                    {changes.map((c) => {
-                                                      return (
-                                                        <TableRow>
-                                                          <TableCell>
-                                                            <ValueRenderer
-                                                              type={fromType!}
-                                                              value={deserializeStandardValue(
-                                                                c.serializedFromValue ??
-                                                                  null,
-                                                                fromType!,
-                                                              )}
-                                                              variant={"light"}
-                                                            />
-                                                          </TableCell>
-                                                          <TableCell>
-                                                            <ValueRenderer
-                                                              type={toType!}
-                                                              value={deserializeStandardValue(
-                                                                c.serializedToValue ??
-                                                                  null,
-                                                                toType!,
-                                                              )}
-                                                              variant={"light"}
-                                                            />
-                                                          </TableCell>
-                                                        </TableRow>
-                                                      );
-                                                    })}
-                                                  </TableBody>
-                                                </Table>
+                                      createPortal(Modal, {
+                                        defaultVisible: true,
+                                        title: t<string>("Final check"),
+                                        size: changes.length! > 0 ? "lg" : undefined,
+                                        children: (
+                                          <div>
+                                            <div className={"text-base"}>
+                                              {changes.length > 0
+                                                ? t<string>(
+                                                    "Found {{count}} data, and {{changedDataCount}} data will be modified or deleted",
+                                                    {
+                                                      count: dataCount,
+                                                      changedDataCount: changes.length!,
+                                                    },
+                                                  )
+                                                : t<string>(
+                                                    "Found {{count}} data, and all of them will be retained",
+                                                    { count: dataCount! },
+                                                  )}
+                                            </div>
+                                            <div className={"font-bold"}>
+                                              {t<string>(
+                                                "Be careful, this process is irreversible",
                                               )}
                                             </div>
-                                          ),
-                                          onOk: async () => {
-                                            await BApi.customProperty.changeCustomPropertyType(
-                                              property.id!,
-                                              type,
-                                            );
-                                            await BApi.customProperty
-                                              .getCustomPropertyByKeys({
-                                                ids: [property.id!],
-                                              })
-                                              .then((r) => {
-                                                patchProperty(r.data![0]!);
-                                              });
+                                            {changes.length > 0 && (
+                                              <Table>
+                                                <TableHeader>
+                                                  <TableColumn>
+                                                    {t<string>("Source value")}
+                                                  </TableColumn>
+                                                  <TableColumn>
+                                                    {t<string>("Converted value")}
+                                                  </TableColumn>
+                                                </TableHeader>
+                                                <TableBody>
+                                                  {changes.map((c, i) => {
+                                                    return (
+                                                      <TableRow key={i}>
+                                                        <TableCell>
+                                                          <ValueRenderer
+                                                            type={fromType!}
+                                                            value={deserializeStandardValue(
+                                                              c.serializedFromValue ?? null,
+                                                              fromType!,
+                                                            )}
+                                                            variant={"light"}
+                                                          />
+                                                        </TableCell>
+                                                        <TableCell>
+                                                          <ValueRenderer
+                                                            type={toType!}
+                                                            value={deserializeStandardValue(
+                                                              c.serializedToValue ?? null,
+                                                              toType!,
+                                                            )}
+                                                            variant={"light"}
+                                                          />
+                                                        </TableCell>
+                                                      </TableRow>
+                                                    );
+                                                  })}
+                                                </TableBody>
+                                              </Table>
+                                            )}
+                                          </div>
+                                        ),
+                                        onOk: async () => {
+                                          await BApi.customProperty.changeCustomPropertyType(
+                                            property.id!,
+                                            type,
+                                          );
+                                          await BApi.customProperty
+                                            .getCustomPropertyByKeys({
+                                              ids: [property.id!],
+                                            })
+                                            .then((r) => {
+                                              patchProperty(r.data![0]!);
+                                            });
+                                        },
+                                        footer: {
+                                          actions: ["ok", "cancel"],
+                                          okProps: {
+                                            children: t<string>("Convert"),
                                           },
-                                          footer: {
-                                            actions: ["ok", "cancel"],
-                                            okProps: {
-                                              children: t<string>("Convert"),
-                                            },
-                                          },
-                                        });
-                                      }
-                                    },
-                                  });
+                                        },
+                                      });
+                                    }
+                                  },
                                 });
+                              });
                             } else {
                               patchProperty({
                                 ...property,
@@ -716,10 +653,7 @@ const ModalContent = ({ validValueTypes, value, onChange }: Props) => {
                             settypeGroupsVisible(false);
                           }}
                         >
-                          <PropertyTypeIcon
-                            textVariant={"default"}
-                            type={type}
-                          />
+                          <PropertyTypeIcon textVariant={"default"} type={type} />
                         </Button>
                       );
                     })}

@@ -49,9 +49,7 @@ const ChoiceValueEditor = (props: ChoiceValueEditorProps) => {
       size={dataSource.length > 10 ? "xl" : "lg"}
       title={t<string>("Select data")}
       onOk={async () => {
-        const validValues = value.filter((v) =>
-          dataSource.some((d) => d.value == v),
-        );
+        const validValues = value.filter((v) => dataSource.some((d) => d.value == v));
 
         onValueChange?.(
           validValues,
@@ -63,8 +61,8 @@ const ChoiceValueEditor = (props: ChoiceValueEditorProps) => {
     >
       <div>
         <Input
-          size={"sm"}
           placeholder={t<string>("common.placeholder.search")}
+          size={"sm"}
           startContent={<SearchOutlined className={"text-small"} />}
           value={keyword}
           onValueChange={(v) => {
@@ -77,25 +75,17 @@ const ChoiceValueEditor = (props: ChoiceValueEditorProps) => {
           ? t<string>("No choices available, please check your configurations")
           : dataSource
               .filter(
-                (d) =>
-                  keyword.length == 0 ||
-                  d.label.toLowerCase().includes(keyword.toLowerCase()),
+                (d) => keyword.length == 0 || d.label.toLowerCase().includes(keyword.toLowerCase()),
               )
               .map((d) => {
                 return (
                   <Button
+                    key={d.value}
                     color={value.includes(d.value) ? "primary" : "default"}
                     size={"sm"}
                     onClick={() => {
                       if (multiple) {
-                        log(
-                          "value",
-                          value,
-                          "select",
-                          d.value,
-                          "includes",
-                          value.includes(d.value),
-                        );
+                        log("value", value, "select", d.value, "includes", value.includes(d.value));
                         if (value.includes(d.value)) {
                           setValue(value.filter((v) => v !== d.value));
                         } else {

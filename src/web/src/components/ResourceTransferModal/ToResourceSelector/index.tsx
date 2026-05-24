@@ -4,12 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useAsyncList } from "@react-stately/data";
 import { ReloadOutlined } from "@ant-design/icons";
 
-import {
-  Autocomplete,
-  AutocompleteItem,
-  Button,
-  Chip,
-} from "@/components/bakaui";
+import { Autocomplete, AutocompleteItem, Button, Chip } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 import { buildLogger } from "@/components/utils";
 
@@ -32,10 +27,7 @@ const ToResourceSelector = ({ onSelect, fromResourcePath }: Props) => {
     async load({ signal, filterText }) {
       if (filterText != undefined && filterText.length > 0) {
         const trim = filterText.trim();
-        const res = await BApi.resource.searchResourcePaths(
-          { keyword: trim },
-          { signal },
-        );
+        const res = await BApi.resource.searchResourcePaths({ keyword: trim }, { signal });
         const data = res.data || [];
         const isOverflow = data.length > 20;
         const listItems: Item[] = data.slice(0, 20).map((d) => ({
@@ -47,9 +39,7 @@ const ToResourceSelector = ({ onSelect, fromResourcePath }: Props) => {
         if (isOverflow) {
           listItems.push({
             id: 0,
-            fileName: t<string>(
-              "resourceTransfer.selector.overflow",
-            ),
+            fileName: t<string>("resourceTransfer.selector.overflow"),
           });
         }
 
@@ -72,15 +62,11 @@ const ToResourceSelector = ({ onSelect, fromResourcePath }: Props) => {
       <Autocomplete
         fullWidth
         isRequired
-        description={t<string>(
-          "resourceTransfer.selector.description",
-        )}
+        description={t<string>("resourceTransfer.selector.description")}
         inputValue={targetResourceCandidates.filterText}
         isLoading={targetResourceCandidates.isLoading}
         items={targetResourceCandidates.items}
-        label={t<string>(
-          "resourceTransfer.selector.label",
-        )}
+        label={t<string>("resourceTransfer.selector.label")}
         listboxProps={{
           emptyContent: t<string>("resourceTransfer.selector.empty"),
         }}

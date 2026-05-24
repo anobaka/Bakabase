@@ -59,6 +59,7 @@ export const useCopyMarksStore = create<CopyMarksState>((set, get) => ({
   toggleMarkSelection: (markId) =>
     set((state) => {
       const idx = state.selectedMarkIds.indexOf(markId);
+
       if (idx > -1) {
         return { selectedMarkIds: state.selectedMarkIds.filter((id) => id !== markId) };
       } else {
@@ -95,6 +96,7 @@ export const useCopyMarksStore = create<CopyMarksState>((set, get) => ({
   removeGroup: (groupId) =>
     set((state) => {
       const newGroups = state.candidateGroups.filter((g) => g.id !== groupId);
+
       return {
         candidateGroups: newGroups,
         selectedGroupId: state.selectedGroupId === groupId ? null : state.selectedGroupId,
@@ -104,11 +106,14 @@ export const useCopyMarksStore = create<CopyMarksState>((set, get) => ({
 
   removeMarkFromGroup: (groupId, markId) =>
     set((state) => {
-      const newGroups = state.candidateGroups.map((g) => {
-        if (g.id !== groupId) return g;
-        const newMarks = g.marks.filter((m) => m.id !== markId);
-        return { ...g, marks: newMarks };
-      }).filter((g) => g.marks.length > 0); // Remove group if no marks left
+      const newGroups = state.candidateGroups
+        .map((g) => {
+          if (g.id !== groupId) return g;
+          const newMarks = g.marks.filter((m) => m.id !== markId);
+
+          return { ...g, marks: newMarks };
+        })
+        .filter((g) => g.marks.length > 0); // Remove group if no marks left
 
       return {
         candidateGroups: newGroups,

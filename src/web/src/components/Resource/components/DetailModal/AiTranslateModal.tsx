@@ -1,25 +1,23 @@
 "use client";
 
+import type { DestroyableProps } from "@/components/bakaui/types";
+import type { BakabaseModulesAIModelsDomainPropertyTranslation } from "@/sdk/Api";
+import type { IProperty } from "@/components/Property/models";
+
 import React, { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MdTranslate } from "react-icons/md";
-import {
-  Checkbox,
-  Modal,
-  toast,
-} from "@/components/bakaui";
+
+import { Checkbox, Modal, toast } from "@/components/bakaui";
 import LanguageDropdown from "@/components/LanguageDropdown";
-import type { DestroyableProps } from "@/components/bakaui/types";
 import AiFeatureButton from "@/components/AiFeatureButton";
 import BApi from "@/sdk/BApi";
-import type { BakabaseModulesAIModelsDomainPropertyTranslation } from "@/sdk/Api";
 import { AiFeature, PropertyPool, StandardValueType } from "@/sdk/constants";
 import { useAppOptionsStore } from "@/stores/options";
 import AiFeatureConfigShortcut from "@/components/AiFeatureConfigShortcut";
 import BriefProperty from "@/components/Chips/Property/BriefProperty";
 import { serializeStandardValue } from "@/components/StandardValue/helpers";
 import PropertyValueRenderer from "@/components/Property/components/PropertyValueRenderer";
-import type { IProperty } from "@/components/Property/models";
 
 type Props = {
   resourceId: number;
@@ -58,6 +56,7 @@ const AiTranslateModal = ({ resourceId, onTranslationApplied, onDestroyed }: Pro
       const r = await BApi.ai.aiTranslateResourceProperties(resourceId, {
         targetLanguage,
       });
+
       if (!r.code && r.data?.translations) {
         setItems(
           r.data.translations
@@ -73,6 +72,7 @@ const AiTranslateModal = ({ resourceId, onTranslationApplied, onDestroyed }: Pro
 
   const handleApply = useCallback(async () => {
     const selected = items.filter((it) => it.selected);
+
     if (selected.length === 0) return;
 
     setApplying(true);
@@ -82,6 +82,7 @@ const AiTranslateModal = ({ resourceId, onTranslationApplied, onDestroyed }: Pro
           item.translatedText,
           StandardValueType.String,
         );
+
         await BApi.resource.putResourcePropertyValue(resourceId, {
           propertyId: item.propertyId,
           isCustomProperty: item.propertyPool === PropertyPool.Custom,
@@ -95,17 +96,12 @@ const AiTranslateModal = ({ resourceId, onTranslationApplied, onDestroyed }: Pro
     }
   }, [items, resourceId, onTranslationApplied, t]);
 
-  const toggleAll = useCallback(
-    (checked: boolean) => {
-      setItems((prev) => prev.map((it) => ({ ...it, selected: checked })));
-    },
-    [],
-  );
+  const toggleAll = useCallback((checked: boolean) => {
+    setItems((prev) => prev.map((it) => ({ ...it, selected: checked })));
+  }, []);
 
   const toggleItem = useCallback((idx: number) => {
-    setItems((prev) =>
-      prev.map((it, i) => (i === idx ? { ...it, selected: !it.selected } : it)),
-    );
+    setItems((prev) => prev.map((it, i) => (i === idx ? { ...it, selected: !it.selected } : it)));
   }, []);
 
   const allSelected = items.length > 0 && items.every((it) => it.selected);
@@ -114,23 +110,16 @@ const AiTranslateModal = ({ resourceId, onTranslationApplied, onDestroyed }: Pro
   return (
     <Modal
       defaultVisible
-      size="lg"
-      title={
-        <div className="flex items-center gap-2">
-          <MdTranslate className="text-lg" />
-          {t("resource.action.aiTranslate")}
-        </div>
-      }
       footer={
         <div className="flex items-center w-full gap-2">
           <AiFeatureConfigShortcut feature={AiFeature.Translation} />
           <div className="flex-1" />
           {translated && items.length > 0 && (
             <AiFeatureButton
-              feature={AiFeature.Translation}
               color="success"
-              isLoading={applying}
+              feature={AiFeature.Translation}
               isDisabled={!someSelected}
+              isLoading={applying}
               onPress={handleApply}
             >
               {t("resource.ai.applySelected")}
@@ -138,8 +127,8 @@ const AiTranslateModal = ({ resourceId, onTranslationApplied, onDestroyed }: Pro
             </AiFeatureButton>
           )}
           <AiFeatureButton
-            feature={AiFeature.Translation}
             color="primary"
+            feature={AiFeature.Translation}
             isLoading={loading}
             onPress={handleTranslate}
           >
@@ -147,16 +136,19 @@ const AiTranslateModal = ({ resourceId, onTranslationApplied, onDestroyed }: Pro
           </AiFeatureButton>
         </div>
       }
+      size="lg"
+      title={
+        <div className="flex items-center gap-2">
+          <MdTranslate className="text-lg" />
+          {t("resource.action.aiTranslate")}
+        </div>
+      }
       onDestroyed={onDestroyed}
     >
       <div className="flex flex-col gap-4">
         <div className="flex items-center gap-2">
           <span className="text-sm whitespace-nowrap">{t("resource.ai.targetLanguage")}</span>
-          <LanguageDropdown
-            size="sm"
-            value={targetLanguage}
-            onValueChange={setTargetLanguage}
-          />
+          <LanguageDropdown size="sm" value={targetLanguage} onValueChange={setTargetLanguage} />
         </div>
 
         {translated && items.length === 0 && (
@@ -174,52 +166,58 @@ const AiTranslateModal = ({ resourceId, onTranslationApplied, onDestroyed }: Pro
                   <tr className="border-b border-default-200">
                     <th className="p-2 w-8">
                       <Checkbox
-                        size="sm"
-                        isSelected={allSelected}
                         isIndeterminate={someSelected && !allSelected}
+                        isSelected={allSelected}
+                        size="sm"
                         onValueChange={toggleAll}
                       />
                     </th>
                     <th className="p-2 text-left text-default-500">{t("resource.ai.property")}</th>
                     <th className="p-2 text-left text-default-500">{t("resource.ai.original")}</th>
-                    <th className="p-2 text-left text-default-500">{t("resource.ai.translated")}</th>
+                    <th className="p-2 text-left text-default-500">
+                      {t("resource.ai.translated")}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {items.map((tr, idx) => {
                     const property = buildProperty(tr);
+
                     return (
-                      <tr
-                        key={idx}
-                        className="border-b border-default-100 hover:bg-default-50"
-                      >
+                      <tr key={idx} className="border-b border-default-100 hover:bg-default-50">
                         <td className="p-2">
                           <Checkbox
-                            size="sm"
                             isSelected={tr.selected}
+                            size="sm"
                             onValueChange={() => toggleItem(idx)}
                           />
                         </td>
                         <td className="p-2">
                           <BriefProperty
-                            property={property}
                             fields={["type", "name"]}
+                            property={property}
                             showPoolChip={false}
                           />
                         </td>
                         <td className="p-2">
                           <PropertyValueRenderer
-                            property={property}
-                            bizValue={serializeStandardValue(tr.originalText, StandardValueType.String)}
                             isReadonly
+                            bizValue={serializeStandardValue(
+                              tr.originalText,
+                              StandardValueType.String,
+                            )}
+                            property={property}
                             size="sm"
                           />
                         </td>
                         <td className="p-2">
                           <PropertyValueRenderer
-                            property={property}
-                            bizValue={serializeStandardValue(tr.translatedText, StandardValueType.String)}
                             isReadonly
+                            bizValue={serializeStandardValue(
+                              tr.translatedText,
+                              StandardValueType.String,
+                            )}
+                            property={property}
                             size="sm"
                           />
                         </td>

@@ -1,20 +1,11 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import type {
-  Property,
-  Resource as ResourceModel,
-} from "@/core/models/Resource";
+import type { Property, Resource as ResourceModel } from "@/core/models/Resource";
 import type { DestroyableProps } from "@/components/bakaui/types";
 import type { IProperty } from "@/components/Property/models";
 
-import {
-  TableBody,
-  TableCell,
-  TableColumn,
-  TableHeader,
-  TableRow,
-} from "@heroui/react";
+import { TableBody, TableCell, TableColumn, TableHeader, TableRow } from "@heroui/react";
 import { useTranslation } from "react-i18next";
 import React, { useCallback, useEffect, useState } from "react";
 import {
@@ -25,11 +16,7 @@ import {
 
 import { useResourceOptionsStore } from "@/stores/options";
 import { Button, Chip, Modal, Table, Tooltip } from "@/components/bakaui";
-import {
-  PropertyPool,
-  PropertyValueScope,
-  propertyValueScopes,
-} from "@/sdk/constants";
+import { PropertyPool, PropertyValueScope, propertyValueScopes } from "@/sdk/constants";
 import { buildLogger } from "@/components/utils";
 import BApi from "@/sdk/BApi";
 import PropertyValueRenderer from "@/components/Property/components/PropertyValueRenderer";
@@ -58,11 +45,8 @@ const PropertyValueScopePicker = (props: Props) => {
   const init = useCallback(async () => {
     // @ts-ignore
     const properties =
-      (
-        await BApi.property.getPropertiesByPool(
-          PropertyPool.Custom | PropertyPool.Reserved,
-        )
-      ).data ?? [];
+      (await BApi.property.getPropertiesByPool(PropertyPool.Custom | PropertyPool.Reserved)).data ??
+      [];
     const propertyMap: PropertyMap = {};
 
     properties.forEach((p) => {
@@ -80,8 +64,8 @@ const PropertyValueScopePicker = (props: Props) => {
 
   const renderHeader = () => {
     const columns: any[] = [
-      <TableColumn>{t<string>("Property")}</TableColumn>,
-      <TableColumn>{t<string>("Display value")}</TableColumn>,
+      <TableColumn key="property">{t<string>("Property")}</TableColumn>,
+      <TableColumn key="display-value">{t<string>("Display value")}</TableColumn>,
       ...visibleScopes.map((scope) => {
         const priority = resourceOptions.propertyValueScopePriority ?? [];
         const index = priority.findIndex((p) => p == scope);
@@ -92,9 +76,7 @@ const PropertyValueScopePicker = (props: Props) => {
               size={"sm"}
               onClick={() => {
                 const arr: PropertyValueScope[] =
-                  index > -1
-                    ? priority.filter((p) => p != scope)
-                    : [...priority, scope];
+                  index > -1 ? priority.filter((p) => p != scope) : [...priority, scope];
 
                 BApi.options.patchResourceOptions({
                   propertyValueScopePriority: arr,
@@ -118,11 +100,7 @@ const PropertyValueScopePicker = (props: Props) => {
                 }
               >
                 <Chip color="success" size={"sm"} variant={"light"}>
-                  {index == -1 ? (
-                    <CloseCircleOutlined className={"text-base"} />
-                  ) : (
-                    index + 1
-                  )}
+                  {index == -1 ? <CloseCircleOutlined className={"text-base"} /> : index + 1}
                 </Chip>
               </Tooltip>
             </Button>
@@ -176,10 +154,7 @@ const PropertyValueScopePicker = (props: Props) => {
           <TableCell key={"Display value"}>
             {property && (
               <PropertyValueRenderer
-                bizValue={serializeStandardValue(
-                  finalValue,
-                  propertyValues.bizValueType,
-                )}
+                bizValue={serializeStandardValue(finalValue, propertyValues.bizValueType)}
                 property={property}
                 variant={"light"}
               />
@@ -188,9 +163,7 @@ const PropertyValueScopePicker = (props: Props) => {
         );
 
         visibleScopes.forEach((scope) => {
-          const value = propertyValues.values?.find(
-            (v) => v.scope == scope,
-          )?.aliasAppliedBizValue;
+          const value = propertyValues.values?.find((v) => v.scope == scope)?.aliasAppliedBizValue;
           const isHidden = priority.findIndex((p) => p == scope) == -1;
           let className = "";
           const style: CSSProperties = {};
@@ -201,25 +174,16 @@ const PropertyValueScopePicker = (props: Props) => {
             // style.borderColor = 'var(--bakaui-success)';
           }
           row.push(
-            <TableCell
-              key={`scope-${scope}`}
-              className={className}
-              style={style}
-            >
+            <TableCell key={`scope-${scope}`} className={className} style={style}>
               <div className={`relative ${isHidden ? "opacity-60" : ""}`}>
                 {scope == finalScope && (
                   <CheckCircleOutlined
-                    className={
-                      "absolute top-0 right-0 text-[var(--bakaui-success)]"
-                    }
+                    className={"absolute top-0 right-0 text-[var(--bakaui-success)]"}
                   />
                 )}
                 {property && (
                   <PropertyValueRenderer
-                    bizValue={serializeStandardValue(
-                      value,
-                      propertyValues.bizValueType,
-                    )}
+                    bizValue={serializeStandardValue(value, propertyValues.bizValueType)}
                     property={property}
                     variant={"light"}
                   />
@@ -259,6 +223,7 @@ const PropertyValueScopePicker = (props: Props) => {
 
             return (
               <Chip
+                key={s.value}
                 className={"cursor-pointer"}
                 color={isVisible ? "primary" : "default"}
                 radius={"sm"}

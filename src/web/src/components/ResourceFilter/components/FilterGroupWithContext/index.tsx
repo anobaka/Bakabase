@@ -51,6 +51,7 @@ const isGroupEmpty = (group?: SearchFilterGroup): boolean => {
   if (!group) return true;
   const hasFilters = group.filters && group.filters.length > 0;
   const hasGroups = group.groups && group.groups.length > 0;
+
   return !hasFilters && !hasGroups;
 };
 
@@ -59,13 +60,14 @@ const isGroupEmpty = (group?: SearchFilterGroup): boolean => {
  */
 const createInternalPropertyFilter = async (
   propertyId: ResourceProperty,
-  operation: SearchOperation = SearchOperation.In
+  operation: SearchOperation = SearchOperation.In,
 ): Promise<SearchFilter | null> => {
   try {
     const pool = PropertyPool.Internal;
 
     const propertyResponse = await BApi.property.getPropertiesByPool(pool);
-    const property = (propertyResponse.data || []).find(p => p.id === propertyId);
+    const property = (propertyResponse.data || []).find((p) => p.id === propertyId);
+
     if (!property) return null;
 
     const valuePropertyResponse = await BApi.resource.getFilterValueProperty({
@@ -124,6 +126,7 @@ const FilterGroupWithContextContent = ({
       createInternalPropertyFilter(ResourceProperty.MediaLibraryV2Multi),
     ]).then((filters) => {
       const validFilters = filters.filter((f): f is SearchFilter => f !== null);
+
       if (validFilters.length > 0) {
         const newGroup: SearchFilterGroup = {
           combinator: GroupCombinator.And,
@@ -131,6 +134,7 @@ const FilterGroupWithContextContent = ({
           filters: validFilters,
           groups: [],
         };
+
         onChange(newGroup);
       }
     });
@@ -138,8 +142,7 @@ const FilterGroupWithContextContent = ({
 
   const hasFilters =
     group &&
-    ((group.filters && group.filters.length > 0) ||
-      (group.groups && group.groups.length > 0));
+    ((group.filters && group.filters.length > 0) || (group.groups && group.groups.length > 0));
 
   if (!hasFilters || !group) {
     return null;
@@ -149,13 +152,13 @@ const FilterGroupWithContextContent = ({
     <div className={className || undefined}>
       <FilterGroup
         isRoot
-        group={group}
+        externalNewFilterIndex={externalNewFilterIndex}
         filterDisplayMode={filterDisplayMode}
         filterLayout={filterLayout}
+        group={group}
         isReadonly={isReadonly}
-        externalNewFilterIndex={externalNewFilterIndex}
-        onExternalNewFilterConsumed={onExternalNewFilterConsumed}
         onChange={onChange}
+        onExternalNewFilterConsumed={onExternalNewFilterConsumed}
       />
     </div>
   );
@@ -166,10 +169,7 @@ const FilterGroupWithContextContent = ({
  * Can be used standalone (with config prop) or inside ResourceFilterController.
  * When used standalone, it creates its own FilterProvider.
  */
-const FilterGroupWithContext = ({
-  config,
-  ...props
-}: FilterGroupWithContextProps) => {
+const FilterGroupWithContext = ({ config, ...props }: FilterGroupWithContextProps) => {
   const hasContext = useHasFilterContext();
   const { createPortal } = useBakabaseContext();
   const defaultConfig = useMemo(() => createDefaultFilterConfig(createPortal), [createPortal]);

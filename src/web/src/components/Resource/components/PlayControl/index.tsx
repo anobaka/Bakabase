@@ -3,9 +3,18 @@
 import type { PlayableItem, Resource as ResourceModel } from "@/core/models/Resource";
 
 import { FolderOutlined, PlayCircleOutlined } from "@ant-design/icons";
-import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from "react";
+import React, {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
+
+import NoPlayableFilesModal from "./NoPlayableFilesModal";
 
 import { Button, Chip, Modal } from "@/components/bakaui";
 import { splitPathIntoSegments, standardizePath } from "@/components/utils";
@@ -16,8 +25,6 @@ import { useUiOptionsStore } from "@/stores/options";
 import { usePlayableItemResolution } from "@/hooks/usePlayableItemResolution";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import envConfig from "@/config/env";
-
-import NoPlayableFilesModal from "./NoPlayableFilesModal";
 
 // Play control status for UI rendering
 export type PlayControlStatus = "idle" | "loading" | "ready" | "not-found";
@@ -118,6 +125,7 @@ const playItemApi = async (resourceId: number, origin: DataOrigin, key: string) 
   const endpoint = envConfig.apiEndpoint || "";
   const url = `${endpoint}/resource/${resourceId}/play-item?origin=${origin}&key=${encodeURIComponent(key)}`;
   const rsp = await fetch(url);
+
   return rsp.json();
 };
 
@@ -142,52 +150,62 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
   const [modalSource, setModalSource] = useState<DataOrigin | null>(null);
 
   // Map resolution groups to SourceEntry[] for the PortalComponent
-  const sources: SourceEntry[] = useMemo(() =>
-    resolution.groups
-      .filter(g => g.items.length > 0)
-      .map(g => ({ source: g.origin, items: g.items })),
-    [resolution.groups]
+  const sources: SourceEntry[] = useMemo(
+    () =>
+      resolution.groups
+        .filter((g) => g.items.length > 0)
+        .map((g) => ({ source: g.origin, items: g.items })),
+    [resolution.groups],
   );
 
   // Build sourceGroups map for handlePlaySource
   const sourceGroups = useMemo(() => {
     const groups = new Map<DataOrigin, PlayableItem[]>();
+
     for (const g of resolution.groups) {
       if (g.items.length > 0) {
         groups.set(g.origin, g.items);
       }
     }
+
     return groups;
   }, [resolution.groups]);
 
   // All playable items from all groups
-  const playableItems = useMemo(() =>
-    resolution.groups.flatMap(g => g.items),
-    [resolution.groups]
+  const playableItems = useMemo(
+    () => resolution.groups.flatMap((g) => g.items),
+    [resolution.groups],
   );
 
   // FileSystem discovery status for the portal
   const fsDiscoveryStatus: FsDiscoveryStatus = useMemo(() => {
-    const fsGroup = resolution.groups.find(g => g.origin === DataOrigin.FileSystem);
+    const fsGroup = resolution.groups.find((g) => g.origin === DataOrigin.FileSystem);
+
     if (!fsGroup) {
       // Check if there's a FS dataState at all
       const hasFsState = resource.dataStates?.some(
-        s => s.dataType === ResourceDataType.PlayableItem && s.origin === DataOrigin.FileSystem
+        (s) => s.dataType === ResourceDataType.PlayableItem && s.origin === DataOrigin.FileSystem,
       );
+
       if (!hasFsState) return "ready";
+
       return "idle";
     }
     if (fsGroup.status === DataStatus.Ready) return "ready";
     if (fsGroup.status === DataStatus.NotStarted) return "loading";
+
     return "ready";
   }, [resolution.groups, resource.dataStates]);
 
   // Map overall status
   const status: PlayControlStatus = useMemo(() => {
     switch (resolution.overallStatus) {
-      case "ready": return "ready";
-      case "loading": return "loading";
-      case "not-found": return fsDiscoveryStatus === "idle" ? "idle" : "not-found";
+      case "ready":
+        return "ready";
+      case "loading":
+        return "loading";
+      case "not-found":
+        return fsDiscoveryStatus === "idle" ? "idle" : "not-found";
     }
   }, [resolution.overallStatus, fsDiscoveryStatus]);
 
@@ -196,6 +214,7 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
     const fsPaths = playableItems
       .filter((i) => i.origin === DataOrigin.FileSystem)
       .map((i) => i.key);
+
     if (fsPaths.length > 0 && !resource.isFile) {
       setDirs(splitIntoDirs(fsPaths, resource.path));
     }
@@ -207,14 +226,19 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
     setModalSource(null);
   }, [resource.id]);
 
-  useImperativeHandle(ref, () => ({
-    triggerDiscovery: () => resolution.triggerDiscovery(DataOrigin.FileSystem),
-  }), [resolution.triggerDiscovery]);
+  useImperativeHandle(
+    ref,
+    () => ({
+      triggerDiscovery: () => resolution.triggerDiscovery(DataOrigin.FileSystem),
+    }),
+    [resolution.triggerDiscovery],
+  );
 
   // Play a PlayableItem via unified PlayItem API (all sources go through resolvers)
   const playItem = async (item: PlayableItem) => {
     try {
       const rsp = await playItemApi(resource.id, item.origin, item.key);
+
       if (!rsp.code) {
         toast.success(t<string>("Opened"));
         afterPlaying?.();
@@ -225,33 +249,41 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
   };
 
   /** Play items from a specific source, handling single/multiple items */
-  const handlePlaySource = useCallback((source: DataOrigin) => {
-    const items = sourceGroups.get(source) ?? [];
-    if (items.length === 0) return;
+  const handlePlaySource = useCallback(
+    (source: DataOrigin) => {
+      const items = sourceGroups.get(source) ?? [];
 
-    if (items.length === 1) {
-      playItem(items[0]!);
-      return;
-    }
+      if (items.length === 0) return;
 
-    // Multiple items - check auto-select preference
-    if (resourceUiOptions?.autoSelectFirstPlayableFile) {
-      playItem(items[0]!);
-      return;
-    }
+      if (items.length === 1) {
+        playItem(items[0]!);
 
-    // Show modal filtered to this source
-    if (source === DataOrigin.FileSystem && !resource.isFile) {
-      const fsItems = sourceGroups.get(DataOrigin.FileSystem) ?? [];
-      if (fsItems.length > 0) {
-        const fsPaths = fsItems.map(i => i.key);
-        const computedDirs = splitIntoDirs(fsPaths, resource.path);
-        setDirs(computedDirs);
+        return;
       }
-    }
-    setModalSource(source);
-    setModalVisible(true);
-  }, [sourceGroups, resourceUiOptions?.autoSelectFirstPlayableFile, resource.path, resource.isFile]);
+
+      // Multiple items - check auto-select preference
+      if (resourceUiOptions?.autoSelectFirstPlayableFile) {
+        playItem(items[0]!);
+
+        return;
+      }
+
+      // Show modal filtered to this source
+      if (source === DataOrigin.FileSystem && !resource.isFile) {
+        const fsItems = sourceGroups.get(DataOrigin.FileSystem) ?? [];
+
+        if (fsItems.length > 0) {
+          const fsPaths = fsItems.map((i) => i.key);
+          const computedDirs = splitIntoDirs(fsPaths, resource.path);
+
+          setDirs(computedDirs);
+        }
+      }
+      setModalSource(source);
+      setModalVisible(true);
+    },
+    [sourceGroups, resourceUiOptions?.autoSelectFirstPlayableFile, resource.path, resource.isFile],
+  );
 
   /** Open the resource's folder */
   const handleOpenFolder = useCallback(() => {
@@ -270,20 +302,22 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
 
   // Get items to display in modal (filtered by selected source or all)
   const modalItems = modalSource ? (sourceGroups.get(modalSource) ?? []) : playableItems;
-  const isFileSystemModal = modalSource === DataOrigin.FileSystem || (!modalSource && sourceGroups.has(DataOrigin.FileSystem));
+  const isFileSystemModal =
+    modalSource === DataOrigin.FileSystem ||
+    (!modalSource && sourceGroups.has(DataOrigin.FileSystem));
 
   return (
     <>
       <PortalComponent
-        status={status}
-        sources={sources}
+        fsDiscoveryStatus={fsDiscoveryStatus}
         hasPath={!!resource.path}
         isFile={resource.isFile}
-        fsDiscoveryStatus={fsDiscoveryStatus}
-        onPlaySource={handlePlaySource}
-        onOpenFolder={handleOpenFolder}
-        onNotFound={handleNotFound}
+        sources={sources}
+        status={status}
         triggerFsDiscovery={() => resolution.triggerDiscovery(DataOrigin.FileSystem)}
+        onNotFound={handleNotFound}
+        onOpenFolder={handleOpenFolder}
+        onPlaySource={handlePlaySource}
       />
       <Modal
         footer={false}
@@ -399,9 +433,7 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
                   },
                 });
                 setModalVisible(false);
-                toast.success(
-                  t<string>("resource.playControl.toast.autoSelectEnabled"),
-                );
+                toast.success(t<string>("resource.playControl.toast.autoSelectEnabled"));
               }}
             >
               {t<string>("resource.playControl.modal.autoSelectFirstFile")}

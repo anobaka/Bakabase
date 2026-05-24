@@ -66,9 +66,7 @@ export const toFilterInputModel = (filter: FilterLike): SearchFilterInputModel =
 /**
  * Convert any filter-group-like object to SearchFilterGroupInputModel
  */
-export const toFilterGroupInputModel = (
-  group: FilterGroupLike
-): SearchFilterGroupInputModel => {
+export const toFilterGroupInputModel = (group: FilterGroupLike): SearchFilterGroupInputModel => {
   return {
     combinator: group.combinator ?? 1,
     groups: group.groups?.map(toFilterGroupInputModel),

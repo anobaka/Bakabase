@@ -33,7 +33,11 @@ enum ProxyMode {
 }
 
 interface OthersProps {
-  applyPatches: <T>(api: (patches: T) => Promise<{ code?: number }>, patches: T, success?: (rsp: unknown) => void) => void;
+  applyPatches: <T>(
+    api: (patches: T) => Promise<{ code?: number }>,
+    patches: T,
+    success?: (rsp: unknown) => void,
+  ) => void;
 }
 
 const Others: React.FC<OthersProps> = ({ applyPatches }) => {
@@ -84,9 +88,7 @@ const Others: React.FC<OthersProps> = ({ applyPatches }) => {
               <Select
                 dataSource={proxies}
                 multiple={false}
-                selectedKeys={
-                  selectedProxy === undefined ? undefined : [selectedProxy]
-                }
+                selectedKeys={selectedProxy === undefined ? undefined : [selectedProxy]}
                 size="sm"
                 onSelectionChange={(keys) => {
                   const key = Array.from(keys)[0] as string;
@@ -142,10 +144,7 @@ const Others: React.FC<OthersProps> = ({ applyPatches }) => {
                       throw new Error("Invalid data");
                     }
                     await BApi.options.patchNetworkOptions({
-                      customProxies: [
-                        ...(networkOptions.customProxies ?? []),
-                        { address: p },
-                      ],
+                      customProxies: [...(networkOptions.customProxies ?? []), { address: p }],
                     });
                   },
                 });
@@ -153,26 +152,28 @@ const Others: React.FC<OthersProps> = ({ applyPatches }) => {
             >
               {t("common.action.add")}
             </Button>
-            {networkOptions?.proxy?.mode === ProxyMode.UseCustom && networkOptions?.proxy?.customProxyId && (
-              <Button
-                color="danger"
-                isIconOnly
-                size="sm"
-                variant="light"
-                onClick={async () => {
-                  const remaining = (networkOptions.customProxies ?? []).filter(
-                    (c) => c.id !== networkOptions.proxy?.customProxyId,
-                  );
-                  await BApi.options.patchNetworkOptions({
-                    customProxies: remaining,
-                    proxy: { mode: ProxyMode.DoNotUse, customProxyId: undefined },
-                  });
-                  toast.success(t("common.success.saved"));
-                }}
-              >
-                <AiOutlineDelete className="text-lg" />
-              </Button>
-            )}
+            {networkOptions?.proxy?.mode === ProxyMode.UseCustom &&
+              networkOptions?.proxy?.customProxyId && (
+                <Button
+                  isIconOnly
+                  color="danger"
+                  size="sm"
+                  variant="light"
+                  onClick={async () => {
+                    const remaining = (networkOptions.customProxies ?? []).filter(
+                      (c) => c.id !== networkOptions.proxy?.customProxyId,
+                    );
+
+                    await BApi.options.patchNetworkOptions({
+                      customProxies: remaining,
+                      proxy: { mode: ProxyMode.DoNotUse, customProxyId: undefined },
+                    });
+                    toast.success(t("common.success.saved"));
+                  }}
+                >
+                  <AiOutlineDelete className="text-lg" />
+                </Button>
+              )}
           </div>
         );
       },
@@ -186,10 +187,7 @@ const Others: React.FC<OthersProps> = ({ applyPatches }) => {
             isSelected={appOptions.enableAnonymousDataTracking}
             size="sm"
             onValueChange={(checked) => {
-              applyPatches(
-                BApi.options.patchAppOptions,
-                { enableAnonymousDataTracking: checked },
-              );
+              applyPatches(BApi.options.patchAppOptions, { enableAnonymousDataTracking: checked });
             }}
           />
         );
@@ -201,19 +199,21 @@ const Others: React.FC<OthersProps> = ({ applyPatches }) => {
       renderValue: () => {
         return (
           <Input
-            type="number"
-            size="sm"
+            className="w-24"
             min={1}
             placeholder={String(appOptions.effectiveMaxParallelism)}
-            value={appOptions.maxParallelism !== undefined && appOptions.maxParallelism !== null ? String(appOptions.maxParallelism) : ""}
-            className="w-24"
+            size="sm"
+            type="number"
+            value={
+              appOptions.maxParallelism !== undefined && appOptions.maxParallelism !== null
+                ? String(appOptions.maxParallelism)
+                : ""
+            }
             onValueChange={(v) => {
               const value = v === "" ? undefined : parseInt(v, 10);
+
               if (value === undefined || (value >= 1 && !isNaN(value))) {
-                applyPatches(
-                  BApi.options.patchAppOptions,
-                  { maxParallelism: value },
-                );
+                applyPatches(BApi.options.patchAppOptions, { maxParallelism: value });
               }
             }}
           />
@@ -224,12 +224,7 @@ const Others: React.FC<OthersProps> = ({ applyPatches }) => {
       label: "onboarding.viewAgain",
       renderValue: () => {
         return (
-          <Button
-            color="primary"
-            size="sm"
-            variant="flat"
-            onPress={resetOnboarding}
-          >
+          <Button color="primary" size="sm" variant="flat" onPress={resetOnboarding}>
             {t("onboarding.viewAgain")}
           </Button>
         );
@@ -243,18 +238,13 @@ const Others: React.FC<OthersProps> = ({ applyPatches }) => {
       <div className="settings">
         <Table removeWrapper>
           <TableHeader>
-            <TableColumn width={200}>
-              {t("configuration.others.title")}
-            </TableColumn>
+            <TableColumn width={200}>{t("configuration.others.title")}</TableColumn>
             <TableColumn>&nbsp;</TableColumn>
           </TableHeader>
           <TableBody>
             {otherSettings.map((c, i) => {
               return (
-                <TableRow
-                  key={i}
-                  className="hover:bg-[var(--bakaui-overlap-background)]"
-                >
+                <TableRow key={i} className="hover:bg-[var(--bakaui-overlap-background)]">
                   <TableCell>
                     <div className="flex items-center">
                       {c.tip ? (

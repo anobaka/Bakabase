@@ -97,12 +97,9 @@ const BackgroundTaskPage = () => {
     if (editingInterval) {
       return (
         <TimeInput
-          autoFocus
           granularity={"second"}
           size={"sm"}
-          value={dayjs.duration(
-            moment.duration(editingInterval).asMilliseconds(),
-          )}
+          value={dayjs.duration(moment.duration(editingInterval).asMilliseconds())}
           onBlur={() => {
             patchOptions();
           }}
@@ -134,9 +131,7 @@ const BackgroundTaskPage = () => {
               size={'sm'}
             >
               {task.interval
-                ? dayjs
-                    .duration(moment.duration(task.interval).asMilliseconds())
-                    .format("HH:mm:ss")
+                ? dayjs.duration(moment.duration(task.interval).asMilliseconds()).format("HH:mm:ss")
                 : t<string>("backgroundTask.label.notSet")}
             </Button>
           </div>
@@ -170,7 +165,6 @@ const BackgroundTaskPage = () => {
     if (editingEnableAfter) {
       return (
         <DateInput
-          autoFocus
           granularity={"second"}
           size={"sm"}
           value={dayjs(editingEnableAfter)}
@@ -212,11 +206,7 @@ const BackgroundTaskPage = () => {
   };
 
   return (
-    <Table
-      isStriped
-      removeWrapper
-      aria-label="Example table with dynamic content"
-    >
+    <Table isStriped removeWrapper aria-label="Example table with dynamic content">
       <TableHeader columns={columns}>
         {(column) => <TableColumn key={column.key}>{column.label}</TableColumn>}
       </TableHeader>
@@ -237,12 +227,11 @@ const BackgroundTaskPage = () => {
               <TableCell>
                 <div className={"flex flex-col gap-0.5"}>
                   <div className={"flex items-center gap-1"}>
-                    {t<string>(`backgroundTask.status.${BTaskStatus[task.status].charAt(0).toLowerCase() + BTaskStatus[task.status].slice(1)}`)}
+                    {t<string>(
+                      `backgroundTask.status.${BTaskStatus[task.status].charAt(0).toLowerCase() + BTaskStatus[task.status].slice(1)}`,
+                    )}
                     {task.reasonForUnableToStart && (
-                      <Tooltip
-                        color={"warning"}
-                        content={task.reasonForUnableToStart}
-                      >
+                      <Tooltip color={"warning"} content={task.reasonForUnableToStart}>
                         <QuestionCircleOutlined className={"text-base"} />
                       </Tooltip>
                     )}
@@ -269,19 +258,15 @@ const BackgroundTaskPage = () => {
                 </div>
               </TableCell>
               <TableCell>
-                {task.startedAt &&
-                  dayjs(task.startedAt).format("YYYY-MM-DD HH:mm:ss")}
+                {task.startedAt && dayjs(task.startedAt).format("YYYY-MM-DD HH:mm:ss")}
               </TableCell>
               <TableCell>{renderInterval(task)}</TableCell>
               <TableCell>
-                {task.nextTimeStartAt &&
-                  dayjs(task.nextTimeStartAt).format("YYYY-MM-DD HH:mm:ss")}
+                {task.nextTimeStartAt && dayjs(task.nextTimeStartAt).format("YYYY-MM-DD HH:mm:ss")}
               </TableCell>
               <TableCell>
                 {task.elapsed &&
-                  dayjs
-                    .duration(moment.duration(task.elapsed).asMilliseconds())
-                    .format("HH:mm:ss")}
+                  dayjs.duration(moment.duration(task.elapsed).asMilliseconds()).format("HH:mm:ss")}
               </TableCell>
               <TableCell>{renderEnableAfter(task)}</TableCell>
             </TableRow>

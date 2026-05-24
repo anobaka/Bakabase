@@ -17,7 +17,16 @@ type DateTimeValueRendererProps = ValueRendererProps<Dayjs> & {
 
 const log = buildLogger("DateTimeValueRenderer");
 const DateTimeValueRenderer = (props: DateTimeValueRendererProps) => {
-  const { value: propsValue, format, as, variant, editor, size, isEditing, isReadonly: propsIsReadonly } = props;
+  const {
+    value: propsValue,
+    format,
+    as,
+    variant,
+    editor,
+    size,
+    isEditing,
+    isReadonly: propsIsReadonly,
+  } = props;
 
   log(props);
   const [editing, setEditing] = useState(false);
@@ -31,18 +40,15 @@ const DateTimeValueRenderer = (props: DateTimeValueRendererProps) => {
   }, [propsValue]);
 
   // Don't allow starting edit mode if isEditing is explicitly set to false
-  const startEditing = !isReadonly && editor && isEditing !== false
-    ? () => {
-        setEditing(true);
-      }
-    : undefined;
+  const startEditing =
+    !isReadonly && editor && isEditing !== false
+      ? () => {
+          setEditing(true);
+        }
+      : undefined;
 
   const f =
-    format == undefined
-      ? as == "datetime"
-        ? "YYYY-MM-DD HH:mm:ss"
-        : "YYYY-MM-DD"
-      : format;
+    format == undefined ? (as == "datetime" ? "YYYY-MM-DD HH:mm:ss" : "YYYY-MM-DD") : format;
 
   // Direct editing mode: always show date picker without toggle
   if (isEditing && !isReadonly && editor) {
@@ -50,8 +56,8 @@ const DateTimeValueRenderer = (props: DateTimeValueRendererProps) => {
       <DateInput
         granularity={as == "datetime" ? "second" : "day"}
         isReadOnly={false}
-        value={value}
         size={size}
+        value={value}
         onChange={(d) => {
           log("OnChange", d);
           setValue(d);
@@ -66,7 +72,26 @@ const DateTimeValueRenderer = (props: DateTimeValueRendererProps) => {
       return <NotSet onClick={startEditing} />;
     }
 
-    return <span onClick={startEditing} className={startEditing ? "cursor-pointer" : undefined}>{value?.format(f)}</span>;
+    return (
+      <span
+        className={startEditing ? "cursor-pointer" : undefined}
+        role={startEditing ? "button" : undefined}
+        tabIndex={startEditing ? 0 : undefined}
+        onClick={startEditing}
+        onKeyDown={
+          startEditing
+            ? (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  startEditing();
+                }
+              }
+            : undefined
+        }
+      >
+        {value?.format(f)}
+      </span>
+    );
   }
 
   // console.log(as);
@@ -75,8 +100,8 @@ const DateTimeValueRenderer = (props: DateTimeValueRendererProps) => {
     <DateInput
       granularity={as == "datetime" ? "second" : "day"}
       isReadOnly={!editor}
-      value={value}
       size={size}
+      value={value}
       onBlur={() => {
         log("onBlur", value);
         editor?.onValueChange?.(value, value);

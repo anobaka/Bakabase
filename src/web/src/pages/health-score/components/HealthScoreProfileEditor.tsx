@@ -1,25 +1,16 @@
+import type { SearchFilterGroup } from "@/components/ResourceFilter/models";
+import type { HealthScoreProfile } from "@/pages/health-score/types";
+
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 
 import { RulesEditor } from "./RulesEditor";
 
-import {
-  Input,
-  Modal,
-  NumberInput,
-  Tab,
-  Tabs,
-  Tooltip,
-} from "@/components/bakaui";
+import { Input, Modal, NumberInput, Tab, Tabs, Tooltip } from "@/components/bakaui";
 import { ResourceFilterController } from "@/components/ResourceFilter";
-import type { SearchFilterGroup } from "@/components/ResourceFilter/models";
 import BApi from "@/sdk/BApi";
-import {
-  HealthScoreProfile,
-  apiFilterGroupToInternal,
-  internalFilterGroupToApi,
-} from "@/pages/health-score/types";
+import { apiFilterGroupToInternal, internalFilterGroupToApi } from "@/pages/health-score/types";
 
 interface Props {
   profile: HealthScoreProfile;
@@ -31,6 +22,7 @@ const isEmptyInternalFilter = (g: SearchFilterGroup | null | undefined): boolean
   if (!g) return true;
   const filters = (g.filters ?? []).length;
   const groups = (g.groups ?? []).length;
+
   return filters === 0 && groups === 0;
 };
 
@@ -39,8 +31,8 @@ export const HealthScoreProfileEditor = ({ profile, onClose, onSaved }: Props) =
   const [draft, setDraft] = useState<HealthScoreProfile>({ ...profile });
   // Filter is edited in the ResourceFilterController's internal shape (`dbValue`),
   // then converted back to the API's DB shape (`value`) when persisting.
-  const [filterGroup, setFilterGroup] = useState<SearchFilterGroup | undefined>(
-    () => apiFilterGroupToInternal(profile.membershipFilter),
+  const [filterGroup, setFilterGroup] = useState<SearchFilterGroup | undefined>(() =>
+    apiFilterGroupToInternal(profile.membershipFilter),
   );
   const [saving, setSaving] = useState(false);
   const isEmpty = useMemo(() => isEmptyInternalFilter(filterGroup), [filterGroup]);
@@ -111,9 +103,9 @@ export const HealthScoreProfileEditor = ({ profile, onClose, onSaved }: Props) =
               </div>
             )}
             <ResourceFilterController
+              filterLayout="vertical"
               group={filterGroup}
               onGroupChange={setFilterGroup}
-              filterLayout="vertical"
             />
           </div>
         </Tab>

@@ -9,7 +9,10 @@ import { TbSwitch2, TbFilter, TbFilterStar } from "react-icons/tb";
 
 import FilterAddPopoverContent from "../FilterAddPopoverContent";
 import { useFilterConfig } from "../../context/FilterContext";
-import { getSimpleFilterOperation, getRangeFilterOperations, isRangeFilterType } from "../../utils/simpleFilterOperations";
+import {
+  getSimpleFilterOperation,
+  getRangeFilterOperations,
+} from "../../utils/simpleFilterOperations";
 
 import { Button, Popover, Tooltip } from "@/components/bakaui";
 import { FilterDisplayMode } from "@/sdk/constants";
@@ -58,83 +61,77 @@ const FilterPortal = ({
 
   const handleSimpleModeAddFilter = () => {
     // In Simple mode, open property selector directly without adding empty filter
-    config.renderers.openPropertySelector(
-      undefined,
-      async (property, availableOperations) => {
-        // Check if this property type needs range filters (e.g., Number, Date, Rating)
-        const rangeOperations = property.type ? getRangeFilterOperations(property.type) : undefined;
+    config.renderers.openPropertySelector(undefined, async (property, availableOperations) => {
+      // Check if this property type needs range filters (e.g., Number, Date, Rating)
+      const rangeOperations = property.type ? getRangeFilterOperations(property.type) : undefined;
 
-        if (rangeOperations) {
-          // Create two filters for range types
-          const [minOp, maxOp] = rangeOperations;
+      if (rangeOperations) {
+        // Create two filters for range types
+        const [minOp, maxOp] = rangeOperations;
 
-          const baseFilter = {
-            propertyId: property.id,
-            propertyPool: property.pool,
-            property,
-            availableOperations,
-            disabled: false,
-          };
+        const baseFilter = {
+          propertyId: property.id,
+          propertyPool: property.pool,
+          property,
+          availableOperations,
+          disabled: false,
+        };
 
-          const minFilter: SearchFilter = { ...baseFilter, operation: minOp };
-          const maxFilter: SearchFilter = { ...baseFilter, operation: maxOp };
+        const minFilter: SearchFilter = { ...baseFilter, operation: minOp };
+        const maxFilter: SearchFilter = { ...baseFilter, operation: maxOp };
 
-          // Fetch value properties for both filters
-          const [minValueProperty, maxValueProperty] = await Promise.all([
-            config.api.getValueProperty(minFilter),
-            config.api.getValueProperty(maxFilter),
-          ]);
+        // Fetch value properties for both filters
+        const [minValueProperty, maxValueProperty] = await Promise.all([
+          config.api.getValueProperty(minFilter),
+          config.api.getValueProperty(maxFilter),
+        ]);
 
-          onSelectFilters([
-            { ...minFilter, valueProperty: minValueProperty },
-            { ...maxFilter, valueProperty: maxValueProperty },
-          ]);
-        } else {
-          // Single filter for non-range types
-          const operation = property.type
-            ? getSimpleFilterOperation(property.type)
-            : availableOperations[0];
+        onSelectFilters([
+          { ...minFilter, valueProperty: minValueProperty },
+          { ...maxFilter, valueProperty: maxValueProperty },
+        ]);
+      } else {
+        // Single filter for non-range types
+        const operation = property.type
+          ? getSimpleFilterOperation(property.type)
+          : availableOperations[0];
 
-          const newFilter: SearchFilter = {
-            propertyId: property.id,
-            propertyPool: property.pool,
-            property,
-            availableOperations,
-            operation,
-            disabled: false,
-          };
+        const newFilter: SearchFilter = {
+          propertyId: property.id,
+          propertyPool: property.pool,
+          property,
+          availableOperations,
+          operation,
+          disabled: false,
+        };
 
-          // Fetch value property and then add filter
-          const valueProperty = await config.api.getValueProperty(newFilter);
-          onSelectFilters([{ ...newFilter, valueProperty }]);
-        }
+        // Fetch value property and then add filter
+        const valueProperty = await config.api.getValueProperty(newFilter);
+
+        onSelectFilters([{ ...newFilter, valueProperty }]);
       }
-    );
+    });
   };
 
   if (mode === FilterDisplayMode.Simple) {
     // Simple mode: button with tooltip for mode switch
     return (
       <Tooltip
-        placement="right"
-        delay={1000}
         content={
           <Button
+            color="primary"
             size="sm"
             variant="light"
-            color="primary"
             onPress={() => onModeChange(FilterDisplayMode.Advanced)}
           >
             <TbSwitch2 className="text-lg" />
             {t<string>("resourceFilter.switchToAdvancedMode")}
           </Button>
         }
+        delay={1000}
+        placement="right"
       >
-        <Button
-          isIconOnly
-          size="md"
-          onPress={handleSimpleModeAddFilter}
-        >
+        <Button isIconOnly size="md" onPress={handleSimpleModeAddFilter}>
           <TbFilter className="text-lg" />
         </Button>
       </Tooltip>
@@ -145,20 +142,19 @@ const FilterPortal = ({
   return (
     <Popover
       showArrow
-      placement="bottom"
       isOpen={popoverOpen}
-      onOpenChange={setPopoverOpen}
+      placement="bottom"
       trigger={
-        <Button isIconOnly size="md" color="primary">
+        <Button isIconOnly color="primary" size="md">
           <TbFilterStar className="text-lg" />
         </Button>
       }
+      onOpenChange={setPopoverOpen}
     >
       <FilterAddPopoverContent
-        showTags={showTags}
         selectedTags={selectedTags}
-        onTagsChange={onTagsChange}
         showRecentFilters={showRecentFilters}
+        showTags={showTags}
         onAddFilter={(autoTrigger) => {
           setPopoverOpen(false);
           onAddFilter(autoTrigger);
@@ -167,15 +163,16 @@ const FilterPortal = ({
           setPopoverOpen(false);
           onAddFilterGroup();
         }}
+        onClose={() => setPopoverOpen(false)}
         onSelectFilters={(filters) => {
           setPopoverOpen(false);
           onSelectFilters(filters);
         }}
-        onClose={() => setPopoverOpen(false)}
         onSwitchToSimpleMode={() => {
           setPopoverOpen(false);
           onModeChange(FilterDisplayMode.Simple);
         }}
+        onTagsChange={onTagsChange}
       />
     </Popover>
   );

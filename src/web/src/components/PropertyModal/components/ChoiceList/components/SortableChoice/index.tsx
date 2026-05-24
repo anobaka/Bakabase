@@ -7,11 +7,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useTranslation } from "react-i18next";
 import { useUpdateEffect } from "react-use";
-import {
-  DeleteOutlined,
-  EyeInvisibleOutlined,
-  EyeOutlined,
-} from "@ant-design/icons";
+import { DeleteOutlined, EyeInvisibleOutlined, EyeOutlined } from "@ant-design/icons";
 
 import DragHandle from "@/components/DragHandle";
 import { Button, ColorPicker, Input, Modal } from "@/components/bakaui";
@@ -39,8 +35,7 @@ export function SortableChoice({
   onEnterKeyDown,
 }: IProps) {
   const { t } = useTranslation();
-  const { attributes, listeners, setNodeRef, transform, transition } =
-    useSortable({ id: id });
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: id });
   const { createPortal } = useBakabaseContext();
 
   const [choice, setChoice] = useState(propsChoice);
@@ -70,7 +65,6 @@ export function SortableChoice({
         }}
       />
       <Input
-        autoFocus={!choice.label}
         size={"sm"}
         value={choice?.label}
         onKeyDown={(e) => {
@@ -119,10 +113,7 @@ export function SortableChoice({
                 createPortal(Modal, {
                   defaultVisible: true,
                   size: "sm",
-                  title: t<string>(
-                    "Value is being referenced in {{count}} places",
-                    { count },
-                  ),
+                  title: t<string>("Value is being referenced in {{count}} places", { count }),
                   children: t<string>("Sure to delete?"),
                   onOk: async () => {
                     onRemove?.(choice);

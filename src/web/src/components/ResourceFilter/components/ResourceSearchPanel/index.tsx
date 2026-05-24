@@ -2,7 +2,7 @@
 
 import type { SearchFilter, SearchFilterGroup } from "../../models";
 import type { FilterLayout } from "../Filter";
-import { FilterDisplayMode } from "@/sdk/constants";
+import type { SearchCriteria } from "../../hooks/useFilterCriteria";
 
 import { useMemo, useState } from "react";
 import { SearchOutlined } from "@ant-design/icons";
@@ -14,8 +14,8 @@ import FilterAddPopoverContent from "../FilterAddPopoverContent";
 import { FilterProvider } from "../../context/FilterContext";
 import { createDefaultFilterConfig } from "../../presets/DefaultFilterPreset";
 import { GroupCombinator } from "../../models";
-import type { SearchCriteria } from "../../hooks/useFilterCriteria";
 
+import { FilterDisplayMode } from "@/sdk/constants";
 import { Button, Input, Popover } from "@/components/bakaui";
 import { resourceTags } from "@/sdk/constants";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
@@ -143,31 +143,31 @@ const ResourceSearchPanelInner = ({
         <div className="flex items-center gap-2">
           <Popover
             showArrow
-            placement="bottom"
             isOpen={popoverOpen}
-            onOpenChange={setPopoverOpen}
+            placement="bottom"
             trigger={
               <Button isIconOnly size={compact ? "md" : "md"}>
                 <TbFilterPlus className="text-lg" />
               </Button>
             }
+            onOpenChange={setPopoverOpen}
           >
             <FilterAddPopoverContent
-              showTags={showTags}
               selectedTags={criteria.tags}
+              showRecentFilters={showRecentFilters}
+              showTags={showTags}
+              onAddFilter={(autoTrigger) => addFilter({ disabled: false }, autoTrigger)}
+              onAddFilterGroup={addFilterGroup}
+              onClose={() => setPopoverOpen(false)}
+              onSelectFilters={(filters) => {
+                filters.forEach((filter) => addFilter(filter));
+              }}
               onTagsChange={(tags) => {
                 onChange({
                   ...criteria,
                   tags: tags.length > 0 ? tags : undefined,
                 });
               }}
-              showRecentFilters={showRecentFilters}
-              onAddFilter={(autoTrigger) => addFilter({ disabled: false }, autoTrigger)}
-              onAddFilterGroup={addFilterGroup}
-              onSelectFilters={(filters) => {
-                filters.forEach(filter => addFilter(filter));
-              }}
-              onClose={() => setPopoverOpen(false)}
             />
           </Popover>
         </div>
@@ -175,19 +175,21 @@ const ResourceSearchPanelInner = ({
 
       {/* 筛选器分组预览 */}
       {showFilterGroupPreview && hasFilters && criteria.group && (
-        <div className={`${filterDisplayMode === FilterDisplayMode.Simple ? "" : "border border-default-200 rounded"} w-full`}>
+        <div
+          className={`${filterDisplayMode === FilterDisplayMode.Simple ? "" : "border border-default-200 rounded"} w-full`}
+        >
           <FilterGroup
             isRoot
-            group={criteria.group}
+            externalNewFilterIndex={newFilterIndex}
             filterDisplayMode={filterDisplayMode}
             filterLayout={filterLayout}
-            externalNewFilterIndex={newFilterIndex}
+            group={criteria.group}
+            onChange={(group) => {
+              onChange({ ...criteria, group });
+            }}
             onExternalNewFilterConsumed={() => {
               setInternalNewFilterIndex(null);
               onExternalNewFilterConsumed?.();
-            }}
-            onChange={(group) => {
-              onChange({ ...criteria, group });
             }}
           />
         </div>
@@ -196,20 +198,35 @@ const ResourceSearchPanelInner = ({
       {/* 标签显示 */}
       {criteria.tags && criteria.tags.length > 0 && (
         <div className="flex flex-wrap gap-1">
-          {criteria.tags.map((tag) => (
-            <span
-              key={tag}
-              className="px-2 py-1 text-xs bg-default-100 rounded cursor-pointer hover:bg-default-200"
-              onClick={() => {
-                onChange({
-                  ...criteria,
-                  tags: criteria.tags?.filter((t) => t !== tag),
-                });
-              }}
-            >
-              {t<string>(getEnumKey('ResourceTag', resourceTags.find((rt) => rt.value === tag)?.label!))} &times;
-            </span>
-          ))}
+          {criteria.tags.map((tag) => {
+            const handleRemoveTag = () => {
+              onChange({
+                ...criteria,
+                tags: criteria.tags?.filter((t) => t !== tag),
+              });
+            };
+
+            return (
+              <span
+                key={tag}
+                className="px-2 py-1 text-xs bg-default-100 rounded cursor-pointer hover:bg-default-200"
+                role="button"
+                tabIndex={0}
+                onClick={handleRemoveTag}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    handleRemoveTag();
+                  }
+                }}
+              >
+                {t<string>(
+                  getEnumKey("ResourceTag", resourceTags.find((rt) => rt.value === tag)?.label!),
+                )}{" "}
+                &times;
+              </span>
+            );
+          })}
         </div>
       )}
     </div>

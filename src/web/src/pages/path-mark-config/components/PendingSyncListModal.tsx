@@ -3,6 +3,7 @@
 import type { BakabaseAbstractionsModelsDomainPathMark } from "@/sdk/Api";
 import type { DestroyableProps } from "@/components/bakaui/types";
 import type { PathMarkSyncStatus as PathMarkSyncStatusType } from "@/sdk/constants";
+import type { BTask } from "@/core/models/BTask";
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
@@ -14,14 +15,14 @@ import {
   AiOutlineDelete,
 } from "react-icons/ai";
 
+import SyncProgressModal from "./SyncProgressModal";
+
 import { Modal, Button, Chip, Spinner, Tooltip, CircularProgress } from "@/components/bakaui";
 import { PathMarkSyncStatus, PathMarkType, BTaskStatus } from "@/sdk/constants";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import BApi from "@/sdk/BApi";
 import { useBTasksStore } from "@/stores/bTasks";
 import { usePathMarksStore } from "@/stores/pathMarks";
-import type { BTask } from "@/core/models/BTask";
-import SyncProgressModal from "./SyncProgressModal";
 
 export interface PendingSyncListModalProps extends DestroyableProps {
   visible?: boolean;
@@ -40,7 +41,7 @@ const getSyncStatusIcon = (status?: PathMarkSyncStatusType) => {
     case PathMarkSyncStatus.Pending:
       return <AiOutlineClockCircle className="text-warning" />;
     case PathMarkSyncStatus.Syncing:
-      return <Spinner size="sm" className="w-3 h-3" />;
+      return <Spinner className="w-3 h-3" size="sm" />;
     case PathMarkSyncStatus.Synced:
       return <AiOutlineCheck className="text-success" />;
     case PathMarkSyncStatus.Failed:
@@ -54,6 +55,7 @@ const getSyncStatusIcon = (status?: PathMarkSyncStatusType) => {
 
 const getSyncStatusLabel = (status?: PathMarkSyncStatusType, t?: (key: string) => string) => {
   const translate = t || ((key: string) => key);
+
   switch (status) {
     case PathMarkSyncStatus.Pending:
       return translate("pathMarkConfig.status.pending");
@@ -72,6 +74,7 @@ const getSyncStatusLabel = (status?: PathMarkSyncStatusType, t?: (key: string) =
 
 const getMarkTypeLabel = (type?: number, t?: (key: string) => string) => {
   const translate = t || ((key: string) => key);
+
   switch (type) {
     case PathMarkType.Resource:
       return translate("Resource");
@@ -122,6 +125,7 @@ const PendingSyncListModal = ({
     setLoading(true);
     try {
       const response = await BApi.pathMark.getPendingPathMarks();
+
       setPendingMarks(response?.data || []);
     } catch (error) {
       console.error("Failed to load pending marks", error);
@@ -155,6 +159,7 @@ const PendingSyncListModal = ({
       const mark = storeMark ?? propMark;
 
       const path = mark.path || "Unknown";
+
       if (!groups.has(path)) {
         groups.set(path, []);
       }
@@ -223,7 +228,11 @@ const PendingSyncListModal = ({
     return pendingMarks.filter((propMark) => {
       const storeMark = propMark.id != null ? pathMarksStore.get(propMark.id) : undefined;
       const mark = storeMark ?? propMark;
-      return mark.syncStatus === PathMarkSyncStatus.Pending || mark.syncStatus === PathMarkSyncStatus.PendingDelete;
+
+      return (
+        mark.syncStatus === PathMarkSyncStatus.Pending ||
+        mark.syncStatus === PathMarkSyncStatus.PendingDelete
+      );
     }).length;
   }, [pendingMarks, pathMarksStore]);
 
@@ -234,7 +243,33 @@ const PendingSyncListModal = ({
 
   return (
     <Modal
-      visible={isOpen}
+      footer={
+        <div className="flex items-center justify-between w-full gap-2">
+          <div className="flex items-center gap-2">
+            <Button
+              color="primary"
+              isDisabled={loading || totalPending === 0}
+              startContent={<AiOutlineSync />}
+              onPress={handleSyncPending}
+            >
+              {t("pathMarkConfig.action.syncPending")}
+              {totalPending > 0 && <span className="ml-1 opacity-70">({totalPending})</span>}
+            </Button>
+            <Button
+              color="warning"
+              isDisabled={loading}
+              startContent={<AiOutlineSync />}
+              variant="flat"
+              onPress={handleForceResyncAll}
+            >
+              {t("pathMarkConfig.action.forceResyncAll")}
+            </Button>
+          </div>
+          <Button color="default" variant="light" onPress={handleClose}>
+            {t("common.action.close")}
+          </Button>
+        </div>
+      }
       size="lg"
       title={
         <div className="flex items-center gap-2">
@@ -246,35 +281,7 @@ const PendingSyncListModal = ({
           )}
         </div>
       }
-      footer={
-        <div className="flex items-center justify-between w-full gap-2">
-          <div className="flex items-center gap-2">
-            <Button
-              color="primary"
-              startContent={<AiOutlineSync />}
-              isDisabled={loading || totalPending === 0}
-              onPress={handleSyncPending}
-            >
-              {t("pathMarkConfig.action.syncPending")}
-              {totalPending > 0 && (
-                <span className="ml-1 opacity-70">({totalPending})</span>
-              )}
-            </Button>
-            <Button
-              color="warning"
-              variant="flat"
-              startContent={<AiOutlineSync />}
-              isDisabled={loading}
-              onPress={handleForceResyncAll}
-            >
-              {t("pathMarkConfig.action.forceResyncAll")}
-            </Button>
-          </div>
-          <Button color="default" variant="light" onPress={handleClose}>
-            {t("common.action.close")}
-          </Button>
-        </div>
-      }
+      visible={isOpen}
       onClose={handleClose}
       onDestroyed={onDestroyed}
     >
@@ -305,7 +312,9 @@ const PendingSyncListModal = ({
               <div className="flex flex-col gap-1 pl-4">
                 {group.marks.map((mark) => {
                   const markTask = getMarkTask(mark.id!);
-                  const isTaskRunning = markTask?.status === BTaskStatus.Running || markTask?.status === BTaskStatus.NotStarted;
+                  const isTaskRunning =
+                    markTask?.status === BTaskStatus.Running ||
+                    markTask?.status === BTaskStatus.NotStarted;
                   const isPendingDelete = mark.syncStatus === PathMarkSyncStatus.PendingDelete;
 
                   return (
@@ -318,31 +327,29 @@ const PendingSyncListModal = ({
                       {/* Sync status icon */}
                       <Tooltip content={getSyncStatusLabel(mark.syncStatus, t)}>
                         <span className="flex items-center">
-                          {isTaskRunning ? <Spinner size="sm" className="w-4 h-4" /> : getSyncStatusIcon(mark.syncStatus)}
+                          {isTaskRunning ? (
+                            <Spinner className="w-4 h-4" size="sm" />
+                          ) : (
+                            getSyncStatusIcon(mark.syncStatus)
+                          )}
                         </span>
                       </Tooltip>
 
                       {/* Mark type chip */}
-                      <Chip
-                        color={getMarkTypeColor(mark.type) as any}
-                        size="sm"
-                        variant="flat"
-                      >
+                      <Chip color={getMarkTypeColor(mark.type) as any} size="sm" variant="flat">
                         {getMarkTypeLabel(mark.type, t)}
                       </Chip>
 
                       {/* Priority */}
-                      <span className="text-xs text-default-500">
-                        #{mark.priority}
-                      </span>
+                      <span className="text-xs text-default-500">#{mark.priority}</span>
 
                       {/* Task progress if running */}
                       {isTaskRunning && markTask && (
                         <CircularProgress
-                          size="sm"
-                          value={markTask.percentage || 0}
                           showValueLabel
                           className="w-8"
+                          size="sm"
+                          value={markTask.percentage || 0}
                         />
                       )}
 
@@ -360,12 +367,12 @@ const PendingSyncListModal = ({
 
                       {/* Sync button */}
                       <Button
-                        size="sm"
-                        color="primary"
-                        variant="light"
                         isIconOnly
-                        isLoading={isTaskRunning}
+                        color="primary"
                         isDisabled={isPendingDelete || isTaskRunning}
+                        isLoading={isTaskRunning}
+                        size="sm"
+                        variant="light"
                         onPress={() => handleSyncMark(mark)}
                       >
                         <AiOutlineSync />

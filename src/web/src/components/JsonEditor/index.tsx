@@ -47,10 +47,13 @@ const JsonEditor = ({
     if (value && value.trim().length > 0) return value;
     if (sampleHeader || sampleBody) {
       const parts: string[] = [];
+
       if (sampleHeader) parts.push(sampleHeader.trim());
       if (sampleBody) parts.push(sampleBody.trim());
+
       return parts.join("\n\n");
     }
+
     return "";
   }, []);
   // ESLint will warn that we don't depend on value/sample*; intentional —
@@ -76,20 +79,15 @@ const JsonEditor = ({
   return (
     <div className="rounded-md overflow-hidden border border-default-200">
       <AceEditor
-        mode="json"
-        theme={aceTheme}
-        value={text}
-        onChange={handleChange}
-        name={`json-editor-${Math.random().toString(36).slice(2)}`}
-        width="100%"
-        height={height}
-        minLines={minLines}
-        maxLines={maxLines}
-        readOnly={readOnly}
-        placeholder={placeholder}
-        showPrintMargin={false}
         wrapEnabled
         editorProps={{ $blockScrolling: true }}
+        height={height}
+        maxLines={maxLines}
+        minLines={minLines}
+        mode="json"
+        name={`json-editor-${Math.random().toString(36).slice(2)}`}
+        placeholder={placeholder}
+        readOnly={readOnly}
         setOptions={{
           useWorker: false,
           tabSize: 2,
@@ -97,6 +95,11 @@ const JsonEditor = ({
           highlightActiveLine: !readOnly,
           fontSize: 13,
         }}
+        showPrintMargin={false}
+        theme={aceTheme}
+        value={text}
+        width="100%"
+        onChange={handleChange}
       />
     </div>
   );
@@ -114,8 +117,10 @@ export const stripJsonComments = (raw: string): string => {
   const out: string[] = [];
   let inString = false;
   let escape = false;
+
   for (let i = 0; i < noBlock.length; i++) {
     const c = noBlock[i];
+
     if (inString) {
       out.push(c);
       if (escape) {
@@ -140,6 +145,7 @@ export const stripJsonComments = (raw: string): string => {
     }
     out.push(c);
   }
+
   return out.join("");
 };
 

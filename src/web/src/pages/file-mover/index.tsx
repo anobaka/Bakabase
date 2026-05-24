@@ -21,7 +21,6 @@ import {
 } from "@/components/bakaui";
 import { toast } from "@/components/bakaui";
 import { FileSystemSelectorButton, FileSystemSelectorModal } from "@/components/FileSystemSelector";
-
 import BApi from "@/sdk/BApi";
 import { useFileMovingProgressesStore } from "@/stores/fileMovingProgresses";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
@@ -91,6 +90,7 @@ const FileMoverPage = () => {
   const updateTarget = (targetPath: string, newTargetPath: string) => {
     const targetIndex = targets.findIndex((a) => a.path == targetPath);
     const target = targets[targetIndex]!;
+
     target.path = newTargetPath;
     targets.splice(targetIndex, 1, target);
     save({ targets });
@@ -98,6 +98,7 @@ const FileMoverPage = () => {
 
   const addSource = (targetPath: string, sourcePath: string) => {
     const target = targets.find((a) => a.path == targetPath)!;
+
     if (!target.sources) {
       target.sources = [];
     }
@@ -109,9 +110,11 @@ const FileMoverPage = () => {
 
   const updateSource = (targetPath: string, sourcePath: string, newSourcePath: string) => {
     const target = targets.find((a) => a.path == targetPath);
+
     if (!target || !target.sources) return;
 
     const idx = target.sources.indexOf(sourcePath);
+
     if (idx > -1 && target.sources.indexOf(newSourcePath) == -1) {
       target.sources[idx] = newSourcePath;
       save({ targets });
@@ -186,7 +189,7 @@ const FileMoverPage = () => {
               )}
               {progress.moving && <Icon type="loading" />}
               {progress.percentage > 0 && progress.percentage < 100 && (
-                <Chip size="sm" color="primary" variant="flat">
+                <Chip color="primary" size="sm" variant="flat">
                   {progress.percentage}%
                 </Chip>
               )}
@@ -205,6 +208,7 @@ const FileMoverPage = () => {
             variant="light"
             onPress={() => {
               const target = targets.find((t) => t.path === targetPath);
+
               if (target) {
                 target.sources = target.sources?.filter((a) => a !== sourcePath);
               }
@@ -224,7 +228,9 @@ const FileMoverPage = () => {
         <CardBody className="flex flex-col gap-1.5 p-2 px-3">
           <div className="flex items-center justify-between pb-1 border-b border-divider">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-primary">{t<string>("fileMover.label.targetPath")}</span>
+              <span className="text-xs font-medium text-primary">
+                {t<string>("fileMover.label.targetPath")}
+              </span>
               <Button
                 color="primary"
                 size="sm"
@@ -273,16 +279,16 @@ const FileMoverPage = () => {
               <span className="flex items-center text-xs text-default-500">
                 {t<string>("fileMover.label.sourcesDescription")}
                 {(target.sources ?? []).length > 0 && (
-                  <Chip size="sm" variant="flat" className="ml-2">
+                  <Chip className="ml-2" size="sm" variant="flat">
                     {(target.sources ?? []).length}
                   </Chip>
                 )}
               </span>
               <Button
-                size="sm"
                 color="primary"
-                variant="flat"
+                size="sm"
                 startContent={<PlusCircleOutlined className="text-base" />}
+                variant="flat"
                 onPress={() => {
                   createPortal(FileSystemSelectorModal, {
                     targetType: "folder",
@@ -299,7 +305,10 @@ const FileMoverPage = () => {
             {(target.sources ?? []).length > 0 ? (
               <div className="flex flex-col gap-1">
                 {(target.sources ?? []).map((sourcePath) => (
-                  <div key={sourcePath} className="flex items-center gap-1.5 p-1 px-1.5 bg-default-50 rounded-md">
+                  <div
+                    key={sourcePath}
+                    className="flex items-center gap-1.5 p-1 px-1.5 bg-default-50 rounded-md"
+                  >
                     {renderSourceItem(target.path, sourcePath)}
                   </div>
                 ))}
@@ -324,8 +333,8 @@ const FileMoverPage = () => {
           <CardBody className="flex items-center justify-center p-3">
             <Button
               color="primary"
-              variant="flat"
               startContent={<PlusCircleOutlined className="text-lg" />}
+              variant="flat"
               onPress={() => {
                 createPortal(FileSystemSelectorModal, {
                   targetType: "folder",
@@ -348,14 +357,16 @@ const FileMoverPage = () => {
       <div className="flex items-center gap-3 p-2 px-3 mb-3 bg-default-50 rounded-lg">
         <div className="flex items-center">
           <Switch
+            color={enabled ? "success" : "default"}
             isSelected={enabled}
             size="sm"
-            color={enabled ? "success" : "default"}
             onValueChange={(c) => {
               save({ enabled: c });
             }}
           >
-            <span className={`text-sm font-medium transition-colors ${enabled ? "text-success" : "text-default-500"}`}>
+            <span
+              className={`text-sm font-medium transition-colors ${enabled ? "text-success" : "text-default-500"}`}
+            >
               {t<string>(enabled ? "fileMover.status.enabled" : "fileMover.status.disabled")}
             </span>
           </Switch>
@@ -364,15 +375,15 @@ const FileMoverPage = () => {
         <div className="w-px h-5 bg-default-200" />
 
         <div className="flex items-center">
-          <Tooltip
-            content={t<string>("fileMover.tip.delay")}
-          >
+          <Tooltip content={t<string>("fileMover.tip.delay")}>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-default-600 whitespace-nowrap">{t<string>("fileMover.label.delay")}</span>
+              <span className="text-sm text-default-600 whitespace-nowrap">
+                {t<string>("fileMover.label.delay")}
+              </span>
               <TimeInput
-                size="sm"
                 hideTimeZone
                 granularity="second"
+                size="sm"
                 value={
                   value?.delay
                     ? dayjs.duration(moment.duration(value.delay).asMilliseconds())
@@ -390,7 +401,6 @@ const FileMoverPage = () => {
             </div>
           </Tooltip>
         </div>
-
       </div>
       {renderNormalEditMode()}
     </div>

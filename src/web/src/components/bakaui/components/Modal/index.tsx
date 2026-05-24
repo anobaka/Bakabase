@@ -26,9 +26,7 @@ interface ISimpleFooter {
 
 type Size = "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl" | "5xl" | "6xl" | "7xl" | "full";
 
-export interface ModalProps
-  extends DestroyableProps,
-    Omit<NextUIModalProps, "children"> {
+export interface ModalProps extends DestroyableProps, Omit<NextUIModalProps, "children"> {
   title?: any;
   children?: any;
   defaultVisible?: boolean;
@@ -40,9 +38,9 @@ export interface ModalProps
   okProps?: ButtonProps;
 }
 /**
- * 
+ *
  * @param props.style.maxWidth: set this property to value like '85vw' to extend the width of the modal
- * @returns 
+ * @returns
  */
 const Modal = (props: ModalProps) => {
   const {
@@ -73,6 +71,7 @@ const Modal = (props: ModalProps) => {
   const autoFocused = useRef(false);
 
   let classNameParts: string[] = [];
+
   switch (sizeProp) {
     case "5xl":
       classNameParts.push("max-w-5xl");
@@ -187,9 +186,7 @@ const Modal = (props: ModalProps) => {
               ref(r);
             } else {
               if (ref && typeof ref === "object" && "current" in ref) {
-                (
-                  ref as React.MutableRefObject<HTMLButtonElement | null>
-                ).current = r;
+                (ref as React.MutableRefObject<HTMLButtonElement | null>).current = r;
               }
             }
             if (r && !autoFocused.current && autoFocus) {
@@ -233,9 +230,7 @@ const Modal = (props: ModalProps) => {
   if (sizeProp == "2xl") {
     const propsBaseClassName = classNamesProp?.["base"] ?? "";
 
-    classNames["base"] = propsBaseClassName
-      ? `max-w-[80vw] ${propsBaseClassName}`
-      : "max-w-[80vw]";
+    classNames["base"] = propsBaseClassName ? `max-w-[80vw] ${propsBaseClassName}` : "max-w-[80vw]";
   }
 
   return (
@@ -253,11 +248,11 @@ const Modal = (props: ModalProps) => {
       {...restProps}
       className={className}
       classNames={classNames}
+      scrollBehavior={'inside'}
       size={size}
       isOpen={isOpen}
       // onOpenChange={v => console.log('123456', v)}
       onClose={onClose}
-      scrollBehavior={'inside'}
     >
       <ModalContent>
         <ModalHeader className="flex flex-col gap-1">{title}</ModalHeader>

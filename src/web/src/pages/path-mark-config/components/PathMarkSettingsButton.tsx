@@ -1,5 +1,3 @@
-import type { ButtonProps as NextUIButtonProps } from "@heroui/react";
-
 import { useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { AiOutlineSetting } from "react-icons/ai";
@@ -31,8 +29,7 @@ const PathMarkSettingsButton = ({
     resourceOptionsStore.data?.synchronizationOptions?.syncMarksImmediately ?? false;
 
   // Get keep resources on path change option
-  const keepResourcesOnPathChange =
-    resourceOptionsStore.data?.keepResourcesOnPathChange ?? false;
+  const keepResourcesOnPathChange = resourceOptionsStore.data?.keepResourcesOnPathChange ?? false;
 
   // Toggle sync immediately option
   const handleToggleSyncImmediately = useCallback(
@@ -46,9 +43,7 @@ const PathMarkSettingsButton = ({
             children: (
               <div className="flex flex-col gap-2">
                 <p>{t("pathMarkConfig.tip.syncImmediately")}</p>
-                <p className="text-warning">
-                  {t("pathMarkConfig.warning.syncDataNote")}
-                </p>
+                <p className="text-warning">{t("pathMarkConfig.warning.syncDataNote")}</p>
               </div>
             ),
             footer: {

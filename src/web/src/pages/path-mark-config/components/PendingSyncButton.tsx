@@ -1,8 +1,8 @@
+import type { BTask } from "@/core/models/BTask";
+
 import { useState, useEffect, useCallback, useImperativeHandle, forwardRef, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { AiOutlineSync } from "react-icons/ai";
-
-import type { BTask } from "@/core/models/BTask";
 
 import PendingSyncListModal from "./PendingSyncListModal";
 
@@ -42,6 +42,7 @@ const PendingSyncButton = forwardRef<PendingSyncButtonRef, PendingSyncButtonProp
     const loadPendingSyncCount = useCallback(async () => {
       try {
         const response = await BApi.pathMark.getPendingPathMarksCount();
+
         setPendingSyncCount(response?.data ?? 0);
       } catch (error) {
         console.error("Failed to load pending sync count", error);
@@ -83,9 +84,13 @@ const PendingSyncButton = forwardRef<PendingSyncButtonRef, PendingSyncButtonProp
     }, [bTasks, loadPendingSyncCount, onSyncComplete]);
 
     // Expose refresh method via ref
-    useImperativeHandle(ref, () => ({
-      refresh: loadPendingSyncCount,
-    }), [loadPendingSyncCount]);
+    useImperativeHandle(
+      ref,
+      () => ({
+        refresh: loadPendingSyncCount,
+      }),
+      [loadPendingSyncCount],
+    );
 
     const handleSyncComplete = useCallback(() => {
       loadPendingSyncCount();
@@ -121,7 +126,7 @@ const PendingSyncButton = forwardRef<PendingSyncButtonRef, PendingSyncButtonProp
         )}
       </>
     );
-  }
+  },
 );
 
 PendingSyncButton.displayName = "PendingSyncButton";

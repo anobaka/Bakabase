@@ -24,20 +24,21 @@ import { useTranslation } from "react-i18next";
 import { MdDriveFileRenameOutline } from "react-icons/md";
 import { AiOutlineFileZip } from "react-icons/ai";
 
-import { IwFsEntryAction } from "@/core/models/FileExplorer/Entry";
-import BApi from "@/sdk/BApi";
-import { IwFsType } from "@/sdk/constants";
-import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import ExtractModal from "./ExtractModal";
 import WrapModal from "./WrapModal";
 import DeleteConfirmationModal from "./DeleteConfirmationModal";
 import DeleteItemsWithSameNamesModal from "./DeleteItemsWithSameNamesModal";
 import GroupModal from "./GroupModal";
+import CreateDirectoryModal from "./CreateDirectoryModal";
+
+import { IwFsEntryAction } from "@/core/models/FileExplorer/Entry";
+import BApi from "@/sdk/BApi";
+import { IwFsType } from "@/sdk/constants";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import FileNameModifierModal from "@/components/FileNameModifierModal";
 import { toast } from "@/components/bakaui";
 import FolderSelector from "@/components/FolderSelector";
 import BulkDecompressionToolModal from "@/components/BulkDecompressionToolModal";
-import CreateDirectoryModal from "./CreateDirectoryModal";
 
 type Props = {
   selectedEntries: Entry[];
@@ -51,7 +52,13 @@ type Item = {
   label: string;
   onClick: () => any;
 };
-const ContextMenu = ({ selectedEntries, capabilities, root, renderExtraContextMenuItems, onChangeWorkingDirectory }: Props) => {
+const ContextMenu = ({
+  selectedEntries,
+  capabilities,
+  root,
+  renderExtraContextMenuItems,
+  onChangeWorkingDirectory,
+}: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
@@ -68,6 +75,7 @@ const ContextMenu = ({ selectedEntries, capabilities, root, renderExtraContextMe
     // Open in system file manager (single entry only)
     if (selectedEntries.length === 1) {
       const entry = selectedEntries[0];
+
       items.push({
         icon: <FolderOpenOutlined className={"text-base"} />,
         label: t<string>("fileExplorer.contextMenu.openInFileManager"),
@@ -81,7 +89,11 @@ const ContextMenu = ({ selectedEntries, capabilities, root, renderExtraContextMe
     }
 
     // Enter directory (change working directory) - only for single directory selection
-    if (selectedEntries.length === 1 && selectedEntries[0].isDirectoryOrDrive && onChangeWorkingDirectory) {
+    if (
+      selectedEntries.length === 1 &&
+      selectedEntries[0].isDirectoryOrDrive &&
+      onChangeWorkingDirectory
+    ) {
       items.push({
         icon: <LoginOutlined className={"text-base"} />,
         label: t<string>("fileExplorer.contextMenu.enterDirectory"),
@@ -92,7 +104,11 @@ const ContextMenu = ({ selectedEntries, capabilities, root, renderExtraContextMe
     }
 
     // Create new folder - only for single directory selection
-    if (capabilities?.includes("create-directory") && selectedEntries.length === 1 && selectedEntries[0].isDirectoryOrDrive) {
+    if (
+      capabilities?.includes("create-directory") &&
+      selectedEntries.length === 1 &&
+      selectedEntries[0].isDirectoryOrDrive
+    ) {
       items.push({
         icon: <FolderAddOutlined className={"text-base"} />,
         label: t<string>("fileExplorer.contextMenu.createNewFolder"),
@@ -107,7 +123,11 @@ const ContextMenu = ({ selectedEntries, capabilities, root, renderExtraContextMe
     if (expandableEntries.length > 0) {
       items.push({
         icon: <DownOutlined className={"text-base"} />,
-        label: t<string>(selectedEntries.length == 1 ? "fileExplorer.contextMenu.expand" : "fileExplorer.contextMenu.expandSelected"),
+        label: t<string>(
+          selectedEntries.length == 1
+            ? "fileExplorer.contextMenu.expand"
+            : "fileExplorer.contextMenu.expandSelected",
+        ),
         onClick: () => {
           for (const entry of expandableEntries) {
             entry.expand(false);
@@ -119,7 +139,11 @@ const ContextMenu = ({ selectedEntries, capabilities, root, renderExtraContextMe
     if (collapsableEntries.length > 0) {
       items.push({
         icon: <UpOutlined className={"text-base"} />,
-        label: t<string>(selectedEntries.length == 1 ? "fileExplorer.contextMenu.collapse" : "fileExplorer.contextMenu.collapseSelected"),
+        label: t<string>(
+          selectedEntries.length == 1
+            ? "fileExplorer.contextMenu.collapse"
+            : "fileExplorer.contextMenu.collapseSelected",
+        ),
         onClick: () => {
           for (const entry of collapsableEntries) {
             entry.collapse();
@@ -308,7 +332,6 @@ const ContextMenu = ({ selectedEntries, capabilities, root, renderExtraContextMe
         });
       },
     });
-
   }
 
   // Create new folder in current working directory when no entries selected

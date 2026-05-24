@@ -17,21 +17,19 @@ const sizeMap: Record<"sm" | "md" | "lg", number> = {
   lg: 28,
 };
 
-const Rating = forwardRef<RateRef, RatingProps>(
-  ({ size = "md", style, ...props }, ref) => {
-    const fontSize = sizeMap[size];
+const Rating = forwardRef<RateRef, RatingProps>(({ size = "md", style, ...props }, ref) => {
+  const fontSize = sizeMap[size];
 
-    return (
-      <Rate
-        ref={ref}
-        style={{
-          fontSize,
-          ...style,
-        }}
-        {...props}
-      />
-    );
-  },
-);
+  return (
+    <Rate
+      ref={ref}
+      style={{
+        fontSize,
+        ...style,
+      }}
+      {...props}
+    />
+  );
+});
 
 export default Rating;

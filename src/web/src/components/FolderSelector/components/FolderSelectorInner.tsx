@@ -5,6 +5,7 @@ import { Accordion, AccordionItem } from "../../bakaui";
 
 import CustomPathSelectorInner from "./CustomPathSelectorInner";
 import MediaLibraryPathSelectorInner from "./MediaLibraryPathSelectorInner";
+
 import BApi from "@/sdk/BApi";
 
 type Source = "custom" | "media library";
@@ -30,14 +31,9 @@ const FolderSelectorInner = ({ sources, onSelect: propsOnSelect }: Props) => {
   const renderSourceInner = (source: Source) => {
     switch (source) {
       case "media library":
-        return (
-          <MediaLibraryPathSelectorInner
-            onSelect={onSelect}
-            onPathsLoaded={onPathsLoaded}
-          />
-        );
+        return <MediaLibraryPathSelectorInner onPathsLoaded={onPathsLoaded} onSelect={onSelect} />;
       case "custom":
-        return <CustomPathSelectorInner onSelect={onSelect} mlPaths={mlPaths} />;
+        return <CustomPathSelectorInner mlPaths={mlPaths} onSelect={onSelect} />;
     }
   };
 
@@ -55,5 +51,3 @@ const FolderSelectorInner = ({ sources, onSelect: propsOnSelect }: Props) => {
 };
 
 export default FolderSelectorInner;
-
-

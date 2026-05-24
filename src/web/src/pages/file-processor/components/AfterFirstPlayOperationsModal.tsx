@@ -20,22 +20,22 @@ const AfterFirstPlayOperationsModal = ({ entry, onDestroyed }: Props) => {
 
   return (
     <Modal
-      visible={visible}
       footer={false}
-      onClose={() => setVisible(false)}
       size="lg"
+      style={{ maxWidth: "85vw" }}
       title={t("fileProcessor.modal.afterFirstPlayTitle")}
-      style={{ maxWidth: '85vw' }}
+      visible={visible}
+      onClose={() => setVisible(false)}
       onDestroyed={onDestroyed}
     >
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-2">
-          <Chip variant="flat">
-            {t("fileProcessor.label.currentPath")}
-          </Chip>
-          <Snippet symbol={false} size="sm">{entry.path}</Snippet>
+          <Chip variant="flat">{t("fileProcessor.label.currentPath")}</Chip>
+          <Snippet size="sm" symbol={false}>
+            {entry.path}
+          </Snippet>
         </div>
-        <div className="grid gap-3" style={{ gridTemplateColumns: 'auto auto' }}>
+        <div className="grid gap-3" style={{ gridTemplateColumns: "auto auto" }}>
           <Card className="border border-default-200 dark:border-default-100 rounded-md">
             <CardBody>
               <div className="mb-2 font-medium">{t("fileProcessor.tip.moveToAnotherPath")}</div>
@@ -57,14 +57,12 @@ const AfterFirstPlayOperationsModal = ({ entry, onDestroyed }: Props) => {
                   createPortal(Modal, {
                     title: t("common.confirm.deleteFileTitle"),
                     defaultVisible: true,
-                    children: (
-                      <div>{t("common.confirm.deleteFile")}</div>
-                    ),
+                    children: <div>{t("common.confirm.deleteFile")}</div>,
                     footer: {
                       actions: ["ok", "cancel"],
                       okProps: {
                         color: "danger",
-                      }
+                      },
                     },
                     onOk: async () => {
                       await BApi.file.removeFiles({ paths: [entry.path] });
@@ -86,5 +84,3 @@ const AfterFirstPlayOperationsModal = ({ entry, onDestroyed }: Props) => {
 AfterFirstPlayOperationsModal.displayName = "AfterFirstPlayOperationsModal";
 
 export default AfterFirstPlayOperationsModal;
-
-

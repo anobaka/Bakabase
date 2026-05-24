@@ -4,8 +4,15 @@ import type { ComparisonResultGroupViewModel } from "@/sdk/constants";
 import type { Resource as ResourceModel } from "@/core/models/Resource";
 
 import { useTranslation } from "react-i18next";
-import { StarFilled, EyeInvisibleOutlined, EyeOutlined, NodeIndexOutlined } from "@ant-design/icons";
+import {
+  StarFilled,
+  EyeInvisibleOutlined,
+  EyeOutlined,
+  NodeIndexOutlined,
+} from "@ant-design/icons";
 import { useCallback, useEffect, useState } from "react";
+
+import ComparisonNetworkGraph from "./ComparisonNetworkGraph";
 
 import {
   Button,
@@ -20,7 +27,6 @@ import {
 import BApi from "@/sdk/BApi";
 import Resource from "@/components/Resource";
 import { ResourceAdditionalItem } from "@/sdk/constants";
-import ComparisonNetworkGraph from "./ComparisonNetworkGraph";
 
 interface ComparisonResultGroupProps {
   planId: number;
@@ -31,7 +37,12 @@ interface ComparisonResultGroupProps {
 
 const RESOURCES_PAGE_SIZE = 50;
 
-const ComparisonResultGroup = ({ planId, group, threshold, onHiddenChange }: ComparisonResultGroupProps) => {
+const ComparisonResultGroup = ({
+  planId,
+  group,
+  threshold,
+  onHiddenChange,
+}: ComparisonResultGroupProps) => {
   const { t } = useTranslation();
 
   const [resources, setResources] = useState<ResourceModel[]>([]);
@@ -45,12 +56,14 @@ const ComparisonResultGroup = ({ planId, group, threshold, onHiddenChange }: Com
   const loadResourceIds = useCallback(async () => {
     const r = await BApi.comparison.getComparisonResultGroupResourceIds(planId, group.id!);
     const ids = r.data || [];
+
     setAllResourceIds(ids);
 
     // Get group details to find primary resource
     const groupDetail = await BApi.comparison.getComparisonResultGroup(planId, group.id!);
     const members = groupDetail.data?.members || [];
     const primary = members.find((m) => m.isSuggestedPrimary);
+
     if (primary) {
       setPrimaryResourceId(primary.resourceId);
     }
@@ -66,6 +79,7 @@ const ComparisonResultGroup = ({ planId, group, threshold, onHiddenChange }: Com
       const sortedIds = [...allResourceIds].sort((a, b) => {
         if (a === primaryResourceId) return -1;
         if (b === primaryResourceId) return 1;
+
         return 0;
       });
 
@@ -76,6 +90,7 @@ const ComparisonResultGroup = ({ planId, group, threshold, onHiddenChange }: Com
 
       if (pageIds.length === 0) {
         setResources([]);
+
         return;
       }
 
@@ -135,34 +150,19 @@ const ComparisonResultGroup = ({ planId, group, threshold, onHiddenChange }: Com
         </div>
         <div className="flex items-center gap-1">
           <Tooltip content={t("comparison.action.viewNetworkGraph")}>
-            <Button
-              isIconOnly
-              size="sm"
-              variant="light"
-              onPress={() => setShowNetworkGraph(true)}
-            >
+            <Button isIconOnly size="sm" variant="light" onPress={() => setShowNetworkGraph(true)}>
               <NodeIndexOutlined className="text-lg" />
             </Button>
           </Tooltip>
           {isHidden ? (
             <Tooltip content={t("comparison.action.unhideGroup")}>
-              <Button
-                isIconOnly
-                size="sm"
-                variant="light"
-                onPress={handleUnhide}
-              >
+              <Button isIconOnly size="sm" variant="light" onPress={handleUnhide}>
                 <EyeOutlined className="text-lg" />
               </Button>
             </Tooltip>
           ) : (
             <Tooltip content={t("comparison.action.hideGroup")}>
-              <Button
-                isIconOnly
-                size="sm"
-                variant="light"
-                onPress={handleHide}
-              >
+              <Button isIconOnly size="sm" variant="light" onPress={handleHide}>
                 <EyeInvisibleOutlined className="text-lg" />
               </Button>
             </Tooltip>
@@ -175,17 +175,12 @@ const ComparisonResultGroup = ({ planId, group, threshold, onHiddenChange }: Com
             <Spinner size="sm" />
           </div>
         ) : resources.length === 0 ? (
-          <div className="text-sm text-default-400 py-4">
-            {t("comparison.empty.noResources")}
-          </div>
+          <div className="text-sm text-default-400 py-4">{t("comparison.empty.noResources")}</div>
         ) : (
           <div className="flex flex-col gap-3">
             <div className="grid grid-cols-10 gap-2">
               {resources.map((resource) => (
-                <div
-                  key={resource.id}
-                  className="relative"
-                >
+                <div key={resource.id} className="relative">
                   {/* Primary indicator */}
                   {resource.id === primaryResourceId && (
                     <Tooltip content={t("comparison.label.primaryResource")}>
@@ -194,10 +189,7 @@ const ComparisonResultGroup = ({ planId, group, threshold, onHiddenChange }: Com
                       </div>
                     </Tooltip>
                   )}
-                  <Resource
-                    resource={resource}
-                    disableCoverClick={false}
-                  />
+                  <Resource disableCoverClick={false} resource={resource} />
                 </div>
               ))}
             </div>
@@ -205,12 +197,7 @@ const ComparisonResultGroup = ({ planId, group, threshold, onHiddenChange }: Com
             {/* Pagination within group */}
             {totalPages > 1 && (
               <div className="flex justify-center">
-                <Pagination
-                  size="sm"
-                  page={page}
-                  total={totalPages}
-                  onChange={setPage}
-                />
+                <Pagination page={page} size="sm" total={totalPages} onChange={setPage} />
               </div>
             )}
           </div>
@@ -219,10 +206,10 @@ const ComparisonResultGroup = ({ planId, group, threshold, onHiddenChange }: Com
 
       {/* Network Graph Modal */}
       <ComparisonNetworkGraph
-        planId={planId}
         groupId={group.id!}
-        threshold={threshold}
         isOpen={showNetworkGraph}
+        planId={planId}
+        threshold={threshold}
         onClose={() => setShowNetworkGraph(false)}
       />
     </Card>

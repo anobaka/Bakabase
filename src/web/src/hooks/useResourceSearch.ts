@@ -1,10 +1,10 @@
+import type { Resource } from "@/core/models/Resource";
+import type { components } from "@/sdk/BApi2";
+
 import { useState, useCallback, useRef } from "react";
 
 import BApi from "@/sdk/BApi";
 import { ResourceAdditionalItem } from "@/sdk/constants";
-
-import type { Resource } from "@/core/models/Resource";
-import type { components } from "@/sdk/BApi2";
 
 type SearchForm = components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
 
@@ -74,6 +74,7 @@ export const useResourceSearch = (): UseResourceSearchResult => {
   const searchIdRef = useRef(0);
   // Keep a ref to resources for use in callbacks
   const resourcesRef = useRef(resources);
+
   resourcesRef.current = resources;
 
   const search = useCallback(
@@ -103,7 +104,18 @@ export const useResourceSearch = (): UseResourceSearchResult => {
 
         let basicResources = (rsp.data || []) as Resource[];
 
-        console.log('[useResourceSearch] Phase 1 (Cache) loaded', basicResources.length, 'resources. Sample properties:', basicResources.slice(0, 3).map(r => ({ id: r.id, hasProperties: !!r.properties, propertyKeys: r.properties ? Object.keys(r.properties) : [], mediaLibraries: r.mediaLibraries, category: r.category?.name })));
+        console.log(
+          "[useResourceSearch] Phase 1 (Cache) loaded",
+          basicResources.length,
+          "resources. Sample properties:",
+          basicResources.slice(0, 3).map((r) => ({
+            id: r.id,
+            hasProperties: !!r.properties,
+            propertyKeys: r.properties ? Object.keys(r.properties) : [],
+            mediaLibraries: r.mediaLibraries,
+            category: r.category?.name,
+          })),
+        );
 
         // Apply filter if provided
         if (filter) {
@@ -141,14 +153,36 @@ export const useResourceSearch = (): UseResourceSearchResult => {
 
           // Check again if this search is still the latest one
           if (currentSearchId !== searchIdRef.current) {
-            console.log('[useResourceSearch] Phase 2 aborted: searchId mismatch', currentSearchId, '!==', searchIdRef.current);
+            console.log(
+              "[useResourceSearch] Phase 2 aborted: searchId mismatch",
+              currentSearchId,
+              "!==",
+              searchIdRef.current,
+            );
+
             return [];
           }
 
           if (!fullRsp.code) {
             let fullResources = (fullRsp.data || []) as Resource[];
 
-            console.log('[useResourceSearch] Phase 2 (All) loaded', fullResources.length, 'resources. Sample properties:', fullResources.slice(0, 3).map(r => ({ id: r.id, hasProperties: !!r.properties, propertyPools: r.properties ? Object.keys(r.properties).map(pool => ({ pool, propIds: Object.keys(r.properties![pool as any] || {}) })) : [], mediaLibraries: r.mediaLibraries, category: r.category?.name })));
+            console.log(
+              "[useResourceSearch] Phase 2 (All) loaded",
+              fullResources.length,
+              "resources. Sample properties:",
+              fullResources.slice(0, 3).map((r) => ({
+                id: r.id,
+                hasProperties: !!r.properties,
+                propertyPools: r.properties
+                  ? Object.keys(r.properties).map((pool) => ({
+                      pool,
+                      propIds: Object.keys(r.properties![pool as any] || {}),
+                    }))
+                  : [],
+                mediaLibraries: r.mediaLibraries,
+                category: r.category?.name,
+              })),
+            );
 
             // Apply filter to full resources as well
             if (filter) {
@@ -160,14 +194,25 @@ export const useResourceSearch = (): UseResourceSearchResult => {
 
             setResources((prev) => {
               const next = prev.map((r) => fullResourcesMap.get(r.id) ?? r);
-              console.log('[useResourceSearch] Phase 2 setResources: prev refs === next refs?', prev.map((r, i) => r === next[i]));
+
+              console.log(
+                "[useResourceSearch] Phase 2 setResources: prev refs === next refs?",
+                prev.map((r, i) => r === next[i]),
+              );
+
               return next;
             });
             setLoadingDetails(false);
+
             return fullResources;
           }
 
-          console.log('[useResourceSearch] Phase 2 API error, code:', fullRsp.code, 'message:', fullRsp.message);
+          console.log(
+            "[useResourceSearch] Phase 2 API error, code:",
+            fullRsp.code,
+            "message:",
+            fullRsp.message,
+          );
           setLoadingDetails(false);
         }
 
@@ -193,9 +238,7 @@ export const useResourceSearch = (): UseResourceSearchResult => {
       const updatedResources = rsp.data as Resource[];
       const updatedMap = new Map(updatedResources.map((r) => [r.id, r]));
 
-      setResources((prev) =>
-        prev.map((r) => updatedMap.get(r.id) ?? r),
-      );
+      setResources((prev) => prev.map((r) => updatedMap.get(r.id) ?? r));
     }
   }, []);
 
@@ -256,6 +299,7 @@ export const progressiveSearch = async (
     }
 
     setState(fullResources);
+
     return fullResources;
   }
 

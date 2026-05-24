@@ -66,13 +66,11 @@ const Functional: React.FC<FunctionalProps> = ({ applyPatches }) => {
               });
             }}
           >
-            {[
-              CloseBehavior.Minimize,
-              CloseBehavior.Exit,
-              CloseBehavior.Prompt,
-            ].map((c) => (
+            {[CloseBehavior.Minimize, CloseBehavior.Exit, CloseBehavior.Prompt].map((c) => (
               <Radio key={c} value={String(c)}>
-                {t<string>(`configuration.functional.exitBehavior.${CloseBehavior[c].toLowerCase()}`)}
+                {t<string>(
+                  `configuration.functional.exitBehavior.${CloseBehavior[c].toLowerCase()}`,
+                )}
               </Radio>
             ))}
           </RadioGroup>
@@ -87,22 +85,15 @@ const Functional: React.FC<FunctionalProps> = ({ applyPatches }) => {
       <div className="settings">
         <Table removeWrapper>
           <TableHeader>
-            <TableColumn width={200}>
-              {t<string>("configuration.functional.title")}
-            </TableColumn>
+            <TableColumn width={200}>{t<string>("configuration.functional.title")}</TableColumn>
             <TableColumn>&nbsp;</TableColumn>
           </TableHeader>
           <TableBody>
             {functionSettings.map((c, i) => {
               return (
-                <TableRow
-                  key={i}
-                  className="hover:bg-[var(--bakaui-overlap-background)]"
-                >
+                <TableRow key={i} className="hover:bg-[var(--bakaui-overlap-background)]">
                   <TableCell>
-                    <div className="flex items-center">
-                      {t(c.label)}
-                    </div>
+                    <div className="flex items-center">{t(c.label)}</div>
                   </TableCell>
                   <TableCell>{c.renderCell()}</TableCell>
                 </TableRow>

@@ -124,11 +124,16 @@ const targetToDetailField: Partial<Record<AvEnhancerTarget, keyof AvSourceTestDe
 
 const imageTargets = new Set<AvEnhancerTarget>([AvEnhancerTarget.Cover, AvEnhancerTarget.Poster]);
 
-const cellValue = (target: AvEnhancerTarget, detail?: AvSourceTestDetail | null): string | undefined => {
+const cellValue = (
+  target: AvEnhancerTarget,
+  detail?: AvSourceTestDetail | null,
+): string | undefined => {
   if (!detail) return undefined;
   const field = targetToDetailField[target];
+
   if (!field) return undefined;
   const v = detail[field];
+
   return v == null || v === "" ? undefined : String(v);
 };
 
@@ -138,12 +143,15 @@ const parsePreferredFromApi = (
 ): PreferredSourcesByTarget => {
   if (!raw) return {};
   const out: PreferredSourcesByTarget = {};
+
   for (const [k, v] of Object.entries(raw)) {
     const target = Number.parseInt(k, 10);
+
     if (!Number.isNaN(target) && Array.isArray(v)) {
       out[target as AvEnhancerTarget] = v;
     }
   }
+
   return out;
 };
 
@@ -156,6 +164,7 @@ export const AvSourcesConfigPanel = () => {
     useState<PreferredSourcesByTarget>({});
   const [number, setNumber] = useState(() => {
     if (typeof window === "undefined") return "";
+
     return localStorage.getItem(TEST_NUMBER_STORAGE_KEY) || "";
   });
   const [running, setRunning] = useState(false);
@@ -170,7 +179,10 @@ export const AvSourcesConfigPanel = () => {
     const fetched = rsp.data || [];
     // Honor AvSourceIds order (shipped via constants.ts), with stragglers appended.
     const order = new Map(AvSourceIds.map((id, idx) => [id, idx] as const));
-    fetched.sort((a, b) => (order.get(a.id) ?? 999) - (order.get(b.id) ?? 999) || a.id.localeCompare(b.id));
+
+    fetched.sort(
+      (a, b) => (order.get(a.id) ?? 999) - (order.get(b.id) ?? 999) || a.id.localeCompare(b.id),
+    );
     setSources(fetched);
   }, []);
 
@@ -185,6 +197,7 @@ export const AvSourcesConfigPanel = () => {
       method: "GET",
       format: "json",
     });
+
     setConfigs(rsp.data?.sources || {});
     setPreferredSourcesByTarget(parsePreferredFromApi(rsp.data?.preferredSourcesByTarget));
   }, []);
@@ -197,6 +210,7 @@ export const AvSourcesConfigPanel = () => {
   const saveConfig = async (id: string, patch: Partial<AvSourceConfig>) => {
     const next = { ...configs };
     const merged: AvSourceConfig = { ...(next[id] || {}), ...patch };
+
     next[id] = merged;
     setConfigs(next);
     await BApi.request({
@@ -224,10 +238,12 @@ export const AvSourcesConfigPanel = () => {
   const runAll = async () => {
     if (!number.trim()) {
       toast.danger(t("avSources.toast.numberRequired", "Please enter a number first"));
+
       return;
     }
     setRunning(true);
     const initial: Record<string, SourceState> = {};
+
     sources.forEach((s) => {
       initial[s.id] = { phase: "loading" };
     });
@@ -242,12 +258,16 @@ export const AvSourcesConfigPanel = () => {
         format: "json",
       });
       const next: Record<string, SourceState> = {};
+
       (rsp.data || []).forEach((r) => {
         next[r.source] = { phase: "done", result: r };
       });
       sources.forEach((s) => {
         if (!next[s.id]) {
-          next[s.id] = { phase: "done", result: { source: s.id, durationMs: 0, error: "no response" } };
+          next[s.id] = {
+            phase: "done",
+            result: { source: s.id, durationMs: 0, error: "no response" },
+          };
         }
       });
       setResults(next);
@@ -259,6 +279,7 @@ export const AvSourcesConfigPanel = () => {
   const runOne = async (id: string) => {
     if (!number.trim()) {
       toast.danger(t("avSources.toast.numberRequired", "Please enter a number first"));
+
       return;
     }
     setResults((prev) => ({ ...prev, [id]: { phase: "loading" } }));
@@ -271,6 +292,7 @@ export const AvSourcesConfigPanel = () => {
         format: "json",
       });
       const result = rsp.data?.[0];
+
       if (result) {
         setResults((prev) => ({ ...prev, [id]: { phase: "done", result } }));
       } else {
@@ -282,7 +304,10 @@ export const AvSourcesConfigPanel = () => {
     } catch (e: any) {
       setResults((prev) => ({
         ...prev,
-        [id]: { phase: "done", result: { source: id, durationMs: 0, error: e?.message ?? String(e) } },
+        [id]: {
+          phase: "done",
+          result: { source: id, durationMs: 0, error: e?.message ?? String(e) },
+        },
       }));
     }
   };
@@ -293,7 +318,9 @@ export const AvSourcesConfigPanel = () => {
   const getEffectivePreferred = useCallback(
     (target: AvEnhancerTarget): string[] => {
       const explicit = preferredSourcesByTarget[target];
+
       if (explicit) return explicit;
+
       return orderedSourceIds;
     },
     [preferredSourcesByTarget, orderedSourceIds],
@@ -304,6 +331,7 @@ export const AvSourcesConfigPanel = () => {
     (target: AvEnhancerTarget, sourceId: string): number => {
       const list = getEffectivePreferred(target);
       const idx = list.indexOf(sourceId);
+
       return idx < 0 ? 0 : idx + 1;
     },
     [getEffectivePreferred],
@@ -312,9 +340,8 @@ export const AvSourcesConfigPanel = () => {
   const toggleCell = (target: AvEnhancerTarget, sourceId: string) => {
     const current = getEffectivePreferred(target);
     const isSelected = current.includes(sourceId);
-    const nextList = isSelected
-      ? current.filter((id) => id !== sourceId)
-      : [...current, sourceId];
+    const nextList = isSelected ? current.filter((id) => id !== sourceId) : [...current, sourceId];
+
     void savePreferredSources({ ...preferredSourcesByTarget, [target]: nextList });
   };
 
@@ -331,11 +358,13 @@ export const AvSourcesConfigPanel = () => {
     const count = selectedCountForTarget(target);
     const allSelected = count === orderedSourceIds.length && count > 0;
     const nextList = allSelected ? [] : orderedSourceIds.slice();
+
     void savePreferredSources({ ...preferredSourcesByTarget, [target]: nextList });
   };
 
   const selectAllEverything = () => {
     const next: PreferredSourcesByTarget = {};
+
     for (const tgt of avEnhancerTargets) {
       next[tgt.value as AvEnhancerTarget] = orderedSourceIds.slice();
     }
@@ -348,8 +377,10 @@ export const AvSourcesConfigPanel = () => {
 
   // Convert shift+vertical-wheel into horizontal scroll on the matrix container.
   const scrollRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const el = scrollRef.current;
+
     if (!el) return;
     const onWheel = (e: WheelEvent) => {
       if (e.shiftKey && e.deltaY !== 0) {
@@ -357,7 +388,9 @@ export const AvSourcesConfigPanel = () => {
         el.scrollLeft += e.deltaY;
       }
     };
+
     el.addEventListener("wheel", onWheel, { passive: false });
+
     return () => el.removeEventListener("wheel", onWheel);
   }, []);
 
@@ -375,9 +408,9 @@ export const AvSourcesConfigPanel = () => {
     <div className="flex flex-col gap-3 h-full">
       <div className="flex items-center gap-2 flex-wrap">
         <Input
-          size="sm"
           className="max-w-[280px]"
           placeholder={t("avSources.input.numberPlaceholder", "Enter a number, e.g. SSIS-001")}
+          size="sm"
           value={number}
           onValueChange={(v) => {
             setNumber(v);
@@ -386,18 +419,18 @@ export const AvSourcesConfigPanel = () => {
         />
         <Button
           color="primary"
+          isDisabled={!number.trim() || sources.length === 0}
+          isLoading={running}
           size="sm"
           startContent={<AiOutlinePlayCircle />}
           onPress={runAll}
-          isLoading={running}
-          isDisabled={!number.trim() || sources.length === 0}
         >
           {t("avSources.button.testAll", "Test all sources")}
         </Button>
         <Button
-          variant="flat"
           size="sm"
           startContent={<AiOutlineReload />}
+          variant="flat"
           onPress={() => {
             void loadSources();
             void loadConfig();
@@ -437,11 +470,12 @@ export const AvSourcesConfigPanel = () => {
                 const total = orderedSourceIds.length;
                 const allSelected = count === total && count > 0;
                 const allCleared = count === 0;
+
                 return (
                   <th
                     key={tgt.value}
-                    onClick={() => toggleTargetColumn(target)}
                     className="sticky top-0 z-20 bg-default-100 px-2 py-2 text-left border-b border-r border-default-200 min-w-[140px] select-none cursor-pointer hover:bg-default-200"
+                    onClick={() => toggleTargetColumn(target)}
                   >
                     <div className="flex items-center gap-1 justify-between">
                       <span className="font-medium">{tgt.label}</span>
@@ -471,6 +505,7 @@ export const AvSourcesConfigPanel = () => {
               const rowSkipped = state?.phase === "done" ? state.result.skipped : false;
               const isLoading = state?.phase === "loading";
               const detail = state?.phase === "done" ? state.result.detail : undefined;
+
               return (
                 <tr
                   key={s.id}
@@ -486,12 +521,12 @@ export const AvSourcesConfigPanel = () => {
                 >
                   <th className="sticky left-0 z-10 bg-background px-3 py-2 text-left border-b border-r border-default-200 align-top">
                     <SourceCell
-                      source={s}
                       config={cfg}
-                      state={state}
-                      onTest={() => runOne(s.id)}
-                      onConfigure={() => openSourceConfigModal(s)}
                       numberSet={!!number.trim()}
+                      source={s}
+                      state={state}
+                      onConfigure={() => openSourceConfigModal(s)}
+                      onTest={() => runOne(s.id)}
                     />
                   </th>
                   {avEnhancerTargets.map((tgt) => {
@@ -499,21 +534,22 @@ export const AvSourcesConfigPanel = () => {
                     const priority = priorityOf(target, s.id);
                     const checked = priority > 0;
                     const value = cellValue(target, detail);
+
                     return (
                       <td
                         key={tgt.value}
                         className="px-2 py-2 border-b border-r border-default-200 align-top"
                       >
                         <Cell
-                          target={target}
-                          value={value}
-                          isImage={imageTargets.has(target)}
                           checked={checked}
-                          priority={priority}
                           interactive={!disabledByConfig}
+                          isImage={imageTargets.has(target)}
                           loading={isLoading}
+                          priority={priority}
                           rowError={rowError}
                           rowSkipped={rowSkipped}
+                          target={target}
+                          value={value}
                           onToggle={() => toggleCell(target, s.id)}
                         />
                       </td>
@@ -525,8 +561,8 @@ export const AvSourcesConfigPanel = () => {
             {sources.length === 0 && (
               <tr>
                 <td
-                  colSpan={avEnhancerTargets.length + 1}
                   className="px-3 py-6 text-center text-default-500"
+                  colSpan={avEnhancerTargets.length + 1}
                 >
                   {t("avSources.empty.noSources", "No sources available")}
                 </td>
@@ -554,7 +590,7 @@ const SourceCell = ({ source, config, state, onTest, onConfigure, numberSet }: S
   const error = state?.phase === "done" ? state.result.error : undefined;
   const skipped = state?.phase === "done" ? state.result.skipped : false;
   const duration = state?.phase === "done" ? state.result.durationMs : undefined;
-  const interactions = state?.phase === "done" ? state.result.interactions ?? [] : [];
+  const interactions = state?.phase === "done" ? (state.result.interactions ?? []) : [];
 
   return (
     <div className="flex flex-col gap-1">
@@ -562,10 +598,10 @@ const SourceCell = ({ source, config, state, onTest, onConfigure, numberSet }: S
         <Tooltip content={t("avSources.button.configure", "Configure")}>
           <Button
             isIconOnly
+            aria-label={t("avSources.button.configure", "Configure")}
             size="sm"
             variant="light"
             onPress={onConfigure}
-            aria-label={t("avSources.button.configure", "Configure")}
           >
             <AiOutlineSetting className="text-lg" />
           </Button>
@@ -573,25 +609,23 @@ const SourceCell = ({ source, config, state, onTest, onConfigure, numberSet }: S
         <Tooltip content={t("avSources.button.test", "Test")}>
           <Button
             isIconOnly
-            size="sm"
-            variant="light"
+            aria-label={t("avSources.button.test", "Test")}
             isDisabled={!numberSet}
             isLoading={state?.phase === "loading"}
+            size="sm"
+            variant="light"
             onPress={onTest}
-            aria-label={t("avSources.button.test", "Test")}
           >
             <AiOutlinePlayCircle className="text-lg" />
           </Button>
         </Tooltip>
         <span className="font-medium">{source.id}</span>
         {disabledByConfig && (
-          <Chip size="sm" variant="flat" color="default">
+          <Chip color="default" size="sm" variant="flat">
             {t("avSources.chip.disabled", "disabled")}
           </Chip>
         )}
-        {duration != null && (
-          <span className="text-[10px] text-default-500">{duration}ms</span>
-        )}
+        {duration != null && <span className="text-[10px] text-default-500">{duration}ms</span>}
       </div>
       {error && (
         <Tooltip content={error}>
@@ -620,7 +654,7 @@ const SourceCell = ({ source, config, state, onTest, onConfigure, numberSet }: S
           >
             <div className="space-y-2 pt-1">
               {interactions.map((i, idx) => (
-                <InteractionItem key={idx} index={idx} i={i} />
+                <InteractionItem key={idx} i={i} index={idx} />
               ))}
             </div>
           </AccordionItem>
@@ -658,13 +692,13 @@ const Cell = ({
     <div className="flex flex-col gap-1">
       {interactive && (
         <button
-          type="button"
-          onClick={onToggle}
           className={`self-start inline-flex items-center gap-1 rounded px-1.5 py-0.5 border text-[10px] transition-colors ${
             checked
               ? "border-primary text-primary bg-primary-50"
               : "border-default-300 text-default-500 hover:border-default-400"
           }`}
+          type="button"
+          onClick={onToggle}
         >
           {checked ? (
             <>
@@ -676,7 +710,13 @@ const Cell = ({
           )}
         </button>
       )}
-      <CellBody loading={loading} rowError={rowError} rowSkipped={rowSkipped} value={value} isImage={isImage} />
+      <CellBody
+        isImage={isImage}
+        loading={loading}
+        rowError={rowError}
+        rowSkipped={rowSkipped}
+        value={value}
+      />
     </div>
   );
 };
@@ -697,8 +737,8 @@ const CellBody = ({ loading, rowError, rowSkipped, value, isImage }: CellBodyPro
 
   if (isImage) {
     return (
-      <a href={value} target="_blank" rel="noreferrer" className="block">
-        <img src={value} alt="" className="max-h-16 max-w-[120px] rounded object-contain" />
+      <a className="block" href={value} rel="noreferrer" target="_blank">
+        <img alt="" className="max-h-16 max-w-[120px] rounded object-contain" src={value} />
       </a>
     );
   }
@@ -732,10 +772,10 @@ const SourceConfigModal = ({ source, config, onSave, onDestroyed }: SourceConfig
   return (
     <Modal
       defaultVisible
+      footer={{ actions: ["cancel", "ok"] }}
       size="lg"
       title={t("avSources.modal.sourceConfig", "Source: {{id}}", { id: source.id })}
       onDestroyed={onDestroyed}
-      footer={{ actions: ["cancel", "ok"] }}
       onOk={async () => {
         await onSave({
           enabled,
@@ -748,20 +788,16 @@ const SourceConfigModal = ({ source, config, onSave, onDestroyed }: SourceConfig
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <span className="text-sm">{t("avSources.field.enabled", "Enabled")}</span>
-          <Switch size="sm" isSelected={enabled} onValueChange={setEnabled} />
+          <Switch isSelected={enabled} size="sm" onValueChange={setEnabled} />
         </div>
         <Input
-          size="sm"
           label={t("avSources.field.baseUrl", "Base URL")}
           placeholder={source.defaultBaseUrl}
+          size="sm"
           value={baseUrl}
           onValueChange={setBaseUrl}
         />
         <Textarea
-          size="sm"
-          minRows={2}
-          label={t("avSources.field.cookie", "Cookie")}
-          placeholder={source.defaultCookie || t("avSources.field.cookiePlaceholder", "name=value; ...")}
           description={
             source.defaultCookie
               ? t("avSources.field.cookieDefaultHint", "Default applied: {{cookie}}", {
@@ -769,13 +805,19 @@ const SourceConfigModal = ({ source, config, onSave, onDestroyed }: SourceConfig
                 })
               : undefined
           }
+          label={t("avSources.field.cookie", "Cookie")}
+          minRows={2}
+          placeholder={
+            source.defaultCookie || t("avSources.field.cookiePlaceholder", "name=value; ...")
+          }
+          size="sm"
           value={cookie}
           onValueChange={setCookie}
         />
         <Input
-          size="sm"
           label={t("avSources.field.userAgent", "User-Agent")}
           placeholder={t("avSources.field.userAgentPlaceholder", "Optional override")}
+          size="sm"
           value={userAgent}
           onValueChange={setUserAgent}
         />
@@ -795,6 +837,7 @@ const copyToClipboard = (text: string) => {
 
 const buildCurl = (i: AvSourceHttpInteraction) => {
   const parts: string[] = ["curl"];
+
   if (i.method && i.method.toUpperCase() !== "GET") parts.push(`-X ${i.method.toUpperCase()}`);
   for (const [k, v] of Object.entries(i.requestHeaders || {})) {
     parts.push(`-H '${k}: ${String(v).replace(/'/g, "'\\''")}'`);
@@ -803,6 +846,7 @@ const buildCurl = (i: AvSourceHttpInteraction) => {
     parts.push(`--data-raw '${i.requestBody.replace(/'/g, "'\\''")}'`);
   }
   parts.push(`'${i.url}'`);
+
   return parts.join(" ");
 };
 
@@ -814,6 +858,7 @@ const InteractionItem = ({ index, i }: { index: number; i: AvSourceHttpInteracti
       : i.responseStatusCode && i.responseStatusCode >= 300
         ? "warning"
         : "success";
+
   return (
     <div className="rounded-md border border-default-200 p-2 text-[11px] space-y-1">
       <div className="flex items-center gap-1 flex-wrap">
@@ -822,26 +867,26 @@ const InteractionItem = ({ index, i }: { index: number; i: AvSourceHttpInteracti
           {i.method.toUpperCase()}
         </Chip>
         {i.responseStatusCode != null && (
-          <Chip size="sm" color={statusColor} variant="flat">
+          <Chip color={statusColor} size="sm" variant="flat">
             {i.responseStatusCode}
           </Chip>
         )}
         <span className="text-default-500">{i.durationMs}ms</span>
         <Button
+          isIconOnly
+          aria-label="curl"
           size="sm"
           variant="light"
-          isIconOnly
           onPress={() => copyToClipboard(buildCurl(i))}
-          aria-label="curl"
         >
           <AiOutlineCopy />
         </Button>
       </div>
       <a
-        href={i.url}
-        target="_blank"
-        rel="noreferrer"
         className="block break-all text-primary underline"
+        href={i.url}
+        rel="noreferrer"
+        target="_blank"
       >
         {i.url}
       </a>

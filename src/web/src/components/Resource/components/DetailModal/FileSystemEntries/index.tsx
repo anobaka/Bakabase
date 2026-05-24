@@ -33,8 +33,7 @@ const FileSystemEntries = ({ path, isFile }: Props) => {
           root: path,
         },
         {
-          showErrorToast: (r) =>
-            (r.code >= 404 || r.code < 200) && r.code != 404,
+          showErrorToast: (r) => (r.code >= 404 || r.code < 200) && r.code != 404,
         },
       )
       .then((a) => {
@@ -86,6 +85,8 @@ const FileSystemEntries = ({ path, isFile }: Props) => {
                 <>
                   <span
                     className={"hover:font-bold"}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => {
                       if (i == relativePathSegments.length - 1) {
                         return;
@@ -93,18 +94,28 @@ const FileSystemEntries = ({ path, isFile }: Props) => {
                       let segments = [path];
 
                       if (i > 0) {
-                        segments = segments.concat(
-                          relativePathSegments.slice(1, i + 1),
-                        );
+                        segments = segments.concat(relativePathSegments.slice(1, i + 1));
                       }
                       changePath(segments.join(PathLibrary.sep));
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        if (i == relativePathSegments.length - 1) {
+                          return;
+                        }
+                        let segments = [path];
+
+                        if (i > 0) {
+                          segments = segments.concat(relativePathSegments.slice(1, i + 1));
+                        }
+                        changePath(segments.join(PathLibrary.sep));
+                      }
                     }}
                   >
                     {s}
                   </span>
-                  {i < relativePathSegments.length - 1 && (
-                    <span className={"opacity-60"}>/</span>
-                  )}
+                  {i < relativePathSegments.length - 1 && <span className={"opacity-60"}>/</span>}
                 </>
               );
             })}
@@ -123,22 +134,12 @@ const FileSystemEntries = ({ path, isFile }: Props) => {
       </div>
       <div className={"grid grid-cols-7"}>
         {fsEntries.slice(skipCount, PageSize).map((e) => (
-          <FileSystemEntry
-            key={e.path}
-            entry={e}
-            onEnterDirectory={changePath}
-          />
+          <FileSystemEntry key={e.path} entry={e} onEnterDirectory={changePath} />
         ))}
       </div>
       <div className={"flex items-center justify-end"}>
         {showPagination && (
-          <Pagination
-            boundaries={3}
-            page={page}
-            size={"sm"}
-            total={pageCount}
-            onChange={setPage}
-          />
+          <Pagination boundaries={3} page={page} size={"sm"} total={pageCount} onChange={setPage} />
         )}
       </div>
     </div>

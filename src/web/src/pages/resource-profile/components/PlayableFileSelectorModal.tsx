@@ -33,6 +33,7 @@ const PlayableFileSelectorModal = ({ options: propOptions, onSubmit, onDestroyed
 
   const addPresetExtensions = (preset: keyof typeof extensionPresets) => {
     const currentExts = new Set(options.extensions ?? []);
+
     extensionPresets[preset].forEach((ext) => currentExts.add(ext));
     setOptions({
       ...options,
@@ -58,59 +59,61 @@ const PlayableFileSelectorModal = ({ options: propOptions, onSubmit, onDestroyed
       <div className="flex flex-col gap-4">
         {/* Quick presets */}
         <div>
-          <div className="text-sm font-medium mb-2">{t("resourceProfile.label.quickAddPresets")}</div>
+          <div className="text-sm font-medium mb-2">
+            {t("resourceProfile.label.quickAddPresets")}
+          </div>
           <div className="flex flex-wrap gap-2">
             <Chip
-              size="sm"
-              color="primary"
-              variant="flat"
               className="cursor-pointer hover:opacity-80"
+              color="primary"
+              size="sm"
+              variant="flat"
               onClick={() => addPresetExtensions("video")}
             >
               {t("resourceProfile.label.video")}
             </Chip>
             <Chip
-              size="sm"
-              color="secondary"
-              variant="flat"
               className="cursor-pointer hover:opacity-80"
+              color="secondary"
+              size="sm"
+              variant="flat"
               onClick={() => addPresetExtensions("audio")}
             >
               {t("resourceProfile.label.audio")}
             </Chip>
             <Chip
-              size="sm"
-              color="success"
-              variant="flat"
               className="cursor-pointer hover:opacity-80"
+              color="success"
+              size="sm"
+              variant="flat"
               onClick={() => addPresetExtensions("image")}
             >
               {t("resourceProfile.label.image")}
             </Chip>
             <Chip
-              size="sm"
-              color="warning"
-              variant="flat"
               className="cursor-pointer hover:opacity-80"
+              color="warning"
+              size="sm"
+              variant="flat"
               onClick={() => addPresetExtensions("document")}
             >
               {t("resourceProfile.label.document")}
             </Chip>
             <Chip
-              size="sm"
-              color="default"
-              variant="flat"
               className="cursor-pointer hover:opacity-80"
+              color="default"
+              size="sm"
+              variant="flat"
               onClick={() => addPresetExtensions("archive")}
             >
               {t("resourceProfile.label.archive")}
             </Chip>
             {(options.extensions?.length ?? 0) > 0 && (
               <Chip
-                size="sm"
-                color="danger"
-                variant="flat"
                 className="cursor-pointer hover:opacity-80"
+                color="danger"
+                size="sm"
+                variant="flat"
                 onClick={clearExtensions}
               >
                 {t("resourceProfile.action.clearAll")}
@@ -164,13 +167,17 @@ const PlayableFileSelectorModal = ({ options: propOptions, onSubmit, onDestroyed
           <>
             <Divider />
             <div>
-              <div className="text-sm font-medium mb-2">{t("resourceProfile.label.currentConfiguration")}</div>
+              <div className="text-sm font-medium mb-2">
+                {t("resourceProfile.label.currentConfiguration")}
+              </div>
               <div className="p-3 bg-default-100 rounded-lg">
                 {(options.extensions?.length ?? 0) > 0 && (
                   <div className="flex flex-wrap gap-1 mb-2">
-                    <span className="text-sm text-default-500 mr-2">{t("resourceProfile.label.extensionsLabel")}:</span>
+                    <span className="text-sm text-default-500 mr-2">
+                      {t("resourceProfile.label.extensionsLabel")}:
+                    </span>
                     {options.extensions?.map((ext) => (
-                      <Chip key={ext} size="sm" color="secondary" variant="flat">
+                      <Chip key={ext} color="secondary" size="sm" variant="flat">
                         .{ext}
                       </Chip>
                     ))}
@@ -178,8 +185,10 @@ const PlayableFileSelectorModal = ({ options: propOptions, onSubmit, onDestroyed
                 )}
                 {options.fileNamePattern && (
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-default-500">{t("resourceProfile.label.pattern")}:</span>
-                    <Chip size="sm" color="warning" variant="flat">
+                    <span className="text-sm text-default-500">
+                      {t("resourceProfile.label.pattern")}:
+                    </span>
+                    <Chip color="warning" size="sm" variant="flat">
                       {options.fileNamePattern}
                     </Chip>
                   </div>

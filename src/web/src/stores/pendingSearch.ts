@@ -20,9 +20,11 @@ export const usePendingSearchStore = create<PendingSearchState>((set, get) => ({
   },
   consumePendingSearch: () => {
     const current = get().pendingSearch;
+
     if (current) {
       set({ pendingSearch: undefined });
     }
+
     return current;
   },
 }));

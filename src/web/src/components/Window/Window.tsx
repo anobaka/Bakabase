@@ -10,7 +10,8 @@ import { WindowHeader } from "./WindowHeader";
 import "./styles.css";
 
 const Window: React.FC<WindowProps> = (props) => {
-  const { title, children, onClose, afterClose, onDestroyed, windowOptions, renderHeaderActions } = props;
+  const { title, children, onClose, afterClose, onDestroyed, windowOptions, renderHeaderActions } =
+    props;
 
   const windowIdRef = useRef<string>(`window-${Date.now()}-${Math.random()}`);
   const windowManager = WindowManager.getInstance();
@@ -40,7 +41,9 @@ const Window: React.FC<WindowProps> = (props) => {
   const isDraggingRef = useRef(false);
   const dragPositionRef = useRef<{ x: number; y: number } | null>(null);
   const isResizingRef = useRef(false);
-  const resizeStateRef = useRef<{ x: number; y: number; width: number; height: number } | null>(null);
+  const resizeStateRef = useRef<{ x: number; y: number; width: number; height: number } | null>(
+    null,
+  );
   const optimisticUpdateRef = useRef<Partial<WindowState> | null>(null);
 
   useEffect(() => {
@@ -95,19 +98,25 @@ const Window: React.FC<WindowProps> = (props) => {
           // to ensure our optimistic update isn't lost
           if (optimisticUpdateRef.current) {
             const optimistic = optimisticUpdateRef.current;
+
             optimisticUpdateRef.current = null; // Clear after use
             setWindowState((prev) => {
               // Merge optimistic updates with WindowManager state
               const merged = {
                 ...currentWindow,
                 // Preserve optimistic updates for critical state fields
-                ...(optimistic.isMinimized !== undefined ? { isMinimized: optimistic.isMinimized } : {}),
-                ...(optimistic.isMaximized !== undefined ? { isMaximized: optimistic.isMaximized } : {}),
+                ...(optimistic.isMinimized !== undefined
+                  ? { isMinimized: optimistic.isMinimized }
+                  : {}),
+                ...(optimistic.isMaximized !== undefined
+                  ? { isMaximized: optimistic.isMaximized }
+                  : {}),
                 ...(optimistic.x !== undefined ? { x: optimistic.x } : {}),
                 ...(optimistic.y !== undefined ? { y: optimistic.y } : {}),
                 ...(optimistic.width !== undefined ? { width: optimistic.width } : {}),
                 ...(optimistic.height !== undefined ? { height: optimistic.height } : {}),
               };
+
               return merged;
             });
           } else {
@@ -240,6 +249,7 @@ const Window: React.FC<WindowProps> = (props) => {
 
   const handleMinimize = useCallback(() => {
     const newIsMinimized = !windowState.isMinimized;
+
     // Track optimistic update
     optimisticUpdateRef.current = { isMinimized: newIsMinimized };
     // Update local state immediately for instant UI feedback
@@ -291,6 +301,7 @@ const Window: React.FC<WindowProps> = (props) => {
         width: windowState.width,
         height: windowState.height,
       };
+
       setRestoreState(newRestoreState);
       // Track optimistic update
       optimisticUpdateRef.current = {
@@ -399,12 +410,12 @@ const Window: React.FC<WindowProps> = (props) => {
       >
         <WindowHeader
           isMinimized={true}
+          renderActions={renderHeaderActions}
+          title={title}
           windowState={windowState}
           onClose={handleClose}
           onMaximize={handleMaximize}
           onMinimize={handleMinimize}
-          title={title}
-          renderActions={renderHeaderActions}
         />
       </Rnd>
     );
@@ -435,16 +446,14 @@ const Window: React.FC<WindowProps> = (props) => {
     >
       <div className="flex flex-col w-full h-full overflow-hidden">
         <WindowHeader
+          renderActions={renderHeaderActions}
+          title={title}
           windowState={windowState}
           onClose={handleClose}
           onMaximize={handleMaximize}
           onMinimize={handleMinimize}
-          title={title}
-          renderActions={renderHeaderActions}
         />
-        <div className="flex-1 overflow-hidden">
-          {children}
-        </div>
+        <div className="flex-1 overflow-hidden">{children}</div>
       </div>
     </Rnd>
   );

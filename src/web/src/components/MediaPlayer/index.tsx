@@ -405,7 +405,9 @@ const MediaPlayer = forwardRef<MediaPlayerRef, MediaPlayerProps>((props, ref) =>
           r.focus();
         }
       }}
+      aria-label="Media player"
       className="w-full h-full"
+      role="button"
       tabIndex={0}
       onKeyDown={handleKeyDown}
       {...otherProps}

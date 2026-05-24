@@ -24,15 +24,19 @@ export const DataMigrationHintModal: React.FC = () => {
     if (localStorage.getItem(DISMISSAL_FLAG_KEY) === "1") return;
 
     let cancelled = false;
+
     BApi.app.getAppInfo().then((r) => {
       if (cancelled) return;
       const info = (r as any).data;
+
       if (!info) return;
 
       const isV23 = typeof info.coreVersion === "string" && info.coreVersion.startsWith("2.3");
       const mayHaveLegacy = info.mayHaveLegacyData === true;
+
       if (isV23 && mayHaveLegacy) setOpen(true);
     });
+
     return () => {
       cancelled = true;
     };
@@ -52,11 +56,11 @@ export const DataMigrationHintModal: React.FC = () => {
 
   return (
     <Modal
+      footer={{ actions: [] }}
       size="md"
       title={t("dashboard.dataMigrationHint.title")}
       visible={open}
       onClose={dismiss}
-      footer={{ actions: [] }}
     >
       <div className="flex flex-col gap-4">
         <p>{t("dashboard.dataMigrationHint.body")}</p>

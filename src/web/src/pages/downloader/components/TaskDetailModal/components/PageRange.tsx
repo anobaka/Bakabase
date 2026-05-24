@@ -19,11 +19,7 @@ const PageRange = ({ start, end, onChange }: Props) => {
         <NumberInput
           description={
             <div>
-              <div>
-                {t<string>(
-                  "Set a page range if you don't want to download them all.",
-                )}
-              </div>
+              <div>{t<string>("Set a page range if you don't want to download them all.")}</div>
               <div>{t<string>("The minimal page number is 1.")}</div>
             </div>
           }
@@ -37,9 +33,7 @@ const PageRange = ({ start, end, onChange }: Props) => {
           }}
         />
         <NumberInput
-          description={t<string>(
-            "Set a page range if you don't want to download them all.",
-          )}
+          description={t<string>("Set a page range if you don't want to download them all.")}
           label={t<string>("End page")}
           min={end ?? 1}
           size={"sm"}

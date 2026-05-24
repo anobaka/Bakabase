@@ -1,5 +1,8 @@
 "use client";
 
+import type { IProperty } from "@/components/Property/models";
+import type { DestroyableProps } from "@/components/bakaui/types";
+
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LoadingOutlined, WarningOutlined } from "@ant-design/icons";
@@ -7,8 +10,6 @@ import toast from "react-hot-toast";
 
 import BApi from "@/sdk/BApi";
 import { Checkbox, Modal } from "@/components/bakaui";
-import type { IProperty } from "@/components/Property/models";
-import type { DestroyableProps } from "@/components/bakaui/types";
 import { CustomPropertyAdditionalItem } from "@/sdk/constants";
 
 interface CardType {
@@ -54,23 +55,28 @@ const CreateInitialDataModal = ({
           additionalItems: CustomPropertyAdditionalItem.None,
         }),
       ]);
+
       setCardType((typeRsp.data || null) as CardType | null);
       // @ts-ignore
       setAllProperties((propsRsp.data || []) as IProperty[]);
     };
+
     load();
   }, [typeId]);
 
   const identityPropertyIds = useMemo(() => {
     const ids = cardType?.identityPropertyIds;
+
     if (ids?.length) return ids;
+
     return cardType?.propertyIds || [];
   }, [cardType]);
 
   const identityProperties = useMemo(
-    () => identityPropertyIds
-      .map((pid) => allProperties.find((p) => p.id === pid))
-      .filter(Boolean) as IProperty[],
+    () =>
+      identityPropertyIds
+        .map((pid) => allProperties.find((p) => p.id === pid))
+        .filter(Boolean) as IProperty[],
     [identityPropertyIds, allProperties],
   );
 
@@ -78,6 +84,7 @@ const CreateInitialDataModal = ({
   useEffect(() => {
     if (!cardType) return;
     const mySeq = ++reqSeq.current;
+
     setPreviewing(true);
     (async () => {
       try {
@@ -85,6 +92,7 @@ const CreateInitialDataModal = ({
           onlyFromResources,
           allowNullPropertyIds: Array.from(allowNullPropertyIds),
         });
+
         if (mySeq !== reqSeq.current) return;
         setPreview({
           toCreate: Number(rsp?.data?.toCreate ?? 0),
@@ -102,11 +110,13 @@ const CreateInitialDataModal = ({
   const toggleAllowNull = (propertyId: number) => {
     setAllowNullPropertyIds((prev) => {
       const next = new Set(prev);
+
       if (next.has(propertyId)) {
         next.delete(propertyId);
       } else {
         next.add(propertyId);
       }
+
       return next;
     });
   };
@@ -117,6 +127,7 @@ const CreateInitialDataModal = ({
       allowNullPropertyIds: Array.from(allowNullPropertyIds),
     });
     const count = rsp.data ?? 0;
+
     toast.success(t("dataCard.action.createInitialData.success", { count }));
     onCreated?.();
   };
@@ -124,13 +135,13 @@ const CreateInitialDataModal = ({
   return (
     <Modal
       defaultVisible
-      size="md"
-      title={`${t("dataCard.action.createInitialData")} - ${typeName}`}
-      onOk={handleCreate}
-      onDestroyed={onDestroyed}
       okProps={{
         isDisabled: previewing || preview?.toCreate === 0,
       }}
+      size="md"
+      title={`${t("dataCard.action.createInitialData")} - ${typeName}`}
+      onDestroyed={onDestroyed}
+      onOk={handleCreate}
     >
       <div className="flex flex-col gap-4">
         <p className="text-sm text-default-600">
@@ -139,11 +150,10 @@ const CreateInitialDataModal = ({
 
         {/* Only from resources */}
         <div className="border border-default-200 rounded-lg p-4">
-          <Checkbox
-            isSelected={onlyFromResources}
-            onValueChange={setOnlyFromResources}
-          >
-            <span className="text-sm">{t("dataCard.action.createInitialData.onlyFromResources")}</span>
+          <Checkbox isSelected={onlyFromResources} onValueChange={setOnlyFromResources}>
+            <span className="text-sm">
+              {t("dataCard.action.createInitialData.onlyFromResources")}
+            </span>
           </Checkbox>
           <p className="text-xs text-default-400 mt-2 ml-7">
             {t("dataCard.action.createInitialData.onlyFromResources.description")}
@@ -171,8 +181,8 @@ const CreateInitialDataModal = ({
               {identityProperties.map((p) => (
                 <Checkbox
                   key={p.id}
-                  size="sm"
                   isSelected={allowNullPropertyIds.has(p.id)}
+                  size="sm"
                   onValueChange={() => toggleAllowNull(p.id)}
                 >
                   <span className="text-sm">{p.name}</span>

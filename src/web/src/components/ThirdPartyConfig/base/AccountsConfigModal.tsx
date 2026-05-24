@@ -1,5 +1,7 @@
 "use client";
 
+import type { CookieValidatorTarget } from "@/sdk/constants";
+
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -16,7 +18,7 @@ import {
 } from "@heroui/react";
 import { AiOutlinePlus, AiOutlineDelete } from "react-icons/ai";
 import { CheckCircleOutlined, CloseCircleOutlined } from "@ant-design/icons";
-import type { CookieValidatorTarget } from "@/sdk/constants";
+
 import BApi from "@/sdk/BApi";
 
 export interface AccountField {
@@ -55,20 +57,19 @@ export default function AccountsConfigModal({
   const { t } = useTranslation();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [saving, setSaving] = useState(false);
-  const [validationStatus, setValidationStatus] = useState<Record<string, "loading" | "succeed" | "failed">>({});
+  const [validationStatus, setValidationStatus] = useState<
+    Record<string, "loading" | "succeed" | "failed">
+  >({});
 
   useEffect(() => {
     if (isOpen) {
-      setAccounts(
-        initialAccounts.length > 0
-          ? initialAccounts.map((a) => ({ ...a }))
-          : [],
-      );
+      setAccounts(initialAccounts.length > 0 ? initialAccounts.map((a) => ({ ...a })) : []);
     }
   }, [isOpen, initialAccounts]);
 
   const addAccount = () => {
     const newAccount: Account = { name: "" };
+
     for (const field of fields) {
       newAccount[field.key] = "";
     }
@@ -81,17 +82,21 @@ export default function AccountsConfigModal({
 
   const updateAccount = (index: number, key: string, value: string) => {
     const updated = [...accounts];
+
     updated[index] = { ...updated[index], [key]: value };
     setAccounts(updated);
   };
 
   const handleValidateCookie = async (index: number, field: AccountField) => {
     const cookie = accounts[index]?.[field.key];
+
     if (!cookie || !field.cookieValidatorTarget) return;
     const key = `${index}-${field.key}`;
+
     setValidationStatus((prev) => ({ ...prev, [key]: "loading" }));
     try {
       const rsp = await BApi.tool.validateCookie({ target: field.cookieValidatorTarget, cookie });
+
       setValidationStatus((prev) => ({ ...prev, [key]: rsp.code ? "failed" : "succeed" }));
     } catch {
       setValidationStatus((prev) => ({ ...prev, [key]: "failed" }));
@@ -109,22 +114,11 @@ export default function AccountsConfigModal({
   };
 
   return (
-    <Modal
-      isOpen={isOpen}
-      scrollBehavior="inside"
-      size="2xl"
-      onClose={onClose}
-    >
+    <Modal isOpen={isOpen} scrollBehavior="inside" size="2xl" onClose={onClose}>
       <ModalContent>
-        <ModalHeader>
-          {t("resourceSource.accounts.title", { platform })}
-        </ModalHeader>
+        <ModalHeader>{t("resourceSource.accounts.title", { platform })}</ModalHeader>
         <ModalBody>
-          {extraContent && (
-            <div className="mb-4">
-              {extraContent}
-            </div>
-          )}
+          {extraContent && <div className="mb-4">{extraContent}</div>}
           {accounts.length > 0 && (
             <p className="text-xs text-default-400 mb-2">
               {t("resourceSource.accounts.defaultTip")}
@@ -149,13 +143,11 @@ export default function AccountsConfigModal({
                           {t("resourceSource.accounts.default")}
                         </Chip>
                       )}
-                      <span className="text-sm text-default-500">
-                        #{index + 1}
-                      </span>
+                      <span className="text-sm text-default-500">#{index + 1}</span>
                     </div>
                     <Button
-                      color="danger"
                       isIconOnly
+                      color="danger"
                       size="sm"
                       variant="light"
                       onPress={() => removeAccount(index)}
@@ -176,6 +168,7 @@ export default function AccountsConfigModal({
                   {fields.map((field) => {
                     const vKey = `${index}-${field.key}`;
                     const vStatus = validationStatus[vKey];
+
                     return field.type === "textarea" ? (
                       <div key={field.key}>
                         <Textarea
@@ -184,9 +177,7 @@ export default function AccountsConfigModal({
                           placeholder={field.placeholder}
                           size="sm"
                           value={account[field.key] || ""}
-                          onValueChange={(v) =>
-                            updateAccount(index, field.key, v)
-                          }
+                          onValueChange={(v) => updateAccount(index, field.key, v)}
                         />
                         {field.cookieValidatorTarget != null && (
                           <div className="flex items-center gap-2 mt-1">
@@ -200,8 +191,12 @@ export default function AccountsConfigModal({
                             >
                               {t("common.action.validate")}
                             </Button>
-                            {vStatus === "succeed" && <CheckCircleOutlined className="text-base text-success" />}
-                            {vStatus === "failed" && <CloseCircleOutlined className="text-base text-danger" />}
+                            {vStatus === "succeed" && (
+                              <CheckCircleOutlined className="text-base text-success" />
+                            )}
+                            {vStatus === "failed" && (
+                              <CloseCircleOutlined className="text-base text-danger" />
+                            )}
                           </div>
                         )}
                       </div>
@@ -213,14 +208,10 @@ export default function AccountsConfigModal({
                           size="sm"
                           type={field.type === "password" ? "password" : "text"}
                           value={account[field.key] || ""}
-                          onValueChange={(v) =>
-                            updateAccount(index, field.key, v)
-                          }
+                          onValueChange={(v) => updateAccount(index, field.key, v)}
                         />
                         {field.description && (
-                          <div className="mt-1 text-xs text-default-400">
-                            {field.description}
-                          </div>
+                          <div className="mt-1 text-xs text-default-400">{field.description}</div>
                         )}
                       </div>
                     );
@@ -233,24 +224,14 @@ export default function AccountsConfigModal({
           )}
         </ModalBody>
         <ModalFooter>
-          <Button
-            size="sm"
-            startContent={<AiOutlinePlus />}
-            variant="flat"
-            onPress={addAccount}
-          >
+          <Button size="sm" startContent={<AiOutlinePlus />} variant="flat" onPress={addAccount}>
             {t("resourceSource.accounts.add")}
           </Button>
           <div className="flex-1" />
           <Button size="sm" variant="flat" onPress={onClose}>
             {t("common.action.cancel")}
           </Button>
-          <Button
-            color="primary"
-            isLoading={saving}
-            size="sm"
-            onPress={handleSave}
-          >
+          <Button color="primary" isLoading={saving} size="sm" onPress={handleSave}>
             {t("thirdPartyConfig.action.save")}
           </Button>
         </ModalFooter>

@@ -34,11 +34,8 @@ const ExtensionGroupPage = () => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const [groups, setGroups] = useState<ExtensionGroup[]>([]);
-  const [editingGroup, setEditingGroup] = useState<ExtensionGroup | undefined>(
-    undefined,
-  );
-  const [editingExtensionsText, setEditingExtensionsText] =
-    useState<string>("");
+  const [editingGroup, setEditingGroup] = useState<ExtensionGroup | undefined>(undefined);
+  const [editingExtensionsText, setEditingExtensionsText] = useState<string>("");
 
   useEffect(() => {
     BApi.extensionGroup.getAllExtensionGroups().then((r) => {
@@ -61,10 +58,7 @@ const ExtensionGroupPage = () => {
               groups.push(editingGroup!);
             }
           } else {
-            r = await BApi.extensionGroup.putExtensionGroup(
-              editingGroup!.id,
-              editingGroup!,
-            );
+            r = await BApi.extensionGroup.putExtensionGroup(editingGroup!.id, editingGroup!);
             groups.splice(
               groups.findIndex((x) => x == editingGroup),
               1,
@@ -107,7 +101,7 @@ const ExtensionGroupPage = () => {
           <div className={"mt-2 flex flex-wrap gap-1"}>
             {editingGroup?.extensions.map((ext, i) => {
               return (
-                <Chip radius={"sm"} size={"sm"} variant={"flat"}>
+                <Chip key={i} radius={"sm"} size={"sm"} variant={"flat"}>
                   {ext}
                 </Chip>
               );
@@ -140,21 +134,19 @@ const ExtensionGroupPage = () => {
         <TableBody>
           {groups.map((eg, i) => {
             return (
-              <TableRow>
+              <TableRow key={eg.id ?? i}>
                 <TableCell>{eg.name}</TableCell>
                 <TableCell>
                   {eg.extensions?.map((ext, j) => {
                     return (
                       <Chip
+                        key={j}
                         isCloseable
                         size={"sm"}
                         variant={"flat"}
                         onClose={async () => {
                           eg.extensions?.splice(j, 1);
-                          await BApi.extensionGroup.putExtensionGroup(
-                            eg.id,
-                            eg,
-                          );
+                          await BApi.extensionGroup.putExtensionGroup(eg.id, eg);
                           setGroups([...groups]);
                         }}
                       >
@@ -188,9 +180,7 @@ const ExtensionGroupPage = () => {
                           title: t<string>("extensionGroup.confirm.deleteTitle"),
                           children: t<string>("common.confirm.irreversibleWarning"),
                           onOk: async () => {
-                            await BApi.extensionGroup.deleteExtensionGroup(
-                              eg.id,
-                            );
+                            await BApi.extensionGroup.deleteExtensionGroup(eg.id);
                             groups.splice(i, 1);
                             setGroups(groups.slice());
                           },

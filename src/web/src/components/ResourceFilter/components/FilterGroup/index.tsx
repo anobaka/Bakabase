@@ -5,8 +5,6 @@
 import type { SearchFilter, SearchFilterGroup } from "../../models";
 import type { FilterLayout } from "../Filter";
 
-import { FilterDisplayMode } from "@/sdk/constants";
-
 import { useTranslation } from "react-i18next";
 import React, { useCallback, useRef, useState } from "react";
 import { useUpdateEffect } from "react-use";
@@ -18,6 +16,7 @@ import { GroupCombinator } from "../../models";
 import Filter from "../Filter";
 import FilterAddPopoverContent from "../FilterAddPopoverContent";
 
+import { FilterDisplayMode } from "@/sdk/constants";
 import { Button, Popover } from "@/components/bakaui";
 import { buildLogger } from "@/components/utils";
 import { getEnumKey } from "@/i18n";
@@ -48,18 +47,22 @@ const log = buildLogger("FilterGroup");
 let __filterKeySeq = 0;
 const getStableFilterKey = (f: SearchFilter): string => {
   const anyF = f as SearchFilter & { __clientKey?: string };
+
   if (!anyF.__clientKey) {
     anyF.__clientKey = `__fk${++__filterKeySeq}`;
   }
+
   return anyF.__clientKey;
 };
 
 let __groupKeySeq = 0;
 const getStableGroupKey = (g: SearchFilterGroup): string => {
   const anyG = g as SearchFilterGroup & { __clientKey?: string };
+
   if (!anyG.__clientKey) {
     anyG.__clientKey = `__gk${++__groupKeySeq}`;
   }
+
   return anyG.__clientKey;
 };
 
@@ -106,13 +109,18 @@ const FilterGroup = ({
   const isSimpleMode = filterDisplayMode === FilterDisplayMode.Simple;
   const isVerticalLayout = filterLayout === "vertical";
 
-  log("FilterGroup render", { isRoot, filtersCount: filters?.length, groupsCount: groups?.length, combinator });
+  log("FilterGroup render", {
+    isRoot,
+    filtersCount: filters?.length,
+    groupsCount: groups?.length,
+    combinator,
+  });
 
   // Combinator button/text component
   const renderCombinator = (index: number) => {
     if (isSimpleMode) return null;
 
-    const combinatorText = t<string>(getEnumKey('Combinator', GroupCombinator[combinator]));
+    const combinatorText = t<string>(getEnumKey("Combinator", GroupCombinator[combinator]));
     const isAnd = combinator === GroupCombinator.And;
 
     const handleClick = () => {
@@ -128,11 +136,21 @@ const FilterGroup = ({
       <span
         key={`c-${index}`}
         className={`text-xs font-medium px-1.5 py-0.5 rounded select-none ${isReadonly ? "" : "cursor-pointer transition-opacity hover:opacity-80"}`}
+        role="button"
         style={{
-          backgroundColor: isAnd ? "hsl(var(--heroui-primary) / 0.2)" : "hsl(var(--heroui-warning) / 0.2)",
+          backgroundColor: isAnd
+            ? "hsl(var(--heroui-primary) / 0.2)"
+            : "hsl(var(--heroui-warning) / 0.2)",
           color: isAnd ? "hsl(var(--heroui-primary))" : "hsl(var(--heroui-warning))",
         }}
+        tabIndex={0}
         onClick={handleClick}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            handleClick();
+          }
+        }}
       >
         {combinatorText}
       </span>
@@ -145,11 +163,23 @@ const FilterGroup = ({
       const filterElement = (
         <Filter
           key={getStableFilterKey(f)}
+          autoTriggerPropertySelector={isNewFilter}
           filter={f}
           filterDisplayMode={filterDisplayMode}
-          layout={filterLayout}
           isReadonly={isReadonly}
-          autoTriggerPropertySelector={isNewFilter}
+          layout={filterLayout}
+          onCancelNewFilter={
+            isNewFilter
+              ? () => {
+                  setInternalNewFilterIndex(null);
+                  onExternalNewFilterConsumed?.();
+                  changeGroup({
+                    ...groupRef.current,
+                    filters: (groupRef.current.filters || []).filter((_, idx) => idx !== i),
+                  });
+                }
+              : undefined
+          }
           onChange={(tf) => {
             if (isNewFilter) {
               setInternalNewFilterIndex(null);
@@ -170,16 +200,9 @@ const FilterGroup = ({
               filters: (group.filters || []).filter((fil) => fil !== f),
             });
           }}
-          onCancelNewFilter={isNewFilter ? () => {
-            setInternalNewFilterIndex(null);
-            onExternalNewFilterConsumed?.();
-            changeGroup({
-              ...groupRef.current,
-              filters: (groupRef.current.filters || []).filter((_, idx) => idx !== i),
-            });
-          } : undefined}
         />
       );
+
       return { element: filterElement, index: i };
     })
     .concat(
@@ -187,9 +210,9 @@ const FilterGroup = ({
         const groupElement = (
           <FilterGroup
             key={getStableGroupKey(g)}
-            group={g}
             filterDisplayMode={filterDisplayMode}
             filterLayout={filterLayout}
+            group={g}
             isReadonly={isReadonly}
             onChange={(tg) => {
               changeGroup({
@@ -205,6 +228,7 @@ const FilterGroup = ({
             }}
           />
         );
+
         return { element: groupElement, index: (filters?.length || 0) + i };
       }),
     );
@@ -216,9 +240,11 @@ const FilterGroup = ({
         // Vertical + simple: just stack elements vertically without combinators
         return conditionElements.map((item) => item.element);
       }
+
       // Vertical + advanced: wrap each filter with combinator prefix in a row
       return conditionElements.map((item, i) => {
         const isNotFirst = i > 0;
+
         return (
           <div key={`row-${item.index}`} className="flex items-center gap-1 w-full">
             {isNotFirst && renderCombinator(item.index)}
@@ -227,12 +253,14 @@ const FilterGroup = ({
         );
       });
     }
+
     // Horizontal layout: interleave combinators between elements
     return conditionElements.reduce((acc: React.ReactNode[], item, i) => {
       acc.push(item.element);
       if (i < conditionElements.length - 1 && !isSimpleMode) {
         acc.push(renderCombinator(item.index));
       }
+
       return acc;
     }, []);
   })();
@@ -243,26 +271,21 @@ const FilterGroup = ({
 
     return (
       <Popover
-        placement="bottom-start"
         isOpen={actionsPopoverOpen}
-        onOpenChange={setActionsPopoverOpen}
+        placement="bottom-start"
         trigger={
-          <Button
-            isIconOnly
-            size="sm"
-            variant="light"
-            className="min-w-6 w-6 h-6"
-          >
+          <Button isIconOnly className="min-w-6 w-6 h-6" size="sm" variant="light">
             <MoreOutlined className="text-base" />
           </Button>
         }
+        onOpenChange={setActionsPopoverOpen}
       >
         <div className="flex flex-col gap-1 p-1">
           <Button
+            className="justify-start"
             color="warning"
             size="sm"
             variant="light"
-            className="justify-start"
             onPress={() => {
               changeGroup({
                 ...group,
@@ -284,10 +307,10 @@ const FilterGroup = ({
             )}
           </Button>
           <Button
+            className="justify-start"
             color="danger"
             size="sm"
             variant="light"
-            className="justify-start"
             onPress={() => {
               setActionsPopoverOpen(false);
               onRemove?.();
@@ -324,6 +347,7 @@ const FilterGroup = ({
       }
 
       const [firstElement, ...restElements] = renderedElements;
+
       return (
         <>
           <div className="flex items-center gap-1 w-full">
@@ -350,53 +374,56 @@ const FilterGroup = ({
         )}
         {renderElementsWithActionsMenu()}
         {/* Hide add filter button in Simple mode - use FilterPortal instead */}
-        {!isSimpleMode && !isReadonly && !(isRoot && !group && (!filters || filters.length == 0)) && (
-          <Popover
-            showArrow
-            placement={"bottom"}
-            isOpen={popoverOpen}
-            onOpenChange={setPopoverOpen}
-            trigger={
-              <Button isIconOnly size={"sm"}>
-                <TbFilterPlus className={"text-lg"} />
-              </Button>
-            }
-          >
-            <FilterAddPopoverContent
-              showTags={false}
-              showRecentFilters
-              onAddFilter={(autoTrigger) => {
-                const currentFilters = groupRef.current.filters || [];
-                if (autoTrigger) {
-                  setInternalNewFilterIndex(currentFilters.length);
-                }
-                changeGroup({
-                  ...groupRef.current,
-                  filters: [...currentFilters, { disabled: false }],
-                });
-              }}
-              onAddFilterGroup={() => {
-                changeGroup({
-                  ...groupRef.current,
-                  groups: [
-                    ...(groupRef.current.groups || []),
-                    {
-                      combinator: GroupCombinator.And,
-                      disabled: false,
-                    },
-                  ],
-                });
-              }}
-              onSelectFilters={(filters) => {
-                changeGroup({
-                  ...groupRef.current,
-                  filters: [...(groupRef.current.filters || []), ...filters],
-                });
-              }}
-              onClose={() => setPopoverOpen(false)}
-            />
-          </Popover>
-        )}
+        {!isSimpleMode &&
+          !isReadonly &&
+          !(isRoot && !group && (!filters || filters.length == 0)) && (
+            <Popover
+              showArrow
+              isOpen={popoverOpen}
+              placement={"bottom"}
+              trigger={
+                <Button isIconOnly size={"sm"}>
+                  <TbFilterPlus className={"text-lg"} />
+                </Button>
+              }
+              onOpenChange={setPopoverOpen}
+            >
+              <FilterAddPopoverContent
+                showRecentFilters
+                showTags={false}
+                onAddFilter={(autoTrigger) => {
+                  const currentFilters = groupRef.current.filters || [];
+
+                  if (autoTrigger) {
+                    setInternalNewFilterIndex(currentFilters.length);
+                  }
+                  changeGroup({
+                    ...groupRef.current,
+                    filters: [...currentFilters, { disabled: false }],
+                  });
+                }}
+                onAddFilterGroup={() => {
+                  changeGroup({
+                    ...groupRef.current,
+                    groups: [
+                      ...(groupRef.current.groups || []),
+                      {
+                        combinator: GroupCombinator.And,
+                        disabled: false,
+                      },
+                    ],
+                  });
+                }}
+                onClose={() => setPopoverOpen(false)}
+                onSelectFilters={(filters) => {
+                  changeGroup({
+                    ...groupRef.current,
+                    filters: [...(groupRef.current.filters || []), ...filters],
+                  });
+                }}
+              />
+            </Popover>
+          )}
       </div>
     );
   };

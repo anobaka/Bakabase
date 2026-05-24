@@ -5,7 +5,6 @@ import type { DestroyableProps } from "@/components/bakaui/types";
 import { useTranslation } from "react-i18next";
 
 import PathMarkTreeView from "@/pages/path-mark-config/components/PathMarkTreeView";
-
 import { Modal } from "@/components/bakaui";
 
 interface PathConfigModalProps extends DestroyableProps {
@@ -13,20 +12,16 @@ interface PathConfigModalProps extends DestroyableProps {
   onMarksChanged?: () => void;
 }
 
-const PathConfigModal = ({
-  path,
-  onDestroyed,
-  onMarksChanged,
-}: PathConfigModalProps) => {
+const PathConfigModal = ({ path, onDestroyed, onMarksChanged }: PathConfigModalProps) => {
   const { t } = useTranslation();
 
   return (
     <Modal
+      defaultVisible
       classNames={{
         base: "h-[80vh]",
         body: "p-0 overflow-hidden",
       }}
-      defaultVisible
       footer={false}
       size="5xl"
       title={t("pathMarks.modal.configurePathMarksTitle")}
@@ -37,10 +32,7 @@ const PathConfigModal = ({
           {t("pathMarks.tip.clickOnFoldersToNavigate")}
         </div>
         <div className="flex-1 min-h-0 overflow-hidden border border-default-200 rounded-lg">
-          <PathMarkTreeView
-            rootPath={path}
-            onMarksChanged={onMarksChanged}
-          />
+          <PathMarkTreeView rootPath={path} onMarksChanged={onMarksChanged} />
         </div>
       </div>
     </Modal>

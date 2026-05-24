@@ -2,6 +2,12 @@
 
 import type { FC } from "react";
 
+import CookieDownloaderConfigPanel, {
+  CookieDownloaderConfigField,
+  type CookieDownloaderConfigPanelProps,
+} from "../base/CookieDownloaderConfigPanel";
+import ThirdPartyConfigModal from "../base/ThirdPartyConfigModal";
+
 import BApi from "@/sdk/BApi";
 import { CookieValidatorTarget, ThirdPartyId } from "@/sdk/constants";
 import {
@@ -12,12 +18,6 @@ import {
   useFantiaOptionsStore,
   usePatreonOptionsStore,
 } from "@/stores/options";
-
-import CookieDownloaderConfigPanel, {
-  CookieDownloaderConfigField,
-  type CookieDownloaderConfigPanelProps,
-} from "../base/CookieDownloaderConfigPanel";
-import ThirdPartyConfigModal from "../base/ThirdPartyConfigModal";
 
 type PanelProps = {
   fields?: CookieDownloaderConfigField[] | "all";
@@ -32,12 +32,14 @@ type ModalExtra = PanelProps & {
 function wrapModal(title: string, Inner: FC<PanelProps>) {
   const ModalCmp: FC<ModalExtra> = ({ isOpen, onClose, onDestroyed, fields }) => {
     const handleClose = onClose ?? onDestroyed;
+
     return (
-      <ThirdPartyConfigModal title={title} isOpen={isOpen} onClose={handleClose}>
+      <ThirdPartyConfigModal isOpen={isOpen} title={title} onClose={handleClose}>
         <Inner fields={fields} />
       </ThirdPartyConfigModal>
     );
   };
+
   return ModalCmp;
 }
 
@@ -52,20 +54,22 @@ function makePlatform(
   const Panel: FC<PanelProps> = ({ fields = "all" }) => {
     const options = useStore((s: any) => s.data);
     const patch = useStore((s: any) => s.patch);
+
     return (
       <CookieDownloaderConfigPanel
-        title={title}
-        thirdPartyId={thirdPartyId}
+        cookieCaptureTarget={cookieCaptureTarget}
+        cookieValidatorTarget={cookieValidatorTarget}
         fields={fields}
         options={options}
         patch={patch}
         patchApi={patchApi}
-        cookieValidatorTarget={cookieValidatorTarget}
-        cookieCaptureTarget={cookieCaptureTarget}
+        thirdPartyId={thirdPartyId}
+        title={title}
       />
     );
   };
   const Modal = wrapModal(title, Panel);
+
   return { Panel, Modal };
 }
 
@@ -77,6 +81,7 @@ const bilibili = makePlatform(
   CookieValidatorTarget.BiliBili,
   CookieValidatorTarget.BiliBili,
 );
+
 export const BilibiliConfigPanel = bilibili.Panel;
 export const BilibiliConfigModal = bilibili.Modal;
 export const BilibiliConfig = bilibili.Modal;
@@ -89,6 +94,7 @@ const pixiv = makePlatform(
   CookieValidatorTarget.Pixiv,
   CookieValidatorTarget.Pixiv,
 );
+
 export const PixivConfigPanel = pixiv.Panel;
 export const PixivConfigModal = pixiv.Modal;
 export const PixivConfig = pixiv.Modal;
@@ -101,6 +107,7 @@ const cien = makePlatform(
   CookieValidatorTarget.Cien,
   CookieValidatorTarget.Cien,
 );
+
 export const CienConfigPanel = cien.Panel;
 export const CienConfigModal = cien.Modal;
 export const CienConfig = cien.Modal;
@@ -113,6 +120,7 @@ const fanbox = makePlatform(
   CookieValidatorTarget.Fanbox,
   CookieValidatorTarget.Fanbox,
 );
+
 export const FanboxConfigPanel = fanbox.Panel;
 export const FanboxConfigModal = fanbox.Modal;
 export const FanboxConfig = fanbox.Modal;
@@ -125,6 +133,7 @@ const fantia = makePlatform(
   CookieValidatorTarget.Fantia,
   CookieValidatorTarget.Fantia,
 );
+
 export const FantiaConfigPanel = fantia.Panel;
 export const FantiaConfigModal = fantia.Modal;
 export const FantiaConfig = fantia.Modal;
@@ -137,6 +146,7 @@ const patreon = makePlatform(
   CookieValidatorTarget.Patreon,
   CookieValidatorTarget.Patreon,
 );
+
 export const PatreonConfigPanel = patreon.Panel;
 export const PatreonConfigModal = patreon.Modal;
 export const PatreonConfig = patreon.Modal;

@@ -31,6 +31,8 @@ export default defineConfig([globalIgnores([
     "tests/*",
     "scripts/*",
     "**/*.config.js",
+    "vite.config.ts",
+    "vitest.config.ts",
     "**/.DS_Store",
     "**/node_modules",
     "**/coverage",

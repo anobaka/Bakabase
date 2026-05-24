@@ -4,26 +4,17 @@ import type { DestroyableProps } from "@/components/bakaui/types";
 import type { BulkModificationScopePreferenceConfig } from "@/pages/bulk-modification/components/BulkModification/models";
 import type { IProperty } from "@/components/Property/models";
 import type { PropertyValueScopePriority } from "@/core/models/Resource";
+import type { PropertyValueScope } from "@/sdk/constants";
 
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  MdAdd,
-  MdArrowDownward,
-  MdArrowUpward,
-  MdClose,
-} from "react-icons/md";
+import { MdAdd, MdArrowDownward, MdArrowUpward, MdClose } from "react-icons/md";
 
 import { Button, Card, CardBody, Modal, Switch } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import PropertySelector from "@/components/PropertySelector";
 import { PropertyLabel } from "@/components/Property";
-import {
-  PropertyPool,
-  PropertyValueScope,
-  PropertyValueScopeLabel,
-  propertyValueScopes,
-} from "@/sdk/constants";
+import { PropertyPool, PropertyValueScopeLabel, propertyValueScopes } from "@/sdk/constants";
 
 type Props = {
   config?: Partial<BulkModificationScopePreferenceConfig>;
@@ -94,7 +85,9 @@ const ScopePreferenceConfigModal = ({ onDestroyed, config: propsConfig, onSubmit
       size="xl"
       title={
         config.property
-          ? t<string>("bulkModification.scopePreference.title.forProperty", { property: config.property.name })
+          ? t<string>("bulkModification.scopePreference.title.forProperty", {
+              property: config.property.name,
+            })
           : t<string>("bulkModification.scopePreference.title.new")
       }
       onDestroyed={onDestroyed}
@@ -170,12 +163,14 @@ const ScopePreferenceConfigModal = ({ onDestroyed, config: propsConfig, onSubmit
 
               return (
                 <div
-                  className={`flex items-center gap-1 text-sm ${isCutOff ? "opacity-40" : ""}`}
                   key={scope}
+                  className={`flex items-center gap-1 text-sm ${isCutOff ? "opacity-40" : ""}`}
                 >
                   {inList ? (
                     <>
-                      <span className="font-mono text-xs opacity-60 w-5 text-right">{idx + 1}.</span>
+                      <span className="font-mono text-xs opacity-60 w-5 text-right">
+                        {idx + 1}.
+                      </span>
                       <Button
                         isIconOnly
                         isDisabled={isCutOff || idx === 0}

@@ -3,14 +3,7 @@
 import type { FC } from "react";
 
 import { useTranslation } from "react-i18next";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableColumn,
-  TableHeader,
-  TableRow,
-} from "@heroui/react";
+import { Table, TableBody, TableCell, TableColumn, TableHeader, TableRow } from "@heroui/react";
 
 import { AiFeature, AiFeatureLabel } from "@/sdk/constants";
 import AiFeatureConfigShortcut from "@/components/AiFeatureConfigShortcut";
@@ -34,14 +27,15 @@ const AiFeaturePanel: FC<AiFeaturePanelProps> = ({ features = defaultFeatures })
   return (
     <Table removeWrapper>
       <TableHeader>
-        <TableColumn width={200}>
-          {t<string>("configuration.ai.scenarios")}
-        </TableColumn>
+        <TableColumn width={200}>{t<string>("configuration.ai.scenarios")}</TableColumn>
         <TableColumn>&nbsp;</TableColumn>
       </TableHeader>
       <TableBody>
         {features.map((feature) => (
-          <TableRow key={`feature-${feature}`} className="hover:bg-[var(--bakaui-overlap-background)]">
+          <TableRow
+            key={`feature-${feature}`}
+            className="hover:bg-[var(--bakaui-overlap-background)]"
+          >
             <TableCell>
               <div className="flex items-center">
                 {t<string>(`configuration.ai.feature.${AiFeatureLabel[feature]}`)}

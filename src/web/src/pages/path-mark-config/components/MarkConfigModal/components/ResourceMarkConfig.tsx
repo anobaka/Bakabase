@@ -2,10 +2,13 @@
 
 import type { MarkConfig } from "../types";
 import type { PreviewResultsByPath, PathMarkPreviewResult } from "../hooks/usePreview";
+import type { PathMarkApplyScope } from "@/sdk/constants";
+
 import MatchModeSelector from "./MatchModeSelector";
 import PreviewResults from "./PreviewResults";
+
 import { Select, NumberInput, Switch } from "@/components/bakaui";
-import { PathFilterFsType, pathFilterFsTypes, PathMarkType, PathMarkApplyScope } from "@/sdk/constants";
+import { PathFilterFsType, pathFilterFsTypes, PathMarkType } from "@/sdk/constants";
 import ExtensionGroupSelect from "@/components/ExtensionGroupSelect";
 import ExtensionsInput from "@/components/ExtensionsInput";
 
@@ -25,7 +28,14 @@ type Props = {
   };
 };
 
-const ResourceMarkConfig = ({ config, updateConfig, t, priority, onPriorityChange, preview }: Props) => {
+const ResourceMarkConfig = ({
+  config,
+  updateConfig,
+  t,
+  priority,
+  onPriorityChange,
+  preview,
+}: Props) => {
   return (
     <>
       {/* Explanatory text */}
@@ -35,36 +45,41 @@ const ResourceMarkConfig = ({ config, updateConfig, t, priority, onPriorityChang
 
       <MatchModeSelector
         config={config}
-        updateConfig={updateConfig}
-        t={t}
         markType={PathMarkType.Resource}
+        t={t}
+        updateConfig={updateConfig}
       />
 
       <div className="border-t border-default-200 pt-2">
-        <span className="text-sm font-medium text-default-600">{t("pathMarkConfig.label.resourceFilters")}</span>
+        <span className="text-sm font-medium text-default-600">
+          {t("pathMarkConfig.label.resourceFilters")}
+        </span>
       </div>
 
       <div className="flex gap-2">
         <Select
-          label={t("pathMarkConfig.label.fileTypeFilter")}
-          size="sm"
           className="flex-1"
           dataSource={[
             { label: t("common.label.all"), value: "" },
-            ...pathFilterFsTypes.map(t => ({ label: t.label, value: String(t.value) })),
+            ...pathFilterFsTypes.map((t) => ({ label: t.label, value: String(t.value) })),
           ]}
+          label={t("pathMarkConfig.label.fileTypeFilter")}
           selectedKeys={config.fsTypeFilter ? [String(config.fsTypeFilter)] : [""]}
+          size="sm"
           onSelectionChange={(keys) => {
             const key = Array.from(keys)[0] as string;
-            updateConfig({ fsTypeFilter: key ? parseInt(key, 10) as PathFilterFsType : undefined });
+
+            updateConfig({
+              fsTypeFilter: key ? (parseInt(key, 10) as PathFilterFsType) : undefined,
+            });
           }}
         />
         {(config.fsTypeFilter === undefined || config.fsTypeFilter === PathFilterFsType.File) && (
           <ExtensionGroupSelect
+            className="flex-1"
+            size="sm"
             value={config.extensionGroupIds}
             onSelectionChange={(ids) => updateConfig({ extensionGroupIds: ids })}
-            size="sm"
-            className="flex-1"
           />
         )}
       </div>
@@ -73,34 +88,36 @@ const ResourceMarkConfig = ({ config, updateConfig, t, priority, onPriorityChang
         <ExtensionsInput
           defaultValue={config.extensions}
           label={t("pathMarkConfig.label.limitExtensions")}
-          onValueChange={(v) => updateConfig({ extensions: v })}
           minRows={1}
           size="sm"
+          onValueChange={(v) => updateConfig({ extensions: v })}
         />
       )}
 
       {/* Preview Results - placed after resource filters */}
       <PreviewResults
+        applyScope={preview.applyScope}
+        error={preview.error}
+        isMultiplePaths={preview.isMultiplePaths}
         loading={preview.loading}
+        markType={PathMarkType.Resource}
         results={preview.results}
         resultsByPath={preview.resultsByPath}
-        isMultiplePaths={preview.isMultiplePaths}
-        error={preview.error}
-        markType={PathMarkType.Resource}
         t={t}
-        applyScope={preview.applyScope}
       />
 
       {/* Resource Boundary Option */}
       <div className="border-t border-default-200 pt-2">
         <Switch
-          size="sm"
           isSelected={config.isResourceBoundary ?? false}
+          size="sm"
           onValueChange={(v) => updateConfig({ isResourceBoundary: v })}
         >
           <div className="flex flex-col">
             <span className="text-sm">{t("pathMark.resource.isResourceBoundary")}</span>
-            <span className="text-xs text-default-400">{t("pathMark.resource.isResourceBoundary.description")}</span>
+            <span className="text-xs text-default-400">
+              {t("pathMark.resource.isResourceBoundary.description")}
+            </span>
           </div>
         </Switch>
       </div>
@@ -108,8 +125,8 @@ const ResourceMarkConfig = ({ config, updateConfig, t, priority, onPriorityChang
       {/* Priority at the bottom */}
       <div className="border-t border-default-200 pt-2">
         <NumberInput
-          label={t("common.label.priority")}
           description={t("pathMark.priority.description")}
+          label={t("common.label.priority")}
           size="sm"
           value={priority}
           onValueChange={(v) => onPriorityChange(v ?? 10)}

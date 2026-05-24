@@ -1,6 +1,13 @@
 import type { BakabaseAbstractionsModelsDomainPathMark } from "@/sdk/Api";
 import type { DestroyableProps } from "@/components/bakaui/types";
-import { PathMarkType, PathMatchMode, PropertyValueType, PathFilterFsType, PropertyPool, PathMarkApplyScope } from "@/sdk/constants";
+import type {
+  PathMarkType,
+  PathMatchMode,
+  PropertyValueType,
+  PathFilterFsType,
+  PropertyPool,
+  PathMarkApplyScope,
+} from "@/sdk/constants";
 
 export type MarkConfigModalProps = {
   mark?: BakabaseAbstractionsModelsDomainPathMark;

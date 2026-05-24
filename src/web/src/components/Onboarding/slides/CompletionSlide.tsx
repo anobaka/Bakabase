@@ -12,9 +12,7 @@ const CompletionSlide = () => {
         <AiOutlineCheckCircle className="text-6xl text-success" />
       </div>
 
-      <h2 className="text-3xl font-bold mb-4">
-        {t("onboarding.completion.title")}
-      </h2>
+      <h2 className="text-3xl font-bold mb-4">{t("onboarding.completion.title")}</h2>
 
       <p className="text-lg text-default-500 text-center max-w-md mb-6">
         {t("onboarding.completion.description")}

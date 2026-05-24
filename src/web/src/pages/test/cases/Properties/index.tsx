@@ -17,6 +17,7 @@ const PropertiesPage = () => {
       {propertyTypes.map((pt) => {
         return (
           <div
+            key={pt.value}
             className={"flex items-center gap-1 p-1 border-b-1"}
             style={{ borderBottomColor: "rgba(255,255,255,0.2)" }}
           >

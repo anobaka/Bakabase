@@ -23,17 +23,17 @@ const NumberValueEditor = ({
 
   return (
     <NumberInput
-      fullWidth={false}
-      size={size}
       hideStepper
-      labelPlacement="outside"
+      className="w-[120px]"
       classNames={{
         input: "text-left",
       }}
-      className="w-[120px]"
       defaultValue={valueRef.current}
+      fullWidth={false}
       label={label}
+      labelPlacement="outside"
       placeholder={placeholder}
+      size={size}
       onBlur={() => {
         onValueChange?.(valueRef.current, valueRef.current);
       }}

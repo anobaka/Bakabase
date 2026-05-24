@@ -24,18 +24,26 @@ const generateDefaultName = (existingNames: string[], t: (key: string) => string
   const baseNameKey = "resourceProfile.label.resourceProfile";
   const baseName = t(baseNameKey);
   let n = 1;
+
   while (existingNames.includes(`${baseName} ${n}`)) {
     n++;
   }
+
   return `${baseName} ${n}`;
 };
 
-const ResourceProfileModal = ({ profile, existingNames = [], onSaved, onUpdate, onDestroyed }: Props) => {
+const ResourceProfileModal = ({
+  profile,
+  existingNames = [],
+  onSaved,
+  onUpdate,
+  onDestroyed,
+}: Props) => {
   const { t } = useTranslation();
   const isEdit = !!profile?.id;
 
   const [name, setName] = useState(
-    profile?.name || (isEdit ? "" : generateDefaultName(existingNames, t))
+    profile?.name || (isEdit ? "" : generateDefaultName(existingNames, t)),
   );
   const [priority, setPriority] = useState(profile?.priority ?? 0);
 
@@ -57,6 +65,7 @@ const ResourceProfileModal = ({ profile, existingNames = [], onSaved, onUpdate, 
           name,
           priority,
         };
+
         await BApi.resourceProfile.addResourceProfile(inputModel as any);
       }
       onSaved?.();
@@ -78,7 +87,11 @@ const ResourceProfileModal = ({ profile, existingNames = [], onSaved, onUpdate, 
         isLoading: saving,
       }}
       size="md"
-      title={isEdit ? t("resourceProfile.modal.editResourceProfileTitle") : t("resourceProfile.modal.addResourceProfileTitle")}
+      title={
+        isEdit
+          ? t("resourceProfile.modal.editResourceProfileTitle")
+          : t("resourceProfile.modal.addResourceProfileTitle")
+      }
       onDestroyed={onDestroyed}
       onOk={handleSubmit}
     >

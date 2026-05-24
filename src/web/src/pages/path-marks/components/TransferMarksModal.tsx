@@ -9,7 +9,6 @@ import { useTranslation } from "react-i18next";
 import { AiOutlineWarning, AiOutlineArrowRight, AiOutlineImport } from "react-icons/ai";
 
 import PathMarkChip from "@/pages/path-mark-config/components/PathMarkChip";
-
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { Modal, Button, toast, Spinner, Checkbox, Tooltip } from "@/components/bakaui";
 import { FileExplorer } from "@/components/FileExplorer";
@@ -55,6 +54,7 @@ const TransferMarksModal = ({
       const normalizedChildPath = child.path.replace(/\\/g, "/");
       const relativePath = normalizedChildPath.slice(normalizedFromPath.length);
       const newPath = normalizedDestPath + relativePath;
+
       return {
         ...child,
         newPath,
@@ -63,13 +63,17 @@ const TransferMarksModal = ({
   }, [fromPath, selectedDestination, invalidChildPaths]);
 
   // Handle clicking "Transfer here" button
-  const handleSelectDestination = useCallback((entry: Entry) => {
-    if (entry.path === fromPath) {
-      toast.warning(t("pathMarks.warning.cannotTransferToSamePath"));
-      return;
-    }
-    setSelectedDestination(entry.path);
-  }, [fromPath, t]);
+  const handleSelectDestination = useCallback(
+    (entry: Entry) => {
+      if (entry.path === fromPath) {
+        toast.warning(t("pathMarks.warning.cannotTransferToSamePath"));
+
+        return;
+      }
+      setSelectedDestination(entry.path);
+    },
+    [fromPath, t],
+  );
 
   // Handle confirm button - show confirmation dialog
   const handleConfirm = useCallback(() => {
@@ -87,6 +91,7 @@ const TransferMarksModal = ({
           // Transfer main path marks
           for (const mark of marks) {
             const { id: _id, ...markWithoutId } = mark;
+
             await BApi.pathMark.addPathMark({
               ...markWithoutId,
               path: selectedDestination!,
@@ -102,6 +107,7 @@ const TransferMarksModal = ({
             for (const childMapping of childPathMappings) {
               for (const mark of childMapping.marks) {
                 const { id: _id, ...markWithoutId } = mark;
+
                 await BApi.pathMark.addPathMark({
                   ...markWithoutId,
                   path: childMapping.newPath,
@@ -114,7 +120,10 @@ const TransferMarksModal = ({
             }
           }
 
-          const totalCount = marks.length + (includeChildPaths ? invalidChildPaths.reduce((sum, c) => sum + c.marks.length, 0) : 0);
+          const totalCount =
+            marks.length +
+            (includeChildPaths ? invalidChildPaths.reduce((sum, c) => sum + c.marks.length, 0) : 0);
+
           toast.success(t("pathMarks.status.transferredSuccessfully", { count: totalCount }));
           onTransferComplete?.();
           onDestroyed?.();
@@ -126,7 +135,18 @@ const TransferMarksModal = ({
         }
       },
     });
-  }, [canTransfer, createPortal, fromPath, selectedDestination, marks, invalidChildPaths, childPathMappings, t, onTransferComplete, onDestroyed]);
+  }, [
+    canTransfer,
+    createPortal,
+    fromPath,
+    selectedDestination,
+    marks,
+    invalidChildPaths,
+    childPathMappings,
+    t,
+    onTransferComplete,
+    onDestroyed,
+  ]);
 
   // Render "Transfer here" button after entry name
   const renderAfterName = useCallback(
@@ -158,11 +178,11 @@ const TransferMarksModal = ({
 
   return (
     <Modal
+      defaultVisible
       classNames={{
         base: "max-w-4xl w-[90vw] h-[80vh]",
         body: "p-0 overflow-hidden",
       }}
-      defaultVisible
       footer={{
         actions: ["cancel", "ok"],
         okProps: {
@@ -181,9 +201,7 @@ const TransferMarksModal = ({
           <div className="flex items-start gap-3">
             <AiOutlineWarning className="text-warning text-xl flex-shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="font-medium">
-                {t("pathMarks.info.transferringFrom")}
-              </p>
+              <p className="font-medium">{t("pathMarks.info.transferringFrom")}</p>
               <code className="text-sm text-danger line-through">{fromPath}</code>
               <div className="flex flex-wrap gap-1 mt-2">
                 {marks.map((mark) => (
@@ -192,7 +210,9 @@ const TransferMarksModal = ({
               </div>
               {invalidChildPaths.length > 0 && (
                 <p className="text-sm text-warning-600 mt-2">
-                  {t("pathMarks.checkbox.childPathsAvailableForTransfer", { count: invalidChildPaths.length })}
+                  {t("pathMarks.checkbox.childPathsAvailableForTransfer", {
+                    count: invalidChildPaths.length,
+                  })}
                 </p>
               )}
             </div>
@@ -247,9 +267,11 @@ const TransferConfirmationModal = ({
 
   const totalMarksCount = useMemo(() => {
     let count = marks.length;
+
     if (includeChildPaths) {
       count += childPathMappings.reduce((sum, child) => sum + child.marks.length, 0);
     }
+
     return count;
   }, [marks, childPathMappings, includeChildPaths]);
 
@@ -260,11 +282,11 @@ const TransferConfirmationModal = ({
 
   return (
     <Modal
+      defaultVisible
       classNames={{
         base: "max-w-2xl max-h-[85vh]",
         body: "overflow-y-auto",
       }}
-      defaultVisible
       footer={{
         actions: ["cancel", "ok"],
         okProps: {
@@ -309,10 +331,7 @@ const TransferConfirmationModal = ({
         {childPathMappings.length > 0 && (
           <div className="border border-warning-200 rounded-lg p-3 bg-warning-50/50">
             <div className="flex items-start gap-2 mb-2">
-              <Checkbox
-                isSelected={includeChildPaths}
-                onValueChange={setIncludeChildPaths}
-              >
+              <Checkbox isSelected={includeChildPaths} onValueChange={setIncludeChildPaths}>
                 <span className="text-sm font-medium">
                   {t("pathMarks.checkbox.includeChildPaths", { count: childPathMappings.length })}
                 </span>
@@ -322,14 +341,23 @@ const TransferConfirmationModal = ({
             {includeChildPaths && (
               <div className="flex flex-col gap-2 max-h-48 overflow-y-auto ml-6">
                 {childPathMappings.map((child) => (
-                  <div key={child.path} className="flex items-start gap-2 text-sm bg-white/50 p-2 rounded">
+                  <div
+                    key={child.path}
+                    className="flex items-start gap-2 text-sm bg-white/50 p-2 rounded"
+                  >
                     <div className="flex-1 min-w-0">
-                      <div className="text-danger line-through font-mono text-xs truncate" title={child.path}>
+                      <div
+                        className="text-danger line-through font-mono text-xs truncate"
+                        title={child.path}
+                      >
                         {child.path}
                       </div>
                       <div className="flex items-center gap-1 mt-1">
                         <AiOutlineArrowRight className="text-default-400 flex-shrink-0" />
-                        <div className="text-success font-mono text-xs truncate" title={child.newPath}>
+                        <div
+                          className="text-success font-mono text-xs truncate"
+                          title={child.newPath}
+                        >
                           {child.newPath}
                         </div>
                       </div>

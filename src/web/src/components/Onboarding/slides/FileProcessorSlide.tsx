@@ -32,9 +32,7 @@ const FileProcessorSlide = () => {
         <AiOutlineThunderbolt className="text-5xl text-primary" />
       </div>
 
-      <h2 className="text-2xl font-bold mb-2">
-        {t("onboarding.fileProcessor.title")}
-      </h2>
+      <h2 className="text-2xl font-bold mb-2">{t("onboarding.fileProcessor.title")}</h2>
 
       <p className="text-default-500 text-center mb-6 max-w-md">
         {t("onboarding.fileProcessor.subtitle")}
@@ -42,10 +40,7 @@ const FileProcessorSlide = () => {
 
       <ul className="space-y-4 max-w-md w-full">
         {features.map((feature, index) => (
-          <li
-            key={index}
-            className="flex items-start gap-3 p-3 rounded-lg bg-default-100"
-          >
+          <li key={index} className="flex items-start gap-3 p-3 rounded-lg bg-default-100">
             <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-primary/10 text-primary">
               {feature.icon}
             </div>

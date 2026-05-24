@@ -16,16 +16,10 @@ type Props = ButtonProps &
   DestroyableProps & {
     fileSystemSelectorProps: FileSystemSelectorProps;
   };
-const FileSystemSelectorButton = ({
-  fileSystemSelectorProps,
-  children,
-  ...buttonProps
-}: Props) => {
+const FileSystemSelectorButton = ({ fileSystemSelectorProps, children, ...buttonProps }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
-  const [path, setPath] = useState<string | undefined>(
-    fileSystemSelectorProps.defaultSelectedPath,
-  );
+  const [path, setPath] = useState<string | undefined>(fileSystemSelectorProps.defaultSelectedPath);
 
   let label: ReactNode = path;
 

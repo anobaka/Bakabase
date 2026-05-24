@@ -1,11 +1,11 @@
 "use client";
 
+import type { DestroyableProps } from "@/components/bakaui/types";
+import type { IProperty } from "@/components/Property/models";
+
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ExclamationCircleOutlined } from "@ant-design/icons";
-
-import type { DestroyableProps } from "@/components/bakaui/types";
-import type { IProperty } from "@/components/Property/models";
 
 import { Chip, Modal } from "@/components/bakaui";
 import BriefProperty from "@/components/Chips/Property/BriefProperty";
@@ -44,9 +44,6 @@ const PropertyChangeConfirmDialog: React.FC<PropertyChangeConfirmDialogProps> = 
 
   return (
     <Modal
-      size="lg"
-      title={t("property.modal.confirmPropertyChange")}
-      visible={visible}
       footer={{
         actions: ["cancel", "ok"],
         okProps: {
@@ -55,6 +52,9 @@ const PropertyChangeConfirmDialog: React.FC<PropertyChangeConfirmDialogProps> = 
           color: "primary",
         },
       }}
+      size="lg"
+      title={t("property.modal.confirmPropertyChange")}
+      visible={visible}
       onClose={() => setVisible(false)}
       onDestroyed={onDestroyed}
       onOk={handleConfirm}
@@ -64,7 +64,7 @@ const PropertyChangeConfirmDialog: React.FC<PropertyChangeConfirmDialogProps> = 
           <span className="text-sm">{t("common.label.setting")}</span>
           <BriefProperty fields={["pool", "name"]} property={property} />
           <span className="text-sm">{t("common.label.to")}</span>
-          <Chip size="sm" color="primary" variant="flat">
+          <Chip color="primary" size="sm" variant="flat">
             {newBizValue || `(${t("common.state.empty")})`}
           </Chip>
         </div>

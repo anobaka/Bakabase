@@ -9,12 +9,11 @@ export type HealthScoreColor = "success" | "warning" | "danger" | "default";
  * 70+ green, 40-70 yellow, &lt;40 red. <c>null</c>/<c>undefined</c> falls back
  * to the neutral color so callers can render the badge without branching.
  */
-export const getHealthScoreColor = (
-  score: number | null | undefined
-): HealthScoreColor => {
+export const getHealthScoreColor = (score: number | null | undefined): HealthScoreColor => {
   if (score == null) return "default";
   if (score >= 70) return "success";
   if (score >= 40) return "warning";
+
   return "danger";
 };
 
@@ -52,7 +51,7 @@ export const HealthScoreBadge = forwardRef<HTMLDivElement, Props>(
         </div>
       </Chip>
     );
-  }
+  },
 );
 
 HealthScoreBadge.displayName = "HealthScoreBadge";

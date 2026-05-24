@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Input } from "@heroui/react";
+
 import { toast } from "@/components/bakaui";
 
 interface AutoSyncPanelProps {
@@ -24,11 +25,13 @@ export default function AutoSyncPanel({ autoSyncIntervalMinutes, onSave }: AutoS
 
   const parseValue = (v: string): number | null => {
     const num = parseInt(v, 10);
+
     return isNaN(num) || num <= 0 ? null : num;
   };
 
   const save = (v: string) => {
     const result = parseValue(v);
+
     if (result === lastSavedRef.current) return;
     lastSavedRef.current = result;
     Promise.resolve(onSave(result)).then(() => {
@@ -53,20 +56,22 @@ export default function AutoSyncPanel({ autoSyncIntervalMinutes, onSave }: AutoS
   return (
     <div className="flex flex-col gap-4">
       <Input
-        type="number"
-        label={t("thirdPartyConfig.autoSync.intervalLabel")}
-        description={t("thirdPartyConfig.autoSync.intervalDescription")}
-        placeholder="0"
-        min={0}
-        value={value}
-        onValueChange={handleChange}
-        onBlur={handleBlur}
-        endContent={<span className="text-default-400 text-sm whitespace-nowrap">{t("thirdPartyConfig.autoSync.unit")}</span>}
         className="max-w-xs"
+        description={t("thirdPartyConfig.autoSync.intervalDescription")}
+        endContent={
+          <span className="text-default-400 text-sm whitespace-nowrap">
+            {t("thirdPartyConfig.autoSync.unit")}
+          </span>
+        }
+        label={t("thirdPartyConfig.autoSync.intervalLabel")}
+        min={0}
+        placeholder="0"
+        type="number"
+        value={value}
+        onBlur={handleBlur}
+        onValueChange={handleChange}
       />
-      <p className="text-xs text-warning">
-        {t("thirdPartyConfig.autoSync.warning")}
-      </p>
+      <p className="text-xs text-warning">{t("thirdPartyConfig.autoSync.warning")}</p>
     </div>
   );
 }

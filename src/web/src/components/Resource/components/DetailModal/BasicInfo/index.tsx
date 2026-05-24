@@ -38,9 +38,7 @@ const BasicInfo = ({ resource }: Props) => {
     >
       {dateTimes.map((dateTime, i) => {
         const label = t<string>(dateTime.label);
-        const value = dayjs(resource[dateTime.key]).format(
-          "YYYY-MM-DD HH:mm:ss",
-        );
+        const value = dayjs(resource[dateTime.key]).format("YYYY-MM-DD HH:mm:ss");
 
         return (
           <div key={i} className={"flex flex-col"}>

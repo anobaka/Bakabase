@@ -34,19 +34,19 @@ const DownloaderOptions = ({
 
   return (
     <div className="flex flex-col gap-4">
-      {!hideCookie && <CookieValidator
-        cookie={options?.cookie || ""}
-        description={t<string>("Cookie required for authentication")}
-        target={thirdPartyId as unknown as CookieValidatorTarget}
-        onChange={(cookie: string) => {
-          onChange({ cookie });
-        }}
-      />}
+      {!hideCookie && (
+        <CookieValidator
+          cookie={options?.cookie || ""}
+          description={t<string>("Cookie required for authentication")}
+          target={thirdPartyId as unknown as CookieValidatorTarget}
+          onChange={(cookie: string) => {
+            onChange({ cookie });
+          }}
+        />
+      )}
 
       <div className={"flex flex-col gap-1"}>
-        <span className="text-sm font-medium">
-          {t<string>("Default download path")}
-        </span>
+        <span className="text-sm font-medium">{t<string>("Default download path")}</span>
         <div>
           {options && (
             <FileSystemSelectorButton
@@ -96,37 +96,30 @@ const DownloaderOptions = ({
           description={
             namingDefinition ? (
               <div>
-                <div>
-                  {t<string>("Define how downloaded files should be named")}
-                </div>
-                {namingDefinition.namingFields &&
-                  namingDefinition.namingFields.length > 0 && (
-                    <div className="mt-2">
-                      <div className="text-xs mb-1">
-                        {t<string>("Available fields")}:
-                      </div>
-                      <div className="flex flex-wrap gap-1">
-                        {namingDefinition.namingFields.map((x, index) => (
-                          <Chip
-                            key={index}
-                            color="secondary"
-                            size="sm"
-                            variant="flat"
-                            onClick={() => {
-                              const currentConvention =
-                                options?.namingConvention || "";
-                              const newConvention =
-                                currentConvention + `{${x.name || x.key}}`;
+                <div>{t<string>("Define how downloaded files should be named")}</div>
+                {namingDefinition.namingFields && namingDefinition.namingFields.length > 0 && (
+                  <div className="mt-2">
+                    <div className="text-xs mb-1">{t<string>("Available fields")}:</div>
+                    <div className="flex flex-wrap gap-1">
+                      {namingDefinition.namingFields.map((x, index) => (
+                        <Chip
+                          key={index}
+                          color="secondary"
+                          size="sm"
+                          variant="flat"
+                          onClick={() => {
+                            const currentConvention = options?.namingConvention || "";
+                            const newConvention = currentConvention + `{${x.name || x.key}}`;
 
-                              onChange({ namingConvention: newConvention });
-                            }}
-                          >
-                            {x.name || x.key}
-                          </Chip>
-                        ))}
-                      </div>
+                            onChange({ namingConvention: newConvention });
+                          }}
+                        >
+                          {x.name || x.key}
+                        </Chip>
+                      ))}
                     </div>
-                  )}
+                  </div>
+                )}
               </div>
             ) : (
               t<string>("Define how downloaded files should be named")

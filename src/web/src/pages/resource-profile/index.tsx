@@ -1,11 +1,5 @@
 "use client";
 
-import { useTranslation } from "react-i18next";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, CopyOutlined, ExperimentOutlined, ClearOutlined, MoreOutlined, InfoCircleOutlined, QuestionCircleOutlined, CheckOutlined } from "@ant-design/icons";
-import { BsController } from "react-icons/bs";
-
-import BApi from "@/sdk/BApi";
 import type {
   BakabaseServiceModelsViewResourceProfileViewModel,
   BakabaseAbstractionsModelsDomainEnhancerFullOptions,
@@ -15,32 +9,77 @@ import type {
 } from "@/sdk/Api";
 import type { EnhancerDescriptor } from "@/components/EnhancerSelectorV2/models";
 import type { IProperty } from "@/components/Property/models";
-import { Button, Input, Table, TableHeader, TableBody, TableColumn, TableRow, TableCell, Chip, Tooltip, Popover, Listbox, ListboxItem, Spinner } from "@/components/bakaui";
-import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import ConfirmModal from "@/components/ConfirmModal";
+import type { SearchFilterGroup } from "@/components/ResourceFilter/models";
+
+import { useTranslation } from "react-i18next";
+import { useEffect, useRef, useState } from "react";
+import {
+  SearchOutlined,
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  CopyOutlined,
+  ExperimentOutlined,
+  ClearOutlined,
+  MoreOutlined,
+  InfoCircleOutlined,
+  QuestionCircleOutlined,
+  CheckOutlined,
+} from "@ant-design/icons";
+import { BsController } from "react-icons/bs";
+
 import ResourceProfileModal from "./components/ResourceProfileModal";
 import ResourceProfileTestModal from "./components/ResourceProfileTestModal";
 import DisplayNameTemplateEditorModal from "./components/DisplayNameTemplateEditorModal";
 import EnhancementConfigPanel from "./components/EnhancementConfigPanel";
 import PlayableFileSelectorModal from "./components/PlayableFileSelectorModal";
+
 import PlayerSelectorModal from "./components/PlayerSelectorModal";
+import BApi from "@/sdk/BApi";
+
+import {
+  Button,
+  Input,
+  Table,
+  TableHeader,
+  TableBody,
+  TableColumn,
+  TableRow,
+  TableCell,
+  Chip,
+  Tooltip,
+  Popover,
+  Listbox,
+  ListboxItem,
+  Spinner,
+} from "@/components/bakaui";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import ConfirmModal from "@/components/ConfirmModal";
+
 import DeleteEnhancementsModal from "./components/DeleteEnhancementsModal";
 import PropertyPoolModal from "./components/PropertyPoolModal";
-import PropertySelector from "@/components/PropertySelector";
+
 import { ResourceFilterController, toSearchInputModel } from "@/components/ResourceFilter";
-import type { SearchFilterGroup } from "@/components/ResourceFilter/models";
 import { getEnumKey } from "@/i18n";
-import type { ResourceSearchInputModel } from "@/components/ResourceFilter/utils/toInputModel";
-import { PropertyPool, resourceTags, builtinPropertyForDisplayNames, FilterDisplayMode } from "@/sdk/constants";
+import {
+  PropertyPool,
+  resourceTags,
+  builtinPropertyForDisplayNames,
+  FilterDisplayMode,
+} from "@/sdk/constants";
 import { splitPathIntoSegments } from "@/components/utils";
 import BriefEnhancer from "@/components/Chips/Enhancer/BriefEnhancer";
 import { EnhancerDescription } from "@/components/Chips/Terms";
-import { ResourceProfileGuideModal, useResourceProfileGuide } from "./components/ResourceProfileGuide";
+
+import {
+  ResourceProfileGuideModal,
+  useResourceProfileGuide,
+} from "./components/ResourceProfileGuide";
 
 // Parse template and render with highlighted properties
 const parseTemplateSegments = (
   template: string,
-  validPropertyNames: Set<string>
+  validPropertyNames: Set<string>,
 ): Array<{ type: "text" | "valid" | "invalid"; content: string }> => {
   const segments: Array<{ type: "text" | "valid" | "invalid"; content: string }> = [];
   const regex = /\{([^}]+)\}/g;
@@ -55,6 +94,7 @@ const parseTemplateSegments = (
     // Check if property name is valid
     const propName = match[1];
     const isValid = validPropertyNames.has(propName);
+
     segments.push({ type: isValid ? "valid" : "invalid", content: propName });
     lastIndex = regex.lastIndex;
   }
@@ -101,16 +141,20 @@ const ResourceProfilePage = () => {
   const [enhancerDescriptors, setEnhancerDescriptors] = useState<EnhancerDescriptor[]>([]);
   const [editingProfileIds, setEditingProfileIds] = useState<Set<number>>(new Set());
   // Store pending filter group changes while editing (profileId -> pending group)
-  const [pendingFilterGroups, setPendingFilterGroups] = useState<Map<number, SearchFilterGroup>>(new Map());
+  const [pendingFilterGroups, setPendingFilterGroups] = useState<Map<number, SearchFilterGroup>>(
+    new Map(),
+  );
 
   // Use ref to always access the latest profiles in callbacks (avoids stale closure issues)
   const profilesRef = useRef<ResourceProfile[]>(profiles);
+
   profilesRef.current = profiles;
 
   const loadProfiles = async () => {
     setLoading(true);
     try {
       const rsp = await BApi.resourceProfile.getAllResourceProfiles();
+
       setProfiles(((rsp.data || []) as ResourceProfile[]).sort((a, b) => b.priority - a.priority));
     } catch (e) {
       console.error("Failed to load resource profiles", e);
@@ -130,9 +174,7 @@ const ResourceProfilePage = () => {
   }, []);
 
   const filteredProfiles = profiles.filter(
-    (p) =>
-      keyword === "" ||
-      p.name?.toLowerCase().includes(keyword.toLowerCase())
+    (p) => keyword === "" || p.name?.toLowerCase().includes(keyword.toLowerCase()),
   );
 
   const handleDelete = (id: number) => {
@@ -157,6 +199,7 @@ const ResourceProfilePage = () => {
         ...profile,
         name: `${profile.name} (Copy)`,
       });
+
       await BApi.resourceProfile.addResourceProfile(inputModel as any);
       loadProfiles();
     } catch (e) {
@@ -170,17 +213,23 @@ const ResourceProfilePage = () => {
     });
   };
 
-  const updateProfile = async (profileOrId: ResourceProfile | number, updates: Partial<ResourceProfile>) => {
+  const updateProfile = async (
+    profileOrId: ResourceProfile | number,
+    updates: Partial<ResourceProfile>,
+  ) => {
     try {
-      const id = typeof profileOrId === 'number' ? profileOrId : profileOrId.id;
+      const id = typeof profileOrId === "number" ? profileOrId : profileOrId.id;
       // Always get the latest profile from ref to avoid stale closure issues
-      const currentProfile = profilesRef.current.find(p => p.id === id);
+      const currentProfile = profilesRef.current.find((p) => p.id === id);
+
       if (!currentProfile) {
         console.error("Profile not found", id);
+
         return;
       }
       const merged = { ...currentProfile, ...updates };
       const inputModel = toProfileInputModel(merged);
+
       await BApi.resourceProfile.updateResourceProfile(id, inputModel as any);
       loadProfiles();
     } catch (e) {
@@ -203,12 +252,7 @@ const ResourceProfilePage = () => {
 
     if (!hasTemplate) {
       return (
-        <Button
-          size="sm"
-          variant="light"
-          className="min-w-0 px-2 h-auto py-1"
-          onPress={openModal}
-        >
+        <Button className="min-w-0 px-2 h-auto py-1" size="sm" variant="light" onPress={openModal}>
           <span className="text-default-400">-</span>
           <EditOutlined className="ml-1 text-xs opacity-50 flex-shrink-0" />
         </Button>
@@ -217,9 +261,11 @@ const ResourceProfilePage = () => {
 
     // Build valid property names set
     const builtinNames = builtinPropertyForDisplayNames.map((v) =>
-      t(getEnumKey('BuiltinPropertyForDisplayName', v.label))
+      t(getEnumKey("BuiltinPropertyForDisplayName", v.label)),
     );
-    const customNames = properties.filter((p) => p.pool === PropertyPool.Custom).map((p) => p.name!);
+    const customNames = properties
+      .filter((p) => p.pool === PropertyPool.Custom)
+      .map((p) => p.name!);
     const validPropertyNames = new Set([...builtinNames, ...customNames]);
 
     // Parse template into segments
@@ -227,9 +273,9 @@ const ResourceProfilePage = () => {
 
     return (
       <Button
+        className="min-w-0 px-2 h-auto py-1 flex-wrap"
         size="sm"
         variant="light"
-        className="min-w-0 px-2 h-auto py-1 flex-wrap"
         onPress={openModal}
       >
         <div className="text-sm text-left flex flex-wrap items-center gap-0.5">
@@ -239,14 +285,21 @@ const ResourceProfilePage = () => {
             }
             if (seg.type === "valid") {
               return (
-                <Chip key={idx} size="sm" color="primary" variant="flat" className="h-5 px-1 text-xs">
+                <Chip
+                  key={idx}
+                  className="h-5 px-1 text-xs"
+                  color="primary"
+                  size="sm"
+                  variant="flat"
+                >
                   {seg.content}
                 </Chip>
               );
             }
+
             // invalid
             return (
-              <Chip key={idx} size="sm" color="danger" variant="flat" className="h-5 px-1 text-xs">
+              <Chip key={idx} className="h-5 px-1 text-xs" color="danger" size="sm" variant="flat">
                 {seg.content}
               </Chip>
             );
@@ -274,6 +327,7 @@ const ResourceProfilePage = () => {
             for (const to of e.targetOptions ?? []) {
               if (!to.propertyPool || !to.propertyId) continue;
               const key = `${to.propertyPool}-${to.propertyId}`;
+
               if (seen.has(key)) continue;
               seen.add(key);
               merged.push({ pool: to.propertyPool, id: to.propertyId });
@@ -294,12 +348,7 @@ const ResourceProfilePage = () => {
     if (!hasEnhancers) {
       return (
         <Tooltip content={t("resourceProfile.tip.configureEnhancers")}>
-          <Button
-            size="sm"
-            variant="light"
-            className="min-w-0"
-            onPress={openEnhancerModal}
-          >
+          <Button className="min-w-0" size="sm" variant="light" onPress={openEnhancerModal}>
             <span className="text-default-400">-</span>
             <EditOutlined className="ml-1 text-xs opacity-50" />
           </Button>
@@ -309,7 +358,9 @@ const ResourceProfilePage = () => {
 
     // Get enhancer descriptors for the selected enhancers
     const selectedEnhancers = enhancerOptions
-      .map((opt: BakabaseAbstractionsModelsDomainEnhancerFullOptions) => enhancerDescriptors.find((e: EnhancerDescriptor) => e.id === opt.enhancerId))
+      .map((opt: BakabaseAbstractionsModelsDomainEnhancerFullOptions) =>
+        enhancerDescriptors.find((e: EnhancerDescriptor) => e.id === opt.enhancerId),
+      )
       .filter((e): e is EnhancerDescriptor => e != null);
 
     return (
@@ -317,9 +368,9 @@ const ResourceProfilePage = () => {
         {selectedEnhancers.map((enhancer: EnhancerDescriptor) => (
           <Button
             key={enhancer.id}
+            className="min-w-0 h-auto py-1 px-2"
             size="sm"
             variant="light"
-            className="min-w-0 h-auto py-1 px-2"
             onPress={openEnhancerModal}
           >
             <BriefEnhancer enhancer={enhancer} />
@@ -338,6 +389,7 @@ const ResourceProfilePage = () => {
         options: profile.playableFileOptions,
         onSubmit: (opts: BakabaseAbstractionsModelsDomainResourceProfilePlayableFileOptions) => {
           const hasOpts = !!(opts.extensions?.length || opts.fileNamePattern);
+
           updateProfile(profile, {
             playableFileOptions: hasOpts ? opts : undefined,
           });
@@ -347,12 +399,7 @@ const ResourceProfilePage = () => {
 
     if (!hasOptions) {
       return (
-        <Button
-          size="sm"
-          variant="light"
-          className="min-w-0"
-          onPress={openModal}
-        >
+        <Button className="min-w-0" size="sm" variant="light" onPress={openModal}>
           <span className="text-default-400">-</span>
           <EditOutlined className="ml-1 text-xs opacity-50" />
         </Button>
@@ -365,10 +412,10 @@ const ResourceProfilePage = () => {
         {options?.extensions?.map((ext: string) => (
           <Chip
             key={ext}
-            size="sm"
-            color="secondary"
-            variant="flat"
             className="cursor-pointer h-5 text-xs"
+            color="secondary"
+            size="sm"
+            variant="flat"
             onClick={openModal}
           >
             {ext}
@@ -377,10 +424,10 @@ const ResourceProfilePage = () => {
         {/* File name pattern */}
         {options?.fileNamePattern && (
           <Chip
-            size="sm"
-            color="warning"
-            variant="flat"
             className="cursor-pointer h-5 text-xs"
+            color="warning"
+            size="sm"
+            variant="flat"
             onClick={openModal}
           >
             {options.fileNamePattern}
@@ -388,9 +435,9 @@ const ResourceProfilePage = () => {
         )}
         <Button
           isIconOnly
+          className="min-w-0 w-6 h-6"
           size="sm"
           variant="light"
-          className="min-w-0 w-6 h-6"
           onPress={openModal}
         >
           <EditOutlined className="text-xs opacity-50" />
@@ -416,12 +463,7 @@ const ResourceProfilePage = () => {
 
     if (!hasPlayers) {
       return (
-        <Button
-          size="sm"
-          variant="light"
-          className="min-w-0"
-          onPress={openModal}
-        >
+        <Button className="min-w-0" size="sm" variant="light" onPress={openModal}>
           <span className="text-default-400">-</span>
           <EditOutlined className="ml-1 text-xs opacity-50" />
         </Button>
@@ -430,48 +472,50 @@ const ResourceProfilePage = () => {
 
     return (
       <div className="flex flex-wrap gap-1 items-center">
-        {players.map((player: BakabaseAbstractionsModelsDomainMediaLibraryPlayer, index: number) => {
-          const executablePathSegments = splitPathIntoSegments(player.executablePath);
-          const playerName = executablePathSegments[executablePathSegments.length - 1];
-          const extCount = player.extensions?.length ?? 0;
+        {players.map(
+          (player: BakabaseAbstractionsModelsDomainMediaLibraryPlayer, index: number) => {
+            const executablePathSegments = splitPathIntoSegments(player.executablePath);
+            const playerName = executablePathSegments[executablePathSegments.length - 1];
+            const extCount = player.extensions?.length ?? 0;
 
-          return (
-            <Tooltip
-              key={index}
-              content={
-                <div className="flex flex-col gap-1">
-                  <div className="font-medium">{playerName}</div>
-                  {extCount > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {player.extensions?.map((ext: string) => (
-                        <Chip key={ext} size="sm" variant="flat">
-                          {ext}
-                        </Chip>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              }
-            >
-              <Chip
-                size="sm"
-                color="success"
-                variant="flat"
-                className="cursor-pointer h-5 text-xs"
-                onClick={openModal}
-                startContent={<BsController className="text-xs" />}
+            return (
+              <Tooltip
+                key={index}
+                content={
+                  <div className="flex flex-col gap-1">
+                    <div className="font-medium">{playerName}</div>
+                    {extCount > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {player.extensions?.map((ext: string) => (
+                          <Chip key={ext} size="sm" variant="flat">
+                            {ext}
+                          </Chip>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                }
               >
-                {playerName}
-                {extCount > 0 && <span className="ml-1 opacity-60">({extCount})</span>}
-              </Chip>
-            </Tooltip>
-          );
-        })}
+                <Chip
+                  className="cursor-pointer h-5 text-xs"
+                  color="success"
+                  size="sm"
+                  startContent={<BsController className="text-xs" />}
+                  variant="flat"
+                  onClick={openModal}
+                >
+                  {playerName}
+                  {extCount > 0 && <span className="ml-1 opacity-60">({extCount})</span>}
+                </Chip>
+              </Tooltip>
+            );
+          },
+        )}
         <Button
           isIconOnly
+          className="min-w-0 w-6 h-6"
           size="sm"
           variant="light"
-          className="min-w-0 w-6 h-6"
           onPress={openModal}
         >
           <EditOutlined className="text-xs opacity-50" />
@@ -490,7 +534,11 @@ const ResourceProfilePage = () => {
         allProperties: properties,
         enhancerOptions: profile.enhancerOptions?.enhancers ?? [],
         enhancerDescriptors,
-        onSubmit: (newPropertyOptions: BakabaseAbstractionsModelsDomainResourceProfilePropertyOptions | undefined) => {
+        onSubmit: (
+          newPropertyOptions:
+            | BakabaseAbstractionsModelsDomainResourceProfilePropertyOptions
+            | undefined,
+        ) => {
           updateProfile(profile, {
             propertyOptions: newPropertyOptions,
           });
@@ -500,12 +548,7 @@ const ResourceProfilePage = () => {
 
     if (!hasProperties) {
       return (
-        <Button
-          size="sm"
-          variant="light"
-          className="min-w-0"
-          onPress={openModal}
-        >
+        <Button className="min-w-0" size="sm" variant="light" onPress={openModal}>
           <span className="text-default-400">-</span>
           <EditOutlined className="ml-1 text-xs opacity-50" />
         </Button>
@@ -522,10 +565,10 @@ const ResourceProfilePage = () => {
         {selectedProperties.map((property) => (
           <Chip
             key={`${property.pool}-${property.id}`}
-            size="sm"
-            color="secondary"
-            variant="flat"
             className="cursor-pointer h-5 text-xs"
+            color="secondary"
+            size="sm"
+            variant="flat"
             onClick={openModal}
           >
             {property.name}
@@ -533,9 +576,9 @@ const ResourceProfilePage = () => {
         ))}
         <Button
           isIconOnly
+          className="min-w-0 w-6 h-6"
           size="sm"
           variant="light"
-          className="min-w-0 w-6 h-6"
           onPress={openModal}
         >
           <EditOutlined className="text-xs opacity-50" />
@@ -565,40 +608,44 @@ const ResourceProfilePage = () => {
         const savedGroup = profile.search?.group ?? { combinator: 1, disabled: false };
         const isEditing = editingProfileIds.has(profile.id!);
         // Use pending group if editing, otherwise use saved group
-        const group = isEditing && pendingFilterGroups.has(profile.id!)
-          ? pendingFilterGroups.get(profile.id!)!
-          : savedGroup;
+        const group =
+          isEditing && pendingFilterGroups.has(profile.id!)
+            ? pendingFilterGroups.get(profile.id!)!
+            : savedGroup;
 
         return (
           <div className="flex flex-col gap-1">
             <div className="flex items-start gap-2">
               <div className="flex-1">
                 <ResourceFilterController
+                  autoCreateMediaLibraryFilter
+                  defaultFilterDisplayMode={FilterDisplayMode.Simple}
+                  filterLayout="horizontal"
                   group={group as SearchFilterGroup}
+                  isReadonly={!isEditing}
                   onGroupChange={(newGroup) => {
                     // Store changes locally while editing
                     setPendingFilterGroups((prev) => {
                       const next = new Map(prev);
+
                       next.set(profile.id!, newGroup);
+
                       return next;
                     });
                   }}
-                  defaultFilterDisplayMode={FilterDisplayMode.Simple}
-                  filterLayout="horizontal"
-                  isReadonly={!isEditing}
-                  autoCreateMediaLibraryFilter
                 />
               </div>
               <Tooltip content={isEditing ? t("common.action.save") : t("common.action.edit")}>
                 <Button
                   isIconOnly
+                  color={isEditing ? "success" : "default"}
                   size="sm"
                   variant="light"
-                  color={isEditing ? "success" : "default"}
                   onPress={() => {
                     if (isEditing) {
                       // Save pending changes when exiting edit mode
                       const pendingGroup = pendingFilterGroups.get(profile.id!);
+
                       if (pendingGroup) {
                         updateProfile(profile, {
                           search: {
@@ -609,20 +656,26 @@ const ResourceProfilePage = () => {
                         // Clear pending changes
                         setPendingFilterGroups((prev) => {
                           const next = new Map(prev);
+
                           next.delete(profile.id!);
+
                           return next;
                         });
                       }
                       setEditingProfileIds((prev) => {
                         const next = new Set(prev);
+
                         next.delete(profile.id!);
+
                         return next;
                       });
                     } else {
                       // Enter edit mode
                       setEditingProfileIds((prev) => {
                         const next = new Set(prev);
+
                         next.add(profile.id!);
+
                         return next;
                       });
                     }
@@ -635,8 +688,13 @@ const ResourceProfilePage = () => {
             {profile.search?.tags && profile.search.tags.length > 0 && (
               <div className="flex flex-wrap gap-1">
                 {profile.search.tags.map((tag) => (
-                  <Chip key={tag} size="sm" variant="flat" color="warning">
-                    {t(getEnumKey('ResourceTag', resourceTags.find((rt) => rt.value === tag)?.label!))}
+                  <Chip key={tag} color="warning" size="sm" variant="flat">
+                    {t(
+                      getEnumKey(
+                        "ResourceTag",
+                        resourceTags.find((rt) => rt.value === tag)?.label!,
+                      ),
+                    )}
                   </Chip>
                 ))}
               </div>
@@ -686,12 +744,7 @@ const ResourceProfilePage = () => {
       render: (profile: ResourceProfile) => (
         <div className="flex gap-1">
           <Tooltip content={t("resourceProfile.action.testCriteria")}>
-            <Button
-              isIconOnly
-              size="sm"
-              variant="light"
-              onPress={() => handleTest(profile)}
-            >
+            <Button isIconOnly size="sm" variant="light" onPress={() => handleTest(profile)}>
               <ExperimentOutlined />
             </Button>
           </Tooltip>
@@ -712,12 +765,7 @@ const ResourceProfilePage = () => {
             </Button>
           </Tooltip>
           <Tooltip content={t("resourceProfile.action.duplicate")}>
-            <Button
-              isIconOnly
-              size="sm"
-              variant="light"
-              onPress={() => handleDuplicate(profile)}
-            >
+            <Button isIconOnly size="sm" variant="light" onPress={() => handleDuplicate(profile)}>
               <CopyOutlined />
             </Button>
           </Tooltip>
@@ -746,16 +794,16 @@ const ResourceProfilePage = () => {
             >
               <ListboxItem
                 key="delete-enhancements"
-                startContent={<ClearOutlined />}
                 color="warning"
+                startContent={<ClearOutlined />}
               >
                 {t("resourceProfile.action.deleteEnhancements")}
               </ListboxItem>
               <ListboxItem
                 key="delete"
-                startContent={<DeleteOutlined />}
-                color="danger"
                 className="text-danger"
+                color="danger"
+                startContent={<DeleteOutlined />}
               >
                 {t("common.action.delete")}
               </ListboxItem>
@@ -768,17 +816,14 @@ const ResourceProfilePage = () => {
 
   return (
     <div className="p-2">
-      <ResourceProfileGuideModal
-        visible={showGuide}
-        onComplete={completeGuide}
-      />
+      <ResourceProfileGuideModal visible={showGuide} onComplete={completeGuide} />
       <div className="flex items-center justify-between gap-2 mb-4">
         <div className="flex items-center gap-2">
           <Button
+            className="tour-add-profile"
             color="primary"
             size="sm"
             startContent={<PlusOutlined />}
-            className="tour-add-profile"
             onPress={() => {
               createPortal(ResourceProfileModal, {
                 existingNames: profiles.map((p) => p.name),
@@ -789,22 +834,17 @@ const ResourceProfilePage = () => {
             {t("resourceProfile.action.addProfile")}
           </Button>
           <Tooltip content={t("resourceProfileGuide.viewAgain")}>
-            <Button
-              isIconOnly
-              size="sm"
-              variant="light"
-              onPress={resetGuide}
-            >
+            <Button isIconOnly size="sm" variant="light" onPress={resetGuide}>
               <QuestionCircleOutlined className="text-base" />
             </Button>
           </Tooltip>
           <Input
-            size="sm"
+            className="w-64"
             placeholder={t("resourceProfile.action.searchByName")}
+            size="sm"
             startContent={<SearchOutlined className="text-small" />}
             value={keyword}
             onValueChange={setKeyword}
-            className="w-64"
           />
         </div>
         <div className="text-sm text-default-500">
@@ -813,9 +853,9 @@ const ResourceProfilePage = () => {
       </div>
 
       <Table
-        aria-label="Resource Profiles Table"
         isHeaderSticky
         removeWrapper
+        aria-label="Resource Profiles Table"
         className="tour-profile-table"
         classNames={{
           wrapper: "max-h-[calc(100vh-200px)]",
@@ -825,8 +865,8 @@ const ResourceProfilePage = () => {
           {columns.map((column) => (
             <TableColumn
               key={column.key}
-              width={column.width}
               data-tour={column.description ? `col-${column.key}` : undefined}
+              width={column.width}
             >
               <div className="flex items-center gap-1">
                 {column.label}
@@ -839,12 +879,18 @@ const ResourceProfilePage = () => {
             </TableColumn>
           ))}
         </TableHeader>
-        <TableBody isLoading={loading} loadingContent={<Spinner label={t("resourceProfile.status.loading")} />} emptyContent={t("resourceProfile.empty.noProfiles")}>
+        <TableBody
+          emptyContent={t("resourceProfile.empty.noProfiles")}
+          isLoading={loading}
+          loadingContent={<Spinner label={t("resourceProfile.status.loading")} />}
+        >
           {filteredProfiles.map((profile) => (
             <TableRow key={profile.id}>
               {columns.map((column) => (
                 <TableCell key={column.key}>
-                  {column.render ? column.render(profile) : String(profile[column.key as keyof ResourceProfile] ?? '')}
+                  {column.render
+                    ? column.render(profile)
+                    : String(profile[column.key as keyof ResourceProfile] ?? "")}
                 </TableCell>
               ))}
             </TableRow>

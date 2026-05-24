@@ -132,9 +132,11 @@ const Panel = (props: FileSystemSelectorProps) => {
 
           if (multiple) {
             const valid = es.filter((e) => filter(e, "select"));
+
             setSelectedMany(valid);
           } else {
             const e = es[0];
+
             if (e) {
               if (filter(e, "select")) {
                 setSelected(e);

@@ -21,8 +21,16 @@ const Label = ({ error }: IProps) => {
       <span>{error ?? t<string>("We have encountered some problems.")}</span>
       <span
         className={"cursor-pointer"}
+        role="button"
         style={{ color: "var(--bakaui-primary)" }}
+        tabIndex={0}
         onClick={() => createPortal(ErrorModal, {})}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            createPortal(ErrorModal, {});
+          }
+        }}
       >
         {t<string>("how should I handle this problem?")}
       </span>

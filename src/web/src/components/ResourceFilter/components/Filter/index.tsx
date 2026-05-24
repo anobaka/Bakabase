@@ -10,6 +10,7 @@ import { MdOutlineFilterAltOff } from "react-icons/md";
 
 import { useFilterConfig } from "../../context/FilterContext";
 import { getSimpleFilterOperation } from "../../utils/simpleFilterOperations";
+
 import PropertyField from "./PropertyField";
 import OperationSelector from "./OperationSelector";
 import DeleteButton from "./DeleteButton";
@@ -70,7 +71,6 @@ const Filter = ({
     if ((isNew || autoTriggerPropertySelector) && !filter.propertyId) {
       openPropertySelector();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Lazily fill in property + valueProperty when missing. Re-fires whenever
@@ -104,6 +104,7 @@ const Filter = ({
   // closes that gap.
   useEffect(() => {
     const type = filter.property?.type;
+
     if (!type) return;
     if (filter.availableOperations?.length) return;
     config.api.getAvailableOperationsByPropertyType(type).then((ops) => {
@@ -141,15 +142,16 @@ const Filter = ({
       (property, availableOperations) => {
         handlePropertySelect(property, availableOperations);
       },
-      onCancelNewFilter
+      onCancelNewFilter,
     );
   };
 
   const handlePropertySelect = (property: any, availableOperations: SearchOperation[]) => {
     // In Simple mode, use the predefined operation based on property type
-    const operation = isSimpleMode && property.type
-      ? getSimpleFilterOperation(property.type)
-      : availableOperations[0];
+    const operation =
+      isSimpleMode && property.type
+        ? getSimpleFilterOperation(property.type)
+        : availableOperations[0];
 
     const nf: SearchFilter = {
       ...filter,
@@ -175,7 +177,10 @@ const Filter = ({
       });
     } else {
       // Clear value for operations that don't need it (IsNull, IsNotNull)
-      if (filter.operation === SearchOperation.IsNull || filter.operation === SearchOperation.IsNotNull) {
+      if (
+        filter.operation === SearchOperation.IsNull ||
+        filter.operation === SearchOperation.IsNotNull
+      ) {
         filter.dbValue = undefined;
         filter.bizValue = undefined;
       }
@@ -222,8 +227,8 @@ const Filter = ({
         operation: filter.operation,
         // In Simple mode, always show editing UI (isEditing: true)
         // In Advanced mode, don't pass isEditing (keep undefined) to allow click-to-edit
-        isEditing: (isSimpleMode && !isReadonly) ? true : undefined,
-      }
+        isEditing: isSimpleMode && !isReadonly ? true : undefined,
+      },
     );
 
     // For compact value types in Simple mode (editing mode), constrain the input width
@@ -231,10 +236,12 @@ const Filter = ({
     if (isSimpleMode && isCompactValueType(filter.property?.type)) {
       const propertyType = filter.property?.type;
       // Date/DateTime/Time need more width than Number/Rating/Percentage/Boolean
-      const isDateTimeType = propertyType === PropertyType.Date ||
+      const isDateTimeType =
+        propertyType === PropertyType.Date ||
         propertyType === PropertyType.DateTime ||
         propertyType === PropertyType.Time;
       const widthClass = isDateTimeType ? "w-auto" : "w-16";
+
       return <div className={widthClass}>{valueElement}</div>;
     }
 
@@ -259,9 +266,7 @@ const Filter = ({
   return (
     <div
       className={`flex ${useVerticalLayout ? "flex-col" : ""} ${useFullWidth ? "w-full" : ""} rounded p-1 ${useVerticalLayout ? "gap-1" : "items-center"} relative`}
-      style={
-        removeBackground ? undefined : { backgroundColor: "var(--bakaui-overlap-background)" }
-      }
+      style={removeBackground ? undefined : { backgroundColor: "var(--bakaui-overlap-background)" }}
     >
       {/* Disabled overlay */}
       {filter.disabled && (
@@ -282,22 +287,24 @@ const Filter = ({
       )}
 
       {/* First row: Property + Operation */}
-      <div className={`flex items-center gap-1 ${useFullWidth ? "w-full" : ""} ${filter.disabled ? "opacity-40" : ""}`}>
+      <div
+        className={`flex items-center gap-1 ${useFullWidth ? "w-full" : ""} ${filter.disabled ? "opacity-40" : ""}`}
+      >
         {/* Property field */}
         <PropertyField
-          property={filter.property}
           isReadonly={isReadonly || isSimpleMode}
-          onSelect={handlePropertySelect}
+          property={filter.property}
           onCancel={onCancelNewFilter}
+          onSelect={handlePropertySelect}
         />
 
         {/* Operation selector */}
         <OperationSelector
-          operation={filter.operation}
-          propertyType={filter.property?.type}
           availableOperations={filter.availableOperations}
           hasProperty={filter.propertyId !== undefined}
           isReadonly={isReadonly}
+          operation={filter.operation}
+          propertyType={filter.property?.type}
           onSelect={(op) => refreshValue({ ...filter, operation: op })}
         />
 

@@ -64,19 +64,25 @@ const ParentResourceValueRenderer: React.FC<ParentResourceValueRendererProps> = 
       const deserializedBizValue = deserializeStandardValue(bizValue ?? "", bizValueType);
 
       if (isMultiple) {
-        const ids = (deserializedDbValue as string[] ?? []).map(id => parseInt(id, 10));
-        const names = deserializedBizValue as string[] ?? [];
+        const ids = ((deserializedDbValue as string[]) ?? []).map((id) => parseInt(id, 10));
+        const names = (deserializedBizValue as string[]) ?? [];
+
         return ids.map((id, index) => ({
           id,
           displayName: names[index] ?? `Resource ${id}`,
         }));
       } else {
-        const id = parseInt(deserializedDbValue as string ?? "", 10);
+        const id = parseInt((deserializedDbValue as string) ?? "", 10);
         const name = deserializedBizValue as string;
-        return isNaN(id) ? [] : [{
-          id,
-          displayName: name ?? `Resource ${id}`,
-        }];
+
+        return isNaN(id)
+          ? []
+          : [
+              {
+                id,
+                displayName: name ?? `Resource ${id}`,
+              },
+            ];
       }
     } catch {
       return [];
@@ -90,24 +96,28 @@ const ParentResourceValueRenderer: React.FC<ParentResourceValueRendererProps> = 
 
     const portal = createPortal(ResourceSelectorModal, {
       multiple: isMultiple,
-      defaultSelectedIds: currentValues.map(v => v.id),
+      defaultSelectedIds: currentValues.map((v) => v.id),
       defaultCriteria: { tags: [ResourceTag.IsParent] },
-      title: t<string>(isMultiple ? "common.label.selectParentResources" : "common.label.selectParentResource"),
+      title: t<string>(
+        isMultiple ? "common.label.selectParentResources" : "common.label.selectParentResource",
+      ),
       onConfirm: (selectedResources: ResourceSelectorValue[]) => {
         if (selectedResources.length === 0) {
           onValueChange?.(undefined, undefined);
         } else if (isMultiple) {
           // Serialize using correct value types
-          const dbIds = selectedResources.map(r => r.id.toString());
-          const bizNames = selectedResources.map(r => r.displayName);
+          const dbIds = selectedResources.map((r) => r.id.toString());
+          const bizNames = selectedResources.map((r) => r.displayName);
           const serializedDbValue = serializeStandardValue(dbIds, dbValueType);
           const serializedBizValue = serializeStandardValue(bizNames, bizValueType);
+
           onValueChange?.(serializedDbValue, serializedBizValue);
         } else {
           // Serialize single value using correct value types
           const resource = selectedResources[0];
           const serializedDbValue = serializeStandardValue(resource.id.toString(), dbValueType);
           const serializedBizValue = serializeStandardValue(resource.displayName, bizValueType);
+
           onValueChange?.(serializedDbValue, serializedBizValue);
         }
         portal.destroy();
@@ -119,14 +129,16 @@ const ParentResourceValueRenderer: React.FC<ParentResourceValueRendererProps> = 
   };
 
   const handleRemoveValue = (valueToRemove: ResourceSelectorValue) => {
-    const newValues = currentValues.filter(v => v.id !== valueToRemove.id);
+    const newValues = currentValues.filter((v) => v.id !== valueToRemove.id);
+
     if (newValues.length === 0) {
       onValueChange?.(undefined, undefined);
     } else {
-      const dbIds = newValues.map(v => v.id.toString());
-      const bizNames = newValues.map(v => v.displayName);
+      const dbIds = newValues.map((v) => v.id.toString());
+      const bizNames = newValues.map((v) => v.displayName);
       const serializedDbValue = serializeStandardValue(dbIds, dbValueType);
       const serializedBizValue = serializeStandardValue(bizNames, bizValueType);
+
       onValueChange?.(serializedDbValue, serializedBizValue);
     }
   };
@@ -137,10 +149,10 @@ const ParentResourceValueRenderer: React.FC<ParentResourceValueRendererProps> = 
         <Button
           className="min-w-fit"
           color="default"
+          isDisabled={isReadonly}
           size={size}
           variant={variant}
           onPress={handleOpenModal}
-          isDisabled={isReadonly}
         >
           {t<string>("common.action.select")}
         </Button>
@@ -161,12 +173,7 @@ const ParentResourceValueRenderer: React.FC<ParentResourceValueRendererProps> = 
             </Chip>
           ))}
           {!isReadonly && (
-            <Button
-              isIconOnly
-              size="sm"
-              variant="light"
-              onPress={handleOpenModal}
-            >
+            <Button isIconOnly size="sm" variant="light" onPress={handleOpenModal}>
               +
             </Button>
           )}
@@ -176,14 +183,15 @@ const ParentResourceValueRenderer: React.FC<ParentResourceValueRendererProps> = 
 
     // Single selection
     const value = currentValues[0];
+
     return (
       <Button
         className="min-w-fit"
         color="default"
+        isDisabled={isReadonly}
         size={size}
         variant={variant}
         onPress={handleOpenModal}
-        isDisabled={isReadonly}
       >
         {value.displayName}
       </Button>

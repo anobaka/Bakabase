@@ -6,6 +6,7 @@ import type {
   BulkModificationProcessStep,
   BulkModificationVariable,
 } from "@/pages/bulk-modification/components/BulkModification/models";
+import type { BulkModificationProcessorValueType } from "@/sdk/constants";
 
 import { useTranslation } from "react-i18next";
 import React, { useState } from "react";
@@ -17,7 +18,6 @@ import StepDemonstrator from "../StepDemonstrator";
 import { Button, Chip, Modal } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import ProcessStepModal from "@/pages/bulk-modification/components/BulkModification/ProcessStepModal";
-import type { BulkModificationProcessorValueType } from "@/sdk/constants";
 
 type Props = {
   no: any;
@@ -52,29 +52,41 @@ const ProcessStep = ({
     return <StepDemonstrator property={property} step={step} variables={variables} />;
   };
 
+  const openEditor = editable
+    ? () => {
+        createPortal(ProcessStepModal, {
+          property: property,
+          availableValueTypes,
+          onSubmit: (operation, options) => {
+            const newStep = {
+              ...step,
+              operation,
+              options,
+            };
+
+            setStep(newStep);
+            onChange?.(newStep);
+          },
+          variables: variables,
+          operation: step.operation,
+          options: step.options,
+        });
+      }
+    : undefined;
+
   return (
     <div
       className={`flex items-center flex-wrap gap-1 ${editable ? "cursor-pointer hover:bg-[var(--bakaui-overlap-background)] rounded" : ""}`}
-      onClick={
+      role={editable ? "button" : undefined}
+      tabIndex={editable ? 0 : undefined}
+      onClick={openEditor}
+      onKeyDown={
         editable
-          ? () => {
-              createPortal(ProcessStepModal, {
-                property: property,
-                availableValueTypes,
-                onSubmit: (operation, options) => {
-                  const newStep = {
-                    ...step,
-                    operation,
-                    options,
-                  };
-
-                  setStep(newStep);
-                  onChange?.(newStep);
-                },
-                variables: variables,
-                operation: step.operation,
-                options: step.options,
-              });
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                openEditor?.();
+              }
             }
           : undefined
       }

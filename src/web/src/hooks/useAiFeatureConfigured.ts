@@ -22,14 +22,15 @@ export default function useAiFeatureConfigured(feature: AiFeature) {
 
       if (!isDefault && (!featureCfg || featureCfg.useDefault)) {
         const defaultRes = await BApi.ai.getAiFeatureConfig(AiFeature.Default);
+
         displayCfg = defaultRes.code ? null : (defaultRes.data ?? null);
       }
 
       setIsConfigured(
         displayCfg != null &&
-        displayCfg.providerConfigId != null &&
-        displayCfg.modelId != null &&
-        displayCfg.modelId !== "",
+          displayCfg.providerConfigId != null &&
+          displayCfg.modelId != null &&
+          displayCfg.modelId !== "",
       );
     } finally {
       setIsLoading(false);

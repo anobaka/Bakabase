@@ -12,9 +12,7 @@ import MarkConfigModal from "./MarkConfigModal";
 import PathMarkChip from "./PathMarkChip";
 import AddMarkDropdown from "./AddMarkDropdown";
 
-import {
-  Button,
-} from "@/components/bakaui";
+import { Button } from "@/components/bakaui";
 import { PathMarkType, BTaskStatus } from "@/sdk/constants";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { useBTasksStore } from "@/stores/bTasks";
@@ -147,6 +145,7 @@ const PathMarks = ({ entry, marks = [], onSaveMark, onDeleteMark, onTaskComplete
       enterCopyMode(entry.path);
       // Select all marks by default
       const markIds = marks.filter((m) => m.id !== undefined).map((m) => m.id!);
+
       selectAllMarks(markIds);
     }
   }, [enterCopyMode, entry.path, marks, selectAllMarks]);
@@ -178,7 +177,9 @@ const PathMarks = ({ entry, marks = [], onSaveMark, onDeleteMark, onTaskComplete
   return (
     <div
       className="flex items-center gap-2 ml-2"
+      role="presentation"
       onClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
     >
       {/* Add Mark Dropdown - hidden in copy mode */}
@@ -213,17 +214,14 @@ const PathMarks = ({ entry, marks = [], onSaveMark, onDeleteMark, onTaskComplete
         <div className="flex items-center gap-1 ml-2">
           <Button
             color="primary"
-            size="sm"
             isDisabled={selectedMarkIds.length === 0}
+            size="sm"
             onPress={handleConfirmCopy}
           >
-            {t("pathMarkConfig.action.confirmSelection")} ({selectedMarkIds.length}/{allMarks.length})
+            {t("pathMarkConfig.action.confirmSelection")} ({selectedMarkIds.length}/
+            {allMarks.length})
           </Button>
-          <Button
-            size="sm"
-            variant="light"
-            onPress={handleCancelCopy}
-          >
+          <Button size="sm" variant="light" onPress={handleCancelCopy}>
             {t("common.action.cancel")}
           </Button>
         </div>

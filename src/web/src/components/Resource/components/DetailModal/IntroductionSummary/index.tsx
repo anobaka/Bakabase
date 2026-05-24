@@ -1,18 +1,14 @@
 "use client";
 
+import type { Resource } from "@/core/models/Resource";
+
 import React, { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { EditOutlined, FileTextOutlined } from "@ant-design/icons";
-import {
-  Drawer,
-  DrawerBody,
-  DrawerContent,
-  DrawerHeader,
-} from "@heroui/react";
+import { Drawer, DrawerBody, DrawerContent, DrawerHeader } from "@heroui/react";
 
-import type { Resource } from "@/core/models/Resource";
 import { isNonEmptyValue } from "@/core/models/Resource";
-import { PropertyPool, ReservedProperty, PropertyValueScope } from "@/sdk/constants";
+import { PropertyPool, ReservedProperty } from "@/sdk/constants";
 import { Button, Card, CardBody, Textarea } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 import { serializeStandardValue } from "@/components/StandardValue";
@@ -34,9 +30,11 @@ const IntroductionSummary = ({ resource, onReload }: Props) => {
 
   const introduction = useMemo(() => {
     const reservedProps = resource.properties?.[PropertyPool.Reserved];
+
     if (!reservedProps) return null;
 
     const introProperty = reservedProps[ReservedProperty.Introduction];
+
     if (!introProperty?.values?.length) return null;
 
     // `values` has one entry per scope, including empty ones; the highest-priority scope can be
@@ -44,6 +42,7 @@ const IntroductionSummary = ({ resource, onReload }: Props) => {
     const value = introProperty.values.find((v) =>
       isNonEmptyValue(v?.aliasAppliedBizValue ?? v?.bizValue),
     );
+
     return (value?.bizValue as string) ?? null;
   }, [resource]);
 
@@ -90,8 +89,8 @@ const IntroductionSummary = ({ resource, onReload }: Props) => {
               {hasIntroduction ? (
                 <>
                   <div
-                    className="text-sm text-default-600 line-clamp-2"
                     dangerouslySetInnerHTML={{ __html: introduction }}
+                    className="text-sm text-default-600 line-clamp-2"
                   />
                   {isTruncated && (
                     <p className="text-xs text-primary mt-1">
@@ -145,11 +144,7 @@ const IntroductionSummary = ({ resource, onReload }: Props) => {
                   >
                     {t("common.action.cancel")}
                   </Button>
-                  <Button
-                    color="primary"
-                    isLoading={isSaving}
-                    onPress={handleSave}
-                  >
+                  <Button color="primary" isLoading={isSaving} onPress={handleSave}>
                     {t("common.action.save")}
                   </Button>
                 </div>
@@ -157,8 +152,8 @@ const IntroductionSummary = ({ resource, onReload }: Props) => {
             ) : (
               <div className="flex flex-col h-full">
                 <div
-                  className="flex-1 text-default-700"
                   dangerouslySetInnerHTML={{ __html: introduction ?? "" }}
+                  className="flex-1 text-default-700"
                 />
                 <div className="flex justify-end pt-4">
                   <Button

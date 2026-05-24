@@ -63,6 +63,7 @@ import DownloadTaskDetailModal from "./components/TaskDetailModal";
 import envConfig from "@/config/env.ts";
 
 import { CircularProgress } from "@heroui/react";
+
 import { DownloadTaskTypeIconMap } from "./components/TaskDetailModal/models";
 
 // const testTasks: DownloadTask[] = [
@@ -251,7 +252,9 @@ const DownloaderPage = () => {
             createPortal(Modal, {
               defaultVisible: true,
               title: t<string>(
-                ids.length > 1 ? "downloader.confirm.clearCheckpoints" : "downloader.confirm.clearCheckpoint",
+                ids.length > 1
+                  ? "downloader.confirm.clearCheckpoints"
+                  : "downloader.confirm.clearCheckpoint",
                 { count: ids.length },
               ),
               onOk: async () => {
@@ -617,6 +620,7 @@ const DownloaderPage = () => {
               const hasErrorMessage = task.status == DownloadTaskStatus.Failed && task.message;
               const selected = selectedTaskIds.indexOf(task.id) > -1;
               const Icon = DownloadTaskTypeIconMap[task.thirdPartyId!]?.[task.type];
+
               log("rendering task", task);
 
               return (
@@ -626,6 +630,9 @@ const DownloaderPage = () => {
                 >
                   <div
                     key={task.id}
+                    className={`flex flex-col gap-1`}
+                    role="button"
+                    tabIndex={0}
                     onContextMenu={e => {
                       console.log(`Opening context menu from ${task.id}:${task.name}`);
                       e.preventDefault();
@@ -639,9 +646,14 @@ const DownloaderPage = () => {
                       toggleMenu(true);
                       forceUpdate();
                     }}
-                    className={`flex flex-col gap-1`}
                     // style={style}
                     onClick={(e) => onTaskClick(task.id, e)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        onTaskClick(task.id, e);
+                      }
+                    }}
                   >
                     <div className={"flex items-center justify-between"}>
                       <div className={"flex flex-col gap-1"}>
@@ -662,7 +674,7 @@ const DownloaderPage = () => {
                             {t("downloader.label.createdAt")}
                             &nbsp;
                             {moment(task.createdAt).format("YYYY-MM-DD HH:mm:ss")}
-                            </Chip>
+                          </Chip>
                         </div>
                       </div>
                       <div className={"flex items-center"}>
@@ -674,9 +686,7 @@ const DownloaderPage = () => {
                             {t<string>(DownloadTaskStatus[task.status])}
                           </Chip>
                           {task.current && (
-                            <span className="text-xs text-default-400">
-                              {task.current}
-                            </span>
+                            <span className="text-xs text-default-400">{task.current}</span>
                           )}
                           {task.status == DownloadTaskStatus.Failed && (
                             <Button

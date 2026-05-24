@@ -26,11 +26,7 @@ const WelcomePage = () => {
         <div className={"flex justify-center"}>
           <span className={"text-5xl relative"}>
             Bakabase
-            <Chip
-              className={"r-0 bottom-[4px] absolute"}
-              color={"success"}
-              variant={"light"}
-            >
+            <Chip className={"r-0 bottom-[4px] absolute"} color={"success"} variant={"light"}>
               v{version}
             </Chip>
           </span>

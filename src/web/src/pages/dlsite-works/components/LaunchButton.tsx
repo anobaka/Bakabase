@@ -23,8 +23,8 @@ export function LaunchButton({
 }) {
   const { t } = useTranslation();
 
-  const leContext = useDependentComponentContextsStore(
-    (s) => s.contexts.find((c) => c.id === dependentComponentIds.LocaleEmulator),
+  const leContext = useDependentComponentContextsStore((s) =>
+    s.contexts.find((c) => c.id === dependentComponentIds.LocaleEmulator),
   );
 
   const isLeAvailable = leContext?.isAvailableOnCurrentPlatform !== false;
@@ -47,12 +47,7 @@ export function LaunchButton({
 
     if (isLeInstalling) {
       return (
-        <Chip
-          color="warning"
-          size="sm"
-          startContent={<Spinner size="sm" />}
-          variant="flat"
-        >
+        <Chip color="warning" size="sm" startContent={<Spinner size="sm" />} variant="flat">
           {t("resourceSource.dlsite.le.installing")}
           {leContext?.installationProgress != null && ` ${leContext.installationProgress}%`}
         </Chip>
@@ -100,11 +95,7 @@ export function LaunchButton({
               onValueChange={(v) => onToggleUseLocaleEmulator(workId, v)}
             />
           </div>
-          {useLocaleEmulator && (
-            <div className="flex items-center">
-              {renderLeStatus()}
-            </div>
-          )}
+          {useLocaleEmulator && <div className="flex items-center">{renderLeStatus()}</div>}
         </div>
       }
       placement="bottom"
@@ -112,16 +103,18 @@ export function LaunchButton({
       {/* Wrap in span so Tooltip works on disabled button */}
       <span>
         <Button
+          isIconOnly
           color="success"
           isDisabled={launchDisabled}
-          isIconOnly
           size="sm"
           variant="light"
           onPress={() => onLaunch(workId)}
         >
-          {useLocaleEmulator && isLeAvailable
-            ? <MdOutlineRocketLaunch className="text-lg" />
-            : <AiOutlinePlayCircle className="text-lg" />}
+          {useLocaleEmulator && isLeAvailable ? (
+            <MdOutlineRocketLaunch className="text-lg" />
+          ) : (
+            <AiOutlinePlayCircle className="text-lg" />
+          )}
         </Button>
       </span>
     </Tooltip>

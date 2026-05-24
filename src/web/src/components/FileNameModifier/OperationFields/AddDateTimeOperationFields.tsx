@@ -3,12 +3,9 @@
 import React from "react";
 
 import { Input, Select, NumberInput } from "../../bakaui";
-
-import {
-  FileNameModifierPosition,
-  fileNameModifierPositions,
-} from "@/sdk/constants";
 import { getFieldRequirements } from "../validation";
+
+import { FileNameModifierPosition, fileNameModifierPositions } from "@/sdk/constants";
 
 const PositionType = FileNameModifierPosition;
 const PositionTypeOptions = fileNameModifierPositions.map((opt) => ({
@@ -16,11 +13,7 @@ const PositionTypeOptions = fileNameModifierPositions.map((opt) => ({
   value: opt.value,
 }));
 
-const AddDateTimeOperationFields: React.FC<any> = ({
-  operation,
-  t,
-  onChange,
-}) => {
+const AddDateTimeOperationFields: React.FC<any> = ({ operation, t, onChange }) => {
   const requirements = getFieldRequirements(operation);
 
   return (
@@ -35,12 +28,12 @@ const AddDateTimeOperationFields: React.FC<any> = ({
         onValueChange={(e) => onChange({ ...operation, dateTimeFormat: e })}
       />
       <Select
+        disallowEmptySelection
         className="w-[160px]"
         dataSource={PositionTypeOptions.map((opt) => ({
           label: t<string>(opt.label),
           value: opt.value,
         }))}
-        disallowEmptySelection
         isRequired={requirements.position}
         label={t<string>("FileNameModifier.Label.PositionType")}
         placeholder={t<string>("FileNameModifier.Placeholder.PositionType")}

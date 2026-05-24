@@ -2,7 +2,7 @@
 
 import type { AutocompleteProps } from "@heroui/react";
 
-import React, {useCallback, useEffect, useRef, useState} from "react";
+import React, { useCallback, useRef, useState } from "react";
 import { useDebounce, useUpdateEffect } from "react-use";
 import { FolderOutlined, FileOutlined } from "@ant-design/icons";
 
@@ -60,7 +60,8 @@ export default function PathAutocomplete({
     (prefix?: string) => {
       setIsLoading(true);
 
-      const reqPrefix = (prefix && prefix.length >= 1) ? prefix : undefined;
+      const reqPrefix = prefix && prefix.length >= 1 ? prefix : undefined;
+
       BApi.file
         .searchFileSystemEntries({
           prefix: reqPrefix,
@@ -72,9 +73,7 @@ export default function PathAutocomplete({
             let filteredItems = response.data;
 
             if (pathType === "folder") {
-              filteredItems = response.data.filter(
-                (item) => item.isDirectory,
-              );
+              filteredItems = response.data.filter((item) => item.isDirectory);
             }
             setAutocompleteItems(filteredItems);
           }
@@ -91,6 +90,7 @@ export default function PathAutocomplete({
     () => {
       if (isFirstRender.current) {
         isFirstRender.current = false;
+
         return;
       }
       searchPaths(value);
@@ -118,10 +118,7 @@ export default function PathAutocomplete({
     // console.log(autocompleteItems, item, inputValue);
 
     setValue(inputValue);
-    onChange?.(
-      inputValue,
-      item ? (item.isDirectory ? "folder" : "file") : undefined,
-    );
+    onChange?.(inputValue, item ? (item.isDirectory ? "folder" : "file") : undefined);
   };
 
   const handleSelectionChange = (key: React.Key | null) => {
@@ -153,11 +150,7 @@ export default function PathAutocomplete({
       onSelectionChange={handleSelectionChange}
     >
       {(item) => (
-        <AutocompleteItem
-          key={item.path}
-          startContent={getFileIcon(item)}
-          title={item.path}
-        />
+        <AutocompleteItem key={item.path} startContent={getFileIcon(item)} title={item.path} />
       )}
     </Autocomplete>
   );

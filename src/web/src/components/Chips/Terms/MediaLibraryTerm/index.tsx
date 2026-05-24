@@ -9,13 +9,7 @@ type Props = {
   className?: string;
   size?: "sm" | "md" | "lg";
   variant?: "solid" | "bordered" | "light" | "flat" | "faded" | "shadow";
-  color?:
-    | "default"
-    | "primary"
-    | "secondary"
-    | "success"
-    | "warning"
-    | "danger";
+  color?: "default" | "primary" | "secondary" | "success" | "warning" | "danger";
 };
 
 export const MediaLibraryDescription = () => {

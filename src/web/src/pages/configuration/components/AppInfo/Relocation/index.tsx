@@ -3,14 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import {
-  Button,
-  Card,
-  CardBody,
-  Input,
-  Modal,
-  Snippet,
-} from "@/components/bakaui";
+import { Button, Card, CardBody, Input, Modal, Snippet } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 import { FileSystemSelectorModal } from "@/components/FileSystemSelector";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
@@ -47,16 +40,20 @@ export const RelocationButton: React.FC<RelocationButtonProps> = ({ currentDataP
 
   const handleSelected = async (target: string, current: string) => {
     let resp;
+
     try {
       resp = await BApi.app.validateAppDataPath({ targetPath: target });
     } catch (e) {
       showError(String(e));
+
       return;
     }
 
     const data = (resp as any).data;
+
     if (!data?.valid) {
       const reasonKey = `configuration.dataPath.validation.${camelize(data?.reason)}`;
+
       // Some reason messages interpolate runtime values (e.g. insideInstall renders the
       // detected install root). Pass the whole response in — i18next ignores unused keys.
       createPortal(Modal, {
@@ -73,6 +70,7 @@ export const RelocationButton: React.FC<RelocationButtonProps> = ({ currentDataP
         defaultVisible: true,
         footer: { actions: ["cancel"] },
       });
+
       return;
     }
 
@@ -108,7 +106,13 @@ export const RelocationButton: React.FC<RelocationButtonProps> = ({ currentDataP
     createPortal(Modal, {
       size: "lg",
       title: t("configuration.dataPath.confirm.title.copy"),
-      children: <PathPair current={current} target={target} note={t("configuration.dataPath.confirm.copyNote")} />,
+      children: (
+        <PathPair
+          current={current}
+          note={t("configuration.dataPath.confirm.copyNote")}
+          target={target}
+        />
+      ),
       defaultVisible: true,
       onOk: () => submitRelocate(target, RelocationMode.MergeOverwrite),
       footer: {
@@ -118,11 +122,7 @@ export const RelocationButton: React.FC<RelocationButtonProps> = ({ currentDataP
     });
   };
 
-  const openHasBakabaseDataModal = (
-    target: string,
-    current: string,
-    targetVersion?: string,
-  ) => {
+  const openHasBakabaseDataModal = (target: string, current: string, targetVersion?: string) => {
     createPortal(Modal, {
       size: "lg",
       title: t("configuration.dataPath.confirm.title.useOrMerge"),
@@ -131,8 +131,8 @@ export const RelocationButton: React.FC<RelocationButtonProps> = ({ currentDataP
           current={current}
           target={target}
           targetVersion={targetVersion}
-          onUseTarget={() => submitRelocate(target, RelocationMode.UseTarget)}
           onMerge={() => openMergeConfirmModal(target)}
+          onUseTarget={() => submitRelocate(target, RelocationMode.UseTarget)}
         />
       ),
       defaultVisible: true,
@@ -147,7 +147,7 @@ export const RelocationButton: React.FC<RelocationButtonProps> = ({ currentDataP
   };
 
   return (
-    <Button size="sm" variant="light" color="primary" onPress={openPicker}>
+    <Button color="primary" size="sm" variant="light" onPress={openPicker}>
       {t("configuration.dataPath.modify.button")}
     </Button>
   );
@@ -159,6 +159,7 @@ const PathPair: React.FC<{ current: string; target: string; note?: string }> = (
   note,
 }) => {
   const { t } = useTranslation();
+
   return (
     <div className="flex flex-col gap-3">
       <Row label={t("configuration.dataPath.confirm.current")} value={current} />
@@ -171,7 +172,9 @@ const PathPair: React.FC<{ current: string; target: string; note?: string }> = (
 const Row = ({ label, value }: { label: string; value: string }) => (
   <div className="flex flex-col gap-1">
     <span className="text-xs text-foreground-400">{label}</span>
-    <Snippet hideSymbol size="sm" variant="bordered">{value}</Snippet>
+    <Snippet hideSymbol size="sm" variant="bordered">
+      {value}
+    </Snippet>
   </div>
 );
 
@@ -191,6 +194,7 @@ const UseOrMergeBody: React.FC<UseOrMergeProps> = ({
   onMerge,
 }) => {
   const { t } = useTranslation();
+
   return (
     <div className="flex flex-col gap-4">
       <p>
@@ -203,14 +207,14 @@ const UseOrMergeBody: React.FC<UseOrMergeProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
         <ChoiceCard
           color="primary"
-          title={t("configuration.dataPath.confirm.option.useTarget.title")}
           description={t("configuration.dataPath.confirm.option.useTarget.description")}
+          title={t("configuration.dataPath.confirm.option.useTarget.title")}
           onPress={onUseTarget}
         />
         <ChoiceCard
           color="warning"
-          title={t("configuration.dataPath.confirm.option.merge.title")}
           description={t("configuration.dataPath.confirm.option.merge.description")}
+          title={t("configuration.dataPath.confirm.option.merge.title")}
           onPress={onMerge}
         />
       </div>
@@ -225,14 +229,14 @@ const ChoiceCard: React.FC<{
   onPress: () => void;
 }> = ({ color, title, description, onPress }) => (
   <Card
-    isPressable
     isHoverable
-    onPress={onPress}
+    isPressable
     className={
       color === "warning"
         ? "border-1 border-warning-200 hover:border-warning"
         : "border-1 border-primary-200 hover:border-primary"
     }
+    onPress={onPress}
   >
     <CardBody className="flex flex-col gap-2">
       <span className={`font-semibold text-${color}`}>{title}</span>
@@ -261,11 +265,6 @@ const MergeConfirmModal: React.FC<MergeConfirmProps> = ({ onConfirm, onDestroyed
 
   return (
     <Modal
-      size="md"
-      title={t("configuration.dataPath.confirm.title.merge")}
-      visible={visible}
-      onClose={() => setVisible(false)}
-      onDestroyed={onDestroyed}
       footer={{
         actions: ["ok", "cancel"],
         okProps: {
@@ -274,12 +273,15 @@ const MergeConfirmModal: React.FC<MergeConfirmProps> = ({ onConfirm, onDestroyed
           children: t("configuration.dataPath.confirm.merge.confirmButton"),
         },
       }}
+      size="md"
+      title={t("configuration.dataPath.confirm.title.merge")}
+      visible={visible}
+      onClose={() => setVisible(false)}
+      onDestroyed={onDestroyed}
       onOk={() => ok && onConfirm()}
     >
       <div className="flex flex-col gap-3">
-        <p className="text-warning">
-          {t("configuration.dataPath.confirm.merge.warning")}
-        </p>
+        <p className="text-warning">{t("configuration.dataPath.confirm.merge.warning")}</p>
         <div className="flex flex-col gap-1">
           <span className="text-xs text-foreground-400">
             {t("configuration.dataPath.confirm.merge.typeBelow")}
@@ -288,10 +290,10 @@ const MergeConfirmModal: React.FC<MergeConfirmProps> = ({ onConfirm, onDestroyed
             {expectedPhrase}
           </Snippet>
           <Input
+            placeholder={t("configuration.dataPath.confirm.merge.placeholder")}
             size="sm"
             value={phrase}
             onChange={(e) => setPhrase(e.target.value)}
-            placeholder={t("configuration.dataPath.confirm.merge.placeholder")}
           />
         </div>
       </div>
@@ -330,22 +332,24 @@ export const RelocationRestartGate: React.FC = () => {
 
   return (
     <Modal
+      hideCloseButton
+      isKeyboardDismissDisabled
+      footer={{ actions: [] }}
+      isDismissable={false}
       size="md"
       title={t("configuration.dataPath.restart.title")}
       visible={open}
       onClose={() => {}}
-      hideCloseButton
-      isDismissable={false}
-      isKeyboardDismissDisabled
-      footer={{ actions: [] }}
     >
       <div className="flex flex-col gap-4">
         <p>{t("configuration.dataPath.restart.body")}</p>
-        <Snippet hideSymbol size="sm" variant="bordered">{pending.target}</Snippet>
+        <Snippet hideSymbol size="sm" variant="bordered">
+          {pending.target}
+        </Snippet>
         <Button
           color="primary"
-          isLoading={restarting}
           isDisabled={restarting}
+          isLoading={restarting}
           onPress={triggerRestart}
         >
           {t("configuration.dataPath.restart.button")}
@@ -357,5 +361,6 @@ export const RelocationRestartGate: React.FC = () => {
 
 function camelize(reason: any): string {
   if (typeof reason !== "string") return "unknown";
+
   return reason.charAt(0).toLowerCase() + reason.slice(1);
 }

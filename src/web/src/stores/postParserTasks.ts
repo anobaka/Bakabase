@@ -11,26 +11,23 @@ interface PostParserTasksState {
   deleteAll: () => void;
 }
 
-export const usePostParserTasksStore = create<PostParserTasksState>(
-  (set, get) => ({
-    tasks: [],
-    setTasks: (tasks) => set({ tasks: _.sortBy(tasks, (x) => x.id) }),
-    updateTask: (task) =>
-      set((state) => {
-        const idx = state.tasks.findIndex((t) => t.id == task.id);
-        let newState = state.tasks.slice();
+export const usePostParserTasksStore = create<PostParserTasksState>((set, get) => ({
+  tasks: [],
+  setTasks: (tasks) => set({ tasks: _.sortBy(tasks, (x) => x.id) }),
+  updateTask: (task) =>
+    set((state) => {
+      const idx = state.tasks.findIndex((t) => t.id == task.id);
+      let newState = state.tasks.slice();
 
-        if (idx > -1) {
-          newState[idx] = task;
-        } else {
-          newState.push(task);
-          newState = _.sortBy(newState, (x) => x.id);
-        }
+      if (idx > -1) {
+        newState[idx] = task;
+      } else {
+        newState.push(task);
+        newState = _.sortBy(newState, (x) => x.id);
+      }
 
-        return { tasks: newState };
-      }),
-    deleteTask: (taskId) =>
-      set((state) => ({ tasks: state.tasks.filter((t) => t.id !== taskId) })),
-    deleteAll: () => set({ tasks: [] }),
-  }),
-);
+      return { tasks: newState };
+    }),
+  deleteTask: (taskId) => set((state) => ({ tasks: state.tasks.filter((t) => t.id !== taskId) })),
+  deleteAll: () => set({ tasks: [] }),
+}));

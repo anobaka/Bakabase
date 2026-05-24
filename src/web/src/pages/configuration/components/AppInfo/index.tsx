@@ -30,18 +30,26 @@ import {
 } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import { RelocationButton, RelocationRestartGate } from "@/pages/configuration/components/AppInfo/Relocation";
+import {
+  RelocationButton,
+  RelocationRestartGate,
+} from "@/pages/configuration/components/AppInfo/Relocation";
 import { LegacyAppDataNoticeBanner } from "@/pages/configuration/components/AppInfo/LegacyNotice";
 
 interface AppInfoProps {
   appInfo: Partial<BakabaseInfrastructuresComponentsAppModelsResponseModelsAppInfo>;
-  applyPatches: <T>(api: (patches: T) => Promise<{ code?: number }>, patches: T, success?: (rsp: unknown) => void) => void;
+  applyPatches: <T>(
+    api: (patches: T) => Promise<{ code?: number }>,
+    patches: T,
+    success?: (rsp: unknown) => void,
+  ) => void;
 }
 
 const AppInfo: React.FC<AppInfoProps> = ({ appInfo, applyPatches }) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
-  const [newVersion, setNewVersion] = useState<BakabaseInfrastructuresComponentsAppUpgradeAbstractionsAppVersionInfo>();
+  const [newVersion, setNewVersion] =
+    useState<BakabaseInfrastructuresComponentsAppUpgradeAbstractionsAppVersionInfo>();
   const appUpdaterState = useAppUpdaterStateStore((state) => state);
   const appOptions = useAppOptionsStore((state) => state.data);
 
@@ -53,6 +61,7 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo, applyPatches }) => {
 
   useEffect(() => {
     checkNewAppVersion();
+
     return () => {};
   }, []);
 
@@ -66,11 +75,12 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo, applyPatches }) => {
   const renderNewVersion = () => {
     // When the API has returned a concrete new version, trust it over a
     // possibly-stale UpToDate status carried by the backend singleton.
-    const effectiveStatus = newVersion?.version
-      && (appUpdaterState.status === undefined
-        || appUpdaterState.status === UpdaterStatus.UpToDate)
-      ? UpdaterStatus.Idle
-      : appUpdaterState.status;
+    const effectiveStatus =
+      newVersion?.version &&
+      (appUpdaterState.status === undefined || appUpdaterState.status === UpdaterStatus.UpToDate)
+        ? UpdaterStatus.Idle
+        : appUpdaterState.status;
+
     switch (effectiveStatus) {
       case UpdaterStatus.UpToDate:
         return upToDateIndicator;
@@ -134,9 +144,7 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo, applyPatches }) => {
                     >
                       {newVersion.installers.map((i) => (
                         <div key={i.url}>
-                          <ExternalLink href={i.url}>
-                            {i.name}
-                          </ExternalLink>
+                          <ExternalLink href={i.url}>{i.name}</ExternalLink>
                         </div>
                       ))}
                     </Popover>
@@ -155,16 +163,16 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo, applyPatches }) => {
           <Progress
             showValueLabel
             className="w-[200px] pl-3"
+            label={`${t("configuration.appInfo.downloading")} ${newVersion?.version ?? ""}`}
             size="sm"
             value={appUpdaterState.percentage}
-            label={`${t("configuration.appInfo.downloading")} ${newVersion?.version ?? ""}`}
           />
         );
       case UpdaterStatus.PendingRestart:
         return (
           <Button
-            size="sm"
             color="primary"
+            size="sm"
             onClick={() => {
               BApi.updater.restartAndUpdateApp();
             }}
@@ -178,8 +186,8 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo, applyPatches }) => {
             {t("configuration.appInfo.failedToUpdateApp")}: {t(appUpdaterState.error!)}
             &nbsp;
             <Button
-              variant="light"
               color="primary"
+              variant="light"
               onClick={() => {
                 BApi.updater.startUpdatingApp();
               }}
@@ -201,17 +209,15 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo, applyPatches }) => {
         </Snippet>
         <Button
           isIconOnly
+          color="primary"
           size="sm"
           variant="light"
-          color="primary"
           onPress={() => BApi.tool.openFileOrDirectory({ path })}
         >
           <FolderOpenOutlined className="text-base" />
         </Button>
       </div>
-      {description && (
-        <span className="text-xs text-foreground-400">{description}</span>
-      )}
+      {description && <span className="text-xs text-foreground-400">{description}</span>}
     </div>
   );
 
@@ -239,7 +245,7 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo, applyPatches }) => {
     }
 
     return (
-      <Chip radius="sm" size="sm" variant="flat" color={color}>
+      <Chip color={color} radius="sm" size="sm" variant="flat">
         {label}
       </Chip>
     );
@@ -257,18 +263,16 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo, applyPatches }) => {
               </Snippet>
               <Button
                 isIconOnly
+                color="primary"
                 size="sm"
                 variant="light"
-                color="primary"
                 onPress={() => BApi.tool.openFileOrDirectory({ path: appInfo.appDataPath })}
               >
                 <FolderOpenOutlined className="text-base" />
               </Button>
               {renderDataPathSource()}
-              <Divider orientation="vertical" className="mx-1" />
-              {appInfo.appDataPath && (
-                <RelocationButton currentDataPath={appInfo.appDataPath} />
-              )}
+              <Divider className="mx-1" orientation="vertical" />
+              {appInfo.appDataPath && <RelocationButton currentDataPath={appInfo.appDataPath} />}
             </div>
             <span className="text-xs text-foreground-400">
               {t("configuration.appInfo.tip.appDataPath")}
@@ -284,42 +288,29 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo, applyPatches }) => {
           </div>
         ),
       },
-      ...((appInfo.anchorPath && appInfo.anchorPath !== appInfo.appDataPath)
-        ? [{
-          label: "configuration.appInfo.anchorPath",
-          value: renderPathValue(
-            appInfo.anchorPath,
-            t("configuration.appInfo.tip.anchorPath"),
-          ),
-        }]
+      ...(appInfo.anchorPath && appInfo.anchorPath !== appInfo.appDataPath
+        ? [
+            {
+              label: "configuration.appInfo.anchorPath",
+              value: renderPathValue(appInfo.anchorPath, t("configuration.appInfo.tip.anchorPath")),
+            },
+          ]
         : []),
       {
         label: "configuration.appInfo.dataPath",
-        value: renderPathValue(
-          appInfo.dataPath,
-          t("configuration.appInfo.tip.dataPath"),
-        ),
+        value: renderPathValue(appInfo.dataPath, t("configuration.appInfo.tip.dataPath")),
       },
       {
         label: "configuration.appInfo.tempFilesPath",
-        value: renderPathValue(
-          appInfo.tempFilesPath,
-          t("configuration.appInfo.tip.tempFilesPath"),
-        ),
+        value: renderPathValue(appInfo.tempFilesPath, t("configuration.appInfo.tip.tempFilesPath")),
       },
       {
         label: "configuration.appInfo.logPath",
-        value: renderPathValue(
-          appInfo.logPath,
-          t("configuration.appInfo.tip.logPath"),
-        ),
+        value: renderPathValue(appInfo.logPath, t("configuration.appInfo.tip.logPath")),
       },
       {
         label: "configuration.appInfo.backupPath",
-        value: renderPathValue(
-          appInfo.backupPath,
-          t("configuration.appInfo.tip.backupPath"),
-        ),
+        value: renderPathValue(appInfo.backupPath, t("configuration.appInfo.tip.backupPath")),
       },
       {
         label: "configuration.appInfo.coreVersion",
@@ -380,10 +371,7 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo, applyPatches }) => {
           <TableBody>
             {buildAppInfoDataSource().map((c, i) => {
               return (
-                <TableRow
-                  key={i}
-                  className="hover:bg-[var(--bakaui-overlap-background)]"
-                >
+                <TableRow key={i} className="hover:bg-[var(--bakaui-overlap-background)]">
                   <TableCell>{c.label}</TableCell>
                   <TableCell>{c.value}</TableCell>
                 </TableRow>

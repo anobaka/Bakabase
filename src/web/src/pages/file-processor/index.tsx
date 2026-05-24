@@ -4,8 +4,11 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import "./index.scss";
 import { useTranslation } from "react-i18next";
 import { MenuItem } from "@szhsin/react-menu";
+import { MdUnarchive } from "react-icons/md";
+import { RiRobot2Line } from "react-icons/ri";
 
 import { FileExplorer } from "@/components/FileExplorer";
+
 import type { FileExplorerRef } from "@/components/FileExplorer";
 import type { Entry } from "@/core/models/FileExplorer/Entry";
 
@@ -13,8 +16,6 @@ import { useFileSystemOptionsStore } from "@/stores/options";
 import BApi from "@/sdk/BApi";
 import { Checkbox } from "@/components/bakaui/components/Checkbox";
 import AfterFirstPlayOperationsModal from "@/pages/file-processor/components/AfterFirstPlayOperationsModal";
-import { MdUnarchive } from "react-icons/md";
-import { RiRobot2Line } from "react-icons/ri";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { Button, Tooltip } from "@/components/bakaui";
 import BulkDecompressionToolModal from "@/components/BulkDecompressionToolModal";
@@ -49,16 +50,21 @@ const FileProcessorPage = () => {
 
   const getFirstLevelPaths = useCallback((): string[] => {
     const root = fileExplorerRef.current?.root;
+
     if (!root?.children) return [];
+
     return root.children.map((c) => c.path);
   }, []);
 
-  const openAiAnalysis = useCallback((directoryPath: string, filePaths: string[]) => {
-    createPortal(AiAnalysisModal, {
-      directoryPath,
-      filePaths,
-    });
-  }, [createPortal]);
+  const openAiAnalysis = useCallback(
+    (directoryPath: string, filePaths: string[]) => {
+      createPortal(AiAnalysisModal, {
+        directoryPath,
+        filePaths,
+      });
+    },
+    [createPortal],
+  );
 
   const renderExtraContextMenuItems = useCallback(
     (entries: Entry[]) => {
@@ -70,6 +76,7 @@ const FileProcessorPage = () => {
             const paths = entries.map((e) => e.path);
             // Use the first directory entry's path, or the parent directory
             const dirPath = entries.find((e) => e.isDirectoryOrDrive)?.path ?? rootPath ?? "";
+
             openAiAnalysis(dirPath, paths);
           }}
         >
@@ -91,27 +98,32 @@ const FileProcessorPage = () => {
           <div className="flex items-center gap-2">
             {rootPath && (
               <>
-                <Button size="sm" variant="flat" onPress={() => {
-                  openAiAnalysis(rootPath, getFirstLevelPaths());
-                }}>
+                <Button
+                  size="sm"
+                  variant="flat"
+                  onPress={() => {
+                    openAiAnalysis(rootPath, getFirstLevelPaths());
+                  }}
+                >
                   <RiRobot2Line className="text-lg" />
                   {t("fileProcessor.ai.title")}
                 </Button>
-                <Button size="sm" variant="flat" onPress={() => {
-                  createPortal(BulkDecompressionToolModal, { paths: [rootPath] });
-                }}>
+                <Button
+                  size="sm"
+                  variant="flat"
+                  onPress={() => {
+                    createPortal(BulkDecompressionToolModal, { paths: [rootPath] });
+                  }}
+                >
                   <MdUnarchive className="text-lg" />
                   {t("fileProcessor.action.bulkDecompression")}
                 </Button>
               </>
             )}
-            <Tooltip
-              content={t("fileProcessor.tip.operationsAfterPlay")}
-              placement="bottom"
-            >
+            <Tooltip content={t("fileProcessor.tip.operationsAfterPlay")} placement="bottom">
               <Checkbox
-                size="sm"
                 isSelected={optionsStore.data?.fileProcessor?.showOperationsAfterPlayingFirstFile}
+                size="sm"
                 onValueChange={(v) => {
                   BApi.options.patchFileSystemOptions({
                     ...optionsStore.data,
@@ -128,7 +140,7 @@ const FileProcessorPage = () => {
             </Tooltip>
           </div>
         </div>
-        <div className="root relative overflow-hidden min-h-0 grow" tabIndex={0}>
+        <div className="root relative overflow-hidden min-h-0 grow">
           <div className={"absolute top-0 left-0 w-full h-full flex flex-col"}>
             {rootPathInitialized && (
               <FileExplorer
@@ -154,11 +166,11 @@ const FileProcessorPage = () => {
                   "delete-all-same-name",
                   "group",
                   "play-first-file",
-                  "create-directory"
+                  "create-directory",
                 ]}
+                renderExtraContextMenuItems={renderExtraContextMenuItems}
                 rootPath={rootPath}
                 selectable={"multiple"}
-                renderExtraContextMenuItems={renderExtraContextMenuItems}
                 onDoubleClick={(evt, en) => {
                   if (!en.isDirectoryOrDrive) {
                     BApi.tool.openFile({ path: en.path });

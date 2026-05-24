@@ -63,14 +63,15 @@ const NumberValueRenderer = (props: NumberValueRendererProps) => {
   if (isEditing && !isReadonly && editor) {
     return (
       <Input
-        type="number"
         endContent={as === "progress" ? "%" : undefined}
         placeholder={t("common.placeholder.typeHere")}
         size={size}
+        type="number"
         value={value?.toString() ?? ""}
         onValueChange={(raw) => {
           const v = raw === "" ? undefined : parseFloat(raw);
           const valid = v != null && !Number.isNaN(v) ? v : undefined;
+
           setValue(valid);
           editor.onValueChange?.(valid, valid);
         }}
@@ -101,7 +102,7 @@ const NumberValueRenderer = (props: NumberValueRendererProps) => {
     return (
       <Progress
         showValueLabel
-        className={`w-[120px] ${startEditing ? "cursor-pointer" : ''}`}
+        className={`w-[120px] ${startEditing ? "cursor-pointer" : ""}`}
         classNames={{
           base: "relative",
           labelWrapper: "absolute inset-0 flex items-center justify-center z-10",

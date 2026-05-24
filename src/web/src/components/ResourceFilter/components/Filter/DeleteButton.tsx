@@ -16,10 +16,10 @@ const DeleteButton = ({ onDelete }: DeleteButtonProps) => {
   return (
     <Button
       isIconOnly
+      className="min-w-6 w-6 h-6"
+      color="danger"
       size="sm"
       variant="light"
-      color="danger"
-      className="min-w-6 w-6 h-6"
       onPress={onDelete}
     >
       <AiOutlineClose className="text-sm" />

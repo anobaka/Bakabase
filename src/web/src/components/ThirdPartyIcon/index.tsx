@@ -69,11 +69,7 @@ const ThirdPartyIcon = ({ thirdPartyId, size }: Props) => {
   }
 
   return (
-    <img
-      alt={t<string>(`ThirdPartyId.${ThirdPartyId[thirdPartyId]}`)}
-      src={img}
-      style={style}
-    />
+    <img alt={t<string>(`ThirdPartyId.${ThirdPartyId[thirdPartyId]}`)} src={img} style={style} />
   );
 };
 

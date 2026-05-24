@@ -9,19 +9,16 @@ import { useTranslation } from "react-i18next";
 import { useUpdate } from "react-use";
 import { AiOutlinePlusCircle } from "react-icons/ai";
 
+import ScopePreferencePopover from "./ScopePreferencePopover";
+
 import BApi from "@/sdk/BApi";
 import { propertyValueScopes } from "@/sdk/constants";
 import { selectScopedValue } from "@/core/models/Resource";
 import PropertyValueRenderer from "@/components/Property/components/PropertyValueRenderer";
 import { buildLogger } from "@/components/utils";
-import {
-  convertFromApiValue,
-  serializeStandardValue,
-} from "@/components/StandardValue/helpers";
+import { convertFromApiValue, serializeStandardValue } from "@/components/StandardValue/helpers";
 import BriefProperty from "@/components/Chips/Property/BriefProperty";
 import { Tooltip } from "@/components/bakaui";
-
-import ScopePreferencePopover from "./ScopePreferencePopover";
 
 export type PropertyContainerProps = {
   valueScopePriority: PropertyValueScope[];
@@ -124,7 +121,9 @@ const PropertyContainer = (props: PropertyContainerProps) => {
       {canShowPopover && (
         <span
           className={`transition-opacity duration-150 ${
-            isScopePopoverOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100 focus-within:opacity-100"
+            isScopePopoverOpen
+              ? "opacity-100"
+              : "opacity-0 group-hover:opacity-100 focus-within:opacity-100"
           }`}
         >
           <ScopePreferencePopover

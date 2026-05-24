@@ -1,6 +1,7 @@
 "use client";
 
 import type { DestroyableProps } from "@/components/bakaui/types";
+import type { BTask } from "@/core/models/BTask";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
@@ -18,7 +19,6 @@ import { Button, Chip } from "@/components/bakaui";
 import { BTaskStatus } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
 import { useBTasksStore } from "@/stores/bTasks";
-import type { BTask } from "@/core/models/BTask";
 
 export interface SyncProgressModalProps extends DestroyableProps {
   visible?: boolean;
@@ -30,7 +30,13 @@ export interface SyncProgressModalProps extends DestroyableProps {
 
 const SyncTaskId = "SyncPathMarks";
 
-const SyncProgressModal = ({ visible = true, forceResync = false, onClose, onComplete, onDestroyed }: SyncProgressModalProps) => {
+const SyncProgressModal = ({
+  visible = true,
+  forceResync = false,
+  onClose,
+  onComplete,
+  onDestroyed,
+}: SyncProgressModalProps) => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(visible);
   const bTasks = useBTasksStore((state) => state.tasks);
@@ -46,7 +52,9 @@ const SyncProgressModal = ({ visible = true, forceResync = false, onClose, onCom
   const progress = task?.percentage || 0;
   const currentProcess = task?.process || "";
   const error = task?.error;
-  const data = task?.data as { resourcesCreated?: number; propertiesApplied?: number; failedMarks?: number } | undefined;
+  const data = task?.data as
+    | { resourcesCreated?: number; propertiesApplied?: number; failedMarks?: number }
+    | undefined;
 
   // Start sync when modal opens
   useEffect(() => {
@@ -54,6 +62,7 @@ const SyncProgressModal = ({ visible = true, forceResync = false, onClose, onCom
       const trigger = forceResync
         ? BApi.pathMark.forceResyncAllPathMarks
         : BApi.pathMark.startPathMarkSyncAll;
+
       trigger().catch(console.error);
     }
   }, [visible, forceResync]);
@@ -95,10 +104,10 @@ const SyncProgressModal = ({ visible = true, forceResync = false, onClose, onCom
 
   return (
     <NextUiModal
-      isOpen={isOpen}
-      isDismissable={false}
       hideCloseButton={isSyncing || isPaused}
+      isDismissable={false}
       isKeyboardDismissDisabled={isSyncing || isPaused}
+      isOpen={isOpen}
       onClose={handleClose}
       onOpenChange={(open) => {
         if (!open && !isSyncing && !isPaused) {
@@ -117,23 +126,23 @@ const SyncProgressModal = ({ visible = true, forceResync = false, onClose, onCom
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between text-sm">
                 <span>{t("pathMarkConfig.label.progress")}</span>
-                <span className="text-default-500">
-                  {Math.round(progress)}%
-                </span>
+                <span className="text-default-500">{Math.round(progress)}%</span>
               </div>
               <Progress
                 aria-label="Sync progress"
+                className="w-full"
                 color={isError ? "danger" : isPaused ? "warning" : "primary"}
                 isIndeterminate={(isSyncing || isPaused) && progress === 0}
                 value={progress}
-                className="w-full"
               />
             </div>
 
             {/* Current process */}
             {currentProcess && (isSyncing || isPaused) && (
               <div className="flex flex-col gap-1">
-                <span className="text-sm text-default-500">{t("pathMarkConfig.label.currentlySyncing")}:</span>
+                <span className="text-sm text-default-500">
+                  {t("pathMarkConfig.label.currentlySyncing")}:
+                </span>
                 <span className="text-sm truncate" title={currentProcess}>
                   {currentProcess}
                 </span>
@@ -152,16 +161,12 @@ const SyncProgressModal = ({ visible = true, forceResync = false, onClose, onCom
 
             {/* Paused message */}
             {isPaused && (
-              <div className="text-sm text-warning">
-                {t("pathMarkConfig.status.paused")}
-              </div>
+              <div className="text-sm text-warning">{t("pathMarkConfig.status.paused")}</div>
             )}
 
             {/* Cancelled message */}
             {isCancelled && (
-              <div className="text-sm text-warning">
-                {t("pathMarkConfig.status.cancelled")}
-              </div>
+              <div className="text-sm text-warning">{t("pathMarkConfig.status.cancelled")}</div>
             )}
 
             {/* Completed summary */}
@@ -194,16 +199,16 @@ const SyncProgressModal = ({ visible = true, forceResync = false, onClose, onCom
             <div className="flex items-center gap-2">
               <Button
                 color="warning"
-                variant="flat"
                 startContent={<AiOutlinePause />}
+                variant="flat"
                 onPress={handlePause}
               >
                 {t("pathMarkConfig.action.pause")}
               </Button>
               <Button
                 color="danger"
-                variant="flat"
                 startContent={<AiOutlineStop />}
+                variant="flat"
                 onPress={handleStop}
               >
                 {t("pathMarkConfig.action.stop")}
@@ -213,16 +218,16 @@ const SyncProgressModal = ({ visible = true, forceResync = false, onClose, onCom
             <div className="flex items-center gap-2">
               <Button
                 color="primary"
-                variant="flat"
                 startContent={<AiOutlinePlayCircle />}
+                variant="flat"
                 onPress={handleResume}
               >
                 {t("pathMarkConfig.action.resume")}
               </Button>
               <Button
                 color="danger"
-                variant="flat"
                 startContent={<AiOutlineStop />}
+                variant="flat"
                 onPress={handleStop}
               >
                 {t("pathMarkConfig.action.stop")}

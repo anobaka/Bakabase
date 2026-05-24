@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import type { BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry } from "@/sdk/Api";
+import type { MediaPlayerEntry } from "../types";
+import type { MediaType } from "@/sdk/constants";
+
+import React from "react";
 
 import ThumbnailPanel from "./ThumbnailPanel";
 import MediaContent from "./MediaContent";
-import { MediaType, IwFsType } from "@/sdk/constants";
-
-import type { BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry } from "@/sdk/Api";
-import type { MediaPlayerEntry } from "../types";
 
 interface MediaPlayerLayoutProps {
   entries: MediaPlayerEntry[];
@@ -76,11 +76,7 @@ const MediaPlayerLayout: React.FC<MediaPlayerLayoutProps> = ({
   const mediaType = getMediaType(activeEntry);
 
   return (
-    <div
-      className="w-full h-full bg-black/90 flex flex-row"
-      tabIndex={-1}
-      onWheel={onWheel}
-    >
+    <div className="w-full h-full bg-black/90 flex flex-row" tabIndex={-1} onWheel={onWheel}>
       <ThumbnailPanel
         activeIndex={activeIndex}
         collapsed={leftPanelCollapsed}

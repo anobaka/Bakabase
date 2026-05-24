@@ -9,13 +9,7 @@ type Props = {
   className?: string;
   size?: "sm" | "md" | "lg";
   variant?: "solid" | "bordered" | "light" | "flat" | "faded" | "shadow";
-  color?:
-    | "default"
-    | "primary"
-    | "secondary"
-    | "success"
-    | "warning"
-    | "danger";
+  color?: "default" | "primary" | "secondary" | "success" | "warning" | "danger";
   tooltipContent?: string;
   showTooltip?: boolean;
 };
@@ -45,9 +39,9 @@ const DeprecatedChip = ({
 
   return (
     <Tooltip
-      delay={2000}
       color="foreground"
       content={tooltipContent || defaultTooltipContent}
+      delay={2000}
       placement="top"
     >
       {chip}

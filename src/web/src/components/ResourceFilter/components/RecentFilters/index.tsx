@@ -5,14 +5,13 @@ import type { SearchFilter } from "../../models";
 import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
 import { Button } from "@heroui/react";
-import { AiOutlineRightCircle } from "react-icons/ai";
+import { BiAddToQueue } from "react-icons/bi";
 
 import { useFilterConfig } from "../../context/FilterContext";
 import Filter from "../Filter";
 
 import { buildLogger } from "@/components/utils";
-import { Spinner, Tooltip } from "@/components/bakaui";
-import { BiAddToQueue } from "react-icons/bi";
+import { Spinner } from "@/components/bakaui";
 
 interface IProps {
   onSelectFilter?: (filter: SearchFilter) => void;
@@ -30,6 +29,7 @@ const RecentFilters = ({ onSelectFilter }: IProps) => {
     setLoading(true);
     try {
       const filters = await config.api.getRecentFilters();
+
       setRecentFilters(filters || []);
     } catch (error) {
       console.error("Failed to load recent filters:", error);
@@ -53,17 +53,17 @@ const RecentFilters = ({ onSelectFilter }: IProps) => {
   return (
     <div className={"grid-cols-2 gap-1 max-h-[400px] overflow-y-auto"}>
       {recentFilters.map((filter, index) => (
-        <div className="flex items-center gap-1">
+        <div key={index} className="flex items-center gap-1">
           <Button
-            variant="light"
-            size="sm"
-            color="primary"
-            onPress={() => onSelectFilter?.(filter)}
             isIconOnly
+            color="primary"
+            size="sm"
+            variant="light"
+            onPress={() => onSelectFilter?.(filter)}
           >
             <BiAddToQueue className={"text-lg"} />
           </Button>
-          <Filter isReadonly filter={filter} removeBackground />
+          <Filter isReadonly removeBackground filter={filter} />
         </div>
       ))}
     </div>

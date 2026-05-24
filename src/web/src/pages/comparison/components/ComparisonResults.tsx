@@ -1,23 +1,15 @@
 "use client";
 
-import type {
-  ComparisonPlanViewModel,
-  ComparisonResultGroupViewModel,
-} from "@/sdk/constants";
+import type { ComparisonPlanViewModel, ComparisonResultGroupViewModel } from "@/sdk/constants";
 
 import { useTranslation } from "react-i18next";
 import { useCallback, useEffect, useState } from "react";
 import { InfoCircleOutlined } from "@ant-design/icons";
 
-import {
-  Chip,
-  Pagination,
-  Spinner,
-  Checkbox,
-  NumberInput,
-} from "@/components/bakaui";
-import BApi from "@/sdk/BApi";
 import ComparisonResultGroup from "./ComparisonResultGroup";
+
+import { Chip, Pagination, Spinner, Checkbox, NumberInput } from "@/components/bakaui";
+import BApi from "@/sdk/BApi";
 
 interface ComparisonResultsProps {
   plan: ComparisonPlanViewModel;
@@ -45,6 +37,7 @@ const ComparisonResults = ({ plan }: ComparisonResultsProps) => {
         minMemberCount,
         includeHidden,
       });
+
       setGroups(r.data || []);
       setPageCount(r.totalCount || 0);
       // Use hiddenCount from API response
@@ -58,29 +51,32 @@ const ComparisonResults = ({ plan }: ComparisonResultsProps) => {
     loadResults();
   }, [loadResults]);
 
-  const handleGroupHiddenChange = useCallback((groupId: number, hidden: boolean) => {
-    if (hidden) {
-      // Group was hidden
-      if (!includeHidden) {
-        // Remove from list when not including hidden groups
-        setGroups((prev) => prev.filter((g) => g.id !== groupId));
-        setPageCount((prev) => Math.max(0, prev - 1));
+  const handleGroupHiddenChange = useCallback(
+    (groupId: number, hidden: boolean) => {
+      if (hidden) {
+        // Group was hidden
+        if (!includeHidden) {
+          // Remove from list when not including hidden groups
+          setGroups((prev) => prev.filter((g) => g.id !== groupId));
+          setPageCount((prev) => Math.max(0, prev - 1));
+        } else {
+          // Update the group's isHidden state in place
+          setGroups((prev) =>
+            prev.map((g) => (g.id === groupId ? ({ ...g, isHidden: true } as any) : g)),
+          );
+        }
+        setHiddenCount((prev) => prev + 1);
       } else {
+        // Group was unhidden
         // Update the group's isHidden state in place
-        setGroups((prev) => prev.map((g) =>
-          g.id === groupId ? { ...g, isHidden: true } as any : g
-        ));
+        setGroups((prev) =>
+          prev.map((g) => (g.id === groupId ? ({ ...g, isHidden: false } as any) : g)),
+        );
+        setHiddenCount((prev) => Math.max(0, prev - 1));
       }
-      setHiddenCount((prev) => prev + 1);
-    } else {
-      // Group was unhidden
-      // Update the group's isHidden state in place
-      setGroups((prev) => prev.map((g) =>
-        g.id === groupId ? { ...g, isHidden: false } as any : g
-      ));
-      setHiddenCount((prev) => Math.max(0, prev - 1));
-    }
-  }, [includeHidden]);
+    },
+    [includeHidden],
+  );
 
   // Total groups = current page count + hidden count (when not including hidden)
   const totalGroups = includeHidden ? pageCount : pageCount + hiddenCount;
@@ -104,8 +100,8 @@ const ComparisonResults = ({ plan }: ComparisonResultsProps) => {
           />
         </div>
         <Checkbox
-          size="sm"
           isSelected={includeHidden}
+          size="sm"
           onValueChange={(v) => {
             setIncludeHidden(v);
             setPage(1);
@@ -117,11 +113,11 @@ const ComparisonResults = ({ plan }: ComparisonResultsProps) => {
           {t("comparison.label.totalGroups")}: {totalGroups}
         </Chip>
         {hiddenCount > 0 && (
-          <Chip size="sm" variant="flat" color="warning">
+          <Chip color="warning" size="sm" variant="flat">
             {t("comparison.label.hiddenGroups")}: {hiddenCount}
           </Chip>
         )}
-        <Chip size="sm" variant="flat" className="text-default-400">
+        <Chip className="text-default-400" size="sm" variant="flat">
           {t("comparison.label.threshold")}: {plan.threshold}%
         </Chip>
       </div>
@@ -147,8 +143,8 @@ const ComparisonResults = ({ plan }: ComparisonResultsProps) => {
           {groups.map((group) => (
             <ComparisonResultGroup
               key={group.id}
-              planId={plan.id!}
               group={group}
+              planId={plan.id!}
               threshold={plan.threshold!}
               onHiddenChange={(hidden) => handleGroupHiddenChange(group.id!, hidden)}
             />
@@ -157,11 +153,7 @@ const ComparisonResults = ({ plan }: ComparisonResultsProps) => {
           {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex justify-center mt-4">
-              <Pagination
-                page={page}
-                total={totalPages}
-                onChange={setPage}
-              />
+              <Pagination page={page} total={totalPages} onChange={setPage} />
             </div>
           )}
         </div>

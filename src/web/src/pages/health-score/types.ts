@@ -26,6 +26,7 @@ export const apiFilterGroupToInternal = (
   g: ApiFilterGroup | null | undefined,
 ): SearchFilterGroup | undefined => {
   if (!g) return undefined;
+
   return {
     combinator: g.combinator as unknown as SearchFilterGroup["combinator"],
     disabled: g.disabled ?? false,
@@ -44,17 +45,20 @@ export const internalFilterGroupToApi = (
   g: SearchFilterGroup | null | undefined,
 ): ApiFilterGroup | undefined => {
   if (!g) return undefined;
+
   return {
     combinator: g.combinator as any,
     disabled: g.disabled ?? false,
     groups: g.groups?.map((sub) => internalFilterGroupToApi(sub)!).filter(Boolean),
-    filters: g.filters?.map((f: any): ApiFilter => ({
-      propertyId: f.propertyId,
-      propertyPool: f.propertyPool,
-      operation: f.operation,
-      value: f.dbValue,
-      disabled: f.disabled ?? false,
-    })),
+    filters: g.filters?.map(
+      (f: any): ApiFilter => ({
+        propertyId: f.propertyId,
+        propertyPool: f.propertyPool,
+        operation: f.operation,
+        value: f.dbValue,
+        disabled: f.disabled ?? false,
+      }),
+    ),
   };
 };
 

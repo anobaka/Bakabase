@@ -60,7 +60,9 @@ import { convertFromApiValue } from "@/components/StandardValue/helpers";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import PropertyValueScopePicker from "@/components/Resource/components/DetailModal/PropertyValueScopePicker";
 import PlayControl from "@/components/Resource/components/PlayControl";
+
 import type { PlayControlPortalProps } from "@/components/Resource/components/PlayControl";
+
 import CustomPropertySortModal from "@/components/CustomPropertySortModal";
 import AiTranslateModal from "@/components/Resource/components/DetailModal/AiTranslateModal";
 import ConflictResolutionModal from "@/components/Resource/components/DetailModal/ConflictResolutionModal";
@@ -75,6 +77,44 @@ import { useUiOptionsStore } from "@/stores/options";
 
 type ColumnCount = 1 | 2 | 3;
 const PROPERTIES_COLUMNS_KEY = "bakabase:properties:columns";
+
+const PlayControlPortal = ({
+  status,
+  sources,
+  onPlaySource,
+  onNotFound,
+  triggerFsDiscovery,
+  fsDiscoveryStatus,
+}: PlayControlPortalProps) => {
+  const { t } = useTranslation();
+
+  React.useEffect(() => {
+    if (fsDiscoveryStatus === "idle") triggerFsDiscovery();
+  }, [fsDiscoveryStatus, triggerFsDiscovery]);
+
+  const mainSource = sources[0];
+
+  return (
+    <Tooltip content={t("common.action.play")}>
+      <Button
+        isIconOnly
+        color="primary"
+        isDisabled={status === "loading" || status === "idle"}
+        onPress={() =>
+          mainSource ? onPlaySource(mainSource.source) : onNotFound()
+        }
+      >
+        {status === "loading" || status === "idle" ? (
+          <LoadingOutlined spin className="text-lg" />
+        ) : status === "not-found" ? (
+          <QuestionCircleOutlined className="text-lg text-warning" />
+        ) : (
+          <PlayCircleOutlined className="text-lg" />
+        )}
+      </Button>
+    </Tooltip>
+  );
+};
 
 interface Props extends DestroyableProps {
   id: number;
@@ -99,6 +139,7 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
   const loadConflictCount = async () => {
     try {
       const r = await BApi.resource.getResourceConflicts(id);
+
       setConflictCount((r.data || []).length);
     } catch {
       setConflictCount(0);
@@ -179,40 +220,7 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
             <div className="flex items-center justify-center">
               <ButtonGroup size={"sm"}>
                 <PlayControl
-                  PortalComponent={({
-                    status,
-                    sources,
-                    onPlaySource,
-                    onNotFound,
-                    triggerFsDiscovery,
-                    fsDiscoveryStatus,
-                  }: PlayControlPortalProps) => {
-                    React.useEffect(() => {
-                      if (fsDiscoveryStatus === "idle") triggerFsDiscovery();
-                    }, [fsDiscoveryStatus, triggerFsDiscovery]);
-
-                    const mainSource = sources[0];
-                    return (
-                      <Tooltip content={t("common.action.play")}>
-                        <Button
-                          isIconOnly
-                          color="primary"
-                          onPress={() =>
-                            mainSource ? onPlaySource(mainSource.source) : onNotFound()
-                          }
-                          isDisabled={status === "loading" || status === "idle"}
-                        >
-                          {status === "loading" || status === "idle" ? (
-                            <LoadingOutlined className="text-lg" spin />
-                          ) : status === "not-found" ? (
-                            <QuestionCircleOutlined className="text-lg text-warning" />
-                          ) : (
-                            <PlayCircleOutlined className="text-lg" />
-                          )}
-                        </Button>
-                      </Tooltip>
-                    );
-                  }}
+                  PortalComponent={PlayControlPortal}
                   resource={resource}
                 />
                 <Tooltip content={t("common.action.openFolder")}>
@@ -248,12 +256,13 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
                     <Button
                       isIconOnly
                       color="default"
-                      variant="light"
                       isDisabled={refreshingCache}
+                      variant="light"
                       onPress={async () => {
                         setRefreshingCache(true);
                         try {
                           const rsp = await BApi.cache.refreshResourceCache(resource.id);
+
                           if (!rsp.code) {
                             toast.success(t<string>("resource.action.refreshCache.success"));
                             await loadResource();
@@ -264,7 +273,7 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
                       }}
                     >
                       {refreshingCache ? (
-                        <LoadingOutlined className="text-lg" spin />
+                        <LoadingOutlined spin className="text-lg" />
                       ) : (
                         <ReloadOutlined className="text-lg" />
                       )}
@@ -273,9 +282,7 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
                 )}
                 <Tooltip
                   content={
-                    hideTimeInfo
-                      ? t("common.action.showTimeInfo")
-                      : t("common.action.hideTimeInfo")
+                    hideTimeInfo ? t("common.action.showTimeInfo") : t("common.action.hideTimeInfo")
                   }
                 >
                   <Button
@@ -385,17 +392,26 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
           return null;
       }
     },
-    [resource, hideTimeInfo, columns, uiOptions, refreshingCache, createPortal, t, props.onDestroyed],
+    [
+      resource,
+      hideTimeInfo,
+      columns,
+      uiOptions,
+      refreshingCache,
+      createPortal,
+      t,
+      props.onDestroyed,
+    ],
   );
 
   return (
     <Modal
       defaultVisible
-      footer={false}
-      size={"7xl"}
       classNames={{
         base: "max-w-[var(--detail-modal-w)] max-h-[var(--detail-modal-h)] w-[var(--detail-modal-w)] h-[var(--detail-modal-h)]",
       }}
+      footer={false}
+      size={"7xl"}
       style={
         {
           "--detail-modal-w": `${layoutConfig.modalWidthPercent}vw`,
@@ -412,9 +428,9 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
               <Tooltip content={t("resource.conflict.tooltip", { count: conflictCount })}>
                 <Button
                   isIconOnly
+                  color={"warning"}
                   size={"sm"}
                   variant={"light"}
-                  color={"warning"}
                   onPress={() => {
                     createPortal(ConflictResolutionModal, {
                       resourceId: resource.id,
@@ -462,13 +478,11 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-default-500">{t("resource.label.columns")}</span>
                   <ButtonGroup size="sm">
-                    {(
-                      [
-                        { col: 1 as const, icon: <TbColumns1 /> },
-                        { col: 2 as const, icon: <TbColumns2 /> },
-                        { col: 3 as const, icon: <TbColumns3 /> },
-                      ]
-                    ).map(({ col, icon }) => (
+                    {[
+                      { col: 1 as const, icon: <TbColumns1 /> },
+                      { col: 2 as const, icon: <TbColumns2 /> },
+                      { col: 3 as const, icon: <TbColumns3 /> },
+                    ].map(({ col, icon }) => (
                       <Button
                         key={col}
                         isIconOnly

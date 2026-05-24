@@ -1,28 +1,24 @@
 "use client";
 
 import type { SearchForm } from "@/pages/resource/models";
-import type { SearchFilter, SearchFilterGroup } from "@/components/ResourceFilter/models";
 
 import { useTranslation } from "react-i18next";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useUpdateEffect } from "react-use";
-import { SearchOutlined } from "@ant-design/icons";
 import { AiOutlineExport, AiOutlineSearch } from "react-icons/ai";
 import { MdPlaylistPlay } from "react-icons/md";
 import { HistoryOutlined } from "@ant-design/icons";
 
 import styles from "./index.module.scss";
 import OrderSelector from "./OrderSelector";
+import ShortcutsButton from "./ShortcutsButton";
 
-import BApi from "@/sdk/BApi";
-import { FilterDisplayMode, PropertyPool, ResourceProperty, ResourceTag, SearchOperation } from "@/sdk/constants";
+import { FilterDisplayMode } from "@/sdk/constants";
 import { PlaylistCollection } from "@/components/Playlist";
 import { Button, Checkbox, Chip, Popover, Spinner, Tooltip } from "@/components/bakaui";
-import ShortcutsButton from "./ShortcutsButton";
 import MiscellaneousOptions from "@/pages/resource/components/FilterPanel/MiscellaneousOptions";
 import { ResourceFilterController, GroupCombinator } from "@/components/ResourceFilter";
 import { buildLogger, useTraceUpdate } from "@/components/utils.tsx";
-import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
 interface IProps {
   selectedResourceIds?: number[];
@@ -50,7 +46,6 @@ const defaultSearchForm = (): SearchForm => ({
 const log = buildLogger("FilterPanel");
 
 const FilterPanel = (props: IProps) => {
-
   const {
     maxResourceColCount = DefaultMaxResourceColCount,
     selectedResourceIds,
@@ -94,10 +89,11 @@ const FilterPanel = (props: IProps) => {
       // 2. Remove sub-groups
       // 3. Reset disabled state on remaining filters
       const currentGroup = searchForm.group;
+
       if (currentGroup) {
         const cleanedFilters = (currentGroup.filters || [])
-          .filter(f => !f.disabled)
-          .map(f => ({ ...f, disabled: false }));
+          .filter((f) => !f.disabled)
+          .map((f) => ({ ...f, disabled: false }));
 
         setSearchForm({
           ...searchForm,
@@ -137,6 +133,7 @@ const FilterPanel = (props: IProps) => {
   };
 
   const searchFormRef = useRef(searchForm);
+
   searchFormRef.current = searchForm;
 
   const autoSearchTimerRef = useRef<ReturnType<typeof setTimeout>>();
@@ -171,12 +168,7 @@ const FilterPanel = (props: IProps) => {
           <Popover
             className="min-w-[160px]"
             trigger={
-              <Button
-                isIconOnly
-                color={"default"}
-                size={"sm"}
-                variant={"light"}
-              >
+              <Button isIconOnly color={"default"} size={"sm"} variant={"light"}>
                 <MdPlaylistPlay className={"text-xl"} />
               </Button>
             }
@@ -201,7 +193,23 @@ const FilterPanel = (props: IProps) => {
       {/* Scrollable Filters Area */}
       <div className="flex-grow overflow-y-auto min-h-0">
         <ResourceFilterController
+          autoCreateMediaLibraryFilter
+          showRecentFilters
+          showTags
+          filterDisplayMode={filterMode}
+          filterLayout="vertical"
+          group={searchForm.group}
           keyword={searchForm.keyword}
+          keywordPlaceholder={t<string>("resource.search.placeholder")}
+          tags={searchForm.tags}
+          onFilterDisplayModeChange={handleModeChange}
+          onGroupChange={(group) => {
+            setSearchForm({
+              ...searchForm,
+              group,
+            });
+            scheduleAutoSearch();
+          }}
           onKeywordChange={(keyword) => {
             setSearchForm({
               ...searchForm,
@@ -214,156 +222,139 @@ const FilterPanel = (props: IProps) => {
               page: 1,
             });
           }}
-          group={searchForm.group}
-          onGroupChange={(group) => {
-            setSearchForm({
-              ...searchForm,
-              group,
-            });
-            scheduleAutoSearch();
-          }}
-          tags={searchForm.tags}
           onTagsChange={(tags) => {
             setSearchForm({
               ...searchForm,
               tags: tags.length > 0 ? tags : undefined,
             });
           }}
-          filterDisplayMode={filterMode}
-          onFilterDisplayModeChange={handleModeChange}
-          filterLayout="vertical"
-          showRecentFilters
-          showTags
-          keywordPlaceholder={t<string>("resource.search.placeholder")}
-          autoCreateMediaLibraryFilter
         />
       </div>
 
-        {/* Order Selector - Fixed */}
-        <div className="flex-shrink-0 mt-3">
-          <OrderSelector
-            value={searchForm.orders}
-            onChange={(orders) => {
-              const nf = {
-                ...searchForm,
-                orders,
-              };
+      {/* Order Selector - Fixed */}
+      <div className="flex-shrink-0 mt-3">
+        <OrderSelector
+          value={searchForm.orders}
+          onChange={(orders) => {
+            const nf = {
+              ...searchForm,
+              orders,
+            };
 
-              setSearchForm(nf);
-              cancelPendingAutoSearch();
-              search(nf);
-            }}
-          />
-        </div>
+            setSearchForm(nf);
+            cancelPendingAutoSearch();
+            search(nf);
+          }}
+        />
+      </div>
 
       {/* Fixed Bottom Actions */}
       <div className="flex-shrink-0 pt-3 mt-3 border-t border-divider space-y-2">
-          {/* Selection Info */}
-          <div className="flex items-center justify-between">
-            <Tooltip
-              content={
-                <div className={"flex items-center gap-1"}>
-                  {t<string>("resource.search.loadedInPage")}
-                  {selectingAllFilteredResources ? (
-                    <Spinner size={"sm"} />
-                  ) : (
-                    totalFilteredResourceCount != resourceCount && (
-                      <Button
-                        color={"primary"}
-                        size={"sm"}
-                        variant={"light"}
-                        onPress={async () => {
-                          setSelectedAll(true);
-                          setSelectingAllFilteredResources(true);
-                          try {
-                            const ret = onSelectAllChange(true, true);
-
-                            if (!!ret && typeof ret.then === "function") {
-                              await ret;
-                            }
-                          } finally {
-                            setSelectingAllFilteredResources(false);
-                          }
-                        }}
-                      >
-                        {t<string>(
-                          "resource.search.selectAllFiltered",
-                          { count: totalFilteredResourceCount },
-                        )}
-                      </Button>
-                    )
-                  )}
-                </div>
-              }
-            >
-              <Checkbox
-                isSelected={selectedAll && selectedResourceIds && selectedResourceIds?.length > 0}
-                size={"sm"}
-                onValueChange={(isSelected) => {
-                  onSelectAllChange(isSelected);
-                  setSelectedAll(isSelected);
-                }}
-              >
-                {selectedAll
-                  ? t<string>("resource.search.selectedCount", {
-                      count: selectedResourceIds?.length,
-                    })
-                  : t<string>("resource.search.selectAll")}
-              </Checkbox>
-            </Tooltip>
-            {totalFilteredResourceCount && totalFilteredResourceCount > 0 ? (
+        {/* Selection Info */}
+        <div className="flex items-center justify-between">
+          <Tooltip
+            content={
               <div className={"flex items-center gap-1"}>
-                <Tooltip content={t<string>("resource.search.loadedResources")}>
-                  <Chip color={"success"} size="sm" variant="light">
-                    {resourceCount}
-                  </Chip>
-                </Tooltip>
-                /
-                <Tooltip content={t<string>("resource.search.allFiltered")}>
-                  <Chip color={"secondary"} size="sm" variant="light">
-                    {totalFilteredResourceCount}
-                  </Chip>
-                </Tooltip>
-              </div>
-            ) : null}
-          </div>
+                {t<string>("resource.search.loadedInPage")}
+                {selectingAllFilteredResources ? (
+                  <Spinner size={"sm"} />
+                ) : (
+                  totalFilteredResourceCount != resourceCount && (
+                    <Button
+                      color={"primary"}
+                      size={"sm"}
+                      variant={"light"}
+                      onPress={async () => {
+                        setSelectedAll(true);
+                        setSelectingAllFilteredResources(true);
+                        try {
+                          const ret = onSelectAllChange(true, true);
 
-          {/* Search Buttons */}
-          <div className="flex items-center gap-2">
-            <Button
-              color={"primary"}
-              isLoading={searching}
+                          if (!!ret && typeof ret.then === "function") {
+                            await ret;
+                          }
+                        } finally {
+                          setSelectingAllFilteredResources(false);
+                        }
+                      }}
+                    >
+                      {t<string>("resource.search.selectAllFiltered", {
+                        count: totalFilteredResourceCount,
+                      })}
+                    </Button>
+                  )
+                )}
+              </div>
+            }
+          >
+            <Checkbox
+              isSelected={selectedAll && selectedResourceIds && selectedResourceIds?.length > 0}
               size={"sm"}
-              className="flex-1"
-              onPress={async () => {
-                cancelPendingAutoSearch();
-                await search({
+              onValueChange={(isSelected) => {
+                onSelectAllChange(isSelected);
+                setSelectedAll(isSelected);
+              }}
+            >
+              {selectedAll
+                ? t<string>("resource.search.selectedCount", {
+                    count: selectedResourceIds?.length,
+                  })
+                : t<string>("resource.search.selectAll")}
+            </Checkbox>
+          </Tooltip>
+          {totalFilteredResourceCount && totalFilteredResourceCount > 0 ? (
+            <div className={"flex items-center gap-1"}>
+              <Tooltip content={t<string>("resource.search.loadedResources")}>
+                <Chip color={"success"} size="sm" variant="light">
+                  {resourceCount}
+                </Chip>
+              </Tooltip>
+              /
+              <Tooltip content={t<string>("resource.search.allFiltered")}>
+                <Chip color={"secondary"} size="sm" variant="light">
+                  {totalFilteredResourceCount}
+                </Chip>
+              </Tooltip>
+            </div>
+          ) : null}
+        </div>
+
+        {/* Search Buttons */}
+        <div className="flex items-center gap-2">
+          <Button
+            className="flex-1"
+            color={"primary"}
+            isLoading={searching}
+            size={"sm"}
+            onPress={async () => {
+              cancelPendingAutoSearch();
+              await search({
+                ...searchForm,
+                page: 1,
+              });
+            }}
+          >
+            <AiOutlineSearch className={"text-base"} />
+            {t<string>("resource.search.button")}
+          </Button>
+          <Button
+            isLoading={searching}
+            size={"sm"}
+            onPress={async () => {
+              await search(
+                {
                   ...searchForm,
                   page: 1,
-                });
-              }}
-            >
-              <AiOutlineSearch className={"text-base"} />
-              {t<string>("resource.search.button")}
-            </Button>
-            <Button
-              isLoading={searching}
-              size={"sm"}
-              onPress={async () => {
-                await search(
-                  {
-                    ...searchForm,
-                    page: 1,
-                  },
-                  true,
-                );
-              }}
-            >
-              <AiOutlineExport className={"text-base"} />
-              {t<string>("resource.search.newTab")}
-            </Button>
-          </div>
+                },
+                true,
+              );
+            }}
+          >
+            <AiOutlineExport className={"text-base"} />
+            {t<string>("resource.search.newTab")}
+          </Button>
         </div>
+      </div>
     </div>
   );
 };

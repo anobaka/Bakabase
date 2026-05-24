@@ -1,7 +1,9 @@
+import type { PlayableItem, Resource } from "@/core/models/Resource";
+
 import { useEffect, useState, useRef, useMemo, useCallback } from "react";
+
 import { resourceDiscoveryChannel, type DiscoveryData } from "@/services/ResourceDiscoveryChannel";
 import { DataOrigin, DataStatus, ResourceDataType } from "@/sdk/constants";
-import type { PlayableItem, Resource, ResourceDataState } from "@/core/models/Resource";
 
 export type OriginGroup = {
   origin: DataOrigin;
@@ -20,7 +22,12 @@ export type PlayableItemResolutionState = {
 
 export type PlayableItemResolutionCallbacks = {
   onDiscoveryStart?: (resourceId: number, origin: DataOrigin) => void;
-  onDiscoveryComplete?: (resourceId: number, origin: DataOrigin, data: DiscoveryData | null, error?: string) => void;
+  onDiscoveryComplete?: (
+    resourceId: number,
+    origin: DataOrigin,
+    data: DiscoveryData | null,
+    error?: string,
+  ) => void;
 };
 
 // Fixed display order for origins
@@ -33,12 +40,12 @@ const ORIGIN_ORDER: DataOrigin[] = [
 
 export function usePlayableItemResolution(
   resource: Resource,
-  callbacks?: PlayableItemResolutionCallbacks
+  callbacks?: PlayableItemResolutionCallbacks,
 ): PlayableItemResolutionState {
   // Get playableItem-related dataStates
   const piStates = useMemo(
-    () => resource.dataStates?.filter(s => s.dataType === ResourceDataType.PlayableItem) ?? [],
-    [resource.dataStates]
+    () => resource.dataStates?.filter((s) => s.dataType === ResourceDataType.PlayableItem) ?? [],
+    [resource.dataStates],
   );
 
   // SSE-discovered items per origin
@@ -47,9 +54,11 @@ export function usePlayableItemResolution(
   const [manualTriggers, setManualTriggers] = useState<Set<DataOrigin>>(new Set());
 
   const triggerDiscovery = useCallback((origin: DataOrigin) => {
-    setManualTriggers(prev => {
+    setManualTriggers((prev) => {
       const next = new Set(prev);
+
       next.add(origin);
+
       return next;
     });
   }, []);
@@ -58,10 +67,11 @@ export function usePlayableItemResolution(
   const originsToDiscover = useMemo(() => {
     if (piStates.length === 0) return [];
     const autoOrigins = piStates
-      .filter(s => s.status === DataStatus.NotStarted)
-      .map(s => s.origin);
+      .filter((s) => s.status === DataStatus.NotStarted)
+      .map((s) => s.origin);
     // Merge with manual triggers
     const all = new Set([...autoOrigins, ...manualTriggers]);
+
     return Array.from(all);
   }, [piStates, manualTriggers]);
 
@@ -80,19 +90,21 @@ export function usePlayableItemResolution(
           callbacks?.onDiscoveryComplete?.(resource.id, origin, data, error);
           // Record completion even when the backend returns no items or an error,
           // otherwise folder-only resources would stay in NotStarted forever.
-          setSseItems(prev => {
+          setSseItems((prev) => {
             const next = new Map(prev);
+
             next.set(origin, {
               items: data?.playableItems ?? [],
             });
+
             return next;
           });
         })
-        .then(unsub => unsubscribes.push(unsub));
+        .then((unsub) => unsubscribes.push(unsub));
     }
 
     return () => {
-      unsubscribes.forEach(fn => fn());
+      unsubscribes.forEach((fn) => fn());
       subscribedRef.current = new Set();
     };
   }, [resource.id, originsToDiscover.join(",")]);
@@ -110,15 +122,19 @@ export function usePlayableItemResolution(
 
     // Backend items grouped by origin
     const backendItemsByOrigin = new Map<DataOrigin, PlayableItem[]>();
+
     for (const item of resource.playableItems ?? []) {
       const list = backendItemsByOrigin.get(item.origin) ?? [];
+
       list.push(item);
       backendItemsByOrigin.set(item.origin, list);
     }
 
     const result: OriginGroup[] = [];
+
     for (const origin of ORIGIN_ORDER) {
-      const state = piStates.find(s => s.origin === origin);
+      const state = piStates.find((s) => s.origin === origin);
+
       if (!state) continue; // This origin doesn't apply
 
       // SSE items override backend items for this origin
@@ -140,8 +156,9 @@ export function usePlayableItemResolution(
 
   const overallStatus = useMemo((): "ready" | "loading" | "not-found" => {
     if (piStates.length === 0) return "not-found";
-    if (groups.some(g => g.items.length > 0)) return "ready";
-    if (groups.some(g => g.status === DataStatus.NotStarted)) return "loading";
+    if (groups.some((g) => g.items.length > 0)) return "ready";
+    if (groups.some((g) => g.status === DataStatus.NotStarted)) return "loading";
+
     return "not-found";
   }, [piStates, groups]);
 

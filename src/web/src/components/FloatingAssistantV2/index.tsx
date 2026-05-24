@@ -1,14 +1,18 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import './index.scss';
-import { useStateMachine } from './hooks/useStateMachine';
-import { useBakaDraggable } from './hooks/useDraggable';
-import { useAutonomousBehavior } from './hooks/useAutonomousBehavior';
-import BakaCharacter from './components/BakaCharacter';
-import ChatPanel from './components/ChatPanel';
-import TaskPopover from './components/TaskPopover';
-import type { DockedEdge } from './types';
-import { BAKA_SIZE, CLICK_ANIM_DURATION, REDOCK_DELAY, WAVING_BYE_DURATION } from './constants';
-import { Popover } from '@/components/bakaui';
+import React, { useCallback, useEffect, useRef, useState } from "react";
+
+import "./index.scss";
+import { useStateMachine } from "./hooks/useStateMachine";
+import { useBakaDraggable } from "./hooks/useDraggable";
+import { useAutonomousBehavior } from "./hooks/useAutonomousBehavior";
+import BakaCharacter from "./components/BakaCharacter";
+import ChatPanel from "./components/ChatPanel";
+import TaskPopover from "./components/TaskPopover";
+
+import type { DockedEdge } from "./types";
+
+import { BAKA_SIZE, REDOCK_DELAY, WAVING_BYE_DURATION } from "./constants";
+
+import { Popover } from "@/components/bakaui";
 
 const HOVER_HITBOX_EXTRA = 24;
 
@@ -21,15 +25,19 @@ const FloatingAssistantV2: React.FC = () => {
   const [popoverVisible, setPopoverVisible] = useState(false);
 
   const machineRef = useRef(machine);
+
   machineRef.current = machine;
 
   const onDragStart = useCallback(() => {
-    send({ type: 'DRAG_START' });
+    send({ type: "DRAG_START" });
   }, [send]);
 
-  const onDragEnd = useCallback((nearEdge: DockedEdge | null) => {
-    send({ type: 'DRAG_END', nearEdge });
-  }, [send]);
+  const onDragEnd = useCallback(
+    (nearEdge: DockedEdge | null) => {
+      send({ type: "DRAG_END", nearEdge });
+    },
+    [send],
+  );
 
   const { position, handleMouseDown, isDragging, isDraggingState, undockFromEdge, redockToEdge } =
     useBakaDraggable(onDragStart, onDragEnd);
@@ -48,26 +56,29 @@ const FloatingAssistantV2: React.FC = () => {
     clearTimeout(wavingTimerRef.current);
     redockTimerRef.current = setTimeout(() => {
       const m = machineRef.current;
+
       if (mouseOverRef.current) return;
       if (!m.undockedByHover) return;
-      if (m.state === 'clicked' || m.state === 'chatting' || m.state === 'dragging') return;
+      if (m.state === "clicked" || m.state === "chatting" || m.state === "dragging") return;
 
-      send({ type: 'UNDOCK' });
+      send({ type: "UNDOCK" });
 
       wavingTimerRef.current = setTimeout(() => {
         if (mouseOverRef.current) {
-          send({ type: 'HOVER_ENTER' });
+          send({ type: "HOVER_ENTER" });
+
           return;
         }
         const m2 = machineRef.current;
+
         redockToEdge(m2.dockedEdge);
-        send({ type: 'REDOCK' });
+        send({ type: "REDOCK" });
       }, WAVING_BYE_DURATION);
     }, REDOCK_DELAY);
   }, [redockToEdge, send]);
 
   useEffect(() => {
-    if (machine.state === 'hovered' && machine.undockedByHover && !mouseOverRef.current) {
+    if (machine.state === "hovered" && machine.undockedByHover && !mouseOverRef.current) {
       scheduleRedock();
     }
   }, [machine.state, machine.undockedByHover, scheduleRedock]);
@@ -84,13 +95,15 @@ const FloatingAssistantV2: React.FC = () => {
   const handleClick = useCallback(() => {
     if (isDragging()) return;
 
-    if (machine.state === 'chatting') {
-      send({ type: 'CLOSE_CHAT' });
+    if (machine.state === "chatting") {
+      send({ type: "CLOSE_CHAT" });
+
       return;
     }
-    if (machine.state === 'waving-bye') {
+    if (machine.state === "waving-bye") {
       cancelRedock();
-      send({ type: 'HOVER_ENTER' });
+      send({ type: "HOVER_ENTER" });
+
       return;
     }
 
@@ -103,25 +116,27 @@ const FloatingAssistantV2: React.FC = () => {
     cancelRedock();
     clearTimeout(clickTimerRef.current);
     setPopoverVisible(false); // close popover if open
-    send({ type: 'OPEN_CHAT' });
+    send({ type: "OPEN_CHAT" });
   }, [isDragging, send, cancelRedock]);
 
   const handleOpenChatFromPopover = useCallback(() => {
     setPopoverVisible(false);
     cancelRedock();
-    send({ type: 'OPEN_CHAT' });
+    send({ type: "OPEN_CHAT" });
   }, [send, cancelRedock]);
 
   const handleMouseEnter = useCallback(() => {
     mouseOverRef.current = true;
     cancelRedock();
     if (isDragging()) return;
-    if (machine.state === 'waving-bye') {
-      send({ type: 'HOVER_ENTER' });
+    if (machine.state === "waving-bye") {
+      send({ type: "HOVER_ENTER" });
+
       return;
     }
-    const wasDocked = machine.state === 'docked' || machine.state === 'peeking';
-    send({ type: 'HOVER_ENTER' });
+    const wasDocked = machine.state === "docked" || machine.state === "peeking";
+
+    send({ type: "HOVER_ENTER" });
     if (wasDocked) {
       undockFromEdge(machine.dockedEdge);
     }
@@ -129,20 +144,25 @@ const FloatingAssistantV2: React.FC = () => {
 
   const handleMouseLeave = useCallback(() => {
     mouseOverRef.current = false;
-    if (machine.state === 'clicked' || machine.state === 'chatting' || machine.state === 'waving-bye') return;
+    if (
+      machine.state === "clicked" ||
+      machine.state === "chatting" ||
+      machine.state === "waving-bye"
+    )
+      return;
     if (machine.undockedByHover) {
       scheduleRedock();
     } else {
-      send({ type: 'HOVER_LEAVE' });
+      send({ type: "HOVER_LEAVE" });
     }
   }, [machine.state, machine.undockedByHover, send, scheduleRedock]);
 
   const handleCloseChat = useCallback(() => {
-    send({ type: 'CLOSE_CHAT' });
+    send({ type: "CLOSE_CHAT" });
   }, [send]);
 
-  const cursorClass = isDraggingState ? 'cursor-grabbing' : 'cursor-grab';
-  const isDocked = machine.state === 'docked' || machine.state === 'peeking';
+  const cursorClass = isDraggingState ? "cursor-grabbing" : "cursor-grab";
+  const isDocked = machine.state === "docked" || machine.state === "peeking";
 
   return (
     <>
@@ -154,42 +174,50 @@ const FloatingAssistantV2: React.FC = () => {
         />
       )}
       <Popover
-        visible={popoverVisible}
-        onOpenChange={(v) => {
-          if (!v) setPopoverVisible(false);
-        }}
         trigger={
           <div
             className={`baka-assistant-v2 baka-state-${machine.state} ${cursorClass}`}
+            role="button"
             style={{
               left: position.x,
               top: position.y,
               width: BAKA_SIZE,
               height: BAKA_SIZE,
             }}
-            onMouseDown={handleMouseDown}
+            tabIndex={0}
             onClick={handleClick}
             onDoubleClick={handleDoubleClick}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                handleClick();
+              }
+            }}
+            onMouseDown={handleMouseDown}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
           >
             <BakaCharacter
-              state={machine.state}
-              idlePose={machine.idlePose}
-              hoverPose={machine.hoverPose}
               clickPose={machine.clickPose}
-              peekPose={machine.peekPose}
               dockedEdge={machine.dockedEdge}
+              hoverPose={machine.hoverPose}
+              idlePose={machine.idlePose}
+              peekPose={machine.peekPose}
+              state={machine.state}
             />
           </div>
         }
+        visible={popoverVisible}
+        onOpenChange={(v) => {
+          if (!v) setPopoverVisible(false);
+        }}
       >
         <TaskPopover onOpenChat={handleOpenChatFromPopover} />
       </Popover>
       <ChatPanel
-        visible={machine.state === 'chatting'}
-        position={position}
         dockedEdge={machine.dockedEdge}
+        position={position}
+        visible={machine.state === "chatting"}
         onClose={handleCloseChat}
       />
     </>
@@ -202,18 +230,43 @@ function getDockHitboxStyle(
 ): React.CSSProperties {
   const size = BAKA_SIZE + HOVER_HITBOX_EXTRA * 2;
   const base: React.CSSProperties = {
-    position: 'fixed',
+    position: "fixed",
     zIndex: 48,
   };
+
   switch (edge) {
-    case 'left':
-      return { ...base, left: 0, top: position.y - HOVER_HITBOX_EXTRA, width: BAKA_SIZE + HOVER_HITBOX_EXTRA, height: size };
-    case 'right':
-      return { ...base, right: 0, top: position.y - HOVER_HITBOX_EXTRA, width: BAKA_SIZE + HOVER_HITBOX_EXTRA, height: size };
-    case 'top':
-      return { ...base, top: 0, left: position.x - HOVER_HITBOX_EXTRA, width: size, height: BAKA_SIZE + HOVER_HITBOX_EXTRA };
-    case 'bottom':
-      return { ...base, bottom: 0, left: position.x - HOVER_HITBOX_EXTRA, width: size, height: BAKA_SIZE + HOVER_HITBOX_EXTRA };
+    case "left":
+      return {
+        ...base,
+        left: 0,
+        top: position.y - HOVER_HITBOX_EXTRA,
+        width: BAKA_SIZE + HOVER_HITBOX_EXTRA,
+        height: size,
+      };
+    case "right":
+      return {
+        ...base,
+        right: 0,
+        top: position.y - HOVER_HITBOX_EXTRA,
+        width: BAKA_SIZE + HOVER_HITBOX_EXTRA,
+        height: size,
+      };
+    case "top":
+      return {
+        ...base,
+        top: 0,
+        left: position.x - HOVER_HITBOX_EXTRA,
+        width: size,
+        height: BAKA_SIZE + HOVER_HITBOX_EXTRA,
+      };
+    case "bottom":
+      return {
+        ...base,
+        bottom: 0,
+        left: position.x - HOVER_HITBOX_EXTRA,
+        width: size,
+        height: BAKA_SIZE + HOVER_HITBOX_EXTRA,
+      };
   }
 }
 

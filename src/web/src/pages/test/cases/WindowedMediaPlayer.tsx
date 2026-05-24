@@ -72,17 +72,21 @@ const WindowedMediaPlayerTest = () => {
 
     setWindowCount(instanceId);
 
-    createWindow(MediaPlayer, {
-      entries: entries,
-      defaultActiveIndex: 0,
-      autoPlay: autoPlay,
-    }, {
-      title: `Media Player ${instanceId}`,
-      persistent: true,
-      afterClose: () => {
-        setWindowCount((prev) => Math.max(0, prev - 1));
+    createWindow(
+      MediaPlayer,
+      {
+        entries: entries,
+        defaultActiveIndex: 0,
+        autoPlay: autoPlay,
       },
-    });
+      {
+        title: `Media Player ${instanceId}`,
+        persistent: true,
+        afterClose: () => {
+          setWindowCount((prev) => Math.max(0, prev - 1));
+        },
+      },
+    );
   };
 
   const handleOpenMultipleWindows = () => {
@@ -99,17 +103,21 @@ const WindowedMediaPlayerTest = () => {
 
         setWindowCount((prev) => prev + 1);
 
-        createWindow(MediaPlayer, {
-          entries: entries,
-          defaultActiveIndex: i % Math.min(entries.length, 10), // Different starting index for each
-          autoPlay: autoPlay,
-        }, {
-          title: `Media Player ${instanceId}`,
-          persistent: true,
-          afterClose: () => {
-            setWindowCount((prev) => Math.max(0, prev - 1));
+        createWindow(
+          MediaPlayer,
+          {
+            entries: entries,
+            defaultActiveIndex: i % Math.min(entries.length, 10), // Different starting index for each
+            autoPlay: autoPlay,
           },
-        });
+          {
+            title: `Media Player ${instanceId}`,
+            persistent: true,
+            afterClose: () => {
+              setWindowCount((prev) => Math.max(0, prev - 1));
+            },
+          },
+        );
       }, i * 100); // Stagger the opening slightly
     }
   };
@@ -203,7 +211,7 @@ const WindowedMediaPlayerTest = () => {
         <h4 className="mt-0 mb-2.5 text-base font-semibold">Features to Test:</h4>
         <ul className="m-0 pl-5 text-sm text-gray-700 dark:text-gray-300 space-y-1">
           <li>
-            <strong>Multiple Instances:</strong> Click "Open 3 Windows" to test multiple windows
+            <strong>Multiple Instances:</strong> Click &quot;Open 3 Windows&quot; to test multiple windows
             simultaneously
           </li>
           <li>

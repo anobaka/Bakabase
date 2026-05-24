@@ -2,9 +2,13 @@
 
 import { useTranslation } from "react-i18next";
 
-import { Input } from "@/components/bakaui";
 import NotSet, { LightText } from "./components/LightText";
-import { useStringValueState, type StringValueRendererBaseProps } from "./hooks/useStringValueState";
+import {
+  useStringValueState,
+  type StringValueRendererBaseProps,
+} from "./hooks/useStringValueState";
+
+import { Input } from "@/components/bakaui";
 
 const SingleLineTextRenderer = (props: StringValueRendererBaseProps) => {
   const { t } = useTranslation();
@@ -28,18 +32,25 @@ const SingleLineTextRenderer = (props: StringValueRendererBaseProps) => {
       editor.onValueChange?.(newValue, newValue);
     };
 
-    return <Input size={size} value={value ?? ""} placeholder={t("common.placeholder.typeHere")} onValueChange={handleChange} />;
+    return (
+      <Input
+        placeholder={t("common.placeholder.typeHere")}
+        size={size}
+        value={value ?? ""}
+        onValueChange={handleChange}
+      />
+    );
   }
 
   // Light variant: show plain text with size-matched text class, or NotSet if empty
   if (variant == "light" && !editing) {
     // Show NotSet indicator when value is empty
     if (value == null || value === "") {
-      return <NotSet onClick={startEditing} size={size} />;
+      return <NotSet size={size} onClick={startEditing} />;
     }
 
     return (
-      <LightText onClick={startEditing} size={size}>
+      <LightText size={size} onClick={startEditing}>
         {value}
       </LightText>
     );
@@ -47,17 +58,25 @@ const SingleLineTextRenderer = (props: StringValueRendererBaseProps) => {
 
   // Editing mode: show editable input
   if (editing) {
-    return <Input size={size} autoFocus value={value} placeholder={t("common.placeholder.typeHere")} onBlur={completeEditing} onValueChange={setValue} />;
+    return (
+      <Input
+        placeholder={t("common.placeholder.typeHere")}
+        size={size}
+        value={value}
+        onBlur={completeEditing}
+        onValueChange={setValue}
+      />
+    );
   }
 
   // Default variant non-editing: show text or NotSet indicator
   // If value is empty, show NotSet; otherwise show text with click-to-edit
   if (value == null || value === "") {
-    return <NotSet onClick={startEditing} size={size} />;
+    return <NotSet size={size} onClick={startEditing} />;
   }
 
   return (
-    <LightText onClick={startEditing} size={size}>
+    <LightText size={size} onClick={startEditing}>
       {value}
     </LightText>
   );

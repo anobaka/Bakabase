@@ -105,6 +105,7 @@ const components = {
   SimpleLabel: ["dark", "light"].map((t) => {
     return (
       <div
+        key={t}
         className={`iw-theme-${t}`}
         style={{
           background: "var(--theme-body-background)",
@@ -112,7 +113,7 @@ const components = {
         }}
       >
         {["default", "primary", "success", "warning", "info", "danger"].map((s) => {
-          return <SimpleLabel status={s}>{s}</SimpleLabel>;
+          return <SimpleLabel key={s} status={s}>{s}</SimpleLabel>;
         })}
       </div>
     );

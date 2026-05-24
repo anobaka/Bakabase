@@ -25,27 +25,32 @@ const ResourcesModal = ({ resourceIds, onDestroyed }: Props) => {
 
   const totalPages = Math.ceil(resourceIds.length / PAGE_SIZE);
 
-  const loadResources = useCallback(async (pageNum: number) => {
-    const startIndex = (pageNum - 1) * PAGE_SIZE;
-    const endIndex = startIndex + PAGE_SIZE;
-    const pageIds = resourceIds.slice(startIndex, endIndex);
+  const loadResources = useCallback(
+    async (pageNum: number) => {
+      const startIndex = (pageNum - 1) * PAGE_SIZE;
+      const endIndex = startIndex + PAGE_SIZE;
+      const pageIds = resourceIds.slice(startIndex, endIndex);
 
-    if (pageIds.length === 0) {
-      setResources([]);
-      return;
-    }
+      if (pageIds.length === 0) {
+        setResources([]);
 
-    setLoading(true);
-    try {
-      const rsp = await BApi.resource.getResourcesByKeys({
-        ids: pageIds,
-        additionalItems: ResourceAdditionalItem.All,
-      });
-      setResources((rsp.data as Resource[]) || []);
-    } finally {
-      setLoading(false);
-    }
-  }, [resourceIds]);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const rsp = await BApi.resource.getResourcesByKeys({
+          ids: pageIds,
+          additionalItems: ResourceAdditionalItem.All,
+        });
+
+        setResources((rsp.data as Resource[]) || []);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [resourceIds],
+  );
 
   useEffect(() => {
     loadResources(page);
@@ -54,10 +59,10 @@ const ResourcesModal = ({ resourceIds, onDestroyed }: Props) => {
   return (
     <Modal
       defaultVisible
+      footer={null}
       size="7xl"
       title={t("resourcesModal.title", { count: resourceIds.length })}
       onClose={onDestroyed}
-      footer={null}
     >
       <div className="flex flex-col gap-2 min-h-[400px]">
         {loading ? (
@@ -72,11 +77,7 @@ const ResourcesModal = ({ resourceIds, onDestroyed }: Props) => {
           <>
             {totalPages > 1 && (
               <div className="flex justify-center">
-                <Pagination
-                  page={page}
-                  total={totalPages}
-                  onChange={setPage}
-                />
+                <Pagination page={page} total={totalPages} onChange={setPage} />
               </div>
             )}
 
@@ -87,12 +88,12 @@ const ResourcesModal = ({ resourceIds, onDestroyed }: Props) => {
                   className="flex flex-col gap-2 p-2 rounded-lg bg-default-50 hover:bg-default-100 transition-colors"
                 >
                   <div className="aspect-[6/7] relative overflow-hidden rounded">
-                    <ResourceCover
-                      resource={resource}
-                      showBiggerOnHover={false}
-                    />
+                    <ResourceCover resource={resource} showBiggerOnHover={false} />
                   </div>
-                  <div className="text-sm font-medium truncate" title={resource.displayName || resource.fileName}>
+                  <div
+                    className="text-sm font-medium truncate"
+                    title={resource.displayName || resource.fileName}
+                  >
                     {resource.displayName || resource.fileName}
                   </div>
                 </div>
@@ -101,11 +102,7 @@ const ResourcesModal = ({ resourceIds, onDestroyed }: Props) => {
 
             {totalPages > 1 && (
               <div className="flex justify-center">
-                <Pagination
-                  page={page}
-                  total={totalPages}
-                  onChange={setPage}
-                />
+                <Pagination page={page} total={totalPages} onChange={setPage} />
               </div>
             )}
           </>

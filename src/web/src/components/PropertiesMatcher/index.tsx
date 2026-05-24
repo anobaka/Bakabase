@@ -9,10 +9,11 @@ import { IoLocate } from "react-icons/io5";
 import { MdAutoFixHigh } from "react-icons/md";
 import { AiOutlineSearch } from "react-icons/ai";
 
+import BriefProperty from "../Chips/Property/BriefProperty";
+
 import { Button, Tooltip, Modal, Card } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import BriefProperty from "../Chips/Property/BriefProperty";
 
 type Property = {
   name: string;
@@ -24,10 +25,7 @@ type Props = {
   properties: Property[];
   onValueChanged?: (properties: (IProperty | undefined)[]) => any;
 };
-const PropertiesMatcher = ({
-  properties,
-  onValueChanged: propsOnValueChanged,
-}: Props) => {
+const PropertiesMatcher = ({ properties, onValueChanged: propsOnValueChanged }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const [isFindingBestMatch, setIsFindingBestMatch] = useState(false);
@@ -45,9 +43,9 @@ const PropertiesMatcher = ({
       <Button
         isIconOnly
         color={"primary"}
+        isLoading={isFindingBestMatch}
         size={"sm"}
         variant={"light"}
-        isLoading={isFindingBestMatch}
         onPress={async () => {
           setIsFindingBestMatch(true);
           try {
@@ -60,9 +58,7 @@ const PropertiesMatcher = ({
               ),
             );
 
-            const ret: (IProperty | undefined)[] = results.map(
-              (r) => r.data,
-            );
+            const ret: (IProperty | undefined)[] = results.map((r) => r.data);
 
             const missingIndexes = ret
               .map((p, idx) => (p ? -1 : idx))
@@ -70,6 +66,7 @@ const PropertiesMatcher = ({
 
             if (missingIndexes.length === 0) {
               onValueChange(ret);
+
               return;
             }
 
@@ -80,13 +77,19 @@ const PropertiesMatcher = ({
               children: (
                 <div className={"flex flex-col gap-3"}>
                   <div className={"flex flex-col gap-1"}>
-                    <div className={"font-semibold"}>{t<string>("propertyMatcher.autoMatched.label")}</div>
+                    <div className={"font-semibold"}>
+                      {t<string>("propertyMatcher.autoMatched.label")}
+                    </div>
                     <div className={"flex flex-wrap items-center gap-1 text-sm"}>
-                      {ret.map((p, idx) => (p ? <BriefProperty key={`matched-${idx}`} property={p} /> : null))}
+                      {ret.map((p, idx) =>
+                        p ? <BriefProperty key={`matched-${idx}`} property={p} /> : null,
+                      )}
                     </div>
                   </div>
                   <div className={"flex flex-col gap-1"}>
-                    <div className={"font-semibold"}>{t<string>("propertyMatcher.missing.label")}</div>
+                    <div className={"font-semibold"}>
+                      {t<string>("propertyMatcher.missing.label")}
+                    </div>
                     <div className={"flex flex-wrap items-center gap-1 text-sm text-warning-500"}>
                       {missingIndexes.map((idx) => (
                         <BriefProperty key={`missing-${idx}`} property={properties[idx]!} />
@@ -104,28 +107,34 @@ const PropertiesMatcher = ({
                         // Auto-create all missing properties (batch)
                         const models = missingIndexes.map((idx) => {
                           const p = properties[idx]!;
+
                           return {
                             name: p.name,
                             type: p.type,
-                            options: p.options
-                              ? JSON.stringify(p.options)
-                              : undefined,
+                            options: p.options ? JSON.stringify(p.options) : undefined,
                           } as any;
                         });
                         const r = await BApi.customProperty.addCustomPropertyBatch(models);
+
                         if (r.code) {
                           throw new Error(r.message);
                         }
                         const created = r.data || [];
+
                         created.forEach((cp, i) => {
                           const idx = missingIndexes[i]!;
+
                           ret[idx] = cp;
                         });
                         onValueChange(ret);
                         modal.destroy();
                       }}
                     >
-                      <span className={"absolute top-1 right-1 rounded-full bg-primary-500 text-white text-[10px] px-2 py-0.5"}>
+                      <span
+                        className={
+                          "absolute top-1 right-1 rounded-full bg-primary-500 text-white text-[10px] px-2 py-0.5"
+                        }
+                      >
                         {t<string>("propertyMatcher.recommended.label")}
                       </span>
                       <MdAutoFixHigh className={"text-2xl text-primary-600"} />
@@ -134,12 +143,10 @@ const PropertiesMatcher = ({
                       </div>
                     </Card>
                     <Card
+                      className={`relative flex flex-col items-center gap-2 justify-center py-2 border border-default-200 bg-content1 text-default-600 hover:bg-content2 ${
+                        missingIndexes.length === 0 ? "opacity-50 pointer-events-none" : ""
+                      }`}
                       isPressable={missingIndexes.length > 0}
-                      className={
-                        `relative flex flex-col items-center gap-2 justify-center py-2 border border-default-200 bg-content1 text-default-600 hover:bg-content2 ${
-                          missingIndexes.length === 0 ? "opacity-50 pointer-events-none" : ""
-                        }`
-                      }
                       onPress={() => {
                         // Close and let user handle manually elsewhere
                         onValueChange(ret);

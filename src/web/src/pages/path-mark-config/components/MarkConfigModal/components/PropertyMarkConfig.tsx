@@ -3,13 +3,16 @@
 import type { MarkConfig } from "../types";
 import type { IProperty } from "@/components/Property/models";
 import type { PreviewResultsByPath, PathMarkPreviewResult } from "../hooks/usePreview";
+import type { PathMarkApplyScope } from "@/sdk/constants";
 
 import { useState, useEffect } from "react";
+import { EditOutlined } from "@ant-design/icons";
+
 import MatchModeSelector from "./MatchModeSelector";
 import PreviewResults from "./PreviewResults";
+
 import { Button, Chip, Input, NumberInput, RadioGroup, Radio } from "@/components/bakaui";
-import { PathMatchMode, PropertyValueType, PropertyPool, PathMarkType, PathMarkApplyScope } from "@/sdk/constants";
-import { EditOutlined } from "@ant-design/icons";
+import { PathMatchMode, PropertyValueType, PropertyPool, PathMarkType } from "@/sdk/constants";
 import PropertySelector from "@/components/PropertySelector";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import BApi from "@/sdk/BApi";
@@ -30,7 +33,14 @@ type Props = {
   };
 };
 
-const PropertyMarkConfig = ({ config, updateConfig, t, priority, onPriorityChange, preview }: Props) => {
+const PropertyMarkConfig = ({
+  config,
+  updateConfig,
+  t,
+  priority,
+  onPriorityChange,
+  preview,
+}: Props) => {
   const { createPortal } = useBakabaseContext();
   const [selectedProperty, setSelectedProperty] = useState<IProperty | null>(null);
 
@@ -39,8 +49,10 @@ const PropertyMarkConfig = ({ config, updateConfig, t, priority, onPriorityChang
     const loadProperty = async () => {
       if (config.propertyId && config.propertyPool) {
         try {
-          const properties = (await BApi.property.getPropertiesByPool(config.propertyPool)).data || [];
-          const property = properties.find(p => p.id === config.propertyId);
+          const properties =
+            (await BApi.property.getPropertiesByPool(config.propertyPool)).data || [];
+          const property = properties.find((p) => p.id === config.propertyId);
+
           if (property) {
             setSelectedProperty(property as IProperty);
           }
@@ -49,6 +61,7 @@ const PropertyMarkConfig = ({ config, updateConfig, t, priority, onPriorityChang
         }
       }
     };
+
     loadProperty();
   }, []);
 
@@ -60,6 +73,7 @@ const PropertyMarkConfig = ({ config, updateConfig, t, priority, onPriorityChang
       onSubmit: async (properties: IProperty[]) => {
         if (properties.length > 0) {
           const property = properties[0];
+
           setSelectedProperty(property);
           updateConfig({
             propertyPool: property.pool,
@@ -84,26 +98,30 @@ const PropertyMarkConfig = ({ config, updateConfig, t, priority, onPriorityChang
 
       <MatchModeSelector
         config={config}
-        updateConfig={updateConfig}
-        t={t}
         markType={PathMarkType.Property}
+        t={t}
+        updateConfig={updateConfig}
       />
 
       {/* Preview Results - placed after apply scope (part of MatchModeSelector) */}
       <PreviewResults
+        applyScope={preview.applyScope}
+        error={preview.error}
+        isMultiplePaths={preview.isMultiplePaths}
         loading={preview.loading}
+        markType={PathMarkType.Property}
         results={preview.results}
         resultsByPath={preview.resultsByPath}
-        isMultiplePaths={preview.isMultiplePaths}
-        error={preview.error}
-        markType={PathMarkType.Property}
         t={t}
-        applyScope={preview.applyScope}
       />
 
       <div className="border-t border-default-200 pt-2">
-        <span className="text-sm font-medium text-default-600">{t("pathMarkConfig.label.propertySettings")}</span>
-        <div className="text-xs text-default-400 mt-1">{t("pathMark.property.configDescription")}</div>
+        <span className="text-sm font-medium text-default-600">
+          {t("pathMarkConfig.label.propertySettings")}
+        </span>
+        <div className="text-xs text-default-400 mt-1">
+          {t("pathMark.property.configDescription")}
+        </div>
       </div>
 
       {/* Property Selector */}
@@ -122,15 +140,19 @@ const PropertyMarkConfig = ({ config, updateConfig, t, priority, onPriorityChang
               {selectedProperty.name}
             </Chip>
           ) : (
-            <span className="text-sm text-default-400">{t("pathMarkConfig.empty.noPropertySelected")}</span>
+            <span className="text-sm text-default-400">
+              {t("pathMarkConfig.empty.noPropertySelected")}
+            </span>
           )}
           <Button
             size="sm"
-            variant="flat"
             startContent={<EditOutlined />}
+            variant="flat"
             onPress={handleSelectProperty}
           >
-            {selectedProperty ? t("common.action.change") : t("pathMarkConfig.action.selectProperty")}
+            {selectedProperty
+              ? t("common.action.change")
+              : t("pathMarkConfig.action.selectProperty")}
           </Button>
         </div>
       </div>
@@ -139,14 +161,12 @@ const PropertyMarkConfig = ({ config, updateConfig, t, priority, onPriorityChang
       <div className="flex flex-col gap-1">
         <span className="text-sm font-medium">{t("pathMarkConfig.label.valueType")}</span>
         <RadioGroup
+          orientation="horizontal"
+          size="sm"
           value={String(config.valueType ?? PropertyValueType.Fixed)}
           onValueChange={(value) => updateConfig({ valueType: Number(value) })}
-          size="sm"
-          orientation="horizontal"
         >
-          <Radio value={String(PropertyValueType.Fixed)}>
-            {t("pathMarkConfig.label.fixed")}
-          </Radio>
+          <Radio value={String(PropertyValueType.Fixed)}>{t("pathMarkConfig.label.fixed")}</Radio>
           <Radio value={String(PropertyValueType.Dynamic)}>
             {t("pathMarkConfig.label.dynamic")}
           </Radio>
@@ -164,26 +184,24 @@ const PropertyMarkConfig = ({ config, updateConfig, t, priority, onPriorityChang
         <>
           {/* Value Match Mode - Radio Group */}
           <div className="flex flex-col gap-1">
-            <span className="text-sm font-medium">{t("pathMarkConfig.label.valueExtractionMode")}</span>
+            <span className="text-sm font-medium">
+              {t("pathMarkConfig.label.valueExtractionMode")}
+            </span>
             <RadioGroup
+              orientation="horizontal"
+              size="sm"
               value={String(config.valueMatchMode ?? PathMatchMode.Layer)}
               onValueChange={(value) => updateConfig({ valueMatchMode: Number(value) })}
-              size="sm"
-              orientation="horizontal"
             >
-              <Radio value={String(PathMatchMode.Layer)}>
-                {t("pathMarkConfig.label.layer")}
-              </Radio>
-              <Radio value={String(PathMatchMode.Regex)}>
-                {t("pathMarkConfig.label.regex")}
-              </Radio>
+              <Radio value={String(PathMatchMode.Layer)}>{t("pathMarkConfig.label.layer")}</Radio>
+              <Radio value={String(PathMatchMode.Regex)}>{t("pathMarkConfig.label.regex")}</Radio>
             </RadioGroup>
           </div>
 
           {config.valueMatchMode === PathMatchMode.Layer ? (
             <NumberInput
-              label={t("pathMarkConfig.label.valueLayer")}
               description={t("pathMarkConfig.tip.zeroEqualsMatchedItem")}
+              label={t("pathMarkConfig.label.valueLayer")}
               size="sm"
               value={config.valueLayer ?? 0}
               onValueChange={(v) => updateConfig({ valueLayer: v })}
@@ -203,8 +221,8 @@ const PropertyMarkConfig = ({ config, updateConfig, t, priority, onPriorityChang
       {/* Priority at the bottom */}
       <div className="border-t border-default-200 pt-2">
         <NumberInput
-          label={t("common.label.priority")}
           description={t("pathMark.priority.description")}
+          label={t("common.label.priority")}
           size="sm"
           value={priority}
           onValueChange={(v) => onPriorityChange(v ?? 10)}

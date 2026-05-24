@@ -1,21 +1,15 @@
 "use client";
 
 import { useTranslation } from "react-i18next";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableColumn,
-  TableHeader,
-  TableRow,
-} from "@heroui/react";
+import { Table, TableBody, TableCell, TableColumn, TableHeader, TableRow } from "@heroui/react";
+
+import QuotaSettings from "./QuotaSettings";
+import CacheSettings from "./CacheSettings";
 
 import { AiFeature } from "@/sdk/constants";
 import AiProviderPanel from "@/components/AiProviderPanel";
 import AiFeaturePanel from "@/components/AiFeaturePanel";
 import ToolConfigPanel from "@/components/FloatingAssistantV2/components/ChatView/ToolConfigPanel";
-import QuotaSettings from "./QuotaSettings";
-import CacheSettings from "./CacheSettings";
 
 const aiSettingsFeatures = [
   AiFeature.Default,
@@ -39,9 +33,7 @@ const AISettings = () => {
 
         <Table removeWrapper className="mt-4">
           <TableHeader>
-            <TableColumn width={200}>
-              {t<string>("configuration.ai.tools.header")}
-            </TableColumn>
+            <TableColumn width={200}>{t<string>("configuration.ai.tools.header")}</TableColumn>
             <TableColumn>&nbsp;</TableColumn>
           </TableHeader>
           <TableBody>
@@ -56,9 +48,7 @@ const AISettings = () => {
 
         <Table removeWrapper className="mt-4">
           <TableHeader>
-            <TableColumn width={200}>
-              {t<string>("configuration.ai.cache.title")}
-            </TableColumn>
+            <TableColumn width={200}>{t<string>("configuration.ai.cache.title")}</TableColumn>
             <TableColumn>&nbsp;</TableColumn>
           </TableHeader>
           <TableBody>
@@ -66,16 +56,16 @@ const AISettings = () => {
               <TableCell>
                 <span className="text-sm">{t("configuration.ai.cache.responseCache")}</span>
               </TableCell>
-              <TableCell><CacheSettings /></TableCell>
+              <TableCell>
+                <CacheSettings />
+              </TableCell>
             </TableRow>
           </TableBody>
         </Table>
 
         <Table removeWrapper className="mt-4">
           <TableHeader>
-            <TableColumn width={200}>
-              {t<string>("configuration.ai.quota.title")}
-            </TableColumn>
+            <TableColumn width={200}>{t<string>("configuration.ai.quota.title")}</TableColumn>
             <TableColumn>&nbsp;</TableColumn>
           </TableHeader>
           <TableBody>
@@ -83,11 +73,12 @@ const AISettings = () => {
               <TableCell>
                 <span className="text-sm">{t("configuration.ai.quota.auditContent")}</span>
               </TableCell>
-              <TableCell><QuotaSettings /></TableCell>
+              <TableCell>
+                <QuotaSettings />
+              </TableCell>
             </TableRow>
           </TableBody>
         </Table>
-
       </div>
     </div>
   );

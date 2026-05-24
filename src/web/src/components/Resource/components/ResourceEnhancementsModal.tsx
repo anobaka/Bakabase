@@ -522,8 +522,8 @@ function ResourceEnhancementsModal({ resourceId, ...props }: Props) {
         </div>
       ) : (
         <Tabs
-          isVertical
           disableAnimation
+          isVertical
           aria-label="Enhancers"
           classNames={{
             panel: "grow min-w-0",
@@ -884,9 +884,9 @@ function ResourceEnhancementsModal({ resourceId, ...props }: Props) {
                             </TableColumn>
                           </TableHeader>
                           <TableBody>
-                            {targets.map((e) => {
+                            {targets.map((e, i) => {
                               return (
-                                <TableRow>
+                                <TableRow key={i}>
                                   <TableCell>{e.targetName}</TableCell>
                                   <TableCell>{JSON.stringify(e.enhancement?.value)}</TableCell>
                                   <TableCell>{renderConvertedValue(e.enhancement)}</TableCell>
@@ -896,9 +896,9 @@ function ResourceEnhancementsModal({ resourceId, ...props }: Props) {
                           </TableBody>
                         </Table>
                       </div>
-                      {enhancement?.dynamicTargets?.map((dt) => {
+                      {enhancement?.dynamicTargets?.map((dt, dti) => {
                         return (
-                          <div>
+                          <div key={dti}>
                             {(!dt.enhancements || dt.enhancements.length == 0) && (
                               <Chip
                                 className={"opacity-60"}
@@ -923,9 +923,9 @@ function ResourceEnhancementsModal({ resourceId, ...props }: Props) {
                                 </TableColumn>
                               </TableHeader>
                               <TableBody>
-                                {dt.enhancements?.map((e) => {
+                                {dt.enhancements?.map((e, ei) => {
                                   return (
-                                    <TableRow>
+                                    <TableRow key={ei}>
                                       <TableCell>{e.dynamicTarget}</TableCell>
                                       <TableCell>{JSON.stringify(e.value)}</TableCell>
                                       <TableCell>{renderConvertedValue(e)}</TableCell>

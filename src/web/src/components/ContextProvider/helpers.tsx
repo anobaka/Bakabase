@@ -4,7 +4,6 @@ import type { ComponentType } from "react";
 import type { DestroyableProps } from "@/components/bakaui/types";
 
 import ReactDOM from "react-dom/client";
-import { HashRouter } from "react-router-dom";
 
 import { uuidv4 } from "@/components/utils";
 import BakabaseContextProvider from "@/components/ContextProvider/BakabaseContextProvider";
@@ -34,17 +33,17 @@ export function createPortal<P extends DestroyableProps>(
 
   root.render(
     // <HashRouter>
-      <BakabaseContextProvider>
-        <C
-          {...props}
-          onDestroyed={() => {
-            if (props.onDestroyed) {
-              props.onDestroyed();
-            }
-            unmount();
-          }}
-        />
-      </BakabaseContextProvider>
+    <BakabaseContextProvider>
+      <C
+        {...props}
+        onDestroyed={() => {
+          if (props.onDestroyed) {
+            props.onDestroyed();
+          }
+          unmount();
+        }}
+      />
+    </BakabaseContextProvider>,
     // </HashRouter>,
   );
 

@@ -6,23 +6,14 @@ import type { Time } from "@internationalized/date";
 
 import { TimeInput as HeroTimeInput } from "@heroui/react";
 
-import {
-  convertDurationToTime,
-  convertTimeToDuration,
-} from "@/components/utils";
+import { convertDurationToTime, convertTimeToDuration } from "@/components/utils";
 
-interface TimeInputProps
-  extends Omit<NextUITimeInputProps, "value" | "onChange" | "defaultValue"> {
+interface TimeInputProps extends Omit<NextUITimeInputProps, "value" | "onChange" | "defaultValue"> {
   value?: Duration;
   defaultValue?: Duration;
   onChange?: (value?: Duration) => void;
 }
-const TimeInput = ({
-  value,
-  onChange,
-  defaultValue,
-  ...props
-}: TimeInputProps) => {
+const TimeInput = ({ value, onChange, defaultValue, ...props }: TimeInputProps) => {
   const dv = defaultValue ? convertDurationToTime(defaultValue) : undefined;
   const v = value ? convertDurationToTime(value) : undefined;
 

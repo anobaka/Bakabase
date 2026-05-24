@@ -116,7 +116,9 @@ const BakabaseContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const currentTheme = useRef(getUiTheme(appOptions ? appOptions.uiTheme : getStoredTheme()));
   const isDarkMode = useMemo(() => currentTheme.current === UiTheme.Dark, [currentTheme]);
 
-  const [portals, setPortals] = useState<{ key: string; component: React.ReactNode; persistent?: boolean }[]>([]);
+  const [portals, setPortals] = useState<
+    { key: string; component: React.ReactNode; persistent?: boolean }[]
+  >([]);
 
   const mount = (C: ComponentType<any>, props: any) => {
     console.log("[createPortal] mount", C, props);
@@ -151,9 +153,9 @@ const BakabaseContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
     const windowComponent = (
       <Window
+        renderHeaderActions={renderHeaderActions}
         title={title}
         windowOptions={windowOptions}
-        renderHeaderActions={renderHeaderActions}
         onDestroyed={() => {
           destroy();
         }}
@@ -239,8 +241,10 @@ const BakabaseContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
   // Inject CSS variable overwrites to :root
   useEffect(() => {
     const root = document.documentElement;
+
     for (const def of allCssVariableDefinitions) {
       const value = cssVariableOverwrites?.[def.name] ?? def.defaultValue;
+
       root.style.setProperty(def.name, value);
     }
   }, [cssVariableOverwrites]);

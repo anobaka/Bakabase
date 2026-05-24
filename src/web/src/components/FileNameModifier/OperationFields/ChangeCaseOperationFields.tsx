@@ -3,33 +3,26 @@
 import React from "react";
 
 import { Select } from "../../bakaui";
-
-import {
-  FileNameModifierCaseType,
-  fileNameModifierCaseTypes,
-} from "@/sdk/constants";
 import { getFieldRequirements } from "../validation";
+
+import { FileNameModifierCaseType, fileNameModifierCaseTypes } from "@/sdk/constants";
 
 const CaseTypeOptions = fileNameModifierCaseTypes.map((opt) => ({
   label: "FileNameModifier.CaseType." + FileNameModifierCaseType[opt.value],
   value: opt.value,
 }));
 
-const ChangeCaseOperationFields: React.FC<any> = ({
-  operation,
-  t,
-  onChange,
-}) => {
+const ChangeCaseOperationFields: React.FC<any> = ({ operation, t, onChange }) => {
   const requirements = getFieldRequirements(operation);
 
   return (
     <Select
+      disallowEmptySelection
       className="w-[180px]"
       dataSource={CaseTypeOptions.map((opt) => ({
         label: t<string>(opt.label),
         value: opt.value,
       }))}
-      disallowEmptySelection
       isRequired={requirements.caseType}
       label={t<string>("FileNameModifier.Label.CaseType")}
       placeholder={t<string>("FileNameModifier.Placeholder.CaseType")}

@@ -254,6 +254,7 @@ if (!i18n.isInitialized) {
 if (import.meta.hot) {
   // 动态导入所有英文翻译文件
   const enModules = import.meta.glob("./locales/en/**/*.json");
+
   Object.keys(enModules).forEach((modulePath) => {
     import.meta.hot?.accept(modulePath, (newModule) => {
       if (newModule) {
@@ -266,6 +267,7 @@ if (import.meta.hot) {
 
   // 动态导入所有中文翻译文件
   const cnModules = import.meta.glob("./locales/cn/**/*.json");
+
   Object.keys(cnModules).forEach((modulePath) => {
     import.meta.hot?.accept(modulePath, (newModule) => {
       if (newModule) {

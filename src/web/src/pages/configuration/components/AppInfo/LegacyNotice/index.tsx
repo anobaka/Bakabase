@@ -33,9 +33,11 @@ export const LegacyAppDataNoticeBanner: React.FC = () => {
     <div className="rounded-md border border-warning-200 bg-warning-50 p-3 mb-3 flex flex-col gap-2">
       <div className="font-semibold">{t("configuration.legacyNotice.title")}</div>
       <div className="text-sm">{t("configuration.legacyNotice.description")}</div>
-      <Snippet hideSymbol size="sm" variant="bordered">{notice.path}</Snippet>
+      <Snippet hideSymbol size="sm" variant="bordered">
+        {notice.path}
+      </Snippet>
       <div className="flex gap-2">
-        <Button size="sm" variant="flat" color="primary" onPress={open}>
+        <Button color="primary" size="sm" variant="flat" onPress={open}>
           {t("configuration.legacyNotice.openButton")}
         </Button>
         <Button size="sm" variant="light" onPress={dismiss}>

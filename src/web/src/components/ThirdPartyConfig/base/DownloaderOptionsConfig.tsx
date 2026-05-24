@@ -1,14 +1,17 @@
 "use client";
 
+import type { CookieValidatorTarget } from "@/sdk/constants";
+
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Input, Button, Textarea } from "@heroui/react";
 import { AiOutlineCheck, AiOutlineClose } from "react-icons/ai";
 
+import { notifyCookieCaptureDismissal } from "./notifyCookieCaptureDismissal";
+
 import BApi from "@/sdk/BApi";
 import { toast } from "@/components/bakaui";
-import { notifyCookieCaptureDismissal } from "./notifyCookieCaptureDismissal";
-import { CookieValidatorTarget, RuntimeMode } from "@/sdk/constants";
+import { RuntimeMode } from "@/sdk/constants";
 import { useAppContextStore } from "@/stores/appContext";
 
 interface DownloaderOptionsConfigProps {
@@ -54,9 +57,7 @@ export default function DownloaderOptionsConfig({
       .then((r: any) => {
         if (r.code) {
           setValidationResult("failed");
-          toast.danger(
-            `${t<string>("thirdPartyConfig.error.invalidCookie")}:${r.message}`,
-          );
+          toast.danger(`${t<string>("thirdPartyConfig.error.invalidCookie")}:${r.message}`);
         } else {
           setValidationResult("succeed");
         }
@@ -72,6 +73,7 @@ export default function DownloaderOptionsConfig({
     setCapturing(true);
     try {
       const rsp = await BApi.tool.captureCookie({ target: cookieCaptureTarget });
+
       if (!rsp.code && rsp.data) {
         setOptions((prev: any) => ({ ...prev, cookie: rsp.data }));
       } else {
@@ -104,18 +106,14 @@ export default function DownloaderOptionsConfig({
             size="sm"
             type="number"
             value={String(options.maxConcurrency || 1)}
-            onValueChange={(v) =>
-              setOptions({ ...options, maxConcurrency: Number(v) || 1 })
-            }
+            onValueChange={(v) => setOptions({ ...options, maxConcurrency: Number(v) || 1 })}
           />
           <Input
             label={t<string>("thirdPartyConfig.label.requestInterval")}
             size="sm"
             type="number"
             value={String(options.requestInterval || 1000)}
-            onValueChange={(v) =>
-              setOptions({ ...options, requestInterval: Number(v) || 1000 })
-            }
+            onValueChange={(v) => setOptions({ ...options, requestInterval: Number(v) || 1000 })}
           />
         </div>
         <div className="grid grid-cols-2 gap-4">
@@ -124,18 +122,14 @@ export default function DownloaderOptionsConfig({
             size="sm"
             type="number"
             value={String(options.maxRetries || 0)}
-            onValueChange={(v) =>
-              setOptions({ ...options, maxRetries: Number(v) || 0 })
-            }
+            onValueChange={(v) => setOptions({ ...options, maxRetries: Number(v) || 0 })}
           />
           <Input
             label={t<string>("thirdPartyConfig.label.requestTimeout")}
             size="sm"
             type="number"
             value={String(options.requestTimeout || 0)}
-            onValueChange={(v) =>
-              setOptions({ ...options, requestTimeout: Number(v) || 0 })
-            }
+            onValueChange={(v) => setOptions({ ...options, requestTimeout: Number(v) || 0 })}
           />
         </div>
       </div>
@@ -156,9 +150,7 @@ export default function DownloaderOptionsConfig({
             label={t<string>("thirdPartyConfig.label.namingConvention")}
             size="sm"
             value={options.namingConvention || ""}
-            onValueChange={(v) =>
-              setOptions({ ...options, namingConvention: v })
-            }
+            onValueChange={(v) => setOptions({ ...options, namingConvention: v })}
           />
         </div>
       </div>
@@ -168,12 +160,24 @@ export default function DownloaderOptionsConfig({
         </Button>
         {!hideCookie && cookieValidatorTarget && options.cookie && (
           <Button
-            color={validationResult === "succeed" ? "success" : validationResult === "failed" ? "danger" : "default"}
+            color={
+              validationResult === "succeed"
+                ? "success"
+                : validationResult === "failed"
+                  ? "danger"
+                  : "default"
+            }
             disabled={!options.cookie?.length || validatingCookie}
             isLoading={validatingCookie}
             size="sm"
+            startContent={
+              validationResult === "succeed" ? (
+                <AiOutlineCheck />
+              ) : validationResult === "failed" ? (
+                <AiOutlineClose />
+              ) : undefined
+            }
             variant="flat"
-            startContent={validationResult === "succeed" ? <AiOutlineCheck /> : validationResult === "failed" ? <AiOutlineClose /> : undefined}
             onPress={handleValidateCookie}
           >
             {t<string>("thirdPartyConfig.action.validateCookie")}

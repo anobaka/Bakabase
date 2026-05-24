@@ -7,10 +7,11 @@ import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import _ from "lodash";
 
-import BApi from "@/sdk/BApi";
-import { Modal } from "@/components/bakaui";
 import FileSystemEntryChangeExampleItem from "./FileSystemEntryChangeExampleItem";
 import FileSystemEntryChangeExampleMiscellaneousItem from "./FileSystemEntryChangeExampleMiscellaneousItem";
+
+import BApi from "@/sdk/BApi";
+import { Modal } from "@/components/bakaui";
 
 type Props = { entries: Entry[] } & DestroyableProps;
 const ExtractModal = ({ entries = [], onDestroyed }: Props) => {
@@ -75,11 +76,7 @@ const ExtractModal = ({ entries = [], onDestroyed }: Props) => {
 
           return (
             <React.Fragment key={parent}>
-              <FileSystemEntryChangeExampleItem
-                isDirectory
-                text={parent ?? "."}
-                type={"default"}
-              />
+              <FileSystemEntryChangeExampleItem isDirectory text={parent ?? "."} type={"default"} />
               {innerEntries.map((e) => {
                 if (e.isDirectoryOrDrive) {
                   return (
@@ -118,10 +115,7 @@ const ExtractModal = ({ entries = [], onDestroyed }: Props) => {
                   );
                 }
               })}
-              <FileSystemEntryChangeExampleMiscellaneousItem
-                indent={1}
-                parent={parent}
-              />
+              <FileSystemEntryChangeExampleMiscellaneousItem indent={1} parent={parent} />
             </React.Fragment>
           );
         })}

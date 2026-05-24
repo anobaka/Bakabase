@@ -12,9 +12,7 @@ const WelcomeSlide = () => {
         <AiOutlineAppstore className="text-6xl text-primary" />
       </div>
 
-      <h1 className="text-3xl font-bold mb-4">
-        {t("onboarding.welcome.title")}
-      </h1>
+      <h1 className="text-3xl font-bold mb-4">{t("onboarding.welcome.title")}</h1>
 
       <p className="text-lg text-default-500 text-center max-w-md">
         {t("onboarding.welcome.description")}

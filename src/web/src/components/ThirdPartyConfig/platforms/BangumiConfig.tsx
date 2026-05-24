@@ -4,14 +4,15 @@ import { useEffect, useMemo, useState, type FC } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, Input } from "@heroui/react";
 
+import AccountsPanel, { type AccountField } from "../base/AccountsPanel";
+import ConfigurableThirdPartyPanel, {
+  type ConfigFieldTab,
+} from "../base/ConfigurableThirdPartyPanel";
+import ThirdPartyConfigModal from "../base/ThirdPartyConfigModal";
+
 import { toast } from "@/components/bakaui";
-import BApi from "@/sdk/BApi";
 import { CookieValidatorTarget } from "@/sdk/constants";
 import { useBangumiOptionsStore } from "@/stores/options";
-
-import AccountsPanel, { type AccountField } from "../base/AccountsPanel";
-import ConfigurableThirdPartyPanel, { type ConfigFieldTab } from "../base/ConfigurableThirdPartyPanel";
-import ThirdPartyConfigModal from "../base/ThirdPartyConfigModal";
 
 export enum BangumiConfigField {
   Accounts = "accounts",
@@ -71,7 +72,11 @@ export const BangumiConfigPanel: FC<BangumiConfigPanelProps> = ({ fields = "all"
         key: "accounts",
         title: t("resourceSource.config.tab.accounts"),
         content: (
-          <AccountsPanel accounts={bangumiOptions?.accounts || []} fields={accountFields} onSave={saveAccounts} />
+          <AccountsPanel
+            accounts={bangumiOptions?.accounts || []}
+            fields={accountFields}
+            onSave={saveAccounts}
+          />
         ),
       },
       {
@@ -93,7 +98,9 @@ export const BangumiConfigPanel: FC<BangumiConfigPanelProps> = ({ fields = "all"
                 size="sm"
                 type="number"
                 value={String(tmpHttp.requestInterval || 1000)}
-                onValueChange={(v) => setTmpHttp({ ...tmpHttp, requestInterval: Number(v) || 1000 })}
+                onValueChange={(v) =>
+                  setTmpHttp({ ...tmpHttp, requestInterval: Number(v) || 1000 })
+                }
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -130,14 +137,21 @@ export interface BangumiConfigModalProps {
   fields?: BangumiConfigField[] | "all";
 }
 
-export const BangumiConfigModal: FC<BangumiConfigModalProps> = ({ onDestroyed, onClose, isOpen, fields }) => {
+export const BangumiConfigModal: FC<BangumiConfigModalProps> = ({
+  onDestroyed,
+  onClose,
+  isOpen,
+  fields,
+}) => {
   const handleClose = onClose ?? onDestroyed;
+
   return (
-    <ThirdPartyConfigModal title="Bangumi" isOpen={isOpen} onClose={handleClose}>
+    <ThirdPartyConfigModal isOpen={isOpen} title="Bangumi" onClose={handleClose}>
       <BangumiConfigPanel fields={fields} />
     </ThirdPartyConfigModal>
   );
 };
 
 const BangumiConfig = BangumiConfigModal;
+
 export default BangumiConfig;

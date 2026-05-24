@@ -1,6 +1,6 @@
-import { Input, NumberInput, Select } from "@/components/bakaui";
 import { useTranslation } from "react-i18next";
 
+import { Input, NumberInput, Select } from "@/components/bakaui";
 import { PredicateMediaType, predicateMediaTypes } from "@/sdk/constants";
 
 const COMPARISON_OPS: { value: number; label: string }[] = [
@@ -32,30 +32,32 @@ export const PredicateParametersEditor = ({ predicateId, parameters, onChange }:
     case "MediaTypeFileCount":
     case "MediaTypeTotalSize": {
       const isCount = predicateId === "MediaTypeFileCount";
-      const currentMediaType =
-        parameters?.mediaType ?? PredicateMediaType.All;
+      const currentMediaType = parameters?.mediaType ?? PredicateMediaType.All;
+
       return (
         <div className="flex flex-wrap items-end gap-2">
           <Select
             className="w-40"
-            label={t<string>("healthScore.label.parameters")}
             dataSource={predicateMediaTypes.map((m) => ({
               value: String(m.value),
               label: m.label,
             }))}
+            label={t<string>("healthScore.label.parameters")}
             selectedKeys={[String(currentMediaType)]}
             onSelectionChange={(keys: any) => {
               const v = Array.from(keys)[0];
+
               if (v != null) set({ mediaType: Number(v) });
             }}
           />
           <Select
             className="w-24"
-            label="Op"
             dataSource={COMPARISON_OPS.map((o) => ({ value: String(o.value), label: o.label }))}
+            label="Op"
             selectedKeys={parameters?.operator ? [String(parameters.operator)] : []}
             onSelectionChange={(keys: any) => {
               const v = Array.from(keys)[0];
+
               if (v != null) set({ operator: Number(v) });
             }}
           />
@@ -63,9 +65,7 @@ export const PredicateParametersEditor = ({ predicateId, parameters, onChange }:
             className="w-32"
             label={isCount ? "Count" : "Bytes"}
             value={isCount ? (parameters?.count ?? 0) : (parameters?.bytes ?? 0)}
-            onValueChange={(v) =>
-              isCount ? set({ count: Number(v) }) : set({ bytes: Number(v) })
-            }
+            onValueChange={(v) => (isCount ? set({ count: Number(v) }) : set({ bytes: Number(v) }))}
           />
         </div>
       );
@@ -82,11 +82,12 @@ export const PredicateParametersEditor = ({ predicateId, parameters, onChange }:
           />
           <Select
             className="w-24"
-            label="Op"
             dataSource={COMPARISON_OPS.map((o) => ({ value: String(o.value), label: o.label }))}
+            label="Op"
             selectedKeys={parameters?.operator ? [String(parameters.operator)] : []}
             onSelectionChange={(keys: any) => {
               const v = Array.from(keys)[0];
+
               if (v != null) set({ operator: Number(v) });
             }}
           />
@@ -130,7 +131,11 @@ export const PredicateParametersEditor = ({ predicateId, parameters, onChange }:
           label={t<string>("healthScore.label.parameters")}
           value={JSON.stringify(parameters ?? {})}
           onValueChange={(v) => {
-            try { onChange(JSON.parse(v)); } catch { /* ignore */ }
+            try {
+              onChange(JSON.parse(v));
+            } catch {
+              /* ignore */
+            }
           }}
         />
       );

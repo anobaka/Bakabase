@@ -8,7 +8,6 @@ import { useTranslation } from "react-i18next";
 import { AiOutlineWarning } from "react-icons/ai";
 
 import PathMarkChip from "@/pages/path-mark-config/components/PathMarkChip";
-
 import { Modal, Checkbox } from "@/components/bakaui";
 
 // Child path info for delete
@@ -38,9 +37,11 @@ const DeleteMarksConfirmationModal = ({
 
   const totalMarksCount = useMemo(() => {
     let count = marks.length;
+
     if (includeChildPaths) {
       count += childPaths.reduce((sum, child) => sum + child.marks.length, 0);
     }
+
     return count;
   }, [marks, childPaths, includeChildPaths]);
 
@@ -55,11 +56,11 @@ const DeleteMarksConfirmationModal = ({
 
   return (
     <Modal
+      defaultVisible
       classNames={{
         base: "max-w-2xl max-h-[85vh]",
         body: "overflow-y-auto",
       }}
-      defaultVisible
       footer={{
         actions: ["cancel", "ok"],
         okProps: {
@@ -79,9 +80,7 @@ const DeleteMarksConfirmationModal = ({
             <p className="text-danger-700 font-medium">
               {t("pathMarks.status.aboutToDeleteMarks", { count: totalMarksCount })}
             </p>
-            <p className="text-danger-600 text-sm mt-1">
-              {t("pathMarks.warning.cannotBeUndone")}
-            </p>
+            <p className="text-danger-600 text-sm mt-1">{t("pathMarks.warning.cannotBeUndone")}</p>
           </div>
         </div>
 
@@ -104,14 +103,11 @@ const DeleteMarksConfirmationModal = ({
         {childPaths.length > 0 && (
           <div className="border border-warning-200 rounded-lg p-3 bg-warning-50/50">
             <div className="flex items-start gap-2 mb-2">
-              <Checkbox
-                isSelected={includeChildPaths}
-                onValueChange={setIncludeChildPaths}
-              >
+              <Checkbox isSelected={includeChildPaths} onValueChange={setIncludeChildPaths}>
                 <span className="text-sm font-medium">
                   {t("pathMarks.checkbox.alsoDeleteChildMarks", {
                     count: childMarksCount,
-                    pathCount: childPaths.length
+                    pathCount: childPaths.length,
                   })}
                 </span>
               </Checkbox>
@@ -120,7 +116,10 @@ const DeleteMarksConfirmationModal = ({
             {includeChildPaths && (
               <div className="flex flex-col gap-2 max-h-48 overflow-y-auto ml-6">
                 {childPaths.map((child) => (
-                  <div key={child.path} className="flex items-start gap-2 text-sm bg-white/50 p-2 rounded">
+                  <div
+                    key={child.path}
+                    className="flex items-start gap-2 text-sm bg-white/50 p-2 rounded"
+                  >
                     <div className="flex-1 min-w-0">
                       <div className="font-mono text-xs truncate text-danger" title={child.path}>
                         {child.path}

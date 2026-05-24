@@ -1,15 +1,11 @@
 import type { Dayjs } from "dayjs";
-import type { Duration } from "dayjs/plugin/duration";
 import type { LinkValue, MultilevelData, TagValue } from "./models";
 import type { StandardValueOf } from "@/components/Property/PropertySystem";
 
 import dayjs from "dayjs";
 
 import { StandardValueType } from "@/sdk/constants";
-import {
-  joinWithEscapeChar,
-  splitStringWithEscapeChar,
-} from "@/components/utils";
+import { joinWithEscapeChar, splitStringWithEscapeChar } from "@/components/utils";
 
 export const filterMultilevelData = <V>(
   data: MultilevelData<V>[],
@@ -77,9 +73,7 @@ const parseTimeSpanToMs = (value: string): number | undefined => {
     return numeric;
   }
 
-  const match = value.match(
-    /^(-)?(?:(\d+)[.:])?(\d{1,2}):(\d{2}):(\d{2})(?:\.(\d{1,7}))?$/,
-  );
+  const match = value.match(/^(-)?(?:(\d+)[.:])?(\d{1,2}):(\d{2}):(\d{2})(?:\.(\d{1,7}))?$/);
 
   if (!match) {
     return undefined;
@@ -225,11 +219,7 @@ export const deserializeStandardValue = (
 
       if (parts) {
         return parts.map((p) =>
-          splitStringWithEscapeChar(
-            p,
-            Serialization.LowLevelSeparator,
-            Serialization.EscapeChar,
-          ),
+          splitStringWithEscapeChar(p, Serialization.LowLevelSeparator, Serialization.EscapeChar),
         );
       }
 
@@ -326,11 +316,7 @@ export const serializeStandardValue = (
     case StandardValueType.ListListString: {
       return joinWithEscapeChar(
         (value as string[][]).map((p) =>
-          joinWithEscapeChar(
-            p,
-            Serialization.LowLevelSeparator,
-            Serialization.EscapeChar,
-          ),
+          joinWithEscapeChar(p, Serialization.LowLevelSeparator, Serialization.EscapeChar),
         ),
         Serialization.HighLevelSeparator,
         Serialization.EscapeChar,
@@ -375,6 +361,7 @@ export const serializeStandardValue = (
 
       if (typeof value === "string") {
         const ms = parseTimeSpanToMs(value);
+
         return ms == undefined ? undefined : ms.toString();
       }
 

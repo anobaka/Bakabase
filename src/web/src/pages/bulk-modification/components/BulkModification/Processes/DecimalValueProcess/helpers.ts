@@ -19,11 +19,13 @@ export const validate = (
       if (!options.value) {
         return "bulkModification.validation.valueRequired";
       }
+
       return undefined;
     case BulkModificationDecimalProcessOperation.Round:
       if (options.decimalPlaces === undefined || options.decimalPlaces < 0) {
         return "bulkModification.validation.decimalPlacesRequired";
       }
+
       return undefined;
     default:
       return undefined;

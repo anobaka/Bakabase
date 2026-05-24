@@ -1,16 +1,13 @@
 "use client";
 
-import type { Entry } from "@/core/models/FileExplorer/Entry";
+import type { Entry, EntryError } from "@/core/models/FileExplorer/Entry";
 
-import {
-  LoadingOutlined,
-  RightOutlined,
-  WarningOutlined,
-} from "@ant-design/icons";
+import { LoadingOutlined, RightOutlined, WarningOutlined } from "@ant-design/icons";
 import React, { useCallback } from "react";
 
-import { EntryError, EntryStatus } from "@/core/models/FileExplorer/Entry";
 import OperationButton from "../OperationButton";
+
+import { EntryStatus } from "@/core/models/FileExplorer/Entry";
 import { Chip, Tooltip } from "@/components/bakaui";
 
 type Props = {

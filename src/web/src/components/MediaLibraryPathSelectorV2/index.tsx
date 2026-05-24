@@ -4,11 +4,7 @@ import type { DestroyableProps } from "@/components/bakaui/types";
 
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  DoubleRightOutlined,
-  HistoryOutlined,
-  SearchOutlined,
-} from "@ant-design/icons";
+import { DoubleRightOutlined, HistoryOutlined, SearchOutlined } from "@ant-design/icons";
 
 import DeprecatedChip from "../Chips/DeprecatedChip";
 
@@ -20,11 +16,7 @@ import { Button, Chip, Divider, Input, Modal } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
 type Props = {
-  onSelect: (
-    id: number,
-    path: string,
-    isLegacyMediaLibrary: boolean,
-  ) => Promise<any> | any;
+  onSelect: (id: number, path: string, isLegacyMediaLibrary: boolean) => Promise<any> | any;
   confirmation?: boolean;
 } & DestroyableProps;
 
@@ -106,8 +98,8 @@ const MediaLibraryPathSelectorV2 = (props: Props) => {
     return () => {};
   }, []);
 
-  const recentlySelectedPaths = (fsOptions?.recentMovingDestinations || []).map(
-    (a) => standardizePath(a),
+  const recentlySelectedPaths = (fsOptions?.recentMovingDestinations || []).map((a) =>
+    standardizePath(a),
   );
 
   const lowerCasedKeyword = keyword?.toLowerCase() ?? "";
@@ -189,48 +181,29 @@ const MediaLibraryPathSelectorV2 = (props: Props) => {
                             <div className={"flex flex-col gap-1"}>
                               {l.paths.map((path) => {
                                 const selectedRecently =
-                                  recentlySelectedPaths.indexOf(
-                                    standardizePath(path),
-                                  ) > -1;
+                                  recentlySelectedPaths.indexOf(standardizePath(path)) > -1;
 
                                 return (
                                   <Button
-                                    color={
-                                      selectedRecently ? "success" : "primary"
-                                    }
+                                    key={path}
+                                    color={selectedRecently ? "success" : "primary"}
                                     size={"sm"}
                                     variant={"light"}
                                     onPress={() => {
                                       if (confirmation) {
                                         createPortal(Modal, {
                                           defaultVisible: true,
-                                          title: t<string>(
-                                            "Are you sure to select this path?",
-                                          ),
+                                          title: t<string>("Are you sure to select this path?"),
                                           children: (
-                                            <div
-                                              className={
-                                                "flex items-center gap-2"
-                                              }
-                                            >
-                                              <Chip
-                                                color={"primary"}
-                                                radius={"sm"}
-                                              >
+                                            <div className={"flex items-center gap-2"}>
+                                              <Chip color={"primary"} radius={"sm"}>
                                                 {c.name}
                                               </Chip>
-                                              <DoubleRightOutlined
-                                                className={"text-base"}
-                                              />
-                                              <Chip
-                                                color={"secondary"}
-                                                radius={"sm"}
-                                              >
+                                              <DoubleRightOutlined className={"text-base"} />
+                                              <Chip color={"secondary"} radius={"sm"}>
                                                 {l.name}
                                               </Chip>
-                                              <DoubleRightOutlined
-                                                className={"text-base"}
-                                              />
+                                              <DoubleRightOutlined className={"text-base"} />
                                               <Chip radius={"sm"}>{path}</Chip>
                                             </div>
                                           ),
@@ -246,25 +219,19 @@ const MediaLibraryPathSelectorV2 = (props: Props) => {
                                     }}
                                   >
                                     {path}
-                                    {selectedRecently && (
-                                      <HistoryOutlined className={"text-sm"} />
-                                    )}
+                                    {selectedRecently && <HistoryOutlined className={"text-sm"} />}
                                   </Button>
                                 );
                               })}
                             </div>
                           </div>
-                          {il != c.libraries.length - 1 && (
-                            <Divider orientation={"horizontal"} />
-                          )}
+                          {il != c.libraries.length - 1 && <Divider orientation={"horizontal"} />}
                         </>
                       );
                     })}
                   </div>
                 </div>
-                {ic != filteredCategories.length - 1 && (
-                  <Divider orientation={"horizontal"} />
-                )}
+                {ic != filteredCategories.length - 1 && <Divider orientation={"horizontal"} />}
               </>
             );
           })}

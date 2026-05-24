@@ -110,7 +110,9 @@ const TargetRow = (props: Props) => {
 
   const dt = options.dynamicTarget ?? dynamicTarget;
 
-  const targetLabel = descriptor.isDynamic ? (dt ?? t<string>("enhancer.target.default.label")) : descriptor.name;
+  const targetLabel = descriptor.isDynamic
+    ? (dt ?? t<string>("enhancer.target.default.label"))
+    : descriptor.name;
   const isDefaultTargetOfDynamic = descriptor.isDynamic && dt == undefined;
   const integratedSpecialTextType = StdValueSpecialTextIntegrationMap[descriptor.valueType];
 
@@ -242,7 +244,9 @@ const TargetRow = (props: Props) => {
         <div className={"w-1/4"}>
           <div className={"flex flex-col gap-2"}>
             <TargetOptions
-              isDisabled={!options.autoBindProperty && (!options.propertyId || !options.propertyPool)}
+              isDisabled={
+                !options.autoBindProperty && (!options.propertyId || !options.propertyPool)
+              }
               options={options}
               optionsItems={descriptor.optionsItems}
               onChange={patchTargetOptions}

@@ -2,13 +2,13 @@
 
 import type { BakabaseAbstractionsModelsDomainPathMark } from "@/sdk/Api";
 import type { PathMarkGroup } from "@/pages/path-mark-config/hooks/usePathMarks";
+import type { PathTreeNode } from "./TreeNodeComponent";
 
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { AiOutlineFolder } from "react-icons/ai";
 
 import TreeNodeComponent from "./TreeNodeComponent";
-import type { PathTreeNode } from "./TreeNodeComponent";
 
 interface PathTreeProps {
   groups: PathMarkGroup[];
@@ -64,6 +64,7 @@ function buildPathTree(groups: PathMarkGroup[]): PathTreeNode[] {
     // Traverse the path
     for (let i = startIndex; i < parts.length; i++) {
       const part = parts[i];
+
       currentPath = currentPath + "/" + part;
 
       if (!currentNode.children.has(part)) {
@@ -96,6 +97,7 @@ function collapseSingleChildPaths(node: PathTreeNode): PathTreeNode {
   // If this node has exactly one child and no marks, merge with child
   if (collapsedChildren.length === 1 && node.marks.length === 0) {
     const child = collapsedChildren[0];
+
     return {
       name: node.name + "/" + child.name,
       fullPath: child.fullPath,
@@ -107,6 +109,7 @@ function collapseSingleChildPaths(node: PathTreeNode): PathTreeNode {
 
   // Otherwise, update children
   const newChildren = new Map<string, PathTreeNode>();
+
   for (const child of collapsedChildren) {
     newChildren.set(child.name, child);
   }
@@ -129,6 +132,7 @@ const PathTree = ({
 
   const treeNodes = useMemo(() => {
     const rawTree = buildPathTree(groups);
+
     return rawTree.map(collapseSingleChildPaths).sort((a, b) => a.name.localeCompare(b.name));
   }, [groups]);
 

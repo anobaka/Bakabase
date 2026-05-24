@@ -5,8 +5,6 @@ import type { MarkConfigModalProps } from "./types";
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { Modal, Switch, DurationInput, Button, toast } from "@/components/bakaui";
-import { PathMarkType, PathMarkApplyScope } from "@/sdk/constants";
 import { SaveOutlined, SyncOutlined, DownOutlined } from "@ant-design/icons";
 
 import { parseMarkConfig, buildConfigJson } from "./utils";
@@ -14,23 +12,38 @@ import ResourceMarkConfig from "./components/ResourceMarkConfig";
 import PropertyMarkConfig from "./components/PropertyMarkConfig";
 import MediaLibraryMarkConfig from "./components/MediaLibraryMarkConfig";
 import { usePreview } from "./hooks/usePreview";
+
+import { PathMarkType, PathMarkApplyScope } from "@/sdk/constants";
+import { Modal, Switch, DurationInput, Button, toast } from "@/components/bakaui";
 import { ResourceTerm, PropertyTerm, MediaLibraryTerm } from "@/components/Chips/Terms";
 import BApi from "@/sdk/BApi";
 
 const DEFAULT_EXPIRES_IN_SECONDS = 3600; // 1 hour
 
-const MarkConfigModal = ({ mark, markType, rootPath, rootPaths, onSave, onDestroyed }: MarkConfigModalProps) => {
+const MarkConfigModal = ({
+  mark,
+  markType,
+  rootPath,
+  rootPaths,
+  onSave,
+  onDestroyed,
+}: MarkConfigModalProps) => {
   const { t } = useTranslation();
 
   const initialConfig = parseMarkConfig(mark?.configJson);
+
   // For new MediaLibrary marks, default applyScope to MatchedAndSubdirectories
   if (!mark && markType === PathMarkType.MediaLibrary) {
     initialConfig.applyScope = PathMarkApplyScope.MatchedAndSubdirectories;
   }
   const [priority, setPriority] = useState(mark?.priority ?? 10);
   const [config, setConfig] = useState(initialConfig);
-  const [enableExpiration, setEnableExpiration] = useState(mark?.expiresInSeconds != null && mark.expiresInSeconds > 0);
-  const [expiresInSeconds, setExpiresInSeconds] = useState(mark?.expiresInSeconds ?? DEFAULT_EXPIRES_IN_SECONDS);
+  const [enableExpiration, setEnableExpiration] = useState(
+    mark?.expiresInSeconds != null && mark.expiresInSeconds > 0,
+  );
+  const [expiresInSeconds, setExpiresInSeconds] = useState(
+    mark?.expiresInSeconds ?? DEFAULT_EXPIRES_IN_SECONDS,
+  );
   const [syncing, setSyncing] = useState(false);
   const [showScrollIndicator, setShowScrollIndicator] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -41,9 +54,11 @@ const MarkConfigModal = ({ mark, markType, rootPath, rootPaths, onSave, onDestro
   useEffect(() => {
     const checkScrollable = () => {
       const el = contentRef.current;
+
       if (el) {
         const isScrollable = el.scrollHeight > el.clientHeight;
         const isAtBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 10;
+
         setShowScrollIndicator(isScrollable && !isAtBottom);
       }
     };
@@ -51,10 +66,12 @@ const MarkConfigModal = ({ mark, markType, rootPath, rootPaths, onSave, onDestro
     checkScrollable();
 
     const el = contentRef.current;
+
     if (el) {
       el.addEventListener("scroll", checkScrollable);
       // Also check on resize
       const resizeObserver = new ResizeObserver(checkScrollable);
+
       resizeObserver.observe(el);
 
       return () => {
@@ -71,7 +88,9 @@ const MarkConfigModal = ({ mark, markType, rootPath, rootPaths, onSave, onDestro
       configJson: buildConfigJson(config, markType),
       expiresInSeconds: enableExpiration ? expiresInSeconds : undefined,
     };
+
     await onSave?.(newMark as BakabaseAbstractionsModelsDomainPathMark);
+
     return true;
   }, [markType, priority, config, enableExpiration, expiresInSeconds, onSave]);
 
@@ -89,7 +108,7 @@ const MarkConfigModal = ({ mark, markType, rootPath, rootPaths, onSave, onDestro
   }, [mark?.id, t]);
 
   const updateConfig = useCallback((updates: Partial<typeof config>) => {
-    setConfig(prev => ({ ...prev, ...updates }));
+    setConfig((prev) => ({ ...prev, ...updates }));
   }, []);
 
   const scrollToBottom = () => {
@@ -115,25 +134,6 @@ const MarkConfigModal = ({ mark, markType, rootPath, rootPaths, onSave, onDestro
   return (
     <Modal
       defaultVisible
-      size="3xl"
-      title={
-        <span className="flex items-center gap-1 whitespace-nowrap">
-          <Trans
-            i18nKey={mark ? "Edit <type></type> Mark" : "Add <type></type> Mark"}
-            components={{
-              type: markType === PathMarkType.Resource ? <ResourceTerm size="lg" /> :
-                    markType === PathMarkType.Property ? <PropertyTerm size="lg" /> :
-                    markType === PathMarkType.MediaLibrary ? <MediaLibraryTerm size="lg" /> :
-                    <span>{t("pathMarkConfig.status.unknown")}</span>,
-            }}
-          />
-          {pathCount > 1 && (
-            <span className="text-default-400 text-sm ml-2">
-              ({t("pathMarkConfig.label.pathCount", { count: pathCount })})
-            </span>
-          )}
-        </span>
-      }
       footer={{
         actions: ["cancel", "ok"],
         okProps: {
@@ -143,18 +143,43 @@ const MarkConfigModal = ({ mark, markType, rootPath, rootPaths, onSave, onDestro
         startContent: mark?.id ? (
           <Button
             color="primary"
-            variant="flat"
-            size="sm"
             isLoading={syncing}
+            size="sm"
             startContent={<SyncOutlined />}
+            variant="flat"
             onClick={handleSyncNow}
           >
             {t("pathMarkConfig.action.syncNow")}
           </Button>
         ) : undefined,
       }}
-      onOk={handleSave}
+      size="3xl"
+      title={
+        <span className="flex items-center gap-1 whitespace-nowrap">
+          <Trans
+            components={{
+              type:
+                markType === PathMarkType.Resource ? (
+                  <ResourceTerm size="lg" />
+                ) : markType === PathMarkType.Property ? (
+                  <PropertyTerm size="lg" />
+                ) : markType === PathMarkType.MediaLibrary ? (
+                  <MediaLibraryTerm size="lg" />
+                ) : (
+                  <span>{t("pathMarkConfig.status.unknown")}</span>
+                ),
+            }}
+            i18nKey={mark ? "Edit <type></type> Mark" : "Add <type></type> Mark"}
+          />
+          {pathCount > 1 && (
+            <span className="text-default-400 text-sm ml-2">
+              ({t("pathMarkConfig.label.pathCount", { count: pathCount })})
+            </span>
+          )}
+        </span>
+      }
       onDestroyed={onDestroyed}
+      onOk={handleSave}
     >
       <div className="relative overflow-hidden">
         <div
@@ -165,29 +190,29 @@ const MarkConfigModal = ({ mark, markType, rootPath, rootPaths, onSave, onDestro
           {markType === PathMarkType.Resource ? (
             <ResourceMarkConfig
               config={config}
-              updateConfig={updateConfig}
-              t={t}
-              priority={priority}
-              onPriorityChange={setPriority}
               preview={previewData}
+              priority={priority}
+              t={t}
+              updateConfig={updateConfig}
+              onPriorityChange={setPriority}
             />
           ) : markType === PathMarkType.Property ? (
             <PropertyMarkConfig
               config={config}
-              updateConfig={updateConfig}
-              t={t}
-              priority={priority}
-              onPriorityChange={setPriority}
               preview={previewData}
+              priority={priority}
+              t={t}
+              updateConfig={updateConfig}
+              onPriorityChange={setPriority}
             />
           ) : markType === PathMarkType.MediaLibrary ? (
             <MediaLibraryMarkConfig
               config={config}
-              updateConfig={updateConfig}
-              t={t}
-              priority={priority}
-              onPriorityChange={setPriority}
               preview={previewData}
+              priority={priority}
+              t={t}
+              updateConfig={updateConfig}
+              onPriorityChange={setPriority}
             />
           ) : null}
 
@@ -195,8 +220,8 @@ const MarkConfigModal = ({ mark, markType, rootPath, rootPaths, onSave, onDestro
           <div className="border-t border-default-200 pt-3 mt-2">
             <div className="flex items-center gap-2 mb-1">
               <Switch
-                size="sm"
                 isSelected={enableExpiration}
+                size="sm"
                 onValueChange={(checked) => {
                   setEnableExpiration(checked);
                   if (checked && expiresInSeconds <= 0) {
@@ -212,10 +237,10 @@ const MarkConfigModal = ({ mark, markType, rootPath, rootPaths, onSave, onDestro
             {enableExpiration && (
               <div className="ml-10">
                 <DurationInput
-                  value={expiresInSeconds}
-                  onChange={setExpiresInSeconds}
                   minValue={60}
                   size="sm"
+                  value={expiresInSeconds}
+                  onChange={setExpiresInSeconds}
                 />
               </div>
             )}
@@ -226,7 +251,15 @@ const MarkConfigModal = ({ mark, markType, rootPath, rootPaths, onSave, onDestro
         {showScrollIndicator && (
           <div
             className="absolute bottom-0 left-0 right-0 flex justify-center items-center py-1 bg-gradient-to-t from-background to-transparent cursor-pointer hover:from-primary-50 transition-colors"
+            role="button"
+            tabIndex={0}
             onClick={scrollToBottom}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                scrollToBottom();
+              }
+            }}
           >
             <div className="flex items-center gap-1 text-xs text-primary-500 animate-bounce">
               <DownOutlined />

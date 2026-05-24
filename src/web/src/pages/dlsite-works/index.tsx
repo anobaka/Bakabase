@@ -1,5 +1,7 @@
 "use client";
 
+import type { DLsiteWork } from "./types";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -30,6 +32,14 @@ import {
   AiOutlineScan,
 } from "react-icons/ai";
 
+import {
+  SYNC_TASK_ID,
+  DOWNLOAD_TASK_ID_PREFIX,
+  EXTRACT_TASK_ID_PREFIX,
+  SCAN_TASK_ID,
+} from "./types";
+import { DLsiteTable } from "./components/DLsiteTable";
+
 import BApi from "@/sdk/BApi";
 import { toast } from "@/components/bakaui";
 import { useDLsiteOptionsStore } from "@/stores/options";
@@ -38,11 +48,6 @@ import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContext
 import ConfirmModal from "@/components/ConfirmModal";
 import { useBTasksStore } from "@/stores/bTasks";
 import { BTaskStatus } from "@/sdk/constants";
-
-import type { DLsiteWork } from "./types";
-import { SYNC_TASK_ID, DOWNLOAD_TASK_ID_PREFIX, EXTRACT_TASK_ID_PREFIX, SCAN_TASK_ID } from "./types";
-import { DLsiteTable } from "./components/DLsiteTable";
-
 
 const PAGE_SIZE_OPTIONS = [20, 50];
 
@@ -86,6 +91,7 @@ export default function DLsiteWorksPage() {
         pageIndex: pageNum,
         pageSize: ps,
       });
+
       if (!rsp.code) {
         setWorks(rsp.data || []);
         setTotalCount(rsp.totalCount ?? 0);
@@ -100,14 +106,20 @@ export default function DLsiteWorksPage() {
   }, [page, pageSize, searchKeyword, showHidden]);
 
   useEffect(() => {
-    if (prevSyncStatusRef.current === BTaskStatus.Running && syncTask?.status === BTaskStatus.Completed) {
+    if (
+      prevSyncStatusRef.current === BTaskStatus.Running &&
+      syncTask?.status === BTaskStatus.Completed
+    ) {
       loadWorks(page, pageSize, searchKeyword, showHidden);
     }
     prevSyncStatusRef.current = syncTask?.status;
   }, [syncTask?.status]);
 
   useEffect(() => {
-    if (prevScanStatusRef.current === BTaskStatus.Running && scanTask?.status === BTaskStatus.Completed) {
+    if (
+      prevScanStatusRef.current === BTaskStatus.Running &&
+      scanTask?.status === BTaskStatus.Completed
+    ) {
       loadWorks(page, pageSize, searchKeyword, showHidden);
     }
     prevScanStatusRef.current = scanTask?.status;
@@ -116,7 +128,10 @@ export default function DLsiteWorksPage() {
   useEffect(() => {
     const downloadTasks = allTasks.filter((t) => t.id?.startsWith(DOWNLOAD_TASK_ID_PREFIX));
     const extractTasks = allTasks.filter((t) => t.id?.startsWith(EXTRACT_TASK_ID_PREFIX));
-    const justCompleted = [...downloadTasks, ...extractTasks].some((t) => t.status === BTaskStatus.Completed);
+    const justCompleted = [...downloadTasks, ...extractTasks].some(
+      (t) => t.status === BTaskStatus.Completed,
+    );
+
     if (justCompleted) {
       loadWorks(page, pageSize, searchKeyword, showHidden);
     }
@@ -142,9 +157,11 @@ export default function DLsiteWorksPage() {
   const handleScanFolders = async () => {
     if (!hasScanFolders) {
       createPortal(DLsiteConfig, {});
+
       return;
     }
     const rsp = await BApi.dlsiteWork.scanDLsiteFolders();
+
     if (!rsp.code) {
       toast.success(t("resourceSource.dlsite.action.scanning"));
     }
@@ -171,21 +188,23 @@ export default function DLsiteWorksPage() {
 
   const handleLaunch = async (workId: string) => {
     const rsp = await BApi.dlsiteWork.launchDLsiteWork(workId);
+
     if (rsp.code) {
       toast.danger(rsp.message!);
     }
   };
 
   const handleWorkUpdate = useCallback((workId: string, patch: Partial<DLsiteWork>) => {
-    setWorks((prev) => prev.map((w) => w.workId === workId ? { ...w, ...patch } : w));
+    setWorks((prev) => prev.map((w) => (w.workId === workId ? { ...w, ...patch } : w)));
   }, []);
 
   const handleSetWorksLocalPath = useCallback((workId: string, localPath: string) => {
-    setWorks((prev) => prev.map((w) => w.workId === workId ? { ...w, localPath } : w));
+    setWorks((prev) => prev.map((w) => (w.workId === workId ? { ...w, localPath } : w)));
   }, []);
 
   const handleReExtract = async (workId: string) => {
     const rsp = await BApi.dlsiteWork.extractDLsiteWork(workId);
+
     if (!rsp.code) {
       toast.success(t("resourceSource.dlsite.action.reExtract"));
     }
@@ -198,8 +217,13 @@ export default function DLsiteWorksPage() {
       destructive: true,
       onConfirm: async () => {
         const rsp = await BApi.dlsiteWork.deleteDLsiteWorkLocalFiles(workId);
+
         if (!rsp.code) {
-          setWorks((prev) => prev.map((w) => w.workId === workId ? { ...w, isDownloaded: false, localPath: undefined } : w));
+          setWorks((prev) =>
+            prev.map((w) =>
+              w.workId === workId ? { ...w, isDownloaded: false, localPath: undefined } : w,
+            ),
+          );
           toast.success(t<string>("common.state.saved"));
         } else if (rsp.message) {
           toast.danger(rsp.message);
@@ -210,15 +234,17 @@ export default function DLsiteWorksPage() {
 
   const handleToggleHidden = async (workId: string, isHidden: boolean) => {
     const rsp = await BApi.dlsiteWork.setDLsiteWorkHidden(workId, isHidden);
+
     if (!rsp.code) {
-      setWorks((prev) => prev.map((w) => w.workId === workId ? { ...w, isHidden } : w));
+      setWorks((prev) => prev.map((w) => (w.workId === workId ? { ...w, isHidden } : w)));
     }
   };
 
   const handleToggleUseLocaleEmulator = async (workId: string, useLocaleEmulator: boolean) => {
     const rsp = await BApi.dlsiteWork.setDLsiteWorkUseLocaleEmulator(workId, useLocaleEmulator);
+
     if (!rsp.code) {
-      setWorks((prev) => prev.map((w) => w.workId === workId ? { ...w, useLocaleEmulator } : w));
+      setWorks((prev) => prev.map((w) => (w.workId === workId ? { ...w, useLocaleEmulator } : w)));
     }
   };
 
@@ -226,20 +252,15 @@ export default function DLsiteWorksPage() {
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">
-            {t("resourceSource.dlsite.title")}
-          </h1>
-          <p className="text-default-500 mt-1">
-            {t("resourceSource.dlsite.description")}
-          </p>
+          <h1 className="text-2xl font-bold">{t("resourceSource.dlsite.title")}</h1>
+          <p className="text-default-500 mt-1">{t("resourceSource.dlsite.description")}</p>
         </div>
         <div className="flex gap-2 items-center">
-
           {isSyncing ? (
             <div className="flex items-center gap-2">
               <CircularProgress
-                color="primary"
                 showValueLabel
+                color="primary"
                 size="sm"
                 value={syncTask?.percentage ?? 0}
               />
@@ -271,8 +292,8 @@ export default function DLsiteWorksPage() {
           {isScanning ? (
             <div className="flex items-center gap-2">
               <CircularProgress
-                color="secondary"
                 showValueLabel
+                color="secondary"
                 size="sm"
                 value={scanTask?.percentage ?? 0}
               />
@@ -318,18 +339,11 @@ export default function DLsiteWorksPage() {
         </div>
       </div>
 
-
-
-
       {!isConfigured && works.length === 0 && !loading && (
         <div className="flex flex-col items-center justify-center py-16 gap-4 text-default-500">
           <p className="text-lg font-medium">{t("resourceSource.notConfigured.title")}</p>
           <p>{t("resourceSource.notConfigured.description", { platform: "DLsite" })}</p>
-          <Button
-            color="primary"
-            size="sm"
-            onPress={() => createPortal(DLsiteConfig, {})}
-          >
+          <Button color="primary" size="sm" onPress={() => createPortal(DLsiteConfig, {})}>
             {t("resourceSource.notConfigured.goToConfigure")}
           </Button>
         </div>
@@ -345,8 +359,8 @@ export default function DLsiteWorksPage() {
                 size="sm"
                 startContent={<AiOutlineSearch />}
                 value={keyword}
-                onValueChange={setKeyword}
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                onValueChange={setKeyword}
               />
               <Chip size="sm" variant="flat">
                 {t("resourceSource.pagination.total", { total: totalCount })}
@@ -375,13 +389,16 @@ export default function DLsiteWorksPage() {
                 </span>
               </Switch>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-default-500 whitespace-nowrap">{t("resourceSource.pagination.pageSize")}</span>
+                <span className="text-sm text-default-500 whitespace-nowrap">
+                  {t("resourceSource.pagination.pageSize")}
+                </span>
                 <Select
-                  size="sm"
                   className="w-20"
                   selectedKeys={[String(pageSize)]}
+                  size="sm"
                   onSelectionChange={(keys) => {
                     const val = Number(Array.from(keys)[0]);
+
                     if (val) {
                       setPageSize(val);
                       setPage(1);
@@ -402,28 +419,24 @@ export default function DLsiteWorksPage() {
             </div>
           ) : (
             <DLsiteTable
-              works={works}
-              showCover={showCover}
               hasDownloadDir={hasDownloadDir}
-              onOpenPage={handleOpenDLsitePage}
-              onOpenLocal={handleOpenLocal}
-              onLaunch={handleLaunch}
-              onToggleHidden={handleToggleHidden}
+              showCover={showCover}
+              works={works}
               onDeleteLocal={handleDeleteLocal}
+              onLaunch={handleLaunch}
+              onOpenLocal={handleOpenLocal}
+              onOpenPage={handleOpenDLsitePage}
               onReExtract={handleReExtract}
-              onWorkUpdate={handleWorkUpdate}
               onSetWorksLocalPath={handleSetWorksLocalPath}
+              onToggleHidden={handleToggleHidden}
               onToggleUseLocaleEmulator={handleToggleUseLocaleEmulator}
+              onWorkUpdate={handleWorkUpdate}
             />
           )}
 
           {totalPages > 1 && (
             <div className="flex justify-center">
-              <Pagination
-                page={page}
-                total={totalPages}
-                onChange={setPage}
-              />
+              <Pagination page={page} total={totalPages} onChange={setPage} />
             </div>
           )}
         </>
@@ -434,10 +447,7 @@ export default function DLsiteWorksPage() {
           <ModalBody>
             <p>{t("resourceSource.confirm.sync.description")}</p>
             <div>
-              <Checkbox
-                isSelected={refetchMetadata}
-                onValueChange={setRefetchMetadata}
-              >
+              <Checkbox isSelected={refetchMetadata} onValueChange={setRefetchMetadata}>
                 {t("resourceSource.confirm.sync.refetchMetadata")}
               </Checkbox>
               <p className="text-xs text-default-400 ml-7 mt-1">

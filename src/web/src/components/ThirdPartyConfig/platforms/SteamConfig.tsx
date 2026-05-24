@@ -4,15 +4,18 @@ import { useMemo, type FC } from "react";
 import { useTranslation } from "react-i18next";
 import { Select, SelectItem } from "@heroui/react";
 
-import { toast } from "@/components/bakaui";
-import { useSteamOptionsStore } from "@/stores/options";
-import { ResourceSource } from "@/sdk/constants";
-import ExternalLink from "@/components/ExternalLink";
 import AccountsPanel, { type AccountField } from "../base/AccountsPanel";
-import ConfigurableThirdPartyPanel, { type ConfigFieldTab } from "../base/ConfigurableThirdPartyPanel";
+import ConfigurableThirdPartyPanel, {
+  type ConfigFieldTab,
+} from "../base/ConfigurableThirdPartyPanel";
 import MetadataMappingPanel from "../base/MetadataMappingPanel";
 import AutoSyncPanel from "../base/AutoSyncPanel";
 import ThirdPartyConfigModal from "../base/ThirdPartyConfigModal";
+
+import ExternalLink from "@/components/ExternalLink";
+import { ResourceSource } from "@/sdk/constants";
+import { useSteamOptionsStore } from "@/stores/options";
+import { toast } from "@/components/bakaui";
 
 const steamLanguageOptions = [
   { value: "english", label: "English" },
@@ -83,16 +86,17 @@ export const SteamConfigPanel: FC<SteamConfigPanelProps> = ({ fields = "all" }) 
         title: t("resourceSource.config.tab.general"),
         content: (
           <Select
-            label={t("thirdPartyConfig.steam.language.label")}
+            className="max-w-xs"
             description={t("thirdPartyConfig.steam.language.description")}
+            label={t("thirdPartyConfig.steam.language.label")}
             placeholder={t("thirdPartyConfig.steam.language.auto")}
             selectedKeys={steamOptions?.language ? [steamOptions.language] : []}
             onSelectionChange={async (keys) => {
               const selected = Array.from(keys)[0] as string | undefined;
+
               await patch({ language: selected ?? null });
               toast.success(t("thirdPartyConfig.success.saved"));
             }}
-            className="max-w-xs"
           >
             {steamLanguageOptions.map((opt) => (
               <SelectItem key={opt.value}>{opt.label}</SelectItem>
@@ -130,6 +134,7 @@ export const SteamConfigPanel: FC<SteamConfigPanelProps> = ({ fields = "all" }) 
         ),
       },
     ];
+
     return allTabs;
   }, [steamOptions, accountFields, t, patch]);
 
@@ -151,10 +156,11 @@ export const SteamConfigModal: FC<SteamConfigModalProps> = ({
 }) => {
   const { t } = useTranslation();
   const handleClose = onClose ?? onDestroyed;
+
   return (
     <ThirdPartyConfigModal
-      title={t("resourceSource.steam.title")}
       isOpen={isOpen}
+      title={t("resourceSource.steam.title")}
       onClose={handleClose}
     >
       <SteamConfigPanel fields={fields} />
@@ -164,4 +170,5 @@ export const SteamConfigModal: FC<SteamConfigModalProps> = ({
 
 /** Modal wrapper; same as SteamConfigModal (legacy name). */
 const SteamConfig = SteamConfigModal;
+
 export default SteamConfig;

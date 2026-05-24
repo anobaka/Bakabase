@@ -28,11 +28,7 @@ export default function SortablePage() {
   );
 
   return (
-    <DndContext
-      collisionDetection={closestCenter}
-      sensors={sensors}
-      onDragEnd={handleDragEnd}
-    >
+    <DndContext collisionDetection={closestCenter} sensors={sensors} onDragEnd={handleDragEnd}>
       <SortableContext items={items} strategy={verticalListSortingStrategy}>
         {items.map((id) => (
           <SortableItem key={id} id={id} />

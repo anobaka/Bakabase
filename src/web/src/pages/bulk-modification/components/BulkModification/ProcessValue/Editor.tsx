@@ -18,14 +18,7 @@ import {
   bulkModificationProcessorValueTypes,
   PropertyType,
 } from "@/sdk/constants";
-import {
-  Button,
-  Checkbox,
-  Radio,
-  RadioGroup,
-  Select,
-  Tooltip,
-} from "@/components/bakaui";
+import { Button, Checkbox, Radio, RadioGroup, Select, Tooltip } from "@/components/bakaui";
 import PropertyValueRenderer from "@/components/Property/components/PropertyValueRenderer";
 import { buildLogger } from "@/components/utils";
 import BApi from "@/sdk/BApi";
@@ -87,6 +80,7 @@ const Editor = (props: Props) => {
   useEffect(() => {
     BApi.property.getAvailablePropertyTypesForManuallySettingValue().then((r) => {
       const pvs = r.data || [];
+
       setPropertyTypesForManuallySettingValue(pvs);
     });
   }, []);
@@ -205,6 +199,7 @@ const Editor = (props: Props) => {
       isDisabled: (p) => !validPropertyIds.has(`${p.pool}-${p.id}`),
       onSubmit: async (selectedProperties) => {
         const prop = selectedProperties[0];
+
         if (prop) {
           changeValue({
             propertyPool: prop.pool,
@@ -240,6 +235,7 @@ const Editor = (props: Props) => {
           value={String(value.type)}
           onValueChange={(v) => {
             const type = parseInt(v, 10) as BulkModificationProcessorValueType;
+
             changeValue({ type });
           }}
         >
@@ -261,7 +257,6 @@ const Editor = (props: Props) => {
         <div className="flex items-center gap-2 flex-wrap">
           <Select
             className="max-w-xs"
-            label={t<string>("bulkModification.valueType.label")}
             dataSource={propertyTypesForManuallySettingValue.map((pt) => ({
               label: (
                 <div className="flex items-center gap-2">
@@ -281,6 +276,7 @@ const Editor = (props: Props) => {
               value: String(pt.type),
               isDisabled: !pt.isAvailable,
             }))}
+            label={t<string>("bulkModification.valueType.label")}
             selectedKeys={value.editorPropertyType ? [value.editorPropertyType.toString()] : []}
             selectionMode="single"
             onSelectionChange={(keys) => {
@@ -301,39 +297,38 @@ const Editor = (props: Props) => {
           />
           {selectedType && <TypeMismatchTip fromType={selectedType} toType={baseValueType} />}
         </div>
+      ) : !variables || variables.length === 0 ? (
+        <span className="text-default-400">
+          {t<string>("bulkModification.label.noVariablesAvailable")}
+        </span>
       ) : (
-        (!variables || variables.length === 0) ? (
-          <span className="text-default-400">
-            {t<string>("bulkModification.label.noVariablesAvailable")}
-          </span>
-        ) : (
-          <div className="flex items-center gap-2 flex-wrap">
-            <Select
-              className="max-w-xs"
-              isRequired
-              label={t<string>("bulkModification.select.variable")}
-              dataSource={variables.map((v) => ({
-                label: v.name,
-                value: v.key,
-              }))}
-              placeholder={t<string>("bulkModification.select.variable")}
-              selectedKeys={value.value ? [value.value] : []}
-              selectionMode="single"
-              onSelectionChange={(keys) => {
-                const key = Array.from(keys)[0] as string;
-                changeValue({
-                  value: key,
-                  editorPropertyType: undefined,
-                  property: undefined,
-                  propertyId: undefined,
-                  propertyPool: undefined,
-                  followPropertyChanges: undefined,
-                });
-              }}
-            />
-            {selectedType && <TypeMismatchTip fromType={selectedType} toType={baseValueType} />}
-          </div>
-        )
+        <div className="flex items-center gap-2 flex-wrap">
+          <Select
+            isRequired
+            className="max-w-xs"
+            dataSource={variables.map((v) => ({
+              label: v.name,
+              value: v.key,
+            }))}
+            label={t<string>("bulkModification.select.variable")}
+            placeholder={t<string>("bulkModification.select.variable")}
+            selectedKeys={value.value ? [value.value] : []}
+            selectionMode="single"
+            onSelectionChange={(keys) => {
+              const key = Array.from(keys)[0] as string;
+
+              changeValue({
+                value: key,
+                editorPropertyType: undefined,
+                property: undefined,
+                propertyId: undefined,
+                propertyPool: undefined,
+                followPropertyChanges: undefined,
+              });
+            }}
+          />
+          {selectedType && <TypeMismatchTip fromType={selectedType} toType={baseValueType} />}
+        </div>
       )}
 
       {/* Row 3: Property Selection (for reference types only) */}
@@ -345,9 +340,11 @@ const Editor = (props: Props) => {
               {t<string>("bulkModification.dataSource.label")}
             </span>
             <Button variant="bordered" onPress={openPropertySelector}>
-              {value.property
-                ? <PropertyLabel showPool property={value.property} />
-                : t<string>("bulkModification.dataSource.clickToSelect")}
+              {value.property ? (
+                <PropertyLabel showPool property={value.property} />
+              ) : (
+                t<string>("bulkModification.dataSource.clickToSelect")
+              )}
             </Button>
             {value.property && (
               <Tooltip
@@ -381,17 +378,17 @@ const Editor = (props: Props) => {
               {t<string>("bulkModification.label.setValue")}
             </span>
             <PropertyValueRenderer
+              isEditing
               bizValue={value.followPropertyChanges ? undefined : value.value}
               dbValue={value.followPropertyChanges ? value.value : undefined}
-              isEditing
               property={value.property}
+              size="sm"
               variant="light"
               onValueChange={(dv, bv) => {
                 changeValue({
                   value: value.followPropertyChanges ? dv : bv,
                 });
               }}
-              size="sm"
             />
           </div>
         )}

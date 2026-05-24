@@ -87,12 +87,8 @@ export default function ChoiceList({
 
   const calculateBulkEditSummary = (text: string) => {
     const ctxChoices = buildChoicesFromBulkText(text);
-    const addedChoicesCount = ctxChoices.filter(
-      (x) => !choices.includes(x),
-    ).length;
-    const sameChoicesCount = ctxChoices.filter((x) =>
-      choices.includes(x),
-    ).length;
+    const addedChoicesCount = ctxChoices.filter((x) => !choices.includes(x)).length;
+    const sameChoicesCount = ctxChoices.filter((x) => choices.includes(x)).length;
 
     const deletedChoicesCount = choices.length - sameChoicesCount;
 
@@ -133,9 +129,7 @@ export default function ChoiceList({
           size={"sm"}
           variant={"light"}
           onClick={() => {
-            choices.sort((a, b) =>
-              (a.label || "").localeCompare(b.label || ""),
-            );
+            choices.sort((a, b) => (a.label || "").localeCompare(b.label || ""));
             setChoices([...choices]);
           }}
         >
@@ -144,11 +138,7 @@ export default function ChoiceList({
         </Button>
       </div>
       <div className="mt-2 mb-2 flex flex-col gap-1">
-        <DndContext
-          collisionDetection={closestCenter}
-          sensors={sensors}
-          onDragEnd={handleDragEnd}
-        >
+        <DndContext collisionDetection={closestCenter} sensors={sensors} onDragEnd={handleDragEnd}>
           <SortableContext
             items={choices?.map((c) => ({ ...c, id: c.value }))}
             strategy={verticalListSortingStrategy}
@@ -241,13 +231,9 @@ export default function ChoiceList({
           }}
         >
           <div className={"flex flex-col gap-2 m-2 "}>
-            <div className="text-base">
-              {t<string>("Add or delete choices in bulk")}
-            </div>
+            <div className="text-base">{t<string>("Add or delete choices in bulk")}</div>
             <div className={"text-sm opacity-70"}>
-              <div>
-                {t<string>("Choices will be separated by line breaks.")}
-              </div>
+              <div>{t<string>("Choices will be separated by line breaks.")}</div>
               <div>
                 {t<string>(
                   "Once you click the submit button, new choices will be added to the list, and missing choices will be deleted.",
@@ -261,8 +247,8 @@ export default function ChoiceList({
             </div>
             {bulkEditSummaries.length > 0 && (
               <div className={"flex items-center gap-2 text-sm"}>
-                {bulkEditSummaries.map((s) => (
-                  <Chip color={"success"} size={"sm"} variant={"light"}>
+                {bulkEditSummaries.map((s, i) => (
+                  <Chip key={i} color={"success"} size={"sm"} variant={"light"}>
                     {s}
                   </Chip>
                 ))}

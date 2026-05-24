@@ -37,9 +37,7 @@ type Props = {
   className?: string;
 };
 
-const renderHighlightedName = (
-  entry: FileChangeEntry,
-): React.ReactNode => {
+const renderHighlightedName = (entry: FileChangeEntry): React.ReactNode => {
   const spans = (entry.highlightSpans ?? [])
     .filter((s) => s.length > 0 && s.start >= 0 && s.start < entry.name.length)
     .slice()
@@ -48,10 +46,13 @@ const renderHighlightedName = (
   if (spans.length === 0) return entry.name;
 
   const merged: FileChangeHighlightSpan[] = [];
+
   for (const s of spans) {
     const last = merged[merged.length - 1];
+
     if (last && s.start <= last.start + last.length) {
       const end = Math.max(last.start + last.length, s.start + s.length);
+
       last.length = end - last.start;
     } else {
       merged.push({ start: s.start, length: s.length });
@@ -60,15 +61,13 @@ const renderHighlightedName = (
 
   const out: React.ReactNode[] = [];
   let cursor = 0;
+
   merged.forEach((s, i) => {
     if (cursor < s.start) {
       out.push(<span key={`p-${i}`}>{entry.name.slice(cursor, s.start)}</span>);
     }
     out.push(
-      <span
-        key={`h-${i}`}
-        className="bg-yellow-200/50 dark:bg-yellow-500/30 rounded-sm px-0.5"
-      >
+      <span key={`h-${i}`} className="bg-yellow-200/50 dark:bg-yellow-500/30 rounded-sm px-0.5">
         {entry.name.slice(s.start, s.start + s.length)}
       </span>,
     );
@@ -77,6 +76,7 @@ const renderHighlightedName = (
   if (cursor < entry.name.length) {
     out.push(<span key="tail">{entry.name.slice(cursor)}</span>);
   }
+
   return <>{out}</>;
 };
 
@@ -97,9 +97,7 @@ const EntryRow = ({
       size={18}
       type={entry.isDirectory ? IconType.Directory : IconType.UnknownFile}
     />
-    <span className="text-sm whitespace-break-spaces">
-      {renderHighlightedName(entry)}
-    </span>
+    <span className="text-sm whitespace-break-spaces">{renderHighlightedName(entry)}</span>
   </div>
 );
 
@@ -124,9 +122,9 @@ const GroupBlock = ({
   return (
     <div className="flex flex-col gap-0.5">
       <button
-        type="button"
         className="flex items-center gap-2 text-left"
         style={{ paddingLeft: `24px` }}
+        type="button"
         onClick={() => setCollapsed((c) => !c)}
       >
         {collapsed ? (
@@ -143,9 +141,9 @@ const GroupBlock = ({
       ))}
       {hiddenCount > 0 && (
         <button
-          type="button"
           className="text-xs opacity-70 hover:opacity-100 text-left"
           style={{ paddingLeft: `${2 * 24}px` }}
+          type="button"
           onClick={() => setCollapsed(false)}
         >
           + {t<string>("FileChangePreview.MoreEntries", { count: hiddenCount })}
@@ -164,24 +162,15 @@ const UntouchedBlock = ({ entries }: { entries: FileChangeEntry[] }) => {
   return (
     <div className="flex flex-col gap-0.5 mt-1">
       <button
-        type="button"
         className="flex items-center gap-2 text-left text-sm opacity-70 hover:opacity-100"
         style={{ paddingLeft: `24px` }}
+        type="button"
         onClick={() => setOpen((o) => !o)}
       >
-        {open ? (
-          <AiOutlineDown className="text-xs" />
-        ) : (
-          <AiOutlineRight className="text-xs" />
-        )}
-        <span>
-          {t<string>("FileChangePreview.UntouchedCount", { count: entries.length })}
-        </span>
+        {open ? <AiOutlineDown className="text-xs" /> : <AiOutlineRight className="text-xs" />}
+        <span>{t<string>("FileChangePreview.UntouchedCount", { count: entries.length })}</span>
       </button>
-      {open &&
-        entries.map((e) => (
-          <EntryRow key={e.name} entry={e} layer={2} muted />
-        ))}
+      {open && entries.map((e) => <EntryRow key={e.name} muted entry={e} layer={2} />)}
     </div>
   );
 };
@@ -200,6 +189,7 @@ const FileChangePreview = ({
     let groupCount = 0;
     let movingCount = 0;
     let untouchedCount = 0;
+
     for (const b of batches) {
       groupCount += b.groups.length;
       for (const g of b.groups) {
@@ -207,6 +197,7 @@ const FileChangePreview = ({
       }
       untouchedCount += b.untouched?.length ?? 0;
     }
+
     return { groupCount, movingCount, untouchedCount };
   }, [batches]);
 
@@ -214,9 +205,7 @@ const FileChangePreview = ({
     return (
       <div className="flex items-center gap-2 py-4">
         <Spinner size="sm" />
-        <span className="text-sm opacity-70">
-          {t<string>("FileChangePreview.Calculating")}
-        </span>
+        <span className="text-sm opacity-70">{t<string>("FileChangePreview.Calculating")}</span>
       </div>
     );
   }
@@ -232,20 +221,14 @@ const FileChangePreview = ({
   }
 
   return (
-    <div
-      className={`flex flex-col gap-2 overflow-auto ${
-        className ?? "max-h-[60vh]"
-      }`}
-    >
+    <div className={`flex flex-col gap-2 overflow-auto ${className ?? "max-h-[60vh]"}`}>
       <div className="sticky top-0 z-10 bg-content1 border-b border-default-200 px-2 py-1.5 text-xs flex items-center gap-3">
         <span>
-          <strong>{summary.groupCount}</strong>{" "}
-          {t<string>("FileChangePreview.SummaryGroups")}
+          <strong>{summary.groupCount}</strong> {t<string>("FileChangePreview.SummaryGroups")}
         </span>
         <span className="opacity-60">·</span>
         <span>
-          <strong>{summary.movingCount}</strong>{" "}
-          {t<string>("FileChangePreview.SummaryMoving")}
+          <strong>{summary.movingCount}</strong> {t<string>("FileChangePreview.SummaryMoving")}
         </span>
         {summary.untouchedCount > 0 && (
           <>
@@ -264,18 +247,15 @@ const FileChangePreview = ({
             <span className="text-sm font-medium">{batch.rootPath}</span>
           </div>
           {batch.groups.length === 0 ? (
-            <div
-              className="text-xs opacity-60"
-              style={{ paddingLeft: `24px` }}
-            >
+            <div className="text-xs opacity-60" style={{ paddingLeft: `24px` }}>
               {t<string>("FileChangePreview.NothingToChange")}
             </div>
           ) : (
             batch.groups.map((g) => (
               <GroupBlock
                 key={g.targetName}
-                group={g}
                 collapsedMemberPreviewCount={collapsedMemberPreviewCount}
+                group={g}
                 largeGroupThreshold={largeGroupThreshold}
               />
             ))

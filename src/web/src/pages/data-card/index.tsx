@@ -1,27 +1,26 @@
 "use client";
 
+import type { IProperty } from "@/components/Property/models";
+
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { DeleteOutlined, EditOutlined, LayoutOutlined, PlusCircleOutlined, WarningOutlined } from "@ant-design/icons";
-import toast from "react-hot-toast";
-
-import BApi from "@/sdk/BApi";
 import {
-  Button,
-  Card,
-  CardBody,
-  CardHeader,
-  Divider,
-  Modal,
-  Tooltip,
-} from "@/components/bakaui";
-import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import type { IProperty } from "@/components/Property/models";
-import { CustomPropertyAdditionalItem } from "@/sdk/constants";
+  DeleteOutlined,
+  EditOutlined,
+  LayoutOutlined,
+  PlusCircleOutlined,
+  WarningOutlined,
+} from "@ant-design/icons";
+import toast from "react-hot-toast";
 
 import DataCardTypeEditor from "./components/DataCardTypeEditor";
 import DataCardList from "./components/DataCardList";
 import DisplayTemplateDesigner from "./components/DisplayTemplateDesigner";
+
+import BApi from "@/sdk/BApi";
+import { Button, Card, CardBody, CardHeader, Divider, Modal, Tooltip } from "@/components/bakaui";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import { CustomPropertyAdditionalItem } from "@/sdk/constants";
 
 interface DataCardType {
   id: number;
@@ -46,6 +45,7 @@ const DataCardPage = () => {
   const loadCardTypes = async () => {
     const rsp = await BApi.dataCardType.getAllDataCardTypes();
     const types = (rsp.data || []) as DataCardType[];
+
     setCardTypes(types);
     if (types.length > 0 && !selectedTypeId) {
       setSelectedTypeId(types[0].id);
@@ -57,6 +57,7 @@ const DataCardPage = () => {
     const rsp = await BApi.customProperty.getAllCustomProperties({
       additionalItems: CustomPropertyAdditionalItem.None,
     });
+
     // @ts-ignore
     setAllProperties((rsp.data || []) as IProperty[]);
   };
@@ -97,10 +98,10 @@ const DataCardPage = () => {
             <CardHeader className="flex items-center justify-between">
               <span className="font-semibold">{t("dataCard.type.title")}</span>
               <Button
-                size="sm"
-                color="primary"
-                variant="light"
                 isIconOnly
+                color="primary"
+                size="sm"
+                variant="light"
                 onPress={() => {
                   createPortal(DataCardTypeEditor, {
                     allProperties,
@@ -125,12 +126,22 @@ const DataCardPage = () => {
                       className={`flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-default-100 transition-colors ${
                         selectedTypeId === ct.id ? "bg-primary-50" : ""
                       }`}
+                      role="button"
+                      tabIndex={0}
                       onClick={() => setSelectedTypeId(ct.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setSelectedTypeId(ct.id);
+                        }
+                      }}
                     >
                       <div className="flex items-center gap-1.5 min-w-0">
                         <span className="text-sm truncate">{ct.name}</span>
                         {!ct.matchRules?.autoBindEnabled && (
-                          <Tooltip content={t<string>("dataCard.matchRules.autoBindDisabled.tooltip")}>
+                          <Tooltip
+                            content={t<string>("dataCard.matchRules.autoBindDisabled.tooltip")}
+                          >
                             <span
                               className="inline-flex items-center flex-shrink-0"
                               style={{ color: "hsl(var(--heroui-warning))" }}
@@ -142,9 +153,9 @@ const DataCardPage = () => {
                       </div>
                       <div className="flex gap-1">
                         <Button
+                          isIconOnly
                           size="sm"
                           variant="light"
-                          isIconOnly
                           onPress={() => {
                             createPortal(DataCardTypeEditor, {
                               cardType: ct,
@@ -156,9 +167,9 @@ const DataCardPage = () => {
                           <EditOutlined className="text-lg" />
                         </Button>
                         <Button
+                          isIconOnly
                           size="sm"
                           variant="light"
-                          isIconOnly
                           onPress={() => {
                             createPortal(DisplayTemplateDesigner, {
                               cardTypeId: ct.id,
@@ -172,10 +183,10 @@ const DataCardPage = () => {
                           <LayoutOutlined className="text-lg" />
                         </Button>
                         <Button
+                          isIconOnly
+                          color="danger"
                           size="sm"
                           variant="light"
-                          color="danger"
-                          isIconOnly
                           onPress={() => handleDeleteType(ct.id)}
                         >
                           <DeleteOutlined className="text-lg" />
@@ -192,10 +203,7 @@ const DataCardPage = () => {
         {/* Right: Card List for Selected Type */}
         <div className="flex-1">
           {selectedType ? (
-            <DataCardList
-              cardType={selectedType}
-              allProperties={allProperties}
-            />
+            <DataCardList allProperties={allProperties} cardType={selectedType} />
           ) : (
             <Card>
               <CardBody>

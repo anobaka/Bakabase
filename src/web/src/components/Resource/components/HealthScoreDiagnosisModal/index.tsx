@@ -45,6 +45,7 @@ export const HealthScoreDiagnosisModal = ({ resourceId, onClose, onDestroyed }: 
     ]).then(([diagRes, profileRes]) => {
       setRows((diagRes.data ?? []) as DiagnosisRow[]);
       const map: Record<number, ProfileSummary> = {};
+
       for (const p of profileRes.data ?? []) {
         if (p?.id != null) map[p.id] = p as ProfileSummary;
       }
@@ -56,12 +57,18 @@ export const HealthScoreDiagnosisModal = ({ resourceId, onClose, onDestroyed }: 
     const profile = profiles[row.profileId];
     const matched: MatchedRule[] = (() => {
       if (!row.matchedRulesJson) return [];
-      try { return JSON.parse(row.matchedRulesJson) ?? []; }
-      catch { return []; }
+      try {
+        return JSON.parse(row.matchedRulesJson) ?? [];
+      } catch {
+        return [];
+      }
     })();
 
     return (
-      <div key={row.profileId} className="border border-default-200 rounded-md p-3 flex flex-col gap-2">
+      <div
+        key={row.profileId}
+        className="border border-default-200 rounded-md p-3 flex flex-col gap-2"
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="font-medium">{profile?.name ?? `#${row.profileId}`}</span>
@@ -90,11 +97,7 @@ export const HealthScoreDiagnosisModal = ({ resourceId, onClose, onDestroyed }: 
           <div className="flex flex-col gap-1">
             {matched.map((m, i) => (
               <div key={i} className="flex items-center gap-2 text-sm">
-                <Chip
-                  color={m.delta < 0 ? "danger" : "success"}
-                  size="sm"
-                  variant="flat"
-                >
+                <Chip color={m.delta < 0 ? "danger" : "success"} size="sm" variant="flat">
                   {m.delta > 0 ? `+${m.delta}` : m.delta}
                 </Chip>
                 <span>{m.ruleName ?? `Rule #${m.ruleId}`}</span>
@@ -104,7 +107,8 @@ export const HealthScoreDiagnosisModal = ({ resourceId, onClose, onDestroyed }: 
         )}
 
         <div className="text-xs text-default-400">
-          {t<string>("healthScore.diagnosis.evaluatedAt")}: {new Date(row.evaluatedAt).toLocaleString()}
+          {t<string>("healthScore.diagnosis.evaluatedAt")}:{" "}
+          {new Date(row.evaluatedAt).toLocaleString()}
         </div>
       </div>
     );
@@ -126,9 +130,7 @@ export const HealthScoreDiagnosisModal = ({ resourceId, onClose, onDestroyed }: 
           {t<string>("healthScore.diagnosis.empty")}
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
-          {rows.map(renderRow)}
-        </div>
+        <div className="flex flex-col gap-3">{rows.map(renderRow)}</div>
       )}
     </Modal>
   );

@@ -7,11 +7,14 @@ import ReactJson from "react-json-view";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
 
+import { ResourceFilterController, GroupCombinator } from "@/components/ResourceFilter";
 import {
-  ResourceFilterController,
-  GroupCombinator,
-} from "@/components/ResourceFilter";
-import { FilterDisplayMode, PropertyPool, PropertyType, SearchOperation, StandardValueType } from "@/sdk/constants";
+  FilterDisplayMode,
+  PropertyPool,
+  PropertyType,
+  SearchOperation,
+  StandardValueType,
+} from "@/sdk/constants";
 import { Card, CardBody, CardHeader, Tabs, Tab } from "@/components/bakaui";
 import { serializeStandardValue } from "@/components/StandardValue/helpers";
 
@@ -728,7 +731,10 @@ const createComprehensiveFilterGroup = (): SearchFilterGroup => ({
           operation: SearchOperation.GreaterThanOrEquals,
           property: mockTimeProperty,
           valueProperty: mockTimeProperty,
-          dbValue: serializeStandardValue(dayjs.duration({ hours: 1, minutes: 30 }), StandardValueType.Time),
+          dbValue: serializeStandardValue(
+            dayjs.duration({ hours: 1, minutes: 30 }),
+            StandardValueType.Time,
+          ),
           disabled: false,
         },
       ],
@@ -823,8 +829,12 @@ const ResourceFilterPage = () => {
   const [portalMode, setPortalMode] = useState<FilterDisplayMode>(FilterDisplayMode.Simple);
 
   // State for auto-create media library filter demo
-  const [autoCreateGroupSimple, setAutoCreateGroupSimple] = useState<SearchFilterGroup | undefined>(undefined);
-  const [autoCreateGroupAdvanced, setAutoCreateGroupAdvanced] = useState<SearchFilterGroup | undefined>(undefined);
+  const [autoCreateGroupSimple, setAutoCreateGroupSimple] = useState<SearchFilterGroup | undefined>(
+    undefined,
+  );
+  const [autoCreateGroupAdvanced, setAutoCreateGroupAdvanced] = useState<
+    SearchFilterGroup | undefined
+  >(undefined);
 
   // Refs for portal containers
   const keywordContainerRef = useRef<HTMLDivElement>(null);
@@ -833,6 +843,7 @@ const ResourceFilterPage = () => {
 
   // Force re-render after refs are set
   const [refsReady, setRefsReady] = useState(false);
+
   useEffect(() => {
     setRefsReady(true);
   }, []);
@@ -852,8 +863,9 @@ const ResourceFilterPage = () => {
         <Tab key="comprehensive" title="All Modes Comparison">
           <div className="flex flex-col gap-6 pt-4">
             <p className="text-sm text-default-500">
-              Same comprehensive data shown in all 4 mode combinations. Includes: SingleLineText, Rating, Percentage, Boolean,
-              SingleChoice, MultipleChoice, Date, DateTime, Time, Tags, and Multilevel properties with nested groups.
+              Same comprehensive data shown in all 4 mode combinations. Includes: SingleLineText,
+              Rating, Percentage, Boolean, SingleChoice, MultipleChoice, Date, DateTime, Time, Tags,
+              and Multilevel properties with nested groups.
             </p>
 
             {/* 2x2 Grid Layout */}
@@ -862,12 +874,12 @@ const ResourceFilterPage = () => {
               <div className="border border-default-200 rounded p-3">
                 <div className="font-semibold text-primary mb-2">Vertical + Simple</div>
                 <ResourceFilterController
-                  group={comprehensiveGroup}
-                  onGroupChange={() => {}}
                   filterDisplayMode={FilterDisplayMode.Simple}
                   filterLayout="vertical"
+                  group={comprehensiveGroup}
                   showRecentFilters={false}
                   showTags={false}
+                  onGroupChange={() => {}}
                 />
               </div>
 
@@ -875,12 +887,12 @@ const ResourceFilterPage = () => {
               <div className="border border-default-200 rounded p-3">
                 <div className="font-semibold text-secondary mb-2">Horizontal + Simple</div>
                 <ResourceFilterController
-                  group={comprehensiveGroup}
-                  onGroupChange={() => {}}
                   filterDisplayMode={FilterDisplayMode.Simple}
                   filterLayout="horizontal"
+                  group={comprehensiveGroup}
                   showRecentFilters={false}
                   showTags={false}
+                  onGroupChange={() => {}}
                 />
               </div>
 
@@ -888,12 +900,12 @@ const ResourceFilterPage = () => {
               <div className="border border-default-200 rounded p-3">
                 <div className="font-semibold text-primary mb-2">Vertical + Advanced</div>
                 <ResourceFilterController
-                  group={comprehensiveGroup}
-                  onGroupChange={() => {}}
                   filterDisplayMode={FilterDisplayMode.Advanced}
                   filterLayout="vertical"
+                  group={comprehensiveGroup}
                   showRecentFilters={false}
                   showTags={false}
+                  onGroupChange={() => {}}
                 />
               </div>
 
@@ -901,12 +913,12 @@ const ResourceFilterPage = () => {
               <div className="border border-default-200 rounded p-3">
                 <div className="font-semibold text-secondary mb-2">Horizontal + Advanced</div>
                 <ResourceFilterController
-                  group={comprehensiveGroup}
-                  onGroupChange={() => {}}
                   filterDisplayMode={FilterDisplayMode.Advanced}
                   filterLayout="horizontal"
+                  group={comprehensiveGroup}
                   showRecentFilters={false}
                   showTags={false}
+                  onGroupChange={() => {}}
                 />
               </div>
             </div>
@@ -924,53 +936,61 @@ const ResourceFilterPage = () => {
             <div className="grid grid-cols-2 gap-4">
               {/* Vertical + Simple - Interactive */}
               <div className="border border-default-200 rounded p-3">
-                <div className="font-semibold text-primary mb-2">Vertical + Simple (Interactive)</div>
+                <div className="font-semibold text-primary mb-2">
+                  Vertical + Simple (Interactive)
+                </div>
                 <ResourceFilterController
-                  group={group}
-                  onGroupChange={setGroup}
                   filterDisplayMode={FilterDisplayMode.Simple}
                   filterLayout="vertical"
+                  group={group}
                   showRecentFilters={false}
                   showTags={false}
+                  onGroupChange={setGroup}
                 />
               </div>
 
               {/* Horizontal + Simple - Interactive */}
               <div className="border border-default-200 rounded p-3">
-                <div className="font-semibold text-secondary mb-2">Horizontal + Simple (Interactive)</div>
+                <div className="font-semibold text-secondary mb-2">
+                  Horizontal + Simple (Interactive)
+                </div>
                 <ResourceFilterController
-                  group={group}
-                  onGroupChange={setGroup}
                   filterDisplayMode={FilterDisplayMode.Simple}
                   filterLayout="horizontal"
+                  group={group}
                   showRecentFilters={false}
                   showTags={false}
+                  onGroupChange={setGroup}
                 />
               </div>
 
               {/* Vertical + Advanced - Interactive */}
               <div className="border border-default-200 rounded p-3">
-                <div className="font-semibold text-primary mb-2">Vertical + Advanced (Interactive)</div>
+                <div className="font-semibold text-primary mb-2">
+                  Vertical + Advanced (Interactive)
+                </div>
                 <ResourceFilterController
-                  group={group}
-                  onGroupChange={setGroup}
                   filterDisplayMode={FilterDisplayMode.Advanced}
                   filterLayout="vertical"
+                  group={group}
                   showRecentFilters={false}
                   showTags={false}
+                  onGroupChange={setGroup}
                 />
               </div>
 
               {/* Horizontal + Advanced - Interactive */}
               <div className="border border-default-200 rounded p-3">
-                <div className="font-semibold text-secondary mb-2">Horizontal + Advanced (Interactive)</div>
+                <div className="font-semibold text-secondary mb-2">
+                  Horizontal + Advanced (Interactive)
+                </div>
                 <ResourceFilterController
-                  group={group}
-                  onGroupChange={setGroup}
                   filterDisplayMode={FilterDisplayMode.Advanced}
                   filterLayout="horizontal"
+                  group={group}
                   showRecentFilters={false}
                   showTags={false}
+                  onGroupChange={setGroup}
                 />
               </div>
             </div>
@@ -986,8 +1006,9 @@ const ResourceFilterPage = () => {
               </CardHeader>
               <CardBody>
                 <p className="text-sm text-default-500 mb-4">
-                  This demo shows how ResourceFilterController can render different parts to separate containers.
-                  The keyword input, filter button, and filter groups are each rendered to different areas.
+                  This demo shows how ResourceFilterController can render different parts to
+                  separate containers. The keyword input, filter button, and filter groups are each
+                  rendered to different areas.
                 </p>
 
                 <div className="grid grid-cols-3 gap-4 mb-4">
@@ -1014,27 +1035,26 @@ const ResourceFilterPage = () => {
 
                 {/* Filter Groups Container */}
                 <div className="border rounded p-3">
-                  <div className="text-xs text-default-400 mb-2">Filter Groups Container (Scrollable)</div>
-                  <div
-                    ref={filterGroupsContainerRef}
-                    className="max-h-[200px] overflow-y-auto"
-                  />
+                  <div className="text-xs text-default-400 mb-2">
+                    Filter Groups Container (Scrollable)
+                  </div>
+                  <div ref={filterGroupsContainerRef} className="max-h-[200px] overflow-y-auto" />
                 </div>
 
                 {/* The controller renders parts to the containers above */}
                 {refsReady && (
                   <ResourceFilterController
-                    keyword={portalKeyword}
-                    onKeywordChange={setPortalKeyword}
-                    group={portalGroup}
-                    onGroupChange={setPortalGroup}
                     filterDisplayMode={portalMode}
-                    onFilterDisplayModeChange={setPortalMode}
-                    filterLayout="vertical"
-                    keywordContainer={keywordContainerRef.current}
-                    filterPortalContainer={filterPortalContainerRef.current}
                     filterGroupsContainer={filterGroupsContainerRef.current}
+                    filterLayout="vertical"
+                    filterPortalContainer={filterPortalContainerRef.current}
+                    group={portalGroup}
+                    keyword={portalKeyword}
                     keywordClassName="w-full"
+                    keywordContainer={keywordContainerRef.current}
+                    onFilterDisplayModeChange={setPortalMode}
+                    onGroupChange={setPortalGroup}
+                    onKeywordChange={setPortalKeyword}
                   />
                 )}
               </CardBody>
@@ -1046,8 +1066,9 @@ const ResourceFilterPage = () => {
         <Tab key="auto-create" title="Auto-Create Filter">
           <div className="flex flex-col gap-6 pt-4">
             <p className="text-sm text-default-500">
-              Tests the autoCreateMediaLibraryFilter prop. When enabled and group is empty/undefined,
-              a media library filter is automatically created and onChange is triggered.
+              Tests the autoCreateMediaLibraryFilter prop. When enabled and group is
+              empty/undefined, a media library filter is automatically created and onChange is
+              triggered.
             </p>
 
             {/* 1x2 Grid Layout */}
@@ -1059,16 +1080,19 @@ const ResourceFilterPage = () => {
                   Initial group: undefined. Should auto-create media library filter.
                 </p>
                 <ResourceFilterController
-                  group={autoCreateGroupSimple}
-                  onGroupChange={setAutoCreateGroupSimple}
+                  autoCreateMediaLibraryFilter
                   filterDisplayMode={FilterDisplayMode.Simple}
                   filterLayout="vertical"
+                  group={autoCreateGroupSimple}
                   showRecentFilters={false}
                   showTags={false}
-                  autoCreateMediaLibraryFilter
+                  onGroupChange={setAutoCreateGroupSimple}
                 />
                 <div className="mt-2 text-xs text-default-500">
-                  Group state: {autoCreateGroupSimple ? `${autoCreateGroupSimple.filters?.length ?? 0} filter(s)` : "undefined"}
+                  Group state:{" "}
+                  {autoCreateGroupSimple
+                    ? `${autoCreateGroupSimple.filters?.length ?? 0} filter(s)`
+                    : "undefined"}
                 </div>
               </div>
 
@@ -1079,16 +1103,19 @@ const ResourceFilterPage = () => {
                   Initial group: undefined. Should auto-create media library filter.
                 </p>
                 <ResourceFilterController
-                  group={autoCreateGroupAdvanced}
-                  onGroupChange={setAutoCreateGroupAdvanced}
+                  autoCreateMediaLibraryFilter
                   filterDisplayMode={FilterDisplayMode.Advanced}
                   filterLayout="vertical"
+                  group={autoCreateGroupAdvanced}
                   showRecentFilters={false}
                   showTags={false}
-                  autoCreateMediaLibraryFilter
+                  onGroupChange={setAutoCreateGroupAdvanced}
                 />
                 <div className="mt-2 text-xs text-default-500">
-                  Group state: {autoCreateGroupAdvanced ? `${autoCreateGroupAdvanced.filters?.length ?? 0} filter(s)` : "undefined"}
+                  Group state:{" "}
+                  {autoCreateGroupAdvanced
+                    ? `${autoCreateGroupAdvanced.filters?.length ?? 0} filter(s)`
+                    : "undefined"}
                 </div>
               </div>
             </div>
@@ -1101,8 +1128,8 @@ const ResourceFilterPage = () => {
                   collapsed={2}
                   name={"autoCreateGroupSimple"}
                   src={autoCreateGroupSimple ?? {}}
-                  theme={"monokai"}
                   style={{ fontSize: 11 }}
+                  theme={"monokai"}
                 />
               </CardBody>
             </Card>
@@ -1113,8 +1140,9 @@ const ResourceFilterPage = () => {
         <Tab key="readonly" title="Readonly Mode">
           <div className="flex flex-col gap-6 pt-4">
             <p className="text-sm text-default-500">
-              Readonly mode displays filters without any action buttons (delete, disable, add filter, edit operations).
-              Useful for displaying filter criteria in a non-editable view.
+              Readonly mode displays filters without any action buttons (delete, disable, add
+              filter, edit operations). Useful for displaying filter criteria in a non-editable
+              view.
             </p>
 
             {/* 2x2 Grid Layout */}
@@ -1123,55 +1151,61 @@ const ResourceFilterPage = () => {
               <div className="border border-default-200 rounded p-3">
                 <div className="font-semibold text-primary mb-2">Vertical + Simple (Readonly)</div>
                 <ResourceFilterController
-                  group={comprehensiveGroup}
-                  onGroupChange={() => {}}
+                  isReadonly
                   filterDisplayMode={FilterDisplayMode.Simple}
                   filterLayout="vertical"
+                  group={comprehensiveGroup}
                   showRecentFilters={false}
                   showTags={false}
-                  isReadonly
+                  onGroupChange={() => {}}
                 />
               </div>
 
               {/* Horizontal + Simple - Readonly */}
               <div className="border border-default-200 rounded p-3">
-                <div className="font-semibold text-secondary mb-2">Horizontal + Simple (Readonly)</div>
+                <div className="font-semibold text-secondary mb-2">
+                  Horizontal + Simple (Readonly)
+                </div>
                 <ResourceFilterController
-                  group={comprehensiveGroup}
-                  onGroupChange={() => {}}
+                  isReadonly
                   filterDisplayMode={FilterDisplayMode.Simple}
                   filterLayout="horizontal"
+                  group={comprehensiveGroup}
                   showRecentFilters={false}
                   showTags={false}
-                  isReadonly
+                  onGroupChange={() => {}}
                 />
               </div>
 
               {/* Vertical + Advanced - Readonly */}
               <div className="border border-default-200 rounded p-3">
-                <div className="font-semibold text-primary mb-2">Vertical + Advanced (Readonly)</div>
+                <div className="font-semibold text-primary mb-2">
+                  Vertical + Advanced (Readonly)
+                </div>
                 <ResourceFilterController
-                  group={comprehensiveGroup}
-                  onGroupChange={() => {}}
+                  isReadonly
                   filterDisplayMode={FilterDisplayMode.Advanced}
                   filterLayout="vertical"
+                  group={comprehensiveGroup}
                   showRecentFilters={false}
                   showTags={false}
-                  isReadonly
+                  onGroupChange={() => {}}
                 />
               </div>
 
               {/* Horizontal + Advanced - Readonly */}
               <div className="border border-default-200 rounded p-3">
-                <div className="font-semibold text-secondary mb-2">Horizontal + Advanced (Readonly)</div>
+                <div className="font-semibold text-secondary mb-2">
+                  Horizontal + Advanced (Readonly)
+                </div>
                 <ResourceFilterController
-                  group={comprehensiveGroup}
-                  onGroupChange={() => {}}
+                  isReadonly
                   filterDisplayMode={FilterDisplayMode.Advanced}
                   filterLayout="horizontal"
+                  group={comprehensiveGroup}
                   showRecentFilters={false}
                   showTags={false}
-                  isReadonly
+                  onGroupChange={() => {}}
                 />
               </div>
             </div>
@@ -1188,8 +1222,8 @@ const ResourceFilterPage = () => {
                   collapsed={2}
                   name={"group"}
                   src={comprehensiveGroup}
-                  theme={"monokai"}
                   style={{ fontSize: 11 }}
+                  theme={"monokai"}
                 />
               </CardBody>
             </Card>

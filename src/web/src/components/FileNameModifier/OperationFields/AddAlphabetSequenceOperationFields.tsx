@@ -3,17 +3,13 @@
 import React from "react";
 
 import { Input, NumberInput } from "../../bakaui";
+import { getFieldRequirements } from "../validation";
 
 import { FileNameModifierPosition } from "@/sdk/constants";
-import { getFieldRequirements } from "../validation";
 
 const PositionType = FileNameModifierPosition;
 
-const AddAlphabetSequenceOperationFields: React.FC<any> = ({
-  operation,
-  t,
-  onChange,
-}) => {
+const AddAlphabetSequenceOperationFields: React.FC<any> = ({ operation, t, onChange }) => {
   const requirements = getFieldRequirements(operation);
 
   return (

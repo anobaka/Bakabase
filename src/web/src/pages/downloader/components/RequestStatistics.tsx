@@ -18,24 +18,12 @@ import { Bar } from "react-chartjs-2";
 
 import { ThirdPartyId, ThirdPartyRequestResultType } from "@/sdk/constants";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import {
-  Button,
-  Chip,
-  Modal,
-  Tooltip as BakauiTooltip,
-} from "@/components/bakaui";
+import { Button, Chip, Modal, Tooltip as BakauiTooltip } from "@/components/bakaui";
 import ThirdPartyIcon from "@/components/ThirdPartyIcon";
 import { useThirdPartyRequestStatisticsStore } from "@/stores/thirdPartyRequestStatistics";
 
 // Register Chart.js components
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-);
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 type RequestStatistics =
   components["schemas"]["Bakabase.InsideWorld.Models.Models.Aos.ThirdPartyRequestStatistics"];
@@ -43,9 +31,7 @@ const RequestStatistics = () => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
-  const requestStatistics = useThirdPartyRequestStatisticsStore(
-    (state) => state.statistics,
-  );
+  const requestStatistics = useThirdPartyRequestStatisticsStore((state) => state.statistics);
 
   return (
     <div className="flex items-center gap-1">
@@ -53,14 +39,9 @@ const RequestStatistics = () => {
         size={"sm"}
         variant={"light"}
         onPress={() => {
-          const thirdPartyRequestCounts = (requestStatistics || []).reduce<
-            any[]
-          >((s, t) => {
+          const thirdPartyRequestCounts = (requestStatistics || []).reduce<any[]>((s, t) => {
             Object.keys(t.counts || {}).forEach((r) => {
-              const resultTypeValue = parseInt(
-                r,
-                10,
-              ) as ThirdPartyRequestResultType;
+              const resultTypeValue = parseInt(r, 10) as ThirdPartyRequestResultType;
 
               s.push({
                 id: t.id.toString(),
@@ -105,26 +86,16 @@ const RequestStatistics = () => {
             });
 
             return (
-              <div className="flex items-center">
+              <div key={rs.id} className="flex items-center">
                 <ThirdPartyIcon size={"sm"} thirdPartyId={rs.id} />
                 <BakauiTooltip content={t<string>("downloader.label.success")}>
-                  <Chip
-                    className={"p-0"}
-                    color={"success"}
-                    size={"sm"}
-                    variant={"light"}
-                  >
+                  <Chip className={"p-0"} color={"success"} size={"sm"} variant={"light"}>
                     {successCount}
                   </Chip>
                 </BakauiTooltip>
                 /
                 <BakauiTooltip content={t<string>("downloader.label.failure")}>
-                  <Chip
-                    className={"p-0"}
-                    color={"danger"}
-                    size={"sm"}
-                    variant={"light"}
-                  >
+                  <Chip className={"p-0"} color={"danger"} size={"sm"} variant={"light"}>
                     {failureCount}
                   </Chip>
                 </BakauiTooltip>
@@ -140,13 +111,7 @@ const RequestStatistics = () => {
 RequestStatistics.displayName = "RequestStatistics";
 
 // Chart component using Chart.js
-const BizChartsChart = ({
-  data,
-  height = 300,
-}: {
-  data: any[];
-  height?: number;
-}) => {
+const BizChartsChart = ({ data, height = 300 }: { data: any[]; height?: number }) => {
   const { t } = useTranslation();
   const { isDarkMode } = useBakabaseContext();
 
@@ -157,9 +122,7 @@ const BizChartsChart = ({
       return "";
     }
 
-    return getComputedStyle(document.documentElement).getPropertyValue(
-      variableName,
-    );
+    return getComputedStyle(document.documentElement).getPropertyValue(variableName);
   };
 
   // Dynamic color mapping based on theme
@@ -180,11 +143,7 @@ const BizChartsChart = ({
   };
 
   if (!Array.isArray(data) || data.length === 0) {
-    return (
-      <div className="flex justify-center py-4 text-gray-500">
-        {t("common.state.noData")}
-      </div>
-    );
+    return <div className="flex justify-center py-4 text-gray-500">{t("common.state.noData")}</div>;
   }
 
   // Group data by third party and result type
@@ -208,9 +167,7 @@ const BizChartsChart = ({
   const colorMap = getRequestResultTypeColorMap();
 
   const chartData = {
-    labels: thirdParties.map(
-      (id) => ThirdPartyId[id as keyof typeof ThirdPartyId],
-    ),
+    labels: thirdParties.map((id) => ThirdPartyId[id as keyof typeof ThirdPartyId]),
     datasets: resultTypes.map((resultType) => ({
       label: t(ThirdPartyRequestResultType[resultType] as string),
       data: thirdParties.map((id) => groupedData[id][resultType] || 0),
@@ -221,13 +178,10 @@ const BizChartsChart = ({
   };
 
   // Get theme colors for chart styling
-  const textColor =
-    getCssVariable("--theme-text") || (isDarkMode ? "#e6e6e6" : "#000");
-  const subtleColor =
-    getCssVariable("--theme-text-subtle") || (isDarkMode ? "#c0c0c0" : "#666");
+  const textColor = getCssVariable("--theme-text") || (isDarkMode ? "#e6e6e6" : "#000");
+  const subtleColor = getCssVariable("--theme-text-subtle") || (isDarkMode ? "#c0c0c0" : "#666");
   const borderColor =
-    getCssVariable("--theme-border-color") ||
-    (isDarkMode ? "rgb(48, 54, 61)" : "#f0f0f0");
+    getCssVariable("--theme-border-color") || (isDarkMode ? "rgb(48, 54, 61)" : "#f0f0f0");
   const tooltipBg = isDarkMode ? "rgba(0,0,0,0.9)" : "rgba(0,0,0,0.8)";
 
   const options = {

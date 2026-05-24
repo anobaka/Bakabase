@@ -2,29 +2,23 @@
 
 import type { components } from "@/sdk/BApi2";
 import type { ReactNode } from "react";
+import type { SortableElementProps } from "react-sortable-hoc";
 
-import { SortableElement, SortableElementProps, SortableHandle } from "react-sortable-hoc";
+import { SortableElement, SortableHandle } from "react-sortable-hoc";
 import React, { useCallback } from "react";
-import {
-  MdVideoLibrary,
-  MdVideoFile,
-  MdImage,
-  MdAudiotrack,
-} from "react-icons/md";
+import { MdVideoFile, MdImage, MdAudiotrack } from "react-icons/md";
 import { AiOutlineDelete, AiOutlineFolderOpen } from "react-icons/ai";
 import { useTranslation } from "react-i18next";
+import { GrResources } from "react-icons/gr";
 
 import { Button } from "@/components/bakaui";
 import { PlaylistItemType } from "@/sdk/constants";
 import DragHandle from "@/components/DragHandle";
 import BApi from "@/sdk/BApi";
-import { GrResources } from "react-icons/gr";
-import { IoFolderOpen } from "react-icons/io5";
 
 type PlayListItem =
   components["schemas"]["Bakabase.InsideWorld.Business.Components.PlayList.Models.Domain.PlayListItem"];
-type Resource =
-  components["schemas"]["Bakabase.Abstractions.Models.Domain.Resource"];
+type Resource = components["schemas"]["Bakabase.Abstractions.Models.Domain.Resource"];
 
 interface SortablePlaylistItemProps extends SortableElementProps {
   item: PlayListItem;
@@ -40,10 +34,7 @@ const ItemTypeIcon = {
 };
 
 const renderDuration = (item: PlayListItem): string => {
-  if (
-    item.type === PlaylistItemType.Audio ||
-    item.type === PlaylistItemType.Video
-  ) {
+  if (item.type === PlaylistItemType.Audio || item.type === PlaylistItemType.Video) {
     let duration = item.startTime ?? "";
 
     if (item.endTime) {
@@ -65,6 +56,7 @@ export default SortableElement<SortablePlaylistItemProps>(
       if (resource?.displayName) {
         return resource.displayName;
       }
+
       return t("playlist.label.unknownResource");
     }, [resource, t]);
 
@@ -82,10 +74,10 @@ export default SortableElement<SortablePlaylistItemProps>(
     }, [item, onRemove]);
 
     return (
-      <div 
+      <div
         className="grid grid-cols-[auto_auto_1fr_auto_auto] gap-2 items-center px-2 border-b"
         style={{
-          borderColor: 'var(--theme-border-color)',
+          borderColor: "var(--theme-border-color)",
         }}
       >
         <div className="flex items-center justify-center w-8">
@@ -98,31 +90,21 @@ export default SortableElement<SortablePlaylistItemProps>(
           <span className="text-sm">{renderResourceName()}</span>
           <Button
             // color={"primary"}
-            disabled={!resource && item.type === PlaylistItemType.Resource}
-            variant={"light"}
-            size="sm"
-            onPress={handleOpenFile}
             isIconOnly
+            disabled={!resource && item.type === PlaylistItemType.Resource}
+            size="sm"
+            variant={"light"}
+            onPress={handleOpenFile}
           >
             <AiOutlineFolderOpen className="text-lg" />
           </Button>
-          {item.file && (
-            <span className="text-sm text-gray-600 truncate">
-              {item.file}
-            </span>
-          )}
+          {item.file && <span className="text-sm text-gray-600 truncate">{item.file}</span>}
         </div>
         <div className="flex items-center justify-end text-sm text-gray-500 min-w-[120px]">
           {renderDuration(item)}
         </div>
         <div className="flex items-center justify-center w-10">
-          <Button
-            isIconOnly
-            color={"danger"}
-            size={"sm"}
-            variant={"light"}
-            onPress={handleRemove}
-          >
+          <Button isIconOnly color={"danger"} size={"sm"} variant={"light"} onPress={handleRemove}>
             <AiOutlineDelete className={"text-lg"} />
           </Button>
         </div>

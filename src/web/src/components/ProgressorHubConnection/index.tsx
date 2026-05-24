@@ -6,11 +6,7 @@ import type { DestroyableProps } from "@/components/bakaui/types";
 
 import React, { useEffect, useRef } from "react";
 import i18n from "i18next";
-import {
-  HubConnectionBuilder,
-  HubConnectionState,
-  LogLevel,
-} from "@microsoft/signalr";
+import { HubConnectionBuilder, HubConnectionState, LogLevel } from "@microsoft/signalr";
 
 import { Modal } from "@/components/bakaui";
 import envConfig from "@/config/env";
@@ -130,10 +126,7 @@ class ProgressorHubConnection<TProgress extends IProgressorProgress> {
             this.onStateChange(varState);
           }
         },
-        [ProgressorSignalRClientMethod.ProgressChanged]: (
-          varKey,
-          varProgress,
-        ) => {
+        [ProgressorSignalRClientMethod.ProgressChanged]: (varKey, varProgress) => {
           if (varKey === this._id) {
             this.progress = varProgress;
             this.onProgressChange(varProgress);
@@ -226,9 +219,7 @@ function useProgressorHubConnection(
           dialogRef.current = createPortal(Modal, {
             defaultVisible: true,
             children: (
-              <div style={{ textAlign: "center" }}>
-                Hub{i18n.t<string>("Connecting...")}
-              </div>
+              <div style={{ textAlign: "center" }}>Hub{i18n.t<string>("Connecting...")}</div>
             ),
             size: "auto",
             footer: false,
@@ -237,9 +228,7 @@ function useProgressorHubConnection(
             hasMask: false,
           });
         } else {
-          toast.success(
-            `[${progressorHubUri}]${i18n.t<string>("Hub connected")}`,
-          );
+          toast.success(`[${progressorHubUri}]${i18n.t<string>("Hub connected")}`);
         }
       },
       onFatalError: (code: number, msg: string) =>

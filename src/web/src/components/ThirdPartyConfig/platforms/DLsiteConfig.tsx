@@ -5,6 +5,14 @@ import { useTranslation } from "react-i18next";
 import { Button, Chip as HeroChip, Divider, Switch, Textarea } from "@heroui/react";
 import { AiOutlineDelete, AiOutlinePlus } from "react-icons/ai";
 
+import AccountsPanel, { type AccountField } from "../base/AccountsPanel";
+import MetadataMappingPanel from "../base/MetadataMappingPanel";
+import AutoSyncPanel from "../base/AutoSyncPanel";
+import ConfigurableThirdPartyPanel, {
+  type ConfigFieldTab,
+} from "../base/ConfigurableThirdPartyPanel";
+import ThirdPartyConfigModal from "../base/ThirdPartyConfigModal";
+
 import { Chip, NumberInput, toast, Modal as BakaModal } from "@/components/bakaui";
 import { FileSystemSelectorButton } from "@/components/FileSystemSelector";
 import BApi from "@/sdk/BApi";
@@ -12,11 +20,6 @@ import { useDLsiteOptionsStore } from "@/stores/options";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { FileSystemSelectorModal } from "@/components/FileSystemSelector";
 import { CookieValidatorTarget, ResourceSource } from "@/sdk/constants";
-import AccountsPanel, { type AccountField } from "../base/AccountsPanel";
-import MetadataMappingPanel from "../base/MetadataMappingPanel";
-import AutoSyncPanel from "../base/AutoSyncPanel";
-import ConfigurableThirdPartyPanel, { type ConfigFieldTab } from "../base/ConfigurableThirdPartyPanel";
-import ThirdPartyConfigModal from "../base/ThirdPartyConfigModal";
 import { LeStatusIndicator } from "@/pages/dlsite-works/components/LeStatusIndicator";
 
 export enum DLsiteConfigField {
@@ -47,11 +50,14 @@ export const DLsiteConfigPanel: FC<DLsiteConfigPanelProps> = ({
   const [saving, setSaving] = useState(false);
   const [namingDefinition, setNamingDefinition] = useState<any>();
 
-  const showDownload = fields === "all" || (Array.isArray(fields) && fields.includes(DLsiteConfigField.Download));
+  const showDownload =
+    fields === "all" || (Array.isArray(fields) && fields.includes(DLsiteConfigField.Download));
+
   useEffect(() => {
     if (!showDownload) return;
     BApi.downloadTask.getAllDownloaderDefinitions().then((res) => {
       const def = (res.data || []).find((d) => d.thirdPartyId === 6); // DLsite = 6
+
       if (def) setNamingDefinition(def);
     });
   }, [showDownload]);
@@ -78,6 +84,7 @@ export const DLsiteConfigPanel: FC<DLsiteConfigPanelProps> = ({
     setSaving(true);
     try {
       const updates: any = {};
+
       if (pendingAccountsRef.current !== null) {
         updates.accounts = pendingAccountsRef.current;
       }
@@ -96,8 +103,10 @@ export const DLsiteConfigPanel: FC<DLsiteConfigPanelProps> = ({
   const getRecommendedPath = (selectedPath: string): string | null => {
     const normalized = selectedPath.replace(/[\\/]+$/, "");
     const lastSegment = normalized.split(/[\\/]/).pop();
+
     if (lastSegment === recommendedSubdir) return null;
     const sep = selectedPath.includes("\\") ? "\\" : "/";
+
     return `${normalized}${sep}${recommendedSubdir}`;
   };
 
@@ -112,6 +121,7 @@ export const DLsiteConfigPanel: FC<DLsiteConfigPanelProps> = ({
 
         if (!recommended) {
           await patch({ defaultPath: selected });
+
           return;
         }
 
@@ -124,11 +134,15 @@ export const DLsiteConfigPanel: FC<DLsiteConfigPanelProps> = ({
               <p className="text-sm">{t("thirdPartyConfig.recommendedDir.description")}</p>
               <div className="space-y-2 text-sm">
                 <div className="flex items-center gap-2 rounded-md bg-success-50 p-2">
-                  <span className="shrink-0 text-default-500">{t("thirdPartyConfig.recommendedDir.recommended")}:</span>
+                  <span className="shrink-0 text-default-500">
+                    {t("thirdPartyConfig.recommendedDir.recommended")}:
+                  </span>
                   <code className="break-all">{recommended}</code>
                 </div>
                 <div className="flex items-center gap-2 rounded-md bg-default-100 p-2">
-                  <span className="shrink-0 text-default-500">{t("thirdPartyConfig.recommendedDir.selected")}:</span>
+                  <span className="shrink-0 text-default-500">
+                    {t("thirdPartyConfig.recommendedDir.selected")}:
+                  </span>
                   <code className="break-all">{selected}</code>
                 </div>
               </div>
@@ -159,6 +173,7 @@ export const DLsiteConfigPanel: FC<DLsiteConfigPanelProps> = ({
       targetType: "folder",
       onSelected: async (e: any) => {
         const updated = [...scanFolders, e.path];
+
         await patch({ scanFolders: updated });
       },
     });
@@ -166,6 +181,7 @@ export const DLsiteConfigPanel: FC<DLsiteConfigPanelProps> = ({
 
   const handleRemoveScanFolder = async (index: number) => {
     const updated = scanFolders.filter((_: string, i: number) => i !== index);
+
     await patch({ scanFolders: updated });
   };
 
@@ -177,9 +193,9 @@ export const DLsiteConfigPanel: FC<DLsiteConfigPanelProps> = ({
         title: t("resourceSource.config.tab.accounts"),
         content: (
           <AccountsPanel
+            hideFooter
             accounts={options?.accounts || []}
             fields={accountFields}
-            hideFooter
             onAccountsChange={(accs) => {
               pendingAccountsRef.current = accs;
             }}
@@ -193,10 +209,35 @@ export const DLsiteConfigPanel: FC<DLsiteConfigPanelProps> = ({
         title: t("thirdPartyConfig.group.dataFetch"),
         content: (
           <div className="space-y-4">
-            <NumberInput label={t<string>("thirdPartyConfig.label.maxConcurrency")} description={t<string>("thirdPartyConfig.field.maxConcurrency.description")} min={1} max={100} value={options?.maxConcurrency || 1} onValueChange={(v) => patch({ maxConcurrency: v })} />
-            <NumberInput label={t<string>("thirdPartyConfig.label.requestInterval")} description={t<string>("thirdPartyConfig.field.requestInterval.description")} min={0} value={options?.requestInterval || 1000} onValueChange={(v) => patch({ requestInterval: v })} />
-            <NumberInput label={t<string>("thirdPartyConfig.label.maxRetries")} description={t<string>("thirdPartyConfig.field.maxRetries.description")} min={0} value={options?.maxRetries || 0} onValueChange={(v) => patch({ maxRetries: v })} />
-            <NumberInput label={t<string>("thirdPartyConfig.label.requestTimeout")} description={t<string>("thirdPartyConfig.field.requestTimeout.description")} min={0} value={options?.requestTimeout || 0} onValueChange={(v) => patch({ requestTimeout: v })} />
+            <NumberInput
+              description={t<string>("thirdPartyConfig.field.maxConcurrency.description")}
+              label={t<string>("thirdPartyConfig.label.maxConcurrency")}
+              max={100}
+              min={1}
+              value={options?.maxConcurrency || 1}
+              onValueChange={(v) => patch({ maxConcurrency: v })}
+            />
+            <NumberInput
+              description={t<string>("thirdPartyConfig.field.requestInterval.description")}
+              label={t<string>("thirdPartyConfig.label.requestInterval")}
+              min={0}
+              value={options?.requestInterval || 1000}
+              onValueChange={(v) => patch({ requestInterval: v })}
+            />
+            <NumberInput
+              description={t<string>("thirdPartyConfig.field.maxRetries.description")}
+              label={t<string>("thirdPartyConfig.label.maxRetries")}
+              min={0}
+              value={options?.maxRetries || 0}
+              onValueChange={(v) => patch({ maxRetries: v })}
+            />
+            <NumberInput
+              description={t<string>("thirdPartyConfig.field.requestTimeout.description")}
+              label={t<string>("thirdPartyConfig.label.requestTimeout")}
+              min={0}
+              value={options?.requestTimeout || 0}
+              onValueChange={(v) => patch({ requestTimeout: v })}
+            />
           </div>
         ),
       },
@@ -207,30 +248,52 @@ export const DLsiteConfigPanel: FC<DLsiteConfigPanelProps> = ({
         content: (
           <div className="space-y-4">
             <div>
-              <span className="text-sm font-medium">{t<string>("thirdPartyConfig.field.defaultPath.label")}</span>
+              <span className="text-sm font-medium">
+                {t<string>("thirdPartyConfig.field.defaultPath.label")}
+              </span>
               <div className="mt-1">
-                <FileSystemSelectorButton fileSystemSelectorProps={{ targetType: "folder", onSelected: (e) => patch({ defaultPath: e.path }), defaultSelectedPath: options?.defaultPath }} />
+                <FileSystemSelectorButton
+                  fileSystemSelectorProps={{
+                    targetType: "folder",
+                    onSelected: (e) => patch({ defaultPath: e.path }),
+                    defaultSelectedPath: options?.defaultPath,
+                  }}
+                />
               </div>
-              <span className="text-xs text-default-400 mt-1 block">{t<string>("thirdPartyConfig.field.defaultPath.description")}</span>
+              <span className="text-xs text-default-400 mt-1 block">
+                {t<string>("thirdPartyConfig.field.defaultPath.description")}
+              </span>
             </div>
             <Textarea
-              label={t<string>("thirdPartyConfig.field.namingConvention.label")}
-              placeholder={namingDefinition?.defaultConvention}
               description={
                 namingDefinition?.namingFields?.length ? (
                   <div>
                     <div>{t<string>("thirdPartyConfig.field.namingConvention.description")}</div>
                     <div className="flex flex-wrap gap-1 mt-2">
                       {namingDefinition.namingFields.map((x, i) => (
-                        <Chip key={i} color="secondary" size="sm" variant="flat"
-                          onClick={() => patch({ namingConvention: (options?.namingConvention || "") + `{${x.name || x.key}}` })}>
+                        <Chip
+                          key={i}
+                          color="secondary"
+                          size="sm"
+                          variant="flat"
+                          onClick={() =>
+                            patch({
+                              namingConvention:
+                                (options?.namingConvention || "") + `{${x.name || x.key}}`,
+                            })
+                          }
+                        >
                           {x.name || x.key}
                         </Chip>
                       ))}
                     </div>
                   </div>
-                ) : t<string>("thirdPartyConfig.field.namingConvention.description")
+                ) : (
+                  t<string>("thirdPartyConfig.field.namingConvention.description")
+                )
               }
+              label={t<string>("thirdPartyConfig.field.namingConvention.label")}
+              placeholder={namingDefinition?.defaultConvention}
               size="sm"
               value={options?.namingConvention || ""}
               onValueChange={(v) => patch({ namingConvention: v })}
@@ -246,9 +309,16 @@ export const DLsiteConfigPanel: FC<DLsiteConfigPanelProps> = ({
           <div className="space-y-4">
             <div>
               <div className="mb-2 flex items-center justify-between">
-                <span className="text-sm font-medium">{t("resourceSource.dlsite.config.downloadDir")}</span>
+                <span className="text-sm font-medium">
+                  {t("resourceSource.dlsite.config.downloadDir")}
+                </span>
               </div>
-              <Button className="w-full justify-start" size="sm" variant="flat" onPress={handleSelectDownloadDir}>
+              <Button
+                className="w-full justify-start"
+                size="sm"
+                variant="flat"
+                onPress={handleSelectDownloadDir}
+              >
                 {downloadDir || t("resourceSource.dlsite.config.downloadDirPlaceholder")}
               </Button>
             </div>
@@ -260,30 +330,54 @@ export const DLsiteConfigPanel: FC<DLsiteConfigPanelProps> = ({
               size="sm"
               onValueChange={(v) => patch({ deleteArchiveAfterExtraction: v })}
             >
-              <span className="text-sm font-medium">{t("resourceSource.dlsite.config.deleteArchiveAfterExtraction")}</span>
+              <span className="text-sm font-medium">
+                {t("resourceSource.dlsite.config.deleteArchiveAfterExtraction")}
+              </span>
             </Switch>
 
             <Divider />
 
             <div>
               <div className="mb-2 flex items-center justify-between">
-                <span className="text-sm font-medium">{t("resourceSource.dlsite.config.scanFolders")}</span>
-                <Button size="sm" startContent={<AiOutlinePlus />} variant="flat" onPress={handleAddScanFolder}>
+                <span className="text-sm font-medium">
+                  {t("resourceSource.dlsite.config.scanFolders")}
+                </span>
+                <Button
+                  size="sm"
+                  startContent={<AiOutlinePlus />}
+                  variant="flat"
+                  onPress={handleAddScanFolder}
+                >
                   {t("resourceSource.dlsite.config.addScanFolder")}
                 </Button>
               </div>
-              <p className="mb-2 text-xs text-default-400">{t("resourceSource.dlsite.config.scanFoldersTip1")}</p>
-              <p className="mb-3 text-xs text-default-400">{t("resourceSource.dlsite.config.scanFoldersTip2")}</p>
+              <p className="mb-2 text-xs text-default-400">
+                {t("resourceSource.dlsite.config.scanFoldersTip1")}
+              </p>
+              <p className="mb-3 text-xs text-default-400">
+                {t("resourceSource.dlsite.config.scanFoldersTip2")}
+              </p>
               {scanFolders.length === 0 ? (
-                <div className="py-3 text-center text-sm text-default-400">{t("resourceSource.dlsite.config.noScanFolders")}</div>
+                <div className="py-3 text-center text-sm text-default-400">
+                  {t("resourceSource.dlsite.config.noScanFolders")}
+                </div>
               ) : (
                 <div className="space-y-2">
                   {scanFolders.map((folder: string, index: number) => (
-                    <div key={index} className="flex items-center gap-2 rounded-lg border-small border-default-200 px-3 py-2">
+                    <div
+                      key={index}
+                      className="flex items-center gap-2 rounded-lg border-small border-default-200 px-3 py-2"
+                    >
                       <HeroChip className="max-w-full flex-1" size="sm" variant="flat">
                         {folder}
                       </HeroChip>
-                      <Button color="danger" isIconOnly size="sm" variant="light" onPress={() => handleRemoveScanFolder(index)}>
+                      <Button
+                        isIconOnly
+                        color="danger"
+                        size="sm"
+                        variant="light"
+                        onPress={() => handleRemoveScanFolder(index)}
+                      >
                         <AiOutlineDelete className="text-lg" />
                       </Button>
                     </div>
@@ -351,15 +445,26 @@ export interface DLsiteConfigModalProps {
   fields?: DLsiteConfigField[] | "all";
 }
 
-export const DLsiteConfigModal: FC<DLsiteConfigModalProps> = ({ onDestroyed, onClose, isOpen, fields }) => {
+export const DLsiteConfigModal: FC<DLsiteConfigModalProps> = ({
+  onDestroyed,
+  onClose,
+  isOpen,
+  fields,
+}) => {
   const { t } = useTranslation();
   const handleClose = onClose ?? onDestroyed;
+
   return (
-    <ThirdPartyConfigModal title={t("resourceSource.dlsite.title")} isOpen={isOpen} onClose={handleClose}>
+    <ThirdPartyConfigModal
+      isOpen={isOpen}
+      title={t("resourceSource.dlsite.title")}
+      onClose={handleClose}
+    >
       <DLsiteConfigPanel fields={fields} onCancel={handleClose} />
     </ThirdPartyConfigModal>
   );
 };
 
 const DLsiteConfig = DLsiteConfigModal;
+
 export default DLsiteConfig;

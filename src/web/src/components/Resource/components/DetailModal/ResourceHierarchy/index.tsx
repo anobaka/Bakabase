@@ -1,16 +1,17 @@
 "use client";
 
+import type { Resource } from "@/core/models/Resource";
+
 import React, { useEffect, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { TiFlowChildren } from "react-icons/ti";
 
-import type { Resource } from "@/core/models/Resource";
+import DetailModal from "../index";
+import ChildrenModal from "../../ChildrenModal";
+
 import { Breadcrumbs, BreadcrumbItem, Spinner } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import BApi from "@/sdk/BApi";
-
-import DetailModal from "../index";
-import ChildrenModal from "../../ChildrenModal";
 
 type Ancestor = {
   id: number;
@@ -36,12 +37,14 @@ const ResourceHierarchy: React.FC<Props> = ({ resource, onReload }) => {
     if (!resource.parentId && !resource.hasChildren) {
       setAncestors([]);
       setChildrenCount(undefined);
+
       return;
     }
 
     setLoading(true);
     try {
       const res = await BApi.resource.getResourceHierarchyContext(resource.id);
+
       setAncestors(res.data?.ancestors ?? []);
       setChildrenCount(res.data?.childrenCount ?? undefined);
     } catch (error) {
@@ -75,9 +78,10 @@ const ResourceHierarchy: React.FC<Props> = ({ resource, onReload }) => {
   };
 
   // Truncate ancestors if more than 3 levels
-  const displayAncestors = ancestors.length > 3
-    ? [ancestors[0], null, ...ancestors.slice(-2)] // null represents "..."
-    : ancestors;
+  const displayAncestors =
+    ancestors.length > 3
+      ? [ancestors[0], null, ...ancestors.slice(-2)] // null represents "..."
+      : ancestors;
 
   return (
     <div className="flex flex-col gap-1">
@@ -86,11 +90,11 @@ const ResourceHierarchy: React.FC<Props> = ({ resource, onReload }) => {
           <Spinner size="sm" />
         ) : (
           <Breadcrumbs
-            size="sm"
-            variant="light"
             classNames={{
               list: "flex-wrap",
             }}
+            size="sm"
+            variant="light"
           >
             {displayAncestors.map((ancestor, index) => {
               if (ancestor === null) {
@@ -101,11 +105,20 @@ const ResourceHierarchy: React.FC<Props> = ({ resource, onReload }) => {
                   </BreadcrumbItem>
                 );
               }
+
               return (
                 <BreadcrumbItem key={ancestor.id}>
                   <span
                     className="cursor-pointer hover:underline text-primary"
+                    role="button"
+                    tabIndex={0}
                     onClick={() => handleAncestorClick(ancestor.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        handleAncestorClick(ancestor.id);
+                      }
+                    }}
                   >
                     {ancestor.displayName}
                   </span>
@@ -129,7 +142,15 @@ const ResourceHierarchy: React.FC<Props> = ({ resource, onReload }) => {
               <BreadcrumbItem key="children">
                 <span
                   className="flex items-center gap-1 cursor-pointer hover:underline text-primary"
+                  role="button"
+                  tabIndex={0}
                   onClick={handleChildrenClick}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      handleChildrenClick();
+                    }
+                  }}
                 >
                   <TiFlowChildren className="text-sm" />
                   {t("common.label.children")}
@@ -139,13 +160,10 @@ const ResourceHierarchy: React.FC<Props> = ({ resource, onReload }) => {
             )}
           </Breadcrumbs>
         )}
-
       </div>
 
       {/* Description text */}
-      <div className="text-xs text-default-500">
-        {t("resource.tip.hierarchyDescription")}
-      </div>
+      <div className="text-xs text-default-500">{t("resource.tip.hierarchyDescription")}</div>
     </div>
   );
 };

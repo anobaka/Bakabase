@@ -46,21 +46,25 @@ const BakauiPage = () => {
       <div className={"w-[400px] h-[400px]"}>
         <Carousel>
           <img
+            alt=""
             src={
               "http://localhost:5001/tool/thumbnail?path=C%3A%2FUsers%2Fanoba%2FAppData%2FRoaming%2FBakabase.Debugging%2Fdata%2Fenhancer%2F4%2F8907%2Fcover.5.RJ01248749_img_smp5.jpg"
             }
           />
           <img
+            alt=""
             src={
               "http://localhost:5001/tool/thumbnail?path=C%3A%2FUsers%2Fanoba%2FAppData%2FRoaming%2FBakabase.Debugging%2Fdata%2Fenhancer%2F4%2F8907%2Fcover.5.RJ01248749_img_smp5.jpg"
             }
           />
           <img
+            alt=""
             src={
               "http://localhost:5001/tool/thumbnail?path=C%3A%2FUsers%2Fanoba%2FAppData%2FRoaming%2FBakabase.Debugging%2Fdata%2Fenhancer%2F4%2F8907%2Fcover.5.RJ01248749_img_smp5.jpg"
             }
           />
           <img
+            alt=""
             src={
               "http://localhost:5001/tool/thumbnail?path=C%3A%2FUsers%2Fanoba%2FAppData%2FRoaming%2FBakabase.Debugging%2Fdata%2Fenhancer%2F4%2F8907%2Fcover.5.RJ01248749_img_smp5.jpg"
             }

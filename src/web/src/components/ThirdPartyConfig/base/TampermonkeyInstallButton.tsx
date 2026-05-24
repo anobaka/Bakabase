@@ -19,14 +19,14 @@ const TampermonkeyInstallButton: FC<TampermonkeyInstallButtonProps> = ({ descrip
   return (
     <Alert
       color="success"
-      variant="flat"
-      title={t<string>("thirdPartyIntegration.tip.scriptModifies")}
       description={
         <div className="space-y-3 mt-1">
           {descriptions && descriptions.length > 0 && (
             <div>
               {descriptions.map((desc, i) => (
-                <div key={i}>{i + 1}. {desc}</div>
+                <div key={i}>
+                  {i + 1}. {desc}
+                </div>
               ))}
             </div>
           )}
@@ -40,6 +40,8 @@ const TampermonkeyInstallButton: FC<TampermonkeyInstallButtonProps> = ({ descrip
           </Button>
         </div>
       }
+      title={t<string>("thirdPartyIntegration.tip.scriptModifies")}
+      variant="flat"
     />
   );
 };

@@ -1,5 +1,7 @@
 "use client";
 
+import type { PendingSyncButtonRef } from "./components/PendingSyncButton";
+
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -8,7 +10,6 @@ import { AiOutlineTags } from "react-icons/ai";
 import PathMarkTreeView from "./components/PathMarkTreeView";
 import PathMarkSettingsButton from "./components/PathMarkSettingsButton";
 import PendingSyncButton from "./components/PendingSyncButton";
-import type { PendingSyncButtonRef } from "./components/PendingSyncButton";
 import usePathMarks from "./hooks/usePathMarks";
 import { PathMarkGuideModal, usePathMarkGuide } from "./components/PathMarkGuide";
 
@@ -98,8 +99,8 @@ const PathRuleConfigPage = () => {
             {rootPathInitialized && (
               <PathMarkTreeView
                 rootPath={rootPath}
-                onMarksChanged={refreshPendingSyncCount}
                 onInitialized={handleRootPathInitialized}
+                onMarksChanged={refreshPendingSyncCount}
               />
             )}
           </div>

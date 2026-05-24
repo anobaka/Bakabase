@@ -1,6 +1,7 @@
 "use client";
 
 import type { BakabaseAbstractionsModelsDomainPathMark } from "@/sdk/Api";
+import type { PathMarkType } from "@/sdk/constants";
 
 import { useState, useMemo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
@@ -25,7 +26,6 @@ import AddMarkDropdown from "@/pages/path-mark-config/components/AddMarkDropdown
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { useCopyMarksStore } from "@/stores/copyMarks";
 import { getNewMarks, getExistingMarksCount } from "@/pages/path-mark-config/utils/markComparison";
-import { PathMarkType } from "@/sdk/constants";
 
 export interface PathTreeNode {
   name: string;
@@ -85,11 +85,13 @@ const TreeNodeComponent = ({
   // Calculate paste info
   const pasteInfo = useMemo(() => {
     const selectedGroup = candidateGroups.find((g) => g.id === selectedGroupId);
+
     if (!selectedGroup || selectedGroup.sourcePath === node.fullPath) {
       return { canPaste: false, newMarks: [], existingCount: 0 };
     }
     const newMarks = getNewMarks(selectedGroup.marks, node.marks);
     const existingCount = getExistingMarksCount(selectedGroup.marks, node.marks);
+
     return { canPaste: newMarks.length > 0, newMarks, existingCount };
   }, [candidateGroups, selectedGroupId, node.fullPath, node.marks]);
 
@@ -111,6 +113,7 @@ const TreeNodeComponent = ({
     if (node.marks.length > 0) {
       enterCopyMode(node.fullPath);
       const markIds = node.marks.filter((m) => m.id !== undefined).map((m) => m.id!);
+
       selectAllMarks(markIds);
     }
   }, [enterCopyMode, node.fullPath, node.marks, selectAllMarks]);
@@ -223,7 +226,15 @@ const TreeNodeComponent = ({
         <Tooltip content={t("pathMarks.tip.clickToCopyFullPath")}>
           <span
             className={`font-mono text-sm cursor-pointer hover:text-primary ${isInvalid ? "text-danger line-through" : ""}`}
+            role="button"
+            tabIndex={0}
             onClick={handleCopyPath}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                handleCopyPath();
+              }
+            }}
           >
             {node.name}
           </span>
@@ -284,17 +295,14 @@ const TreeNodeComponent = ({
           <div className="flex items-center gap-1 ml-3">
             <Button
               color="primary"
-              size="sm"
               isDisabled={selectedMarkIds.length === 0}
+              size="sm"
               onPress={handleConfirmCopy}
             >
-              {t("pathMarks.action.confirmSelection")} ({selectedMarkIds.length}/{node.marks.length})
+              {t("pathMarks.action.confirmSelection")} ({selectedMarkIds.length}/{node.marks.length}
+              )
             </Button>
-            <Button
-              size="sm"
-              variant="light"
-              onPress={handleCancelCopy}
-            >
+            <Button size="sm" variant="light" onPress={handleCancelCopy}>
               {t("common.action.cancel")}
             </Button>
           </div>
@@ -326,9 +334,9 @@ const TreeNodeComponent = ({
                   isIconOnly
                   className="min-w-0 w-6 h-6"
                   color="success"
+                  isLoading={syncing}
                   size="sm"
                   variant="light"
-                  isLoading={syncing}
                   onPress={handleSyncPath}
                 >
                   <AiOutlineSync className="text-sm" />

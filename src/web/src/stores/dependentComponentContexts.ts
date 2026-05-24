@@ -22,8 +22,8 @@ interface DependentComponentContextsState {
   updateContext: (context: IContext) => void;
 }
 
-export const useDependentComponentContextsStore =
-  create<DependentComponentContextsState>((set, get) => ({
+export const useDependentComponentContextsStore = create<DependentComponentContextsState>(
+  (set, get) => ({
     contexts: [],
     setContexts: (contexts) => {
       console.log("dependent component context changed", contexts);
@@ -44,4 +44,5 @@ export const useDependentComponentContextsStore =
 
         return { contexts: newContexts };
       }),
-  }));
+  }),
+);

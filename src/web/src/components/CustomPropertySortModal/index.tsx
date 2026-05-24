@@ -6,10 +6,7 @@ import type { DestroyableProps } from "@/components/bakaui/types";
 import React, { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
-import {
-  VerticalAlignTopOutlined,
-  VerticalAlignBottomOutlined,
-} from "@ant-design/icons";
+import { VerticalAlignTopOutlined, VerticalAlignBottomOutlined } from "@ant-design/icons";
 import {
   closestCenter,
   DndContext,
@@ -27,12 +24,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-import {
-  Button,
-  Input,
-  Modal,
-  Tooltip,
-} from "@/components/bakaui";
+import { Button, Input, Modal, Tooltip } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 import { PropertyLabel } from "@/components/Property";
 import { PropertyPool } from "@/sdk/constants";
@@ -80,14 +72,9 @@ const SortableRow = ({
   onMoveToBottom,
   t,
 }: SortableRowProps) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: item.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.id,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -105,7 +92,6 @@ const SortableRow = ({
       <div className="w-16">
         {isEditing ? (
           <Input
-            autoFocus
             className="w-16"
             size="sm"
             type="number"
@@ -118,8 +104,16 @@ const SortableRow = ({
           <Tooltip content={t("property.tip.clickToEditOrder")}>
             <div
               className="cursor-pointer px-2 py-1 rounded hover:bg-default-200 inline-block min-w-[40px] text-center"
+              role="button"
+              tabIndex={0}
               onClick={() => {
                 onEditStart(item.id, String(globalIndex));
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onEditStart(item.id, String(globalIndex));
+                }
               }}
             >
               {globalIndex}
@@ -139,8 +133,8 @@ const SortableRow = ({
       <div className="flex gap-1">
         <Tooltip content={t("common.action.moveToTop")}>
           <Button
-            isDisabled={globalIndex === 1}
             isIconOnly
+            isDisabled={globalIndex === 1}
             size="sm"
             variant="light"
             onPress={() => onMoveToTop(item.id)}
@@ -150,8 +144,8 @@ const SortableRow = ({
         </Tooltip>
         <Tooltip content={t("common.action.moveToBottom")}>
           <Button
-            isDisabled={globalIndex === totalCount}
             isIconOnly
+            isDisabled={globalIndex === totalCount}
             size="sm"
             variant="light"
             onPress={() => onMoveToBottom(item.id)}
@@ -175,30 +169,31 @@ const CustomPropertySortModal = ({ properties, onSaved, onDestroyed }: Props) =>
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
   const filteredItems = useMemo(() => {
     if (!searchText.trim()) return items;
     const lowerSearch = searchText.toLowerCase();
-    return items.filter((item) =>
-      item.name.toLowerCase().includes(lowerSearch)
-    );
+
+    return items.filter((item) => item.name.toLowerCase().includes(lowerSearch));
   }, [items, searchText]);
 
   const saveOrder = useCallback(
     async (newItems: PropertyLike[]) => {
       const ids = newItems.map((item) => item.id);
+
       await BApi.customProperty.sortCustomProperties({ ids });
       toast.success(t<string>("common.state.saved"));
       onSaved?.();
     },
-    [t, onSaved]
+    [t, onSaved],
   );
 
   const handleOrderChange = useCallback(
     async (itemId: number, newOrder: number) => {
       const currentIndex = items.findIndex((item) => item.id === itemId);
+
       if (currentIndex === -1) return;
 
       // Clamp to valid range (1-based)
@@ -208,51 +203,53 @@ const CustomPropertySortModal = ({ properties, onSaved, onDestroyed }: Props) =>
 
       const newItems = [...items];
       const [removed] = newItems.splice(currentIndex, 1);
+
       newItems.splice(targetIndex, 0, removed);
 
       setItems(newItems);
       await saveOrder(newItems);
     },
-    [items, saveOrder]
+    [items, saveOrder],
   );
 
   const handleMoveToTop = useCallback(
     async (itemId: number) => {
       const currentIndex = items.findIndex((item) => item.id === itemId);
+
       if (currentIndex <= 0) return;
 
       const newItems = [...items];
       const [removed] = newItems.splice(currentIndex, 1);
+
       newItems.unshift(removed);
 
       setItems(newItems);
       await saveOrder(newItems);
     },
-    [items, saveOrder]
+    [items, saveOrder],
   );
 
   const handleMoveToBottom = useCallback(
     async (itemId: number) => {
       const currentIndex = items.findIndex((item) => item.id === itemId);
+
       if (currentIndex === -1 || currentIndex === items.length - 1) return;
 
       const newItems = [...items];
       const [removed] = newItems.splice(currentIndex, 1);
+
       newItems.push(removed);
 
       setItems(newItems);
       await saveOrder(newItems);
     },
-    [items, saveOrder]
+    [items, saveOrder],
   );
 
-
-  const handleOrderInputKeyDown = (
-    e: React.KeyboardEvent<HTMLInputElement>,
-    itemId: number
-  ) => {
+  const handleOrderInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, itemId: number) => {
     if (e.key === "Enter") {
       const newOrder = parseInt(editingValue, 10);
+
       if (!isNaN(newOrder) && newOrder >= 1 && newOrder <= items.length) {
         handleOrderChange(itemId, newOrder);
       }
@@ -264,6 +261,7 @@ const CustomPropertySortModal = ({ properties, onSaved, onDestroyed }: Props) =>
 
   const handleOrderInputBlur = (itemId: number) => {
     const newOrder = parseInt(editingValue, 10);
+
     if (!isNaN(newOrder) && newOrder >= 1 && newOrder <= items.length) {
       handleOrderChange(itemId, newOrder);
     }
@@ -280,12 +278,13 @@ const CustomPropertySortModal = ({ properties, onSaved, onDestroyed }: Props) =>
 
         if (oldIndex !== -1 && newIndex !== -1) {
           const newItems = arrayMove(items, oldIndex, newIndex);
+
           setItems(newItems);
           await saveOrder(newItems);
         }
       }
     },
-    [items, saveOrder]
+    [items, saveOrder],
   );
 
   return (
@@ -303,9 +302,7 @@ const CustomPropertySortModal = ({ properties, onSaved, onDestroyed }: Props) =>
     >
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
-          <div className="text-sm text-default-500">
-            {t("property.tip.orderEditInstructions")}
-          </div>
+          <div className="text-sm text-default-500">{t("property.tip.orderEditInstructions")}</div>
           <Input
             className="w-64"
             placeholder={t<string>("property.action.searchProperties")}
@@ -315,11 +312,7 @@ const CustomPropertySortModal = ({ properties, onSaved, onDestroyed }: Props) =>
           />
         </div>
 
-        <DndContext
-          collisionDetection={closestCenter}
-          sensors={sensors}
-          onDragEnd={handleDragEnd}
-        >
+        <DndContext collisionDetection={closestCenter} sensors={sensors} onDragEnd={handleDragEnd}>
           <SortableContext
             items={filteredItems.map((item) => item.id)}
             strategy={verticalListSortingStrategy}

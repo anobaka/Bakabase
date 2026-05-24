@@ -1,16 +1,20 @@
 "use client";
 
+import type { BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry } from "@/sdk/Api";
+
 import React, { useEffect, useState } from "react";
+
 import { Button, Spinner, toast } from "@/components/bakaui";
 import MediaPlayer from "@/components/MediaPlayer";
 import { IwFsType } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
-import type { BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry } from "@/sdk/Api";
 
 const TEST_DIRECTORY = "E:\\迅雷下载";
 
 const MediaPlayerTest = () => {
-  const [entries, setEntries] = useState<BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry[]>([]);
+  const [entries, setEntries] = useState<
+    BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry[]
+  >([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [autoPlay, setAutoPlay] = useState(false);
@@ -34,6 +38,7 @@ const MediaPlayerTest = () => {
       } else {
         // @ts-ignore
         const loadedEntries = rsp.data?.entries || [];
+
         setEntries(loadedEntries);
         if (loadedEntries.length === 0) {
           toast.default("No entries found in the directory");
@@ -41,6 +46,7 @@ const MediaPlayerTest = () => {
       }
     } catch (e: any) {
       const errorMsg = e?.message || "An error occurred while loading entries";
+
       setError(errorMsg);
       toast.danger(errorMsg);
     } finally {
@@ -55,6 +61,7 @@ const MediaPlayerTest = () => {
   const handleOpenMediaPlayer = () => {
     if (entries.length === 0) {
       toast.warning("No entries to display. Please load entries first.");
+
       return;
     }
 
@@ -78,17 +85,13 @@ const MediaPlayerTest = () => {
       >
         <Button
           color="primary"
-          onClick={handleOpenMediaPlayer}
           isDisabled={loading || entries.length === 0}
+          onClick={handleOpenMediaPlayer}
         >
           Open Media Player
         </Button>
 
-        <Button
-          color="secondary"
-          onClick={loadEntries}
-          isDisabled={loading}
-        >
+        <Button color="secondary" isDisabled={loading} onClick={loadEntries}>
           {loading ? <Spinner size="sm" /> : "Reload Entries"}
         </Button>
 
@@ -127,12 +130,16 @@ const MediaPlayerTest = () => {
         </div>
       )}
 
-      <div style={{ marginTop: "20px", padding: "15px", background: "#f5f5f5", borderRadius: "8px" }}>
+      <div
+        style={{ marginTop: "20px", padding: "15px", background: "#f5f5f5", borderRadius: "8px" }}
+      >
         <h3 style={{ marginTop: 0, marginBottom: "10px" }}>Loaded Entries Preview:</h3>
         {loading ? (
           <div style={{ textAlign: "center", padding: "20px" }}>
             <Spinner size="lg" />
-            <div style={{ marginTop: "10px", color: "#666" }}>Loading entries from {TEST_DIRECTORY}...</div>
+            <div style={{ marginTop: "10px", color: "#666" }}>
+              Loading entries from {TEST_DIRECTORY}...
+            </div>
           </div>
         ) : entries.length === 0 ? (
           <div style={{ color: "#666", textAlign: "center", padding: "20px" }}>
@@ -156,13 +163,21 @@ const MediaPlayerTest = () => {
         )}
       </div>
 
-      <div style={{ marginTop: "20px", padding: "15px", background: "#e8f4f8", borderRadius: "8px" }}>
+      <div
+        style={{ marginTop: "20px", padding: "15px", background: "#e8f4f8", borderRadius: "8px" }}
+      >
         <h4 style={{ marginTop: 0, marginBottom: "10px" }}>Features to Test:</h4>
         <ul style={{ margin: 0, paddingLeft: "20px", fontSize: "14px", color: "#555" }}>
           <li>Left panel: Collapsible thumbnail panel with all entries</li>
-          <li>Thumbnails: Click to preview files, double-click directories/compressed files to open nested player</li>
+          <li>
+            Thumbnails: Click to preview files, double-click directories/compressed files to open
+            nested player
+          </li>
           <li>Page counter: Shows current/total playable items at top of left panel</li>
-          <li>Nested players: Double-click directories or compressed files to open new player above current</li>
+          <li>
+            Nested players: Double-click directories or compressed files to open new player above
+            current
+          </li>
           <li>Right panel: Vertical scrolling content area for media preview</li>
           <li>Media types: Images, videos, audios, text files</li>
           <li>Visual indicators: Directories and compressed files show badges</li>
@@ -178,20 +193,3 @@ const MediaPlayerTest = () => {
 MediaPlayerTest.displayName = "MediaPlayerTest";
 
 export default MediaPlayerTest;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

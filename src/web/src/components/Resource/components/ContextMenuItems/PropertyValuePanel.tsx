@@ -9,6 +9,8 @@
  * - New values are both applied AND added to presets via onAddPreset callback
  */
 
+import type { IProperty } from "@/components/Property/models";
+
 import React from "react";
 import { MenuItem, MenuDivider } from "@szhsin/react-menu";
 import { useTranslation } from "react-i18next";
@@ -18,7 +20,6 @@ import { Button } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import PropertyValueRenderer from "@/components/Property/components/PropertyValueRenderer";
 import PropertyValueEditorModal from "@/components/PropertyValueEditorModal";
-import type { IProperty } from "@/components/Property/models";
 
 type Props = {
   property: IProperty;
@@ -37,22 +38,30 @@ const MenuItemContent = ({ children }: { children: React.ReactNode }) => (
   <li
     className="szh-menu__item"
     role="menuitem"
+    style={{ cursor: "default" }}
     onClick={(e) => e.stopPropagation()}
     onKeyDown={(e) => e.stopPropagation()}
-    style={{ cursor: "default" }}
   >
     {children}
   </li>
 );
 
-const PropertyValuePanel = ({ property, presetValues, onApply, onAddPreset, onRemovePreset }: Props) => {
+const PropertyValuePanel = ({
+  property,
+  presetValues,
+  onApply,
+  onAddPreset,
+  onRemovePreset,
+}: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
   const handleAdd = () => {
     createPortal(PropertyValueEditorModal, {
       property,
-      title: t<string>("resource.display.contextMenu.addPresetValueTitle", { property: property.name }),
+      title: t<string>("resource.display.contextMenu.addPresetValueTitle", {
+        property: property.name,
+      }),
       onSubmit: (dbValue: string) => {
         onApply(dbValue);
         onAddPreset?.(dbValue);
@@ -68,22 +77,17 @@ const PropertyValuePanel = ({ property, presetValues, onApply, onAddPreset, onRe
           {presetValues.map((dbVal, idx) => (
             <MenuItem key={`${dbVal}-${idx}`} onClick={() => onApply(dbVal)}>
               <div className={"flex items-center justify-between w-full gap-2"}>
-                <PropertyValueRenderer
-                  property={property}
-                  dbValue={dbVal}
-                  size="sm"
-                  isReadonly
-                />
+                <PropertyValueRenderer isReadonly dbValue={dbVal} property={property} size="sm" />
                 {onRemovePreset && (
                   <Button
                     isIconOnly
+                    color="danger"
                     size="sm"
                     variant="light"
-                    color="danger"
+                    onClick={(e) => e.stopPropagation()}
                     onPress={(e) => {
                       onRemovePreset(dbVal);
                     }}
-                    onClick={(e) => e.stopPropagation()}
                   >
                     <CloseOutlined />
                   </Button>
@@ -103,12 +107,12 @@ const PropertyValuePanel = ({ property, presetValues, onApply, onAddPreset, onRe
       {/* Add preset value button */}
       <MenuItemContent>
         <Button
-          size="sm"
-          variant="light"
-          color="primary"
-          startContent={<PlusOutlined />}
-          onPress={handleAdd}
           className="w-full"
+          color="primary"
+          size="sm"
+          startContent={<PlusOutlined />}
+          variant="light"
+          onPress={handleAdd}
         >
           {t<string>("resource.display.contextMenu.addPresetValueFull")}
         </Button>

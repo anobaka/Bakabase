@@ -31,14 +31,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       }
     }
 
-    return (
-      <NextUiButton
-        ref={ref}
-        isDisabled={props.disabled}
-        {...props}
-        size={nSize}
-      />
-    );
+    return <NextUiButton ref={ref} isDisabled={props.disabled} {...props} size={nSize} />;
   },
 );
 

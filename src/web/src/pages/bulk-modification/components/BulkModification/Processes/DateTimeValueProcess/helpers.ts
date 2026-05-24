@@ -14,6 +14,7 @@ export const validate = (
       if (!options.value) {
         return "bulkModification.validation.valueRequired";
       }
+
       return undefined;
     case BulkModificationDateTimeProcessOperation.AddDays:
     case BulkModificationDateTimeProcessOperation.SubtractDays:
@@ -24,6 +25,7 @@ export const validate = (
       if (options.amount === undefined || options.amount < 0) {
         return "bulkModification.validation.amountRequired";
       }
+
       return undefined;
     default:
       return undefined;

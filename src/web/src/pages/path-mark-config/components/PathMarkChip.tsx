@@ -12,14 +12,22 @@ import {
   AiOutlineDelete,
   AiOutlineSync,
 } from "react-icons/ai";
+import { AiOutlineFieldTime } from "react-icons/ai";
 
 import MarkDescription from "./MarkDescription";
 
-import { Chip, Tooltip, CircularProgress, formatDuration, Checkbox, Button, toast } from "@/components/bakaui";
+import {
+  Chip,
+  Tooltip,
+  CircularProgress,
+  formatDuration,
+  Checkbox,
+  Button,
+  toast,
+} from "@/components/bakaui";
 import { PathMarkType, PathMarkSyncStatus, BTaskStatus } from "@/sdk/constants";
 import { useBTasksStore } from "@/stores/bTasks";
 import { usePathMarksStore } from "@/stores/pathMarks";
-import { AiOutlineFieldTime } from "react-icons/ai";
 import BApi from "@/sdk/BApi";
 
 export interface PathMarkChipProps {
@@ -55,12 +63,12 @@ const getSyncStatusIcon = (status?: number, isTaskRunning?: boolean, taskProgres
     case PathMarkSyncStatus.Syncing:
       return (
         <CircularProgress
+          isIndeterminate
           aria-label="Syncing"
           classNames={{
             svg: "w-3.5 h-3.5",
           }}
           size="sm"
-          isIndeterminate
         />
       );
     case PathMarkSyncStatus.Synced:
@@ -137,7 +145,7 @@ const PathMarkChip = ({
 
   // Get the latest mark state from store (updated via SignalR)
   const storeMark = usePathMarksStore((state) =>
-    propMark.id != null ? state.marks.get(propMark.id) : undefined
+    propMark.id != null ? state.marks.get(propMark.id) : undefined,
   );
 
   // Use store mark if available (has latest syncStatus), otherwise use prop mark
@@ -192,7 +200,7 @@ const PathMarkChip = ({
     >
       <div className="flex items-center gap-1 text-xs">
         {getSyncStatusIcon(mark.syncStatus, isTaskRunning, taskProgress)}
-        <MarkDescription mark={mark} label={label} priority={mark.priority} />
+        <MarkDescription label={label} mark={mark} priority={mark.priority} />
       </div>
     </Chip>
   );
@@ -200,11 +208,7 @@ const PathMarkChip = ({
   if (selectable) {
     return (
       <div className="flex items-center gap-1">
-        <Checkbox
-          size="sm"
-          isSelected={selected}
-          onValueChange={onSelectionChange}
-        />
+        <Checkbox isSelected={selected} size="sm" onValueChange={onSelectionChange} />
         {chipContent}
       </div>
     );
@@ -237,12 +241,12 @@ const PathMarkChip = ({
           )}
           {canSync && (
             <Button
-              size="sm"
-              color="success"
-              variant="flat"
               className="mt-1"
+              color="success"
               isLoading={syncing}
+              size="sm"
               startContent={!syncing && <AiOutlineSync className="text-base" />}
+              variant="flat"
               onPress={handleSyncMark}
             >
               {t("pathMarkConfig.action.syncNow")}

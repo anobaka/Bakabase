@@ -1,6 +1,13 @@
 "use client";
 
-import React, { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useUpdate, useUpdateEffect } from "react-use";
 import { useTranslation } from "react-i18next";
 
@@ -82,7 +89,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
 
   const stableApiEndpoints = useMemo(
     () => appContext.apiEndpoints,
-    [appContext.apiEndpoints?.join(",")]
+    [appContext.apiEndpoints?.join(",")],
   );
 
   // Build URLs from cover paths using coverResolution
@@ -98,14 +105,18 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
       resourceServerAddresses[Math.floor(Math.random() * resourceServerAddresses.length)];
 
     // Use resolved covers, or fall back to resource.path
-    const coverPaths = coverResolution.covers?.length
-      ? coverResolution.covers
-      : [resource.path];
+    const coverPaths = coverResolution.covers?.length ? coverResolution.covers : [resource.path];
 
     return coverPaths.map(
-      (coverPath) => `${serverAddress}/tool/thumbnail?path=${encodeURIComponent(coverPath)}`
+      (coverPath) => `${serverAddress}/tool/thumbnail?path=${encodeURIComponent(coverPath)}`,
     );
-  }, [coverResolution.status, coverResolution.covers, stableApiEndpoints, resource.path, reloadKey]);
+  }, [
+    coverResolution.status,
+    coverResolution.covers,
+    stableApiEndpoints,
+    resource.path,
+    reloadKey,
+  ]);
 
   useUpdateEffect(() => {
     forceUpdate();
@@ -131,6 +142,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     });
 
     resizeObserver.observe(containerRef.current);
+
     return () => resizeObserver.disconnect();
   }, []);
 
@@ -153,40 +165,35 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     if (coverResolution.status === "loading") {
       return t("resource.cover.tooltip.loading");
     }
+
     return undefined;
   }, [coverResolution.status, t]);
 
-  const handleImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
-    const img = e.target as HTMLImageElement;
+  const handleImageLoad = useCallback(
+    (e: React.SyntheticEvent<HTMLImageElement>) => {
+      const img = e.target as HTMLImageElement;
 
-    if (img) {
-      const prevW = maxCoverRawSizeRef.current?.w ?? 0;
-      const prevH = maxCoverRawSizeRef.current?.h ?? 0;
+      if (img) {
+        const prevW = maxCoverRawSizeRef.current?.w ?? 0;
+        const prevH = maxCoverRawSizeRef.current?.h ?? 0;
 
-      if (!maxCoverRawSizeRef.current) {
-        maxCoverRawSizeRef.current = {
-          w: img.naturalWidth,
-          h: img.naturalHeight,
-        };
-      } else {
-        maxCoverRawSizeRef.current.w = Math.max(
-          maxCoverRawSizeRef.current.w,
-          img.naturalWidth,
-        );
-        maxCoverRawSizeRef.current.h = Math.max(
-          maxCoverRawSizeRef.current.h,
-          img.naturalHeight,
-        );
+        if (!maxCoverRawSizeRef.current) {
+          maxCoverRawSizeRef.current = {
+            w: img.naturalWidth,
+            h: img.naturalHeight,
+          };
+        } else {
+          maxCoverRawSizeRef.current.w = Math.max(maxCoverRawSizeRef.current.w, img.naturalWidth);
+          maxCoverRawSizeRef.current.h = Math.max(maxCoverRawSizeRef.current.h, img.naturalHeight);
+        }
+
+        if (maxCoverRawSizeRef.current.w !== prevW || maxCoverRawSizeRef.current.h !== prevH) {
+          forceUpdate();
+        }
       }
-
-      if (
-        maxCoverRawSizeRef.current.w !== prevW ||
-        maxCoverRawSizeRef.current.h !== prevH
-      ) {
-        forceUpdate();
-      }
-    }
-  }, [forceUpdate]);
+    },
+    [forceUpdate],
+  );
 
   const handleImageError = useCallback((url: string) => {
     setFailureUrls((prev) => new Set(prev).add(url));
@@ -266,8 +273,8 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
                     className={`${dynamicClassName} max-w-full max-h-full`}
                     loading={"eager"}
                     src={url}
-                    onLoad={handleImageLoad}
                     onError={() => handleImageError(url)}
+                    onLoad={handleImageLoad}
                     {...({ fetchpriority: "low" } as any)}
                   />
                 )}
@@ -277,32 +284,55 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
         })}
       </Carousel>
     );
-  }, [urls, coverFit, disableCarousel, failureUrls, coverResolution.status, loadingTooltipContent, handleImageLoad, handleImageError, hideCovers]);
+  }, [
+    urls,
+    coverFit,
+    disableCarousel,
+    failureUrls,
+    coverResolution.status,
+    loadingTooltipContent,
+    handleImageLoad,
+    handleImageError,
+    hideCovers,
+  ]);
 
   const renderContainer = () => {
+    const handleMouseOver = () => {
+      if (!disableMediaPreviewer) {
+        if (!previewerHoverTimerRef.current) {
+          previewerHoverTimerRef.current = setTimeout(() => {
+            setPreviewerVisible(true);
+          }, 1000);
+        }
+      }
+    };
+    const handleMouseLeave = () => {
+      if (!disableMediaPreviewer) {
+        clearTimeout(previewerHoverTimerRef.current);
+        previewerHoverTimerRef.current = undefined;
+        if (previewerVisible) {
+          setPreviewerVisible(false);
+        }
+      }
+    };
+
     return (
       <div
         ref={containerRef}
         className="resource-cover-container relative overflow-hidden"
+        role="button"
+        tabIndex={0}
+        onBlur={handleMouseLeave}
         onClick={onClick}
-        onMouseLeave={() => {
-          if (!disableMediaPreviewer) {
-            clearTimeout(previewerHoverTimerRef.current);
-            previewerHoverTimerRef.current = undefined;
-            if (previewerVisible) {
-              setPreviewerVisible(false);
-            }
+        onFocus={handleMouseOver}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onClick();
           }
         }}
-        onMouseOver={() => {
-          if (!disableMediaPreviewer) {
-            if (!previewerHoverTimerRef.current) {
-              previewerHoverTimerRef.current = setTimeout(() => {
-                setPreviewerVisible(true);
-              }, 1000);
-            }
-          }
-        }}
+        onMouseLeave={handleMouseLeave}
+        onMouseOver={handleMouseOver}
       >
         {previewerVisible && <MediaPreviewerPage resourceId={resource.id} />}
         {renderCover()}

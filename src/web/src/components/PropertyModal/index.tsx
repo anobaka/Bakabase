@@ -28,12 +28,7 @@ type CustomPropertyForm = {
 };
 
 const log = buildLogger("PropertyModal");
-const PropertyModal = ({
-  value,
-  onSaved,
-  validValueTypes,
-  ...props
-}: Props) => {
+const PropertyModal = ({ value, onSaved, validValueTypes, ...props }: Props) => {
   const { t } = useTranslation();
   const [visible, setVisible] = useState(true);
   const [property, setProperty] = useState<CustomPropertyForm>();

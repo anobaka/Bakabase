@@ -1,11 +1,11 @@
 import type { MediaLibrary } from "@/pages/deprecated/media-library/models";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
+import { AiOutlineCopy } from "react-icons/ai";
+import { useTranslation } from "react-i18next";
 
 import { Button, Chip, toast, Tooltip } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
-import { AiOutlineCopy } from "react-icons/ai";
-import { useTranslation } from "react-i18next";
 
 type Props = {
   onSelect: (path: string, mediaLibraryId: number) => any;
@@ -29,30 +29,32 @@ const MediaLibraryPathSelectorInner = (props: Props) => {
     <div className="grid gap-x-2 items-center" style={{ gridTemplateColumns: "auto 1fr" }}>
       {mediaLibraries.map((ml) => {
         return (
-          <>
+          <React.Fragment key={ml.id}>
             <Chip variant="light">{ml.name}</Chip>
             <div>
               {ml.paths?.map((p) => {
                 return (
-                  <Tooltip content={
-                    <div className="flex items-center gap-0">
-                      {/* Copy path */}
-                      <Button
-                        isIconOnly
-                        color="default"
-                        size="sm"
-                        variant="light"
-                        onPress={() => {
-                          navigator.clipboard.writeText(p);
-                          toast.success(t<string>("Path copied to clipboard"));
-                        }}
-                      >
-                        <AiOutlineCopy className="text-lg" />
-                      </Button>
-                    </div>
-                  }>
+                  <Tooltip
+                    key={p}
+                    content={
+                      <div className="flex items-center gap-0">
+                        {/* Copy path */}
+                        <Button
+                          isIconOnly
+                          color="default"
+                          size="sm"
+                          variant="light"
+                          onPress={() => {
+                            navigator.clipboard.writeText(p);
+                            toast.success(t<string>("Path copied to clipboard"));
+                          }}
+                        >
+                          <AiOutlineCopy className="text-lg" />
+                        </Button>
+                      </div>
+                    }
+                  >
                     <Button
-                      key={p}
                       color="success"
                       size="sm"
                       variant="light"
@@ -64,7 +66,7 @@ const MediaLibraryPathSelectorInner = (props: Props) => {
                 );
               })}
             </div>
-          </>
+          </React.Fragment>
         );
       })}
     </div>

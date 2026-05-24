@@ -1,14 +1,15 @@
 "use client";
 
+import type {
+  BakabaseModulesAIComponentsObservationLlmUsageSummary,
+  BakabaseModulesAIModelsDbAiProviderDbModel,
+} from "@/sdk/Api";
+
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Chip } from "@heroui/react";
 
 import BApi from "@/sdk/BApi";
-import type {
-  BakabaseModulesAIComponentsObservationLlmUsageSummary,
-  BakabaseModulesAIModelsDbAiProviderDbModel,
-} from "@/sdk/Api";
 import { AiProviderKindLabel } from "@/sdk/constants";
 
 type UsageSummary = BakabaseModulesAIComponentsObservationLlmUsageSummary;
@@ -32,6 +33,7 @@ const AiUsagePage = () => {
       BApi.ai.getLlmUsageSummary(),
       BApi.ai.getAllAiProviders(),
     ]);
+
     if (!summaryRes.code && summaryRes.data) {
       setSummary(summaryRes.data);
     }
@@ -46,22 +48,21 @@ const AiUsagePage = () => {
 
   const getProviderLabel = (providerConfigId: number): string => {
     const p = providers.find((pr) => pr.id === providerConfigId);
+
     if (!p) return `#${providerConfigId}`;
     const typeName = AiProviderKindLabel[p.kind] ?? "";
+
     return `${p.name}${typeName ? ` (${typeName})` : ""}`;
   };
 
   const getFeatureLabel = (feature: string): string => {
     const key = featureI18nKey[feature];
+
     return key ? t<string>(key) : feature;
   };
 
   if (!summary || summary.totalCalls === 0) {
-    return (
-      <div className="p-4 text-default-400">
-        {t("configuration.ai.usage.noData")}
-      </div>
-    );
+    return <div className="p-4 text-default-400">{t("configuration.ai.usage.noData")}</div>;
   }
 
   return (
@@ -69,15 +70,21 @@ const AiUsagePage = () => {
       {/* Summary cards */}
       <div className="grid grid-cols-3 gap-4">
         <div className="flex flex-col gap-1 p-4 rounded-lg bg-default-100">
-          <span className="text-xs text-default-400">{t("configuration.ai.usage.todayTokens")}</span>
+          <span className="text-xs text-default-400">
+            {t("configuration.ai.usage.todayTokens")}
+          </span>
           <span className="text-2xl font-semibold">{summary.todayTokens.toLocaleString()}</span>
         </div>
         <div className="flex flex-col gap-1 p-4 rounded-lg bg-default-100">
-          <span className="text-xs text-default-400">{t("configuration.ai.usage.monthTokens")}</span>
+          <span className="text-xs text-default-400">
+            {t("configuration.ai.usage.monthTokens")}
+          </span>
           <span className="text-2xl font-semibold">{summary.monthTokens.toLocaleString()}</span>
         </div>
         <div className="flex flex-col gap-1 p-4 rounded-lg bg-default-100">
-          <span className="text-xs text-default-400">{t("configuration.ai.usage.totalTokens")}</span>
+          <span className="text-xs text-default-400">
+            {t("configuration.ai.usage.totalTokens")}
+          </span>
           <span className="text-2xl font-semibold">{summary.totalTokens.toLocaleString()}</span>
         </div>
       </div>
@@ -92,7 +99,9 @@ const AiUsagePage = () => {
           <span className="text-2xl font-semibold">{summary.cacheHits.toLocaleString()}</span>
         </div>
         <div className="flex flex-col gap-1 p-4 rounded-lg bg-default-100">
-          <span className="text-xs text-default-400">{t("configuration.ai.usage.cacheHitRate")}</span>
+          <span className="text-xs text-default-400">
+            {t("configuration.ai.usage.cacheHitRate")}
+          </span>
           <span className="text-2xl font-semibold">{(summary.cacheHitRate * 100).toFixed(1)}%</span>
         </div>
       </div>
@@ -103,14 +112,21 @@ const AiUsagePage = () => {
           <span className="text-sm font-medium">{t("configuration.ai.usage.byProvider")}</span>
           <div className="grid grid-cols-2 gap-3">
             {summary.byProvider.map((p) => (
-              <div key={`${p.providerConfigId}-${p.modelId}`} className="flex items-center justify-between p-3 rounded-lg bg-default-50 border border-default-200">
+              <div
+                key={`${p.providerConfigId}-${p.modelId}`}
+                className="flex items-center justify-between p-3 rounded-lg bg-default-50 border border-default-200"
+              >
                 <div className="flex flex-col gap-0.5">
                   <span className="text-sm">{getProviderLabel(p.providerConfigId)}</span>
                   <span className="text-xs text-default-400 font-mono">{p.modelId}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Chip size="sm" variant="flat">{p.totalTokens.toLocaleString()} tokens</Chip>
-                  <Chip size="sm" variant="flat" color="primary">{t("configuration.ai.usage.calls", { count: p.callCount })}</Chip>
+                  <Chip size="sm" variant="flat">
+                    {p.totalTokens.toLocaleString()} tokens
+                  </Chip>
+                  <Chip color="primary" size="sm" variant="flat">
+                    {t("configuration.ai.usage.calls", { count: p.callCount })}
+                  </Chip>
                 </div>
               </div>
             ))}
@@ -124,11 +140,18 @@ const AiUsagePage = () => {
           <span className="text-sm font-medium">{t("configuration.ai.usage.byFeature")}</span>
           <div className="grid grid-cols-2 gap-3">
             {summary.byFeature.map((f) => (
-              <div key={f.feature} className="flex items-center justify-between p-3 rounded-lg bg-default-50 border border-default-200">
+              <div
+                key={f.feature}
+                className="flex items-center justify-between p-3 rounded-lg bg-default-50 border border-default-200"
+              >
                 <span className="text-sm">{getFeatureLabel(f.feature)}</span>
                 <div className="flex items-center gap-2">
-                  <Chip size="sm" variant="flat">{f.totalTokens.toLocaleString()} tokens</Chip>
-                  <Chip size="sm" variant="flat" color="primary">{t("configuration.ai.usage.calls", { count: f.callCount })}</Chip>
+                  <Chip size="sm" variant="flat">
+                    {f.totalTokens.toLocaleString()} tokens
+                  </Chip>
+                  <Chip color="primary" size="sm" variant="flat">
+                    {t("configuration.ai.usage.calls", { count: f.callCount })}
+                  </Chip>
                 </div>
               </div>
             ))}

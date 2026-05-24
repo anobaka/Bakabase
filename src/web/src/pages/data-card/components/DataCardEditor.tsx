@@ -1,13 +1,14 @@
 "use client";
 
+import type { IProperty } from "@/components/Property/models";
+import type { DestroyableProps } from "@/components/bakaui/types";
+
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { WarningOutlined } from "@ant-design/icons";
 
 import BApi from "@/sdk/BApi";
 import { Button, Chip, Modal } from "@/components/bakaui";
-import type { IProperty } from "@/components/Property/models";
-import type { DestroyableProps } from "@/components/bakaui/types";
 import PropertyValueRenderer from "@/components/Property/components/PropertyValueRenderer";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
@@ -48,29 +49,32 @@ const DataCardEditor = ({
   const isEditing = !!card;
 
   const [visible, setVisible] = useState(true);
-  const [propertyValues, setPropertyValues] = useState<Record<number, string | undefined>>(
-    () => {
-      const values: Record<number, string | undefined> = {};
-      if (card?.propertyValues) {
-        for (const pv of card.propertyValues) {
-          values[pv.propertyId] = pv.value || undefined;
-        }
+  const [propertyValues, setPropertyValues] = useState<Record<number, string | undefined>>(() => {
+    const values: Record<number, string | undefined> = {};
+
+    if (card?.propertyValues) {
+      for (const pv of card.propertyValues) {
+        values[pv.propertyId] = pv.value || undefined;
       }
-      return values;
-    },
-  );
+    }
+
+    return values;
+  });
 
   const [duplicateCard, setDuplicateCard] = useState<DataCardItem | null>(null);
 
   const identityPropertyIds = useMemo(() => {
     if (cardType.identityPropertyIds?.length) return cardType.identityPropertyIds;
+
     return cardType.propertyIds || [];
   }, [cardType]);
 
   const checkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     if (identityPropertyIds.length === 0) {
       setDuplicateCard(null);
+
       return;
     }
 
@@ -89,6 +93,7 @@ const DataCardEditor = ({
           propertyValues: pvList,
         });
         const found = ((rsp.data as any) || null) as DataCardItem | null;
+
         setDuplicateCard(found && found.id === card?.id ? null : found);
       } catch {
         setDuplicateCard(null);
@@ -102,9 +107,11 @@ const DataCardEditor = ({
 
   const layoutByPropertyId = useMemo(() => {
     const map = new Map<number, { x: number; y: number; w: number; h: number }>();
+
     for (const item of cardType.displayTemplate?.layout ?? []) {
       map.set(item.propertyId, { x: item.x, y: item.y, w: item.w, h: item.h });
     }
+
     return map;
   }, [cardType.displayTemplate]);
 
@@ -145,6 +152,7 @@ const DataCardEditor = ({
   const handleSwitchToExisting = () => {
     if (!duplicateCard) return;
     const existing = duplicateCard;
+
     setVisible(false);
     // Defer opening so the current modal can close cleanly
     setTimeout(() => {
@@ -162,13 +170,11 @@ const DataCardEditor = ({
       <label className="text-sm text-default-600">{p.name}</label>
       <div className="min-w-0">
         <PropertyValueRenderer
-          property={p}
-          dbValue={propertyValues[p.id!] ?? undefined}
-          size={fillContainer ? "md" : "sm"}
-          attachmentPropertyValueRendererProps={
-            fillContainer ? { fill: true } : undefined
-          }
           isEditing
+          attachmentPropertyValueRendererProps={fillContainer ? { fill: true } : undefined}
+          dbValue={propertyValues[p.id!] ?? undefined}
+          property={p}
+          size={fillContainer ? "md" : "sm"}
           onValueChange={(dbValue) => {
             setPropertyValues((prev) => ({
               ...prev,
@@ -182,22 +188,20 @@ const DataCardEditor = ({
 
   return (
     <Modal
-      visible={visible}
+      okProps={{ isDisabled: !!duplicateCard }}
       size="lg"
       title={
         <span className="inline-flex items-center gap-2">
           <span>
             {`${isEditing ? t("dataCard.card.edit") : t("dataCard.card.create")} - ${cardType.name}`}
           </span>
-          {isEditing && card && (
-            <Chip size="sm" variant="flat">{`#${card.id}`}</Chip>
-          )}
+          {isEditing && card && <Chip size="sm" variant="flat">{`#${card.id}`}</Chip>}
         </span>
       }
+      visible={visible}
       onClose={() => setVisible(false)}
-      onOk={handleSave}
-      okProps={{ isDisabled: !!duplicateCard }}
       onDestroyed={onDestroyed}
+      onOk={handleSave}
     >
       <div className="flex flex-col gap-4">
         {duplicateCard && (
@@ -208,12 +212,7 @@ const DataCardEditor = ({
                 {t("dataCard.card.duplicate.message")}
               </span>
               <div>
-                <Button
-                  size="sm"
-                  color="warning"
-                  variant="flat"
-                  onPress={handleSwitchToExisting}
-                >
+                <Button color="warning" size="sm" variant="flat" onPress={handleSwitchToExisting}>
                   {t("dataCard.card.duplicate.switch", { id: duplicateCard.id })}
                 </Button>
               </div>
@@ -231,6 +230,7 @@ const DataCardEditor = ({
           >
             {placedProperties.map((p) => {
               const pos = layoutByPropertyId.get(p.id!)!;
+
               return (
                 <div
                   key={p.id}

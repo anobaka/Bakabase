@@ -1,7 +1,6 @@
 import {
   AiOutlineDashboard,
   AiOutlinePicture,
-  AiOutlineProduct,
   AiOutlineAppstoreAdd,
   AiOutlineControl,
   AiOutlineRadarChart,
@@ -10,7 +9,6 @@ import {
   AiOutlineBranches,
   AiOutlineFieldString,
   AiOutlineHistory,
-  AiOutlineSync,
   AiOutlineAppstore,
   AiOutlineInteraction,
   AiOutlineFileText,
@@ -38,16 +36,13 @@ import { TbToolsKitchen } from "react-icons/tb";
 import WelcomePage from "@/pages/welcome";
 import DashboardPage from "@/pages/dashboard";
 import ResourcePage from "@/pages/resource";
-import LegacyMediaLibraryPage from "@/pages/deprecated/media-library";
 import MediaLibraryPage from "@/pages/media-library";
-import MediaLibraryTemplatePage from "@/pages/deprecated/media-library-template";
 import CustomPropertyPage from "@/pages/custom-property";
 import ExtensionGroup from "@/pages/extension-group";
 import BulkModification2Page from "@/pages/bulk-modification";
 import CachePage from "@/pages/cache";
 import AliasPage from "@/pages/alias";
 import TextPage from "@/pages/text";
-import PlayHistoryPage from "@/pages/play-history";
 import Configuration from "@/pages/configuration";
 import ThirdPartyConfiguration from "@/pages/third-party-configuration";
 import BackgroundTaskPage from "@/pages/background-task";
@@ -56,7 +51,6 @@ import FileProcessorPage from "@/pages/file-processor";
 import DownloaderPage from "@/pages/downloader";
 import FileMoverPage from "@/pages/file-mover";
 import FileNameModifier from "@/pages/file-name-modifier";
-import ThirdPartyIntegrationPage from "@/pages/third-party-integration";
 import PostParserPage from "@/pages/post-parser";
 import ResourceProfilePage from "@/pages/resource-profile";
 import PathRuleConfigPage from "@/pages/path-mark-config";
@@ -236,7 +230,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
         layout: "basic",
         menu: true,
         isBeta: true,
-      }
+      },
     ],
   },
   {

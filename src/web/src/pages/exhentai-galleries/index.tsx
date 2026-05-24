@@ -27,6 +27,8 @@ import {
   AiOutlineReload,
 } from "react-icons/ai";
 
+import ExHentaiTable from "./components/ExHentaiTable";
+
 import BApi from "@/sdk/BApi";
 import { toast } from "@/components/bakaui";
 import { useExHentaiOptionsStore } from "@/stores/options";
@@ -35,7 +37,6 @@ import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContext
 import ConfirmModal from "@/components/ConfirmModal";
 import { useBTasksStore } from "@/stores/bTasks";
 import { BTaskStatus } from "@/sdk/constants";
-import ExHentaiTable from "./components/ExHentaiTable";
 
 export interface ExHentaiGallery {
   id: number;
@@ -87,6 +88,7 @@ export default function ExHentaiGalleriesPage() {
         pageIndex: pageNum,
         pageSize: ps,
       });
+
       if (!rsp.code) {
         setGalleries(rsp.data || []);
         setTotalCount(rsp.totalCount ?? 0);
@@ -101,7 +103,10 @@ export default function ExHentaiGalleriesPage() {
   }, [page, pageSize, searchKeyword]);
 
   useEffect(() => {
-    if (prevSyncStatusRef.current === BTaskStatus.Running && syncTask?.status === BTaskStatus.Completed) {
+    if (
+      prevSyncStatusRef.current === BTaskStatus.Running &&
+      syncTask?.status === BTaskStatus.Completed
+    ) {
       loadGalleries(page, pageSize, searchKeyword);
     }
     prevSyncStatusRef.current = syncTask?.status;
@@ -139,13 +144,19 @@ export default function ExHentaiGalleriesPage() {
       message: t<string>("resourceSource.exhentai.action.deleteLocalConfirm"),
       destructive: true,
       onConfirm: async () => {
-        const rsp = await BApi.exhentaiGallery.deleteExHentaiGalleryLocalFiles(galleryId, galleryToken);
+        const rsp = await BApi.exhentaiGallery.deleteExHentaiGalleryLocalFiles(
+          galleryId,
+          galleryToken,
+        );
+
         if (!rsp.code) {
-          setGalleries((prev) => prev.map((g) =>
-            g.galleryId === galleryId && g.galleryToken === galleryToken
-              ? { ...g, isDownloaded: false, localPath: undefined }
-              : g,
-          ));
+          setGalleries((prev) =>
+            prev.map((g) =>
+              g.galleryId === galleryId && g.galleryToken === galleryToken
+                ? { ...g, isDownloaded: false, localPath: undefined }
+                : g,
+            ),
+          );
           toast.success(t<string>("common.state.saved"));
         } else if (rsp.message) {
           toast.danger(rsp.message);
@@ -156,31 +167,31 @@ export default function ExHentaiGalleriesPage() {
 
   const handleDelete = async (id: number) => {
     const rsp = await BApi.exhentaiGallery.deleteExHentaiGallery(id);
+
     if (!rsp.code) {
       toast.success(t("common.state.saved"));
       loadGalleries(page, pageSize, searchKeyword);
     }
   };
 
-  const categoryColorMap: Record<string, "primary" | "secondary" | "success" | "warning" | "danger" | "default"> = {
-    "Doujinshi": "primary",
-    "Manga": "secondary",
+  const categoryColorMap: Record<
+    string,
+    "primary" | "secondary" | "success" | "warning" | "danger" | "default"
+  > = {
+    Doujinshi: "primary",
+    Manga: "secondary",
     "Artist CG": "success",
     "Game CG": "warning",
     "Non-H": "default",
-    "Cosplay": "danger",
+    Cosplay: "danger",
   };
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">
-            {t("resourceSource.exhentai.title")}
-          </h1>
-          <p className="text-default-500 mt-1">
-            {t("resourceSource.exhentai.description")}
-          </p>
+          <h1 className="text-2xl font-bold">{t("resourceSource.exhentai.title")}</h1>
+          <p className="text-default-500 mt-1">{t("resourceSource.exhentai.description")}</p>
         </div>
         <div className="flex gap-2 items-center">
           {isSyncing ? (
@@ -231,18 +242,11 @@ export default function ExHentaiGalleriesPage() {
         </div>
       </div>
 
-
-
-
       {!isConfigured && galleries.length === 0 && !loading && (
         <div className="flex flex-col items-center justify-center py-16 gap-4 text-default-500">
           <p className="text-lg font-medium">{t("resourceSource.notConfigured.title")}</p>
           <p>{t("resourceSource.notConfigured.description", { platform: "ExHentai" })}</p>
-          <Button
-            color="primary"
-            size="sm"
-            onPress={() => createPortal(ExHentaiConfig, {})}
-          >
+          <Button color="primary" size="sm" onPress={() => createPortal(ExHentaiConfig, {})}>
             {t("resourceSource.notConfigured.goToConfigure")}
           </Button>
         </div>
@@ -258,8 +262,8 @@ export default function ExHentaiGalleriesPage() {
                 size="sm"
                 startContent={<AiOutlineSearch />}
                 value={keyword}
-                onValueChange={setKeyword}
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                onValueChange={setKeyword}
               />
               <Chip size="sm" variant="flat">
                 {t("resourceSource.pagination.total", { total: totalCount })}
@@ -276,13 +280,16 @@ export default function ExHentaiGalleriesPage() {
                 </span>
               </Switch>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-default-500 whitespace-nowrap">{t("resourceSource.pagination.pageSize")}</span>
+                <span className="text-sm text-default-500 whitespace-nowrap">
+                  {t("resourceSource.pagination.pageSize")}
+                </span>
                 <Select
-                  size="sm"
                   className="w-20"
                   selectedKeys={[String(pageSize)]}
+                  size="sm"
                   onSelectionChange={(keys) => {
                     const val = Number(Array.from(keys)[0]);
+
                     if (val) {
                       setPageSize(val);
                       setPage(1);
@@ -303,22 +310,18 @@ export default function ExHentaiGalleriesPage() {
             </div>
           ) : (
             <ExHentaiTable
+              categoryColorMap={categoryColorMap}
               galleries={galleries}
               showCover={showCover}
-              categoryColorMap={categoryColorMap}
               onDelete={handleDelete}
-              onOpenLocal={handleOpenLocal}
               onDeleteLocal={handleDeleteLocal}
+              onOpenLocal={handleOpenLocal}
             />
           )}
 
           {totalPages > 1 && (
             <div className="flex justify-center">
-              <Pagination
-                page={page}
-                total={totalPages}
-                onChange={setPage}
-              />
+              <Pagination page={page} total={totalPages} onChange={setPage} />
             </div>
           )}
         </>
@@ -329,10 +332,7 @@ export default function ExHentaiGalleriesPage() {
           <ModalBody>
             <p>{t("resourceSource.confirm.sync.description")}</p>
             <div>
-              <Checkbox
-                isSelected={refetchMetadata}
-                onValueChange={setRefetchMetadata}
-              >
+              <Checkbox isSelected={refetchMetadata} onValueChange={setRefetchMetadata}>
                 {t("resourceSource.confirm.sync.refetchMetadata")}
               </Checkbox>
               <p className="text-xs text-default-400 ml-7 mt-1">

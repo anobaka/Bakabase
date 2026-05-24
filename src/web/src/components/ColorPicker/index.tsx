@@ -21,7 +21,15 @@ const ColorPicker = ({
           display: "inline-block",
           cursor: "pointer",
         }}
+        role="button"
+        tabIndex={0}
         onClick={() => setColorPickerVisible(true)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setColorPickerVisible(true);
+          }
+        }}
       >
         <div
           style={{
@@ -42,7 +50,15 @@ const ColorPicker = ({
               bottom: "0px",
               left: "0px",
             }}
+            role="button"
+            tabIndex={0}
             onClick={() => setColorPickerVisible(false)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                setColorPickerVisible(false);
+              }
+            }}
           />
           <SketchPicker
             color={{ hex: color }}

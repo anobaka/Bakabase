@@ -6,13 +6,16 @@ import React, { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useUpdateEffect } from "react-use";
 import { FaSortAmountDownAlt, FaSortAmountUpAlt } from "react-icons/fa";
-import { MdOutlineCreateNewFolder, MdEditNote, MdSortByAlpha, MdLibraryAdd, MdPlayCircleOutline } from "react-icons/md";
+import {
+  MdOutlineCreateNewFolder,
+  MdEditNote,
+  MdSortByAlpha,
+  MdLibraryAdd,
+  MdPlayCircleOutline,
+} from "react-icons/md";
 import { AiOutlineRadarChart } from "react-icons/ai";
 
-import {
-  resourceSearchSortableProperties,
-  ResourceSearchSortableProperty,
-} from "@/sdk/constants";
+import { resourceSearchSortableProperties, ResourceSearchSortableProperty } from "@/sdk/constants";
 import { Button, ButtonGroup, Select, Tooltip } from "@/components/bakaui";
 
 const sortPropertyIcons: Record<ResourceSearchSortableProperty, React.ReactNode> = {
@@ -73,24 +76,26 @@ const OrderSelector = ({ value: propsValue, onChange, ...otherProps }: IProps) =
         aria-label={t<string>("resource.order.label")}
         dataSource={propertyDataSource}
         placeholder={t<string>("resource.order.placeholder")}
-        selectedKeys={[currentProperty.toString()]}
-        selectionMode={"single"}
-        size={"sm"}
-        style={{
-          maxWidth: 320,
-          minWidth: 180,
-        }}
         renderValue={(items) => {
           const selected = items[0];
+
           if (!selected?.data) return null;
           const data = selected.data as { value: string; textValue: string };
           const prop = parseInt(data.value, 10) as ResourceSearchSortableProperty;
+
           return (
             <div className="flex items-center gap-2">
               {sortPropertyIcons[prop]}
               <span>{data.textValue}</span>
             </div>
           );
+        }}
+        selectedKeys={[currentProperty.toString()]}
+        selectionMode={"single"}
+        size={"sm"}
+        style={{
+          maxWidth: 320,
+          minWidth: 180,
         }}
         onSelectionChange={(keys) => {
           const first = Array.from((keys as Set<string>) || [])[0];

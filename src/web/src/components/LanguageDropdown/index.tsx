@@ -1,9 +1,10 @@
 "use client";
 
+import type { SelectProps } from "@/components/bakaui/components/Select";
+
 import React from "react";
 
 import { Select } from "@/components/bakaui";
-import type { SelectProps } from "@/components/bakaui/components/Select";
 import { useAppOptionsStore } from "@/stores/options";
 
 const DEFAULT_LANGUAGES = [
@@ -29,7 +30,10 @@ type Props = {
   defaultValue?: string;
   onValueChange?: (value: string) => void;
   availableLocales?: { code: string; label: string; shortLabel?: string }[];
-} & Omit<SelectProps, "dataSource" | "selectedKeys" | "defaultSelectedKeys" | "onSelectionChange" | "children">;
+} & Omit<
+  SelectProps,
+  "dataSource" | "selectedKeys" | "defaultSelectedKeys" | "onSelectionChange" | "children"
+>;
 
 const LanguageDropdown = ({
   value,
@@ -51,10 +55,11 @@ const LanguageDropdown = ({
         value: lang.code,
         label: lang.label,
       }))}
-      selectedKeys={value ? [value] : undefined}
       defaultSelectedKeys={effectiveDefaultValue ? [effectiveDefaultValue] : undefined}
+      selectedKeys={value ? [value] : undefined}
       onSelectionChange={(keys) => {
         const selected = Array.from(keys)[0] as string;
+
         if (selected) {
           onValueChange?.(selected);
         }
@@ -64,6 +69,7 @@ const LanguageDropdown = ({
             renderValue: (items) => {
               const selectedCode = items[0]?.key as string;
               const lang = languages.find((l) => l.code === selectedCode);
+
               return <span>{lang?.shortLabel ?? lang?.label ?? ""}</span>;
             },
             popoverProps: { placement: "top", className: "min-w-[140px]" },

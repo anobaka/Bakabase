@@ -6,10 +6,10 @@ import type { BulkModificationVariable } from "@/pages/bulk-modification/compone
 
 import { Trans, useTranslation } from "react-i18next";
 import React, { useEffect, useState } from "react";
-import { getEnumKey } from "@/i18n";
 
 import { validate } from "./helpers";
 
+import { getEnumKey } from "@/i18n";
 import {
   type BulkModificationProcessorValueType,
   BulkModificationStringProcessOperation,
@@ -250,11 +250,11 @@ const Editor = ({
   return (
     <div className={"flex flex-col gap-3"}>
       <Select
-        label={t<string>("bulkModification.label.operation")}
         dataSource={bulkModificationStringProcessOperations.map((tpo) => ({
           label: t(getEnumKey("BulkModificationStringProcessOperation", tpo.label)),
           value: tpo.value,
         }))}
+        label={t<string>("bulkModification.label.operation")}
         selectedKeys={operation == undefined ? undefined : [operation.toString()]}
         selectionMode={"single"}
         onSelectionChange={(keys) => {

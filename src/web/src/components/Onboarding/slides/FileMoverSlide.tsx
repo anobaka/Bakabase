@@ -32,9 +32,7 @@ const FileMoverSlide = () => {
         <AiOutlineSwap className="text-5xl text-cyan-500" />
       </div>
 
-      <h2 className="text-2xl font-bold mb-2">
-        {t("onboarding.fileMover.title")}
-      </h2>
+      <h2 className="text-2xl font-bold mb-2">{t("onboarding.fileMover.title")}</h2>
 
       <p className="text-default-500 text-center mb-6 max-w-md">
         {t("onboarding.fileMover.subtitle")}
@@ -42,10 +40,7 @@ const FileMoverSlide = () => {
 
       <ul className="space-y-4 max-w-md w-full">
         {features.map((feature, index) => (
-          <li
-            key={index}
-            className="flex items-start gap-3 p-3 rounded-lg bg-default-100"
-          >
+          <li key={index} className="flex items-start gap-3 p-3 rounded-lg bg-default-100">
             <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-cyan-500/10 text-cyan-500">
               {feature.icon}
             </div>

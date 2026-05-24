@@ -37,7 +37,7 @@ const contacts = [
   },
   {
     label: "QQ",
-    value: <img src={qqGroupImg} />,
+    value: <img alt="QQ" src={qqGroupImg} />,
   },
   // {
   //   label: 'WeChat',
@@ -58,10 +58,7 @@ const ContactUs = () => {
           <TableBody>
             {contacts.map((c, i) => {
               return (
-                <TableRow
-                  key={i}
-                  className={"hover:bg-[var(--bakaui-overlap-background)]"}
-                >
+                <TableRow key={i} className={"hover:bg-[var(--bakaui-overlap-background)]"}>
                   <TableCell>{t<string>(c.label)}</TableCell>
                   <TableCell>{c.value}</TableCell>
                 </TableRow>

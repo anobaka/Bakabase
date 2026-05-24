@@ -1,3 +1,10 @@
+import type {
+  FilePredicateDescriptor,
+  HealthScoreRule,
+  ResourceMatcher,
+  ResourceMatcherLeaf,
+} from "@/pages/health-score/types";
+
 import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
 import { DeleteOutlined, FolderAddOutlined, PlusOutlined } from "@ant-design/icons";
@@ -5,24 +12,9 @@ import { DeleteOutlined, FolderAddOutlined, PlusOutlined } from "@ant-design/ico
 import { PredicateParametersEditor } from "./PredicateParametersEditor";
 import { PropertyLeafEditor } from "./PropertyLeafEditor";
 
-import {
-  Button,
-  Card,
-  Input,
-  NumberInput,
-  Select,
-  Switch,
-  Tooltip,
-} from "@/components/bakaui";
+import { Button, Card, Input, NumberInput, Select, Switch, Tooltip } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
-import {
-  FilePredicateDescriptor,
-  HealthScoreRule,
-  ResourceMatcher,
-  ResourceMatcherLeaf,
-  ResourceMatcherLeafKind,
-  SearchCombinator,
-} from "@/pages/health-score/types";
+import { ResourceMatcherLeafKind, SearchCombinator } from "@/pages/health-score/types";
 
 interface Props {
   rules: HealthScoreRule[];
@@ -50,8 +42,11 @@ const blankPropertyLeaf = (): ResourceMatcherLeaf => ({
 
 const parseParams = (json?: string | null): any => {
   if (!json) return null;
-  try { return JSON.parse(json); }
-  catch { return null; }
+  try {
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
 };
 
 const blankGroup = (): ResourceMatcher => ({
@@ -73,6 +68,7 @@ export const RulesEditor = ({ rules, onChange }: Props) => {
 
   const updateRule = (i: number, patch: Partial<HealthScoreRule>) => {
     const next = rules.slice();
+
     next[i] = { ...next[i], ...patch } as HealthScoreRule;
     onChange(next);
   };
@@ -90,6 +86,7 @@ export const RulesEditor = ({ rules, onChange }: Props) => {
 
   const removeRule = (i: number) => {
     const next = rules.slice();
+
     next.splice(i, 1);
     onChange(next);
   };
@@ -106,16 +103,16 @@ export const RulesEditor = ({ rules, onChange }: Props) => {
             <span className="text-sm text-default-500 font-mono">{i + 1}.</span>
             <Input
               className="w-60"
-              size="sm"
               label={t<string>("healthScore.label.ruleName")}
+              size="sm"
               value={rule.name ?? ""}
               onValueChange={(v) => updateRule(i, { name: v })}
             />
             <Tooltip content={t<string>("healthScore.tip.delta")}>
               <NumberInput
                 className="w-32"
-                size="sm"
                 label={t<string>("healthScore.label.delta")}
+                size="sm"
                 value={rule.delta}
                 onValueChange={(v) => updateRule(i, { delta: Number(v ?? 0) })}
               />
@@ -135,11 +132,11 @@ export const RulesEditor = ({ rules, onChange }: Props) => {
 
           <div className="mt-3">
             <MatcherEditor
+              depth={0}
               matcher={(rule.match as ResourceMatcher) ?? blankGroup()}
+              path={`${i + 1}`}
               predicates={predicates}
               onChange={(m) => updateRule(i, { match: m } as Partial<HealthScoreRule>)}
-              depth={0}
-              path={`${i + 1}`}
             />
           </div>
         </Card>
@@ -181,6 +178,7 @@ const MatcherEditor = ({ matcher, predicates, onChange, depth, path }: MatcherEd
 
   const addFileLeaf = () => {
     const first = predicates[0];
+
     setLeaves([...(matcher.leaves ?? []), blankLeaf(first?.id ?? "")]);
   };
 
@@ -195,21 +193,18 @@ const MatcherEditor = ({ matcher, predicates, onChange, depth, path }: MatcherEd
   const leafCount = matcher.leaves?.length ?? 0;
 
   return (
-    <div
-      className={depth > 0 ? "border-l-2 border-default-200 pl-3" : undefined}
-    >
+    <div className={depth > 0 ? "border-l-2 border-default-200 pl-3" : undefined}>
       <div className="flex items-center gap-2">
-        {depth > 0 && (
-          <span className="text-sm text-default-500 font-mono">{path}</span>
-        )}
+        {depth > 0 && <span className="text-sm text-default-500 font-mono">{path}</span>}
         <Select
           className="w-28"
-          size="sm"
-          label={t<string>("healthScore.label.combinator")}
           dataSource={COMBINATORS.map((c) => ({ value: String(c.value), label: c.label }))}
+          label={t<string>("healthScore.label.combinator")}
           selectedKeys={[String(matcher.combinator ?? SearchCombinator.And)]}
+          size="sm"
           onSelectionChange={(keys: any) => {
             const v = Array.from(keys)[0];
+
             if (v != null) setCombinator(Number(v) as SearchCombinator);
           }}
         />
@@ -226,16 +221,18 @@ const MatcherEditor = ({ matcher, predicates, onChange, depth, path }: MatcherEd
         {(matcher.leaves ?? []).map((leaf, i) => (
           <LeafRow
             key={`leaf-${i}`}
+            label={`${path}.${i + 1}`}
             leaf={leaf}
             predicates={predicates}
-            label={`${path}.${i + 1}`}
             onChange={(next) => {
               const list = (matcher.leaves ?? []).slice();
+
               list[i] = next;
               setLeaves(list);
             }}
             onRemove={() => {
               const list = (matcher.leaves ?? []).slice();
+
               list.splice(i, 1);
               setLeaves(list);
             }}
@@ -249,15 +246,16 @@ const MatcherEditor = ({ matcher, predicates, onChange, depth, path }: MatcherEd
           >
             <div className="flex-1">
               <MatcherEditor
+                depth={depth + 1}
                 matcher={group}
+                path={`${path}.${leafCount + i + 1}`}
                 predicates={predicates}
                 onChange={(next) => {
                   const list = (matcher.groups ?? []).slice();
+
                   list[i] = next;
                   setGroups(list);
                 }}
-                depth={depth + 1}
-                path={`${path}.${leafCount + i + 1}`}
               />
             </div>
             <Button
@@ -267,6 +265,7 @@ const MatcherEditor = ({ matcher, predicates, onChange, depth, path }: MatcherEd
               variant="light"
               onPress={() => {
                 const list = (matcher.groups ?? []).slice();
+
                 list.splice(i, 1);
                 setGroups(list);
               }}
@@ -336,22 +335,28 @@ const LeafRow = ({ leaf, predicates, label, onChange, onRemove }: LeafRowProps) 
         <>
           <Select
             className="w-56"
-            size="sm"
-            label={t<string>("healthScore.label.predicate")}
             dataSource={predicates.map((p) => ({
               value: p.id ?? "",
               label: t<string>(p.displayNameKey ?? p.id ?? ""),
             }))}
+            label={t<string>("healthScore.label.predicate")}
             selectedKeys={leaf.filePredicateId ? [leaf.filePredicateId] : []}
+            size="sm"
             onSelectionChange={(keys: any) => {
               const v = Array.from(keys)[0];
-              if (v) onChange({ ...leaf, filePredicateId: String(v), filePredicateParametersJson: "{}" });
+
+              if (v)
+                onChange({
+                  ...leaf,
+                  filePredicateId: String(v),
+                  filePredicateParametersJson: "{}",
+                });
             }}
           />
           {leaf.filePredicateId && (
             <PredicateParametersEditor
-              predicateId={leaf.filePredicateId}
               parameters={parseParams(leaf.filePredicateParametersJson)}
+              predicateId={leaf.filePredicateId}
               onChange={(p) =>
                 onChange({ ...leaf, filePredicateParametersJson: JSON.stringify(p ?? {}) })
               }

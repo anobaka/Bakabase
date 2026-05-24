@@ -51,9 +51,7 @@ const ExtensionsInput: React.FC<ExtensionsInputProps> = ({
 }) => {
   const { t } = useTranslation();
   const [text, setText] = useState(defaultValue?.join(" "));
-  const [extensions, setExtensions] = useState<string[] | undefined>(
-    defaultValue,
-  );
+  const [extensions, setExtensions] = useState<string[] | undefined>(defaultValue);
 
   return (
     <div>
@@ -63,8 +61,8 @@ const ExtensionsInput: React.FC<ExtensionsInputProps> = ({
         isMultiline
         label={label ?? t<string>("common.label.extensions")}
         minRows={minRows}
-        size={size}
         placeholder={placeholder ?? t<string>("common.placeholder.separateBySpaceOrNewline")}
+        size={size}
         value={text}
         onValueChange={(v) => {
           setText(v);

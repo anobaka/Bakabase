@@ -51,16 +51,16 @@ const FileSystemSelectorModal = (props: IProps) => {
             fsProps.onCancel();
           }
         }}
-        onSelected={(e) => {
-          close();
-          if (fsProps.onSelected) {
-            fsProps.onSelected(e);
-          }
-        }}
         onMultipleSelected={(entries) => {
           close();
           if (fsProps.onMultipleSelected) {
             fsProps.onMultipleSelected(entries);
+          }
+        }}
+        onSelected={(e) => {
+          close();
+          if (fsProps.onSelected) {
+            fsProps.onSelected(e);
           }
         }}
       />

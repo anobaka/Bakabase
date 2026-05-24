@@ -121,14 +121,8 @@ const DiffsModal = ({ bmId, deleteResources, onDestroyed }: Props) => {
           <div className={"flex justify-center mt-4"}>
             <div>
               <div>{t<string>("bulkModification.empty.noData")}</div>
-              <div>
-                1.{" "}
-                {t<string>("bulkModification.info.ensureCalculation")}
-              </div>
-              <div>
-                2.{" "}
-                {t<string>("bulkModification.info.noResourcesToChange")}
-              </div>
+              <div>1. {t<string>("bulkModification.info.ensureCalculation")}</div>
+              <div>2. {t<string>("bulkModification.info.noResourcesToChange")}</div>
               <div>3. {t<string>("bulkModification.error.checkCriteria")}</div>
             </div>
           </div>
@@ -139,13 +133,11 @@ const DiffsModal = ({ bmId, deleteResources, onDestroyed }: Props) => {
               <TableColumn>{t<string>("bulkModification.label.diffs")}</TableColumn>
             </TableHeader>
             <TableBody>
-              {data.map((d) => {
+              {data.map((d, di) => {
                 return (
-                  <TableRow>
+                  <TableRow key={di}>
                     <TableCell>
-                      <div className={"max-w-[600px] break-all"}>
-                        {d.resourcePath}
-                      </div>
+                      <div className={"max-w-[600px] break-all"}>{d.resourcePath}</div>
                     </TableCell>
                     <TableCell>
                       {deleteResources ? (
@@ -153,15 +145,11 @@ const DiffsModal = ({ bmId, deleteResources, onDestroyed }: Props) => {
                           {t<string>("bulkModification.diff.resourceWillBeDeleted")}
                         </Chip>
                       ) : (
-                        d.diffs.map((diff) => {
+                        d.diffs.map((diff, diffI) => {
                           return (
-                            <div className={"flex items-center gap-2"}>
+                            <div key={diffI} className={"flex items-center gap-2"}>
                               <div className={"flex items-center gap-1"}>
-                                <Chip
-                                  color={"secondary"}
-                                  size={"sm"}
-                                  variant={"flat"}
-                                >
+                                <Chip color={"secondary"} size={"sm"} variant={"flat"}>
                                   {diff.property.poolName}
                                 </Chip>
                                 <Chip color={"primary"} size={"sm"}>

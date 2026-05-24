@@ -1,5 +1,7 @@
 "use client";
 
+import type { IProperty } from "@/components/Property/models";
+
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { EditOutlined, LayoutOutlined, SearchOutlined } from "@ant-design/icons";
@@ -15,7 +17,6 @@ import {
   Spinner,
   Tooltip,
 } from "@/components/bakaui";
-import type { IProperty } from "@/components/Property/models";
 import DataCardBody, { computeFixedOuterWidth } from "@/components/DataCardBody";
 import { CustomPropertyAdditionalItem } from "@/sdk/constants";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
@@ -98,6 +99,7 @@ const DataCardAssociationPanel = ({
           additionalItems: CustomPropertyAdditionalItem.None,
         }),
       ]);
+
       setCards((cardsRsp.data || []) as DataCardItem[]);
       setCardTypes((typesRsp.data || []) as CardType[]);
       // @ts-ignore
@@ -115,14 +117,17 @@ const DataCardAssociationPanel = ({
   const grouped = useMemo<GroupedCards[]>(() => {
     const typeById = new Map(cardTypes.map((ct) => [ct.id, ct]));
     const bucket = new Map<number, DataCardItem[]>();
+
     for (const c of cards) {
       const arr = bucket.get(c.typeId);
+
       if (arr) {
         arr.push(c);
       } else {
         bucket.set(c.typeId, [c]);
       }
     }
+
     return Array.from(bucket.entries())
       .map(([typeId, items]) => ({
         typeId,
@@ -132,13 +137,16 @@ const DataCardAssociationPanel = ({
       .sort((a, b) => {
         const oa = a.type?.order ?? Number.MAX_SAFE_INTEGER;
         const ob = b.type?.order ?? Number.MAX_SAFE_INTEGER;
+
         if (oa !== ob) return oa - ob;
+
         return (a.type?.name ?? "").localeCompare(b.type?.name ?? "");
       });
   }, [cards, cardTypes]);
 
   const defaultExpandedKeys = useMemo(() => {
     if (grouped.length === 0) return [] as string[];
+
     return [String(grouped[0].typeId)];
   }, [grouped]);
 
@@ -146,6 +154,7 @@ const DataCardAssociationPanel = ({
     const typeProperties = allProperties.filter(
       (p) => cardType.propertyIds?.includes(p.id!) ?? false,
     );
+
     createPortal(DataCardEditor, {
       card,
       cardType,
@@ -174,11 +183,9 @@ const DataCardAssociationPanel = ({
 
   const renderCard = (card: DataCardItem, cardType?: CardType) => {
     const outerWidth =
-      (cardType && computeFixedOuterWidth(cardType, CELL_PX)) ??
-      FALLBACK_CARD_WIDTH;
+      (cardType && computeFixedOuterWidth(cardType, CELL_PX)) ?? FALLBACK_CARD_WIDTH;
 
-    const searchEnabled =
-      !!cardType && canSearch(card, cardType, allProperties);
+    const searchEnabled = !!cardType && canSearch(card, cardType, allProperties);
 
     return (
       <Card
@@ -230,9 +237,7 @@ const DataCardAssociationPanel = ({
           </Tooltip>
         </div>
         <CardBody className="p-3">
-          {card.name && (
-            <div className="font-medium text-sm mb-2 truncate">{card.name}</div>
-          )}
+          {card.name && <div className="font-medium text-sm mb-2 truncate">{card.name}</div>}
           {cardType && (
             <DataCardBody
               allProperties={allProperties}
@@ -250,9 +255,7 @@ const DataCardAssociationPanel = ({
     return (
       <div className="flex items-center gap-2 py-4">
         <Spinner size="sm" />
-        <span className="text-sm text-default-400">
-          {t("dataCard.association.loading")}
-        </span>
+        <span className="text-sm text-default-400">{t("dataCard.association.loading")}</span>
       </div>
     );
   }
@@ -292,7 +295,15 @@ const DataCardAssociationPanel = ({
                 {type && (
                   <div
                     className="ml-auto flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    role="button"
+                    tabIndex={0}
                     onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }
+                    }}
                     onPointerDown={(e) => e.stopPropagation()}
                   >
                     <Tooltip content={t<string>("common.action.edit")}>

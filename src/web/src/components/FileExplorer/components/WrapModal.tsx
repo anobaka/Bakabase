@@ -8,11 +8,11 @@ import { useTranslation } from "react-i18next";
 import _ from "lodash";
 
 import FileSystemEntryChangeExampleMiscellaneousItem from "./FileSystemEntryChangeExampleMiscellaneousItem";
+import FileSystemEntryChangeExampleItem from "./FileSystemEntryChangeExampleItem";
 
 import BApi from "@/sdk/BApi";
 import { Modal } from "@/components/bakaui";
 import BusinessConstants from "@/components/BusinessConstants";
-import FileSystemEntryChangeExampleItem from "./FileSystemEntryChangeExampleItem";
 
 type Props = { entries: Entry[] } & DestroyableProps;
 const WrapModal = ({ entries = [], onDestroyed }: Props) => {
@@ -43,9 +43,7 @@ const WrapModal = ({ entries = [], onDestroyed }: Props) => {
           _.keys(groupsRef.current).map(async (p) => {
             const innerEntries = groupsRef.current[p]!;
             const parentEntry = innerEntries[0]!.parent!;
-            const d = [parentEntry.path, newParentNames[p]].join(
-              BusinessConstants.pathSeparator,
-            );
+            const d = [parentEntry.path, newParentNames[p]].join(BusinessConstants.pathSeparator);
 
             await BApi.file.moveEntries({
               destDir: d,
@@ -62,11 +60,7 @@ const WrapModal = ({ entries = [], onDestroyed }: Props) => {
 
           return (
             <React.Fragment key={parent}>
-              <FileSystemEntryChangeExampleItem
-                isDirectory
-                text={parent ?? "."}
-                type={"default"}
-              />
+              <FileSystemEntryChangeExampleItem isDirectory text={parent ?? "."} type={"default"} />
               <FileSystemEntryChangeExampleItem
                 editable
                 isDirectory
@@ -101,10 +95,7 @@ const WrapModal = ({ entries = [], onDestroyed }: Props) => {
                   />
                 );
               })}
-              <FileSystemEntryChangeExampleMiscellaneousItem
-                indent={1}
-                parent={parent}
-              />
+              <FileSystemEntryChangeExampleMiscellaneousItem indent={1} parent={parent} />
             </React.Fragment>
           );
         })}

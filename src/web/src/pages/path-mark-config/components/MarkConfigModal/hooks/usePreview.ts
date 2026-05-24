@@ -1,7 +1,11 @@
-import { useState, useEffect, useRef, useMemo } from "react";
 import type { MarkConfig } from "../types";
+import type { PathMarkType } from "@/sdk/constants";
+
+import { useState, useEffect, useRef, useMemo } from "react";
+
 import { buildConfigJson } from "../utils";
-import { PathMarkType, PathMatchMode } from "@/sdk/constants";
+
+import { PathMatchMode } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
 
 export type PathMarkPreviewResult = {
@@ -21,7 +25,7 @@ export const usePreview = (
   markType: PathMarkType,
   config: MarkConfig,
   debounceMs: number = 500,
-  rootPaths?: string[]
+  rootPaths?: string[],
 ) => {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<PathMarkPreviewResult[]>([]);
@@ -34,6 +38,7 @@ export const usePreview = (
     if (rootPaths && rootPaths.length > 0) {
       return rootPaths;
     }
+
     return rootPath ? [rootPath] : [];
   }, [rootPath, rootPaths]);
 
@@ -41,6 +46,7 @@ export const usePreview = (
     if (effectivePaths.length === 0) {
       setResults([]);
       setResultsByPath([]);
+
       return;
     }
 
@@ -53,6 +59,7 @@ export const usePreview = (
     if (!hasValidConfig) {
       setResults([]);
       setResultsByPath([]);
+
       return;
     }
 
@@ -80,12 +87,13 @@ export const usePreview = (
 
             if (!rsp.code && rsp.data) {
               const pathResults = rsp.data.slice(0, 5);
+
               allResults.push(...pathResults);
               allResultsByPath.push({ path, results: pathResults });
             } else if (rsp.message) {
               setError(rsp.message);
             }
-          })
+          }),
         );
 
         setResults(allResults.slice(0, 10)); // Show max 10 combined results
@@ -118,5 +126,12 @@ export const usePreview = (
     debounceMs,
   ]);
 
-  return { loading, results, resultsByPath, error, isMultiplePaths: effectivePaths.length > 1, applyScope: config.applyScope };
+  return {
+    loading,
+    results,
+    resultsByPath,
+    error,
+    isMultiplePaths: effectivePaths.length > 1,
+    applyScope: config.applyScope,
+  };
 };

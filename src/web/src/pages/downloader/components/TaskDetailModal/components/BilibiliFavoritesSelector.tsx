@@ -1,6 +1,6 @@
 import type { components } from "@/sdk/BApi2";
 
-import { Button, Chip, Radio, RadioGroup, Spinner } from "@heroui/react";
+import { Button, Radio, RadioGroup, Spinner } from "@heroui/react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -82,7 +82,8 @@ const BilibiliFavoritesSelector = ({ isDisabled, value, onChange }: Props) => {
         {favorites.map((f) => {
           return (
             <Radio key={f.id} value={f.id.toString()}>
-              {f.title}{f.mediaCount ? `(${f.mediaCount})` : ''} 
+              {f.title}
+              {f.mediaCount ? `(${f.mediaCount})` : ""}
             </Radio>
           );
         })}

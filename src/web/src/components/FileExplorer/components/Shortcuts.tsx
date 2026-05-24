@@ -1,26 +1,28 @@
 "use client";
 
+import type { FileExplorerEntryProps } from "../FileExplorerEntry";
+
 import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { RiKeyboardLine } from "react-icons/ri";
 
-import type { FileExplorerEntryProps } from "../FileExplorerEntry";
+import { FileSystemTreeEntryCapabilityMap } from "../models";
+
 import { Kbd, Button, Modal, Tooltip } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import { FileSystemTreeEntryCapabilityMap } from "../models";
 import { buildLogger } from "@/components/utils";
 
 type Props = Pick<FileExplorerEntryProps, "capabilities"> & {
   className?: string;
 };
 
-const log = buildLogger('Shortcuts');
+const log = buildLogger("Shortcuts");
 
 const Shortcuts = ({ capabilities, className }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
-  log('shortcuts for capabilities', capabilities);
+  log("shortcuts for capabilities", capabilities);
 
   const shortcuts = useMemo(() => {
     const result: { label: string; shortcut: string }[] = [];
@@ -30,6 +32,7 @@ const Shortcuts = ({ capabilities, className }: Props) => {
       capabilities.forEach((c) => {
         const def = FileSystemTreeEntryCapabilityMap[c];
         const shortcut = def?.shortcut;
+
         if (shortcut) {
           result.push({
             label: t<string>(def.nameI18NKey),
@@ -84,5 +87,3 @@ const Shortcuts = ({ capabilities, className }: Props) => {
 Shortcuts.displayName = "Shortcuts";
 
 export default Shortcuts;
-
-

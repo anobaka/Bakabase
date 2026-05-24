@@ -26,13 +26,10 @@ const TypeMismatchTip = (props: Props) => {
       content={
         <div className={"flex flex-col gap-1"}>
           <div>
-            {t<string>(
-              "bulkModification.info.typeConversion",
-              {
-                fromType: t<string>(`PropertyType.${PropertyType[fromType]}`),
-                toType: t<string>(`PropertyType.${PropertyType[toType]}`),
-              },
-            )}
+            {t<string>("bulkModification.info.typeConversion", {
+              fromType: t<string>(`PropertyType.${PropertyType[fromType]}`),
+              toType: t<string>(`PropertyType.${PropertyType[toType]}`),
+            })}
           </div>
           <div>
             <Button

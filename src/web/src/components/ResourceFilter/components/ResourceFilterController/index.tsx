@@ -13,8 +13,8 @@ import FilterGroupWithContext from "../FilterGroupWithContext";
 import { FilterProvider } from "../../context/FilterContext";
 import { createDefaultFilterConfig } from "../../presets/DefaultFilterPreset";
 import { GroupCombinator } from "../../models";
-import ResourceKeywordAutocomplete from "@/components/ResourceKeywordAutocomplete";
 
+import ResourceKeywordAutocomplete from "@/components/ResourceKeywordAutocomplete";
 import { FilterDisplayMode } from "@/sdk/constants";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
@@ -142,7 +142,8 @@ const ResourceFilterControllerInner = ({
   const onKeywordChange = externalOnKeywordChange ?? setInternalKeyword;
 
   // Internal filterDisplayMode state for uncontrolled mode
-  const [internalFilterDisplayMode, setInternalFilterDisplayMode] = useState<FilterDisplayMode>(defaultFilterDisplayMode);
+  const [internalFilterDisplayMode, setInternalFilterDisplayMode] =
+    useState<FilterDisplayMode>(defaultFilterDisplayMode);
 
   // Use external filterDisplayMode if provided, otherwise use internal state
   const filterDisplayMode = externalFilterDisplayMode ?? internalFilterDisplayMode;
@@ -150,42 +151,48 @@ const ResourceFilterControllerInner = ({
   // Combine internal and external new filter index
   const newFilterIndex = internalNewFilterIndex ?? externalNewFilterIndex ?? null;
 
-  const addFilter = useCallback((filter: SearchFilter, autoTriggerPropertySelector = false) => {
-    const newGroup: SearchFilterGroup = group ?? {
-      combinator: GroupCombinator.And,
-      disabled: false,
-      filters: [],
-      groups: [],
-    };
+  const addFilter = useCallback(
+    (filter: SearchFilter, autoTriggerPropertySelector = false) => {
+      const newGroup: SearchFilterGroup = group ?? {
+        combinator: GroupCombinator.And,
+        disabled: false,
+        filters: [],
+        groups: [],
+      };
 
-    if (!newGroup.filters) {
-      newGroup.filters = [];
-    }
+      if (!newGroup.filters) {
+        newGroup.filters = [];
+      }
 
-    // Track the index if we need to auto-trigger property selector
-    if (autoTriggerPropertySelector) {
-      setInternalNewFilterIndex(newGroup.filters.length);
-    }
+      // Track the index if we need to auto-trigger property selector
+      if (autoTriggerPropertySelector) {
+        setInternalNewFilterIndex(newGroup.filters.length);
+      }
 
-    newGroup.filters.push(filter);
-    onGroupChange({ ...newGroup });
-  }, [group, onGroupChange]);
+      newGroup.filters.push(filter);
+      onGroupChange({ ...newGroup });
+    },
+    [group, onGroupChange],
+  );
 
-  const addFilters = useCallback((filters: SearchFilter[]) => {
-    const newGroup: SearchFilterGroup = group ?? {
-      combinator: GroupCombinator.And,
-      disabled: false,
-      filters: [],
-      groups: [],
-    };
+  const addFilters = useCallback(
+    (filters: SearchFilter[]) => {
+      const newGroup: SearchFilterGroup = group ?? {
+        combinator: GroupCombinator.And,
+        disabled: false,
+        filters: [],
+        groups: [],
+      };
 
-    if (!newGroup.filters) {
-      newGroup.filters = [];
-    }
+      if (!newGroup.filters) {
+        newGroup.filters = [];
+      }
 
-    newGroup.filters.push(...filters);
-    onGroupChange({ ...newGroup });
-  }, [group, onGroupChange]);
+      newGroup.filters.push(...filters);
+      onGroupChange({ ...newGroup });
+    },
+    [group, onGroupChange],
+  );
 
   const addFilterGroup = useCallback(() => {
     const newSubGroup: SearchFilterGroup = {
@@ -210,78 +217,82 @@ const ResourceFilterControllerInner = ({
     onGroupChange({ ...newGroup });
   }, [group, onGroupChange]);
 
-  const handleModeChange = useCallback((mode: FilterDisplayMode) => {
-    // When switching from Advanced to Simple, clean up
-    if (mode === FilterDisplayMode.Simple && filterDisplayMode === FilterDisplayMode.Advanced) {
-      const currentGroup = group;
-      if (currentGroup) {
-        const cleanedFilters = (currentGroup.filters || [])
-          .filter(f => !f.disabled)
-          .map(f => ({ ...f, disabled: false }));
+  const handleModeChange = useCallback(
+    (mode: FilterDisplayMode) => {
+      // When switching from Advanced to Simple, clean up
+      if (mode === FilterDisplayMode.Simple && filterDisplayMode === FilterDisplayMode.Advanced) {
+        const currentGroup = group;
 
-        onGroupChange({
-          ...currentGroup,
-          filters: cleanedFilters,
-          groups: [], // Remove all sub-groups in Simple mode
-          combinator: GroupCombinator.And,
-          disabled: false,
-        });
+        if (currentGroup) {
+          const cleanedFilters = (currentGroup.filters || [])
+            .filter((f) => !f.disabled)
+            .map((f) => ({ ...f, disabled: false }));
+
+          onGroupChange({
+            ...currentGroup,
+            filters: cleanedFilters,
+            groups: [], // Remove all sub-groups in Simple mode
+            combinator: GroupCombinator.And,
+            disabled: false,
+          });
+        }
       }
-    }
 
-    // Update internal state (for uncontrolled mode)
-    setInternalFilterDisplayMode(mode);
-    // Notify external callback
-    onFilterDisplayModeChange?.(mode);
-  }, [onFilterDisplayModeChange, filterDisplayMode, group, onGroupChange]);
+      // Update internal state (for uncontrolled mode)
+      setInternalFilterDisplayMode(mode);
+      // Notify external callback
+      onFilterDisplayModeChange?.(mode);
+    },
+    [onFilterDisplayModeChange, filterDisplayMode, group, onGroupChange],
+  );
 
   // Render keyword search with autocomplete
   const keywordElement = (
     <ResourceKeywordAutocomplete
       isClearable
+      className={`${keywordClassName} ${!keywordContainer && !filterPortalContainer ? "flex-1 min-w-0" : ""}`}
+      placeholder={keywordPlaceholder}
       value={keyword}
-      onValueChange={onKeywordChange}
       onKeyDown={(e) => {
         if (e.key === "Enter") {
           onSearch?.();
         }
       }}
-      placeholder={keywordPlaceholder}
-      className={`${keywordClassName} ${!keywordContainer && !filterPortalContainer ? "flex-1 min-w-0" : ""}`}
+      onValueChange={onKeywordChange}
     />
   );
 
   // Render filter portal
   const filterPortalElement = (
     <FilterPortal
+      currentFilters={group?.filters}
       mode={filterDisplayMode}
-      onModeChange={handleModeChange}
-      onAddFilter={(autoTrigger) => addFilter({ disabled: false }, autoTrigger)}
-      onAddFilterGroup={addFilterGroup}
-      onSelectFilters={addFilters}
+      selectedTags={tags}
       showRecentFilters={showRecentFilters}
       showTags={showTags}
-      selectedTags={tags}
+      onAddFilter={(autoTrigger) => addFilter({ disabled: false }, autoTrigger)}
+      onAddFilterGroup={addFilterGroup}
+      onModeChange={handleModeChange}
+      onSelectFilters={addFilters}
       onTagsChange={onTagsChange}
-      currentFilters={group?.filters}
     />
   );
 
   // Render filter groups
   const filterGroupsElement = (
     <FilterGroupWithContext
-      group={group}
-      onChange={onGroupChange}
+      autoCreateMediaLibraryFilter={autoCreateMediaLibraryFilter}
+      className={filterGroupsClassName}
+      externalNewFilterIndex={newFilterIndex}
       filterDisplayMode={filterDisplayMode}
       filterLayout={filterLayout}
+      group={group}
       isReadonly={isReadonly}
-      externalNewFilterIndex={newFilterIndex}
+      onChange={onGroupChange}
       onExternalNewFilterConsumed={() => {
         setInternalNewFilterIndex(null);
         onExternalNewFilterConsumed?.();
       }}
-      className={filterGroupsClassName}
-      autoCreateMediaLibraryFilter={autoCreateMediaLibraryFilter}
     />
   );
 
@@ -290,6 +301,7 @@ const ResourceFilterControllerInner = ({
     if (container) {
       return createPortal(element, container);
     }
+
     return element;
   };
 
@@ -297,13 +309,17 @@ const ResourceFilterControllerInner = ({
   const shouldRenderKeywordAndFilterPortalTogether = !keywordContainer && !filterPortalContainer;
 
   // Check if there's content in the filter groups (for gap spacing)
-  const hasFilterGroupContent = group && ((group.filters && group.filters.length > 0) || (group.groups && group.groups.length > 0));
+  const hasFilterGroupContent =
+    group &&
+    ((group.filters && group.filters.length > 0) || (group.groups && group.groups.length > 0));
 
   return (
     <>
-      {!isReadonly && (
-        shouldRenderKeywordAndFilterPortalTogether ? (
-          <div className={`flex items-center gap-2 ${hasFilterGroupContent && !filterGroupsContainer ? "mb-2" : ""}`}>
+      {!isReadonly &&
+        (shouldRenderKeywordAndFilterPortalTogether ? (
+          <div
+            className={`flex items-center gap-2 ${hasFilterGroupContent && !filterGroupsContainer ? "mb-2" : ""}`}
+          >
             {keywordElement}
             {filterPortalElement}
           </div>
@@ -312,8 +328,7 @@ const ResourceFilterControllerInner = ({
             {renderToContainer(keywordElement, keywordContainer)}
             {renderToContainer(filterPortalElement, filterPortalContainer)}
           </>
-        )
-      )}
+        ))}
       {renderToContainer(filterGroupsElement, filterGroupsContainer)}
     </>
   );

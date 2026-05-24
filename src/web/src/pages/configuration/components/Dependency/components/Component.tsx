@@ -6,7 +6,7 @@ import { usePrevious } from "react-use";
 import { CheckCircleOutlined } from "@ant-design/icons";
 import { MdError } from "react-icons/md";
 
-import { Button, Icon, Spinner } from "@/components/bakaui";
+import { Button, Spinner } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 import { useDependentComponentContextsStore } from "@/stores/dependentComponentContexts";
 import { DependentComponentStatus } from "@/sdk/constants";
@@ -15,9 +15,9 @@ import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContext
 const Component = ({ id }: { id: string }) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
-  const context = useDependentComponentContextsStore(
-    (state) => state.contexts,
-  ).find((a) => a.id == id);
+  const context = useDependentComponentContextsStore((state) => state.contexts).find(
+    (a) => a.id == id,
+  );
   const [latestVersion, setLatestVersion] = useState<{
     version?: string;
     canUpdate: boolean;
@@ -41,6 +41,7 @@ const Component = ({ id }: { id: string }) => {
   const init = useCallback(async () => {
     if (context && !context.isAvailableOnCurrentPlatform) {
       setDiscovering(false);
+
       return;
     }
 
@@ -50,14 +51,10 @@ const Component = ({ id }: { id: string }) => {
       setDiscovering(false);
     }
 
-    if (
-      context?.isRequired ||
-      context?.status == DependentComponentStatus.NotInstalled
-    ) {
+    if (context?.isRequired || context?.status == DependentComponentStatus.NotInstalled) {
       setFindingNewVersion(true);
       try {
-        const latestVersionRsp =
-          await BApi.component.getDependentComponentLatestVersion(id);
+        const latestVersionRsp = await BApi.component.getDependentComponentLatestVersion(id);
 
         if (!latestVersionRsp.code) {
           // @ts-ignore
@@ -116,29 +113,24 @@ const Component = ({ id }: { id: string }) => {
           if (context?.status != DependentComponentStatus.Installing) {
             elements.push(
               <Button
-                size={"sm"}
                 color={"primary"}
+                size={"sm"}
                 variant={"light"}
                 onClick={() => {
                   BApi.component.installDependentComponent(id);
                 }}
               >
-                {t<string>("configuration.dependency.clickToUpdate")}:{" "}
-                {latestVersion.version}
+                {t<string>("configuration.dependency.clickToUpdate")}: {latestVersion.version}
               </Button>,
             );
           }
         } else if (context?.status === DependentComponentStatus.Installed) {
-          elements.push(
-            <CheckCircleOutlined className={"text-base text-success"} />,
-          );
+          elements.push(<CheckCircleOutlined className={"text-base text-success"} />);
         }
       }
     } else {
       if (findingNewVersion) {
-        elements.push(
-          <Spinner size="sm" />
-        );
+        elements.push(<Spinner size="sm" />);
       }
     }
 
@@ -185,11 +177,7 @@ const Component = ({ id }: { id: string }) => {
           alignItems: "center",
         }}
       >
-        <Chip
-          radius={"sm"}
-          size={"sm"}
-          color={"default"}
-        >
+        <Chip color={"default"} radius={"sm"} size={"sm"}>
           {t<string>("configuration.dependency.notAvailableOnCurrentPlatform")}
         </Chip>
       </div>
@@ -209,11 +197,7 @@ const Component = ({ id }: { id: string }) => {
         {discovering ? (
           <Spinner size="sm" />
         ) : (
-          <Chip
-            radius={"sm"}
-            size={"sm"}
-            title={context?.location ?? undefined}
-          >
+          <Chip radius={"sm"} size={"sm"} title={context?.location ?? undefined}>
             {context?.version ?? t<string>("configuration.dependency.notInstalled")}
           </Chip>
         )}

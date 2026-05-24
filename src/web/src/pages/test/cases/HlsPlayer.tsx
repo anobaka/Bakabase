@@ -19,5 +19,9 @@ export default function HlsPlayerPage({ src }) {
     }
   }, [src]);
 
-  return <video ref={videoRef} controls height={600} width={800} />;
+  return (
+    <video ref={videoRef} controls height={600} width={800}>
+      <track kind="captions" />
+    </video>
+  );
 }

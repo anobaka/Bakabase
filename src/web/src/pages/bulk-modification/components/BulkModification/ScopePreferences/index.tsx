@@ -23,7 +23,9 @@ const ScopePreferences = ({ configs: propsConfigs, disabled, onChange }: Props) 
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
-  const [configs, setConfigs] = useState<BulkModificationScopePreferenceConfig[]>(propsConfigs ?? []);
+  const [configs, setConfigs] = useState<BulkModificationScopePreferenceConfig[]>(
+    propsConfigs ?? [],
+  );
 
   useEffect(() => {
     setConfigs(propsConfigs ?? []);
@@ -59,11 +61,12 @@ const ScopePreferences = ({ configs: propsConfigs, disabled, onChange }: Props) 
       });
     };
 
-    const summary = c.priorities && c.priorities.length > 0
-      ? c.priorities
-          .map((p) => `${PropertyValueScopeLabel[p.scope]}${p.fallbackOnEmpty ? "↘" : "·"}`)
-          .join(" → ")
-      : t<string>("bulkModification.scopePreference.willClear");
+    const summary =
+      c.priorities && c.priorities.length > 0
+        ? c.priorities
+            .map((p) => `${PropertyValueScopeLabel[p.scope]}${p.fallbackOnEmpty ? "↘" : "·"}`)
+            .join(" → ")
+        : t<string>("bulkModification.scopePreference.willClear");
 
     return (
       <Card
@@ -116,7 +119,8 @@ const ScopePreferences = ({ configs: propsConfigs, disabled, onChange }: Props) 
               onSubmit: (added: BulkModificationScopePreferenceConfig) => {
                 // Prevent duplicates: same (pool, id) replaces existing
                 const filtered = configs.filter(
-                  (x) => !(x.propertyPool === added.propertyPool && x.propertyId === added.propertyId),
+                  (x) =>
+                    !(x.propertyPool === added.propertyPool && x.propertyId === added.propertyId),
                 );
                 const next = [...filtered, added];
 

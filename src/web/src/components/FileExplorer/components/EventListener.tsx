@@ -56,12 +56,14 @@ const EventListener = (props: Props) => {
 
   const isInsideDialog = useCallback((target: EventTarget | null): boolean => {
     let el = target as HTMLElement | null;
+
     while (el) {
       if (el.role === "dialog") {
         return true;
       }
       el = el.parentElement;
     }
+
     return false;
   }, []);
 

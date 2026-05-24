@@ -1,4 +1,7 @@
-import { getFilterOptionsThreshold, DEFAULT_FILTER_OPTIONS_THRESHOLD } from "@/hooks/useFilterOptionsThreshold";
+import {
+  getFilterOptionsThreshold,
+  DEFAULT_FILTER_OPTIONS_THRESHOLD,
+} from "@/hooks/useFilterOptionsThreshold";
 
 /** @deprecated Use getFilterOptionsThreshold() instead for dynamic threshold */
 export const INLINE_OPTIONS_LIMIT = DEFAULT_FILTER_OPTIONS_THRESHOLD;
@@ -28,7 +31,7 @@ export function getInlineOptionsLimit(): number {
 export function buildVisibleOptions<T>(
   options: T[],
   isSelected: (item: T) => boolean,
-  limit?: number
+  limit?: number,
 ): T[] {
   if (options.length === 0) return [];
 
@@ -42,9 +45,7 @@ export function buildVisibleOptions<T>(
   const unselectedInFirstN = firstN.filter((item) => !isSelected(item));
 
   // Selected options beyond position N
-  const selectedBeyondN = options
-    .slice(inlineLimit)
-    .filter(isSelected);
+  const selectedBeyondN = options.slice(inlineLimit).filter(isSelected);
 
   // Calculate how many unselected from first N we can show
   const totalSelected = selectedInFirstN.length + selectedBeyondN.length;
@@ -66,6 +67,7 @@ export function buildVisibleOptions<T>(
  */
 export function hasMoreOptions(totalCount: number, limit?: number): boolean {
   const inlineLimit = limit ?? getInlineOptionsLimit();
+
   return totalCount > inlineLimit;
 }
 

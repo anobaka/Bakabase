@@ -18,10 +18,7 @@ type Props = {
   enhancerOptions: BakabaseAbstractionsModelsDomainEnhancerFullOptions[];
 } & DestroyableProps;
 
-const EnhancerValidationModal: React.FC<Props> = ({
-  enhancerOptions,
-  onDestroyed,
-}) => {
+const EnhancerValidationModal: React.FC<Props> = ({ enhancerOptions, onDestroyed }) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const [selectedResource, setSelectedResource] = useState<ResourceSelectorValue | null>(null);
@@ -48,6 +45,7 @@ const EnhancerValidationModal: React.FC<Props> = ({
         selectedResource.id,
         enhancerOptions,
       );
+
       if (response.code === 0) {
         // Open ResourceEnhancementsModal to show the results
         createPortal(ResourceEnhancementsModal, {
@@ -65,23 +63,11 @@ const EnhancerValidationModal: React.FC<Props> = ({
   return (
     <Modal
       defaultVisible
-      size="lg"
-      title={
-        <div className="flex items-center gap-2">
-          <ExperimentOutlined />
-          {t<string>("enhancementConfig.validation.title")}
-        </div>
-      }
-      onDestroyed={onDestroyed}
-      footer={(
+      footer={
         <div className="flex justify-between items-center w-full">
           <div />
           <div className="flex gap-2">
-            <Button
-              color="default"
-              variant="light"
-              onPress={() => onDestroyed?.()}
-            >
+            <Button color="default" variant="light" onPress={() => onDestroyed?.()}>
               {t<string>("common.action.close")}
             </Button>
             <Button
@@ -95,7 +81,15 @@ const EnhancerValidationModal: React.FC<Props> = ({
             </Button>
           </div>
         </div>
-      )}
+      }
+      size="lg"
+      title={
+        <div className="flex items-center gap-2">
+          <ExperimentOutlined />
+          {t<string>("enhancementConfig.validation.title")}
+        </div>
+      }
+      onDestroyed={onDestroyed}
     >
       <div className="flex flex-col gap-4">
         <div className="text-sm text-default-500">
@@ -114,9 +108,10 @@ const EnhancerValidationModal: React.FC<Props> = ({
             variant={selectedResource ? "bordered" : "solid"}
             onPress={handleSelectResource}
           >
-            {t<string>(selectedResource
-              ? "enhancementConfig.validation.changeResource"
-              : "enhancementConfig.validation.selectResource"
+            {t<string>(
+              selectedResource
+                ? "enhancementConfig.validation.changeResource"
+                : "enhancementConfig.validation.selectResource",
             )}
           </Button>
         </div>

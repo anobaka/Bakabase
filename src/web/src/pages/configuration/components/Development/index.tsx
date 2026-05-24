@@ -31,9 +31,7 @@ const Development: React.FC = () => {
   const appContext = useAppContextStore((state) => state);
   const appOptions = useAppOptionsStore((state) => state.data);
 
-  const apiDocumentUrl = appContext.apiEndpoint
-    ? `${appContext.apiEndpoint}/swagger`
-    : undefined;
+  const apiDocumentUrl = appContext.apiEndpoint ? `${appContext.apiEndpoint}/swagger` : undefined;
 
   const parsePorts = (text?: string): number[] => {
     const raw = (text ?? "")
@@ -45,18 +43,21 @@ const Development: React.FC = () => {
       .filter((n) => Number.isFinite(n) && n > 0 && n <= 65535);
     const seen = new Set<number>();
     const unique: number[] = [];
+
     for (const n of nums) {
       if (!seen.has(n)) {
         seen.add(n);
         unique.push(n);
       }
     }
+
     return unique;
   };
 
   const renderListeningPortCount = () => {
     const min = 0;
     const max = 3;
+
     return (
       <EditableValue<number, NumberInputProps, ChipProps & { value: number }>
         Editor={(props) => (
@@ -67,18 +68,15 @@ const Development: React.FC = () => {
               <div>
                 <div>
                   {t("configuration.development.tip.currentListeningPortCount", {
-                    port: appOptions.autoListeningPortCount === 0
-                      ? t("configuration.development.auto")
-                      : appOptions.autoListeningPortCount,
+                    port:
+                      appOptions.autoListeningPortCount === 0
+                        ? t("configuration.development.auto")
+                        : appOptions.autoListeningPortCount,
                   })}
                 </div>
-                <div>
-                  {t("configuration.development.tip.configurablePortRange", { min, max })}
-                </div>
+                <div>{t("configuration.development.tip.configurablePortRange", { min, max })}</div>
                 <div>{t("configuration.development.tip.changesAfterRestart")}</div>
-                <div>
-                  {t("configuration.development.tip.portWarning")}
-                </div>
+                <div>{t("configuration.development.tip.portWarning")}</div>
               </div>
             }
             formatOptions={{ useGrouping: false }}
@@ -112,6 +110,7 @@ const Development: React.FC = () => {
   const renderListeningPorts = () => {
     const toText = (ports?: number[]) => (ports?.length ? ports.join(", ") : "");
     const max = 6;
+
     return (
       <EditableValue<string, InputProps>
         Editor={(props) => (
@@ -122,9 +121,7 @@ const Development: React.FC = () => {
               <div>
                 <div>{t("configuration.development.tip.portsInput")}</div>
                 <div>{t("configuration.development.tip.changesAfterRestart")}</div>
-                <div>
-                  {t("configuration.development.tip.portWarning")}
-                </div>
+                <div>{t("configuration.development.tip.portWarning")}</div>
               </div>
             }
             placeholder={t("configuration.development.input.portsPlaceholder")}
@@ -133,6 +130,7 @@ const Development: React.FC = () => {
         )}
         Viewer={({ value }) => {
           const ports = parsePorts(value);
+
           if (ports && ports.length > 0) {
             return (
               <div className="flex flex-wrap gap-2">
@@ -149,11 +147,13 @@ const Development: React.FC = () => {
               </div>
             );
           }
+
           return null;
         }}
         value={toText(appOptions.listeningPorts)}
         onSubmit={async (text) => {
           const ports = parsePorts(text);
+
           if (ports.length > max) {
             toast.error(t("configuration.development.error.tooManyPorts", { max }));
             throw new Error("invalid");
@@ -180,14 +180,16 @@ const Development: React.FC = () => {
     },
     {
       label: "configuration.development.apiDocument",
-      value: apiDocumentUrl && (
-        <ExternalLink href={apiDocumentUrl}>{apiDocumentUrl}</ExternalLink>
-      ),
+      value: apiDocumentUrl && <ExternalLink href={apiDocumentUrl}>{apiDocumentUrl}</ExternalLink>,
     },
   ];
 
   // Add port configurations for Dev and WinForms modes
-  if (appContext.runtimeMode === RuntimeMode.Dev || appContext.runtimeMode === RuntimeMode.WinForms || appContext.runtimeMode === RuntimeMode.MacOS) {
+  if (
+    appContext.runtimeMode === RuntimeMode.Dev ||
+    appContext.runtimeMode === RuntimeMode.WinForms ||
+    appContext.runtimeMode === RuntimeMode.MacOS
+  ) {
     items.push(
       {
         label: "configuration.development.listeningPortCount",
@@ -209,14 +211,9 @@ const Development: React.FC = () => {
       <TableBody>
         {items.map((c, i) => {
           return (
-            <TableRow
-              key={i}
-              className="hover:bg-[var(--bakaui-overlap-background)]"
-            >
+            <TableRow key={i} className="hover:bg-[var(--bakaui-overlap-background)]">
               <TableCell>
-                <div className="flex items-center gap-1">
-                  {t(c.label)}
-                </div>
+                <div className="flex items-center gap-1">{t(c.label)}</div>
               </TableCell>
               <TableCell>{c.value}</TableCell>
             </TableRow>

@@ -12,7 +12,7 @@ import BApi from "@/sdk/BApi";
 import ThirdPartyIcon from "@/components/ThirdPartyIcon";
 import { isThirdPartyDeveloping } from "@/pages/downloader/models";
 import DevelopingChip from "@/components/Chips/DevelopingChip";
-import { ThirdPartyId as ThirdPartyIdEnum, CookieValidatorTarget } from "@/sdk/constants";
+import { ThirdPartyId as ThirdPartyIdEnum } from "@/sdk/constants";
 import { useDownloaderGlobalOptionsStore } from "@/stores/options";
 import {
   ExHentaiConfigPanel,
@@ -39,8 +39,21 @@ type Props = {
  * with the appropriate fields for the downloader context.
  */
 const platformRenderers: Record<number, () => React.ReactNode> = {
-  [ThirdPartyIdEnum.ExHentai]: () => <ExHentaiConfigPanel fields={[ExHentaiConfigField.Accounts, ExHentaiConfigField.DataFetch, ExHentaiConfigField.Download]} />,
-  [ThirdPartyIdEnum.DLsite]: () => <DLsiteConfigPanel fields={[DLsiteConfigField.Accounts, DLsiteConfigField.DataFetch, DLsiteConfigField.Download]} showFooter={false} />,
+  [ThirdPartyIdEnum.ExHentai]: () => (
+    <ExHentaiConfigPanel
+      fields={[
+        ExHentaiConfigField.Accounts,
+        ExHentaiConfigField.DataFetch,
+        ExHentaiConfigField.Download,
+      ]}
+    />
+  ),
+  [ThirdPartyIdEnum.DLsite]: () => (
+    <DLsiteConfigPanel
+      fields={[DLsiteConfigField.Accounts, DLsiteConfigField.DataFetch, DLsiteConfigField.Download]}
+      showFooter={false}
+    />
+  ),
   [ThirdPartyIdEnum.Steam]: () => <SteamConfigPanel fields={[SteamConfigField.Accounts]} />,
   [ThirdPartyIdEnum.Bilibili]: () => <BilibiliConfigPanel fields="all" />,
   [ThirdPartyIdEnum.Pixiv]: () => <PixivConfigPanel fields="all" />,
@@ -87,12 +100,13 @@ const ConfigurationsModal = ({ onSubmitted, onDestroyed }: Props) => {
 
   useEffect(() => {
     BApi.downloadTask.getAllDownloaderDefinitions().then((res) => {
-      const ids = [...new Set((res.data || []).map((d) => d.thirdPartyId))]
-        .sort((a, b) => {
-          const aDev = isThirdPartyDeveloping(a) ? 1 : 0;
-          const bDev = isThirdPartyDeveloping(b) ? 1 : 0;
-          return aDev - bDev;
-        });
+      const ids = [...new Set((res.data || []).map((d) => d.thirdPartyId))].sort((a, b) => {
+        const aDev = isThirdPartyDeveloping(a) ? 1 : 0;
+        const bDev = isThirdPartyDeveloping(b) ? 1 : 0;
+
+        return aDev - bDev;
+      });
+
       setThirdPartyIds(ids);
     });
   }, []);
@@ -107,8 +121,8 @@ const ConfigurationsModal = ({ onSubmitted, onDestroyed }: Props) => {
     >
       <Tabs
         destroyInactiveTabPanel
-        isVertical
         disableAnimation
+        isVertical
         classNames={{ panel: "flex-1 w-0" }}
         selectedKey={selectedTab}
         onSelectionChange={(key) => setSelectedTab(key as string)}

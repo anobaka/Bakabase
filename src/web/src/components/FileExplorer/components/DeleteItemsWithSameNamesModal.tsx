@@ -6,10 +6,11 @@ import type { Entry } from "@/core/models/FileExplorer/Entry";
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import FileSystemEntryChangeExampleItem from "./FileSystemEntryChangeExampleItem";
+
 import { toast } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 import { Modal, Spinner } from "@/components/bakaui";
-import FileSystemEntryChangeExampleItem from "./FileSystemEntryChangeExampleItem";
 
 type Props = {
   entries: Entry[];
@@ -83,13 +84,11 @@ const DeleteItemsWithSameNamesModal = ({
       {deletingAllPaths ? (
         <>
           <div className={"flex flex-col gap-1"}>
-            <FileSystemEntryChangeExampleItem
-              text={workingDirectory}
-              type={"default"}
-            />
+            <FileSystemEntryChangeExampleItem text={workingDirectory} type={"default"} />
             {deletingAllPaths.map((d, i) => {
               return (
                 <FileSystemEntryChangeExampleItem
+                  key={i}
                   isDirectory={d.isDirectory}
                   layer={1}
                   path={d.path}

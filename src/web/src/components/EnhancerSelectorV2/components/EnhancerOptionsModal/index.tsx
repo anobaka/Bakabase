@@ -12,9 +12,10 @@ import { useEffect, useState } from "react";
 import { useUpdate } from "react-use";
 import _ from "lodash";
 
+import TranslationOptionsSection from "../TranslationOptionsSection";
+
 import DynamicTargets from "./components/DynamicTargets";
 import FixedTargets from "./components/FixedTargets";
-import TranslationOptionsSection from "../TranslationOptionsSection";
 
 import { Button, Chip, Modal, Select, Switch, Textarea } from "@/components/bakaui";
 import {
@@ -52,12 +53,17 @@ const extractCaptureGroups = (expressions: string[]) =>
 /** Sanitize targetOptions on load: treat pool=0/id=0 (C# default for unbound) as undefined */
 const sanitizeOptions = (opts?: EnhancerFullOptions): EnhancerFullOptions => {
   if (!opts) return {};
+
   return {
     ...opts,
     targetOptions: opts.targetOptions?.map((to) => {
-      if ((to.propertyPool != null && to.propertyPool <= 0) || (to.propertyId != null && to.propertyId <= 0)) {
+      if (
+        (to.propertyPool != null && to.propertyPool <= 0) ||
+        (to.propertyId != null && to.propertyId <= 0)
+      ) {
         return { ...to, propertyPool: undefined, propertyId: undefined };
       }
+
       return to;
     }),
   };
@@ -137,16 +143,8 @@ export default function EnhancerOptionsModal({
           <div className=" w-[300px]">
             <div className="text-small">{t<string>("enhancer.options.keywordProperty.label")}</div>
             <div className="text-xs text-default-400">
-              <div>
-                {t<string>(
-                  "enhancer.options.keywordProperty.description",
-                )}
-              </div>
-              <div>
-                {t<string>(
-                  "enhancer.options.keywordProperty.tip",
-                )}
-              </div>
+              <div>{t<string>("enhancer.options.keywordProperty.description")}</div>
+              <div>{t<string>("enhancer.options.keywordProperty.tip")}</div>
             </div>
           </div>
           <Button
@@ -189,14 +187,8 @@ export default function EnhancerOptionsModal({
             }))}
             description={
               <div>
-                <div>
-                  {t<string>(
-                    "enhancer.options.propertyValueScope.description",
-                  )}
-                </div>
-                <div>
-                  {t<string>("enhancer.options.propertyValueScope.tip")}
-                </div>
+                <div>{t<string>("enhancer.options.propertyValueScope.description")}</div>
+                <div>{t<string>("enhancer.options.propertyValueScope.tip")}</div>
               </div>
             }
             label={t<string>("enhancer.options.propertyValueScope.label")}
@@ -214,13 +206,7 @@ export default function EnhancerOptionsModal({
                 createPortal(Modal, {
                   defaultVisible: true,
                   title: t<string>("enhancer.options.manualScope.title"),
-                  children: (
-                    <div>
-                      {t<string>(
-                        "enhancer.options.manualScope.description",
-                      )}
-                    </div>
-                  ),
+                  children: <div>{t<string>("enhancer.options.manualScope.description")}</div>,
                   footer: {
                     actions: ["cancel"],
                     cancelProps: {
@@ -241,13 +227,9 @@ export default function EnhancerOptionsModal({
           <div className=" w-[300px]">
             <div className="text-small">{t<string>("enhancer.options.pretreat.label")}</div>
             <div className="text-xs text-default-400">
+              <div>{t<string>("enhancer.options.pretreat.description")}</div>
               <div>
-                {t<string>("enhancer.options.pretreat.description")}
-              </div>
-              <div>
-                {t<string>(
-                  "enhancer.options.pretreat.tip",
-                )}
+                {t<string>("enhancer.options.pretreat.tip")}
                 <Button
                   color="primary"
                   size="sm"
@@ -338,10 +320,12 @@ export default function EnhancerOptionsModal({
   // Auto-sync candidate targets (e.g. regex capture groups) into targetOptions
   // so that DynamicTargets UI is not needed for candidate-driven enhancers
   const captureGroupsKey = captureGroups.join("\0");
+
   useEffect(() => {
     if (!hasCandidateTargets) return;
 
     const dynamicDescriptor = enhancer.targets.find((t) => t.isDynamic);
+
     if (!dynamicDescriptor) return;
 
     setOptions((prev) => {
@@ -360,13 +344,15 @@ export default function EnhancerOptionsModal({
       );
 
       const synced = captureGroups.map(
-        (group) => existingByName.get(group) ?? { target: dynamicDescriptor.id, dynamicTarget: group },
+        (group) =>
+          existingByName.get(group) ?? { target: dynamicDescriptor.id, dynamicTarget: group },
       );
 
       // Check if anything actually changed
       const oldDynamic = current.filter(
         (to) => to.target === dynamicDescriptor.id && to.dynamicTarget != undefined,
       );
+
       if (
         synced.length === oldDynamic.length &&
         synced.every((s, i) => s.dynamicTarget === oldDynamic[i]?.dynamicTarget)
@@ -397,22 +383,32 @@ export default function EnhancerOptionsModal({
         const sanitized = {
           ...options,
           targetOptions: options.targetOptions?.filter(
-            (to) => to.autoBindProperty || (to.propertyPool && to.propertyPool > 0 && to.propertyId && to.propertyId > 0),
+            (to) =>
+              to.autoBindProperty ||
+              (to.propertyPool && to.propertyPool > 0 && to.propertyId && to.propertyId > 0),
           ),
         };
+
         await onSubmit?.(sanitized);
       }}
     >
       <div className={"flex flex-col gap-y-2"}>
         {/* Embed third-party account & data-fetch config for platform-linked enhancers */}
         {enhancer.id === EnhancerId.ExHentai && (
-          <ExHentaiConfigPanel fields={[ExHentaiConfigField.Accounts, ExHentaiConfigField.DataFetch]} />
+          <ExHentaiConfigPanel
+            fields={[ExHentaiConfigField.Accounts, ExHentaiConfigField.DataFetch]}
+          />
         )}
         {enhancer.id === EnhancerId.DLsite && (
-          <DLsiteConfigPanel fields={[DLsiteConfigField.Accounts, DLsiteConfigField.DataFetch]} showFooter={false} />
+          <DLsiteConfigPanel
+            fields={[DLsiteConfigField.Accounts, DLsiteConfigField.DataFetch]}
+            showFooter={false}
+          />
         )}
         {enhancer.id === EnhancerId.Bangumi && (
-          <BangumiConfigPanel fields={[BangumiConfigField.Accounts, BangumiConfigField.DataFetch]} />
+          <BangumiConfigPanel
+            fields={[BangumiConfigField.Accounts, BangumiConfigField.DataFetch]}
+          />
         )}
 
         <Select
@@ -420,11 +416,7 @@ export default function EnhancerOptionsModal({
           dataSource={allEnhancers.map((e) => ({ label: e.name, value: e.id.toString() }))}
           description={
             <div>
-              <div>
-                {t<string>(
-                  "enhancer.options.runAfter.description",
-                )}
-              </div>
+              <div>{t<string>("enhancer.options.runAfter.description")}</div>
               <div>{t<string>("enhancer.options.runAfter.tip")}</div>
             </div>
           }
@@ -458,39 +450,19 @@ export default function EnhancerOptionsModal({
                       {t<string>("enhancer.regex.captureGroups.label")}
                       {captureGroups.map((g) => {
                         return (
-                          <Chip size={"sm"} key={g} variant={"light"}>
+                          <Chip key={g} size={"sm"} variant={"light"}>
                             {g}
                           </Chip>
                         );
                       })}
                     </div>
                   ) : (
-                    <div>
-                      {t<string>(
-                        "enhancer.regex.captureGroups.warning",
-                      )}
-                    </div>
+                    <div>{t<string>("enhancer.regex.captureGroups.warning")}</div>
                   )}
-                  <div>
-                    {t<string>(
-                      "enhancer.regex.expressions.description",
-                    )}
-                  </div>
-                  <div>
-                    {t<string>(
-                      "enhancer.regex.captureGroups.mergeDescription",
-                    )}
-                  </div>
-                  <div>
-                    {t<string>(
-                      "enhancer.regex.expressions.categoryTip",
-                    )}
-                  </div>
-                  <div>
-                    {t<string>(
-                      "enhancer.regex.expressions.namingTip",
-                    )}
-                  </div>
+                  <div>{t<string>("enhancer.regex.expressions.description")}</div>
+                  <div>{t<string>("enhancer.regex.captureGroups.mergeDescription")}</div>
+                  <div>{t<string>("enhancer.regex.expressions.categoryTip")}</div>
+                  <div>{t<string>("enhancer.regex.expressions.namingTip")}</div>
                 </div>
               }
               label={t<string>("enhancer.regex.expressions.label")}

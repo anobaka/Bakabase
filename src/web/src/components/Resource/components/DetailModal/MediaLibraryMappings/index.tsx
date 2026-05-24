@@ -1,17 +1,15 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
-import {
-  PlusOutlined,
-  DeleteOutlined,
-  LinkOutlined,
-} from "@ant-design/icons";
-import BApi from "@/sdk/BApi";
 import type {
   BakabaseAbstractionsModelsDomainMediaLibraryResourceMapping,
   BakabaseAbstractionsModelsDomainMediaLibraryV2,
 } from "@/sdk/Api";
+
+import React, { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { PlusOutlined, DeleteOutlined, LinkOutlined } from "@ant-design/icons";
+
+import BApi from "@/sdk/BApi";
 import {
   Button,
   Chip,
@@ -34,11 +32,17 @@ interface MappingWithLibrary extends BakabaseAbstractionsModelsDomainMediaLibrar
   mediaLibrary?: BakabaseAbstractionsModelsDomainMediaLibraryV2;
 }
 
-const MediaLibraryMappings: React.FC<Props> = ({ resourceId, onMappingsChange, compact = false }) => {
+const MediaLibraryMappings: React.FC<Props> = ({
+  resourceId,
+  onMappingsChange,
+  compact = false,
+}) => {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [mappings, setMappings] = useState<MappingWithLibrary[]>([]);
-  const [allLibraries, setAllLibraries] = useState<BakabaseAbstractionsModelsDomainMediaLibraryV2[]>([]);
+  const [allLibraries, setAllLibraries] = useState<
+    BakabaseAbstractionsModelsDomainMediaLibraryV2[]
+  >([]);
   const [addPopoverOpen, setAddPopoverOpen] = useState(false);
 
   const loadData = useCallback(async () => {
@@ -50,6 +54,7 @@ const MediaLibraryMappings: React.FC<Props> = ({ resourceId, onMappingsChange, c
       ]);
 
       const libs = librariesRsp.data || [];
+
       setAllLibraries(libs);
 
       const mappingsData = mappingsRsp.data || [];
@@ -57,6 +62,7 @@ const MediaLibraryMappings: React.FC<Props> = ({ resourceId, onMappingsChange, c
         ...m,
         mediaLibrary: libs.find((lib) => lib.id === m.mediaLibraryId),
       }));
+
       setMappings(mappingsWithLib);
     } catch (error) {
       console.error("Failed to load mappings:", error);
@@ -87,15 +93,13 @@ const MediaLibraryMappings: React.FC<Props> = ({ resourceId, onMappingsChange, c
         toast.danger(t("resource.error.failedToAddMediaLibrary"));
       }
     },
-    [resourceId, t, loadData, onMappingsChange]
+    [resourceId, t, loadData, onMappingsChange],
   );
 
   const handleRemoveMapping = useCallback(
     async (mappingId: number) => {
       try {
-        await BApi.mediaLibraryResourceMapping.deleteMediaLibraryResourceMapping(
-          mappingId,
-        );
+        await BApi.mediaLibraryResourceMapping.deleteMediaLibraryResourceMapping(mappingId);
         toast.success(t("resource.success.mediaLibraryRemoved"));
         await loadData();
         onMappingsChange?.();
@@ -104,12 +108,12 @@ const MediaLibraryMappings: React.FC<Props> = ({ resourceId, onMappingsChange, c
         toast.danger(t("resource.error.failedToRemoveMediaLibrary"));
       }
     },
-    [t, loadData, onMappingsChange]
+    [t, loadData, onMappingsChange],
   );
 
   // Get libraries not yet assigned to this resource
   const availableLibraries = allLibraries.filter(
-    (lib) => !mappings.some((m) => m.mediaLibraryId === lib.id)
+    (lib) => !mappings.some((m) => m.mediaLibraryId === lib.id),
   );
 
   if (loading) {
@@ -141,29 +145,19 @@ const MediaLibraryMappings: React.FC<Props> = ({ resourceId, onMappingsChange, c
       )}
       <div className="flex flex-wrap items-center gap-1 flex-1">
         {mappings.length === 0 ? (
-          <span className="text-sm text-default-400">
-            {t("common.label.none")}
-          </span>
+          <span className="text-sm text-default-400">{t("common.label.none")}</span>
         ) : (
           mappings.map((mapping) => (
             <Chip
               key={mapping.id}
-              size="sm"
-              variant="flat"
-              style={{
-                backgroundColor: mapping.mediaLibrary?.color
-                  ? `${mapping.mediaLibrary.color}20`
-                  : undefined,
-                color: mapping.mediaLibrary?.color,
-              }}
               endContent={
                 <Tooltip content={t("resource.tip.removeFromMediaLibrary")}>
                   <Button
-                    className=""
                     isIconOnly
+                    className=""
+                    color="danger"
                     size="sm"
                     variant="light"
-                    color="danger"
                     onPress={(e) => {
                       handleRemoveMapping(mapping.id);
                     }}
@@ -172,6 +166,14 @@ const MediaLibraryMappings: React.FC<Props> = ({ resourceId, onMappingsChange, c
                   </Button>
                 </Tooltip>
               }
+              size="sm"
+              style={{
+                backgroundColor: mapping.mediaLibrary?.color
+                  ? `${mapping.mediaLibrary.color}20`
+                  : undefined,
+                color: mapping.mediaLibrary?.color,
+              }}
+              variant="flat"
             >
               <span>{mapping.mediaLibrary?.name || t("common.state.unknown")}</span>
             </Chip>
@@ -182,11 +184,11 @@ const MediaLibraryMappings: React.FC<Props> = ({ resourceId, onMappingsChange, c
           trigger={
             <Button
               isIconOnly
+              className="min-w-6 w-6 h-6"
+              color="primary"
               isDisabled={availableLibraries.length === 0}
               size="sm"
               variant="light"
-              color="primary"
-              className="min-w-6 w-6 h-6"
             >
               <PlusOutlined className="text-base" />
             </Button>
@@ -199,6 +201,7 @@ const MediaLibraryMappings: React.FC<Props> = ({ resourceId, onMappingsChange, c
               aria-label={t("resource.modal.selectMediaLibrary")}
               onAction={(key) => {
                 const id = parseInt(key as string, 10);
+
                 handleAddMapping(id);
               }}
             >

@@ -5,15 +5,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CopyOutlined, CheckOutlined, GithubOutlined } from "@ant-design/icons";
 
-import {
-  Accordion,
-  AccordionItem,
-  Button,
-  Chip,
-  Link,
-  Modal,
-  Snippet,
-} from "@/components/bakaui";
+import { Accordion, AccordionItem, Button, Chip, Link, Modal, Snippet } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 import Urls from "@/cons/Urls";
 
@@ -61,7 +53,9 @@ const ErrorModal = ({ error, errorInfo }: IProps) => {
 
   const truncateStack = (stack: string, maxLines: number = 5) => {
     const lines = stack.split("\n");
+
     if (lines.length <= maxLines) return { text: stack, truncated: false };
+
     return {
       text: lines.slice(0, maxLines).join("\n") + "\n...",
       truncated: true,
@@ -71,6 +65,7 @@ const ErrorModal = ({ error, errorInfo }: IProps) => {
 
   const handleCopyAll = async () => {
     const parts: string[] = [];
+
     if (error?.message) parts.push(error.message);
     if (error?.stack) parts.push(error.stack);
     if (errorInfo?.componentStack) parts.push(errorInfo.componentStack);
@@ -102,16 +97,9 @@ const ErrorModal = ({ error, errorInfo }: IProps) => {
         {error && (
           <div className="border border-danger-200 rounded-lg overflow-hidden">
             <div className="bg-danger-50 px-3 py-1.5 border-b border-danger-200 flex items-center justify-between">
-              <span className="font-semibold text-danger-600 text-sm">
-                {error.name || "Error"}
-              </span>
+              <span className="font-semibold text-danger-600 text-sm">{error.name || "Error"}</span>
               <div className="flex items-center gap-1">
-                <Button
-                  isIconOnly
-                  size="sm"
-                  variant="light"
-                  onPress={handleCopyAll}
-                >
+                <Button isIconOnly size="sm" variant="light" onPress={handleCopyAll}>
                   {copied ? <CheckOutlined /> : <CopyOutlined />}
                 </Button>
                 <Chip color="danger" size="sm" variant="flat">
@@ -128,7 +116,11 @@ const ErrorModal = ({ error, errorInfo }: IProps) => {
                 <Accordion isCompact selectionMode="multiple">
                   <AccordionItem
                     key="stack"
-                    title={<span className="text-xs text-default-500">{t<string>("error.modal.stackTrace")}</span>}
+                    title={
+                      <span className="text-xs text-default-500">
+                        {t<string>("error.modal.stackTrace")}
+                      </span>
+                    }
                   >
                     <pre
                       className="text-xs whitespace-pre-wrap break-all font-mono bg-default-100 p-2 rounded"
@@ -137,8 +129,14 @@ const ErrorModal = ({ error, errorInfo }: IProps) => {
                       {showFullStack ? error.stack : truncateStack(error.stack).text}
                     </pre>
                     {truncateStack(error.stack).truncated && (
-                      <Button size="sm" variant="light" onClick={() => setShowFullStack(!showFullStack)}>
-                        {showFullStack ? t<string>("error.modal.showLess") : t<string>("error.modal.showAll")}
+                      <Button
+                        size="sm"
+                        variant="light"
+                        onClick={() => setShowFullStack(!showFullStack)}
+                      >
+                        {showFullStack
+                          ? t<string>("error.modal.showLess")
+                          : t<string>("error.modal.showAll")}
                       </Button>
                     )}
                   </AccordionItem>
@@ -148,17 +146,32 @@ const ErrorModal = ({ error, errorInfo }: IProps) => {
                 <Accordion isCompact selectionMode="multiple">
                   <AccordionItem
                     key="component-stack"
-                    title={<span className="text-xs text-default-500">{t<string>("error.modal.componentStack")}</span>}
+                    title={
+                      <span className="text-xs text-default-500">
+                        {t<string>("error.modal.componentStack")}
+                      </span>
+                    }
                   >
                     <pre
                       className="text-xs whitespace-pre-wrap break-all font-mono bg-default-100 p-2 rounded"
-                      style={{ maxHeight: showFullComponentStack ? "none" : "6rem", overflowY: "auto" }}
+                      style={{
+                        maxHeight: showFullComponentStack ? "none" : "6rem",
+                        overflowY: "auto",
+                      }}
                     >
-                      {showFullComponentStack ? errorInfo.componentStack : truncateStack(errorInfo.componentStack).text}
+                      {showFullComponentStack
+                        ? errorInfo.componentStack
+                        : truncateStack(errorInfo.componentStack).text}
                     </pre>
                     {truncateStack(errorInfo.componentStack).truncated && (
-                      <Button size="sm" variant="light" onClick={() => setShowFullComponentStack(!showFullComponentStack)}>
-                        {showFullComponentStack ? t<string>("error.modal.showLess") : t<string>("error.modal.showAll")}
+                      <Button
+                        size="sm"
+                        variant="light"
+                        onClick={() => setShowFullComponentStack(!showFullComponentStack)}
+                      >
+                        {showFullComponentStack
+                          ? t<string>("error.modal.showLess")
+                          : t<string>("error.modal.showAll")}
                       </Button>
                     )}
                   </AccordionItem>
@@ -190,7 +203,9 @@ const ErrorModal = ({ error, errorInfo }: IProps) => {
                       size="sm"
                       onClick={() => BApi.tool.openFileOrDirectory({ path: appInfo.logPath })}
                     >
-                      <span className="break-all whitespace-break-spaces text-primary">{appInfo.logPath}</span>
+                      <span className="break-all whitespace-break-spaces text-primary">
+                        {appInfo.logPath}
+                      </span>
                     </Snippet>
                   </div>
                 )}

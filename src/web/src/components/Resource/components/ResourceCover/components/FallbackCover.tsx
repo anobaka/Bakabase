@@ -76,6 +76,7 @@ const FallbackCover = ({ id, afterClearingCache }: Props) => {
               onPress={async () => {
                 try {
                   const rsp = await BApi.cache.refreshResourceCache(id);
+
                   if (!rsp.code) {
                     afterClearingCache?.();
                     toast.success(t<string>("resource.action.refreshCache.success"));
@@ -98,11 +99,11 @@ const FallbackCover = ({ id, afterClearingCache }: Props) => {
     <Tooltip
       content={
         <Button
-          onPress={showModal}
-          size={"sm"}
-          variant={"flat"}
           color={"primary"}
+          size={"sm"}
           startContent={<MdHelpOutline className={"text-lg"} />}
+          variant={"flat"}
+          onPress={showModal}
         >
           {t<string>("ResourceCover.CoverTips.Tooltip")}
         </Button>

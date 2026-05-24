@@ -36,12 +36,7 @@ interface IProps {
 const LineHeight = 35;
 const GroupAndNameSeparator = ":";
 
-export default function TagList({
-  tags: propsTags,
-  onChange,
-  className,
-  checkUsage,
-}: IProps) {
+export default function TagList({ tags: propsTags, onChange, className, checkUsage }: IProps) {
   const { t } = useTranslation();
   const [tags, setTags] = useState<Tag[]>(propsTags || []);
   const [editInBulkPopupVisible, setEditInBulkPopupVisible] = useState(false);
@@ -142,11 +137,7 @@ export default function TagList({
         </Button>
       </div>
       <div className="mt-2 mb-2 flex flex-col gap-1">
-        <DndContext
-          collisionDetection={closestCenter}
-          sensors={sensors}
-          onDragEnd={handleDragEnd}
-        >
+        <DndContext collisionDetection={closestCenter} sensors={sensors} onDragEnd={handleDragEnd}>
           <SortableContext
             items={tags?.map((c) => ({
               ...c,
@@ -255,9 +246,7 @@ export default function TagList({
           }}
         >
           <div className={"flex flex-col gap-2 m-2 "}>
-            <div className="text-base">
-              {t<string>("Add or delete tags in bulk")}
-            </div>
+            <div className="text-base">{t<string>("Add or delete tags in bulk")}</div>
             <div className={"text-sm opacity-70"}>
               <div>
                 {t<string>(
@@ -277,8 +266,8 @@ export default function TagList({
             </div>
             {bulkEditSummaries.length > 0 && (
               <div className={"flex items-center gap-2 text-sm"}>
-                {bulkEditSummaries.map((s) => (
-                  <Chip color={"success"} size={"sm"} variant={"light"}>
+                {bulkEditSummaries.map((s, i) => (
+                  <Chip key={i} color={"success"} size={"sm"} variant={"light"}>
                     {s}
                   </Chip>
                 ))}

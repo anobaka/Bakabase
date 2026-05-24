@@ -82,6 +82,7 @@ const PropertySelector = (props: IProps) => {
 
   const loadProperties = async () => {
     const psr = (await BApi.property.getPropertiesByPool(pool)).data || [];
+
     // @ts-ignore
     setProperties(psr.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
   };
@@ -95,8 +96,10 @@ const PropertySelector = (props: IProps) => {
   };
 
   const toggleProperty = async (property: IProperty) => {
-    const isDeprecatedInternal = property.pool === PropertyPool.Internal &&
+    const isDeprecatedInternal =
+      property.pool === PropertyPool.Internal &&
       deprecatedInternalPropertyIds.includes(property.id);
+
     if (isDeprecatedInternal || isDisabled?.(property)) {
       return;
     }
@@ -114,6 +117,7 @@ const PropertySelector = (props: IProps) => {
         setSelection([]);
       } else {
         const ns: Key[] = [{ id: property.id, pool: property.pool }];
+
         setSelection(ns);
         await onSubmit(ns);
       }
@@ -147,6 +151,7 @@ const PropertySelector = (props: IProps) => {
     if (types && !types.includes(p.type)) {
       return false;
     }
+
     return true;
   });
 
@@ -156,14 +161,13 @@ const PropertySelector = (props: IProps) => {
   const internalProperties = filteredProperties.filter((p) => p.pool === PropertyPool.Internal);
 
   // Group custom properties by type
-  const groupedCustomProperties: { [key in PropertyType]?: IProperty[] } =
-    customProperties.reduce<{ [key in PropertyType]?: IProperty[] }>(
-      (s, t) => {
-        (s[t.type!] ??= []).push(t);
-        return s;
-      },
-      {},
-    );
+  const groupedCustomProperties: { [key in PropertyType]?: IProperty[] } = customProperties.reduce<{
+    [key in PropertyType]?: IProperty[];
+  }>((s, t) => {
+    (s[t.type!] ??= []).push(t);
+
+    return s;
+  }, {});
 
   const renderFilter = () => {
     const filters: any[] = [];
@@ -171,6 +175,7 @@ const PropertySelector = (props: IProps) => {
     if (pool !== PropertyPool.All) {
       Object.keys(PropertyPool).forEach((k) => {
         const v = parseInt(k, 10) as PropertyPool;
+
         if (Number.isNaN(v)) {
           return;
         }
@@ -226,7 +231,8 @@ const PropertySelector = (props: IProps) => {
 
   const renderPropertyItem = (property: IProperty, showTypeIcon?: boolean) => {
     const selected = isSelected(property);
-    const isDeprecatedInternal = property.pool === PropertyPool.Internal &&
+    const isDeprecatedInternal =
+      property.pool === PropertyPool.Internal &&
       deprecatedInternalPropertyIds.includes(property.id);
     const disabled = isDeprecatedInternal || isDisabled?.(property);
 
@@ -239,14 +245,14 @@ const PropertySelector = (props: IProps) => {
       >
         {v2 ? (
           <PropertyV2
+            hidePool
             disabled={disabled}
             editable={editable}
-            hidePool
             hideType={showTypeIcon}
             property={property}
             removable={removable}
-            onSaved={loadProperties}
             onClick={() => toggleProperty(property)}
+            onSaved={loadProperties}
           />
         ) : (
           <Property
@@ -254,8 +260,8 @@ const PropertySelector = (props: IProps) => {
             editable={editable}
             property={property}
             removable={removable}
-            onSaved={loadProperties}
             onClick={() => toggleProperty(property)}
+            onSaved={loadProperties}
           />
         )}
         {selected && (
@@ -273,7 +279,9 @@ const PropertySelector = (props: IProps) => {
     return (
       <div className="rounded-lg border border-default-200 bg-content1 overflow-hidden">
         <div className="flex items-center gap-2 px-4 py-3 bg-default-100 border-b border-default-200">
-          {showTypeIcon && props[0] && <PropertyTypeIcon textVariant="default" type={props[0].type} />}
+          {showTypeIcon && props[0] && (
+            <PropertyTypeIcon textVariant="default" type={props[0].type} />
+          )}
           {!showTypeIcon && <span className="font-medium">{groupTitle}</span>}
           <span className="text-default-500 text-sm">({props.length})</span>
         </div>
@@ -287,9 +295,10 @@ const PropertySelector = (props: IProps) => {
   };
 
   // Resolve pinned properties from the loaded property list
-  const resolvedPinnedProperties = pinnedProperties
-    ?.map((key) => filteredProperties.find((p) => p.id === key.id && p.pool === key.pool))
-    .filter((p): p is IProperty => p != null) ?? [];
+  const resolvedPinnedProperties =
+    pinnedProperties
+      ?.map((key) => filteredProperties.find((p) => p.id === key.id && p.pool === key.pool))
+      .filter((p): p is IProperty => p != null) ?? [];
 
   const renderProperties = () => {
     const totalCount = filteredProperties.length;
@@ -297,7 +306,9 @@ const PropertySelector = (props: IProps) => {
     if (totalCount === 0) {
       return (
         <div className="flex flex-col items-center justify-center gap-2 py-8">
-          <span className="text-default-400">{t<string>("property.empty.noPropertiesAvailable")}</span>
+          <span className="text-default-400">
+            {t<string>("property.empty.noPropertiesAvailable")}
+          </span>
           {addable && (
             <Button
               color="primary"
@@ -327,22 +338,21 @@ const PropertySelector = (props: IProps) => {
 
         <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
           {/* Internal Properties */}
-          {(pool & PropertyPool.Internal) !== 0 && internalProperties.length > 0 &&
+          {(pool & PropertyPool.Internal) !== 0 &&
+            internalProperties.length > 0 &&
             renderPropertyGroup(t("common.label.internalProperties"), internalProperties, false)}
 
           {/* Reserved Properties */}
-          {(pool & PropertyPool.Reserved) !== 0 && reservedProperties.length > 0 &&
+          {(pool & PropertyPool.Reserved) !== 0 &&
+            reservedProperties.length > 0 &&
             renderPropertyGroup(t("common.label.reservedProperties"), reservedProperties, false)}
 
           {/* Custom Properties grouped by type */}
           {(pool & PropertyPool.Custom) !== 0 &&
             (Object.keys(groupedCustomProperties) as unknown as PropertyType[]).map((k) => {
               const ps = groupedCustomProperties[k]!;
-              return (
-                <div key={k}>
-                  {renderPropertyGroup("", ps, true)}
-                </div>
-              );
+
+              return <div key={k}>{renderPropertyGroup("", ps, true)}</div>;
             })}
         </div>
       </div>
@@ -354,7 +364,10 @@ const PropertySelector = (props: IProps) => {
       classNames={{ base: "max-w-[70vw]" }}
       footer={multiple && filteredProperties.length > 0 ? true : <Spacer />}
       size="3xl"
-      title={title ?? t<string>(multiple ? "property.modal.selectProperties" : "property.modal.selectProperty")}
+      title={
+        title ??
+        t<string>(multiple ? "property.modal.selectProperties" : "property.modal.selectProperty")
+      }
       visible={visible}
       onClose={() => {
         setVisible(false);
@@ -372,21 +385,24 @@ const PropertySelector = (props: IProps) => {
       <div className="flex flex-col gap-4">
         {(() => {
           const filter = renderFilter();
-          return filter && (
-            <>
-              {filter}
-              <Divider />
-            </>
+
+          return (
+            filter && (
+              <>
+                {filter}
+                <Divider />
+              </>
+            )
           );
         })()}
         <div className="flex items-center justify-between">
           <Input
-            size="sm"
+            className="w-64"
             placeholder={t<string>("property.action.searchProperties")}
+            size="sm"
             startContent={<SearchOutlined className="text-small" />}
             value={keyword}
             onValueChange={setKeyword}
-            className="w-64"
           />
           <div className="flex items-center gap-4">
             <div className="text-sm text-default-500">

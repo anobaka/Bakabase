@@ -19,10 +19,7 @@ const generateTrees = (): TreeNode[] => {
   return trees;
 };
 
-const generateTreeLayer = (
-  restDepth: number,
-  maxBranchCount: number,
-): TreeNode[] => {
+const generateTreeLayer = (restDepth: number, maxBranchCount: number): TreeNode[] => {
   const nodes: TreeNode[] = [];
   const branchCount = Math.floor(Math.random() * maxBranchCount);
 

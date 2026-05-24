@@ -17,6 +17,7 @@ export function areMarksEqual(
   try {
     const configA = JSON.parse(markA.configJson || "{}");
     const configB = JSON.parse(markB.configJson || "{}");
+
     return _.isEqual(configA, configB);
   } catch {
     // If JSON parsing fails, fall back to string comparison

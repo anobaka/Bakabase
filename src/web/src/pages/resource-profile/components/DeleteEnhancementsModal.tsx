@@ -38,13 +38,12 @@ const DeleteEnhancementsModal = ({ profile, onDeleted, onDestroyed }: Props) => 
 
   const getEnhancerName = (enhancerId: number): string => {
     const enhancer = enhancerDescriptors.find((e) => e.id === enhancerId);
+
     return enhancer?.name ?? `Enhancer ${enhancerId}`;
   };
 
   const selectDataSource = useMemo(() => {
-    const options = [
-      { value: "all", label: t("resourceProfile.label.allEnhancers") },
-    ];
+    const options = [{ value: "all", label: t("resourceProfile.label.allEnhancers") }];
 
     enhancerOptions.forEach((opt: BakabaseAbstractionsModelsDomainEnhancerFullOptions) => {
       options.push({
@@ -60,18 +59,19 @@ const DeleteEnhancementsModal = ({ profile, onDeleted, onDestroyed }: Props) => 
     setIsDeleting(true);
     try {
       // Temporary: Use fetch directly until SDK is regenerated
-      const baseUrl = "";  // Uses relative URL which works with proxy
+      const baseUrl = ""; // Uses relative URL which works with proxy
+
       if (selectedEnhancerId === "all") {
         // Delete all enhancements for this profile
         await fetch(
           `${baseUrl}/resource-profile/${profile.id}/enhancement?deleteEmptyOnly=${deleteEmptyOnly}`,
-          { method: "DELETE" }
+          { method: "DELETE" },
         );
       } else {
         // Delete enhancements for specific enhancer
         await fetch(
           `${baseUrl}/resource-profile/${profile.id}/enhancer/${selectedEnhancerId}/enhancement?deleteEmptyOnly=${deleteEmptyOnly}`,
-          { method: "DELETE" }
+          { method: "DELETE" },
         );
       }
       onDeleted?.();
@@ -86,10 +86,7 @@ const DeleteEnhancementsModal = ({ profile, onDeleted, onDestroyed }: Props) => 
   return (
     <Modal
       defaultVisible
-      size="md"
-      title={t<string>("resourceProfile.modal.deleteEnhancementsTitle")}
-      onDestroyed={onDestroyed}
-      footer={(
+      footer={
         <div className="flex justify-end gap-2">
           <Button variant="light" onPress={() => onDestroyed?.()}>
             {t<string>("common.action.cancel")}
@@ -103,22 +100,30 @@ const DeleteEnhancementsModal = ({ profile, onDeleted, onDestroyed }: Props) => 
             {t<string>("common.action.delete")}
           </Button>
         </div>
-      )}
+      }
+      size="md"
+      title={t<string>("resourceProfile.modal.deleteEnhancementsTitle")}
+      onDestroyed={onDestroyed}
     >
       <div className="flex flex-col gap-4">
         <div className="text-sm">
           {t("resourceProfile.tip.deleteEnhancementsForProfile")}:{" "}
-          <Chip color="primary" size="sm" variant="flat">{profile.name}</Chip>
+          <Chip color="primary" size="sm" variant="flat">
+            {profile.name}
+          </Chip>
         </div>
 
         {enhancerOptions.length > 0 ? (
           <div>
-            <label className="text-sm font-medium mb-2 block">{t("resourceProfile.label.selectEnhancer")}</label>
+            <label className="text-sm font-medium mb-2 block">
+              {t("resourceProfile.label.selectEnhancer")}
+            </label>
             <Select
-              selectedKeys={[selectedEnhancerId]}
               dataSource={selectDataSource}
+              selectedKeys={[selectedEnhancerId]}
               onSelectionChange={(keys) => {
                 const key = Array.from(keys)[0] as string;
+
                 setSelectedEnhancerId(key);
               }}
             />
@@ -129,10 +134,7 @@ const DeleteEnhancementsModal = ({ profile, onDeleted, onDestroyed }: Props) => 
           </div>
         )}
 
-        <Checkbox
-          isSelected={deleteEmptyOnly}
-          onValueChange={setDeleteEmptyOnly}
-        >
+        <Checkbox isSelected={deleteEmptyOnly} onValueChange={setDeleteEmptyOnly}>
           <div className="flex flex-col">
             <span>{t("resourceProfile.label.deleteEmptyRecordsOnly")}</span>
             <span className="text-xs text-default-400">
@@ -141,9 +143,7 @@ const DeleteEnhancementsModal = ({ profile, onDeleted, onDestroyed }: Props) => 
           </div>
         </Checkbox>
 
-        <div className="text-sm text-danger">
-          {t("resourceProfile.warning.cannotBeUndone")}
-        </div>
+        <div className="text-sm text-danger">{t("resourceProfile.warning.cannotBeUndone")}</div>
       </div>
     </Modal>
   );

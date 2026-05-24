@@ -1,22 +1,29 @@
+import type { DLsiteWork } from "../types";
+
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, CircularProgress, Tooltip } from "@heroui/react";
 import { AiOutlineDownload, AiOutlineStop } from "react-icons/ai";
 
+import { DOWNLOAD_TASK_ID_PREFIX } from "../types";
+
 import BApi from "@/sdk/BApi";
 import { useBTasksStore } from "@/stores/bTasks";
 import { useDLsiteOptionsStore } from "@/stores/options";
 import { BTaskStatus } from "@/sdk/constants";
-import type { DLsiteWork } from "../types";
-import { DOWNLOAD_TASK_ID_PREFIX } from "../types";
 
 /** Standalone download button - subscribes to stores directly to bypass Table memoization */
-export function DownloadButton({ work, onSetWorksLocalPath }: {
+export function DownloadButton({
+  work,
+  onSetWorksLocalPath,
+}: {
   work: DLsiteWork;
   onSetWorksLocalPath: (workId: string, localPath: string) => void;
 }) {
   const { t } = useTranslation();
-  const downloadTask = useBTasksStore((s) => s.tasks.find((task) => task.id === `${DOWNLOAD_TASK_ID_PREFIX}${work.workId}`));
+  const downloadTask = useBTasksStore((s) =>
+    s.tasks.find((task) => task.id === `${DOWNLOAD_TASK_ID_PREFIX}${work.workId}`),
+  );
   const hasDownloadDir = !!useDLsiteOptionsStore((s) => s.data?.defaultPath);
   const [isStarting, setIsStarting] = useState(false);
 
@@ -27,12 +34,16 @@ export function DownloadButton({ work, onSetWorksLocalPath }: {
     }
   }, [isStarting, downloadTask]);
 
-  const isDownloading = isStarting || downloadTask?.status === BTaskStatus.Running || downloadTask?.status === BTaskStatus.NotStarted;
+  const isDownloading =
+    isStarting ||
+    downloadTask?.status === BTaskStatus.Running ||
+    downloadTask?.status === BTaskStatus.NotStarted;
 
   const handleDownload = async () => {
     setIsStarting(true);
     try {
       const rsp = await BApi.dlsiteWork.downloadDLsiteWork(work.workId);
+
       if (rsp.code) {
         setIsStarting(false);
       } else if (rsp.data) {
@@ -45,25 +56,36 @@ export function DownloadButton({ work, onSetWorksLocalPath }: {
 
   const handleStop = async () => {
     const taskId = `${DOWNLOAD_TASK_ID_PREFIX}${work.workId}`;
+
     await BApi.backgroundTask.stopBackgroundTask(taskId);
   };
 
   if (isDownloading) {
     return (
-      <Tooltip content={
-        <div className="text-center">
-          <div>{downloadTask?.process || t("resourceSource.dlsite.action.downloading")}</div>
-          <div className="text-xs mt-1">{t("resourceSource.dlsite.action.stopDownload")}</div>
-        </div>
-      }>
+      <Tooltip
+        content={
+          <div className="text-center">
+            <div>{downloadTask?.process || t("resourceSource.dlsite.action.downloading")}</div>
+            <div className="text-xs mt-1">{t("resourceSource.dlsite.action.stopDownload")}</div>
+          </div>
+        }
+      >
         <div
           className="relative w-8 h-8 flex items-center justify-center cursor-pointer group"
+          role="button"
+          tabIndex={0}
           onClick={handleStop}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              handleStop();
+            }
+          }}
         >
           <CircularProgress
+            showValueLabel
             className="group-hover:hidden"
             color="primary"
-            showValueLabel
             size="sm"
             value={downloadTask?.percentage ?? 0}
           />
@@ -76,12 +98,18 @@ export function DownloadButton({ work, onSetWorksLocalPath }: {
   if (work.isDownloaded) return null;
 
   return (
-    <Tooltip content={hasDownloadDir ? t("resourceSource.dlsite.action.download") : t("resourceSource.dlsite.action.setDownloadDir")}>
+    <Tooltip
+      content={
+        hasDownloadDir
+          ? t("resourceSource.dlsite.action.download")
+          : t("resourceSource.dlsite.action.setDownloadDir")
+      }
+    >
       <span>
         <Button
+          isIconOnly
           color="warning"
           isDisabled={!hasDownloadDir}
-          isIconOnly
           size="sm"
           variant="light"
           onPress={handleDownload}

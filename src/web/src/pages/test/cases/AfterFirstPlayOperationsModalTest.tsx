@@ -4,14 +4,17 @@ import AfterFirstPlayOperationsModal from "@/pages/file-processor/components/Aft
 
 const AfterFirstPlayOperationsModalTest = () => {
   const { createPortal } = useBakabaseContext();
+
   return (
-    <Button onPress={() => {
-      createPortal(AfterFirstPlayOperationsModal, {
-        entry: { path: '/path/to/file' },
-      });
-    }}>
+    <Button
+      onPress={() => {
+        createPortal(AfterFirstPlayOperationsModal, {
+          entry: { path: "/path/to/file" },
+        });
+      }}
+    >
       Open
-    </Button >
+    </Button>
   );
 };
 

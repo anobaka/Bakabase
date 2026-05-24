@@ -31,15 +31,15 @@ const CopyMarksSidebar = () => {
       <div className="flex-shrink-0 border-l border-default-200">
         <Button
           isIconOnly
-          variant="light"
           className="h-full rounded-none px-2"
+          variant="light"
           onPress={toggleSidebar}
         >
           <Badge
-            content={candidateGroups.length}
             color="primary"
-            size="sm"
+            content={candidateGroups.length}
             isInvisible={candidateGroups.length === 0}
+            size="sm"
           >
             <AiOutlineLeft className="text-lg" />
           </Badge>
@@ -53,12 +53,7 @@ const CopyMarksSidebar = () => {
       {/* Header */}
       <div className="flex items-center justify-between p-3 border-b border-default-200">
         <h3 className="text-sm font-medium">{t("pathMarkConfig.label.copiedMarks")}</h3>
-        <Button
-          isIconOnly
-          size="sm"
-          variant="light"
-          onPress={toggleSidebar}
-        >
+        <Button isIconOnly size="sm" variant="light" onPress={toggleSidebar}>
           <AiOutlineRight className="text-lg" />
         </Button>
       </div>
@@ -76,8 +71,8 @@ const CopyMarksSidebar = () => {
               key={group.id}
               group={group}
               isSelected={selectedGroupId === group.id}
-              onSelect={() => selectGroup(selectedGroupId === group.id ? null : group.id)}
               onRemove={() => removeGroup(group.id)}
+              onSelect={() => selectGroup(selectedGroupId === group.id ? null : group.id)}
             />
           ))
         )}
@@ -87,11 +82,11 @@ const CopyMarksSidebar = () => {
       {candidateGroups.length > 0 && (
         <div className="p-3 border-t border-default-200">
           <Button
-            size="sm"
-            variant="flat"
-            color="danger"
-            startContent={<AiOutlineDelete />}
             className="w-full"
+            color="danger"
+            size="sm"
+            startContent={<AiOutlineDelete />}
+            variant="flat"
             onPress={clearAllGroups}
           >
             {t("common.action.clearAll")}

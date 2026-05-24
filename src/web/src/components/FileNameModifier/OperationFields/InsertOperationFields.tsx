@@ -3,12 +3,9 @@
 import React from "react";
 
 import { Input, Select, NumberInput } from "../../bakaui";
-
-import {
-  FileNameModifierPosition,
-  fileNameModifierPositions,
-} from "@/sdk/constants";
 import { getFieldRequirements } from "../validation";
+
+import { FileNameModifierPosition, fileNameModifierPositions } from "@/sdk/constants";
 
 const PositionType = FileNameModifierPosition;
 const PositionTypeOptions = fileNameModifierPositions.map((opt) => ({
@@ -17,8 +14,7 @@ const PositionTypeOptions = fileNameModifierPositions.map((opt) => ({
 }));
 
 const InsertOperationFields: React.FC<any> = ({ operation, t, onChange }) => {
-  const handleChangeField = (key: string, value: any) =>
-    onChange({ ...operation, [key]: value });
+  const handleChangeField = (key: string, value: any) => onChange({ ...operation, [key]: value });
 
   const requirements = getFieldRequirements(operation);
 
@@ -46,12 +42,12 @@ const InsertOperationFields: React.FC<any> = ({ operation, t, onChange }) => {
         />
       )}
       <Select
+        disallowEmptySelection
         className="w-[160px]"
         dataSource={PositionTypeOptions.map((opt) => ({
           label: t<string>(opt.label),
           value: opt.value,
         }))}
-        disallowEmptySelection
         isRequired={requirements.position}
         label={t<string>("FileNameModifier.Label.PositionType")}
         placeholder={t<string>("FileNameModifier.Placeholder.PositionType")}

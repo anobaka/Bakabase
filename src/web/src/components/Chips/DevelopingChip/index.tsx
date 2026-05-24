@@ -9,13 +9,7 @@ type Props = {
   className?: string;
   size?: "sm" | "md" | "lg";
   variant?: "solid" | "bordered" | "light" | "flat" | "faded" | "shadow";
-  color?:
-    | "default"
-    | "primary"
-    | "secondary"
-    | "success"
-    | "warning"
-    | "danger";
+  color?: "default" | "primary" | "secondary" | "success" | "warning" | "danger";
   tooltipContent?: string;
   showTooltip?: boolean;
 };
@@ -31,9 +25,7 @@ const DevelopingChip = ({
 
   const defaultTooltipContent = (
     <>
-      {t<string>(
-        "This feature is currently in development and may not be fully functional.",
-      )}
+      {t<string>("This feature is currently in development and may not be fully functional.")}
       <br />
       {t<string>("DevelopingFeature.ExpectChanges")}
     </>
@@ -51,9 +43,9 @@ const DevelopingChip = ({
 
   return (
     <Tooltip
-      delay={2000}
       color="foreground"
       content={tooltipContent || defaultTooltipContent}
+      delay={2000}
       placement="top"
     >
       {chip}

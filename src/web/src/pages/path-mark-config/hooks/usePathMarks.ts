@@ -1,6 +1,11 @@
+import type {
+  BakabaseAbstractionsModelsDomainPathMark,
+  BakabaseAbstractionsModelsDomainConstantsPathMarkAdditionalItem,
+} from "@/sdk/Api";
+
 import { useCallback, useEffect, useRef, useState } from "react";
+
 import BApi from "@/sdk/BApi";
-import type { BakabaseAbstractionsModelsDomainPathMark, BakabaseAbstractionsModelsDomainConstantsPathMarkAdditionalItem } from "@/sdk/Api";
 import { IwFsType, PathMarkSyncStatus, PathMarkAdditionalItem } from "@/sdk/constants";
 import { usePathMarksStore } from "@/stores/pathMarks";
 
@@ -36,8 +41,10 @@ export function usePathMarks() {
     try {
       // Request both Property and MediaLibrary additional items
       // Cast to the API type since it's a flags enum and bitwise OR produces a value (3) not in the union type
-      const additionalItems = (PathMarkAdditionalItem.Property | PathMarkAdditionalItem.MediaLibrary) as BakabaseAbstractionsModelsDomainConstantsPathMarkAdditionalItem;
+      const additionalItems = (PathMarkAdditionalItem.Property |
+        PathMarkAdditionalItem.MediaLibrary) as BakabaseAbstractionsModelsDomainConstantsPathMarkAdditionalItem;
       const rsp = await BApi.pathMark.getAllPathMarks({ additionalItems });
+
       if (!rsp.code && rsp.data) {
         setAllMarks(rsp.data);
 
@@ -46,6 +53,7 @@ export function usePathMarks() {
 
         // Extract unique paths
         const paths = [...new Set(rsp.data.map((m) => m.path).filter(Boolean))] as string[];
+
         setAllPaths(paths);
       }
     } catch (error) {
@@ -59,45 +67,53 @@ export function usePathMarks() {
   }, []);
 
   // Check if paths exist on file system - only check new paths
-  const checkPathsExistence = useCallback(async (paths: string[], existingMap: Map<string, boolean>) => {
-    // Find paths that haven't been checked yet
-    const newPaths = paths.filter(p => !existingMap.has(p));
-    if (newPaths.length === 0) return existingMap;
+  const checkPathsExistence = useCallback(
+    async (paths: string[], existingMap: Map<string, boolean>) => {
+      // Find paths that haven't been checked yet
+      const newPaths = paths.filter((p) => !existingMap.has(p));
 
-    setCheckingPaths(true);
+      if (newPaths.length === 0) return existingMap;
 
-    // Check only new paths in parallel
-    const results = await Promise.all(
-      newPaths.map(async (path) => {
-        try {
-          const rsp = await BApi.file.getIwFsEntry({ path });
-          // Path exists if we get a valid response with data and type is not Invalid
-          const exists = !rsp.code && rsp.data != null && rsp.data.type !== IwFsType.Invalid;
-          return { path, exists };
-        } catch {
-          return { path, exists: false };
-        }
-      })
-    );
+      setCheckingPaths(true);
 
-    // Merge with existing map
-    const newMap = new Map(existingMap);
-    for (const { path, exists } of results) {
-      newMap.set(path, exists);
-    }
+      // Check only new paths in parallel
+      const results = await Promise.all(
+        newPaths.map(async (path) => {
+          try {
+            const rsp = await BApi.file.getIwFsEntry({ path });
+            // Path exists if we get a valid response with data and type is not Invalid
+            const exists = !rsp.code && rsp.data != null && rsp.data.type !== IwFsType.Invalid;
 
-    // Remove paths that no longer exist in allPaths
-    const pathSet = new Set(paths);
-    for (const key of newMap.keys()) {
-      if (!pathSet.has(key)) {
-        newMap.delete(key);
+            return { path, exists };
+          } catch {
+            return { path, exists: false };
+          }
+        }),
+      );
+
+      // Merge with existing map
+      const newMap = new Map(existingMap);
+
+      for (const { path, exists } of results) {
+        newMap.set(path, exists);
       }
-    }
 
-    setPathExistsMap(newMap);
-    setCheckingPaths(false);
-    return newMap;
-  }, []);
+      // Remove paths that no longer exist in allPaths
+      const pathSet = new Set(paths);
+
+      for (const key of newMap.keys()) {
+        if (!pathSet.has(key)) {
+          newMap.delete(key);
+        }
+      }
+
+      setPathExistsMap(newMap);
+      setCheckingPaths(false);
+
+      return newMap;
+    },
+    [],
+  );
 
   // Check paths existence when allPaths changes
   useEffect(() => {
@@ -109,11 +125,13 @@ export function usePathMarks() {
   // Get count of invalid paths
   const getInvalidPathsCount = useCallback((): number => {
     let count = 0;
+
     for (const path of allPaths) {
       if (pathExistsMap.has(path) && !pathExistsMap.get(path)) {
         count++;
       }
     }
+
     return count;
   }, [allPaths, pathExistsMap]);
 
@@ -128,10 +146,11 @@ export function usePathMarks() {
 
       return allMarks.filter((mark) => {
         const markPath = (mark.path || "").replace(/\\/g, "/").toLowerCase();
+
         return markPath === normalizedPath && mark.syncStatus !== PathMarkSyncStatus.PendingDelete;
       });
     },
-    [allMarks]
+    [allMarks],
   );
 
   /**
@@ -149,6 +168,7 @@ export function usePathMarks() {
 
       for (const markPath of allPaths) {
         const normalizedMarkPath = markPath.replace(/\\/g, "/").toLowerCase();
+
         if (
           normalizedPath.startsWith(normalizedMarkPath) ||
           normalizedPath === normalizedMarkPath
@@ -163,9 +183,10 @@ export function usePathMarks() {
       if (!bestMatch) return null;
 
       const marks = getMarksForPath(bestMatch);
+
       return marks.length > 0 ? { path: bestMatch, marks } : null;
     },
-    [allPaths, getMarksForPath]
+    [allPaths, getMarksForPath],
   );
 
   /**
@@ -175,7 +196,7 @@ export function usePathMarks() {
     (path: string): boolean => {
       return getMarksForPath(path).length > 0;
     },
-    [getMarksForPath]
+    [getMarksForPath],
   );
 
   /**
@@ -187,6 +208,7 @@ export function usePathMarks() {
     for (const mark of allMarks) {
       if (mark.syncStatus === PathMarkSyncStatus.PendingDelete) continue;
       const path = mark.path || "Unknown";
+
       if (!groups.has(path)) {
         groups.set(path, []);
       }
@@ -203,11 +225,16 @@ export function usePathMarks() {
   /**
    * Get marks grouped by path, filtered by existence
    */
-  const getGroupedMarksFiltered = useCallback((showOnlyInvalid: boolean): PathMarkGroup[] => {
-    const groups = getGroupedMarks();
-    if (!showOnlyInvalid) return groups;
-    return groups.filter(group => group.exists === false);
-  }, [getGroupedMarks]);
+  const getGroupedMarksFiltered = useCallback(
+    (showOnlyInvalid: boolean): PathMarkGroup[] => {
+      const groups = getGroupedMarks();
+
+      if (!showOnlyInvalid) return groups;
+
+      return groups.filter((group) => group.exists === false);
+    },
+    [getGroupedMarks],
+  );
 
   return {
     allMarks,

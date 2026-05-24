@@ -5,14 +5,7 @@ import { useTranslation } from "react-i18next";
 import { DeleteOutlined } from "@ant-design/icons";
 
 import BApi from "@/sdk/BApi";
-import {
-  Button,
-  Card,
-  CardBody,
-  CardHeader,
-  Chip,
-  Divider,
-} from "@/components/bakaui";
+import { Button, Card, CardBody, CardHeader, Chip, Divider } from "@/components/bakaui";
 import { ResourceCacheType } from "@/sdk/constants";
 
 type MediaLibraryCacheOverview = {
@@ -53,81 +46,75 @@ const CachePage = () => {
     <div>
       <p className="text-sm text-default-500 mb-4">{t("cache.description")}</p>
       <div className={"flex flex-col gap-2"}>
-        {cacheOverview?.mediaLibraryCaches &&
-          cacheOverview.mediaLibraryCaches.length > 0 && (
-            <div className={"grid grid-cols-4 gap-2"}>
-              {cacheOverview.mediaLibraryCaches.map((item, idx) => {
-                return (
-                  <Card key={idx}>
-                    <CardHeader>
-                      <div>
-                        <div className="text-md">{item.mediaLibraryName}</div>
-                        <div className="text-small text-default-500">
-                          {t<string>("cache.label.resourceCount")}: {item.resourceCount}
-                        </div>
+        {cacheOverview?.mediaLibraryCaches && cacheOverview.mediaLibraryCaches.length > 0 && (
+          <div className={"grid grid-cols-4 gap-2"}>
+            {cacheOverview.mediaLibraryCaches.map((item, idx) => {
+              return (
+                <Card key={idx}>
+                  <CardHeader>
+                    <div>
+                      <div className="text-md">{item.mediaLibraryName}</div>
+                      <div className="text-small text-default-500">
+                        {t<string>("cache.label.resourceCount")}: {item.resourceCount}
                       </div>
-                    </CardHeader>
-                    <Divider />
-                    <CardBody>
-                      {Object.keys(item.resourceCacheCountMap).map(
-                        (key, idx) => {
-                          const type = parseInt(key, 10) as ResourceCacheType;
+                    </div>
+                  </CardHeader>
+                  <Divider />
+                  <CardBody>
+                    {Object.keys(item.resourceCacheCountMap).map((key, idx) => {
+                      const type = parseInt(key, 10) as ResourceCacheType;
 
-                          return (
-                            <div
-                              key={idx}
-                              className={"flex items-center gap-2"}
-                            >
-                              <Chip radius={"sm"} size={"sm"}>
-                                {t<string>("cache.label.cached")}{" "}
-                                {t<string>(`cache.resourceCacheType.${ResourceCacheType[type].toLowerCase()}`)}
-                              </Chip>
-                              {item.resourceCacheCountMap[type]}
-                              <Button
-                                isIconOnly
-                                color={"danger"}
-                                size={"sm"}
-                                variant={"light"}
-                                onClick={() => {
-                                  BApi.cache
-                                    .deleteResourceCacheByMediaLibraryIdAndCacheType(
-                                      item.mediaLibraryId,
-                                      parseInt(key, 10) as ResourceCacheType,
-                                    )
-                                    .then((r) => {
-                                      if (!r.code) {
-                                        reload();
-                                      }
-                                    });
-                                }}
-                              >
-                                <DeleteOutlined className={"text-base"} />
-                              </Button>
-                            </div>
-                          );
-                        },
-                      )}
-                    </CardBody>
-                    {/* <Divider /> */}
-                    {/* <CardFooter> */}
-                    {/*   <Link isExternal showAnchorIcon href="https://github.com/nextui-org/nextui"> */}
-                    {/*     Visit source code on GitHub. */}
-                    {/*   </Link> */}
-                    {/* </CardFooter> */}
-                  </Card>
-                );
-              })}
-            </div>
-          )}
+                      return (
+                        <div key={idx} className={"flex items-center gap-2"}>
+                          <Chip radius={"sm"} size={"sm"}>
+                            {t<string>("cache.label.cached")}{" "}
+                            {t<string>(
+                              `cache.resourceCacheType.${ResourceCacheType[type].toLowerCase()}`,
+                            )}
+                          </Chip>
+                          {item.resourceCacheCountMap[type]}
+                          <Button
+                            isIconOnly
+                            color={"danger"}
+                            size={"sm"}
+                            variant={"light"}
+                            onClick={() => {
+                              BApi.cache
+                                .deleteResourceCacheByMediaLibraryIdAndCacheType(
+                                  item.mediaLibraryId,
+                                  parseInt(key, 10) as ResourceCacheType,
+                                )
+                                .then((r) => {
+                                  if (!r.code) {
+                                    reload();
+                                  }
+                                });
+                            }}
+                          >
+                            <DeleteOutlined className={"text-base"} />
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </CardBody>
+                  {/* <Divider /> */}
+                  {/* <CardFooter> */}
+                  {/*   <Link isExternal showAnchorIcon href="https://github.com/nextui-org/nextui"> */}
+                  {/*     Visit source code on GitHub. */}
+                  {/*   </Link> */}
+                  {/* </CardFooter> */}
+                </Card>
+              );
+            })}
+          </div>
+        )}
         {cacheOverview?.unassociatedCaches &&
           cacheOverview.unassociatedCaches.resourceCount > 0 && (
             <div className={"grid grid-cols-4 gap-2"}>
               <Card>
                 <CardHeader>
                   <div>
-                    <div className="text-md">
-                      {t<string>("cache.label.unassociatedResources")}
-                    </div>
+                    <div className="text-md">{t<string>("cache.label.unassociatedResources")}</div>
                     <div className="text-small text-default-500">
                       {t<string>("cache.label.resourceCount")}:{" "}
                       {cacheOverview.unassociatedCaches.resourceCount}
@@ -136,40 +123,42 @@ const CachePage = () => {
                 </CardHeader>
                 <Divider />
                 <CardBody>
-                  {Object.keys(
-                    cacheOverview.unassociatedCaches.resourceCacheCountMap,
-                  ).map((key, idx) => {
-                    const type = parseInt(key, 10) as ResourceCacheType;
+                  {Object.keys(cacheOverview.unassociatedCaches.resourceCacheCountMap).map(
+                    (key, idx) => {
+                      const type = parseInt(key, 10) as ResourceCacheType;
 
-                    return (
-                      <div key={idx} className={"flex items-center gap-2"}>
-                        <Chip radius={"sm"} size={"sm"}>
-                          {t<string>("cache.label.cached")}{" "}
-                          {t<string>(`cache.resourceCacheType.${ResourceCacheType[type].toLowerCase()}`)}
-                        </Chip>
-                        {cacheOverview.unassociatedCaches!.resourceCacheCountMap[type]}
-                        <Button
-                          isIconOnly
-                          color={"danger"}
-                          size={"sm"}
-                          variant={"light"}
-                          onClick={() => {
-                            BApi.cache
-                              .deleteUnassociatedResourceCacheByCacheType(
-                                parseInt(key, 10) as ResourceCacheType,
-                              )
-                              .then((r) => {
-                                if (!r.code) {
-                                  reload();
-                                }
-                              });
-                          }}
-                        >
-                          <DeleteOutlined className={"text-base"} />
-                        </Button>
-                      </div>
-                    );
-                  })}
+                      return (
+                        <div key={idx} className={"flex items-center gap-2"}>
+                          <Chip radius={"sm"} size={"sm"}>
+                            {t<string>("cache.label.cached")}{" "}
+                            {t<string>(
+                              `cache.resourceCacheType.${ResourceCacheType[type].toLowerCase()}`,
+                            )}
+                          </Chip>
+                          {cacheOverview.unassociatedCaches!.resourceCacheCountMap[type]}
+                          <Button
+                            isIconOnly
+                            color={"danger"}
+                            size={"sm"}
+                            variant={"light"}
+                            onClick={() => {
+                              BApi.cache
+                                .deleteUnassociatedResourceCacheByCacheType(
+                                  parseInt(key, 10) as ResourceCacheType,
+                                )
+                                .then((r) => {
+                                  if (!r.code) {
+                                    reload();
+                                  }
+                                });
+                            }}
+                          >
+                            <DeleteOutlined className={"text-base"} />
+                          </Button>
+                        </div>
+                      );
+                    },
+                  )}
                 </CardBody>
               </Card>
             </div>

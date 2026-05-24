@@ -48,11 +48,7 @@ export default {
       return num <= 9 ? `0${num}` : `${num}`;
     }
 
-    const [Y, M, D] = [
-      date.getFullYear(),
-      fillZero(date.getMonth() + 1),
-      fillZero(date.getDate()),
-    ];
+    const [Y, M, D] = [date.getFullYear(), fillZero(date.getMonth() + 1), fillZero(date.getDate())];
 
     const [h, m, s] = [
       fillZero(date.getHours()),
@@ -280,10 +276,7 @@ export function humanFileSize(bytes, si = false, dp = 1) {
   do {
     bytes /= thresh;
     ++u;
-  } while (
-    Math.round(Math.abs(bytes) * r) / r >= thresh &&
-    u < units.length - 1
-  );
+  } while (Math.round(Math.abs(bytes) * r) / r >= thresh && u < units.length - 1);
 
   return `${bytes.toFixed(dp)} ${units[u]}`;
 }
@@ -291,10 +284,7 @@ export function humanFileSize(bytes, si = false, dp = 1) {
 const layerRegex = "[^\\/]+";
 const pathSeparatorInRegexStr = "\\/";
 
-export function buildLayerBasedPathRegexString(
-  layer,
-  extensions?: string[],
-): string {
+export function buildLayerBasedPathRegexString(layer, extensions?: string[]): string {
   let reg = "^";
 
   for (let i = 0; i < layer; i++) {
@@ -317,10 +307,7 @@ export function buildLayerBasedPathRegexString(
   return reg;
 }
 
-export function prependLayersToLayerBasedPathRegexString(
-  regStr,
-  layerCount,
-): string {
+export function prependLayersToLayerBasedPathRegexString(regStr, layerCount): string {
   if (layerCount == 0) {
     return regStr;
   } else {
@@ -334,9 +321,7 @@ export function prependLayersToLayerBasedPathRegexString(
 
       for (let i = layerCount; i < 0; i++) {
         if (core.startsWith(layerRegex)) {
-          core = core.substring(
-            layerRegex.length + pathSeparatorInRegexStr.length,
-          );
+          core = core.substring(layerRegex.length + pathSeparatorInRegexStr.length);
         } else {
           // invalid
           return regStr;
@@ -372,10 +357,7 @@ export function prependLayersToLayerBasedPathRegexString(
 //   }
 // }
 
-export function parseLayerCountFromLayerBasedPathRegexString(
-  regStr,
-  strict: boolean,
-): number {
+export function parseLayerCountFromLayerBasedPathRegexString(regStr, strict: boolean): number {
   if (regStr == undefined) {
     return 0;
   }
@@ -384,9 +366,7 @@ export function parseLayerCountFromLayerBasedPathRegexString(
 
   while (coreRegStr.length > 0) {
     if (coreRegStr.startsWith(layerRegex)) {
-      coreRegStr = coreRegStr.substring(
-        layerRegex.length + pathSeparatorInRegexStr.length,
-      );
+      coreRegStr = coreRegStr.substring(layerRegex.length + pathSeparatorInRegexStr.length);
       count += 1;
     } else {
       if (strict) {
@@ -448,11 +428,7 @@ export function findCapturingGroupsInRegex(regex: string): string[] {
   return regex?.match(/\(\?<(\w+)>/g)?.map((match) => match.slice(3, -1)) || [];
 }
 
-
-export function createPortalOfComponent(
-  Component: React.ComponentType<any>,
-  props: any,
-) {
+export function createPortalOfComponent(Component: React.ComponentType<any>, props: any) {
   const key = uuidv4();
   const node = document.createElement("div");
 
@@ -524,7 +500,7 @@ export function getStandardParentPath(path?: string): string | undefined {
   if (path === undefined) {
     return undefined;
   }
-  
+
   // 2. 如果路径已经是空字符串（代表在“我的电脑”/设备列表层级），则没有上级了
   if (path === "") {
     return undefined;
@@ -543,33 +519,29 @@ export function getStandardParentPath(path?: string): string | undefined {
     // 所以我们需要结合 prefix 判断
     const match = stdPath.match(/^([\\/]+)(.*)/);
     const prefix = match ? match[1] : "";
-    
+
     // 如果有前缀且只有一段（例如 /usr），且当前路径不仅仅是前缀本身
     if (prefix && segments.length === 1 && stdPath !== prefix) {
-        return prefix; // 返回根目录 "/"
+      return prefix; // 返回根目录 "/"
     }
-    
+
     // 其他情况（如 "C:" 或 "/"），返回空字符串触发获取 Drivers
     return "";
   }
 
   // 4. 标准的截断逻辑
   const suffix = segments.slice(0, -1).join(BusinessConstants.pathSeparator);
-  
+
   const match = stdPath.match(/^([\\/]+)(.*)/);
   const prefix = match ? match[1] : "";
-  
+
   // 5. 组合
   return `${prefix}${suffix}`;
 }
 
 export function buildLogger(key: string) {
   return ((...args) => {
-    return Function.prototype.bind.call(
-      console.log,
-      console,
-      chalk.blue(`[${key}]`),
-    );
+    return Function.prototype.bind.call(console.log, console, chalk.blue(`[${key}]`));
   })();
 }
 
@@ -678,12 +650,7 @@ export function getValue(object: any, key: string, separator: string = ".") {
   return object;
 }
 
-export function setValue(
-  object: any,
-  key: string,
-  value: any,
-  separator: string = ".",
-) {
+export function setValue(object: any, key: string, value: any, separator: string = ".") {
   const segments = key.split(separator);
 
   while (true) {
@@ -701,10 +668,7 @@ export function setValue(
   }
 }
 
-export function equalsOrIsChildOf(
-  child: HTMLElement | null,
-  parent: HTMLElement | null,
-) {
+export function equalsOrIsChildOf(child: HTMLElement | null, parent: HTMLElement | null) {
   if (!child || !parent) {
     return false;
   }
@@ -732,9 +696,7 @@ export function execAll(
 
 export function splitPathIntoSegments(path: string): string[] {
   const sp = standardizePath(path)!;
-  const segments = sp
-    .split(BusinessConstants.pathSeparator)
-    .filter((a) => a?.length > 0);
+  const segments = sp.split(BusinessConstants.pathSeparator).filter((a) => a?.length > 0);
 
   if (sp.startsWith(BusinessConstants.uncPathPrefix)) {
     segments[0] = `${BusinessConstants.uncPathPrefix}${segments[0]}`;
@@ -798,11 +760,7 @@ export function splitStringWithEscapeCharNested(
   lowLevelSeparator: string,
   escapeChar: string,
 ): string[][] | null {
-  const lowLevelStrings = splitStringWithEscapeChar(
-    str,
-    highLevelSeparator,
-    escapeChar,
-  );
+  const lowLevelStrings = splitStringWithEscapeChar(str, highLevelSeparator, escapeChar);
 
   if (lowLevelStrings === null) {
     return null;
@@ -895,9 +853,7 @@ function hexToRGBAWithAlpha(hex: string, alphaAdjustment: number): string {
 }
 
 function adjustRGBAWithAlpha(rgba: string, alphaAdjustment: number): string {
-  const match = rgba.match(
-    /rgba?\((\d+),\s*(\d+),\s*(\d+)(,\s*(\d+\.?\d*))?\)/,
-  );
+  const match = rgba.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(,\s*(\d+\.?\d*))?\)/);
 
   if (!match) throw new Error("Invalid RGB(A) format");
   const [_, r, g, b, a = 1] = match.map(Number);
@@ -907,9 +863,7 @@ function adjustRGBAWithAlpha(rgba: string, alphaAdjustment: number): string {
 }
 
 function adjustHSLAWithAlpha(hsla: string, alphaAdjustment: number): string {
-  const match = hsla.match(
-    /hsla?\((\d+),\s*(\d+)%,\s*(\d+)%(,\s*(\d+\.?\d*))?\)/,
-  );
+  const match = hsla.match(/hsla?\((\d+),\s*(\d+)%,\s*(\d+)%(,\s*(\d+\.?\d*))?\)/);
 
   if (!match) throw new Error("Invalid HSL(A) format");
   const [_, h, s, l, a = 1] = match.map(Number);
@@ -922,10 +876,7 @@ export function autoBackgroundColor(color: string): string {
   return adjustAlpha(color, 0.2);
 }
 
-export function generateNextWithPrefix(
-  prefix: string,
-  currentList: string[],
-): string {
+export function generateNextWithPrefix(prefix: string, currentList: string[]): string {
   const regex = new RegExp(`^${prefix} (\\d+)$`);
 
   // Extract numbers from the list
@@ -993,9 +944,7 @@ export function willCauseCircleReference<TObject, TKey>(
 }
 
 export function isPromise(value: any): boolean {
-  return (
-    !!value && typeof value === "object" && typeof value.then === "function"
-  );
+  return !!value && typeof value === "object" && typeof value.then === "function";
 }
 
 export function extractErrorMessage(error: unknown): string {

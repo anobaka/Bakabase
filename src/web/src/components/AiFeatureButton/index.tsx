@@ -1,10 +1,11 @@
 "use client";
 
 import type { ComponentProps } from "react";
+import type { AiFeature } from "@/sdk/constants";
+
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/bakaui";
-import type { AiFeature } from "@/sdk/constants";
 import useAiFeatureConfigured from "@/hooks/useAiFeatureConfigured";
 
 type Props = ComponentProps<typeof Button> & {

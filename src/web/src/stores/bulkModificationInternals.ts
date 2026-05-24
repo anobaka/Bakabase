@@ -8,9 +8,8 @@ type BulkModificationInternals = {
   update: (payload: Partial<Omit<BulkModificationInternals, "update">>) => void;
 };
 
-export const useBulkModificationInternalsStore =
-  create<BulkModificationInternals>((set, get) => ({
-    disabledPropertyKeys: {},
-    supportedStandardValueTypes: [],
-    update: (payload) => set((state) => ({ ...state, ...payload })),
-  }));
+export const useBulkModificationInternalsStore = create<BulkModificationInternals>((set, get) => ({
+  disabledPropertyKeys: {},
+  supportedStandardValueTypes: [],
+  update: (payload) => set((state) => ({ ...state, ...payload })),
+}));

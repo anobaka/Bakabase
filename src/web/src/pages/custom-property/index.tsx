@@ -45,14 +45,11 @@ const CustomPropertyPage = () => {
       p.name!.toLowerCase().includes(keyword.toLowerCase()),
   );
   const groupedFilteredProperties: { [key in PropertyType]?: IProperty[] } =
-    filteredProperties.reduce<{ [key in PropertyType]?: IProperty[] }>(
-      (s, t) => {
-        (s[t.type!] ??= []).push(t);
+    filteredProperties.reduce<{ [key in PropertyType]?: IProperty[] }>((s, t) => {
+      (s[t.type!] ??= []).push(t);
 
-        return s;
-      },
-      {},
-    );
+      return s;
+    }, {});
 
   console.log("[CustomProperty] render", groupedFilteredProperties);
 
@@ -117,7 +114,11 @@ const CustomPropertyPage = () => {
               key={k}
               className={"rounded-lg border border-default-200 bg-content1 overflow-hidden"}
             >
-              <div className={"flex items-center gap-2 px-4 py-3 bg-default-100 border-b border-default-200"}>
+              <div
+                className={
+                  "flex items-center gap-2 px-4 py-3 bg-default-100 border-b border-default-200"
+                }
+              >
                 <PropertyTypeIcon textVariant={"default"} type={ps[0].type} />
                 <span className={"text-default-500 text-sm"}>({ps.length})</span>
               </div>

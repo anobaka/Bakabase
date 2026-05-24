@@ -1,8 +1,9 @@
 import type { BTask } from "@/core/models/BTask";
-import { BTaskStatus } from "@/sdk/constants";
 
 import { create } from "zustand";
 import _ from "lodash";
+
+import { BTaskStatus } from "@/sdk/constants";
 
 interface BTasksState {
   tasks: BTask[];
@@ -24,6 +25,7 @@ export const useBTasksStore = create<BTasksState>((set) => ({
         newState[idx] = task;
       } else {
         newState.push(task);
+
         return { tasks: _.sortBy(newState, (x) => x.createdAt) };
       }
 

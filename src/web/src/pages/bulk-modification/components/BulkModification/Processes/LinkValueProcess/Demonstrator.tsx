@@ -2,13 +2,14 @@
 
 import type { LinkProcessOptions } from "./models";
 import type { BulkModificationVariable } from "@/pages/bulk-modification/components/BulkModification/models";
+import type { BulkModificationLinkProcessOperation } from "@/sdk/constants";
 
 import { useTranslation } from "react-i18next";
 
-import { BulkModificationLinkProcessOperation } from "@/sdk/constants";
+import { StringValueProcessDemonstrator } from "../StringValueProcess";
+
 import { ProcessValueDemonstrator } from "@/pages/bulk-modification/components/BulkModification/ProcessValue";
 import { Chip } from "@/components/bakaui";
-import { StringValueProcessDemonstrator } from "../StringValueProcess";
 
 type Props = {
   operation: BulkModificationLinkProcessOperation;
@@ -21,12 +22,18 @@ const Demonstrator = ({ operation, options, variables }: Props) => {
 
   switch (operation) {
     case bulkModification.operation.link.delete:
-      return <Chip color="danger" size="sm">{t("bulkModification.operation.link.delete")}</Chip>;
+      return (
+        <Chip color="danger" size="sm">
+          {t("bulkModification.operation.link.delete")}
+        </Chip>
+      );
     case bulkModification.operation.link.setWithFixedValue:
       return (
         <span>
           {t("bulkModification.operation.link.setWithFixedValue")}:{" "}
-          {options?.value && <ProcessValueDemonstrator value={options.value} variables={variables} />}
+          {options?.value && (
+            <ProcessValueDemonstrator value={options.value} variables={variables} />
+          )}
         </span>
       );
     case bulkModification.operation.link.setText:

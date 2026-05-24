@@ -52,21 +52,26 @@ const ResizablePanelDivider: React.FC<Props> = ({
   const [panelWidth, setPanelWidth] = useState<number>(() => {
     if (storageKey && typeof window !== "undefined") {
       const stored = localStorage.getItem(storageKey);
+
       if (stored) {
         const parsed = parseInt(stored, 10);
+
         if (!isNaN(parsed) && parsed >= minWidth && parsed <= maxWidth) {
           return parsed;
         }
       }
     }
+
     return defaultWidth;
   });
 
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     if (collapsedStorageKey && typeof window !== "undefined") {
       const stored = localStorage.getItem(collapsedStorageKey);
+
       return stored === "true";
     }
+
     return false;
   });
 
@@ -91,34 +96,41 @@ const ResizablePanelDivider: React.FC<Props> = ({
   const targetCollapsed = useRef(collapsed);
 
   // Start drag operation
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    isDragging.current = true;
-    startX.current = e.clientX;
-    startWidth.current = panelWidth;
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      isDragging.current = true;
+      startX.current = e.clientX;
+      startWidth.current = panelWidth;
 
-    // Activate overlay mode: placeholder keeps current width, overlay handles drag
-    setOverlayState({
-      active: true,
-      width: panelWidth,
-      placeholderWidth: panelWidth,
-    });
+      // Activate overlay mode: placeholder keeps current width, overlay handles drag
+      setOverlayState({
+        active: true,
+        width: panelWidth,
+        placeholderWidth: panelWidth,
+      });
 
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-  }, [panelWidth]);
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+    },
+    [panelWidth],
+  );
 
   // Handle drag movement - only update overlay width via DOM
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isDragging.current || !overlayRef.current) return;
+  const handleMouseMove = useCallback(
+    (e: MouseEvent) => {
+      if (!isDragging.current || !overlayRef.current) return;
 
-    const delta = e.clientX - startX.current;
-    let newWidth = startWidth.current + delta;
-    newWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
+      const delta = e.clientX - startX.current;
+      let newWidth = startWidth.current + delta;
 
-    // Only update overlay DOM directly, no React state changes
-    overlayRef.current.style.width = `${newWidth}px`;
-  }, [minWidth, maxWidth]);
+      newWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
+
+      // Only update overlay DOM directly, no React state changes
+      overlayRef.current.style.width = `${newWidth}px`;
+    },
+    [minWidth, maxWidth],
+  );
 
   // End drag operation
   const handleMouseUp = useCallback(() => {
@@ -148,6 +160,7 @@ const ResizablePanelDivider: React.FC<Props> = ({
     if (isAnimating.current) return;
 
     const newCollapsed = !collapsed;
+
     targetCollapsed.current = newCollapsed;
     isAnimating.current = true;
 
@@ -189,17 +202,20 @@ const ResizablePanelDivider: React.FC<Props> = ({
   }, [collapsed, panelWidth, collapsedStorageKey]);
 
   // Handle overlay transition end
-  const handleOverlayTransitionEnd = useCallback((e: React.TransitionEvent) => {
-    if (e.propertyName !== "width" || !isAnimating.current) return;
+  const handleOverlayTransitionEnd = useCallback(
+    (e: React.TransitionEvent) => {
+      if (e.propertyName !== "width" || !isAnimating.current) return;
 
-    isAnimating.current = false;
-    const newCollapsed = targetCollapsed.current;
+      isAnimating.current = false;
+      const newCollapsed = targetCollapsed.current;
 
-    // Deactivate overlay and update collapsed state
-    setOverlayState(null);
-    setCollapsed(newCollapsed);
-    onCollapsedChange?.(newCollapsed);
-  }, [onCollapsedChange]);
+      // Deactivate overlay and update collapsed state
+      setOverlayState(null);
+      setCollapsed(newCollapsed);
+      onCollapsedChange?.(newCollapsed);
+    },
+    [onCollapsedChange],
+  );
 
   // Global mouse event listeners
   useEffect(() => {
@@ -235,7 +251,14 @@ const ResizablePanelDivider: React.FC<Props> = ({
         {/* Draggable divider bar - hide when collapsed and no overlay */}
         {(!collapsed || overlayState) && (
           <div
+            aria-label="Resize panel"
+            aria-orientation="vertical"
+            aria-valuemax={100}
+            aria-valuemin={0}
+            aria-valuenow={Math.round(actualLeftWidth)}
             className="w-1 h-full cursor-col-resize hover:bg-primary/30 active:bg-primary/50 transition-colors group"
+            role="slider"
+            tabIndex={0}
             onMouseDown={handleMouseDown}
           >
             <div className="absolute inset-y-0 -left-1 -right-1 group-hover:bg-primary/10" />
@@ -245,10 +268,10 @@ const ResizablePanelDivider: React.FC<Props> = ({
         {/* Collapse/Expand button */}
         {collapsible && (
           <button
-            type="button"
             className={`absolute top-1/2 -translate-y-1/2 z-10 w-5 h-10 flex items-center justify-center bg-default-100 hover:bg-default-200 border border-default-300 rounded-r-md transition-colors ${collapsed && !overlayState ? "left-0" : "right-0"}`}
-            onClick={toggleCollapse}
             title={collapsed ? "Expand panel" : "Collapse panel"}
+            type="button"
+            onClick={toggleCollapse}
           >
             {collapsed && !overlayState ? (
               <RightOutlined className="text-xs text-default-600" />
@@ -260,9 +283,7 @@ const ResizablePanelDivider: React.FC<Props> = ({
       </div>
 
       {/* Right Panel - always uses flex-grow, unaffected by overlay */}
-      <div className="flex-grow min-w-0 h-full overflow-hidden">
-        {rightPanel}
-      </div>
+      <div className="flex-grow min-w-0 h-full overflow-hidden">{rightPanel}</div>
 
       {/* Overlay Panel - floats above during drag/animation */}
       {overlayState?.active && (

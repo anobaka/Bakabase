@@ -28,9 +28,7 @@ const PropertyPoolIcon = ({ pool }: Props) => {
 
   const color = getPropertyPoolColor(pool);
 
-  const poolName = pool
-    ? t<string>(`PropertyPool.${PropertyPool[pool]}`)
-    : t<string>("Unknown");
+  const poolName = pool ? t<string>(`PropertyPool.${PropertyPool[pool]}`) : t<string>("Unknown");
   const poolAbbreviation = pool
     ? t<string>(`PropertyPool.Abbreviation.${PropertyPool[pool]}`)
     : "?";

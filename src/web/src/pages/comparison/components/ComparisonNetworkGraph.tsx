@@ -1,21 +1,15 @@
 "use client";
 
+import type { PropertyPool } from "@/sdk/constants";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CloseOutlined, ReloadOutlined } from "@ant-design/icons";
 
-import {
-  Modal,
-  Spinner,
-  Chip,
-  Button,
-  Tooltip,
-  Divider,
-} from "@/components/bakaui";
+import { Modal, Spinner, Chip, Button, Tooltip, Divider } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import BriefProperty from "@/components/Chips/Property/BriefProperty";
-import type { PropertyPool } from "@/sdk/constants";
 
 // Types for the pairs response
 interface RuleScoreDetail {
@@ -95,7 +89,7 @@ interface RuleInfo {
 function computeForceLayout(
   nodes: ResourceNode[],
   edges: Edge[],
-  iterations: number = 300
+  iterations: number = 300,
 ): ResourceNode[] {
   if (nodes.length === 0) return nodes;
 
@@ -127,6 +121,7 @@ function computeForceLayout(
         const force = repulsionStrength / (distance * distance);
         const fx = (dx / distance) * force;
         const fy = (dy / distance) * force;
+
         nodeA.vx -= fx;
         nodeA.vy -= fy;
         nodeB.vx += fx;
@@ -137,6 +132,7 @@ function computeForceLayout(
     edges.forEach((edge) => {
       const sourceNode = nodeMap.get(edge.source);
       const targetNode = nodeMap.get(edge.target);
+
       if (sourceNode && targetNode) {
         const dx = targetNode.x - sourceNode.x;
         const dy = targetNode.y - sourceNode.y;
@@ -144,6 +140,7 @@ function computeForceLayout(
         const force = distance * attractionStrength * (edge.score / 100);
         const fx = (dx / distance) * force;
         const fy = (dy / distance) * force;
+
         sourceNode.vx += fx;
         sourceNode.vy += fy;
         targetNode.vx -= fx;
@@ -214,9 +211,10 @@ const ComparisonNetworkGraph = ({
   const getResourceDisplayName = useCallback(
     (resourceId: number): string => {
       const node = nodes.find((n) => n.id === resourceId);
+
       return node?.displayName || `Resource ${resourceId}`;
     },
-    [nodes]
+    [nodes],
   );
 
   const resetTransform = useCallback(() => {
@@ -232,13 +230,12 @@ const ComparisonNetworkGraph = ({
       // Fetch plan to get rules with property info
       const planResponse = await BApi.comparison.getComparisonPlan(planId);
       const planRules = planResponse.data?.rules || [];
+
       setRules(planRules as RuleInfo[]);
 
-      const pairsResponse = await BApi.comparison.getComparisonResultGroupPairs(
-        planId,
-        groupId,
-        { limit: PAIR_LIMIT }
-      );
+      const pairsResponse = await BApi.comparison.getComparisonResultGroupPairs(planId, groupId, {
+        limit: PAIR_LIMIT,
+      });
 
       const data = pairsResponse as unknown as ComparisonResultPairsResponse;
       const pairs = data.pairs || [];
@@ -248,7 +245,7 @@ const ComparisonNetworkGraph = ({
 
       const resourceIds = await BApi.comparison.getComparisonResultGroupResourceIds(
         planId,
-        groupId
+        groupId,
       );
       const ids = resourceIds.data || [];
 
@@ -275,6 +272,7 @@ const ComparisonNetworkGraph = ({
       const nodeList: ResourceNode[] = ids.map((id, index) => {
         const resource = resourceMap.get(id);
         const angle = (2 * Math.PI * index) / ids.length - Math.PI / 2;
+
         return {
           id,
           displayName: resource?.displayName || `Resource ${id}`,
@@ -303,9 +301,11 @@ const ComparisonNetworkGraph = ({
   // Canvas rendering with theme colors
   useEffect(() => {
     const canvas = canvasRef.current;
+
     if (!canvas || loading) return;
 
     const ctx = canvas.getContext("2d");
+
     if (!ctx) return;
 
     const nodeMap = new Map(nodes.map((n) => [n.id, n]));
@@ -322,6 +322,7 @@ const ComparisonNetworkGraph = ({
     edges.forEach((edge) => {
       const sourceNode = nodeMap.get(edge.source);
       const targetNode = nodeMap.get(edge.target);
+
       if (!sourceNode || !targetNode) return;
 
       const isActive = activeEdge === edge;
@@ -340,6 +341,7 @@ const ComparisonNetworkGraph = ({
     // Draw nodes
     nodes.forEach((node) => {
       const nodeRadius = 8 / transform.scale;
+
       ctx.beginPath();
       ctx.arc(node.x, node.y, nodeRadius, 0, 2 * Math.PI);
       ctx.fillStyle = colors.nodeColor;
@@ -353,9 +355,8 @@ const ComparisonNetworkGraph = ({
       ctx.fillStyle = colors.textColor;
       ctx.textAlign = "center";
       const displayName =
-        node.displayName.length > 20
-          ? node.displayName.substring(0, 20) + "..."
-          : node.displayName;
+        node.displayName.length > 20 ? node.displayName.substring(0, 20) + "..." : node.displayName;
+
       ctx.fillText(displayName, node.x, node.y + 22 / transform.scale);
     });
 
@@ -365,6 +366,7 @@ const ComparisonNetworkGraph = ({
   const screenToWorld = useCallback(
     (screenX: number, screenY: number): { x: number; y: number } => {
       const canvas = canvasRef.current;
+
       if (!canvas) return { x: 0, y: 0 };
 
       const rect = canvas.getBoundingClientRect();
@@ -375,7 +377,7 @@ const ComparisonNetworkGraph = ({
 
       return { x: worldX, y: worldY };
     },
-    [transform]
+    [transform],
   );
 
   const findEdgeAtPosition = useCallback(
@@ -387,6 +389,7 @@ const ComparisonNetworkGraph = ({
       edges.forEach((edge) => {
         const sourceNode = nodeMap.get(edge.source);
         const targetNode = nodeMap.get(edge.target);
+
         if (!sourceNode || !targetNode) return;
 
         const dx = targetNode.x - sourceNode.x;
@@ -397,10 +400,7 @@ const ComparisonNetworkGraph = ({
 
         const t = Math.max(
           0,
-          Math.min(
-            1,
-            ((x - sourceNode.x) * dx + (y - sourceNode.y) * dy) / lengthSq
-          )
+          Math.min(1, ((x - sourceNode.x) * dx + (y - sourceNode.y) * dy) / lengthSq),
         );
         const nearestX = sourceNode.x + t * dx;
         const nearestY = sourceNode.y + t * dy;
@@ -414,7 +414,7 @@ const ComparisonNetworkGraph = ({
 
       return closestEdge;
     },
-    [nodes, edges, transform.scale]
+    [nodes, edges, transform.scale],
   );
 
   const handleWheel = useCallback(
@@ -422,6 +422,7 @@ const ComparisonNetworkGraph = ({
       e.preventDefault();
 
       const canvas = canvasRef.current;
+
       if (!canvas) return;
 
       const rect = canvas.getBoundingClientRect();
@@ -441,24 +442,22 @@ const ComparisonNetworkGraph = ({
         offsetY: newOffsetY,
       });
     },
-    [transform]
+    [transform],
   );
 
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent<HTMLCanvasElement>) => {
-      if (e.button === 1 || (e.button === 0 && (e.ctrlKey || e.metaKey))) {
-        e.preventDefault();
-        setIsDragging(true);
-        setDragStart({ x: e.clientX, y: e.clientY });
-      }
-    },
-    []
-  );
+  const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (e.button === 1 || (e.button === 0 && (e.ctrlKey || e.metaKey))) {
+      e.preventDefault();
+      setIsDragging(true);
+      setDragStart({ x: e.clientX, y: e.clientY });
+    }
+  }, []);
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
       if (isDragging) {
         const canvas = canvasRef.current;
+
         if (!canvas) return;
 
         const rect = canvas.getBoundingClientRect();
@@ -475,6 +474,7 @@ const ComparisonNetworkGraph = ({
         }));
 
         setDragStart({ x: e.clientX, y: e.clientY });
+
         return;
       }
 
@@ -482,12 +482,13 @@ const ComparisonNetworkGraph = ({
 
       const { x, y } = screenToWorld(e.clientX, e.clientY);
       const edge = findEdgeAtPosition(x, y);
+
       setHoveredEdge(edge);
       if (edge) {
         setTooltipPosition({ x: e.clientX, y: e.clientY });
       }
     },
-    [isDragging, dragStart, pinnedEdge, screenToWorld, findEdgeAtPosition]
+    [isDragging, dragStart, pinnedEdge, screenToWorld, findEdgeAtPosition],
   );
 
   const handleMouseUp = useCallback(() => {
@@ -509,7 +510,7 @@ const ComparisonNetworkGraph = ({
         setPinnedEdge(null);
       }
     },
-    [isDragging, screenToWorld, findEdgeAtPosition]
+    [isDragging, screenToWorld, findEdgeAtPosition],
   );
 
   const handleMouseLeave = useCallback(() => {
@@ -555,7 +556,7 @@ const ComparisonNetworkGraph = ({
     (ruleId: number): RuleInfo | undefined => {
       return rules.find((r) => r.id === ruleId);
     },
-    [rules]
+    [rules],
   );
 
   // Render improved tooltip content with formula
@@ -566,9 +567,7 @@ const ComparisonNetworkGraph = ({
     const weightedSum = validRules.reduce((sum, rs) => sum + rs.score * rs.weight, 0);
 
     // Build formula parts for display
-    const formulaParts = validRules.map(
-      (rs) => `${(rs.score * 100).toFixed(0)}%×${rs.weight}`
-    );
+    const formulaParts = validRules.map((rs) => `${(rs.score * 100).toFixed(0)}%×${rs.weight}`);
 
     return (
       <>
@@ -596,6 +595,7 @@ const ComparisonNetworkGraph = ({
             </div>
             {ruleScores.map((rs, idx) => {
               const ruleInfo = getRuleInfo(rs.ruleId);
+
               return (
                 <div
                   key={idx}
@@ -614,22 +614,22 @@ const ComparisonNetworkGraph = ({
                       </span>
                       {ruleInfo?.propertyName && (
                         <BriefProperty
+                          chipProps={{ size: "sm" }}
+                          fields={["pool", "name"]}
                           property={{
                             name: ruleInfo.propertyName,
                             pool: ruleInfo.propertyPool,
                           }}
-                          fields={["pool", "name"]}
                           showPoolChip={false}
-                          chipProps={{ size: "sm" }}
                         />
                       )}
                     </div>
                     {rs.isSkipped ? (
-                      <Chip size="sm" variant="flat" color="default">
+                      <Chip color="default" size="sm" variant="flat">
                         {t("comparison.networkGraph.skipped")}
                       </Chip>
                     ) : rs.isVetoed ? (
-                      <Chip size="sm" variant="flat" color="danger">
+                      <Chip color="danger" size="sm" variant="flat">
                         {t("comparison.networkGraph.vetoed")}
                       </Chip>
                     ) : (
@@ -638,13 +638,16 @@ const ComparisonNetworkGraph = ({
                       </span>
                     )}
                   </div>
-                  {!rs.isSkipped && !rs.isVetoed && rs.value1 !== undefined && rs.value2 !== undefined && (
-                    <div className="text-default-500 mt-1">
-                      <span className="break-all">{rs.value1 || "(empty)"}</span>
-                      <span className="mx-2 text-default-300">vs</span>
-                      <span className="break-all">{rs.value2 || "(empty)"}</span>
-                    </div>
-                  )}
+                  {!rs.isSkipped &&
+                    !rs.isVetoed &&
+                    rs.value1 !== undefined &&
+                    rs.value2 !== undefined && (
+                      <div className="text-default-500 mt-1">
+                        <span className="break-all">{rs.value1 || "(empty)"}</span>
+                        <span className="mx-2 text-default-300">vs</span>
+                        <span className="break-all">{rs.value2 || "(empty)"}</span>
+                      </div>
+                    )}
                 </div>
               );
             })}
@@ -658,7 +661,8 @@ const ComparisonNetworkGraph = ({
             <div className="text-xs text-default-500 space-y-1">
               <div className="font-medium text-foreground">{t("comparison.scoring.title")}:</div>
               <div className="font-mono bg-default-100 p-2 rounded overflow-x-auto">
-                ({formulaParts.join(" + ")}) / {totalWeight} = {((weightedSum / totalWeight) * 100).toFixed(1)}%
+                ({formulaParts.join(" + ")}) / {totalWeight} ={" "}
+                {((weightedSum / totalWeight) * 100).toFixed(1)}%
               </div>
             </div>
           </>
@@ -669,12 +673,12 @@ const ComparisonNetworkGraph = ({
 
   return (
     <Modal
-      visible={isOpen}
-      onClose={onClose}
+      className="max-h-[100vh]"
+      footer={false}
       size="7xl"
       title={renderTitle()}
-      footer={false}
-      className="max-h-[100vh]"
+      visible={isOpen}
+      onClose={onClose}
     >
       {loading ? (
         <div className="flex items-center justify-center min-h-[400px]">
@@ -692,12 +696,7 @@ const ComparisonNetworkGraph = ({
               {Math.round(transform.scale * 100)}%
             </span>
             <Tooltip content={t("Reset view")}>
-              <Button
-                isIconOnly
-                size="sm"
-                variant="light"
-                onPress={resetTransform}
-              >
+              <Button isIconOnly size="sm" variant="light" onPress={resetTransform}>
                 <ReloadOutlined />
               </Button>
             </Tooltip>
@@ -710,17 +709,17 @@ const ComparisonNetworkGraph = ({
 
           <canvas
             ref={canvasRef}
-            width={CANVAS_WIDTH}
-            height={CANVAS_HEIGHT}
             className={`border border-default-200 rounded-lg w-full ${
               isDragging ? "cursor-grabbing" : "cursor-crosshair"
             }`}
-            onWheel={handleWheel}
+            height={CANVAS_HEIGHT}
+            width={CANVAS_WIDTH}
+            onClick={handleClick}
             onMouseDown={handleMouseDown}
+            onMouseLeave={handleMouseLeave}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseLeave}
-            onClick={handleClick}
+            onWheel={handleWheel}
           />
 
           {/* Tooltip */}

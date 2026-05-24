@@ -1,12 +1,6 @@
 import React, { useState } from "react";
 
-import {
-  Button,
-  Card,
-  CardBody,
-  CardHeader,
-  Spacer,
-} from "@/components/bakaui";
+import { Button, Card, CardBody, CardHeader, Spacer } from "@/components/bakaui";
 import { ErrorBoundary } from "@/components/Error";
 
 const BuggyComponent = ({ shouldThrow }: { shouldThrow: string }) => {
@@ -70,24 +64,16 @@ const ErrorBoundaryTestPage = ({ onClose }: Props) => {
       <CardBody>
         <div className="space-y-4">
           <p className="text-sm text-gray-600">
-            Use these buttons to test different types of errors and see how the
-            error boundary handles them:
+            Use these buttons to test different types of errors and see how the error boundary
+            handles them:
           </p>
 
           <div className="grid grid-cols-1 gap-3">
-            <Button
-              color="danger"
-              variant="flat"
-              onClick={() => triggerError("render")}
-            >
+            <Button color="danger" variant="flat" onClick={() => triggerError("render")}>
               Throw Error During Render
             </Button>
 
-            <Button
-              color="danger"
-              variant="flat"
-              onClick={() => triggerError("undefined")}
-            >
+            <Button color="danger" variant="flat" onClick={() => triggerError("undefined")}>
               Trigger Undefined Property Error
             </Button>
           </div>
@@ -97,8 +83,7 @@ const ErrorBoundaryTestPage = ({ onClose }: Props) => {
           <div className="border-t pt-4">
             <h4 className="font-semibold mb-2">Interactive Error Test:</h4>
             <p className="text-sm text-gray-600 mb-2">
-              This component is wrapped with ErrorBoundary - click to see the
-              error modal:
+              This component is wrapped with ErrorBoundary - click to see the error modal:
             </p>
             <ErrorBoundary>
               <AsyncBuggyComponent />
@@ -110,9 +95,7 @@ const ErrorBoundaryTestPage = ({ onClose }: Props) => {
           {errorType && (
             <div className="border-t pt-4">
               <div className="flex justify-between items-center mb-2">
-                <h4 className="font-semibold">
-                  Error Component with ErrorBoundary:
-                </h4>
+                <h4 className="font-semibold">Error Component with ErrorBoundary:</h4>
                 <Button size="sm" variant="light" onClick={reset}>
                   Reset
                 </Button>
@@ -127,21 +110,16 @@ const ErrorBoundaryTestPage = ({ onClose }: Props) => {
           )}
 
           <div className="border-t pt-4 mt-4">
-            <h4 className="font-semibold mb-2">
-              Async Error Test (Not Caught by ErrorBoundary):
-            </h4>
+            <h4 className="font-semibold mb-2">Async Error Test (Not Caught by ErrorBoundary):</h4>
             <p className="text-sm text-gray-600 mb-2">
-              Error boundaries don't catch async errors - this will show up in
-              console:
+              Error boundaries don&apos;t catch async errors - this will show up in console:
             </p>
             <Button
               color="warning"
               variant="flat"
               onClick={() => {
                 setTimeout(() => {
-                  throw new Error(
-                    "Async error - this won't be caught by error boundary",
-                  );
+                  throw new Error("Async error - this won't be caught by error boundary");
                 }, 100);
               }}
             >
@@ -153,18 +131,12 @@ const ErrorBoundaryTestPage = ({ onClose }: Props) => {
             <p>
               <strong>How to test:</strong>
             </p>
-            <p>
-              1. Click the buttons above to trigger errors wrapped in
-              ErrorBoundary
-            </p>
-            <p>
-              2. You should see your enhanced error modal with error details and
-              stack traces
-            </p>
+            <p>1. Click the buttons above to trigger errors wrapped in ErrorBoundary</p>
+            <p>2. You should see your enhanced error modal with error details and stack traces</p>
             <p>3. The async error will only appear in browser console (F12)</p>
             <p>
-              4. The main app ErrorBoundary in BasicLayout will catch any
-              unhandled errors throughout the app
+              4. The main app ErrorBoundary in BasicLayout will catch any unhandled errors
+              throughout the app
             </p>
           </div>
         </div>

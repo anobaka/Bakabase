@@ -6,13 +6,12 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Checkbox, Switch } from "@/components/bakaui";
-import NotSet, { LightText } from "@/components/StandardValue/ValueRenderer/Renderers/components/LightText";
+import NotSet, {
+  LightText,
+} from "@/components/StandardValue/ValueRenderer/Renderers/components/LightText";
 import SelectableChip from "@/components/StandardValue/ValueRenderer/Renderers/components/SelectableChip";
 
-type BooleanValueRendererProps = Omit<
-  ValueRendererProps<boolean>,
-  "variant"
-> & {
+type BooleanValueRendererProps = Omit<ValueRendererProps<boolean>, "variant"> & {
   variant: ValueRendererProps<boolean>["variant"] | "switch";
   size?: "sm" | "md" | "lg";
 };
@@ -45,6 +44,7 @@ const BooleanValueRenderer = ({
   const handleChipClick = (clickedValue: boolean) => {
     // Toggle: if already selected, clear to undefined; otherwise set the value
     const newValue = value === clickedValue ? undefined : clickedValue;
+
     editor?.onValueChange?.(newValue, newValue);
     if (!isEditing) {
       setInternalEditing(false);
@@ -56,16 +56,16 @@ const BooleanValueRenderer = ({
     return (
       <div className="inline-flex gap-1 flex-wrap">
         <SelectableChip
+          isSelected={value === true}
           itemKey="__yes__"
           label={t("common.label.yes")}
-          isSelected={value === true}
           size={size}
           onClick={() => handleChipClick(true)}
         />
         <SelectableChip
+          isSelected={value === false}
           itemKey="__no__"
           label={t("common.label.no")}
-          isSelected={value === false}
           size={size}
           onClick={() => handleChipClick(false)}
         />
@@ -96,9 +96,9 @@ const BooleanValueRenderer = ({
   if (v === "switch") {
     return (
       <Switch
+        isDisabled={!canEdit}
         isSelected={value}
         size={size}
-        isDisabled={!canEdit}
         onValueChange={canEdit ? (v) => editor?.onValueChange?.(v, v) : undefined}
       />
     );
@@ -106,8 +106,23 @@ const BooleanValueRenderer = ({
 
   // Default variant display mode: show Checkbox (clickable to enter editing)
   return (
-    <div onClick={startEditing} className={startEditing ? "cursor-pointer" : undefined}>
-      <Checkbox isSelected={value} size={size} isReadOnly className="pointer-events-none" />
+    <div
+      className={startEditing ? "cursor-pointer" : undefined}
+      role={startEditing ? "button" : undefined}
+      tabIndex={startEditing ? 0 : undefined}
+      onClick={startEditing}
+      onKeyDown={
+        startEditing
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                startEditing();
+              }
+            }
+          : undefined
+      }
+    >
+      <Checkbox isReadOnly className="pointer-events-none" isSelected={value} size={size} />
     </div>
   );
 };

@@ -4,7 +4,9 @@ import type { PropertyPool, PropertyType } from "@/sdk/constants";
 
 import { useTranslation } from "react-i18next";
 
-import PropertyPoolIcon, { getPropertyPoolColor } from "@/components/Property/components/PropertyPoolIcon";
+import PropertyPoolIcon, {
+  getPropertyPoolColor,
+} from "@/components/Property/components/PropertyPoolIcon";
 import PropertyTypeIcon from "@/components/Property/components/PropertyTypeIcon";
 import { Chip, type ChipProps } from "@/components/bakaui";
 
@@ -40,7 +42,14 @@ const BriefProperty = ({ property, fields, showPoolChip = true, chipProps }: Pro
                 return <PropertyTypeIcon key={f} type={property.type} />;
               case "name":
                 return (
-                  <Chip key={f} color={nameColor} radius={"sm"} size="sm" variant="flat" {...chipProps}>
+                  <Chip
+                    key={f}
+                    color={nameColor}
+                    radius={"sm"}
+                    size="sm"
+                    variant="flat"
+                    {...chipProps}
+                  >
                     {property.name}
                   </Chip>
                 );

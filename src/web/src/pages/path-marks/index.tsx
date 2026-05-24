@@ -1,6 +1,8 @@
 "use client";
 
 import type { BakabaseAbstractionsModelsDomainPathMark } from "@/sdk/Api";
+import type { ChildPathInfo } from "./components/TransferMarksModal";
+import type { PendingSyncButtonRef } from "@/pages/path-mark-config/components/PendingSyncButton";
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -9,15 +11,16 @@ import { AiOutlineWarning, AiOutlineControl } from "react-icons/ai";
 
 import PathTree from "./components/PathTree";
 import PathConfigModal from "./components/PathConfigModal";
-import type { ChildPathInfo } from "./components/TransferMarksModal";
 import DeleteMarksConfirmationModal from "./components/DeleteMarksConfirmationModal";
 
 import usePathMarks from "@/pages/path-mark-config/hooks/usePathMarks";
 import PathMarkSettingsButton from "@/pages/path-mark-config/components/PathMarkSettingsButton";
 import PendingSyncButton from "@/pages/path-mark-config/components/PendingSyncButton";
-import type { PendingSyncButtonRef } from "@/pages/path-mark-config/components/PendingSyncButton";
 import CopyMarksSidebar from "@/pages/path-mark-config/components/CopyMarksSidebar";
-import { PathMarkGuideModal, usePathMarkGuide } from "@/pages/path-mark-config/components/PathMarkGuide";
+import {
+  PathMarkGuideModal,
+  usePathMarkGuide,
+} from "@/pages/path-mark-config/components/PathMarkGuide";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { Button, toast, Modal, Spinner, Switch } from "@/components/bakaui";
 import BetaChip from "@/components/Chips/BetaChip";
@@ -31,12 +34,21 @@ const PathMarksPage = () => {
 
   const [showOnlyInvalid, setShowOnlyInvalid] = useState(false);
 
-  const { loading, checkingPaths, loadAllMarks, getGroupedMarksFiltered, getGroupedMarks, getInvalidPathsCount } = usePathMarks();
+  const {
+    loading,
+    checkingPaths,
+    loadAllMarks,
+    getGroupedMarksFiltered,
+    getGroupedMarks,
+    getInvalidPathsCount,
+  } = usePathMarks();
   const pendingSyncButtonRef = useRef<PendingSyncButtonRef>(null);
 
-
   const allGroups = useMemo(() => getGroupedMarks(), [getGroupedMarks]);
-  const groups = useMemo(() => getGroupedMarksFiltered(showOnlyInvalid), [getGroupedMarksFiltered, showOnlyInvalid]);
+  const groups = useMemo(
+    () => getGroupedMarksFiltered(showOnlyInvalid),
+    [getGroupedMarksFiltered, showOnlyInvalid],
+  );
   const invalidPathsCount = useMemo(() => getInvalidPathsCount(), [getInvalidPathsCount]);
 
   // Refresh pending sync count
@@ -82,6 +94,7 @@ const PathMarksPage = () => {
 
       if (!markId) {
         console.error("Mark has no id, cannot delete");
+
         return;
       }
 
@@ -155,6 +168,7 @@ const PathMarksPage = () => {
 
       if (marks.length === 0) {
         toast.warning(t("pathMarks.warning.noMarksToDelete"));
+
         return;
       }
 
@@ -164,6 +178,7 @@ const PathMarksPage = () => {
         .filter((g) => {
           if (g.path === path) return false; // Exclude the main path itself
           const normalizedChildPath = g.path.replace(/\\/g, "/").toLowerCase();
+
           // Check if it's a child path
           return normalizedChildPath.startsWith(normalizedPath + "/");
         })
@@ -196,7 +211,10 @@ const PathMarksPage = () => {
               }
             }
 
-            const totalCount = marks.length + (includeChildPaths ? childPaths.reduce((sum, c) => sum + c.marks.length, 0) : 0);
+            const totalCount =
+              marks.length +
+              (includeChildPaths ? childPaths.reduce((sum, c) => sum + c.marks.length, 0) : 0);
+
             toast.success(t("pathMarks.success.deletedCount", { count: totalCount }));
             loadAllMarks();
             refreshPendingSyncCount();
@@ -266,9 +284,7 @@ const PathMarksPage = () => {
         </div>
 
         {/* Description */}
-        <div className="text-sm text-default-500">
-          {t("pathMarks.tip.description")}
-        </div>
+        <div className="text-sm text-default-500">{t("pathMarks.tip.description")}</div>
 
         {/* Invalid paths warning */}
         {!checkingPaths && invalidPathsCount > 0 && (
@@ -280,12 +296,10 @@ const PathMarksPage = () => {
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-default-600">{t("pathMarks.label.showOnlyInvalid")}</span>
-              <Switch
-                isSelected={showOnlyInvalid}
-                size="sm"
-                onValueChange={setShowOnlyInvalid}
-              />
+              <span className="text-sm text-default-600">
+                {t("pathMarks.label.showOnlyInvalid")}
+              </span>
+              <Switch isSelected={showOnlyInvalid} size="sm" onValueChange={setShowOnlyInvalid} />
             </div>
           </div>
         )}
@@ -316,7 +330,9 @@ const PathMarksPage = () => {
 
         {/* Resource profile config hint */}
         <div className="flex items-center justify-center gap-2 p-3 bg-default-50 rounded-lg">
-          <span className="text-sm text-default-500">{t("pathMarks.label.resourceProfileHint")}</span>
+          <span className="text-sm text-default-500">
+            {t("pathMarks.label.resourceProfileHint")}
+          </span>
           <Button
             color="secondary"
             size="sm"

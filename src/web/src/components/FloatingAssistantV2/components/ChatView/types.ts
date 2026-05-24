@@ -9,7 +9,7 @@ export interface ChatConversation {
 export interface ChatMessageRecord {
   id: number;
   conversationId: number;
-  role: 'system' | 'user' | 'assistant' | 'tool';
+  role: "system" | "user" | "assistant" | "tool";
   content?: string;
   toolCalls?: string;
   toolResults?: string;
@@ -46,7 +46,7 @@ export interface ChatToolInfo {
 // A message in the UI (may be built from streaming)
 export interface UiMessage {
   id: string;
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   content: string;
   toolCalls?: { name: string; args?: string; result?: string; isLoading?: boolean }[];
   isStreaming?: boolean;

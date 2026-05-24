@@ -7,12 +7,13 @@
 
 import type { Dayjs } from "dayjs";
 import type { Duration } from "dayjs/plugin/duration";
+import type { LinkValue, TagValue } from "./models";
+import type { StandardValueOf } from "@/components/Property/PropertySystem";
+
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
 
 import { StandardValueType } from "@/sdk/constants";
-import type { LinkValue, TagValue } from "./models";
-import type { StandardValueOf } from "@/components/Property/PropertySystem";
 
 // Ensure duration plugin is loaded
 dayjs.extend(duration);
@@ -52,6 +53,7 @@ export function isEmpty<T>(sv: StandardValue<T> | undefined): boolean {
     // LinkValue check
     if ("text" in value || "url" in value) {
       const lv = value as LinkValue;
+
       return (!lv.text || lv.text.length === 0) && (!lv.url || lv.url.length === 0);
     }
   }
@@ -117,6 +119,7 @@ export function createDecimalFromString(value?: string): StandardValue<number> {
   }
 
   const parsed = parseFloat(value);
+
   return createDecimal(Number.isNaN(parsed) ? undefined : parsed);
 }
 
@@ -131,7 +134,7 @@ export function createLink(text?: string, url?: string): StandardValue<LinkValue
 export function createLink(value?: LinkValue): StandardValue<LinkValue>;
 export function createLink(
   textOrValue?: string | LinkValue,
-  url?: string
+  url?: string,
 ): StandardValue<LinkValue> {
   if (typeof textOrValue === "object") {
     return {
@@ -219,7 +222,7 @@ export function createTimeFromMs(milliseconds?: number): StandardValue<Duration>
 export function createTimeFromComponents(
   hours?: number,
   minutes?: number,
-  seconds?: number
+  seconds?: number,
 ): StandardValue<Duration> {
   if (hours === undefined && minutes === undefined && seconds === undefined) {
     return { type: StandardValueType.Time, value: undefined };
@@ -269,9 +272,7 @@ export function createListTag(value?: TagValue[]): StandardValue<TagValue[]> {
 export function createListTagFromTuples(
   ...tuples: Array<[group: string | undefined, name: string]>
 ): StandardValue<TagValue[]> {
-  return createListTag(
-    tuples.map(([group, name]) => ({ group: group ?? undefined, name }))
-  );
+  return createListTag(tuples.map(([group, name]) => ({ group: group ?? undefined, name })));
 }
 
 // ============================================================================
@@ -284,7 +285,7 @@ export function createListTagFromTuples(
  */
 export function create<T extends StandardValueType>(
   type: T,
-  value?: StandardValueOf<T>
+  value?: StandardValueOf<T>,
 ): StandardValue<StandardValueOf<T>> {
   return {
     type,

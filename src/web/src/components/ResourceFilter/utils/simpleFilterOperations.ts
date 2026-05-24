@@ -4,7 +4,10 @@ import { PropertyType, SearchOperation } from "@/sdk/constants";
  * Maps property type to default operation(s) for simple filter mode.
  * For range types (Number, Date, etc.), returns a tuple of [min, max] operations.
  */
-export const SimpleFilterOperationMap: Record<PropertyType, SearchOperation | [SearchOperation, SearchOperation]> = {
+export const SimpleFilterOperationMap: Record<
+  PropertyType,
+  SearchOperation | [SearchOperation, SearchOperation]
+> = {
   [PropertyType.SingleLineText]: SearchOperation.Contains,
   [PropertyType.MultilineText]: SearchOperation.Contains,
   // Choice / Multilevel / Tags default to `In` — picking from a known set of
@@ -13,7 +16,10 @@ export const SimpleFilterOperationMap: Record<PropertyType, SearchOperation | [S
   [PropertyType.SingleChoice]: SearchOperation.In,
   [PropertyType.MultipleChoice]: SearchOperation.In,
   [PropertyType.Number]: [SearchOperation.GreaterThanOrEquals, SearchOperation.LessThanOrEquals],
-  [PropertyType.Percentage]: [SearchOperation.GreaterThanOrEquals, SearchOperation.LessThanOrEquals],
+  [PropertyType.Percentage]: [
+    SearchOperation.GreaterThanOrEquals,
+    SearchOperation.LessThanOrEquals,
+  ],
   [PropertyType.Rating]: [SearchOperation.GreaterThanOrEquals, SearchOperation.LessThanOrEquals],
   [PropertyType.Boolean]: SearchOperation.Equals,
   [PropertyType.Link]: SearchOperation.Contains,
@@ -31,6 +37,7 @@ export const SimpleFilterOperationMap: Record<PropertyType, SearchOperation | [S
  */
 export const isRangeFilterType = (type: PropertyType): boolean => {
   const operation = SimpleFilterOperationMap[type];
+
   return Array.isArray(operation);
 };
 
@@ -40,6 +47,7 @@ export const isRangeFilterType = (type: PropertyType): boolean => {
  */
 export const getSimpleFilterOperation = (type: PropertyType): SearchOperation => {
   const operation = SimpleFilterOperationMap[type];
+
   return Array.isArray(operation) ? operation[0] : operation;
 };
 
@@ -47,7 +55,10 @@ export const getSimpleFilterOperation = (type: PropertyType): SearchOperation =>
  * Get both operations for a range filter type.
  * Returns undefined for non-range types.
  */
-export const getRangeFilterOperations = (type: PropertyType): [SearchOperation, SearchOperation] | undefined => {
+export const getRangeFilterOperations = (
+  type: PropertyType,
+): [SearchOperation, SearchOperation] | undefined => {
   const operation = SimpleFilterOperationMap[type];
+
   return Array.isArray(operation) ? operation : undefined;
 };

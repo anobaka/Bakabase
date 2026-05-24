@@ -10,7 +10,12 @@ import { InfoCircleOutlined } from "@ant-design/icons";
 
 import { Chip, Modal, Textarea, Divider } from "@/components/bakaui";
 import BApi from "@/sdk/BApi.tsx";
-import { builtinPropertyForDisplayNames, PropertyPool, PropertyType, SpecialTextType } from "@/sdk/constants.ts";
+import {
+  builtinPropertyForDisplayNames,
+  PropertyPool,
+  PropertyType,
+  SpecialTextType,
+} from "@/sdk/constants.ts";
 import { getEnumKey } from "@/i18n";
 
 type Props = DestroyableProps & {
@@ -29,15 +34,17 @@ type PropertyItem = {
 const parseTemplateForPreview = (
   template: string,
   validPropertyNames: Set<string>,
-  wrappers: Wrapper[]
+  wrappers: Wrapper[],
 ): Array<{ type: "text" | "property" | "invalid" | "wrapper"; content: string }> => {
-  const segments: Array<{ type: "text" | "property" | "invalid" | "wrapper"; content: string }> = [];
+  const segments: Array<{ type: "text" | "property" | "invalid" | "wrapper"; content: string }> =
+    [];
   const regex = /\{([^}]+)\}/g;
   let lastIndex = 0;
   let match;
 
   // Build wrapper chars set
   const wrapperChars = new Set<string>();
+
   wrappers.forEach((w) => {
     wrapperChars.add(w.left);
     wrapperChars.add(w.right);
@@ -46,12 +53,15 @@ const parseTemplateForPreview = (
   const processText = (text: string) => {
     // Check for wrapper characters in text
     let i = 0;
+
     while (i < text.length) {
       let foundWrapper = false;
+
       for (const w of wrapperChars) {
         if (text.substring(i, i + w.length) === w) {
           if (i > 0) {
             const before = text.substring(0, i);
+
             if (before) segments.push({ type: "text", content: before });
           }
           segments.push({ type: "wrapper", content: w });
@@ -72,6 +82,7 @@ const parseTemplateForPreview = (
     }
     const propName = match[1];
     const isValid = validPropertyNames.has(propName);
+
     segments.push({ type: isValid ? "property" : "invalid", content: propName });
     lastIndex = regex.lastIndex;
   }
@@ -118,6 +129,7 @@ const DisplayNameTemplateEditorModal = ({ template, properties, onSubmit, ...pro
       left: text.value1!,
       right: text.value2!,
     }));
+
     setWrappers(wrappersData);
 
     // Build property items with type info
@@ -126,20 +138,22 @@ const DisplayNameTemplateEditorModal = ({ template, properties, onSubmit, ...pro
     // Add builtin properties
     builtinPropertyForDisplayNames.forEach((v) => {
       items.push({
-        name: t(getEnumKey('BuiltinPropertyForDisplayName', v.label)),
+        name: t(getEnumKey("BuiltinPropertyForDisplayName", v.label)),
         type: "builtin",
       });
     });
 
     // Add custom properties with their type
-    properties?.filter(p => p.pool == PropertyPool.Custom).forEach((cp) => {
-      if (cp.name) {
-        items.push({
-          name: cp.name,
-          type: cp.type,
-        });
-      }
-    });
+    properties
+      ?.filter((p) => p.pool == PropertyPool.Custom)
+      .forEach((cp) => {
+        if (cp.name) {
+          items.push({
+            name: cp.name,
+            type: cp.type,
+          });
+        }
+      });
 
     setPropertyItems(items);
   }, [properties, t]);
@@ -150,14 +164,17 @@ const DisplayNameTemplateEditorModal = ({ template, properties, onSubmit, ...pro
 
   const insertAtCursor = (text: string) => {
     const textarea = textareaRef.current;
+
     if (!textarea) {
       setTemplateValue((prev) => prev + text);
+
       return;
     }
 
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const newValue = templateValue.slice(0, start) + text + templateValue.slice(end);
+
     setTemplateValue(newValue);
 
     // Restore cursor position after the inserted text
@@ -170,13 +187,16 @@ const DisplayNameTemplateEditorModal = ({ template, properties, onSubmit, ...pro
   // Get available type filters based on existing properties
   const availableTypes = useMemo(() => {
     const types = new Set<"builtin" | PropertyType>();
+
     propertyItems.forEach((item) => types.add(item.type));
+
     return types;
   }, [propertyItems]);
 
   // Filter properties by selected type
   const filteredProperties = useMemo(() => {
     if (selectedType === "all") return propertyItems;
+
     return propertyItems.filter((item) => item.type === selectedType);
   }, [propertyItems, selectedType]);
 
@@ -197,8 +217,9 @@ const DisplayNameTemplateEditorModal = ({ template, properties, onSubmit, ...pro
     // Add property types that exist
     Object.entries(propertyTypeLabels).forEach(([key, label]) => {
       const typeKey = Number(key) as PropertyType;
+
       if (availableTypes.has(typeKey)) {
-        filters.push({ key: typeKey, label: t(getEnumKey('PropertyType', label)) });
+        filters.push({ key: typeKey, label: t(getEnumKey("PropertyType", label)) });
       }
     });
 
@@ -217,17 +238,19 @@ const DisplayNameTemplateEditorModal = ({ template, properties, onSubmit, ...pro
         {/* Properties Section */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <div className="text-sm font-medium">{t("resourceProfile.label.availableProperties")}</div>
+            <div className="text-sm font-medium">
+              {t("resourceProfile.label.availableProperties")}
+            </div>
           </div>
           {/* Type filters */}
           <div className="flex flex-wrap gap-1 mb-2">
             {typeFilters.map((filter) => (
               <Chip
                 key={String(filter.key)}
-                size="sm"
-                color={selectedType === filter.key ? "primary" : "default"}
-                variant={selectedType === filter.key ? "solid" : "flat"}
                 className="cursor-pointer"
+                color={selectedType === filter.key ? "primary" : "default"}
+                size="sm"
+                variant={selectedType === filter.key ? "solid" : "flat"}
                 onClick={() => setSelectedType(filter.key)}
               >
                 {filter.label}
@@ -240,17 +263,19 @@ const DisplayNameTemplateEditorModal = ({ template, properties, onSubmit, ...pro
               {filteredProperties.map((p) => (
                 <Chip
                   key={p.name}
-                  size="sm"
-                  color="primary"
-                  variant="flat"
                   className="cursor-pointer hover:opacity-80"
+                  color="primary"
+                  size="sm"
+                  variant="flat"
                   onClick={() => insertAtCursor(`{${p.name}}`)}
                 >
                   {p.name}
                 </Chip>
               ))}
               {filteredProperties.length === 0 && (
-                <span className="text-default-400 text-sm">{t("resourceProfile.empty.noPropertiesAvailable")}</span>
+                <span className="text-default-400 text-sm">
+                  {t("resourceProfile.empty.noPropertiesAvailable")}
+                </span>
               )}
             </div>
           </div>
@@ -264,10 +289,10 @@ const DisplayNameTemplateEditorModal = ({ template, properties, onSubmit, ...pro
               {wrappers.map((w) => (
                 <Chip
                   key={w.left}
-                  size="sm"
-                  color="secondary"
-                  variant="flat"
                   className="cursor-pointer hover:opacity-80"
+                  color="secondary"
+                  size="sm"
+                  variant="flat"
                   onClick={() => insertAtCursor(`${w.left}${w.right}`)}
                 >
                   {w.left} {w.right}
@@ -288,14 +313,14 @@ const DisplayNameTemplateEditorModal = ({ template, properties, onSubmit, ...pro
           <div className="text-sm font-medium mb-2">{t("resourceProfile.label.template")}</div>
           <Textarea
             ref={textareaRef}
-            placeholder={t("resourceProfile.input.templatePlaceholder")}
-            value={templateValue}
-            onValueChange={setTemplateValue}
-            minRows={2}
-            maxRows={5}
             classNames={{
               input: "font-mono",
             }}
+            maxRows={5}
+            minRows={2}
+            placeholder={t("resourceProfile.input.templatePlaceholder")}
+            value={templateValue}
+            onValueChange={setTemplateValue}
           />
           <div className="text-xs text-default-400 mt-1">
             <InfoCircleOutlined className="mr-1" />
@@ -314,21 +339,22 @@ const DisplayNameTemplateEditorModal = ({ template, properties, onSubmit, ...pro
                 }
                 if (seg.type === "property") {
                   return (
-                    <Chip key={idx} size="sm" color="primary" variant="flat" className="h-5">
+                    <Chip key={idx} className="h-5" color="primary" size="sm" variant="flat">
                       {seg.content}
                     </Chip>
                   );
                 }
                 if (seg.type === "wrapper") {
                   return (
-                    <Chip key={idx} size="sm" color="secondary" variant="flat" className="h-5">
+                    <Chip key={idx} className="h-5" color="secondary" size="sm" variant="flat">
                       {seg.content}
                     </Chip>
                   );
                 }
+
                 // invalid
                 return (
-                  <Chip key={idx} size="sm" color="danger" variant="flat" className="h-5">
+                  <Chip key={idx} className="h-5" color="danger" size="sm" variant="flat">
                     {seg.content}
                   </Chip>
                 );

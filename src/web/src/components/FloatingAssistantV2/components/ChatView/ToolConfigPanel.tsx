@@ -1,8 +1,10 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Switch, Chip } from '@/components/bakaui';
-import BApi from '@/sdk/BApi';
-import type { ChatToolInfo } from './types';
+import type { ChatToolInfo } from "./types";
+
+import React, { useEffect, useState, useCallback } from "react";
+import { useTranslation } from "react-i18next";
+
+import { Switch, Chip } from "@/components/bakaui";
+import BApi from "@/sdk/BApi";
 
 interface Props {
   /** If true, renders as a compact inline section (for chat popover). */
@@ -18,7 +20,8 @@ const ToolConfigPanel: React.FC<Props> = ({ compact = false, hideTitle = false }
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    BApi.chat.getChatTools()
+    BApi.chat
+      .getChatTools()
       .then((rsp: any) => {
         if (rsp?.data) setTools(rsp.data);
       })
@@ -40,25 +43,29 @@ const ToolConfigPanel: React.FC<Props> = ({ compact = false, hideTitle = false }
   }, []);
 
   if (loading) {
-    return <div className="text-sm text-default-400 p-2">{t('common.state.loading')}</div>;
+    return <div className="text-sm text-default-400 p-2">{t("common.state.loading")}</div>;
   }
 
   if (error) {
-    return <div className="text-sm text-default-400 p-2">{t('bakaChat.tools.loadError')}</div>;
+    return <div className="text-sm text-default-400 p-2">{t("bakaChat.tools.loadError")}</div>;
   }
 
   if (tools.length === 0) {
-    return <div className="text-sm text-default-400 p-2">{t('bakaChat.tools.empty')}</div>;
+    return <div className="text-sm text-default-400 p-2">{t("bakaChat.tools.empty")}</div>;
   }
 
   return (
     <div className="flex flex-col gap-2">
       {!hideTitle && (
-        <div className={compact ? 'text-xs font-semibold text-default-500' : 'text-sm font-semibold mb-1'}>
-          {t('bakaChat.tools.label')}
+        <div
+          className={
+            compact ? "text-xs font-semibold text-default-500" : "text-sm font-semibold mb-1"
+          }
+        >
+          {t("bakaChat.tools.label")}
         </div>
       )}
-      <div className={compact ? 'grid grid-cols-1 gap-1' : 'grid grid-cols-2 gap-2'}>
+      <div className={compact ? "grid grid-cols-1 gap-1" : "grid grid-cols-2 gap-2"}>
         {tools.map((tool) => (
           <div
             key={tool.name}
@@ -69,12 +76,8 @@ const ToolConfigPanel: React.FC<Props> = ({ compact = false, hideTitle = false }
                 <span className="text-sm font-medium truncate">
                   {t(`bakaChat.tools.registry.${tool.name}.name`, { defaultValue: tool.name })}
                 </span>
-                <Chip
-                  size="sm"
-                  variant="flat"
-                  color={tool.isReadOnly ? 'success' : 'warning'}
-                >
-                  {tool.isReadOnly ? t('bakaChat.tools.readOnly') : t('bakaChat.tools.canModify')}
+                <Chip color={tool.isReadOnly ? "success" : "warning"} size="sm" variant="flat">
+                  {tool.isReadOnly ? t("bakaChat.tools.readOnly") : t("bakaChat.tools.canModify")}
                 </Chip>
               </div>
               <span className="text-xs text-default-500 font-mono truncate" title={tool.name}>
@@ -85,8 +88,8 @@ const ToolConfigPanel: React.FC<Props> = ({ compact = false, hideTitle = false }
               </span>
             </div>
             <Switch
-              size="sm"
               isSelected={tool.isEnabled}
+              size="sm"
               onValueChange={(v) => handleToggle(tool.name, v)}
             />
           </div>

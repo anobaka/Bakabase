@@ -1,5 +1,7 @@
 "use client";
 
+import type { IProperty } from "@/components/Property/models";
+
 import { MenuItem, SubMenu, MenuDivider } from "@szhsin/react-menu";
 import { useTranslation } from "react-i18next";
 import {
@@ -15,8 +17,9 @@ import {
   ThunderboltOutlined,
   VideoCameraAddOutlined,
 } from "@ant-design/icons";
-import { AiOutlinePicture } from "react-icons/ai";
 import React, { useCallback, useEffect, useState } from "react";
+
+import PropertyValuePanel from "./PropertyValuePanel";
 
 import MediaLibraryMultiSelector from "@/components/MediaLibraryMultiSelector";
 import { EnhancementAdditionalItem, PropertyPool, ResourceAdditionalItem } from "@/sdk/constants";
@@ -30,8 +33,6 @@ import BApi from "@/sdk/BApi";
 import BulkPropertyEditor from "@/components/Resource/components/BulkPropertyEditor";
 import DeleteResourceConfirmContent from "@/components/Resource/components/DeleteResourceConfirmContent";
 import { useUiOptionsStore } from "@/stores/options";
-import type { IProperty } from "@/components/Property/models";
-import PropertyValuePanel from "./PropertyValuePanel";
 
 const log = buildLogger("ResourceContextMenuItems");
 
@@ -81,6 +82,7 @@ const PropertyQuickSetItem = ({
           isCustomProperty: property.pool === PropertyPool.Custom,
           value: dbValue,
         });
+
         if (!rsp.code) {
           toast.success(t("resource.contextMenu.propertyValueSet"));
           onSelectedResourcesChanged?.(selectedResourceIds);
@@ -94,23 +96,23 @@ const PropertyQuickSetItem = ({
 
   return (
     <SubMenu
+      setDownOverflow
       label={
         <div className={"flex items-center gap-2"}>
           <SettingOutlined className={"text-base"} />
           {menuLabel}
         </div>
       }
-      overflow="auto"
-      setDownOverflow
       menuStyle={{ maxHeight: "400px", minWidth: "240px" }}
-      submenuOpenDelay={0}
+      overflow="auto"
       submenuCloseDelay={150}
+      submenuOpenDelay={0}
     >
       <PropertyValuePanel
-        property={property}
         presetValues={presetValues}
-        onApply={handleApply}
+        property={property}
         onAddPreset={onAddPreset}
+        onApply={handleApply}
         onRemovePreset={onRemovePreset}
       />
     </SubMenu>
@@ -148,6 +150,7 @@ const ContextMenuItems = ({
       const customProps = (customPropsRsp.data || []) as IProperty[];
 
       const ps: Record<number, Record<number, IProperty>> = {};
+
       for (const p of builtinProps) {
         if (!ps[p.pool]) ps[p.pool] = {};
         ps[p.pool][p.id] = p;
@@ -169,19 +172,21 @@ const ContextMenuItems = ({
         const pool = item.property?.pool;
         const propId = item.property?.id;
         const property = propertyMap[pool]?.[propId];
+
         if (!property) return null;
 
         return (
           <PropertyQuickSetItem
             key={`${pool}-${propId}`}
-            property={property}
             presetValues={item.presetValues ?? []}
+            property={property}
             selectedResourceIds={selectedResourceIds}
-            onSelectedResourcesChanged={onSelectedResourcesChanged}
             onAddPreset={(dbValue) => {
               const currentPresets = item.presetValues ?? [];
+
               if (!currentPresets.includes(dbValue)) {
                 const newItems = [...customContextMenuItems];
+
                 newItems[itemIndex] = {
                   ...newItems[itemIndex],
                   presetValues: [...currentPresets, dbValue],
@@ -196,6 +201,7 @@ const ContextMenuItems = ({
             }}
             onRemovePreset={(dbValue) => {
               const newItems = [...customContextMenuItems];
+
               newItems[itemIndex] = {
                 ...newItems[itemIndex],
                 presetValues: (item.presetValues ?? []).filter((v: string) => v !== dbValue),
@@ -207,6 +213,7 @@ const ContextMenuItems = ({
                 },
               });
             }}
+            onSelectedResourcesChanged={onSelectedResourcesChanged}
           />
         );
       })}
@@ -215,9 +222,11 @@ const ContextMenuItems = ({
 
       {/* Open folder — always uses the right-clicked resource, independent of selection. */}
       {contextResource?.path && (
-        <MenuItem onClick={() => {
-          BApi.resource.openResourceDirectory({ id: contextResource.id });
-        }}>
+        <MenuItem
+          onClick={() => {
+            BApi.resource.openResourceDirectory({ id: contextResource.id });
+          }}
+        >
           <div className="flex items-center gap-2">
             <FolderOpenOutlined className="text-base" />
             {t<string>("common.action.openFolder")}
@@ -226,60 +235,83 @@ const ContextMenuItems = ({
       )}
 
       {/* Single-resource actions (mirrored from cover buttons) */}
-      {selectedResourceIds.length === 1 && (() => {
-        const resId = selectedResourceIds[0];
-        const res = selectedResources?.[0];
-        return (
-          <>
-            <MenuItem onClick={() => {
-              BApi.resource.pinResource(resId, { pin: !res?.pinned }).then(() => onSelectedResourcesChanged?.(selectedResourceIds));
-            }}>
-              <div className="flex items-center gap-2">
-                <PushpinOutlined className="text-base" />
-                {res?.pinned ? t<string>("resource.operation.unpin") : t<string>("resource.operation.pin")}
-              </div>
-            </MenuItem>
-            <MenuItem onClick={() => {
-              BApi.resource.getResourceEnhancements(resId, { additionalItem: EnhancementAdditionalItem.GeneratedPropertyValue })
-                .then((resp) => { createPortal(ResourceEnhancementsModal, { resourceId: resId, enhancements: resp.data || [] }); });
-            }}>
-              <div className="flex items-center gap-2">
-                <FireOutlined className="text-base" />
-                {t<string>("resource.operation.enhancements")}
-              </div>
-            </MenuItem>
-            <MenuItem onClick={() => {
-              createPortal(Modal, {
-                defaultVisible: true,
-                title: t<string>("resource.operation.addToPlaylist"),
-                children: <PlaylistCollection addingResourceId={resId} />,
-                style: { minWidth: 600 },
-                footer: { actions: ["cancel"] },
-              });
-            }}>
-              <div className="flex items-center gap-2">
-                <VideoCameraAddOutlined className="text-base" />
-                {t<string>("resource.operation.addToPlaylist")}
-              </div>
-            </MenuItem>
-            {(res?.dataStates?.length ?? 0) > 0 && (
-              <MenuItem onClick={async () => {
-                const rsp = await BApi.cache.refreshResourceCache(resId);
-                if (!rsp.code) {
-                  toast.success(t<string>("resource.action.refreshCache.success"));
-                  onSelectedResourcesChanged?.(selectedResourceIds);
-                }
-              }}>
+      {selectedResourceIds.length === 1 &&
+        (() => {
+          const resId = selectedResourceIds[0];
+          const res = selectedResources?.[0];
+
+          return (
+            <>
+              <MenuItem
+                onClick={() => {
+                  BApi.resource
+                    .pinResource(resId, { pin: !res?.pinned })
+                    .then(() => onSelectedResourcesChanged?.(selectedResourceIds));
+                }}
+              >
                 <div className="flex items-center gap-2">
-                  <ReloadOutlined className="text-base" />
-                  {t<string>("resource.action.refreshCache")}
+                  <PushpinOutlined className="text-base" />
+                  {res?.pinned
+                    ? t<string>("resource.operation.unpin")
+                    : t<string>("resource.operation.pin")}
                 </div>
               </MenuItem>
-            )}
-            <MenuDivider />
-          </>
-        );
-      })()}
+              <MenuItem
+                onClick={() => {
+                  BApi.resource
+                    .getResourceEnhancements(resId, {
+                      additionalItem: EnhancementAdditionalItem.GeneratedPropertyValue,
+                    })
+                    .then((resp) => {
+                      createPortal(ResourceEnhancementsModal, {
+                        resourceId: resId,
+                        enhancements: resp.data || [],
+                      });
+                    });
+                }}
+              >
+                <div className="flex items-center gap-2">
+                  <FireOutlined className="text-base" />
+                  {t<string>("resource.operation.enhancements")}
+                </div>
+              </MenuItem>
+              <MenuItem
+                onClick={() => {
+                  createPortal(Modal, {
+                    defaultVisible: true,
+                    title: t<string>("resource.operation.addToPlaylist"),
+                    children: <PlaylistCollection addingResourceId={resId} />,
+                    style: { minWidth: 600 },
+                    footer: { actions: ["cancel"] },
+                  });
+                }}
+              >
+                <div className="flex items-center gap-2">
+                  <VideoCameraAddOutlined className="text-base" />
+                  {t<string>("resource.operation.addToPlaylist")}
+                </div>
+              </MenuItem>
+              {(res?.dataStates?.length ?? 0) > 0 && (
+                <MenuItem
+                  onClick={async () => {
+                    const rsp = await BApi.cache.refreshResourceCache(resId);
+
+                    if (!rsp.code) {
+                      toast.success(t<string>("resource.action.refreshCache.success"));
+                      onSelectedResourcesChanged?.(selectedResourceIds);
+                    }
+                  }}
+                >
+                  <div className="flex items-center gap-2">
+                    <ReloadOutlined className="text-base" />
+                    {t<string>("resource.action.refreshCache")}
+                  </div>
+                </MenuItem>
+              )}
+              <MenuDivider />
+            </>
+          );
+        })()}
 
       {/* Built-in menu items */}
       <MenuItem
@@ -293,7 +325,9 @@ const ContextMenuItems = ({
         <div className={"flex items-center gap-2"}>
           <ApiOutlined className={"text-base"} />
           {selectedResourceIds.length > 1
-            ? t<string>("resource.contextMenu.setMediaLibrariesForCount", { count: selectedResourceIds.length })
+            ? t<string>("resource.contextMenu.setMediaLibrariesForCount", {
+                count: selectedResourceIds.length,
+              })
             : t<string>("resource.contextMenu.setMediaLibraries")}
         </div>
       </MenuItem>
@@ -303,7 +337,10 @@ const ContextMenuItems = ({
             createPortal(ResourceTransferModal, { fromResources: selectedResources });
           } else {
             BApi.resource
-              .getResourcesByKeys({ ids: selectedResourceIds, additionalItems: ResourceAdditionalItem.All })
+              .getResourcesByKeys({
+                ids: selectedResourceIds,
+                additionalItems: ResourceAdditionalItem.All,
+              })
               .then((r) => createPortal(ResourceTransferModal, { fromResources: r.data || [] }));
           }
         }}
@@ -311,7 +348,9 @@ const ContextMenuItems = ({
         <div className={"flex items-center gap-2"}>
           <SendOutlined className={"text-base"} />
           {selectedResourceIds.length > 1
-            ? t<string>("resource.contextMenu.transferDataOfCount", { count: selectedResourceIds.length })
+            ? t<string>("resource.contextMenu.transferDataOfCount", {
+                count: selectedResourceIds.length,
+              })
             : t<string>("resource.contextMenu.transferResourceData")}
         </div>
       </MenuItem>
@@ -334,6 +373,7 @@ const ContextMenuItems = ({
       <MenuItem
         onClick={() => {
           const count = selectedResourceIds.length;
+
           createPortal(Modal, {
             defaultVisible: true,
             title:
@@ -348,6 +388,7 @@ const ContextMenuItems = ({
             footer: { actions: ["cancel", "ok"] },
             onOk: async () => {
               const rsp = await BApi.resources.deleteEnhancementsByResources(selectedResourceIds);
+
               if (!rsp.code) {
                 toast.success(t<string>("resource.contextMenu.reEnhance.scheduled"));
                 onSelectedResourcesChanged?.(selectedResourceIds);
@@ -356,14 +397,13 @@ const ContextMenuItems = ({
           });
         }}
       >
-        <Tooltip
-          placement={"right"}
-          content={t<string>("resource.contextMenu.reEnhance.tooltip")}
-        >
+        <Tooltip content={t<string>("resource.contextMenu.reEnhance.tooltip")} placement={"right"}>
           <div className={"flex items-center gap-2"}>
             <ThunderboltOutlined className={"text-base"} />
             {selectedResourceIds.length > 1
-              ? t<string>("resource.contextMenu.reEnhanceCount", { count: selectedResourceIds.length })
+              ? t<string>("resource.contextMenu.reEnhanceCount", {
+                  count: selectedResourceIds.length,
+                })
               : t<string>("resource.contextMenu.reEnhance")}
           </div>
         </Tooltip>
@@ -371,13 +411,18 @@ const ContextMenuItems = ({
       <MenuItem
         onClick={() => {
           let deleteFiles = false;
+
           createPortal(Modal, {
             defaultVisible: true,
-            title: t<string>("resource.contextMenu.deleteCountResources", { count: selectedResourceIds.length }),
+            title: t<string>("resource.contextMenu.deleteCountResources", {
+              count: selectedResourceIds.length,
+            }),
             children: (
               <DeleteResourceConfirmContent
                 count={selectedResourceIds.length}
-                onDeleteFilesChange={(v) => { deleteFiles = v; }}
+                onDeleteFilesChange={(v) => {
+                  deleteFiles = v;
+                }}
               />
             ),
             onOk: async () => {
@@ -389,7 +434,9 @@ const ContextMenuItems = ({
         <div className={"flex items-center gap-2 text-danger"}>
           <DeleteOutlined className={"text-base"} />
           {selectedResourceIds.length > 1
-            ? t<string>("resource.contextMenu.deleteCountResources", { count: selectedResourceIds.length })
+            ? t<string>("resource.contextMenu.deleteCountResources", {
+                count: selectedResourceIds.length,
+              })
             : t<string>("resource.contextMenu.deleteResource")}
         </div>
       </MenuItem>

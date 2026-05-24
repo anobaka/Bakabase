@@ -1,12 +1,14 @@
 "use client";
 
+import type { CookieValidatorTarget } from "@/sdk/constants";
+
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@heroui/react";
 
-import { toast } from "@/components/bakaui";
-import type { CookieValidatorTarget } from "@/sdk/constants";
 import AccountsPanel, { type AccountField } from "./AccountsPanel";
+
+import { toast } from "@/components/bakaui";
 
 interface SimpleThirdPartyConfigProps {
   title: string;
@@ -68,10 +70,12 @@ export default function SimpleThirdPartyConfig({
         <ModalHeader>{title}</ModalHeader>
         <ModalBody>
           <AccountsPanel
+            hideFooter
             accounts={accounts}
             fields={accountFields}
-            hideFooter
-            onAccountsChange={(accs) => { pendingAccountsRef.current = accs; }}
+            onAccountsChange={(accs) => {
+              pendingAccountsRef.current = accs;
+            }}
             onSave={async () => {}}
           />
         </ModalBody>

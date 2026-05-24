@@ -7,11 +7,11 @@ import { useTranslation } from "react-i18next";
 import _ from "lodash";
 
 import FileSystemEntryChangeItem from "./FileSystemEntryChangeExampleItem";
+import FileSystemEntryChangeExampleMiscellaneousItem from "./FileSystemEntryChangeExampleMiscellaneousItem";
 
 import { Modal } from "@/components/bakaui";
 import { buildLogger, splitPathIntoSegments } from "@/components/utils";
 import BApi from "@/sdk/BApi";
-import FileSystemEntryChangeExampleMiscellaneousItem from "./FileSystemEntryChangeExampleMiscellaneousItem";
 
 type Props = {
   rootPath?: string;
@@ -37,10 +37,7 @@ const _mergeItems = (
 ): Item[] => {
   const prefixes: string[] = [];
   const ret: Item[] = [];
-  const groups = _.groupBy(
-    entries,
-    (e) => entryRestSegmentsMap.get(e.path)!.shift()!,
-  );
+  const groups = _.groupBy(entries, (e) => entryRestSegmentsMap.get(e.path)!.shift()!);
   const keys = _.sortBy(_.keys(groups), (x) => x);
 
   for (const key of keys) {
@@ -75,9 +72,7 @@ const mergeItems = (entries: SimpleEntry[], rootPath?: string): Item[] => {
   const entryRestSegmentsMap = entries.reduce((s, t) => {
     s.set(
       t.path,
-      splitPathIntoSegments(
-        rootPath == undefined ? t.path : t.path.replace(rootPath, ""),
-      ),
+      splitPathIntoSegments(rootPath == undefined ? t.path : t.path.replace(rootPath, "")),
     );
 
     return s;
@@ -113,11 +108,7 @@ const renderItem = (item: Item, layer: number) => {
     </React.Fragment>
   );
 };
-const DeleteConfirmationModal = ({
-  entries = [],
-  onDestroyed,
-  rootPath,
-}: Props) => {
+const DeleteConfirmationModal = ({ entries = [], onDestroyed, rootPath }: Props) => {
   const { t } = useTranslation();
   const items = mergeItems(entries, rootPath);
 
@@ -137,18 +128,11 @@ const DeleteConfirmationModal = ({
       size={"xl"}
       title={t<string>("fileExplorer.deleteModal.title")}
       onDestroyed={onDestroyed}
-      onOk={async () =>
-        await BApi.file.removeFiles({ paths: entries.map((p) => p.path) })
-      }
+      onOk={async () => await BApi.file.removeFiles({ paths: entries.map((p) => p.path) })}
     >
       <div className={"flex flex-col gap-1"}>
         {items.map((item) => renderItem(item, 0))}
-        {rootPath && (
-          <FileSystemEntryChangeExampleMiscellaneousItem
-            indent={1}
-            parent={rootPath}
-          />
-        )}
+        {rootPath && <FileSystemEntryChangeExampleMiscellaneousItem indent={1} parent={rootPath} />}
       </div>
     </Modal>
   );

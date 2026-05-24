@@ -9,13 +9,7 @@ type Props = {
   className?: string;
   size?: "sm" | "md" | "lg";
   variant?: "solid" | "bordered" | "light" | "flat" | "faded" | "shadow";
-  color?:
-    | "default"
-    | "primary"
-    | "secondary"
-    | "success"
-    | "warning"
-    | "danger";
+  color?: "default" | "primary" | "secondary" | "success" | "warning" | "danger";
 };
 
 export const ResourceDescription = () => {
@@ -25,21 +19,14 @@ export const ResourceDescription = () => {
     <div className="space-y-2">
       <p>{t("term.resource.description")}</p>
       <p>{t("term.resource.usage")}</p>
-      <p className="text-small text-warning-500">
-        {t("term.resource.tip")}
-      </p>
+      <p className="text-small text-warning-500">{t("term.resource.tip")}</p>
     </div>
   );
 };
 
 ResourceDescription.displayName = "ResourceDescription";
 
-const ResourceTerm = ({
-  className,
-  size = "sm",
-  variant = "light",
-  color = "success",
-}: Props) => {
+const ResourceTerm = ({ className, size = "sm", variant = "light", color = "success" }: Props) => {
   const { t } = useTranslation();
 
   return (

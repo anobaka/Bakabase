@@ -36,12 +36,13 @@ export function useStringValueState(props: StringValueRendererBaseProps) {
   }, [propsValue]);
 
   // Don't allow starting edit mode if isEditing is explicitly set to false
-  const startEditing = !isReadonly && editor && isEditing !== false
-    ? () => {
-      log("Start editing");
-      setEditing(true);
-    }
-    : undefined;
+  const startEditing =
+    !isReadonly && editor && isEditing !== false
+      ? () => {
+          log("Start editing");
+          setEditing(true);
+        }
+      : undefined;
 
   const completeEditing = () => {
     editor?.onValueChange?.(value, value);

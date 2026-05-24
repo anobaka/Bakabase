@@ -20,28 +20,62 @@ const Demonstrator = ({ operation, options, variables }: Props) => {
 
   switch (operation) {
     case BulkModificationDateTimeProcessOperation.Delete:
-      return <Chip color="danger" size="sm">{t("bulkModification.operation.dateTime.delete")}</Chip>;
+      return (
+        <Chip color="danger" size="sm">
+          {t("bulkModification.operation.dateTime.delete")}
+        </Chip>
+      );
     case BulkModificationDateTimeProcessOperation.SetWithFixedValue:
       return (
         <span>
           {t("bulkModification.operation.dateTime.setWithFixedValue")}:{" "}
-          {options?.value && <ProcessValueDemonstrator value={options.value} variables={variables} />}
+          {options?.value && (
+            <ProcessValueDemonstrator value={options.value} variables={variables} />
+          )}
         </span>
       );
     case BulkModificationDateTimeProcessOperation.AddDays:
-      return <span>+ {options?.amount} {t("common.unit.days")}</span>;
+      return (
+        <span>
+          + {options?.amount} {t("common.unit.days")}
+        </span>
+      );
     case BulkModificationDateTimeProcessOperation.SubtractDays:
-      return <span>- {options?.amount} {t("common.unit.days")}</span>;
+      return (
+        <span>
+          - {options?.amount} {t("common.unit.days")}
+        </span>
+      );
     case BulkModificationDateTimeProcessOperation.AddMonths:
-      return <span>+ {options?.amount} {t("common.unit.months")}</span>;
+      return (
+        <span>
+          + {options?.amount} {t("common.unit.months")}
+        </span>
+      );
     case BulkModificationDateTimeProcessOperation.SubtractMonths:
-      return <span>- {options?.amount} {t("common.unit.months")}</span>;
+      return (
+        <span>
+          - {options?.amount} {t("common.unit.months")}
+        </span>
+      );
     case BulkModificationDateTimeProcessOperation.AddYears:
-      return <span>+ {options?.amount} {t("common.unit.years")}</span>;
+      return (
+        <span>
+          + {options?.amount} {t("common.unit.years")}
+        </span>
+      );
     case BulkModificationDateTimeProcessOperation.SubtractYears:
-      return <span>- {options?.amount} {t("common.unit.years")}</span>;
+      return (
+        <span>
+          - {options?.amount} {t("common.unit.years")}
+        </span>
+      );
     case BulkModificationDateTimeProcessOperation.SetToNow:
-      return <Chip color="primary" size="sm">{t("bulkModification.operation.dateTime.setToNow")}</Chip>;
+      return (
+        <Chip color="primary" size="sm">
+          {t("bulkModification.operation.dateTime.setToNow")}
+        </Chip>
+      );
     default:
       return null;
   }

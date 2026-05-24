@@ -30,11 +30,19 @@ export const FileSystemTreeEntryCapabilityMap: Record<Capability, CapabilityDefi
     nameI18NKey: "fileExplorer.capability.select",
   },
   "multi-select": {
-    shortcut: { nameI18nKey: "fileExplorer.shortcutKey.ctrlClick", mouseButton: 0, modifiers: ["Control"] },
+    shortcut: {
+      nameI18nKey: "fileExplorer.shortcutKey.ctrlClick",
+      mouseButton: 0,
+      modifiers: ["Control"],
+    },
     nameI18NKey: "fileExplorer.capability.multiSelect",
   },
   "range-select": {
-    shortcut: { nameI18nKey: "fileExplorer.shortcutKey.shiftClick", mouseButton: 0, modifiers: ["Shift"] },
+    shortcut: {
+      nameI18nKey: "fileExplorer.shortcutKey.shiftClick",
+      mouseButton: 0,
+      modifiers: ["Shift"],
+    },
     nameI18NKey: "fileExplorer.capability.rangeSelect",
   },
   wrap: {

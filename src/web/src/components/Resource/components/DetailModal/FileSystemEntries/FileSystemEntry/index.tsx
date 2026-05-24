@@ -29,7 +29,7 @@ const FileSystemEntry = ({ entry, onEnterDirectory }: Props) => {
       );
       break;
     case IwFsType.Image:
-      comp = <img src={buildImageUrl(entry.path)} />;
+      comp = <img alt={entry.name} src={buildImageUrl(entry.path)} />;
       break;
     case IwFsType.Invalid:
       comp = <MdInsertDriveFile />;
@@ -49,6 +49,8 @@ const FileSystemEntry = ({ entry, onEnterDirectory }: Props) => {
       <div className="square">
         <div
           className="cover-container"
+          role="button"
+          tabIndex={0}
           onDoubleClick={(evt) => {
             evt.preventDefault();
             evt.stopPropagation();
@@ -56,6 +58,16 @@ const FileSystemEntry = ({ entry, onEnterDirectory }: Props) => {
               onEnterDirectory(entry.path);
             } else {
               toast.error(i18n.t<string>("Under development"));
+            }
+          }}
+          onKeyDown={(evt) => {
+            if (evt.key === "Enter" || evt.key === " ") {
+              evt.preventDefault();
+              if (entry.type == IwFsType.Directory) {
+                onEnterDirectory(entry.path);
+              } else {
+                toast.error(i18n.t<string>("Under development"));
+              }
             }
           }}
           onMouseDown={(evt) => {

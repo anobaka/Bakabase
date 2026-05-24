@@ -42,6 +42,7 @@ const secondsToParts = (totalSeconds: number): DurationParts => {
   const hours = Math.floor((totalSeconds % 86400) / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
+
   return { days, hours, minutes, seconds };
 };
 
@@ -72,9 +73,10 @@ const DurationInput = ({
       const numValue = parseInt(newValue, 10) || 0;
       const newParts = { ...parts, [part]: Math.max(0, numValue) };
       const totalSeconds = partsToSeconds(newParts);
+
       onChange?.(Math.max(minValue, totalSeconds));
     },
-    [parts, onChange, minValue]
+    [parts, onChange, minValue],
   );
 
   const inputWidth = size === "sm" ? "w-16" : size === "md" ? "w-20" : "w-24";
@@ -84,12 +86,12 @@ const DurationInput = ({
       {showDays && (
         <div className="flex items-center gap-1">
           <Input
-            type="number"
-            size={size}
-            value={String(parts.days)}
-            min={0}
             className={inputWidth}
             isDisabled={isDisabled}
+            min={0}
+            size={size}
+            type="number"
+            value={String(parts.days)}
             onChange={(e) => handlePartChange("days", e.target.value)}
           />
           <span className="text-default-500 text-sm">{t("common.unit.days")}</span>
@@ -98,13 +100,13 @@ const DurationInput = ({
       {showHours && (
         <div className="flex items-center gap-1">
           <Input
-            type="number"
-            size={size}
-            value={String(parts.hours)}
-            min={0}
-            max={showDays ? 23 : undefined}
             className={inputWidth}
             isDisabled={isDisabled}
+            max={showDays ? 23 : undefined}
+            min={0}
+            size={size}
+            type="number"
+            value={String(parts.hours)}
             onChange={(e) => handlePartChange("hours", e.target.value)}
           />
           <span className="text-default-500 text-sm">{t("common.unit.hours")}</span>
@@ -113,13 +115,13 @@ const DurationInput = ({
       {showMinutes && (
         <div className="flex items-center gap-1">
           <Input
-            type="number"
-            size={size}
-            value={String(parts.minutes)}
-            min={0}
-            max={59}
             className={inputWidth}
             isDisabled={isDisabled}
+            max={59}
+            min={0}
+            size={size}
+            type="number"
+            value={String(parts.minutes)}
             onChange={(e) => handlePartChange("minutes", e.target.value)}
           />
           <span className="text-default-500 text-sm">{t("common.unit.minutes")}</span>
@@ -128,13 +130,13 @@ const DurationInput = ({
       {showSeconds && (
         <div className="flex items-center gap-1">
           <Input
-            type="number"
-            size={size}
-            value={String(parts.seconds)}
-            min={0}
-            max={59}
             className={inputWidth}
             isDisabled={isDisabled}
+            max={59}
+            min={0}
+            size={size}
+            type="number"
+            value={String(parts.seconds)}
             onChange={(e) => handlePartChange("seconds", e.target.value)}
           />
           <span className="text-default-500 text-sm">{t("common.unit.seconds")}</span>

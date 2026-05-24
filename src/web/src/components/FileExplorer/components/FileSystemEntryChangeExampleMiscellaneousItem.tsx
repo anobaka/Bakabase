@@ -9,10 +9,7 @@ type Props = {
   indent?: 0 | 1 | 2;
   parent?: string;
 };
-const FileSystemEntryChangeExampleMiscellaneousItem = ({
-  indent,
-  parent,
-}: Props) => {
+const FileSystemEntryChangeExampleMiscellaneousItem = ({ indent, parent }: Props) => {
   const { t } = useTranslation();
 
   return (

@@ -1,7 +1,11 @@
-import type { EnhancerDescriptor, EnhancerTargetDescriptor } from "@/components/EnhancerSelectorV2/models";
+import type {
+  EnhancerDescriptor,
+  EnhancerTargetDescriptor,
+} from "@/components/EnhancerSelectorV2/models";
 import type { BakabaseAbstractionsModelsDomainEnhancerFullOptions } from "@/sdk/Api";
-import type { PropertyPool } from "@/sdk/constants";
-import { EnhancerId, EnhancerTag, PropertyType, PropertyValueScope } from "@/sdk/constants";
+import type { PropertyPool, PropertyType } from "@/sdk/constants";
+
+import { EnhancerId, EnhancerTag, PropertyValueScope } from "@/sdk/constants";
 
 type ApiEnhancerOptions = BakabaseAbstractionsModelsDomainEnhancerFullOptions;
 
@@ -18,6 +22,7 @@ export const enhancerIdToScope = (id: EnhancerId): PropertyValueScope => {
     [EnhancerId.Av]: PropertyValueScope.Av,
     [EnhancerId.AI]: PropertyValueScope.Ai,
   };
+
   return map[id];
 };
 
@@ -74,7 +79,11 @@ export const groupOrder: PropertyGroup[] = [
 
 // ─── Flat source state (single source of truth) ─────────────────────
 
-export function sourceKey(enhancerId: EnhancerId, targetId: number, dynamicTarget?: string): string {
+export function sourceKey(
+  enhancerId: EnhancerId,
+  targetId: number,
+  dynamicTarget?: string,
+): string {
   return dynamicTarget ? `${enhancerId}:${targetId}:${dynamicTarget}` : `${enhancerId}:${targetId}`;
 }
 
@@ -97,7 +106,7 @@ export interface SourceState {
 /** Build the flat source state map from descriptors + existing config */
 export function buildSourceStates(
   descriptors: EnhancerDescriptor[],
-  existingConfig: ApiEnhancerOptions[]
+  existingConfig: ApiEnhancerOptions[],
 ): Map<string, SourceState> {
   const states = new Map<string, SourceState>();
 
@@ -112,6 +121,7 @@ export function buildSourceStates(
             if (to.target === target.id && to.dynamicTarget) {
               const key = sourceKey(desc.id, target.id, to.dynamicTarget);
               const toAny = to as any;
+
               states.set(key, {
                 enhancerId: desc.id,
                 enhancerName: desc.name,
@@ -121,7 +131,10 @@ export function buildSourceStates(
                 isDynamic: true,
                 dynamicTarget: to.dynamicTarget,
                 targetMapping:
-                  to.propertyPool != null && to.propertyPool > 0 && to.propertyId != null && to.propertyId > 0
+                  to.propertyPool != null &&
+                  to.propertyPool > 0 &&
+                  to.propertyId != null &&
+                  to.propertyId > 0
                     ? { pool: to.propertyPool, id: to.propertyId }
                     : undefined,
                 config: {
@@ -149,7 +162,10 @@ export function buildSourceStates(
         enabled: !!targetOption,
         isDynamic: false,
         targetMapping:
-          targetOption?.propertyPool != null && targetOption.propertyPool > 0 && targetOption?.propertyId != null && targetOption.propertyId > 0
+          targetOption?.propertyPool != null &&
+          targetOption.propertyPool > 0 &&
+          targetOption?.propertyId != null &&
+          targetOption.propertyId > 0
             ? { pool: targetOption.propertyPool, id: targetOption.propertyId }
             : undefined,
         config: targetOption
@@ -188,22 +204,26 @@ export interface PropertyRow {
 /** Get the bound property mapping for a row (from any source that has one) */
 export function getRowBinding(
   row: PropertyRow,
-  sourceStates: Map<string, SourceState>
+  sourceStates: Map<string, SourceState>,
 ): { pool: PropertyPool; id: number } | undefined {
   for (const source of row.sources) {
     const state = sourceStates.get(source.stateKey);
+
     if (state?.targetMapping) return state.targetMapping;
   }
+
   return undefined;
 }
 
 /** Check if a row has any enabled source but no bound property */
 export function isRowEnabledButUnbound(
   row: PropertyRow,
-  sourceStates: Map<string, SourceState>
+  sourceStates: Map<string, SourceState>,
 ): boolean {
   const hasEnabled = row.sources.some((s) => s.enabled);
+
   if (!hasEnabled) return false;
+
   return !getRowBinding(row, sourceStates);
 }
 
@@ -215,7 +235,7 @@ function propertyRowKey(name: string, propertyType: PropertyType): string {
 /** Derive property rows for a group by filtering & merging same-name+type targets */
 export function getGroupPropertyRows(
   group: PropertyGroup,
-  sourceStates: Map<string, SourceState>
+  sourceStates: Map<string, SourceState>,
 ): PropertyRow[] {
   const enhancerIds = groupEnhancerMap[group];
   const rowMap = new Map<string, PropertyRow>();
@@ -224,6 +244,7 @@ export function getGroupPropertyRows(
     if (!enhancerIds.includes(state.enhancerId)) continue;
 
     const name = state.isDynamic ? (state.dynamicTarget ?? "") : state.targetDescriptor.name;
+
     if (!name) continue;
 
     const source: EnhancerSource = {
@@ -239,6 +260,7 @@ export function getGroupPropertyRows(
 
     const rk = propertyRowKey(name, state.targetDescriptor.propertyType);
     const existing = rowMap.get(rk);
+
     if (existing) {
       existing.sources.push(source);
     } else {
@@ -256,7 +278,7 @@ export function getGroupPropertyRows(
 /** Count properties (by unique name+type) with at least one enabled source in a group */
 export function getGroupEnabledCount(
   group: PropertyGroup,
-  sourceStates: Map<string, SourceState>
+  sourceStates: Map<string, SourceState>,
 ): number {
   const enhancerIds = groupEnhancerMap[group];
   const enabledKeys = new Set<string>();
@@ -264,6 +286,7 @@ export function getGroupEnabledCount(
   for (const [, state] of sourceStates) {
     if (!enhancerIds.includes(state.enhancerId) || !state.enabled) continue;
     const name = state.isDynamic ? (state.dynamicTarget ?? "") : state.targetDescriptor.name;
+
     if (name) enabledKeys.add(propertyRowKey(name, state.targetDescriptor.propertyType));
   }
 
@@ -273,18 +296,20 @@ export function getGroupEnabledCount(
 /** Collect unique enhancer IDs from multiple groups */
 export function getEnhancerIdsForGroups(groups: PropertyGroup[]): Set<EnhancerId> {
   const ids = new Set<EnhancerId>();
+
   for (const group of groups) {
     for (const id of groupEnhancerMap[group]) {
       ids.add(id);
     }
   }
+
   return ids;
 }
 
 /** Derive property rows for a set of enhancer IDs (deduped by name+type) */
 export function getPropertyRowsForEnhancerIds(
   enhancerIds: Set<EnhancerId>,
-  sourceStates: Map<string, SourceState>
+  sourceStates: Map<string, SourceState>,
 ): PropertyRow[] {
   const rowMap = new Map<string, PropertyRow>();
 
@@ -292,6 +317,7 @@ export function getPropertyRowsForEnhancerIds(
     if (!enhancerIds.has(state.enhancerId)) continue;
 
     const name = state.isDynamic ? (state.dynamicTarget ?? "") : state.targetDescriptor.name;
+
     if (!name) continue;
 
     const source: EnhancerSource = {
@@ -307,6 +333,7 @@ export function getPropertyRowsForEnhancerIds(
 
     const rk = propertyRowKey(name, state.targetDescriptor.propertyType);
     const existing = rowMap.get(rk);
+
     if (existing) {
       existing.sources.push(source);
     } else {
@@ -324,53 +351,57 @@ export function getPropertyRowsForEnhancerIds(
 /** Derive property rows for multiple selected groups (union of enhancers, deduped by name+type) */
 export function getPropertyRowsForGroups(
   groups: PropertyGroup[],
-  sourceStates: Map<string, SourceState>
+  sourceStates: Map<string, SourceState>,
 ): PropertyRow[] {
   const enhancerIds = getEnhancerIdsForGroups(groups);
+
   return getPropertyRowsForEnhancerIds(enhancerIds, sourceStates);
 }
 
 /** Get dynamic enhancers from a set of enhancer IDs */
 export function getDynamicEnhancersForEnhancerIds(
   enhancerIds: Set<EnhancerId>,
-  descriptors: EnhancerDescriptor[]
+  descriptors: EnhancerDescriptor[],
 ): EnhancerDescriptor[] {
-  return descriptors.filter(
-    (d) => enhancerIds.has(d.id) && d.targets.some((t) => t.isDynamic)
-  );
+  return descriptors.filter((d) => enhancerIds.has(d.id) && d.targets.some((t) => t.isDynamic));
 }
 
 /** Get dynamic enhancers from multiple selected groups */
 export function getDynamicEnhancersForGroups(
   groups: PropertyGroup[],
-  descriptors: EnhancerDescriptor[]
+  descriptors: EnhancerDescriptor[],
 ): EnhancerDescriptor[] {
   const enhancerIds = getEnhancerIdsForGroups(groups);
+
   return getDynamicEnhancersForEnhancerIds(enhancerIds, descriptors);
 }
 
 /** Count properties with at least one enabled source for a specific enhancer */
 export function getEnhancerEnabledCount(
   enhancerId: EnhancerId,
-  sourceStates: Map<string, SourceState>
+  sourceStates: Map<string, SourceState>,
 ): number {
   const enabledKeys = new Set<string>();
+
   for (const [, state] of sourceStates) {
     if (state.enhancerId !== enhancerId || !state.enabled) continue;
     const name = state.isDynamic ? (state.dynamicTarget ?? "") : state.targetDescriptor.name;
+
     if (name) enabledKeys.add(`${name}::${state.targetDescriptor.propertyType}`);
   }
+
   return enabledKeys.size;
 }
 
 /** Get enhancers in a group that have dynamic targets */
 export function getGroupDynamicEnhancers(
   group: PropertyGroup,
-  descriptors: EnhancerDescriptor[]
+  descriptors: EnhancerDescriptor[],
 ): EnhancerDescriptor[] {
   const enhancerIds = groupEnhancerMap[group];
+
   return descriptors.filter(
-    (d) => enhancerIds.includes(d.id) && d.targets.some((t) => t.isDynamic)
+    (d) => enhancerIds.includes(d.id) && d.targets.some((t) => t.isDynamic),
   );
 }
 
@@ -379,19 +410,23 @@ export function getGroupDynamicEnhancers(
 /** Convert flat source states back to EnhancerFullOptions[] for storage */
 export function convertStatesToEnhancerOptions(
   sourceStates: Map<string, SourceState>,
-  enhancerLevelConfigs: Map<EnhancerId, Partial<ApiEnhancerOptions>>
+  enhancerLevelConfigs: Map<EnhancerId, Partial<ApiEnhancerOptions>>,
 ): ApiEnhancerOptions[] {
-  const enhancerTargets = new Map<EnhancerId, {
-    target: number;
-    dynamicTarget?: string;
-    pool?: PropertyPool;
-    propertyId?: number;
-    coverSelectOrder?: number;
-  }[]>();
+  const enhancerTargets = new Map<
+    EnhancerId,
+    {
+      target: number;
+      dynamicTarget?: string;
+      pool?: PropertyPool;
+      propertyId?: number;
+      coverSelectOrder?: number;
+    }[]
+  >();
 
   for (const [, state] of sourceStates) {
     if (!state.enabled) continue;
     const targets = enhancerTargets.get(state.enhancerId) ?? [];
+
     targets.push({
       target: state.targetId,
       dynamicTarget: state.isDynamic ? state.dynamicTarget : undefined,
@@ -403,8 +438,10 @@ export function convertStatesToEnhancerOptions(
   }
 
   const result: ApiEnhancerOptions[] = [];
+
   for (const [enhancerId, targets] of enhancerTargets) {
     const levelConfig = enhancerLevelConfigs.get(enhancerId) ?? {};
+
     result.push({
       enhancerId,
       ...levelConfig,
@@ -423,22 +460,26 @@ export function convertStatesToEnhancerOptions(
 
 /** Extract enhancer-level config from existing options */
 export function extractEnhancerLevelConfigs(
-  config: ApiEnhancerOptions[]
+  config: ApiEnhancerOptions[],
 ): Map<EnhancerId, Partial<ApiEnhancerOptions>> {
   const result = new Map<EnhancerId, Partial<ApiEnhancerOptions>>();
+
   for (const c of config) {
     const { targetOptions, ...rest } = c;
+
     result.set(c.enhancerId as EnhancerId, rest);
   }
+
   return result;
 }
 
 /** Get the set of groups that cover all enabled enhancers in source states */
 export function getGroupsForEnabledEnhancers(
-  sourceStates: Map<string, SourceState>
+  sourceStates: Map<string, SourceState>,
 ): Set<PropertyGroup> {
   // Collect enhancer IDs that have at least one enabled source
   const enabledEnhancerIds = new Set<EnhancerId>();
+
   for (const [, state] of sourceStates) {
     if (state.enabled) {
       enabledEnhancerIds.add(state.enhancerId);
@@ -451,6 +492,7 @@ export function getGroupsForEnabledEnhancers(
 
   // For each enabled enhancer, find the first group that contains it
   const groups = new Set<PropertyGroup>();
+
   for (const enhancerId of enabledEnhancerIds) {
     for (const group of groupOrder) {
       if (groupEnhancerMap[group].includes(enhancerId)) {
@@ -471,13 +513,15 @@ export function getGroupsForEnabledEnhancers(
 /** Check if an enhancer needs additional configuration */
 export function enhancerNeedsConfig(
   descriptor: EnhancerDescriptor,
-  levelConfig: Partial<ApiEnhancerOptions> | undefined
+  levelConfig: Partial<ApiEnhancerOptions> | undefined,
 ): boolean {
   if (descriptor.tags.includes(EnhancerTag.UseRegex)) {
     const expressions = levelConfig?.expressions;
+
     if (!expressions || expressions.filter((e: string) => e.trim()).length === 0) {
       return true;
     }
   }
+
   return false;
 }

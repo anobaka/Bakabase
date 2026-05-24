@@ -1,9 +1,6 @@
 "use client";
 
-import type {
-  SelectedItems,
-  SelectProps as NextUISelectProps,
-} from "@heroui/react";
+import type { SelectedItems, SelectProps as NextUISelectProps } from "@heroui/react";
 import type { Key } from "@react-types/shared";
 import type { ReactNode } from "react";
 
@@ -47,8 +44,8 @@ const Select: React.FC<SelectProps> = ({ dataSource = [], ...props }) => {
                 {v.reduce<ReactNode[]>((s, x, i) => {
                   s.push(
                     <Chip radius={"sm"} size={props.size ?? undefined}>
-                      {dataSource.find((d) => d.value === x.data?.value)
-                        ?.label ?? t<string>("Unknown label")}
+                      {dataSource.find((d) => d.value === x.data?.value)?.label ??
+                        t<string>("Unknown label")}
                     </Chip>,
                   );
 

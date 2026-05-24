@@ -9,21 +9,8 @@ export interface ChipProps extends NextUIChipProps {
   className?: string;
   radius?: "full" | "sm" | "md" | "lg";
   isDisabled?: boolean;
-  variant?:
-    | "solid"
-    | "bordered"
-    | "light"
-    | "flat"
-    | "faded"
-    | "shadow"
-    | "dot";
-  color?:
-    | "default"
-    | "primary"
-    | "secondary"
-    | "success"
-    | "danger"
-    | "warning";
+  variant?: "solid" | "bordered" | "light" | "flat" | "faded" | "shadow" | "dot";
+  color?: "default" | "primary" | "secondary" | "success" | "danger" | "warning";
 }
 
 const Chip = forwardRef<any, ChipProps>((props: ChipProps, ref) => {

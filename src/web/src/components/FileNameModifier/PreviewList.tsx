@@ -1,10 +1,11 @@
 "use client";
 
 import type { FileNameModificationResult } from "./index";
+import type { ListRowProps } from "react-virtualized";
 
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { AutoSizer, List, ListRowProps } from "react-virtualized";
+import { AutoSizer, List } from "react-virtualized";
 
 import PreviewItem from "./PreviewItem";
 
@@ -29,9 +30,7 @@ const PreviewList: React.FC<PreviewListProps> = ({
 
   if (isLoading) {
     return (
-      <div className="text-gray-400 text-center py-5">
-        {t<string>("FileNameModifier.Loading")}
-      </div>
+      <div className="text-gray-400 text-center py-5">{t<string>("FileNameModifier.Loading")}</div>
     );
   }
 
@@ -45,6 +44,7 @@ const PreviewList: React.FC<PreviewListProps> = ({
 
   const rowRenderer = ({ index, key, style }: ListRowProps) => {
     const result = results[index];
+
     return (
       <PreviewItem
         key={result.originalPath}

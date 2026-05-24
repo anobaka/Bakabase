@@ -101,7 +101,9 @@ const Variables = ({ variables: propsVariable, disabled, onChange }: Props) => {
   };
 
   return (
-    <div className={`bulk-modification-variables ${disabled ? "opacity-50 pointer-events-none" : ""}`}>
+    <div
+      className={`bulk-modification-variables ${disabled ? "opacity-50 pointer-events-none" : ""}`}
+    >
       {variables.length > 0 && (
         <div className={"flex flex-wrap gap-2 mb-2"}>
           {variables.map((v, i) => (

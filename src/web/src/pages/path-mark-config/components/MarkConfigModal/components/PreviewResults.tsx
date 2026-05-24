@@ -1,6 +1,7 @@
 "use client";
 
 import type { PreviewResultsByPath, PathMarkPreviewResult } from "../hooks/usePreview";
+
 import { Spinner, Chip } from "@/components/bakaui";
 import { PathMarkType, PathMarkApplyScope } from "@/sdk/constants";
 import { ResourceTerm } from "@/components/Chips/Terms";
@@ -16,8 +17,18 @@ type Props = {
   applyScope?: PathMarkApplyScope;
 };
 
-const PreviewResults = ({ loading, results, resultsByPath, isMultiplePaths, error, markType, t, applyScope }: Props) => {
+const PreviewResults = ({
+  loading,
+  results,
+  resultsByPath,
+  isMultiplePaths,
+  error,
+  markType,
+  t,
+  applyScope,
+}: Props) => {
   const showSubdirectoriesSuffix = applyScope === PathMarkApplyScope.MatchedAndSubdirectories;
+
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-sm text-default-500 py-2">
@@ -28,9 +39,7 @@ const PreviewResults = ({ loading, results, resultsByPath, isMultiplePaths, erro
   }
 
   if (error) {
-    return (
-      <div className="text-sm text-danger py-2">{error}</div>
-    );
+    return <div className="text-sm text-danger py-2">{error}</div>;
   }
 
   if (results.length === 0) {
@@ -43,6 +52,7 @@ const PreviewResults = ({ loading, results, resultsByPath, isMultiplePaths, erro
 
   const renderSubdirectoriesSuffix = () => {
     if (!showSubdirectoriesSuffix) return null;
+
     return (
       <span className="text-primary-500 italic ml-1">
         {t("pathMarkConfig.label.andAllSubdirectories")}
@@ -55,28 +65,28 @@ const PreviewResults = ({ loading, results, resultsByPath, isMultiplePaths, erro
     const separator = result.path.includes("/") ? "/" : "\\";
 
     // For Resource type: highlight the resource layer in the path
-    if (markType === PathMarkType.Resource && result.resourceLayerIndex !== null && result.resourceLayerIndex !== undefined) {
+    if (
+      markType === PathMarkType.Resource &&
+      result.resourceLayerIndex !== null &&
+      result.resourceLayerIndex !== undefined
+    ) {
       return (
         <div key={idx} className="text-xs text-default-600 break-all">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="flex items-center gap-0.5 flex-wrap">
               {pathSegments.map((segment, segIdx) => {
                 const isResourceLayer = segIdx === result.resourceLayerIndex;
+
                 return (
                   <span key={segIdx} className="flex items-center gap-0.5">
                     {segIdx > 0 && <span className="text-default-400">{separator}</span>}
                     {isResourceLayer ? (
-                    <span className="flex items-center gap-1">
-                      <Chip
-                        size="sm"
-                        color="success"
-                        variant="flat"
-                        className="font-semibold"
-                      >
-                        <ResourceTerm size="sm" />
-                      </Chip>
-                      <span>{segment}</span>
-                    </span>
+                      <span className="flex items-center gap-1">
+                        <Chip className="font-semibold" color="success" size="sm" variant="flat">
+                          <ResourceTerm size="sm" />
+                        </Chip>
+                        <span>{segment}</span>
+                      </span>
                     ) : (
                       <span>{segment}</span>
                     )}
@@ -100,13 +110,11 @@ const PreviewResults = ({ loading, results, resultsByPath, isMultiplePaths, erro
               {renderSubdirectoriesSuffix()}
             </span>
             {result.propertyValue !== null && result.propertyValue !== undefined && (
-              <Chip
-                size="sm"
-                color="primary"
-                variant="flat"
-                className="flex-shrink-0"
-              >
-                <span className="font-semibold">{t("pathMarkConfig.label.propertyValue")}: <span className="font-bold">{result.propertyValue}</span></span>
+              <Chip className="flex-shrink-0" color="primary" size="sm" variant="flat">
+                <span className="font-semibold">
+                  {t("pathMarkConfig.label.propertyValue")}:{" "}
+                  <span className="font-bold">{result.propertyValue}</span>
+                </span>
               </Chip>
             )}
           </div>
@@ -124,13 +132,11 @@ const PreviewResults = ({ loading, results, resultsByPath, isMultiplePaths, erro
               {renderSubdirectoriesSuffix()}
             </span>
             {result.propertyValue !== null && result.propertyValue !== undefined && (
-              <Chip
-                size="sm"
-                color="secondary"
-                variant="flat"
-                className="flex-shrink-0"
-              >
-                <span className="font-semibold">{t("common.label.mediaLibrary")}: <span className="font-bold">{result.propertyValue}</span></span>
+              <Chip className="flex-shrink-0" color="secondary" size="sm" variant="flat">
+                <span className="font-semibold">
+                  {t("common.label.mediaLibrary")}:{" "}
+                  <span className="font-bold">{result.propertyValue}</span>
+                </span>
               </Chip>
             )}
           </div>
@@ -153,7 +159,9 @@ const PreviewResults = ({ loading, results, resultsByPath, isMultiplePaths, erro
   if (isMultiplePaths && resultsByPath && resultsByPath.length > 0) {
     return (
       <div className="bg-default-100 rounded p-2">
-        <div className="text-xs text-default-500 mb-1">{t("pathMarkConfig.label.previewMatches")}:</div>
+        <div className="text-xs text-default-500 mb-1">
+          {t("pathMarkConfig.label.previewMatches")}:
+        </div>
         <div className="flex flex-col gap-2 max-h-48 overflow-y-auto">
           {resultsByPath.map((group, groupIdx) => (
             <div key={groupIdx} className="border-l-2 border-primary-200 pl-2">
@@ -172,7 +180,9 @@ const PreviewResults = ({ loading, results, resultsByPath, isMultiplePaths, erro
 
   return (
     <div className="bg-default-100 rounded p-2">
-      <div className="text-xs text-default-500 mb-1">{t("pathMarkConfig.label.previewMatches")}:</div>
+      <div className="text-xs text-default-500 mb-1">
+        {t("pathMarkConfig.label.previewMatches")}:
+      </div>
       <div className="flex flex-col gap-1 max-h-32 overflow-y-auto">
         {results.map((result, idx) => renderResult(result, idx))}
       </div>

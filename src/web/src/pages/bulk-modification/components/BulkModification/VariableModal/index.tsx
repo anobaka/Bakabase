@@ -32,6 +32,7 @@ const validate = (v?: Partial<BulkModificationVariable>) => {
   if (v.propertyPool === PropertyPool.Internal) {
     return true;
   }
+
   return v.scope !== undefined;
 };
 
@@ -60,9 +61,13 @@ const VariableModal = ({ variable: propsVariable, onDestroyed, onChange }: Props
         },
       }}
       size={"xl"}
-      title={variable?.property
-        ? t<string>("bulkModification.title.preprocessForProperty", { property: variable.property.name })
-        : t<string>("bulkModification.label.settingVariable")}
+      title={
+        variable?.property
+          ? t<string>("bulkModification.title.preprocessForProperty", {
+              property: variable.property.name,
+            })
+          : t<string>("bulkModification.label.settingVariable")
+      }
       onDestroyed={onDestroyed}
       onOk={() => {
         if (!validate(variable)) {
@@ -71,10 +76,12 @@ const VariableModal = ({ variable: propsVariable, onDestroyed, onChange }: Props
         // Ensure scope is set for Internal properties
         const finalVariable = {
           ...variable,
-          scope: variable.propertyPool === PropertyPool.Internal
-            ? PropertyValueScope.Manual
-            : variable.scope,
+          scope:
+            variable.propertyPool === PropertyPool.Internal
+              ? PropertyValueScope.Manual
+              : variable.scope,
         };
+
         onChange?.(finalVariable as BulkModificationVariable);
       }}
     >
@@ -111,7 +118,10 @@ const VariableModal = ({ variable: propsVariable, onDestroyed, onChange }: Props
                         propertyId: p.id,
                         property: p,
                         // Auto-set scope to Default for Internal properties
-                        scope: p.pool === PropertyPool.Internal ? PropertyValueScope.Manual : variable?.scope,
+                        scope:
+                          p.pool === PropertyPool.Internal
+                            ? PropertyValueScope.Manual
+                            : variable?.scope,
                       });
                     },
                   });
@@ -182,6 +192,7 @@ const VariableModal = ({ variable: propsVariable, onDestroyed, onChange }: Props
               {variable.preprocesses.map((step, i) => {
                 return (
                   <ProcessStep
+                    key={i}
                     editable
                     no={i + 1}
                     property={variable.property!}

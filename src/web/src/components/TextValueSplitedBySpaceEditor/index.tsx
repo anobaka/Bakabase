@@ -38,9 +38,9 @@ const TextValueSplitedBySpaceEditor = (props: Props) => {
       />
       {value && value.length > 0 && (
         <div className={"flex items-center gap-1 flex-wrap"}>
-          {value.map((v) => {
+          {value.map((v, i) => {
             return (
-              <Chip radius={"sm"} size={"sm"}>
+              <Chip key={i} radius={"sm"} size={"sm"}>
                 {v}
               </Chip>
             );

@@ -268,10 +268,12 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
   const shallowStyleEqual = useCallback((a: any, b: any): boolean => {
     if (a === b) return true;
     if (!a || !b) return false;
-    const keysA = Object.keys(a).filter(k => k !== 'id');
-    const keysB = Object.keys(b).filter(k => k !== 'id');
+    const keysA = Object.keys(a).filter((k) => k !== "id");
+    const keysB = Object.keys(b).filter((k) => k !== "id");
+
     if (keysA.length !== keysB.length) return false;
-    return keysA.every(key => a[key] === b[key]);
+
+    return keysA.every((key) => a[key] === b[key]);
   }, []);
 
   const virtualListRowHeightCallback = useCallback(
@@ -296,7 +298,15 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
   );
 
   const virtualListRowRendererCallback = useCallback(
-    ({ index, style }: { index: number; style: any; isVisible?: boolean; isScrolling?: boolean }) => {
+    ({
+      index,
+      style,
+    }: {
+      index: number;
+      style: any;
+      isVisible?: boolean;
+      isScrolling?: boolean;
+    }) => {
       if (entryRef.current.filteredChildren.length <= index) {
         log(
           `[VirtualListRowRenderer] Rendering a child with overflow index: ${index} >= count of children: ${entryRef.current.filteredChildren.length}, ignoring`,
@@ -316,6 +326,7 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
 
       // Use shallow compare instead of deep-diff for better performance
       const prevStyle = childrenStylesRef.current[e.path];
+
       if (!shallowStyleEqual(prevStyle, style)) {
         childrenStylesRef.current[e.path] = { ...style, id: uuidv4() };
       }
@@ -330,18 +341,31 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
           entry={e}
           expandable={e.expandable}
           filter={filter}
+          renderAfterName={renderAfterName}
+          renderBeforeRightOperations={renderBeforeRightOperations}
           style={s}
           switchSelective={switchSelective}
           onContextMenu={onContextMenu}
           onDoubleClick={onDoubleClick}
-          onLoadFail={onLoadFail}
-          renderAfterName={renderAfterName}
-          renderBeforeRightOperations={renderBeforeRightOperations}
           onEnterDirectory={onEnterDirectory}
+          onLoadFail={onLoadFail}
         />
       );
     },
-    [childrenVersion, onDoubleClick, renderAfterName, renderBeforeRightOperations, shallowStyleEqual, log, afterPlayedFirstFile, capabilities, filter, switchSelective, onContextMenu, onLoadFail],
+    [
+      childrenVersion,
+      onDoubleClick,
+      renderAfterName,
+      renderBeforeRightOperations,
+      shallowStyleEqual,
+      log,
+      afterPlayedFirstFile,
+      capabilities,
+      filter,
+      switchSelective,
+      onContextMenu,
+      onLoadFail,
+    ],
   );
 
   const domCallback = useCallback((node?: HTMLElement | null) => {
@@ -362,10 +386,11 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
     pendingRenderingRef.current = true;
 
     // Increment version to trigger useCallback updates
-    setChildrenVersion(v => v + 1);
+    setChildrenVersion((v) => v + 1);
 
     // Clean up style cache for entries that are no longer in the children list
-    const currentPaths = new Set(entryRef.current.filteredChildren.map(c => c.path));
+    const currentPaths = new Set(entryRef.current.filteredChildren.map((c) => c.path));
+
     for (const path of Object.keys(childrenStylesRef.current)) {
       if (!currentPaths.has(path)) {
         delete childrenStylesRef.current[path];
@@ -403,57 +428,63 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
    * @param refresh
    * @return rendered
    */
-  const expand = useCallback(async (refresh: boolean = false): Promise<boolean> => {
-    if (!entryRef.current.expandable) {
-      return false;
-    }
-    if (refresh) {
-      entryRef.current.clearChildren();
-      log("Clear children");
-    }
-    if (!entryRef.current.expanded || !entryRef.current.children) {
-      if (!entryRef.current.children) {
-        if (loadingChildrenRef.current) {
-          return false;
-        }
-        loadingChildrenRef.current = true;
-        setLoading(true);
-        // @ts-ignore
-        const rsp = await BApi.file.getChildrenIwFsInfo(
-          { root: entryRef.current.path, showHiddenFiles: entryRef.current.root?.showHiddenFiles },
-          { showErrorToast: () => false },
-        );
-
-        log(`Loaded ${rsp.data?.entries?.length} children`);
-        setLoading(false);
-        if (rsp.code) {
-          onLoadFail(rsp, entryRef.current);
-
-          return false;
-        }
-        if (rsp.data) {
-          const { entries = [] } = rsp.data || {};
-
-          // @ts-ignore
-          entryRef.current.children = entries!.map(
-            (e) =>
-              new Entry({
-                ...e,
-                parent: entryRef.current,
-                properties: entryRef.current.properties,
-              }),
-          );
-        }
+  const expand = useCallback(
+    async (refresh: boolean = false): Promise<boolean> => {
+      if (!entryRef.current.expandable) {
+        return false;
       }
-      entryRef.current.expanded = true;
-      entryRef.current.expireFilteredChildren();
-      entryRef.current.renderChildren();
+      if (refresh) {
+        entryRef.current.clearChildren();
+        log("Clear children");
+      }
+      if (!entryRef.current.expanded || !entryRef.current.children) {
+        if (!entryRef.current.children) {
+          if (loadingChildrenRef.current) {
+            return false;
+          }
+          loadingChildrenRef.current = true;
+          setLoading(true);
+          // @ts-ignore
+          const rsp = await BApi.file.getChildrenIwFsInfo(
+            {
+              root: entryRef.current.path,
+              showHiddenFiles: entryRef.current.root?.showHiddenFiles,
+            },
+            { showErrorToast: () => false },
+          );
 
-      return true;
-    }
+          log(`Loaded ${rsp.data?.entries?.length} children`);
+          setLoading(false);
+          if (rsp.code) {
+            onLoadFail(rsp, entryRef.current);
 
-    return false;
-  }, [log, onLoadFail]);
+            return false;
+          }
+          if (rsp.data) {
+            const { entries = [] } = rsp.data || {};
+
+            // @ts-ignore
+            entryRef.current.children = entries!.map(
+              (e) =>
+                new Entry({
+                  ...e,
+                  parent: entryRef.current,
+                  properties: entryRef.current.properties,
+                }),
+            );
+          }
+        }
+        entryRef.current.expanded = true;
+        entryRef.current.expireFilteredChildren();
+        entryRef.current.renderChildren();
+
+        return true;
+      }
+
+      return false;
+    },
+    [log, onLoadFail],
+  );
 
   const triggerChildrenLoaded = useCallback(() => {
     log("Trigger onChildrenLoaded", entryRef.current);
@@ -557,7 +588,7 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
                   const segments = x.split(".");
 
                   return (
-                    <Tooltip className="max-w-[600px]" content={x}>
+                    <Tooltip key={x} className="max-w-[600px]" content={x}>
                       <Button
                         onPress={async () => {
                           await BApi.tool.openFile({ path: x });
@@ -600,7 +631,6 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
       ref={domCallback}
       className={`tree-entry flex flex-col select-none outline-none ${entryRef.current.isRoot ? "h-full" : ""}`}
       style={propsStyle}
-      tabIndex={0}
       onDoubleClick={(e) => {
         e.stopPropagation();
         log("Double clicked", entryRef.current);
@@ -610,8 +640,16 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
       {!entryRef.current.isRoot && (
         <div
           className="entry-main-container relative w-full h-9 min-h-9 max-h-9 border-b border-[var(--theme-file-processor-entry-divider)]"
+          role="button"
+          tabIndex={0}
           onClick={(e) => {
             e.stopPropagation();
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              e.stopPropagation();
+            }
           }}
         >
           {entryRef.current.type == IwFsType.Invalid && (
@@ -623,43 +661,9 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
               currentEntryDomRef.current = r;
             }}
             className={`entry-main box-content flex items-center justify-between h-6 py-[5px] pl-1 pr-2 relative rounded-md mx-1 border-l-[3px] border-l-transparent transition-all duration-150 ${entryRef.current?.selected ? "selected" : ""} ${entryRef.current.expanded ? "border-b-[var(--theme-border-color)]" : ""} ${isDragOver ? "bg-primary/20 border-l-primary" : ""} ${clipboardStore.paths.includes(entryRef.current.path) ? (clipboardStore.mode === "cut" ? "opacity-50 border-l-warning" : "border-l-success") : ""}`}
-            tabIndex={0}
             draggable={!entryRef.current.isDrive}
-            onDragStart={(e) => {
-              e.dataTransfer.setData("text/plain", JSON.stringify([entryRef.current.path]));
-              e.dataTransfer.effectAllowed = "move";
-            }}
-            onDragOver={(e) => {
-              if (entryRef.current.isDirectoryOrDrive) {
-                e.preventDefault();
-                e.dataTransfer.dropEffect = "move";
-                setIsDragOver(true);
-              }
-            }}
-            onDragLeave={() => {
-              setIsDragOver(false);
-            }}
-            onDrop={(e) => {
-              e.preventDefault();
-              setIsDragOver(false);
-              try {
-                const paths = JSON.parse(e.dataTransfer.getData("text/plain")) as string[];
-                if (paths.length > 0 && entryRef.current.isDirectoryOrDrive) {
-                  BApi.file.moveEntries({
-                    destDir: entryRef.current.path,
-                    entryPaths: paths,
-                  }).then(() => {
-                    toast.success(t<string>("fileExplorer.success.movedItems", { count: paths.length }));
-                  }).catch((err) => {
-                    toast.danger(t<string>("fileExplorer.error.failedToMoveItems"));
-                    log("Move entries failed", err);
-                  });
-                }
-              } catch (err) {
-                // Invalid drag data - log for debugging
-                log("Invalid drag data", err);
-              }
-            }}
+            role="button"
+            tabIndex={0}
             onClick={() => {
               const r = !switchSelective || switchSelective(entryRef.current);
 
@@ -671,6 +675,17 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
                 forceUpdate();
               }
             }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                const r = !switchSelective || switchSelective(entryRef.current);
+
+                if (r) {
+                  entryRef.current.selected = !entryRef.current?.selected;
+                  forceUpdate();
+                }
+              }
+            }}
             onContextMenu={(e) => {
               if (!entryRef.current.selected) {
                 if (!switchSelective || switchSelective(entryRef.current)) {
@@ -680,12 +695,57 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
               }
               onContextMenu(e, entryRef.current);
             }}
+            onDragLeave={() => {
+              setIsDragOver(false);
+            }}
+            onDragOver={(e) => {
+              if (entryRef.current.isDirectoryOrDrive) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "move";
+                setIsDragOver(true);
+              }
+            }}
+            onDragStart={(e) => {
+              e.dataTransfer.setData("text/plain", JSON.stringify([entryRef.current.path]));
+              e.dataTransfer.effectAllowed = "move";
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              setIsDragOver(false);
+              try {
+                const paths = JSON.parse(e.dataTransfer.getData("text/plain")) as string[];
+
+                if (paths.length > 0 && entryRef.current.isDirectoryOrDrive) {
+                  BApi.file
+                    .moveEntries({
+                      destDir: entryRef.current.path,
+                      entryPaths: paths,
+                    })
+                    .then(() => {
+                      toast.success(
+                        t<string>("fileExplorer.success.movedItems", { count: paths.length }),
+                      );
+                    })
+                    .catch((err) => {
+                      toast.danger(t<string>("fileExplorer.error.failedToMoveItems"));
+                      log("Move entries failed", err);
+                    });
+                }
+              } catch (err) {
+                // Invalid drag data - log for debugging
+                log("Invalid drag data", err);
+              }
+            }}
           >
-            <div className={`flex items-center flex-1 overflow-hidden text-sm gap-0.5 ${entry.isDirectoryOrDrive ? "font-medium" : "font-normal opacity-90"}`}>
+            <div
+              className={`flex items-center flex-1 overflow-hidden text-sm gap-0.5 ${entry.isDirectoryOrDrive ? "font-medium" : "font-normal opacity-90"}`}
+            >
               <div className="things-before-name flex items-center">
                 <LeftIcon entry={entryRef.current} expandable={expandable} loading={loading} />
                 {entryRef.current && (
-                  <div className={`flex items-center justify-center mr-1.5 ${entry.isDirectoryOrDrive ? "w-5 h-5 min-w-5 max-w-5 min-h-5 max-h-5" : "w-4 h-4 min-w-4 max-w-4 min-h-4 max-h-4"}`}>
+                  <div
+                    className={`flex items-center justify-center mr-1.5 ${entry.isDirectoryOrDrive ? "w-5 h-5 min-w-5 max-w-5 min-h-5 max-h-5" : "w-4 h-4 min-w-4 max-w-4 min-h-4 max-h-4"}`}
+                  >
                     <FileSystemEntryIcon
                       path={entryRef.current.path}
                       size={entry.isDirectoryOrDrive ? 18 : 16}
@@ -742,17 +802,23 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
                     <BsCollectionPlayFill className={"text-base"} />
                   </OperationButton>
                 </Tooltip>
-                <TailingOperations capabilities={capabilities} entry={entry} onEnterDirectory={onEnterDirectory} />
+                <TailingOperations
+                  capabilities={capabilities}
+                  entry={entry}
+                  onEnterDirectory={onEnterDirectory}
+                />
                 {renderFileSystemInfo()}
                 {renderTaskError()}
                 {renderAfterName && (
                   <div
                     className="ml-1.5"
+                    role="button"
+                    tabIndex={0}
                     onClick={(e) => e.stopPropagation()}
-                    onDoubleClick={(e) => e.stopPropagation()}
-                    onMouseDown={(e) => e.stopPropagation()}
-                    onKeyDown={(e) => e.stopPropagation()}
                     onContextMenu={(e) => e.stopPropagation()}
+                    onDoubleClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => e.stopPropagation()}
                   >
                     {renderAfterName(entry)}
                   </div>
@@ -762,10 +828,12 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
             <div className="flex items-center justify-end ml-3 gap-1">
               {renderBeforeRightOperations && (
                 <div
+                  role="button"
+                  tabIndex={0}
                   onClick={(e) => e.stopPropagation()}
                   onDoubleClick={(e) => e.stopPropagation()}
-                  onMouseDown={(e) => e.stopPropagation()}
                   onKeyDown={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
                 >
                   {renderBeforeRightOperations(entry)}
                 </div>

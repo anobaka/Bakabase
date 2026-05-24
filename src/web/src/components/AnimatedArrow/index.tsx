@@ -5,11 +5,7 @@ interface Props {
   direction?: "left" | "right" | "up" | "down";
   className?: string;
 }
-const AnimatedArrow = ({
-  color = "#999",
-  direction = "right",
-  className,
-}: Props) => {
+const AnimatedArrow = ({ color = "#999", direction = "right", className }: Props) => {
   const spans: any[] = [];
 
   let rotate = -90;

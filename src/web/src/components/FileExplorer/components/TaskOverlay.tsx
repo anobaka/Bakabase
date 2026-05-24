@@ -26,7 +26,8 @@ const TaskOverlay = ({ task }: TaskOverlayProps) => {
           className="absolute left-0 top-0 h-full transition-[width] duration-300 ease-out"
           style={{
             width: `${task.percentage}%`,
-            background: "linear-gradient(90deg, rgba(105, 226, 248, 0.15), rgba(105, 226, 248, 0.3))",
+            background:
+              "linear-gradient(90deg, rgba(105, 226, 248, 0.15), rgba(105, 226, 248, 0.3))",
           }}
         />
         <Spinner size="sm" />
@@ -34,9 +35,7 @@ const TaskOverlay = ({ task }: TaskOverlayProps) => {
         <div className="bg-[var(--theme-body-background)] px-6 py-1 rounded-md text-xs font-medium shadow-md">
           {task.name}
           &nbsp;
-          {task.status == BTaskStatus.NotStarted
-            ? t<string>("Waiting")
-            : `${task.percentage}%`}
+          {task.status == BTaskStatus.NotStarted ? t<string>("Waiting") : `${task.percentage}%`}
         </div>
       </div>
       <div className="stop absolute inset-0 hidden items-center justify-center hover:flex">

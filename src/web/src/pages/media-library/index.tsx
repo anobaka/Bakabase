@@ -265,8 +265,8 @@ const MediaLibraryPage = () => {
     return (
       <Card
         key={ml.id}
-        id={`media-library-card-${ml.id}`}
         className={`group hover:shadow-md hover:scale-[1.02] transition-all duration-300 ${isHighlighted ? "ring-2 ring-primary shadow-md" : ""}`}
+        id={`media-library-card-${ml.id}`}
         shadow="sm"
       >
         <CardBody className="p-4 flex flex-col gap-3">
@@ -336,7 +336,11 @@ const MediaLibraryPage = () => {
           <div className="flex items-center justify-between pt-2 mt-auto border-t border-default-100">
             {/* Search button */}
             {ml.resourceCount > 0 ? (
-              <Tooltip content={t("mediaLibrary.action.searchResources")} delay={500} placement="top">
+              <Tooltip
+                content={t("mediaLibrary.action.searchResources")}
+                delay={500}
+                placement="top"
+              >
                 <Button
                   isIconOnly
                   color="default"
@@ -421,7 +425,9 @@ const MediaLibraryPage = () => {
 
       {/* Path mark config hint */}
       <div className="flex items-center justify-center gap-2 p-3 bg-default-50 rounded-lg">
-        <span className="text-sm text-default-500">{t("mediaLibrary.label.pathMarkConfigHint")}</span>
+        <span className="text-sm text-default-500">
+          {t("mediaLibrary.label.pathMarkConfigHint")}
+        </span>
         <Button
           color="secondary"
           size="sm"

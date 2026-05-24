@@ -17,11 +17,7 @@ import {
 } from "@/components/StandardValue/helpers";
 import { autoBackgroundColor, buildLogger } from "@/components/utils";
 
-type Selectable<V> = (
-  data: MultilevelData<V>,
-  depth: number,
-  index: number,
-) => boolean;
+type Selectable<V> = (data: MultilevelData<V>, depth: number, index: number) => boolean;
 
 interface MultilevelValueEditorProps<V>
   extends ValueEditorProps<V[], string[][]>,
@@ -32,14 +28,11 @@ interface MultilevelValueEditorProps<V>
 }
 
 const buildDefaultSelectable: <V>() => Selectable<V> = () => {
-  return (data, depth, index) =>
-    data.children == undefined || data.children.length == 0;
+  return (data, depth, index) => data.children == undefined || data.children.length == 0;
 };
 
 const log = buildLogger("MultilevelValueEditor");
-const MultilevelValueEditor = <V = string,>(
-  props: MultilevelValueEditorProps<V>,
-) => {
+const MultilevelValueEditor = <V = string,>(props: MultilevelValueEditorProps<V>) => {
   const { t } = useTranslation();
 
   const {
@@ -83,11 +76,13 @@ const MultilevelValueEditor = <V = string,>(
   const getColumnsData = useCallback(() => {
     const columns: { items: MultilevelData<V>[]; depth: number }[] = [];
     let currentItems = filterMultilevelData(dataSource, keyword);
+
     columns.push({ items: currentItems, depth: 0 });
 
     for (let i = 0; i < expandedPath.length; i++) {
       const expandedValue = expandedPath[i];
       const expandedItem = currentItems.find((item) => item.value === expandedValue);
+
       if (expandedItem?.children && expandedItem.children.length > 0) {
         currentItems = filterMultilevelData(expandedItem.children, keyword);
         columns.push({ items: currentItems, depth: i + 1 });
@@ -143,11 +138,11 @@ const MultilevelValueEditor = <V = string,>(
           return (
             <Button
               key={idx}
+              className="justify-between"
               color={isSelected ? "primary" : isExpanded ? "secondary" : "default"}
               size="sm"
-              variant={isExpanded && !isSelected ? "flat" : "solid"}
               style={style}
-              className="justify-between"
+              variant={isExpanded && !isSelected ? "flat" : "solid"}
               onPress={() => handleItemClick(item, depth)}
             >
               <span className="truncate">{item.label}</span>
@@ -164,6 +159,7 @@ const MultilevelValueEditor = <V = string,>(
     return value
       .map((v) => {
         const chain = findNodeChainInMultilevelData(dataSource, v);
+
         return chain?.map((x) => x.label).join(" / ");
       })
       .filter((x) => x);
@@ -177,9 +173,7 @@ const MultilevelValueEditor = <V = string,>(
       onClose={onCancel}
       onOk={async () => {
         const bv = value
-          .map((v) =>
-            findNodeChainInMultilevelData(dataSource, v)?.map((x) => x.label),
-          )
+          .map((v) => findNodeChainInMultilevelData(dataSource, v)?.map((x) => x.label))
           .filter((x) => x) as string[][];
 
         onValueChange?.(value, bv);
@@ -188,8 +182,8 @@ const MultilevelValueEditor = <V = string,>(
       <div className="flex flex-col gap-3 max-h-full min-h-0">
         <div>
           <Input
-            size="sm"
             placeholder={t<string>("common.placeholder.search")}
+            size="sm"
             startContent={<SearchOutlined className="text-small" />}
             value={keyword}
             onValueChange={(v) => setKeyword(v)}
@@ -212,9 +206,7 @@ const MultilevelValueEditor = <V = string,>(
         <div className="flex gap-2 min-h-0 overflow-x-auto overflow-y-hidden">
           {columns.length > 0 && columns[0].items.length > 0 ? (
             columns.map((column, i) => (
-              <React.Fragment key={i}>
-                {renderColumn(column.items, column.depth)}
-              </React.Fragment>
+              <React.Fragment key={i}>{renderColumn(column.items, column.depth)}</React.Fragment>
             ))
           ) : (
             <div className="m-2 flex items-center justify-center text-default-400">

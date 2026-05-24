@@ -80,12 +80,12 @@ const SelectableChip = ({
   return (
     <Chip
       key={itemKey}
-      size={size}
-      variant={chipVariant}
-      color={chipColor}
       className={classNames.join(" ")}
-      style={Object.keys(style).length > 0 ? style : undefined}
+      color={chipColor}
       isDisabled={isDisabled}
+      size={size}
+      style={Object.keys(style).length > 0 ? style : undefined}
+      variant={chipVariant}
       onClick={isDisabled ? undefined : onClick}
     >
       {label}

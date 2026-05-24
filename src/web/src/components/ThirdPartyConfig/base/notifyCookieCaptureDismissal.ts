@@ -17,7 +17,9 @@ export function notifyCookieCaptureDismissal(rsp: {
   }
   if (rsp.message) {
     toast.default(rsp.message);
+
     return true;
   }
+
   return false;
 }

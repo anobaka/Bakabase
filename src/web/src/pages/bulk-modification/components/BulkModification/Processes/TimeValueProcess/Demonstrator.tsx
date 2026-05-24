@@ -20,26 +20,56 @@ const Demonstrator = ({ operation, options, variables }: Props) => {
 
   switch (operation) {
     case BulkModificationTimeProcessOperation.Delete:
-      return <Chip color="danger" size="sm">{t("bulkModification.operation.time.delete")}</Chip>;
+      return (
+        <Chip color="danger" size="sm">
+          {t("bulkModification.operation.time.delete")}
+        </Chip>
+      );
     case BulkModificationTimeProcessOperation.SetWithFixedValue:
       return (
         <span>
           {t("bulkModification.operation.time.setWithFixedValue")}:{" "}
-          {options?.value && <ProcessValueDemonstrator value={options.value} variables={variables} />}
+          {options?.value && (
+            <ProcessValueDemonstrator value={options.value} variables={variables} />
+          )}
         </span>
       );
     case BulkModificationTimeProcessOperation.AddHours:
-      return <span>+ {options?.amount} {t("common.unit.hours")}</span>;
+      return (
+        <span>
+          + {options?.amount} {t("common.unit.hours")}
+        </span>
+      );
     case BulkModificationTimeProcessOperation.SubtractHours:
-      return <span>- {options?.amount} {t("common.unit.hours")}</span>;
+      return (
+        <span>
+          - {options?.amount} {t("common.unit.hours")}
+        </span>
+      );
     case BulkModificationTimeProcessOperation.AddMinutes:
-      return <span>+ {options?.amount} {t("common.unit.minutes")}</span>;
+      return (
+        <span>
+          + {options?.amount} {t("common.unit.minutes")}
+        </span>
+      );
     case BulkModificationTimeProcessOperation.SubtractMinutes:
-      return <span>- {options?.amount} {t("common.unit.minutes")}</span>;
+      return (
+        <span>
+          - {options?.amount} {t("common.unit.minutes")}
+        </span>
+      );
     case BulkModificationTimeProcessOperation.AddSeconds:
-      return <span>+ {options?.amount} {t("common.unit.seconds")}</span>;
+      return (
+        <span>
+          + {options?.amount} {t("common.unit.seconds")}
+        </span>
+      );
     case BulkModificationTimeProcessOperation.SubtractSeconds:
-      return <span>- {options?.amount} {t("common.unit.seconds")}</span>;
+      return (
+        <span>
+          - {options?.amount} {t("common.unit.seconds")}
+        </span>
+      );
     default:
       return null;
   }

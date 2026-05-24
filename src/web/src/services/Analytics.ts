@@ -83,7 +83,10 @@ function snapshotHash(serialized: string): string {
 }
 
 async function pushSnapshotIfChanged(): Promise<void> {
-  const snapshot = await BApi.app.getAppTelemetrySnapshot().then((r) => r.data).catch(() => null);
+  const snapshot = await BApi.app
+    .getAppTelemetrySnapshot()
+    .then((r) => r.data)
+    .catch(() => null);
 
   if (!snapshot) return;
   if (!window.gtag && !posthogInitialized) return;
@@ -153,7 +156,10 @@ export async function initAnalytics(): Promise<void> {
   if (initialized) return;
   initialized = true;
 
-  const info = await BApi.app.getAnalyticsAppInfo().then((r) => r.data).catch(() => null);
+  const info = await BApi.app
+    .getAnalyticsAppInfo()
+    .then((r) => r.data)
+    .catch(() => null);
 
   if (!info || !info.enableAnonymousDataTracking) return;
 

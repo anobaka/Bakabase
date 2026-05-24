@@ -45,6 +45,7 @@ const ResourceProfileTestModal = ({ profile, onDestroyed }: Props) => {
 
         const rsp = await BApi.resource.searchResources(searchParams as any);
         const resources = (rsp.data || []) as Resource[];
+
         setMatchingResources(resources);
         setMatchCount(rsp.totalCount ?? resources.length);
       } catch (e) {
@@ -61,23 +62,23 @@ const ResourceProfileTestModal = ({ profile, onDestroyed }: Props) => {
     (r) =>
       keyword === "" ||
       r.path?.toLowerCase().includes(keyword.toLowerCase()) ||
-      r.name?.toLowerCase().includes(keyword.toLowerCase()) || 
-      r.displayName?.toLowerCase().includes(keyword.toLowerCase())
+      r.name?.toLowerCase().includes(keyword.toLowerCase()) ||
+      r.displayName?.toLowerCase().includes(keyword.toLowerCase()),
   );
 
   return (
     <Modal
       defaultVisible
+      footer={false}
       size="3xl"
       title={
         <div className="flex items-center gap-2">
           {t("resourceProfile.modal.testSearchCriteriaTitle")}
-          <Chip size="sm" variant="flat" color="primary">
+          <Chip color="primary" size="sm" variant="flat">
             {profile.name}
           </Chip>
         </div>
       }
-      footer={false}
       onDestroyed={onDestroyed}
     >
       <div className="flex flex-col gap-4">
@@ -90,7 +91,9 @@ const ResourceProfileTestModal = ({ profile, onDestroyed }: Props) => {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-sm text-default-500">{t("resourceProfile.label.showLimit")}:</span>
+            <span className="text-sm text-default-500">
+              {t("resourceProfile.label.showLimit")}:
+            </span>
             <Button
               size="sm"
               variant={limit === 50 ? "solid" : "flat"}
@@ -116,11 +119,11 @@ const ResourceProfileTestModal = ({ profile, onDestroyed }: Props) => {
         </div>
 
         <Input
-          size="sm"
+          className="max-w-sm"
           placeholder={t("resourceProfile.input.filterResults")}
+          size="sm"
           value={keyword}
           onValueChange={setKeyword}
-          className="max-w-sm"
         />
 
         {loading ? (
@@ -130,7 +133,9 @@ const ResourceProfileTestModal = ({ profile, onDestroyed }: Props) => {
           </div>
         ) : filteredResources.length === 0 ? (
           <div className="text-center text-default-400 py-8">
-            {keyword ? t("resourceProfile.empty.noResourcesMatchFilter") : t("resourceProfile.empty.noResourcesMatchedByCriteria")}
+            {keyword
+              ? t("resourceProfile.empty.noResourcesMatchFilter")
+              : t("resourceProfile.empty.noResourcesMatchedByCriteria")}
           </div>
         ) : (
           <div className="max-h-[400px] overflow-y-auto border-divider border rounded-lg">
@@ -144,7 +149,10 @@ const ResourceProfileTestModal = ({ profile, onDestroyed }: Props) => {
                   <div className="text-sm font-medium truncate" title={resource.name}>
                     {resource.displayName || t("resourceProfile.label.unnamed")}
                   </div>
-                  <div className="text-xs text-default-400 font-mono truncate" title={resource.path}>
+                  <div
+                    className="text-xs text-default-400 font-mono truncate"
+                    title={resource.path}
+                  >
                     {resource.path}
                   </div>
                 </div>

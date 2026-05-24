@@ -3,12 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import {
-  MenuFoldOutlined,
-  MenuUnfoldOutlined,
-  MoonOutlined,
-  SunOutlined,
-} from "@ant-design/icons";
+import { MenuFoldOutlined, MenuUnfoldOutlined, MoonOutlined, SunOutlined } from "@ant-design/icons";
 
 import AntdMenu from "./components/AntdMenu";
 import styles from "./index.module.scss";

@@ -1,10 +1,8 @@
 "use client";
+import type { AppNotificationMessageViewModel } from "@/core/models/AppNotification";
+
 import { useEffect, useRef } from "react";
-import {
-  HubConnectionBuilder,
-  HubConnectionState,
-  LogLevel,
-} from "@microsoft/signalr";
+import { HubConnectionBuilder, HubConnectionState, LogLevel } from "@microsoft/signalr";
 import delay from "delay";
 import { v4 as uuidv4 } from "uuid";
 
@@ -26,11 +24,6 @@ import { useAppUpdaterStateStore } from "@/stores/appUpdaterState";
 import { useThirdPartyRequestStatisticsStore } from "@/stores/thirdPartyRequestStatistics";
 import { optionsStores } from "@/stores/options";
 import { usePathMarksStore } from "@/stores/pathMarks";
-import type {
-  AppNotificationMessageViewModel,
-  AppNotificationSeverity,
-  AppNotificationBehavior,
-} from "@/core/models/AppNotification";
 
 const hubEndpoint = `${envConfig.apiEndpoint}/hub/ui`;
 
@@ -135,6 +128,7 @@ export const UIHubConnection = () => {
         uistyleoptions: "uiStyleOptions",
         dlsiteoptions: "dlsiteOptions",
       };
+
       if (nameFixMap[nameLower]) name = nameFixMap[nameLower];
       log("options changed", name, options);
       const store = optionsStores[name as keyof typeof optionsStores];
@@ -149,9 +143,7 @@ export const UIHubConnection = () => {
     });
 
     conn.on("UpdateThirdPartyRequestStatistics", (statistics) => {
-      useThirdPartyRequestStatisticsStore
-        .getState()
-        .updateStatistics(statistics);
+      useThirdPartyRequestStatisticsStore.getState().updateStatistics(statistics);
     });
 
     conn.on("RelocationPending", (payload: any) => {
@@ -177,12 +169,13 @@ export const UIHubConnection = () => {
         ? `${notification.title}\n${notification.message}`
         : notification.title;
 
-      const duration = notification.behavior === 0 // AutoDismiss
-        ? notification.durationMs || 5000
-        : 0; // 0 means persistent
+      const duration =
+        notification.behavior === 0 // AutoDismiss
+          ? notification.durationMs || 5000
+          : 0; // 0 means persistent
 
       const props = { title: message, timeout: duration, placement: "bottom-right" };
-      
+
       // Map severity to toast method
       switch (notification.severity) {
         case 0: // Info

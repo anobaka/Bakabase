@@ -34,19 +34,20 @@ const TimeValueRenderer = ({
   const f = format == undefined ? "HH:mm:ss" : format;
 
   // Don't allow starting edit mode if isEditing is explicitly set to false
-  const startEditing = !isReadonly && editor && isEditing !== false
-    ? () => {
-        setEditing(true);
-      }
-    : undefined;
+  const startEditing =
+    !isReadonly && editor && isEditing !== false
+      ? () => {
+          setEditing(true);
+        }
+      : undefined;
 
   // Direct editing mode: always show time picker without toggle
   if (isEditing && !isReadonly && editor) {
     return (
       <TimeInput
         isReadOnly={false}
-        value={value}
         size={size}
+        value={value}
         onChange={(x) => {
           setValue(x);
           editor.onValueChange?.(x, x);
@@ -59,8 +60,8 @@ const TimeValueRenderer = ({
     return (
       <TimeInput
         isReadOnly={!editor}
-        value={value}
         size={size}
+        value={value}
         onBlur={() => {
           editor?.onValueChange?.(value, value);
           setEditing(false);
@@ -71,9 +72,28 @@ const TimeValueRenderer = ({
   }
 
   if (value == undefined) {
-    return <NotSet onClick={startEditing} size={size} />;
+    return <NotSet size={size} onClick={startEditing} />;
   } else {
-    return <span onClick={startEditing} className={startEditing ? "cursor-pointer" : undefined}>{value?.format(f)}</span>;
+    return (
+      <span
+        className={startEditing ? "cursor-pointer" : undefined}
+        role={startEditing ? "button" : undefined}
+        tabIndex={startEditing ? 0 : undefined}
+        onClick={startEditing}
+        onKeyDown={
+          startEditing
+            ? (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  startEditing();
+                }
+              }
+            : undefined
+        }
+      >
+        {value?.format(f)}
+      </span>
+    );
   }
 };
 

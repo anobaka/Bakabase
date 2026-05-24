@@ -3,21 +3,16 @@
 import type { Entry } from "@/core/models/FileExplorer/Entry";
 import type { FileExplorerEntryProps } from "../../FileExplorerEntry";
 
-import {
-  ApartmentOutlined,
-  FileZipOutlined,
-  SendOutlined,
-} from "@ant-design/icons";
+import { ApartmentOutlined, FileZipOutlined, SendOutlined } from "@ant-design/icons";
 import React from "react";
 import { useTranslation } from "react-i18next";
 
 import DecompressBalloon from "../DecompressBalloon";
+import WrapModal from "../WrapModal";
 
 import { IwFsEntryAction } from "@/core/models/FileExplorer/Entry";
-import { Button, Kbd } from "@/components/bakaui";
-import WrapModal from "../WrapModal";
+import { Button } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import MediaLibraryPathSelectorV2 from "@/components/MediaLibraryPathSelectorV2";
 import BApi from "@/sdk/BApi";
 import FolderSelector from "@/components/FolderSelector";
 
@@ -29,8 +24,7 @@ const RightOperations = ({ entry, capabilities }: Props) => {
   const { createPortal } = useBakabaseContext();
   const { actions } = entry;
   const isDecompressible =
-    capabilities?.includes("decompress") &&
-    actions.includes(IwFsEntryAction.Decompress);
+    capabilities?.includes("decompress") && actions.includes(IwFsEntryAction.Decompress);
   const isWrappable = capabilities?.includes("wrap") && entry.isDirectory;
   const isMovable = capabilities?.includes("move");
 
@@ -71,7 +65,7 @@ const RightOperations = ({ entry, capabilities }: Props) => {
           variant={"ghost"}
           onClick={(e) => {
             createPortal(FolderSelector, {
-              sources: ['media library', 'custom'],
+              sources: ["media library", "custom"],
               onSelect: (path: string) => {
                 return BApi.file.moveEntries({
                   destDir: path,

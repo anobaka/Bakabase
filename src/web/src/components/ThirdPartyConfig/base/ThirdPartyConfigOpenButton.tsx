@@ -21,7 +21,10 @@ interface ThirdPartyConfigOpenButtonProps {
 /**
  * Opens a third-party Config modal (SteamConfig-style) from the third-party settings page.
  */
-export default function ThirdPartyConfigOpenButton({ Config, accountCount }: ThirdPartyConfigOpenButtonProps) {
+export default function ThirdPartyConfigOpenButton({
+  Config,
+  accountCount,
+}: ThirdPartyConfigOpenButtonProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 

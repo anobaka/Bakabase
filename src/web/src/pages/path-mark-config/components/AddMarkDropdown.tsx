@@ -4,13 +4,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { AiOutlineAim, AiOutlinePlus } from "react-icons/ai";
 
-import {
-  Button,
-  Dropdown,
-  DropdownTrigger,
-  DropdownMenu,
-  DropdownItem,
-} from "@/components/bakaui";
+import { Button, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@/components/bakaui";
 import { PathMarkType } from "@/sdk/constants";
 import {
   ResourceDescription,
@@ -30,13 +24,7 @@ const AddMarkDropdown = ({ onSelect, compact }: Props) => {
     <Dropdown>
       <DropdownTrigger>
         {compact ? (
-          <Button
-            isIconOnly
-            className="min-w-0 w-5 h-5"
-            color="success"
-            size="sm"
-            variant="light"
-          >
+          <Button isIconOnly className="min-w-0 w-5 h-5" color="success" size="sm" variant="light">
             <AiOutlinePlus className="text-base" />
           </Button>
         ) : (

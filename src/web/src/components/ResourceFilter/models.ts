@@ -43,15 +43,13 @@ export interface FilterApiAdapter {
    */
   getAvailableOperations: (
     propertyPool: PropertyPool,
-    propertyId: number
+    propertyId: number,
   ) => Promise<SearchOperation[]>;
 
   /**
    * 通过属性类型获取可用的操作列表
    */
-  getAvailableOperationsByPropertyType: (
-    propertyType: PropertyType
-  ) => Promise<SearchOperation[]>;
+  getAvailableOperationsByPropertyType: (propertyType: PropertyType) => Promise<SearchOperation[]>;
 
   /**
    * 获取用于渲染值的属性定义
@@ -84,7 +82,7 @@ export interface FilterComponentRenderers {
     currentSelection: { id: number; pool: PropertyPool } | undefined,
     onSelect: (property: IProperty, availableOperations: SearchOperation[]) => void,
     onCancel?: () => void,
-    disabledProperties?: { id: number; pool: PropertyPool }[]
+    disabledProperties?: { id: number; pool: PropertyPool }[],
   ) => void;
 
   /**
@@ -104,7 +102,7 @@ export interface FilterComponentRenderers {
       operation?: SearchOperation;
       /** When true, always show the editing UI without toggle */
       isEditing?: boolean;
-    }
+    },
   ) => ReactNode;
 }
 

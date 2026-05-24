@@ -58,11 +58,7 @@ import {
   Tooltip,
 } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
-import {
-  CoverSelectOrder,
-  EnhancerId,
-  EnhancerTargetOptionsItem,
-} from "@/sdk/constants";
+import { CoverSelectOrder, EnhancerId, EnhancerTargetOptionsItem } from "@/sdk/constants";
 import BriefEnhancer from "@/components/Chips/Enhancer/BriefEnhancer";
 import EnhancerIcon from "@/components/EnhancerIcon";
 import PropertyTypeIcon from "@/components/Property/components/PropertyTypeIcon";
@@ -456,9 +452,11 @@ const EnhancementConfigPanel = ({
   // in a group the user hasn't selected this session.
   const unboundCount = useMemo(() => {
     let count = 0;
+
     for (const [, state] of sourceStates) {
       if (state.enabled && !state.targetMapping) count++;
     }
+
     return count;
   }, [sourceStates]);
 
@@ -646,11 +644,7 @@ const EnhancementConfigPanel = ({
             <Button color="default" variant="light" onPress={() => onDestroyed?.()}>
               {t<string>("common.action.cancel")}
             </Button>
-            <Button
-              color="primary"
-              isDisabled={hasUnbound}
-              onPress={handleSubmit}
-            >
+            <Button color="primary" isDisabled={hasUnbound} onPress={handleSubmit}>
               {t<string>("common.action.confirm")}
             </Button>
           </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+
 import { computeDiff } from "./utils";
 
 interface DiffHighlightProps {
@@ -9,11 +10,7 @@ interface DiffHighlightProps {
   className?: string;
 }
 
-const DiffHighlight: React.FC<DiffHighlightProps> = ({
-  original,
-  modified,
-  className = "",
-}) => {
+const DiffHighlight: React.FC<DiffHighlightProps> = ({ original, modified, className = "" }) => {
   const diff = computeDiff(original, modified);
 
   // 如果没有变化，直接显示原文

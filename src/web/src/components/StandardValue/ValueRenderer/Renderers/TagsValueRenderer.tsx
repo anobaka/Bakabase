@@ -7,16 +7,15 @@ import { useEffect, useState, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import TagsValueEditor from "../../ValueEditor/Editors/TagsValueEditor";
+import { buildVisibleOptions, hasMoreOptions, getRemainingCount } from "../utils";
 
 import NotSet, { LightText } from "./components/LightText";
 import NoChoicesAvailable from "./components/NoChoicesAvailable";
 
 import SelectableChip from "@/components/StandardValue/ValueRenderer/Renderers/components/SelectableChip";
-
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { Button } from "@/components/bakaui";
 import { buildLogger } from "@/components/utils";
-import { buildVisibleOptions, hasMoreOptions, getRemainingCount } from "../utils";
 import { useFilterOptionsThreshold } from "@/hooks/useFilterOptionsThreshold";
 
 type TagData = TagValue & { value: string; color?: string };
@@ -32,7 +31,17 @@ const TagsValueRenderer = (props: TagsValueRendererProps) => {
   const { createPortal } = useBakabaseContext();
   const { t } = useTranslation();
 
-  const { value, editor, variant, getDataSource, valueAttributes, size, isReadonly: propsIsReadonly, isEditing: controlledIsEditing, defaultEditing = false } = props;
+  const {
+    value,
+    editor,
+    variant,
+    getDataSource,
+    valueAttributes,
+    size,
+    isReadonly: propsIsReadonly,
+    isEditing: controlledIsEditing,
+    defaultEditing = false,
+  } = props;
   const [dataSource, setDataSource] = useState<TagData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [optionsThreshold] = useFilterOptionsThreshold();
@@ -58,6 +67,7 @@ const TagsValueRenderer = (props: TagsValueRendererProps) => {
     };
 
     document.addEventListener("mousedown", handleClickOutside);
+
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [controlledIsEditing, isEditing]);
 
@@ -82,6 +92,7 @@ const TagsValueRenderer = (props: TagsValueRendererProps) => {
     if (tag.group != undefined && tag.group.length > 0) {
       return `${tag.group}:${tag.name}`;
     }
+
     return tag.name;
   };
 
@@ -107,6 +118,7 @@ const TagsValueRenderer = (props: TagsValueRendererProps) => {
     if (isReadonly || !editor?.onValueChange) return;
 
     const tag = dataSource.find((t) => t.value === tagValue);
+
     if (!tag) return;
 
     const newDbValues = selectedValues.includes(tagValue)
@@ -115,11 +127,13 @@ const TagsValueRenderer = (props: TagsValueRendererProps) => {
 
     if (newDbValues.length === 0) {
       editor.onValueChange(undefined, undefined);
+
       return;
     }
 
     const newBizValues: TagValue[] = newDbValues.map((v) => {
       const t = dataSource.find((d) => d.value === v);
+
       return t ? { name: t.name, group: t.group } : { name: v };
     });
 
@@ -128,8 +142,13 @@ const TagsValueRenderer = (props: TagsValueRendererProps) => {
 
   // Build visible options using shared utility
   const visibleOptions = useMemo(
-    () => buildVisibleOptions(dataSource, (item) => selectedValues.includes(item.value), optionsThreshold),
-    [dataSource, selectedValues, optionsThreshold]
+    () =>
+      buildVisibleOptions(
+        dataSource,
+        (item) => selectedValues.includes(item.value),
+        optionsThreshold,
+      ),
+    [dataSource, selectedValues, optionsThreshold],
   );
 
   const hasMore = hasMoreOptions(dataSource.length, optionsThreshold);
@@ -142,21 +161,16 @@ const TagsValueRenderer = (props: TagsValueRendererProps) => {
         {visibleOptions.map((item) => (
           <SelectableChip
             key={item.value}
+            color={item.color}
+            isSelected={selectedValues.includes(item.value)}
             itemKey={item.value}
             label={getTagLabel(item)}
-            isSelected={selectedValues.includes(item.value)}
-            color={item.color}
             size={size}
             onClick={() => toggleValue(item.value)}
           />
         ))}
         {hasMore && (
-          <Button
-            size="sm"
-            variant="light"
-            color="primary"
-            onClick={openFullEditor}
-          >
+          <Button color="primary" size="sm" variant="light" onClick={openFullEditor}>
             {t("common.action.more")} (+{remainingCount})
           </Button>
         )}
@@ -180,7 +194,23 @@ const TagsValueRenderer = (props: TagsValueRendererProps) => {
   // Readonly mode
   if (!value || value.length == 0) {
     return (
-      <div ref={containerRef} onClick={handleClick} className={canEdit ? "cursor-pointer" : undefined}>
+      <div
+        ref={containerRef}
+        className={canEdit ? "cursor-pointer" : undefined}
+        role={canEdit ? "button" : undefined}
+        tabIndex={canEdit ? 0 : undefined}
+        onClick={handleClick}
+        onKeyDown={
+          canEdit
+            ? (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  handleClick();
+                }
+              }
+            : undefined
+        }
+      >
         <NotSet size={size} onClick={canEdit ? handleClick : undefined} />
       </div>
     );
@@ -188,25 +218,39 @@ const TagsValueRenderer = (props: TagsValueRendererProps) => {
 
   if (variant == "light") {
     return (
-      <LightText onClick={handleClick} size={size}>
+      <LightText size={size} onClick={handleClick}>
         {simpleLabels?.map((l, i) => (
           <span key={i}>
             {i != 0 && ", "}
-            <LightText color={valueAttributes?.[i]?.color} size={size}>{l}</LightText>
+            <LightText color={valueAttributes?.[i]?.color} size={size}>
+              {l}
+            </LightText>
           </span>
         ))}
       </LightText>
     );
   } else {
     return (
-      <div ref={containerRef} onClick={handleClick} className="flex flex-wrap gap-1 cursor-pointer">
+      <div
+        ref={containerRef}
+        className="flex flex-wrap gap-1 cursor-pointer"
+        role="button"
+        tabIndex={0}
+        onClick={handleClick}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            handleClick();
+          }
+        }}
+      >
         {simpleLabels?.map((l, i) => (
           <SelectableChip
             key={i}
-            itemKey={`display-${i}`}
-            label={l}
             isSelected
             color={valueAttributes?.[i]?.color}
+            itemKey={`display-${i}`}
+            label={l}
             size={size}
           />
         ))}

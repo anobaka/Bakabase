@@ -63,7 +63,10 @@ const PostParserPage = () => {
 
   useEffect(() => {}, []);
 
-  const getResultData = (results: Record<string | number, any>, target: PostParseTarget): any | undefined => {
+  const getResultData = (
+    results: Record<string | number, any>,
+    target: PostParseTarget,
+  ): any | undefined => {
     return results[target] ?? results[PostParseTargetLabel[target]];
   };
 
@@ -114,9 +117,7 @@ const PostParserPage = () => {
 
     if (!results || Object.keys(results).length === 0) {
       return (
-        <div className={"text-default-400 text-sm"}>
-          {t<string>("postParser.label.pending")}
-        </div>
+        <div className={"text-default-400 text-sm"}>{t<string>("postParser.label.pending")}</div>
       );
     }
 
@@ -124,10 +125,12 @@ const PostParserPage = () => {
       <div className={"flex flex-col gap-2"}>
         {targets.map((target) => {
           const data = getResultData(results, target);
+
           if (data == null) {
             return (
               <Chip key={target} size={"sm"} variant={"flat"}>
-                {t<string>(`PostParseTarget.${PostParseTargetLabel[target]}`)} - {t<string>("postParser.label.pending")}
+                {t<string>(`PostParseTarget.${PostParseTargetLabel[target]}`)} -{" "}
+                {t<string>("postParser.label.pending")}
               </Chip>
             );
           }
@@ -144,66 +147,70 @@ const PostParserPage = () => {
     for (const task of tasks) {
       if (!task.results || Object.keys(task.results).length === 0) {
         rows.push({
-          "ID": task.id,
-          "Source": PostParserSource[task.source] ?? task.source,
-          "Link": task.link,
-          "Title": task.title ?? "",
-          "Target": "",
+          ID: task.id,
+          Source: PostParserSource[task.source] ?? task.source,
+          Link: task.link,
+          Title: task.title ?? "",
+          Target: "",
           "Resource Link": "",
           "Access Code": "",
-          "Password": "",
-          "Error": "",
-          "ParsedAt": "",
+          Password: "",
+          Error: "",
+          ParsedAt: "",
         });
         continue;
       }
 
       for (const [targetKey, result] of Object.entries(task.results)) {
-        const targetName = t<string>(`PostParseTarget.${PostParseTargetLabel[Number(targetKey) as PostParseTarget] ?? targetKey}`);
+        const targetName = t<string>(
+          `PostParseTarget.${PostParseTargetLabel[Number(targetKey) as PostParseTarget] ?? targetKey}`,
+        );
 
         if (result.data && typeof result.data === "object") {
           const data = result.data as any;
+
           if (data.resources && Array.isArray(data.resources) && data.resources.length > 0) {
             for (const r of data.resources) {
               rows.push({
-                "ID": task.id,
-                "Source": PostParserSource[task.source] ?? task.source,
-                "Link": task.link,
-                "Title": data.title ?? task.title ?? "",
-                "Target": targetName,
+                ID: task.id,
+                Source: PostParserSource[task.source] ?? task.source,
+                Link: task.link,
+                Title: data.title ?? task.title ?? "",
+                Target: targetName,
                 "Resource Link": r.link ?? "",
                 "Access Code": r.code ?? "",
-                "Password": r.password ?? "",
-                "Error": result.error ?? "",
-                "ParsedAt": result.parsedAt ?? "",
+                Password: r.password ?? "",
+                Error: result.error ?? "",
+                ParsedAt: result.parsedAt ?? "",
               });
             }
           } else {
             // Generic JSON: flatten top-level fields
             const flatFields: Record<string, string> = {};
+
             for (const [k, v] of Object.entries(data)) {
               flatFields[k] = typeof v === "object" ? JSON.stringify(v) : String(v ?? "");
             }
             rows.push({
-              "ID": task.id,
-              "Source": PostParserSource[task.source] ?? task.source,
-              "Link": task.link,
-              "Title": task.title ?? "",
-              "Target": targetName,
+              ID: task.id,
+              Source: PostParserSource[task.source] ?? task.source,
+              Link: task.link,
+              Title: task.title ?? "",
+              Target: targetName,
               ...flatFields,
-              "Error": result.error ?? "",
-              "ParsedAt": result.parsedAt ?? "",
+              Error: result.error ?? "",
+              ParsedAt: result.parsedAt ?? "",
             });
           }
         } else {
           rows.push({
-            "ID": task.id,
-            "Source": PostParserSource[task.source] ?? task.source,
-            "Link": task.link,
-            "Title": task.title ?? "",
-            "Target": targetName,
-            "Error": result.error ?? "",
-            "ParsedAt": result.parsedAt ?? "",
+            ID: task.id,
+            Source: PostParserSource[task.source] ?? task.source,
+            Link: task.link,
+            Title: task.title ?? "",
+            Target: targetName,
+            Error: result.error ?? "",
+            ParsedAt: result.parsedAt ?? "",
           });
         }
       }
@@ -211,6 +218,7 @@ const PostParserPage = () => {
 
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
+
     XLSX.utils.book_append_sheet(wb, ws, "PostParser");
     XLSX.writeFile(wb, `post-parser-export-${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
@@ -220,9 +228,12 @@ const PostParserPage = () => {
       <div className={"flex justify-between items-center"}>
         <div className={"flex items-center gap-2"}>
           <Button
+            color={"primary"}
+            size={"sm"}
             onPress={() => {
               let linksTextMap: Record<number, string> = {};
-              let selectedTargets: PostParseTarget[] = postParseTargets.map(t => t.value);
+              let selectedTargets: PostParseTarget[] = postParseTargets.map((t) => t.value);
+
               createPortal(Modal, {
                 defaultVisible: true,
                 size: "xl",
@@ -251,9 +262,6 @@ const PostParserPage = () => {
                       return (
                         <Textarea
                           key={s.value}
-                          onValueChange={(v) => {
-                            linksTextMap[s.value] = v;
-                          }}
                           label={t<string>("postParser.input.postLinks", {
                             source: s.label,
                           })}
@@ -261,12 +269,15 @@ const PostParserPage = () => {
                           placeholder={`https://xxxxxxx
 https://xxxxxxx
 ...`}
+                          onValueChange={(v) => {
+                            linksTextMap[s.value] = v;
+                          }}
                         />
                       );
                     })}
                     <FeatureStatusTip
-                      status={"developing"}
                       name={t<string>("postParser.tip.otherSitesSupport")}
+                      status={"developing"}
                     />
                   </div>
                 ),
@@ -277,6 +288,7 @@ https://xxxxxxx
                       .map((x) => x.trim())
                       .filter((x) => x),
                   );
+
                   await BApi.postParser.addPostParserTasks({
                     sourceLinksMap: linksMap,
                     targets: selectedTargets,
@@ -284,8 +296,6 @@ https://xxxxxxx
                 },
               });
             }}
-            size={"sm"}
-            color={"primary"}
           >
             <AiOutlinePlusCircle className={"text-base"} />
             {t<string>("postParser.action.addTasks")}
@@ -300,20 +310,20 @@ https://xxxxxxx
             {t<string>("postParser.action.configuration")}
           </Button>
           <Button
-            size={"sm"}
             color={"success"}
+            isDisabled={tasks.length === 0}
+            size={"sm"}
             variant={"flat"}
             onPress={handleExport}
-            isDisabled={tasks.length === 0}
           >
             <AiOutlineDownload className={"text-base"} />
             {t<string>("postParser.action.export")}
           </Button>
           <Button
             color={"danger"}
+            isDisabled={tasks.length === 0}
             size={"sm"}
             variant={"light"}
-            isDisabled={tasks.length === 0}
             onPress={async () => {
               await BApi.postParser.deleteAllPostParserTasks();
             }}
@@ -324,17 +334,18 @@ https://xxxxxxx
         </div>
         <div className={"flex items-center gap-2"}>
           <Checkbox
+            color={"secondary"}
             isSelected={thirdPartyOptions.automaticallyParsingPosts}
+            size={"sm"}
             onValueChange={async (v) => {
               const r = await BApi.options.patchThirdPartyOptions({
                 automaticallyParsingPosts: v,
               });
+
               if (v && !r.code) {
                 await BApi.postParser.startAllPostParserTasks();
               }
             }}
-            size={"sm"}
-            color={"secondary"}
           >
             {t<string>("postParser.label.automaticallyParsing")}
           </Checkbox>
@@ -352,17 +363,13 @@ https://xxxxxxx
                     <Alert
                       description={
                         <div>
-                          <div>
-                            {t<string>("postParser.tip.aiRequired")}
-                          </div>
+                          <div>{t<string>("postParser.tip.aiRequired")}</div>
                         </div>
                       }
                       title={t<string>("postParser.label.ai")}
                     />
                     <TampermonkeyInstallButton
-                      descriptions={[
-                        t<string>("thirdPartyIntegration.tip.soulPlusClick"),
-                      ]}
+                      descriptions={[t<string>("thirdPartyIntegration.tip.soulPlusClick")]}
                     />
                   </div>
                 ),
@@ -388,23 +395,22 @@ https://xxxxxxx
           <TableBody>
             {tasks.map((task) => {
               const isParsed = (task.results && Object.keys(task.results).length > 0) || task.error;
+
               return (
                 <TableRow key={task.id}>
                   <TableCell>{task.id}</TableCell>
                   <TableCell>
                     <div className={"flex flex-col gap-1"}>
                       <div className={"flex items-center gap-1"}>
-                        <ThirdPartyIcon
-                          thirdPartyId={ThirdPartyMap[task.source]}
-                        />
+                        <ThirdPartyIcon thirdPartyId={ThirdPartyMap[task.source]} />
                         {task.title && (
                           <>
                             <div>{task.title}</div>
                             <Button
                               isIconOnly
+                              className={"min-w-6 w-6 h-6"}
                               size={"sm"}
                               variant={"light"}
-                              className={"min-w-6 w-6 h-6"}
                               onPress={() => {
                                 navigator.clipboard.writeText(task.title!);
                                 toast.success(t("postParser.result.copied"));
@@ -440,9 +446,7 @@ https://xxxxxxx
                       )}
                     </div>
                   </TableCell>
-                  <TableCell>
-                    {renderResultCell(task.results, task.targets, task.error)}
-                  </TableCell>
+                  <TableCell>{renderResultCell(task.results, task.targets, task.error)}</TableCell>
                   <TableCell>
                     <div className={"flex items-center gap-1"}>
                       {isParsed && (
@@ -450,8 +454,8 @@ https://xxxxxxx
                           isIconOnly
                           color={"warning"}
                           size={"sm"}
-                          variant={"light"}
                           title={t<string>("postParser.action.reParse")}
+                          variant={"light"}
                           onPress={async () => {
                             await BApi.postParser.reParsePostParserTask(task.id);
                             await BApi.postParser.startAllPostParserTasks();

@@ -4,10 +4,10 @@ import type { ReactNode } from "react";
 
 import { AiOutlineCheck, AiOutlineClose, AiOutlineEdit } from "react-icons/ai";
 import React, { useRef, useState } from "react";
+import { useUpdateEffect } from "react-use";
 
 import { Button } from "@/components/bakaui";
 import { isPromise } from "@/components/utils";
-import { useUpdateEffect } from "react-use";
 
 // export type SimpleEditableValueProps<TValue> = {
 //   onSubmit?: (value?: TValue) => any | Promise<any>;
@@ -39,7 +39,7 @@ type Props<
   editorProps?: Omit<TEditorProps, keyof ComponentCommonProps<TValue>>;
   onSubmit?: (value?: TValue) => any | Promise<any>;
   className?: string;
-  trigger?: "viewer" | "edit-button",
+  trigger?: "viewer" | "edit-button";
 } & ComponentCommonProps<TValue>;
 
 // & SimpleEditableValueProps<TValue> & EditorProps<TValue> & ViewProps<TValue>;
@@ -118,8 +118,8 @@ function EditableValue<
           <Viewer
             {...(viewerProps as unknown as TViewerProps)}
             {...commonProps}
-            value={value}
             isReadOnly
+            value={value}
             onClick={() => {
               if (trigger == "viewer") {
                 // setValue(commonProps.value);

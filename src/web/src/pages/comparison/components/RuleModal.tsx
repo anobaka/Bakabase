@@ -1,17 +1,16 @@
 "use client";
 
-import type {
-  BakabaseModulesComparisonModelsInputComparisonRuleInputModel as ComparisonRuleInputModel,
-} from "@/sdk/Api";
+import type { BakabaseModulesComparisonModelsInputComparisonRuleInputModel as ComparisonRuleInputModel } from "@/sdk/Api";
 import type { IProperty } from "@/components/Property/models";
+import type { RuleConfig, ModeParameter, RuleConfigValidationError } from "./RuleConfigPanel";
 
 import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
 
+import RuleConfigPanel, { getDefaultParameterForMode, validateRuleConfig } from "./RuleConfigPanel";
+
 import { Modal } from "@/components/bakaui";
 import { PropertyPool, ComparisonMode, NullValueBehavior } from "@/sdk/constants";
-import RuleConfigPanel, { getDefaultParameterForMode, validateRuleConfig } from "./RuleConfigPanel";
-import type { RuleConfig, ModeParameter, RuleConfigValidationError } from "./RuleConfigPanel";
 
 export interface RuleWithProperty extends ComparisonRuleInputModel {
   property?: IProperty;
@@ -47,6 +46,7 @@ const RuleModal = ({ rule, isOpen, onClose, onSave }: RuleModalProps) => {
   useEffect(() => {
     if (rule) {
       const mode = rule.mode as ComparisonMode;
+
       setConfig({
         propertyPool: rule.propertyPool,
         propertyId: rule.propertyId,
@@ -57,8 +57,8 @@ const RuleModal = ({ rule, isOpen, onClose, onSave }: RuleModalProps) => {
         weight: rule.weight ?? 1,
         isVeto: rule.isVeto ?? false,
         vetoThreshold: rule.vetoThreshold ?? 1.0,
-        oneNullBehavior: rule.oneNullBehavior as NullValueBehavior ?? NullValueBehavior.Skip,
-        bothNullBehavior: rule.bothNullBehavior as NullValueBehavior ?? NullValueBehavior.Skip,
+        oneNullBehavior: (rule.oneNullBehavior as NullValueBehavior) ?? NullValueBehavior.Skip,
+        bothNullBehavior: (rule.bothNullBehavior as NullValueBehavior) ?? NullValueBehavior.Skip,
       });
     } else {
       setConfig({
@@ -79,8 +79,10 @@ const RuleModal = ({ rule, isOpen, onClose, onSave }: RuleModalProps) => {
 
   const handleSave = async () => {
     const errors = validateRuleConfig(config, t);
+
     if (errors.length > 0) {
       setValidationErrors(errors);
+
       return;
     }
 
@@ -98,22 +100,23 @@ const RuleModal = ({ rule, isOpen, onClose, onSave }: RuleModalProps) => {
       oneNullBehavior: config.oneNullBehavior,
       bothNullBehavior: config.bothNullBehavior,
     };
+
     onSave(result);
     onClose();
   };
 
   return (
     <Modal
-      size="lg"
-      title={isEditing ? t("comparison.action.editRule") : t("comparison.action.addRule")}
-      visible={isOpen}
       footer={{
         actions: ["ok", "cancel"],
       }}
+      size="lg"
+      title={isEditing ? t("comparison.action.editRule") : t("comparison.action.addRule")}
+      visible={isOpen}
       onClose={onClose}
       onOk={handleSave}
     >
-      <RuleConfigPanel value={config} onChange={setConfig} validationErrors={validationErrors} />
+      <RuleConfigPanel validationErrors={validationErrors} value={config} onChange={setConfig} />
     </Modal>
   );
 };

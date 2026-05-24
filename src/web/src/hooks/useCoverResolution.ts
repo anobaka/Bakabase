@@ -1,7 +1,9 @@
-import { useEffect, useState, useRef, useMemo, useCallback } from "react";
+import type { Resource } from "@/core/models/Resource";
+
+import { useEffect, useState, useRef, useMemo } from "react";
+
 import { resourceDiscoveryChannel, type DiscoveryData } from "@/services/ResourceDiscoveryChannel";
 import { DataOrigin, DataStatus, ResourceDataType } from "@/sdk/constants";
-import type { Resource, ResourceDataState } from "@/core/models/Resource";
 
 export type CoverResolutionState = {
   /** Best available covers (by provider priority) */
@@ -12,7 +14,12 @@ export type CoverResolutionState = {
 
 export type CoverResolutionCallbacks = {
   onDiscoveryStart?: (resourceId: number, origin: DataOrigin) => void;
-  onDiscoveryComplete?: (resourceId: number, origin: DataOrigin, data: DiscoveryData | null, error?: string) => void;
+  onDiscoveryComplete?: (
+    resourceId: number,
+    origin: DataOrigin,
+    data: DiscoveryData | null,
+    error?: string,
+  ) => void;
 };
 
 // Provider priority (lower = higher priority). Must match backend.
@@ -26,12 +33,12 @@ const COVER_PRIORITY: DataOrigin[] = [
 
 export function useCoverResolution(
   resource: Resource,
-  callbacks?: CoverResolutionCallbacks
+  callbacks?: CoverResolutionCallbacks,
 ): CoverResolutionState {
   // Get cover-related dataStates
   const coverStates = useMemo(
-    () => resource.dataStates?.filter(s => s.dataType === ResourceDataType.Cover) ?? [],
-    [resource.dataStates]
+    () => resource.dataStates?.filter((s) => s.dataType === ResourceDataType.Cover) ?? [],
+    [resource.dataStates],
   );
 
   // Backend-resolved covers (already priority-selected)
@@ -41,9 +48,8 @@ export function useCoverResolution(
   // Determine which origins need SSE discovery
   const originsToDiscover = useMemo(() => {
     if (coverStates.length === 0) return []; // No dataStates = no capability
-    return coverStates
-      .filter(s => s.status === DataStatus.NotStarted)
-      .map(s => s.origin);
+
+    return coverStates.filter((s) => s.status === DataStatus.NotStarted).map((s) => s.origin);
   }, [coverStates]);
 
   // SSE subscription effect
@@ -60,18 +66,20 @@ export function useCoverResolution(
         .subscribe(resource.id, origin, ResourceDataType.Cover, (data, error) => {
           callbacks?.onDiscoveryComplete?.(resource.id, origin, data, error);
           if (data?.coverPaths?.length) {
-            setSseCovers(prev => {
+            setSseCovers((prev) => {
               const next = new Map(prev);
+
               next.set(origin, data.coverPaths!);
+
               return next;
             });
           }
         })
-        .then(unsub => unsubscribes.push(unsub));
+        .then((unsub) => unsubscribes.push(unsub));
     }
 
     return () => {
-      unsubscribes.forEach(fn => fn());
+      unsubscribes.forEach((fn) => fn());
       subscribedRef.current = new Set();
     };
   }, [resource.id, originsToDiscover.join(",")]);
@@ -97,15 +105,15 @@ export function useCoverResolution(
     // Check SSE-discovered covers by priority
     for (const origin of COVER_PRIORITY) {
       const sseCover = sseCovers.get(origin);
+
       if (sseCover?.length) {
         return { covers: sseCover, status: "ready" };
       }
     }
 
     // Check if any are still not-started (SSE in progress)
-    const hasNotStarted = coverStates.some(s =>
-      s.status === DataStatus.NotStarted
-    );
+    const hasNotStarted = coverStates.some((s) => s.status === DataStatus.NotStarted);
+
     if (hasNotStarted) {
       return { covers: null, status: "loading" };
     }

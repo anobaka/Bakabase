@@ -45,14 +45,15 @@ const tagRenders: Record<string, (t: SpecialText) => React.ReactNode> = {
   ),
 };
 
-const typeTagRendersMapping: Partial<Record<SpecialTextType, (t: SpecialText) => React.ReactNode>> = {
-  [SpecialTextType.Useless]: tagRenders.Single,
-  [SpecialTextType.Language]: tagRenders.Value1ToValue2,
-  [SpecialTextType.Wrapper]: tagRenders.Wrapper,
-  [SpecialTextType.Standardization]: tagRenders.Value1ToValue2,
-  [SpecialTextType.Volume]: tagRenders.Single,
-  [SpecialTextType.Trim]: tagRenders.Single,
-};
+const typeTagRendersMapping: Partial<Record<SpecialTextType, (t: SpecialText) => React.ReactNode>> =
+  {
+    [SpecialTextType.Useless]: tagRenders.Single,
+    [SpecialTextType.Language]: tagRenders.Value1ToValue2,
+    [SpecialTextType.Wrapper]: tagRenders.Wrapper,
+    [SpecialTextType.Standardization]: tagRenders.Value1ToValue2,
+    [SpecialTextType.Volume]: tagRenders.Single,
+    [SpecialTextType.Trim]: tagRenders.Single,
+  };
 
 const typeDescriptions = {
   [SpecialTextType.Useless]: "text.typeDescription.useless",
@@ -99,6 +100,7 @@ const TextPage = () => {
 
     const dmp = new DiffMatchPatch();
     const diffs = dmp.diff_main(a || "", b || "");
+
     dmp.diff_cleanupSemantic(diffs);
 
     const left: React.ReactNode[] = [];
@@ -193,23 +195,20 @@ const TextPage = () => {
             const texts = textsMap[type] ?? [];
 
             return (
-              <TableRow>
+              <TableRow key={type}>
                 <TableCell>
                   <div className={"flex flex-col"}>
                     <span>{t<string>(`SpecialTextType.${SpecialTextType[type]}`)}</span>
-                    <span className={"text-xs text-default-400"}>{t<string>(typeDescriptions[type])}</span>
+                    <span className={"text-xs text-default-400"}>
+                      {t<string>(typeDescriptions[type])}
+                    </span>
                   </div>
                 </TableCell>
                 <TableCell>
                   <div className={"flex gap-1 flex-wrap"}>
-                    {usedInMapping[type].map((x) => {
+                    {usedInMapping[type].map((x, xi) => {
                       return (
-                        <Chip
-                          color={"default"}
-                          radius={"sm"}
-                          size={"sm"}
-                          variant={"flat"}
-                        >
+                        <Chip key={xi} color={"default"} radius={"sm"} size={"sm"} variant={"flat"}>
                           {t<string>(x)}
                         </Chip>
                       );
@@ -219,8 +218,7 @@ const TextPage = () => {
                 <TableCell>
                   <div className={"flex flex-wrap gap-1"}>
                     {texts.map((c) => {
-                      const renderer =
-                        typeTagRendersMapping[c.type] ?? tagRenders.Single;
+                      const renderer = typeTagRendersMapping[c.type] ?? tagRenders.Single;
 
                       return (
                         <Chip
@@ -300,12 +298,13 @@ const TextPage = () => {
         <div className="mt-2 flex items-center gap-2">
           <Button
             color="primary"
-            size="sm"
             isLoading={isRunning}
+            size="sm"
             onClick={async () => {
               setIsRunning(true);
               try {
                 const r = await BApi.specialText.pretreatText({ text: testInput });
+
                 setTestResult(r.data ?? "");
               } finally {
                 setIsRunning(false);
@@ -316,12 +315,10 @@ const TextPage = () => {
           </Button>
         </div>
         <div className="mt-3">
-          {(!testResult || !testInput) ? null : (
-            hasDiff ? (
-              renderDiffChunks(testInput, testResult)
-            ) : (
-              <div className="text-default-500 text-sm">{t<string>("text.label.noChanges")}</div>
-            )
+          {!testResult || !testInput ? null : hasDiff ? (
+            renderDiffChunks(testInput, testResult)
+          ) : (
+            <div className="text-default-500 text-sm">{t<string>("text.label.noChanges")}</div>
           )}
         </div>
       </div>

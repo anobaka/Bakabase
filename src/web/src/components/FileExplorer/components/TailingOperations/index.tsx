@@ -3,18 +3,24 @@
 import type { Entry } from "@/core/models/FileExplorer/Entry";
 import type { FileExplorerEntryProps } from "../../FileExplorerEntry";
 
-import { FolderAddOutlined, FolderOpenOutlined, LoginOutlined, SyncOutlined, UploadOutlined } from "@ant-design/icons";
+import {
+  FolderAddOutlined,
+  FolderOpenOutlined,
+  LoginOutlined,
+  SyncOutlined,
+  UploadOutlined,
+} from "@ant-design/icons";
 import React from "react";
 import { useTranslation } from "react-i18next";
 
 import OperationButton from "../OperationButton";
+import ExtractModal from "../ExtractModal";
+import CreateDirectoryModal from "../CreateDirectoryModal";
 
 import BApi from "@/sdk/BApi";
 import { IwFsType } from "@/sdk/constants";
 import { Button, Tooltip } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import ExtractModal from "../ExtractModal";
-import CreateDirectoryModal from "../CreateDirectoryModal";
 
 type Props = {
   entry: Entry;
@@ -81,7 +87,10 @@ const TailingOperations = (props: Props) => {
         </Tooltip>
       )}
       {entry.isDirectoryOrDrive && capabilities?.includes("create-directory") && (
-        <Tooltip content={`(N)${t<string>("fileExplorer.contextMenu.createNewFolder")}`} placement={"top"}>
+        <Tooltip
+          content={`(N)${t<string>("fileExplorer.contextMenu.createNewFolder")}`}
+          placement={"top"}
+        >
           <Button
             isIconOnly
             className={"w-auto h-auto p-1 min-w-fit opacity-60 hover:opacity-100"}

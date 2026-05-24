@@ -53,10 +53,11 @@ const TextReader = (props: ITextReaderProps) => {
               pd.paragraphs = paragraphs;
             }
             setPreviewData(pd);
+            onLoad?.();
           }
         });
     } else {
-      onLoad();
+      onLoad?.();
     }
   }, []);
 
@@ -64,7 +65,6 @@ const TextReader = (props: ITextReaderProps) => {
     <div
       className={`text-reader ${className || ""}`}
       style={{ ...style, background, color }}
-      onLoad={onLoad}
     >
       <div className="configurations">
         <div className="label">{i18n.t<string>("Font size")}</div>
@@ -84,21 +84,19 @@ const TextReader = (props: ITextReaderProps) => {
         {previewData?.title && <h1>{previewData.title}</h1>}
         {previewData?.sections?.map((s, i) => {
           return (
-            <section className={`s-${i}`}>
+            <section key={i} className={`s-${i}`}>
               {s.title && <h2>{s.title}</h2>}
 
               {s.paragraphs?.map((p, j) => {
                 return (
-                  <p className={`p-${j}`} style={{ fontSize }}>
+                  <p key={j} className={`p-${j}`} style={{ fontSize }}>
                     {p}
                   </p>
                 );
               })}
             </section>
           );
-        }) || (
-          <div className={"no-content"}>{i18n.t<string>("No content")}</div>
-        )}
+        }) || <div className={"no-content"}>{i18n.t<string>("No content")}</div>}
       </div>
     </div>
   );

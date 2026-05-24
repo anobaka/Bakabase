@@ -1,33 +1,20 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
-import {
-  WarningOutlined,
-  DeleteOutlined,
-  MergeCellsOutlined,
-  CheckOutlined,
-} from "@ant-design/icons";
-import BApi from "@/sdk/BApi";
 import type { Resource as ResourceModel, Property } from "@/core/models/Resource";
 import type { DestroyableProps } from "@/components/bakaui/types";
+import type { PropertyValueScope, ResourceSource, PropertyPool } from "@/sdk/constants";
+
+import React, { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { WarningOutlined, DeleteOutlined, MergeCellsOutlined } from "@ant-design/icons";
+
+import BApi from "@/sdk/BApi";
+import { Button, Chip, Modal, Radio, RadioGroup, Spinner, toast } from "@/components/bakaui";
 import {
-  Button,
-  Chip,
-  Modal,
-  Radio,
-  RadioGroup,
-  Spinner,
-  Tooltip,
-  toast,
-} from "@/components/bakaui";
-import {
-  PropertyPool,
   PropertyValueScopeLabel,
   ResourceAdditionalItem,
   ResourceSourceLabel,
 } from "@/sdk/constants";
-import type { PropertyValueScope, ResourceSource } from "@/sdk/constants";
 import { convertFromApiValue } from "@/components/StandardValue/helpers";
 import ResourceCover from "@/components/Resource/components/ResourceCover";
 
@@ -57,13 +44,17 @@ const ConflictResolutionModal = ({ resourceId, onResolved, onDestroyed }: Props)
         additionalItems: ResourceAdditionalItem.All,
       });
       const currentRes = (currentRsp.data || [])?.[0];
+
       if (currentRes?.properties) {
         Object.values(currentRes.properties).forEach((a: any) => {
           Object.values(a).forEach((b: any) => {
             if (b.values) {
               for (const v of b.values) {
                 v.bizValue = convertFromApiValue(v.bizValue, b.bizValueType!);
-                v.aliasAppliedBizValue = convertFromApiValue(v.aliasAppliedBizValue, b.bizValueType!);
+                v.aliasAppliedBizValue = convertFromApiValue(
+                  v.aliasAppliedBizValue,
+                  b.bizValueType!,
+                );
                 v.value = convertFromApiValue(v.value, b.dbValueType!);
               }
             }
@@ -86,7 +77,10 @@ const ConflictResolutionModal = ({ resourceId, onResolved, onDestroyed }: Props)
               if (b.values) {
                 for (const v of b.values) {
                   v.bizValue = convertFromApiValue(v.bizValue, b.bizValueType!);
-                  v.aliasAppliedBizValue = convertFromApiValue(v.aliasAppliedBizValue, b.bizValueType!);
+                  v.aliasAppliedBizValue = convertFromApiValue(
+                    v.aliasAppliedBizValue,
+                    b.bizValueType!,
+                  );
                   v.value = convertFromApiValue(v.value, b.dbValueType!);
                 }
               }
@@ -98,6 +92,7 @@ const ConflictResolutionModal = ({ resourceId, onResolved, onDestroyed }: Props)
       setConflicts(conflictData);
       // Default action: merge
       const defaultActions: Record<number, ResourceAction> = {};
+
       for (const c of conflictData) {
         defaultActions[c.id] = "merge";
       }
@@ -155,9 +150,11 @@ const ConflictResolutionModal = ({ resourceId, onResolved, onDestroyed }: Props)
     if (!res.properties) continue;
     for (const [poolStr, props] of Object.entries(res.properties)) {
       const pool = parseInt(poolStr, 10) as PropertyPool;
+
       for (const [idStr, prop] of Object.entries(props as Record<number, Property>)) {
         const id = parseInt(idStr, 10);
         const key = `${pool}:${id}`;
+
         if (!seenKeys.has(key)) {
           seenKeys.add(key);
           propertyKeys.push({ pool, id, name: prop.name || `#${id}`, property: prop });
@@ -168,6 +165,7 @@ const ConflictResolutionModal = ({ resourceId, onResolved, onDestroyed }: Props)
 
   // Gather all unique value scopes across all resources and properties
   const allScopes = new Set<PropertyValueScope>();
+
   for (const res of allResources) {
     if (!res.properties) continue;
     for (const props of Object.values(res.properties)) {
@@ -189,34 +187,36 @@ const ConflictResolutionModal = ({ resourceId, onResolved, onDestroyed }: Props)
     if (typeof value === "boolean") return value ? "true" : "false";
     if (Array.isArray(value)) {
       if (value.length === 0) return "-";
+
       return value.map((v) => (typeof v === "object" ? JSON.stringify(v) : String(v))).join(", ");
     }
     if (typeof value === "object") return JSON.stringify(value);
+
     return String(value);
   };
 
   return (
     <Modal
       defaultVisible
-      size="full"
-      title={
-        <div className="flex items-center gap-2">
-          <WarningOutlined className="text-warning" />
-          {t("resource.conflict.title")}
-        </div>
-      }
       footer={
         <div className="flex items-center w-full gap-2">
           <div className="flex-1" />
           <Button
             color="primary"
-            isLoading={submitting}
             isDisabled={conflicts.length === 0}
+            isLoading={submitting}
             onPress={handleSubmit}
           >
             <MergeCellsOutlined className="text-base" />
             {t("resource.conflict.apply")}
           </Button>
+        </div>
+      }
+      size="full"
+      title={
+        <div className="flex items-center gap-2">
+          <WarningOutlined className="text-warning" />
+          {t("resource.conflict.title")}
         </div>
       }
       onDestroyed={onDestroyed}
@@ -232,9 +232,7 @@ const ConflictResolutionModal = ({ resourceId, onResolved, onDestroyed }: Props)
       ) : (
         <div className="flex flex-col gap-4">
           {/* Description */}
-          <div className="text-sm text-default-500">
-            {t("resource.conflict.description")}
-          </div>
+          <div className="text-sm text-default-500">{t("resource.conflict.description")}</div>
 
           {/* Resource comparison table */}
           <div className="overflow-x-auto">
@@ -248,10 +246,7 @@ const ConflictResolutionModal = ({ resourceId, onResolved, onDestroyed }: Props)
                     {t("resource.conflict.scope")}
                   </th>
                   {allResources.map((res) => (
-                    <th
-                      key={res.id}
-                      className="p-2 text-left min-w-[200px]"
-                    >
+                    <th key={res.id} className="p-2 text-left min-w-[200px]">
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-2">
                           <div className="w-12 h-12 rounded overflow-hidden border flex-shrink-0">
@@ -262,7 +257,7 @@ const ConflictResolutionModal = ({ resourceId, onResolved, onDestroyed }: Props)
                               {res.displayName || res.fileName || `#${res.id}`}
                             </span>
                             {res.id === resourceId && (
-                              <Chip size="sm" color="primary" variant="flat">
+                              <Chip color="primary" size="sm" variant="flat">
                                 {t("resource.conflict.current")}
                               </Chip>
                             )}
@@ -312,7 +307,7 @@ const ConflictResolutionModal = ({ resourceId, onResolved, onDestroyed }: Props)
                     <td key={res.id} className="p-2">
                       <div className="flex flex-wrap gap-1">
                         {(res as any).sourceLinks?.map((link: any) => (
-                          <Chip key={link.id} size="sm" variant="flat" color="secondary">
+                          <Chip key={link.id} color="secondary" size="sm" variant="flat">
                             {ResourceSourceLabel[link.source as ResourceSource]}: {link.sourceKey}
                           </Chip>
                         )) || <span className="text-default-400">-</span>}
@@ -334,11 +329,11 @@ const ConflictResolutionModal = ({ resourceId, onResolved, onDestroyed }: Props)
                           <Chip
                             key={ml.id}
                             size="sm"
-                            variant="flat"
                             style={{
                               backgroundColor: ml.color ? `${ml.color}20` : undefined,
                               color: ml.color,
                             }}
+                            variant="flat"
                           >
                             {ml.name}
                           </Chip>
@@ -368,8 +363,10 @@ const ConflictResolutionModal = ({ resourceId, onResolved, onDestroyed }: Props)
                       // Check if any resource has a value for this property+scope
                       const hasValue = allResources.some((res) => {
                         const prop = res.properties?.[pk.pool]?.[pk.id];
+
                         return prop?.values?.some((v) => v.scope === scope);
                       });
+
                       if (!hasValue) return null;
 
                       return (
@@ -377,7 +374,9 @@ const ConflictResolutionModal = ({ resourceId, onResolved, onDestroyed }: Props)
                           key={`${pk.pool}:${pk.id}:${scope}`}
                           className={`border-b border-default-100 ${scopeIdx % 2 === 0 ? "bg-default-50" : ""}`}
                         >
-                          <td className={`p-2 sticky left-0 ${scopeIdx % 2 === 0 ? "bg-default-50" : "bg-content1"}`}>
+                          <td
+                            className={`p-2 sticky left-0 ${scopeIdx % 2 === 0 ? "bg-default-50" : "bg-content1"}`}
+                          >
                             {scopeIdx === 0 ? (
                               <span className="font-medium">{pk.name}</span>
                             ) : (
@@ -385,7 +384,7 @@ const ConflictResolutionModal = ({ resourceId, onResolved, onDestroyed }: Props)
                             )}
                           </td>
                           <td className="p-2">
-                            <Chip size="sm" variant="flat" color="default">
+                            <Chip color="default" size="sm" variant="flat">
                               {PropertyValueScopeLabel[scope] || `Scope ${scope}`}
                             </Chip>
                           </td>

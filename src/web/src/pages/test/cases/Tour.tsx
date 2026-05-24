@@ -4,8 +4,7 @@ import { useTour } from "@reactour/tour";
 import React from "react";
 
 export default function TourPage() {
-  const { isOpen, currentStep, steps, setIsOpen, setCurrentStep, setSteps } =
-    useTour();
+  const { isOpen, currentStep, steps, setIsOpen, setCurrentStep, setSteps } = useTour();
 
   console.log("current steps", steps);
 
@@ -17,9 +16,7 @@ export default function TourPage() {
       </p>
       <nav>
         <button onClick={() => setIsOpen((o) => !o)}>Toggle Tour</button>
-        <button onClick={() => setCurrentStep(3)}>
-          Take a fast way to 4th place
-        </button>
+        <button onClick={() => setCurrentStep(3)}>Take a fast way to 4th place</button>
         <button
           onClick={() => {
             setSteps!([

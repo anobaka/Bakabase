@@ -57,13 +57,14 @@ export const shouldUseSymbol = (propertyType?: PropertyType): boolean => {
 export const getOperationDisplay = (
   operation: SearchOperation,
   propertyType: PropertyType | undefined,
-  t: (key: string) => string
+  t: (key: string) => string,
 ): string => {
-  const baseKey = getEnumKey('SearchOperation', SearchOperation[operation]);
+  const baseKey = getEnumKey("SearchOperation", SearchOperation[operation]);
 
   if (shouldUseSymbol(propertyType)) {
     const symbolKey = `${baseKey}.symbol`;
     const symbol = t(symbolKey);
+
     // If symbol key exists (not equal to key itself), use symbol
     if (symbol !== symbolKey) {
       return symbol;
@@ -77,18 +78,20 @@ export const getOperationDisplay = (
 export const getOperationDropdownDisplay = (
   operation: SearchOperation,
   propertyType: PropertyType | undefined,
-  t: (key: string) => string
+  t: (key: string) => string,
 ): { displayText: string; description?: string } => {
-  const baseKey = getEnumKey('SearchOperation', SearchOperation[operation]);
+  const baseKey = getEnumKey("SearchOperation", SearchOperation[operation]);
   const descriptionKey = `${baseKey}.description`;
   const description = t(descriptionKey);
   const label = t(baseKey);
 
   // For dropdown items, show "symbol label" format if property is numeric and symbol exists
   let displayText = label;
+
   if (shouldUseSymbol(propertyType)) {
     const symbolKey = `${baseKey}.symbol`;
     const symbol = t(symbolKey);
+
     if (symbol !== symbolKey) {
       displayText = `${symbol} ${label}`;
     }

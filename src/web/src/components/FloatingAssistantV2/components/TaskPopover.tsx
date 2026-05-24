@@ -1,22 +1,18 @@
-import React from 'react';
-import { useTranslation } from 'react-i18next';
+import React from "react";
+import { useTranslation } from "react-i18next";
 import {
   CaretRightOutlined,
   ClearOutlined,
   PauseOutlined,
   MessageOutlined,
-} from '@ant-design/icons';
-import { BTaskStatus } from '@/sdk/constants';
-import {
-  Button,
-  Divider,
-  Switch,
-  Tooltip,
-} from '@/components/bakaui';
-import BApi from '@/sdk/BApi';
-import { useBTasksStore, selectTasks } from '@/stores/bTasks';
-import { useUiOptionsStore } from '@/stores/options';
-import { TaskTable } from '@/components/FloatingAssistant/components/TaskTable';
+} from "@ant-design/icons";
+
+import { BTaskStatus } from "@/sdk/constants";
+import { Button, Divider, Switch, Tooltip } from "@/components/bakaui";
+import BApi from "@/sdk/BApi";
+import { useBTasksStore, selectTasks } from "@/stores/bTasks";
+import { useUiOptionsStore } from "@/stores/options";
+import { TaskTable } from "@/components/FloatingAssistant/components/TaskTable";
 
 interface Props {
   onOpenChat: () => void;
@@ -40,7 +36,18 @@ const TaskPopover: React.FC<Props> = ({ onOpenChat }) => {
   const pausedTasks = bTasks.filter((task) => task.status === BTaskStatus.Paused);
 
   return (
-    <div className="flex flex-col gap-2 p-2 min-w-[300px]" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="flex flex-col gap-2 p-2 min-w-[300px]"
+      role="button"
+      tabIndex={0}
+      onClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }}
+    >
       <div className="flex flex-col gap-2">
         <div className="flex flex-col gap-1 max-h-[600px] overflow-auto">
           <TaskTable tasks={bTasks} />
@@ -48,11 +55,11 @@ const TaskPopover: React.FC<Props> = ({ onOpenChat }) => {
         <Divider orientation="horizontal" />
         <div className="flex items-center gap-2 flex-wrap">
           {runningTasks.length > 0 && (
-            <Tooltip content={t('floatingAssistant.tip.pauseAllRunningTasks')}>
+            <Tooltip content={t("floatingAssistant.tip.pauseAllRunningTasks")}>
               <Button
+                color="warning"
                 size="sm"
                 variant="ghost"
-                color="warning"
                 onPress={async () => {
                   for (const task of runningTasks) {
                     await BApi.backgroundTask.pauseBackgroundTask(task.id);
@@ -60,16 +67,16 @@ const TaskPopover: React.FC<Props> = ({ onOpenChat }) => {
                 }}
               >
                 <PauseOutlined className="text-base" />
-                {t('common.action.pauseAll')}
+                {t("common.action.pauseAll")}
               </Button>
             </Tooltip>
           )}
           {pausedTasks.length > 0 && (
-            <Tooltip content={t('floatingAssistant.tip.resumeAllPausedTasks')}>
+            <Tooltip content={t("floatingAssistant.tip.resumeAllPausedTasks")}>
               <Button
+                color="secondary"
                 size="sm"
                 variant="ghost"
-                color="secondary"
                 onPress={async () => {
                   for (const task of pausedTasks) {
                     await BApi.backgroundTask.resumeBackgroundTask(task.id);
@@ -77,19 +84,19 @@ const TaskPopover: React.FC<Props> = ({ onOpenChat }) => {
                 }}
               >
                 <CaretRightOutlined className="text-base" />
-                {t('common.action.resumeAll')}
+                {t("common.action.resumeAll")}
               </Button>
             </Tooltip>
           )}
           {clearableTasks.length > 0 && (
-            <Tooltip content={t('floatingAssistant.tip.clearInactiveTasks')}>
+            <Tooltip content={t("floatingAssistant.tip.clearInactiveTasks")}>
               <Button
                 size="sm"
                 variant="ghost"
                 onPress={() => BApi.backgroundTask.cleanInactiveBackgroundTasks()}
               >
                 <ClearOutlined className="text-base" />
-                {t('floatingAssistant.action.clearInactiveTasks')}
+                {t("floatingAssistant.action.clearInactiveTasks")}
               </Button>
             </Tooltip>
           )}
@@ -100,11 +107,11 @@ const TaskPopover: React.FC<Props> = ({ onOpenChat }) => {
 
       <div className="flex flex-col gap-3">
         <Switch
-          size="sm"
           isSelected={hideResourceCovers}
+          size="sm"
           onValueChange={(v) => patchUiOptions({ hideResourceCovers: v })}
         >
-          {t('floatingAssistant.label.hideResourceCovers')}
+          {t("floatingAssistant.label.hideResourceCovers")}
         </Switch>
       </div>
 
@@ -113,10 +120,18 @@ const TaskPopover: React.FC<Props> = ({ onOpenChat }) => {
       {/* Chat hint */}
       <div
         className="flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors hover:bg-default-100"
+        role="button"
+        tabIndex={0}
         onClick={onOpenChat}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onOpenChat?.();
+          }
+        }}
       >
         <MessageOutlined className="text-primary text-base" />
-        <span className="text-sm">{t('bakaChat.hint.doubleClickToChat')}</span>
+        <span className="text-sm">{t("bakaChat.hint.doubleClickToChat")}</span>
       </div>
     </div>
   );

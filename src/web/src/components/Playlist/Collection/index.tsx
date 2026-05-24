@@ -1,15 +1,12 @@
 "use client";
 
 import type { components } from "@/sdk/BApi2";
+import type { BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry } from "@/sdk/Api";
 
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Divider } from "@heroui/react";
-import {
-  AiOutlineDelete,
-  AiOutlinePlayCircle,
-  AiOutlinePlusCircle,
-} from "react-icons/ai";
+import { AiOutlineDelete, AiOutlinePlayCircle, AiOutlinePlusCircle } from "react-icons/ai";
 
 import { toast } from "@/components/bakaui";
 import PlaylistDetail from "@/components/Playlist/Detail/index";
@@ -18,7 +15,6 @@ import { PlaylistItemType, IwFsType } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
 import MediaPlayer from "@/components/MediaPlayer";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import type { BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry } from "@/sdk/Api";
 
 type PlayList =
   components["schemas"]["Bakabase.InsideWorld.Business.Components.PlayList.Models.Domain.PlayList"];
@@ -128,7 +124,8 @@ const Collection = ({ addingResourceId }: Props) => {
                           BApi.playlist.getPlaylistFiles(pl.id).then((a) => {
                             if (a.data) {
                               if (a.data.length > 0) {
-                                const entries: BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry[] = [];
+                                const entries: BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry[] =
+                                  [];
 
                                 for (let x = 0; x < pl.items!.length; x++) {
                                   const item = pl.items![x];
@@ -137,7 +134,10 @@ const Collection = ({ addingResourceId }: Props) => {
                                   if (currentItemFiles) {
                                     for (const filePath of a.data[x]) {
                                       const name = filePath.split(/[/\\]/).pop() || filePath;
-                                      const ext = name.includes(".") ? name.split(".").pop() : undefined;
+                                      const ext = name.includes(".")
+                                        ? name.split(".").pop()
+                                        : undefined;
+
                                       entries.push({
                                         path: filePath,
                                         name: name,
@@ -149,14 +149,18 @@ const Collection = ({ addingResourceId }: Props) => {
                                     }
                                   }
                                 }
-                                createWindow(MediaPlayer, {
-                                  entries,
-                                  interval: pl.interval,
-                                  autoPlay: true,
-                                }, {
-                                  title: pl.name,
-                                  persistent: true,
-                                });
+                                createWindow(
+                                  MediaPlayer,
+                                  {
+                                    entries,
+                                    interval: pl.interval,
+                                    autoPlay: true,
+                                  },
+                                  {
+                                    title: pl.name,
+                                    persistent: true,
+                                  },
+                                );
                               } else {
                                 toast.danger(t<string>("playlist.label.noPlayableContents"));
                               }
@@ -177,9 +181,7 @@ const Collection = ({ addingResourceId }: Props) => {
                         createPortal(Modal, {
                           defaultVisible: true,
                           title: t<string>("playlist.label.confirmDelete"),
-                          children: t<string>(
-                            "playlist.label.confirmDeleteMessage",
-                          ),
+                          children: t<string>("playlist.label.confirmDeleteMessage"),
                           onOk: () =>
                             BApi.playlist.deletePlaylist(pl.id).then((a) => {
                               if (!a.code) {

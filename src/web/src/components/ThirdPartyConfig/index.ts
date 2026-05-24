@@ -6,12 +6,20 @@ export { default as AutoSyncPanel } from "./base/AutoSyncPanel";
 export { default as MetadataMappingPanel } from "./base/MetadataMappingPanel";
 export { default as ThirdPartyConfigModal } from "./base/ThirdPartyConfigModal";
 export { default as ThirdPartyConfigOpenButton } from "./base/ThirdPartyConfigOpenButton";
-export { default as CookieDownloaderConfigPanel, CookieDownloaderConfigField } from "./base/CookieDownloaderConfigPanel";
+export {
+  default as CookieDownloaderConfigPanel,
+  CookieDownloaderConfigField,
+} from "./base/CookieDownloaderConfigPanel";
 export { default as DownloaderOptionsConfig } from "./base/DownloaderOptionsConfig";
 export { default as SimpleThirdPartyConfig } from "./base/SimpleThirdPartyConfig";
 
 // Platform configs
-export { default as SteamConfig, SteamConfigPanel, SteamConfigModal, SteamConfigField } from "./platforms/SteamConfig";
+export {
+  default as SteamConfig,
+  SteamConfigPanel,
+  SteamConfigModal,
+  SteamConfigField,
+} from "./platforms/SteamConfig";
 
 export {
   default as DLsiteConfig,

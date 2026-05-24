@@ -1,23 +1,19 @@
 "use client";
 
+import type { Resource as ResourceModel } from "@/core/models/Resource";
+import type { DestroyableProps } from "@/components/bakaui/types";
+import type { IProperty } from "@/components/Property/models";
+import type { AggregatedValueState, AggregatedPropertyValue, PropertyKey } from "./types";
+
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { AppstoreOutlined } from "@ant-design/icons";
 
-import type { Resource as ResourceModel } from "@/core/models/Resource";
-import type { DestroyableProps } from "@/components/bakaui/types";
-import type { IProperty } from "@/components/Property/models";
+import { makePropertyKey } from "./types";
+import PropertyChangeConfirmDialog from "./PropertyChangeConfirmDialog";
 
-import {
-  Button,
-  Divider,
-  Modal,
-  Radio,
-  RadioGroup,
-  Spinner,
-  toast,
-} from "@/components/bakaui";
+import { Button, Divider, Modal, Radio, RadioGroup, Spinner, toast } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 import {
   PropertyPool,
@@ -28,15 +24,8 @@ import {
 import Resource from "@/components/Resource";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import PropertyValueRenderer from "@/components/Property/components/PropertyValueRenderer";
-import {
-  serializeStandardValue,
-  convertFromApiValue,
-} from "@/components/StandardValue/helpers";
+import { serializeStandardValue, convertFromApiValue } from "@/components/StandardValue/helpers";
 import BriefProperty from "@/components/Chips/Property/BriefProperty";
-
-import type { AggregatedValueState, AggregatedPropertyValue, PropertyKey } from "./types";
-import { makePropertyKey } from "./types";
-import PropertyChangeConfirmDialog from "./PropertyChangeConfirmDialog";
 
 interface Props extends DestroyableProps {
   resourceIds: number[];
@@ -63,7 +52,9 @@ const BulkPropertyEditor: React.FC<Props> = ({
 
   const [resources, setResources] = useState<ResourceModel[]>([]);
   const [propertyMap, setPropertyMap] = useState<Map<PropertyKey, IProperty>>(new Map());
-  const [aggregatedValues, setAggregatedValues] = useState<Map<PropertyKey, AggregatedPropertyValue>>(new Map());
+  const [aggregatedValues, setAggregatedValues] = useState<
+    Map<PropertyKey, AggregatedPropertyValue>
+  >(new Map());
 
   // Load all data on mount
   const loadData = useCallback(async () => {
@@ -116,7 +107,11 @@ const BulkPropertyEditor: React.FC<Props> = ({
   }, [resourceIds, initialResources, t]);
 
   // Helper function to process loaded data
-  const processLoadedData = (loadedResources: ResourceModel[], builtinProps: IProperty[], customProps: IProperty[]) => {
+  const processLoadedData = (
+    loadedResources: ResourceModel[],
+    builtinProps: IProperty[],
+    customProps: IProperty[],
+  ) => {
     try {
       // Convert API values
       loadedResources.forEach((r) => {
@@ -126,7 +121,10 @@ const BulkPropertyEditor: React.FC<Props> = ({
               if (prop.values) {
                 for (const v of prop.values) {
                   v.bizValue = convertFromApiValue(v.bizValue, prop.bizValueType!);
-                  v.aliasAppliedBizValue = convertFromApiValue(v.aliasAppliedBizValue, prop.bizValueType!);
+                  v.aliasAppliedBizValue = convertFromApiValue(
+                    v.aliasAppliedBizValue,
+                    prop.bizValueType!,
+                  );
                   v.value = convertFromApiValue(v.value, prop.dbValueType!);
                 }
               }
@@ -141,10 +139,15 @@ const BulkPropertyEditor: React.FC<Props> = ({
 
       // Add Internal property: only MediaLibraryV2Multi
       const mediaLibMultiProp = builtinProps.find(
-        (p) => p.pool === PropertyPool.Internal && p.id === ResourcePropertyEnum.MediaLibraryV2Multi
+        (p) =>
+          p.pool === PropertyPool.Internal && p.id === ResourcePropertyEnum.MediaLibraryV2Multi,
       );
+
       if (mediaLibMultiProp) {
-        propMap.set(makePropertyKey(PropertyPool.Internal, mediaLibMultiProp.id), mediaLibMultiProp);
+        propMap.set(
+          makePropertyKey(PropertyPool.Internal, mediaLibMultiProp.id),
+          mediaLibMultiProp,
+        );
       }
 
       // Add all Reserved properties
@@ -163,6 +166,7 @@ const BulkPropertyEditor: React.FC<Props> = ({
 
       // Aggregate values for each property
       const aggValues = aggregatePropertyValues(loadedResources, propMap);
+
       setAggregatedValues(aggValues);
     } catch (error) {
       console.error("Failed to process data:", error);
@@ -173,7 +177,7 @@ const BulkPropertyEditor: React.FC<Props> = ({
   // Helper function to aggregate property values
   const aggregatePropertyValues = (
     loadedResources: ResourceModel[],
-    propMap: Map<PropertyKey, IProperty>
+    propMap: Map<PropertyKey, IProperty>,
   ): Map<PropertyKey, AggregatedPropertyValue> => {
     const aggValues = new Map<PropertyKey, AggregatedPropertyValue>();
 
@@ -186,17 +190,22 @@ const BulkPropertyEditor: React.FC<Props> = ({
         let bizValue: any = undefined;
 
         // Special handling for MediaLibraryV2Multi - get from resource.mediaLibraries
-        if (property.pool === PropertyPool.Internal && property.id === ResourcePropertyEnum.MediaLibraryV2Multi) {
+        if (
+          property.pool === PropertyPool.Internal &&
+          property.id === ResourcePropertyEnum.MediaLibraryV2Multi
+        ) {
           if (resource.mediaLibraries && resource.mediaLibraries.length > 0) {
             // Use library IDs as dbValue, names as bizValue
-            dbValue = resource.mediaLibraries.map(ml => String(ml.id));
-            bizValue = resource.mediaLibraries.map(ml => ml.name);
+            dbValue = resource.mediaLibraries.map((ml) => String(ml.id));
+            bizValue = resource.mediaLibraries.map((ml) => ml.name);
           }
         } else {
           // Bulk edit only operates on scope=Manual values; other scopes are not surfaced here
           // because bulkPutResourcePropertyValue writes to Manual and they would be effectively read-only.
           const resourceProp = resource.properties?.[property.pool]?.[property.id];
-          const manualValue = resourceProp?.values?.find((v) => v.scope === PropertyValueScope.Manual);
+          const manualValue = resourceProp?.values?.find(
+            (v) => v.scope === PropertyValueScope.Manual,
+          );
 
           if (manualValue?.value !== undefined) {
             dbValue = manualValue.value;
@@ -229,10 +238,12 @@ const BulkPropertyEditor: React.FC<Props> = ({
         state = "partial";
       } else {
         const allSame = nonEmptyValues.every((v) => v === nonEmptyValues[0]);
+
         if (allSame) {
           state = "consistent";
           const firstResource = loadedResources[0];
           const orig = originalValues.get(firstResource.id);
+
           sharedDbValue = orig?.dbValue;
           sharedBizValue = orig?.bizValue;
         } else {
@@ -271,6 +282,7 @@ const BulkPropertyEditor: React.FC<Props> = ({
 
     resources.forEach((resource) => {
       const orig = aggValue.originalValues.get(resource.id);
+
       if (orig?.dbValue !== dbValue) {
         affectedResources.push({
           resourceId: resource.id,
@@ -291,12 +303,22 @@ const BulkPropertyEditor: React.FC<Props> = ({
         affectedResources,
         newBizValue: bizValue,
         onConfirm: async () => {
-          await applyPropertyChange(property, dbValue, bizValue, affectedResources.map(r => r.resourceId));
+          await applyPropertyChange(
+            property,
+            dbValue,
+            bizValue,
+            affectedResources.map((r) => r.resourceId),
+          );
         },
       });
     } else {
       // For consistent or empty state, apply directly
-      await applyPropertyChange(property, dbValue, bizValue, affectedResources.map(r => r.resourceId));
+      await applyPropertyChange(
+        property,
+        dbValue,
+        bizValue,
+        affectedResources.map((r) => r.resourceId),
+      );
     }
   };
 
@@ -305,9 +327,10 @@ const BulkPropertyEditor: React.FC<Props> = ({
     property: IProperty,
     dbValue: string | undefined,
     bizValue: string | undefined,
-    affectedResourceIds: number[]
+    affectedResourceIds: number[],
   ) => {
     const key = makePropertyKey(property.pool, property.id);
+
     setUpdatingProperty(key);
 
     try {
@@ -326,25 +349,31 @@ const BulkPropertyEditor: React.FC<Props> = ({
       setAggregatedValues((prev) => {
         const next = new Map(prev);
         const oldAgg = prev.get(key);
+
         if (oldAgg) {
           // Update originalValues for affected resources
           const newOriginalValues = new Map(oldAgg.originalValues);
+
           affectedResourceIds.forEach((id) => {
             newOriginalValues.set(id, { dbValue, bizValue });
           });
 
           // Recalculate state
-          const valueStrings = Array.from(newOriginalValues.values()).map(v => v.dbValue ?? "");
-          const nonEmptyValues = valueStrings.filter((v) => v !== "" && v !== undefined && v !== null);
+          const valueStrings = Array.from(newOriginalValues.values()).map((v) => v.dbValue ?? "");
+          const nonEmptyValues = valueStrings.filter(
+            (v) => v !== "" && v !== undefined && v !== null,
+          );
           const emptyCount = valueStrings.length - nonEmptyValues.length;
 
           let newState: AggregatedValueState;
+
           if (nonEmptyValues.length === 0) {
             newState = "empty";
           } else if (emptyCount > 0) {
             newState = "partial";
           } else {
             const allSame = nonEmptyValues.every((v) => v === nonEmptyValues[0]);
+
             if (allSame) {
               newState = "consistent";
             } else {
@@ -359,6 +388,7 @@ const BulkPropertyEditor: React.FC<Props> = ({
             originalValues: newOriginalValues,
           });
         }
+
         return next;
       });
 
@@ -443,9 +473,9 @@ const BulkPropertyEditor: React.FC<Props> = ({
           // Consistent: show actual value; Empty: PropertyValueRenderer shows "Not set" by default
           return (
             <PropertyValueRenderer
-              property={property}
-              dbValue={aggValue.dbValue}
               bizValue={aggValue.bizValue}
+              dbValue={aggValue.dbValue}
+              property={property}
               size="sm"
               onValueChange={(newDbValue, newBizValue) => {
                 handleValueChange(property, newDbValue, newBizValue);
@@ -458,11 +488,11 @@ const BulkPropertyEditor: React.FC<Props> = ({
           if (isEditing) {
             return (
               <PropertyValueRenderer
-                property={property}
-                dbValue={undefined}
-                bizValue={undefined}
-                size="sm"
                 defaultEditing
+                bizValue={undefined}
+                dbValue={undefined}
+                property={property}
+                size="sm"
                 onValueChange={(newDbValue, newBizValue) => {
                   setEditingProperty(null);
                   handleValueChange(property, newDbValue, newBizValue);
@@ -470,14 +500,17 @@ const BulkPropertyEditor: React.FC<Props> = ({
               />
             );
           }
+
           return (
             <Button
+              color={aggValue.state === "mixed" ? "warning" : "default"}
               size="sm"
               variant="light"
-              color={aggValue.state === "mixed" ? "warning" : "default"}
               onPress={() => setEditingProperty(key)}
             >
-              {aggValue.state === "mixed" ? t("common.state.multipleValues") : t("common.state.partiallySet")}
+              {aggValue.state === "mixed"
+                ? t("common.state.multipleValues")
+                : t("common.state.partiallySet")}
             </Button>
           );
       }
@@ -497,9 +530,7 @@ const BulkPropertyEditor: React.FC<Props> = ({
         </div>
 
         {/* Value display/editor */}
-        <div className="flex items-center gap-1 min-w-0">
-          {renderValue()}
-        </div>
+        <div className="flex items-center gap-1 min-w-0">{renderValue()}</div>
       </div>
     );
   };
@@ -507,29 +538,23 @@ const BulkPropertyEditor: React.FC<Props> = ({
   const renderPropertySection = (_title: string, properties: IProperty[]) => {
     if (properties.length === 0) return null;
 
-    return (
-      <div className="flex flex-col">
-        {properties.map((prop) => renderPropertyRow(prop))}
-      </div>
-    );
+    return <div className="flex flex-col">{properties.map((prop) => renderPropertyRow(prop))}</div>;
   };
 
   const columnOptions = [2, 4, 6, 8];
 
   return (
     <Modal
-      size="5xl"
-      title={t("property.modal.bulkEditProperties")}
-      visible={visible}
+      className="max-w-7xl"
       footer={
         <div className="flex items-center justify-between w-full">
           <div className="text-sm text-default-500">
             {t("bulkModification.tip.forMorePowerfulModification")}
             <Button
+              className="ml-1"
+              color="primary"
               size="sm"
               variant="light"
-              color="primary"
-              className="ml-1"
               onPress={handleNavigateToBulkModification}
             >
               {t("bulkModification.action.goToBulkModificationPage")}
@@ -540,9 +565,11 @@ const BulkPropertyEditor: React.FC<Props> = ({
           </Button>
         </div>
       }
+      size="5xl"
+      title={t("property.modal.bulkEditProperties")}
+      visible={visible}
       onClose={handleClose}
       onDestroyed={onDestroyed}
-      className="max-w-7xl"
     >
       {loading ? (
         <div className="flex items-center justify-center py-12">
@@ -599,10 +626,16 @@ const BulkPropertyEditor: React.FC<Props> = ({
                 {groupedProperties.internal.length > 0 && groupedProperties.reserved.length > 0 && (
                   <Divider className="my-0.5" />
                 )}
-                {renderPropertySection(t("common.label.reservedProperties"), groupedProperties.reserved)}
+                {renderPropertySection(
+                  t("common.label.reservedProperties"),
+                  groupedProperties.reserved,
+                )}
                 {(groupedProperties.internal.length > 0 || groupedProperties.reserved.length > 0) &&
                   groupedProperties.custom.length > 0 && <Divider className="my-0.5" />}
-                {renderPropertySection(t("common.label.customProperties"), groupedProperties.custom)}
+                {renderPropertySection(
+                  t("common.label.customProperties"),
+                  groupedProperties.custom,
+                )}
                 {propertyMap.size === 0 && (
                   <div className="text-center text-default-400 py-4">
                     {t("property.empty.noPropertiesAvailable")}

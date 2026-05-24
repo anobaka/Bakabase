@@ -45,12 +45,7 @@ import Code from "./components/Code";
 import Carousel from "./components/Carousel";
 import Link from "./components/Link";
 import Snippet from "./components/Snippet";
-import {
-  Dropdown,
-  DropdownItem,
-  DropdownMenu,
-  DropdownTrigger,
-} from "./components/Dropdown";
+import { Dropdown, DropdownItem, DropdownMenu, DropdownTrigger } from "./components/Dropdown";
 import { DateInput, DatePicker } from "./components/Date";
 import { TimeInput } from "./components/Time";
 import Pagination from "./components/Pagination";

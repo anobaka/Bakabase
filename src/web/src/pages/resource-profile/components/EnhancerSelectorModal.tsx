@@ -22,12 +22,18 @@ type Props = {
   onSubmit?: (options: ApiEnhancerOptions[]) => any;
 } & DestroyableProps;
 
-const EnhancerSelectorModal = ({ enhancerOptions: propEnhancerOptions, onSubmit, onDestroyed }: Props) => {
+const EnhancerSelectorModal = ({
+  enhancerOptions: propEnhancerOptions,
+  onSubmit,
+  onDestroyed,
+}: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
   const [enhancers, setEnhancers] = useState<EnhancerDescriptor[]>([]);
-  const [enhancerOptions, setEnhancerOptions] = useState<ApiEnhancerOptions[]>(propEnhancerOptions ?? []);
+  const [enhancerOptions, setEnhancerOptions] = useState<ApiEnhancerOptions[]>(
+    propEnhancerOptions ?? [],
+  );
 
   const MAX_VISIBLE_TARGETS = 5;
 
@@ -64,22 +70,28 @@ const EnhancerSelectorModal = ({ enhancerOptions: propEnhancerOptions, onSubmit,
           keywordProperty: options.keywordProperty as ApiEnhancerOptions["keywordProperty"],
         };
       }
+
       return o;
     });
+
     setEnhancerOptions(newOptions);
   };
 
   const openEnhancerOptions = (enhancer: EnhancerDescriptor) => {
     const currentOptions = getOptionsForEnhancer(enhancer.id);
+
     createPortal(EnhancerOptionsModal, {
       enhancer,
-      options: currentOptions ? {
-        targetOptions: currentOptions.targetOptions as EnhancerFullOptions["targetOptions"],
-        expressions: currentOptions.expressions ?? undefined,
-        requirements: currentOptions.requirements ?? undefined,
-        keywordProperty: currentOptions.keywordProperty as EnhancerFullOptions["keywordProperty"],
-        pretreatKeyword: currentOptions.pretreatKeyword ?? undefined,
-      } : undefined,
+      options: currentOptions
+        ? {
+            targetOptions: currentOptions.targetOptions as EnhancerFullOptions["targetOptions"],
+            expressions: currentOptions.expressions ?? undefined,
+            requirements: currentOptions.requirements ?? undefined,
+            keywordProperty:
+              currentOptions.keywordProperty as EnhancerFullOptions["keywordProperty"],
+            pretreatKeyword: currentOptions.pretreatKeyword ?? undefined,
+          }
+        : undefined,
       onSubmit: async (options) => {
         updateEnhancerOptions(enhancer.id, options);
       },
@@ -119,7 +131,9 @@ const EnhancerSelectorModal = ({ enhancerOptions: propEnhancerOptions, onSubmit,
                 </div>
                 <div className={"opacity-60"}>{e.description}</div>
                 <div className={"flex flex-wrap gap-1"}>
-                  <div className={"font-bold"}>{t<string>("resourceProfile.label.enhanceProperties")}:&nbsp;</div>
+                  <div className={"font-bold"}>
+                    {t<string>("resourceProfile.label.enhanceProperties")}:&nbsp;
+                  </div>
                   {visibleTargets.map((target) => {
                     if (target.description) {
                       return (

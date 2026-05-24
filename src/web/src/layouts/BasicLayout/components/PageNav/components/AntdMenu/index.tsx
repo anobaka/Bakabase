@@ -51,14 +51,10 @@ const Index: React.FC<IProps> = ({ collapsed }: IProps) => {
 
     return getItem(
       collapsed ? (
-        <span className={item.isDeprecated ? "line-through" : ""}>
-          {t<string>(item.name)}
-        </span>
+        <span className={item.isDeprecated ? "line-through" : ""}>{t<string>(item.name)}</span>
       ) : (
         <div className="flex items-center gap-0.5">
-          <span className={item.isDeprecated ? "line-through" : ""}>
-            {t<string>(item.name)}
-          </span>
+          <span className={item.isDeprecated ? "line-through" : ""}>{t<string>(item.name)}</span>
           {item.isBeta && <BetaChip />}
           {item.isDeprecated && <DeprecatedChip />}
         </div>
@@ -82,13 +78,12 @@ const Index: React.FC<IProps> = ({ collapsed }: IProps) => {
         }
       }
     }
+
     return "";
   };
 
   const defaultOpenKeysRef = useRef(
-    asideMenuConfig
-      .filter((m) => m.children?.some((c) => c.path === pathname))
-      .map((m) => m.path!),
+    asideMenuConfig.filter((m) => m.children?.some((c) => c.path === pathname)).map((m) => m.path!),
   );
   const defaultSelectedKeysRef = useRef([findSelectedKey()]);
 

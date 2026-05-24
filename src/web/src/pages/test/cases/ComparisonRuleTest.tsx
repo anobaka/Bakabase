@@ -1,5 +1,7 @@
 "use client";
 
+import type { RuleConfig } from "@/pages/comparison/components/RuleConfigPanel";
+
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -7,7 +9,6 @@ import { Card, CardBody, CardHeader } from "@/components/bakaui";
 import { PropertyPool, PropertyType, ComparisonMode, NullValueBehavior } from "@/sdk/constants";
 import BriefProperty from "@/components/Chips/Property/BriefProperty";
 import RuleConfigPanel from "@/pages/comparison/components/RuleConfigPanel";
-import type { RuleConfig } from "@/pages/comparison/components/RuleConfigPanel";
 import { getAvailableModesForPropertyType } from "@/pages/comparison/components/RuleConfigPanel";
 
 // All property types to test
@@ -30,7 +31,13 @@ const AllPropertyTypes = [
   { type: PropertyType.Tags, name: "Tags" },
 ];
 
-const RuleTestPanel = ({ propertyType, propertyName }: { propertyType: PropertyType; propertyName: string }) => {
+const RuleTestPanel = ({
+  propertyType,
+  propertyName,
+}: {
+  propertyType: PropertyType;
+  propertyName: string;
+}) => {
   const { t } = useTranslation();
   const availableModes = getAvailableModesForPropertyType(propertyType);
 
@@ -61,15 +68,11 @@ const RuleTestPanel = ({ propertyType, propertyName }: { propertyType: PropertyT
           property={{ name: propertyName, pool: PropertyPool.Custom, type: propertyType }}
         />
         <span className="text-xs text-default-400 ml-auto">
-          Modes: {availableModes.map(m => ComparisonMode[m]).join(", ")}
+          Modes: {availableModes.map((m) => ComparisonMode[m]).join(", ")}
         </span>
       </CardHeader>
       <CardBody className="pt-0">
-        <RuleConfigPanel
-          value={config}
-          onChange={setConfig}
-          showPropertySelector={false}
-        />
+        <RuleConfigPanel showPropertySelector={false} value={config} onChange={setConfig} />
       </CardBody>
     </Card>
   );
@@ -82,17 +85,13 @@ const ComparisonRuleTest = () => {
     <div className="flex flex-col gap-4 p-4">
       <h2 className="text-xl font-bold">Comparison Rule Configuration Test</h2>
       <p className="text-default-500">
-        This page shows the real RuleConfigPanel component for all property types.
-        Each property type has different available comparison modes.
+        This page shows the real RuleConfigPanel component for all property types. Each property
+        type has different available comparison modes.
       </p>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {AllPropertyTypes.map((pt) => (
-          <RuleTestPanel
-            key={pt.type}
-            propertyName={pt.name}
-            propertyType={pt.type}
-          />
+          <RuleTestPanel key={pt.type} propertyName={pt.name} propertyType={pt.type} />
         ))}
       </div>
     </div>

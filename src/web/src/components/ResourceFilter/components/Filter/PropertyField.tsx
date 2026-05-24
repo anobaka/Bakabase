@@ -23,12 +23,7 @@ export interface PropertyFieldProps {
  * - Readonly mode: non-clickable Chip
  * - Editable mode: clickable Button that opens PropertySelector
  */
-const PropertyField = ({
-  property,
-  isReadonly,
-  onSelect,
-  onCancel,
-}: PropertyFieldProps) => {
+const PropertyField = ({ property, isReadonly, onSelect, onCancel }: PropertyFieldProps) => {
   const { t } = useTranslation();
   const config = useFilterConfig();
 
@@ -38,28 +33,22 @@ const PropertyField = ({
 
   const handlePress = () => {
     config.renderers.openPropertySelector(
-      property
-        ? { id: property.id, pool: property.pool }
-        : undefined,
+      property ? { id: property.id, pool: property.pool } : undefined,
       (selectedProperty, availableOperations) => {
         onSelect?.(selectedProperty, availableOperations);
       },
-      onCancel
+      onCancel,
     );
   };
 
   if (isReadonly) {
-    return (
-      <span className="text-sm font-medium text-foreground">
-        {displayText}
-      </span>
-    );
+    return <span className="text-sm font-medium text-foreground">{displayText}</span>;
   }
 
   return (
     <button
-      type="button"
       className="text-sm font-medium text-foreground hover:text-primary hover:underline cursor-pointer bg-transparent border-none p-0"
+      type="button"
       onClick={handlePress}
     >
       {displayText}

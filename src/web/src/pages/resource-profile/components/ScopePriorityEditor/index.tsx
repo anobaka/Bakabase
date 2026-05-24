@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
   closestCenter,
@@ -18,11 +18,11 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { UndoOutlined } from "@ant-design/icons";
 
 import { Button, Chip, Tooltip } from "@/components/bakaui";
 import { PropertyValueScope, PropertyValueScopeLabel } from "@/sdk/constants";
 import DragHandle from "@/components/DragHandle";
-import { DeleteOutlined, UndoOutlined } from "@ant-design/icons";
 
 type Props = {
   /** Current scope priority. null means "use global setting". */
@@ -32,22 +32,11 @@ type Props = {
   onChange: (value: PropertyValueScope[] | null) => void;
 };
 
-const SortableScopeItem = ({
-  scope,
-  index,
-}: {
-  scope: PropertyValueScope;
-  index: number;
-}) => {
+const SortableScopeItem = ({ scope, index }: { scope: PropertyValueScope; index: number }) => {
   const { t } = useTranslation();
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: scope });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: scope,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -64,9 +53,9 @@ const SortableScopeItem = ({
       <DragHandle {...listeners} {...attributes} />
       <span className="text-xs text-default-400 w-5">{index + 1}</span>
       <Chip
+        color={scope === PropertyValueScope.Manual ? "primary" : "default"}
         size="sm"
         variant="flat"
-        color={scope === PropertyValueScope.Manual ? "primary" : "default"}
       >
         {t(`PropertyValueScope.${PropertyValueScopeLabel[scope]}`)}
       </Chip>
@@ -82,27 +71,31 @@ const ScopePriorityEditor = ({ value, availableScopes, onChange }: Props) => {
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
   const currentScopes = useMemo(() => {
     if (value !== null) return value;
+
     return availableScopes;
   }, [value, availableScopes]);
 
   const handleDragEnd = useCallback(
     (event: any) => {
       const { active, over } = event;
+
       if (active.id !== over?.id) {
         const oldIndex = currentScopes.indexOf(active.id as PropertyValueScope);
         const newIndex = currentScopes.indexOf(over?.id as PropertyValueScope);
+
         if (oldIndex !== -1 && newIndex !== -1) {
           const newScopes = arrayMove(currentScopes, oldIndex, newIndex);
+
           onChange(newScopes);
         }
       }
     },
-    [currentScopes, onChange]
+    [currentScopes, onChange],
   );
 
   const handleCustomize = () => {
@@ -120,11 +113,7 @@ const ScopePriorityEditor = ({ value, availableScopes, onChange }: Props) => {
           {t("resourceProfile.scopePriority.useGlobal")}
         </span>
         <Tooltip content={t("resourceProfile.scopePriority.customizeTooltip")}>
-          <Button
-            size="sm"
-            variant="flat"
-            onPress={handleCustomize}
-          >
+          <Button size="sm" variant="flat" onPress={handleCustomize}>
             {t("resourceProfile.scopePriority.customize")}
           </Button>
         </Tooltip>
@@ -139,32 +128,16 @@ const ScopePriorityEditor = ({ value, availableScopes, onChange }: Props) => {
           {t("resourceProfile.scopePriority.customLabel")}
         </span>
         <Tooltip content={t("resourceProfile.scopePriority.resetTooltip")}>
-          <Button
-            isIconOnly
-            size="sm"
-            variant="light"
-            onPress={handleReset}
-          >
+          <Button isIconOnly size="sm" variant="light" onPress={handleReset}>
             <UndoOutlined className="text-xs" />
           </Button>
         </Tooltip>
       </div>
-      <DndContext
-        collisionDetection={closestCenter}
-        sensors={sensors}
-        onDragEnd={handleDragEnd}
-      >
-        <SortableContext
-          items={currentScopes}
-          strategy={verticalListSortingStrategy}
-        >
+      <DndContext collisionDetection={closestCenter} sensors={sensors} onDragEnd={handleDragEnd}>
+        <SortableContext items={currentScopes} strategy={verticalListSortingStrategy}>
           <div className="border border-default-200 rounded-md">
             {currentScopes.map((scope, index) => (
-              <SortableScopeItem
-                key={scope}
-                scope={scope}
-                index={index}
-              />
+              <SortableScopeItem key={scope} index={index} scope={scope} />
             ))}
           </div>
         </SortableContext>

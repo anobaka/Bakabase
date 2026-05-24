@@ -40,5 +40,6 @@ export const cssVariableGroups: CssVariableGroup[] = [
 ];
 
 /** Flat list of all CSS variable definitions (for CSS injection) */
-export const allCssVariableDefinitions: CssVariableDefinition[] =
-  cssVariableGroups.flatMap((g) => g.variables);
+export const allCssVariableDefinitions: CssVariableDefinition[] = cssVariableGroups.flatMap(
+  (g) => g.variables,
+);

@@ -27,6 +27,6 @@ export interface WindowProps {
   onClose?: () => void;
   afterClose?: () => void;
   onDestroyed?: () => void;
-  windowOptions?: Omit<WindowOptions, 'persistent'>;
+  windowOptions?: Omit<WindowOptions, "persistent">;
   renderHeaderActions?: () => React.ReactNode;
 }

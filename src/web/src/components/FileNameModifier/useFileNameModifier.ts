@@ -6,16 +6,15 @@ import { useState, useEffect, useRef } from "react";
 export type { FileNameModificationResult };
 
 // 带 id 的操作类型
-export interface OperationWithId extends BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFileNameModifierOperation {
+export interface OperationWithId
+  extends BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFileNameModifierOperation {
   id: string;
 }
 
 export function useFileNameModifier(initialFilePaths: string[] = []) {
   const [operations, setOperations] = useState<OperationWithId[]>([]);
   const [filePaths, setFilePaths] = useState<string[]>(initialFilePaths);
-  const [previewResults, setPreviewResults] = useState<
-    FileNameModificationResult[]
-  >([]);
+  const [previewResults, setPreviewResults] = useState<FileNameModificationResult[]>([]);
   const [error, setError] = useState<string>("");
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [lastFilePaths, setLastFilePaths] = useState<string[] | null>(null);

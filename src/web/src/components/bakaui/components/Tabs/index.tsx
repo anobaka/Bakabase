@@ -7,16 +7,14 @@ interface TabsProps extends NextUITabsProps {
   children?: React.ReactNode;
 }
 
-const Tabs = forwardRef<any, TabsProps>(
-  ({ children, ...props }: TabsProps, ref) => {
-    // console.log(66666666, props.children);
-    return (
-      <NextUiTabs ref={ref} {...props}>
-        {children}
-      </NextUiTabs>
-    );
-  },
-);
+const Tabs = forwardRef<any, TabsProps>(({ children, ...props }: TabsProps, ref) => {
+  // console.log(66666666, props.children);
+  return (
+    <NextUiTabs ref={ref} {...props}>
+      {children}
+    </NextUiTabs>
+  );
+});
 
 const Tab = NextUiTab;
 

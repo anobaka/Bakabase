@@ -11,13 +11,7 @@ import { useState } from "react";
 import TargetRow from "../TargetRow";
 import OtherOptionsTip from "../OtherOptionsTip";
 
-import {
-  Divider,
-  Table,
-  TableBody,
-  TableColumn,
-  TableHeader,
-} from "@/components/bakaui";
+import { Divider, Table, TableBody, TableColumn, TableHeader } from "@/components/bakaui";
 import PropertiesMatcher from "@/components/PropertiesMatcher";
 
 interface Props {
@@ -48,6 +42,7 @@ const FixedTargets = (props: Props) => {
 
   const hasUnbound = fixedTargets.some((target) => {
     const to = optionsList.find((x) => x.target === target.id);
+
     return !to?.propertyId || !to?.propertyPool;
   });
 
@@ -58,9 +53,7 @@ const FixedTargets = (props: Props) => {
       {hideBindingAndConfig ? (
         <Table removeWrapper aria-label={"Fixed targets"}>
           <TableHeader>
-            <TableColumn width="80%">
-              {t<string>("enhancer.target.fixed.label")}
-            </TableColumn>
+            <TableColumn width="80%">{t<string>("enhancer.target.fixed.label")}</TableColumn>
             <TableColumn>{t<string>("common.label.operations")}</TableColumn>
           </TableHeader>
           {/* @ts-ignore */}
@@ -72,9 +65,7 @@ const FixedTargets = (props: Props) => {
             <TableColumn align={"center"} width={80}>
               {t<string>("enhancer.target.configured.label")}
             </TableColumn>
-            <TableColumn width={"33.3333%"}>
-              {t<string>("enhancer.target.fixed.label")}
-            </TableColumn>
+            <TableColumn width={"33.3333%"}>{t<string>("enhancer.target.fixed.label")}</TableColumn>
             <TableColumn width={"25%"}>
               <div className={"flex items-center gap-1"}>
                 {t<string>("enhancer.target.bindProperty.label")}
@@ -101,6 +92,7 @@ const FixedTargets = (props: Props) => {
 
                           if (propertyMap) {
                             const pMap = (propertyMap[p.pool] ??= {});
+
                             if (!(p.id in pMap)) {
                               pMap[p.id] = p;
                             }
@@ -131,9 +123,7 @@ const FixedTargets = (props: Props) => {
         {fixedTargets.map((target, i) => {
           const toIdx = optionsList.findIndex((x) => x.target == target.id);
           const to = optionsList[toIdx];
-          const targetDescriptor = enhancer.targets.find(
-            (x) => x.id == target.id,
-          )!;
+          const targetDescriptor = enhancer.targets.find((x) => x.id == target.id)!;
           // console.log(target.name);
 
           return (
@@ -166,9 +156,7 @@ const FixedTargets = (props: Props) => {
                 }}
                 onPropertyChanged={onPropertyChanged}
               />
-              {fixedTargets.length - 1 !== i && (
-                <Divider orientation={"horizontal"} />
-              )}
+              {fixedTargets.length - 1 !== i && <Divider orientation={"horizontal"} />}
             </>
           );
         })}

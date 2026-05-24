@@ -6,7 +6,10 @@ import { useTranslation } from "react-i18next";
 
 import { Modal, Tab, Tabs } from "@/components/bakaui";
 import { AiFeature } from "@/sdk/constants";
-import { SoulPlusConfigPanel, SoulPlusConfigField } from "@/components/ThirdPartyConfig/platforms/SoulPlusConfig";
+import {
+  SoulPlusConfigPanel,
+  SoulPlusConfigField,
+} from "@/components/ThirdPartyConfig/platforms/SoulPlusConfig";
 import AiProviderPanel from "@/components/AiProviderPanel";
 import AiFeaturePanel from "@/components/AiFeaturePanel";
 
@@ -23,7 +26,7 @@ const ConfigurationModal = (props: Props) => {
       size={"xl"}
       onDestroyed={props.onDestroyed}
     >
-      <Tabs isVertical disableAnimation aria-label="Options" classNames={{ panel: "flex-1 w-0" }}>
+      <Tabs disableAnimation isVertical aria-label="Options" classNames={{ panel: "flex-1 w-0" }}>
         <Tab key="ai" title={t<string>("postParser.config.ai")}>
           <div className="space-y-4">
             <AiProviderPanel />

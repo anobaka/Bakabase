@@ -9,6 +9,7 @@ import type {
 import { useTranslation } from "react-i18next";
 import React, { useState } from "react";
 import { CardHeader } from "@heroui/react";
+
 import { Button, Card, CardBody, Modal } from "@/components/bakaui";
 import PropertySelector from "@/components/PropertySelector";
 import { BulkModificationProcessorValueType, PropertyPool } from "@/sdk/constants";
@@ -49,9 +50,13 @@ const ProcessModal = ({ onDestroyed, process: propsProcess, onSubmit, variables 
         },
       }}
       size={"xl"}
-      title={process?.property
-        ? t<string>("bulkModification.title.processForProperty", { property: process.property.name })
-        : t<string>("bulkModification.label.settingProcess")}
+      title={
+        process?.property
+          ? t<string>("bulkModification.title.processForProperty", {
+              property: process.property.name,
+            })
+          : t<string>("bulkModification.label.settingProcess")
+      }
       onDestroyed={onDestroyed}
       onOk={() => {
         if (!validate(process)) {
@@ -113,6 +118,7 @@ const ProcessModal = ({ onDestroyed, process: propsProcess, onSubmit, variables 
               {process.steps.map((step, i) => {
                 return (
                   <ProcessStep
+                    key={i}
                     editable
                     availableValueTypes={AllBulkModificationValueTypes}
                     no={`${i + 1}`}

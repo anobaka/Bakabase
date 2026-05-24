@@ -20,11 +20,14 @@ import { Button, Modal } from "@/components/bakaui";
 import { buildLogger } from "@/components/utils";
 
 const log = buildLogger("PropertyValueEditorModal");
+
 import { PropertyPool, PropertyType } from "@/sdk/constants";
 import { isReferenceValueType } from "@/components/Property/PropertySystem";
 import PropertyValueRenderer from "@/components/Property/components/PropertyValueRenderer";
+
 import type { IProperty } from "@/components/Property/models";
 import type { DestroyableProps } from "@/components/bakaui/types";
+
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import PropertyModal from "@/components/PropertyModal";
 import BApi from "@/sdk/BApi";
@@ -56,8 +59,12 @@ const PropertyValueEditorModal: React.FC<Props> = ({
   const hasOptions = (() => {
     if (!isReference) return true;
     const opts = property.options;
+
     if (!opts) return false;
-    if (property.type === PropertyType.SingleChoice || property.type === PropertyType.MultipleChoice) {
+    if (
+      property.type === PropertyType.SingleChoice ||
+      property.type === PropertyType.MultipleChoice
+    ) {
       return (opts.choices ?? []).length > 0;
     }
     if (property.type === PropertyType.Tags) {
@@ -66,6 +73,7 @@ const PropertyValueEditorModal: React.FC<Props> = ({
     if (property.type === PropertyType.Multilevel) {
       return (opts.data ?? []).length > 0;
     }
+
     return false;
   })();
 
@@ -84,6 +92,7 @@ const PropertyValueEditorModal: React.FC<Props> = ({
             const rsp = await BApi.customProperty.getAllCustomProperties();
             const allProps = (rsp.data || []) as IProperty[];
             const updated = allProps.find((p) => p.id === property.id);
+
             if (updated) {
               setProperty(updated);
               setEditorKey((k) => k + 1);
@@ -101,6 +110,12 @@ const PropertyValueEditorModal: React.FC<Props> = ({
   return (
     <Modal
       defaultVisible
+      footer={{
+        actions: ["ok", "cancel"],
+        okProps: {
+          isDisabled: selectedDbValue == null,
+        },
+      }}
       size="lg"
       title={
         <div className={"flex items-center gap-2"}>
@@ -108,8 +123,8 @@ const PropertyValueEditorModal: React.FC<Props> = ({
           {isReference && (
             <Button
               size="sm"
-              variant="light"
               startContent={<SettingOutlined />}
+              variant="light"
               onPress={handleEditPropertyConfig}
             >
               {t<string>("propertyValueEditor.editPropertyConfig")}
@@ -127,12 +142,6 @@ const PropertyValueEditorModal: React.FC<Props> = ({
           log("selectedDbValue is null, not submitting");
         }
       }}
-      footer={{
-        actions: ["ok", "cancel"],
-        okProps: {
-          isDisabled: selectedDbValue == null,
-        },
-      }}
     >
       <div className={"flex flex-col gap-3"}>
         {/* No options hint for reference types */}
@@ -145,10 +154,10 @@ const PropertyValueEditorModal: React.FC<Props> = ({
         {/* Value editor - isEditing locks it in edit mode (no blur exit) */}
         <PropertyValueRenderer
           key={editorKey}
-          property={property}
-          dbValue={selectedDbValue ?? undefined}
-          size="sm"
           isEditing
+          dbValue={selectedDbValue ?? undefined}
+          property={property}
+          size="sm"
           onValueChange={(dbValue) => {
             log("onValueChange dbValue:", JSON.stringify(dbValue));
             setSelectedDbValue(dbValue ?? null);

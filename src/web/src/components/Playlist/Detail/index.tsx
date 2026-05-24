@@ -47,9 +47,9 @@ const Detail = ({ id, onChange }: PlaylistDetailProps) => {
 
         setPlaylist(pl);
 
-        const resourceIds = (
-          pl.items?.map((item) => item.resourceId) ?? []
-        ).filter((resourceId): resourceId is number => resourceId != null);
+        const resourceIds = (pl.items?.map((item) => item.resourceId) ?? []).filter(
+          (resourceId): resourceId is number => resourceId != null,
+        );
 
         const distinctResourceIds = [...new Set(resourceIds)];
 
@@ -60,21 +60,20 @@ const Detail = ({ id, onChange }: PlaylistDetailProps) => {
 
           if (!isMounted) return;
 
-          const resourceMap = (
-            resourcesResponse.data || []
-          ).reduce<ResourceMap>((acc, resource) => {
-            acc[resource.id!] = resource;
+          const resourceMap = (resourcesResponse.data || []).reduce<ResourceMap>(
+            (acc, resource) => {
+              acc[resource.id!] = resource;
 
-            return acc;
-          }, {});
+              return acc;
+            },
+            {},
+          );
 
           setResourceMap(resourceMap);
         }
       } catch (err) {
         if (!isMounted) return;
-        setError(
-          err instanceof Error ? err.message : t<string>("playlist.label.loadFailed"),
-        );
+        setError(err instanceof Error ? err.message : t<string>("playlist.label.loadFailed"));
       } finally {
         if (isMounted) {
           setLoading(false);

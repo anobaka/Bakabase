@@ -8,15 +8,16 @@ import { useEffect, useState, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import MultilevelValueEditor from "../../ValueEditor/Editors/MultilevelValueEditor";
+import { buildVisibleOptions, hasMoreOptions, getRemainingCount } from "../utils";
 
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { Button } from "@/components/bakaui";
-import NotSet, { LightText } from "@/components/StandardValue/ValueRenderer/Renderers/components/LightText";
+import NotSet, {
+  LightText,
+} from "@/components/StandardValue/ValueRenderer/Renderers/components/LightText";
 import NoChoicesAvailable from "@/components/StandardValue/ValueRenderer/Renderers/components/NoChoicesAvailable";
-
 import SelectableChip from "@/components/StandardValue/ValueRenderer/Renderers/components/SelectableChip";
 import { buildLogger } from "@/components/utils";
-import { buildVisibleOptions, hasMoreOptions, getRemainingCount } from "../utils";
 import { useFilterOptionsThreshold } from "@/hooks/useFilterOptionsThreshold";
 
 type FlattenedOption = {
@@ -73,6 +74,7 @@ const MultilevelValueRenderer = ({
     };
 
     document.addEventListener("mousedown", handleClickOutside);
+
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [controlledIsEditing, isEditing]);
 
@@ -108,7 +110,11 @@ const MultilevelValueRenderer = ({
   const flattenedOptions = useMemo(() => {
     const result: FlattenedOption[] = [];
 
-    const traverse = (nodes: MultilevelData<string>[], currentPath: string[], currentLabels: string[]) => {
+    const traverse = (
+      nodes: MultilevelData<string>[],
+      currentPath: string[],
+      currentLabels: string[],
+    ) => {
       for (const node of nodes) {
         const newPath = [...currentPath, node.value];
         const newLabels = [...currentLabels, node.label || node.value];
@@ -128,6 +134,7 @@ const MultilevelValueRenderer = ({
     };
 
     traverse(dataSource, [], []);
+
     return result;
   }, [dataSource]);
 
@@ -137,6 +144,7 @@ const MultilevelValueRenderer = ({
   // Check if a path's leaf value is selected
   const isPathSelected = (path: string[]) => {
     const leafValue = path[path.length - 1];
+
     return selectedValues.includes(leafValue);
   };
 
@@ -153,6 +161,7 @@ const MultilevelValueRenderer = ({
       newDbValues = selectedValues.filter((v) => v !== leafValue);
       if (newDbValues.length === 0) {
         editor.onValueChange(undefined, undefined);
+
         return;
       }
       newBizValues = flattenedOptions
@@ -175,8 +184,9 @@ const MultilevelValueRenderer = ({
 
   // Build visible options using shared utility
   const visibleOptions = useMemo(
-    () => buildVisibleOptions(flattenedOptions, (opt) => isPathSelected(opt.path), optionsThreshold),
-    [flattenedOptions, selectedValues, optionsThreshold]
+    () =>
+      buildVisibleOptions(flattenedOptions, (opt) => isPathSelected(opt.path), optionsThreshold),
+    [flattenedOptions, selectedValues, optionsThreshold],
   );
 
   const hasMore = hasMoreOptions(flattenedOptions.length, optionsThreshold);
@@ -189,21 +199,16 @@ const MultilevelValueRenderer = ({
         {visibleOptions.map((opt) => (
           <SelectableChip
             key={opt.path.join("/")}
+            color={opt.color}
+            isSelected={isPathSelected(opt.path)}
             itemKey={opt.path.join("/")}
             label={opt.label}
-            isSelected={isPathSelected(opt.path)}
-            color={opt.color}
             size={size}
             onClick={() => togglePath(opt.path)}
           />
         ))}
         {hasMore && (
-          <Button
-            size="sm"
-            variant="light"
-            color="primary"
-            onClick={openFullEditor}
-          >
+          <Button color="primary" size="sm" variant="light" onClick={openFullEditor}>
             {t("common.action.more")} (+{remainingCount})
           </Button>
         )}
@@ -227,7 +232,23 @@ const MultilevelValueRenderer = ({
   // Readonly mode
   if (value == undefined || value.length == 0) {
     return (
-      <div ref={containerRef} onClick={handleClick} className={canEdit ? "cursor-pointer" : undefined}>
+      <div
+        ref={containerRef}
+        className={canEdit ? "cursor-pointer" : undefined}
+        role={canEdit ? "button" : undefined}
+        tabIndex={canEdit ? 0 : undefined}
+        onClick={handleClick}
+        onKeyDown={
+          canEdit
+            ? (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  handleClick();
+                }
+              }
+            : undefined
+        }
+      >
         <NotSet size={size} onClick={canEdit ? handleClick : undefined} />
       </div>
     );
@@ -236,35 +257,51 @@ const MultilevelValueRenderer = ({
   // Helper to get first available color from value attributes
   const getFirstColor = (index: number) => {
     const attrs = valueAttributes?.[index];
+
     if (attrs) {
       for (const attr of attrs) {
         if (attr?.color) return attr.color;
       }
     }
+
     return undefined;
   };
 
   if (variant == "light") {
     return (
-      <LightText onClick={handleClick} size={size}>
+      <LightText size={size} onClick={handleClick}>
         {value?.map((v, i) => (
           <span key={i}>
             {i != 0 && ", "}
-            <LightText color={getFirstColor(i)} size={size}>{v.join("/")}</LightText>
+            <LightText color={getFirstColor(i)} size={size}>
+              {v.join("/")}
+            </LightText>
           </span>
         ))}
       </LightText>
     );
   } else {
     return (
-      <div ref={containerRef} onClick={handleClick} className="flex flex-wrap gap-1 cursor-pointer">
+      <div
+        ref={containerRef}
+        className="flex flex-wrap gap-1 cursor-pointer"
+        role="button"
+        tabIndex={0}
+        onClick={handleClick}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            handleClick();
+          }
+        }}
+      >
         {value?.map((v, i) => (
           <SelectableChip
             key={i}
-            itemKey={`display-${i}`}
-            label={v.join("/")}
             isSelected
             color={getFirstColor(i)}
+            itemKey={`display-${i}`}
+            label={v.join("/")}
             size={size}
           />
         ))}

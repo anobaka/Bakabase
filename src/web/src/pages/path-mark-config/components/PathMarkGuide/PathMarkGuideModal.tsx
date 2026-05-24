@@ -210,9 +210,7 @@ const PathMarkGuideModal = ({ visible, onComplete }: PathMarkGuideModalProps) =>
               </p>
 
               <div className="px-3 py-2 rounded-lg bg-warning/5 border border-warning/20 max-w-lg w-full mb-3">
-                <p className="text-default-700 text-sm">
-                  {t("pathMarkGuide.sync.explanation")}
-                </p>
+                <p className="text-default-700 text-sm">{t("pathMarkGuide.sync.explanation")}</p>
               </div>
 
               <ul className="space-y-2 max-w-lg w-full">
@@ -220,17 +218,13 @@ const PathMarkGuideModal = ({ visible, onComplete }: PathMarkGuideModalProps) =>
                   <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-success/10 text-success font-bold text-sm">
                     1
                   </div>
-                  <span className="text-default-700 text-sm">
-                    {t("pathMarkGuide.sync.point1")}
-                  </span>
+                  <span className="text-default-700 text-sm">{t("pathMarkGuide.sync.point1")}</span>
                 </li>
                 <li className="flex items-center gap-3 px-3 py-2 rounded-lg bg-default-100">
                   <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-success/10 text-success font-bold text-sm">
                     2
                   </div>
-                  <span className="text-default-700 text-sm">
-                    {t("pathMarkGuide.sync.point2")}
-                  </span>
+                  <span className="text-default-700 text-sm">{t("pathMarkGuide.sync.point2")}</span>
                 </li>
               </ul>
             </div>

@@ -3,7 +3,14 @@
 import type { ResourcesRef } from "./Resources";
 import type { SearchForm } from "@/pages/resource/models";
 
-import React, { useCallback, useDeferredValue, useEffect, useImperativeHandle, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { usePrevious, useUpdate } from "react-use";
 import { SearchOutlined, FolderOpenOutlined } from "@ant-design/icons";
@@ -24,7 +31,8 @@ import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContext
 import { useResourceSearch } from "@/hooks/useResourceSearch";
 
 const BasePageSize = 50;
-const getPageSize = (cols: number) => cols > 0 ? Math.ceil(BasePageSize / cols) * cols : BasePageSize;
+const getPageSize = (cols: number) =>
+  cols > 0 ? Math.ceil(BasePageSize / cols) * cols : BasePageSize;
 
 interface IPageable {
   page: number;
@@ -144,7 +152,8 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
   }, [resourceOptions.initialized]);
 
   // Use Meta (Command) on Mac, Control on Windows/Linux
-  const isMac = typeof navigator !== "undefined" && navigator.platform.toUpperCase().indexOf("MAC") >= 0;
+  const isMac =
+    typeof navigator !== "undefined" && navigator.platform.toUpperCase().indexOf("MAC") >= 0;
   const selectionKey = isMac ? "Meta" : "Control";
 
   // Use refs for event handlers to avoid stale closures in event listeners
@@ -158,6 +167,7 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "a") {
       e.preventDefault();
       setSelectedIds(resourcesRef.current.map((r) => r.id));
+
       return;
     }
     if (e.key == selectionKey && !multiSelectionRef.current) {
@@ -184,6 +194,7 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
     if (!multiSelectionRef.current && !e.shiftKey) {
       // Don't clear selection if clicking on menu items, modals, or other overlay elements
       const target = e.target as HTMLElement;
+
       if (target.closest(".szh-menu, [role='dialog'], [role='menu'], .bakaui-modal")) {
         return;
       }
@@ -288,18 +299,22 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
   // Auto-load more when content doesn't fill the viewport
   useEffect(() => {
     const pageSize = pageable?.pageSize;
+
     if (pageable && pageSize && props.activated && !searching && resources.length > 0) {
       const timer = setTimeout(() => {
-        const gridElement = pageContainerRef.current?.querySelector('.ReactVirtualized__Grid');
+        const gridElement = pageContainerRef.current?.querySelector(".ReactVirtualized__Grid");
+
         if (gridElement && gridElement.scrollHeight <= gridElement.clientHeight) {
           const totalPage = Math.ceil(pageable.totalCount / pageSize);
           // Calculate loaded pages from resources.length
           const loadedPages = Math.ceil(resources.length / pageSize);
+
           if (loadedPages < totalPage) {
-            search({ page: loadedPages + 1 }, 'append', false, false);
+            search({ page: loadedPages + 1 }, "append", false, false);
           }
         }
       }, 300);
+
       return () => clearTimeout(timer);
     }
   }, [pageable, props.activated, searching, resources.length]);
@@ -324,6 +339,7 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
       // Prevent concurrent searches
       if (searchingRef.current) {
         log("Search already in progress, skipping");
+
         return;
       }
 
@@ -377,6 +393,7 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
 
       // Merge with existing selection
       const newSelectedIds = [...new Set([...selectedIdsRef.current, ...rangeIds])];
+
       setSelectedIds(newSelectedIds);
 
       // Update last selected index to current position for subsequent shift selections
@@ -398,9 +415,12 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
     }
   }, []);
 
-  const onSelectedResourcesChanged = useCallback((ids: number[]) => {
-    reloadResources(ids);
-  }, [reloadResources]);
+  const onSelectedResourcesChanged = useCallback(
+    (ids: number[]) => {
+      reloadResources(ids);
+    },
+    [reloadResources],
+  );
 
   type GridCellRenderArgs = {
     columnIndex: number;
@@ -422,17 +442,17 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
       const resource = displayResources[index];
       const selected = selectedIdsRef.current.includes(resource.id);
       // Get selected resources data for context menu
-      const selectedResources = displayResources.filter(r => selectedIdsRef.current.includes(r.id));
+      const selectedResources = displayResources.filter((r) =>
+        selectedIdsRef.current.includes(r.id),
+      );
 
       return (
         <div
           key={resource.id}
+          // React's emulated bubble: img loads inside ResourceCard fire onLoad here,
+          // letting react-virtualized re-measure once the cover has real dimensions.
+          // eslint-disable-next-line react/no-unknown-property
           onLoad={measure}
-          // ref={(el) => {
-          //   if (el) {
-          //     measure();
-          //   }
-          // }}
           className={"relative p-0.5"}
           style={{
             ...style,
@@ -440,11 +460,11 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
         >
           <ResourceCard
             biggerCoverPlacement={index % columnCount < columnCount / 2 ? "right" : "left"}
-            selectionModeRef={multiSelectionRef}
             resource={resource}
             selected={selected}
             selectedResourceIds={selectedIdsRef.current}
             selectedResources={selectedResources}
+            selectionModeRef={multiSelectionRef}
             onSelected={onSelect}
             onSelectedResourcesChanged={onSelectedResourcesChanged}
           />
@@ -482,9 +502,11 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
 
   const rightPanelContent = (
     <div className="flex flex-col h-full overflow-hidden">
-        {columnCount > 0 && displayResources.length > 0 && (
-          <>
-            {pageable && pageable.pageSize != undefined && Math.ceil(pageable.totalCount / pageable.pageSize) > 1 && (
+      {columnCount > 0 && displayResources.length > 0 && (
+        <>
+          {pageable &&
+            pageable.pageSize != undefined &&
+            Math.ceil(pageable.totalCount / pageable.pageSize) > 1 && (
               <div className={"flex items-center justify-end py-2"}>
                 <Pagination
                   showControls
@@ -503,7 +525,7 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
                 />
               </div>
             )}
-            <Resources
+          <Resources
             ref={(r) => {
               resourcesComponentRef.current = r;
             }}
@@ -515,7 +537,9 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
                 return;
               }
               if (e.scrollHeight < e.scrollTop + e.clientHeight + 200 && !searchingRef.current) {
-                const totalPage = Math.ceil((pageable?.totalCount ?? 0) / (pageable?.pageSize ?? BasePageSize));
+                const totalPage = Math.ceil(
+                  (pageable?.totalCount ?? 0) / (pageable?.pageSize ?? BasePageSize),
+                );
 
                 if (
                   searchFormRef.current?.page != undefined &&
@@ -555,7 +579,8 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
                 }
                 const centerResourceId = parseInt(closest.getAttribute("data-id"), 10);
                 const pageOffset = Math.floor(
-                  displayResources.findIndex((r) => r.id == centerResourceId) / (searchFormRef.current?.pageSize ?? BasePageSize),
+                  displayResources.findIndex((r) => r.id == centerResourceId) /
+                    (searchFormRef.current?.pageSize ?? BasePageSize),
                 );
                 const currentPage = pageOffset + initStartPageRef.current;
 
@@ -675,15 +700,15 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
       className="h-full max-h-full relative"
     >
       <ResizablePanelDivider
-        defaultWidth={320}
-        minWidth={250}
-        maxWidth={500}
-        storageKey="resource-filter-panel-width"
         collapsible
-        collapsedStorageKey="resource-filter-panel-collapsed"
         className="h-full"
+        collapsedStorageKey="resource-filter-panel-collapsed"
+        defaultWidth={320}
         leftPanel={leftPanelContent}
+        maxWidth={500}
+        minWidth={250}
         rightPanel={rightPanelContent}
+        storageKey="resource-filter-panel-width"
       />
     </div>
   );

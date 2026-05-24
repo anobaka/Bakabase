@@ -1,5 +1,7 @@
 "use client";
 
+import type { BakabaseModulesAIModelsDbLlmUsageLogDbModel } from "@/sdk/Api";
+
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -22,7 +24,6 @@ import {
 import { AiOutlineEye } from "react-icons/ai";
 
 import BApi from "@/sdk/BApi";
-import type { BakabaseModulesAIModelsDbLlmUsageLogDbModel } from "@/sdk/Api";
 import { LlmCallStatus } from "@/sdk/constants";
 import LlmProviderSelector, { useLlmProviders } from "@/components/LlmProviderSelector";
 
@@ -30,15 +31,17 @@ type UsageLog = BakabaseModulesAIModelsDbLlmUsageLogDbModel;
 
 const StatusChip = ({ status }: { status: number }) => {
   const { t } = useTranslation();
-  const map: Record<number, { color: "success" | "danger" | "warning" | "default"; key: string }> = {
-    [LlmCallStatus.Success]: { color: "success", key: "success" },
-    [LlmCallStatus.Error]: { color: "danger", key: "error" },
-    [LlmCallStatus.Timeout]: { color: "warning", key: "timeout" },
-    [LlmCallStatus.Cancelled]: { color: "default", key: "cancelled" },
-  };
+  const map: Record<number, { color: "success" | "danger" | "warning" | "default"; key: string }> =
+    {
+      [LlmCallStatus.Success]: { color: "success", key: "success" },
+      [LlmCallStatus.Error]: { color: "danger", key: "error" },
+      [LlmCallStatus.Timeout]: { color: "warning", key: "timeout" },
+      [LlmCallStatus.Cancelled]: { color: "default", key: "cancelled" },
+    };
   const info = map[status] ?? { color: "default" as const, key: "unknown" };
+
   return (
-    <Chip size="sm" variant="flat" color={info.color}>
+    <Chip color={info.color} size="sm" variant="flat">
       {t(`configuration.ai.auditLog.status.${info.key}`)}
     </Chip>
   );
@@ -67,6 +70,7 @@ const AiAuditLogPage = () => {
         modelId: kw || undefined,
         providerConfigId: providerId,
       });
+
       if (!r.code && r.data) {
         setLogs(r.data);
         setHasMore(r.data.length >= PAGE_SIZE);
@@ -87,6 +91,7 @@ const AiAuditLogPage = () => {
 
   const formatDuration = (ms: number) => {
     if (ms < 1000) return `${ms}ms`;
+
     return `${(ms / 1000).toFixed(1)}s`;
   };
 
@@ -100,21 +105,24 @@ const AiAuditLogPage = () => {
     <div className="flex flex-col gap-4 p-4">
       <div className="flex items-center gap-2 min-w-0">
         <Input
-          size="sm"
           className="min-w-[200px]"
           placeholder={t<string>("configuration.ai.auditLog.searchPlaceholder")}
+          size="sm"
           value={keyword}
-          onValueChange={setKeyword}
           onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+          onValueChange={setKeyword}
         />
         <LlmProviderSelector
-          value={selectedProviderId}
-          onChange={(id) => { setSelectedProviderId(id); setPage(1); }}
           placeholder={t<string>("configuration.ai.auditLog.allProviders")}
+          value={selectedProviderId}
+          onChange={(id) => {
+            setSelectedProviderId(id);
+            setPage(1);
+          }}
         />
       </div>
 
-      <Table removeWrapper size="sm" aria-label="audit log">
+      <Table removeWrapper aria-label="audit log" size="sm">
         <TableHeader>
           <TableColumn>{t("configuration.ai.auditLog.provider")}</TableColumn>
           <TableColumn>{t("configuration.ai.auditLog.model")}</TableColumn>
@@ -123,7 +131,7 @@ const AiAuditLogPage = () => {
           <TableColumn>{t("configuration.ai.auditLog.duration")}</TableColumn>
           <TableColumn>{t("configuration.ai.auditLog.status")}</TableColumn>
           <TableColumn>{t("configuration.ai.auditLog.time")}</TableColumn>
-          <TableColumn width={60}>{" "}</TableColumn>
+          <TableColumn width={60}> </TableColumn>
         </TableHeader>
         <TableBody emptyContent={t<string>("configuration.ai.auditLog.noLogs")}>
           {logs.map((log) => (
@@ -135,7 +143,11 @@ const AiAuditLogPage = () => {
                 <span className="font-mono">{log.modelId}</span>
               </TableCell>
               <TableCell>
-                {log.feature && <Chip size="sm" variant="flat">{t(`configuration.ai.feature.${log.feature}`, log.feature)}</Chip>}
+                {log.feature && (
+                  <Chip size="sm" variant="flat">
+                    {t(`configuration.ai.feature.${log.feature}`, log.feature)}
+                  </Chip>
+                )}
               </TableCell>
               <TableCell>
                 <Tooltip
@@ -160,7 +172,7 @@ const AiAuditLogPage = () => {
                 <div className="flex items-center gap-1">
                   <StatusChip status={log.status} />
                   {log.cacheHit && (
-                    <Chip size="sm" variant="flat" color="primary">
+                    <Chip color="primary" size="sm" variant="flat">
                       {t("configuration.ai.auditLog.cacheHit")}
                     </Chip>
                   )}
@@ -177,12 +189,7 @@ const AiAuditLogPage = () => {
                 <span className="text-default-400">{formatTime(log.createdAt)}</span>
               </TableCell>
               <TableCell>
-                <Button
-                  isIconOnly
-                  size="sm"
-                  variant="light"
-                  onPress={() => setDetailLog(log)}
-                >
+                <Button isIconOnly size="sm" variant="light" onPress={() => setDetailLog(log)}>
                   <AiOutlineEye className="text-lg" />
                 </Button>
               </TableCell>
@@ -193,20 +200,16 @@ const AiAuditLogPage = () => {
 
       {(totalPages > 1 || logs.length > 0) && (
         <div className="flex justify-center">
-          <Pagination
-            page={page}
-            total={totalPages}
-            onChange={setPage}
-          />
+          <Pagination page={page} total={totalPages} onChange={setPage} />
         </div>
       )}
 
       {/* Detail Modal */}
       <NextUiModal
-        size="2xl"
         isOpen={!!detailLog}
-        onClose={() => setDetailLog(null)}
         scrollBehavior="inside"
+        size="2xl"
+        onClose={() => setDetailLog(null)}
       >
         <ModalContent>
           {detailLog && (
@@ -217,34 +220,50 @@ const AiAuditLogPage = () => {
                   {/* Basic info */}
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
-                      <span className="text-default-400">{t("configuration.ai.auditLog.provider")}: </span>
+                      <span className="text-default-400">
+                        {t("configuration.ai.auditLog.provider")}:{" "}
+                      </span>
                       {getProviderLabel(detailLog.providerConfigId)}
                     </div>
                     <div>
-                      <span className="text-default-400">{t("configuration.ai.auditLog.model")}: </span>
+                      <span className="text-default-400">
+                        {t("configuration.ai.auditLog.model")}:{" "}
+                      </span>
                       <span className="font-mono">{detailLog.modelId}</span>
                     </div>
                     <div>
-                      <span className="text-default-400">{t("configuration.ai.auditLog.feature")}: </span>
-                      {detailLog.feature ? t(`configuration.ai.feature.${detailLog.feature}`, detailLog.feature) : "-"}
+                      <span className="text-default-400">
+                        {t("configuration.ai.auditLog.feature")}:{" "}
+                      </span>
+                      {detailLog.feature
+                        ? t(`configuration.ai.feature.${detailLog.feature}`, detailLog.feature)
+                        : "-"}
                     </div>
                     <div>
-                      <span className="text-default-400">{t("configuration.ai.auditLog.duration")}: </span>
+                      <span className="text-default-400">
+                        {t("configuration.ai.auditLog.duration")}:{" "}
+                      </span>
                       {formatDuration(detailLog.durationMs)}
                     </div>
                     <div>
-                      <span className="text-default-400">{t("configuration.ai.auditLog.tokens")}: </span>
+                      <span className="text-default-400">
+                        {t("configuration.ai.auditLog.tokens")}:{" "}
+                      </span>
                       {`${detailLog.inputTokens} / ${detailLog.outputTokens} (${detailLog.totalTokens})`}
                     </div>
                     <div>
-                      <span className="text-default-400">{t("configuration.ai.auditLog.time")}: </span>
+                      <span className="text-default-400">
+                        {t("configuration.ai.auditLog.time")}:{" "}
+                      </span>
                       {formatTime(detailLog.createdAt)}
                     </div>
                   </div>
 
                   {/* Request */}
                   <div>
-                    <div className="text-sm font-medium mb-1">{t("configuration.ai.auditLog.request")}</div>
+                    <div className="text-sm font-medium mb-1">
+                      {t("configuration.ai.auditLog.request")}
+                    </div>
                     <pre className="whitespace-pre-wrap break-all text-sm bg-default-100 rounded-lg p-3 max-h-[300px] overflow-auto">
                       {detailLog.requestSummary || t<string>("configuration.ai.auditLog.noContent")}
                     </pre>
@@ -252,16 +271,21 @@ const AiAuditLogPage = () => {
 
                   {/* Response */}
                   <div>
-                    <div className="text-sm font-medium mb-1">{t("configuration.ai.auditLog.response")}</div>
+                    <div className="text-sm font-medium mb-1">
+                      {t("configuration.ai.auditLog.response")}
+                    </div>
                     <pre className="whitespace-pre-wrap break-all text-sm bg-default-100 rounded-lg p-3 max-h-[300px] overflow-auto">
-                      {detailLog.responseSummary || t<string>("configuration.ai.auditLog.noContent")}
+                      {detailLog.responseSummary ||
+                        t<string>("configuration.ai.auditLog.noContent")}
                     </pre>
                   </div>
 
                   {/* Error */}
                   {detailLog.errorMessage && (
                     <div>
-                      <div className="text-sm font-medium mb-1 text-danger">{t("configuration.ai.auditLog.error")}</div>
+                      <div className="text-sm font-medium mb-1 text-danger">
+                        {t("configuration.ai.auditLog.error")}
+                      </div>
                       <pre className="whitespace-pre-wrap break-all text-sm bg-danger-50 rounded-lg p-3 max-h-[200px] overflow-auto">
                         {detailLog.errorMessage}
                       </pre>

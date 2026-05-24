@@ -9,11 +9,7 @@ export default function ProfilerPage() {
 
   return (
     <div className="w-full h-full">
-      <iframe
-        src={profilerUrl}
-        className="w-full h-full border-0"
-        title="Performance Profiler"
-      />
+      <iframe className="w-full h-full border-0" src={profilerUrl} title="Performance Profiler" />
     </div>
   );
 }

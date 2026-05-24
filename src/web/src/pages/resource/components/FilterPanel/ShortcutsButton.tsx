@@ -36,7 +36,9 @@ const ShortcutsButton = ({ className }: Props) => {
   const { createPortal } = useBakabaseContext();
 
   const modifierKey = useMemo(() => {
-    const isMac = typeof navigator !== "undefined" && navigator.platform.toUpperCase().indexOf("MAC") >= 0;
+    const isMac =
+      typeof navigator !== "undefined" && navigator.platform.toUpperCase().indexOf("MAC") >= 0;
+
     return isMac ? "⌘" : "Ctrl";
   }, []);
 
@@ -51,11 +53,7 @@ const ShortcutsButton = ({ className }: Props) => {
           {shortcuts.map((s, idx) => (
             <div key={idx} className="flex items-center justify-between">
               <span>{t<string>(s.labelKey)}</span>
-              <Kbd>
-                {typeof s.keys === "function"
-                  ? s.keys(modifierKey)
-                  : s.keys}
-              </Kbd>
+              <Kbd>{typeof s.keys === "function" ? s.keys(modifierKey) : s.keys}</Kbd>
             </div>
           ))}
         </div>
@@ -65,13 +63,7 @@ const ShortcutsButton = ({ className }: Props) => {
 
   return (
     <Tooltip content={t<string>("resource.shortcut.title")}>
-      <Button
-        isIconOnly
-        className={className}
-        size={"sm"}
-        variant={"light"}
-        onPress={openModal}
-      >
+      <Button isIconOnly className={className} size={"sm"} variant={"light"} onPress={openModal}>
         <RiKeyboardLine className={"text-lg"} />
       </Button>
     </Tooltip>

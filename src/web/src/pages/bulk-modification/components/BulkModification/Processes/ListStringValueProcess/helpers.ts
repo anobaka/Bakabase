@@ -19,8 +19,7 @@ export const validate = (
     return "bulkModification.validation.optionsRequired";
   }
 
-  const { value, valueType, isOperationDirectionReversed, modifyOptions } =
-    options;
+  const { value, valueType, isOperationDirectionReversed, modifyOptions } = options;
 
   switch (operation) {
     case BulkModificationListStringProcessOperation.SetWithFixedValue:
@@ -36,10 +35,8 @@ export const validate = (
       }
 
       if (
-        modifyOptions.filterBy !=
-          BulkModificationProcessorOptionsItemsFilterBy.All &&
-        (modifyOptions.filterValue == undefined ||
-          modifyOptions.filterValue.length == 0)
+        modifyOptions.filterBy != BulkModificationProcessorOptionsItemsFilterBy.All &&
+        (modifyOptions.filterValue == undefined || modifyOptions.filterValue.length == 0)
       ) {
         return "bulkModification.validation.filterValueRequired";
       }
@@ -48,10 +45,7 @@ export const validate = (
         return "bulkModification.validation.operationRequired";
       }
 
-      return validateStringValueProcessOptions(
-        modifyOptions.operation,
-        modifyOptions.options,
-      );
+      return validateStringValueProcessOptions(modifyOptions.operation, modifyOptions.options);
   }
 
   return;

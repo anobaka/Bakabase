@@ -10,8 +10,7 @@ import { useEffect, useState } from "react";
 
 import { buildLogger } from "@/components/utils";
 
-interface DateInputProps
-  extends Omit<NextUIDateInputProps, "value" | "onChange" | "defaultValue"> {
+interface DateInputProps extends Omit<NextUIDateInputProps, "value" | "onChange" | "defaultValue"> {
   value?: Dayjs;
   defaultValue?: Dayjs;
   onChange?: (value?: Dayjs) => void;
@@ -19,9 +18,7 @@ interface DateInputProps
 
 const log = buildLogger("DateInput");
 
-const convertToCalendarDateTime = (
-  value: Dayjs | undefined,
-): CalendarDateTime | undefined => {
+const convertToCalendarDateTime = (value: Dayjs | undefined): CalendarDateTime | undefined => {
   if (!value) {
     return;
   }
@@ -37,15 +34,9 @@ const convertToCalendarDateTime = (
     date.getMilliseconds(),
   );
 };
-const calendarDateTimeToDayjs = (v: CalendarDateTime): Dayjs =>
-  dayjs(v.toDate(getLocalTimeZone()));
+const calendarDateTimeToDayjs = (v: CalendarDateTime): Dayjs => dayjs(v.toDate(getLocalTimeZone()));
 
-const DateInput = ({
-  value: propsValue,
-  onChange,
-  defaultValue,
-  ...props
-}: DateInputProps) => {
+const DateInput = ({ value: propsValue, onChange, defaultValue, ...props }: DateInputProps) => {
   const [value, setValue] = useState<CalendarDateTime>();
 
   log(propsValue);

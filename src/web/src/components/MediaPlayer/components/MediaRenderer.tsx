@@ -1,18 +1,18 @@
 "use client";
 
+import type { MediaPlayerEntry } from "../types";
+import type { BakabaseServiceModelsViewFilePlayabilityViewModel } from "@/sdk/Api";
+
 import React, { useRef, useImperativeHandle, forwardRef, useState, useEffect } from "react";
 import ReactPlayer from "react-player";
+import { useTranslation } from "react-i18next";
 
 import { MediaType } from "@/sdk/constants";
 import { buildLogger } from "@/components/utils";
 import { Spinner } from "@/components/bakaui";
 import TextReader from "@/components/TextReader";
 import envConfig from "@/config/env";
-import { useTranslation } from "react-i18next";
 import BApi from "@/sdk/BApi";
-
-import type { MediaPlayerEntry } from "../types";
-import type { BakabaseServiceModelsViewFilePlayabilityViewModel } from "@/sdk/Api";
 
 export interface MediaRendererRef {
   getImageRef: () => HTMLImageElement | null;
@@ -65,7 +65,8 @@ const MediaRenderer = forwardRef<MediaRendererRef, MediaRendererProps>((props, r
   const mediaContainerRef = useRef<HTMLDivElement | null>(null);
 
   // Playability check state
-  const [playabilityInfo, setPlayabilityInfo] = useState<BakabaseServiceModelsViewFilePlayabilityViewModel | null>(null);
+  const [playabilityInfo, setPlayabilityInfo] =
+    useState<BakabaseServiceModelsViewFilePlayabilityViewModel | null>(null);
   const [isCheckingPlayability, setIsCheckingPlayability] = useState(false);
   const [playabilityChecked, setPlayabilityChecked] = useState(false);
 
@@ -84,6 +85,7 @@ const MediaRenderer = forwardRef<MediaRendererRef, MediaRendererProps>((props, r
       if (mediaType !== MediaType.Video && mediaType !== MediaType.Audio) {
         setPlayabilityChecked(true);
         setPlayabilityInfo({ playable: true, mediaType });
+
         return;
       }
 
@@ -93,6 +95,7 @@ const MediaRenderer = forwardRef<MediaRendererRef, MediaRendererProps>((props, r
 
       try {
         const response = await BApi.file.checkFilePlayability({ fullname: playPath });
+
         if (response.data) {
           setPlayabilityInfo(response.data);
           if (!response.data.playable && response.data.error) {
@@ -171,14 +174,17 @@ const MediaRenderer = forwardRef<MediaRendererRef, MediaRendererProps>((props, r
                 // codec/container is unsupported; we surface it to the user via
                 // onPlayabilityError instead of bubbling up to Sentry.
                 const name = err?.name || err?.error?.name;
+
                 if (name === "AbortError") {
                   log("Video play aborted (normal)", err);
+
                   return;
                 }
                 const message =
                   err?.message ||
                   err?.error?.message ||
                   (typeof err === "string" ? err : t("Cannot play this file"));
+
                 log("Video error", err);
                 onPlayabilityError?.(message);
               },
@@ -200,8 +206,7 @@ const MediaRenderer = forwardRef<MediaRendererRef, MediaRendererProps>((props, r
               },
               onReady: () => {
                 if (playerRef.current) {
-                  const internalPlayer =
-                    playerRef.current.getInternalPlayer() as HTMLVideoElement;
+                  const internalPlayer = playerRef.current.getInternalPlayer() as HTMLVideoElement;
 
                   const width = internalPlayer.videoWidth;
                   const height = internalPlayer.videoHeight;
@@ -232,6 +237,7 @@ const MediaRenderer = forwardRef<MediaRendererRef, MediaRendererProps>((props, r
         return (
           <img
             ref={imageRef}
+            alt=""
             className="max-w-full max-h-full object-contain"
             crossOrigin={"anonymous"}
             src={`${envConfig.apiEndpoint}/file/play?fullname=${encodeURIComponent(playPath)}`}
@@ -255,9 +261,6 @@ const MediaRenderer = forwardRef<MediaRendererRef, MediaRendererProps>((props, r
         return (
           <div
             className="max-w-full max-h-full object-contain text-white text-2xl"
-            onLoad={() => {
-              onLoad();
-            }}
           >
             {t<string>("Unsupported")}
           </div>

@@ -1,6 +1,7 @@
 import type { FileNameModificationResult } from "./index";
+import type { CSSProperties } from "react";
 
-import React, { CSSProperties } from "react";
+import React from "react";
 
 import DiffHighlight from "./DiffHighlight";
 
@@ -18,12 +19,8 @@ const PreviewItem: React.FC<PreviewItemProps> = ({
   style,
 }) => {
   // 根据 showFullPaths 决定显示内容
-  const originalDisplay = showFullPaths
-    ? result.originalPath
-    : result.originalFileName;
-  const modifiedDisplay = showFullPaths
-    ? result.modifiedPath
-    : result.modifiedFileName;
+  const originalDisplay = showFullPaths ? result.originalPath : result.originalFileName;
+  const modifiedDisplay = showFullPaths ? result.modifiedPath : result.modifiedFileName;
 
   const hasChanged = originalDisplay !== modifiedDisplay;
 
@@ -40,9 +37,7 @@ const PreviewItem: React.FC<PreviewItemProps> = ({
           original={originalDisplay}
         />
       ) : (
-        <span className="opacity-60 flex-1 min-w-0 truncate">
-          {originalDisplay}
-        </span>
+        <span className="opacity-60 flex-1 min-w-0 truncate">{originalDisplay}</span>
       )}
     </div>
   );

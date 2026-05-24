@@ -52,12 +52,23 @@ function PasswordSelector(props: IProps) {
     );
 
     return filtered.map((p) => {
+      const handleSelect = () => {
+        onSelect(p.text);
+        close();
+      };
+
       return (
         <div
+          key={p.text}
           className="password"
-          onClick={() => {
-            onSelect(p.text);
-            close();
+          role="button"
+          tabIndex={0}
+          onClick={handleSelect}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              handleSelect();
+            }
           }}
         >
           <div className="top">
@@ -134,7 +145,6 @@ function PasswordSelector(props: IProps) {
   );
 }
 
-PasswordSelector.show = (props) =>
-  createPortalOfComponent(PasswordSelector, props);
+PasswordSelector.show = (props) => createPortalOfComponent(PasswordSelector, props);
 
 export default PasswordSelector;

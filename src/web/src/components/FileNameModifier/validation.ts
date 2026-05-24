@@ -1,10 +1,9 @@
 import type { BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFileNameModifierOperation } from "@/sdk/Api";
-import {
-  FileNameModifierOperationType,
-  FileNameModifierPosition,
-} from "@/sdk/constants";
 
-type Operation = BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFileNameModifierOperation;
+import { FileNameModifierOperationType, FileNameModifierPosition } from "@/sdk/constants";
+
+type Operation =
+  BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFileNameModifierOperation;
 
 const OperationType = FileNameModifierOperationType;
 const PositionType = FileNameModifierPosition;
@@ -35,10 +34,7 @@ export function getFieldRequirements(op: Operation): FieldRequirements {
       // position 必填
       requirements.position = true;
       // 如果 position 是 BeforeText/AfterText，则 targetText 必填
-      if (
-        op.position === PositionType.BeforeText ||
-        op.position === PositionType.AfterText
-      ) {
+      if (op.position === PositionType.BeforeText || op.position === PositionType.AfterText) {
         requirements.targetText = true;
       }
       // 如果 position 是 AtPosition，则 positionIndex 必填
@@ -67,10 +63,7 @@ export function getFieldRequirements(op: Operation): FieldRequirements {
         requirements.positionIndex = true;
       }
       // 如果 position 是 BeforeText/AfterText，则 targetText 必填
-      if (
-        op.position === PositionType.BeforeText ||
-        op.position === PositionType.AfterText
-      ) {
+      if (op.position === PositionType.BeforeText || op.position === PositionType.AfterText) {
         requirements.targetText = true;
       }
       break;

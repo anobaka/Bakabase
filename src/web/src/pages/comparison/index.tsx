@@ -1,6 +1,8 @@
 "use client";
 
 import type { BakabaseServiceModelsViewComparisonPlanViewModel } from "@/sdk/Api";
+import type { RuleWithProperty } from "./components/RuleModal";
+import type { IProperty } from "@/components/Property/models";
 
 import { useTranslation } from "react-i18next";
 import {
@@ -14,6 +16,11 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { AiOutlineInbox } from "react-icons/ai";
+
+import ComparisonResults from "./components/ComparisonResults";
+import RuleModal from "./components/RuleModal";
+import RuleDemonstrator from "./components/RuleDemonstrator";
+import ScoringExplanation from "./components/ScoringExplanation";
 
 import {
   Accordion,
@@ -35,14 +42,8 @@ import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContext
 import { useBTasksStore } from "@/stores/bTasks";
 import { BTaskStatus } from "@/sdk/constants";
 import BetaChip from "@/components/Chips/BetaChip";
-import ComparisonResults from "./components/ComparisonResults";
-import RuleModal from "./components/RuleModal";
-import type { RuleWithProperty } from "./components/RuleModal";
-import RuleDemonstrator from "./components/RuleDemonstrator";
-import ScoringExplanation from "./components/ScoringExplanation";
 import { ResourceFilterController } from "@/components/ResourceFilter";
 import { FilterDisplayMode, PropertyPool } from "@/sdk/constants";
-import type { IProperty } from "@/components/Property/models";
 import { EditableValue } from "@/components/EditableValue";
 
 type ComparisonPlan = BakabaseServiceModelsViewComparisonPlanViewModel;
@@ -57,17 +58,23 @@ const ComparisonPage = () => {
   const isFirstLoad = useRef(true);
 
   // Helper to get task status for a plan from BTask store
-  const getTaskForPlan = useCallback((planId: number) => {
-    const taskId = `Comparison:${planId}`;
-    return bTasks.find((t) => t.id === taskId);
-  }, [bTasks]);
+  const getTaskForPlan = useCallback(
+    (planId: number) => {
+      const taskId = `Comparison:${planId}`;
+
+      return bTasks.find((t) => t.id === taskId);
+    },
+    [bTasks],
+  );
 
   // Rule modal state
   const [ruleModalOpen, setRuleModalOpen] = useState(false);
   const [editingRule, setEditingRule] = useState<RuleWithProperty | undefined>();
   const [editingRuleIndex, setEditingRuleIndex] = useState<number>(-1);
   const [editingPlanId, setEditingPlanId] = useState<number | null>(null);
-  const [planRulesWithProperties, setPlanRulesWithProperties] = useState<Map<number, RuleWithProperty[]>>(new Map());
+  const [planRulesWithProperties, setPlanRulesWithProperties] = useState<
+    Map<number, RuleWithProperty[]>
+  >(new Map());
 
   const loadAllPlans = useCallback(async () => {
     const r = await BApi.comparison.getAllComparisonPlans();
@@ -86,6 +93,7 @@ const ComparisonPage = () => {
 
   // Reload plans when any comparison task completes to get updated lastRunAt and resultGroupCount
   const prevTasksRef = useRef<Map<string, number>>(new Map());
+
   useEffect(() => {
     const comparisonTasks = bTasks.filter((t) => t.id.startsWith("Comparison:"));
     const currentStatuses = new Map(comparisonTasks.map((t) => [t.id, t.status]));
@@ -97,6 +105,7 @@ const ComparisonPage = () => {
 
     for (const [taskId, status] of currentStatuses) {
       const prevStatus = prevStatuses.get(taskId);
+
       if (prevStatus !== undefined && prevStatus !== status && terminalStates.includes(status)) {
         shouldReload = true;
         break;
@@ -127,6 +136,7 @@ const ComparisonPage = () => {
           threshold: 80,
           rules: [],
         });
+
         await loadAllPlans();
         if (r.data?.id) {
           setExpandedKeys((prev) => [...prev, r.data!.id!.toString()]);
@@ -137,10 +147,9 @@ const ComparisonPage = () => {
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-1">
             <Input
-              label={t("comparison.label.name")}
-              autoFocus
               isRequired
               defaultValue=""
+              label={t("comparison.label.name")}
               onValueChange={(v) => (nameInput = v)}
             />
           </div>
@@ -174,10 +183,9 @@ const ComparisonPage = () => {
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-1">
             <Input
-              label={t("comparison.label.name")}
-              autoFocus
-              defaultValue={nameInput}
               isRequired
+              defaultValue={nameInput}
+              label={t("comparison.label.name")}
               onValueChange={(v) => (nameInput = v)}
             />
           </div>
@@ -191,9 +199,12 @@ const ComparisonPage = () => {
     if (!plan.rules || plan.rules.length === 0) {
       setPlanRulesWithProperties((prev) => {
         const newMap = new Map(prev);
+
         newMap.set(plan.id!, []);
+
         return newMap;
       });
+
       return [];
     }
 
@@ -202,8 +213,9 @@ const ComparisonPage = () => {
 
     const rulesWithProperties: RuleWithProperty[] = plan.rules.map((r) => {
       const property = allProperties.find(
-        (p) => p.id === r.propertyId && p.pool === r.propertyPool
+        (p) => p.id === r.propertyId && p.pool === r.propertyPool,
       );
+
       return {
         order: r.order!,
         propertyPool: r.propertyPool!,
@@ -223,9 +235,12 @@ const ComparisonPage = () => {
 
     setPlanRulesWithProperties((prev) => {
       const newMap = new Map(prev);
+
       newMap.set(plan.id!, rulesWithProperties);
+
       return newMap;
     });
+
     return rulesWithProperties;
   }, []);
 
@@ -250,6 +265,7 @@ const ComparisonPage = () => {
     if (!editingPlanId) return;
 
     const plan = plans?.find((p) => p.id === editingPlanId);
+
     if (!plan) return;
 
     const currentRules = planRulesWithProperties.get(editingPlanId) || [];
@@ -276,7 +292,10 @@ const ComparisonPage = () => {
 
     await loadAllPlans();
     // Reload rules with properties
-    const updatedPlan = (await BApi.comparison.getAllComparisonPlans()).data?.find((p) => p.id === editingPlanId);
+    const updatedPlan = (await BApi.comparison.getAllComparisonPlans()).data?.find(
+      (p) => p.id === editingPlanId,
+    );
+
     if (updatedPlan) {
       await loadRulesWithProperties(updatedPlan as ComparisonPlan);
     }
@@ -287,6 +306,7 @@ const ComparisonPage = () => {
   const handleDeleteRule = async (plan: ComparisonPlan, index: number) => {
     const currentRules = planRulesWithProperties.get(plan.id!) || [];
     const newRules = currentRules.filter((_, i) => i !== index);
+
     // Reorder
     newRules.forEach((r, i) => (r.order = i));
 
@@ -302,7 +322,10 @@ const ComparisonPage = () => {
 
     await loadAllPlans();
     // Reload rules with properties
-    const updatedPlan = (await BApi.comparison.getAllComparisonPlans()).data?.find((p) => p.id === plan.id);
+    const updatedPlan = (await BApi.comparison.getAllComparisonPlans()).data?.find(
+      (p) => p.id === plan.id,
+    );
+
     if (updatedPlan) {
       await loadRulesWithProperties(updatedPlan as ComparisonPlan);
     }
@@ -312,11 +335,7 @@ const ComparisonPage = () => {
   // Update filters inline (like BulkModification)
   const handleFilterChange = useCallback(async (plan: ComparisonPlan, updatedSearch: any) => {
     // Update local state immediately
-    setPlans((prev) =>
-      prev?.map((p) =>
-        p.id === plan.id ? { ...p, search: updatedSearch } : p
-      )
-    );
+    setPlans((prev) => prev?.map((p) => (p.id === plan.id ? { ...p, search: updatedSearch } : p)));
     // Save to server
     await BApi.comparison.updateComparisonPlan(plan.id!, {
       name: plan.name,
@@ -330,9 +349,7 @@ const ComparisonPage = () => {
   const handleThresholdChange = useCallback(async (plan: ComparisonPlan, newThreshold: number) => {
     // Update local state immediately
     setPlans((prev) =>
-      prev?.map((p) =>
-        p.id === plan.id ? { ...p, threshold: newThreshold } : p
-      )
+      prev?.map((p) => (p.id === plan.id ? { ...p, threshold: newThreshold } : p)),
     );
     // Save to server
     await BApi.comparison.updateComparisonPlan(plan.id!, {
@@ -364,6 +381,7 @@ const ComparisonPage = () => {
   const handleExecute = async (plan: ComparisonPlan) => {
     try {
       const r = await BApi.comparison.executeComparisonPlan(plan.id!);
+
       if (r.code === 0) {
         toast.success(t("comparison.success.taskStarted"));
         // Task status will be updated automatically via SignalR -> BTask store
@@ -394,9 +412,7 @@ const ComparisonPage = () => {
       size: "7xl",
       title: plan.name,
       footer: false,
-      children: (
-        <ComparisonResults plan={plan} />
-      ),
+      children: <ComparisonResults plan={plan} />,
     });
   };
 
@@ -405,9 +421,7 @@ const ComparisonPage = () => {
       <AiOutlineInbox className="text-6xl text-default-300" />
       <div className="text-default-500 text-center">
         <p className="text-lg mb-2">{t("comparison.empty.noPlans")}</p>
-        <p className="text-sm text-default-400">
-          {t("comparison.empty.description")}
-        </p>
+        <p className="text-sm text-default-400">{t("comparison.empty.description")}</p>
       </div>
       <Button color="primary" startContent={<PlusOutlined />} onPress={handleAdd}>
         {t("comparison.action.createPlan")}
@@ -428,71 +442,56 @@ const ComparisonPage = () => {
             {t("comparison.label.ruleCount", { count: plan.rules?.length || 0 })}
           </Chip>
           {isRunning && (
-            <Progress
-              className="w-24"
-              color="primary"
-              size="sm"
-              value={task?.percentage || 0}
-            />
+            <Progress className="w-24" color="primary" size="sm" value={task?.percentage || 0} />
           )}
           <Chip className="text-default-400" size="sm" variant="light">
             {t("comparison.label.createdAt")}: {plan.createdAt}
           </Chip>
           <Tooltip content={t("comparison.action.edit")}>
-            <Button
-              isIconOnly
-              size="sm"
-              variant="light"
-              onPress={() => handleEditBasicInfo(plan)}
-            >
+            <Button isIconOnly size="sm" variant="light" onPress={() => handleEditBasicInfo(plan)}>
               <EditOutlined className="text-base" />
             </Button>
           </Tooltip>
         </div>
 
-      {/* Right section: Actions */}
-      <div className="flex items-center gap-1">
-        {plan.lastRunAt && (
-          <Chip className="text-default-400" size="sm" variant="light">
-            {t("comparison.label.lastRun")}: {plan.lastRunAt}
-          </Chip>
-        )}
-        <Tooltip content={t("comparison.action.duplicate")}>
-          <Button
-            isIconOnly
-            size="sm"
-            variant="light"
-            onPress={() => handleDuplicate(plan)}
-          >
-            <CopyOutlined className="text-base" />
-          </Button>
-        </Tooltip>
-        {plan.resultGroupCount != null && plan.resultGroupCount > 0 && (
-          <Tooltip content={t("comparison.action.clearResults")}>
-            <Button
-              isIconOnly
-              color="warning"
-              size="sm"
-              variant="light"
-              onPress={() => handleClearResults(plan)}
-            >
-              <ClearOutlined className="text-base" />
+        {/* Right section: Actions */}
+        <div className="flex items-center gap-1">
+          {plan.lastRunAt && (
+            <Chip className="text-default-400" size="sm" variant="light">
+              {t("comparison.label.lastRun")}: {plan.lastRunAt}
+            </Chip>
+          )}
+          <Tooltip content={t("comparison.action.duplicate")}>
+            <Button isIconOnly size="sm" variant="light" onPress={() => handleDuplicate(plan)}>
+              <CopyOutlined className="text-base" />
             </Button>
           </Tooltip>
-        )}
-        <Tooltip content={t("comparison.action.delete")}>
-          <Button
-            isIconOnly
-            color="danger"
-            size="sm"
-            variant="light"
-            onPress={() => handleDelete(plan)}
-          >
-            <DeleteOutlined className="text-base" />
-          </Button>
-        </Tooltip>
+          {plan.resultGroupCount != null && plan.resultGroupCount > 0 && (
+            <Tooltip content={t("comparison.action.clearResults")}>
+              <Button
+                isIconOnly
+                color="warning"
+                size="sm"
+                variant="light"
+                onPress={() => handleClearResults(plan)}
+              >
+                <ClearOutlined className="text-base" />
+              </Button>
+            </Tooltip>
+          )}
+          <Tooltip content={t("comparison.action.delete")}>
+            <Button
+              isIconOnly
+              color="danger"
+              size="sm"
+              variant="light"
+              onPress={() => handleDelete(plan)}
+            >
+              <DeleteOutlined className="text-base" />
+            </Button>
+          </Tooltip>
+        </div>
       </div>
-    </div>
     );
   };
 
@@ -541,25 +540,29 @@ const ComparisonPage = () => {
                     <Card className="bg-default-50">
                       <CardHeader className="pb-2 flex items-center gap-4">
                         <span className="text-sm font-medium">{t("comparison.label.filters")}</span>
-                        <span className="text-xs text-default-400">{t("comparison.description.filters")}</span>
+                        <span className="text-xs text-default-400">
+                          {t("comparison.description.filters")}
+                        </span>
                       </CardHeader>
                       <CardBody className="pt-0">
                         <ResourceFilterController
-                          defaultFilterDisplayMode={FilterDisplayMode.Simple}
-                          autoCreateMediaLibraryFilter={true}
-                          group={plan.search?.group}
-                          onGroupChange={(group) => {
-                            const updatedSearch = { ...plan.search, group };
-                            handleFilterChange(plan, updatedSearch);
-                          }}
-                          tags={plan.search?.tags}
-                          onTagsChange={(tags) => {
-                            const updatedSearch = { ...plan.search, tags };
-                            handleFilterChange(plan, updatedSearch);
-                          }}
-                          filterLayout="vertical"
                           showRecentFilters
                           showTags
+                          autoCreateMediaLibraryFilter={true}
+                          defaultFilterDisplayMode={FilterDisplayMode.Simple}
+                          filterLayout="vertical"
+                          group={plan.search?.group}
+                          tags={plan.search?.tags}
+                          onGroupChange={(group) => {
+                            const updatedSearch = { ...plan.search, group };
+
+                            handleFilterChange(plan, updatedSearch);
+                          }}
+                          onTagsChange={(tags) => {
+                            const updatedSearch = { ...plan.search, tags };
+
+                            handleFilterChange(plan, updatedSearch);
+                          }}
                         />
                       </CardBody>
                     </Card>
@@ -569,7 +572,9 @@ const ComparisonPage = () => {
                       <CardHeader className="pb-2 flex items-center gap-4">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-medium">{t("comparison.label.rules")}</span>
-                          <span className="text-xs text-default-400">{t("comparison.description.rules")}</span>
+                          <span className="text-xs text-default-400">
+                            {t("comparison.description.rules")}
+                          </span>
                         </div>
                         <Button
                           color="primary"
@@ -584,9 +589,11 @@ const ComparisonPage = () => {
                       <CardBody className="pt-0">
                         {(() => {
                           const rulesWithProps = planRulesWithProperties.get(plan.id!);
+
                           // Load rules if not loaded
                           if (rulesWithProps === undefined && (plan.rules?.length ?? 0) > 0) {
                             loadRulesWithProperties(plan);
+
                             return (
                               <div className="text-sm text-default-400 py-2">
                                 {t("common.state.loading")}
@@ -600,21 +607,22 @@ const ComparisonPage = () => {
                               </div>
                             );
                           }
+
                           return (
                             <div className="flex flex-wrap gap-2">
                               {rulesWithProps.map((rule, index) => (
                                 <RuleDemonstrator
                                   key={index}
+                                  bothNullBehavior={rule.bothNullBehavior!}
+                                  isVeto={rule.isVeto!}
+                                  mode={rule.mode!}
+                                  normalize={rule.normalize}
+                                  oneNullBehavior={rule.oneNullBehavior!}
+                                  parameter={rule.parameter}
                                   property={rule.property}
                                   propertyId={rule.propertyId}
-                                  mode={rule.mode!}
-                                  parameter={rule.parameter}
-                                  normalize={rule.normalize}
-                                  weight={rule.weight!}
-                                  isVeto={rule.isVeto!}
                                   vetoThreshold={rule.vetoThreshold}
-                                  oneNullBehavior={rule.oneNullBehavior!}
-                                  bothNullBehavior={rule.bothNullBehavior!}
+                                  weight={rule.weight!}
                                   onClick={() => handleEditRule(plan, rule, index)}
                                   onDelete={() => handleDeleteRule(plan, index)}
                                 />
@@ -628,28 +636,26 @@ const ComparisonPage = () => {
                     {/* Execution section */}
                     <Card className="bg-default-50">
                       <CardHeader className="pb-2 flex items-center gap-4">
-                        <span className="text-sm font-medium">{t("comparison.action.execute")}</span>
-                        <span className="text-xs text-default-400">{t("comparison.description.execute")}</span>
+                        <span className="text-sm font-medium">
+                          {t("comparison.action.execute")}
+                        </span>
+                        <span className="text-xs text-default-400">
+                          {t("comparison.description.execute")}
+                        </span>
                       </CardHeader>
                       <CardBody className="pt-0 flex flex-col gap-3">
                         <div className="flex items-center gap-4">
                           <div className="flex items-center gap-2">
-                            <span className="text-sm text-default-500">{t("comparison.label.threshold")}:</span>
-                            <EditableValue<number, { value?: number; onValueChange?: (v: number) => void }, { value?: number; isReadOnly?: boolean; onClick?: () => void }>
-                              value={plan.threshold ?? 80}
-                              Viewer={({ value, onClick }) => (
-                                <Chip
-                                  className="cursor-pointer hover:bg-default-200"
-                                  size="sm"
-                                  variant="flat"
-                                  onClick={onClick}
-                                >
-                                  {value}%
-                                </Chip>
-                              )}
+                            <span className="text-sm text-default-500">
+                              {t("comparison.label.threshold")}:
+                            </span>
+                            <EditableValue<
+                              number,
+                              { value?: number; onValueChange?: (v: number) => void },
+                              { value?: number; isReadOnly?: boolean; onClick?: () => void }
+                            >
                               Editor={({ value, onValueChange }) => (
                                 <NumberInput
-                                  autoFocus
                                   className="w-24"
                                   endContent={<span className="text-default-400">%</span>}
                                   max={100}
@@ -660,15 +666,33 @@ const ComparisonPage = () => {
                                   onValueChange={(v) => onValueChange?.(v ?? 80)}
                                 />
                               )}
-                              onSubmit={(v) => handleThresholdChange(plan, v ?? 80)}
+                              Viewer={({ value, onClick }) => (
+                                <Chip
+                                  className="cursor-pointer hover:bg-default-200"
+                                  size="sm"
+                                  variant="flat"
+                                  onClick={onClick}
+                                >
+                                  {value}%
+                                </Chip>
+                              )}
                               trigger="viewer"
+                              value={plan.threshold ?? 80}
+                              onSubmit={(v) => handleThresholdChange(plan, v ?? 80)}
                             />
                           </div>
                         </div>
-                        <ScoringExplanation mode="inline" className="p-3 bg-default-100 rounded-lg" />
+                        <ScoringExplanation
+                          className="p-3 bg-default-100 rounded-lg"
+                          mode="inline"
+                        />
                         <div className="flex items-center gap-3">
                           <Tooltip
-                            content={!plan.rules?.length ? t("comparison.description.executeDisabledNoRules") : undefined}
+                            content={
+                              !plan.rules?.length
+                                ? t("comparison.description.executeDisabledNoRules")
+                                : undefined
+                            }
                             isDisabled={!!plan.rules?.length}
                           >
                             <span>
@@ -679,7 +703,9 @@ const ComparisonPage = () => {
                                 startContent={<PlayCircleOutlined />}
                                 onPress={() => handleExecute(plan)}
                               >
-                                {plan.lastRunAt ? t("comparison.action.reExecute") : t("comparison.action.execute")}
+                                {plan.lastRunAt
+                                  ? t("comparison.action.reExecute")
+                                  : t("comparison.action.execute")}
                               </Button>
                             </span>
                           </Tooltip>

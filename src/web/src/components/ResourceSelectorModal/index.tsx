@@ -3,6 +3,7 @@
 import type { DestroyableProps } from "@/components/bakaui/types";
 import type { Resource as ResourceModel } from "@/core/models/Resource";
 import type { SearchCriteria } from "@/components/ResourceFilter";
+import type { components } from "@/sdk/BApi2";
 
 import React, { useEffect, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
@@ -12,7 +13,6 @@ import Resource from "@/components/Resource";
 import { buildLogger } from "@/components/utils";
 import { useResourceSearch } from "@/hooks/useResourceSearch";
 import { ResourceSearchPanel, toSearchInputModel } from "@/components/ResourceFilter";
-import type { components } from "@/sdk/BApi2";
 
 type SearchForm = components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
 
@@ -54,26 +54,28 @@ const ResourceSelectorModal: React.FC<ResourceSelectorModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<number[]>(defaultSelectedIds);
-  const [criteria, setCriteria] = useState<SearchCriteria>(
-    defaultCriteria ?? {}
-  );
+  const [criteria, setCriteria] = useState<SearchCriteria>(defaultCriteria ?? {});
 
-  const doSearch = useCallback((pageNumber: number, searchCriteria: SearchCriteria) => {
-    setError(null);
-    const inputModel = toSearchInputModel({
-      ...searchCriteria,
-      page: pageNumber,
-      pageSize: PAGE_SIZE,
-    });
-    search(inputModel as SearchForm, { saveSearch: false })
-      .then((result) => {
-        log("Found resources:", result.length);
-      })
-      .catch((err) => {
-        console.error("Failed to search resources:", err);
-        setError(t<string>("Failed to load resources"));
+  const doSearch = useCallback(
+    (pageNumber: number, searchCriteria: SearchCriteria) => {
+      setError(null);
+      const inputModel = toSearchInputModel({
+        ...searchCriteria,
+        page: pageNumber,
+        pageSize: PAGE_SIZE,
       });
-  }, [search, t]);
+
+      search(inputModel as SearchForm, { saveSearch: false })
+        .then((result) => {
+          log("Found resources:", result.length);
+        })
+        .catch((err) => {
+          console.error("Failed to search resources:", err);
+          setError(t<string>("Failed to load resources"));
+        });
+    },
+    [search, t],
+  );
 
   useEffect(() => {
     doSearch(1, criteria);
@@ -96,6 +98,7 @@ const ResourceSelectorModal: React.FC<ResourceSelectorModalProps> = ({
         if (prev.includes(resource.id)) {
           return prev.filter((id) => id !== resource.id);
         }
+
         return [...prev, resource.id];
       });
     } else {
@@ -104,21 +107,23 @@ const ResourceSelectorModal: React.FC<ResourceSelectorModalProps> = ({
   };
 
   const handleConfirm = () => {
-    const selectedResources: ResourceSelectorValue[] = selectedIds
-      .map((id) => {
-        const resource = resources.find((r) => r.id === id);
-        if (resource) {
-          return {
-            id: resource.id,
-            displayName: resource.displayName || resource.fileName || `Resource ${resource.id}`,
-          };
-        }
-        // For resources not in current page, use ID as displayName
+    const selectedResources: ResourceSelectorValue[] = selectedIds.map((id) => {
+      const resource = resources.find((r) => r.id === id);
+
+      if (resource) {
         return {
-          id,
-          displayName: `Resource ${id}`,
+          id: resource.id,
+          displayName: resource.displayName || resource.fileName || `Resource ${resource.id}`,
         };
-      });
+      }
+
+      // For resources not in current page, use ID as displayName
+      return {
+        id,
+        displayName: `Resource ${id}`,
+      };
+    });
+
     onConfirm?.(selectedResources);
     onDestroyed?.();
   };
@@ -133,10 +138,7 @@ const ResourceSelectorModal: React.FC<ResourceSelectorModalProps> = ({
   return (
     <Modal
       defaultVisible
-      size="7xl"
-      title={title || t<string>(multiple ? "Select Resources" : "Select Resource")}
-      onDestroyed={onDestroyed}
-      footer={(
+      footer={
         <div className="flex justify-between items-center w-full">
           <div className="flex items-center gap-2">
             {selectedIds.length > 0 && (
@@ -146,33 +148,28 @@ const ResourceSelectorModal: React.FC<ResourceSelectorModalProps> = ({
             )}
           </div>
           <div className="flex gap-2">
-            <Button
-              color="default"
-              variant="light"
-              onPress={handleCancel}
-            >
+            <Button color="default" variant="light" onPress={handleCancel}>
               {t<string>("Cancel")}
             </Button>
-            <Button
-              color="primary"
-              isDisabled={selectedIds.length === 0}
-              onPress={handleConfirm}
-            >
+            <Button color="primary" isDisabled={selectedIds.length === 0} onPress={handleConfirm}>
               {t<string>("Confirm")}
             </Button>
           </div>
         </div>
-      )}
+      }
+      size="7xl"
+      title={title || t<string>(multiple ? "Select Resources" : "Select Resource")}
+      onDestroyed={onDestroyed}
     >
       <div className="flex flex-col gap-4 min-h-[400px]">
         {/* Filter Section */}
         <div className="border-b pb-4">
           <ResourceSearchPanel
             compact
+            showTags
             criteria={criteria}
             showKeyword={false}
             showRecentFilters={false}
-            showTags
             onChange={handleCriteriaChange}
           />
         </div>
@@ -187,9 +184,7 @@ const ResourceSelectorModal: React.FC<ResourceSelectorModalProps> = ({
           ) : error ? (
             <div className="text-center text-red-500 p-4">{error}</div>
           ) : resources.length === 0 ? (
-            <div className="text-center text-gray-500 p-4">
-              {t<string>("No resources found")}
-            </div>
+            <div className="text-center text-gray-500 p-4">{t<string>("No resources found")}</div>
           ) : (
             <div className="flex flex-col gap-4">
               <div className="text-sm text-gray-500">
@@ -206,7 +201,15 @@ const ResourceSelectorModal: React.FC<ResourceSelectorModalProps> = ({
                         ? "ring-2 ring-primary ring-offset-2"
                         : "hover:ring-2 hover:ring-gray-300 hover:ring-offset-2"
                     }`}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => handleResourceClick(resource)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        handleResourceClick(resource);
+                      }
+                    }}
                   >
                     <Resource
                       disableCoverClick
@@ -226,12 +229,7 @@ const ResourceSelectorModal: React.FC<ResourceSelectorModalProps> = ({
         {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex justify-center pt-4 border-t">
-            <Pagination
-              showControls
-              page={page}
-              total={totalPages}
-              onChange={handlePageChange}
-            />
+            <Pagination showControls page={page} total={totalPages} onChange={handlePageChange} />
           </div>
         )}
       </div>

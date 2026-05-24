@@ -1,13 +1,13 @@
 "use client";
 
+import type { MediaPlayerEntry } from "../types";
+import type { MediaType } from "@/sdk/constants";
+
 import React from "react";
-import { MdInventory } from "react-icons/md";
 
 import FileSystemEntryIcon from "@/components/FileSystemEntryIcon";
-import { IconType, MediaType } from "@/sdk/constants";
+import { IconType } from "@/sdk/constants";
 import { Progress } from "@/components/bakaui";
-
-import type { MediaPlayerEntry } from "../types";
 
 interface MediaFooterProps {
   entry: MediaPlayerEntry;
@@ -49,22 +49,14 @@ const MediaFooter: React.FC<MediaFooterProps> = ({
           <div className="max-w-4 max-h-4">
             <FileSystemEntryIcon path={entry.path} size={16} type={IconType.Dynamic} />
           </div>
-          <div className="flex items-center flex-wrap gap-0.5">
-            {entry.name}
-          </div>
+          <div className="flex items-center flex-wrap gap-0.5">{entry.name}</div>
         </div>
         <span>
           ({activeIndex + 1} / {totalEntries})
         </span>
         {renderOperations &&
           currentInitialized &&
-          renderOperations(
-            entry.playPath || entry.path,
-            mediaType,
-            playing,
-            reactPlayer,
-            image,
-          )}
+          renderOperations(entry.playPath || entry.path, mediaType, playing, reactPlayer, image)}
       </div>
       {autoPlay && progress && (
         <Progress {...({ percent: progress, size: "sm", textRender: () => "" } as any)} />

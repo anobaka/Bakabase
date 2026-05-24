@@ -1,11 +1,11 @@
 "use client";
 
+import type { BakabaseServiceModelsViewResourceProfileViewModel } from "@/sdk/Api";
+
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ProfileOutlined, RightOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
-
-import type { BakabaseServiceModelsViewResourceProfileViewModel } from "@/sdk/Api";
 
 import { Chip, Spinner, Tooltip } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
@@ -20,9 +20,7 @@ interface Props {
 const ResourceProfiles = ({ resourceId, onClose, compact = false }: Props) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [profiles, setProfiles] = useState<
-    BakabaseServiceModelsViewResourceProfileViewModel[]
-  >([]);
+  const [profiles, setProfiles] = useState<BakabaseServiceModelsViewResourceProfileViewModel[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -31,6 +29,7 @@ const ResourceProfiles = ({ resourceId, onClose, compact = false }: Props) => {
       try {
         // @ts-ignore - API will be available after SDK regeneration
         const response = await BApi.resourceProfile.getMatchingProfilesForResource(resourceId);
+
         setProfiles(response.data || []);
       } catch (error) {
         console.error("Failed to load matching profiles:", error);
@@ -77,15 +76,10 @@ const ResourceProfiles = ({ resourceId, onClose, compact = false }: Props) => {
       )}
       <div className="flex flex-wrap items-center gap-1 flex-1">
         {profiles.length === 0 ? (
-          <span className="text-sm text-default-400">
-            {t("common.label.none")}
-          </span>
+          <span className="text-sm text-default-400">{t("common.label.none")}</span>
         ) : (
           profiles.map((profile) => (
-            <Tooltip
-              key={profile.id}
-              content={t("resource.tip.clickToViewEditProfile")}
-            >
+            <Tooltip key={profile.id} content={t("resource.tip.clickToViewEditProfile")}>
               <Chip
                 className="cursor-pointer"
                 color="primary"

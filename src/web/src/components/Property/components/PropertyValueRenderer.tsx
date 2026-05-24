@@ -4,7 +4,12 @@
 
 import type { Dayjs } from "dayjs";
 import type { Duration } from "dayjs/plugin/duration";
-import type { IProperty, ChoiceOption, TagOption, AttachmentPropertyOptions } from "@/components/Property/models";
+import type {
+  IProperty,
+  ChoiceOption,
+  TagOption,
+  AttachmentPropertyOptions,
+} from "@/components/Property/models";
 import type { LinkValue, TagValue } from "@/components/StandardValue/models";
 import type { ValueRendererSize } from "@/components/StandardValue/ValueRenderer/models";
 
@@ -108,10 +113,7 @@ const PropertyValueRenderer = (props: Props) => {
           // Empty serialized payload (cleared text / empty list / etc.)
           // is sent as undefined so the Manual scope record becomes
           // "no value" and the scope priority fallback kicks in.
-          return onValueChange(
-            sdv === "" ? undefined : sdv,
-            sbv === "" ? undefined : sbv,
-          );
+          return onValueChange(sdv === "" ? undefined : sdv, sbv === "" ? undefined : sbv);
         }
       : undefined;
 

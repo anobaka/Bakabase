@@ -122,10 +122,7 @@ export type SettleOptions = {
 // Sort key is (rowStart asc, colStart asc), so the user's dropped rowStart
 // encodes intent: drop low to land below other blocks; drop near the top
 // to land above them.
-export function settleLayout(
-  blocks: BlockPlacement[],
-  options?: SettleOptions,
-): BlockPlacement[] {
+export function settleLayout(blocks: BlockPlacement[], options?: SettleOptions): BlockPlacement[] {
   const movedId = options?.movedId;
   const pinMoved = options?.pinMoved ?? false;
   const sorted = [...blocks].sort((a, b) => {
@@ -148,8 +145,7 @@ export function settleLayout(
     let minRow = 0;
 
     for (const p of settled) {
-      const overlap =
-        b.colStart < p.colStart + p.colSpan && p.colStart < b.colStart + b.colSpan;
+      const overlap = b.colStart < p.colStart + p.colSpan && p.colStart < b.colStart + b.colSpan;
 
       if (overlap) {
         minRow = Math.max(minRow, p.rowStart + p.rowSpan);

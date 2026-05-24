@@ -35,7 +35,9 @@ const LinkValueRenderer = ({
   const renderInner = () => {
     if (value?.url) {
       return (
-        <ExternalLink className="px-3" size={size} href={value.url}>{value.text ?? value.url}</ExternalLink>
+        <ExternalLink className="px-3" href={value.url} size={size}>
+          {value.text ?? value.url}
+        </ExternalLink>
       );
     } else {
       if (value?.text != undefined && value.text.length > 0) {
@@ -76,9 +78,9 @@ const LinkValueRenderer = ({
             <Input
               placeholder={t<string>("Text")}
               size={size}
-              variant="bordered"
               startContent={<FileTextOutlined className="text-default-400" />}
               value={editingValue?.text}
+              variant="bordered"
               onValueChange={(text) => {
                 setEditingValue({
                   ...editingValue,
@@ -89,9 +91,9 @@ const LinkValueRenderer = ({
             <Input
               placeholder={t<string>("Link")}
               size={size}
-              variant="bordered"
               startContent={<LinkOutlined className="text-default-400" />}
               value={editingValue?.url}
+              variant="bordered"
               onValueChange={(url) => {
                 setEditingValue({
                   ...editingValue,

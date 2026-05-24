@@ -1,17 +1,17 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import i18n from "i18next";
 import { MdFolder, MdInsertDriveFile } from "react-icons/md";
 
 import "./index.scss";
 import _ from "lodash";
+import { useUpdate } from "react-use";
 
 import { IconType } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
 import { splitPathIntoSegments } from "@/components/utils";
 import { useIconsStore } from "@/stores/icons";
-import { useUpdate } from "react-use";
 
 type Props = {
   type: IconType;
@@ -53,16 +53,13 @@ const buildCacheKey = (type: IconType, path?: string): string | undefined => {
 
   return `${type}-${suffix}`;
 };
-const FileSystemEntryIcon = ({
-  path,
-  type,
-  size = 14,
-  disableCache,
-}: Props) => {
+const FileSystemEntryIcon = ({ path, type, size = 14, disableCache }: Props) => {
   const cacheKey = buildCacheKey(type, path);
   const { icons, add } = useIconsStore();
-  const iconCache = cacheKey == undefined ? undefined : icons[cacheKey] as string;
-  const iconImgDataRef = useRef<string | undefined>(disableCache ? undefined : (iconCache === undefined ? undefined : iconCache));
+  const iconCache = cacheKey == undefined ? undefined : (icons[cacheKey] as string);
+  const iconImgDataRef = useRef<string | undefined>(
+    disableCache ? undefined : iconCache === undefined ? undefined : iconCache,
+  );
   const forceUpdate = useUpdate();
 
   // console.log(path, type, size, iconImgData);
@@ -81,7 +78,7 @@ const FileSystemEntryIcon = ({
         .then((r) => {
           add({ [cacheKey]: r.data });
           // console.log('add', { [cacheKey]: r.data });
-          iconImgDataRef.current = (r.data);
+          iconImgDataRef.current = r.data;
           forceUpdate();
         });
     }
@@ -104,21 +101,22 @@ const FileSystemEntryIcon = ({
       {/* ) : */}
       {iconImgDataRef.current ? (
         <img alt={""} src={iconImgDataRef.current} />
-      ) : (
-        type == IconType.Directory ? (
-          <MdFolder style={{
+      ) : type == IconType.Directory ? (
+        <MdFolder
+          style={{
             color: "#ccc",
             fontSize: size,
-          }} />
-        ) :
-          (<MdInsertDriveFile
-            style={{
-              color: "#ccc",
-              fontSize: size,
-            }}
-            title={i18n.t<string>("Unknown file type")}
-          />
-          ))}
+          }}
+        />
+      ) : (
+        <MdInsertDriveFile
+          style={{
+            color: "#ccc",
+            fontSize: size,
+          }}
+          title={i18n.t<string>("Unknown file type")}
+        />
+      )}
     </div>
   );
 };

@@ -11,6 +11,7 @@ export const usePathMarkGuide = () => {
     }
 
     const completed = localStorage.getItem(GUIDE_KEY);
+
     if (!completed) {
       setShowGuide(true);
     }

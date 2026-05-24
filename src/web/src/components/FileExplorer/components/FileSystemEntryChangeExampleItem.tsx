@@ -50,9 +50,7 @@ const FileSystemEntryChangeExampleItem = (props: Props) => {
               variant={"light"}
             >
               <div className={"flex items-center gap-2"}>
-                {!hideIcon && (
-                  <ExclamationCircleOutlined style={{ fontSize: "18px" }} />
-                )}
+                {!hideIcon && <ExclamationCircleOutlined style={{ fontSize: "18px" }} />}
                 {text}
               </div>
             </Chip>
@@ -175,7 +173,6 @@ const FileSystemEntryChangeExampleItem = (props: Props) => {
   );
 };
 
-FileSystemEntryChangeExampleItem.displayName =
-  "FileSystemEntryChangeExampleItem";
+FileSystemEntryChangeExampleItem.displayName = "FileSystemEntryChangeExampleItem";
 
 export default FileSystemEntryChangeExampleItem;

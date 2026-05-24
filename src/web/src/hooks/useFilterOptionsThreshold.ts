@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 
 const STORAGE_KEY = "bakabase-filter-options-threshold";
+
 export const DEFAULT_FILTER_OPTIONS_THRESHOLD = 30;
 
 /**
@@ -14,8 +15,10 @@ export const getFilterOptionsThreshold = (): number => {
 
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
+
     if (stored) {
       const value = parseInt(stored, 10);
+
       if (!isNaN(value) && value > 0) {
         return value;
       }
@@ -66,6 +69,7 @@ export const useFilterOptionsThreshold = (): [number, (value: number) => void] =
     };
 
     window.addEventListener("filter-options-threshold-change", handleChange as EventListener);
+
     return () => {
       window.removeEventListener("filter-options-threshold-change", handleChange as EventListener);
     };

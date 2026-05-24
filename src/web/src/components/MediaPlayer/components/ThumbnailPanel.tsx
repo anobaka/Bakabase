@@ -1,18 +1,17 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import {
-  TbChevronLeft,
-  TbChevronRight,
-} from "react-icons/tb";
-import { AutoSizer, List } from "react-virtualized";
 import type { ListRowProps } from "react-virtualized";
+import type { BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry } from "@/sdk/Api";
+import type { MediaPlayerEntry } from "../types";
+
+import React, { useCallback, useEffect, useRef } from "react";
+import { TbChevronLeft, TbChevronRight } from "react-icons/tb";
+import { AutoSizer, List } from "react-virtualized";
+
+import ThumbnailPanelItem from "./ThumbnailPanelItem";
 
 import { MediaType } from "@/sdk/constants";
 import envConfig from "@/config/env";
-import ThumbnailPanelItem from "./ThumbnailPanelItem";
-import type { BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry } from "@/sdk/Api";
-import type { MediaPlayerEntry } from "../types";
 
 interface ThumbnailPanelProps {
   entries: MediaPlayerEntry[];
@@ -48,6 +47,7 @@ const ThumbnailPanel: React.FC<ThumbnailPanelProps> = ({
       if (mediaType === MediaType.Image) {
         // Use playPath for compressed file entries, otherwise use path
         const pathToUse = entry.playPath || entry.path;
+
         return `${envConfig.apiEndpoint}/tool/thumbnail?path=${encodeURIComponent(pathToUse)}&w=150&h=150`;
       }
 
@@ -58,24 +58,29 @@ const ThumbnailPanel: React.FC<ThumbnailPanelProps> = ({
 
   // Scroll active thumbnail into view (skip on initial mount and when entries change)
   const prevEntriesLengthRef = useRef(entries.length);
+
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false;
       prevEntriesLengthRef.current = entries.length;
+
       return;
     }
 
     // Don't scroll if entries array changed (likely initial load)
     if (entries.length !== prevEntriesLengthRef.current) {
       prevEntriesLengthRef.current = entries.length;
+
       return;
     }
 
     if (!collapsed && virtualListRef.current && entries.length > 0) {
       // Find the index of the active entry in the entries array
       const activeEntry = playableEntries[activeIndex];
+
       if (activeEntry) {
         const entryIndex = entries.findIndex((e) => e.path === activeEntry.path);
+
         if (entryIndex >= 0) {
           virtualListRef.current.scrollToRow(entryIndex);
         }
@@ -86,6 +91,7 @@ const ThumbnailPanel: React.FC<ThumbnailPanelProps> = ({
   const rowRenderer = useCallback(
     ({ index, key, style }: ListRowProps) => {
       const entry = entries[index];
+
       if (!entry) return null;
 
       const playableIndex = playableEntries.findIndex((e) => e.path === entry.path);
@@ -106,22 +112,15 @@ const ThumbnailPanel: React.FC<ThumbnailPanelProps> = ({
         </div>
       );
     },
-    [
-      entries,
-      playableEntries,
-      activeIndex,
-      getMediaType,
-      getThumbnailUrl,
-      onEntryClick,
-    ],
+    [entries, playableEntries, activeIndex, getMediaType, getThumbnailUrl, onEntryClick],
   );
 
   if (collapsed) {
     return (
       <TbChevronRight
         className="absolute left-1 top-1/2 -translate-y-1/2 text-white/70 hover:text-white text-xl cursor-pointer hover:scale-110 transition-all duration-200 z-10"
-        onClick={onToggleCollapse}
         title="Expand thumbnail panel"
+        onClick={onToggleCollapse}
       />
     );
   }
@@ -130,12 +129,16 @@ const ThumbnailPanel: React.FC<ThumbnailPanelProps> = ({
     <div className="relative bg-[rgba(30,30,30,0.95)] border-r border-white/10 flex flex-col transition-all duration-300 ease-in-out w-[120px] min-w-[120px] max-w-[120px]">
       <TbChevronLeft
         className="absolute right-1 top-1/2 -translate-y-1/2 text-white/70 hover:text-white text-xl cursor-pointer hover:scale-110 transition-all duration-200 z-10"
-        onClick={onToggleCollapse}
         title="Collapse thumbnail panel"
+        onClick={onToggleCollapse}
       />
       <div
         ref={thumbnailPanelRef}
+        aria-label="Thumbnail list"
         className="flex-1 overflow-hidden thumbnail-list"
+        role="listbox"
+        style={{ userSelect: "none" }}
+        tabIndex={0}
         onMouseDown={(e) => {
           // Prevent text selection when clicking and dragging
           if (e.button === 0) {
@@ -143,7 +146,6 @@ const ThumbnailPanel: React.FC<ThumbnailPanelProps> = ({
             e.preventDefault();
           }
         }}
-        style={{ userSelect: "none" }}
       >
         {entries.length > 0 ? (
           <AutoSizer>
@@ -152,11 +154,11 @@ const ThumbnailPanel: React.FC<ThumbnailPanelProps> = ({
                 ref={virtualListRef}
                 className="thumbnail-list-virtualized"
                 height={height}
-                width={width}
+                overscanRowCount={15}
                 rowCount={entries.length}
                 rowHeight={ROW_HEIGHT}
                 rowRenderer={rowRenderer}
-                overscanRowCount={15}
+                width={width}
               />
             )}
           </AutoSizer>

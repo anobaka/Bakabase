@@ -47,8 +47,8 @@ const TypeConversionRuleOverviewDialog = () => {
 
   const columns = [
     // <TableColumn>{t<string>('typeConversion.sourceType')}</TableColumn>,
-    <TableColumn>{t<string>("typeConversion.targetType")}</TableColumn>,
-    <TableColumn>{t<string>("typeConversion.rules")}</TableColumn>,
+    <TableColumn key="target-type">{t<string>("typeConversion.targetType")}</TableColumn>,
+    <TableColumn key="rules">{t<string>("typeConversion.rules")}</TableColumn>,
   ];
 
   useEffect(() => {
@@ -78,16 +78,16 @@ const TypeConversionRuleOverviewDialog = () => {
       rows.push(
         <TableRow key={fromType}>
           {/* <TableCell>{t<string>(getEnumKey('PropertyType', PropertyType[fromType]))}</TableCell> */}
-          <TableCell>{t<string>(getEnumKey('PropertyType', PropertyType[toType]))}</TableCell>
+          <TableCell>{t<string>(getEnumKey("PropertyType", PropertyType[toType]))}</TableCell>
           <TableCell>
             <div className={"flex flex-wrap gap-1"}>
-              {rules.map((r) => {
+              {rules.map((r, i) => {
                 if (r.description == null) {
-                  return <Chip size={"sm"}>{r.name}</Chip>;
+                  return <Chip key={i} size={"sm"}>{r.name}</Chip>;
                 }
 
                 return (
-                  <Tooltip content={<pre>{r.description}</pre>}>
+                  <Tooltip key={i} content={<pre>{r.description}</pre>}>
                     <Chip size={"sm"}>
                       <div className={"flex items-center gap-1"}>
                         {r.name}
@@ -133,14 +133,14 @@ const TypeConversionRuleOverviewDialog = () => {
       }
     >
       <div>
-        <Tabs isVertical disableAnimation disabledKeys={["title"]}>
+        <Tabs disableAnimation isVertical disabledKeys={["title"]}>
           <Tab key={"title"} title={t<string>("typeConversion.sourceType")} />
           {propertyTypes.map((cpt) => {
             return (
               <Tab
                 key={cpt.value}
                 className={"w-full"}
-                title={t<string>(getEnumKey('PropertyType', PropertyType[cpt.value]))}
+                title={t<string>(getEnumKey("PropertyType", PropertyType[cpt.value]))}
               >
                 <Table isCompact isHeaderSticky isStriped removeWrapper>
                   <TableHeader>{columns}</TableHeader>
@@ -155,7 +155,6 @@ const TypeConversionRuleOverviewDialog = () => {
   );
 };
 
-TypeConversionRuleOverviewDialog.displayName =
-  "TypeConversionRuleOverviewDialog";
+TypeConversionRuleOverviewDialog.displayName = "TypeConversionRuleOverviewDialog";
 
 export default TypeConversionRuleOverviewDialog;

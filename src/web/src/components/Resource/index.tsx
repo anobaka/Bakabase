@@ -3,10 +3,26 @@
 import type { CSSProperties } from "react";
 import type { IResourceCoverRef } from "@/components/Resource/components/ResourceCover";
 import type SimpleSearchEngine from "@/core/models/SimpleSearchEngine";
-import type { Property, Resource as ResourceModel, PropertyValueScopePreference } from "@/core/models/Resource";
+import type {
+  Property,
+  Resource as ResourceModel,
+  PropertyValueScopePreference,
+} from "@/core/models/Resource";
 import type { TagValue } from "@/components/StandardValue/models";
+import type {
+  PlayControlPortalProps,
+  PlayControlRef,
+} from "@/components/Resource/components/PlayControl";
+import type { PropertyType } from "@/sdk/constants";
 
-import React, { useCallback, useImperativeHandle, useMemo, useReducer, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useImperativeHandle,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import {
   ApartmentOutlined,
@@ -25,6 +41,7 @@ import { AiOutlineFolderOpen, AiOutlineSync } from "react-icons/ai";
 import moment from "moment";
 
 import StandardValueRenderer from "../StandardValue/ValueRenderer";
+
 import { convertFromApiValue } from "@/components/StandardValue/helpers";
 import { resolveScopedValue } from "@/core/models/Resource";
 
@@ -42,20 +59,17 @@ import { Button, Chip, Link, Tooltip } from "@/components/bakaui";
 import {
   DataOrigin,
   PropertyPool,
-  PropertyType,
   PropertyValueScope,
   propertyValueScopes,
   ResourceAdditionalItem,
   ResourceProperty,
   ResourceSource,
-  ResourceSourceLabel,
   ResourceStatus,
   ResourceTag,
   StandardValueType,
 } from "@/sdk/constants";
 import { useResourceOptionsStore, useUiOptionsStore } from "@/stores/options";
 import PlayControl from "@/components/Resource/components/PlayControl";
-import type { PlayControlPortalProps, PlayControlRef, FsDiscoveryStatus } from "@/components/Resource/components/PlayControl";
 import ContextMenuItems from "@/components/Resource/components/ContextMenuItems";
 import ResourceSourceIcon from "@/components/Resource/components/ResourceSourceIcon";
 import { SteamIcon, DLsiteIcon, ExHentaiIcon } from "@/components/SourceIcons";
@@ -89,7 +103,15 @@ type MenuEntry = {
 
 // PlayButton component defined outside Resource to maintain stable reference
 const PlayButton: React.FC<PlayControlPortalProps> = ({
-  status, sources, hasPath, isFile, fsDiscoveryStatus, onPlaySource, onOpenFolder, onNotFound, triggerFsDiscovery,
+  status,
+  sources,
+  hasPath,
+  isFile,
+  fsDiscoveryStatus,
+  onPlaySource,
+  onOpenFolder,
+  onNotFound,
+  triggerFsDiscovery,
 }) => {
   const { t } = useTranslation();
   const fsTriggeredRef = React.useRef(false);
@@ -105,20 +127,27 @@ const PlayButton: React.FC<PlayControlPortalProps> = ({
 
     for (const { source } of sources) {
       const isFs = source === DataOrigin.FileSystem;
+
       result.push({
         key: `source-${source}`,
         type: "source",
         source,
-        icon: isFs && fsDiscoveryStatus === "loading"
-          ? <LoadingOutlined spin />
-          : renderSourceIcon(source, "text-base"),
-        label: t("resource.playControl.menu.openVia", { source: t(`resource.source.${DataOrigin[source]}`) }),
+        icon:
+          isFs && fsDiscoveryStatus === "loading" ? (
+            <LoadingOutlined spin />
+          ) : (
+            renderSourceIcon(source, "text-base")
+          ),
+        label: t("resource.playControl.menu.openVia", {
+          source: t(`resource.source.${DataOrigin[source]}`),
+        }),
         onClick: () => onPlaySource(source),
       });
     }
 
     // If FileSystem has no items yet but discovery is pending/idle, add a loading entry
     const hasFsSource = sources.some((s) => s.source === DataOrigin.FileSystem);
+
     if (!hasFsSource && fsDiscoveryStatus !== "ready") {
       result.push({
         key: "source-fs-loading",
@@ -175,14 +204,15 @@ const PlayButton: React.FC<PlayControlPortalProps> = ({
   if (status === "idle" || status === "loading") {
     return (
       <div className="hidden group-hover/cover:flex absolute left-0 bottom-0 z-[1]">
-        <Button isIconOnly isDisabled className={buttonClass}>
-          <LoadingOutlined className={iconClass} spin />
+        <Button isDisabled isIconOnly className={buttonClass}>
+          <LoadingOutlined spin className={iconClass} />
         </Button>
       </div>
     );
   }
 
   const mainEntry = entries[0];
+
   if (!mainEntry) return null;
 
   // Dropdown entries = all entries except the main one (which is the trigger button)
@@ -197,11 +227,13 @@ const PlayButton: React.FC<PlayControlPortalProps> = ({
           isDisabled={mainEntry.isDisabled}
           onPress={mainEntry.onClick}
         >
-          {mainEntry.isLoading
-            ? <LoadingOutlined className={iconClass} spin />
-            : mainEntry.type === "openFolder"
-              ? <AiOutlineFolderOpen className={iconClass} />
-              : renderSourceIcon(mainEntry.source ?? DataOrigin.FileSystem, iconClass)}
+          {mainEntry.isLoading ? (
+            <LoadingOutlined spin className={iconClass} />
+          ) : mainEntry.type === "openFolder" ? (
+            <AiOutlineFolderOpen className={iconClass} />
+          ) : (
+            renderSourceIcon(mainEntry.source ?? DataOrigin.FileSystem, iconClass)
+          )}
         </Button>
       </Tooltip>
 
@@ -211,10 +243,10 @@ const PlayButton: React.FC<PlayControlPortalProps> = ({
             {dropdownEntries.map((entry) => (
               <Button
                 key={entry.key}
-                size="sm"
-                variant="light"
                 className="justify-start gap-2 px-2"
+                size="sm"
                 startContent={entry.icon}
+                variant="light"
                 onPress={entry.onClick}
               >
                 {entry.label}
@@ -327,7 +359,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
   }, [resource.scopePreferences]);
 
   // Use useReducer for stable forceUpdate reference
-  const [, forceUpdate] = useReducer(x => x + 1, 0);
+  const [, forceUpdate] = useReducer((x) => x + 1, 0);
 
   const [contextMenuIsOpen, setContextMenuIsOpen] = useState(false);
   const [contextMenuAnchorPoint, setContextMenuAnchorPoint] = useState({
@@ -347,7 +379,19 @@ const Resource = React.forwardRef((props: Props, ref) => {
 
   const displayPropertyKeys = uiOptions.resource?.displayProperties ?? [];
 
-  log(`render #${renderedTimes.current}`, 'displayPropertyKeys:', displayPropertyKeys.length, 'hasProperties:', !!resource.properties, 'propertyPools:', resource.properties ? Object.keys(resource.properties) : '(none)', 'mediaLibraries:', resource.mediaLibraries, 'category:', resource.category?.name);
+  log(
+    `render #${renderedTimes.current}`,
+    "displayPropertyKeys:",
+    displayPropertyKeys.length,
+    "hasProperties:",
+    !!resource.properties,
+    "propertyPools:",
+    resource.properties ? Object.keys(resource.properties) : "(none)",
+    "mediaLibraries:",
+    resource.mediaLibraries,
+    "category:",
+    resource.category?.name,
+  );
 
   // Discovery happens automatically via SSE now
 
@@ -356,29 +400,33 @@ const Resource = React.forwardRef((props: Props, ref) => {
 
   // Keep a ref to the latest resource to avoid stale closure in reload
   const resourceRef = useRef(resource);
+
   resourceRef.current = resource;
 
-  const reload = useCallback(async (ct?: AbortSignal) => {
-    const currentResource = resourceRef.current;
-    const newResourceRsp = await BApi.resource.getResourcesByKeys({
-      ids: [currentResource.id],
-      additionalItems: ResourceAdditionalItem.All,
-    });
+  const reload = useCallback(
+    async (ct?: AbortSignal) => {
+      const currentResource = resourceRef.current;
+      const newResourceRsp = await BApi.resource.getResourcesByKeys({
+        ids: [currentResource.id],
+        additionalItems: ResourceAdditionalItem.All,
+      });
 
-    if (!newResourceRsp.code) {
-      const nr = (newResourceRsp.data || [])[0];
+      if (!newResourceRsp.code) {
+        const nr = (newResourceRsp.data || [])[0];
 
-      if (nr) {
-        Object.keys(nr).forEach((k) => {
-          currentResource[k] = nr[k];
-        });
-        coverRef.current?.reload();
-        forceUpdate();
+        if (nr) {
+          Object.keys(nr).forEach((k) => {
+            currentResource[k] = nr[k];
+          });
+          coverRef.current?.reload();
+          forceUpdate();
+        }
+      } else {
+        throw new Error(newResourceRsp.message!);
       }
-    } else {
-      throw new Error(newResourceRsp.message!);
-    }
-  }, [forceUpdate]);
+    },
+    [forceUpdate],
+  );
 
   const onCoverClick = useCallback(() => {
     if (disableCoverClick) return;
@@ -441,7 +489,12 @@ const Resource = React.forwardRef((props: Props, ref) => {
             </Chip>
           )}
           {resource.playedAt && (
-            <Chip radius={"sm"} size={"sm"} variant={"flat"} className="whitespace-break-spaces h-auto">
+            <Chip
+              className="whitespace-break-spaces h-auto"
+              radius={"sm"}
+              size={"sm"}
+              variant={"flat"}
+            >
               <div className={"flex items-center gap-1"}>
                 <HistoryOutlined />
                 {(() => {
@@ -472,7 +525,9 @@ const Resource = React.forwardRef((props: Props, ref) => {
             </Tooltip>
           )}
           {resource.healthScore != null && !uiOptions.resource?.hideHealthScore && (
-            <Tooltip content={t<string>("healthScore.label.scoreTip", { score: resource.healthScore })}>
+            <Tooltip
+              content={t<string>("healthScore.label.scoreTip", { score: resource.healthScore })}
+            >
               <HealthScoreBadge
                 score={resource.healthScore}
                 onClick={(e) => {
@@ -595,7 +650,12 @@ const Resource = React.forwardRef((props: Props, ref) => {
                 log("error occurred while rendering display property", error);
               }
 
-              log(`displayProperty pool:${dpk.pool} id:${dpk.id} => bizValue:`, bizValue, 'bizValueType:', bizValueType);
+              log(
+                `displayProperty pool:${dpk.pool} id:${dpk.id} => bizValue:`,
+                bizValue,
+                "bizValueType:",
+                bizValueType,
+              );
 
               if (bizValue == undefined || bizValueType == undefined) {
                 return [];
@@ -610,7 +670,12 @@ const Resource = React.forwardRef((props: Props, ref) => {
                   style={style}
                   variant={"flat"}
                 >
-                  <StandardValueRenderer type={bizValueType} value={bizValue} variant="light" propertyType={propertyType} />
+                  <StandardValueRenderer
+                    propertyType={propertyType}
+                    type={bizValueType}
+                    value={bizValue}
+                    variant="light"
+                  />
                 </Chip>,
               ];
             })}
@@ -618,16 +683,23 @@ const Resource = React.forwardRef((props: Props, ref) => {
           </div>
         )}
         {(() => {
-          const externalSources = [...new Set(
-            resource.sourceLinks
-              ?.map(l => l.source)
-              .filter(s => s !== ResourceSource.PathMark) ?? []
-          )];
+          const externalSources = [
+            ...new Set(
+              resource.sourceLinks
+                ?.map((l) => l.source)
+                .filter((s) => s !== ResourceSource.PathMark) ?? [],
+            ),
+          ];
+
           if (externalSources.length === 0) return null;
+
           return (
             <div className="absolute right-1 bottom-1 z-[1] flex items-end gap-0.5 pointer-events-none">
-              {externalSources.map(source => (
-                <div key={source} className="flex items-center justify-center w-6 h-6 rounded-md bg-black/60 text-white text-sm [&_img]:h-3.5">
+              {externalSources.map((source) => (
+                <div
+                  key={source}
+                  className="flex items-center justify-center w-6 h-6 rounded-md bg-black/60 text-white text-sm [&_img]:h-3.5"
+                >
                   <ResourceSourceIcon source={source} />
                 </div>
               ))}
@@ -660,8 +732,9 @@ const Resource = React.forwardRef((props: Props, ref) => {
           valueScopePriority,
           scopePreferenceMap.get(`${PropertyPool.Custom}-${id}`),
         );
-        const tags = (selectedValue?.aliasAppliedBizValue ??
-          selectedValue?.bizValue) as TagValue[] | undefined;
+        const tags = (selectedValue?.aliasAppliedBizValue ?? selectedValue?.bizValue) as
+          | TagValue[]
+          | undefined;
 
         if (
           tags &&
@@ -743,13 +816,19 @@ const Resource = React.forwardRef((props: Props, ref) => {
       className={`flex flex-col p-1 rounded relative group/resource resource ${props.className} ${
         uiOptions.resource?.hideResourceBorder ? "" : "border-2"
       } ${
-        selected ? "border-primary ring-2 ring-primary/30 bg-primary/5" : uiOptions.resource?.hideResourceBorder ? "" : "border-default-200"
+        selected
+          ? "border-primary ring-2 ring-primary/30 bg-primary/5"
+          : uiOptions.resource?.hideResourceBorder
+            ? ""
+            : "border-default-200"
       } ${
-        resource.status === ResourceStatus.Absent ? "opacity-50 grayscale" :
-        resource.status === ResourceStatus.Unavailable ? "opacity-60" : ""
+        resource.status === ResourceStatus.Absent
+          ? "opacity-50 grayscale"
+          : resource.status === ResourceStatus.Unavailable
+            ? "opacity-60"
+            : ""
       }`}
       data-id={resource.id}
-      role={"resource"}
       style={style}
       onClickCapture={(e) => {
         if (selectionModeRef?.current || e.shiftKey) {
@@ -789,9 +868,9 @@ const Resource = React.forwardRef((props: Props, ref) => {
           onClose={() => setContextMenuIsOpen(false)}
         >
           <ContextMenuItems
+            contextResource={resource}
             selectedResourceIds={selectedResourceIds}
             selectedResources={selectedResources}
-            contextResource={resource}
             onSelectedResourcesChanged={onSelectedResourcesChanged}
           />
         </ControlledMenu>

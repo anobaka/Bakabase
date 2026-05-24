@@ -84,33 +84,39 @@ const EditableText = memo((props: Props) => {
     }
   }, [path, cancel]);
 
-  const enterEditingModeKeyDownHandler = useCallback((e: KeyboardEvent) => {
-    if (disabled || editingRef.current) {
-      return;
-    }
-    if (e.key == "F2") {
-      setEditing(true);
-      e.stopPropagation();
-    }
-  }, [disabled]);
-
-  const inputKeyDownHandler = useCallback((e: React.KeyboardEvent) => {
-    log("Key down", e.key, e.ctrlKey, e.shiftKey, e.altKey, e.metaKey, e);
-    switch (e.key) {
-      case "Enter":
-        submit();
-        break;
-      case "Escape":
-        cancel();
-        break;
-      case "Delete":
-        break;
-      default:
-        // Propagation
+  const enterEditingModeKeyDownHandler = useCallback(
+    (e: KeyboardEvent) => {
+      if (disabled || editingRef.current) {
         return;
-    }
-    // e.stopPropagation();
-  }, [submit, cancel]);
+      }
+      if (e.key == "F2") {
+        setEditing(true);
+        e.stopPropagation();
+      }
+    },
+    [disabled],
+  );
+
+  const inputKeyDownHandler = useCallback(
+    (e: React.KeyboardEvent) => {
+      log("Key down", e.key, e.ctrlKey, e.shiftKey, e.altKey, e.metaKey, e);
+      switch (e.key) {
+        case "Enter":
+          submit();
+          break;
+        case "Escape":
+          cancel();
+          break;
+        case "Delete":
+          break;
+        default:
+          // Propagation
+          return;
+      }
+      // e.stopPropagation();
+    },
+    [submit, cancel],
+  );
 
   // Track parent element for cleanup
   const parentListenerRef = useRef<HTMLElement | null>(null);
@@ -119,6 +125,7 @@ const EditableText = memo((props: Props) => {
   // Update handler when it changes, and cleanup on unmount
   useEffect(() => {
     const oldHandler = handlerRef.current;
+
     handlerRef.current = enterEditingModeKeyDownHandler;
 
     // If parent exists and handler changed, swap listeners
@@ -147,7 +154,10 @@ const EditableText = memo((props: Props) => {
             if (e.className.includes("entry-keydown-listener")) {
               // Remove from old parent if different
               if (parentListenerRef.current && parentListenerRef.current !== e) {
-                parentListenerRef.current.removeEventListener("keydown", enterEditingModeKeyDownHandler);
+                parentListenerRef.current.removeEventListener(
+                  "keydown",
+                  enterEditingModeKeyDownHandler,
+                );
               }
               // Only add if not already attached to this element
               if (parentListenerRef.current !== e) {
@@ -162,6 +172,8 @@ const EditableText = memo((props: Props) => {
         }
       }}
       className={`min-w-0 ${editing ? "flex-1" : ""}`}
+      role="textbox"
+      tabIndex={0}
       onKeyDown={(e) => enterEditingModeKeyDownHandler(e.nativeEvent)}
     >
       {editing ? (

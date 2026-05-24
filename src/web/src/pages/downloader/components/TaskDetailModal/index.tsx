@@ -75,8 +75,7 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
       setForm(form);
     }
 
-    const taskDefinitionsResponse =
-      await BApi.downloadTask.getAllDownloaderDefinitions();
+    const taskDefinitionsResponse = await BApi.downloadTask.getAllDownloaderDefinitions();
 
     setTaskDefinitions(taskDefinitionsResponse.data || []);
   };
@@ -90,10 +89,9 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
     const loadDownloaderOptions = async () => {
       if (form.thirdPartyId && form.type) {
         try {
-          const optionsRes = await BApi.downloadTask.getDownloaderOptions(
-            form.thirdPartyId,
-            { taskType: form.type },
-          );
+          const optionsRes = await BApi.downloadTask.getDownloaderOptions(form.thirdPartyId, {
+            taskType: form.type,
+          });
 
           const options = optionsRes.data;
 
@@ -306,14 +304,14 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
           case DownloadTaskFieldType.PreferTorrent: {
             const parsedOptions = form.options ? JSON.parse(form.options) : {};
             const preferTorrent =
-              parsedOptions.preferTorrent ??
-              (isAdding ? exHentaiPreferTorrentDefault : true);
+              parsedOptions.preferTorrent ?? (isAdding ? exHentaiPreferTorrentDefault : true);
 
             return (
               <PreferTorrentField
                 preferTorrent={preferTorrent}
                 onChange={(value) => {
                   const newOptions = { ...parsedOptions, preferTorrent: value };
+
                   setForm({
                     ...form,
                     options: JSON.stringify(newOptions),
@@ -363,6 +361,7 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
               const newIds = (r.data ?? [])
                 .map((task) => task.id)
                 .filter((tid): tid is number => typeof tid === "number");
+
               if (newIds.length > 0) {
                 await BApi.downloadTask.startDownloadTasks({
                   ids: newIds,
@@ -379,10 +378,7 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
           }
         }}
       >
-        <div
-          className={"grid gap-2 items-center"}
-          style={{ gridTemplateColumns: "auto 1fr" }}
-        >
+        <div className={"grid gap-2 items-center"} style={{ gridTemplateColumns: "auto 1fr" }}>
           <div>{t<string>("downloader.label.site")}</div>
           <div>
             <ButtonGroup size={"sm"}>
@@ -392,6 +388,7 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
 
                 return (
                   <Button
+                    key={thirdParty.id}
                     color={isSelected ? "primary" : undefined}
                     isDisabled={!isAdding}
                     onPress={() => {
@@ -452,7 +449,6 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
         {form.thirdPartyId === ThirdPartyId.ExHentai && (
           <Alert
             color="primary"
-            variant="flat"
             description={
               <div className="flex items-center gap-1 flex-wrap">
                 <span>{t<string>("downloader.tip.exHentaiUserscript")}</span>
@@ -461,6 +457,7 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
                 </NavigateButton>
               </div>
             }
+            variant="flat"
           />
         )}
         {form.thirdPartyId && form.type && (

@@ -17,11 +17,7 @@ interface PasteMarksButtonProps {
   onPaste: (marks: BakabaseAbstractionsModelsDomainPathMark[]) => void;
 }
 
-const PasteMarksButton = ({
-  targetPath,
-  existingMarks,
-  onPaste,
-}: PasteMarksButtonProps) => {
+const PasteMarksButton = ({ targetPath, existingMarks, onPaste }: PasteMarksButtonProps) => {
   const { t } = useTranslation();
   const { candidateGroups, selectedGroupId } = useCopyMarksStore();
 
@@ -62,10 +58,10 @@ const PasteMarksButton = ({
 
   const button = (
     <Button
-      size="sm"
       color="warning"
-      variant="flat"
+      size="sm"
       startContent={<AiOutlineSnippets />}
+      variant="flat"
       onPress={handlePaste}
     >
       {t("pathMarkConfig.action.pasteMarks", { count: newMarks.length })}
@@ -75,9 +71,7 @@ const PasteMarksButton = ({
   // Show tooltip if some marks already exist
   if (existingCount > 0) {
     return (
-      <Tooltip
-        content={t("pathMarkConfig.tip.marksAlreadyExist", { count: existingCount })}
-      >
+      <Tooltip content={t("pathMarkConfig.tip.marksAlreadyExist", { count: existingCount })}>
         {button}
       </Tooltip>
     );

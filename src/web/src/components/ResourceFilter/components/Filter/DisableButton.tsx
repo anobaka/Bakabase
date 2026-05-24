@@ -17,10 +17,10 @@ const DisableButton = ({ disabled, onToggle }: DisableButtonProps) => {
   return (
     <Button
       isIconOnly
+      className="min-w-6 w-6 h-6"
+      color={disabled ? "success" : "warning"}
       size="sm"
       variant="light"
-      color={disabled ? "success" : "warning"}
-      className="min-w-6 w-6 h-6"
       onPress={onToggle}
     >
       {disabled ? (

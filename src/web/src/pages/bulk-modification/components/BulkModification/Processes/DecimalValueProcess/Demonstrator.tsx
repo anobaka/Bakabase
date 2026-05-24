@@ -20,12 +20,17 @@ const Demonstrator = ({ operation, options, variables }: Props) => {
 
   const renderValue = () => {
     if (!options?.value) return null;
+
     return <ProcessValueDemonstrator value={options.value} variables={variables} />;
   };
 
   switch (operation) {
     case BulkModificationDecimalProcessOperation.Delete:
-      return <Chip color="danger" size="sm">{t("bulkModification.operation.decimal.delete")}</Chip>;
+      return (
+        <Chip color="danger" size="sm">
+          {t("bulkModification.operation.decimal.delete")}
+        </Chip>
+      );
     case BulkModificationDecimalProcessOperation.SetWithFixedValue:
       return (
         <span>
@@ -41,7 +46,11 @@ const Demonstrator = ({ operation, options, variables }: Props) => {
     case BulkModificationDecimalProcessOperation.Divide:
       return <span>÷ {renderValue()}</span>;
     case BulkModificationDecimalProcessOperation.Round:
-      return <span>{t("bulkModification.operation.decimal.round")} ({options?.decimalPlaces ?? 0})</span>;
+      return (
+        <span>
+          {t("bulkModification.operation.decimal.round")} ({options?.decimalPlaces ?? 0})
+        </span>
+      );
     case BulkModificationDecimalProcessOperation.Ceil:
       return <span>{t("bulkModification.operation.decimal.ceil")}</span>;
     case BulkModificationDecimalProcessOperation.Floor:

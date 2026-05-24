@@ -2,12 +2,13 @@ import type { WindowState } from "./types.ts";
 
 import React, { useCallback } from "react";
 import { IoMdClose, IoMdRemove } from "react-icons/io";
-import { MdMaximize, MdFullscreenExit } from "react-icons/md";
+import { MdFullscreenExit } from "react-icons/md";
 import { FiMaximize2 } from "react-icons/fi";
 import { RiKeyboardLine } from "react-icons/ri";
+import { useTranslation } from "react-i18next";
+
 import { Button, Kbd, Modal, Tooltip } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import { useTranslation } from "react-i18next";
 
 interface WindowHeaderProps {
   windowState: WindowState;
@@ -79,10 +80,10 @@ export const WindowHeader: React.FC<WindowHeaderProps> = ({
           <Tooltip content={t<string>("Shortcuts")}>
             <Button
               isIconOnly
-              size="sm"
-              variant="light"
               className="text-white/70 hover:text-white/90 min-w-8 w-8 h-8"
+              size="sm"
               title="Shortcuts"
+              variant="light"
               onMouseDown={(e) => {
                 e.stopPropagation();
                 e.preventDefault();
@@ -99,10 +100,10 @@ export const WindowHeader: React.FC<WindowHeaderProps> = ({
         {!isMinimized && (
           <Button
             isIconOnly
-            size="sm"
-            variant="light"
             className="text-white/70 hover:text-white/90 min-w-8 w-8 h-8"
+            size="sm"
             title="Minimize"
+            variant="light"
             onMouseDown={(e) => {
               e.stopPropagation();
               e.preventDefault();
@@ -116,10 +117,10 @@ export const WindowHeader: React.FC<WindowHeaderProps> = ({
         )}
         <Button
           isIconOnly
-          size="sm"
-          variant="light"
           className="text-white/70 hover:text-white/90 min-w-8 w-8 h-8"
+          size="sm"
           title={windowState.isMaximized ? "Restore" : isMinimized ? "Restore" : "Maximize"}
+          variant="light"
           onMouseDown={(e) => {
             e.stopPropagation();
             e.preventDefault();
@@ -136,10 +137,10 @@ export const WindowHeader: React.FC<WindowHeaderProps> = ({
         </Button>
         <Button
           isIconOnly
-          size="sm"
-          variant="light"
           className="text-white/70 hover:text-red-500 hover:bg-red-500/20 min-w-8 w-8 h-8"
+          size="sm"
           title="Close"
+          variant="light"
           onMouseDown={(e) => {
             e.stopPropagation();
             e.preventDefault();

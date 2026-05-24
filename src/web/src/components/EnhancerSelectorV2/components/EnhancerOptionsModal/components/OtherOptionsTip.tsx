@@ -15,21 +15,9 @@ const OtherOptionsTip = () => {
             {t<string>("enhancer.targetOptions.autoBind.label")}
           </div>
           <div>
-            <div>
-              {t<string>(
-                "enhancer.targetOptions.autoBind.description",
-              )}
-            </div>
-            <div>
-              {t<string>(
-                "enhancer.targetOptions.autoBind.createTip",
-              )}
-            </div>
-            <div>
-              {t<string>(
-                "enhancer.targetOptions.autoBind.dynamicTip",
-              )}
-            </div>
+            <div>{t<string>("enhancer.targetOptions.autoBind.description")}</div>
+            <div>{t<string>("enhancer.targetOptions.autoBind.createTip")}</div>
+            <div>{t<string>("enhancer.targetOptions.autoBind.dynamicTip")}</div>
           </div>
         </div>
         <div>
@@ -37,31 +25,11 @@ const OtherOptionsTip = () => {
             {t<string>("enhancer.targetOptions.autoMatch.label")}
           </div>
           <div>
-            <div>
-              {t<string>(
-                "enhancer.targetOptions.autoMatch.description",
-              )}
-            </div>
-            <div>
-              {t<string>(
-                "enhancer.targetOptions.autoMatch.checkedBehavior",
-              )}
-            </div>
-            <div>
-              {t<string>(
-                "enhancer.targetOptions.autoMatch.example",
-              )}
-            </div>
-            <div>
-              {t<string>(
-                "enhancer.targetOptions.autoMatch.exampleResult",
-              )}
-            </div>
-            <div>
-              {t<string>(
-                "enhancer.targetOptions.autoMatch.warning",
-              )}
-            </div>
+            <div>{t<string>("enhancer.targetOptions.autoMatch.description")}</div>
+            <div>{t<string>("enhancer.targetOptions.autoMatch.checkedBehavior")}</div>
+            <div>{t<string>("enhancer.targetOptions.autoMatch.example")}</div>
+            <div>{t<string>("enhancer.targetOptions.autoMatch.exampleResult")}</div>
+            <div>{t<string>("enhancer.targetOptions.autoMatch.warning")}</div>
           </div>
         </div>
       </div>

@@ -1,7 +1,10 @@
-import React from 'react';
-import type { DockedEdge } from '../types';
-import { BAKA_SIZE } from '../constants';
-import ChatView from './ChatView';
+import type { DockedEdge } from "../types";
+
+import React from "react";
+
+import { BAKA_SIZE } from "../constants";
+
+import ChatView from "./ChatView";
 
 interface Props {
   visible: boolean;
@@ -19,13 +22,28 @@ const ChatPanel: React.FC<Props> = ({ visible, position, dockedEdge, onClose }) 
   const panelStyle = computePanelPosition(position, dockedEdge);
 
   return (
-    <div className="baka-chat-panel" style={panelStyle} onClick={(e) => e.stopPropagation()}>
+    <div
+      className="baka-chat-panel"
+      role="button"
+      style={panelStyle}
+      tabIndex={0}
+      onClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }}
+    >
       <ChatView mode="popover" onClose={onClose} />
     </div>
   );
 };
 
-function computePanelPosition(pos: { x: number; y: number }, _edge: DockedEdge): React.CSSProperties {
+function computePanelPosition(
+  pos: { x: number; y: number },
+  _edge: DockedEdge,
+): React.CSSProperties {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
 
@@ -33,6 +51,7 @@ function computePanelPosition(pos: { x: number; y: number }, _edge: DockedEdge):
   const spaceLeft = pos.x;
 
   let left: number;
+
   if (spaceRight >= PANEL_WIDTH + 8) {
     left = pos.x + BAKA_SIZE + 8;
   } else if (spaceLeft >= PANEL_WIDTH + 8) {
@@ -44,7 +63,7 @@ function computePanelPosition(pos: { x: number; y: number }, _edge: DockedEdge):
   const top = Math.max(8, Math.min(pos.y - 40, vh - PANEL_HEIGHT - 8));
 
   return {
-    position: 'fixed',
+    position: "fixed",
     left,
     top,
     width: PANEL_WIDTH,

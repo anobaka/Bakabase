@@ -12,8 +12,10 @@
 
 import type { Dayjs } from "dayjs";
 import type { Duration } from "dayjs/plugin/duration";
-import { AttachmentLayout, PropertyType, StandardValueType } from "@/sdk/constants";
+import type { AttachmentLayout } from "@/sdk/constants";
 import type { LinkValue, TagValue, MultilevelData } from "@/components/StandardValue/models";
+
+import { PropertyType, StandardValueType } from "@/sdk/constants";
 
 // ============================================================================
 // StandardValue Type Mapping
@@ -331,11 +333,12 @@ export type TypedProperty<T extends PropertyType = PropertyType> = BaseProperty 
  */
 export function asTypedProperty<T extends PropertyType>(
   property: BaseProperty & { options?: unknown },
-  expectedType: T
+  expectedType: T,
 ): TypedProperty<T> | undefined {
   if (property.type === expectedType) {
     return property as TypedProperty<T>;
   }
+
   return undefined;
 }
 
@@ -349,7 +352,11 @@ export function asTypedProperty<T extends PropertyType>(
 export const PropertyTypeGroups = {
   text: [PropertyType.SingleLineText, PropertyType.MultilineText, PropertyType.Link] as const,
   number: [PropertyType.Number, PropertyType.Percentage, PropertyType.Rating] as const,
-  choice: [PropertyType.SingleChoice, PropertyType.MultipleChoice, PropertyType.Multilevel] as const,
+  choice: [
+    PropertyType.SingleChoice,
+    PropertyType.MultipleChoice,
+    PropertyType.Multilevel,
+  ] as const,
   dateTime: [PropertyType.DateTime, PropertyType.Date, PropertyType.Time] as const,
   other: [PropertyType.Attachment, PropertyType.Boolean, PropertyType.Tags] as const,
   underDevelopment: [PropertyType.Formula] as const,
@@ -387,11 +394,7 @@ export function isValidStandardValue(value: unknown, type: StandardValueType): b
     case StandardValueType.Decimal:
       return typeof value === "number" && !Number.isNaN(value);
     case StandardValueType.Link:
-      return (
-        typeof value === "object" &&
-        value !== null &&
-        ("text" in value || "url" in value)
-      );
+      return typeof value === "object" && value !== null && ("text" in value || "url" in value);
     case StandardValueType.Boolean:
       return typeof value === "boolean";
     case StandardValueType.DateTime:

@@ -1,13 +1,13 @@
 "use client";
 
+import type { BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry } from "@/sdk/Api";
+import type { MediaPlayerEntry } from "../types";
+
 import React, { useState } from "react";
-import { MdInventory } from "react-icons/md";
 
 import FileSystemEntryIcon from "@/components/FileSystemEntryIcon";
 import { IconType, IwFsType, MediaType } from "@/sdk/constants";
 import { Spinner } from "@/components/bakaui";
-import type { BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry } from "@/sdk/Api";
-import type { MediaPlayerEntry } from "../types";
 
 export interface ThumbnailPanelItemProps {
   entry: MediaPlayerEntry;
@@ -44,8 +44,16 @@ const ThumbnailPanelItem: React.FC<ThumbnailPanelItemProps> = ({
       className={`group cursor-pointer transition-all duration-200 border-transparent relative ${
         isActive ? "bg-blue-500/20 border-l-blue-500/80" : "hover:bg-white/5"
       }`}
+      role="button"
+      tabIndex={0}
       title={entry.name}
       onClick={() => onEntryClick(entry)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onEntryClick(entry);
+        }
+      }}
     >
       <div className="flex flex-col items-center gap-1.5 relative w-full">
         <div className="relative w-[120px] h-[120px] flex items-center justify-center bg-black/30 rounded overflow-hidden thumbnail-image-container">
@@ -60,17 +68,18 @@ const ThumbnailPanelItem: React.FC<ThumbnailPanelItemProps> = ({
                 alt={entry.name}
                 className="w-full h-full object-contain thumbnail-image"
                 src={thumbnailUrl}
-                onLoad={() => setImageLoading(false)}
                 onError={(e) => {
                   setImageLoading(false);
                   setImageError(true);
                   // Fallback to icon if thumbnail fails
                   const target = e.target as HTMLImageElement;
+
                   target.style.display = "none";
                   if (target.parentElement) {
                     target.parentElement.classList.add("icon-fallback");
                   }
                 }}
+                onLoad={() => setImageLoading(false)}
               />
               {imageError && (
                 <div className="flex items-center justify-center w-full h-full text-white/70 thumbnail-icon">
@@ -93,7 +102,10 @@ const ThumbnailPanelItem: React.FC<ThumbnailPanelItemProps> = ({
           )}
           {/* Name overlay - appears on hover */}
           <div className="absolute top-0 left-0 right-0 px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 max-h-full overflow-hidden">
-            <div className="text-white/90 text-xs text-center break-words line-clamp-6" title={entry.name}>
+            <div
+              className="text-white/90 text-xs text-center break-words line-clamp-6"
+              title={entry.name}
+            >
               {entry.name}
             </div>
           </div>
@@ -124,5 +136,3 @@ const ThumbnailPanelItem: React.FC<ThumbnailPanelItemProps> = ({
 };
 
 export default ThumbnailPanelItem;
-
-

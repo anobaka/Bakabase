@@ -39,12 +39,8 @@ const FeatureStatusTip = ({ name, status, className, url }: Props) => {
       <Trans i18nKey={i18nKey} values={{ name }}>
         The
         <span className={"font-bold px-1"}>name</span>
-        feature is under development. You can urge the author or make
-        suggestions on
-        <ExternalLink
-          className={"px-1"}
-          href={"https://github.com/anobaka/InsideWorld"}
-        >
+        feature is under development. You can urge the author or make suggestions on
+        <ExternalLink className={"px-1"} href={"https://github.com/anobaka/InsideWorld"}>
           Github
         </ExternalLink>
         or

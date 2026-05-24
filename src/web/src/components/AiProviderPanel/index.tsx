@@ -1,5 +1,14 @@
 "use client";
 
+import type {
+  BakabaseModulesAIModelsDbAiProviderDbModel,
+  BakabaseModulesAIModelsDomainAiProviderKindInfo,
+  BakabaseModulesAIModelsInputAiProviderTestResult,
+  BakabaseModulesAIModelsInputAiProviderAddInputModel,
+  BakabaseModulesAIModelsInputAiProviderUpdateInputModel,
+  BakabaseModulesAIModelsDomainLlmModelInfo,
+} from "@/sdk/Api";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -22,21 +31,14 @@ import {
 } from "@heroui/react";
 import { AiOutlineDelete, AiOutlinePlus, AiOutlineUpload } from "react-icons/ai";
 
+import { AigcProviderConfigSamples } from "./samples";
+
 import { Select, toast } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import ConfirmModal from "@/components/ConfirmModal";
 import BApi from "@/sdk/BApi";
-import type {
-  BakabaseModulesAIModelsDbAiProviderDbModel,
-  BakabaseModulesAIModelsDomainAiProviderKindInfo,
-  BakabaseModulesAIModelsInputAiProviderTestResult,
-  BakabaseModulesAIModelsInputAiProviderAddInputModel,
-  BakabaseModulesAIModelsInputAiProviderUpdateInputModel,
-  BakabaseModulesAIModelsDomainLlmModelInfo,
-} from "@/sdk/Api";
 import { AiProviderCapability } from "@/sdk/constants";
 import JsonEditor, { stripJsonComments } from "@/components/JsonEditor";
-import { AigcProviderConfigSamples } from "./samples";
 
 type AiProvider = BakabaseModulesAIModelsDbAiProviderDbModel;
 type KindInfo = BakabaseModulesAIModelsDomainAiProviderKindInfo;
@@ -63,10 +65,8 @@ const AiProviderPanel = () => {
   const aigcFileInputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
-    const [pr, kr] = await Promise.all([
-      BApi.ai.getAllAiProviders(),
-      BApi.ai.getAiProviderKinds(),
-    ]);
+    const [pr, kr] = await Promise.all([BApi.ai.getAllAiProviders(), BApi.ai.getAiProviderKinds()]);
+
     if (!pr.code && pr.data) setProviders(pr.data);
     if (!kr.code && kr.data) setKinds(kr.data);
   }, []);
@@ -80,6 +80,7 @@ const AiProviderPanel = () => {
 
   const handleAdd = () => {
     const firstKind = kinds[0];
+
     setEditing({
       kind: firstKind?.kind,
       name: "",
@@ -104,29 +105,36 @@ const AiProviderPanel = () => {
     if (!editing) return;
     if (!editing.kind) {
       toast.danger(t<string>("aiProvider.error.kindRequired"));
+
       return;
     }
     if (!editing.name?.trim()) {
       toast.danger(t<string>("aiProvider.error.nameRequired"));
+
       return;
     }
     const ki = kindInfo(editing.kind);
+
     if (!editing.llmEnabled && !editing.aigcEnabled) {
       toast.danger(t<string>("aiProvider.error.atLeastOneCapability"));
+
       return;
     }
     if (ki?.requiresApiKey && !editing.apiKey?.trim()) {
       toast.danger(t<string>("aiProvider.error.apiKeyRequired"));
+
       return;
     }
     if (ki?.requiresEndpoint && !editing.endpoint?.trim()) {
       toast.danger(t<string>("aiProvider.error.endpointRequired"));
+
       return;
     }
 
-    const cleanAigcConfig = editing.aigcEnabled && editing.aigcConfigJson
-      ? stripJsonComments(editing.aigcConfigJson)
-      : null;
+    const cleanAigcConfig =
+      editing.aigcEnabled && editing.aigcConfigJson
+        ? stripJsonComments(editing.aigcConfigJson)
+        : null;
 
     if (isEditMode && editing.id) {
       const r = await BApi.ai.updateAiProvider(editing.id, {
@@ -139,6 +147,7 @@ const AiProviderPanel = () => {
         aigcEnabled: editing.aigcEnabled,
         aigcConfigJson: cleanAigcConfig,
       } as BakabaseModulesAIModelsInputAiProviderUpdateInputModel);
+
       if (!r.code) {
         toast.success(t<string>("common.success.saved"));
         onClose();
@@ -155,6 +164,7 @@ const AiProviderPanel = () => {
         aigcEnabled: editing.aigcEnabled ?? false,
         aigcConfigJson: cleanAigcConfig,
       } as BakabaseModulesAIModelsInputAiProviderAddInputModel);
+
       if (!r.code) {
         toast.success(t<string>("common.success.saved"));
         onClose();
@@ -170,6 +180,7 @@ const AiProviderPanel = () => {
       destructive: true,
       onConfirm: async () => {
         const r = await BApi.ai.deleteAiProvider(id);
+
         if (!r.code) {
           toast.success(t<string>("common.success.saved"));
           await load();
@@ -184,25 +195,35 @@ const AiProviderPanel = () => {
     setTesting((prev) => new Set([...prev, id]));
     try {
       const r = await BApi.ai.testAiProvider(id);
+
       if (!r.code && r.data) {
         const result = r.data as TestResult;
         const lines: string[] = [];
+
         if (result.llm !== null && result.llm !== undefined) {
-          lines.push(`LLM: ${result.llm ? "✓" : "✗"}${result.llmMessage ? ` (${result.llmMessage})` : ""}`);
+          lines.push(
+            `LLM: ${result.llm ? "✓" : "✗"}${result.llmMessage ? ` (${result.llmMessage})` : ""}`,
+          );
         }
         if (result.aigc !== null && result.aigc !== undefined) {
-          lines.push(`AIGC: ${result.aigc ? "✓" : "✗"}${result.aigcMessage ? ` (${result.aigcMessage})` : ""}`);
+          lines.push(
+            `AIGC: ${result.aigc ? "✓" : "✗"}${result.aigcMessage ? ` (${result.aigcMessage})` : ""}`,
+          );
         }
         const ok = (result.llm ?? true) && (result.aigc ?? true);
         const msg = lines.join("\n") || t<string>("aiProvider.testNoCapability");
-        if (ok) toast.success(msg); else toast.danger(msg);
+
+        if (ok) toast.success(msg);
+        else toast.danger(msg);
       } else {
         toast.danger(t<string>("aiProvider.testFailed"));
       }
     } finally {
       setTesting((prev) => {
         const n = new Set(prev);
+
         n.delete(id);
+
         return n;
       });
     }
@@ -212,6 +233,7 @@ const AiProviderPanel = () => {
     setLoadingModels((prev) => ({ ...prev, [id]: true }));
     try {
       const r = await BApi.ai.getAiProviderLlmModels(id);
+
       if (!r.code && r.data) {
         setProviderModels((prev) => ({ ...prev, [id]: r.data! }));
       } else if (r.message) {
@@ -224,8 +246,10 @@ const AiProviderPanel = () => {
 
   const handleUploadAigcConfig = (file: File) => {
     const reader = new FileReader();
+
     reader.onload = () => {
       const text = reader.result;
+
       if (typeof text !== "string" || !editing) return;
       setEditing({ ...editing, aigcConfigJson: text });
       toast.success(t<string>("aiProvider.aigcConfigUploaded"));
@@ -237,6 +261,7 @@ const AiProviderPanel = () => {
   const handleKindChange = (kind: number) => {
     if (!editing) return;
     const ki = kindInfo(kind);
+
     setEditing({
       ...editing,
       kind: kind as AiProvider["kind"],
@@ -253,24 +278,35 @@ const AiProviderPanel = () => {
 
   const renderProviderRow = (p: AiProvider) => {
     const models = providerModels[p.id];
+
     return (
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2 flex-wrap">
-          <Chip size="sm" variant="flat">{kindLabel(p.kind)}</Chip>
-          <Chip size="sm" color={p.isEnabled ? "success" : "default"} variant="dot">
+          <Chip size="sm" variant="flat">
+            {kindLabel(p.kind)}
+          </Chip>
+          <Chip color={p.isEnabled ? "success" : "default"} size="sm" variant="dot">
             {p.isEnabled ? t<string>("common.enabled") : t<string>("common.disabled")}
           </Chip>
-          {p.llmEnabled && <Chip size="sm" color="primary" variant="flat">LLM</Chip>}
-          {p.aigcEnabled && <Chip size="sm" color="secondary" variant="flat">AIGC</Chip>}
-          {p.endpoint && (
-            <span className="text-xs text-default-400 font-mono">{p.endpoint}</span>
+          {p.llmEnabled && (
+            <Chip color="primary" size="sm" variant="flat">
+              LLM
+            </Chip>
           )}
+          {p.aigcEnabled && (
+            <Chip color="secondary" size="sm" variant="flat">
+              AIGC
+            </Chip>
+          )}
+          {p.endpoint && <span className="text-xs text-default-400 font-mono">{p.endpoint}</span>}
         </div>
 
         {p.llmEnabled && models && models.length > 0 && (
           <div className="flex flex-wrap gap-1">
             {models.map((m) => (
-              <Chip key={m.modelId} size="sm" variant="flat">{m.displayName}</Chip>
+              <Chip key={m.modelId} size="sm" variant="flat">
+                {m.displayName}
+              </Chip>
             ))}
           </div>
         )}
@@ -283,28 +319,30 @@ const AiProviderPanel = () => {
             {t<string>("common.action.edit")}
           </Button>
           <Button
+            isLoading={testing.has(p.id)}
             size="sm"
             variant="flat"
-            isLoading={testing.has(p.id)}
             onPress={() => handleTest(p.id)}
           >
-            {testing.has(p.id) ? t<string>("aiProvider.testing") : t<string>("aiProvider.testConnection")}
+            {testing.has(p.id)
+              ? t<string>("aiProvider.testing")
+              : t<string>("aiProvider.testConnection")}
           </Button>
           {p.llmEnabled && (
             <Button
+              isLoading={loadingModels[p.id]}
               size="sm"
               variant="flat"
-              isLoading={loadingModels[p.id]}
               onPress={() => handleLoadModels(p.id)}
             >
               {t<string>("aiProvider.loadModels")}
             </Button>
           )}
           <Button
-            size="sm"
-            variant="flat"
             color="danger"
+            size="sm"
             startContent={<AiOutlineDelete />}
+            variant="flat"
             onPress={() => handleDelete(p.id)}
           >
             {t<string>("common.action.delete")}
@@ -346,7 +384,7 @@ const AiProviderPanel = () => {
         </TableBody>
       </Table>
 
-      <Modal isOpen={isOpen} onClose={onClose} size="3xl" scrollBehavior="inside">
+      <Modal isOpen={isOpen} scrollBehavior="inside" size="3xl" onClose={onClose}>
         <ModalContent>
           <ModalHeader>
             {isEditMode ? t<string>("aiProvider.edit") : t<string>("aiProvider.add")}
@@ -357,20 +395,21 @@ const AiProviderPanel = () => {
                 {/* Row 1: Kind + Name */}
                 <div className="grid grid-cols-2 gap-3">
                   <Select
-                    label={t<string>("aiProvider.kind")}
-                    size="sm"
                     isRequired
+                    dataSource={kinds.map((k) => ({ label: k.displayName, value: String(k.kind) }))}
+                    label={t<string>("aiProvider.kind")}
                     selectedKeys={editing.kind ? [String(editing.kind)] : []}
+                    size="sm"
                     onSelectionChange={(keys) => {
                       const v = Array.from(keys)[0];
+
                       if (v) handleKindChange(Number(v));
                     }}
-                    dataSource={kinds.map((k) => ({ label: k.displayName, value: String(k.kind) }))}
                   />
                   <Input
+                    isRequired
                     label={t<string>("aiProvider.name")}
                     size="sm"
-                    isRequired
                     value={editing.name ?? ""}
                     onValueChange={(v) => setEditing({ ...editing, name: v })}
                   />
@@ -379,18 +418,18 @@ const AiProviderPanel = () => {
                 {/* Row 2: Endpoint + API Key */}
                 <div className="grid grid-cols-2 gap-3">
                   <Input
-                    label={t<string>("aiProvider.endpoint")}
-                    size="sm"
                     isRequired={editingKi?.requiresEndpoint}
+                    label={t<string>("aiProvider.endpoint")}
                     placeholder={editingKi?.defaultEndpoint ?? ""}
+                    size="sm"
                     value={editing.endpoint ?? ""}
                     onValueChange={(v) => setEditing({ ...editing, endpoint: v })}
                   />
                   <Input
+                    isRequired={editingKi?.requiresApiKey}
                     label={t<string>("aiProvider.apiKey")}
                     size="sm"
                     type="password"
-                    isRequired={editingKi?.requiresApiKey}
                     value={editing.apiKey ?? ""}
                     onValueChange={(v) => setEditing({ ...editing, apiKey: v })}
                   />
@@ -400,17 +439,17 @@ const AiProviderPanel = () => {
                 <div className="flex items-center gap-6">
                   <div className="flex items-center gap-2">
                     <Switch
-                      size="sm"
                       isSelected={editing.isEnabled ?? true}
+                      size="sm"
                       onValueChange={(v) => setEditing({ ...editing, isEnabled: v })}
                     />
                     <span className="text-sm">{t<string>("common.enabled")}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Switch
-                      size="sm"
                       isDisabled={!editingSupportsLlm}
                       isSelected={editing.llmEnabled ?? false}
+                      size="sm"
                       onValueChange={(v) => setEditing({ ...editing, llmEnabled: v })}
                     />
                     <span className="text-sm">{t<string>("aiProvider.useForLlm")}</span>
@@ -422,9 +461,9 @@ const AiProviderPanel = () => {
                   </div>
                   <div className="flex items-center gap-2">
                     <Switch
-                      size="sm"
                       isDisabled={!editingSupportsAigc}
                       isSelected={editing.aigcEnabled ?? false}
+                      size="sm"
                       onValueChange={(v) => setEditing({ ...editing, aigcEnabled: v })}
                     />
                     <span className="text-sm">{t<string>("aiProvider.useForAigc")}</span>
@@ -448,19 +487,20 @@ const AiProviderPanel = () => {
                       </div>
                       <Button
                         size="sm"
-                        variant="flat"
                         startContent={<AiOutlineUpload />}
+                        variant="flat"
                         onPress={() => aigcFileInputRef.current?.click()}
                       >
                         {t<string>("aiProvider.uploadJson")}
                       </Button>
                       <input
                         ref={aigcFileInputRef}
-                        type="file"
                         accept="application/json,.json"
                         className="hidden"
+                        type="file"
                         onChange={(e) => {
                           const f = e.target.files?.[0];
+
                           if (f) handleUploadAigcConfig(f);
                           e.target.value = "";
                         }}
@@ -468,10 +508,10 @@ const AiProviderPanel = () => {
                     </div>
                     <JsonEditor
                       key={`aigc-config-${editing.kind ?? 0}-${editing.id ?? "new"}`}
+                      sampleBody={aigcSample?.body}
+                      sampleHeader={aigcSample?.header}
                       value={editing.aigcConfigJson ?? ""}
                       onChange={(v) => setEditing({ ...editing, aigcConfigJson: v })}
-                      sampleHeader={aigcSample?.header}
-                      sampleBody={aigcSample?.body}
                     />
                   </div>
                 )}

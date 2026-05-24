@@ -1,5 +1,12 @@
 "use client";
 
+import type {
+  BakabaseModulesAIModelsDbAigcArtifactDbModel,
+  BakabaseModulesAIModelsDbAigcGenerationRunDbModel,
+  BakabaseModulesAIModelsDbAigcGeneratorDbModel,
+  BakabaseModulesAIModelsDomainAigcGeneratorView,
+} from "@/sdk/Api";
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -21,24 +28,18 @@ import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContext
 import ConfirmModal from "@/components/ConfirmModal";
 import { selectTasks, useBTasksStore } from "@/stores/bTasks";
 import BApi from "@/sdk/BApi";
-import type {
-  BakabaseModulesAIModelsDbAigcArtifactDbModel,
-  BakabaseModulesAIModelsDbAigcGenerationRunDbModel,
-  BakabaseModulesAIModelsDbAigcGeneratorDbModel,
-  BakabaseModulesAIModelsDomainAigcGeneratorView,
-} from "@/sdk/Api";
 
 type Run = BakabaseModulesAIModelsDbAigcGenerationRunDbModel;
 type Artifact = BakabaseModulesAIModelsDbAigcArtifactDbModel;
 type Generator = BakabaseModulesAIModelsDbAigcGeneratorDbModel;
 
 const STATUS_COLORS: Record<number, "default" | "primary" | "success" | "danger" | "warning"> = {
-  1: "default",   // Pending
-  2: "primary",   // Running
-  3: "success",   // Succeeded
-  4: "danger",    // Failed
-  5: "warning",   // Imported
-  6: "default",   // Cancelled
+  1: "default", // Pending
+  2: "primary", // Running
+  3: "success", // Succeeded
+  4: "danger", // Failed
+  5: "warning", // Imported
+  6: "default", // Cancelled
 };
 
 const RUN_STATUS_PENDING = 1;
@@ -61,9 +62,12 @@ const AigcRecordsPage = () => {
       BApi.aigc.getAigcRuns({ generatorId: filterGeneratorId ?? undefined } as any),
       BApi.aigc.getAllAigcGenerators(),
     ]);
+
     if (!rr.code && rr.data) setRuns(rr.data);
     if (!gr.code && gr.data) {
-      setGenerators(gr.data.map((v: BakabaseModulesAIModelsDomainAigcGeneratorView) => v.generator));
+      setGenerators(
+        gr.data.map((v: BakabaseModulesAIModelsDomainAigcGeneratorView) => v.generator),
+      );
     }
   }, [filterGeneratorId]);
 
@@ -87,6 +91,7 @@ const AigcRecordsPage = () => {
         .join("|"),
     [bTasks],
   );
+
   useEffect(() => {
     // Skip the initial-empty render so we don't double-fire alongside the mount load above.
     if (!aigcBTaskFingerprint) return;
@@ -96,6 +101,7 @@ const AigcRecordsPage = () => {
   const loadArtifacts = async (runId: number) => {
     if (artifactsByRun[runId]) return;
     const r = await BApi.aigc.getAigcArtifacts({ runId } as any);
+
     if (!r.code && r.data) {
       setArtifactsByRun((prev) => ({ ...prev, [runId]: r.data! }));
     }
@@ -106,11 +112,14 @@ const AigcRecordsPage = () => {
 
   const handleDeleteRun = async (id: number) => {
     const r = await BApi.aigc.deleteAigcRun(id);
+
     if (!r.code) {
       toast.success(t<string>("common.success.saved"));
       setArtifactsByRun((prev) => {
         const n = { ...prev };
+
         delete n[id];
+
         return n;
       });
       await load();
@@ -121,6 +130,7 @@ const AigcRecordsPage = () => {
 
   const handleStopRun = async (id: number) => {
     const r = await BApi.aigc.stopAigcRun(id);
+
     if (!r.code) {
       toast.success(t<string>("aigc.records.stopRequested"));
       await load();
@@ -136,11 +146,14 @@ const AigcRecordsPage = () => {
       destructive: true,
       onConfirm: async () => {
         const r = await BApi.aigc.deleteAigcArtifact(artifactId);
+
         if (!r.code) {
           toast.success(t<string>("common.success.saved"));
           setArtifactsByRun((prev) => {
             const n = { ...prev };
+
             delete n[runId];
+
             return n;
           });
           await load();
@@ -157,17 +170,18 @@ const AigcRecordsPage = () => {
         <h1 className="text-xl font-semibold">{t<string>("aigc.records.title")}</h1>
         <div className="w-64">
           <Select
-            label={t<string>("aigc.records.filterByConfig")}
-            size="sm"
-            selectedKeys={filterGeneratorId ? [String(filterGeneratorId)] : []}
-            onSelectionChange={(keys) => {
-              const v = Array.from(keys)[0];
-              setFilterGeneratorId(v ? Number(v) : null);
-            }}
             dataSource={[
               { label: t<string>("aigc.records.allConfigs"), value: "" },
               ...generators.map((g) => ({ label: g.name, value: String(g.id) })),
             ]}
+            label={t<string>("aigc.records.filterByConfig")}
+            selectedKeys={filterGeneratorId ? [String(filterGeneratorId)] : []}
+            size="sm"
+            onSelectionChange={(keys) => {
+              const v = Array.from(keys)[0];
+
+              setFilterGeneratorId(v ? Number(v) : null);
+            }}
           />
         </div>
       </div>
@@ -177,11 +191,13 @@ const AigcRecordsPage = () => {
         onSelectionChange={(keys) => {
           if (keys === "all") return;
           const set = keys as Set<string>;
+
           set.forEach((k) => loadArtifacts(Number(k)));
         }}
       >
         {runs.map((r) => {
           const arts = artifactsByRun[r.id] ?? [];
+
           return (
             <AccordionItem
               key={r.id}
@@ -190,31 +206,41 @@ const AigcRecordsPage = () => {
                 <div className="flex items-center gap-3 flex-wrap">
                   <span className="font-mono">#{r.id}</span>
                   {/* Inline actions. Wrapper stops propagation so clicks don't toggle the accordion. */}
-                  <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                  <div
+                    className="flex items-center gap-1"
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.stopPropagation();
+                      }
+                    }}
+                  >
                     {isStoppable(r.status) && (
                       <Button
-                        size="sm"
                         isIconOnly
-                        variant="light"
                         color="warning"
+                        size="sm"
                         title={t<string>("aigc.records.stopRun")}
+                        variant="light"
                         onPress={() => handleStopRun(r.id)}
                       >
                         <AiOutlineStop className="text-lg" />
                       </Button>
                     )}
                     <Button
-                      size="sm"
                       isIconOnly
-                      variant="light"
                       color="danger"
+                      size="sm"
                       title={t<string>("aigc.records.deleteRun")}
+                      variant="light"
                       onPress={() => handleDeleteRun(r.id)}
                     >
                       <AiOutlineDelete className="text-lg" />
                     </Button>
                   </div>
-                  <Chip size="sm" color={STATUS_COLORS[r.status] ?? "default"} variant="dot">
+                  <Chip color={STATUS_COLORS[r.status] ?? "default"} size="sm" variant="dot">
                     {tStatus(r.status)}
                   </Chip>
                   <span className="text-sm text-default-500">{generatorName(r.generatorId)}</span>
@@ -252,12 +278,13 @@ const AigcRecordsPage = () => {
                         <TableCell>
                           <div className="flex items-center gap-1">
                             <Button
-                              size="sm"
                               isIconOnly
-                              variant="light"
+                              size="sm"
                               title={t<string>("aigc.records.openArtifact")}
+                              variant="light"
                               onPress={async () => {
                                 const rsp = await BApi.aigc.openAigcArtifact(a.id);
+
                                 if (rsp.code) toast.danger(rsp.message || String(rsp.code));
                               }}
                             >
@@ -269,10 +296,10 @@ const AigcRecordsPage = () => {
                         <TableCell>{a.resourceId ? `#${a.resourceId}` : "-"}</TableCell>
                         <TableCell>
                           <Button
-                            size="sm"
-                            variant="flat"
                             color="danger"
+                            size="sm"
                             startContent={<AiOutlineDelete />}
+                            variant="flat"
                             onPress={() => handleDeleteArtifact(r.id, a.id)}
                           >
                             {t<string>("common.action.delete")}

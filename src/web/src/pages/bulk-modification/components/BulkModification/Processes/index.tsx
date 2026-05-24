@@ -11,7 +11,17 @@ import { DeleteOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
 
 import StepDemonstrator from "../StepDemonstrator";
 
-import { Button, Card, CardBody, CardHeader, Checkbox, Chip, Divider, Modal, Switch } from "@/components/bakaui";
+import {
+  Button,
+  Card,
+  CardBody,
+  CardHeader,
+  Checkbox,
+  Chip,
+  Divider,
+  Modal,
+  Switch,
+} from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import ProcessModal from "@/pages/bulk-modification/components/BulkModification/ProcessModal";
 
@@ -24,7 +34,14 @@ type Props = {
   onDeleteResourcesChange?: (deleteResources: boolean, deleteFiles: boolean) => void;
 };
 
-const Processes = ({ processes: propsProcesses, onChange, variables, deleteResources, deleteFiles, onDeleteResourcesChange }: Props) => {
+const Processes = ({
+  processes: propsProcesses,
+  onChange,
+  variables,
+  deleteResources,
+  deleteFiles,
+  onDeleteResourcesChange,
+}: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
@@ -147,13 +164,15 @@ const Processes = ({ processes: propsProcesses, onChange, variables, deleteResou
       <div className={"flex flex-col gap-2"}>
         <div className={"flex items-center gap-2"}>
           <Switch
-            size="sm"
             isSelected={deleteResources ?? false}
+            size="sm"
             onValueChange={(v) => {
               onDeleteResourcesChange?.(v, deleteFiles ?? false);
             }}
           >
-            <span className={"text-sm font-medium text-danger"}>{t<string>("bulkModification.process.deleteResources")}</span>
+            <span className={"text-sm font-medium text-danger"}>
+              {t<string>("bulkModification.process.deleteResources")}
+            </span>
           </Switch>
         </div>
         {deleteResources && (
@@ -162,14 +181,18 @@ const Processes = ({ processes: propsProcesses, onChange, variables, deleteResou
               {t<string>("bulkModification.process.deleteResources.description")}
             </p>
             {!deleteFiles && (
-              <div className={"flex items-start gap-2 p-2 rounded bg-warning-50 text-warning-700 text-sm"}>
+              <div
+                className={
+                  "flex items-start gap-2 p-2 rounded bg-warning-50 text-warning-700 text-sm"
+                }
+              >
                 <ExclamationCircleOutlined className={"text-base mt-0.5 shrink-0"} />
                 <span>{t<string>("bulkModification.process.deleteDataOnlyWarning")}</span>
               </div>
             )}
             <Checkbox
-              size="sm"
               isSelected={deleteFiles ?? false}
+              size="sm"
               onValueChange={(v) => {
                 onDeleteResourcesChange?.(true, v);
               }}

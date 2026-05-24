@@ -8,6 +8,7 @@ import type {
   BakabaseServiceModelsInputFileSystemEntryGroupStrategyType,
   BakabaseServiceModelsInputFileSystemEntryGroupAffixDirection,
 } from "@/sdk/Api";
+import type { FileChangeBatch } from "@/components/FileChangePreview";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -15,9 +16,7 @@ import { Slider, Tab, Tabs } from "@heroui/react";
 
 import BApi from "@/sdk/BApi";
 import { Button, Modal, Input, Radio, RadioGroup } from "@/components/bakaui";
-import FileChangePreview, {
-  FileChangeBatch,
-} from "@/components/FileChangePreview";
+import FileChangePreview from "@/components/FileChangePreview";
 
 const KEY_EXTRACTION_PRESETS: { labelKey: string; regex: string }[] = [
   {
@@ -106,12 +105,13 @@ const GroupModal = ({ entries = [], groupInternal, onDestroyed }: Props) => {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const buildModel = (): BakabaseServiceModelsInputFileSystemEntryGroupInputModel => ({
-    ...(buildBaseModel(entries, groupInternal) as BakabaseServiceModelsInputFileSystemEntryGroupInputModel),
+    ...(buildBaseModel(
+      entries,
+      groupInternal,
+    ) as BakabaseServiceModelsInputFileSystemEntryGroupInputModel),
     strategyType: strategyType as BakabaseServiceModelsInputFileSystemEntryGroupStrategyType,
     similarityThreshold:
-      breakpoints.length > 0
-        ? breakpoints[Math.min(similarityIndex, breakpoints.length - 1)]
-        : 1,
+      breakpoints.length > 0 ? breakpoints[Math.min(similarityIndex, breakpoints.length - 1)] : 1,
     keyExtractionRegex: keyRegex || undefined,
     affixDirection: affixDirection as BakabaseServiceModelsInputFileSystemEntryGroupAffixDirection,
     affixMinLength,
@@ -120,11 +120,15 @@ const GroupModal = ({ entries = [], groupInternal, onDestroyed }: Props) => {
   useEffect(() => {
     BApi.file
       .getFileSystemEntriesGroupSimilarityBreakpoints(
-        buildBaseModel(entries, groupInternal) as BakabaseServiceModelsInputFileSystemEntryGroupInputModel,
+        buildBaseModel(
+          entries,
+          groupInternal,
+        ) as BakabaseServiceModelsInputFileSystemEntryGroupInputModel,
       )
       .then((r) => {
         const bps = (r.data ?? [0, 1]).map((d) => Number(d)).sort((a, b) => a - b);
         const dedupedClustered: number[] = [];
+
         for (const v of bps) {
           if (
             dedupedClustered.length === 0 ||
@@ -152,6 +156,7 @@ const GroupModal = ({ entries = [], groupInternal, onDestroyed }: Props) => {
         setRegexError(t<string>("fileExplorer.groupModal.keyExtraction.invalidRegex"));
         setPreview([]);
         setCalculating(false);
+
         return;
       }
     } else {
@@ -169,14 +174,7 @@ const GroupModal = ({ entries = [], groupInternal, onDestroyed }: Props) => {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [
-    strategyType,
-    similarityIndex,
-    breakpoints,
-    keyRegex,
-    affixDirection,
-    affixMinLength,
-  ]);
+  }, [strategyType, similarityIndex, breakpoints, keyRegex, affixDirection, affixMinLength]);
 
   const batches = useMemo(() => mapToBatches(preview), [preview]);
 
@@ -215,9 +213,7 @@ const GroupModal = ({ entries = [], groupInternal, onDestroyed }: Props) => {
       }}
       size={"2xl"}
       title={t<string>(
-        groupInternal
-          ? "fileExplorer.groupModal.titleInternal"
-          : "fileExplorer.groupModal.title",
+        groupInternal ? "fileExplorer.groupModal.titleInternal" : "fileExplorer.groupModal.title",
         { count: entries.length },
       )}
       onDestroyed={onDestroyed}
@@ -228,10 +224,10 @@ const GroupModal = ({ entries = [], groupInternal, onDestroyed }: Props) => {
       <div className="flex gap-4 items-start h-full">
         <div className="w-[360px] flex-shrink-0 flex flex-col gap-3">
           <Tabs
-            selectedKey={String(strategyType)}
-            onSelectionChange={(k) => setStrategyType(Number(k))}
-            size="sm"
             fullWidth
+            selectedKey={String(strategyType)}
+            size="sm"
+            onSelectionChange={(k) => setStrategyType(Number(k))}
           >
             <Tab
               key={String(StrategyType.Similarity)}
@@ -246,26 +242,22 @@ const GroupModal = ({ entries = [], groupInternal, onDestroyed }: Props) => {
               title={t<string>("fileExplorer.groupModal.mode.affixShort")}
             />
           </Tabs>
-          <p className="text-xs opacity-70 leading-relaxed">
-            {t<string>(modeDescriptionKey)}
-          </p>
+          <p className="text-xs opacity-70 leading-relaxed">{t<string>(modeDescriptionKey)}</p>
 
           {strategyType === StrategyType.Similarity && (
             <div className="flex flex-col gap-1">
               <Slider
                 isDisabled={calculating || breakpoints.length <= 1}
-                minValue={0}
+                label={t<string>("fileExplorer.groupModal.similarityThreshold")}
                 maxValue={Math.max(0, breakpoints.length - 1)}
-                step={1}
+                minValue={0}
+                renderValue={() => `${currentSimilarityPercent}%`}
                 size="sm"
+                step={1}
                 value={similarityIndex}
                 onChange={(v) => setSimilarityIndex(Array.isArray(v) ? v[0] : v)}
-                renderValue={() => `${currentSimilarityPercent}%`}
-                label={t<string>("fileExplorer.groupModal.similarityThreshold")}
               />
-              <span className="text-xs opacity-60 leading-relaxed">
-                {similarityHint}
-              </span>
+              <span className="text-xs opacity-60 leading-relaxed">{similarityHint}</span>
               {breakpoints.length > 2 && (
                 <span className="text-xs opacity-50">
                   {t<string>("fileExplorer.groupModal.snapToBreakpoint", {
@@ -294,14 +286,14 @@ const GroupModal = ({ entries = [], groupInternal, onDestroyed }: Props) => {
                 ))}
               </div>
               <Input
+                description={t<string>("fileExplorer.groupModal.keyExtraction.regexDesc")}
+                errorMessage={regexError}
+                isInvalid={!!regexError}
+                label={t<string>("fileExplorer.groupModal.keyExtraction.regexLabel")}
+                placeholder={t<string>("fileExplorer.groupModal.keyExtraction.regexPlaceholder")}
                 size="sm"
                 value={keyRegex}
-                placeholder={t<string>("fileExplorer.groupModal.keyExtraction.regexPlaceholder")}
                 onValueChange={setKeyRegex}
-                label={t<string>("fileExplorer.groupModal.keyExtraction.regexLabel")}
-                description={t<string>("fileExplorer.groupModal.keyExtraction.regexDesc")}
-                isInvalid={!!regexError}
-                errorMessage={regexError}
               />
             </div>
           )}
@@ -309,9 +301,9 @@ const GroupModal = ({ entries = [], groupInternal, onDestroyed }: Props) => {
           {strategyType === StrategyType.Affix && (
             <div className="flex flex-col gap-3">
               <RadioGroup
-                size="sm"
-                orientation="horizontal"
                 label={t<string>("fileExplorer.groupModal.affix.direction")}
+                orientation="horizontal"
+                size="sm"
                 value={String(affixDirection)}
                 onValueChange={(v) => setAffixDirection(Number(v))}
               >
@@ -326,16 +318,17 @@ const GroupModal = ({ entries = [], groupInternal, onDestroyed }: Props) => {
                 </Radio>
               </RadioGroup>
               <Input
+                className="max-w-[160px]"
+                label={t<string>("fileExplorer.groupModal.affix.minLength")}
+                min={1}
                 size="sm"
                 type="number"
-                min={1}
                 value={String(affixMinLength)}
                 onValueChange={(v) => {
                   const n = Number(v);
+
                   if (!Number.isNaN(n) && n >= 1) setAffixMinLength(n);
                 }}
-                label={t<string>("fileExplorer.groupModal.affix.minLength")}
-                className="max-w-[160px]"
               />
             </div>
           )}
@@ -344,8 +337,8 @@ const GroupModal = ({ entries = [], groupInternal, onDestroyed }: Props) => {
         <div className="flex-1 min-w-0 h-full">
           <FileChangePreview
             batches={batches}
-            isLoading={calculating}
             className="h-full max-h-full"
+            isLoading={calculating}
           />
         </div>
       </div>

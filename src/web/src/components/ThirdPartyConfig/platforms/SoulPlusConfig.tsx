@@ -1,19 +1,22 @@
 "use client";
 
+import type { BakabaseModulesThirdPartyHelpersTlsPresetInfo } from "@/sdk/Api";
+
 import { useEffect, useMemo, useState, type FC } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, Input, Select, SelectItem } from "@heroui/react";
+
+import AccountsPanel, { type AccountField } from "../base/AccountsPanel";
+import ConfigurableThirdPartyPanel, {
+  type ConfigFieldTab,
+} from "../base/ConfigurableThirdPartyPanel";
+import ThirdPartyConfigModal from "../base/ThirdPartyConfigModal";
+import TampermonkeyInstallButton from "../base/TampermonkeyInstallButton";
 
 import { toast } from "@/components/bakaui";
 import { CookieValidatorTarget } from "@/sdk/constants";
 import { useSoulPlusOptionsStore } from "@/stores/options";
 import BApi from "@/sdk/BApi";
-import type { BakabaseModulesThirdPartyHelpersTlsPresetInfo } from "@/sdk/Api";
-
-import AccountsPanel, { type AccountField } from "../base/AccountsPanel";
-import ConfigurableThirdPartyPanel, { type ConfigFieldTab } from "../base/ConfigurableThirdPartyPanel";
-import ThirdPartyConfigModal from "../base/ThirdPartyConfigModal";
-import TampermonkeyInstallButton from "../base/TampermonkeyInstallButton";
 
 export enum SoulPlusConfigField {
   Accounts = "accounts",
@@ -91,8 +94,6 @@ export const SoulPlusConfigPanel: FC<SoulPlusConfigPanelProps> = ({ fields = "al
         content: (
           <AccountsPanel
             accounts={options?.accounts || []}
-            fields={accountFields}
-            onSave={saveAccounts}
             customFieldRenderers={{
               tlsPreset: (account, index, updateAccount) => (
                 <div>
@@ -103,6 +104,7 @@ export const SoulPlusConfigPanel: FC<SoulPlusConfigPanelProps> = ({ fields = "al
                     size="sm"
                     onSelectionChange={(keys) => {
                       const selected = Array.from(keys)[0] as string;
+
                       if (selected) {
                         updateAccount(index, "tlsPreset", selected);
                       }
@@ -118,6 +120,8 @@ export const SoulPlusConfigPanel: FC<SoulPlusConfigPanelProps> = ({ fields = "al
                 </div>
               ),
             }}
+            fields={accountFields}
+            onSave={saveAccounts}
           />
         ),
       },
@@ -164,14 +168,21 @@ export interface SoulPlusConfigModalProps {
   fields?: SoulPlusConfigField[] | "all";
 }
 
-export const SoulPlusConfigModal: FC<SoulPlusConfigModalProps> = ({ onDestroyed, onClose, isOpen, fields }) => {
+export const SoulPlusConfigModal: FC<SoulPlusConfigModalProps> = ({
+  onDestroyed,
+  onClose,
+  isOpen,
+  fields,
+}) => {
   const handleClose = onClose ?? onDestroyed;
+
   return (
-    <ThirdPartyConfigModal title="SoulPlus" isOpen={isOpen} onClose={handleClose}>
+    <ThirdPartyConfigModal isOpen={isOpen} title="SoulPlus" onClose={handleClose}>
       <SoulPlusConfigPanel fields={fields} />
     </ThirdPartyConfigModal>
   );
 };
 
 const SoulPlusConfig = SoulPlusConfigModal;
+
 export default SoulPlusConfig;

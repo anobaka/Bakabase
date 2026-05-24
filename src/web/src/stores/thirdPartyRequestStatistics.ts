@@ -11,9 +11,10 @@ interface ThirdPartyRequestStatisticsState {
   updateStatistics: (statistics: ThirdPartyRequestStatistics[]) => void;
 }
 
-export const useThirdPartyRequestStatisticsStore =
-  create<ThirdPartyRequestStatisticsState>((set) => ({
+export const useThirdPartyRequestStatisticsStore = create<ThirdPartyRequestStatisticsState>(
+  (set) => ({
     statistics: [],
     setStatistics: (statistics) => set({ statistics: statistics.slice() }),
     updateStatistics: (statistics) => set({ statistics: statistics.slice() }),
-  }));
+  }),
+);

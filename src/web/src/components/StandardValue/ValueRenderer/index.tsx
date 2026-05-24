@@ -69,9 +69,13 @@ const StandardValueRenderer = (props: Props) => {
     case StandardValueType.Boolean:
       return <BooleanValueRenderer value={value as boolean} variant={variant} />;
     case StandardValueType.DateTime: {
-      const dayjsValue: Dayjs | undefined = value == undefined ? undefined
-        : dj.isDayjs(value) ? value
-        : dj(typeof value === 'string' || typeof value === 'number' ? value : undefined);
+      const dayjsValue: Dayjs | undefined =
+        value == undefined
+          ? undefined
+          : dj.isDayjs(value)
+            ? value
+            : dj(typeof value === "string" || typeof value === "number" ? value : undefined);
+
       return (
         <DateTimeValueRenderer
           as={

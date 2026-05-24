@@ -119,6 +119,18 @@ const Properties = (props: Props) => {
     }
   }, []);
 
+  const uiOptionsStore = useUiOptionsStore();
+
+  const preferenceMap = React.useMemo(() => {
+    const map = new Map<string, NonNullable<Resource["scopePreferences"]>[number]>();
+
+    for (const p of resource.scopePreferences ?? []) {
+      map.set(`${p.propertyPool}-${p.propertyId}`, p);
+    }
+
+    return map;
+  }, [resource.scopePreferences]);
+
   if (!cps || Object.keys(cps).length == 0) {
     return (
       <div className={"opacity-60"}>
@@ -126,8 +138,6 @@ const Properties = (props: Props) => {
       </div>
     );
   }
-
-  const uiOptionsStore = useUiOptionsStore();
 
   const onValueChange = async (propertyId: number, isCustomProperty: boolean, value?: string) => {
     await BApi.resource.putResourcePropertyValue(resource.id, {
@@ -139,6 +149,7 @@ const Properties = (props: Props) => {
 
     // Auto-add to quick-set context menu config if enabled
     const resourceUiOptions = uiOptionsStore.data?.resource;
+
     if (resourceUiOptions?.autoAddRecentPropertyValues && value) {
       const pool = isCustomProperty ? PropertyPool.Custom : PropertyPool.Reserved;
       const items = [...(resourceUiOptions.customContextMenuItems ?? [])];
@@ -154,6 +165,7 @@ const Properties = (props: Props) => {
         // Property exists, add value if not already present
         const existing = items[itemIndex];
         const presets = existing.presetValues ?? [];
+
         if (!presets.includes(value)) {
           items[itemIndex] = { ...existing, presetValues: [...presets, value] };
         } else {
@@ -219,16 +231,6 @@ const Properties = (props: Props) => {
     return renderContext.sort((a, b) => a.order - b.order);
   };
 
-  const preferenceMap = React.useMemo(() => {
-    const map = new Map<string, NonNullable<Resource["scopePreferences"]>[number]>();
-
-    for (const p of resource.scopePreferences ?? []) {
-      map.set(`${p.propertyPool}-${p.propertyId}`, p);
-    }
-
-    return map;
-  }, [resource.scopePreferences]);
-
   const renderProperty = (pCtx: PropertyRenderContext) => {
     const { property, propertyValues, propertyPool } = pCtx;
     const preference = preferenceMap.get(`${propertyPool}-${property.id}`);
@@ -287,11 +289,9 @@ const Properties = (props: Props) => {
     <div>
       {propertyInnerDirection == "hoz" ? (
         <>
-          <Masonry columns={columns} className={`${className} overflow-visible`}>
+          <Masonry className={`${className} overflow-visible`} columns={columns}>
             {visibleProperties.map((pCtx) => (
-              <div key={`${pCtx.propertyPool}-${pCtx.property.id}`}>
-                {renderProperty(pCtx)}
-              </div>
+              <div key={`${pCtx.propertyPool}-${pCtx.property.id}`}>{renderProperty(pCtx)}</div>
             ))}
           </Masonry>
           {invisibleProperties.length > 0 && (
@@ -303,11 +303,9 @@ const Properties = (props: Props) => {
                 </span>
                 <Divider className="flex-1" />
               </div>
-              <Masonry columns={columns} className={`${className} overflow-visible`}>
+              <Masonry className={`${className} overflow-visible`} columns={columns}>
                 {invisibleProperties.map((pCtx) => (
-                  <div key={`${pCtx.propertyPool}-${pCtx.property.id}`}>
-                    {renderProperty(pCtx)}
-                  </div>
+                  <div key={`${pCtx.propertyPool}-${pCtx.property.id}`}>{renderProperty(pCtx)}</div>
                 ))}
               </Masonry>
             </>
@@ -316,7 +314,9 @@ const Properties = (props: Props) => {
       ) : (
         <div className={"flex flex-col gap-4"}>
           {visibleProperties.map((pCtx) => (
-            <div key={`${pCtx.propertyPool}-${pCtx.property.id}`} className={"flex flex-col gap-2"}>{renderProperty(pCtx)}</div>
+            <div key={`${pCtx.propertyPool}-${pCtx.property.id}`} className={"flex flex-col gap-2"}>
+              {renderProperty(pCtx)}
+            </div>
           ))}
           {invisibleProperties.length > 0 && (
             <>
@@ -328,7 +328,12 @@ const Properties = (props: Props) => {
                 <Divider className="flex-1" />
               </div>
               {invisibleProperties.map((pCtx) => (
-                <div key={`${pCtx.propertyPool}-${pCtx.property.id}`} className={"flex flex-col gap-2"}>{renderProperty(pCtx)}</div>
+                <div
+                  key={`${pCtx.propertyPool}-${pCtx.property.id}`}
+                  className={"flex flex-col gap-2"}
+                >
+                  {renderProperty(pCtx)}
+                </div>
               ))}
             </>
           )}

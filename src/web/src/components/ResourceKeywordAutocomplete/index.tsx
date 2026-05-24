@@ -77,7 +77,7 @@ export default function ResourceKeywordAutocomplete({
     }
   };
 
-  console.log(autocompleteProps)
+  console.log(autocompleteProps);
 
   return (
     <Autocomplete

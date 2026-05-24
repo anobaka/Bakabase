@@ -13,15 +13,8 @@ interface DatePickerProps
   defaultValue?: Dayjs;
   onChange?: (value: Dayjs) => void;
 }
-const DatePicker = ({
-  value,
-  onChange,
-  defaultValue,
-  ...props
-}: DatePickerProps) => {
-  const dv = defaultValue
-    ? parseDateTime(defaultValue.toISOString())
-    : undefined;
+const DatePicker = ({ value, onChange, defaultValue, ...props }: DatePickerProps) => {
+  const dv = defaultValue ? parseDateTime(defaultValue.toISOString()) : undefined;
   const v = value ? parseDateTime(value.toISOString()) : undefined;
 
   return (

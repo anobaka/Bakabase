@@ -24,12 +24,16 @@ const Masonry: React.FC<Props> = ({
 
   // Distribute items round-robin across columns for row-first ordering
   const columnItems: React.ReactNode[][] = Array.from({ length: columns }, () => []);
+
   items.forEach((item, i) => {
     columnItems[i % columns].push(item);
   });
 
   return (
-    <div className={className} style={{ display: "flex", gap: columnGap, alignItems: "flex-start" }}>
+    <div
+      className={className}
+      style={{ display: "flex", gap: columnGap, alignItems: "flex-start" }}
+    >
       {columnItems.map((colItems, colIndex) => (
         <div
           key={colIndex}

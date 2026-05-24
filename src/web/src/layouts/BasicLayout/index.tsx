@@ -18,11 +18,7 @@ import { Modal } from "@/components/bakaui";
 
 const log = buildLogger("BasicLayout");
 
-export default function BasicLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function BasicLayout({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const navigate = useNavigate();

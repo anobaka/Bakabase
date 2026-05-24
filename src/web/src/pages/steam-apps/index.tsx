@@ -27,14 +27,14 @@ import {
   AiOutlineReload,
 } from "react-icons/ai";
 
-import BApi from "@/sdk/BApi";
+import SteamTable from "./components/SteamTable";
 
+import BApi from "@/sdk/BApi";
 import { useSteamOptionsStore } from "@/stores/options";
 import { SteamConfig } from "@/components/ThirdPartyConfig";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { useBTasksStore } from "@/stores/bTasks";
 import { BTaskStatus } from "@/sdk/constants";
-import SteamTable from "./components/SteamTable";
 
 export interface SteamApp {
   id: number;
@@ -86,6 +86,7 @@ export default function SteamAppsPage() {
         pageIndex: pageNum,
         pageSize: ps,
       });
+
       if (!rsp.code) {
         setApps(rsp.data || []);
         setTotalCount(rsp.totalCount ?? 0);
@@ -100,7 +101,10 @@ export default function SteamAppsPage() {
   }, [page, pageSize, searchKeyword]);
 
   useEffect(() => {
-    if (prevSyncStatusRef.current === BTaskStatus.Running && syncTask?.status === BTaskStatus.Completed) {
+    if (
+      prevSyncStatusRef.current === BTaskStatus.Running &&
+      syncTask?.status === BTaskStatus.Completed
+    ) {
       loadApps(page, pageSize, searchKeyword);
     }
     prevSyncStatusRef.current = syncTask?.status;
@@ -137,12 +141,14 @@ export default function SteamAppsPage() {
   };
 
   const formatPlaytime = (minutes: number) => {
-    const hours = Math.round(minutes / 60 * 10) / 10;
+    const hours = Math.round((minutes / 60) * 10) / 10;
+
     return t("resourceSource.steam.playtimeHours", { hours });
   };
 
   const formatDate = (unixTs: number) => {
     if (!unixTs) return "-";
+
     return new Date(unixTs * 1000).toLocaleDateString();
   };
 
@@ -150,12 +156,8 @@ export default function SteamAppsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">
-            {t("resourceSource.steam.title")}
-          </h1>
-          <p className="text-default-500 mt-1">
-            {t("resourceSource.steam.description")}
-          </p>
+          <h1 className="text-2xl font-bold">{t("resourceSource.steam.title")}</h1>
+          <p className="text-default-500 mt-1">{t("resourceSource.steam.description")}</p>
         </div>
         <div className="flex gap-2 items-center">
           {isSyncing ? (
@@ -206,18 +208,11 @@ export default function SteamAppsPage() {
         </div>
       </div>
 
-
-
-
       {!isConfigured && apps.length === 0 && !loading && (
         <div className="flex flex-col items-center justify-center py-16 gap-4 text-default-500">
           <p className="text-lg font-medium">{t("resourceSource.notConfigured.title")}</p>
           <p>{t("resourceSource.notConfigured.description", { platform: "Steam" })}</p>
-          <Button
-            color="primary"
-            size="sm"
-            onPress={() => createPortal(SteamConfig, {})}
-          >
+          <Button color="primary" size="sm" onPress={() => createPortal(SteamConfig, {})}>
             {t("resourceSource.notConfigured.goToConfigure")}
           </Button>
         </div>
@@ -233,8 +228,8 @@ export default function SteamAppsPage() {
                 size="sm"
                 startContent={<AiOutlineSearch />}
                 value={keyword}
-                onValueChange={setKeyword}
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                onValueChange={setKeyword}
               />
               <Chip size="sm" variant="flat">
                 {t("resourceSource.pagination.total", { total: totalCount })}
@@ -251,13 +246,16 @@ export default function SteamAppsPage() {
                 </span>
               </Switch>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-default-500 whitespace-nowrap">{t("resourceSource.pagination.pageSize")}</span>
+                <span className="text-sm text-default-500 whitespace-nowrap">
+                  {t("resourceSource.pagination.pageSize")}
+                </span>
                 <Select
-                  size="sm"
                   className="w-20"
                   selectedKeys={[String(pageSize)]}
+                  size="sm"
                   onSelectionChange={(keys) => {
                     const val = Number(Array.from(keys)[0]);
+
                     if (val) {
                       setPageSize(val);
                       setPage(1);
@@ -279,21 +277,17 @@ export default function SteamAppsPage() {
           ) : (
             <SteamTable
               apps={apps}
+              formatDate={formatDate}
+              formatPlaytime={formatPlaytime}
               showCover={showCover}
               onLaunch={handleLaunch}
               onOpenLocal={handleOpenLocal}
-              formatPlaytime={formatPlaytime}
-              formatDate={formatDate}
             />
           )}
 
           {totalPages > 1 && (
             <div className="flex justify-center">
-              <Pagination
-                page={page}
-                total={totalPages}
-                onChange={setPage}
-              />
+              <Pagination page={page} total={totalPages} onChange={setPage} />
             </div>
           )}
         </>
@@ -305,10 +299,7 @@ export default function SteamAppsPage() {
           <ModalBody>
             <p>{t("resourceSource.confirm.sync.description")}</p>
             <div>
-              <Checkbox
-                isSelected={refetchMetadata}
-                onValueChange={setRefetchMetadata}
-              >
+              <Checkbox isSelected={refetchMetadata} onValueChange={setRefetchMetadata}>
                 {t("resourceSource.confirm.sync.refetchMetadata")}
               </Checkbox>
               <p className="text-xs text-default-400 ml-7 mt-1">

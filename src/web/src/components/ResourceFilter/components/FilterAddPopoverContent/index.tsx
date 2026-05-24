@@ -5,12 +5,12 @@ import type { ResourceTag } from "@/sdk/constants";
 
 import { useTranslation } from "react-i18next";
 import { AppstoreOutlined, FilterOutlined } from "@ant-design/icons";
+import { TbSwitch2 } from "react-icons/tb";
 
 import RecentFilters from "../RecentFilters";
 
 import { Button, Checkbox, CheckboxGroup, Divider } from "@/components/bakaui";
 import { resourceTags, ResourceTag as ResourceTagEnum } from "@/sdk/constants";
-import { TbSwitch2 } from "react-icons/tb";
 import { getEnumKey } from "@/i18n";
 
 export interface FilterAddPopoverContentProps {
@@ -87,6 +87,7 @@ const FilterAddPopoverContent = ({
               value={selectedTags?.map((tag) => tag.toString())}
               onChange={(ts) => {
                 const newTags = ts.map((tag) => parseInt(tag, 10) as ResourceTag);
+
                 onTagsChange(newTags);
               }}
             >
@@ -98,7 +99,7 @@ const FilterAddPopoverContent = ({
                 )
                 .map((rt) => (
                   <Checkbox key={rt.value} value={rt.value.toString()}>
-                    {t<string>(getEnumKey('ResourceTag', rt.label))}
+                    {t<string>(getEnumKey("ResourceTag", rt.label))}
                   </Checkbox>
                 ))}
             </CheckboxGroup>
@@ -129,9 +130,9 @@ const FilterAddPopoverContent = ({
           <div />
           <div className="flex justify-end">
             <Button
+              color="primary"
               size="sm"
               variant="light"
-              color="primary"
               onPress={() => {
                 onClose?.();
                 onSwitchToSimpleMode();

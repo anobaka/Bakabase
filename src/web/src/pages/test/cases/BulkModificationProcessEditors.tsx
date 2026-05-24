@@ -1,5 +1,8 @@
 "use client";
 
+import type { IProperty } from "@/components/Property/models";
+import type { BulkModificationVariable } from "@/pages/bulk-modification/components/BulkModification/models";
+
 import { StringValueProcessEditor } from "@/pages/bulk-modification/components/BulkModification/Processes/StringValueProcess";
 import { ListStringValueProcessEditor } from "@/pages/bulk-modification/components/BulkModification/Processes/ListStringValueProcess";
 import { DecimalValueProcessEditor } from "@/pages/bulk-modification/components/BulkModification/Processes/DecimalValueProcess";
@@ -16,8 +19,6 @@ import {
   PropertyType,
   StandardValueType,
 } from "@/sdk/constants";
-import type { IProperty } from "@/components/Property/models";
-import type { BulkModificationVariable } from "@/pages/bulk-modification/components/BulkModification/models";
 
 const createMockProperty = (
   type: PropertyType,

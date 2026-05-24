@@ -6,13 +6,11 @@
  * and their preset values. Used in both the display options modal and the test page.
  */
 
+import type { IProperty } from "@/components/Property/models";
+
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  CloseOutlined,
-  DeleteOutlined,
-  PlusOutlined,
-} from "@ant-design/icons";
+import { CloseOutlined, DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import {
   closestCenter,
   DndContext,
@@ -36,7 +34,6 @@ import BApi from "@/sdk/BApi";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import PropertySelector from "@/components/PropertySelector";
 import PropertyValueRenderer from "@/components/Property/components/PropertyValueRenderer";
-import type { IProperty } from "@/components/Property/models";
 import BriefProperty from "@/components/Chips/Property/BriefProperty";
 import DragHandle from "@/components/DragHandle";
 import PropertyValueEditorModal from "@/components/PropertyValueEditorModal";
@@ -61,7 +58,13 @@ type Props = {
 // Sortable Item
 // ============================================================================
 
-const SortablePropertyItem = ({ item, property, onRemove, onPresetChange, onReloadProperties }: {
+const SortablePropertyItem = ({
+  item,
+  property,
+  onRemove,
+  onPresetChange,
+  onReloadProperties,
+}: {
   item: CustomContextMenuItem;
   property: IProperty | undefined;
   onRemove: () => void;
@@ -73,32 +76,38 @@ const SortablePropertyItem = ({ item, property, onRemove, onPresetChange, onRelo
   const presetValues = item.presetValues ?? [];
 
   const itemId = `${item.property.pool}-${item.property.id}`;
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: itemId });
-  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: itemId,
+  });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
 
   return (
     <div
       ref={setNodeRef}
-      style={style}
       className={"rounded-lg p-3 flex flex-col gap-2 hover:bg-default-100 transition-colors"}
+      style={style}
     >
       {/* Row 1: Drag handle + property chip + delete */}
       <div className={"flex items-center gap-2"}>
         <DragHandle {...listeners} {...attributes} />
         <div className={"flex items-center gap-1 shrink-0"}>
           {property ? (
-            <BriefProperty property={property} fields={["pool", "name"]} />
+            <BriefProperty fields={["pool", "name"]} property={property} />
           ) : (
             <Chip>{t("common.label.unknownProperty")}</Chip>
           )}
         </div>
         <Button
           isIconOnly
+          className="ml-auto shrink-0"
           color="danger"
           size="sm"
           variant="light"
           onPress={onRemove}
-          className="ml-auto shrink-0"
         >
           <DeleteOutlined />
         </Button>
@@ -117,12 +126,7 @@ const SortablePropertyItem = ({ item, property, onRemove, onPresetChange, onRelo
             {presetValues.map((bv, valIdx) => (
               <div key={valIdx} className={"flex items-center gap-1"}>
                 {property && (
-                  <PropertyValueRenderer
-                    property={property}
-                    dbValue={bv}
-                    size="sm"
-                    isReadonly
-                  />
+                  <PropertyValueRenderer isReadonly dbValue={bv} property={property} size="sm" />
                 )}
                 <Button
                   isIconOnly
@@ -144,14 +148,16 @@ const SortablePropertyItem = ({ item, property, onRemove, onPresetChange, onRelo
         {property && (
           <div className={"flex flex-col gap-0.5"}>
             <Button
-              size="sm"
-              variant="flat"
-              startContent={<PlusOutlined />}
               className="self-start"
+              size="sm"
+              startContent={<PlusOutlined />}
+              variant="flat"
               onPress={() => {
                 createPortal(PropertyValueEditorModal, {
                   property,
-                  title: t<string>("resource.display.contextMenu.addPresetValueTitle", { property: property.name }),
+                  title: t<string>("resource.display.contextMenu.addPresetValueTitle", {
+                    property: property.name,
+                  }),
                   onSubmit: (dbValue: string) => {
                     if (dbValue && !presetValues.includes(dbValue)) {
                       onPresetChange([...presetValues, dbValue]);
@@ -179,7 +185,12 @@ const SortablePropertyItem = ({ item, property, onRemove, onPresetChange, onRelo
 // Main Component
 // ============================================================================
 
-const QuickSetPropertyConfig = ({ items, onChange, autoAddRecentPropertyValues, onAutoAddChange }: Props) => {
+const QuickSetPropertyConfig = ({
+  items,
+  onChange,
+  autoAddRecentPropertyValues,
+  onAutoAddChange,
+}: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
@@ -197,6 +208,7 @@ const QuickSetPropertyConfig = ({ items, onChange, autoAddRecentPropertyValues, 
       BApi.customProperty.getAllCustomProperties(),
     ]);
     const ps: Record<number, Record<number, IProperty>> = {};
+
     for (const p of (builtinRsp.data || []) as IProperty[]) {
       if (!ps[p.pool]) ps[p.pool] = {};
       ps[p.pool][p.id] = p;
@@ -229,8 +241,10 @@ const QuickSetPropertyConfig = ({ items, onChange, autoAddRecentPropertyValues, 
           const existing = items.find(
             (item) => `${item.property.pool}-${item.property.id}` === key,
           );
+
           return existing ?? { property: { pool: prop.pool, id: prop.id }, presetValues: [] };
         });
+
         await onChange(newItems);
       },
     });
@@ -238,9 +252,11 @@ const QuickSetPropertyConfig = ({ items, onChange, autoAddRecentPropertyValues, 
 
   const handleDragEnd = async (event: any) => {
     const { active, over } = event;
+
     if (!over || active.id === over.id) return;
     const oldIndex = sortableIds.indexOf(active.id);
     const newIndex = sortableIds.indexOf(over.id);
+
     if (oldIndex === -1 || newIndex === -1) return;
     await onChange(arrayMove([...items], oldIndex, newIndex));
   };
@@ -259,8 +275,8 @@ const QuickSetPropertyConfig = ({ items, onChange, autoAddRecentPropertyValues, 
 
         {onAutoAddChange && (
           <Checkbox
-            size="sm"
             isSelected={!!autoAddRecentPropertyValues}
+            size="sm"
             onValueChange={(checked) => onAutoAddChange(checked)}
           >
             {t<string>("resource.display.contextMenu.autoAddRecent")}
@@ -272,7 +288,11 @@ const QuickSetPropertyConfig = ({ items, onChange, autoAddRecentPropertyValues, 
             {t<string>("resource.display.contextMenu.noItems")}
           </div>
         ) : (
-          <DndContext collisionDetection={closestCenter} sensors={sensors} onDragEnd={handleDragEnd}>
+          <DndContext
+            collisionDetection={closestCenter}
+            sensors={sensors}
+            onDragEnd={handleDragEnd}
+          >
             <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
               <div className={"flex flex-col gap-2"}>
                 {items.map((item, itemIndex) => {
@@ -285,15 +305,16 @@ const QuickSetPropertyConfig = ({ items, onChange, autoAddRecentPropertyValues, 
                       key={`${pool}-${propId}`}
                       item={item}
                       property={property}
-                      onRemove={async () => {
-                        await onChange(items.filter((_, i) => i !== itemIndex));
-                      }}
                       onPresetChange={async (presetValues) => {
                         const newItems = [...items];
+
                         newItems[itemIndex] = { ...newItems[itemIndex], presetValues };
                         await onChange(newItems);
                       }}
                       onReloadProperties={loadProperties}
+                      onRemove={async () => {
+                        await onChange(items.filter((_, i) => i !== itemIndex));
+                      }}
                     />
                   );
                 })}
@@ -303,11 +324,11 @@ const QuickSetPropertyConfig = ({ items, onChange, autoAddRecentPropertyValues, 
         )}
 
         <Button
-          size="sm"
-          variant="flat"
-          startContent={<PlusOutlined />}
-          onPress={handleAddProperty}
           className="self-start"
+          size="sm"
+          startContent={<PlusOutlined />}
+          variant="flat"
+          onPress={handleAddProperty}
         >
           {t<string>("resource.display.contextMenu.addProperty")}
         </Button>

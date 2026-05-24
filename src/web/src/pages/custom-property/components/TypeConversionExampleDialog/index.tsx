@@ -40,9 +40,11 @@ const TypeConversionExampleDialog = () => {
 
   const columns = [
     // <TableColumn>{t<string>('typeConversion.sourceType')}</TableColumn>,
-    <TableColumn>{t<string>("typeConversion.valueToBeConverted")}</TableColumn>,
+    <TableColumn key="value-to-be-converted">{t<string>("typeConversion.valueToBeConverted")}</TableColumn>,
     ...propertyTypes.map((cpt) => {
-      return <TableColumn>{t<string>(getEnumKey('PropertyType', PropertyType[cpt.value]))}</TableColumn>;
+      return (
+        <TableColumn key={cpt.value}>{t<string>(getEnumKey("PropertyType", PropertyType[cpt.value]))}</TableColumn>
+      );
     }),
   ];
 
@@ -66,17 +68,16 @@ const TypeConversionExampleDialog = () => {
       title={t<string>("typeConversion.examplesTitle")}
     >
       <div>
-        <Tabs isVertical disableAnimation disabledKeys={["title"]}>
+        <Tabs disableAnimation isVertical disabledKeys={["title"]}>
           <Tab key={"title"} title={t<string>("typeConversion.sourceType")} />
           {propertyTypes.map((cpt) => {
-            const filteredResults =
-              results?.filter((x) => x.type == cpt.value) || [];
+            const filteredResults = results?.filter((x) => x.type == cpt.value) || [];
 
             return (
               <Tab
                 key={cpt.value}
                 className={"w-full"}
-                title={t<string>(getEnumKey('PropertyType', PropertyType[cpt.value]))}
+                title={t<string>(getEnumKey("PropertyType", PropertyType[cpt.value]))}
               >
                 <Table isCompact isHeaderSticky isStriped removeWrapper>
                   <TableHeader>{columns}</TableHeader>
@@ -84,7 +85,7 @@ const TypeConversionExampleDialog = () => {
                     {filteredResults.map((td, i) => {
                       const cells = [
                         // <TableCell>{t<string>(PropertyType[td.type])}</TableCell>,
-                        <TableCell>
+                        <TableCell key="source">
                           <StandardValueRenderer
                             propertyType={td.type}
                             type={td.bizValueType}
@@ -98,9 +99,7 @@ const TypeConversionExampleDialog = () => {
                       ];
 
                       propertyTypes.forEach((type) => {
-                        const o = filteredResults?.[i]?.outputs?.find(
-                          (o) => o.type == type.value,
-                        );
+                        const o = filteredResults?.[i]?.outputs?.find((o) => o.type == type.value);
 
                         if (o) {
                           const deserializedValue = deserializeStandardValue(
@@ -110,7 +109,7 @@ const TypeConversionExampleDialog = () => {
 
                           console.log(o, deserializedValue);
                           cells.push(
-                            <TableCell>
+                            <TableCell key={type.value}>
                               <StandardValueRenderer
                                 propertyType={type.value}
                                 type={o.bizValueType}
@@ -120,7 +119,7 @@ const TypeConversionExampleDialog = () => {
                             </TableCell>,
                           );
                         } else {
-                          cells.push(<TableCell>/</TableCell>);
+                          cells.push(<TableCell key={type.value}>/</TableCell>);
                         }
                       });
 

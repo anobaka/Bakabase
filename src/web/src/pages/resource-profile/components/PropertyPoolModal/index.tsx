@@ -8,13 +8,15 @@ import type {
   BakabaseAbstractionsModelsDomainResourceProfilePropertyOptions,
   BakabaseAbstractionsModelsDomainPropertyKeyWithScopePriority,
 } from "@/sdk/Api";
+import type { EnhancerId } from "@/sdk/constants";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PlusOutlined, DeleteOutlined, OrderedListOutlined } from "@ant-design/icons";
 
 import ScopePriorityEditor from "../ScopePriorityEditor";
 import GlobalScopePriorityModal from "../GlobalScopePriorityModal";
+import { enhancerIdToScope } from "../EnhancementConfigPanel/utils";
 
 import {
   Button,
@@ -32,8 +34,6 @@ import { PropertyPool, PropertyTypeLabel, PropertyValueScope } from "@/sdk/const
 import { PropertyLabel } from "@/components/Property";
 import PropertySelector from "@/components/PropertySelector";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import { enhancerIdToScope } from "../EnhancementConfigPanel/utils";
-import type { EnhancerId } from "@/sdk/constants";
 
 type PropertyRef = BakabaseAbstractionsModelsDomainPropertyKeyWithScopePriority;
 
@@ -42,7 +42,9 @@ type Props = {
   allProperties: IProperty[];
   enhancerOptions: BakabaseAbstractionsModelsDomainEnhancerFullOptions[];
   enhancerDescriptors: EnhancerDescriptor[];
-  onSubmit?: (options: BakabaseAbstractionsModelsDomainResourceProfilePropertyOptions | undefined) => any;
+  onSubmit?: (
+    options: BakabaseAbstractionsModelsDomainResourceProfilePropertyOptions | undefined,
+  ) => any;
 } & DestroyableProps;
 
 const PropertyPoolModal = ({
@@ -56,7 +58,7 @@ const PropertyPoolModal = ({
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const [propertyRefs, setPropertyRefs] = useState<PropertyRef[]>(
-    propertyOptions?.properties ?? []
+    propertyOptions?.properties ?? [],
   );
 
   // Compute relevant scopes for a property based on enhancer configurations
@@ -69,10 +71,12 @@ const PropertyPoolModal = ({
     for (const opt of enhancerOptions) {
       if (!opt.targetOptions) continue;
       const hasTarget = opt.targetOptions.some(
-        (to) => to.propertyPool === pool && to.propertyId === id
+        (to) => to.propertyPool === pool && to.propertyId === id,
       );
+
       if (hasTarget && opt.enhancerId != null) {
         const scope = enhancerIdToScope(opt.enhancerId as EnhancerId);
+
         if (scope && !scopes.includes(scope)) {
           scopes.push(scope);
         }
@@ -95,11 +99,11 @@ const PropertyPoolModal = ({
       onSubmit: async (selectedProperties: IProperty[]) => {
         // Merge: keep existing refs with their scopePriority, add new ones
         const newRefs: PropertyRef[] = selectedProperties.map((p) => {
-          const existing = propertyRefs.find(
-            (r) => r.pool === p.pool && r.id === p.id
-          );
+          const existing = propertyRefs.find((r) => r.pool === p.pool && r.id === p.id);
+
           return existing ?? { pool: p.pool, id: p.id };
         });
+
         setPropertyRefs(newRefs);
       },
     });
@@ -112,20 +116,22 @@ const PropertyPoolModal = ({
   const handleScopePriorityChange = (
     pool: PropertyPool,
     id: number,
-    scopePriority: PropertyValueScope[] | null
+    scopePriority: PropertyValueScope[] | null,
   ) => {
     setPropertyRefs((prev) =>
       prev.map((r) => {
         if (r.pool === pool && r.id === id) {
           return { ...r, scopePriority: scopePriority ?? undefined };
         }
+
         return r;
-      })
+      }),
     );
   };
 
   const handleSubmit = () => {
     const result = propertyRefs.length > 0 ? { properties: propertyRefs } : undefined;
+
     onSubmit?.(result);
   };
 
@@ -146,15 +152,15 @@ const PropertyPoolModal = ({
           <div className="flex items-center gap-2">
             <Button
               size="sm"
-              variant="flat"
               startContent={<OrderedListOutlined />}
+              variant="flat"
               onPress={() => createPortal(GlobalScopePriorityModal, {})}
             >
               {t<string>("resourceProfile.propertyPool.globalScopePriority")}
             </Button>
             <Button
-              size="sm"
               color="primary"
+              size="sm"
               startContent={<PlusOutlined />}
               onPress={handleAddProperties}
             >
@@ -168,10 +174,7 @@ const PropertyPoolModal = ({
             {t("resourceProfile.propertyPool.empty")}
           </div>
         ) : (
-          <Table
-            aria-label="Property Pool Table"
-            removeWrapper
-          >
+          <Table removeWrapper aria-label="Property Pool Table">
             <TableHeader>
               <TableColumn>{t("resourceProfile.propertyPool.columnProperty")}</TableColumn>
               <TableColumn>{t("resourceProfile.propertyPool.columnType")}</TableColumn>
@@ -213,8 +216,8 @@ const PropertyPoolModal = ({
                     </TableCell>
                     <TableCell>
                       <ScopePriorityEditor
-                        value={ref.scopePriority ?? null}
                         availableScopes={availableScopes}
+                        value={ref.scopePriority ?? null}
                         onChange={(newPriority) =>
                           handleScopePriorityChange(ref.pool!, ref.id!, newPriority)
                         }
@@ -224,9 +227,9 @@ const PropertyPoolModal = ({
                       <Tooltip content={t("common.action.delete")}>
                         <Button
                           isIconOnly
+                          color="danger"
                           size="sm"
                           variant="light"
-                          color="danger"
                           onPress={() => handleRemoveProperty(ref.pool!, ref.id!)}
                         >
                           <DeleteOutlined className="text-xs" />

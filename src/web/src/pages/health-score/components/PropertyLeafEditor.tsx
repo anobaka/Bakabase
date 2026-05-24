@@ -1,3 +1,5 @@
+import type { ResourceMatcherLeaf } from "@/pages/health-score/types";
+
 import { useMemo, useState } from "react";
 
 import {
@@ -7,7 +9,6 @@ import {
   type SearchFilter,
 } from "@/components/ResourceFilter";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import { ResourceMatcherLeaf } from "@/pages/health-score/types";
 
 interface Props {
   leaf: ResourceMatcherLeaf;
@@ -29,13 +30,16 @@ export const PropertyLeafEditor = ({ leaf, onChange }: Props) => {
   const { createPortal } = useBakabaseContext();
   const config = useMemo(() => createDefaultFilterConfig(createPortal), [createPortal]);
 
-  const [filterState, setFilterState] = useState<SearchFilter>(() => ({
-    propertyPool: leaf.propertyPool ?? undefined,
-    propertyId: leaf.propertyId ?? undefined,
-    operation: leaf.operation ?? undefined,
-    dbValue: leaf.propertyValue ?? undefined,
-    disabled: leaf.disabled ?? false,
-  } as SearchFilter));
+  const [filterState, setFilterState] = useState<SearchFilter>(
+    () =>
+      ({
+        propertyPool: leaf.propertyPool ?? undefined,
+        propertyId: leaf.propertyId ?? undefined,
+        operation: leaf.operation ?? undefined,
+        dbValue: leaf.propertyValue ?? undefined,
+        disabled: leaf.disabled ?? false,
+      }) as SearchFilter,
+  );
 
   const handleChange = (next: SearchFilter) => {
     setFilterState(next);
@@ -51,11 +55,11 @@ export const PropertyLeafEditor = ({ leaf, onChange }: Props) => {
   return (
     <FilterProvider config={config}>
       <Filter
+        hideInternalActions
+        removeBackground
+        autoTriggerPropertySelector={!leaf.propertyId}
         filter={filterState}
         layout="horizontal"
-        removeBackground
-        hideInternalActions
-        autoTriggerPropertySelector={!leaf.propertyId}
         onChange={handleChange}
       />
     </FilterProvider>

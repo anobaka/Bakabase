@@ -33,7 +33,8 @@ const CreateDirectoryModal = ({ parentPath, onDestroyed }: Props) => {
       }}
     >
       <div className="text-sm">
-        {t<string>("fileExplorer.createDirectoryModal.description")}: <span className="font-medium">{parentPath}</span>
+        {t<string>("fileExplorer.createDirectoryModal.description")}:{" "}
+        <span className="font-medium">{parentPath}</span>
       </div>
     </Modal>
   );

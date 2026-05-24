@@ -60,8 +60,7 @@ const MediaLibrarySelectorV2 = (props: Props) => {
     init();
   }, []);
 
-  const recentlySelectedIds =
-    resourceOptions?.idsOfMediaLibraryRecentlyMovedTo || [];
+  const recentlySelectedIds = resourceOptions?.idsOfMediaLibraryRecentlyMovedTo || [];
 
   const lowerCasedKeyword = keyword?.toLowerCase() ?? "";
   const filteredCategories =
@@ -116,12 +115,11 @@ const MediaLibrarySelectorV2 = (props: Props) => {
                   <div>{c.name}</div>
                   <div>
                     {c.libraries.map((l, il) => {
-                      const selectedRecently = recentlySelectedIds.includes(
-                        l.id,
-                      );
+                      const selectedRecently = recentlySelectedIds.includes(l.id);
 
                       return (
                         <Button
+                          key={l.id}
                           color={selectedRecently ? "success" : "primary"}
                           size={"sm"}
                           variant={"light"}
@@ -129,9 +127,7 @@ const MediaLibrarySelectorV2 = (props: Props) => {
                             if (confirmation) {
                               createPortal(Modal, {
                                 defaultVisible: true,
-                                title: t<string>(
-                                  "Are you sure to select this media library?",
-                                ),
+                                title: t<string>("Are you sure to select this media library?"),
                                 children: (
                                   <div className={"flex items-center gap-2"}>
                                     <Chip radius={"sm"}>{l.name}</Chip>
@@ -149,17 +145,13 @@ const MediaLibrarySelectorV2 = (props: Props) => {
                           }}
                         >
                           {l.name}
-                          {selectedRecently && (
-                            <HistoryOutlined className={"text-sm"} />
-                          )}
+                          {selectedRecently && <HistoryOutlined className={"text-sm"} />}
                         </Button>
                       );
                     })}
                   </div>
                 </div>
-                {ic != filteredCategories.length - 1 && (
-                  <Divider orientation={"horizontal"} />
-                )}
+                {ic != filteredCategories.length - 1 && <Divider orientation={"horizontal"} />}
               </>
             );
           })}

@@ -9,7 +9,9 @@ import { useUpdateEffect } from "react-use";
 import NumberValueEditor from "../../ValueEditor/Editors/NumberValueEditor";
 
 import { Rating } from "@/components/bakaui";
-import NotSet, { LightText } from "@/components/StandardValue/ValueRenderer/Renderers/components/LightText";
+import NotSet, {
+  LightText,
+} from "@/components/StandardValue/ValueRenderer/Renderers/components/LightText";
 import { buildLogger } from "@/components/utils";
 
 type RatingValueRendererProps = ValueRendererProps<number, number> & {
@@ -19,7 +21,16 @@ type RatingValueRendererProps = ValueRendererProps<number, number> & {
 
 const log = buildLogger("RatingValueRenderer");
 const RatingValueRenderer = (props: RatingValueRendererProps) => {
-  const { value: propsValue, editor, variant, allowHalf = true, size, isEditing, isReadonly: propsIsReadonly, defaultEditing } = props;
+  const {
+    value: propsValue,
+    editor,
+    variant,
+    allowHalf = true,
+    size,
+    isEditing,
+    isReadonly: propsIsReadonly,
+    defaultEditing,
+  } = props;
   const [value, setValue] = useState(propsValue);
   const { t } = useTranslation();
 
@@ -27,7 +38,9 @@ const RatingValueRenderer = (props: RatingValueRendererProps) => {
   const isReadonly = propsIsReadonly ?? false;
 
   // For light variant, track editing state for NumberValueEditor
-  const [lightEditing, setLightEditing] = useState(defaultEditing && !isReadonly && !!editor && variant === "light");
+  const [lightEditing, setLightEditing] = useState(
+    defaultEditing && !isReadonly && !!editor && variant === "light",
+  );
 
   useUpdateEffect(() => {
     setValue(propsValue);
@@ -41,7 +54,10 @@ const RatingValueRenderer = (props: RatingValueRendererProps) => {
   };
 
   // For light variant only: editing mode controls
-  const startLightEditing = !isReadonly && editor && isEditing !== false && variant === "light" ? () => setLightEditing(true) : undefined;
+  const startLightEditing =
+    !isReadonly && editor && isEditing !== false && variant === "light"
+      ? () => setLightEditing(true)
+      : undefined;
   const completeLightEditing = (v: number | undefined) => {
     setValue(v);
     setLightEditing(false);
@@ -55,8 +71,8 @@ const RatingValueRenderer = (props: RatingValueRendererProps) => {
       return (
         <NumberValueEditor
           placeholder={t<string>("Set rating")}
-          value={value}
           size={size}
+          value={value}
           onValueChange={(dv) => {
             setValue(dv);
             editor.onValueChange?.(dv, dv);
@@ -70,8 +86,8 @@ const RatingValueRenderer = (props: RatingValueRendererProps) => {
       return (
         <NumberValueEditor
           placeholder={t<string>("Set rating")}
-          value={value}
           size={size}
+          value={value}
           onValueChange={(dv) => completeLightEditing(dv)}
         />
       );
@@ -95,9 +111,9 @@ const RatingValueRenderer = (props: RatingValueRendererProps) => {
   return (
     <Rating
       allowHalf={allowHalf}
-      value={value}
-      size={size}
       disabled={!canEdit}
+      size={size}
+      value={value}
       onChange={canEdit ? handleRatingChange : undefined}
     />
   );

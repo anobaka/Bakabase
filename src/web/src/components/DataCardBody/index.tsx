@@ -1,9 +1,10 @@
 "use client";
 
+import type { IProperty } from "@/components/Property/models";
+
 import React from "react";
 
 import PropertyValueRenderer from "@/components/Property/components/PropertyValueRenderer";
-import type { IProperty } from "@/components/Property/models";
 
 export interface DataCardLayoutItem {
   propertyId: number;
@@ -63,8 +64,10 @@ export function computeFixedOuterWidth(
   const cols = tpl?.cols ?? 0;
   const rows = tpl?.rows ?? 0;
   const hasLayout = cols > 0 && rows > 0 && (tpl?.layout?.length ?? 0) > 0;
+
   if (!hasLayout) return undefined;
   const gridWidth = cols * cellPx + Math.max(0, cols - 1) * DATA_CARD_CELL_GAP_PX;
+
   return gridWidth + DATA_CARD_OUTER_CHROME_PX;
 }
 
@@ -86,12 +89,12 @@ const DataCardBody: React.FC<DataCardBodyProps> = ({
       <div className={`flex flex-col gap-2${className ? ` ${className}` : ""}`}>
         {card.propertyValues?.map((pv) => {
           const prop = allProperties.find((p) => p.id === pv.propertyId);
+
           if (!prop) return null;
+
           return (
             <div key={pv.propertyId} className="flex items-center gap-2 min-w-0">
-              <span className="text-xs text-default-500 flex-shrink-0">
-                {prop.name}
-              </span>
+              <span className="text-xs text-default-500 flex-shrink-0">{prop.name}</span>
               <div className="min-w-0">
                 <PropertyValueRenderer
                   isReadonly
@@ -120,17 +123,15 @@ const DataCardBody: React.FC<DataCardBodyProps> = ({
         };
 
   return (
-    <div
-      className={`grid gap-2${className ? ` ${className}` : ""}`}
-      style={gridStyle}
-    >
+    <div className={`grid gap-2${className ? ` ${className}` : ""}`} style={gridStyle}>
       {layout.map((item) => {
         const prop = allProperties.find((p) => p.id === item.propertyId);
+
         if (!prop) return null;
-        const pv = card.propertyValues?.find(
-          (v) => v.propertyId === item.propertyId,
-        );
+        const pv = card.propertyValues?.find((v) => v.propertyId === item.propertyId);
+
         if (item.hideEmpty && !pv?.value) return null;
+
         return (
           <div
             key={item.propertyId}
@@ -141,9 +142,7 @@ const DataCardBody: React.FC<DataCardBodyProps> = ({
             }}
           >
             {!item.hideLabel && (
-              <span className="text-xs text-default-500 truncate">
-                {prop.name}
-              </span>
+              <span className="text-xs text-default-500 truncate">{prop.name}</span>
             )}
             <div className="min-w-0">
               <PropertyValueRenderer

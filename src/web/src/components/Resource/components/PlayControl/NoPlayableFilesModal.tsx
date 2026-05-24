@@ -26,6 +26,7 @@ const NoPlayableFilesModal = ({ resourceId, onDestroyed }: Props) => {
       setLoading(true);
       try {
         const response = await BApi.resourceProfile.getMatchingProfilesForResource(resourceId);
+
         setProfiles(response.data || []);
       } catch (error) {
         console.error("Failed to load matching profiles:", error);
@@ -50,10 +51,10 @@ const NoPlayableFilesModal = ({ resourceId, onDestroyed }: Props) => {
   return (
     <Modal
       defaultVisible
+      footer={{ actions: ["ok"] }}
       size="lg"
       title={t("resource.playControl.noPlayableFiles.title")}
       onDestroyed={onDestroyed}
-      footer={{ actions: ["ok"] }}
     >
       <div className="flex flex-col gap-6">
         <div>
@@ -63,7 +64,9 @@ const NoPlayableFilesModal = ({ resourceId, onDestroyed }: Props) => {
         </div>
 
         <div>
-          <div className="font-medium mb-2">{t("resource.playControl.noPlayableFiles.tips.title")}</div>
+          <div className="font-medium mb-2">
+            {t("resource.playControl.noPlayableFiles.tips.title")}
+          </div>
           <ul className="list-disc pl-5 text-sm space-y-1">
             <li>{t("resource.playControl.noPlayableFiles.tips.noFile")}</li>
             <li>{t("resource.playControl.noPlayableFiles.tips.extension")}</li>
@@ -71,7 +74,9 @@ const NoPlayableFilesModal = ({ resourceId, onDestroyed }: Props) => {
         </div>
 
         <div>
-          <div className="font-medium mb-2">{t("resource.playControl.noPlayableFiles.action.title")}</div>
+          <div className="font-medium mb-2">
+            {t("resource.playControl.noPlayableFiles.action.title")}
+          </div>
           <div className="text-sm mb-3">
             <InfoCircleOutlined className="mr-1" />
             {t("resource.playControl.noPlayableFiles.action.description")}
@@ -113,8 +118,8 @@ const NoPlayableFilesModal = ({ resourceId, onDestroyed }: Props) => {
             <Button
               color="primary"
               size="sm"
-              variant="flat"
               startContent={<SettingOutlined />}
+              variant="flat"
               onPress={() => handleNavigateToProfile()}
             >
               {t("resource.playControl.noPlayableFiles.action.settings")}

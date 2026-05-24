@@ -1,4 +1,4 @@
-import { AiOutlineCheck, AiOutlineCloseCircle, AiOutlineCopy, AiOutlineDelete } from "react-icons/ai";
+import { AiOutlineCheck, AiOutlineCopy, AiOutlineDelete } from "react-icons/ai";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -27,36 +27,38 @@ const CustomPathSelectorInner = (props: Props) => {
           .map((p) => {
             return (
               <div key={p}>
-                <Tooltip content={
-                  <div className="flex items-center gap-0">
-                    {/* Copy path */}
-                    <Button
-                      isIconOnly
-                      color="default"
-                      size="sm"
-                      variant="light"
-                      onPress={() => {
-                        navigator.clipboard.writeText(p);
-                        toast.success(t<string>("common.tip.pathCopied"));
-                      }}
-                    >
-                      <AiOutlineCopy className="text-lg" />
-                    </Button>
-                    <Button
-                      isIconOnly
-                      color="danger"
-                      size="sm"
-                      variant="light"
-                      onPress={async () => {
-                        await fsOptions.patch({
-                          recentMovingDestinations: paths.filter((p) => p !== p),
-                        });
-                      }}
-                    >
-                      <AiOutlineDelete className="text-lg" />
-                    </Button>
-                  </div>
-                }>
+                <Tooltip
+                  content={
+                    <div className="flex items-center gap-0">
+                      {/* Copy path */}
+                      <Button
+                        isIconOnly
+                        color="default"
+                        size="sm"
+                        variant="light"
+                        onPress={() => {
+                          navigator.clipboard.writeText(p);
+                          toast.success(t<string>("common.tip.pathCopied"));
+                        }}
+                      >
+                        <AiOutlineCopy className="text-lg" />
+                      </Button>
+                      <Button
+                        isIconOnly
+                        color="danger"
+                        size="sm"
+                        variant="light"
+                        onPress={async () => {
+                          await fsOptions.patch({
+                            recentMovingDestinations: paths.filter((p) => p !== p),
+                          });
+                        }}
+                      >
+                        <AiOutlineDelete className="text-lg" />
+                      </Button>
+                    </div>
+                  }
+                >
                   <Button
                     key={p}
                     color={mlPaths.has(p) ? "success" : "primary"}

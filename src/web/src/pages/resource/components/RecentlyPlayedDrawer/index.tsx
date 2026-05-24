@@ -2,12 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  Drawer,
-  DrawerBody,
-  DrawerContent,
-  DrawerHeader,
-} from "@heroui/react";
+import { Drawer, DrawerBody, DrawerContent, DrawerHeader } from "@heroui/react";
 
 import { Pagination, Spinner } from "@/components/bakaui";
 import Resource from "@/components/Resource";
@@ -63,12 +58,7 @@ const RecentlyPlayedDrawer = ({ isOpen, onClose }: IProps) => {
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
   return (
-    <Drawer
-      isOpen={isOpen}
-      placement="right"
-      size="xl"
-      onClose={onClose}
-    >
+    <Drawer isOpen={isOpen} placement="right" size="xl" onClose={onClose}>
       <DrawerContent>
         <DrawerHeader className="flex flex-col gap-1">
           {t("resource.recentlyPlayed.title")}
@@ -101,10 +91,7 @@ const RecentlyPlayedDrawer = ({ isOpen, onClose }: IProps) => {
               )}
               <div className="grid grid-cols-3 gap-2">
                 {resources.map((resource) => (
-                  <Resource
-                    key={resource.id}
-                    resource={resource}
-                  />
+                  <Resource key={resource.id} resource={resource} />
                 ))}
               </div>
               {totalPages > 1 && (

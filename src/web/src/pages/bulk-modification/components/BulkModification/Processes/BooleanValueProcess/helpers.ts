@@ -14,6 +14,7 @@ export const validate = (
       if (!options.value) {
         return "bulkModification.validation.valueRequired";
       }
+
       return undefined;
     default:
       return undefined;

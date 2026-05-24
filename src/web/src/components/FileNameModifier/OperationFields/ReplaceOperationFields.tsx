@@ -6,8 +6,7 @@ import { Input, Checkbox } from "../../bakaui";
 import { getFieldRequirements } from "../validation";
 
 const ReplaceOperationFields: React.FC<any> = ({ operation, t, onChange }) => {
-  const handleChangeField = (key: string, value: any) =>
-    onChange({ ...operation, [key]: value });
+  const handleChangeField = (key: string, value: any) => onChange({ ...operation, [key]: value });
 
   const requirements = getFieldRequirements(operation);
 
@@ -22,7 +21,7 @@ const ReplaceOperationFields: React.FC<any> = ({ operation, t, onChange }) => {
         label={t<string>("FileNameModifier.Label.TargetText")}
         placeholder={t<string>("FileNameModifier.Placeholder.TargetText")}
         size="sm"
-        value={isReplaceEntire ? "" : (operation.targetText || "")}
+        value={isReplaceEntire ? "" : operation.targetText || ""}
         onValueChange={(e) => handleChangeField("targetText", e)}
       />
       <Input
@@ -37,8 +36,8 @@ const ReplaceOperationFields: React.FC<any> = ({ operation, t, onChange }) => {
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-1">
           <Checkbox
+            checked={isReplaceEntire ? false : operation.regex || false}
             isDisabled={isReplaceEntire}
-            checked={isReplaceEntire ? false : (operation.regex || false)}
             onChange={(e) => handleChangeField("regex", e.target.checked)}
           />
           <span className={`text-xs ${isReplaceEntire ? "text-gray-300" : "text-gray-500"}`}>

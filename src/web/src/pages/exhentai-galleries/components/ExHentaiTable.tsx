@@ -1,3 +1,5 @@
+import type { ExHentaiGallery } from "..";
+
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -12,12 +14,7 @@ import {
   Image,
   Tooltip,
 } from "@heroui/react";
-import {
-  AiOutlineDelete,
-  AiOutlineFolderOpen,
-} from "react-icons/ai";
-
-import type { ExHentaiGallery } from "..";
+import { AiOutlineDelete, AiOutlineFolderOpen } from "react-icons/ai";
 
 interface ExHentaiTableColumn {
   key: string;
@@ -26,11 +23,19 @@ interface ExHentaiTableColumn {
 }
 
 export default function ExHentaiTable({
-  galleries, showCover, categoryColorMap, onDelete, onOpenLocal, onDeleteLocal,
+  galleries,
+  showCover,
+  categoryColorMap,
+  onDelete,
+  onOpenLocal,
+  onDeleteLocal,
 }: {
   galleries: ExHentaiGallery[];
   showCover: boolean;
-  categoryColorMap: Record<string, "primary" | "secondary" | "success" | "warning" | "danger" | "default">;
+  categoryColorMap: Record<
+    string,
+    "primary" | "secondary" | "success" | "warning" | "danger" | "default"
+  >;
   onDelete: (id: number) => void;
   onOpenLocal: (localPath: string) => void;
   onDeleteLocal: (galleryId: number, galleryToken: string) => void;
@@ -39,6 +44,7 @@ export default function ExHentaiTable({
 
   const columns = useMemo<ExHentaiTableColumn[]>(() => {
     const cols: ExHentaiTableColumn[] = [];
+
     if (showCover) cols.push({ key: "cover", label: "", width: 160 });
     cols.push(
       { key: "galleryId", label: t("resourceSource.exhentai.label.galleryId") },
@@ -49,6 +55,7 @@ export default function ExHentaiTable({
       { key: "createdAt", label: t("resourceSource.label.createdAt") },
       { key: "actions", label: "", width: 120 },
     );
+
     return cols;
   }, [showCover, t]);
 
@@ -69,41 +76,27 @@ export default function ExHentaiTable({
           </div>
         );
       case "galleryId":
-        return (
-          <span className="text-sm text-default-500">
-            {gallery.galleryId}
-          </span>
-        );
+        return <span className="text-sm text-default-500">{gallery.galleryId}</span>;
       case "title":
         return (
           <div>
-            <span className="font-medium">
-              {gallery.title || gallery.titleJpn || "-"}
-            </span>
+            <span className="font-medium">{gallery.title || gallery.titleJpn || "-"}</span>
             {gallery.titleJpn && gallery.title && (
-              <div className="text-xs text-default-400 mt-0.5">
-                {gallery.titleJpn}
-              </div>
+              <div className="text-xs text-default-400 mt-0.5">{gallery.titleJpn}</div>
             )}
           </div>
         );
       case "category":
         return gallery.category ? (
-          <Chip
-            color={categoryColorMap[gallery.category] || "default"}
-            size="sm"
-            variant="flat"
-          >
+          <Chip color={categoryColorMap[gallery.category] || "default"} size="sm" variant="flat">
             {gallery.category}
           </Chip>
-        ) : "-";
+        ) : (
+          "-"
+        );
       case "downloaded":
         return (
-          <Chip
-            color={gallery.isDownloaded ? "success" : "default"}
-            size="sm"
-            variant="flat"
-          >
+          <Chip color={gallery.isDownloaded ? "success" : "default"} size="sm" variant="flat">
             {gallery.isDownloaded ? "Yes" : "No"}
           </Chip>
         );
@@ -112,13 +105,11 @@ export default function ExHentaiTable({
           <Chip size="sm" variant="flat">
             {gallery.account}
           </Chip>
-        ) : "-";
-      case "createdAt":
-        return (
-          <span className="text-sm">
-            {new Date(gallery.createdAt).toLocaleDateString()}
-          </span>
+        ) : (
+          "-"
         );
+      case "createdAt":
+        return <span className="text-sm">{new Date(gallery.createdAt).toLocaleDateString()}</span>;
       case "actions":
         return (
           <div className="flex gap-1">
@@ -137,8 +128,8 @@ export default function ExHentaiTable({
             {gallery.isDownloaded && gallery.localPath && (
               <Tooltip content={t("resourceSource.exhentai.action.deleteLocal")}>
                 <Button
-                  color="danger"
                   isIconOnly
+                  color="danger"
                   size="sm"
                   variant="light"
                   onPress={() => onDeleteLocal(gallery.galleryId, gallery.galleryToken)}
@@ -148,8 +139,8 @@ export default function ExHentaiTable({
               </Tooltip>
             )}
             <Button
-              color="danger"
               isIconOnly
+              color="danger"
               size="sm"
               variant="light"
               onPress={() => onDelete(gallery.id)}
@@ -164,7 +155,7 @@ export default function ExHentaiTable({
   };
 
   return (
-    <Table removeWrapper aria-label="ExHentai Galleries" isStriped>
+    <Table isStriped removeWrapper aria-label="ExHentai Galleries">
       <TableHeader columns={columns}>
         {(column) => (
           <TableColumn key={column.key} width={column.width}>
@@ -172,15 +163,10 @@ export default function ExHentaiTable({
           </TableColumn>
         )}
       </TableHeader>
-      <TableBody
-        emptyContent={t("resourceSource.empty")}
-        items={galleries}
-      >
+      <TableBody emptyContent={t("resourceSource.empty")} items={galleries}>
         {(gallery) => (
           <TableRow key={gallery.id}>
-            {(columnKey) => (
-              <TableCell>{renderCell(gallery, columnKey as string)}</TableCell>
-            )}
+            {(columnKey) => <TableCell>{renderCell(gallery, columnKey as string)}</TableCell>}
           </TableRow>
         )}
       </TableBody>

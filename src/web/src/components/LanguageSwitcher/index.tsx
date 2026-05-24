@@ -11,9 +11,12 @@ const SUPPORTED_LANGUAGES = [
 
 const LanguageSwitcher = () => {
   const appOptions = useAppOptionsStore((state) => state.data);
-  const currentLanguageCode = SUPPORTED_LANGUAGES.find(
-    (lang) => lang.code === appOptions.language || lang.code.toLowerCase() === appOptions.language?.toLowerCase()
-  )?.code ?? SUPPORTED_LANGUAGES[1].code;
+  const currentLanguageCode =
+    SUPPORTED_LANGUAGES.find(
+      (lang) =>
+        lang.code === appOptions.language ||
+        lang.code.toLowerCase() === appOptions.language?.toLowerCase(),
+    )?.code ?? SUPPORTED_LANGUAGES[1].code;
 
   return (
     <Dropdown>
@@ -26,16 +29,15 @@ const LanguageSwitcher = () => {
       </DropdownTrigger>
       <DropdownMenu
         aria-label="Language"
-        selectionMode="single"
         selectedKeys={[currentLanguageCode]}
+        selectionMode="single"
         onSelectionChange={(keys) => {
           const selected = Array.from(keys)[0] as string;
+
           if (selected && selected !== currentLanguageCode) {
-            BApi.options
-              .patchAppOptions({ language: selected })
-              .then(() => {
-                location.reload();
-              });
+            BApi.options.patchAppOptions({ language: selected }).then(() => {
+              location.reload();
+            });
           }
         }}
       >

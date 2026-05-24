@@ -6,8 +6,6 @@ import { useState } from "react";
 import { Modal } from "../bakaui";
 
 import FolderSelectorInner from "./components/FolderSelectorInner";
-import { useFileSystemOptionsStore } from "@/stores/options";
-import BApi from "@/sdk/BApi";
 
 type Source = "custom" | "media library";
 
@@ -25,13 +23,13 @@ const FolderSelector = (props: Props) => {
     <Modal
       footer={false}
       size="lg"
-      visible={visible}
+      title={t('Select Path')}
       onClose={() => setVisible(false)}
       // onClose={() => {
       //   setVisible(false);
       // }}
       // onOpenChange={}
-      title={t('Select Path')}
+      visible={visible}
     >
       <FolderSelectorInner
         sources={sources}

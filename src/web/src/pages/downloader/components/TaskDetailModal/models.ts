@@ -1,4 +1,8 @@
 import type { components } from "@/sdk/BApi2";
+import type { IconType } from "react-icons";
+
+import { AiOutlineSearch, AiOutlineStar, AiOutlineUnorderedList } from "react-icons/ai";
+import { FaImages, FaRankingStar } from "react-icons/fa6";
 
 import {
   BilibiliDownloadTaskType,
@@ -6,9 +10,6 @@ import {
   PixivDownloadTaskType,
   ThirdPartyId,
 } from "@/sdk/constants";
-import { IconType } from "react-icons";
-import { AiOutlineSearch, AiOutlineStar, AiOutlineUnorderedList } from "react-icons/ai";
-import { FaImages, FaRankingStar } from "react-icons/fa6";
 
 type Form =
   components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input.DownloadTaskAddInputModel"];
@@ -33,8 +34,8 @@ export const DownloadTaskTypeIconMap: Record<number, Record<number, IconType>> =
     [PixivDownloadTaskType.Following]: AiOutlineStar,
     [PixivDownloadTaskType.Ranking]: FaRankingStar,
     [PixivDownloadTaskType.Search]: AiOutlineSearch,
-  }
-}
+  },
+};
 
 export enum DownloadTaskFieldType {
   BilibiliFavorites = 1,

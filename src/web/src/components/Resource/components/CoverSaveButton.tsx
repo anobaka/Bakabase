@@ -33,7 +33,7 @@ const CoverSaveButton = (props: Props) => {
           <div>{t<string>("Please select mode")}</div>
           {coverSaveModes.map((c) => {
             return (
-              <div className={"flex items-center gap-2"}>
+              <div key={c.value} className={"flex items-center gap-2"}>
                 <Button
                   color={saveMode == c.value ? "primary" : "default"}
                   size={"sm"}

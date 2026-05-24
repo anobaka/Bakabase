@@ -1,14 +1,22 @@
 "use client";
 
 import type { IProperty } from "@/components/Property/models";
+import type {
+  ModeParameter,
+  FixedToleranceParameter,
+  RelativeToleranceParameter,
+  TimeWindowParameter,
+  RegexExtractNumberParameter,
+} from "./RuleConfigPanel";
+import type { NullValueBehavior } from "@/sdk/constants";
 
 import { useTranslation } from "react-i18next";
 
-import { Chip, Tooltip } from "@/components/bakaui";
-import { ComparisonMode, NullValueBehavior } from "@/sdk/constants";
-import PropertyTypeIcon from "@/components/Property/components/PropertyTypeIcon";
 import { AllComparisonModes, NullValueBehaviors } from "./RuleConfigPanel";
-import type { ModeParameter, FixedToleranceParameter, RelativeToleranceParameter, TimeWindowParameter, RegexExtractNumberParameter } from "./RuleConfigPanel";
+
+import { Chip, Tooltip } from "@/components/bakaui";
+import { ComparisonMode } from "@/sdk/constants";
+import PropertyTypeIcon from "@/components/Property/components/PropertyTypeIcon";
 
 export interface RuleDemonstratorProps {
   property?: IProperty;
@@ -42,8 +50,10 @@ const RuleDemonstrator = ({
   const { t } = useTranslation();
 
   const modeLabel = AllComparisonModes.find((m) => m.value === mode)?.label || "Unknown";
-  const oneNullLabel = NullValueBehaviors.find((b) => b.value === oneNullBehavior)?.label || "Unknown";
-  const bothNullLabel = NullValueBehaviors.find((b) => b.value === bothNullBehavior)?.label || "Unknown";
+  const oneNullLabel =
+    NullValueBehaviors.find((b) => b.value === oneNullBehavior)?.label || "Unknown";
+  const bothNullLabel =
+    NullValueBehaviors.find((b) => b.value === bothNullBehavior)?.label || "Unknown";
 
   const getParameterDisplay = () => {
     if (!parameter) return null;
@@ -58,8 +68,10 @@ const RuleDemonstrator = ({
     }
     if (mode === ComparisonMode.RegexExtractNumber && "pattern" in parameter) {
       const pattern = (parameter as RegexExtractNumberParameter).pattern;
+
       return pattern ? `${t("comparison.label.regexPattern")}: ${pattern}` : null;
     }
+
     return null;
   };
 
@@ -107,17 +119,15 @@ const RuleDemonstrator = ({
     <Tooltip content={tooltipContent}>
       <Chip
         className={onClick ? "cursor-pointer" : undefined}
+        color={isVeto ? "warning" : "default"}
         size="sm"
         variant="flat"
-        color={isVeto ? "warning" : "default"}
         onClick={onClick}
         onClose={onDelete}
       >
         <div className="flex items-center gap-1">
           {property && <PropertyTypeIcon type={property.type} />}
-          <span>
-            {property?.name || `${t("comparison.label.property")} #${propertyId}`}
-          </span>
+          <span>{property?.name || `${t("comparison.label.property")} #${propertyId}`}</span>
           <span className="text-default-400">|</span>
           <span className="text-default-500 text-xs">{t(modeLabel)}</span>
           {normalize && <span className="text-primary text-xs">[N]</span>}

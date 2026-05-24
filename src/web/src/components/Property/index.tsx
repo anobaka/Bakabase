@@ -45,8 +45,7 @@ const Property = ({
 }: Props) => {
   const { t } = useTranslation();
 
-  const [removeConfirmingDialogVisible, setRemoveConfirmingDialogVisible] =
-    useState(false);
+  const [removeConfirmingDialogVisible, setRemoveConfirmingDialogVisible] = useState(false);
   const { createPortal } = useBakabaseContext();
 
   const editable = property.pool == PropertyPool.Custom && props.editable;
@@ -91,18 +90,28 @@ const Property = ({
     });
   };
 
+  const handlePropertyClick = () => {
+    if (disabled) {
+      return;
+    }
+    if (editable && editablePortal == "click") {
+      showDetail();
+    }
+    onClick?.();
+  };
+
   return (
     <div
       key={property.id}
       className={`${styles.property} group px-2 py-1 rounded ${disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:bg-[var(--bakaui-overlap-background)]"}`}
-      onClick={() => {
-        if (disabled) {
-          return;
+      role="button"
+      tabIndex={0}
+      onClick={handlePropertyClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          handlePropertyClick();
         }
-        if (editable && editablePortal == "click") {
-          showDetail();
-        }
-        onClick?.();
       }}
     >
       <Modal
@@ -124,21 +133,14 @@ const Property = ({
             </Chip>
             {property.name}
           </div>
-          <Tooltip
-            color={"foreground"}
-            content={t<string>(PropertyType[property.type!])}
-          >
+          <Tooltip color={"foreground"} content={t<string>(PropertyType[property.type!])}>
             <div className={styles.type}>
               <PropertyTypeIcon textVariant={"none"} type={property.type} />
             </div>
           </Tooltip>
         </div>
         {property.pool == PropertyPool.Custom && (
-          <div
-            className={
-              "ml-1 flex gap-0.5 items-center invisible group-hover:visible"
-            }
-          >
+          <div className={"ml-1 flex gap-0.5 items-center invisible group-hover:visible"}>
             {editable && editablePortal == "edit-icon" && (
               <Button
                 isIconOnly

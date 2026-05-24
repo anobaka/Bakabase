@@ -6,11 +6,7 @@ import type { RecursivePartial } from "@/components/types";
 
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  DeleteOutlined,
-  QuestionCircleOutlined,
-  SearchOutlined,
-} from "@ant-design/icons";
+import { DeleteOutlined, QuestionCircleOutlined, SearchOutlined } from "@ant-design/icons";
 import toast from "react-hot-toast";
 
 import {
@@ -81,9 +77,7 @@ type FilterForm = {
 
 const log = buildLogger("ResourceTransferModal");
 
-const validateInputModel = (
-  inputModel: RecursivePartial<InputModel>,
-): InputModel | undefined => {
+const validateInputModel = (inputModel: RecursivePartial<InputModel>): InputModel | undefined => {
   const items: InputModelItem[] = [];
 
   if (inputModel.items) {
@@ -92,11 +86,9 @@ const validateInputModel = (
         items.push({
           fromId: item.fromId,
           toId: item.toId,
-          keepMediaLibrary:
-            item.keepMediaLibrary ?? defaultInputModelItem.keepMediaLibrary!,
+          keepMediaLibrary: item.keepMediaLibrary ?? defaultInputModelItem.keepMediaLibrary!,
           deleteSourceResource:
-            item.deleteSourceResource ??
-            defaultInputModelItem.deleteSourceResource!,
+            item.deleteSourceResource ?? defaultInputModelItem.deleteSourceResource!,
         });
       }
     }
@@ -105,11 +97,9 @@ const validateInputModel = (
     return {
       items,
       keepMediaLibraryForAll:
-        inputModel.keepMediaLibraryForAll ??
-        defaultInputModel.keepMediaLibraryForAll!,
+        inputModel.keepMediaLibraryForAll ?? defaultInputModel.keepMediaLibraryForAll!,
       deleteAllSourceResources:
-        inputModel.deleteAllSourceResources ??
-        defaultInputModel.deleteAllSourceResources!,
+        inputModel.deleteAllSourceResources ?? defaultInputModel.deleteAllSourceResources!,
     };
   }
 
@@ -123,13 +113,9 @@ const ResourceTransferModal = ({ fromResources, onDestroyed }: Props) => {
   const [inputModel, setInputModel] = useState<RecursivePartial<InputModel>>({
     ...defaultInputModel,
   });
-  const [resourcePool, setResourcePool] = useState<
-    Record<number, ResourceModel>
-  >({});
+  const [resourcePool, setResourcePool] = useState<Record<number, ResourceModel>>({});
   const [filterForm, setFilterForm] = useState<FilterForm>({});
-  const [deletedSourceResourceIds, setDeletedSourceResourceIds] = useState<
-    number[]
-  >([]);
+  const [deletedSourceResourceIds, setDeletedSourceResourceIds] = useState<number[]>([]);
 
   useEffect(() => {
     const resources = fromResources
@@ -137,8 +123,7 @@ const ResourceTransferModal = ({ fromResources, onDestroyed }: Props) => {
         (x) =>
           !deletedSourceResourceIds.includes(x.id) &&
           (!filterForm.showUnfinishedOnly ||
-            inputModel.items?.find((i) => i!.fromId == x.id)?.toId ==
-              undefined) &&
+            inputModel.items?.find((i) => i!.fromId == x.id)?.toId == undefined) &&
           (filterForm.pathKeyword == undefined ||
             filterForm.pathKeyword.length == 0 ||
             x.path.toLowerCase().includes(filterForm.pathKeyword)),
@@ -153,12 +138,7 @@ const ResourceTransferModal = ({ fromResources, onDestroyed }: Props) => {
 
     if (total > 1) {
       return (
-        <Pagination
-          page={page}
-          size={"sm"}
-          total={total}
-          onChange={(page) => setPage(page)}
-        />
+        <Pagination page={page} size={"sm"} total={total} onChange={(page) => setPage(page)} />
       );
     }
 
@@ -242,9 +222,7 @@ const ResourceTransferModal = ({ fromResources, onDestroyed }: Props) => {
               </Chip>
               {
                 fromResources.filter(
-                  (r) =>
-                    inputModel.items?.find((i) => i!.fromId == r.id)?.toId !=
-                    undefined,
+                  (r) => inputModel.items?.find((i) => i!.fromId == r.id)?.toId != undefined,
                 ).length
               }
               /{fromResources.length}
@@ -272,15 +250,8 @@ const ResourceTransferModal = ({ fromResources, onDestroyed }: Props) => {
                 content={
                   <div>
                     <div className={"flex items-center gap-1"}>
-                      {t<string>(
-                        "resourceTransfer.tip.nonTransferableProperties",
-                      )}
-                      {[
-                        "parentAssociation",
-                        "path",
-                        "fileCreatedAt",
-                        "fileModifiedAt",
-                      ].map((x) => (
+                      {t<string>("resourceTransfer.tip.nonTransferableProperties")}
+                      {["parentAssociation", "path", "fileCreatedAt", "fileModifiedAt"].map((x) => (
                         <Chip key={x} radius={"sm"} size={"sm"}>
                           {t<string>(`resourceTransfer.property.${x}`)}
                         </Chip>
@@ -304,7 +275,7 @@ const ResourceTransferModal = ({ fromResources, onDestroyed }: Props) => {
                 <TableColumn width={200}>
                   {t<string>("resourceTransfer.column.sourceResource")}
                 </TableColumn>
-                <TableColumn width={60}>{" "}</TableColumn>
+                <TableColumn width={60}> </TableColumn>
                 <TableColumn width={200}>
                   {t<string>("resourceTransfer.column.targetResource")}
                 </TableColumn>
@@ -312,22 +283,18 @@ const ResourceTransferModal = ({ fromResources, onDestroyed }: Props) => {
               </TableHeader>
               <TableBody>
                 {resources.map((x, i) => {
-                  const item = inputModel.items?.find(
-                    (y) => y?.fromId == x.id,
-                  ) || {
+                  const item = inputModel.items?.find((y) => y?.fromId == x.id) || {
                     ...defaultInputModelItem,
                     fromId: x.id,
                   };
                   const toResource = resourcePool[item.toId ?? 0];
 
                   return (
-                    <TableRow>
+                    <TableRow key={x.id}>
                       <TableCell>
                         <div className={"flex justify-center"}>
                           <Chip
-                            color={
-                              item.toId == undefined ? "default" : "success"
-                            }
+                            color={item.toId == undefined ? "default" : "success"}
                             radius={"sm"}
                           >
                             {i + 1}
@@ -337,12 +304,9 @@ const ResourceTransferModal = ({ fromResources, onDestroyed }: Props) => {
                       <TableCell>
                         <div className={"relative"}>
                           <Resource resource={x} />
-                          {(inputModel.deleteAllSourceResources ||
-                            item.deleteSourceResource) && (
+                          {(inputModel.deleteAllSourceResources || item.deleteSourceResource) && (
                             <div className={"absolute top-0 right-0"}>
-                              <DeleteOutlined
-                                className={"text-3xl text-danger"}
-                              />
+                              <DeleteOutlined className={"text-3xl text-danger"} />
                             </div>
                           )}
                         </div>
@@ -359,9 +323,7 @@ const ResourceTransferModal = ({ fromResources, onDestroyed }: Props) => {
                           )
                         ) : (
                           <div className={"text-warning"}>
-                            {t<string>(
-                              "resourceTransfer.tip.selectTarget",
-                            )}
+                            {t<string>("resourceTransfer.tip.selectTarget")}
                           </div>
                         )}
                       </TableCell>
@@ -393,8 +355,7 @@ const ResourceTransferModal = ({ fromResources, onDestroyed }: Props) => {
                           <Checkbox
                             isDisabled={inputModel.deleteAllSourceResources}
                             isSelected={
-                              inputModel.deleteAllSourceResources ||
-                              item.deleteSourceResource
+                              inputModel.deleteAllSourceResources || item.deleteSourceResource
                             }
                             onValueChange={(v) => {
                               console.log(item);
@@ -408,19 +369,14 @@ const ResourceTransferModal = ({ fromResources, onDestroyed }: Props) => {
                           </Checkbox>
                           <Checkbox
                             isDisabled={inputModel.keepMediaLibraryForAll}
-                            isSelected={
-                              inputModel.keepMediaLibraryForAll ||
-                              item.keepMediaLibrary
-                            }
+                            isSelected={inputModel.keepMediaLibraryForAll || item.keepMediaLibrary}
                             onValueChange={(v) => {
                               item.keepMediaLibrary = v;
                               addItem(inputModel, item);
                               setInputModel({ ...inputModel });
                             }}
                           >
-                            {t<string>(
-                              "resourceTransfer.option.keepMediaLibrary",
-                            )}
+                            {t<string>("resourceTransfer.option.keepMediaLibrary")}
                           </Checkbox>
                         </div>
                       </TableCell>
@@ -453,16 +409,8 @@ const ResourceTransferModal = ({ fromResources, onDestroyed }: Props) => {
               color={"secondary"}
               content={
                 <div>
-                  <div>
-                    {t<string>(
-                      "resourceTransfer.tip.keepMediaLibrary",
-                    )}
-                  </div>
-                  <div>
-                    {t<string>(
-                      "resourceTransfer.tip.replaceMediaLibrary",
-                    )}
-                  </div>
+                  <div>{t<string>("resourceTransfer.tip.keepMediaLibrary")}</div>
+                  <div>{t<string>("resourceTransfer.tip.replaceMediaLibrary")}</div>
                 </div>
               }
             >
@@ -476,10 +424,7 @@ const ResourceTransferModal = ({ fromResources, onDestroyed }: Props) => {
                   });
                 }}
               >
-                {t<string>(
-                  "resourceTransfer.option.keepMediaLibrary",
-                )}
-                (
+                {t<string>("resourceTransfer.option.keepMediaLibrary")}(
                 {t<string>("resourceTransfer.option.forAllItems", {
                   count: fromResources.length,
                 })}

@@ -5,24 +5,14 @@ import type {
   PropertyValueScopePreference,
   PropertyValueScopePriority,
 } from "@/core/models/Resource";
+import type { PropertyPool, PropertyValueScope } from "@/sdk/constants";
 
 import React, { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  MdAdd,
-  MdArrowDownward,
-  MdArrowUpward,
-  MdClose,
-  MdTune,
-} from "react-icons/md";
+import { MdAdd, MdArrowDownward, MdArrowUpward, MdClose, MdTune } from "react-icons/md";
 
 import BApi from "@/sdk/BApi";
-import {
-  PropertyPool,
-  PropertyValueScope,
-  PropertyValueScopeLabel,
-  propertyValueScopes,
-} from "@/sdk/constants";
+import { PropertyValueScopeLabel, propertyValueScopes } from "@/sdk/constants";
 import { Button, Popover, Switch } from "@/components/bakaui";
 
 type Props = {
@@ -43,17 +33,22 @@ type Props = {
 
 const hasValue = (v?: { value?: any; bizValue?: any }) => {
   const x = v?.bizValue ?? v?.value;
+
   if (x == null) return false;
   if (Array.isArray(x)) return x.length > 0;
   if (typeof x === "string") return x.trim().length > 0;
+
   return true;
 };
 
 const previewText = (v?: { value?: any; bizValue?: any }) => {
   const x = v?.bizValue ?? v?.value;
+
   if (x == null) return "";
-  if (Array.isArray(x)) return x.map((i) => (typeof i === "object" ? JSON.stringify(i) : String(i))).join(", ");
+  if (Array.isArray(x))
+    return x.map((i) => (typeof i === "object" ? JSON.stringify(i) : String(i))).join(", ");
   if (typeof x === "object") return JSON.stringify(x);
+
   return String(x);
 };
 
@@ -99,8 +94,10 @@ const ScopePreferencePopover = ({
   const effectiveScope = useMemo(() => {
     for (const s of effectivePriority) {
       const v = values?.find((x) => x.scope === s);
+
       if (hasValue(v)) return s;
     }
+
     return undefined;
   }, [effectivePriority, values]);
 
@@ -170,12 +167,6 @@ const ScopePreferencePopover = ({
 
   return (
     <Popover
-      visible={open}
-      onVisibleChange={(v) => {
-        if (v) initialize();
-        setOpen(v);
-        onOpenChange?.(v);
-      }}
       trigger={
         <button
           aria-label={t("property.scopePreference.title")}
@@ -186,6 +177,12 @@ const ScopePreferencePopover = ({
           <MdTune size={12} />
         </button>
       }
+      visible={open}
+      onVisibleChange={(v) => {
+        if (v) initialize();
+        setOpen(v);
+        onOpenChange?.(v);
+      }}
     >
       <div className="flex flex-col gap-2 p-1 min-w-[340px] max-w-[460px]">
         <div className="flex items-center justify-between gap-2 text-xs">
@@ -195,14 +192,8 @@ const ScopePreferencePopover = ({
               : t("property.scopePreference.currentlyBlank")}
           </span>
           <label className="flex items-center gap-1 shrink-0 cursor-pointer">
-            <Switch
-              isSelected={showEmpty}
-              size="sm"
-              onValueChange={setShowEmpty}
-            />
-            <span className="opacity-60">
-              {t("property.scopePreference.showEmpty")}
-            </span>
+            <Switch isSelected={showEmpty} size="sm" onValueChange={setShowEmpty} />
+            <span className="opacity-60">{t("property.scopePreference.showEmpty")}</span>
           </label>
         </div>
 
@@ -213,21 +204,18 @@ const ScopePreferencePopover = ({
             const isLast = inList && idx === priorityLen - 1;
             const entry = inList ? priorities![idx] : undefined;
             // A non-last entry with fallbackOnEmpty=false cuts off the chain; anything after it is inert.
-            const cutoffIdx = priorities?.findIndex(
-              (p, i) => !p.fallbackOnEmpty && i < priorityLen - 1,
-            ) ?? -1;
+            const cutoffIdx =
+              priorities?.findIndex((p, i) => !p.fallbackOnEmpty && i < priorityLen - 1) ?? -1;
             const isCutOff = inList && cutoffIdx >= 0 && idx > cutoffIdx;
 
             return (
               <div
-                className={`flex items-center gap-1 text-sm ${isCutOff ? "opacity-40" : ""}`}
                 key={s.scope}
+                className={`flex items-center gap-1 text-sm ${isCutOff ? "opacity-40" : ""}`}
               >
                 {inList ? (
                   <>
-                    <span className="font-mono text-xs opacity-60 w-5 text-right">
-                      {idx + 1}.
-                    </span>
+                    <span className="font-mono text-xs opacity-60 w-5 text-right">{idx + 1}.</span>
                     <Button
                       isIconOnly
                       isDisabled={isCutOff || idx === 0}
@@ -293,9 +281,7 @@ const ScopePreferencePopover = ({
             );
           })}
           {nonEmptyScopes.length === 0 && (
-            <div className="text-sm opacity-50 py-2">
-              {t("property.scopePreference.noValues")}
-            </div>
+            <div className="text-sm opacity-50 py-2">{t("property.scopePreference.noValues")}</div>
           )}
         </div>
 

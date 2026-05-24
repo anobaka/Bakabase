@@ -10,13 +10,9 @@ import dependentComponentIds from "@/core/models/Constants/DependentComponentIds
 export default function LuxRequired() {
   const { t } = useTranslation();
 
-  const dependentComponentContexts = useDependentComponentContextsStore(
-    (state) => state.contexts,
-  );
+  const dependentComponentContexts = useDependentComponentContextsStore((state) => state.contexts);
 
-  const luxState = dependentComponentContexts?.find(
-    (d) => d.id === dependentComponentIds.Lux,
-  );
+  const luxState = dependentComponentContexts?.find((d) => d.id === dependentComponentIds.Lux);
 
   const isLuxMissing = luxState?.status !== DependentComponentStatus.Installed;
 

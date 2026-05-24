@@ -1,13 +1,10 @@
 "use client";
 
 import type { BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFileNameModifierOperation } from "../../sdk/Api";
+import type { CSSProperties } from "react";
 
-import React, { CSSProperties, forwardRef } from "react";
-import {
-  AiOutlineDelete,
-  AiOutlineCopy,
-  AiOutlineHolder,
-} from "react-icons/ai";
+import React, { forwardRef } from "react";
+import { AiOutlineDelete, AiOutlineCopy, AiOutlineHolder } from "react-icons/ai";
 import { useTranslation } from "react-i18next";
 
 import { Select, Button, Card, Chip } from "../bakaui";
@@ -47,19 +44,7 @@ const TargetTypeOptions = fileNameModifierFileNameTargets.map((opt) => ({
 }));
 
 const OperationCard = forwardRef<HTMLDivElement, OperationCardProps>(
-  (
-    {
-      operation,
-      index,
-      onChange,
-      onDelete,
-      onCopy,
-      errors,
-      style,
-      dragHandleProps,
-    },
-    ref
-  ) => {
+  ({ operation, index, onChange, onDelete, onCopy, errors, style, dragHandleProps }, ref) => {
     const { t } = useTranslation();
     // 参数输入变更
     const handleChange = (
@@ -86,12 +71,12 @@ const OperationCard = forwardRef<HTMLDivElement, OperationCardProps>(
               {index + 1}
             </Chip>
             <Select
+              disallowEmptySelection
               className="w-[200px]"
               dataSource={TargetTypeOptions.map((opt) => ({
                 label: t<string>(opt.label),
                 value: opt.value,
               }))}
-              disallowEmptySelection
               isRequired={true}
               placeholder={t<string>("FileNameModifier.TargetTypePlaceholder")}
               selectedKeys={[operation.target?.toString() || ""]}
@@ -105,12 +90,12 @@ const OperationCard = forwardRef<HTMLDivElement, OperationCardProps>(
               }}
             />
             <Select
+              disallowEmptySelection
               className="w-[160px]"
               dataSource={fileNameModifierOperationTypes.map((opt) => ({
                 label: t<string>(`FileNameModifier.OperationType.${opt.label}`),
                 value: opt.value,
               }))}
-              disallowEmptySelection
               isRequired={true}
               placeholder={t<string>("FileNameModifier.OperationTypePlaceholder")}
               selectedKeys={[operation.operation?.toString() || ""]}
@@ -131,13 +116,7 @@ const OperationCard = forwardRef<HTMLDivElement, OperationCardProps>(
                 <AiOutlineCopy className="text-lg" />
               </Button>
             )}
-            <Button
-              isIconOnly
-              color="danger"
-              size="sm"
-              variant="light"
-              onClick={onDelete}
-            >
+            <Button isIconOnly color="danger" size="sm" variant="light" onClick={onDelete}>
               <AiOutlineDelete className="text-lg" />
             </Button>
           </div>
@@ -147,52 +126,28 @@ const OperationCard = forwardRef<HTMLDivElement, OperationCardProps>(
         {/* 操作参数字段 */}
         <div className="flex flex-wrap gap-2 items-center">
           {operation.operation === OperationType.Insert && (
-            <InsertOperationFields
-              operation={operation}
-              t={t}
-              onChange={onChange}
-            />
+            <InsertOperationFields operation={operation} t={t} onChange={onChange} />
           )}
           {operation.operation === OperationType.Replace && (
-            <ReplaceOperationFields
-              operation={operation}
-              t={t}
-              onChange={onChange}
-            />
+            <ReplaceOperationFields operation={operation} t={t} onChange={onChange} />
           )}
           {operation.operation === OperationType.AddDateTime && (
-            <AddDateTimeOperationFields
-              operation={operation}
-              t={t}
-              onChange={onChange}
-            />
+            <AddDateTimeOperationFields operation={operation} t={t} onChange={onChange} />
           )}
           {operation.operation === OperationType.Delete && (
-            <DeleteOperationFields
-              operation={operation}
-              t={t}
-              onChange={onChange}
-            />
+            <DeleteOperationFields operation={operation} t={t} onChange={onChange} />
           )}
           {operation.operation === OperationType.ChangeCase && (
-            <ChangeCaseOperationFields
-              operation={operation}
-              t={t}
-              onChange={onChange}
-            />
+            <ChangeCaseOperationFields operation={operation} t={t} onChange={onChange} />
           )}
           {operation.operation === OperationType.AddAlphabetSequence && (
-            <AddAlphabetSequenceOperationFields
-              operation={operation}
-              t={t}
-              onChange={onChange}
-            />
+            <AddAlphabetSequenceOperationFields operation={operation} t={t} onChange={onChange} />
           )}
           {/* Reverse 无需参数 */}
         </div>
       </Card>
     );
-  }
+  },
 );
 
 OperationCard.displayName = "OperationCard";

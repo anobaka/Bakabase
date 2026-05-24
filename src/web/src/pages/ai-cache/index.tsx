@@ -1,5 +1,7 @@
 "use client";
 
+import type { BakabaseModulesAIModelsDbLlmCallCacheEntryDbModel } from "@/sdk/Api";
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -23,7 +25,6 @@ import { AiOutlineDelete, AiOutlineEye } from "react-icons/ai";
 import { Modal, toast } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import BApi from "@/sdk/BApi";
-import type { BakabaseModulesAIModelsDbLlmCallCacheEntryDbModel } from "@/sdk/Api";
 import LlmProviderSelector, { useLlmProviders } from "@/components/LlmProviderSelector";
 
 type CacheEntry = BakabaseModulesAIModelsDbLlmCallCacheEntryDbModel;
@@ -45,6 +46,7 @@ const AiCachePage = () => {
     setLoading(true);
     try {
       const r = await BApi.ai.getAllLlmCacheEntries();
+
       if (!r.code && r.data) {
         setAllEntries(r.data);
       }
@@ -59,17 +61,18 @@ const AiCachePage = () => {
 
   const filteredEntries = useMemo(() => {
     let result = allEntries;
+
     if (selectedProviderId !== undefined) {
       result = result.filter((e) => e.providerConfigId === selectedProviderId);
     }
     if (keyword) {
       const kw = keyword.toLowerCase();
+
       result = result.filter(
-        (e) =>
-          e.modelId.toLowerCase().includes(kw) ||
-          e.cacheKey.toLowerCase().includes(kw),
+        (e) => e.modelId.toLowerCase().includes(kw) || e.cacheKey.toLowerCase().includes(kw),
       );
     }
+
     return result;
   }, [allEntries, keyword, selectedProviderId]);
 
@@ -83,6 +86,7 @@ const AiCachePage = () => {
 
   const handleDelete = async (id: number) => {
     const r = await BApi.ai.deleteLlmCacheEntry(id);
+
     if (!r.code) {
       setAllEntries((prev) => prev.filter((e) => e.id !== id));
     }
@@ -95,6 +99,7 @@ const AiCachePage = () => {
       children: t<string>("configuration.ai.cache.clearConfirm"),
       onOk: async () => {
         const r = await BApi.ai.clearAllLlmCache();
+
         if (!r.code) {
           setAllEntries([]);
           toast.success(t<string>("common.success.saved"));
@@ -105,11 +110,13 @@ const AiCachePage = () => {
 
   const isExpired = (entry: CacheEntry) => {
     if (!entry.expiresAt) return false;
+
     return new Date(entry.expiresAt) < new Date();
   };
 
   const formatTime = (iso?: string) => {
     if (!iso) return "-";
+
     return new Date(iso).toLocaleString();
   };
 
@@ -127,37 +134,37 @@ const AiCachePage = () => {
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <Input
-            size="sm"
             className="min-w-[200px]"
             placeholder={t<string>("configuration.ai.cache.searchPlaceholder")}
+            size="sm"
             value={keyword}
             onValueChange={setKeyword}
           />
           <LlmProviderSelector
+            placeholder={t<string>("configuration.ai.cache.allProviders")}
             value={selectedProviderId}
             onChange={setSelectedProviderId}
-            placeholder={t<string>("configuration.ai.cache.allProviders")}
           />
           <span className="text-sm text-default-400 whitespace-nowrap">
             {t("configuration.ai.cache.totalEntries", { count: filteredEntries.length })}
           </span>
         </div>
         {allEntries.length > 0 && (
-          <Button size="sm" color="danger" variant="flat" onPress={handleClearAll}>
+          <Button color="danger" size="sm" variant="flat" onPress={handleClearAll}>
             {t("configuration.ai.cache.clearAll")}
           </Button>
         )}
       </div>
 
       {/* Cache entries table */}
-      <Table removeWrapper size="sm" aria-label="cache entries">
+      <Table removeWrapper aria-label="cache entries" size="sm">
         <TableHeader>
           <TableColumn>{t("configuration.ai.auditLog.provider")}</TableColumn>
           <TableColumn>{t("configuration.ai.auditLog.model")}</TableColumn>
           <TableColumn>{t("configuration.ai.cache.hitCount", { count: "" })}</TableColumn>
           <TableColumn>{t("common.label.createdAt")}</TableColumn>
           <TableColumn>{t("configuration.ai.cache.expiresAt")}</TableColumn>
-          <TableColumn width={80}>{" "}</TableColumn>
+          <TableColumn width={80}> </TableColumn>
         </TableHeader>
         <TableBody emptyContent={t<string>("configuration.ai.cache.noEntries")}>
           {pagedEntries.map((entry) => (
@@ -176,7 +183,7 @@ const AiCachePage = () => {
                 <div className="flex items-center gap-1">
                   <span className="text-default-400">{formatTime(entry.expiresAt)}</span>
                   {isExpired(entry) && (
-                    <Chip size="sm" variant="flat" color="warning">
+                    <Chip color="warning" size="sm" variant="flat">
                       {t("configuration.ai.cache.expired")}
                     </Chip>
                   )}
@@ -194,9 +201,9 @@ const AiCachePage = () => {
                   </Button>
                   <Button
                     isIconOnly
+                    color="danger"
                     size="sm"
                     variant="light"
-                    color="danger"
                     onPress={() => handleDelete(entry.id)}
                   >
                     <AiOutlineDelete className="text-lg" />
@@ -210,20 +217,16 @@ const AiCachePage = () => {
 
       {totalPages > 1 && (
         <div className="flex justify-center">
-          <Pagination
-            page={page}
-            total={totalPages}
-            onChange={setPage}
-          />
+          <Pagination page={page} total={totalPages} onChange={setPage} />
         </div>
       )}
 
       {/* Detail Modal */}
       <NextUiModal
-        size="2xl"
         isOpen={!!detailEntry}
-        onClose={() => setDetailEntry(null)}
         scrollBehavior="inside"
+        size="2xl"
+        onClose={() => setDetailEntry(null)}
       >
         <ModalContent>
           {detailEntry && (
@@ -234,11 +237,15 @@ const AiCachePage = () => {
                   {/* Basic info */}
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
-                      <span className="text-default-400">{t("configuration.ai.auditLog.provider")}: </span>
+                      <span className="text-default-400">
+                        {t("configuration.ai.auditLog.provider")}:{" "}
+                      </span>
                       {getProviderLabel(detailEntry.providerConfigId)}
                     </div>
                     <div>
-                      <span className="text-default-400">{t("configuration.ai.auditLog.model")}: </span>
+                      <span className="text-default-400">
+                        {t("configuration.ai.auditLog.model")}:{" "}
+                      </span>
                       <span className="font-mono">{detailEntry.modelId}</span>
                     </div>
                     <div>
@@ -246,23 +253,29 @@ const AiCachePage = () => {
                       {formatTime(detailEntry.createdAt)}
                     </div>
                     <div>
-                      <span className="text-default-400">{t("configuration.ai.cache.expiresAt")}: </span>
+                      <span className="text-default-400">
+                        {t("configuration.ai.cache.expiresAt")}:{" "}
+                      </span>
                       {formatTime(detailEntry.expiresAt)}
                       {isExpired(detailEntry) && (
-                        <Chip size="sm" variant="flat" color="warning" className="ml-1">
+                        <Chip className="ml-1" color="warning" size="sm" variant="flat">
                           {t("configuration.ai.cache.expired")}
                         </Chip>
                       )}
                     </div>
                     <div>
-                      <span className="text-default-400">{t("configuration.ai.cache.hitCount", { count: "" })}: </span>
+                      <span className="text-default-400">
+                        {t("configuration.ai.cache.hitCount", { count: "" })}:{" "}
+                      </span>
                       {detailEntry.hitCount}
                     </div>
                   </div>
 
                   {/* Cache Key */}
                   <div>
-                    <div className="text-sm font-medium mb-1">{t("configuration.ai.cache.cacheKey")}</div>
+                    <div className="text-sm font-medium mb-1">
+                      {t("configuration.ai.cache.cacheKey")}
+                    </div>
                     <pre className="whitespace-pre-wrap break-all text-sm bg-default-100 rounded-lg p-3 max-h-[150px] overflow-auto">
                       {detailEntry.cacheKey}
                     </pre>
@@ -270,7 +283,9 @@ const AiCachePage = () => {
 
                   {/* Response Content */}
                   <div>
-                    <div className="text-sm font-medium mb-1">{t("configuration.ai.cache.responseContent")}</div>
+                    <div className="text-sm font-medium mb-1">
+                      {t("configuration.ai.cache.responseContent")}
+                    </div>
                     <pre className="whitespace-pre-wrap break-all text-sm bg-default-100 rounded-lg p-3 max-h-[400px] overflow-auto">
                       {formatJson(detailEntry.responseJson)}
                     </pre>

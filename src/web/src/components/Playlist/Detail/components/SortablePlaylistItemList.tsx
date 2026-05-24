@@ -1,8 +1,9 @@
 "use client";
 
 import type { components } from "@/sdk/BApi2";
+import type { SortableContainerProps } from "react-sortable-hoc";
 
-import { SortableContainer, SortableContainerProps } from "react-sortable-hoc";
+import { SortableContainer } from "react-sortable-hoc";
 import { useTranslation } from "react-i18next";
 
 import SortablePlaylistItem from "@/components/Playlist/Detail/components/SortablePlaylistItem";
@@ -21,23 +22,23 @@ interface SortablePlaylistItemListProps {
 export default SortableContainer<SortablePlaylistItemListProps>(
   ({ items, resources, onRemove }: SortablePlaylistItemListProps) => {
     const { t } = useTranslation();
-    
+
     return (
       <div className="w-full">
         {/* Header Row */}
-        <div 
+        <div
           className="grid grid-cols-[auto_auto_1fr_auto_auto] gap-2 items-center px-2 py-2 border-b text-sm font-medium"
           style={{
-            backgroundColor: 'var(--theme-table-header-background)',
-            color: 'var(--theme-text)',
-            borderColor: 'var(--theme-border-color)',
+            backgroundColor: "var(--theme-table-header-background)",
+            color: "var(--theme-text)",
+            borderColor: "var(--theme-border-color)",
           }}
         >
-          <div className="w-8"></div>
-          <div className="w-6"></div>
+          <div className="w-8" />
+          <div className="w-6" />
           <div>{t<string>("playlist.label.resourceFile")}</div>
           <div className="text-right">{t<string>("playlist.label.duration")}</div>
-          <div className="w-10"></div>
+          <div className="w-10" />
         </div>
         {/* Sortable Items */}
         <div className="max-h-[800px] overflow-y-auto">
@@ -56,8 +57,8 @@ export default SortableContainer<SortablePlaylistItemListProps>(
       </div>
     );
   },
-  { 
+  {
     withRef: false,
-    helperClass: 'sortable-playlist-item-helper',
+    helperClass: "sortable-playlist-item-helper",
   },
 );

@@ -3,6 +3,7 @@ export function truncatePath(path: string, maxLength = 40): string {
   if (path.length <= maxLength) return path;
 
   const lastSep = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
+
   if (lastSep === -1) {
     // 没有分隔符，直接截断
     return "..." + path.slice(-(maxLength - 3));
@@ -17,6 +18,7 @@ export function truncatePath(path: string, maxLength = 40): string {
   }
 
   const remainingLength = maxLength - fileName.length - 4; // 4 = ".../"
+
   if (remainingLength <= 0) {
     return ".../" + fileName;
   }
@@ -29,24 +31,28 @@ export function detectCommonPrefix(paths: string[]): string {
   if (paths.length === 0) return "";
   if (paths.length === 1) {
     const lastSep = Math.max(paths[0].lastIndexOf("/"), paths[0].lastIndexOf("\\"));
+
     return lastSep >= 0 ? paths[0].substring(0, lastSep + 1) : "";
   }
 
   // 将所有路径转换为目录部分
   const dirs = paths.map((p) => {
     const lastSep = Math.max(p.lastIndexOf("/"), p.lastIndexOf("\\"));
+
     return lastSep >= 0 ? p.substring(0, lastSep + 1) : "";
   });
 
   // 找到公共前缀
   let prefix = dirs[0];
+
   for (let i = 1; i < dirs.length; i++) {
     while (!dirs[i].startsWith(prefix) && prefix.length > 0) {
       // 退回到上一个目录分隔符
       const lastSep = Math.max(
         prefix.lastIndexOf("/", prefix.length - 2),
-        prefix.lastIndexOf("\\", prefix.length - 2)
+        prefix.lastIndexOf("\\", prefix.length - 2),
       );
+
       prefix = lastSep >= 0 ? prefix.substring(0, lastSep + 1) : "";
     }
     if (prefix.length === 0) break;
@@ -76,12 +82,14 @@ export function computeDiff(original: string, modified: string): DiffParts {
   // 找公共前缀
   let prefixLen = 0;
   const minLen = Math.min(original.length, modified.length);
+
   while (prefixLen < minLen && original[prefixLen] === modified[prefixLen]) {
     prefixLen++;
   }
 
   // 找公共后缀
   let suffixLen = 0;
+
   while (
     suffixLen < original.length - prefixLen &&
     suffixLen < modified.length - prefixLen &&

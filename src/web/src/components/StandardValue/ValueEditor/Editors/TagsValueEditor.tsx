@@ -37,6 +37,7 @@ const TagsValueEditor = (props: TagsValueEditorProps) => {
 
   const loadData = async () => {
     const data = (await getDataSource()) ?? [];
+
     if (data.length > 0) {
       setDataSource(data);
     }
@@ -47,12 +48,14 @@ const TagsValueEditor = (props: TagsValueEditorProps) => {
     const groups: Record<string, TagData[]> = {};
     const ungrouped: TagData[] = [];
 
-    const filteredData = keyword.length === 0
-      ? dataSource
-      : dataSource.filter((d) => {
-          const searchText = d.group ? `${d.group}:${d.name}` : d.name;
-          return searchText.toLowerCase().includes(keyword.toLowerCase());
-        });
+    const filteredData =
+      keyword.length === 0
+        ? dataSource
+        : dataSource.filter((d) => {
+            const searchText = d.group ? `${d.group}:${d.name}` : d.name;
+
+            return searchText.toLowerCase().includes(keyword.toLowerCase());
+          });
 
     for (const tag of filteredData) {
       if (tag.group && tag.group.length > 0) {
@@ -112,9 +115,11 @@ const TagsValueEditor = (props: TagsValueEditorProps) => {
         const bizValue: TagValue[] = value
           .map((v) => {
             const tag = dataSource.find((d) => d.value === v);
+
             if (tag) {
               return { name: tag.name, group: tag.group };
             }
+
             return null;
           })
           .filter((x) => x) as TagValue[];
@@ -125,8 +130,8 @@ const TagsValueEditor = (props: TagsValueEditorProps) => {
       <div className={"flex flex-col gap-3 max-h-full min-h-0"}>
         <div>
           <Input
-            size={"sm"}
             placeholder={t<string>("common.placeholder.search")}
+            size={"sm"}
             startContent={<SearchOutlined className={"text-small"} />}
             value={keyword}
             onValueChange={(v) => setKeyword(v)}
@@ -150,9 +155,7 @@ const TagsValueEditor = (props: TagsValueEditorProps) => {
               {/* Grouped tags */}
               {groupNames.map((groupName) => (
                 <div key={groupName} className={"flex flex-col gap-1"}>
-                  <div className={"text-sm font-medium text-default-500"}>
-                    {groupName}
-                  </div>
+                  <div className={"text-sm font-medium text-default-500"}>{groupName}</div>
                   <div className={"flex flex-wrap gap-1 pl-2"}>
                     {groupedTags.groups[groupName].map(renderTagButton)}
                   </div>
@@ -160,11 +163,13 @@ const TagsValueEditor = (props: TagsValueEditorProps) => {
               ))}
 
               {/* No results after filtering */}
-              {groupedTags.ungrouped.length === 0 && groupNames.length === 0 && keyword.length > 0 && (
-                <div className={"text-default-400 text-center py-4"}>
-                  {t<string>("common.state.noData")}
-                </div>
-              )}
+              {groupedTags.ungrouped.length === 0 &&
+                groupNames.length === 0 &&
+                keyword.length > 0 && (
+                  <div className={"text-default-400 text-center py-4"}>
+                    {t<string>("common.state.noData")}
+                  </div>
+                )}
             </>
           )}
         </div>

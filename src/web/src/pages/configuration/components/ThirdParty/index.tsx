@@ -67,22 +67,14 @@ const ThirdParty = ({
   const tmdbOptions = useTmdbOptionsStore((state) => state.data);
   const steamOptions = useSteamOptionsStore((state) => state.data);
 
-  const [tmpBilibiliOptions, setTmpBilibiliOptions] = useState(
-    bilibiliOptions || {},
-  );
+  const [tmpBilibiliOptions, setTmpBilibiliOptions] = useState(bilibiliOptions || {});
   const [tmpPixivOptions, setTmpPixivOptions] = useState(pixivOptions || {});
-  const [tmpSoulPlusOptions, setTmpSoulPlusOptions] = useState(
-    soulPlusOptions || {},
-  );
-  const [tmpBangumiOptions, setTmpBangumiOptions] = useState(
-    bangumiOptions || {},
-  );
+  const [tmpSoulPlusOptions, setTmpSoulPlusOptions] = useState(soulPlusOptions || {});
+  const [tmpBangumiOptions, setTmpBangumiOptions] = useState(bangumiOptions || {});
   const [tmpCienOptions, setTmpCienOptions] = useState(cienOptions || {});
   const [tmpFanboxOptions, setTmpFanboxOptions] = useState(fanboxOptions || {});
   const [tmpFantiaOptions, setTmpFantiaOptions] = useState(fantiaOptions || {});
-  const [tmpPatreonOptions, setTmpPatreonOptions] = useState(
-    patreonOptions || {},
-  );
+  const [tmpPatreonOptions, setTmpPatreonOptions] = useState(patreonOptions || {});
   const [tmpTmdbOptions, setTmpTmdbOptions] = useState(tmdbOptions || {});
 
   const [exhentaiConfigOpen, setExhentaiConfigOpen] = useState(false);
@@ -136,11 +128,7 @@ const ThirdParty = ({
     setTmpTmdbOptions(JSON.parse(JSON.stringify(tmdbOptions || {})));
   }, [tmdbOptions]);
 
-  const validateCookie = (
-    thirdParty: string,
-    cookie: string,
-    target: CookieValidatorTarget,
-  ) => {
+  const validateCookie = (thirdParty: string, cookie: string, target: CookieValidatorTarget) => {
     setValidatingCookies((prev) => ({ ...prev, [thirdParty]: true }));
     BApi.tool
       .validateCookie({
@@ -270,14 +258,24 @@ const ThirdParty = ({
         </Button>
         {options.cookie && (
           <Button
-            color={cookieValidationResults[thirdPartyName] === "succeed" ? "success" : cookieValidationResults[thirdPartyName] === "failed" ? "danger" : "default"}
-            disabled={
-              !options.cookie?.length || validatingCookies[thirdPartyName]
+            color={
+              cookieValidationResults[thirdPartyName] === "succeed"
+                ? "success"
+                : cookieValidationResults[thirdPartyName] === "failed"
+                  ? "danger"
+                  : "default"
             }
+            disabled={!options.cookie?.length || validatingCookies[thirdPartyName]}
             isLoading={validatingCookies[thirdPartyName]}
             size="sm"
+            startContent={
+              cookieValidationResults[thirdPartyName] === "succeed" ? (
+                <AiOutlineCheck />
+              ) : cookieValidationResults[thirdPartyName] === "failed" ? (
+                <AiOutlineClose />
+              ) : undefined
+            }
             variant="flat"
-            startContent={cookieValidationResults[thirdPartyName] === "succeed" ? <AiOutlineCheck /> : cookieValidationResults[thirdPartyName] === "failed" ? <AiOutlineClose /> : undefined}
             onPress={() => {
               const validatorMap: { [key: string]: CookieValidatorTarget } = {
                 bilibili: CookieValidatorTarget.BiliBili,
@@ -299,42 +297,46 @@ const ThirdParty = ({
             {t<string>("configuration.thirdParty.validateCookie")}
           </Button>
         )}
-        {isDesktopApp && (() => {
-          const captureMap: { [key: string]: CookieValidatorTarget } = {
-            bilibili: CookieValidatorTarget.BiliBili,
-            exhentai: CookieValidatorTarget.ExHentai,
-            pixiv: CookieValidatorTarget.Pixiv,
-            fanbox: CookieValidatorTarget.Fanbox,
-            fantia: CookieValidatorTarget.Fantia,
-            cien: CookieValidatorTarget.Cien,
-            patreon: CookieValidatorTarget.Patreon,
-          };
-          const target = captureMap[thirdPartyName.toLowerCase()];
-          if (!target) return null;
-          return (
-            <Button
-              color="secondary"
-              isLoading={capturingCookies[thirdPartyName]}
-              size="sm"
-              variant="flat"
-              onPress={async () => {
-                setCapturingCookies((prev) => ({ ...prev, [thirdPartyName]: true }));
-                try {
-                  const rsp = await BApi.tool.captureCookie({ target });
-                  if (!rsp.code && rsp.data) {
-                    setOptions({ ...options, cookie: rsp.data });
-                  } else {
-                    notifyCookieCaptureDismissal(rsp);
+        {isDesktopApp &&
+          (() => {
+            const captureMap: { [key: string]: CookieValidatorTarget } = {
+              bilibili: CookieValidatorTarget.BiliBili,
+              exhentai: CookieValidatorTarget.ExHentai,
+              pixiv: CookieValidatorTarget.Pixiv,
+              fanbox: CookieValidatorTarget.Fanbox,
+              fantia: CookieValidatorTarget.Fantia,
+              cien: CookieValidatorTarget.Cien,
+              patreon: CookieValidatorTarget.Patreon,
+            };
+            const target = captureMap[thirdPartyName.toLowerCase()];
+
+            if (!target) return null;
+
+            return (
+              <Button
+                color="secondary"
+                isLoading={capturingCookies[thirdPartyName]}
+                size="sm"
+                variant="flat"
+                onPress={async () => {
+                  setCapturingCookies((prev) => ({ ...prev, [thirdPartyName]: true }));
+                  try {
+                    const rsp = await BApi.tool.captureCookie({ target });
+
+                    if (!rsp.code && rsp.data) {
+                      setOptions({ ...options, cookie: rsp.data });
+                    } else {
+                      notifyCookieCaptureDismissal(rsp);
+                    }
+                  } finally {
+                    setCapturingCookies((prev) => ({ ...prev, [thirdPartyName]: false }));
                   }
-                } finally {
-                  setCapturingCookies((prev) => ({ ...prev, [thirdPartyName]: false }));
-                }
-              }}
-            >
-              {t("resourceSource.accounts.loginToImport")}
-            </Button>
-          );
-        })()}
+                }}
+              >
+                {t("resourceSource.accounts.loginToImport")}
+              </Button>
+            );
+          })()}
       </div>
     </div>
   );
@@ -358,25 +360,18 @@ const ThirdParty = ({
       content: (
         <div className="space-y-4">
           <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="flat"
-              onPress={() => setExhentaiConfigOpen(true)}
-            >
+            <Button size="sm" variant="flat" onPress={() => setExhentaiConfigOpen(true)}>
               {t("configuration.thirdParty.configure")}
             </Button>
             {exhentaiConfigOpen && (
-              <ExHentaiConfig
-                fields="all"
-                onDestroyed={() => setExhentaiConfigOpen(false)}
-              />
+              <ExHentaiConfig fields="all" onDestroyed={() => setExhentaiConfigOpen(false)} />
             )}
           </div>
           <DownloaderOptionsConfig
             hideCookie
+            cookieValidatorTarget={CookieValidatorTarget.ExHentai}
             options={exhentaiOptions}
             patchApi={BApi.options.patchExHentaiOptions}
-            cookieValidatorTarget={CookieValidatorTarget.ExHentai}
           />
         </div>
       ),
@@ -430,10 +425,7 @@ const ThirdParty = ({
               color="primary"
               size="sm"
               onPress={() => {
-                applyPatches(
-                  BApi.options.patchSoulPlusOptions,
-                  tmpSoulPlusOptions,
-                );
+                applyPatches(BApi.options.patchSoulPlusOptions, tmpSoulPlusOptions);
               }}
             >
               {t<string>("common.action.save")}
@@ -453,16 +445,16 @@ const ThirdParty = ({
               {t("configuration.thirdParty.configure")} ({bangumiOptions?.accounts?.length || 0})
             </Button>
             <SimpleThirdPartyConfig
-              title="Bangumi"
-              isOpen={bangumiConfigOpen}
-              onClose={() => setBangumiConfigOpen(false)}
               accounts={bangumiOptions?.accounts || []}
+              cookieCaptureTarget={CookieValidatorTarget.Bangumi}
+              cookieValidatorTarget={CookieValidatorTarget.Bangumi}
+              isOpen={bangumiConfigOpen}
+              title="Bangumi"
+              onClose={() => setBangumiConfigOpen(false)}
               onSave={async (accounts) => {
                 await BApi.options.patchBangumiOptions({ accounts });
                 useBangumiOptionsStore.getState().update({ accounts });
               }}
-              cookieValidatorTarget={CookieValidatorTarget.Bangumi}
-              cookieCaptureTarget={CookieValidatorTarget.Bangumi}
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -553,18 +545,11 @@ const ThirdParty = ({
       content: (
         <div className="space-y-4">
           <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="flat"
-              onPress={() => setSteamConfigOpen(true)}
-            >
+            <Button size="sm" variant="flat" onPress={() => setSteamConfigOpen(true)}>
               {t("configuration.thirdParty.configure")}
             </Button>
             {steamConfigOpen && (
-              <SteamConfig
-                fields="all"
-                onDestroyed={() => setSteamConfigOpen(false)}
-              />
+              <SteamConfig fields="all" onDestroyed={() => setSteamConfigOpen(false)} />
             )}
           </div>
         </div>
@@ -577,18 +562,11 @@ const ThirdParty = ({
       content: (
         <div className="space-y-4">
           <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="flat"
-              onPress={() => setDlsiteConfigOpen(true)}
-            >
+            <Button size="sm" variant="flat" onPress={() => setDlsiteConfigOpen(true)}>
               {t("configuration.thirdParty.configure")}
             </Button>
             {dlsiteConfigOpen && (
-              <DLsiteConfig
-                fields="all"
-                onDestroyed={() => setDlsiteConfigOpen(false)}
-              />
+              <DLsiteConfig fields="all" onDestroyed={() => setDlsiteConfigOpen(false)} />
             )}
           </div>
           <DownloaderOptionsConfig

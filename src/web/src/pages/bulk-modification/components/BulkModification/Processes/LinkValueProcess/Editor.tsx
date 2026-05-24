@@ -6,6 +6,8 @@ import type { BulkModificationVariable } from "@/pages/bulk-modification/compone
 import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
 
+import { StringValueProcessEditor } from "../StringValueProcess";
+
 import { validate } from "./helpers";
 
 import {
@@ -16,7 +18,6 @@ import {
 } from "@/sdk/constants";
 import { ProcessValueEditor } from "@/pages/bulk-modification/components/BulkModification/ProcessValue";
 import { Select } from "@/components/bakaui";
-import { StringValueProcessEditor } from "../StringValueProcess";
 import { getEnumKey } from "@/i18n";
 
 type Props = {
@@ -48,6 +49,7 @@ const Editor = ({
 
   useEffect(() => {
     const error = validate(operation, options);
+
     onChange?.(operation, options, error == undefined ? undefined : t<string>(error));
   }, [options, operation]);
 
@@ -104,7 +106,9 @@ const Editor = ({
       case BulkModificationLinkProcessOperation.ModifyUrl:
         return (
           <div className="flex flex-col gap-1">
-            <span className="text-sm text-default-500">{t("bulkModification.label.stringOperation")}</span>
+            <span className="text-sm text-default-500">
+              {t("bulkModification.label.stringOperation")}
+            </span>
             <StringValueProcessEditor
               availableValueTypes={availableValueTypes}
               operation={options.stringOperation}
@@ -125,16 +129,19 @@ const Editor = ({
   return (
     <div className="flex flex-col gap-3">
       <Select
-        label={t("bulkModification.label.operation")}
         dataSource={bulkModificationLinkProcessOperations.map((op) => ({
-          label: t(getEnumKey('BulkModificationLinkProcessOperation', op.label)),
+          label: t(getEnumKey("BulkModificationLinkProcessOperation", op.label)),
           value: op.value,
         }))}
+        label={t("bulkModification.label.operation")}
         selectedKeys={operation == undefined ? undefined : [operation.toString()]}
         selectionMode="single"
         onSelectionChange={(keys) => {
           changeOperation(
-            parseInt(Array.from(keys || [])[0] as string, 10) as BulkModificationLinkProcessOperation,
+            parseInt(
+              Array.from(keys || [])[0] as string,
+              10,
+            ) as BulkModificationLinkProcessOperation,
           );
         }}
       />

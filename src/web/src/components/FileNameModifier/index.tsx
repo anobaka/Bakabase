@@ -1,5 +1,7 @@
 "use client";
 
+import type { DragEndEvent } from "@dnd-kit/core";
+import type { OperationWithId } from "./useFileNameModifier";
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
@@ -18,7 +20,6 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  DragEndEvent,
 } from "@dnd-kit/core";
 import {
   arrayMove,
@@ -31,7 +32,7 @@ import { Button, Textarea, Modal, Card } from "../bakaui";
 
 import SortableOperationCard from "./SortableOperationCard";
 import PreviewList from "./PreviewList";
-import { useFileNameModifier, OperationWithId } from "./useFileNameModifier";
+import { useFileNameModifier } from "./useFileNameModifier";
 
 import BApi from "@/sdk/BApi";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
@@ -76,10 +77,7 @@ interface FileNameModifierProps {
 import { validateOperation } from "./validation";
 import { detectCommonPrefix } from "./utils";
 
-const FileNameModifier: React.FC<FileNameModifierProps> = ({
-  initialFilePaths = [],
-  onClose,
-}) => {
+const FileNameModifier: React.FC<FileNameModifierProps> = ({ initialFilePaths = [], onClose }) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const {
@@ -106,22 +104,24 @@ const FileNameModifier: React.FC<FileNameModifierProps> = ({
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
   // 拖拽结束处理
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       const { active, over } = event;
+
       if (over && active.id !== over.id) {
         setOperations((ops) => {
           const oldIndex = ops.findIndex((op) => op.id === active.id);
           const newIndex = ops.findIndex((op) => op.id === over.id);
+
           return arrayMove(ops, oldIndex, newIndex);
         });
       }
     },
-    [setOperations]
+    [setOperations],
   );
 
   // 操作项增删改、复制
@@ -129,31 +129,34 @@ const FileNameModifier: React.FC<FileNameModifierProps> = ({
     (id: string, op: OperationWithId) => {
       setOperations((ops) => ops.map((item) => (item.id === id ? op : item)));
     },
-    [setOperations]
+    [setOperations],
   );
 
   const handleOperationDelete = useCallback(
     (id: string) => {
       setOperations((ops) => ops.filter((op) => op.id !== id));
     },
-    [setOperations]
+    [setOperations],
   );
 
   const handleOperationCopy = useCallback(
     (id: string) => {
       setOperations((ops) => {
         const idx = ops.findIndex((op) => op.id === id);
+
         if (idx === -1) return ops;
         const next = [...ops];
         const copy: OperationWithId = {
           ...ops[idx],
           id: generateOperationId(),
         };
+
         next.splice(idx + 1, 0, copy);
+
         return next;
       });
     },
-    [setOperations]
+    [setOperations],
   );
 
   const handleAddOperation = useCallback(() => {
@@ -184,9 +187,7 @@ const FileNameModifier: React.FC<FileNameModifierProps> = ({
   };
   // 新增：去重、清空、粘贴
   const handleDeduplicatePaths = () => {
-    setFilePaths((paths) =>
-      Array.from(new Set(paths.map((f) => f.trim()).filter(Boolean))),
-    );
+    setFilePaths((paths) => Array.from(new Set(paths.map((f) => f.trim()).filter(Boolean))));
   };
 
   const handleAddPathsFromFileSystem = () => {
@@ -194,16 +195,20 @@ const FileNameModifier: React.FC<FileNameModifierProps> = ({
       multiple: true,
       onMultipleSelected: (entries) => {
         const incoming = entries.map((e) => e.path).filter(Boolean) as string[];
+
         setFilePaths((prev) => {
           const existing = new Set(prev.map((p) => p.trim()).filter(Boolean));
           const merged = [...prev];
+
           for (const p of incoming) {
             const trimmed = p.trim();
+
             if (trimmed && !existing.has(trimmed)) {
               existing.add(trimmed);
               merged.push(trimmed);
             }
           }
+
           return merged;
         });
       },
@@ -212,13 +217,13 @@ const FileNameModifier: React.FC<FileNameModifierProps> = ({
   // 预览区公共前缀
   const commonPrefix = useMemo(
     () => detectCommonPrefix(previewResults.map((r) => r.originalPath)),
-    [previewResults]
+    [previewResults],
   );
 
   // 检查预览结果中是否有任何变更
   const hasAnyChanges = useMemo(
     () => previewResults.some((r) => r.originalPath !== r.modifiedPath),
-    [previewResults]
+    [previewResults],
   );
 
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
@@ -228,6 +233,7 @@ const FileNameModifier: React.FC<FileNameModifierProps> = ({
 
     if (filePaths.length === 0) {
       setPreviewResults([]);
+
       return;
     }
     // 只用合法操作预览
@@ -279,6 +285,7 @@ const FileNameModifier: React.FC<FileNameModifierProps> = ({
 
     if (validOperations.length === 0) {
       setError(t<string>("FileNameModifier.Error.NoValidOperation"));
+
       return;
     }
 
@@ -298,8 +305,10 @@ const FileNameModifier: React.FC<FileNameModifierProps> = ({
       // 更新文件路径为新路径
       const newFilePaths = filePaths.map((oldPath) => {
         const resultItem = result.find((r) => r.oldPath === oldPath);
+
         return resultItem?.success && resultItem.newPath ? resultItem.newPath : oldPath;
       });
+
       setFilePaths(newFilePaths);
 
       createPortal(Modal, {
@@ -335,8 +344,7 @@ const FileNameModifier: React.FC<FileNameModifierProps> = ({
                       <li key={item.oldPath} className="mb-1">
                         <span className="text-foreground">{item.oldPath}</span>
                         <span className="text-red-500 ml-2">
-                          {t<string>("FileNameModifier.ModificationFailReason")}
-                          : {item.error}
+                          {t<string>("FileNameModifier.ModificationFailReason")}: {item.error}
                         </span>
                       </li>
                     ))}
@@ -359,9 +367,7 @@ const FileNameModifier: React.FC<FileNameModifierProps> = ({
     <div className="flex flex-col min-h-0 grow md:flex-row gap-4">
       {/* 左侧：操作配置区域 */}
       <Card className="flex-1 flex flex-col min-w-0 p-4">
-        <h5 className="font-semibold mb-2">
-          {t<string>("FileNameModifier.OperationsList")}
-        </h5>
+        <h5 className="font-semibold mb-2">{t<string>("FileNameModifier.OperationsList")}</h5>
         <div className="flex-1 overflow-y-auto rounded p-2">
           {operations.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-gray-400">
@@ -383,6 +389,7 @@ const FileNameModifier: React.FC<FileNameModifierProps> = ({
               >
                 {operations.map((op, idx) => {
                   const validationError = validateOperation(op);
+
                   return (
                     <SortableOperationCard
                       key={op.id}

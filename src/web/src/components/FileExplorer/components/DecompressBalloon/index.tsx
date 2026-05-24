@@ -1,17 +1,17 @@
 "use client";
 
-import { Button, Modal, Input, Chip } from "@/components/bakaui";
-import { toast } from "@/components/bakaui";
+import type {
+  BakabaseInsideWorldModelsConstantsAosPasswordSearchOrder,
+  BakabaseInsideWorldModelsModelsEntitiesPassword,
+} from "@/sdk/Api";
 
 import React, { useCallback, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import i18n from "i18next";
 
+import { Button, Modal, Input, Chip } from "@/components/bakaui";
+import { toast } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
-import type {
-  BakabaseInsideWorldModelsConstantsAosPasswordSearchOrder,
-  BakabaseInsideWorldModelsModelsEntitiesPassword,
-} from "@/sdk/Api";
 import { PasswordSearchOrder } from "@/sdk/constants";
 import PasswordSelector from "@/components/PasswordSelector";
 import { Tooltip } from "@/components/bakaui";
@@ -216,16 +216,16 @@ const DecompressBalloon = (props: Props) => {
                 placeholder={i18n.t<string>("Password")}
                 size={"sm"}
                 style={{ width: "100%" }}
-                onKeyDown={(e) => {
-                  e.cancelable = true;
-                }}
-                onMouseDown={(e) => {
-                  e.stopPropagation();
-                }}
                 onClick={(e) => {
                   e.stopPropagation();
                 }}
                 onDoubleClick={(e) => {
+                  e.stopPropagation();
+                }}
+                onKeyDown={(e) => {
+                  e.cancelable = true;
+                }}
+                onMouseDown={(e) => {
                   e.stopPropagation();
                 }}
                 onValueChange={(v) => {

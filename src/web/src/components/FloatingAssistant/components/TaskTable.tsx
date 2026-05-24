@@ -1,3 +1,5 @@
+import type { BTask } from "@/core/models/BTask";
+
 import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -18,6 +20,10 @@ import {
   StopOutlined,
   CloseOutlined,
 } from "@ant-design/icons";
+
+import { TaskAction, ActionsFilter } from "../constants";
+import { useTaskTimingSimulation } from "../hooks/useTaskTimingSimulation";
+
 import {
   Button,
   Chip,
@@ -35,9 +41,6 @@ import {
 import BApi from "@/sdk/BApi";
 import { BTaskStatus, BTaskType } from "@/sdk/constants";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import type { BTask } from "@/core/models/BTask";
-import { TaskAction, ActionsFilter } from "../constants";
-import { useTaskTimingSimulation } from "../hooks/useTaskTimingSimulation";
 
 interface TaskTableProps {
   tasks: BTask[];
@@ -47,10 +50,11 @@ type TaskFilter = "all" | "running" | "pending" | "completed" | "failed";
 
 const TaskStatusIcon = ({ task, onShowError }: { task: BTask; onShowError: () => void }) => {
   const { t } = useTranslation();
+
   switch (task.status) {
     case BTaskStatus.NotStarted:
       return (
-        <Tooltip content={t('floatingAssistant.tip.willRunAutomatically')} placement="top">
+        <Tooltip content={t("floatingAssistant.tip.willRunAutomatically")} placement="top">
           <Chip color="warning" size="sm" variant="light">
             <ClockCircleOutlined className="text-base" />
           </Chip>
@@ -75,13 +79,7 @@ const TaskStatusIcon = ({ task, onShowError }: { task: BTask; onShowError: () =>
           content={task.briefError || task.error?.substring(0, 100) || "Error"}
           placement="top"
         >
-          <Button
-            isIconOnly
-            color="danger"
-            size="sm"
-            variant="light"
-            onPress={onShowError}
-          >
+          <Button isIconOnly color="danger" size="sm" variant="light" onPress={onShowError}>
             <ExclamationCircleOutlined className="text-base" />
           </Button>
         </Tooltip>
@@ -124,19 +122,28 @@ export function TaskTable({ tasks }: TaskTableProps) {
   // Types that have at least one task
   const typesWithTasks = useMemo(() => {
     const types = new Set<BTaskType>();
-    tasks.forEach(t => types.add(t.type));
+
+    tasks.forEach((t) => types.add(t.type));
+
     return Array.from(types);
   }, [tasks]);
 
   const typeLabel = (type: BTaskType): string => {
     switch (type) {
-      case BTaskType.Decompress: return t("floatingAssistant.taskType.decompress");
-      case BTaskType.MoveFiles: return t("floatingAssistant.taskType.moveFiles");
-      case BTaskType.MoveResources: return t("floatingAssistant.taskType.moveResources");
-      case BTaskType.CopyFiles: return t("floatingAssistant.taskType.copyFiles");
-      case 5: return t("floatingAssistant.taskType.download"); // BTaskType.Download (pending SDK regen)
-      case BTaskType.Any: return t("floatingAssistant.taskType.any");
-      default: return String(type);
+      case BTaskType.Decompress:
+        return t("floatingAssistant.taskType.decompress");
+      case BTaskType.MoveFiles:
+        return t("floatingAssistant.taskType.moveFiles");
+      case BTaskType.MoveResources:
+        return t("floatingAssistant.taskType.moveResources");
+      case BTaskType.CopyFiles:
+        return t("floatingAssistant.taskType.copyFiles");
+      case 5:
+        return t("floatingAssistant.taskType.download"); // BTaskType.Download (pending SDK regen)
+      case BTaskType.Any:
+        return t("floatingAssistant.taskType.any");
+      default:
+        return String(type);
     }
   };
 
@@ -149,6 +156,7 @@ export function TaskTable({ tasks }: TaskTableProps) {
       completed: 0,
       failed: 0,
     };
+
     tasks.forEach((task) => {
       switch (task.status) {
         case BTaskStatus.Running:
@@ -168,6 +176,7 @@ export function TaskTable({ tasks }: TaskTableProps) {
           break;
       }
     });
+
     return counts;
   }, [tasks]);
 
@@ -198,17 +207,20 @@ export function TaskTable({ tasks }: TaskTableProps) {
       });
     }
 
-    return [...result].sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+    return [...result].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   }, [tasks, filter, typeFilter]);
 
-  const columns = useMemo(() => [
-    { key: "name", label: t("floatingAssistant.label.taskList") },
-    { key: "status", label: t("common.label.status") },
-    { key: "progress", label: t("common.label.progress") },
-    { key: "time", label: t("common.label.time") },
-    { key: "remaining", label: t("common.label.remaining") },
-    { key: "operations", label: t("common.label.operations") },
-  ], [t]);
+  const columns = useMemo(
+    () => [
+      { key: "name", label: t("floatingAssistant.label.taskList") },
+      { key: "status", label: t("common.label.status") },
+      { key: "progress", label: t("common.label.progress") },
+      { key: "time", label: t("common.label.time") },
+      { key: "remaining", label: t("common.label.remaining") },
+      { key: "operations", label: t("common.label.operations") },
+    ],
+    [t],
+  );
 
   const handleCopyError = (errorText: string) => {
     navigator.clipboard.writeText(errorText).then(() => {
@@ -228,9 +240,9 @@ export function TaskTable({ tasks }: TaskTableProps) {
             <Tooltip content={t("common.action.copy")} placement="top">
               <Button
                 isIconOnly
+                className="absolute top-1 right-1 z-10"
                 size="sm"
                 variant="light"
-                className="absolute top-1 right-1 z-10"
                 onPress={() => handleCopyError(task.error!)}
               >
                 <CopyOutlined className="text-base" />
@@ -251,21 +263,28 @@ export function TaskTable({ tasks }: TaskTableProps) {
   const clearTaskLoading = (taskId: string) => {
     setLoadingTasks((prev) => {
       const next = new Map(prev);
+
       next.delete(taskId);
+
       return next;
     });
   };
 
   const getActionLabel = (action: TaskAction): string => {
     switch (action) {
-      case TaskAction.Start: return t("floatingAssistant.status.started");
-      case TaskAction.Pause: return t("floatingAssistant.status.paused");
-      case TaskAction.Resume: return t("floatingAssistant.status.resumed");
+      case TaskAction.Start:
+        return t("floatingAssistant.status.started");
+      case TaskAction.Pause:
+        return t("floatingAssistant.status.paused");
+      case TaskAction.Resume:
+        return t("floatingAssistant.status.resumed");
       // The API call only requests cancellation; the task may still be running
       // when the toast fires. The status chip updates to "Cancelling" until
       // the task actually exits.
-      case TaskAction.Stop: return t("floatingAssistant.status.stopRequested");
-      default: return "";
+      case TaskAction.Stop:
+        return t("floatingAssistant.status.stopRequested");
+      default:
+        return "";
     }
   };
 
@@ -289,6 +308,7 @@ export function TaskTable({ tasks }: TaskTableProps) {
       toast.success({ title: `${task.name}: ${getActionLabel(action)}` });
     } catch (error) {
       const message = error instanceof Error ? error.message : t("common.error.unknownError");
+
       toast.danger({ title: `${task.name}: ${message}` });
     } finally {
       clearTaskLoading(task.id);
@@ -307,18 +327,24 @@ export function TaskTable({ tasks }: TaskTableProps) {
         case TaskAction.Start:
         case TaskAction.Resume:
           actions.push(
-            <Tooltip key={`${action}-${task.id}`} content={action === TaskAction.Start ? t("common.action.start") : t("common.action.resume")} placement="top">
+            <Tooltip
+              key={`${action}-${task.id}`}
+              content={
+                action === TaskAction.Start ? t("common.action.start") : t("common.action.resume")
+              }
+              placement="top"
+            >
               <Button
                 isIconOnly
                 color="secondary"
+                isLoading={isLoading}
                 size="sm"
                 variant="light"
-                isLoading={isLoading}
                 onPress={() => handleTaskAction(task, action)}
               >
                 <CaretRightOutlined className="text-base" />
               </Button>
-            </Tooltip>
+            </Tooltip>,
           );
           break;
         case TaskAction.Pause:
@@ -327,25 +353,30 @@ export function TaskTable({ tasks }: TaskTableProps) {
               <Button
                 isIconOnly
                 color="warning"
+                isLoading={isLoading}
                 size="sm"
                 variant="light"
-                isLoading={isLoading}
                 onPress={() => handleTaskAction(task, action)}
               >
                 <PauseOutlined className="text-base" />
               </Button>
-            </Tooltip>
+            </Tooltip>,
           );
           break;
         case TaskAction.Stop:
           actions.push(
-            <Tooltip key={`stop-${task.id}`} content={t("common.action.stop")} placement="top" color="danger">
+            <Tooltip
+              key={`stop-${task.id}`}
+              color="danger"
+              content={t("common.action.stop")}
+              placement="top"
+            >
               <Button
                 isIconOnly
                 color="danger"
+                isLoading={isLoading}
                 size="sm"
                 variant="light"
-                isLoading={isLoading}
                 onPress={() => {
                   createPortal(Modal, {
                     defaultVisible: true,
@@ -358,12 +389,16 @@ export function TaskTable({ tasks }: TaskTableProps) {
               >
                 <StopOutlined className="text-base" />
               </Button>
-            </Tooltip>
+            </Tooltip>,
           );
           break;
         case TaskAction.Clean:
           actions.push(
-            <Tooltip key={`clean-${task.id}`} content={t("floatingAssistant.tip.removeFromList")} placement="top">
+            <Tooltip
+              key={`clean-${task.id}`}
+              content={t("floatingAssistant.tip.removeFromList")}
+              placement="top"
+            >
               <Button
                 isIconOnly
                 size="sm"
@@ -372,12 +407,16 @@ export function TaskTable({ tasks }: TaskTableProps) {
               >
                 <ClearOutlined className="text-base" />
               </Button>
-            </Tooltip>
+            </Tooltip>,
           );
           break;
         case TaskAction.Config:
           actions.push(
-            <Tooltip key={`config-${task.id}`} content={t("common.action.configure")} placement="top">
+            <Tooltip
+              key={`config-${task.id}`}
+              content={t("common.action.configure")}
+              placement="top"
+            >
               <Button
                 isIconOnly
                 size="sm"
@@ -394,7 +433,7 @@ export function TaskTable({ tasks }: TaskTableProps) {
               >
                 <SettingOutlined className="text-base" />
               </Button>
-            </Tooltip>
+            </Tooltip>,
           );
           break;
       }
@@ -403,7 +442,11 @@ export function TaskTable({ tasks }: TaskTableProps) {
     return actions;
   };
 
-  const filterOptions: { key: TaskFilter; label: string; color?: "default" | "primary" | "success" | "danger" | "warning" }[] = [
+  const filterOptions: {
+    key: TaskFilter;
+    label: string;
+    color?: "default" | "primary" | "success" | "danger" | "warning";
+  }[] = [
     { key: "all", label: t("common.label.all") },
     { key: "running", label: t("floatingAssistant.status.running"), color: "primary" },
     { key: "pending", label: t("floatingAssistant.status.pending"), color: "warning" },
@@ -425,10 +468,10 @@ export function TaskTable({ tasks }: TaskTableProps) {
       {typesWithTasks.length > 1 && (
         <div className="flex flex-wrap gap-1">
           <Chip
+            className="cursor-pointer"
+            color={typeFilter == null ? "primary" : "default"}
             size="sm"
             variant={typeFilter == null ? "solid" : "flat"}
-            color={typeFilter == null ? "primary" : "default"}
-            className="cursor-pointer"
             onClick={() => setTypeFilter(null)}
           >
             {t("floatingAssistant.taskType.all")}
@@ -436,10 +479,10 @@ export function TaskTable({ tasks }: TaskTableProps) {
           {typesWithTasks.map((type) => (
             <Chip
               key={type}
+              className="cursor-pointer"
+              color={typeFilter === type ? "primary" : "default"}
               size="sm"
               variant={typeFilter === type ? "solid" : "flat"}
-              color={typeFilter === type ? "primary" : "default"}
-              className="cursor-pointer"
               onClick={() => setTypeFilter(type)}
             >
               {typeLabel(type)}
@@ -453,13 +496,14 @@ export function TaskTable({ tasks }: TaskTableProps) {
         {filterOptions.map((option) => {
           const count = taskCounts[option.key];
           const isActive = filter === option.key;
+
           return (
             <Chip
               key={option.key}
+              className="cursor-pointer"
+              color={isActive ? (option.color ?? "default") : "default"}
               size="sm"
               variant={isActive ? "solid" : "flat"}
-              color={isActive ? (option.color ?? "default") : "default"}
-              className="cursor-pointer"
               onClick={() => setFilter(option.key)}
             >
               {option.label} ({count})
@@ -474,121 +518,146 @@ export function TaskTable({ tasks }: TaskTableProps) {
         </TableHeader>
         <TableBody emptyContent={t("floatingAssistant.empty.noTasksMatchFilter")}>
           {filteredTasks.map((task) => (
-          <TableRow
-            key={task.id}
-            className={`transition-opacity ${task.id === cleaningTaskId ? "opacity-0" : ""} ${task.status === BTaskStatus.Error ? "task-row-error" : ""}`}
-            onTransitionEnd={(evt) => {
-              if (evt.propertyName === "opacity" && task.id === cleaningTaskId) {
-                BApi.backgroundTask.cleanBackgroundTask(task.id);
-              }
-            }}
-          >
-            {/* Name */}
-            <TableCell>
-              <div className="flex items-center gap-1">
-                <span className="truncate max-w-[200px]">{task.name}</span>
-                {task.isPersistent && (
-                  <Tooltip color="secondary" content={t("floatingAssistant.tip.persistentScheduledTask")}>
-                    <PushpinOutlined className="text-base opacity-40" />
-                  </Tooltip>
-                )}
-                {task.description && (
-                  <Tooltip color="secondary" content={task.description}>
-                    <QuestionCircleOutlined className="text-base opacity-60" />
-                  </Tooltip>
-                )}
-                {task.process && (
-                  <Chip color="success" variant="light" size="sm">{task.process}</Chip>
-                )}
-              </div>
-            </TableCell>
-            {/* Status */}
-            <TableCell>
-              <div className="flex items-center gap-1">
-                <TaskStatusIcon task={task} onShowError={() => handleShowError(task)} />
-                {task.status === BTaskStatus.Error && task.briefError && (
-                  <span className="text-xs text-danger truncate max-w-[100px]" title={task.briefError}>
-                    {task.briefError}
-                  </span>
-                )}
-              </div>
-            </TableCell>
-            {/* Progress */}
-            <TableCell>
-              <div className="relative min-w-[60px]">
-                <Progress
-                  color="primary"
-                  size="sm"
-                  value={task.percentage}
-                  className={task.status === BTaskStatus.Running ? "task-progress-animated" : ""}
-                  classNames={{
-                    indicator: task.status === BTaskStatus.Running ? "progress-bar-indicator" : "",
-                  }}
-                />
-                <div className="absolute top-0 left-0 flex items-center justify-center w-full h-full text-xs">
-                  {task.percentage}%
+            <TableRow
+              key={task.id}
+              className={`transition-opacity ${task.id === cleaningTaskId ? "opacity-0" : ""} ${task.status === BTaskStatus.Error ? "task-row-error" : ""}`}
+              onTransitionEnd={(evt) => {
+                if (evt.propertyName === "opacity" && task.id === cleaningTaskId) {
+                  BApi.backgroundTask.cleanBackgroundTask(task.id);
+                }
+              }}
+            >
+              {/* Name */}
+              <TableCell>
+                <div className="flex items-center gap-1">
+                  <span className="truncate max-w-[200px]">{task.name}</span>
+                  {task.isPersistent && (
+                    <Tooltip
+                      color="secondary"
+                      content={t("floatingAssistant.tip.persistentScheduledTask")}
+                    >
+                      <PushpinOutlined className="text-base opacity-40" />
+                    </Tooltip>
+                  )}
+                  {task.description && (
+                    <Tooltip color="secondary" content={task.description}>
+                      <QuestionCircleOutlined className="text-base opacity-60" />
+                    </Tooltip>
+                  )}
+                  {task.process && (
+                    <Chip color="success" size="sm" variant="light">
+                      {task.process}
+                    </Chip>
+                  )}
                 </div>
-              </div>
-            </TableCell>
-            {/* Time - combined started + elapsed */}
-            <TableCell>
-              <div className="flex flex-col text-xs whitespace-nowrap h-[2lh]">
-                <span className="text-default-500">{task.startedAt ? dayjs(task.startedAt).format("HH:mm:ss") : '--:--:--'}</span>
-                <span className="font-medium">{(() => {
-                  const ms = computeDisplayElapsedMs(task);
-                  return ms != null ? dayjs.duration(ms).format("HH:mm:ss") : '--:--:--';
-                })()}</span>
-              </div>
-            </TableCell>
-            {/* Remaining */}
-            <TableCell>
-              {(() => {
-                // Show nothing for completed/cancelled tasks
-                if (task.status === BTaskStatus.Completed || task.status === BTaskStatus.Cancelled || task.percentage === 100) {
-                  return null;
-                }
-                const ms = computeDisplayRemainingMs(task);
-                if (ms == null) {
-                  // Show next run time for persistent tasks
-                  if (task.nextTimeStartAt) {
-                    return (
-                      <Tooltip content={t("floatingAssistant.label.nextRun")} placement="top">
-                        <span className="text-xs text-default-500">{dayjs(task.nextTimeStartAt).format("HH:mm")}</span>
-                      </Tooltip>
-                    );
+              </TableCell>
+              {/* Status */}
+              <TableCell>
+                <div className="flex items-center gap-1">
+                  <TaskStatusIcon task={task} onShowError={() => handleShowError(task)} />
+                  {task.status === BTaskStatus.Error && task.briefError && (
+                    <span
+                      className="text-xs text-danger truncate max-w-[100px]"
+                      title={task.briefError}
+                    >
+                      {task.briefError}
+                    </span>
+                  )}
+                </div>
+              </TableCell>
+              {/* Progress */}
+              <TableCell>
+                <div className="relative min-w-[60px]">
+                  <Progress
+                    className={task.status === BTaskStatus.Running ? "task-progress-animated" : ""}
+                    classNames={{
+                      indicator:
+                        task.status === BTaskStatus.Running ? "progress-bar-indicator" : "",
+                    }}
+                    color="primary"
+                    size="sm"
+                    value={task.percentage}
+                  />
+                  <div className="absolute top-0 left-0 flex items-center justify-center w-full h-full text-xs">
+                    {task.percentage}%
+                  </div>
+                </div>
+              </TableCell>
+              {/* Time - combined started + elapsed */}
+              <TableCell>
+                <div className="flex flex-col text-xs whitespace-nowrap h-[2lh]">
+                  <span className="text-default-500">
+                    {task.startedAt ? dayjs(task.startedAt).format("HH:mm:ss") : "--:--:--"}
+                  </span>
+                  <span className="font-medium">
+                    {(() => {
+                      const ms = computeDisplayElapsedMs(task);
+
+                      return ms != null ? dayjs.duration(ms).format("HH:mm:ss") : "--:--:--";
+                    })()}
+                  </span>
+                </div>
+              </TableCell>
+              {/* Remaining */}
+              <TableCell>
+                {(() => {
+                  // Show nothing for completed/cancelled tasks
+                  if (
+                    task.status === BTaskStatus.Completed ||
+                    task.status === BTaskStatus.Cancelled ||
+                    task.percentage === 100
+                  ) {
+                    return null;
                   }
-                  return null;
-                }
-                const totalSeconds = Math.floor(ms / 1000);
-                const hours = Math.floor(totalSeconds / 3600);
-                const minutes = Math.floor((totalSeconds % 3600) / 60);
-                const seconds = totalSeconds % 60;
-                let remaining: string;
-                if (totalSeconds < 60) {
-                  remaining = "< 1m";
-                } else if (hours > 0) {
-                  remaining = `${hours}h ${minutes}m`;
-                } else {
-                  remaining = `${minutes}m ${seconds}s`;
-                }
-                const estimatedEndTime = dayjs().add(ms, "millisecond").format("HH:mm");
-                return (
-                  <Tooltip content={`${t("floatingAssistant.tip.estimatedCompletion")}: ${estimatedEndTime}`} placement="top">
-                    <span className="cursor-help text-xs">{remaining}</span>
-                  </Tooltip>
-                );
-              })()}
-            </TableCell>
-            {/* Operations */}
-            <TableCell>
-              <div className="flex items-center gap-1">
-                {renderTaskActions(task)}
-              </div>
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+                  const ms = computeDisplayRemainingMs(task);
+
+                  if (ms == null) {
+                    // Show next run time for persistent tasks
+                    if (task.nextTimeStartAt) {
+                      return (
+                        <Tooltip content={t("floatingAssistant.label.nextRun")} placement="top">
+                          <span className="text-xs text-default-500">
+                            {dayjs(task.nextTimeStartAt).format("HH:mm")}
+                          </span>
+                        </Tooltip>
+                      );
+                    }
+
+                    return null;
+                  }
+                  const totalSeconds = Math.floor(ms / 1000);
+                  const hours = Math.floor(totalSeconds / 3600);
+                  const minutes = Math.floor((totalSeconds % 3600) / 60);
+                  const seconds = totalSeconds % 60;
+                  let remaining: string;
+
+                  if (totalSeconds < 60) {
+                    remaining = "< 1m";
+                  } else if (hours > 0) {
+                    remaining = `${hours}h ${minutes}m`;
+                  } else {
+                    remaining = `${minutes}m ${seconds}s`;
+                  }
+                  const estimatedEndTime = dayjs().add(ms, "millisecond").format("HH:mm");
+
+                  return (
+                    <Tooltip
+                      content={`${t("floatingAssistant.tip.estimatedCompletion")}: ${estimatedEndTime}`}
+                      placement="top"
+                    >
+                      <span className="cursor-help text-xs">{remaining}</span>
+                    </Tooltip>
+                  );
+                })()}
+              </TableCell>
+              {/* Operations */}
+              <TableCell>
+                <div className="flex items-center gap-1">{renderTaskActions(task)}</div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
 }

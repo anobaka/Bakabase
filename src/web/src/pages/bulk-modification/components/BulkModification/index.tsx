@@ -6,6 +6,7 @@ import type {
   BulkModificationVariable,
 } from "@/pages/bulk-modification/components/BulkModification/models";
 import type { ReactNode } from "react";
+import type { SearchCriteria } from "@/components/ResourceFilter";
 
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -17,7 +18,6 @@ import ScopePreferences from "./ScopePreferences";
 
 import { Button, Modal } from "@/components/bakaui";
 import { ResourceFilterController } from "@/components/ResourceFilter";
-import type { SearchCriteria } from "@/components/ResourceFilter";
 import BApi from "@/sdk/BApi";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import DiffsModal from "@/pages/bulk-modification/components/BulkModification/DiffsModal";
@@ -61,11 +61,36 @@ interface BlockConfig {
 }
 
 const BlockConfigs: BlockConfig[] = [
-  { key: "Filters", i18nKey: "bulkModification.block.filters", tipKey: "bulkModification.tip.filters", stepNumber: 1 },
-  { key: "Variables", i18nKey: "bulkModification.block.variables", tipKey: "bulkModification.tip.variables", stepNumber: 2 },
-  { key: "Processes", i18nKey: "bulkModification.block.processes", tipKey: "bulkModification.tip.processes", stepNumber: 3 },
-  { key: "ScopePreferences", i18nKey: "bulkModification.block.scopePreferences", tipKey: "bulkModification.tip.scopePreferences", stepNumber: 4 },
-  { key: "Changes", i18nKey: "bulkModification.block.changes", tipKey: "bulkModification.tip.changes", stepNumber: 5 },
+  {
+    key: "Filters",
+    i18nKey: "bulkModification.block.filters",
+    tipKey: "bulkModification.tip.filters",
+    stepNumber: 1,
+  },
+  {
+    key: "Variables",
+    i18nKey: "bulkModification.block.variables",
+    tipKey: "bulkModification.tip.variables",
+    stepNumber: 2,
+  },
+  {
+    key: "Processes",
+    i18nKey: "bulkModification.block.processes",
+    tipKey: "bulkModification.tip.processes",
+    stepNumber: 3,
+  },
+  {
+    key: "ScopePreferences",
+    i18nKey: "bulkModification.block.scopePreferences",
+    tipKey: "bulkModification.tip.scopePreferences",
+    stepNumber: 4,
+  },
+  {
+    key: "Changes",
+    i18nKey: "bulkModification.block.changes",
+    tipKey: "bulkModification.tip.changes",
+    stepNumber: 5,
+  },
   { key: "FinalStep", i18nKey: "bulkModification.block.finalStep", stepNumber: 6 },
 ];
 
@@ -78,6 +103,7 @@ const BulkModification = ({ bm, onChange }: Props) => {
 
   const reload = useCallback(async () => {
     const r = await BApi.bulkModification.getBulkModification(bm.id);
+
     onChange(r.data!);
   }, [onChange, bm.id]);
 
@@ -87,11 +113,16 @@ const BulkModification = ({ bm, onChange }: Props) => {
         return (
           <div className="flex flex-col gap-3">
             <ResourceFilterController
-              defaultFilterDisplayMode={FilterDisplayMode.Simple}
+              showRecentFilters
+              showTags
               autoCreateMediaLibraryFilter={true}
+              defaultFilterDisplayMode={FilterDisplayMode.Simple}
+              filterLayout="vertical"
               group={bm.search?.group}
+              tags={bm.search?.tags}
               onGroupChange={(group) => {
                 const updatedSearch = { ...bm.search, group };
+
                 // 更新父组件状态（立即更新 UI）
                 onChange({ ...bm, search: updatedSearch });
                 // 保存到服务器（不 reload，避免服务器返回的不完整数据覆盖本地状态）
@@ -104,9 +135,9 @@ const BulkModification = ({ bm, onChange }: Props) => {
                   },
                 });
               }}
-              tags={bm.search?.tags}
               onTagsChange={(tags) => {
                 const updatedSearch = { ...bm.search, tags };
+
                 // 更新父组件状态（立即更新 UI）
                 onChange({ ...bm, search: updatedSearch });
                 // 保存到服务器
@@ -119,9 +150,6 @@ const BulkModification = ({ bm, onChange }: Props) => {
                   },
                 });
               }}
-              filterLayout="vertical"
-              showRecentFilters
-              showTags
             />
             <div className="flex items-center gap-2">
               <Button
@@ -131,22 +159,27 @@ const BulkModification = ({ bm, onChange }: Props) => {
                 variant="ghost"
                 onPress={() => {
                   setFiltering(true);
-                  BApi.bulkModification.filterResourcesInBulkModification(bm.id).then(() => {
-                    reload();
-                  }).finally(() => {
-                    setFiltering(false);
-                  });
+                  BApi.bulkModification
+                    .filterResourcesInBulkModification(bm.id)
+                    .then(() => {
+                      reload();
+                    })
+                    .finally(() => {
+                      setFiltering(false);
+                    });
                 }}
               >
-                {t<string>(bm.filteredResourceIds
-                  ? "bulkModification.action.refilter"
-                  : "bulkModification.action.filter")}
+                {t<string>(
+                  bm.filteredResourceIds
+                    ? "bulkModification.action.refilter"
+                    : "bulkModification.action.filter",
+                )}
               </Button>
               {bm.filteredResourceIds && bm.filteredResourceIds.length > 0 && (
                 <Button
+                  color="success"
                   size="sm"
                   variant="flat"
-                  color="success"
                   onPress={() => {
                     createPortal(ResourcesModal, {
                       resourceIds: bm.filteredResourceIds!,
@@ -170,8 +203,8 @@ const BulkModification = ({ bm, onChange }: Props) => {
       case "Variables":
         return (
           <Variables
-            variables={bm.variables}
             disabled={bm.deleteResources}
+            variables={bm.variables}
             onChange={(vs) => {
               // Update local state immediately (avoid reload to prevent losing local data)
               onChange({ ...bm, variables: vs });
@@ -189,10 +222,10 @@ const BulkModification = ({ bm, onChange }: Props) => {
       case "Processes":
         return (
           <Processes
+            deleteFiles={bm.deleteFiles}
+            deleteResources={bm.deleteResources}
             processes={bm.processes}
             variables={bm.variables}
-            deleteResources={bm.deleteResources}
-            deleteFiles={bm.deleteFiles}
             onChange={(ps) => {
               // Update local state immediately (avoid reload to prevent losing local data)
               onChange({ ...bm, processes: ps });
@@ -238,11 +271,13 @@ const BulkModification = ({ bm, onChange }: Props) => {
           return (
             <div className="text-sm text-default-400">
               {bm.filteredResourceIds && bm.filteredResourceIds.length > 0
-                ? t<string>("bulkModification.diff.resourceWillBeDeleted") + ` (${bm.filteredResourceIds.length})`
+                ? t<string>("bulkModification.diff.resourceWillBeDeleted") +
+                  ` (${bm.filteredResourceIds.length})`
                 : t<string>("bulkModification.tip.filters")}
             </div>
           );
         }
+
         return (
           <div className="flex items-center gap-2">
             <Button
@@ -292,7 +327,7 @@ const BulkModification = ({ bm, onChange }: Props) => {
                 bm.deleteResources
                   ? !bm.filteredResourceIds || bm.filteredResourceIds.length === 0
                   : (!bm.scopePreferenceConfigs || bm.scopePreferenceConfigs.length === 0) &&
-                    ((!bm.processes || bm.processes.length === 0) || bm.resourceDiffCount === 0)
+                    (!bm.processes || bm.processes.length === 0 || bm.resourceDiffCount === 0)
               }
               size="sm"
               onPress={() => {
@@ -367,9 +402,7 @@ const BulkModification = ({ bm, onChange }: Props) => {
             </div>
 
             {/* Block content */}
-            <div className="text-sm">
-              {renderBlockContent(config.key)}
-            </div>
+            <div className="text-sm">{renderBlockContent(config.key)}</div>
           </div>
         </div>
       ))}

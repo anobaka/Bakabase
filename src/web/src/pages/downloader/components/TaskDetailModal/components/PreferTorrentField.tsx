@@ -21,9 +21,7 @@ const PreferTorrentField = ({ preferTorrent, onChange }: Props) => {
       value={preferTorrent ? ["yes"] : []}
       onValueChange={(v) => onChange(v.includes("yes"))}
     >
-      <Checkbox value="yes">
-        {t("common.label.yes")}
-      </Checkbox>
+      <Checkbox value="yes">{t("common.label.yes")}</Checkbox>
     </CheckboxGroup>
   );
 };

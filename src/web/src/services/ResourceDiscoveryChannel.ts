@@ -1,6 +1,7 @@
-import envConfig from "@/config/env";
-import { DataOrigin, ResourceDataType } from "@/sdk/constants";
 import type { PlayableItem } from "@/core/models/Resource";
+import type { DataOrigin, ResourceDataType } from "@/sdk/constants";
+
+import envConfig from "@/config/env";
 
 export type DiscoveryData = {
   origin: DataOrigin;
@@ -90,6 +91,7 @@ class ResourceDiscoveryChannel {
       this.eventSource.addEventListener("result", (event) => {
         try {
           const result = JSON.parse(event.data) as DiscoveryResult;
+
           this.notifySubscribers(result);
         } catch (e) {
           console.error("[ResourceDiscoveryChannel] Failed to parse result:", e);
@@ -101,6 +103,7 @@ class ResourceDiscoveryChannel {
         if (event instanceof MessageEvent) {
           try {
             const result = JSON.parse(event.data) as DiscoveryResult;
+
             this.notifySubscribers(result);
           } catch (e) {
             console.error("[ResourceDiscoveryChannel] Failed to parse error:", e);
@@ -133,6 +136,7 @@ class ResourceDiscoveryChannel {
   private notifySubscribers(result: DiscoveryResult) {
     const key: SubscriberKey = `${result.resourceId}-${result.origin}-${result.dataType}`;
     const subscribers = this.subscribers.get(key);
+
     if (!subscribers || subscribers.size === 0) return;
 
     console.log(
@@ -143,7 +147,7 @@ class ResourceDiscoveryChannel {
       "origin",
       result.origin,
       "dataType",
-      result.dataType
+      result.dataType,
     );
 
     if (result.success) {
@@ -153,6 +157,7 @@ class ResourceDiscoveryChannel {
         coverPaths: result.coverPaths,
         playableItems: result.playableItems,
       };
+
       subscribers.forEach((cb) => cb(data));
     } else {
       subscribers.forEach((cb) => cb(null, result.error));
@@ -187,6 +192,7 @@ class ResourceDiscoveryChannel {
     console.log("[ResourceDiscoveryChannel] Sending batch of", requests.length, "subscriptions");
 
     const endpoint = this.getApiEndpoint();
+
     try {
       await fetch(`${endpoint}/resource/discovery/subscribe/batch`, {
         method: "POST",
@@ -200,8 +206,10 @@ class ResourceDiscoveryChannel {
 
       // Notify subscribers of error
       requests.forEach((req) => {
-        const key: SubscriberKey = `${req.resourceId}-${req.origin}-${req.dataType}` as SubscriberKey;
+        const key: SubscriberKey =
+          `${req.resourceId}-${req.origin}-${req.dataType}` as SubscriberKey;
         const subs = this.subscribers.get(key);
+
         if (subs) {
           subs.forEach((cb) => cb(null, "Failed to subscribe"));
         }
@@ -213,7 +221,7 @@ class ResourceDiscoveryChannel {
     resourceId: number,
     origin: DataOrigin,
     dataType: ResourceDataType,
-    callback: Subscriber
+    callback: Subscriber,
   ): Promise<() => void> {
     const key: SubscriberKey = `${resourceId}-${origin}-${dataType}`;
 
@@ -237,6 +245,7 @@ class ResourceDiscoveryChannel {
     // Return unsubscribe function
     return () => {
       const subs = this.subscribers.get(key);
+
       if (subs) {
         subs.delete(callback);
         if (subs.size === 0) {

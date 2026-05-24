@@ -52,7 +52,8 @@ const buildGroups = (
 ) => {
   return descriptors.map((descriptor) => {
     // Only include dynamic targets that have a name (non-empty dynamicTarget)
-    const subOptions = (optionsList?.filter((x) => x.target == descriptor.id && x.dynamicTarget != undefined) || []);
+    const subOptions =
+      optionsList?.filter((x) => x.target == descriptor.id && x.dynamicTarget != undefined) || [];
 
     return {
       descriptor: descriptor,
@@ -65,8 +66,15 @@ const DynamicTargets = (props: Props) => {
   const { t } = useTranslation();
   const forceUpdate = useUpdate();
 
-  const { propertyMap, optionsList, enhancer, onPropertyChanged, onChange, candidateTargetsMap, hideBindingAndConfig } =
-    props;
+  const {
+    propertyMap,
+    optionsList,
+    enhancer,
+    onPropertyChanged,
+    onChange,
+    candidateTargetsMap,
+    hideBindingAndConfig,
+  } = props;
   const dynamicTargetDescriptors = enhancer.targets.filter((x) => x.isDynamic);
   const [groups, setGroups] = useState<Group[]>([]);
 
@@ -76,8 +84,10 @@ const DynamicTargets = (props: Props) => {
     // When candidates exist (e.g. regex capture groups), sync targets to match exactly:
     // add missing candidates, remove stale targets no longer in candidates.
     let changed = false;
+
     for (const group of newGroups) {
       const candidates = group.candidateTargets;
+
       if (!candidates || candidates.length === 0) continue;
 
       const candidateSet = new Set(candidates);
@@ -88,12 +98,15 @@ const DynamicTargets = (props: Props) => {
       );
 
       const synced: EnhancerTargetFullOptions[] = [];
+
       for (const candidate of candidates) {
         const existing = existingByName.get(candidate);
+
         if (existing) {
           synced.push(existing);
         } else {
           const newOpts = createEnhancerTargetOptions(group.descriptor);
+
           newOpts.dynamicTarget = candidate;
           synced.push(newOpts);
           changed = true;
@@ -114,6 +127,7 @@ const DynamicTargets = (props: Props) => {
 
     if (changed) {
       const ol = _.flatMap(newGroups, (g) => g.subOptions);
+
       onChange?.(ol);
     }
   }, [candidateTargetsMap]);
@@ -130,13 +144,15 @@ const DynamicTargets = (props: Props) => {
 
   return groups.length > 0 ? (
     <div className={"flex flex-col gap-y-2"}>
-      {groups.map((g) => {
+      {groups.map((g, gi) => {
         const { descriptor, subOptions, candidateTargets } = g;
         const isCandidateDriven = candidateTargets && candidateTargets.length > 0;
-        const hasUnbound = subOptions.some((x) => x.dynamicTarget != undefined && (!x.propertyId || !x.propertyPool));
+        const hasUnbound = subOptions.some(
+          (x) => x.dynamicTarget != undefined && (!x.propertyId || !x.propertyPool),
+        );
 
         return (
-          <div>
+          <div key={gi}>
             {/* NextUI doesn't support the wrap of TableRow, use div instead for now, waiting the updates of NextUI */}
             {/* see https://github.com/nextui-org/nextui/issues/729 */}
             {hideBindingAndConfig && isCandidateDriven ? (
@@ -146,9 +162,7 @@ const DynamicTargets = (props: Props) => {
                     {descriptor.name}
                     &nbsp;
                     <Popover trigger={<ApartmentOutlined className={"text-base"} />}>
-                      {t<string>(
-                        "enhancer.target.dynamicLabel.tip",
-                      )}
+                      {t<string>("enhancer.target.dynamicLabel.tip")}
                     </Popover>
                   </TableColumn>
                 </TableHeader>
@@ -162,9 +176,7 @@ const DynamicTargets = (props: Props) => {
                     {descriptor.name}
                     &nbsp;
                     <Popover trigger={<ApartmentOutlined className={"text-base"} />}>
-                      {t<string>(
-                        "enhancer.target.dynamicLabel.tip",
-                      )}
+                      {t<string>("enhancer.target.dynamicLabel.tip")}
                     </Popover>
                   </TableColumn>
                   <TableColumn>{t<string>("common.label.operations")}</TableColumn>
@@ -182,9 +194,7 @@ const DynamicTargets = (props: Props) => {
                     {descriptor.name}
                     &nbsp;
                     <Popover trigger={<ApartmentOutlined className={"text-base"} />}>
-                      {t<string>(
-                        "enhancer.target.dynamicLabel.tip",
-                      )}
+                      {t<string>("enhancer.target.dynamicLabel.tip")}
                     </Popover>
                   </TableColumn>
                   <TableColumn width={"25%"}>
@@ -199,12 +209,16 @@ const DynamicTargets = (props: Props) => {
                               name: td.dynamicTarget!,
                             }))}
                           onValueChanged={(ps) => {
-                            const namedOptions = subOptions.filter((x) => x.dynamicTarget != undefined);
+                            const namedOptions = subOptions.filter(
+                              (x) => x.dynamicTarget != undefined,
+                            );
+
                             for (let i = 0; i < ps.length; i++) {
                               const p = ps[i];
 
                               if (p) {
                                 const idx = subOptions.indexOf(namedOptions[i]);
+
                                 subOptions[idx] = {
                                   ...subOptions[idx],
                                   propertyId: p.id,
@@ -247,9 +261,7 @@ const DynamicTargets = (props: Props) => {
                     {descriptor.name}
                     &nbsp;
                     <Popover trigger={<ApartmentOutlined className={"text-base"} />}>
-                      {t<string>(
-                        "enhancer.target.dynamicLabel.tip",
-                      )}
+                      {t<string>("enhancer.target.dynamicLabel.tip")}
                     </Popover>
                   </TableColumn>
                   <TableColumn width={"25%"}>
@@ -264,12 +276,16 @@ const DynamicTargets = (props: Props) => {
                               name: td.dynamicTarget!,
                             }))}
                           onValueChanged={(ps) => {
-                            const namedOptions = subOptions.filter((x) => x.dynamicTarget != undefined);
+                            const namedOptions = subOptions.filter(
+                              (x) => x.dynamicTarget != undefined,
+                            );
+
                             for (let i = 0; i < ps.length; i++) {
                               const p = ps[i];
 
                               if (p) {
                                 const idx = subOptions.indexOf(namedOptions[i]);
+
                                 subOptions[idx] = {
                                   ...subOptions[idx],
                                   propertyId: p.id,
@@ -314,17 +330,21 @@ const DynamicTargets = (props: Props) => {
                       dynamicTarget={data.dynamicTarget}
                       dynamicTargetCandidates={candidateTargets}
                       hideBindingAndConfig={hideBindingAndConfig}
-                      readOnly={isCandidateDriven}
                       options={data}
                       propertyMap={propertyMap}
+                      readOnly={isCandidateDriven}
                       onChange={(newOptions) => {
                         subOptions[i] = newOptions;
                         updateGroups(groups);
                       }}
-                      onDeleted={isCandidateDriven ? undefined : () => {
-                        subOptions?.splice(i, 1);
-                        updateGroups(groups);
-                      }}
+                      onDeleted={
+                        isCandidateDriven
+                          ? undefined
+                          : () => {
+                              subOptions?.splice(i, 1);
+                              updateGroups(groups);
+                            }
+                      }
                       onPropertyChanged={onPropertyChanged}
                     />
                     <Divider orientation={"horizontal"} />
@@ -341,7 +361,10 @@ const DynamicTargets = (props: Props) => {
                   const currentTargets = subOptions
                     .filter((x) => x.dynamicTarget != undefined)
                     .map((x) => x.dynamicTarget!);
-                  const nextTarget = generateNextWithPrefix(t<string>("enhancer.target.label"), currentTargets);
+                  const nextTarget = generateNextWithPrefix(
+                    t<string>("enhancer.target.label"),
+                    currentTargets,
+                  );
                   const newOptions = createEnhancerTargetOptions(descriptor);
 
                   newOptions.dynamicTarget = nextTarget;
