@@ -296,7 +296,14 @@ public class ResourceController(
     public async Task<BaseResponse> Open(int id)
     {
         var resource = await service.Get(id, ResourceAdditionalItem.None);
-        var rawFileOrDirectoryName = Path.Combine(resource.Path);
+        // Resource.Path is nullable — a resource row with no path can't be
+        // opened on disk; return a 400 instead of letting Path.Combine throw.
+        if (string.IsNullOrEmpty(resource.Path))
+        {
+            return BaseResponseBuilder.BuildBadRequest($"Resource {id} has no path.");
+        }
+
+        var rawFileOrDirectoryName = resource.Path;
         // https://github.com/Bakabase/InsideWorld/issues/51
         if (!System.IO.File.Exists(rawFileOrDirectoryName) && !Directory.Exists(rawFileOrDirectoryName))
         {
@@ -306,7 +313,8 @@ public class ResourceController(
         // Resource path can be stale (folder moved/deleted outside Bakabase).
         // GetAttributes throws DirectoryNotFoundException in that case;
         // surface a 400 with the missing path instead of a 500.
-        if (!System.IO.File.Exists(rawFileOrDirectoryName) && !Directory.Exists(rawFileOrDirectoryName))
+        if (string.IsNullOrEmpty(rawFileOrDirectoryName) ||
+            (!System.IO.File.Exists(rawFileOrDirectoryName) && !Directory.Exists(rawFileOrDirectoryName)))
         {
             return BaseResponseBuilder.BuildBadRequest(
                 $"Could not find a part of the path '{rawFileOrDirectoryName}'.");
