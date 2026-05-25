@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
+using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Modules.ThirdParty.ThirdParties.Av;
 using Bakabase.Modules.ThirdParty.ThirdParties.Airav.Models;
 using CsQuery;
@@ -12,9 +13,14 @@ public class AiravClient(
     IHttpClientFactory httpClientFactory,
     ILoggerFactory loggerFactory,
     IAvSourceOptionsProvider avOptionsProvider)
-    : BakabaseHttpClient(httpClientFactory, loggerFactory)
+    : BakabaseHttpClient(httpClientFactory, loggerFactory), IAvClient
 {
     protected override string HttpClientName => InternalOptions.HttpClientNames.Default;
+
+    string IAvClient.SourceId => AvSourceIds.Airav;
+
+    async Task<IAvDetail?> IAvClient.SearchAndParseVideo(string number, string? appointUrl, string? language) =>
+        await SearchAndParseVideo(number, language: language ?? "zh_cn", appointUrl: appointUrl);
 
     public async Task<AiravVideoDetail?> SearchAndParseVideo(string number, string language = "zh_cn", string? appointUrl = null)
     {

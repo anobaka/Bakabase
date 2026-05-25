@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Services;
@@ -10,27 +11,7 @@ using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Bakabase.Modules.StandardValue.Abstractions.Services;
-using Bakabase.Modules.ThirdParty.ThirdParties.Airav;
 using Bakabase.Modules.ThirdParty.ThirdParties.Av;
-using Bakabase.Modules.ThirdParty.ThirdParties.Avsex;
-using Bakabase.Modules.ThirdParty.ThirdParties.Avsox;
-using Bakabase.Modules.ThirdParty.ThirdParties.CNMDB;
-using Bakabase.Modules.ThirdParty.ThirdParties.Dahlia;
-using Bakabase.Modules.ThirdParty.ThirdParties.DMM;
-using Bakabase.Modules.ThirdParty.ThirdParties.FC2;
-using Bakabase.Modules.ThirdParty.ThirdParties.Faleno;
-using Bakabase.Modules.ThirdParty.ThirdParties.Fantastica;
-using Bakabase.Modules.ThirdParty.ThirdParties.Fc2hub;
-using Bakabase.Modules.ThirdParty.ThirdParties.Freejavbt;
-using Bakabase.Modules.ThirdParty.ThirdParties.GetchuDl;
-using Bakabase.Modules.ThirdParty.ThirdParties.Iqqtv;
-using Bakabase.Modules.ThirdParty.ThirdParties.Jav321;
-using Bakabase.Modules.ThirdParty.ThirdParties.Javbus;
-using Bakabase.Modules.ThirdParty.ThirdParties.Javday;
-using Bakabase.Modules.ThirdParty.ThirdParties.Javdb;
-using Bakabase.Modules.ThirdParty.ThirdParties.Javlibrary;
-using Bakabase.Modules.ThirdParty.ThirdParties.Lulubar;
-using Bakabase.Modules.ThirdParty.ThirdParties.Mmtv;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.Logging;
 
@@ -39,26 +20,8 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Av;
 public class AvEnhancer(
     ILoggerFactory loggerFactory,
     IFileManager fileManager,
-    AiravClient airavClient,
-    AvsexClient avsexClient,
-    AvsoxClient avsoxClient,
-    CNMDBClient cnmdbClient,
-    DmmClient dmmClient,
-    DahliaClient dahliaClient,
-    FC2Client fc2Client,
-    FalenoClient falenoClient,
-    FantasticaClient fantasticaClient,
-    Fc2hubClient fc2hubClient,
-    FreejavbtClient freejavbtClient,
-    GetchuDlClient getchuDlClient,
-    IqqtvClient iqqtvClient,
-    Jav321Client jav321Client,
-    JavbusClient javbusClient,
-    JavdayClient javdayClient,
-    JavdbClient javdbClient,
-    JavlibraryClient javlibraryClient,
-    LulubarClient lulubarClient,
-    MmtvClient mmtvClient,
+    IEnumerable<IAvClient> avClients,
+    IHttpClientFactory httpClientFactory,
     IAvSourceOptionsProvider avOptionsProvider,
     IStandardValueService standardValueService, ISpecialTextService specialTextService, IServiceProvider serviceProvider)
     : AbstractKeywordEnhancer<AvEnhancerTarget, AvEnhancerContext, IKeywordEnhancerOptions>(loggerFactory, fileManager, standardValueService, specialTextService, serviceProvider)
@@ -70,33 +33,12 @@ public class AvEnhancer(
     {
         try
         {
-            // Define all clients that implement SearchAndParseVideo returning IAvDetail.
-            // The key MUST match IAvDetail.Source (see AvSourceIds) — preferred-source
-            // filtering compares against d.Source and silently drops anything that
-            // can't be looked up.
-            var clients = new Dictionary<string, Func<string, string?, Task<IAvDetail?>>>
-            {
-                { AvSourceIds.Airav, (num, url) => airavClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
-                { AvSourceIds.Avsex, (num, url) => avsexClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
-                { AvSourceIds.Avsox, (num, url) => avsoxClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
-                { AvSourceIds.Cnmdb, (num, url) => cnmdbClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
-                { AvSourceIds.Dmm, (num, url) => dmmClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
-                { AvSourceIds.Dahlia, (num, url) => dahliaClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
-                { AvSourceIds.Fc2, (num, url) => fc2Client.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
-                { AvSourceIds.Faleno, (num, url) => falenoClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
-                { AvSourceIds.Fantastica, (num, url) => fantasticaClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
-                { AvSourceIds.Fc2Hub, (num, url) => fc2hubClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
-                { AvSourceIds.Freejavbt, (num, url) => freejavbtClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
-                { AvSourceIds.GetchuDl, (num, url) => getchuDlClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
-                { AvSourceIds.Iqqtv, (num, url) => iqqtvClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
-                { AvSourceIds.Jav321, (num, url) => jav321Client.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
-                { AvSourceIds.Javbus, (num, url) => javbusClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
-                { AvSourceIds.Javday, (num, url) => javdayClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
-                { AvSourceIds.Javdb, (num, url) => javdbClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
-                { AvSourceIds.Javlibrary, (num, url) => javlibraryClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
-                { AvSourceIds.Lulubar, (num, url) => lulubarClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
-                { AvSourceIds.Mmtv, (num, url) => mmtvClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
-            };
+            // SourceId on each IAvClient MUST match IAvDetail.Source (see AvSourceIds) —
+            // preferred-source filtering compares against d.Source and silently drops
+            // anything that can't be looked up. Adding a new client only requires a
+            // DI registration (see ThirdPartyExtensions); this dispatcher picks it up
+            // automatically.
+            var clients = avClients.ToDictionary(c => c.SourceId, c => c);
 
             var disabledSources = clients.Keys
                 .Where(k => !avOptionsProvider.Resolve(k).Enabled)
@@ -133,7 +75,7 @@ public class AvEnhancer(
             {
                 try
                 {
-                    var result = await kvp.Value(keyword, null);
+                    var result = await kvp.Value.SearchAndParseVideo(keyword);
                     if (result != null)
                     {
                         lock (successfulSources)
@@ -170,29 +112,7 @@ public class AvEnhancer(
             // Dump per-source parsed results to a debug file for diagnosis
             try
             {
-                var perSourceData = context.Details.Select(d => new Dictionary<string, string?>
-                {
-                    ["Source"] = d.Source,
-                    ["Number"] = d.Number,
-                    ["Title"] = d.Title,
-                    ["OriginalTitle"] = d.OriginalTitle,
-                    ["Actor"] = d.Actor,
-                    ["Outline"] = d.Outline,
-                    ["Publisher"] = d.Publisher,
-                    ["Studio"] = d.Studio,
-                    ["Series"] = d.Series,
-                    ["Director"] = d.Director,
-                    ["Tag"] = d.Tag,
-                    ["Release"] = d.Release,
-                    ["Year"] = d.Year,
-                    ["Runtime"] = d.Runtime,
-                    ["Mosaic"] = d.Mosaic,
-                    ["Website"] = d.Website,
-                    ["SearchUrl"] = d.SearchUrl,
-                    ["CoverUrl"] = d.CoverUrl,
-                    ["PosterUrl"] = d.PosterUrl,
-                }).ToList();
-                var debugJson = JsonSerializer.Serialize(perSourceData, new JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
+                var debugJson = JsonSerializer.Serialize(context.Details, new JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
                 var debugDir = Path.Combine(Path.GetTempPath(), "bakabase_av_debug");
                 Directory.CreateDirectory(debugDir);
                 var debugFilePath = Path.Combine(debugDir, $"{keyword}_{DateTime.Now:yyyyMMdd_HHmmss}.json");
@@ -200,7 +120,7 @@ public class AvEnhancer(
                 Logger.LogInformation("AV enhancer per-source debug results saved to {DebugFilePath}", debugFilePath);
                 logCollector.LogInfo(EnhancementLogEvent.DataFetched,
                     $"Per-source debug results saved to {debugFilePath}",
-                    new { DebugFilePath = debugFilePath, SourceCount = perSourceData.Count });
+                    new { DebugFilePath = debugFilePath, SourceCount = context.Details.Count });
             }
             catch (Exception ex)
             {
@@ -230,7 +150,7 @@ public class AvEnhancer(
                             $"Downloading cover from {detail.Source}",
                             new { Url = detail.CoverUrl, Source = detail.Source });
 
-                        var imageData = await airavClient.HttpClient.GetByteArrayAsync(detail.CoverUrl, ct);
+                        var imageData = await httpClientFactory.CreateClient(InternalOptions.HttpClientNames.Default).GetByteArrayAsync(detail.CoverUrl, ct);
 
                         logCollector.LogInfo(EnhancementLogEvent.HttpResponse,
                             $"Cover downloaded from {detail.Source} ({imageData.Length} bytes)",
@@ -251,7 +171,7 @@ public class AvEnhancer(
                             $"Downloading poster from {detail.Source}",
                             new { Url = detail.PosterUrl, Source = detail.Source });
 
-                        var imageData = await airavClient.HttpClient.GetByteArrayAsync(detail.PosterUrl, ct);
+                        var imageData = await httpClientFactory.CreateClient(InternalOptions.HttpClientNames.Default).GetByteArrayAsync(detail.PosterUrl, ct);
 
                         logCollector.LogInfo(EnhancementLogEvent.HttpResponse,
                             $"Poster downloaded from {detail.Source} ({imageData.Length} bytes)",

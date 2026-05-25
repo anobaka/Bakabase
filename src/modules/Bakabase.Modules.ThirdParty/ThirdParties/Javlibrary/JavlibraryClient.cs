@@ -1,5 +1,6 @@
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
+using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Modules.ThirdParty.ThirdParties.Av;
 using Bakabase.Modules.ThirdParty.ThirdParties.Javlibrary.Models;
 using Microsoft.Extensions.Logging;
@@ -12,9 +13,14 @@ public class JavlibraryClient(
     IHttpClientFactory httpClientFactory,
     ILoggerFactory loggerFactory,
     IAvSourceOptionsProvider avOptionsProvider)
-    : BakabaseHttpClient(httpClientFactory, loggerFactory)
+    : BakabaseHttpClient(httpClientFactory, loggerFactory), IAvClient
 {
     protected override string HttpClientName => InternalOptions.HttpClientNames.Default;
+
+    string IAvClient.SourceId => AvSourceIds.Javlibrary;
+
+    async Task<IAvDetail?> IAvClient.SearchAndParseVideo(string number, string? appointUrl, string? language) =>
+        await SearchAndParseVideo(number, appointUrl: appointUrl, language: language ?? "zh_cn");
 
     public async Task<JavlibraryVideoDetail?> SearchAndParseVideo(string number, string? appointUrl = null, string language = "zh_cn", string? baseDomain = null)
     {

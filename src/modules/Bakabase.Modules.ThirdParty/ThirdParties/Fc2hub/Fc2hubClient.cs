@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
+using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Modules.ThirdParty.ThirdParties.Av;
 using Bakabase.Modules.ThirdParty.ThirdParties.Fc2hub.Models;
 using CsQuery;
@@ -9,9 +10,14 @@ using Microsoft.Extensions.Logging;
 namespace Bakabase.Modules.ThirdParty.ThirdParties.Fc2hub;
 
 public class Fc2hubClient(IHttpClientFactory httpClientFactory, ILoggerFactory loggerFactory)
-    : BakabaseHttpClient(httpClientFactory, loggerFactory)
+    : BakabaseHttpClient(httpClientFactory, loggerFactory), IAvClient
 {
     protected override string HttpClientName => InternalOptions.HttpClientNames.Default;
+
+    string IAvClient.SourceId => AvSourceIds.Fc2Hub;
+
+    async Task<IAvDetail?> IAvClient.SearchAndParseVideo(string number, string? appointUrl, string? language) =>
+        await SearchAndParseVideo(number, appointUrl: appointUrl);
 
     public async Task<Fc2hubVideoDetail?> SearchAndParseVideo(string number, string? appointUrl = null)
     {

@@ -97,27 +97,50 @@ public static class ThirdPartyExtensions
         services.AddSingleton<IBOptions<ITmdbOptions>>(x => x.GetRequiredService<IBOptions<TTmdbOptions>>());
         services.TryAddSingleton<TmdbClient>();
 
-        // Register default-named clients (no custom HttpMessageHandler)
+        // Register default-named clients (no custom HttpMessageHandler).
+        // The IAvClient mapping is what AvEnhancer / AvController consume —
+        // adding a new AV source means registering both lines below, after which
+        // both dispatchers pick it up automatically.
         services.TryAddSingleton<AiravClient>();
+        services.AddSingleton<IAvClient>(sp => sp.GetRequiredService<AiravClient>());
         services.TryAddSingleton<AvsexClient>();
+        services.AddSingleton<IAvClient>(sp => sp.GetRequiredService<AvsexClient>());
         services.TryAddSingleton<AvsoxClient>();
+        services.AddSingleton<IAvClient>(sp => sp.GetRequiredService<AvsoxClient>());
         services.TryAddSingleton<CNMDBClient>();
+        services.AddSingleton<IAvClient>(sp => sp.GetRequiredService<CNMDBClient>());
         services.TryAddSingleton<FC2Client>();
+        services.AddSingleton<IAvClient>(sp => sp.GetRequiredService<FC2Client>());
         services.TryAddSingleton<DahliaClient>();
+        services.AddSingleton<IAvClient>(sp => sp.GetRequiredService<DahliaClient>());
         services.TryAddSingleton<DmmClient>();
+        services.AddSingleton<IAvClient>(sp => sp.GetRequiredService<DmmClient>());
         services.TryAddSingleton<FalenoClient>();
+        services.AddSingleton<IAvClient>(sp => sp.GetRequiredService<FalenoClient>());
         services.TryAddSingleton<FantasticaClient>();
+        services.AddSingleton<IAvClient>(sp => sp.GetRequiredService<FantasticaClient>());
         services.TryAddSingleton<Fc2hubClient>();
+        services.AddSingleton<IAvClient>(sp => sp.GetRequiredService<Fc2hubClient>());
         services.TryAddSingleton<FreejavbtClient>();
+        services.AddSingleton<IAvClient>(sp => sp.GetRequiredService<FreejavbtClient>());
         services.TryAddSingleton<GetchuDlClient>();
+        services.AddSingleton<IAvClient>(sp => sp.GetRequiredService<GetchuDlClient>());
         services.TryAddSingleton<IqqtvClient>();
+        services.AddSingleton<IAvClient>(sp => sp.GetRequiredService<IqqtvClient>());
         services.TryAddSingleton<Jav321Client>();
+        services.AddSingleton<IAvClient>(sp => sp.GetRequiredService<Jav321Client>());
         services.TryAddSingleton<JavbusClient>();
+        services.AddSingleton<IAvClient>(sp => sp.GetRequiredService<JavbusClient>());
         services.TryAddSingleton<JavdayClient>();
+        services.AddSingleton<IAvClient>(sp => sp.GetRequiredService<JavdayClient>());
         services.TryAddSingleton<JavdbClient>();
+        services.AddSingleton<IAvClient>(sp => sp.GetRequiredService<JavdbClient>());
         services.TryAddSingleton<JavlibraryClient>();
+        services.AddSingleton<IAvClient>(sp => sp.GetRequiredService<JavlibraryClient>());
         services.TryAddSingleton<LulubarClient>();
+        services.AddSingleton<IAvClient>(sp => sp.GetRequiredService<LulubarClient>());
         services.TryAddSingleton<MmtvClient>();
+        services.AddSingleton<IAvClient>(sp => sp.GetRequiredService<MmtvClient>());
 
         services.AddTransient<IThirdPartyLocalizer, ThirdPartyLocalizer>();
         services.TryAddSingleton<ThirdPartyHttpRequestLogger>();

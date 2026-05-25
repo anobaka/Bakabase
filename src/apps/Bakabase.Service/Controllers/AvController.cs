@@ -5,27 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Network;
 using Bakabase.Abstractions.Models.Domain;
-using Bakabase.Modules.ThirdParty.ThirdParties.Airav;
 using Bakabase.Modules.ThirdParty.ThirdParties.Av;
-using Bakabase.Modules.ThirdParty.ThirdParties.Avsex;
-using Bakabase.Modules.ThirdParty.ThirdParties.Avsox;
-using Bakabase.Modules.ThirdParty.ThirdParties.CNMDB;
-using Bakabase.Modules.ThirdParty.ThirdParties.Dahlia;
-using Bakabase.Modules.ThirdParty.ThirdParties.DMM;
-using Bakabase.Modules.ThirdParty.ThirdParties.FC2;
-using Bakabase.Modules.ThirdParty.ThirdParties.Faleno;
-using Bakabase.Modules.ThirdParty.ThirdParties.Fantastica;
-using Bakabase.Modules.ThirdParty.ThirdParties.Fc2hub;
-using Bakabase.Modules.ThirdParty.ThirdParties.Freejavbt;
-using Bakabase.Modules.ThirdParty.ThirdParties.GetchuDl;
-using Bakabase.Modules.ThirdParty.ThirdParties.Iqqtv;
-using Bakabase.Modules.ThirdParty.ThirdParties.Jav321;
-using Bakabase.Modules.ThirdParty.ThirdParties.Javbus;
-using Bakabase.Modules.ThirdParty.ThirdParties.Javday;
-using Bakabase.Modules.ThirdParty.ThirdParties.Javdb;
-using Bakabase.Modules.ThirdParty.ThirdParties.Javlibrary;
-using Bakabase.Modules.ThirdParty.ThirdParties.Lulubar;
-using Bakabase.Modules.ThirdParty.ThirdParties.Mmtv;
 using Bakabase.Service.Models.Input;
 using Bakabase.Service.Models.View;
 using Bootstrap.Models.ResponseModels;
@@ -40,61 +20,21 @@ namespace Bakabase.Service.Controllers;
 /// </summary>
 [Route("~/av")]
 public class AvController(
-    AiravClient airavClient,
-    AvsexClient avsexClient,
-    AvsoxClient avsoxClient,
-    CNMDBClient cnmdbClient,
-    DmmClient dmmClient,
-    DahliaClient dahliaClient,
-    FC2Client fc2Client,
-    FalenoClient falenoClient,
-    FantasticaClient fantasticaClient,
-    Fc2hubClient fc2hubClient,
-    FreejavbtClient freejavbtClient,
-    GetchuDlClient getchuDlClient,
-    IqqtvClient iqqtvClient,
-    Jav321Client jav321Client,
-    JavbusClient javbusClient,
-    JavdayClient javdayClient,
-    JavdbClient javdbClient,
-    JavlibraryClient javlibraryClient,
-    LulubarClient lulubarClient,
-    MmtvClient mmtvClient,
+    IEnumerable<IAvClient> avClients,
     IAvSourceOptionsProvider avOptionsProvider)
     : Controller
 {
-    private Dictionary<string, System.Func<string, string, System.Threading.CancellationToken, Task<IAvDetail?>>> BuildDispatchers() =>
-        new()
-        {
-            // (number, language, ct) — language only matters for sources whose URL embeds the locale.
-            [AvSourceIds.Airav] = async (n, lang, _) => await airavClient.SearchAndParseVideo(n, language: lang),
-            [AvSourceIds.Avsex] = async (n, _, _) => await avsexClient.SearchAndParseVideo(n),
-            [AvSourceIds.Avsox] = async (n, _, _) => await avsoxClient.SearchAndParseVideo(n),
-            [AvSourceIds.Cnmdb] = async (n, _, _) => await cnmdbClient.SearchAndParseVideo(n),
-            [AvSourceIds.Dmm] = async (n, _, _) => await dmmClient.SearchAndParseVideo(n),
-            [AvSourceIds.Dahlia] = async (n, _, _) => await dahliaClient.SearchAndParseVideo(n),
-            [AvSourceIds.Fc2] = async (n, _, _) => await fc2Client.SearchAndParseVideo(n),
-            [AvSourceIds.Faleno] = async (n, _, _) => await falenoClient.SearchAndParseVideo(n),
-            [AvSourceIds.Fantastica] = async (n, _, _) => await fantasticaClient.SearchAndParseVideo(n),
-            [AvSourceIds.Fc2Hub] = async (n, _, _) => await fc2hubClient.SearchAndParseVideo(n),
-            [AvSourceIds.Freejavbt] = async (n, _, _) => await freejavbtClient.SearchAndParseVideo(n),
-            [AvSourceIds.GetchuDl] = async (n, _, _) => await getchuDlClient.SearchAndParseVideo(n),
-            [AvSourceIds.Iqqtv] = async (n, lang, _) => await iqqtvClient.SearchAndParseVideo(n, language: lang),
-            [AvSourceIds.Jav321] = async (n, _, _) => await jav321Client.SearchAndParseVideo(n),
-            [AvSourceIds.Javbus] = async (n, _, _) => await javbusClient.SearchAndParseVideo(n),
-            [AvSourceIds.Javday] = async (n, _, _) => await javdayClient.SearchAndParseVideo(n),
-            [AvSourceIds.Javdb] = async (n, _, _) => await javdbClient.SearchAndParseVideo(n),
-            [AvSourceIds.Javlibrary] = async (n, lang, _) => await javlibraryClient.SearchAndParseVideo(n, language: lang),
-            [AvSourceIds.Lulubar] = async (n, _, _) => await lulubarClient.SearchAndParseVideo(n),
-            [AvSourceIds.Mmtv] = async (n, _, _) => await mmtvClient.SearchAndParseVideo(n),
-        };
+    // Indexed by SourceId so input.Sources lookups stay O(1); the IEnumerable is
+    // resolved fresh per request to honor DI scoping.
+    private Dictionary<string, IAvClient> BuildClients() =>
+        avClients.ToDictionary(c => c.SourceId, c => c);
 
     [HttpGet("sources")]
     [SwaggerOperation(OperationId = "GetAvSources")]
     public ListResponse<AvSourceInfoViewModel> GetSources()
     {
-        var dispatchers = BuildDispatchers();
-        var infos = dispatchers.Keys.OrderBy(k => k).Select(k =>
+        var clients = BuildClients();
+        var infos = clients.Keys.OrderBy(k => k).Select(k =>
         {
             var resolved = avOptionsProvider.Resolve(k);
             AvSourceDefaults.DefaultBaseUrls.TryGetValue(k, out var defaultBaseUrl);
@@ -122,10 +62,10 @@ public class AvController(
             return new ListResponse<AvSourceTestResultViewModel>([]);
         }
 
-        var dispatchers = BuildDispatchers();
+        var clients = BuildClients();
         var sources = (input.Sources != null && input.Sources.Count > 0)
-            ? input.Sources.Where(dispatchers.ContainsKey).ToList()
-            : dispatchers.Keys.ToList();
+            ? input.Sources.Where(clients.ContainsKey).ToList()
+            : clients.Keys.ToList();
 
         var language = NormalizeLanguage(input.Language);
 
@@ -146,7 +86,7 @@ public class AvController(
             using var captureScope = HttpInteractionCapture.Begin();
             try
             {
-                var detail = await dispatchers[source](input.Number, language, ct);
+                var detail = await clients[source].SearchAndParseVideo(input.Number, language: language);
                 sw.Stop();
                 return new AvSourceTestResultViewModel
                 {

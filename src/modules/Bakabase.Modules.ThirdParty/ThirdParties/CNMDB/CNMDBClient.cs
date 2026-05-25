@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
+using Bakabase.Abstractions.Models.Domain;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.ThirdParty.ThirdParties.Av;
 using Bakabase.Modules.ThirdParty.ThirdParties.CNMDB.Models;
@@ -12,9 +13,14 @@ using System.Web;
 namespace Bakabase.Modules.ThirdParty.ThirdParties.CNMDB;
 
 public class CNMDBClient(IHttpClientFactory httpClientFactory, ILoggerFactory loggerFactory)
-    : BakabaseHttpClient(httpClientFactory, loggerFactory)
+    : BakabaseHttpClient(httpClientFactory, loggerFactory), IAvClient
 {
     protected override string HttpClientName => InternalOptions.HttpClientNames.Default;
+
+    string IAvClient.SourceId => AvSourceIds.Cnmdb;
+
+    async Task<IAvDetail?> IAvClient.SearchAndParseVideo(string number, string? appointUrl, string? language) =>
+        await SearchAndParseVideo(number, appointUrl: appointUrl);
 
     private const string BaseUrl = "https://cnmdb.net";
 

@@ -1,5 +1,6 @@
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
+using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Modules.ThirdParty.Helpers;
 using Bakabase.Modules.ThirdParty.ThirdParties.Av;
 using Bakabase.Modules.ThirdParty.ThirdParties.Javday.Models;
@@ -9,9 +10,14 @@ using CsQuery;
 namespace Bakabase.Modules.ThirdParty.ThirdParties.Javday;
 
 public class JavdayClient(IHttpClientFactory httpClientFactory, ILoggerFactory loggerFactory)
-    : BakabaseHttpClient(httpClientFactory, loggerFactory)
+    : BakabaseHttpClient(httpClientFactory, loggerFactory), IAvClient
 {
     protected override string HttpClientName => InternalOptions.HttpClientNames.Default;
+
+    string IAvClient.SourceId => AvSourceIds.Javday;
+
+    async Task<IAvDetail?> IAvClient.SearchAndParseVideo(string number, string? appointUrl, string? language) =>
+        await SearchAndParseVideo(number, appointUrl: appointUrl);
 
     public async Task<JavdayVideoDetail?> SearchAndParseVideo(string number, string? appointUrl = null, string? baseUrl = null)
     {

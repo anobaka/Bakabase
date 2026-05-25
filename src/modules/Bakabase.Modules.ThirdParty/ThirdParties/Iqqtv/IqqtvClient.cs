@@ -1,5 +1,6 @@
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
+using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Modules.ThirdParty.Helpers;
 using Bakabase.Modules.ThirdParty.ThirdParties.Av;
 using Bakabase.Modules.ThirdParty.ThirdParties.Iqqtv.Models;
@@ -13,9 +14,14 @@ public class IqqtvClient(
     IHttpClientFactory httpClientFactory,
     ILoggerFactory loggerFactory,
     IAvSourceOptionsProvider avOptionsProvider)
-    : BakabaseHttpClient(httpClientFactory, loggerFactory)
+    : BakabaseHttpClient(httpClientFactory, loggerFactory), IAvClient
 {
     protected override string HttpClientName => InternalOptions.HttpClientNames.Default;
+
+    string IAvClient.SourceId => AvSourceIds.Iqqtv;
+
+    async Task<IAvDetail?> IAvClient.SearchAndParseVideo(string number, string? appointUrl, string? language) =>
+        await SearchAndParseVideo(number, appointUrl: appointUrl, language: language ?? "zh_cn");
 
     public async Task<IqqtvVideoDetail?> SearchAndParseVideo(string number, string? appointUrl = null, string language = "zh_cn", string? baseUrl = null)
     {

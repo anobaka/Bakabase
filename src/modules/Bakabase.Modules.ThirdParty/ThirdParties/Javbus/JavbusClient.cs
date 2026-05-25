@@ -1,5 +1,6 @@
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
+using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Modules.ThirdParty.ThirdParties.Av;
 using Bakabase.Modules.ThirdParty.ThirdParties.Javbus.Models;
 using Microsoft.Extensions.Logging;
@@ -12,9 +13,14 @@ public class JavbusClient(
     IHttpClientFactory httpClientFactory,
     ILoggerFactory loggerFactory,
     IAvSourceOptionsProvider avOptionsProvider)
-    : BakabaseHttpClient(httpClientFactory, loggerFactory)
+    : BakabaseHttpClient(httpClientFactory, loggerFactory), IAvClient
 {
     protected override string HttpClientName => InternalOptions.HttpClientNames.Default;
+
+    string IAvClient.SourceId => AvSourceIds.Javbus;
+
+    async Task<IAvDetail?> IAvClient.SearchAndParseVideo(string number, string? appointUrl, string? language) =>
+        await SearchAndParseVideo(number, appointUrl: appointUrl);
 
     public async Task<JavbusVideoDetail?> SearchAndParseVideo(string number, string? appointUrl = null, string? baseUrl = null, string? mosaic = null)
     {
