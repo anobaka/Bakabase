@@ -21,16 +21,21 @@ export interface SelectProps extends Omit<NextUISelectProps, "children"> {
   dataSource?: Data[];
   children?: any;
 }
-const Select: React.FC<SelectProps> = ({ dataSource = [], ...props }) => {
+const Select: React.FC<SelectProps> = ({ dataSource, ...props }) => {
   const { t } = useTranslation();
 
   const isMultiline = props.selectionMode === "multiple";
+
+  // The destructuring default `= []` only applies to `undefined`. Callers
+  // sometimes pass `null` explicitly (typed as `Data[] | null` upstream),
+  // which would otherwise crash with `null.filter`.
+  const safeDataSource = dataSource ?? [];
 
   // Each item is rendered as <SelectItem key={data.value}>. An item without a
   // usable value produces a keyless node, and react-stately throws
   // "No key found for item" while building the collection, crashing the whole
   // page. Drop such items — an option with no value can't be selected anyway.
-  const items = dataSource.filter((d) => d != null && d.value != null);
+  const items = safeDataSource.filter((d) => d != null && d.value != null);
 
   // console.log(props.selectedKeys, dataSource);
   const baseRenderValue =
@@ -44,7 +49,7 @@ const Select: React.FC<SelectProps> = ({ dataSource = [], ...props }) => {
                 {v.reduce<ReactNode[]>((s, x, i) => {
                   s.push(
                     <Chip radius={"sm"} size={props.size ?? undefined}>
-                      {dataSource.find((d) => d.value === x.data?.value)?.label ??
+                      {safeDataSource.find((d) => d.value === x.data?.value)?.label ??
                         t<string>("Unknown label")}
                     </Chip>,
                   );
