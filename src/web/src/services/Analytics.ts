@@ -184,12 +184,8 @@ export async function initAnalytics(): Promise<void> {
           "AbortError: The fetching process for the media resource was aborted",
           "NotSupportedError: Failed to load because no supported source was found",
           "NotSupportedError: The element has no supported sources",
-          // The generated SDK throws the HttpResponse object on non-2xx; unhandled
-          // bubbles up here as "[object Response]". processResponseError already
-          // surfaces a user-facing toast, so the Sentry event is duplicate noise.
-          "[object Response]",
         ],
-        beforeSend(event) {
+        beforeSend(event, hint) {
           // HashRouter keeps the route in window.location.hash; Sentry's default
           // request.url captures only the origin (the bare "/"), so the issue
           // stream doesn't show which route the error happened on. Surface it as
@@ -198,6 +194,51 @@ export async function initAnalytics(): Promise<void> {
           const route = hash.replace(/^#/, "") || "/";
 
           event.tags = { ...event.tags, route };
+
+          // The generated SDK throws the HttpResponse object (a Response with
+          // extra {data, error} fields) on non-2xx; Sentry's default formatting
+          // collapses it to the useless string "[object Response]". Pull the
+          // status / URL / backend error out of the original so the issue is
+          // actionable.
+          const original = hint?.originalException as
+            | (Response & { error?: { code?: number; message?: string } | unknown })
+            | undefined
+            | null;
+
+          if (
+            original &&
+            typeof original === "object" &&
+            typeof (original as Response).status === "number" &&
+            typeof (original as Response).url === "string"
+          ) {
+            const body = original.error;
+            const codeMsg =
+              body && typeof body === "object" && "code" in body
+                ? `${(body as { code?: unknown }).code} ${
+                    (body as { message?: unknown }).message ?? ""
+                  }`.trim()
+                : undefined;
+
+            const summary =
+              codeMsg ??
+              `HTTP ${original.status} ${original.statusText || ""} ${original.url}`.trim();
+
+            if (event.exception?.values?.length) {
+              event.exception.values[0].type = "HttpError";
+              event.exception.values[0].value = summary;
+            }
+
+            event.contexts = {
+              ...event.contexts,
+              response: {
+                url: original.url,
+                status: original.status,
+                statusText: original.statusText,
+                ...(body ? { body } : {}),
+              },
+            };
+          }
+
           return event;
         },
       });
