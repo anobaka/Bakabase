@@ -184,7 +184,22 @@ export async function initAnalytics(): Promise<void> {
           "AbortError: The fetching process for the media resource was aborted",
           "NotSupportedError: Failed to load because no supported source was found",
           "NotSupportedError: The element has no supported sources",
+          // The generated SDK throws the HttpResponse object on non-2xx; unhandled
+          // bubbles up here as "[object Response]". processResponseError already
+          // surfaces a user-facing toast, so the Sentry event is duplicate noise.
+          "[object Response]",
         ],
+        beforeSend(event) {
+          // HashRouter keeps the route in window.location.hash; Sentry's default
+          // request.url captures only the origin (the bare "/"), so the issue
+          // stream doesn't show which route the error happened on. Surface it as
+          // a `route` tag for filtering and aggregation.
+          const hash = typeof window !== "undefined" ? window.location.hash : "";
+          const route = hash.replace(/^#/, "") || "/";
+
+          event.tags = { ...event.tags, route };
+          return event;
+        },
       });
       Sentry.setUser({ id: info.deviceId });
       Sentry.setTag("release_channel", info.releaseChannel);
