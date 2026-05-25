@@ -328,8 +328,20 @@ public class AvEnhancer(
                     AddListStringEnhancement(orderedDetails, d => d.Series?.Split(',', StringSplitOptions.RemoveEmptyEntries), target, enhancements);
                     break;
                 case AvEnhancerTarget.Runtime:
-                    AddStringEnhancement(orderedDetails, d => d.Runtime, target, enhancements);
+                {
+                    // Runtime from clients is a digit-only minutes string (e.g., "120"),
+                    // which TimeSpan.TryParse cannot handle. Parse it explicitly.
+                    foreach (var d in orderedDetails)
+                    {
+                        if (int.TryParse(d.Runtime, out var minutes) && minutes > 0)
+                        {
+                            enhancements.Add(new EnhancementTargetValue<AvEnhancerTarget>(target, null,
+                                new TimeValueBuilder(TimeSpan.FromMinutes(minutes))));
+                            break;
+                        }
+                    }
                     break;
+                }
                 case AvEnhancerTarget.Director:
                     AddListStringEnhancement(orderedDetails, d => d.Director?.Split(',', StringSplitOptions.RemoveEmptyEntries), target, enhancements);
                     break;

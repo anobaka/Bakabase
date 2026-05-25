@@ -14,11 +14,11 @@ public enum AvEnhancerTarget
     OriginalTitle,
     [EnhancerTarget(StandardValueType.ListString, PropertyType.MultipleChoice)]
     Actor,
-    [EnhancerTarget(StandardValueType.ListTag, PropertyType.Tags)]
+    [EnhancerTarget(StandardValueType.ListString, PropertyType.Tags)]
     Tags,
-    [EnhancerTarget(StandardValueType.DateTime, PropertyType.Date)]
+    [EnhancerTarget(StandardValueType.String, PropertyType.Date)]
     Release,
-    [EnhancerTarget(StandardValueType.Decimal, PropertyType.Number)]
+    [EnhancerTarget(StandardValueType.String, PropertyType.Number)]
     Year,
     [EnhancerTarget(StandardValueType.String, PropertyType.SingleLineText)]
     Studio,
@@ -38,7 +38,7 @@ public enum AvEnhancerTarget
     Poster,
     [EnhancerTarget(StandardValueType.String, PropertyType.SingleLineText)]
     Website,
-    [EnhancerTarget(StandardValueType.Boolean, PropertyType.Boolean)]
+    [EnhancerTarget(StandardValueType.String, PropertyType.SingleLineText)]
     Mosaic,
     [EnhancerTarget(StandardValueType.String, PropertyType.MultilineText, null, false, null, ReservedProperty.Introduction)]
     Introduction
