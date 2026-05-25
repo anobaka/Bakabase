@@ -101,7 +101,7 @@ public static class AliasExtensions
                                 return tv.Select(v =>
                                 {
                                     var group = string.IsNullOrEmpty(v.Group) ? null : aMap.GetValueOrDefault(v.Group);
-                                    var name = aMap[v.Name];
+                                    var name = string.IsNullOrEmpty(v.Name) ? v.Name : aMap.GetValueOrDefault(v.Name) ?? v.Name;
                                     return new TagValue(group, name);
                                 }).ToList();
                             }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
@@ -31,6 +32,13 @@ public class LocalFileCoverProvider : ICoverProvider
     private readonly IFileManager _fileManager;
     private readonly FullMemoryCacheResourceService<BakabaseDbContext, ResourceCacheDbModel, int> _resourceCacheOrm;
     private readonly ILogger<LocalFileCoverProvider> _logger;
+
+    // ResourceCaches has a UNIQUE constraint on ResourceId; two concurrent
+    // discoveries of the same resource both seeing cache==null would race on
+    // Add and SQLite would reject the second with a constraint violation.
+    // Serialize per-resource. Leaks one entry per touched resource id, which
+    // is bounded by the total resource count.
+    private static readonly ConcurrentDictionary<int, SemaphoreSlim> _markCacheReadyLocks = new();
 
     public LocalFileCoverProvider(
         ICoverDiscoverer coverDiscoverer,
@@ -107,26 +115,35 @@ public class LocalFileCoverProvider : ICoverProvider
 
     private async Task MarkCacheReady(int resourceId, string? coverPath)
     {
-        var cache = await _resourceCacheOrm.GetByKey(resourceId, true);
-        var isNewCache = cache == null;
-        cache ??= new ResourceCacheDbModel { ResourceId = resourceId };
-
-        var serializedCoverPaths = ResourceCacheExtensions.SerializeCoverPathsForDb(
-            coverPath.IsNullOrEmpty() ? null : [coverPath]);
-
-        if (cache.CoverPaths != serializedCoverPaths ||
-            !cache.CachedTypes.HasFlag(ResourceCacheType.Covers))
+        var sem = _markCacheReadyLocks.GetOrAdd(resourceId, _ => new SemaphoreSlim(1, 1));
+        await sem.WaitAsync();
+        try
         {
-            cache.CoverPaths = serializedCoverPaths;
-            cache.CachedTypes |= ResourceCacheType.Covers;
-            if (isNewCache)
+            var cache = await _resourceCacheOrm.GetByKey(resourceId, true);
+            var isNewCache = cache == null;
+            cache ??= new ResourceCacheDbModel { ResourceId = resourceId };
+
+            var serializedCoverPaths = ResourceCacheExtensions.SerializeCoverPathsForDb(
+                coverPath.IsNullOrEmpty() ? null : [coverPath]);
+
+            if (cache.CoverPaths != serializedCoverPaths ||
+                !cache.CachedTypes.HasFlag(ResourceCacheType.Covers))
             {
-                await _resourceCacheOrm.Add(cache);
+                cache.CoverPaths = serializedCoverPaths;
+                cache.CachedTypes |= ResourceCacheType.Covers;
+                if (isNewCache)
+                {
+                    await _resourceCacheOrm.Add(cache);
+                }
+                else
+                {
+                    await _resourceCacheOrm.Update(cache);
+                }
             }
-            else
-            {
-                await _resourceCacheOrm.Update(cache);
-            }
+        }
+        finally
+        {
+            sem.Release();
         }
     }
 }

@@ -856,6 +856,26 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
         var poolValueIndex = _index.ValueIndex.GetValueOrDefault(filter.PropertyPool);
         var propValueIndex = poolValueIndex?.GetValueOrDefault(filter.PropertyId);
 
+        // The inner HashSets in ValueIndex are mutated under `lock (resourceIds)`
+        // by AddToValueIndex on the writer side; pass-through to a descriptor
+        // that enumerates them concurrently throws "Collection was modified
+        // during enumeration". Snapshot under the same lock so the descriptor
+        // works against a read-only copy.
+        Dictionary<string, HashSet<int>>? propValueIndexSnapshot = null;
+        if (propValueIndex != null)
+        {
+            propValueIndexSnapshot = new Dictionary<string, HashSet<int>>(propValueIndex.Count);
+            foreach (var kv in propValueIndex)
+            {
+                HashSet<int> snapshot;
+                lock (kv.Value)
+                {
+                    snapshot = new HashSet<int>(kv.Value);
+                }
+                propValueIndexSnapshot[kv.Key] = snapshot;
+            }
+        }
+
         // Get the range index for this property (with lock for thread safety)
         var poolRangeIndex = _index.RangeIndex.GetValueOrDefault(filter.PropertyPool);
         var propRangeIndex = poolRangeIndex?.GetValueOrDefault(filter.PropertyId);
@@ -865,7 +885,12 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
         {
             lock (propRangeIndex)
             {
-                rangeIndexList = propRangeIndex.ToList();
+                // Snapshot each inner HashSet too — AddToRangeIndex mutates them
+                // under the same `lock (sortedList)` we're holding here, but the
+                // descriptor reads them outside the lock.
+                rangeIndexList = propRangeIndex
+                    .Select(kv => new KeyValuePair<IComparable, HashSet<int>>(kv.Key, new HashSet<int>(kv.Value)))
+                    .ToList();
             }
         }
 
@@ -879,7 +904,7 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
         // Use PropertySystem to evaluate the filter on the index
         return PropertySystem.Search.EvaluateOnIndex(
             filter,
-            propValueIndex,
+            propValueIndexSnapshot,
             rangeIndexList,
             allResourceIds);
     }

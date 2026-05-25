@@ -170,4 +170,24 @@ public sealed class LocalFileCoverProviderCacheTests
         resource.Cache = new ResourceFileSystemCache { CachedTypes = [ResourceCacheType.Covers] };
         Assert.AreEqual(DataStatus.Ready, Provider().GetStatus(resource));
     }
+
+    [TestMethod]
+    public async Task ConcurrentDiscoveryOfSameResource_NoUniqueConstraintViolation()
+    {
+        // Regression: two concurrent GetCoversAsync calls for the same resource
+        // both observed cache==null and raced on _resourceCacheOrm.Add, hitting
+        // SQLite UNIQUE constraint on ResourceCaches.ResourceId.
+        var resource = await SeedResource("Movie", "notes.txt");
+
+        var provider = Provider();
+        var tasks = Enumerable.Range(0, 8)
+            .Select(_ => Task.Run(() => provider.GetCoversAsync(resource, CancellationToken.None)))
+            .ToArray();
+
+        await Task.WhenAll(tasks);
+
+        var cache = await GetCacheRow(resource.Id);
+        Assert.IsNotNull(cache);
+        Assert.IsTrue(cache!.CachedTypes.HasFlag(ResourceCacheType.Covers));
+    }
 }

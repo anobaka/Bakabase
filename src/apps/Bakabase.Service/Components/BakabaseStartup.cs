@@ -230,6 +230,24 @@ namespace Bakabase.Service.Components
                             {
                                 return null;
                             }
+                            // User environment / network issues: third-party SSL
+                            // handshakes, DNS / host-down timeouts. Bakabase
+                            // already surfaces these to the user via the
+                            // controller response — Sentry events drown out the
+                            // real signal.
+                            if (ex is System.Net.Http.HttpRequestException ||
+                                ex is System.Net.Sockets.SocketException)
+                            {
+                                return null;
+                            }
+                            // Expected: dependency (7-Zip / ffmpeg / lux / …)
+                            // not yet installed — the UI prompts the user to
+                            // install it, this is not a defect.
+                            if (ex is Bakabase.InsideWorld.Business.Components.Dependency.Exceptions
+                                .DependencyNotInstalledException)
+                            {
+                                return null;
+                            }
                             ex = ex.InnerException;
                         }
                         return @event;

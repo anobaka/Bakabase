@@ -71,6 +71,21 @@ public sealed class AliasExtensionsTests
     }
 
     [TestMethod]
+    public void ListTag_NullName_DoesNotThrowOnReplace()
+    {
+        // Regression: TagValue.Name is non-nullable in the type but persisted
+        // data can produce nulls; aMap[null] then threw ArgumentNullException.
+        var value = new List<TagValue> { new("Group", null!) };
+        var ctx = value.BuildContextForReplacingValueWithAlias(StandardValueType.ListTag);
+        Assert.IsTrue(ctx.HasValue);
+        var replaced = (List<TagValue>)ctx!.Value.ReplaceWithAlias(
+            new Dictionary<string, string> { ["Group"] = "g" });
+        Assert.AreEqual(1, replaced.Count);
+        Assert.AreEqual("g", replaced[0].Group);
+        Assert.IsNull(replaced[0].Name);
+    }
+
+    [TestMethod]
     public void NonTextTypes_ReturnNull()
     {
         Assert.IsFalse(true.BuildContextForReplacingValueWithAlias(StandardValueType.Boolean).HasValue);
