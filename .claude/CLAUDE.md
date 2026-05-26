@@ -143,6 +143,14 @@ docs: 更新 GitHub issue 管理工作流程 [skip ci]
 Closes #123
 ```
 
+**Trap**: GitHub matches the skip tokens (`[skip ci]`, `[ci skip]`,
+`[no ci]`, `[skip actions]`, `[actions skip]`) as literal substrings
+*anywhere* in the commit message — subject **or** body. So when a
+commit's body *describes* the directive (e.g. explaining a workflow's
+manual-override path), don't write the literal token inline, or that
+commit itself will skip the pipeline. Reword it (`the skip-ci
+directive`, `[ skip ci ]` with spaces, etc.) instead.
+
 ## 自动化 Issue 处理规范
 
 当被要求处理 GitHub Issue 时，你必须严格遵循以下 4 步流程：
