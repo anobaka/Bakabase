@@ -37,7 +37,7 @@ import {
   QuestionCircleOutlined,
 } from "@ant-design/icons";
 import { ControlledMenu } from "@szhsin/react-menu";
-import { AiOutlineFolderOpen, AiOutlineSync } from "react-icons/ai";
+import { AiOutlineFolderOpen, AiOutlinePlayCircle, AiOutlineSync } from "react-icons/ai";
 import moment from "moment";
 
 import StandardValueRenderer from "../StandardValue/ValueRenderer";
@@ -87,6 +87,28 @@ const renderSourceIcon = (origin: DataOrigin, className: string): React.ReactNod
     default:
       return <PlayCircleOutlined className={className} />;
   }
+};
+
+/**
+ * Variant of renderSourceIcon used as the *main* play-button trigger:
+ * brand icons get a small green play-circle overlaid bottom-right so the
+ * affordance is unmistakable. FileSystem is already a play icon, so it's
+ * returned as-is.
+ */
+const renderPlayButtonMainIcon = (origin: DataOrigin, className: string): React.ReactNode => {
+  if (origin === DataOrigin.FileSystem) {
+    return renderSourceIcon(origin, className);
+  }
+
+  return (
+    <span className={`relative inline-flex items-center justify-center ${className}`}>
+      {renderSourceIcon(origin, "")}
+      <AiOutlinePlayCircle
+        className="absolute right-0 bottom-0 text-success bg-content1 rounded-full"
+        style={{ fontSize: "0.625em" }}
+      />
+    </span>
+  );
 };
 
 type MenuEntry = {
@@ -231,7 +253,7 @@ const PlayButton: React.FC<PlayControlPortalProps> = ({
           ) : mainEntry.type === "openFolder" ? (
             <AiOutlineFolderOpen className={iconClass} />
           ) : (
-            renderSourceIcon(mainEntry.source ?? DataOrigin.FileSystem, iconClass)
+            renderPlayButtonMainIcon(mainEntry.source ?? DataOrigin.FileSystem, iconClass)
           )}
         </Button>
       </Tooltip>
