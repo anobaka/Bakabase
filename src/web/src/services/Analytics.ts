@@ -163,9 +163,14 @@ export async function initAnalytics(): Promise<void> {
 
   if (!info || !info.enableAnonymousDataTracking) return;
 
+  // Skip Sentry / PostHog / Clarity entirely in local dev so noise from a developer's
+  // own machine doesn't pollute production dashboards. GA4 is left as-is — it's already
+  // opt-in via ga4MeasurementId and useful for verifying integrations.
+  const skipExternalTelemetry = import.meta.env.DEV;
+
   // Sentry first — so its error handlers catch anything that goes wrong in subsequent
   // SDK init.
-  if (info.sentryDsn) {
+  if (info.sentryDsn && !skipExternalTelemetry) {
     try {
       Sentry.init({
         dsn: info.sentryDsn,
@@ -250,7 +255,7 @@ export async function initAnalytics(): Promise<void> {
   }
 
   // Clarity — qualitative recording / heatmaps
-  if (info.clarityProjectId) {
+  if (info.clarityProjectId && !skipExternalTelemetry) {
     try {
       Clarity.init(info.clarityProjectId);
       Clarity.identify(info.deviceId);
@@ -271,7 +276,7 @@ export async function initAnalytics(): Promise<void> {
 
   // PostHog — same dimensions / events as GA4, runs in parallel. Useful as a fallback
   // when GA4 is broken / unreachable, and as a primary in regions where GA4 is blocked.
-  if (info.postHogApiKey && info.postHogApiHost) {
+  if (info.postHogApiKey && info.postHogApiHost && !skipExternalTelemetry) {
     try {
       loadPostHog(info.postHogApiKey, info.postHogApiHost, info.deviceId, info.releaseChannel);
     } catch (e) {

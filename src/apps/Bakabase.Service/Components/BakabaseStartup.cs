@@ -193,7 +193,7 @@ namespace Bakabase.Service.Components
             // listener that captures HTTP request errors. Backend DSN is intentionally
             // separate from the frontend's (per design decision §16, item 2 — two projects).
             var backendSentryDsn = Configuration["Analytics:Sentry:BackendDsn"];
-            if (!string.IsNullOrWhiteSpace(backendSentryDsn))
+            if (!string.IsNullOrWhiteSpace(backendSentryDsn) && !Env.IsDevelopment())
             {
                 SentrySdk.Init(o =>
                 {
