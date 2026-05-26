@@ -13,6 +13,8 @@ import type { DockedEdge } from "./types";
 import { BAKA_SIZE, REDOCK_DELAY, WAVING_BYE_DURATION } from "./constants";
 
 import { Popover } from "@/components/bakaui";
+import { useBTasksStore } from "@/stores/bTasks";
+import { BTaskStatus } from "@/sdk/constants";
 
 const HOVER_HITBOX_EXTRA = 24;
 
@@ -23,6 +25,9 @@ const FloatingAssistantV2: React.FC = () => {
   const redockTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const wavingTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const [popoverVisible, setPopoverVisible] = useState(false);
+  const isWorking = useBTasksStore((s) =>
+    s.tasks.some((t) => t.status === BTaskStatus.Running),
+  );
 
   const machineRef = useRef(machine);
 
@@ -202,6 +207,7 @@ const FloatingAssistantV2: React.FC = () => {
               dockedEdge={machine.dockedEdge}
               hoverPose={machine.hoverPose}
               idlePose={machine.idlePose}
+              isWorking={isWorking}
               peekPose={machine.peekPose}
               state={machine.state}
             />

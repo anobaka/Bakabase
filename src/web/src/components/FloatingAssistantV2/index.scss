@@ -130,6 +130,12 @@ $baka-highlight: rgba(255, 255, 255, 0.8);
   opacity: 0.4;
 }
 
+.baka-mouth-focus {
+  stroke: $baka-mouth;
+  stroke-width: 1.2;
+  stroke-linecap: round;
+}
+
 // -- Blush --
 .baka-blush-mark {
   fill: $baka-blush;
@@ -424,6 +430,100 @@ $baka-highlight: rgba(255, 255, 255, 0.8);
 
 .docked {
   transition: transform 0.3s ease;
+}
+
+// ============================================================
+// Working state (overlay — btasks running)
+// ============================================================
+
+// In working pose, hands hammer in front of the body, so they share the
+// background color and movement gets lost. Give them a much darker stroke/fill
+// with thicker arms so the pumping motion reads clearly.
+.baka-arms-working {
+  .baka-arm {
+    stroke: color.adjust($baka-body-light, $lightness: -38%);
+    stroke-width: 3.2;
+
+    .dark & {
+      stroke: color.adjust($baka-body-dark, $lightness: -32%);
+    }
+  }
+
+  .baka-hand {
+    fill: color.adjust($baka-body-light, $lightness: -32%);
+    stroke: color.adjust($baka-body-light, $lightness: -45%);
+    stroke-width: 0.6;
+
+    .dark & {
+      fill: color.adjust($baka-body-dark, $lightness: -28%);
+      stroke: color.adjust($baka-body-dark, $lightness: -40%);
+    }
+  }
+}
+
+// Hands at chest level, fluttering rapidly along multiple axes.
+// Two design choices keep this from looking rhythmic:
+//   1. Left and right use different durations (0.34s vs 0.41s) — they slide
+//      in and out of phase instead of pumping in lockstep.
+//   2. Each keyframe mixes rotation + X + Y in non-symmetric amounts, so no
+//      single axis dominates the motion.
+.baka-work-hand-l {
+  transform-origin: 9px 28px;
+  animation: baka-work-l 0.34s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.baka-work-hand-r {
+  transform-origin: 39px 28px;
+  animation: baka-work-r 0.41s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes baka-work-l {
+  0%   { transform: rotate(-4deg) translate(0, 0); }
+  18%  { transform: rotate(9deg) translate(2px, -1px); }
+  36%  { transform: rotate(3deg) translate(3px, 1px); }
+  54%  { transform: rotate(-7deg) translate(1px, -2px); }
+  72%  { transform: rotate(6deg) translate(2px, 1px); }
+  100% { transform: rotate(-4deg) translate(0, 0); }
+}
+
+@keyframes baka-work-r {
+  0%   { transform: rotate(4deg) translate(0, 0); }
+  22%  { transform: rotate(-9deg) translate(-2px, -1px); }
+  44%  { transform: rotate(-3deg) translate(-3px, 1px); }
+  66%  { transform: rotate(7deg) translate(-1px, -2px); }
+  88%  { transform: rotate(-6deg) translate(-2px, 1px); }
+  100% { transform: rotate(4deg) translate(0, 0); }
+}
+
+.baka-smoke-puff {
+  fill: rgba(70, 70, 70, 0.9);
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+
+  .dark & {
+    fill: rgba(235, 235, 235, 0.85);
+  }
+}
+
+// 10 puffs staggered across 1.6s — a fresh burst rises every ~160ms,
+// forming a continuous billowing column.
+.baka-smoke-1  { animation: baka-smoke-rise 1.6s ease-out infinite; }
+.baka-smoke-2  { animation: baka-smoke-rise 1.6s ease-out infinite -0.16s; }
+.baka-smoke-3  { animation: baka-smoke-rise 1.6s ease-out infinite -0.32s; }
+.baka-smoke-4  { animation: baka-smoke-rise 1.6s ease-out infinite -0.48s; }
+.baka-smoke-5  { animation: baka-smoke-rise 1.6s ease-out infinite -0.64s; }
+.baka-smoke-6  { animation: baka-smoke-rise 1.6s ease-out infinite -0.80s; }
+.baka-smoke-7  { animation: baka-smoke-rise 1.6s ease-out infinite -0.96s; }
+.baka-smoke-8  { animation: baka-smoke-rise 1.6s ease-out infinite -1.12s; }
+.baka-smoke-9  { animation: baka-smoke-rise 1.6s ease-out infinite -1.28s; }
+.baka-smoke-10 { animation: baka-smoke-rise 1.6s ease-out infinite -1.44s; }
+
+// Rise far, end roughly 3x larger — column billows from chest up past the head.
+@keyframes baka-smoke-rise {
+  0%   { opacity: 0; transform: translateY(0) scale(0.3); }
+  10%  { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-36px) scale(3); }
 }
 
 // ============================================================

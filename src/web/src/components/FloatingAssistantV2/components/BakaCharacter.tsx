@@ -11,6 +11,7 @@ interface Props {
   clickPose: ClickPose;
   peekPose: PeekPose;
   dockedEdge: DockedEdge;
+  isWorking?: boolean;
 }
 
 /**
@@ -24,7 +25,11 @@ const BakaCharacter: React.FC<Props> = ({
   clickPose,
   peekPose,
   dockedEdge,
+  isWorking = false,
 }) => {
+  // Working overlay only appears in passive states; user interactions take priority.
+  const showWorking = isWorking && (state === "docked" || state === "floating-idle");
+
   const animClass = useMemo(() => {
     switch (state) {
       case "floating-idle":
@@ -130,6 +135,10 @@ const BakaCharacter: React.FC<Props> = ({
 
   // Mouth
   const mouth = useMemo(() => {
+    if (showWorking) {
+      // Focused/determined — a short straight line
+      return <line className="baka-mouth-focus" x1="21" x2="27" y1="32" y2="32" />;
+    }
     if (state === "waving-bye") {
       // Gentle smile
       return <path className="baka-mouth-smile" d="M 19 30 Q 24 34 29 30" />;
@@ -153,10 +162,26 @@ const BakaCharacter: React.FC<Props> = ({
 
     // Default gentle smile
     return <path className="baka-mouth-smile" d="M 19 30 Q 24 34 29 30" />;
-  }, [state, idlePose]);
+  }, [state, idlePose, showWorking]);
 
   // Arms
   const arms = useMemo(() => {
+    if (showWorking) {
+      // Hands held in front of the chest, fluttering rapidly — reads as
+      // "frantic typing / busy hands" rather than rhythmic vertical motion.
+      return (
+        <g className="baka-arms baka-arms-working">
+          <g className="baka-work-hand-l">
+            <path className="baka-arm" d="M 9 28 Q 13 31 19 32" />
+            <circle className="baka-hand" cx="19" cy="32" r="2.6" />
+          </g>
+          <g className="baka-work-hand-r">
+            <path className="baka-arm" d="M 39 28 Q 35 31 29 32" />
+            <circle className="baka-hand" cx="29" cy="32" r="2.6" />
+          </g>
+        </g>
+      );
+    }
     if (state === "waving-bye") {
       // One arm waving goodbye
       return (
@@ -208,7 +233,24 @@ const BakaCharacter: React.FC<Props> = ({
         <circle className="baka-hand" cx="45" cy="37" r="2.5" />
       </g>
     );
-  }, [state, clickPose]);
+  }, [state, clickPose, showWorking]);
+
+  // Source sits at the belly — clearly below mouth & hands, so it reads as
+  // smoke rising from a workpiece, not as something exhaled from the face.
+  const smoke = showWorking ? (
+    <g className="baka-smoke">
+      <circle className="baka-smoke-puff baka-smoke-1" cx="24" cy="40" r="5.5" />
+      <circle className="baka-smoke-puff baka-smoke-2" cx="20" cy="40" r="4.8" />
+      <circle className="baka-smoke-puff baka-smoke-3" cx="28" cy="40" r="5" />
+      <circle className="baka-smoke-puff baka-smoke-4" cx="22" cy="40" r="4.2" />
+      <circle className="baka-smoke-puff baka-smoke-5" cx="26" cy="40" r="4.4" />
+      <circle className="baka-smoke-puff baka-smoke-6" cx="24" cy="40" r="3.8" />
+      <circle className="baka-smoke-puff baka-smoke-7" cx="19" cy="40" r="3.6" />
+      <circle className="baka-smoke-puff baka-smoke-8" cx="29" cy="40" r="3.9" />
+      <circle className="baka-smoke-puff baka-smoke-9" cx="23" cy="40" r="3.4" />
+      <circle className="baka-smoke-puff baka-smoke-10" cx="25" cy="40" r="3.5" />
+    </g>
+  ) : null;
 
   // Blush marks (appear on hover/click)
   const blush =
@@ -229,7 +271,7 @@ const BakaCharacter: React.FC<Props> = ({
 
   return (
     <div
-      className={`baka-character ${animClass} edge-${dockedEdge}`}
+      className={`baka-character ${animClass} edge-${dockedEdge} ${showWorking ? "working" : ""}`}
       style={{ width: BAKA_SIZE, height: BAKA_SIZE }}
     >
       <svg
@@ -247,6 +289,8 @@ const BakaCharacter: React.FC<Props> = ({
         {blush}
         {/* Arms */}
         {arms}
+        {/* Smoke (working) */}
+        {smoke}
       </svg>
     </div>
   );
