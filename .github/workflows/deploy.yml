@@ -1,17 +1,23 @@
 name: Build and Deploy
 
 on:
-  push:
-    # we do not use nbgv to set version for release branches, we use tag instead.
-    branches: [ main, 'debug-actions', 'release/v*' ]
-    # tags:
-    #   - 'v*'
-  # pull_request:
-  #   branches: [ main, 'dev/v*' ]
-  # Manual trigger for the full build + deploy + release pipeline.
-  # [skip ci] only blocks push and pull_request, not workflow_dispatch, so this
-  # is how to run the pipeline for a commit whose push was skipped.
+  # Gate the pipeline on CI: only run after the CI workflow finishes on the
+  # same commit, and only proceed if it succeeded. PR runs are filtered out
+  # naturally — `branches:` here checks the run's head_branch, which for PRs
+  # is the feature branch (not main / release/* / debug-actions).
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [ main, debug-actions, 'release/v*' ]
+  # Manual override: runs the full pipeline without waiting for CI, useful when
+  # CI is red for unrelated reasons or for commits whose push was [skip ci]'d.
   workflow_dispatch:
+
+# Don't cancel an in-progress deploy — OSS uploads + GitHub releases shouldn't
+# be torn down mid-flight. Serialize per target branch instead.
+concurrency:
+  group: deploy-${{ github.workflow }}-${{ github.event.workflow_run.head_branch || github.ref }}
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -21,13 +27,36 @@ permissions:
 jobs:
   prepare:
     runs-on: ubuntu-latest
+    # Skip the entire pipeline unless CI succeeded on a push, or this is a
+    # manual dispatch. Without this guard, workflow_run fires on every CI
+    # completion regardless of outcome.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push')
     outputs:
       version: ${{ steps.set-var.outputs.version }}
       is_tag: ${{ steps.set-var.outputs.is_tag }}
+      sha: ${{ steps.target.outputs.sha }}
     steps:
+      - name: Resolve target commit
+        id: target
+        # workflow_run runs in the default-branch context — github.sha points
+        # at main's HEAD, not the commit CI actually validated. Pull the real
+        # SHA off the triggering run so build/deploy/release work on it.
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "ref=${{ github.ref }}" >> $GITHUB_OUTPUT
+            echo "sha=${{ github.sha }}" >> $GITHUB_OUTPUT
+          else
+            echo "ref=refs/heads/${{ github.event.workflow_run.head_branch }}" >> $GITHUB_OUTPUT
+            echo "sha=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_OUTPUT
+          fi
+
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          ref: ${{ steps.target.outputs.sha }}
           fetch-depth: 0
 
       - name: Setup .NET for NBGV
@@ -44,8 +73,9 @@ jobs:
       - name: Set version and tag info
         id: set-var
         run: |
-          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
-            TAG_NAME="${GITHUB_REF#refs/tags/}"
+          REF="${{ steps.target.outputs.ref }}"
+          if [[ "$REF" == refs/tags/* ]]; then
+            TAG_NAME="${REF#refs/tags/}"
             # strip leading 'v' or 'V' from tag when setting version
             TAG_NO_V="${TAG_NAME#v}"
             TAG_NO_V="${TAG_NO_V#V}"
@@ -63,8 +93,14 @@ jobs:
       - name: Debug prepare context
         run: |
           echo "github.event_name=${{ github.event_name }}"
-          echo "github.ref=${GITHUB_REF}"
-          echo "github.ref_name=${{ github.ref_name }}"
+          echo "github.ref=${{ github.ref }}"
+          echo "github.sha=${{ github.sha }}"
+          echo "workflow_run.head_branch=${{ github.event.workflow_run.head_branch }}"
+          echo "workflow_run.head_sha=${{ github.event.workflow_run.head_sha }}"
+          echo "workflow_run.event=${{ github.event.workflow_run.event }}"
+          echo "workflow_run.conclusion=${{ github.event.workflow_run.conclusion }}"
+          echo "resolved.ref=${{ steps.target.outputs.ref }}"
+          echo "resolved.sha=${{ steps.target.outputs.sha }}"
           echo "resolved.version=${{ steps.set-var.outputs.version }}"
           echo "resolved.is_tag=${{ steps.set-var.outputs.is_tag }}"
 
@@ -73,6 +109,7 @@ jobs:
     uses: ./.github/workflows/_build.yml
     with:
       version: ${{ needs.prepare.outputs.version }}
+      ref: ${{ needs.prepare.outputs.sha }}
     secrets: inherit
 
   deploy:
@@ -80,6 +117,7 @@ jobs:
     uses: ./.github/workflows/_deploy.yml
     with:
       version: ${{ needs.prepare.outputs.version }}
+      ref: ${{ needs.prepare.outputs.sha }}
     secrets: inherit
 
   release:
@@ -88,6 +126,7 @@ jobs:
     with:
       version: ${{ needs.prepare.outputs.version }}
       is_tag: ${{ needs.prepare.outputs.is_tag }}
+      ref: ${{ needs.prepare.outputs.sha }}
     secrets: inherit
 
   cdn-refresh:

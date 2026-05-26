@@ -6,7 +6,10 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [ main, 'release/v*' ]
+    # Mirror deploy.yml's branch list — deploy is gated on this workflow
+    # via `on: workflow_run`, so any branch that should auto-deploy must
+    # also run CI.
+    branches: [ main, debug-actions, 'release/v*' ]
   workflow_dispatch:
 
 # A newer push to the same branch / PR cancels older in-progress runs.

@@ -9,6 +9,11 @@ on:
       is_tag:
         required: true
         type: string
+      # See _build.yml — same workflow_run / GITHUB_SHA caveat. Also used
+      # below in place of `github.sha` for changelog range and release target.
+      ref:
+        required: true
+        type: string
 
 jobs:
   release:
@@ -16,6 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.ref }}
           fetch-depth: 0
 
       - name: Debug release context
@@ -23,6 +29,7 @@ jobs:
           echo "event=${{ github.event_name }}"
           echo "ref=${{ github.ref }}"
           echo "ref_name=${{ github.ref_name }}"
+          echo "inputs.ref=${{ inputs.ref }}"
           echo "version=${{ inputs.version }}"
 
       - name: Install semver
@@ -87,7 +94,7 @@ jobs:
         uses: orhun/git-cliff-action@v4
         with:
           config: cliff.toml
-          args: -v ${{ steps.previous.outputs.previous_tag }}..${{ github.sha }} --context
+          args: -v ${{ steps.previous.outputs.previous_tag }}..${{ inputs.ref }} --context
           version: v2.10.0
         env:
           OUTPUT: cliff.context.initial.json
@@ -259,7 +266,10 @@ jobs:
 
             // set changelog timestamp as Unix seconds from current commit, fallback to now
             try {
-              const { data: c } = await github.rest.repos.getCommit({ owner, repo, ref: context.sha });
+              // Use inputs.ref (CI-validated commit) rather than context.sha,
+              // which under workflow_run resolves to the default branch HEAD.
+              const targetSha = "${{ inputs.ref }}";
+              const { data: c } = await github.rest.repos.getCommit({ owner, repo, ref: targetSha });
               const dateStr = c?.commit?.committer?.date || null;
               const seconds = dateStr ? Math.floor(new Date(dateStr).getTime() / 1000) : Math.floor(Date.now() / 1000);
               initial.timestamp = seconds;
@@ -437,7 +447,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.release_tag.outputs.name }}
-          target_commitish: ${{ github.sha }}
+          target_commitish: ${{ inputs.ref }}
           body_path: CHANGELOG_${{ inputs.version }}.md
           prerelease: ${{ steps.prerelease.outputs.prerelease == 'true' }}
           files: |

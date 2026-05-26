@@ -6,6 +6,12 @@ on:
       version:
         required: true
         type: string
+      # Commit SHA to build. Required because the caller runs under
+      # `workflow_run`, where the default GITHUB_SHA points at the default
+      # branch's HEAD instead of the commit CI validated.
+      ref:
+        required: true
+        type: string
 
 jobs:
   build-frontend:
@@ -13,6 +19,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
 
       - name: Cache Yarn
         uses: actions/cache@v4
@@ -51,6 +59,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -114,6 +124,7 @@ jobs:
       - name: Checkout main repo
         uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.ref }}
           fetch-depth: 0
           path: ${{ github.event.repository.name }}
           submodules: recursive

@@ -6,6 +6,10 @@ on:
       version:
         required: true
         type: string
+      # See _build.yml — same workflow_run / GITHUB_SHA caveat.
+      ref:
+        required: true
+        type: string
 
 jobs:
   deploy-velopack:
@@ -80,6 +84,8 @@ jobs:
     steps:
       - name: Checkout main repo
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
 
       - name: Download Bakabase build artifact
         uses: actions/download-artifact@v4
