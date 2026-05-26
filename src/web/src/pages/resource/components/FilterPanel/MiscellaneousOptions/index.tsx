@@ -100,6 +100,19 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
     await uiOptionsStore.patch({ resource: { ...resourceUiOptions, ...options } });
   };
 
+  // Toggling these UI options changes the card's rendered height (more rows
+  // of content, border thickness, name area). The virtualized grid caches
+  // measured heights, so without an explicit re-measure the layout would
+  // stay aligned to the *previous* heights until the user scrolled enough
+  // to remount the affected cells. patchAndRearrange triggers a re-measure
+  // pass after the React commit from the option update.
+  const patchAndRearrange = async (
+    options: Partial<BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions>,
+  ) => {
+    await patchOptions(options);
+    rearrangeResources?.();
+  };
+
   const renderGeneralTab = () => (
     <div className={"flex flex-col gap-1"}>
       <div className={"flex items-center gap-1"}>
@@ -166,7 +179,7 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
         <Checkbox
           isSelected={resourceUiOptions?.inlineDisplayName}
           size="sm"
-          onValueChange={(checked) => patchOptions({ inlineDisplayName: checked })}
+          onValueChange={(checked) => patchAndRearrange({ inlineDisplayName: checked })}
         >
           <div className={"flex items-center gap-1"}>
             <ImEmbed className={"text-base"} />
@@ -195,7 +208,7 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
         <Checkbox
           isSelected={!!resourceUiOptions?.hideResourceBorder}
           size="sm"
-          onValueChange={(checked) => patchOptions({ hideResourceBorder: checked })}
+          onValueChange={(checked) => patchAndRearrange({ hideResourceBorder: checked })}
         >
           <div className={"flex items-center gap-1"}>
             {t<string>("resource.display.hideResourceBorder")}
@@ -422,7 +435,7 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
                 multiple: true,
                 pool: PropertyPool.All,
                 onSubmit: async (selected) => {
-                  patchOptions({
+                  patchAndRearrange({
                     displayProperties: selected.map((p: any) => ({ id: p.id, pool: p.pool })),
                   });
                 },
@@ -447,7 +460,7 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
                   size={"sm"}
                   variant={"light"}
                   onPress={() => {
-                    patchOptions({
+                    patchAndRearrange({
                       displayProperties: resourceUiOptions?.displayProperties?.filter(
                         (pp) => pp.id !== p.id && pp.pool !== p.pool,
                       ),

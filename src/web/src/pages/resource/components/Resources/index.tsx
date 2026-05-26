@@ -6,8 +6,6 @@ import { AutoSizer, CellMeasurer, CellMeasurerCache, Grid } from "react-virtuali
 import React, { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { useUpdate, useUpdateEffect } from "react-use";
 
-import { buildLogger } from "@/components/utils";
-
 const Gap = 10;
 
 type ScrollEvent = {
@@ -38,10 +36,14 @@ type Props = {
 };
 
 export type ResourcesRef = {
+  /** Clear all cached measurements and re-measure. Use after column-count
+   *  or other layout-defining changes that invalidate the cache. */
   rearrange: () => any;
+  /** Re-measure all visible cells without clearing the cache. Use after
+   *  content updates that may change cell height (e.g., Phase 2 data, UI
+   *  option toggles like inlineDisplayName / hideResourceBorder). */
+  measure: () => any;
 };
-
-const log = buildLogger("Resources");
 
 const Resources = forwardRef<ResourcesRef, Props>(
   ({ columnCount, loadMore, renderCell, cellCount, onScroll, onScrollToTop }, ref) => {
@@ -58,8 +60,6 @@ const Resources = forwardRef<ResourcesRef, Props>(
     const prevContainerWidthRef = useRef<number | undefined>(undefined);
 
     const scrollTopRef = useRef(0);
-
-    log("rendering");
 
     useEffect(() => {
       if (!containerRef.current) return;
@@ -115,21 +115,33 @@ const Resources = forwardRef<ResourcesRef, Props>(
     }, [columnCount]);
 
     const onResize = (clearCache: boolean = false) => {
-      log("on resize on scroll", gridRef, containerRef.current?.clientHeight, clearCache);
-      // gridRef.current?.scrollToPosition(scrollTopRef.current);
       if (clearCache) {
         // todo: clear cache will cause the grid scrolls to bottom when height downsized which may trigger load more behavior.
         cacheRef.current.clearAll();
+        forceUpdate();
+        // After React re-renders with default heights, re-measure once the
+        // new DOM is laid out. Without this, cells stay at defaultHeight
+        // until something else triggers a measurement (used to be the
+        // per-image `onLoad={measure}` cascade in ResourceTabContent).
+        requestAnimationFrame(() => {
+          gridRef.current?.measureAllCells();
+        });
       } else {
         gridRef.current?.measureAllCells();
+        forceUpdate();
       }
-      // gridRef.current?.recomputeGridSize();
-      forceUpdate();
     };
 
     useImperativeHandle(ref, () => ({
       rearrange: () => {
         onResize(true);
+      },
+      measure: () => {
+        // rAF so the caller can fire this immediately after a setState
+        // without worrying about commit timing.
+        requestAnimationFrame(() => {
+          gridRef.current?.measureAllCells();
+        });
       },
     }));
 
@@ -138,8 +150,6 @@ const Resources = forwardRef<ResourcesRef, Props>(
       const containerHeight = containerRef.current?.clientHeight ?? 0;
 
       const columnWidth = (containerWidth - verScrollbarWidthRef.current) / columnCount;
-
-      log(containerWidth, containerHeight, columnWidth, columnCount, gridRef);
 
       return (
         <div
@@ -185,18 +195,16 @@ const Resources = forwardRef<ResourcesRef, Props>(
                       stopIndex + overscanCellsCount,
                     ),
                   })}
-                  overscanRowCount={4}
+                  overscanRowCount={2}
                   rowCount={Math.ceil(cellCount / columnCount)}
                   rowHeight={cacheRef.current.rowHeight}
                   width={width}
                   onScroll={e => {
-                    log('onScroll', e);
                     scrollTopRef.current = e.scrollTop;
                     onScroll?.(e);
                   }}
                   onScrollbarPresenceChange={e => {
                     const newWidth = e.vertical ? e.size : 0;
-                    log('onScrollbarPresenceChange', e, newWidth, verScrollbarWidthRef.current);
                     if (newWidth != verScrollbarWidthRef.current) {
                       verScrollbarWidthRef.current = newWidth;
                       onResize(true);

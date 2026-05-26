@@ -7,7 +7,16 @@ import type { WindowOptions } from "@/components/Window";
 
 import { HeroUIProvider, Spinner, ToastProvider } from "@heroui/react";
 import { ConfigProvider, theme } from "antd";
-import { useContext, createContext, useEffect, useRef, useState, useMemo, Fragment } from "react";
+import {
+  useContext,
+  createContext,
+  useEffect,
+  useRef,
+  useState,
+  useMemo,
+  useCallback,
+  Fragment,
+} from "react";
 import { useHref, useLocation, useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
@@ -120,7 +129,10 @@ const BakabaseContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
     { key: string; component: React.ReactNode; persistent?: boolean }[]
   >([]);
 
-  const mount = (C: ComponentType<any>, props: any) => {
+  // Stable callbacks so that the context value reference stays stable across
+  // setPortals updates — otherwise every createPortal call would re-render
+  // every useBakabaseContext() consumer (including all visible ResourceCards).
+  const mount = useCallback((C: ComponentType<any>, props: any) => {
     console.log("[createPortal] mount", C, props);
 
     const key = uuidv4();
@@ -143,41 +155,44 @@ const BakabaseContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
     setPortals((prev) => [...prev, { key, component, persistent: false }]);
 
     return { key, destroy };
-  };
+  }, []);
 
-  const mountWindow = (C: ComponentType<any>, props: any, options?: WindowOptions) => {
-    console.log("[createWindow] mount", C, props, options);
+  const mountWindow = useCallback(
+    (C: ComponentType<any>, props: any, options?: WindowOptions) => {
+      console.log("[createWindow] mount", C, props, options);
 
-    const key = uuidv4();
-    const { title, persistent, renderHeaderActions, ...windowOptions } = options || {};
+      const key = uuidv4();
+      const { title, persistent, renderHeaderActions, ...windowOptions } = options || {};
 
-    const windowComponent = (
-      <Window
-        renderHeaderActions={renderHeaderActions}
-        title={title}
-        windowOptions={windowOptions}
-        onDestroyed={() => {
-          destroy();
-        }}
-      >
-        <C {...props} />
-      </Window>
-    );
+      const destroy = () => {
+        console.log("[createWindow] destroy", key);
+        setPortals((prev) => prev.filter((p) => p.key !== key));
+      };
 
-    setPortals((prev) => [...prev, { key, component: windowComponent, persistent }]);
+      const windowComponent = (
+        <Window
+          renderHeaderActions={renderHeaderActions}
+          title={title}
+          windowOptions={windowOptions}
+          onDestroyed={() => {
+            destroy();
+          }}
+        >
+          <C {...props} />
+        </Window>
+      );
 
-    const destroy = () => {
-      console.log("[createWindow] destroy", key);
-      setPortals((prev) => prev.filter((p) => p.key !== key));
-    };
+      setPortals((prev) => [...prev, { key, component: windowComponent, persistent }]);
 
-    return { key, destroy };
-  };
+      return { key, destroy };
+    },
+    [],
+  );
 
-  const closeAllModals = () => {
+  const closeAllModals = useCallback(() => {
     console.log("[closeAllModals] closing all non-persistent modals");
     setPortals((prev) => prev.filter((p) => p.persistent));
-  };
+  }, []);
 
   const appOptionsStore = useAppOptionsStore();
   const cssVariableOverwrites = useUiStyleOptionsStore((s) => s.data?.cssVariableOverwrites);
@@ -257,6 +272,17 @@ const BakabaseContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
   console.log("current theme", UiTheme[currentTheme.current], "portals", portals);
 
+  const contextValue = useMemo<IContext>(
+    () => ({
+      isDarkMode,
+      createPortal: mount,
+      createWindow: mountWindow,
+      closeAllModals,
+      isDebugging,
+    }),
+    [isDarkMode, mount, mountWindow, closeAllModals, isDebugging],
+  );
+
   return (
     <>
       <UIHubConnection />
@@ -267,15 +293,7 @@ const BakabaseContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
           }}
         >
           <ToastProvider placement={"top-center"} />
-          <BakabaseContext.Provider
-            value={{
-              isDarkMode,
-              createPortal: mount,
-              createWindow: mountWindow,
-              closeAllModals,
-              isDebugging,
-            }}
-          >
+          <BakabaseContext.Provider value={contextValue}>
             {portals.map(({ key, component }) => (
               <ErrorBoundary key={key}>
                 <Fragment>{component}</Fragment>

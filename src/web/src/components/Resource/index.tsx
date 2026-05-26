@@ -47,7 +47,6 @@ import { resolveScopedValue } from "@/core/models/Resource";
 
 import "./index.css";
 
-import { buildLogger, useTraceUpdate } from "@/components/utils";
 import ResourceDetailModal from "@/components/Resource/components/DetailModal";
 import HealthScoreDiagnosisModal from "@/components/Resource/components/HealthScoreDiagnosisModal";
 import HealthScoreBadge from "@/components/HealthScoreBadge";
@@ -290,8 +289,15 @@ type Props = {
   selected?: boolean;
   selectionModeRef?: React.RefObject<boolean>;
   onSelected?: (id: number, shiftKey?: boolean) => any;
+  /**
+   * Prefer the *Ref variants when this component lives inside a virtualized
+   * grid: stable ref objects keep React.memo effective so flipping selection
+   * on one card doesn't re-render every visible card.
+   */
   selectedResourceIds?: number[];
   selectedResources?: ResourceModel[];
+  selectedResourceIdsRef?: React.RefObject<number[]>;
+  selectedResourcesRef?: React.RefObject<ResourceModel[]>;
   onSelectedResourcesChanged?: (ids: number[]) => any;
   debug?: boolean;
   /** Disable cover click to prevent opening DetailModal */
@@ -309,27 +315,38 @@ const Resource = React.forwardRef((props: Props, ref) => {
     selectionModeRef,
     onSelected = (id: number, shiftKey?: boolean) => {},
     selectedResourceIds: propsSelectedResourceIds,
-    selectedResources,
+    selectedResources: propsSelectedResources,
+    selectedResourceIdsRef,
+    selectedResourcesRef,
     onSelectedResourcesChanged,
     debug,
     disableCoverClick = false,
   } = props;
 
-  // useTraceUpdate(props, props`Resource:${resource.id}|${resource.path}`);
-
   const { createPortal } = useBakabaseContext();
 
   const { t } = useTranslation();
-  const log = buildLogger(`Resource:${resource.id}|${resource.path}`);
-  const renderedTimes = useRef(0);
 
-  renderedTimes.current += 1;
-
-  const uiOptions = useUiOptionsStore((state) => state.data);
-  const resourceOptions = useResourceOptionsStore((state) => state.data);
+  // Narrow selectors: any change to the *full* options object would otherwise
+  // re-render every visible ResourceCard. Subscribing to specific fields
+  // ensures only the cards whose displayed field changed will re-render.
+  const displayProperties = useUiOptionsStore((s) => s.data?.resource?.displayProperties);
+  const coverFit = useUiOptionsStore((s) => s.data?.resource?.coverFit);
+  const disableCoverCarousel = useUiOptionsStore((s) => s.data?.resource?.disableCoverCarousel);
+  const disableMediaPreviewer = useUiOptionsStore((s) => s.data?.resource?.disableMediaPreviewer);
+  const showBiggerCoverWhileHover = useUiOptionsStore(
+    (s) => s.data?.resource?.showBiggerCoverWhileHover,
+  );
+  const displayResourceId = useUiOptionsStore((s) => s.data?.resource?.displayResourceId);
+  const hideHealthScore = useUiOptionsStore((s) => s.data?.resource?.hideHealthScore);
+  const inlineDisplayName = useUiOptionsStore((s) => s.data?.resource?.inlineDisplayName);
+  const hideResourceBorder = useUiOptionsStore((s) => s.data?.resource?.hideResourceBorder);
+  const propertyValueScopePriority = useResourceOptionsStore(
+    (s) => s.data?.propertyValueScopePriority,
+  );
 
   const valueScopePriority = useMemo<PropertyValueScope[]>(() => {
-    const configured = resourceOptions.propertyValueScopePriority;
+    const configured = propertyValueScopePriority;
     const vsp =
       configured && configured.length > 0
         ? configured.slice()
@@ -346,7 +363,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
     }
 
     return vsp;
-  }, [resourceOptions.propertyValueScopePriority]);
+  }, [propertyValueScopePriority]);
 
   const scopePreferenceMap = useMemo(() => {
     const map = new Map<string, PropertyValueScopePreference>();
@@ -362,6 +379,11 @@ const Resource = React.forwardRef((props: Props, ref) => {
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
 
   const [contextMenuIsOpen, setContextMenuIsOpen] = useState(false);
+  // Once the user right-clicks this card we keep the menu's subtree mounted
+  // (close animations on ControlledMenu need the children to stay around).
+  // Cards never right-clicked skip rendering the ~380-line ContextMenuItems
+  // tree entirely — and most cards are never right-clicked.
+  const [contextMenuEverOpened, setContextMenuEverOpened] = useState(false);
   const [contextMenuAnchorPoint, setContextMenuAnchorPoint] = useState({
     x: 0,
     y: 0,
@@ -375,23 +397,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
     };
   }, []);
 
-  useTraceUpdate(props, `[${resource.fileName}]`);
-
-  const displayPropertyKeys = uiOptions.resource?.displayProperties ?? [];
-
-  log(
-    `render #${renderedTimes.current}`,
-    "displayPropertyKeys:",
-    displayPropertyKeys.length,
-    "hasProperties:",
-    !!resource.properties,
-    "propertyPools:",
-    resource.properties ? Object.keys(resource.properties) : "(none)",
-    "mediaLibraries:",
-    resource.mediaLibraries,
-    "category:",
-    resource.category?.name,
-  );
+  const displayPropertyKeys = displayProperties ?? [];
 
   // Discovery happens automatically via SSE now
 
@@ -452,11 +458,11 @@ const Resource = React.forwardRef((props: Props, ref) => {
           <ResourceCover
             ref={coverRef}
             biggerCoverPlacement={biggerCoverPlacement}
-            coverFit={uiOptions.resource?.coverFit}
-            disableCarousel={uiOptions?.resource?.disableCoverCarousel}
-            disableMediaPreviewer={uiOptions?.resource?.disableMediaPreviewer}
+            coverFit={coverFit}
+            disableCarousel={disableCoverCarousel}
+            disableMediaPreviewer={disableMediaPreviewer}
             resource={resource}
-            showBiggerOnHover={uiOptions?.resource?.showBiggerCoverWhileHover}
+            showBiggerOnHover={showBiggerCoverWhileHover}
             onClick={onCoverClick}
           />
         </div>
@@ -517,14 +523,14 @@ const Resource = React.forwardRef((props: Props, ref) => {
               </div>
             </Chip>
           )}
-          {uiOptions.resource?.displayResourceId && (
+          {displayResourceId && (
             <Tooltip content={t<string>("resource.label.resourceId")}>
               <Chip radius={"sm"} size={"sm"} variant={"flat"}>
                 {resource.id}
               </Chip>
             </Tooltip>
           )}
-          {resource.healthScore != null && !uiOptions.resource?.hideHealthScore && (
+          {resource.healthScore != null && !hideHealthScore && (
             <Tooltip
               content={t<string>("healthScore.label.scoreTip", { score: resource.healthScore })}
             >
@@ -537,16 +543,8 @@ const Resource = React.forwardRef((props: Props, ref) => {
               />
             </Tooltip>
           )}
-          {debug && (
-            <Chip radius={"sm"} size={"sm"} variant={"flat"}>
-              <div className={"flex items-center gap-1"}>
-                <AiOutlineSync className={"text-base"} />
-                {renderedTimes.current}
-              </div>
-            </Chip>
-          )}
         </div>
-        {(displayPropertyKeys.length > 0 || uiOptions.resource?.inlineDisplayName) && (
+        {(displayPropertyKeys.length > 0 || inlineDisplayName) && (
           <div
             className={
               "inline-flex flex-col gap-1 absolute bottom-0 right-0 items-end max-w-full max-h-full w-fit overflow-hidden"
@@ -647,15 +645,11 @@ const Resource = React.forwardRef((props: Props, ref) => {
                   }
                 }
               } catch (error) {
-                log("error occurred while rendering display property", error);
+                console.warn(
+                  `[Resource:${resource.id}] error rendering display property`,
+                  error,
+                );
               }
-
-              log(
-                `displayProperty pool:${dpk.pool} id:${dpk.id} => bizValue:`,
-                bizValue,
-                "bizValueType:",
-                bizValueType,
-              );
 
               if (bizValue == undefined || bizValueType == undefined) {
                 return [];
@@ -679,7 +673,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
                 </Chip>,
               ];
             })}
-            {uiOptions.resource?.inlineDisplayName && renderDisplayNameAndTags(true)}
+            {inlineDisplayName && renderDisplayNameAndTags(true)}
           </div>
         )}
         {(() => {
@@ -759,11 +753,28 @@ const Resource = React.forwardRef((props: Props, ref) => {
     ...propStyle,
   };
 
-  const selectedResourceIds = (propsSelectedResourceIds ?? []).slice();
+  // Prefer ref-based selection state when provided (hot path inside the
+  // virtualized grid); fall back to the array props for other callers.
+  const resolvedSelectedResourceIds = selectedResourceIdsRef
+    ? (selectedResourceIdsRef.current ?? [])
+    : (propsSelectedResourceIds ?? []);
+  const resolvedSelectedResources = selectedResourcesRef
+    ? (selectedResourcesRef.current ?? [])
+    : (propsSelectedResources ?? []);
+
+  const selectedResourceIds = resolvedSelectedResourceIds.slice();
 
   if (!selectedResourceIds.includes(resource.id)) {
     selectedResourceIds.push(resource.id);
   }
+
+  const selectedResources = (() => {
+    if (resolvedSelectedResources.some((r) => r.id === resource.id)) {
+      return resolvedSelectedResources;
+    }
+
+    return [...resolvedSelectedResources, resource];
+  })();
 
   const renderDisplayNameAndTags = (highContrastBackground: boolean = false) => {
     // inline 模式下 (highContrastBackground=true) 父元素是 w-fit，不能用 container queries
@@ -807,18 +818,15 @@ const Resource = React.forwardRef((props: Props, ref) => {
     );
   };
 
-  // log("selectedResourceIds", selectedResourceIds);
-  log("render", resource);
-
   return (
     <div
       key={resource.id}
       className={`flex flex-col p-1 rounded relative group/resource resource ${props.className} ${
-        uiOptions.resource?.hideResourceBorder ? "" : "border-2"
+        hideResourceBorder ? "" : "border-2"
       } ${
         selected
           ? "border-primary ring-2 ring-primary/30 bg-primary/5"
-          : uiOptions.resource?.hideResourceBorder
+          : hideResourceBorder
             ? ""
             : "border-default-200"
       } ${
@@ -854,6 +862,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
             y: e.clientY,
           });
           setContextMenuIsOpen(true);
+          setContextMenuEverOpened(true);
         }}
       >
         <ControlledMenu
@@ -867,16 +876,18 @@ const Resource = React.forwardRef((props: Props, ref) => {
           }}
           onClose={() => setContextMenuIsOpen(false)}
         >
-          <ContextMenuItems
-            contextResource={resource}
-            selectedResourceIds={selectedResourceIds}
-            selectedResources={selectedResources}
-            onSelectedResourcesChanged={onSelectedResourcesChanged}
-          />
+          {contextMenuEverOpened && (
+            <ContextMenuItems
+              contextResource={resource}
+              selectedResourceIds={selectedResourceIds}
+              selectedResources={selectedResources}
+              onSelectedResourcesChanged={onSelectedResourcesChanged}
+            />
+          )}
         </ControlledMenu>
         <div className="relative">
           {renderCover()}
-          {!uiOptions.resource?.inlineDisplayName && renderDisplayNameAndTags(false)}
+          {!inlineDisplayName && renderDisplayNameAndTags(false)}
         </div>
       </div>
     </div>

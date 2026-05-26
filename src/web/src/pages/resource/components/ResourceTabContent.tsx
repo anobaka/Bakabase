@@ -26,7 +26,6 @@ import ResourceCard from "@/components/Resource";
 import { useResourceOptionsStore, useUiOptionsStore } from "@/stores/options";
 import BusinessConstants from "@/components/BusinessConstants";
 import { Button, Card, CardBody, Link, Pagination, Spinner } from "@/components/bakaui";
-import { buildLogger } from "@/components/utils";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { useResourceSearch } from "@/hooks/useResourceSearch";
 
@@ -51,8 +50,6 @@ export type ResourceTabContentRef = {
   getCurrentSearch: () => SearchForm | undefined;
 };
 
-const log = buildLogger("ResourceTabContent");
-
 const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props, ref) => {
   const { t } = useTranslation();
   const forceUpdate = useUpdate();
@@ -65,6 +62,7 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
     resources,
     setResources,
     loading: searching,
+    loadingDetails,
     response: searchResponse,
     search: progressiveSearch,
     reloadResources,
@@ -87,6 +85,11 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
 
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const selectedIdsRef = useRef(selectedIds);
+  // Mirror of selectedIds as a stable RefObject<Resource[]> so we can pass
+  // a stable reference to each ResourceCard. The contents update on selection
+  // change but the ref object itself never changes, which keeps React.memo
+  // effective on ResourceCard.
+  const selectedResourcesRef = useRef<typeof resources>([]);
   const multiSelectionRef = useRef(false);
   const lastSelectedIndexRef = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -133,8 +136,6 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
 
   const initStartPageRef = useRef(1);
 
-  log("render");
-
   useEffect(() => {
     if (resourceOptionsInitializedRef.current) {
       return;
@@ -145,7 +146,6 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
 
         resourceOptionsInitializedRef.current = true;
         setSearchForm(sf.search);
-        log("Initial search form", sf);
         search(sf.search, "replace");
       });
     }
@@ -291,6 +291,33 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
     resourcesRef.current = resources;
   }, [resources]);
 
+  // Keep selectedResourcesRef.current in sync with the current selection.
+  // Computed in an effect so the work only happens when either resources or
+  // selectedIds change, not on every render.
+  useEffect(() => {
+    if (selectedIds.length === 0) {
+      selectedResourcesRef.current = [];
+
+      return;
+    }
+    const set = new Set(selectedIds);
+
+    selectedResourcesRef.current = resources.filter((r) => set.has(r.id));
+  }, [resources, selectedIds]);
+
+  // When Phase 2 finishes (loadingDetails transitions true → false), the new
+  // displayName / properties / mediaLibrary chips have just been committed to
+  // the DOM. CellMeasurer's cached heights from the Phase-1 layout are now
+  // stale; re-measure once so the virtualized grid uses the real heights.
+  // This is the replacement for the per-image `onLoad={measure}` cascade.
+  const prevLoadingDetails = usePrevious(loadingDetails);
+
+  useEffect(() => {
+    if (prevLoadingDetails === true && loadingDetails === false) {
+      resourcesComponentRef.current?.measure();
+    }
+  }, [loadingDetails, prevLoadingDetails]);
+
   // Update pageable when search response changes
   useEffect(() => {
     if (searchResponse) {
@@ -329,10 +356,32 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
   // Sync ref during render phase to ensure renderCell gets the latest value
   if (selectedIdsRef.current !== selectedIds) {
     selectedIdsRef.current = selectedIds;
-    log("SelectedIds", selectedIds);
   }
 
   const pageContainerRef = useRef<any>();
+
+  // rAF-throttle the expensive part of onScroll (DOM querySelectorAll +
+  // center-resource calculation + setPageable + persistence API call). Raw
+  // scroll events fire many times per frame; coalescing to once per frame
+  // keeps the main thread responsive without losing the trailing event.
+  const scrollRafIdRef = useRef<number>(0);
+  const lastScrollEventRef = useRef<{
+    clientHeight: number;
+    clientWidth: number;
+    scrollHeight: number;
+    scrollLeft: number;
+    scrollTop: number;
+    scrollWidth: number;
+  } | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (scrollRafIdRef.current !== 0) {
+        cancelAnimationFrame(scrollRafIdRef.current);
+        scrollRafIdRef.current = 0;
+      }
+    };
+  }, []);
 
   const search = useCallback(
     async (
@@ -345,8 +394,6 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
 
       // Prevent concurrent searches
       if (searchingRef.current) {
-        log("Search already in progress, skipping");
-
         return;
       }
 
@@ -361,7 +408,6 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
       } as SearchForm;
 
       setSearchForm(newForm);
-      log("Search resources", newForm);
 
       if (resourcesRef.current.length == 0 || renderMode == "replace") {
         initStartPageRef.current = newForm.page ?? 1;
@@ -438,9 +484,15 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
     measure: () => void;
   };
 
+  // No `onLoad={measure}` here on purpose: cover height is CSS-driven via
+  // `pb-[100%]`, so image loads don't actually change cell height. The
+  // height-affecting content (displayName / properties / mediaLibrary chips)
+  // arrives in Phase 2, and we re-measure once when that lands (see the
+  // loadingDetails-transition effect below). Per-image `onLoad` cascading
+  // measure() calls would otherwise fire dozens of times per second during
+  // scroll-triggered loads.
   const renderCell = useCallback(
-    ({ columnIndex, key, parent, rowIndex, style, measure }: GridCellRenderArgs) => {
-      // console.log("123456789");
+    ({ columnIndex, rowIndex, style }: GridCellRenderArgs) => {
       const index = rowIndex * columnCount + columnIndex;
 
       if (index >= displayResources.length) {
@@ -448,18 +500,10 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
       }
       const resource = displayResources[index];
       const selected = selectedIdsRef.current.includes(resource.id);
-      // Get selected resources data for context menu
-      const selectedResources = displayResources.filter((r) =>
-        selectedIdsRef.current.includes(r.id),
-      );
 
       return (
         <div
           key={resource.id}
-          // React's emulated bubble: img loads inside ResourceCard fire onLoad here,
-          // letting react-virtualized re-measure once the cover has real dimensions.
-          // eslint-disable-next-line react/no-unknown-property
-          onLoad={measure}
           className={"relative p-0.5"}
           style={{
             ...style,
@@ -469,8 +513,8 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
             biggerCoverPlacement={index % columnCount < columnCount / 2 ? "right" : "left"}
             resource={resource}
             selected={selected}
-            selectedResourceIds={selectedIdsRef.current}
-            selectedResources={selectedResources}
+            selectedResourceIdsRef={selectedIdsRef}
+            selectedResourcesRef={selectedResourcesRef}
             selectionModeRef={multiSelectionRef}
             onSelected={onSelect}
             onSelectedResourcesChanged={onSelectedResourcesChanged}
@@ -478,14 +522,12 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
         </div>
       );
     },
-    [displayResources, columnCount],
+    [displayResources, columnCount, onSelect, onSelectedResourcesChanged],
   );
 
   useImperativeHandle(ref, () => ({
     getCurrentSearch: () => searchFormRef.current,
   }));
-
-  log(searchForm?.page, pageable?.page, `initialized: ${resourceOptionsInitializedRef.current}`);
 
   if (!resourceOptionsInitializedRef.current) {
     return null;
@@ -543,6 +585,9 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
               if (!props.activated) {
                 return;
               }
+
+              // Load-more check is cheap, run it unthrottled so we react
+              // immediately when the user hits the bottom.
               if (e.scrollHeight < e.scrollTop + e.clientHeight + 200 && !searchingRef.current) {
                 const totalPage = Math.ceil(
                   (pageable?.totalCount ?? 0) / (pageable?.pageSize ?? BasePageSize),
@@ -563,53 +608,59 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
                 }
               }
 
-              const items = pageContainerRef.current?.querySelectorAll("div[role='resource']");
+              // Heavy: DOM query + center-resource calc + setPageable +
+              // persistence call. Coalesce to once per frame, always using
+              // the most recent scroll event (rAF auto-trails: when scroll
+              // stops, the last scheduled frame still runs).
+              lastScrollEventRef.current = e;
+              if (scrollRafIdRef.current === 0) {
+                scrollRafIdRef.current = requestAnimationFrame(() => {
+                  scrollRafIdRef.current = 0;
+                  const ev = lastScrollEventRef.current;
 
-              if (items && items.length > 0) {
-                const x = e.clientWidth / 2;
-                const y = e.scrollTop + e.clientHeight / 2;
+                  if (!ev) return;
 
-                log("on Scroll", `center: ${x},${y}`);
-                let closest = items[0];
-                let minDis = Number.MAX_VALUE;
+                  const items =
+                    pageContainerRef.current?.querySelectorAll("div[role='resource']");
 
-                for (const item of items) {
-                  const parent = item.parentElement;
-                  const ix = parent.offsetLeft + parent.clientWidth / 2;
-                  const iy = parent.offsetTop + parent.clientHeight / 2;
-                  const dis = Math.abs((ix - x) ** 2 + (iy - y) ** 2);
+                  if (!items || items.length === 0) return;
 
-                  if (dis < minDis) {
-                    minDis = dis;
-                    closest = item;
+                  const x = ev.clientWidth / 2;
+                  const y = ev.scrollTop + ev.clientHeight / 2;
+
+                  let closest = items[0];
+                  let minDis = Number.MAX_VALUE;
+
+                  for (const item of items) {
+                    const parent = item.parentElement;
+
+                    if (!parent) continue;
+                    const ix = parent.offsetLeft + parent.clientWidth / 2;
+                    const iy = parent.offsetTop + parent.clientHeight / 2;
+                    const dis = (ix - x) ** 2 + (iy - y) ** 2;
+
+                    if (dis < minDis) {
+                      minDis = dis;
+                      closest = item;
+                    }
                   }
-                }
-                const centerResourceId = parseInt(closest.getAttribute("data-id"), 10);
-                const pageOffset = Math.floor(
-                  displayResources.findIndex((r) => r.id == centerResourceId) /
-                    (searchFormRef.current?.pageSize ?? BasePageSize),
-                );
-                const currentPage = pageOffset + initStartPageRef.current;
+                  const centerResourceId = parseInt(closest.getAttribute("data-id") ?? "0", 10);
+                  const pageOffset = Math.floor(
+                    resourcesRef.current.findIndex((r) => r.id == centerResourceId) /
+                      (searchFormRef.current?.pageSize ?? BasePageSize),
+                  );
+                  const currentPage = pageOffset + initStartPageRef.current;
 
-                log(
-                  "on Scroll",
-                  "center item",
-                  centerResourceId,
-                  closest,
-                  "page offset",
-                  pageOffset,
-                  "active page",
-                  currentPage,
-                );
-                if (currentPage != pageableRef.current?.page) {
-                  setPageable({
-                    ...pageableRef.current!,
-                    page: currentPage,
-                  });
-                  BApi.options.patchResourceOptions({
-                    searchCriteria: searchFormRef.current,
-                  });
-                }
+                  if (currentPage != pageableRef.current?.page) {
+                    setPageable({
+                      ...pageableRef.current!,
+                      page: currentPage,
+                    });
+                    BApi.options.patchResourceOptions({
+                      searchCriteria: searchFormRef.current,
+                    });
+                  }
+                });
               }
             }}
             onScrollToTop={() => {}}
