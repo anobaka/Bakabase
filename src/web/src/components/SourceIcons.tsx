@@ -1,5 +1,6 @@
 import React from "react";
 import { FaSteam } from "react-icons/fa6";
+import { RiRobot2Line } from "react-icons/ri";
 
 import dlsiteLogo from "@/assets/logo/dlsite.png";
 import exhentaiLogo from "@/assets/logo/exhentai.png";
@@ -9,6 +10,8 @@ import cienLogo from "@/assets/logo/cien.png";
 import patreonLogo from "@/assets/logo/patreon.png";
 
 export const SteamIcon = FaSteam;
+
+export const AigcIcon = RiRobot2Line;
 
 export const DLsiteIcon: React.FC<{ className?: string }> = ({ className }) => (
   <img alt="DLsite" className={`h-[1em] ${className ?? ""}`} src={dlsiteLogo} />
