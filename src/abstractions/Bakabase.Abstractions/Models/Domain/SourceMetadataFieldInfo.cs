@@ -4,8 +4,13 @@ namespace Bakabase.Abstractions.Models.Domain;
 
 /// <summary>
 /// Describes a predefined metadata field from an external source.
+/// <paramref name="RecommendedReservedProperty"/>, when set, is used as the
+/// default mapping target if the user has not configured one for this field.
 /// </summary>
-public record SourceMetadataFieldInfo(string Name, StandardValueType ValueType);
+public record SourceMetadataFieldInfo(
+    string Name,
+    StandardValueType ValueType,
+    ReservedProperty? RecommendedReservedProperty = null);
 
 /// <summary>
 /// Result of fetching detailed metadata from an external source for a single item.

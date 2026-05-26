@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Components.Tasks;
+using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
@@ -45,13 +46,7 @@ public class SourceMetadataMappingController(
     [SwaggerOperation(OperationId = "GetSourcePredefinedMetadataFields")]
     public ListResponse<SourceMetadataFieldInfo> GetPredefinedFields(ResourceSource source)
     {
-        var origin = source switch
-        {
-            ResourceSource.Steam => DataOrigin.Steam,
-            ResourceSource.DLsite => DataOrigin.DLsite,
-            ResourceSource.ExHentai => DataOrigin.ExHentai,
-            _ => (DataOrigin?)null
-        };
+        var origin = source.ToDataOrigin();
         var provider = origin.HasValue ? metadataProviders.FirstOrDefault(p => p.Origin == origin.Value) : null;
         var fields = provider?.GetPredefinedMetadataFields() ?? [];
         return new ListResponse<SourceMetadataFieldInfo>(fields);

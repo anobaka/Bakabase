@@ -597,22 +597,6 @@ export interface BakabaseAbstractionsModelsDomainPropertyKeyWithScopePriority {
   scopePriority?: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope[];
 }
 
-export interface BakabaseAbstractionsModelsDomainPropertyPathSegmentMatcherValue {
-  fixedText?: string;
-  /** @format int32 */
-  layer?: number;
-  regex?: string;
-  /** @format int32 */
-  propertyId: number;
-  isCustomProperty: boolean;
-  /** [1: Layer, 2: Regex, 3: FixedText] */
-  valueType: BakabaseInsideWorldModelsConstantsResourceMatcherValueType;
-  propertyName?: string;
-  isSecondaryProperty: boolean;
-  isResourceProperty: boolean;
-  isValid: boolean;
-}
-
 export interface BakabaseAbstractionsModelsDomainPropertyValueScopePreference {
   /** @format int32 */
   resourceId: number;
@@ -821,6 +805,8 @@ export interface BakabaseAbstractionsModelsDomainSourceMetadataFieldInfo {
   name: string;
   /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag] */
   valueType: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
+  /** [12: Introduction, 13: Rating, 22: Cover, 27: Name] */
+  recommendedReservedProperty?: BakabaseAbstractionsModelsDomainConstantsReservedProperty;
 }
 
 export interface BakabaseAbstractionsModelsDomainSourceMetadataMapping {
@@ -2333,12 +2319,6 @@ export type BakabaseInsideWorldModelsConstantsMediaType = 1 | 2 | 3 | 4 | 5 | 10
  * @format int32
  */
 export type BakabaseInsideWorldModelsConstantsPlaylistItemType = 1 | 2 | 3 | 4;
-
-/**
- * [1: Layer, 2: Regex, 3: FixedText]
- * @format int32
- */
-export type BakabaseInsideWorldModelsConstantsResourceMatcherValueType = 1 | 2 | 3;
 
 /**
  * [0: Default, 1: Resource]
@@ -3872,6 +3852,11 @@ export interface BakabaseServiceControllersAppDataPathControllerValidateResponse
   currentPath: string;
   defaultPath: string;
   installRoot?: string;
+}
+
+export interface BakabaseServiceControllersBulkResourceMediaLibraryMappingInputModel {
+  resourceIds: number[];
+  mediaLibraryIds: number[];
 }
 
 export interface BakabaseServiceControllersChatControllerChatToolViewModel {
@@ -5897,11 +5882,6 @@ export interface BootstrapModelsResponseModelsSingletonResponse1SystemString {
   code: number;
   message?: string;
   data?: string;
-}
-
-export interface BulkResourceMediaLibraryMappingInputModel {
-  resourceIds: number[];
-  mediaLibraryIds: number[];
 }
 
 /**
@@ -12607,7 +12587,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request POST:/resource/bulk/media-libraries
      */
     bulkAddResourceMediaLibraryMappings: (
-      data: BulkResourceMediaLibraryMappingInputModel,
+      data: BakabaseServiceControllersBulkResourceMediaLibraryMappingInputModel,
       params: RequestParams = {},
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({

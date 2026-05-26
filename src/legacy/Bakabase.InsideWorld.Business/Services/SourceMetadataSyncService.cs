@@ -58,11 +58,40 @@ public class SourceMetadataSyncService<TDbContext>(
 
     #endregion
 
+    /// <summary>
+    /// Merges user-saved mappings with provider recommendations. User mappings win on conflict;
+    /// recommendations fill in any predefined field the user hasn't explicitly mapped.
+    /// </summary>
+    private async Task<List<SourceMetadataMapping>> GetEffectiveMappings(ResourceSource source)
+    {
+        var userMappings = await GetMappings(source);
+        var userFields = userMappings.Select(m => m.MetadataField).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var origin = source.ToDataOrigin();
+        if (!origin.HasValue) return userMappings;
+
+        var provider = serviceProvider.GetServices<IMetadataProvider>()
+            .FirstOrDefault(p => p.Origin == origin.Value);
+        if (provider == null) return userMappings;
+
+        var recommended = provider.GetPredefinedMetadataFields()
+            .Where(f => f.RecommendedReservedProperty.HasValue && !userFields.Contains(f.Name))
+            .Select(f => new SourceMetadataMapping
+            {
+                Source = source,
+                MetadataField = f.Name,
+                TargetPool = PropertyPool.Reserved,
+                TargetPropertyId = (int)f.RecommendedReservedProperty!.Value
+            });
+
+        return userMappings.Concat(recommended).ToList();
+    }
+
     #region Apply Metadata to Properties
 
     public async Task SyncMetadataToProperties(int resourceId, ResourceSource source, CancellationToken ct)
     {
-        var mappings = await GetMappings(source);
+        var mappings = await GetEffectiveMappings(source);
         if (mappings.Count == 0) return;
 
         var metadataJson = await GetMetadataJsonForResource(resourceId, source);
@@ -75,7 +104,7 @@ public class SourceMetadataSyncService<TDbContext>(
     public async Task SyncMetadataToPropertiesBatch(ResourceSource source, Action<int>? onProgress,
         CancellationToken ct)
     {
-        var mappings = await GetMappings(source);
+        var mappings = await GetEffectiveMappings(source);
         if (mappings.Count == 0) return;
 
         var items = await GetAllItemsWithMetadata(source);

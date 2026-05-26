@@ -18,11 +18,11 @@ public class ExHentaiMetadataProvider : IMetadataProvider
 
     public List<SourceMetadataFieldInfo> GetPredefinedMetadataFields() =>
     [
-        new(nameof(ExHentaiMetadataField.RawName), StandardValueType.String),
-        new(nameof(ExHentaiMetadataField.Introduction), StandardValueType.String),
-        new(nameof(ExHentaiMetadataField.Rate), StandardValueType.Decimal),
+        new(nameof(ExHentaiMetadataField.RawName), StandardValueType.String, ReservedProperty.Name),
+        new(nameof(ExHentaiMetadataField.Introduction), StandardValueType.String, ReservedProperty.Introduction),
+        new(nameof(ExHentaiMetadataField.Rate), StandardValueType.Decimal, ReservedProperty.Rating),
         new(nameof(ExHentaiMetadataField.Category), StandardValueType.String),
-        new(nameof(ExHentaiMetadataField.CoverUrl), StandardValueType.String),
+        new(nameof(ExHentaiMetadataField.CoverUrl), StandardValueType.String, ReservedProperty.Cover),
         new(nameof(ExHentaiMetadataField.FileCount), StandardValueType.Decimal),
         new(nameof(ExHentaiMetadataField.PageCount), StandardValueType.Decimal),
     ];

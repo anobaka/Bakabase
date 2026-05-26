@@ -6226,20 +6226,6 @@ export interface components {
             id: number;
             scopePriority?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyValueScope"][];
         };
-        "Bakabase.Abstractions.Models.Domain.PropertyPathSegmentMatcherValue": {
-            fixedText?: string;
-            /** Format: int32 */
-            layer?: number;
-            regex?: string;
-            /** Format: int32 */
-            propertyId: number;
-            isCustomProperty: boolean;
-            valueType: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ResourceMatcherValueType"];
-            propertyName?: string;
-            readonly isSecondaryProperty: boolean;
-            readonly isResourceProperty: boolean;
-            readonly isValid: boolean;
-        };
         "Bakabase.Abstractions.Models.Domain.PropertyValueScopePreference": {
             /** Format: int32 */
             resourceId: number;
@@ -6414,6 +6400,7 @@ export interface components {
         "Bakabase.Abstractions.Models.Domain.SourceMetadataFieldInfo": {
             name: string;
             valueType: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.StandardValueType"];
+            recommendedReservedProperty?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ReservedProperty"];
         };
         "Bakabase.Abstractions.Models.Domain.SourceMetadataMapping": {
             /** Format: int32 */
@@ -7711,12 +7698,6 @@ export interface components {
         "Bakabase.InsideWorld.Models.Constants.PlaylistItemType": 1 | 2 | 3 | 4;
         /**
          * Format: int32
-         * @description [1: Layer, 2: Regex, 3: FixedText]
-         * @enum {integer}
-         */
-        "Bakabase.InsideWorld.Models.Constants.ResourceMatcherValueType": 1 | 2 | 3;
-        /**
-         * Format: int32
          * @description [0: Default, 1: Resource]
          * @enum {integer}
          */
@@ -8916,6 +8897,10 @@ export interface components {
             currentPath: string;
             defaultPath: string;
             installRoot?: string;
+        };
+        "Bakabase.Service.Controllers.BulkResourceMediaLibraryMappingInputModel": {
+            resourceIds: number[];
+            mediaLibraryIds: number[];
         };
         "Bakabase.Service.Controllers.ChatController+ChatToolViewModel": {
             name: string;
@@ -10664,10 +10649,6 @@ export interface components {
             code: number;
             message?: string;
             data?: string;
-        };
-        BulkResourceMediaLibraryMappingInputModel: {
-            resourceIds: number[];
-            mediaLibraryIds: number[];
         };
         /**
          * Format: int32
@@ -22174,10 +22155,10 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json-patch+json": components["schemas"]["BulkResourceMediaLibraryMappingInputModel"];
-                "application/json": components["schemas"]["BulkResourceMediaLibraryMappingInputModel"];
-                "text/json": components["schemas"]["BulkResourceMediaLibraryMappingInputModel"];
-                "application/*+json": components["schemas"]["BulkResourceMediaLibraryMappingInputModel"];
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.BulkResourceMediaLibraryMappingInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.BulkResourceMediaLibraryMappingInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.BulkResourceMediaLibraryMappingInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.BulkResourceMediaLibraryMappingInputModel"];
             };
         };
         responses: {

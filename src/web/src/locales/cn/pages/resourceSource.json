@@ -133,7 +133,7 @@
   "resourceSource.config.tab.metadataSync": "元数据同步",
   "resourceSource.config.tab.localeEmulator": "Locale Emulator",
   "resourceSource.metadataMapping.title": "元数据映射",
-  "resourceSource.metadataMapping.description": "配置外部源的元数据字段如何映射到资源属性。支持点分路径（如 release_date.date）。详细数据获取后将自动应用。",
+  "resourceSource.metadataMapping.description": "配置外部源的元数据字段如何映射到资源属性。支持点分路径（如 release_date.date）。详细数据获取后将自动应用。部分字段有内置推荐映射（如标记为「推荐」的字段），无需配置即可生效，你也可以随时改成自定义映射覆盖。",
   "resourceSource.metadataMapping.fieldPlaceholder": "输入元数据字段路径（如 name、tags、metacritic.score）",
   "resourceSource.metadataMapping.add": "添加",
   "resourceSource.metadataMapping.reapply": "重新应用映射",
@@ -141,6 +141,7 @@
   "resourceSource.metadataMapping.notConfigured": "未映射 - 点击选择目标属性",
   "resourceSource.metadataMapping.customFields": "自定义字段",
   "resourceSource.metadataMapping.reapplyStarted": "重新应用任务已启动",
+  "resourceSource.metadataMapping.recommended": "推荐",
 
   "metadataField.Steam.Name": "名称",
   "metadataField.Steam.Type": "类型",

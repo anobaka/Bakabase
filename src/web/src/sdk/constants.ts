@@ -3067,21 +3067,6 @@ export const CoverSelectOrderLabel: Record<CoverSelectOrder, string> = {
   [CoverSelectOrder.FileModifyDtDescending]: 'FileModifyDtDescending'
 };
 
-export enum MatchResultType {
-  Layer = 1,
-  Regex = 2
-}
-
-export const matchResultTypes = [
-  { label: 'Layer', value: MatchResultType.Layer },
-  { label: 'Regex', value: MatchResultType.Regex }
-] as const;
-
-export const MatchResultTypeLabel: Record<MatchResultType, string> = {
-  [MatchResultType.Layer]: 'Layer',
-  [MatchResultType.Regex]: 'Regex'
-};
-
 export enum MediaLibrarySyncStep {
   Filtering = 0,
   AcquireFileSystemInfo = 1,
@@ -3152,24 +3137,6 @@ export const PlaylistItemTypeLabel: Record<PlaylistItemType, string> = {
   [PlaylistItemType.Video]: 'Video',
   [PlaylistItemType.Image]: 'Image',
   [PlaylistItemType.Audio]: 'Audio'
-};
-
-export enum ResourceMatcherValueType {
-  Layer = 1,
-  Regex = 2,
-  FixedText = 3
-}
-
-export const resourceMatcherValueTypes = [
-  { label: 'Layer', value: ResourceMatcherValueType.Layer },
-  { label: 'Regex', value: ResourceMatcherValueType.Regex },
-  { label: 'FixedText', value: ResourceMatcherValueType.FixedText }
-] as const;
-
-export const ResourceMatcherValueTypeLabel: Record<ResourceMatcherValueType, string> = {
-  [ResourceMatcherValueType.Layer]: 'Layer',
-  [ResourceMatcherValueType.Regex]: 'Regex',
-  [ResourceMatcherValueType.FixedText]: 'FixedText'
 };
 
 export enum ResourceProperty {
@@ -4755,12 +4722,12 @@ export const AvSourceIds: readonly string[] = [
   "avsex",
   "avsox",
   "cnmdb",
-  "dmm",
   "dahlia",
+  "dmm",
   "fc2",
+  "fc2hub",
   "faleno",
   "fantastica",
-  "fc2hub",
   "freejavbt",
   "getchudl",
   "iqqtv",

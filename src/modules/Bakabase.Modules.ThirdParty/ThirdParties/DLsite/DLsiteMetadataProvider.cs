@@ -18,9 +18,9 @@ public class DLsiteMetadataProvider : IMetadataProvider
 
     public List<SourceMetadataFieldInfo> GetPredefinedMetadataFields() =>
     [
-        new(nameof(DLsiteMetadataField.Introduction), StandardValueType.String),
-        new(nameof(DLsiteMetadataField.Rating), StandardValueType.Decimal),
-        new(nameof(DLsiteMetadataField.CoverUrls), StandardValueType.ListString),
+        new(nameof(DLsiteMetadataField.Introduction), StandardValueType.String, ReservedProperty.Introduction),
+        new(nameof(DLsiteMetadataField.Rating), StandardValueType.Decimal, ReservedProperty.Rating),
+        new(nameof(DLsiteMetadataField.CoverUrls), StandardValueType.ListString, ReservedProperty.Cover),
     ];
 
     public async Task<SourceDetailedMetadata?> FetchMetadataAsync(string sourceKey, CancellationToken ct)

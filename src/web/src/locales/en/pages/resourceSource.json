@@ -133,7 +133,7 @@
   "resourceSource.config.tab.metadataSync": "Metadata Sync",
   "resourceSource.config.tab.localeEmulator": "Locale Emulator",
   "resourceSource.metadataMapping.title": "Metadata Mapping",
-  "resourceSource.metadataMapping.description": "Configure how external source metadata fields map to resource properties. Supports dot-separated paths (e.g. release_date.date). Applied automatically after fetching details.",
+  "resourceSource.metadataMapping.description": "Configure how external source metadata fields map to resource properties. Supports dot-separated paths (e.g. release_date.date). Applied automatically after fetching details. Some fields have built-in recommended mappings (shown with a \"Recommended\" label) that take effect without any configuration; pick a different property anytime to override.",
   "resourceSource.metadataMapping.fieldPlaceholder": "Enter metadata field path (e.g. name, tags, metacritic.score)",
   "resourceSource.metadataMapping.add": "Add",
   "resourceSource.metadataMapping.reapply": "Re-apply Mappings",
@@ -141,6 +141,7 @@
   "resourceSource.metadataMapping.notConfigured": "Not mapped - click to select target property",
   "resourceSource.metadataMapping.customFields": "Custom fields",
   "resourceSource.metadataMapping.reapplyStarted": "Re-apply task started",
+  "resourceSource.metadataMapping.recommended": "Recommended",
 
   "metadataField.Steam.Name": "Name",
   "metadataField.Steam.Type": "Type",

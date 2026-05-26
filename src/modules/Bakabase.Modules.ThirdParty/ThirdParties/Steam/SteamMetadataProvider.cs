@@ -27,7 +27,7 @@ public class SteamMetadataProvider : IMetadataProvider
     public List<SourceMetadataFieldInfo> GetPredefinedMetadataFields() =>
     [
         new(nameof(SteamMetadataField.Type), StandardValueType.String),
-        new(nameof(SteamMetadataField.ShortDescription), StandardValueType.String),
+        new(nameof(SteamMetadataField.ShortDescription), StandardValueType.String, ReservedProperty.Introduction),
         new(nameof(SteamMetadataField.DetailedDescription), StandardValueType.String),
         new(nameof(SteamMetadataField.HeaderImage), StandardValueType.String),
         new(nameof(SteamMetadataField.CapsuleImage), StandardValueType.String),

@@ -9,7 +9,7 @@ import { Button, Divider, Input, Spinner } from "@heroui/react";
 import { AiOutlineDelete, AiOutlinePlus, AiOutlineSync } from "react-icons/ai";
 
 import { toast } from "@/components/bakaui";
-import { PropertyPool, ResourceSourceLabel } from "@/sdk/constants";
+import { PropertyPool, ReservedProperty, ResourceSourceLabel } from "@/sdk/constants";
 import PropertySelector from "@/components/PropertySelector";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import ConfirmModal from "@/components/ConfirmModal";
@@ -28,6 +28,7 @@ type SourceMetadataMapping = {
 type PredefinedField = {
   name: string;
   valueType: number;
+  recommendedReservedProperty?: ReservedProperty;
 };
 
 interface Props {
@@ -51,6 +52,7 @@ export default function MetadataMappingPanel({ source }: Props) {
   const [predefinedFields, setPredefinedFields] = useState<PredefinedField[]>([]);
   const [mappings, setMappings] = useState<SourceMetadataMapping[]>([]);
   const [properties, setProperties] = useState<Record<string, IProperty>>({});
+  const [reservedPropsById, setReservedPropsById] = useState<Record<number, IProperty>>({});
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(false);
   const [newFieldName, setNewFieldName] = useState("");
@@ -72,9 +74,17 @@ export default function MetadataMappingPanel({ source }: Props) {
 
       setMappings(loadedMappings);
 
+      const reservedProps: IProperty[] = (reservedPropsRes?.data as any[]) ?? [];
+      const reservedById: Record<number, IProperty> = {};
+
+      for (const p of reservedProps) {
+        if (p.id != null) reservedById[p.id] = p;
+      }
+      setReservedPropsById(reservedById);
+
       // Build property lookup from loaded mappings
       const allProps: IProperty[] = [
-        ...((reservedPropsRes?.data as any[]) ?? []),
+        ...reservedProps,
         ...((customPropsRes?.data as any[]) ?? []),
       ];
       const propMap: Record<string, IProperty> = {};
@@ -208,10 +218,18 @@ export default function MetadataMappingPanel({ source }: Props) {
     return translated !== key ? translated : fieldName;
   };
 
-  const renderMappingRow = (fieldName: string, isPredefined: boolean) => {
+  const renderMappingRow = (
+    fieldName: string,
+    isPredefined: boolean,
+    recommendedReservedProperty?: ReservedProperty,
+  ) => {
     const mapping = getMappingForField(fieldName);
     const cachedProp = properties[fieldName];
     const displayName = getFieldDisplayName(fieldName, isPredefined);
+    const recommendedProp =
+      !mapping && recommendedReservedProperty != null
+        ? reservedPropsById[recommendedReservedProperty]
+        : undefined;
 
     return (
       <div
@@ -235,6 +253,15 @@ export default function MetadataMappingPanel({ source }: Props) {
             <BriefProperty property={cachedProp} />
           ) : mapping ? (
             `${mapping.targetPool}:${mapping.targetPropertyId}`
+          ) : recommendedProp ? (
+            <span className="flex items-center gap-1.5">
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-default-100 text-default-500">
+                {t("resourceSource.metadataMapping.recommended")}
+              </span>
+              <span className="opacity-70">
+                <BriefProperty property={recommendedProp} />
+              </span>
+            </span>
           ) : (
             <span className="text-default-400">
               {t("resourceSource.metadataMapping.notConfigured")}
@@ -262,7 +289,9 @@ export default function MetadataMappingPanel({ source }: Props) {
 
       {predefinedFields.length > 0 && (
         <div className="space-y-2">
-          {predefinedFields.map((field) => renderMappingRow(field.name, true))}
+          {predefinedFields.map((field) =>
+            renderMappingRow(field.name, true, field.recommendedReservedProperty),
+          )}
         </div>
       )}
 
