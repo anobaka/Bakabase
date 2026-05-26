@@ -9,7 +9,8 @@ import { Button, Divider, Input, Spinner } from "@heroui/react";
 import { AiOutlineDelete, AiOutlinePlus, AiOutlineSync } from "react-icons/ai";
 
 import { toast } from "@/components/bakaui";
-import { PropertyPool, ReservedProperty, ResourceSourceLabel } from "@/sdk/constants";
+import type { ReservedProperty } from "@/sdk/constants";
+import { PropertyPool, ResourceSourceLabel } from "@/sdk/constants";
 import PropertySelector from "@/components/PropertySelector";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import ConfirmModal from "@/components/ConfirmModal";
