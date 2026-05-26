@@ -146,9 +146,6 @@ namespace Bakabase.Service.Components
 
             services.AddMediaLibraryTemplate<BakabaseDbContext>();
 
-            // Add version check job that runs 30 seconds after startup
-            services.AddHostedService<VersionCheckJob>();
-
             // Add path mark expiration check job that periodically checks for expired marks
             services.AddHostedService<PathMarkExpirationCheckJob>();
 

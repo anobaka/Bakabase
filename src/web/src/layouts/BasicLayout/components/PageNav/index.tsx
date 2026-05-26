@@ -8,6 +8,7 @@ import { MenuFoldOutlined, MenuUnfoldOutlined, MoonOutlined, SunOutlined } from 
 import AntdMenu from "./components/AntdMenu";
 import styles from "./index.module.scss";
 
+import AppUpdateBanner from "@/layouts/BasicLayout/components/AppUpdateBanner";
 import { Button, Divider } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 import { useAppOptionsStore, useUiOptionsStore } from "@/stores/options";
@@ -61,6 +62,7 @@ const Navigation = () => {
       <div className={styles.menu}>
         <AntdMenu collapsed={isCollapsed} />
       </div>
+      <AppUpdateBanner collapsed={isCollapsed} />
       <div className={"px-2"}>
         <Divider orientation={"horizontal"} />
       </div>

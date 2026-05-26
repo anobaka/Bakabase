@@ -370,16 +370,6 @@ namespace Bakabase.InsideWorld.Business.Components
             return this[nameof(BuildingData)];
         }
 
-        public string VersionCheck_NewVersionAvailableTitle()
-        {
-            return this[nameof(VersionCheck_NewVersionAvailableTitle)];
-        }
-
-        public string VersionCheck_NewVersionAvailableMessage(string version)
-        {
-            return this[nameof(VersionCheck_NewVersionAvailableMessage), version];
-        }
-
         // SearchIndex
         public string SearchIndex_LoadingResources() => this[nameof(SearchIndex_LoadingResources)];
         public string SearchIndex_LoadedResources(int count) => this[nameof(SearchIndex_LoadedResources), count];

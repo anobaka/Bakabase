@@ -588,12 +588,6 @@
   <data name="SearchIndex_Completed" xml:space="preserve">
     <value>已完成：已索引 {0} 个资源</value>
   </data>
-  <data name="VersionCheck_NewVersionAvailableTitle" xml:space="preserve">
-    <value>发现新版本</value>
-  </data>
-  <data name="VersionCheck_NewVersionAvailableMessage" xml:space="preserve">
-    <value>新版本 ({0}) 可供更新。</value>
-  </data>
   <data name="SyncPathMark_Collecting" xml:space="preserve">
     <value>收集路径标记中</value>
   </data>

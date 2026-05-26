@@ -1,4 +1,9 @@
 {
+  "appUpdate.checking": "Checking for updates",
+  "appUpdate.downloading": "Downloading",
+  "appUpdate.restartToUpdate": "Click to restart and update",
+  "appUpdate.failed": "Update failed",
+  "appUpdate.clickToRetry": "Click to retry",
   "common.enabled": "Enabled",
   "common.disabled": "Disabled",
   "Close": "Close",
