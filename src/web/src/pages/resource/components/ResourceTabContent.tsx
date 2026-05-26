@@ -272,9 +272,16 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
     searchFormRef.current = searchForm;
   }, [searchForm]);
 
-  useEffect(() => {
-    searchingRef.current = searching;
-  }, [searching]);
+  // Intentionally NOT mirroring `searching` into searchingRef here.
+  // `searching` only tracks Phase 1 (it flips to false the instant Phase 1's
+  // `setLoading(false)` fires, while Phase 2 — which fetches displayName,
+  // properties, etc. — is still in flight). Mirroring it would prematurely
+  // unlock concurrent searches: a new "append" started during Phase 2 would
+  // increment the hook's internal searchIdRef, causing the older Phase 2 to
+  // abort on its searchIdRef mismatch check. Those resources stay forever
+  // without a displayName until something triggers a full re-search.
+  // The manual `searchingRef.current = true / false` around progressiveSearch
+  // in `search()` below already guards the full P1+P2 lifetime correctly.
 
   useEffect(() => {
     pageableRef.current = pageable;
