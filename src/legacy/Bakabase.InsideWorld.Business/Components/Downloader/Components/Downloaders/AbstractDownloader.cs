@@ -66,11 +66,10 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
         /// </summary>
         protected async Task<DownloaderOptions> GetDownloaderOptionsAsync() => await Helper.GetOptionsAsync();
 
-        /// <summary>
-        /// Get the default naming convention for this downloader from DownloaderAttribute
-        /// </summary>
-        /// <returns>Default naming convention pattern</returns>
-        protected string GetDefaultNamingConvention() => Definition.DefaultConvention;
+        protected string GetEffectiveNamingConvention(string? overrideConvention) =>
+            string.IsNullOrWhiteSpace(overrideConvention)
+                ? Definition.DefaultConvention
+                : overrideConvention;
 
         /// <summary>
         /// Build download filename using naming convention and values (internal implementation)
@@ -83,7 +82,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             // Get field and replacers mapping from the downloader source naming definitions
             var fieldAndReplacements = Definition.NamingFields.ToDictionary(f => f.Key, f => $"{{{f.Key}}}");
             var options = await GetDownloaderOptionsAsync();
-            var namingConvention = options.NamingConvention ?? GetDefaultNamingConvention();
+            var namingConvention = GetEffectiveNamingConvention(options.NamingConvention);
 
             var startIndex = 0;
             var name = namingConvention;

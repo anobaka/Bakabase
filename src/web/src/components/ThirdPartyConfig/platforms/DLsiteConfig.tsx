@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type FC } from "react";
+import { useMemo, useRef, useState, type FC } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Chip as HeroChip, Divider, Switch, Textarea } from "@heroui/react";
+import { Button, Chip as HeroChip, Divider, Switch } from "@heroui/react";
 import { AiOutlineDelete, AiOutlinePlus } from "react-icons/ai";
 
 import AccountsPanel, { type AccountField } from "../base/AccountsPanel";
@@ -13,9 +13,8 @@ import ConfigurableThirdPartyPanel, {
 } from "../base/ConfigurableThirdPartyPanel";
 import ThirdPartyConfigModal from "../base/ThirdPartyConfigModal";
 
-import { Chip, NumberInput, toast, Modal as BakaModal } from "@/components/bakaui";
+import { NumberInput, toast, Modal as BakaModal } from "@/components/bakaui";
 import { FileSystemSelectorButton } from "@/components/FileSystemSelector";
-import BApi from "@/sdk/BApi";
 import { useDLsiteOptionsStore } from "@/stores/options";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { FileSystemSelectorModal } from "@/components/FileSystemSelector";
@@ -48,19 +47,6 @@ export const DLsiteConfigPanel: FC<DLsiteConfigPanelProps> = ({
   const options = useDLsiteOptionsStore((s) => s.data);
   const patch = useDLsiteOptionsStore((s) => s.patch);
   const [saving, setSaving] = useState(false);
-  const [namingDefinition, setNamingDefinition] = useState<any>();
-
-  const showDownload =
-    fields === "all" || (Array.isArray(fields) && fields.includes(DLsiteConfigField.Download));
-
-  useEffect(() => {
-    if (!showDownload) return;
-    BApi.downloadTask.getAllDownloaderDefinitions().then((res) => {
-      const def = (res.data || []).find((d) => d.thirdPartyId === 6); // DLsite = 6
-
-      if (def) setNamingDefinition(def);
-    });
-  }, [showDownload]);
   const pendingAccountsRef = useRef<any[] | null>(null);
 
   const downloadDir = options?.defaultPath;
@@ -264,40 +250,6 @@ export const DLsiteConfigPanel: FC<DLsiteConfigPanelProps> = ({
                 {t<string>("thirdPartyConfig.field.defaultPath.description")}
               </span>
             </div>
-            <Textarea
-              description={
-                namingDefinition?.namingFields?.length ? (
-                  <div>
-                    <div>{t<string>("thirdPartyConfig.field.namingConvention.description")}</div>
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {namingDefinition.namingFields.map((x, i) => (
-                        <Chip
-                          key={i}
-                          color="secondary"
-                          size="sm"
-                          variant="flat"
-                          onClick={() =>
-                            patch({
-                              namingConvention:
-                                (options?.namingConvention || "") + `{${x.name || x.key}}`,
-                            })
-                          }
-                        >
-                          {x.name || x.key}
-                        </Chip>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  t<string>("thirdPartyConfig.field.namingConvention.description")
-                )
-              }
-              label={t<string>("thirdPartyConfig.field.namingConvention.label")}
-              placeholder={namingDefinition?.defaultConvention}
-              size="sm"
-              value={options?.namingConvention || ""}
-              onValueChange={(v) => patch({ namingConvention: v })}
-            />
           </div>
         ),
       },

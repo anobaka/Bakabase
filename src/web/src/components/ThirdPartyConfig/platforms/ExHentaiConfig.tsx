@@ -214,7 +214,7 @@ export const ExHentaiConfigPanel: FC<ExHentaiConfigPanelProps> = ({ fields = "al
         ),
       },
     ],
-    [options, accountFields, t, patch],
+    [options, accountFields, t, patch, namingDefinition],
   );
 
   return <ConfigurableThirdPartyPanel fields={fields} tabs={tabs} />;

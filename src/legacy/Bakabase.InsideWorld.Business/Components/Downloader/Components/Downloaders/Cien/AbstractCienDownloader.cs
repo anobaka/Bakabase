@@ -32,7 +32,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                 var options = await GetDownloaderOptionsAsync();
                 
                 // Get naming convention and download path
-                var namingConvention = options.NamingConvention ?? GetDefaultNamingConvention();
+                var namingConvention = GetEffectiveNamingConvention(options.NamingConvention);
                 var downloadPath = options.DefaultPath ?? Path.GetTempPath();
 
                 // Handle different task types
