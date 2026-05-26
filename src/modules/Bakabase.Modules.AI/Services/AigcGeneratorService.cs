@@ -132,19 +132,14 @@ public class AigcGeneratorService<TDbContext>(
 
         var taskId = $"AigcGenerationRun:{runId}";
 
-        var builder = new BTaskHandlerBuilder
-        {
-            Id = taskId,
-            Type = BTaskType.Any,
-            ResourceType = BTaskResourceType.Any,
-            GetName = () => $"{localizer.BTask_Name("AigcGeneration")} #{runId}",
-            GetDescription = () => generator.Name,
-            ConflictKeys = [$"AigcProvider:{generator.ProviderId}"],
-            Level = BTaskLevel.Default,
-            IsPersistent = true,
-            StartNow = true,
-            DuplicateIdHandling = BTaskDuplicateIdHandling.Ignore,
-            Run = async args =>
+        var builder = BTaskBuilder.Create(taskId)
+            .Named(() => $"{localizer.BTask_Name("AigcGeneration")} #{runId}")
+            .Describe(() => generator.Name)
+            .ConflictsWith($"AigcProvider:{generator.ProviderId}")
+            .Persistent()
+            .StartImmediately()
+            .IgnoreIfExists()
+            .Run(async args =>
             {
                 await using var scope = args.RootServiceProvider.CreateAsyncScope();
                 var executor = scope.ServiceProvider.GetRequiredService<IAigcRunExecutor>();
@@ -158,8 +153,7 @@ public class AigcGeneratorService<TDbContext>(
                         });
                     },
                     args.CancellationToken);
-            }
-        };
+            });
 
         await taskManager.Enqueue(builder);
         return runId;

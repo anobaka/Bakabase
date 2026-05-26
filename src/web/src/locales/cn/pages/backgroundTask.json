@@ -11,11 +11,17 @@
   "backgroundTask.label.notSupported": "不支持",
   "backgroundTask.label.notSet": "未设置",
   "backgroundTask.label.willStartAt": "将于以下时间开始",
+  "backgroundTask.label.schedule": "调度",
+  "backgroundTask.label.scheduleFor": "调度 {{taskName}}",
+  "backgroundTask.label.scheduleHint": "持久化任务按固定间隔重复运行；也可以指定一个起始时间。",
 
   "backgroundTask.status.notStarted": "未开始",
   "backgroundTask.status.running": "运行中",
   "backgroundTask.status.paused": "已暂停",
   "backgroundTask.status.error": "错误",
   "backgroundTask.status.completed": "已完成",
-  "backgroundTask.status.cancelled": "已取消"
+  "backgroundTask.status.cancelled": "已取消",
+  "backgroundTask.status.cancelling": "正在停止…",
+  "backgroundTask.status.pausing": "正在暂停…",
+  "backgroundTask.status.resuming": "正在恢复…"
 }

@@ -72,8 +72,7 @@ public class BTaskManager : IAsyncDisposable
 
     private void UpdateManagerStatus()
     {
-        IsRunning = _taskMap.Values.Any(x =>
-            x.Task.Status is BTaskStatus.Paused or BTaskStatus.Running or BTaskStatus.Cancelling);
+        IsRunning = _taskMap.Values.Any(x => x.Task.Status.IsActive());
     }
 
     /// <summary>
@@ -97,7 +96,7 @@ public class BTaskManager : IAsyncDisposable
                 {
                     var currentTask = _taskMap[handler.Id];
                     // Cancelling is still active — wait for it to finalize before allowing replace.
-                    if (currentTask.Task.Status is BTaskStatus.Error or BTaskStatus.Completed or BTaskStatus.Cancelled)
+                    if (currentTask.Task.Status.IsFinished())
                     {
                         await Clean(taskBuilder.Id);
                         await Enqueue(taskBuilder);
@@ -132,7 +131,7 @@ public class BTaskManager : IAsyncDisposable
 
         var task = builder.ToBTask(enableAfter, dbModel?.Interval);
 
-        return new BTaskHandler(builder.Run, task, _serviceProvider,
+        return new BTaskHandler(builder.RunAction, task, _serviceProvider,
             builder.OnStatusChange,
             builder.OnPercentageChanged,
             async () => await OnTaskChange(builder.Id),
@@ -182,13 +181,15 @@ public class BTaskManager : IAsyncDisposable
         {
             case BTaskStatus.Running:
             case BTaskStatus.Cancelling:
+            case BTaskStatus.Pausing:
+            case BTaskStatus.Resuming:
             {
-                // Already running (or in the process of cancelling) — Start is a no-op.
+                // Already running, pausing, resuming or cancelling — Start is a no-op.
                 break;
             }
             case BTaskStatus.Paused:
             {
-                d.Resume();
+                await d.Resume();
                 break;
             }
             case BTaskStatus.NotStarted:
@@ -224,7 +225,7 @@ public class BTaskManager : IAsyncDisposable
                 x != d &&
                 d.Task.ConflictKeys != null && x.Task.ConflictKeys != null &&
                 d.Task.ConflictKeys.Intersect(x.Task.ConflictKeys).Any() &&
-                x.Task.Status is BTaskStatus.Running or BTaskStatus.Paused or BTaskStatus.Cancelling)
+                x.Task.Status.IsActive())
             .ToArray();
     }
 
@@ -323,27 +324,27 @@ public class BTaskManager : IAsyncDisposable
         return Task.CompletedTask;
     }
 
-    public void Pause(string id)
+    public async Task Pause(string id)
     {
         if (_taskMap.TryGetValue(id, out var t))
         {
-            t.Pause();
+            await t.Pause();
         }
     }
 
-    public void PauseAll()
+    public async Task PauseAll()
     {
         foreach (var t in _taskMap.Values)
         {
-            t.Pause();
+            await t.Pause();
         }
     }
 
-    public void Resume(string id)
+    public async Task Resume(string id)
     {
         if (_taskMap.TryGetValue(id, out var t))
         {
-            t.Resume();
+            await t.Resume();
         }
     }
 
@@ -356,13 +357,7 @@ public class BTaskManager : IAsyncDisposable
     public async Task CleanInactive()
     {
         var tasks = _taskMap.Values.ToList();
-        foreach (var t in tasks.Where(x => x is
-                 {
-                     Task:
-                     {
-                         IsPersistent: false, Status: BTaskStatus.Completed or BTaskStatus.Error or BTaskStatus.Cancelled
-                     }
-                 }))
+        foreach (var t in tasks.Where(x => !x.Task.IsPersistent && x.Task.Status.IsFinished()))
         {
             _taskMap.TryRemove(t.Id, out _);
         }
@@ -376,9 +371,8 @@ public class BTaskManager : IAsyncDisposable
     public List<BTaskEvent<string?>> GetProcessEvents(string id) =>
         _taskMap.GetValueOrDefault(id)?.ProcessEvents.ToList() ?? [];
 
-    public bool IsPending(string id) => _taskMap.TryGetValue(id, out var bth) &&
-                                        bth.Task.Status is BTaskStatus.Running or BTaskStatus.Paused
-                                            or BTaskStatus.NotStarted or BTaskStatus.Cancelling;
+    public bool IsPending(string id) =>
+        _taskMap.TryGetValue(id, out var bth) && bth.Task.Status.IsActiveOrPending();
 
     private BTaskViewModel BuildTaskViewModel(BTaskHandler handler)
     {
@@ -431,8 +425,7 @@ public class BTaskManager : IAsyncDisposable
 
         // 2. Stop non-Critical tasks
         var nonCriticalTasks = _taskMap.Values
-            .Where(t => t.Task.Level != BTaskLevel.Critical &&
-                        t.Task.Status is BTaskStatus.Running or BTaskStatus.Paused or BTaskStatus.Cancelling)
+            .Where(t => t.Task.Level != BTaskLevel.Critical && t.Task.Status.IsActive())
             .ToList();
 
         foreach (var task in nonCriticalTasks)
@@ -443,8 +436,7 @@ public class BTaskManager : IAsyncDisposable
 
         // 3. Wait for Critical tasks to complete
         var criticalTasks = _taskMap.Values
-            .Where(t => t.Task.Level == BTaskLevel.Critical &&
-                        t.Task.Status is BTaskStatus.Running or BTaskStatus.Paused or BTaskStatus.Cancelling)
+            .Where(t => t.Task.Level == BTaskLevel.Critical && t.Task.Status.IsActive())
             .ToList();
 
         if (criticalTasks.Count > 0)
@@ -452,8 +444,7 @@ public class BTaskManager : IAsyncDisposable
             _logger.LogInformation($"Waiting for {criticalTasks.Count} critical task(s) to complete...");
 
             // Wait for all Critical tasks to complete (or be Cancelled).
-            while (criticalTasks.Any(t =>
-                       t.Task.Status is BTaskStatus.Running or BTaskStatus.Paused or BTaskStatus.Cancelling))
+            while (criticalTasks.Any(t => t.Task.Status.IsActive()))
             {
                 await Task.Delay(100);
             }

@@ -938,25 +938,16 @@ namespace Bakabase.Service.Controllers
             {
                 var path1 = path;
                 var targetPath = Path.Combine(model.DestDir, Path.GetFileName(path1));
-                _taskManager.Enqueue(new BTaskHandlerBuilder
-                {
-                    GetName = () => _localizer.MoveFiles(),
-                    GetMessageOnInterruption = () => _localizer.MessageOnInterruption_MoveFiles(),
-                    GetDescription = () => _localizer.MoveFile(path1, targetPath),
-                    ResourceType = BTaskResourceType.FileSystemEntry,
-                    Type = BTaskType.MoveFiles,
-                    ResourceKeys = [path],
-                    Run = async args =>
+                _taskManager.Enqueue(BTaskBuilder.Create()
+                    .Named(() => _localizer.MoveFiles())
+                    .Describe(() => _localizer.MoveFile(path1, targetPath))
+                    .InterruptionMessage(() => _localizer.MessageOnInterruption_MoveFiles())
+                    .OfType(BTaskType.MoveFiles)
+                    .OfResourceType(BTaskResourceType.FileSystemEntry)
+                    .ForResources(path)
+                    .ConflictsWith(taskId)
+                    .Run(async args =>
                     {
-                        // var fakeDelay = rand.Next(50, 300);
-                        // for (var i = 0; i < 100; i++)
-                        // {
-                        //     await args.UpdateTask(t => t.Percentage = i + 1);
-                        //     await Task.Delay(fakeDelay, args.CancellationToken);
-                        // }
-                        //
-                        // return;
-
                         var isDirectory = Directory.Exists(path1);
                         var isFile = System.IO.File.Exists(path1);
                         if (isDirectory || isFile)
@@ -978,9 +969,7 @@ namespace Bakabase.Service.Controllers
                                     args.CancellationToken);
                             }
                         }
-                    },
-                    ConflictKeys = [taskId]
-                });
+                    }));
             }
 
             return BaseResponseBuilder.Ok;
@@ -1003,15 +992,15 @@ namespace Bakabase.Service.Controllers
             {
                 var path1 = path;
                 var targetPath = Path.Combine(model.DestDir, Path.GetFileName(path1));
-                _taskManager.Enqueue(new BTaskHandlerBuilder
-                {
-                    GetName = () => _localizer.CopyFiles(),
-                    GetMessageOnInterruption = () => _localizer.MessageOnInterruption_CopyFiles(),
-                    GetDescription = () => _localizer.CopyFile(path1, targetPath),
-                    ResourceType = BTaskResourceType.FileSystemEntry,
-                    Type = BTaskType.CopyFiles,
-                    ResourceKeys = [path],
-                    Run = async args =>
+                _taskManager.Enqueue(BTaskBuilder.Create()
+                    .Named(() => _localizer.CopyFiles())
+                    .Describe(() => _localizer.CopyFile(path1, targetPath))
+                    .InterruptionMessage(() => _localizer.MessageOnInterruption_CopyFiles())
+                    .OfType(BTaskType.CopyFiles)
+                    .OfResourceType(BTaskResourceType.FileSystemEntry)
+                    .ForResources(path)
+                    .ConflictsWith(taskId)
+                    .Run(async args =>
                     {
                         var isDirectory = Directory.Exists(path1);
                         var isFile = System.IO.File.Exists(path1);
@@ -1034,9 +1023,7 @@ namespace Bakabase.Service.Controllers
                                     args.CancellationToken);
                             }
                         }
-                    },
-                    ConflictKeys = [taskId]
-                });
+                    }));
             }
 
             return BaseResponseBuilder.Ok;
@@ -1629,15 +1616,14 @@ namespace Bakabase.Service.Controllers
 
                         var files = group.Files.ToArray();
 
-                        _taskManager.Enqueue(new BTaskHandlerBuilder
-                        {
-                            ResourceType = BTaskResourceType.FileSystemEntry,
-                            ConflictKeys = [taskId],
-                            GetDescription = () => taskId,
-                            GetName = () => _localizer.Decompress(),
-                            Type = BTaskType.Decompress,
-                            ResourceKeys = files.Cast<object>().ToArray(),
-                            Run = async args =>
+                        _taskManager.Enqueue(BTaskBuilder.Create()
+                            .Named(() => _localizer.Decompress())
+                            .Describe(() => taskId)
+                            .OfType(BTaskType.Decompress)
+                            .OfResourceType(BTaskResourceType.FileSystemEntry)
+                            .ForResources(files.Cast<object>().ToArray())
+                            .ConflictsWith(taskId)
+                            .Run(async args =>
                             {
                                 await using var scope = args.RootServiceProvider.CreateAsyncScope();
 
@@ -1794,8 +1780,7 @@ namespace Bakabase.Service.Controllers
                                 }
 
                                 throw new BTaskException(null, messageSb.ToString());
-                            }
-                        });
+                            }));
                     }
                 }
             }

@@ -26,16 +26,11 @@ public class PostParserTaskTrigger
     {
         _btm = btm;
         _options = options;
-        _taskBuilder = new BTaskHandlerBuilder
-        {
-            Id = TaskId,
-            GetName = localizer.PostParser_ParseAll_TaskName,
-            IsPersistent = true,
-            Interval = TimeSpan.FromMinutes(1),
-            Type = BTaskType.Any,
-            Level = BTaskLevel.Default,
-            ResourceType = BTaskResourceType.Any,
-            Run = async (args) =>
+        _taskBuilder = BTaskBuilder.Create(TaskId, localizer.PostParser_ParseAll_TaskName)
+            .Persistent()
+            .Every(TimeSpan.FromMinutes(1))
+            .IgnoreIfExists()
+            .Run(async args =>
             {
                 var scope = args.RootServiceProvider.CreateAsyncScope();
                 var service = scope.ServiceProvider.GetRequiredService<IPostParserTaskService>();
@@ -43,10 +38,7 @@ public class PostParserTaskTrigger
                     p => args.UpdateTask(x => x.Process = p),
                     args.PauseToken,
                     args.CancellationToken);
-            },
-            StartNow = false,
-            DuplicateIdHandling = BTaskDuplicateIdHandling.Ignore
-        };
+            });
 
         optionsMonitor.OnChange(async o =>
         {

@@ -32,22 +32,14 @@ public sealed class BTaskManagerTests
         Func<BTaskArgs, Task> run,
         HashSet<string>? conflictKeys = null,
         Action<BTaskStatus>? onStatus = null)
-        => new()
-        {
-            Id = id,
-            Type = BTaskType.Any,
-            ResourceType = BTaskResourceType.Any,
-            GetName = () => id,
-            IsPersistent = false,
-            StartNow = false,
-            ConflictKeys = conflictKeys ?? [id],
-            Run = run,
-            OnStatusChange = (_, task) =>
+        => BTaskBuilder.Create(id)
+            .ConflictsWith(conflictKeys ?? [id])
+            .Run(run)
+            .WhenStatusChanges((_, task) =>
             {
                 onStatus?.Invoke(task.Status);
                 return Task.CompletedTask;
-            }
-        };
+            });
 
     private async Task WaitForRunning(string id, TimeSpan timeout)
     {

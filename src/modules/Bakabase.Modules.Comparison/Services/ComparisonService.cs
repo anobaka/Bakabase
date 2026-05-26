@@ -191,17 +191,12 @@ public class ComparisonService<TDbContext> : ResourceService<TDbContext, Compari
         var taskId = $"Comparison:{planId}";
         var conflictKey = $"Comparison:{planId}";
 
-        var handler = new BTaskHandlerBuilder
-        {
-            Id = taskId,
-            GetName = () => $"对比任务: {plan.Name}",
-            GetDescription = () => $"正在执行对比方案 [{plan.Name}]",
-            ConflictKeys = [conflictKey],
-            IsPersistent = false,
-            Type = BTaskType.Any,
-            ResourceType = BTaskResourceType.Any, 
-            DuplicateIdHandling = BTaskDuplicateIdHandling.Replace,
-            Run = async args =>
+        var handler = BTaskBuilder.Create(taskId)
+            .Named($"对比任务: {plan.Name}")
+            .Describe($"正在执行对比方案 [{plan.Name}]")
+            .ConflictsWith(conflictKey)
+            .ReplaceIfExists()
+            .Run(async args =>
             {
                 await using var scope = args.RootServiceProvider.CreateAsyncScope();
                 var service = scope.ServiceProvider.GetRequiredService<IComparisonService>();
@@ -217,8 +212,7 @@ public class ComparisonService<TDbContext> : ResourceService<TDbContext, Compari
                     },
                     args.PauseToken,
                     args.CancellationToken);
-            }
-        };
+            });
 
         await _taskManager.Enqueue(handler);
         return taskId;

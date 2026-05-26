@@ -58,7 +58,11 @@ export function useTaskTimingSimulation(tasks: BTask[]) {
           // Commit simulated delta on status change, then reset the baseline
           const delta = Math.max(0, now - rec.lastSeenAt);
 
-          if (rec.lastStatus === BTaskStatus.Running) {
+          if (
+            rec.lastStatus === BTaskStatus.Running ||
+            rec.lastStatus === BTaskStatus.Pausing ||
+            rec.lastStatus === BTaskStatus.Resuming
+          ) {
             rec.baseElapsedMs = (rec.baseElapsedMs ?? 0) + delta;
             if (rec.baseRemainingMs != null) {
               rec.baseRemainingMs = Math.max(0, rec.baseRemainingMs - delta);
@@ -76,12 +80,20 @@ export function useTaskTimingSimulation(tasks: BTask[]) {
     existingIds.forEach((id) => map.delete(id));
   }, [tasks]);
 
+  // Treat Pausing/Resuming as "still running" for elapsed/remaining display —
+  // the stopwatch on the backend is still ticking until OnPause actually
+  // fires, so the chip would otherwise look frozen mid-transition.
+  const isActivelyRunning = (status: number) =>
+    status === BTaskStatus.Running ||
+    status === BTaskStatus.Pausing ||
+    status === BTaskStatus.Resuming;
+
   const computeDisplayElapsedMs = (task: BTask): number | undefined => {
     const rec = simTimingRef.current.get(task.id);
     const baseMs = rec?.baseElapsedMs;
 
     if (baseMs == null) return undefined;
-    if (task.status === BTaskStatus.Running) {
+    if (isActivelyRunning(task.status)) {
       return baseMs + Math.max(0, Date.now() - (rec?.lastSeenAt ?? Date.now()));
     }
 
@@ -93,7 +105,7 @@ export function useTaskTimingSimulation(tasks: BTask[]) {
     const baseMs = rec?.baseRemainingMs;
 
     if (baseMs == null) return undefined;
-    if (task.status === BTaskStatus.Running) {
+    if (isActivelyRunning(task.status)) {
       const ms = baseMs - Math.max(0, Date.now() - (rec?.lastSeenAt ?? Date.now()));
 
       return Math.max(0, ms);

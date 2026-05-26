@@ -56,12 +56,13 @@ public class DLsiteWorkController(IDLsiteWorkService service, BTaskManager btm, 
             await sourceLinkService.ClearAllMetadata(ResourceSource.DLsite);
         }
 
-        await btm.Start(SyncTaskId, () => new BTaskHandlerBuilder
-        {
-            Id = SyncTaskId,
-            GetName = () => localizer.BTask_Name(SyncTaskId),
-            GetDescription = () => localizer.BTask_Description(SyncTaskId),
-            Run = async args =>
+        await btm.Start(SyncTaskId, () => BTaskBuilder.Create(SyncTaskId)
+            .Named(() => localizer.BTask_Name(SyncTaskId))
+            .Describe(() => localizer.BTask_Description(SyncTaskId))
+            .Persistent()
+            .ReplaceIfExists()
+            .WithServiceProvider(HttpContext.RequestServices)
+            .Run(async args =>
             {
                 await using var scope = args.RootServiceProvider.CreateAsyncScope();
                 var svc = scope.ServiceProvider.GetRequiredService<IDLsiteWorkService>();
@@ -78,13 +79,7 @@ public class DLsiteWorkController(IDLsiteWorkService service, BTaskManager btm, 
 
                 // Enqueue resource sync for DLsite source after API sync completes
                 await pathMarkSyncService.EnqueueSync(ResourceSource.DLsite);
-            },
-            Type = BTaskType.Any,
-            ResourceType = BTaskResourceType.Any,
-            IsPersistent = true,
-            DuplicateIdHandling = BTaskDuplicateIdHandling.Replace,
-            RootServiceProvider = HttpContext.RequestServices
-        });
+            }));
         return BaseResponseBuilder.Ok;
     }
 
@@ -96,12 +91,12 @@ public class DLsiteWorkController(IDLsiteWorkService service, BTaskManager btm, 
         var localPath = await service.PrepareDownloadDirectory(workId);
 
         var taskId = $"{DownloadTaskIdPrefix}{workId}";
-        await btm.Start(taskId, () => new BTaskHandlerBuilder
-        {
-            Id = taskId,
-            GetName = () => localizer["BTask_Name_DownloadDLsite", workId],
-            GetDescription = () => localizer["BTask_Description_DownloadDLsite", workId],
-            Run = async args =>
+        await btm.Start(taskId, () => BTaskBuilder.Create(taskId)
+            .Named(() => localizer["BTask_Name_DownloadDLsite", workId])
+            .Describe(() => localizer["BTask_Description_DownloadDLsite", workId])
+            .ReplaceIfExists()
+            .WithServiceProvider(HttpContext.RequestServices)
+            .Run(async args =>
             {
                 await using var scope = args.RootServiceProvider.CreateAsyncScope();
                 var svc = scope.ServiceProvider.GetRequiredService<IDLsiteWorkService>();
@@ -116,13 +111,7 @@ public class DLsiteWorkController(IDLsiteWorkService service, BTaskManager btm, 
                         });
                     },
                     args.CancellationToken);
-            },
-            Type = BTaskType.Any,
-            ResourceType = BTaskResourceType.Any,
-            IsPersistent = false,
-            DuplicateIdHandling = BTaskDuplicateIdHandling.Replace,
-            RootServiceProvider = HttpContext.RequestServices
-        });
+            }));
         return new SingletonResponse<string>(localPath);
     }
 
@@ -166,12 +155,13 @@ public class DLsiteWorkController(IDLsiteWorkService service, BTaskManager btm, 
     public async Task<BaseResponse> ScanFolders()
     {
         var taskId = "ScanDLsiteFolder";
-        await btm.Start(taskId, () => new BTaskHandlerBuilder
-        {
-            Id = taskId,
-            GetName = () => localizer.BTask_Name(taskId),
-            GetDescription = () => localizer.BTask_Description(taskId),
-            Run = async args =>
+        await btm.Start(taskId, () => BTaskBuilder.Create(taskId)
+            .Named(() => localizer.BTask_Name(taskId))
+            .Describe(() => localizer.BTask_Description(taskId))
+            .Persistent()
+            .ReplaceIfExists()
+            .WithServiceProvider(HttpContext.RequestServices)
+            .Run(async args =>
             {
                 await using var scope = args.RootServiceProvider.CreateAsyncScope();
                 var svc = scope.ServiceProvider.GetRequiredService<IDLsiteWorkService>();
@@ -185,13 +175,7 @@ public class DLsiteWorkController(IDLsiteWorkService service, BTaskManager btm, 
                         });
                     },
                     args.CancellationToken);
-            },
-            Type = BTaskType.Any,
-            ResourceType = BTaskResourceType.Any,
-            IsPersistent = true,
-            DuplicateIdHandling = BTaskDuplicateIdHandling.Replace,
-            RootServiceProvider = HttpContext.RequestServices
-        });
+            }));
         return BaseResponseBuilder.Ok;
     }
 
@@ -200,12 +184,12 @@ public class DLsiteWorkController(IDLsiteWorkService service, BTaskManager btm, 
     public async Task<BaseResponse> Extract(string workId)
     {
         var taskId = $"{ExtractTaskIdPrefix}{workId}";
-        await btm.Start(taskId, () => new BTaskHandlerBuilder
-        {
-            Id = taskId,
-            GetName = () => localizer["BTask_Name_ExtractDLsite", workId],
-            GetDescription = () => localizer["BTask_Description_ExtractDLsite", workId],
-            Run = async args =>
+        await btm.Start(taskId, () => BTaskBuilder.Create(taskId)
+            .Named(() => localizer["BTask_Name_ExtractDLsite", workId])
+            .Describe(() => localizer["BTask_Description_ExtractDLsite", workId])
+            .ReplaceIfExists()
+            .WithServiceProvider(HttpContext.RequestServices)
+            .Run(async args =>
             {
                 await using var scope = args.RootServiceProvider.CreateAsyncScope();
                 var svc = scope.ServiceProvider.GetRequiredService<IDLsiteWorkService>();
@@ -220,13 +204,7 @@ public class DLsiteWorkController(IDLsiteWorkService service, BTaskManager btm, 
                         });
                     },
                     args.CancellationToken);
-            },
-            Type = BTaskType.Any,
-            ResourceType = BTaskResourceType.Any,
-            IsPersistent = false,
-            DuplicateIdHandling = BTaskDuplicateIdHandling.Replace,
-            RootServiceProvider = HttpContext.RequestServices
-        });
+            }));
         return BaseResponseBuilder.Ok;
     }
 

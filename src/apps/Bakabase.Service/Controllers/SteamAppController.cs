@@ -60,12 +60,13 @@ public class SteamAppController(ISteamAppService service, BTaskManager btm, IBak
             await sourceLinkService.ClearAllMetadata(ResourceSource.Steam);
         }
 
-        await btm.Start(SyncTaskId, () => new BTaskHandlerBuilder
-        {
-            Id = SyncTaskId,
-            GetName = () => localizer.BTask_Name(SyncTaskId),
-            GetDescription = () => localizer.BTask_Description(SyncTaskId),
-            Run = async args =>
+        await btm.Start(SyncTaskId, () => BTaskBuilder.Create(SyncTaskId)
+            .Named(() => localizer.BTask_Name(SyncTaskId))
+            .Describe(() => localizer.BTask_Description(SyncTaskId))
+            .Persistent()
+            .ReplaceIfExists()
+            .WithServiceProvider(HttpContext.RequestServices)
+            .Run(async args =>
             {
                 await using var scope = args.RootServiceProvider.CreateAsyncScope();
                 var svc = scope.ServiceProvider.GetRequiredService<ISteamAppService>();
@@ -82,13 +83,7 @@ public class SteamAppController(ISteamAppService service, BTaskManager btm, IBak
 
                 // Enqueue resource sync for Steam source after API sync completes
                 await pathMarkSyncService.EnqueueSync(ResourceSource.Steam);
-            },
-            Type = BTaskType.Any,
-            ResourceType = BTaskResourceType.Any,
-            IsPersistent = true,
-            DuplicateIdHandling = BTaskDuplicateIdHandling.Replace,
-            RootServiceProvider = HttpContext.RequestServices
-        });
+            }));
         return BaseResponseBuilder.Ok;
     }
 }

@@ -52,11 +52,22 @@ AbstractPredefinedBTaskBuilder (abstract class)
 
 ```
 NotStarted → Running → Completed
-           ↓         ↓
-         Paused ─────┘
+           ↓     ↑↓
+        Pausing  Resuming
+           ↓     ↑
+         Paused ─┘
            ↓
-        Running → Cancelled / Error
+       Cancelling → Cancelled
+           ↓
+         Error
 ```
+
+`Pausing` / `Resuming` / `Cancelling` are **transitional** states — they
+become visible the moment the API call is received, and clear once the task
+body cooperates via `PauseToken.WaitWhilePausedAsync` or
+`CancellationToken.ThrowIfCancellationRequested`. The chip used to lie
+("Paused" while still spinning) when long CPU/IO sections separated yield
+points; the transitional state makes the gap honest.
 
 ## Creating a New Predefined Task
 
@@ -194,8 +205,11 @@ public override async Task RunAsync(BTaskArgs args)
 
     foreach (var item in items)
     {
-        args.CancellationToken.ThrowIfCancellationRequested();
-        await args.PauseToken.WaitIfPaused();
+        // Cooperative checkpoint — sprinkle this through any tight loop so
+        // pause/stop requests reach the body without waiting for the next
+        // natural await. Equivalent to ThrowIfCancellationRequested +
+        // WaitWhilePausedAsync done by hand.
+        await args.YieldAsync();
 
         await ProcessItem(item);
         processed++;
@@ -208,6 +222,34 @@ public override async Task RunAsync(BTaskArgs args)
     }
 }
 ```
+
+## One-shot tasks via the fluent builder
+
+For ad-hoc tasks triggered by a controller / service (not a predefined
+recurring task), build a `BTaskHandlerBuilder` fluently and enqueue it:
+
+```csharp
+await taskManager.Enqueue(
+    BTaskBuilder.Create(taskId)
+        .Named(() => localizer.BTask_Name(taskId))
+        .Describe(() => localizer.BTask_Description(taskId))
+        .ConflictsWith(taskId)
+        .Persistent()
+        .ReplaceIfExists()
+        .Run(async args =>
+        {
+            await using var scope = args.RootServiceProvider.CreateAsyncScope();
+            // ... task body
+        }));
+```
+
+Only `Id` and `Run` need a value (the rest default to sensible Any/Any
+values). Common shortcuts: `.Persistent()`, `.StartImmediately()`,
+`.ReplaceIfExists()`, `.IgnoreIfExists()`, `.ConflictsWith(...)`,
+`.DependsOn(...)`, `.Every(TimeSpan)`, `.WithRetry(...)`.
+
+Prefer the fluent style over the object-initializer form; the with-syntax
+still works but mixing the two reads poorly.
 
 ## Conflict Detection
 
@@ -324,7 +366,9 @@ When `FileSystemOptions` changes, `IsEnabled()` is re-evaluated and task is enab
 
 ### DO
 
-1. Always check `CancellationToken` in loops
+1. Sprinkle `await args.YieldAsync()` through tight loops — pause and stop
+   only take effect when the body cooperates, so the chip lies about
+   "Pausing…" / "Cancelling…" between yield points
 2. Report progress frequently via `UpdateTask`
 3. Use `CreateScope()` for scoped services
 4. Set appropriate `ConflictKeys` to prevent data corruption
@@ -334,7 +378,8 @@ When `FileSystemOptions` changes, `IsEnabled()` is re-evaluated and task is enab
 ### DON'T
 
 1. Don't capture service instances in closures - use `ServiceProvider` instead
-2. Don't ignore `PauseToken` - call `WaitIfPaused()` at safe points
+2. Don't ignore `PauseToken` - call `await args.YieldAsync()` (or
+   `WaitWhilePausedAsync` + `ThrowIfCancellationRequested`) at safe points
 3. Don't set `IsPersistent = false` for tasks users need to track
 4. Don't use overly broad `ConflictKeys` - it reduces parallelism
 

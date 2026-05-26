@@ -181,7 +181,7 @@ public class PathSyncManager : BackgroundService, IPathMarkSyncService
         if (existingTask != null)
         {
             var status = existingTask.Status;
-            if (status is BTaskStatus.Running or BTaskStatus.Paused or BTaskStatus.NotStarted or BTaskStatus.Cancelling)
+            if (status.IsActiveOrPending())
             {
                 return;
             }
@@ -206,21 +206,14 @@ public class PathSyncManager : BackgroundService, IPathMarkSyncService
 
         var capturedSources = sources.ToList();
 
-        await _btm.Enqueue(new BTaskHandlerBuilder
-        {
-            Id = ResourceSyncTaskId,
-            Type = BTaskType.Any,
-            ResourceType = BTaskResourceType.Any,
-            GetName = () => _localizer.BTask_Name("SyncResources"),
-            GetDescription = () => _localizer.BTask_Description("SyncResources"),
-            GetMessageOnInterruption = () => _localizer.BTask_MessageOnInterruption("SyncResources"),
-            ConflictKeys = [ResourceSyncTaskId],
-            Level = BTaskLevel.Default,
-            IsPersistent = false,
-            StartNow = true,
-            DuplicateIdHandling = BTaskDuplicateIdHandling.Ignore,
-            Run = async args => await RunResourceSync(args, capturedSources)
-        });
+        await _btm.Enqueue(BTaskBuilder.Create(ResourceSyncTaskId)
+            .Named(() => _localizer.BTask_Name("SyncResources"))
+            .Describe(() => _localizer.BTask_Description("SyncResources"))
+            .InterruptionMessage(() => _localizer.BTask_MessageOnInterruption("SyncResources"))
+            .ConflictsWith(ResourceSyncTaskId)
+            .StartImmediately()
+            .IgnoreIfExists()
+            .Run(async args => await RunResourceSync(args, capturedSources)));
     }
 
     private async Task ProcessPathMarkSyncQueue(CancellationToken ct)
@@ -230,7 +223,7 @@ public class PathSyncManager : BackgroundService, IPathMarkSyncService
         if (existingTask != null)
         {
             var status = existingTask.Status;
-            if (status is BTaskStatus.Running or BTaskStatus.Paused or BTaskStatus.NotStarted or BTaskStatus.Cancelling)
+            if (status.IsActiveOrPending())
             {
                 return;
             }
@@ -242,21 +235,14 @@ public class PathSyncManager : BackgroundService, IPathMarkSyncService
 
         _logger.LogInformation("Creating path mark sync task");
 
-        await _btm.Enqueue(new BTaskHandlerBuilder
-        {
-            Id = PathMarkSyncTaskId,
-            Type = BTaskType.Any,
-            ResourceType = BTaskResourceType.Any,
-            GetName = () => _localizer.BTask_Name("SyncPathMarks"),
-            GetDescription = () => _localizer.BTask_Description("SyncPathMarks"),
-            GetMessageOnInterruption = () => _localizer.BTask_MessageOnInterruption("SyncPathMarks"),
-            ConflictKeys = [PathMarkSyncTaskId],
-            Level = BTaskLevel.Default,
-            IsPersistent = false,
-            StartNow = true,
-            DuplicateIdHandling = BTaskDuplicateIdHandling.Ignore,
-            Run = RunPathMarkSync
-        });
+        await _btm.Enqueue(BTaskBuilder.Create(PathMarkSyncTaskId)
+            .Named(() => _localizer.BTask_Name("SyncPathMarks"))
+            .Describe(() => _localizer.BTask_Description("SyncPathMarks"))
+            .InterruptionMessage(() => _localizer.BTask_MessageOnInterruption("SyncPathMarks"))
+            .ConflictsWith(PathMarkSyncTaskId)
+            .StartImmediately()
+            .IgnoreIfExists()
+            .Run(RunPathMarkSync));
     }
 
     /// <summary>

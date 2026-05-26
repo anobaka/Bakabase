@@ -48,16 +48,10 @@ public class BTaskCancellingStatusTests
         TimeSpan? cancelObservedAt = null,
         Func<BTaskHandlerBuilder, BTaskHandlerBuilder>? customize = null)
     {
-        var builder = new BTaskHandlerBuilder
-        {
-            Id = id,
-            Type = BTaskType.Any,
-            ResourceType = BTaskResourceType.Any,
-            GetName = () => id,
-            IsPersistent = false,
-            StartNow = true,
-            ConflictKeys = new HashSet<string> { id },
-            Run = async args =>
+        var builder = BTaskBuilder.Create(id)
+            .StartImmediately()
+            .ConflictsWith(id)
+            .Run(async args =>
             {
                 started.TrySetResult();
                 if (cancelObservedAt.HasValue)
@@ -67,16 +61,15 @@ public class BTaskCancellingStatusTests
                     await Task.Delay(cancelObservedAt.Value);
                 }
                 await Task.Delay(Timeout.Infinite, args.CancellationToken);
-            },
-            OnStatusChange = (_, task) =>
+            })
+            .WhenStatusChanges((_, task) =>
             {
                 if (task.Status == BTaskStatus.Cancelled)
                 {
                     cancelledReached.TrySetResult();
                 }
                 return Task.CompletedTask;
-            }
-        };
+            });
         return customize?.Invoke(builder) ?? builder;
     }
 
@@ -176,7 +169,7 @@ public class BTaskCancellingStatusTests
 
         await _btm.Enqueue(BuildLongTask(idA, startedA, cancelledA,
             cancelObservedAt: TimeSpan.FromSeconds(2),
-            customize: b => b with { ConflictKeys = new HashSet<string> { sharedKey } }));
+            customize: b => b.ConflictsWith(sharedKey)));
         await _btm.Start(idA);
         await startedA.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await WaitForRunning(idA, TimeSpan.FromSeconds(5));
@@ -187,11 +180,7 @@ public class BTaskCancellingStatusTests
         // Enqueue B with overlapping ConflictKey. Try to start it while A is
         // still in Cancelling — must be rejected by the conflict check.
         await _btm.Enqueue(BuildLongTask(idB, startedB, cancelledB,
-            customize: b => b with
-            {
-                ConflictKeys = new HashSet<string> { sharedKey },
-                StartNow = false,
-            }));
+            customize: b => b.ConflictsWith(sharedKey).StartImmediately(false)));
         await _btm.Start(idB);
 
         // B should NOT start while A is still cancelling.

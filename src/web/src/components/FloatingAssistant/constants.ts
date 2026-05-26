@@ -27,9 +27,16 @@ export const ActionsFilter: Record<TaskAction, (task: BTask) => boolean> = {
       task.status === BTaskStatus.Error ||
       task.status === BTaskStatus.Completed ||
       task.status === BTaskStatus.NotStarted),
+  // Pause/Resume actions are hidden in transitional states (Pausing/Resuming)
+  // since the request is already in flight — re-clicking would be a no-op and
+  // letting the user re-click looks like the first click was ignored.
   [TaskAction.Pause]: (task) => task.status === BTaskStatus.Running,
   [TaskAction.Resume]: (task) => task.status === BTaskStatus.Paused,
-  [TaskAction.Stop]: (task) => task.status === BTaskStatus.Running,
+  [TaskAction.Stop]: (task) =>
+    task.status === BTaskStatus.Running ||
+    task.status === BTaskStatus.Paused ||
+    task.status === BTaskStatus.Pausing ||
+    task.status === BTaskStatus.Resuming,
   [TaskAction.Clean]: (task) =>
     !task.isPersistent &&
     (task.status === BTaskStatus.Completed ||

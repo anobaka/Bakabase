@@ -54,8 +54,7 @@ public class ResourceDataTask : AbstractPredefinedBTaskBuilder
 
         foreach (var resource in resources)
         {
-            ct.ThrowIfCancellationRequested();
-            await args.PauseToken.WaitWhilePausedAsync(ct);
+            await args.YieldAsync();
 
             // Phase 1: Cover providers — resolve if any applicable provider is NotStarted or Failed
             try

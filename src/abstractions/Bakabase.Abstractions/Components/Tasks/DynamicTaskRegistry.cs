@@ -167,23 +167,19 @@ public class DynamicTaskRegistry : IDisposable
     {
         _logger.LogInformation($"Enabling task: {builder.Id}");
 
-        var handlerBuilder = new BTaskHandlerBuilder
-        {
-            Id = builder.Id,
-            GetName = builder.GetName,
-            GetDescription = builder.GetDescription,
-            GetMessageOnInterruption = builder.GetMessageOnInterruption,
-            Run = builder.RunAsync,
-            ConflictKeys = builder.ConflictKeys,
-            DependsOn = builder.DependsOn,
-            Level = builder.Level,
-            Interval = builder.GetInterval(),
-            IsPersistent = builder.IsPersistent,
-            Type = builder.Type,
-            ResourceType = builder.ResourceType,
-            RetryPolicy = builder.RetryPolicy,
-            DependencyFailurePolicy = builder.DependencyFailurePolicy
-        };
+        var handlerBuilder = BTaskBuilder.Create(builder.Id, builder.GetName)
+            .Describe(builder.GetDescription)
+            .InterruptionMessage(builder.GetMessageOnInterruption)
+            .OfType(builder.Type)
+            .OfResourceType(builder.ResourceType)
+            .AtLevel(builder.Level)
+            .Persistent(builder.IsPersistent)
+            .OnDependencyFailure(builder.DependencyFailurePolicy)
+            .ConflictsWith(builder.ConflictKeys)
+            .DependsOn(builder.DependsOn)
+            .Every(builder.GetInterval())
+            .WithRetry(builder.RetryPolicy)
+            .Run(builder.RunAsync);
 
         await _taskManager.Enqueue(handlerBuilder);
         _taskStates[builder.Id] = true;

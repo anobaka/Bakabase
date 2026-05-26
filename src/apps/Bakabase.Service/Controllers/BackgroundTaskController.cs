@@ -25,16 +25,16 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "PauseBackgroundTask")]
         public async Task<BaseResponse> Pause(string id)
         {
-            btm.Pause(id);
+            await btm.Pause(id);
             return BaseResponseBuilder.Ok;
         }
 
         [HttpDelete("{id}/pause")]
         [SwaggerOperation(OperationId = "ResumeBackgroundTask")]
-        public Task<BaseResponse> Resume(string id)
+        public async Task<BaseResponse> Resume(string id)
         {
-            btm.Resume(id);
-            return Task.FromResult(BaseResponseBuilder.Ok);
+            await btm.Resume(id);
+            return BaseResponseBuilder.Ok;
         }
 
         [HttpDelete("{id}/run")]
@@ -52,7 +52,8 @@ namespace Bakabase.Service.Controllers
 
             if (!confirm)
             {
-                if (task?.Status is BTaskStatus.Running or BTaskStatus.Paused && !string.IsNullOrEmpty(task.MessageOnInterruption))
+                if (task != null && task.Status.CanBeStopped()
+                    && !string.IsNullOrEmpty(task.MessageOnInterruption))
                 {
                     return BaseResponseBuilder.Build((ResponseCode) 202, task.MessageOnInterruption);
                 }

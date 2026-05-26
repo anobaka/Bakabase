@@ -23,6 +23,24 @@ public class BTaskHandler
     private readonly IServiceProvider _rootServiceProvider;
     private CancellationTokenSource? _cts;
     private PauseTokenSource? _pts;
+    private Timer? _heartbeatTimer;
+
+    /// <summary>
+    /// How often the heartbeat fires a change notification while the task body
+    /// is active. The point is to keep frontend timers (elapsed / remaining)
+    /// from drifting when percentage plateaus — the timing simulator only
+    /// resets its baseline when raw elapsed/remaining changes, and those are
+    /// derived from <see cref="Sw"/> which advances continuously.
+    /// </summary>
+    private static readonly TimeSpan HeartbeatInterval = TimeSpan.FromSeconds(1);
+
+    /// <summary>
+    /// How long Stop() waits before logging a warning that the task body has
+    /// ignored the cancellation request. Not enforced — tasks that don't
+    /// cooperate are left to finish on their own; this just surfaces the bug
+    /// so authors know to insert a yield point.
+    /// </summary>
+    private static readonly TimeSpan StopGraceTimeout = TimeSpan.FromSeconds(10);
 
     private readonly Func<BTaskArgs, Task> _run;
     public readonly ConcurrentQueue<BTaskEvent<int>> PercentageEvents = [];
@@ -40,9 +58,7 @@ public class BTaskHandler
                 return null;
             }
 
-            if ((Task.Status != BTaskStatus.Completed && Task.Status != BTaskStatus.Error &&
-                 Task.Status != BTaskStatus.Cancelled) ||
-                !Task.IsPersistent)
+            if (!Task.Status.IsFinished() || !Task.IsPersistent)
             {
                 return null;
             }
@@ -65,7 +81,7 @@ public class BTaskHandler
                 return null;
             }
 
-            if (Task.Status != BTaskStatus.Paused && Task.Status != BTaskStatus.Running)
+            if (!Task.Status.CanBeStopped())
             {
                 return null;
             }
@@ -76,7 +92,12 @@ public class BTaskHandler
                 return null;
             }
 
-            return _elapsedOnLastPercentageChange / lastEvent.Event * (100 - lastEvent.Event);
+            // Extrapolate from the live stopwatch so the estimate keeps refining
+            // every heartbeat instead of freezing at the last percentage step.
+            var elapsed = Sw.Elapsed > _elapsedOnLastPercentageChange
+                ? Sw.Elapsed
+                : _elapsedOnLastPercentageChange;
+            return elapsed / lastEvent.Event * (100 - lastEvent.Event);
         }
     }
 
@@ -136,17 +157,26 @@ public class BTaskHandler
         }
     }
 
-    public void Pause()
+    public async Task Pause()
     {
         if (_pts != null && Task.Status == BTaskStatus.Running)
         {
+            // Surface "Pausing" the moment the click is handled. OnPause only
+            // fires once the task body reaches PauseToken.WaitWhilePausedAsync,
+            // and a long CPU/IO step between yield points was previously
+            // indistinguishable from a pending pause request.
+            await UpdateTask(t => t.Status = BTaskStatus.Pausing);
             _pts.Pause();
         }
     }
 
-    public void Resume()
+    public async Task Resume()
     {
-        _pts?.Resume();
+        if (_pts != null && Task.Status is BTaskStatus.Paused or BTaskStatus.Pausing)
+        {
+            await UpdateTask(t => t.Status = BTaskStatus.Resuming);
+            _pts.Resume();
+        }
     }
 
     public async Task TryStartAutomatically()
@@ -205,6 +235,8 @@ public class BTaskHandler
             t.NextRetryAt = null; // Clear retry time when starting
         });
 
+        StartHeartbeat();
+
         _ = System.Threading.Tasks.Task.Run(async () =>
         {
             try
@@ -252,10 +284,32 @@ public class BTaskHandler
             }
             finally
             {
+                StopHeartbeat();
                 Sw.Stop();
                 await UpdateTask(t => t.LastFinishedAt = DateTime.Now);
             }
         }, ct);
+    }
+
+    private void StartHeartbeat()
+    {
+        StopHeartbeat();
+        _heartbeatTimer = new Timer(static state =>
+        {
+            var self = (BTaskHandler) state!;
+            if (self._onChange == null) return;
+            if (!self.Task.Status.IsAdvancing())
+            {
+                return;
+            }
+            _ = self._onChange();
+        }, this, HeartbeatInterval, HeartbeatInterval);
+    }
+
+    private void StopHeartbeat()
+    {
+        _heartbeatTimer?.Dispose();
+        _heartbeatTimer = null;
     }
 
     public async Task Stop()
@@ -266,10 +320,27 @@ public class BTaskHandler
         // Cancelled happens in the task's catch block once it observes the
         // CancellationToken — until then the user sees "Cancelling" instead
         // of "Running" with a misleading success toast.
-        if (Task.Status is BTaskStatus.Running or BTaskStatus.Paused)
+        if (Task.Status.CanBeStopped())
         {
             await UpdateTask(t => t.Status = BTaskStatus.Cancelling);
         }
+
+        // If a task body holds the thread between yield points it will ignore
+        // the cancellation until the next checkpoint. Log a warning after the
+        // grace window so the author knows where to insert a yield — we never
+        // force-kill since .NET has no safe API for that.
+        var stuckTaskId = Task.Id;
+        var stuckTaskName = Task.Name;
+        _ = System.Threading.Tasks.Task.Delay(StopGraceTimeout).ContinueWith(_ =>
+        {
+            if (Task.Status == BTaskStatus.Cancelling)
+            {
+                _logger.LogWarning(
+                    "Task [{TaskId}] {TaskName} did not observe cancellation within {Timeout}s — " +
+                    "the task body likely needs a yield point (await args.YieldAsync()) inside its tight loop",
+                    stuckTaskId, stuckTaskName, StopGraceTimeout.TotalSeconds);
+            }
+        });
 
         await _cts.CancelAsync();
     }

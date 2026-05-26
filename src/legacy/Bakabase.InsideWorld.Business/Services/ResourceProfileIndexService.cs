@@ -192,22 +192,13 @@ public class ResourceProfileIndexService : IResourceProfileIndexService
             return;
         }
 
-        var builder = new BTaskHandlerBuilder
-        {
-            Id = TaskId,
-            Type = BTaskType.Any,
-            ResourceType = BTaskResourceType.Any,
-            GetName = () => _localizer.BTask_Name("ResourceProfileIndex"),
-            GetDescription = () => _localizer.BTask_Description("ResourceProfileIndex"),
-            GetMessageOnInterruption = null,
-            CancellationToken = null,
-            Run = ProcessPendingUpdates,
-            ConflictKeys = [TaskId],
-            Level = BTaskLevel.Default,
-            IsPersistent = false,
-            StartNow = true,
-            DuplicateIdHandling = BTaskDuplicateIdHandling.Replace
-        };
+        var builder = BTaskBuilder.Create(TaskId)
+            .Named(() => _localizer.BTask_Name("ResourceProfileIndex"))
+            .Describe(() => _localizer.BTask_Description("ResourceProfileIndex"))
+            .ConflictsWith(TaskId)
+            .StartImmediately()
+            .ReplaceIfExists()
+            .Run(ProcessPendingUpdates);
 
         _ = _taskManager.Enqueue(builder);
     }

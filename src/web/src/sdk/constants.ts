@@ -350,7 +350,9 @@ export enum BTaskStatus {
   Error = 4,
   Completed = 5,
   Cancelled = 6,
-  Cancelling = 7
+  Cancelling = 7,
+  Pausing = 8,
+  Resuming = 9
 }
 
 export const bTaskStatuses = [
@@ -360,7 +362,9 @@ export const bTaskStatuses = [
   { label: 'Error', value: BTaskStatus.Error },
   { label: 'Completed', value: BTaskStatus.Completed },
   { label: 'Cancelled', value: BTaskStatus.Cancelled },
-  { label: 'Cancelling', value: BTaskStatus.Cancelling }
+  { label: 'Cancelling', value: BTaskStatus.Cancelling },
+  { label: 'Pausing', value: BTaskStatus.Pausing },
+  { label: 'Resuming', value: BTaskStatus.Resuming }
 ] as const;
 
 export const BTaskStatusLabel: Record<BTaskStatus, string> = {
@@ -370,7 +374,9 @@ export const BTaskStatusLabel: Record<BTaskStatus, string> = {
   [BTaskStatus.Error]: 'Error',
   [BTaskStatus.Completed]: 'Completed',
   [BTaskStatus.Cancelled]: 'Cancelled',
-  [BTaskStatus.Cancelling]: 'Cancelling'
+  [BTaskStatus.Cancelling]: 'Cancelling',
+  [BTaskStatus.Pausing]: 'Pausing',
+  [BTaskStatus.Resuming]: 'Resuming'
 };
 
 export enum DataOrigin {

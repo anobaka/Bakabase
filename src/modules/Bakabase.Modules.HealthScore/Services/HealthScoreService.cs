@@ -306,33 +306,29 @@ public class HealthScoreService<TDbContext> :
         }
     }
 
-    private BTaskHandlerBuilder BuildScoringTaskHandlerBuilder() => new()
-    {
-        Id = ScoringTaskId,
-        GetName = () => _bakabaseLocalizer.BTask_Name(ScoringTaskId),
-        GetDescription = () => _bakabaseLocalizer.BTask_Description(ScoringTaskId),
-        Type = BTaskType.Any,
-        ResourceType = BTaskResourceType.Any,
-        ConflictKeys = [ScoringTaskId],
-        DependsOn = ["SearchIndex"],
-        IsPersistent = true,
-        DuplicateIdHandling = BTaskDuplicateIdHandling.Ignore,
-        Run = async args =>
-        {
-            await using var scope = args.RootServiceProvider.CreateAsyncScope();
-            var service = scope.ServiceProvider.GetRequiredService<IHealthScoreService>();
-            await service.RunScoring(
-                async (percentage, process) =>
-                {
-                    await args.UpdateTask(t =>
+    private BTaskHandlerBuilder BuildScoringTaskHandlerBuilder() =>
+        BTaskBuilder.Create(ScoringTaskId)
+            .Named(() => _bakabaseLocalizer.BTask_Name(ScoringTaskId))
+            .Describe(() => _bakabaseLocalizer.BTask_Description(ScoringTaskId))
+            .ConflictsWith(ScoringTaskId)
+            .DependsOn("SearchIndex")
+            .Persistent()
+            .IgnoreIfExists()
+            .Run(async args =>
+            {
+                await using var scope = args.RootServiceProvider.CreateAsyncScope();
+                var service = scope.ServiceProvider.GetRequiredService<IHealthScoreService>();
+                await service.RunScoring(
+                    async (percentage, process) =>
                     {
-                        t.Percentage = percentage;
-                        t.Process = process;
-                    });
-                },
-                args.CancellationToken);
-        },
-    };
+                        await args.UpdateTask(t =>
+                        {
+                            t.Percentage = percentage;
+                            t.Process = process;
+                        });
+                    },
+                    args.CancellationToken);
+            });
 
     public async Task RunScoring(Func<int, string?, Task>? progress, CancellationToken ct)
     {

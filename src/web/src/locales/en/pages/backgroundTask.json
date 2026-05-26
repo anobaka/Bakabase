@@ -11,11 +11,17 @@
   "backgroundTask.label.notSupported": "Not supported",
   "backgroundTask.label.notSet": "Not set",
   "backgroundTask.label.willStartAt": "Will start at",
+  "backgroundTask.label.schedule": "Schedule",
+  "backgroundTask.label.scheduleFor": "Schedule for {{taskName}}",
+  "backgroundTask.label.scheduleHint": "Persistent tasks run on a recurring interval; you can also gate them until a specific time.",
 
   "backgroundTask.status.notStarted": "Not Started",
   "backgroundTask.status.running": "Running",
   "backgroundTask.status.paused": "Paused",
   "backgroundTask.status.error": "Error",
   "backgroundTask.status.completed": "Completed",
-  "backgroundTask.status.cancelled": "Cancelled"
+  "backgroundTask.status.cancelled": "Cancelled",
+  "backgroundTask.status.cancelling": "Cancelling…",
+  "backgroundTask.status.pausing": "Pausing…",
+  "backgroundTask.status.resuming": "Resuming…"
 }

@@ -57,24 +57,19 @@ public class SourceMetadataMappingController(
     public async Task<BaseResponse> ApplyAll(ResourceSource source)
     {
         var taskId = $"ApplySourceMetadata_{source}";
-        await btm.Start(taskId, () => new BTaskHandlerBuilder
-        {
-            Id = taskId,
-            GetName = () => $"Apply {source} Metadata",
-            Run = async args =>
+        await btm.Start(taskId, () => BTaskBuilder.Create(taskId)
+            .Named($"Apply {source} Metadata")
+            .Persistent()
+            .ReplaceIfExists()
+            .WithServiceProvider(HttpContext.RequestServices)
+            .Run(async args =>
             {
                 await using var scope = args.RootServiceProvider.CreateAsyncScope();
                 var svc = scope.ServiceProvider.GetRequiredService<ISourceMetadataSyncService>();
                 await svc.SyncMetadataToPropertiesBatch(source,
                     percentage => args.UpdateTask(t => t.Percentage = percentage).Wait(),
                     args.CancellationToken);
-            },
-            Type = BTaskType.Any,
-            ResourceType = BTaskResourceType.Any,
-            IsPersistent = true,
-            DuplicateIdHandling = BTaskDuplicateIdHandling.Replace,
-            RootServiceProvider = HttpContext.RequestServices
-        });
+            }));
         return BaseResponseBuilder.Ok;
     }
 }

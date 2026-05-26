@@ -171,16 +171,12 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
 
             try
             {
-                await _bTaskManager.Enqueue(new BTaskHandlerBuilder
-                {
-                    Id = btaskId,
-                    GetName = () => task.DisplayName,
-                    IsPersistent = false,
-                    Type = BTaskType.Download,
-                    ResourceType = BTaskResourceType.Any,
-                    StartNow = true,
-                    DuplicateIdHandling = BTaskDuplicateIdHandling.Ignore,
-                    Run = async args =>
+                await _bTaskManager.Enqueue(BTaskBuilder.Create(btaskId)
+                    .Named(() => task.DisplayName)
+                    .OfType(BTaskType.Download)
+                    .StartImmediately()
+                    .IgnoreIfExists()
+                    .Run(async args =>
                     {
                         try
                         {
@@ -191,8 +187,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
                             tcs.TrySetCanceled();
                             throw;
                         }
-                    }
-                });
+                    }));
             }
             catch (Exception ex)
             {

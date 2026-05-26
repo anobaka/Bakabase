@@ -98,6 +98,22 @@ const TaskStatusIcon = ({ task, onShowError }: { task: BTask; onShowError: () =>
           </Chip>
         </Tooltip>
       );
+    case BTaskStatus.Pausing:
+      return (
+        <Tooltip content={t("floatingAssistant.status.pausing")} placement="top">
+          <Chip color="warning" size="sm" variant="light">
+            <LoadingOutlined className="text-base" />
+          </Chip>
+        </Tooltip>
+      );
+    case BTaskStatus.Resuming:
+      return (
+        <Tooltip content={t("floatingAssistant.status.resuming")} placement="top">
+          <Chip color="secondary" size="sm" variant="light">
+            <LoadingOutlined className="text-base" />
+          </Chip>
+        </Tooltip>
+      );
     case BTaskStatus.Completed:
       return (
         <Chip color="success" size="sm" variant="light">
@@ -161,6 +177,8 @@ export function TaskTable({ tasks }: TaskTableProps) {
       switch (task.status) {
         case BTaskStatus.Running:
         case BTaskStatus.Cancelling:
+        case BTaskStatus.Pausing:
+        case BTaskStatus.Resuming:
           counts.running++;
           break;
         case BTaskStatus.NotStarted:
@@ -194,7 +212,12 @@ export function TaskTable({ tasks }: TaskTableProps) {
       result = result.filter((task) => {
         switch (filter) {
           case "running":
-            return task.status === BTaskStatus.Running || task.status === BTaskStatus.Cancelling;
+            return (
+              task.status === BTaskStatus.Running ||
+              task.status === BTaskStatus.Cancelling ||
+              task.status === BTaskStatus.Pausing ||
+              task.status === BTaskStatus.Resuming
+            );
           case "pending":
             return task.status === BTaskStatus.NotStarted || task.status === BTaskStatus.Paused;
           case "completed":
