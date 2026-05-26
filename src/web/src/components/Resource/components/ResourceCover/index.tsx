@@ -10,6 +10,7 @@ import React, {
 } from "react";
 import { useUpdate, useUpdateEffect } from "react-use";
 import { useTranslation } from "react-i18next";
+import { AiOutlineEyeInvisible } from "react-icons/ai";
 
 import envConfig from "@/config/env";
 import { buildLogger } from "@/components/utils";
@@ -203,11 +204,11 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
   const hideCovers = useUiOptionsStore((state) => state.data?.hideResourceCovers ?? false);
 
   const renderCover = useCallback(() => {
-    // Hide covers mode: show fallback for all resources
+    // Hide covers mode: show eye-invisible icon to indicate intentional hiding
     if (hideCovers) {
       return (
         <div className="w-full h-full flex items-center justify-center">
-          <FallbackCover afterClearingCache={reload} id={resource.id} />
+          <AiOutlineEyeInvisible className="text-2xl opacity-50" />
         </div>
       );
     }
