@@ -607,7 +607,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
             forceUpdate();
           }}
         />
-        <div className="flex items-center">
+        <div className="flex items-center bg-default-100 dark:bg-default-50">
           <Button
             isIconOnly
             isDisabled={historyRootPaths.length == 0}
@@ -641,10 +641,26 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
           >
             <ArrowUpOutlined className={"text-base"} />
           </Button>
+          <Button
+            isIconOnly
+            isDisabled={!root?.path}
+            radius={"none"}
+            size={"sm"}
+            variant={"light"}
+            onPress={() => {
+              BApi.tool.openFileOrDirectory({ path: root?.path });
+            }}
+          >
+            <FolderOutlined className={"text-base"} />
+          </Button>
+
+          <div className="w-px h-5 bg-default-300 mx-1" />
+
           <Input
             className={"grow"}
             classNames={{
-              inputWrapper: "pl-0",
+              inputWrapper:
+                "bg-transparent shadow-none data-[hover=true]:bg-default-200 group-data-[focus=true]:bg-default-200",
             }}
             endContent={
               <Chip size={"sm"} variant={"light"}>
@@ -657,19 +673,6 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
             placeholder={t<string>("You can type a path here")}
             radius={"none"}
             size={"sm"}
-            startContent={
-              <Button
-                isIconOnly
-                isDisabled={!root?.path}
-                radius={"none"}
-                size={"sm"}
-                onPress={() => {
-                  BApi.tool.openFileOrDirectory({ path: root?.path });
-                }}
-              >
-                <FolderOutlined className={"text-base"} />
-              </Button>
-            }
             value={inputValue}
             onKeyDown={(evt) => {
               evt.stopPropagation();
@@ -686,13 +689,20 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
           />
           <Input
             className={"w-1/4"}
+            classNames={{
+              inputWrapper:
+                "bg-transparent shadow-none data-[hover=true]:bg-default-200 group-data-[focus=true]:bg-default-200",
+            }}
             placeholder={t<string>("Filter")}
             radius={"none"}
             size={"sm"}
-            startContent={<SearchOutlined className={"text-base"} />}
+            startContent={<SearchOutlined className={"text-base text-default-500"} />}
             value={filterInputValue}
             onValueChange={(v) => setFilterInputValue(v)}
           />
+
+          <div className="w-px h-5 bg-default-300 mx-1" />
+
           <Tooltip content={t<string>("fileExplorer.label.showHiddenFiles")}>
             <Button
               isIconOnly
@@ -712,14 +722,15 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
             </Button>
           </Tooltip>
           <Button
-            className={"px-6"}
+            className={"shrink-0"}
             radius={"none"}
             size={"sm"}
+            startContent={<FolderOpenOutlined className={"text-base"} />}
+            variant={"light"}
             onClick={() => {
               BApi.file.openRecycleBin();
             }}
           >
-            <FolderOpenOutlined className={"text-base"} />
             {t<string>("Recycle bin")}
           </Button>
           <Shortcuts capabilities={capabilities} />

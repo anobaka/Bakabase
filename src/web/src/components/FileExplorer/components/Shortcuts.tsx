@@ -77,8 +77,15 @@ const Shortcuts = ({ capabilities, className }: Props) => {
 
   return (
     <Tooltip content={t<string>("fileExplorer.label.shortcuts")}>
-      <Button isIconOnly className={className} variant={"light"} onPress={openModal}>
-        <RiKeyboardLine className={"text-lg"} />
+      <Button
+        isIconOnly
+        className={className}
+        radius={"none"}
+        size={"sm"}
+        variant={"light"}
+        onPress={openModal}
+      >
+        <RiKeyboardLine className={"text-base"} />
       </Button>
     </Tooltip>
   );
