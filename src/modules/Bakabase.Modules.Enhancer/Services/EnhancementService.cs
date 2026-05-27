@@ -117,12 +117,17 @@ namespace Bakabase.Modules.Enhancer.Services
 
         public async Task AddRange(List<Enhancement> enhancements)
         {
-            // Two enhancements with the same composite key (ResourceId +
-            // EnhancerId + Target + DynamicTarget + ValueType + Value) collapse
-            // to one DbModel.Key. Two AV scrapers returning the same poster
-            // URL for the same Cover target is a real case we hit. Dedupe
-            // before building the dictionary so we don't blow up with
-            // "An item with the same key has already been added".
+            // Dedup is by composite Key — ResourceId + EnhancerId + Target +
+            // DynamicTarget only (see EnhancementExtensions.FillKey).
+            // ValueType and Value are intentionally NOT part of the key:
+            // a single (R, E, T, DT) is canonical, and downstream property
+            // writes need exactly one value per target. When multiple
+            // scrapers produce different values for the same target, only
+            // the first by input order is kept; the rest are dropped as
+            // redundant signal. Callers that legitimately need multiple
+            // values for one target must distinguish them via DynamicTarget.
+            // The dedup also guards the trailing ToDictionary against a
+            // duplicate-key crash.
             var dbValuesMap = enhancements
                 .Select(e => (Db: e.ToDbModel(GetTargetPropertyType(e.EnhancerId, e.Target)), Biz: e))
                 .GroupBy(p => p.Db.Key)

@@ -1,0 +1,13 @@
+<Project Sdk="MSTest.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\modules\Bakabase.Modules.Alias\Bakabase.Modules.Alias.csproj" />
+    <ProjectReference Include="..\..\apps\Bakabase.Service\Bakabase.Service.csproj" />
+    <ProjectReference Include="..\Bakabase.TestKit\Bakabase.TestKit.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentAssertions" Version="8.0.1" />
+  </ItemGroup>
+
+</Project>

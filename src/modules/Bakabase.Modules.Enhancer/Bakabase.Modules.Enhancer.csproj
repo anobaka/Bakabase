@@ -8,6 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Bakabase.Modules.Enhancer.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\abstractions\Bakabase.Abstractions\Bakabase.Abstractions.csproj" />
     <ProjectReference Include="..\Bakabase.Modules.AI\Bakabase.Modules.AI.csproj" />
     <ProjectReference Include="..\Bakabase.Modules.Property\Bakabase.Modules.Property.csproj" />

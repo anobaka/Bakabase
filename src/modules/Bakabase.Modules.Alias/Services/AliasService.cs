@@ -194,7 +194,17 @@ public class AliasService<TDbContext>(
         var newAliases = new List<Abstractions.Models.Db.Alias>();
         var changedAliases = new List<Abstractions.Models.Db.Alias>();
 
-        var optimizedAliasGroups = aliasGroups.Select(x => new[] {x[0]}.Concat(x.Skip(1).Distinct()).ToArray()).ToArray();
+        // Dedupe within each incoming group: keep x[0] verbatim as the
+        // intended preferred head, and drop any tail entry that either
+        // duplicates the head or repeats another tail entry. Without the
+        // head filter, a caller passing the head a second time in the tail
+        // (e.g. ["foo", "foo", "bar"]) would slip past Distinct() and the
+        // "no existing group" branch below would write two rows with
+        // Text=foo, Preferred=null — leaving an orphan head row that
+        // SearchGroups would pick arbitrarily.
+        var optimizedAliasGroups = aliasGroups
+            .Select(x => new[] {x[0]}.Concat(x.Skip(1).Where(s => s != x[0]).Distinct()).ToArray())
+            .ToArray();
 
         foreach (var incomingGroup in optimizedAliasGroups)
         {

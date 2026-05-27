@@ -58,7 +58,18 @@ namespace Bakabase.TestKit.Utils;
 /// </summary>
 public static class TestServiceBuilder
 {
-    public static async Task<IServiceProvider> BuildServiceProvider()
+    /// <summary>
+    /// Build a fully wired test service provider against a fresh temp SQLite DB.
+    /// </summary>
+    /// <param name="configure">
+    /// Optional callback to mutate the service collection after all production
+    /// services and test stubs have been registered, but before the provider is
+    /// built. Use this to swap a service for a test double — e.g. replace an
+    /// <c>IResourceProfileService</c> implementation when a test needs to drive
+    /// downstream consumers with synthetic profile data.
+    /// </param>
+    public static async Task<IServiceProvider> BuildServiceProvider(
+        Action<IServiceCollection>? configure = null)
     {
         // Use unique database file names to avoid conflicts between parallel tests
         var uniqueId = Guid.NewGuid().ToString("N")[..8];
@@ -191,6 +202,9 @@ public static class TestServiceBuilder
         // (mirrors what ConfigurationRegistrations does in production, but with empty values).
         // TryAdd so manual registrations above (FileSystemOptions, ResourceOptions, etc.) win.
         RegisterAllOptionsTypes(services);
+
+        // Per-test overrides last so they win over both production and stubs.
+        configure?.Invoke(services);
 
         // Build provider and initialize database
         var sp = services.BuildServiceProvider();

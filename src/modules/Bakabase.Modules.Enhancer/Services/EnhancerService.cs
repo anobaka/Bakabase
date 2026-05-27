@@ -375,7 +375,7 @@ namespace Bakabase.Modules.Enhancer.Services
             await _enhancementRecordService.Update(records);
         }
 
-        protected record ContextCreationTask(
+        internal record ContextCreationTask(
             IEnhancer Enhancer,
             EnhancerFullOptions Options,
             Resource Resource,
@@ -383,7 +383,7 @@ namespace Bakabase.Modules.Enhancer.Services
             HashSet<ContextCreationTask> Dependencies,
             HashSet<ContextCreationTask> Dependents);
 
-        protected async
+        internal async
             Task<List<ContextCreationTask>>
             BuildContextCreationTasks(List<Resource> targetResources, HashSet<int>? restrictedEnhancerIds)
         {
@@ -512,15 +512,10 @@ namespace Bakabase.Modules.Enhancer.Services
                 // cycles (A->B->A) are a config-side issue, but a single bad
                 // resource shouldn't tank the rest of the batch — drop just
                 // the affected resource's tasks and continue.
-                var visited = new HashSet<ContextCreationTask>();
-                var stack = new Stack<ContextCreationTask>();
-                string? detectedCycle = null;
-
-                foreach (var node in groupTasks.Where(node => !visited.Contains(node)))
-                {
-                    Dfs(node);
-                    if (detectedCycle != null) break;
-                }
+                var detectedCycle = CycleDetector.DetectFirstCycle(
+                    groupTasks,
+                    t => t.Dependencies,
+                    t => t.Enhancer.Id.ToString());
 
                 if (detectedCycle != null)
                 {
@@ -531,41 +526,6 @@ namespace Bakabase.Modules.Enhancer.Services
                     {
                         tasks.Remove(groupTask);
                     }
-                }
-
-                continue;
-
-                void Dfs(ContextCreationTask node)
-                {
-                    if (detectedCycle != null) return;
-
-                    if (stack.Contains(node))
-                    {
-                        var cycleNodes = new List<ContextCreationTask>();
-                        foreach (var s in stack)
-                        {
-                            cycleNodes.Add(s);
-                            if (s == node) break;
-                        }
-
-                        cycleNodes.Reverse();
-                        cycleNodes.Add(node);
-                        detectedCycle = string.Join("->", cycleNodes.Select(x => x.Enhancer.Id));
-                        return;
-                    }
-
-                    if (!visited.Add(node))
-                    {
-                        return;
-                    }
-
-                    stack.Push(node);
-                    foreach (var dep in node.Dependencies)
-                    {
-                        Dfs(dep);
-                    }
-
-                    stack.Pop();
                 }
             }
 
