@@ -44,6 +44,7 @@ type Props = {
   searchInNewTab?: (form: SearchForm) => any;
   activated: boolean;
   onOpenRecentlyPlayed?: () => void;
+  onSearchFormChange?: (searchId: string, form: SearchForm | undefined) => void;
 };
 
 export type ResourceTabContentRef = {
@@ -290,6 +291,21 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
   useEffect(() => {
     resourcesRef.current = resources;
   }, [resources]);
+
+  // Bubble the live search form up so the page can derive an auto-generated
+  // tab name from the current filter values. Stable identity so FilterPanel's
+  // effect doesn't re-fire on every parent render.
+  const onSearchFormChange = props.onSearchFormChange;
+  const handleFilterPanelLiveChange = useCallback(
+    (form: SearchForm) => {
+      onSearchFormChange?.(props.searchId, form);
+    },
+    [onSearchFormChange, props.searchId],
+  );
+
+  useEffect(() => {
+    onSearchFormChange?.(props.searchId, searchForm);
+  }, [searchForm, props.searchId, onSearchFormChange]);
 
   // Keep selectedResourcesRef.current in sync with the current selection.
   // Computed in an effect so the work only happens when either resources or
@@ -544,6 +560,7 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
         totalFilteredResourceCount={pageable?.totalCount}
         onOpenRecentlyPlayed={props.onOpenRecentlyPlayed}
         onSearch={onSearch}
+        onSearchFormLiveChange={handleFilterPanelLiveChange}
         onSelectAllChange={onSelectAllChange}
       />
     </div>
@@ -620,8 +637,9 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
 
                   if (!ev) return;
 
-                  const items =
-                    pageContainerRef.current?.querySelectorAll("div[role='resource']");
+                  // data-id is the only attribute unique to ResourceCard root
+                  // divs (we can't use role='resource' — not a valid ARIA value).
+                  const items = pageContainerRef.current?.querySelectorAll("div[data-id]");
 
                   if (!items || items.length === 0) return;
 

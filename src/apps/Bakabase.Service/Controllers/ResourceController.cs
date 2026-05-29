@@ -55,7 +55,6 @@ public class ResourceController(
     IPropertyLocalizer propertyLocalizer,
     IMediaLibraryV2Service mediaLibraryV2Service,
     IMediaLibraryResourceMappingService mappingService,
-    IBakabaseLocalizer localizer,
     BTaskManager taskManager,
     IBOptionsManager<FileSystemOptions> fsOptionsManager,
     IPropertyValueScopePreferenceService scopePreferenceService)
@@ -135,7 +134,7 @@ public class ResourceController(
     public async Task<SingletonResponse<SavedSearchViewModel>> SaveNewSearch([FromBody] SavedSearchAddInputModel model)
     {
         model.Search.StandardPageable();
-        var ss = resourceOptionsManager.Value.BuildNewSavedSearch(null, localizer.Search(), model.Search.ToDbModel(), model.DisplayMode);
+        var ss = resourceOptionsManager.Value.BuildNewSavedSearch(null, model.Search.ToDbModel(), model.DisplayMode);
         await resourceOptionsManager.SaveAsync(x =>
         {
             x.SavedSearches.Add(ss);

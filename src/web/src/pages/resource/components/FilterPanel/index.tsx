@@ -25,6 +25,9 @@ interface IProps {
   maxResourceColCount?: number;
   searchForm?: SearchForm;
   onSearch?: (form: Partial<SearchForm>, newTab: boolean) => Promise<any>;
+  /** Fires on every local search-form change (pre-debounce) so the tab name
+   *  can track filter edits live, not wait for the auto-search to fire. */
+  onSearchFormLiveChange?: (form: SearchForm) => void;
   reloadResources: (ids: number[]) => any;
   rearrangeResources?: () => any;
   onSelectAllChange: (selected: boolean, includeNotLoaded?: boolean) => any;
@@ -113,6 +116,12 @@ const FilterPanel = (props: IProps) => {
   useUpdateEffect(() => {
     setSearchForm(propsSearchForm || defaultSearchForm());
   }, [propsSearchForm]);
+
+  const onSearchFormLiveChange = props.onSearchFormLiveChange;
+
+  useEffect(() => {
+    onSearchFormLiveChange?.(searchForm);
+  }, [searchForm, onSearchFormLiveChange]);
 
   useUpdateEffect(() => {
     console.log("Search form changed", searchForm);

@@ -1,5 +1,6 @@
 import type { components } from "@/sdk/BApi2";
 import type { IdName } from "@/components/types";
+import type { SearchForm as ResourceSearchForm } from "@/pages/resource/models";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -12,6 +13,7 @@ import { usePendingSearchStore } from "@/stores/pendingSearch";
 import BApi from "@/sdk/BApi.tsx";
 import ResourceTabContent from "@/pages/resource/components/ResourceTabContent";
 import RecentlyPlayedDrawer from "@/pages/resource/components/RecentlyPlayedDrawer";
+import { buildAutoTabName } from "@/pages/resource/utils/buildAutoTabName";
 
 type SavedSearch =
   components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ResourceOptions+SavedSearch"];
@@ -29,10 +31,26 @@ const ResourcePage = () => {
   const [mountedTabIds, setMountedTabIds] = useState<string[]>([]);
   const [removingTabId, setRemovingTabId] = useState<string | null>(null);
   const [recentlyPlayedOpen, setRecentlyPlayedOpen] = useState(false);
+  // Live search-form state per mounted tab, surfaced by ResourceTabContent so
+  // the tab name can track filter edits in real time.
+  const [liveSearchForms, setLiveSearchForms] = useState<
+    Record<string, ResourceSearchForm | undefined>
+  >({});
   const resourceOptions = useResourceOptionsStore();
   const pendingSearch = usePendingSearchStore((s) => s.pendingSearch);
   const consumePendingSearch = usePendingSearchStore((s) => s.consumePendingSearch);
   const optionsInitialized = useRef(false);
+
+  const handleSearchFormChange = useCallback(
+    (searchId: string, form: ResourceSearchForm | undefined) => {
+      setLiveSearchForms((prev) => {
+        if (prev[searchId] === form) return prev;
+
+        return { ...prev, [searchId]: form };
+      });
+    },
+    [],
+  );
 
   const creatingTabRef = useRef(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -110,11 +128,29 @@ const ResourcePage = () => {
     [changeTab],
   );
 
-  const beginRename = (id: string) => {
-    const current = savedSearches.find((x) => x.id == id);
+  // The displayed name uses the user-set name when present, otherwise an
+  // auto-generated combination of the current filter values reported by the
+  // mounted ResourceTabContent. When neither is available (e.g. un-mounted
+  // tab beyond the LRU cap, or no filters yet) it falls back to a localized
+  // "Search N" placeholder so the tab still reads as something.
+  const getDisplayName = useCallback(
+    (s: IdName<string>, index: number): string => {
+      if (s.name) return s.name;
+      const auto = buildAutoTabName(liveSearchForms[s.id]);
 
+      if (auto) return auto;
+
+      return `${t<string>("common.action.search")} ${index + 1}`;
+    },
+    [liveSearchForms, t],
+  );
+
+  const beginRename = (id: string) => {
+    const index = savedSearches.findIndex((x) => x.id == id);
+
+    if (index < 0) return;
     setEditingId(id);
-    setEditingName(current?.name ?? "");
+    setEditingName(getDisplayName(savedSearches[index], index));
   };
 
   const commitRename = async () => {
@@ -212,7 +248,7 @@ const ResourcePage = () => {
                         }
                       }}
                     >
-                      {s.name}
+                      {getDisplayName(s, i)}
                     </span>
                     {isEditing && (
                       <Input
@@ -234,9 +270,13 @@ const ResourcePage = () => {
                             e.preventDefault();
                             commitRename();
                           }
+                          // Entering edit mode locks the name (per spec —
+                          // even Escape commits the currently pre-filled
+                          // auto-name). Clearing the input and committing
+                          // is the explicit way back to auto-mode.
                           if (e.key === "Escape") {
                             e.preventDefault();
-                            setEditingId(null);
+                            commitRename();
                           }
                         }}
                         onValueChange={(v) => setEditingName(v)}
@@ -285,6 +325,7 @@ const ResourcePage = () => {
                 searchId={s.id}
                 searchInNewTab={searchInNewTab}
                 onOpenRecentlyPlayed={handleOpenRecentlyPlayed}
+                onSearchFormChange={handleSearchFormChange}
               />
             )}
           </div>

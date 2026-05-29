@@ -34,13 +34,11 @@ namespace Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain
         public bool KeepResourcesOnPathChange { get; set; }
 
         /// <summary>
-        ///
+        /// Build a new SavedSearch with an empty Name. The frontend derives a
+        /// display name from the current filter values; when nothing is
+        /// available it falls back to a localized "Search N" placeholder.
         /// </summary>
-        /// <param name="id"></param>
-        /// <param name="translationOfSearch">Default to 'Search' (in english).</param>
-        /// <param name="search"></param>
-        /// <param name="displayMode"></param>
-        public SavedSearch BuildNewSavedSearch(string? id, string translationOfSearch, ResourceSearchDbModel? search, FilterDisplayMode displayMode = FilterDisplayMode.Simple)
+        public SavedSearch BuildNewSavedSearch(string? id, ResourceSearchDbModel? search, FilterDisplayMode displayMode = FilterDisplayMode.Simple)
         {
             id ??= Guid.NewGuid().ToString("N")[..6];
             var ss = SavedSearches.FirstOrDefault(x => x.Id == id);
@@ -51,12 +49,7 @@ namespace Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain
 
             search ??= new ResourceSearchDbModel { Page = 1, PageSize = 50 };
 
-            var candidateNoList = SavedSearches.Where(x => x.Name.StartsWith(translationOfSearch))
-                .Select(a => a.Name.Split(' ')).Where(x => x.Length > 1).Select(a => a[1])
-                .Select(x => int.TryParse(x, out var no) ? no : 0).ToList();
-            var nextNo = Math.Max((candidateNoList.Any() ? candidateNoList.Max() : 0) + 1, SavedSearches.Count);
-
-            return new SavedSearch { Id = id, Name = $"{translationOfSearch} {nextNo}", Search = search, DisplayMode = displayMode };
+            return new SavedSearch { Id = id, Search = search, DisplayMode = displayMode };
         }
 
         public record ResourceFilter
