@@ -8,6 +8,7 @@ import Pixiv from "@/assets/logo/pixiv.png";
 import Bilibili from "@/assets/logo/bilibili.png";
 import SoulPlus from "@/assets/logo/soulplus.png";
 import { ThirdPartyId } from "@/sdk/constants";
+import { getEnumKey } from "@/i18n";
 import dlsiteLogo from "@/assets/logo/dlsite.png";
 import fanboxLogo from "@/assets/logo/fanbox.png";
 import fantiaLogo from "@/assets/logo/fantia.png";
@@ -69,7 +70,11 @@ const ThirdPartyIcon = ({ thirdPartyId, size }: Props) => {
   }
 
   return (
-    <img alt={t<string>(`ThirdPartyId.${ThirdPartyId[thirdPartyId]}`)} src={img} style={style} />
+    <img
+      alt={t<string>(getEnumKey("ThirdPartyId", ThirdPartyId[thirdPartyId]))}
+      src={img}
+      style={style}
+    />
   );
 };
 
