@@ -3520,6 +3520,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/notification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SearchNotifications"];
+        put?: never;
+        post?: never;
+        delete: operations["DeleteNotifications"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notification/unread-count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetUnreadNotificationCount"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notification/mark-read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MarkNotificationsAsRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notification/clear-read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ClearReadNotifications"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notification/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CreateTestNotification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/options/app": {
         parameters: {
             query?: never;
@@ -5456,6 +5536,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/subscription": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SearchSubscriptions"];
+        put?: never;
+        post: operations["AddSubscription"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/subscription/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetSubscription"];
+        put?: never;
+        post?: never;
+        delete: operations["DeleteSubscription"];
+        options?: never;
+        head?: never;
+        patch: operations["PatchSubscription"];
+        trace?: never;
+    };
+    "/subscription/{id}/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RunSubscriptionCheck"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/subscription/providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetSubscriptionProviders"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/Tampermonkey/health": {
         parameters: {
             query?: never;
@@ -5738,6 +5882,102 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["RestartAndUpdateApp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workflow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SearchWorkflows"];
+        put?: never;
+        post: operations["AddWorkflow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workflow/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetWorkflow"];
+        put?: never;
+        post?: never;
+        delete: operations["DeleteWorkflow"];
+        options?: never;
+        head?: never;
+        patch: operations["PatchWorkflow"];
+        trace?: never;
+    };
+    "/workflow/triggers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetWorkflowTriggers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workflow/activities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetWorkflowActivities"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workflow/item-types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetWorkflowItemTypes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workflow/{id}/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SearchWorkflowRuns"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -8742,6 +8982,30 @@ export interface components {
             /** Format: int32 */
             lastMatchedResourceCount?: number;
         };
+        "Bakabase.Modules.Notification.Abstractions.Models.Input.CreateTestNotificationInputModel": {
+            title?: string;
+            body?: string;
+            severity: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.AppNotificationSeverity"];
+        };
+        "Bakabase.Modules.Notification.Abstractions.Models.Input.DeleteNotificationsInputModel": {
+            ids: number[];
+        };
+        "Bakabase.Modules.Notification.Abstractions.Models.Input.MarkNotificationsAsReadInputModel": {
+            ids?: number[];
+        };
+        "Bakabase.Modules.Notification.Abstractions.Models.View.NotificationViewModel": {
+            /** Format: int32 */
+            id: number;
+            source: string;
+            title: string;
+            body?: string;
+            payloadJson?: string;
+            severity: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.AppNotificationSeverity"];
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            readAt?: string;
+        };
         /**
          * Format: int32
          * @description [1: Name, 2: ReleaseDate, 3: Author, 4: Publisher, 5: Series, 6: Tag, 7: Language, 8: Original, 9: Actor, 10: VoiceActor, 11: Duration, 12: Director, 13: Singer, 14: EpisodeCount, 15: Resolution, 16: AspectRatio, 17: SubtitleLanguage, 18: VideoCodec, 19: IsCensored, 20: Is3D, 21: ImageCount, 22: IsAi, 23: Developer, 24: Character, 25: AudioFormat, 26: Bitrate, 27: Platform, 28: SubscriptionPlatform, 29: Type]
@@ -8867,6 +9131,52 @@ export interface components {
             name: string;
             description?: string;
         };
+        "Bakabase.Modules.Subscription.Abstractions.Models.Input.SubscriptionCreationInputModel": {
+            kind: string;
+            displayName: string;
+            targetJson: string;
+            enabled: boolean;
+            /** Format: int32 */
+            intervalMinutes?: number;
+        };
+        "Bakabase.Modules.Subscription.Abstractions.Models.Input.SubscriptionUpdateInputModel": {
+            displayName?: string;
+            targetJson?: string;
+            enabled?: boolean;
+            /** Format: int32 */
+            intervalMinutes?: number;
+        };
+        "Bakabase.Modules.Subscription.Abstractions.Models.View.SubscriptionCheckSummaryViewModel": {
+            firstRun: boolean;
+            /** Format: int32 */
+            newItemCount: number;
+            /** Format: int32 */
+            updatedItemCount: number;
+            error?: string;
+        };
+        "Bakabase.Modules.Subscription.Abstractions.Models.View.SubscriptionProviderViewModel": {
+            kind: string;
+            displayName: string;
+            icon?: string;
+        };
+        "Bakabase.Modules.Subscription.Abstractions.Models.View.SubscriptionViewModel": {
+            /** Format: int32 */
+            id: number;
+            kind: string;
+            displayName: string;
+            targetJson: string;
+            enabled: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            lastCheckedAt?: string;
+            /** Format: date-time */
+            lastChangeAt?: string;
+            lastError?: string;
+            /** Format: int32 */
+            intervalMinutes?: number;
+            targetSummary?: string;
+        };
         "Bakabase.Modules.ThirdParty.Helpers.TlsPresetInfo": {
             id: string;
             label: string;
@@ -8877,6 +9187,127 @@ export interface components {
             title: string;
             /** Format: int32 */
             mediaCount: number;
+        };
+        /**
+         * Format: int32
+         * @description [1: Filter, 2: Action, 3: Transform]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants.WorkflowActivityCategory": 1 | 2 | 3;
+        /**
+         * Format: int32
+         * @description [1: Fail, 2: Skip]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants.WorkflowActivityErrorBehavior": 1 | 2;
+        /**
+         * Format: int32
+         * @description [1: Passthrough, 2: Fixed, 3: AdaptToNext]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants.WorkflowItemTypeBehavior": 1 | 2 | 3;
+        /**
+         * Format: int32
+         * @description [1: Pending, 2: Running, 3: Success, 4: Failed, 5: Cancelled, 6: Interrupted]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants.WorkflowRunStatus": 1 | 2 | 3 | 4 | 5 | 6;
+        "Bakabase.Modules.Workflow.Abstractions.Models.Domain.WorkflowRunStepStat": {
+            /** Format: int32 */
+            stepIndex: number;
+            kind: string;
+            /** Format: int32 */
+            inputCount: number;
+            /** Format: int32 */
+            outputCount: number;
+            /** Format: int32 */
+            failedCount: number;
+        };
+        "Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowActivityInputModel": {
+            kind: string;
+            configJson: string;
+            onItemError: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants.WorkflowActivityErrorBehavior"];
+        };
+        "Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowDefinitionCreationInputModel": {
+            name: string;
+            triggerKind: string;
+            triggerFilterJson?: string;
+            enabled: boolean;
+            activities: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowActivityInputModel"][];
+        };
+        "Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowDefinitionUpdateInputModel": {
+            name?: string;
+            triggerFilterJson?: string;
+            enabled?: boolean;
+            activities?: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowActivityInputModel"][];
+        };
+        "Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowActivityDescriptorViewModel": {
+            kind: string;
+            displayName: string;
+            category: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants.WorkflowActivityCategory"];
+            group: string;
+            acceptedInputItemTypes: string[];
+            outputBehavior: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants.WorkflowItemTypeBehavior"];
+            fixedOutputItemType?: string;
+        };
+        "Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowActivityViewModel": {
+            /** Format: int32 */
+            id: number;
+            /** Format: int32 */
+            order: number;
+            kind: string;
+            configJson: string;
+            onItemError: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants.WorkflowActivityErrorBehavior"];
+        };
+        "Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowDefinitionViewModel": {
+            /** Format: int32 */
+            id: number;
+            name: string;
+            triggerKind: string;
+            triggerFilterJson?: string;
+            enabled: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt?: string;
+            /** Format: date-time */
+            lastRunAt?: string;
+            lastError?: string;
+            activities: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowActivityViewModel"][];
+        };
+        "Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowItemTypeDescriptorViewModel": {
+            itemType: string;
+            displayName: string;
+            fields: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowItemTypeFieldViewModel"][];
+        };
+        "Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowItemTypeFieldViewModel": {
+            name: string;
+            type: string;
+            nullable: boolean;
+        };
+        "Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowRunViewModel": {
+            /** Format: int32 */
+            id: number;
+            /** Format: int32 */
+            workflowDefinitionId: number;
+            status: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants.WorkflowRunStatus"];
+            /** Format: date-time */
+            startedAt: string;
+            /** Format: date-time */
+            completedAt?: string;
+            payloadSummary?: string;
+            /** Format: int32 */
+            inputCount: number;
+            /** Format: int32 */
+            outputCount: number;
+            /** Format: int32 */
+            failedItemCount: number;
+            stepStats: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Domain.WorkflowRunStepStat"][];
+            errorMessage?: string;
+        };
+        "Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowTriggerDescriptorViewModel": {
+            kind: string;
+            displayName: string;
         };
         "Bakabase.Service.Controllers.AppDataPathController+RelocateRequest": {
             targetPath: string;
@@ -9767,11 +10198,47 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.Property.Models.View.PropertyViewModel"][];
         };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Subscription.Abstractions.Models.View.SubscriptionProviderViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Subscription.Abstractions.Models.View.SubscriptionProviderViewModel"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Subscription.Abstractions.Models.View.SubscriptionViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Subscription.Abstractions.Models.View.SubscriptionViewModel"][];
+        };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.ThirdParty.ThirdParties.Bilibili.Models.Favorites]": {
             /** Format: int32 */
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.ThirdParty.ThirdParties.Bilibili.Models.Favorites"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowActivityDescriptorViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowActivityDescriptorViewModel"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowDefinitionViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowDefinitionViewModel"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowItemTypeDescriptorViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowItemTypeDescriptorViewModel"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowTriggerDescriptorViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowTriggerDescriptorViewModel"][];
         };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Controllers.ChatController+ChatToolViewModel]": {
             /** Format: int32 */
@@ -9982,6 +10449,30 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCard"][];
+            /** Format: int32 */
+            totalCount: number;
+            /** Format: int32 */
+            pageIndex: number;
+            /** Format: int32 */
+            pageSize: number;
+        };
+        "Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Modules.Notification.Abstractions.Models.View.NotificationViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Notification.Abstractions.Models.View.NotificationViewModel"][];
+            /** Format: int32 */
+            totalCount: number;
+            /** Format: int32 */
+            pageIndex: number;
+            /** Format: int32 */
+            pageSize: number;
+        };
+        "Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowRunViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowRunViewModel"][];
             /** Format: int32 */
             totalCount: number;
             /** Format: int32 */
@@ -10480,6 +10971,24 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.Property.Models.View.PropertyViewModel"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Subscription.Abstractions.Models.View.SubscriptionCheckSummaryViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Subscription.Abstractions.Models.View.SubscriptionCheckSummaryViewModel"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Subscription.Abstractions.Models.View.SubscriptionViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Subscription.Abstractions.Models.View.SubscriptionViewModel"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowDefinitionViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowDefinitionViewModel"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.AppDataPathController+ValidateResponse]": {
             /** Format: int32 */
@@ -18421,6 +18930,164 @@ export interface operations {
             };
         };
     };
+    SearchNotifications: {
+        parameters: {
+            query?: {
+                source?: string;
+                unreadOnly?: boolean;
+                pageIndex?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Modules.Notification.Abstractions.Models.View.NotificationViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Modules.Notification.Abstractions.Models.View.NotificationViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Modules.Notification.Abstractions.Models.View.NotificationViewModel]"];
+                };
+            };
+        };
+    };
+    DeleteNotifications: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Notification.Abstractions.Models.Input.DeleteNotificationsInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.Notification.Abstractions.Models.Input.DeleteNotificationsInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.Notification.Abstractions.Models.Input.DeleteNotificationsInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.Notification.Abstractions.Models.Input.DeleteNotificationsInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetUnreadNotificationCount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Int32]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Int32]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Int32]"];
+                };
+            };
+        };
+    };
+    MarkNotificationsAsRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Notification.Abstractions.Models.Input.MarkNotificationsAsReadInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.Notification.Abstractions.Models.Input.MarkNotificationsAsReadInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.Notification.Abstractions.Models.Input.MarkNotificationsAsReadInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.Notification.Abstractions.Models.Input.MarkNotificationsAsReadInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    ClearReadNotifications: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    CreateTestNotification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Notification.Abstractions.Models.Input.CreateTestNotificationInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.Notification.Abstractions.Models.Input.CreateTestNotificationInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.Notification.Abstractions.Models.Input.CreateTestNotificationInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.Notification.Abstractions.Models.Input.CreateTestNotificationInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
     GetAppOptions: {
         parameters: {
             query?: never;
@@ -22904,6 +23571,185 @@ export interface operations {
             };
         };
     };
+    SearchSubscriptions: {
+        parameters: {
+            query?: {
+                kind?: string;
+                enabledOnly?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Subscription.Abstractions.Models.View.SubscriptionViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Subscription.Abstractions.Models.View.SubscriptionViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Subscription.Abstractions.Models.View.SubscriptionViewModel]"];
+                };
+            };
+        };
+    };
+    AddSubscription: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Subscription.Abstractions.Models.Input.SubscriptionCreationInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.Subscription.Abstractions.Models.Input.SubscriptionCreationInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.Subscription.Abstractions.Models.Input.SubscriptionCreationInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.Subscription.Abstractions.Models.Input.SubscriptionCreationInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Subscription.Abstractions.Models.View.SubscriptionViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Subscription.Abstractions.Models.View.SubscriptionViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Subscription.Abstractions.Models.View.SubscriptionViewModel]"];
+                };
+            };
+        };
+    };
+    GetSubscription: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Subscription.Abstractions.Models.View.SubscriptionViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Subscription.Abstractions.Models.View.SubscriptionViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Subscription.Abstractions.Models.View.SubscriptionViewModel]"];
+                };
+            };
+        };
+    };
+    DeleteSubscription: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    PatchSubscription: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Subscription.Abstractions.Models.Input.SubscriptionUpdateInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.Subscription.Abstractions.Models.Input.SubscriptionUpdateInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.Subscription.Abstractions.Models.Input.SubscriptionUpdateInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.Subscription.Abstractions.Models.Input.SubscriptionUpdateInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Subscription.Abstractions.Models.View.SubscriptionViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Subscription.Abstractions.Models.View.SubscriptionViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Subscription.Abstractions.Models.View.SubscriptionViewModel]"];
+                };
+            };
+        };
+    };
+    RunSubscriptionCheck: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Subscription.Abstractions.Models.View.SubscriptionCheckSummaryViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Subscription.Abstractions.Models.View.SubscriptionCheckSummaryViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Subscription.Abstractions.Models.View.SubscriptionCheckSummaryViewModel]"];
+                };
+            };
+        };
+    };
+    GetSubscriptionProviders: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Subscription.Abstractions.Models.View.SubscriptionProviderViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Subscription.Abstractions.Models.View.SubscriptionProviderViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Subscription.Abstractions.Models.View.SubscriptionProviderViewModel]"];
+                };
+            };
+        };
+    };
     TampermonkeyHealth: {
         parameters: {
             query?: never;
@@ -23351,6 +24197,233 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    SearchWorkflows: {
+        parameters: {
+            query?: {
+                triggerKind?: string;
+                enabledOnly?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowDefinitionViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowDefinitionViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowDefinitionViewModel]"];
+                };
+            };
+        };
+    };
+    AddWorkflow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowDefinitionCreationInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowDefinitionCreationInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowDefinitionCreationInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowDefinitionCreationInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowDefinitionViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowDefinitionViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowDefinitionViewModel]"];
+                };
+            };
+        };
+    };
+    GetWorkflow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowDefinitionViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowDefinitionViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowDefinitionViewModel]"];
+                };
+            };
+        };
+    };
+    DeleteWorkflow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    PatchWorkflow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowDefinitionUpdateInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowDefinitionUpdateInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowDefinitionUpdateInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowDefinitionUpdateInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowDefinitionViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowDefinitionViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowDefinitionViewModel]"];
+                };
+            };
+        };
+    };
+    GetWorkflowTriggers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowTriggerDescriptorViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowTriggerDescriptorViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowTriggerDescriptorViewModel]"];
+                };
+            };
+        };
+    };
+    GetWorkflowActivities: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowActivityDescriptorViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowActivityDescriptorViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowActivityDescriptorViewModel]"];
+                };
+            };
+        };
+    };
+    GetWorkflowItemTypes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowItemTypeDescriptorViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowItemTypeDescriptorViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowItemTypeDescriptorViewModel]"];
+                };
+            };
+        };
+    };
+    SearchWorkflowRuns: {
+        parameters: {
+            query?: {
+                workflowDefinitionId?: number;
+                pageIndex?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowRunViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowRunViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowRunViewModel]"];
                 };
             };
         };

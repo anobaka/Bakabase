@@ -43,6 +43,9 @@
         <ProjectReference Include="..\..\legacy\Bakabase.Migrations\Bakabase.Migrations.csproj" />
         <ProjectReference Include="..\..\modules\Bakabase.Modules.Comparison\Bakabase.Modules.Comparison.csproj" />
         <ProjectReference Include="..\..\modules\Bakabase.Modules.HealthScore\Bakabase.Modules.HealthScore.csproj" />
+        <ProjectReference Include="..\..\modules\Bakabase.Modules.Notification\Bakabase.Modules.Notification.csproj" />
+        <ProjectReference Include="..\..\modules\Bakabase.Modules.Subscription\Bakabase.Modules.Subscription.csproj" />
+        <ProjectReference Include="..\..\modules\Bakabase.Modules.Workflow\Bakabase.Modules.Workflow.csproj" />
     </ItemGroup>
     <ItemGroup>
         <None Update="Assets\favicon.ico">

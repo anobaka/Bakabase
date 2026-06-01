@@ -8,6 +8,7 @@ using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.In
 using Bakabase.InsideWorld.Business.Components.Downloader.Services;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Infrastructures.Components.Gui;
+using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bakabase.TestKit.Utils;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -33,7 +34,16 @@ public sealed class DownloadTaskServiceTests
         // harness does not register; build it from the IStringLocalizer it wraps.
         var localizer = new BakabaseLocalizer(
             sp.GetRequiredService<IStringLocalizer<Bakabase.InsideWorld.Business.SharedResource>>());
-        _service = new DownloadTaskService(sp, localizer, sp.GetRequiredService<IGuiAdapter>());
+        // The downloader publishes a workflow.completed event on Complete. These tests
+        // don't exercise workflow plumbing, so a no-op bus is enough.
+        _service = new DownloadTaskService(sp, localizer, sp.GetRequiredService<IGuiAdapter>(),
+            new NoopWorkflowEventBus());
+    }
+
+    private sealed class NoopWorkflowEventBus : IWorkflowEventBus
+    {
+        public Task PublishAsync<T>(string triggerKind, T payload, System.Threading.CancellationToken ct = default)
+            => Task.CompletedTask;
     }
 
     private static DownloadTask NewTask(

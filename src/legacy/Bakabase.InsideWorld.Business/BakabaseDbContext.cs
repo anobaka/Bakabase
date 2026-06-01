@@ -12,7 +12,10 @@ using Bakabase.Modules.HealthScore.Models.Db;
 using Bakabase.Modules.AI.Models.Db;
 using Bakabase.Modules.Comparison.Models.Db;
 using Bakabase.Modules.DataCard.Abstractions.Models.Db;
+using Bakabase.Modules.Notification.Abstractions.Models.Db;
 using Bakabase.Modules.Property.Abstractions.Models.Db;
+using Bakabase.Modules.Subscription.Abstractions.Models.Db;
+using Bakabase.Modules.Workflow.Abstractions.Models.Db;
 using Microsoft.EntityFrameworkCore;
 using EnhancementRecord = Bakabase.Abstractions.Models.Db.EnhancementRecord;
 using ReservedPropertyValue = Bakabase.Abstractions.Models.Db.ReservedPropertyValue;
@@ -92,6 +95,18 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<DataCardTypeDbModel> DataCardTypes { get; set; }
         public DbSet<DataCardDbModel> DataCards { get; set; }
         public DbSet<DataCardPropertyValueDbModel> DataCardPropertyValues { get; set; }
+
+        // Notification module table
+        public DbSet<NotificationDbModel> Notifications { get; set; }
+
+        // Subscription module tables
+        public DbSet<SubscriptionDbModel> Subscriptions { get; set; }
+        public DbSet<SubscriptionSnapshotDbModel> SubscriptionSnapshots { get; set; }
+
+        // Workflow module tables
+        public DbSet<WorkflowDefinitionDbModel> WorkflowDefinitions { get; set; }
+        public DbSet<WorkflowActivityDbModel> WorkflowActivities { get; set; }
+        public DbSet<WorkflowRunDbModel> WorkflowRuns { get; set; }
 
         // Comparison module tables
         public DbSet<ComparisonPlanDbModel> ComparisonPlans { get; set; }
@@ -383,6 +398,48 @@ namespace Bakabase.InsideWorld.Business
                 t.HasIndex(x => x.GroupId);
                 t.HasIndex(x => new { x.Resource1Id, x.Resource2Id });
                 t.HasIndex(x => new { x.GroupId, x.Resource1Id, x.Resource2Id }).IsUnique();
+            });
+
+            // Notification module table
+            modelBuilder.Entity<NotificationDbModel>(t =>
+            {
+                t.HasIndex(x => x.CreatedAt);
+                t.HasIndex(x => x.ReadAt);
+                t.HasIndex(x => x.Source);
+            });
+
+            // Subscription module tables
+            modelBuilder.Entity<SubscriptionDbModel>(t =>
+            {
+                t.HasIndex(x => x.Kind);
+                t.HasIndex(x => x.Enabled);
+            });
+
+            modelBuilder.Entity<SubscriptionSnapshotDbModel>(t =>
+            {
+                t.HasKey(x => x.SubscriptionId);
+                // SubscriptionId mirrors Subscriptions.Id — never auto-generated.
+                t.Property(x => x.SubscriptionId).ValueGeneratedNever();
+            });
+
+            // Workflow module tables
+            modelBuilder.Entity<WorkflowDefinitionDbModel>(t =>
+            {
+                t.HasIndex(x => x.TriggerKind);
+                t.HasIndex(x => x.Enabled);
+            });
+
+            modelBuilder.Entity<WorkflowActivityDbModel>(t =>
+            {
+                t.HasIndex(x => x.WorkflowDefinitionId);
+                t.HasIndex(x => new { x.WorkflowDefinitionId, x.Order });
+            });
+
+            modelBuilder.Entity<WorkflowRunDbModel>(t =>
+            {
+                t.HasIndex(x => x.WorkflowDefinitionId);
+                t.HasIndex(x => x.Status);
+                t.HasIndex(x => x.StartedAt);
             });
         }
     }

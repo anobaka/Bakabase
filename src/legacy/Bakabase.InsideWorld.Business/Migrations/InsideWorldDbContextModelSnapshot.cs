@@ -1875,6 +1875,46 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.ToTable("ResourceHealthScores");
                 });
 
+            modelBuilder.Entity("Bakabase.Modules.Notification.Abstractions.Models.Db.NotificationDbModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Body")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PayloadJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ReadAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Severity")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("ReadAt");
+
+                    b.HasIndex("Source");
+
+                    b.ToTable("Notifications");
+                });
+
             modelBuilder.Entity("Bakabase.Modules.Property.Abstractions.Models.Db.CustomPropertyDbModel", b =>
                 {
                     b.Property<int>("Id")
@@ -1930,6 +1970,191 @@ namespace Bakabase.InsideWorld.Business.Migrations
                         .IsUnique();
 
                     b.ToTable("CustomPropertyValues");
+                });
+
+            modelBuilder.Entity("Bakabase.Modules.Subscription.Abstractions.Models.Db.SubscriptionDbModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("IntervalMinutes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("LastChangeAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("LastCheckedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastError")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TargetJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Enabled");
+
+                    b.HasIndex("Kind");
+
+                    b.ToTable("Subscriptions");
+                });
+
+            modelBuilder.Entity("Bakabase.Modules.Subscription.Abstractions.Models.Db.SubscriptionSnapshotDbModel", b =>
+                {
+                    b.Property<int>("SubscriptionId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SnapshotJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("SubscriptionId");
+
+                    b.ToTable("SubscriptionSnapshots");
+                });
+
+            modelBuilder.Entity("Bakabase.Modules.Workflow.Abstractions.Models.Db.WorkflowActivityDbModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ConfigJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("OnItemError")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("WorkflowDefinitionId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkflowDefinitionId");
+
+                    b.HasIndex("WorkflowDefinitionId", "Order");
+
+                    b.ToTable("WorkflowActivities");
+                });
+
+            modelBuilder.Entity("Bakabase.Modules.Workflow.Abstractions.Models.Db.WorkflowDefinitionDbModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("LastError")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("LastRunAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TriggerFilterJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TriggerKind")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Enabled");
+
+                    b.HasIndex("TriggerKind");
+
+                    b.ToTable("WorkflowDefinitions");
+                });
+
+            modelBuilder.Entity("Bakabase.Modules.Workflow.Abstractions.Models.Db.WorkflowRunDbModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("FailedItemCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("InputCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("OutputCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PayloadJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PayloadSummary")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("StepStatsJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("WorkflowDefinitionId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StartedAt");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("WorkflowDefinitionId");
+
+                    b.ToTable("WorkflowRuns");
                 });
 #pragma warning restore 612, 618
         }

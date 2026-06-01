@@ -41,6 +41,8 @@ import enResourceSource from "@/locales/en/pages/resourceSource.json";
 import enDataCard from "@/locales/en/pages/dataCard.json";
 import enHealthScore from "@/locales/en/pages/healthScore.json";
 import enAvSources from "@/locales/en/pages/avSources.json";
+import enSubscription from "@/locales/en/pages/subscription.json";
+import enWorkflow from "@/locales/en/pages/workflow.json";
 
 // English - Components
 import enFileExplorer from "@/locales/en/components/fileExplorer.json";
@@ -57,6 +59,7 @@ import enFileChangePreview from "@/locales/en/components/fileChangePreview.json"
 import enPlaylist from "@/locales/en/components/playlist.json";
 import enResourceTransfer from "@/locales/en/components/resourceTransfer.json";
 import enBakaChat from "@/locales/en/components/bakaChat.json";
+import enNotificationCenter from "@/locales/en/components/notificationCenter.json";
 
 // New modular imports - Chinese
 import cnCommon from "@/locales/cn/common.json";
@@ -98,6 +101,8 @@ import cnResourceSource from "@/locales/cn/pages/resourceSource.json";
 import cnDataCard from "@/locales/cn/pages/dataCard.json";
 import cnHealthScore from "@/locales/cn/pages/healthScore.json";
 import cnAvSources from "@/locales/cn/pages/avSources.json";
+import cnSubscription from "@/locales/cn/pages/subscription.json";
+import cnWorkflow from "@/locales/cn/pages/workflow.json";
 
 // Chinese - Components
 import cnFileExplorer from "@/locales/cn/components/fileExplorer.json";
@@ -114,6 +119,7 @@ import cnFileChangePreview from "@/locales/cn/components/fileChangePreview.json"
 import cnPlaylist from "@/locales/cn/components/playlist.json";
 import cnResourceTransfer from "@/locales/cn/components/resourceTransfer.json";
 import cnBakaChat from "@/locales/cn/components/bakaChat.json";
+import cnNotificationCenter from "@/locales/cn/components/notificationCenter.json";
 
 // Merge all English resources
 const enResources = {
@@ -155,6 +161,8 @@ const enResources = {
   ...enDataCard,
   ...enHealthScore,
   ...enAvSources,
+  ...enSubscription,
+  ...enWorkflow,
   // Components
   ...enFileExplorer,
   ...enResourceFilter,
@@ -170,6 +178,7 @@ const enResources = {
   ...enPlaylist,
   ...enResourceTransfer,
   ...enBakaChat,
+  ...enNotificationCenter,
 };
 
 // Merge all Chinese resources
@@ -212,6 +221,8 @@ const cnResources = {
   ...cnDataCard,
   ...cnHealthScore,
   ...cnAvSources,
+  ...cnSubscription,
+  ...cnWorkflow,
   // Components
   ...cnFileExplorer,
   ...cnResourceFilter,
@@ -227,6 +238,7 @@ const cnResources = {
   ...cnPlaylist,
   ...cnResourceTransfer,
   ...cnBakaChat,
+  ...cnNotificationCenter,
 };
 
 // 只初始化一次，防止热更新或多次 import 时重复初始化

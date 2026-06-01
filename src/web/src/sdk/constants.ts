@@ -4618,6 +4618,84 @@ export const PresetResourceTypeLabel: Record<PresetResourceType, string> = {
   [PresetResourceType.Tool]: 'Tool'
 };
 
+export enum WorkflowActivityCategory {
+  Filter = 1,
+  Action = 2,
+  Transform = 3
+}
+
+export const workflowActivityCategories = [
+  { label: 'Filter', value: WorkflowActivityCategory.Filter },
+  { label: 'Action', value: WorkflowActivityCategory.Action },
+  { label: 'Transform', value: WorkflowActivityCategory.Transform }
+] as const;
+
+export const WorkflowActivityCategoryLabel: Record<WorkflowActivityCategory, string> = {
+  [WorkflowActivityCategory.Filter]: 'Filter',
+  [WorkflowActivityCategory.Action]: 'Action',
+  [WorkflowActivityCategory.Transform]: 'Transform'
+};
+
+export enum WorkflowActivityErrorBehavior {
+  Fail = 1,
+  Skip = 2
+}
+
+export const workflowActivityErrorBehaviors = [
+  { label: 'Fail', value: WorkflowActivityErrorBehavior.Fail },
+  { label: 'Skip', value: WorkflowActivityErrorBehavior.Skip }
+] as const;
+
+export const WorkflowActivityErrorBehaviorLabel: Record<WorkflowActivityErrorBehavior, string> = {
+  [WorkflowActivityErrorBehavior.Fail]: 'Fail',
+  [WorkflowActivityErrorBehavior.Skip]: 'Skip'
+};
+
+export enum WorkflowItemTypeBehavior {
+  Passthrough = 1,
+  Fixed = 2,
+  AdaptToNext = 3
+}
+
+export const workflowItemTypeBehaviors = [
+  { label: 'Passthrough', value: WorkflowItemTypeBehavior.Passthrough },
+  { label: 'Fixed', value: WorkflowItemTypeBehavior.Fixed },
+  { label: 'AdaptToNext', value: WorkflowItemTypeBehavior.AdaptToNext }
+] as const;
+
+export const WorkflowItemTypeBehaviorLabel: Record<WorkflowItemTypeBehavior, string> = {
+  [WorkflowItemTypeBehavior.Passthrough]: 'Passthrough',
+  [WorkflowItemTypeBehavior.Fixed]: 'Fixed',
+  [WorkflowItemTypeBehavior.AdaptToNext]: 'AdaptToNext'
+};
+
+export enum WorkflowRunStatus {
+  Pending = 1,
+  Running = 2,
+  Success = 3,
+  Failed = 4,
+  Cancelled = 5,
+  Interrupted = 6
+}
+
+export const workflowRunStatuses = [
+  { label: 'Pending', value: WorkflowRunStatus.Pending },
+  { label: 'Running', value: WorkflowRunStatus.Running },
+  { label: 'Success', value: WorkflowRunStatus.Success },
+  { label: 'Failed', value: WorkflowRunStatus.Failed },
+  { label: 'Cancelled', value: WorkflowRunStatus.Cancelled },
+  { label: 'Interrupted', value: WorkflowRunStatus.Interrupted }
+] as const;
+
+export const WorkflowRunStatusLabel: Record<WorkflowRunStatus, string> = {
+  [WorkflowRunStatus.Pending]: 'Pending',
+  [WorkflowRunStatus.Running]: 'Running',
+  [WorkflowRunStatus.Success]: 'Success',
+  [WorkflowRunStatus.Failed]: 'Failed',
+  [WorkflowRunStatus.Cancelled]: 'Cancelled',
+  [WorkflowRunStatus.Interrupted]: 'Interrupted'
+};
+
 export enum LogLevel {
   Trace = 0,
   Debug = 1,

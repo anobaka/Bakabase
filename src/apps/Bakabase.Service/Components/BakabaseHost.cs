@@ -143,6 +143,17 @@ namespace Bakabase.Service.Components
 
             // Register all predefined tasks via DI discovery
             await dynamicTaskRegistry.RegisterAllTasksAsync();
+
+            // Workflow runs survive process restart through the DB. Normalize
+            // crash-interrupted ones, then re-enqueue any pending rows so events that
+            // arrived right before shutdown don't get dropped on the floor.
+            await using (var workflowScope = serviceProvider.CreateAsyncScope())
+            {
+                var rehydrator = workflowScope.ServiceProvider
+                    .GetRequiredService<Bakabase.Modules.Workflow.Components.WorkflowRunRehydrator<BakabaseDbContext>>();
+                await rehydrator.MarkInterruptedRunsAsync();
+                await rehydrator.ReEnqueuePendingRunsAsync();
+            }
         }
 
         protected override Task<string?> CheckIfAppCanExitSafely()

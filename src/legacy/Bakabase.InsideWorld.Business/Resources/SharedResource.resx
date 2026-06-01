@@ -744,4 +744,16 @@ The version of lux is not limited.</value>
   <data name="CookieCapture_LoginTo" xml:space="preserve">
     <value>Login to {0}</value>
   </data>
+  <data name="BTask_Name_SubscriptionCheck" xml:space="preserve">
+    <value>Check subscriptions</value>
+  </data>
+  <data name="BTask_Description_SubscriptionCheck" xml:space="preserve">
+    <value>Periodically check all enabled subscriptions for updates and emit a notification when new items are found.</value>
+  </data>
+  <data name="BTask_Name_WorkflowRunCleanup" xml:space="preserve">
+    <value>Clean up workflow run history</value>
+  </data>
+  <data name="BTask_Description_WorkflowRunCleanup" xml:space="preserve">
+    <value>Per workflow definition, keep the most recent 50 run rows and delete the rest.</value>
+  </data>
 </root>

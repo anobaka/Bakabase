@@ -30,6 +30,20 @@ using Bakabase.Modules.AI.Extensions;
 using Bakabase.Modules.Alias.Extensions;
 using Bakabase.Modules.BulkModification.Extensions;
 using Bakabase.Modules.HealthScore.Extensions;
+using Bakabase.Modules.Notification.Abstractions.Components;
+using Bakabase.Modules.Notification.Extensions;
+using Bakabase.Modules.Subscription.Abstractions.Components;
+using Bakabase.Modules.Subscription.Extensions;
+using Bakabase.Modules.Workflow.Abstractions.Components;
+using Bakabase.Modules.Workflow.Extensions;
+using Bakabase.Service.Components.Subscription.Providers.ExHentai;
+using Bakabase.Service.Components.Subscription.Providers.Pixiv;
+using Bakabase.Service.Components.Workflow;
+using Bakabase.Service.Components.Workflow.Activities.Actions;
+using Bakabase.Service.Components.Workflow.Activities.Filters;
+using Bakabase.Service.Components.Workflow.Activities.Transforms;
+using Bakabase.Service.Components.Workflow.Triggers;
+using Bakabase.InsideWorld.Business.Components.Gui;
 using Bakabase.Modules.Enhancer.Extensions;
 using Bakabase.Modules.Presets.Extensions;
 using Bakabase.Modules.Property.Extensions;
@@ -129,6 +143,28 @@ namespace Bakabase.Service.Extensions
             services.AddComparison<BakabaseDbContext>();
             services.AddDataCard<BakabaseDbContext>();
             services.AddHealthScore<BakabaseDbContext>();
+            services.AddNotification<BakabaseDbContext>();
+            services.AddSingleton<INotificationPusher, NotificationPusher>();
+            services.AddSubscription<BakabaseDbContext>();
+            services.AddSingleton<ISubscriptionProvider, ExHentaiSearchProvider>();
+            services.AddSingleton<ISubscriptionProvider, ExHentaiGalleryProvider>();
+            services.AddSingleton<ISubscriptionProvider, PixivFollowLatestProvider>();
+            services.AddWorkflow<BakabaseDbContext>();
+            services.AddSingleton<IWorkflowTrigger, SubscriptionUpdatedTrigger>();
+            services.AddSingleton<IWorkflowTrigger, DownloaderCompletedTrigger>();
+            // Item type descriptors — give the editor type info to render and the AI
+            // transform shape info for prompts.
+            services.AddSingleton<IWorkflowItemTypeDescriptor, SubscriptionAnyItemTypeDescriptor>();
+            services.AddSingleton<IWorkflowItemTypeDescriptor, PixivIllustItemTypeDescriptor>();
+            services.AddSingleton<IWorkflowItemTypeDescriptor, ExHentaiGalleryItemTypeDescriptor>();
+            services.AddSingleton<IWorkflowItemTypeDescriptor, SearchQueryItemTypeDescriptor>();
+            services.AddSingleton<IWorkflowItemTypeDescriptor, DownloaderCompletedItemTypeDescriptor>();
+            // Activities.
+            services.AddSingleton<IWorkflowActivity, SubscriptionItemTitleContainsActivity>();
+            services.AddSingleton<IWorkflowActivity, AiTransformActivity>();
+            services.AddSingleton<IWorkflowActivity, ExHentaiQueryToGalleryActivity>();
+            services.AddSingleton<IWorkflowActivity, ExHentaiEnqueueDownloadActivity>();
+            services.AddSingleton<IWorkflowActivity, CreateNotificationActivity>();
 
             services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, ExtensionGroupDbModel, int>>();
             services.AddScoped<IExtensionGroupService, ExtensionGroupService>();

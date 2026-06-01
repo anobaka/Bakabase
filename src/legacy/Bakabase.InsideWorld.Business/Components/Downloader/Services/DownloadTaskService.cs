@@ -11,6 +11,8 @@ using Bakabase.InsideWorld.Business.Components.Downloader.Components;
 using Bakabase.InsideWorld.Business.Components.Downloader.Extensions;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
 using Bakabase.InsideWorld.Business.Components.Gui;
+using Bakabase.InsideWorld.Business.Workflow;
+using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Components.Office.Excel;
 using Bootstrap.Components.Orm.Infrastructures;
@@ -36,13 +38,15 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
 
         private BakabaseLocalizer _localizer;
         private readonly IGuiAdapter _guiAdapter;
+        private readonly IWorkflowEventBus _workflowBus;
 
         public DownloadTaskService(IServiceProvider serviceProvider, BakabaseLocalizer localizer,
-            IGuiAdapter guiAdapter) : base(
+            IGuiAdapter guiAdapter, IWorkflowEventBus workflowBus) : base(
             serviceProvider)
         {
             _localizer = localizer;
             _guiAdapter = guiAdapter;
+            _workflowBus = workflowBus;
         }
 
         public async Task<DownloadTask> GetDto(int id)
@@ -184,6 +188,24 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
                     or DownloadTaskDbModelStatus.Disabled)
                 {
                     await TryStartAllTasks(DownloadTaskStartMode.AutoStart, null, DownloadTaskActionOnConflict.Ignore);
+                }
+
+                // Fire the workflow trigger after persistence. Same pattern as
+                // SubscriptionService: notifications run on their own track; workflows are
+                // additive and only fire for definitions whose filter matches this payload.
+                if (newStatus == DownloadTaskDbModelStatus.Complete)
+                {
+                    await _workflowBus.PublishAsync(
+                        DownloaderWorkflowKinds.TriggerCompleted,
+                        new DownloaderCompletedPayload
+                        {
+                            TaskId = task.Id,
+                            ThirdPartyId = (int) task.ThirdPartyId,
+                            Type = task.Type,
+                            Key = task.Key ?? "",
+                            Name = task.Name,
+                            DownloadPath = task.DownloadPath,
+                        });
                 }
             }
 

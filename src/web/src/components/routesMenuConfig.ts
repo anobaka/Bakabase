@@ -27,7 +27,9 @@ import {
   AiOutlineRobot,
   AiOutlineBarChart,
   AiOutlineAudit,
+  AiOutlineBell,
   AiOutlineCloudServer,
+  AiOutlinePartition,
 } from "react-icons/ai";
 import { lazy } from "react";
 import { MdOutlineArticle, MdVideoLibrary } from "react-icons/md";
@@ -69,6 +71,8 @@ import DLsiteWorksPage from "@/pages/dlsite-works";
 import ExHentaiGalleriesPage from "@/pages/exhentai-galleries";
 import DataCardPage from "@/pages/data-card";
 import HealthScorePage from "@/pages/health-score";
+import SubscriptionPage from "@/pages/subscription";
+import WorkflowPage from "@/pages/workflow";
 import { SteamIcon, DLsiteIcon, ExHentaiIcon } from "@/components/SourceIcons";
 
 // Lazy load test page to avoid circular dependency
@@ -302,6 +306,24 @@ export const routesMenuConfig: RouteMenuItem[] = [
         layout: "basic",
         isBeta: true,
         menu: true,
+      },
+      {
+        name: "menu.subscription",
+        path: "/subscriptions",
+        component: SubscriptionPage,
+        icon: AiOutlineBell,
+        layout: "basic",
+        menu: true,
+        isBeta: true,
+      },
+      {
+        name: "menu.workflow",
+        path: "/workflows",
+        component: WorkflowPage,
+        icon: AiOutlinePartition,
+        layout: "basic",
+        menu: true,
+        isBeta: true,
       },
       {
         name: "menu.postParser",

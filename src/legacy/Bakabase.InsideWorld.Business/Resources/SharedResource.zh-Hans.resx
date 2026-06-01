@@ -744,4 +744,16 @@
   <data name="CookieCapture_LoginTo" xml:space="preserve">
     <value>登录 {0}</value>
   </data>
+  <data name="BTask_Name_SubscriptionCheck" xml:space="preserve">
+    <value>检查订阅更新</value>
+  </data>
+  <data name="BTask_Description_SubscriptionCheck" xml:space="preserve">
+    <value>定期检查所有启用的订阅是否有新内容，发现更新时发出通知。</value>
+  </data>
+  <data name="BTask_Name_WorkflowRunCleanup" xml:space="preserve">
+    <value>清理工作流运行历史</value>
+  </data>
+  <data name="BTask_Description_WorkflowRunCleanup" xml:space="preserve">
+    <value>每个工作流定义只保留最近 50 条 run 记录，其余删除。</value>
+  </data>
 </root>

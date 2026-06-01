@@ -1,4 +1,8 @@
 {
+  "enum.appNotificationSeverity.info": "Info",
+  "enum.appNotificationSeverity.success": "Success",
+  "enum.appNotificationSeverity.warning": "Warning",
+  "enum.appNotificationSeverity.error": "Error",
   "enum.propertyType.singleLineText": "Single-line text",
   "enum.propertyType.multilineText": "Multi-line text",
   "enum.propertyType.singleChoice": "Single choice",
@@ -234,5 +238,18 @@
 
   "enhancer.bangumi.prioritySubjectType.label": "Priority subject type",
   "enhancer.bangumi.prioritySubjectType.description": "If set, Bangumi will first search with this type. If no results found, it will fall back to searching all types.",
-  "enhancer.bangumi.prioritySubjectType.hint": "Leave empty to search all types by default."
+  "enhancer.bangumi.prioritySubjectType.hint": "Leave empty to search all types by default.",
+
+  "enum.thirdPartyId.bilibili": "Bilibili",
+  "enum.thirdPartyId.exHentai": "ExHentai",
+  "enum.thirdPartyId.pixiv": "Pixiv",
+  "enum.thirdPartyId.bangumi": "Bangumi",
+  "enum.thirdPartyId.soulPlus": "SoulPlus",
+  "enum.thirdPartyId.dLsite": "DLsite",
+  "enum.thirdPartyId.fanbox": "Fanbox",
+  "enum.thirdPartyId.fantia": "Fantia",
+  "enum.thirdPartyId.cien": "Ci-en",
+  "enum.thirdPartyId.patreon": "Patreon",
+  "enum.thirdPartyId.tmdb": "TMDB",
+  "enum.thirdPartyId.steam": "Steam"
 }

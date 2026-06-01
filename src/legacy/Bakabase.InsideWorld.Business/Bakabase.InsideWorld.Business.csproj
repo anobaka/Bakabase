@@ -14,6 +14,9 @@
 		<ProjectReference Include="..\..\modules\Bakabase.Modules.Presets\Bakabase.Modules.Presets.csproj" />
 		<ProjectReference Include="..\..\modules\Bakabase.Modules.BulkModification\Bakabase.Modules.BulkModification.csproj" />
 		<ProjectReference Include="..\..\modules\Bakabase.Modules.HealthScore\Bakabase.Modules.HealthScore.csproj" />
+		<ProjectReference Include="..\..\modules\Bakabase.Modules.Notification\Bakabase.Modules.Notification.csproj" />
+		<ProjectReference Include="..\..\modules\Bakabase.Modules.Subscription\Bakabase.Modules.Subscription.csproj" />
+		<ProjectReference Include="..\..\modules\Bakabase.Modules.Workflow\Bakabase.Modules.Workflow.csproj" />
 		<ProjectReference Include="..\..\modules\Bakabase.Modules.Property\Bakabase.Modules.Property.csproj" />
 		<ProjectReference Include="..\..\modules\Bakabase.Modules.Enhancer\Bakabase.Modules.Enhancer.csproj" />
 		<ProjectReference Include="..\..\modules\Bakabase.Modules.Search\Bakabase.Modules.Search.csproj" />

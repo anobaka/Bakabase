@@ -3561,6 +3561,36 @@ export interface BakabaseModulesHealthScoreModelsViewHealthScoreProfileViewModel
   lastMatchedResourceCount?: number;
 }
 
+export interface BakabaseModulesNotificationAbstractionsModelsInputCreateTestNotificationInputModel {
+  title?: string;
+  body?: string;
+  /** [0: Info, 1: Success, 2: Warning, 3: Error] */
+  severity: BakabaseAbstractionsModelsDomainConstantsAppNotificationSeverity;
+}
+
+export interface BakabaseModulesNotificationAbstractionsModelsInputDeleteNotificationsInputModel {
+  ids: number[];
+}
+
+export interface BakabaseModulesNotificationAbstractionsModelsInputMarkNotificationsAsReadInputModel {
+  ids?: number[];
+}
+
+export interface BakabaseModulesNotificationAbstractionsModelsViewNotificationViewModel {
+  /** @format int32 */
+  id: number;
+  source: string;
+  title: string;
+  body?: string;
+  payloadJson?: string;
+  /** [0: Info, 1: Success, 2: Warning, 3: Error] */
+  severity: BakabaseAbstractionsModelsDomainConstantsAppNotificationSeverity;
+  /** @format date-time */
+  createdAt: string;
+  /** @format date-time */
+  readAt?: string;
+}
+
 /**
  * [1: Name, 2: ReleaseDate, 3: Author, 4: Publisher, 5: Series, 6: Tag, 7: Language, 8: Original, 9: Actor, 10: VoiceActor, 11: Duration, 12: Director, 13: Singer, 14: EpisodeCount, 15: Resolution, 16: AspectRatio, 17: SubtitleLanguage, 18: VideoCodec, 19: IsCensored, 20: Is3D, 21: ImageCount, 22: IsAi, 23: Developer, 24: Character, 25: AudioFormat, 26: Bitrate, 27: Platform, 28: SubscriptionPlatform, 29: Type]
  * @format int32
@@ -3815,6 +3845,57 @@ export interface BakabaseModulesStandardValueModelsViewStandardValueConversionRu
   description?: string;
 }
 
+export interface BakabaseModulesSubscriptionAbstractionsModelsInputSubscriptionCreationInputModel {
+  kind: string;
+  displayName: string;
+  targetJson: string;
+  enabled: boolean;
+  /** @format int32 */
+  intervalMinutes?: number;
+}
+
+export interface BakabaseModulesSubscriptionAbstractionsModelsInputSubscriptionUpdateInputModel {
+  displayName?: string;
+  targetJson?: string;
+  enabled?: boolean;
+  /** @format int32 */
+  intervalMinutes?: number;
+}
+
+export interface BakabaseModulesSubscriptionAbstractionsModelsViewSubscriptionCheckSummaryViewModel {
+  firstRun: boolean;
+  /** @format int32 */
+  newItemCount: number;
+  /** @format int32 */
+  updatedItemCount: number;
+  error?: string;
+}
+
+export interface BakabaseModulesSubscriptionAbstractionsModelsViewSubscriptionProviderViewModel {
+  kind: string;
+  displayName: string;
+  icon?: string;
+}
+
+export interface BakabaseModulesSubscriptionAbstractionsModelsViewSubscriptionViewModel {
+  /** @format int32 */
+  id: number;
+  kind: string;
+  displayName: string;
+  targetJson: string;
+  enabled: boolean;
+  /** @format date-time */
+  createdAt: string;
+  /** @format date-time */
+  lastCheckedAt?: string;
+  /** @format date-time */
+  lastChangeAt?: string;
+  lastError?: string;
+  /** @format int32 */
+  intervalMinutes?: number;
+  targetSummary?: string;
+}
+
 export interface BakabaseModulesThirdPartyHelpersTlsPresetInfo {
   id: string;
   label: string;
@@ -3826,6 +3907,157 @@ export interface BakabaseModulesThirdPartyThirdPartiesBilibiliModelsFavorites {
   title: string;
   /** @format int32 */
   mediaCount: number;
+}
+
+/**
+ * [1: Filter, 2: Action, 3: Transform]
+ * @format int32
+ */
+export type BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowActivityCategory =
+  | 1
+  | 2
+  | 3;
+
+/**
+ * [1: Fail, 2: Skip]
+ * @format int32
+ */
+export type BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowActivityErrorBehavior =
+  | 1
+  | 2;
+
+/**
+ * [1: Passthrough, 2: Fixed, 3: AdaptToNext]
+ * @format int32
+ */
+export type BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowItemTypeBehavior =
+  | 1
+  | 2
+  | 3;
+
+/**
+ * [1: Pending, 2: Running, 3: Success, 4: Failed, 5: Cancelled, 6: Interrupted]
+ * @format int32
+ */
+export type BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowRunStatus =
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5
+  | 6;
+
+export interface BakabaseModulesWorkflowAbstractionsModelsDomainWorkflowRunStepStat {
+  /** @format int32 */
+  stepIndex: number;
+  kind: string;
+  /** @format int32 */
+  inputCount: number;
+  /** @format int32 */
+  outputCount: number;
+  /** @format int32 */
+  failedCount: number;
+}
+
+export interface BakabaseModulesWorkflowAbstractionsModelsInputWorkflowActivityInputModel {
+  kind: string;
+  configJson: string;
+  /** [1: Fail, 2: Skip] */
+  onItemError: BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowActivityErrorBehavior;
+}
+
+export interface BakabaseModulesWorkflowAbstractionsModelsInputWorkflowDefinitionCreationInputModel {
+  name: string;
+  triggerKind: string;
+  triggerFilterJson?: string;
+  enabled: boolean;
+  activities: BakabaseModulesWorkflowAbstractionsModelsInputWorkflowActivityInputModel[];
+}
+
+export interface BakabaseModulesWorkflowAbstractionsModelsInputWorkflowDefinitionUpdateInputModel {
+  name?: string;
+  triggerFilterJson?: string;
+  enabled?: boolean;
+  activities?: BakabaseModulesWorkflowAbstractionsModelsInputWorkflowActivityInputModel[];
+}
+
+export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowActivityDescriptorViewModel {
+  kind: string;
+  displayName: string;
+  /** [1: Filter, 2: Action, 3: Transform] */
+  category: BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowActivityCategory;
+  group: string;
+  acceptedInputItemTypes: string[];
+  /** [1: Passthrough, 2: Fixed, 3: AdaptToNext] */
+  outputBehavior: BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowItemTypeBehavior;
+  fixedOutputItemType?: string;
+}
+
+export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowActivityViewModel {
+  /** @format int32 */
+  id: number;
+  /** @format int32 */
+  order: number;
+  kind: string;
+  configJson: string;
+  /** [1: Fail, 2: Skip] */
+  onItemError: BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowActivityErrorBehavior;
+}
+
+export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowDefinitionViewModel {
+  /** @format int32 */
+  id: number;
+  name: string;
+  triggerKind: string;
+  triggerFilterJson?: string;
+  enabled: boolean;
+  /** @format date-time */
+  createdAt: string;
+  /** @format date-time */
+  updatedAt?: string;
+  /** @format date-time */
+  lastRunAt?: string;
+  lastError?: string;
+  activities: BakabaseModulesWorkflowAbstractionsModelsViewWorkflowActivityViewModel[];
+}
+
+export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowItemTypeDescriptorViewModel {
+  itemType: string;
+  displayName: string;
+  fields: BakabaseModulesWorkflowAbstractionsModelsViewWorkflowItemTypeFieldViewModel[];
+}
+
+export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowItemTypeFieldViewModel {
+  name: string;
+  type: string;
+  nullable: boolean;
+}
+
+export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowRunViewModel {
+  /** @format int32 */
+  id: number;
+  /** @format int32 */
+  workflowDefinitionId: number;
+  /** [1: Pending, 2: Running, 3: Success, 4: Failed, 5: Cancelled, 6: Interrupted] */
+  status: BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowRunStatus;
+  /** @format date-time */
+  startedAt: string;
+  /** @format date-time */
+  completedAt?: string;
+  payloadSummary?: string;
+  /** @format int32 */
+  inputCount: number;
+  /** @format int32 */
+  outputCount: number;
+  /** @format int32 */
+  failedItemCount: number;
+  stepStats: BakabaseModulesWorkflowAbstractionsModelsDomainWorkflowRunStepStat[];
+  errorMessage?: string;
+}
+
+export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowTriggerDescriptorViewModel {
+  kind: string;
+  displayName: string;
 }
 
 export interface BakabaseServiceControllersAppDataPathControllerRelocateRequest {
@@ -4878,11 +5110,53 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesProper
   data?: BakabaseModulesPropertyModelsViewPropertyViewModel[];
 }
 
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesSubscriptionAbstractionsModelsViewSubscriptionProviderViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesSubscriptionAbstractionsModelsViewSubscriptionProviderViewModel[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesSubscriptionAbstractionsModelsViewSubscriptionViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesSubscriptionAbstractionsModelsViewSubscriptionViewModel[];
+}
+
 export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesThirdPartyThirdPartiesBilibiliModelsFavorites {
   /** @format int32 */
   code: number;
   message?: string;
   data?: BakabaseModulesThirdPartyThirdPartiesBilibiliModelsFavorites[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowActivityDescriptorViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesWorkflowAbstractionsModelsViewWorkflowActivityDescriptorViewModel[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowDefinitionViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesWorkflowAbstractionsModelsViewWorkflowDefinitionViewModel[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowItemTypeDescriptorViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesWorkflowAbstractionsModelsViewWorkflowItemTypeDescriptorViewModel[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowTriggerDescriptorViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesWorkflowAbstractionsModelsViewWorkflowTriggerDescriptorViewModel[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceControllersChatControllerChatToolViewModel {
@@ -5121,6 +5395,32 @@ export interface BootstrapModelsResponseModelsSearchResponse1BakabaseModulesData
   code: number;
   message?: string;
   data?: BakabaseModulesDataCardAbstractionsModelsDomainDataCard[];
+  /** @format int32 */
+  totalCount: number;
+  /** @format int32 */
+  pageIndex: number;
+  /** @format int32 */
+  pageSize: number;
+}
+
+export interface BootstrapModelsResponseModelsSearchResponse1BakabaseModulesNotificationAbstractionsModelsViewNotificationViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesNotificationAbstractionsModelsViewNotificationViewModel[];
+  /** @format int32 */
+  totalCount: number;
+  /** @format int32 */
+  pageIndex: number;
+  /** @format int32 */
+  pageSize: number;
+}
+
+export interface BootstrapModelsResponseModelsSearchResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowRunViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesWorkflowAbstractionsModelsViewWorkflowRunViewModel[];
   /** @format int32 */
   totalCount: number;
   /** @format int32 */
@@ -5700,6 +6000,27 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesP
   code: number;
   message?: string;
   data?: BakabaseModulesPropertyModelsViewPropertyViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesSubscriptionAbstractionsModelsViewSubscriptionCheckSummaryViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesSubscriptionAbstractionsModelsViewSubscriptionCheckSummaryViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesSubscriptionAbstractionsModelsViewSubscriptionViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesSubscriptionAbstractionsModelsViewSubscriptionViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowDefinitionViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesWorkflowAbstractionsModelsViewWorkflowDefinitionViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceControllersAppDataPathControllerValidateResponse {
@@ -16147,6 +16468,209 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         ...params,
       }),
   };
+  notification = {
+    /**
+     * No description
+     *
+     * @tags Notification
+     * @name SearchNotifications
+     * @request GET:/notification
+     */
+    searchNotifications: (
+      query?: {
+        source?: string;
+        unreadOnly?: boolean;
+        /** @format int32 */
+        pageIndex?: number;
+        /** @format int32 */
+        pageSize?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSearchResponse1BakabaseModulesNotificationAbstractionsModelsViewNotificationViewModel,
+        any
+      >({
+        path: `/notification`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for searchNotifications
+     * @name searchNotificationsUrl
+     */
+    searchNotificationsUrl: (query?: {
+        source?: string;
+        unreadOnly?: boolean;
+        /** @format int32 */
+        pageIndex?: number;
+        /** @format int32 */
+        pageSize?: number;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/notification`;
+      
+      // Build query string
+      if (query) {
+        const queryString = Object.keys(query)
+          .filter(key => query[key] !== undefined && query[key] !== null)
+          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Notification
+     * @name DeleteNotifications
+     * @request DELETE:/notification
+     */
+    deleteNotifications: (
+      data: BakabaseModulesNotificationAbstractionsModelsInputDeleteNotificationsInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/notification`,
+        method: "DELETE",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for deleteNotifications
+     * @name deleteNotificationsUrl
+     */
+    deleteNotificationsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/notification`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Notification
+     * @name GetUnreadNotificationCount
+     * @request GET:/notification/unread-count
+     */
+    getUnreadNotificationCount: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemInt32, any>({
+        path: `/notification/unread-count`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getUnreadNotificationCount
+     * @name getUnreadNotificationCountUrl
+     */
+    getUnreadNotificationCountUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/notification/unread-count`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Notification
+     * @name MarkNotificationsAsRead
+     * @request POST:/notification/mark-read
+     */
+    markNotificationsAsRead: (
+      data: BakabaseModulesNotificationAbstractionsModelsInputMarkNotificationsAsReadInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/notification/mark-read`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for markNotificationsAsRead
+     * @name markNotificationsAsReadUrl
+     */
+    markNotificationsAsReadUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/notification/mark-read`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Notification
+     * @name ClearReadNotifications
+     * @request POST:/notification/clear-read
+     */
+    clearReadNotifications: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/notification/clear-read`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for clearReadNotifications
+     * @name clearReadNotificationsUrl
+     */
+    clearReadNotificationsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/notification/clear-read`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Notification
+     * @name CreateTestNotification
+     * @request POST:/notification/test
+     */
+    createTestNotification: (
+      data: BakabaseModulesNotificationAbstractionsModelsInputCreateTestNotificationInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/notification/test`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for createTestNotification
+     * @name createTestNotificationUrl
+     */
+    createTestNotificationUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/notification/test`;
+      
+      return baseUrl + path;
+    },
+  };
   options = {
     /**
      * No description
@@ -19717,6 +20241,194 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       return baseUrl + path;
     },
   };
+  subscription = {
+    /**
+     * No description
+     *
+     * @tags Subscription
+     * @name SearchSubscriptions
+     * @request GET:/subscription
+     */
+    searchSubscriptions: (
+      query?: {
+        kind?: string;
+        enabledOnly?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesSubscriptionAbstractionsModelsViewSubscriptionViewModel,
+        any
+      >({
+        path: `/subscription`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for searchSubscriptions
+     * @name searchSubscriptionsUrl
+     */
+    searchSubscriptionsUrl: (query?: {
+        kind?: string;
+        enabledOnly?: boolean;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/subscription`;
+      
+      // Build query string
+      if (query) {
+        const queryString = Object.keys(query)
+          .filter(key => query[key] !== undefined && query[key] !== null)
+          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Subscription
+     * @name AddSubscription
+     * @request POST:/subscription
+     */
+    addSubscription: (
+      data: BakabaseModulesSubscriptionAbstractionsModelsInputSubscriptionCreationInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesSubscriptionAbstractionsModelsViewSubscriptionViewModel,
+        any
+      >({
+        path: `/subscription`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for addSubscription
+     * @name addSubscriptionUrl
+     */
+    addSubscriptionUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/subscription`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Subscription
+     * @name GetSubscription
+     * @request GET:/subscription/{id}
+     */
+    getSubscription: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesSubscriptionAbstractionsModelsViewSubscriptionViewModel,
+        any
+      >({
+        path: `/subscription/${id}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Subscription
+     * @name PatchSubscription
+     * @request PATCH:/subscription/{id}
+     */
+    patchSubscription: (
+      id: number,
+      data: BakabaseModulesSubscriptionAbstractionsModelsInputSubscriptionUpdateInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesSubscriptionAbstractionsModelsViewSubscriptionViewModel,
+        any
+      >({
+        path: `/subscription/${id}`,
+        method: "PATCH",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Subscription
+     * @name DeleteSubscription
+     * @request DELETE:/subscription/{id}
+     */
+    deleteSubscription: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/subscription/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Subscription
+     * @name RunSubscriptionCheck
+     * @request POST:/subscription/{id}/run
+     */
+    runSubscriptionCheck: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesSubscriptionAbstractionsModelsViewSubscriptionCheckSummaryViewModel,
+        any
+      >({
+        path: `/subscription/${id}/run`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Subscription
+     * @name GetSubscriptionProviders
+     * @request GET:/subscription/providers
+     */
+    getSubscriptionProviders: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesSubscriptionAbstractionsModelsViewSubscriptionProviderViewModel,
+        any
+      >({
+        path: `/subscription/providers`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getSubscriptionProviders
+     * @name getSubscriptionProvidersUrl
+     */
+    getSubscriptionProvidersUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/subscription/providers`;
+      
+      return baseUrl + path;
+    },
+  };
   tampermonkey = {
     /**
      * No description
@@ -20411,5 +21123,263 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       return baseUrl + path;
     },
+  };
+  workflow = {
+    /**
+     * No description
+     *
+     * @tags Workflow
+     * @name SearchWorkflows
+     * @request GET:/workflow
+     */
+    searchWorkflows: (
+      query?: {
+        triggerKind?: string;
+        enabledOnly?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowDefinitionViewModel,
+        any
+      >({
+        path: `/workflow`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for searchWorkflows
+     * @name searchWorkflowsUrl
+     */
+    searchWorkflowsUrl: (query?: {
+        triggerKind?: string;
+        enabledOnly?: boolean;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/workflow`;
+      
+      // Build query string
+      if (query) {
+        const queryString = Object.keys(query)
+          .filter(key => query[key] !== undefined && query[key] !== null)
+          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Workflow
+     * @name AddWorkflow
+     * @request POST:/workflow
+     */
+    addWorkflow: (
+      data: BakabaseModulesWorkflowAbstractionsModelsInputWorkflowDefinitionCreationInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowDefinitionViewModel,
+        any
+      >({
+        path: `/workflow`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for addWorkflow
+     * @name addWorkflowUrl
+     */
+    addWorkflowUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/workflow`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Workflow
+     * @name GetWorkflow
+     * @request GET:/workflow/{id}
+     */
+    getWorkflow: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowDefinitionViewModel,
+        any
+      >({
+        path: `/workflow/${id}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Workflow
+     * @name PatchWorkflow
+     * @request PATCH:/workflow/{id}
+     */
+    patchWorkflow: (
+      id: number,
+      data: BakabaseModulesWorkflowAbstractionsModelsInputWorkflowDefinitionUpdateInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowDefinitionViewModel,
+        any
+      >({
+        path: `/workflow/${id}`,
+        method: "PATCH",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Workflow
+     * @name DeleteWorkflow
+     * @request DELETE:/workflow/{id}
+     */
+    deleteWorkflow: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/workflow/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Workflow
+     * @name GetWorkflowTriggers
+     * @request GET:/workflow/triggers
+     */
+    getWorkflowTriggers: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowTriggerDescriptorViewModel,
+        any
+      >({
+        path: `/workflow/triggers`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getWorkflowTriggers
+     * @name getWorkflowTriggersUrl
+     */
+    getWorkflowTriggersUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/workflow/triggers`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Workflow
+     * @name GetWorkflowActivities
+     * @request GET:/workflow/activities
+     */
+    getWorkflowActivities: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowActivityDescriptorViewModel,
+        any
+      >({
+        path: `/workflow/activities`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getWorkflowActivities
+     * @name getWorkflowActivitiesUrl
+     */
+    getWorkflowActivitiesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/workflow/activities`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Workflow
+     * @name GetWorkflowItemTypes
+     * @request GET:/workflow/item-types
+     */
+    getWorkflowItemTypes: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowItemTypeDescriptorViewModel,
+        any
+      >({
+        path: `/workflow/item-types`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getWorkflowItemTypes
+     * @name getWorkflowItemTypesUrl
+     */
+    getWorkflowItemTypesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/workflow/item-types`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Workflow
+     * @name SearchWorkflowRuns
+     * @request GET:/workflow/{id}/runs
+     */
+    searchWorkflowRuns: (
+      id: number,
+      query?: {
+        /** @format int32 */
+        workflowDefinitionId?: number;
+        /** @format int32 */
+        pageIndex?: number;
+        /** @format int32 */
+        pageSize?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSearchResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowRunViewModel,
+        any
+      >({
+        path: `/workflow/${id}/runs`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
   };
 }
