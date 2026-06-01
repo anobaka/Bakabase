@@ -1,0 +1,11 @@
+{
+  "notificationCenter.title": "Notifications",
+  "notificationCenter.openTooltip": "Open notification center",
+  "notificationCenter.empty": "No notifications",
+  "notificationCenter.markAllRead": "Mark all as read",
+  "notificationCenter.clearRead": "Clear read",
+  "notificationCenter.group.today": "Today",
+  "notificationCenter.group.thisWeek": "This week",
+  "notificationCenter.group.earlier": "Earlier",
+  "notificationCenter.unreadCount": "{{count}} unread"
+}

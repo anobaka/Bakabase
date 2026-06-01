@@ -14,6 +14,7 @@ import BApi from "@/sdk/BApi";
 import { useAppOptionsStore, useUiOptionsStore } from "@/stores/options";
 import { UiTheme } from "@/sdk/constants";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import NotificationCenter from "@/components/NotificationCenter";
 
 const OptIconStyle = { fontSize: 20 };
 
@@ -88,6 +89,7 @@ const Navigation = () => {
             <MoonOutlined style={OptIconStyle} />
           )}
         </Button>
+        <NotificationCenter />
         <LanguageSwitcher />
         <Button
           isIconOnly

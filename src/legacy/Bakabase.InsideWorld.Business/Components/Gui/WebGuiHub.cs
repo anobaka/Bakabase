@@ -27,6 +27,7 @@ using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Abstractions.Models.View;
 using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.Modules.BulkModification.Components;
+using Bakabase.Modules.Notification.Abstractions.Models.View;
 using Bakabase.Modules.ThirdParty.Services;
 using Bootstrap.Extensions;
 using Bootstrap.Models.ResponseModels;
@@ -50,6 +51,12 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
         Task GetAppUpdaterState(UpdaterState state);
         Task UpdateThirdPartyRequestStatistics(ThirdPartyRequestStatistics[] statistics);
         Task OnNotification(AppNotificationMessageViewModel notification);
+
+        /// <summary>
+        /// Pushed when a persistent notification is created. The frontend handler shows a toast,
+        /// appends it to the notification-center store, and increments the unread badge.
+        /// </summary>
+        Task OnPersistentNotification(NotificationViewModel notification);
 
         /// <summary>
         /// Pushed after the user confirms a data-path relocation. The UI shows a

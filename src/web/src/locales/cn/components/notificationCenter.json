@@ -1,0 +1,11 @@
+{
+  "notificationCenter.title": "通知",
+  "notificationCenter.openTooltip": "打开通知中心",
+  "notificationCenter.empty": "暂无通知",
+  "notificationCenter.markAllRead": "全部标记为已读",
+  "notificationCenter.clearRead": "清除已读",
+  "notificationCenter.group.today": "今天",
+  "notificationCenter.group.thisWeek": "本周",
+  "notificationCenter.group.earlier": "更早",
+  "notificationCenter.unreadCount": "{{count}} 条未读"
+}

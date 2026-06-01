@@ -24,6 +24,7 @@ import { useAppUpdaterStateStore } from "@/stores/appUpdaterState";
 import { useThirdPartyRequestStatisticsStore } from "@/stores/thirdPartyRequestStatistics";
 import { optionsStores } from "@/stores/options";
 import { usePathMarksStore } from "@/stores/pathMarks";
+import { useNotificationsStore, type NotificationViewModel } from "@/stores/notifications";
 
 const hubEndpoint = `${envConfig.apiEndpoint}/hub/ui`;
 
@@ -160,6 +161,41 @@ export const UIHubConnection = () => {
       import("@/stores/legacyInstallNotice").then(({ useLegacyInstallNoticeStore }) => {
         useLegacyInstallNoticeStore.getState().set(payload);
       });
+    });
+
+    conn.on("OnPersistentNotification", (notification: NotificationViewModel) => {
+      log("OnPersistentNotification", notification);
+
+      useNotificationsStore.getState().appendIncoming(notification);
+
+      // Title and body go into their own slots — stuffing them into title with "\n"
+      // doesn't render as a line break and forces all the text through the title
+      // column, which looked squeezed. Widen the toast container too so longer
+      // titles / bodies don't wrap awkwardly in HeroUI's default ~320px width.
+      const props = {
+        title: notification.title,
+        description: notification.body ?? undefined,
+        timeout: 5000,
+        placement: "bottom-right",
+        classNames: { base: "max-w-md min-w-0 w-auto" },
+      };
+
+      switch (notification.severity) {
+        case 0:
+          toast.default(props);
+          break;
+        case 1:
+          toast.success(props);
+          break;
+        case 2:
+          toast.warning(props);
+          break;
+        case 3:
+          toast.danger(props);
+          break;
+        default:
+          toast.default(props);
+      }
     });
 
     conn.on("OnNotification", (notification: AppNotificationMessageViewModel) => {
