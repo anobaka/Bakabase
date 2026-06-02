@@ -38,7 +38,7 @@ public enum AvEnhancerTarget
     Poster,
     [EnhancerTarget(StandardValueType.String, PropertyType.SingleLineText)]
     Website,
-    [EnhancerTarget(StandardValueType.String, PropertyType.SingleLineText)]
+    [EnhancerTarget(StandardValueType.Boolean, PropertyType.Boolean)]
     Mosaic,
     [EnhancerTarget(StandardValueType.String, PropertyType.MultilineText, null, false, null, ReservedProperty.Introduction)]
     Introduction

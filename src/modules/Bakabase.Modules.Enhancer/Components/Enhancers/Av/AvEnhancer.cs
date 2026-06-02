@@ -292,7 +292,7 @@ public class AvEnhancer(
                     AddStringEnhancement(orderedDetails, d => d.Website, target, enhancements);
                     break;
                 case AvEnhancerTarget.Mosaic:
-                    AddStringEnhancement(orderedDetails, d => d.Mosaic, target, enhancements);
+                    AddBooleanEnhancement(orderedDetails, d => ParseMosaic(d.Mosaic), target, enhancements);
                     break;
                 case AvEnhancerTarget.Introduction:
                     AddStringEnhancement(orderedDetails, d => d.Outline, target, enhancements);
@@ -419,6 +419,56 @@ public class AvEnhancer(
             enhancements.Add(new EnhancementTargetValue<AvEnhancerTarget>(target, null,
                 new ListStringValueBuilder(values)));
         }
+    }
+
+    private static void AddBooleanEnhancement(IReadOnlyList<IAvDetail> details, Func<IAvDetail, bool?> selector,
+        AvEnhancerTarget target, List<EnhancementTargetValue<AvEnhancerTarget>> enhancements)
+    {
+        // Use the first source (respecting preferred-source ordering) that yields a
+        // definitive value; skip sources whose value can't be interpreted.
+        foreach (var d in details)
+        {
+            var value = selector(d);
+            if (value.HasValue)
+            {
+                enhancements.Add(new EnhancementTargetValue<AvEnhancerTarget>(target, null,
+                    new BooleanValueBuilder(value)));
+                return;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Interprets the raw mosaic string from AV sources (e.g. "有码"/"无码"/"国产"/"同人"/"里番")
+    /// as a "has mosaic" (censored) boolean:
+    ///   - uncensored markers (无码/無碼/無修正/uncensored) → false
+    ///   - censored markers (有码/有碼)                     → true
+    ///   - anything else (国产/同人/里番/empty/unknown)      → null
+    /// Returning null avoids forcing an arbitrary true/false for values that don't actually
+    /// describe the mosaic state, which is why mapping these strings straight to a Boolean
+    /// property used to always yield "true".
+    /// </summary>
+    internal static bool? ParseMosaic(string? mosaic)
+    {
+        if (string.IsNullOrWhiteSpace(mosaic))
+        {
+            return null;
+        }
+
+        var v = mosaic.Trim();
+
+        if (v.Contains("无码") || v.Contains("無碼") || v.Contains("無修正") ||
+            v.Contains("uncensored", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (v.Contains("有码") || v.Contains("有碼"))
+        {
+            return true;
+        }
+
+        return null;
     }
 
 }
