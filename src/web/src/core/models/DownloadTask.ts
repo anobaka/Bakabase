@@ -23,4 +23,6 @@ export type DownloadTask = {
   displayName: string;
   canStart: boolean;
   createdAt: string;
+  /** Serialized per-downloader options (e.g. ExHentai `{ "preferTorrent": true }`). */
+  options?: string;
 };
