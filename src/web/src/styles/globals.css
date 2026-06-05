@@ -109,9 +109,15 @@ div[data-react-aria-top-layer][role="region"] [data-toast="true"]:not([data-toas
   pointer-events: auto !important;
 }
 
-/* HeroUI Toast: fixed 356px width causes long text to overflow */
+/* HeroUI Toast: the base slot ships a fixed `sm:w-[356px]`, so long text never
+ * widens the toast. `width: auto` is not enough because the toast base is a
+ * normal-flow block — `auto` makes it fill its containing block instead of
+ * shrinking to its content. `fit-content` makes it shrink-wrap the content and
+ * grow with it, bounded by a comfortable min (so short toasts keep their size)
+ * and a max (so it never gets unwieldy). */
 div[data-toast="true"] {
-  width: auto !important;
+  width: fit-content !important;
+  min-width: min(356px, 90vw);
   max-width: min(90vw, 560px) !important;
 }
 
