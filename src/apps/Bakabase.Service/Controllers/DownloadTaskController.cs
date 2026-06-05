@@ -128,6 +128,12 @@ public class DownloadTaskController : Controller
             t.EndPage = task.EndPage;
             t.AutoRetry = task.AutoRetry;
             t.Options = task.Options;
+            // Only overwrite when provided so existing callers that omit the path
+            // (and the non-empty download-path invariant) are preserved.
+            if (!string.IsNullOrEmpty(task.DownloadPath))
+            {
+                t.DownloadPath = task.DownloadPath;
+            }
         });
     }
 

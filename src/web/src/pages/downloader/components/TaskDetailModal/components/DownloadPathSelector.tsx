@@ -10,10 +10,13 @@ import { FileSystemSelectorModal } from "@/components/FileSystemSelector";
 
 type Props = {
   downloadPath?: string;
+  /** Button text when no path is set (defaults to "Select download path").
+   * Batch editing uses it to surface "multiple values". */
+  placeholder?: string;
   onChange?: (downloadPath?: string) => void;
 };
 
-const DownloadPathSelector: FC<Props> = ({ downloadPath, onChange }: Props) => {
+const DownloadPathSelector: FC<Props> = ({ downloadPath, placeholder, onChange }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
@@ -38,7 +41,7 @@ const DownloadPathSelector: FC<Props> = ({ downloadPath, onChange }: Props) => {
             });
           }}
         >
-          {downloadPath ?? t<string>("Select download path")}
+          {downloadPath ?? placeholder ?? t<string>("Select download path")}
         </Button>
       </div>
     </div>

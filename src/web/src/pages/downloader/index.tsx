@@ -59,6 +59,7 @@ import { useDownloadTasksStore } from "@/stores/downloadTasks";
 import RequestStatistics from "@/pages/downloader/components/RequestStatistics";
 
 import DownloadTaskDetailModal from "./components/TaskDetailModal";
+import BatchEditModal from "./components/BatchEditModal";
 
 import { toAbsoluteBackendUrl } from "@/config/env.ts";
 
@@ -105,6 +106,7 @@ const DownloaderPage = () => {
   const selectionModeRef = useRef(SelectionMode.Default);
 
   const tasksRef = useRef(tasks);
+  const taskListRef = useRef<HTMLDivElement | null>(null);
 
   const [menuProps, toggleMenu] = useMenuState();
   const { createPortal } = useBakabaseContext();
@@ -219,6 +221,25 @@ const DownloaderPage = () => {
           )}
           {t<string>("downloader.action.stop")}
         </MenuItem>
+        {moreThanOne && (
+          <MenuItem
+            className={"flex items-center gap-2"}
+            onClick={() => {
+              const selectedTasks = tasksRef.current.filter((tk) =>
+                selectedTaskIdsRef.current.includes(tk.id),
+              );
+
+              if (selectedTasks.length > 0) {
+                createPortal(BatchEditModal, { tasks: selectedTasks });
+              }
+            }}
+          >
+            <AiOutlineEdit />
+            {t<string>("downloader.action.bulk")}
+            &nbsp;
+            {t<string>("downloader.action.edit")}
+          </MenuItem>
+        )}
         <MenuItem
           className={"flex items-center gap-2 danger"}
           onClick={() => {
@@ -366,6 +387,30 @@ const DownloaderPage = () => {
   const filteredTasks = tasks.filter((x) => taskFilters.every((f) => f(x)));
 
   console.log(form, filteredTasks);
+
+  // Keep the latest filtered tasks available to the (once-registered) key handler.
+  const filteredTasksRef = useRef(filteredTasks);
+
+  filteredTasksRef.current = filteredTasks;
+
+  // Ctrl/Cmd+A selects all filtered tasks, but only while focus is inside the
+  // task list, so it doesn't hijack the shortcut elsewhere on the page.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && (e.key === "a" || e.key === "A")) {
+        const container = taskListRef.current;
+
+        if (container && container.contains(document.activeElement)) {
+          e.preventDefault();
+          setSelectedTaskIds(filteredTasksRef.current.map((tk) => tk.id));
+        }
+      }
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   return (
     <div className={"h-full flex flex-col gap-1"}>
@@ -596,6 +641,7 @@ const DownloaderPage = () => {
       </div>
       <div
         ref={(r) => {
+          taskListRef.current = r;
           if (r && taskListHeight == 0) {
             setTaskListHeight(r.clientHeight);
           }
