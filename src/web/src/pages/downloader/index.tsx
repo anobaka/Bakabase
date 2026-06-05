@@ -60,7 +60,7 @@ import RequestStatistics from "@/pages/downloader/components/RequestStatistics";
 
 import DownloadTaskDetailModal from "./components/TaskDetailModal";
 
-import envConfig from "@/config/env.ts";
+import { toAbsoluteBackendUrl } from "@/config/env.ts";
 
 import { CircularProgress } from "@heroui/react";
 
@@ -574,7 +574,7 @@ const DownloaderPage = () => {
             variant={"flat"}
             onPress={() => {
               BApi.gui.openUrlInDefaultBrowser({
-                url: `${envConfig.apiEndpoint}/download-task/xlsx`,
+                url: toAbsoluteBackendUrl("/download-task/xlsx"),
               });
             }}
           >
