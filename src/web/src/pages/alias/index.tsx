@@ -34,7 +34,7 @@ import {
 } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { FileSystemSelectorModal } from "@/components/FileSystemSelector";
-import envConfig from "@/config/env.ts";
+import { toAbsoluteBackendUrl } from "@/config/env.ts";
 
 type Form = {
   pageSize: 20;
@@ -209,7 +209,7 @@ const AliasPage = () => {
             size={"sm"}
             onPress={() => {
               BApi.gui.openUrlInDefaultBrowser({
-                url: `${envConfig.apiEndpoint}/alias/xlsx`,
+                url: toAbsoluteBackendUrl("/alias/xlsx"),
               });
             }}
           >
