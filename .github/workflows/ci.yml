@@ -1,15 +1,13 @@
 # Runs the test suites on every pull request. Independent of the
-# build/deploy pipeline (deploy.yml) so a broken test gates a PR
-# without touching releases.
+# build/deploy pipeline (deploy.yml): CI gates the PR — wire it up as a
+# required status check in branch protection so nothing reaches main
+# without passing — while deploy fires on the subsequent push to main.
+# Only PRs run CI; the merge commit is not re-tested (it was already
+# validated on the PR), which keeps deploy from re-running the suite.
 name: CI
 
 on:
   pull_request:
-  push:
-    # Mirror deploy.yml's branch list — deploy is gated on this workflow
-    # via `on: workflow_run`, so any branch that should auto-deploy must
-    # also run CI.
-    branches: [ main, debug-actions, 'release/v*' ]
   workflow_dispatch:
 
 # A newer push to the same branch / PR cancels older in-progress runs.
