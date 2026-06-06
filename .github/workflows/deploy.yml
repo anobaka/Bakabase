@@ -1,22 +1,22 @@
 name: Build and Deploy
 
 on:
-  # Gate the pipeline on CI: only run after the CI workflow finishes on the
-  # same commit, and only proceed if it succeeded. PR runs are filtered out
-  # naturally — `branches:` here checks the run's head_branch, which for PRs
-  # is the feature branch (not main / release/* / debug-actions).
-  workflow_run:
-    workflows: [CI]
-    types: [completed]
-    branches: [ main, debug-actions, 'release/v*' ]
-  # Manual override: runs the full pipeline without waiting for CI, useful when
-  # CI is red for unrelated reasons or for commits whose push was [skip ci]'d.
+  # Auto-deploy only on the release branches — pushing a release/v* branch is a
+  # deliberate publish. main / debug-actions are NOT auto-deployed: merging
+  # several PRs into main shouldn't fire a release per merge, so batch them and
+  # publish via the manual workflow_dispatch below when ready.
+  # (CI no longer gates this; branch protection requires CI to pass before a PR
+  # can merge, so whatever lands here was already validated on the PR.)
+  push:
+    branches: [ 'release/v*' ]
+  # Manual trigger: deploy any ref on demand — main betas, debug-actions, or a
+  # re-deploy without a new commit. Pick the branch when dispatching.
   workflow_dispatch:
 
 # Don't cancel an in-progress deploy — OSS uploads + GitHub releases shouldn't
 # be torn down mid-flight. Serialize per target branch instead.
 concurrency:
-  group: deploy-${{ github.workflow }}-${{ github.event.workflow_run.head_branch || github.ref }}
+  group: deploy-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 permissions:
@@ -27,13 +27,6 @@ permissions:
 jobs:
   prepare:
     runs-on: ubuntu-latest
-    # Skip the entire pipeline unless CI succeeded on a push, or this is a
-    # manual dispatch. Without this guard, workflow_run fires on every CI
-    # completion regardless of outcome.
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.event == 'push')
     outputs:
       version: ${{ steps.set-var.outputs.version }}
       is_tag: ${{ steps.set-var.outputs.is_tag }}
@@ -41,17 +34,11 @@ jobs:
     steps:
       - name: Resolve target commit
         id: target
-        # workflow_run runs in the default-branch context — github.sha points
-        # at main's HEAD, not the commit CI actually validated. Pull the real
-        # SHA off the triggering run so build/deploy/release work on it.
+        # Both push and workflow_dispatch run in the context of the target
+        # commit itself, so github.ref / github.sha already point at it.
         run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "ref=${{ github.ref }}" >> $GITHUB_OUTPUT
-            echo "sha=${{ github.sha }}" >> $GITHUB_OUTPUT
-          else
-            echo "ref=refs/heads/${{ github.event.workflow_run.head_branch }}" >> $GITHUB_OUTPUT
-            echo "sha=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_OUTPUT
-          fi
+          echo "ref=${{ github.ref }}" >> $GITHUB_OUTPUT
+          echo "sha=${{ github.sha }}" >> $GITHUB_OUTPUT
 
       - name: Checkout
         uses: actions/checkout@v4
@@ -95,10 +82,6 @@ jobs:
           echo "github.event_name=${{ github.event_name }}"
           echo "github.ref=${{ github.ref }}"
           echo "github.sha=${{ github.sha }}"
-          echo "workflow_run.head_branch=${{ github.event.workflow_run.head_branch }}"
-          echo "workflow_run.head_sha=${{ github.event.workflow_run.head_sha }}"
-          echo "workflow_run.event=${{ github.event.workflow_run.event }}"
-          echo "workflow_run.conclusion=${{ github.event.workflow_run.conclusion }}"
           echo "resolved.ref=${{ steps.target.outputs.ref }}"
           echo "resolved.sha=${{ steps.target.outputs.sha }}"
           echo "resolved.version=${{ steps.set-var.outputs.version }}"
