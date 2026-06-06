@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type FC } from "react";
 import { useTranslation } from "react-i18next";
-import { Textarea } from "@heroui/react";
+import { CheckboxGroup, Textarea } from "@heroui/react";
 
 import AccountsPanel, { type AccountField } from "../base/AccountsPanel";
 import ConfigurableThirdPartyPanel, {
@@ -13,7 +13,7 @@ import TampermonkeyInstallButton from "../base/TampermonkeyInstallButton";
 import AutoSyncPanel from "../base/AutoSyncPanel";
 import ThirdPartyConfigModal from "../base/ThirdPartyConfigModal";
 
-import { Chip, NumberInput, toast } from "@/components/bakaui";
+import { Checkbox, Chip, NumberInput, toast } from "@/components/bakaui";
 import { FileSystemSelectorButton } from "@/components/FileSystemSelector";
 import BApi from "@/sdk/BApi";
 import { useExHentaiOptionsStore } from "@/stores/options";
@@ -200,6 +200,17 @@ export const ExHentaiConfigPanel: FC<ExHentaiConfigPanelProps> = ({ fields = "al
               preferTorrent={options?.preferTorrent ?? true}
               onChange={(v) => patch({ preferTorrent: v })}
             />
+            <CheckboxGroup
+              description={t<string>("downloader.tip.prioritizeTasksWithTorrentDesc")}
+              isDisabled={!(options?.preferTorrent ?? true)}
+              label={t<string>("downloader.label.prioritizeTasksWithTorrent")}
+              orientation="horizontal"
+              size="sm"
+              value={options?.prioritizeTasksWithTorrent ? ["yes"] : []}
+              onValueChange={(v) => patch({ prioritizeTasksWithTorrent: v.includes("yes") })}
+            >
+              <Checkbox value="yes">{t("common.label.yes")}</Checkbox>
+            </CheckboxGroup>
           </div>
         ),
       },

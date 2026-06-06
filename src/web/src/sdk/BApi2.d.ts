@@ -7072,6 +7072,7 @@ export interface components {
             defaultPath?: string;
             namingConvention?: string;
             preferTorrent: boolean;
+            prioritizeTasksWithTorrent: boolean;
             skipExisting: boolean;
             /** Format: int32 */
             maxRetries: number;
@@ -7313,6 +7314,7 @@ export interface components {
             defaultPath?: string;
             namingConvention?: string;
             preferTorrent?: boolean;
+            prioritizeTasksWithTorrent?: boolean;
             skipExisting?: boolean;
             /** Format: int32 */
             maxRetries?: number;

@@ -4,15 +4,19 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Bakabase.Infrastructures.Components.Gui;
+using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Components;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input;
 using Bakabase.InsideWorld.Business.Components.Downloader.Components;
+using Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloaders.ExHentai;
 using Bakabase.InsideWorld.Business.Components.Downloader.Extensions;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
 using Bakabase.InsideWorld.Business.Components.Gui;
 using Bakabase.InsideWorld.Business.Workflow;
+using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.Workflow.Abstractions.Components;
+using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Components.Office.Excel;
 using Bootstrap.Components.Orm.Infrastructures;
@@ -150,6 +154,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
                             newStatus = DownloadTaskDbModelStatus.Disabled;
                             break;
                         case DownloaderStopBy.AppendToTheQueue:
+                        case DownloaderStopBy.Defer:
                             newStatus = DownloadTaskDbModelStatus.InProgress;
                             break;
                         default:
@@ -184,8 +189,13 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
                 }
 
                 await base.Update(task);
+                // A Defer keeps the task eligible (InProgress) but, unlike other requeues, must kick
+                // the scheduler so the next task is picked immediately rather than waiting for the
+                // periodic trigger.
+                var deferred = downloader is
+                    { Status: DownloaderStatus.Stopped, StoppedBy: DownloaderStopBy.Defer };
                 if (newStatus is DownloadTaskDbModelStatus.Complete or DownloadTaskDbModelStatus.Failed
-                    or DownloadTaskDbModelStatus.Disabled)
+                        or DownloadTaskDbModelStatus.Disabled || deferred)
                 {
                     await TryStartAllTasks(DownloadTaskStartMode.AutoStart, null, DownloadTaskActionOnConflict.Ignore);
                 }
@@ -213,6 +223,13 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
                 ToDto(new[] {task}).FirstOrDefault()!);
         }
 
+        // True when an ExHentai task will end up downloading images (so under torrent-priority it should
+        // run after torrent-bearing tasks): it has been probed and has no torrent, or it opts out of
+        // torrents (PreferTorrent off), in which case we honor that and download its images.
+        private bool IsExHentaiImageOnly(DownloadTask task) =>
+            DownloaderManager.IsKnownNoTorrent(task.Id) ||
+            !task.GetTypedOptions<ExHentaiTaskOptions>().PreferTorrent;
+
         public async Task<BaseResponse> TryStartAllTasks(DownloadTaskStartMode mode, int[]? ids,
             DownloadTaskActionOnConflict actionOnConflict)
         {
@@ -230,7 +247,25 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
                     };
                 }).ToArray();
 
-            var filteredTasks = targetTasks.GroupBy(a => a.ThirdPartyId).Select(a => a.FirstOrDefault()!).ToArray();
+            var prioritizeExTorrent = GetRequiredService<IBOptionsManager<ExHentaiOptions>>().Value
+                .PrioritizeTasksWithTorrent;
+            var filteredTasks = targetTasks.GroupBy(a => a.ThirdPartyId)
+                .Select(g =>
+                {
+                    // ExHentai torrent-priority: probe torrent-preferring, un-probed tasks first. Tasks
+                    // that will end up downloading images — already probed with no torrent, or opting
+                    // out of torrents — sink to the back, so they only start once there is nothing
+                    // torrent-bearing left. Stable FIFO (by id) within each tier.
+                    if (prioritizeExTorrent && g.Key == ThirdPartyId.ExHentai)
+                    {
+                        return g.OrderBy(t => IsExHentaiImageOnly(t) ? 1 : 0)
+                            .ThenBy(t => t.Id)
+                            .First();
+                    }
+
+                    return g.FirstOrDefault()!;
+                })
+                .ToArray();
             var startedTasks = new List<DownloadTask>();
 
             foreach (var tt in filteredTasks)
@@ -337,6 +372,9 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
         {
             await DownloaderManager.Stop(id, DownloaderStopBy.ManuallyStop);
             var rsp = await base.UpdateByKey(id, modify);
+            // The task's options (incl. PreferTorrent) may have changed, so drop any stale torrent
+            // verdict and let it be re-probed on the next run.
+            DownloaderManager.ClearNoTorrent(id);
             PushAllDataToUi();
             return rsp;
         }

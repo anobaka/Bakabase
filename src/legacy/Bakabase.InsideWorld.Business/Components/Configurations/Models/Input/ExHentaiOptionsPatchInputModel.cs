@@ -12,6 +12,7 @@ public class ExHentaiOptionsPatchInputModel
     public string? DefaultPath { get; set; }
     public string? NamingConvention { get; set; }
     public bool? PreferTorrent { get; set; }
+    public bool? PrioritizeTasksWithTorrent { get; set; }
     public bool? SkipExisting { get; set; }
     public int? MaxRetries { get; set; }
     public int? RequestTimeout { get; set; }
