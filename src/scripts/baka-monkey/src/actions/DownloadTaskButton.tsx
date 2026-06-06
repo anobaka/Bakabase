@@ -7,7 +7,24 @@ import { showToast } from '../components/Toast';
 import { getOverlayRoot } from '../overlay';
 import { t } from '../i18n';
 
-export function DownloadTaskButton({ adapter, element }: { adapter: DownloadTaskAdapter; element: HTMLElement }) {
+function formatTime(iso: string): string {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? iso : d.toLocaleString();
+}
+
+export function DownloadTaskButton({
+  adapter,
+  element,
+  downloadedAt,
+  onDownloaded,
+}: {
+  adapter: DownloadTaskAdapter;
+  element: HTMLElement;
+  /** When set, this item was already downloaded before (ISO timestamp). */
+  downloadedAt?: string | null;
+  /** Called after a download task is successfully created, so the marker can update immediately. */
+  onDownloaded?: () => void;
+}) {
   const [loading, setLoading] = useState(false);
   const [hovered, setHovered] = useState(false);
 
@@ -21,6 +38,7 @@ export function DownloadTaskButton({ adapter, element }: { adapter: DownloadTask
     try {
       await adapter.createTask(url);
       showToast(t('addedToDownloadQueue'));
+      onDownloaded?.();
     } catch {
       alert(t('downloadFailed'));
     } finally {
@@ -28,11 +46,20 @@ export function DownloadTaskButton({ adapter, element }: { adapter: DownloadTask
     }
   };
 
+  const isDownloaded = !!downloadedAt;
+  const tooltipContent = isDownloaded ? (
+    <div style={{ whiteSpace: 'pre-line', textAlign: 'center' }}>
+      {`${t('download')}\n${t('alreadyDownloadedAt', { time: formatTime(downloadedAt!) })}`}
+    </div>
+  ) : (
+    t('download')
+  );
+
   return (
-    <Tooltip content={t('download')} placement="top" size="sm" color="foreground" portalContainer={getOverlayRoot()}>
+    <Tooltip content={tooltipContent} placement="top" size="sm" color="foreground" portalContainer={getOverlayRoot()}>
       <Button
         size="sm"
-        color="primary"
+        color={isDownloaded ? 'warning' : 'primary'}
         variant={!loading && hovered ? 'solid' : 'flat'}
         isIconOnly
         isDisabled={loading}

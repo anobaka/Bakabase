@@ -14,6 +14,8 @@ interface MarkerEntry {
   element: HTMLElement;
   container: HTMLElement;
   status: ContentStatus;
+  /** ISO timestamp when this item was previously downloaded, or null. */
+  downloadedAt: string | null;
 }
 
 const DEFAULT_STATUS: ContentStatus = {
@@ -37,6 +39,8 @@ export function App({ siteConfigs }: { siteConfigs: SiteConfig[] }) {
   const [markers, setMarkers] = useState<MarkerEntry[]>([]);
   const [connected, setConnected] = useState(isConnected);
   const statusMapRef = useRef(new Map<string, ContentStatus>());
+  // downloadKey (== adapter.extractUrl) -> ISO download time, or null when queried but never downloaded.
+  const downloadRecordsRef = useRef(new Map<string, string | null>());
   const siteConfig = useMemo(() => {
     const hostname = window.location.hostname;
     return siteConfigs.find((c) => c.domains.some((d) => hostname.includes(d))) ?? null;
@@ -67,11 +71,41 @@ export function App({ siteConfigs }: { siteConfigs: SiteConfig[] }) {
       }
 
       const status = statusMapRef.current.get(info.id) ?? DEFAULT_STATUS;
-      entries.push({ id: info.id, element, container, status });
+
+      let downloadedAt: string | null = null;
+      if (siteConfig.downloadTask) {
+        const dlKey = siteConfig.downloadTask.extractUrl(element);
+        if (dlKey) downloadedAt = downloadRecordsRef.current.get(dlKey) ?? null;
+      }
+
+      entries.push({ id: info.id, element, container, status, downloadedAt });
     }
 
     setMarkers(entries);
   }, [siteConfig]);
+
+  const queryDownloadRecords = useCallback((keys: string[]) => {
+    if (!siteConfig?.downloadTask || keys.length === 0) return;
+
+    const { thirdPartyId } = siteConfig.downloadTask;
+    httpRequest({
+      method: 'POST',
+      url: `${getApiBaseUrl()}/download-task/records/query`,
+      data: { thirdPartyId, keys },
+      onSuccess: (result: any) => {
+        // Mark every queried key as resolved so it is not re-queried on the next scroll.
+        for (const k of keys) {
+          if (!downloadRecordsRef.current.has(k)) downloadRecordsRef.current.set(k, null);
+        }
+        if (result.data) {
+          for (const item of result.data) {
+            if (item.key) downloadRecordsRef.current.set(item.key, item.downloadedAt ?? null);
+          }
+        }
+        scanAndRender();
+      },
+    });
+  }, [siteConfig, scanAndRender]);
 
   const queryStatus = useCallback((contentIds: string[]) => {
     if (!siteConfig || contentIds.length === 0) return;
@@ -95,6 +129,30 @@ export function App({ siteConfigs }: { siteConfigs: SiteConfig[] }) {
         scanAndRender();
       },
     });
+  }, [siteConfig, scanAndRender]);
+
+  const collectNewDownloadKeys = useCallback((elements: HTMLElement[]): string[] => {
+    const dl = siteConfig?.downloadTask;
+    if (!dl) return [];
+    const keys: string[] = [];
+    for (const el of elements) {
+      const key = dl.extractUrl(el);
+      if (key && !downloadRecordsRef.current.has(key) && !keys.includes(key)) {
+        keys.push(key);
+      }
+    }
+    return keys;
+  }, [siteConfig]);
+
+  // After a successful download click, optimistically mark the item as downloaded so the
+  // button turns warning + tooltip updates immediately, without waiting for a re-query.
+  const markDownloaded = useCallback((element: HTMLElement) => {
+    const dl = siteConfig?.downloadTask;
+    if (!dl) return;
+    const key = dl.extractUrl(element);
+    if (!key) return;
+    downloadRecordsRef.current.set(key, new Date().toISOString());
+    scanAndRender();
   }, [siteConfig, scanAndRender]);
 
   const markVisibleAsViewed = useCallback(() => {
@@ -167,6 +225,8 @@ export function App({ siteConfigs }: { siteConfigs: SiteConfig[] }) {
     }
     scanAndRender();
     if (newIds.length > 0) queryStatus(newIds);
+    const newDlKeys = collectNewDownloadKeys(elements);
+    if (newDlKeys.length > 0) queryDownloadRecords(newDlKeys);
 
     // Scroll-based content discovery
     let scrollTimeout: ReturnType<typeof setTimeout>;
@@ -183,6 +243,8 @@ export function App({ siteConfigs }: { siteConfigs: SiteConfig[] }) {
         }
         scanAndRender();
         if (ids.length > 0) queryStatus(ids);
+        const dlKeys = collectNewDownloadKeys(els);
+        if (dlKeys.length > 0) queryDownloadRecords(dlKeys);
       }, 300);
     };
     window.addEventListener('scroll', handleScroll);
@@ -194,7 +256,7 @@ export function App({ siteConfigs }: { siteConfigs: SiteConfig[] }) {
       window.removeEventListener('scroll', handleScroll);
       clearTimeout(scrollTimeout);
     };
-  }, [siteConfig, scanAndRender, queryStatus, markVisibleAsViewed]);
+  }, [siteConfig, scanAndRender, queryStatus, markVisibleAsViewed, collectNewDownloadKeys, queryDownloadRecords]);
 
   if (!siteConfig && !__DEV__) return null;
 
@@ -216,6 +278,8 @@ export function App({ siteConfigs }: { siteConfigs: SiteConfig[] }) {
               <DownloadTaskButton
                 adapter={siteConfig.downloadTask}
                 element={m.element}
+                downloadedAt={m.downloadedAt}
+                onDownloaded={() => markDownloaded(m.element)}
               />
             )}
             {/* Site-specific custom marker (overlays, etc.) */}

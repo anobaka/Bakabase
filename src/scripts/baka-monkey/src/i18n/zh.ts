@@ -11,6 +11,7 @@ export const zh = {
   downloadLinkNotFound: '无法找到下载链接',
   addedToDownloadQueue: '已添加到下载队列',
   downloadFailed: '下载请求失败',
+  alreadyDownloadedAt: '已于 {time} 添加过下载',
   updated: '更新',
   parseDownloadInfo: '解析下载信息',
   addedToParseQueue: '已添加到解析队列',

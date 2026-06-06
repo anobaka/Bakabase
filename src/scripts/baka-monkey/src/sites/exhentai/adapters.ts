@@ -12,6 +12,7 @@ export function extractGalleryUrl(element: HTMLElement): string {
 }
 
 export const exhentaiDownloadTask: DownloadTaskAdapter = {
+  thirdPartyId: 2, // ThirdPartyId.ExHentai
   extractUrl: extractGalleryUrl,
   createTask: (url) =>
     new Promise<void>((resolve, reject) => {
