@@ -85,9 +85,13 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
                         DownloaderStatus.Stopped => DownloadTaskStatus.Disabled,
                         _ => throw new ArgumentOutOfRangeException()
                     };
-                    // Same as JustCreated
+                    // Same as JustCreated. Defer is a voluntary requeue (torrent-priority), so it must
+                    // stay eligible just like AppendToTheQueue instead of looking Disabled.
                     if (downloader is
-                        { Status: DownloaderStatus.Stopped, StoppedBy: DownloaderStopBy.AppendToTheQueue })
+                        {
+                            Status: DownloaderStatus.Stopped,
+                            StoppedBy: DownloaderStopBy.AppendToTheQueue or DownloaderStopBy.Defer
+                        })
                     {
                         status = allDownloaders.Any(a =>
                             a.Key != task.Id && a.Value.ThirdPartyId == task.ThirdPartyId &&

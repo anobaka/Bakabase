@@ -227,6 +227,14 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                             Status = DownloaderStatus.Stopped;
                         }
                     }
+                    catch (DownloadDeferredException)
+                    {
+                        // The task gave up its slot on purpose (e.g. no torrent under torrent-priority).
+                        // Mark it Stopped/Defer so it stays eligible and the scheduler advances, without
+                        // counting as a failure.
+                        StoppedBy = DownloaderStopBy.Defer;
+                        Status = DownloaderStatus.Stopped;
+                    }
                     catch (Exception e)
                     {
                         FailureTimes++;

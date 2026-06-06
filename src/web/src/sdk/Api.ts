@@ -1316,6 +1316,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
   defaultPath?: string;
   namingConvention?: string;
   preferTorrent: boolean;
+  prioritizeTasksWithTorrent: boolean;
   skipExisting: boolean;
   /** @format int32 */
   maxRetries: number;
@@ -1570,6 +1571,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputE
   defaultPath?: string;
   namingConvention?: string;
   preferTorrent?: boolean;
+  prioritizeTasksWithTorrent?: boolean;
   skipExisting?: boolean;
   /** @format int32 */
   maxRetries?: number;

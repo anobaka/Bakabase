@@ -70,6 +70,8 @@
   "End page": "结束页",
   "downloader.label.preferTorrent": "优先下载种子",
   "downloader.tip.preferTorrentDesc": "如果可用，优先下载种子文件而非直接下载图片。",
+  "downloader.label.prioritizeTasksWithTorrent": "优先下载包含种子的任务",
+  "downloader.tip.prioritizeTasksWithTorrentDesc": "勾选后，会先依次探测各任务，把包含种子的任务优先下完（仅下载 .torrent 文件），没有种子的任务排到最后再逐页下载图片。仅对单作品任务生效，需先开启“优先下载种子”。",
   "downloader.tip.exHentaiUserscript": "您可以使用我们提供的油猴脚本在 ExHentai 网站上一键下载。",
   "downloader.tip.goToThirdPartyIntegration": "前往第三方集成页面",
   "downloader.bilibili.selectFavorites": "选择收藏夹",

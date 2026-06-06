@@ -44,7 +44,9 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             Func<decimal, Task> onProgress,
             Func<string, Task> onCheckpointChanged,
             CancellationToken ct,
-            bool preferTorrent = true)
+            bool preferTorrent = true,
+            bool deferIfNoTorrent = false,
+            Action? onNoTorrentDetected = null)
         {
             // Only fetch torrent info when preferTorrent is true
             var detail = await Client.ParseDetail(url, preferTorrent);
@@ -88,6 +90,16 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                 }
 
                 return;
+            }
+
+            // Reached here => this gallery has no torrent. Under torrent-priority, yield the slot back
+            // to the queue (after recording the verdict) so torrent-bearing tasks are drained first.
+            // The deferred task is re-selected only once no un-probed task remains, at which point this
+            // method is called again with deferIfNoTorrent=false and proceeds to download images.
+            if (deferIfNoTorrent)
+            {
+                onNoTorrentDetected?.Invoke();
+                throw new DownloadDeferredException();
             }
 
             var baseNameSegmentsValues = new Dictionary<ExHentaiNamingFields, object?>

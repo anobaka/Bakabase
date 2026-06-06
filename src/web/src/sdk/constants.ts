@@ -1896,17 +1896,20 @@ export const DownloaderStatusLabel: Record<DownloaderStatus, string> = {
 
 export enum DownloaderStopBy {
   ManuallyStop = 1,
-  AppendToTheQueue = 2
+  AppendToTheQueue = 2,
+  Defer = 3
 }
 
 export const downloaderStopBies = [
   { label: 'ManuallyStop', value: DownloaderStopBy.ManuallyStop },
-  { label: 'AppendToTheQueue', value: DownloaderStopBy.AppendToTheQueue }
+  { label: 'AppendToTheQueue', value: DownloaderStopBy.AppendToTheQueue },
+  { label: 'Defer', value: DownloaderStopBy.Defer }
 ] as const;
 
 export const DownloaderStopByLabel: Record<DownloaderStopBy, string> = {
   [DownloaderStopBy.ManuallyStop]: 'ManuallyStop',
-  [DownloaderStopBy.AppendToTheQueue]: 'AppendToTheQueue'
+  [DownloaderStopBy.AppendToTheQueue]: 'AppendToTheQueue',
+  [DownloaderStopBy.Defer]: 'Defer'
 };
 
 export enum DownloadTaskAction {

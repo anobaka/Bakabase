@@ -52,6 +52,14 @@ namespace Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain
         /// </summary>
         public bool PreferTorrent { get; set; } = true;
 
+        /// <summary>
+        /// When enabled (only meaningful while <see cref="PreferTorrent"/> is on), SingleWork tasks
+        /// that turn out to have a torrent are processed first: a task without a torrent yields its
+        /// download slot back to the queue after probing, so torrent-bearing tasks are drained before
+        /// any image-only task starts downloading. Global runtime switch, not frozen per task.
+        /// </summary>
+        public bool PrioritizeTasksWithTorrent { get; set; }
+
         public bool SkipExisting { get; set; }
         public int MaxRetries { get; set; }
         public int RequestTimeout { get; set; }

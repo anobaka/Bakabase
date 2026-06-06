@@ -391,6 +391,11 @@ namespace Bakabase.Service.Controllers
                     options.PreferTorrent = model.PreferTorrent.Value;
                 }
 
+                if (model.PrioritizeTasksWithTorrent.HasValue)
+                {
+                    options.PrioritizeTasksWithTorrent = model.PrioritizeTasksWithTorrent.Value;
+                }
+
                 if (model.ShowCover.HasValue)
                 {
                     options.ShowCover = model.ShowCover.Value;

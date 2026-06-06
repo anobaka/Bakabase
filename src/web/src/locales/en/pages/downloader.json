@@ -70,6 +70,8 @@
   "End page": "End page",
   "downloader.label.preferTorrent": "Prefer torrent download",
   "downloader.tip.preferTorrentDesc": "If available, download torrent files instead of downloading images directly.",
+  "downloader.label.prioritizeTasksWithTorrent": "Prioritize tasks that have a torrent",
+  "downloader.tip.prioritizeTasksWithTorrentDesc": "When enabled, tasks are probed one by one and those that have a torrent are finished first (only the .torrent file is downloaded), while tasks without a torrent are pushed to the back to download images last. SingleWork tasks only; requires \"Prefer torrent download\".",
   "downloader.tip.exHentaiUserscript": "You can use our Tampermonkey userscript to download from ExHentai with one click.",
   "downloader.tip.goToThirdPartyIntegration": "Go to Third-Party Integration",
   "downloader.bilibili.selectFavorites": "Select favorites",

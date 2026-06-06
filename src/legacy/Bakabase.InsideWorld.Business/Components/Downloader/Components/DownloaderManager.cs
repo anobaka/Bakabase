@@ -26,6 +26,13 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
         private readonly IServiceProvider _serviceProvider;
         private readonly ConcurrentDictionary<int, IDownloader> _downloaders = new();
         private readonly ConcurrentDictionary<int, TaskCompletionSource> _downloadBTaskCompletionSources = new();
+
+        /// <summary>
+        /// In-memory verdicts for ExHentai torrent-priority: task ids known (during the current run)
+        /// to have no torrent. Used by the scheduler to deprioritize them and by the downloader to
+        /// stop deferring them. Transient by design — it is rebuilt by re-probing after a restart.
+        /// </summary>
+        private readonly ConcurrentDictionary<int, byte> _noTorrentTaskIds = new();
         private readonly IStringLocalizer<SharedResource> _localizer;
         private readonly IDownloaderLocalizer _downloaderLocalizer;
         private readonly IDownloaderFactory _downloaderFactory;
@@ -56,6 +63,17 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
                     CompleteBTask(taskId);
                 }
 
+                // Drop the torrent-priority verdict once the task truly ends (success / failure /
+                // manual stop) so a later restart re-probes it. A Defer / AppendToTheQueue stop is a
+                // requeue, not an end, so the verdict must survive it — otherwise we would re-defer
+                // forever.
+                if (downloader.Status is DownloaderStatus.Complete or DownloaderStatus.Failed ||
+                    (downloader.Status == DownloaderStatus.Stopped &&
+                     downloader.StoppedBy == DownloaderStopBy.ManuallyStop))
+                {
+                    ClearNoTorrent(taskId);
+                }
+
                 return Task.CompletedTask;
             };
             OnNameAcquired += (taskId, name) =>
@@ -81,6 +99,15 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
         public event Func<int, string, Task> OnCheckpointReached;
 
         public IDownloader? this[int taskId] => _downloaders.GetValueOrDefault(taskId);
+
+        /// <summary>Record that a task has been probed and has no torrent (ExHentai torrent-priority).</summary>
+        public void MarkNoTorrent(int taskId) => _noTorrentTaskIds[taskId] = 0;
+
+        /// <summary>Whether a task is already known (this run) to have no torrent.</summary>
+        public bool IsKnownNoTorrent(int taskId) => _noTorrentTaskIds.ContainsKey(taskId);
+
+        /// <summary>Forget a task's no-torrent verdict so it is re-probed next time it runs.</summary>
+        public void ClearNoTorrent(int taskId) => _noTorrentTaskIds.TryRemove(taskId, out _);
 
         public async Task Stop(int taskId, DownloaderStopBy stopBy)
         {
