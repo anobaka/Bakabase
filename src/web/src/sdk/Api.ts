@@ -1828,6 +1828,12 @@ export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsMode
   requestTimeout: number;
 }
 
+export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsInputDownloadRecordQueryInputModel {
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam] */
+  thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
+  keys: string[];
+}
+
 export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsInputDownloadTaskAddInputModel {
   /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam] */
   thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
@@ -1865,6 +1871,7 @@ export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsMode
   checkpoint?: string;
   autoRetry: boolean;
   options?: string;
+  downloadPath?: string;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsInputDownloadTaskStartRequestModel {
@@ -1879,6 +1886,17 @@ export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsMode
  */
 export type BakabaseInsideWorldBusinessComponentsDownloaderComponentsDownloadersExHentaiExHentaiDownloadTaskType =
   1 | 2 | 3;
+
+export interface BakabaseInsideWorldBusinessComponentsDownloaderModelsDbDownloadRecordDbModel {
+  /** @format int32 */
+  id: number;
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam] */
+  thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
+  /** @minLength 1 */
+  key: string;
+  /** @format date-time */
+  downloadedAt: string;
+}
 
 export interface BakabaseInsideWorldBusinessComponentsFileExplorerEntriesIwFsCompressedFileGroup {
   keyName: string;
@@ -4963,6 +4981,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBu
   code: number;
   message?: string;
   data?: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloaderDefinition[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsDownloaderModelsDbDownloadRecordDbModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsDownloaderModelsDbDownloadRecordDbModel[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsPlayListModelsDomainPlayList {
@@ -11405,6 +11430,40 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
+
+    /**
+     * No description
+     *
+     * @tags DownloadTask
+     * @name QueryDownloadRecords
+     * @request POST:/download-task/records/query
+     */
+    queryDownloadRecords: (
+      data: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsInputDownloadRecordQueryInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsDownloaderModelsDbDownloadRecordDbModel,
+        any
+      >({
+        path: `/download-task/records/query`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for queryDownloadRecords
+     * @name queryDownloadRecordsUrl
+     */
+    queryDownloadRecordsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/download-task/records/query`;
+      
+      return baseUrl + path;
+    },
 
     /**
      * No description

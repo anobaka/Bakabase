@@ -30,6 +30,8 @@ namespace Bakabase.InsideWorld.Business
 
         public DbSet<DownloadTaskDbModel> DownloadTasks { get; set; }
 
+        public DbSet<DownloadRecordDbModel> DownloadRecords { get; set; }
+
         public DbSet<PasswordDbModel> Passwords { get; set; }
 
         public DbSet<BulkModificationDbModel> BulkModifications { get; set; }
@@ -140,6 +142,11 @@ namespace Bakabase.InsideWorld.Business
                 t.HasIndex(a => a.ThirdPartyId);
                 t.HasIndex(a => new {a.ThirdPartyId, a.Type});
                 t.HasIndex(a => a.Status);
+            });
+
+            modelBuilder.Entity<DownloadRecordDbModel>(t =>
+            {
+                t.HasIndex(a => new {a.ThirdPartyId, a.Key}).IsUnique();
             });
 
             modelBuilder.Entity<PasswordDbModel>(t =>

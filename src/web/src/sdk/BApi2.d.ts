@@ -1988,6 +1988,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/download-task/records/query": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["QueryDownloadRecords"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/download-task/download": {
         parameters: {
             query?: never;
@@ -7544,6 +7560,10 @@ export interface components {
             /** Format: int32 */
             requestTimeout: number;
         };
+        "Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input.DownloadRecordQueryInputModel": {
+            thirdPartyId: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ThirdPartyId"];
+            keys: string[];
+        };
         "Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input.DownloadTaskAddInputModel": {
             thirdPartyId: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ThirdPartyId"];
             /** Format: int32 */
@@ -7576,6 +7596,7 @@ export interface components {
             checkpoint?: string;
             autoRetry: boolean;
             options?: string;
+            downloadPath?: string;
         };
         "Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input.DownloadTaskStartRequestModel": {
             ids: number[];
@@ -7587,6 +7608,14 @@ export interface components {
          * @enum {integer}
          */
         "Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloaders.ExHentai.ExHentaiDownloadTaskType": 1 | 2 | 3;
+        "Bakabase.InsideWorld.Business.Components.Downloader.Models.Db.DownloadRecordDbModel": {
+            /** Format: int32 */
+            id: number;
+            thirdPartyId: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ThirdPartyId"];
+            key: string;
+            /** Format: date-time */
+            downloadedAt: string;
+        };
         "Bakabase.InsideWorld.Business.Components.FileExplorer.Entries.IwFsCompressedFileGroup": {
             keyName: string;
             extension?: string;
@@ -10073,6 +10102,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.DownloaderDefinition"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.Downloader.Models.Db.DownloadRecordDbModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Models.Db.DownloadRecordDbModel"][];
         };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.PlayList.Models.Domain.PlayList]": {
             /** Format: int32 */
@@ -15908,6 +15943,35 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    QueryDownloadRecords: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input.DownloadRecordQueryInputModel"];
+                "application/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input.DownloadRecordQueryInputModel"];
+                "text/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input.DownloadRecordQueryInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input.DownloadRecordQueryInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.Downloader.Models.Db.DownloadRecordDbModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.Downloader.Models.Db.DownloadRecordDbModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.Downloader.Models.Db.DownloadRecordDbModel]"];
                 };
             };
         };

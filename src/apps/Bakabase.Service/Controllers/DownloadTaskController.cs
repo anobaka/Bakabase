@@ -37,17 +37,19 @@ public class DownloadTaskController : Controller
     private readonly IGuiAdapter _guiAdapter;
     private readonly IStringLocalizer<SharedResource> _localizer;
     private readonly DownloadTaskService _service;
+    private readonly DownloadRecordService _recordService;
     private readonly IDownloaderFactory _downloaderFactory;
 
     public DownloadTaskController(DownloadTaskService service, IStringLocalizer<SharedResource> localizer,
         IGuiAdapter guiAdapter, IBOptions<ExHentaiOptions> exhentaiOptions,
-        IDownloaderFactory downloaderFactory)
+        IDownloaderFactory downloaderFactory, DownloadRecordService recordService)
     {
         _service = service;
         _localizer = localizer;
         _guiAdapter = guiAdapter;
         _exhentaiOptions = exhentaiOptions;
         _downloaderFactory = downloaderFactory;
+        _recordService = recordService;
     }
 
     [SwaggerOperation(OperationId = "GetAllDownloaderDefinitions")]
@@ -70,6 +72,15 @@ public class DownloadTaskController : Controller
     public async Task<SingletonResponse<DownloadTask>> Get(int id)
     {
         return new SingletonResponse<DownloadTask>(await _service.GetDto(id));
+    }
+
+    [HttpPost("records/query")]
+    [SwaggerOperation(OperationId = "QueryDownloadRecords")]
+    public async Task<ListResponse<DownloadRecordDbModel>> QueryRecords(
+        [FromBody] DownloadRecordQueryInputModel model)
+    {
+        var records = await _recordService.Query(model.ThirdPartyId, model.Keys);
+        return new ListResponse<DownloadRecordDbModel>(records);
     }
 
     [HttpPost]

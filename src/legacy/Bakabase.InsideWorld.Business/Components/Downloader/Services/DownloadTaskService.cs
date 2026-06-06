@@ -37,6 +37,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
     {
         protected DownloaderManager DownloaderManager => GetRequiredService<DownloaderManager>();
 
+        protected DownloadRecordService DownloadRecordService => GetRequiredService<DownloadRecordService>();
+
         protected IHubContext<WebGuiHub, IWebGuiClient> UiHub =>
             GetRequiredService<IHubContext<WebGuiHub, IWebGuiClient>>();
 
@@ -189,6 +191,23 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
                 }
 
                 await base.Update(task);
+
+                // Permanently remember that this (ThirdPartyId, Key) has been downloaded.
+                // Kept in a dedicated table so it survives deletion of the task itself.
+                // Best-effort: a recording failure must never break the completion flow.
+                if (newStatus == DownloadTaskDbModelStatus.Complete)
+                {
+                    try
+                    {
+                        await DownloadRecordService.Record(task.ThirdPartyId, task.Key);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError(ex,
+                            $"Failed to persist download record for task {task.Id} ({task.ThirdPartyId}/{task.Key})");
+                    }
+                }
+
                 // A Defer keeps the task eligible (InProgress) but, unlike other requeues, must kick
                 // the scheduler so the next task is picked immediately rather than waiting for the
                 // periodic trigger.
@@ -382,12 +401,30 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
         public async Task<ListResponse<DownloadTask>> AddRange(IEnumerable<DownloadTask> resources)
         {
             var arr = resources.ToArray();
-            var dbModels = resources.Select(r => r.ToDbModel()!).ToArray();
+            var dbModels = arr.Select(r => r.ToDbModel()!).ToArray();
             var rsp = await base.AddRange(dbModels);
             for (var i = 0; i < arr.Length; i++)
             {
                 arr[i].Id = rsp.Data[i].Id;
             }
+
+            // Permanently remember that these (ThirdPartyId, Key) items have been requested for
+            // download. Recorded at creation so the warning shows immediately (even while the task
+            // is still queued / downloading); the timestamp is refreshed when the task completes.
+            // Best-effort: a recording failure must never break task creation.
+            foreach (var t in arr)
+            {
+                try
+                {
+                    await DownloadRecordService.Record(t.ThirdPartyId, t.Key);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex,
+                        $"Failed to persist download record for task {t.Id} ({t.ThirdPartyId}/{t.Key})");
+                }
+            }
+
             PushAllDataToUi();
             return new ListResponse<DownloadTask>(arr);
         }

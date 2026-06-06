@@ -11,6 +11,7 @@ export const en = {
   downloadLinkNotFound: 'Download link not found',
   addedToDownloadQueue: 'Added to download queue',
   downloadFailed: 'Download request failed',
+  alreadyDownloadedAt: 'Download added on {time}',
   updated: 'Updated',
   parseDownloadInfo: 'Parse Downloads',
   addedToParseQueue: 'Added to parse queue',

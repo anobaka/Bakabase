@@ -28,7 +28,13 @@ export interface ParseTaskAdapter {
 
 /** Adapter for the "download" action (e.g. one-click download from exhentai). */
 export interface DownloadTaskAdapter {
-  /** Extract the downloadable URL from a content element. */
+  /** ThirdPartyId enum value identifying this site on the backend. */
+  thirdPartyId: number;
+  /**
+   * Extract the downloadable URL from a content element.
+   * This value is also used as the lookup key against the download history
+   * (it must equal the download task `Key` stored on the backend).
+   */
   extractUrl: (element: HTMLElement) => string;
   /** Call the site-specific backend API to create a download task. */
   createTask: (url: string) => Promise<void>;

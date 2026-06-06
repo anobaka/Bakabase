@@ -8,6 +8,7 @@ using System.Linq;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Downloader.Services;
 using Bootstrap.Components.DependencyInjection;
+using Bootstrap.Components.Orm;
 
 namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
 {
@@ -29,6 +30,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
             services.RegisterAllRegisteredTypeAs<IDownloaderHelper>();
 
             services.AddScoped<DownloadTaskService>();
+            services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, DownloadRecordDbModel, int>>();
+            services.AddScoped<DownloadRecordService>();
             services.AddSingleton<DownloaderManager>();
             services.AddTransient<IDownloaderLocalizer, DownloaderLocalizer>();
             services.AddSingleton<IDownloaderFactory, DownloaderFactory>();
