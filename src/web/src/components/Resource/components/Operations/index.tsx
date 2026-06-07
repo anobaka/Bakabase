@@ -41,9 +41,10 @@ interface IProps {
   resource: Resource;
   coverRef?: IResourceCoverRef;
   reload?: (ct?: AbortSignal) => Promise<any>;
+  onResourcesDeleted?: (ids: number[]) => any;
 }
 
-const Operations = ({ resource, coverRef, reload }: IProps) => {
+const Operations = ({ resource, coverRef, reload, onResourcesDeleted }: IProps) => {
   const { t } = useTranslation();
   const { createPortal, createWindow } = useBakabaseContext();
   const uiOptions = useUiOptionsStore((state) => state.data);
@@ -154,7 +155,9 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
           ids: [resource.id],
           deleteFiles,
         });
-        reload?.();
+        // Prune the card from the list. reload?.() only re-fetches this single
+        // resource, which now returns nothing, leaving the deleted card visible.
+        onResourcesDeleted?.([resource.id]);
       },
     });
   };

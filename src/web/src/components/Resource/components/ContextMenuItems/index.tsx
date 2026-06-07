@@ -42,6 +42,8 @@ type Props = {
   /** The resource whose context menu was triggered (may not be in selectedResources). */
   contextResource?: any;
   onSelectedResourcesChanged?: (ids: number[]) => any;
+  /** Called after resources are deleted so the parent can prune them from the list. */
+  onResourcesDeleted?: (ids: number[]) => any;
 };
 
 // ============================================================================
@@ -128,6 +130,7 @@ const ContextMenuItems = ({
   selectedResources,
   contextResource,
   onSelectedResourcesChanged,
+  onResourcesDeleted,
 }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
@@ -427,6 +430,7 @@ const ContextMenuItems = ({
             ),
             onOk: async () => {
               await BApi.resource.bulkDeleteResources({ ids: selectedResourceIds, deleteFiles });
+              onResourcesDeleted?.(selectedResourceIds);
             },
           });
         }}
