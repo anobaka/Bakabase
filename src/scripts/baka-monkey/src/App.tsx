@@ -16,6 +16,8 @@ interface MarkerEntry {
   status: ContentStatus;
   /** ISO timestamp when this item was previously downloaded, or null. */
   downloadedAt: string | null;
+  /** Whether this content was already viewed *before* the current page load. */
+  visitedBefore: boolean;
 }
 
 const DEFAULT_STATUS: ContentStatus = {
@@ -24,6 +26,14 @@ const DEFAULT_STATUS: ContentStatus = {
   viewedAt: null,
   updatedAt: null,
 };
+
+// Tag content elements the user has visited before so index.css can draw a
+// frame around them. We mutate host elements directly (not via the React
+// portal) because the frame belongs to the host's own content card.
+function applyVisitedHighlight(element: HTMLElement, visitedBefore: boolean, hasUpdate: boolean) {
+  element.classList.toggle('bk-visited', visitedBefore);
+  element.classList.toggle('bk-has-update', visitedBefore && hasUpdate);
+}
 
 function isElementInViewport(element: HTMLElement): boolean {
   const rect = element.getBoundingClientRect();
@@ -41,6 +51,10 @@ export function App({ siteConfigs }: { siteConfigs: SiteConfig[] }) {
   const statusMapRef = useRef(new Map<string, ContentStatus>());
   // downloadKey (== adapter.extractUrl) -> ISO download time, or null when queried but never downloaded.
   const downloadRecordsRef = useRef(new Map<string, string | null>());
+  // Ids that were already viewed when first queried this page load. Marking an
+  // item viewed during the current visit does NOT add it here, so the "visited
+  // before" frame only appears on revisits — the first visit stays untouched.
+  const visitedBeforeRef = useRef(new Set<string>());
   const siteConfig = useMemo(() => {
     const hostname = window.location.hostname;
     return siteConfigs.find((c) => c.domains.some((d) => hostname.includes(d))) ?? null;
@@ -78,7 +92,8 @@ export function App({ siteConfigs }: { siteConfigs: SiteConfig[] }) {
         if (dlKey) downloadedAt = downloadRecordsRef.current.get(dlKey) ?? null;
       }
 
-      entries.push({ id: info.id, element, container, status, downloadedAt });
+      const visitedBefore = visitedBeforeRef.current.has(info.id);
+      entries.push({ id: info.id, element, container, status, downloadedAt, visitedBefore });
     }
 
     setMarkers(entries);
@@ -125,6 +140,9 @@ export function App({ siteConfigs }: { siteConfigs: SiteConfig[] }) {
             viewedAt: item.viewedAt ? new Date(item.viewedAt) : null,
             updatedAt: item.updatedAt ? new Date(item.updatedAt) : null,
           });
+          // Snapshot the "already viewed" state at query time, before any
+          // mark-viewed this session flips it.
+          if (item.isViewed) visitedBeforeRef.current.add(item.contentId);
         }
         scanAndRender();
       },
@@ -257,6 +275,13 @@ export function App({ siteConfigs }: { siteConfigs: SiteConfig[] }) {
       clearTimeout(scrollTimeout);
     };
   }, [siteConfig, scanAndRender, queryStatus, markVisibleAsViewed, collectNewDownloadKeys, queryDownloadRecords]);
+
+  // Frame the content cards the user has visited before.
+  useEffect(() => {
+    for (const m of markers) {
+      applyVisitedHighlight(m.element, m.visitedBefore, m.status.hasUpdate);
+    }
+  }, [markers]);
 
   if (!siteConfig && !__DEV__) return null;
 

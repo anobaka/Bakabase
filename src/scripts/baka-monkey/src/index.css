@@ -92,3 +92,27 @@
 .bk-marker {
   background: transparent !important;
 }
+
+/* "Visited before" frame on host content cards. App.tsx tags the host element
+   with .bk-visited (and .bk-has-update when there's new content since the last
+   visit). These selectors only match elements we tag ourselves, so nothing
+   leaks to the host page. `outline` + negative `outline-offset` draws the frame
+   inside the element's box: no layout shift, and ancestor `overflow:hidden`
+   can't clip it. Green = seen; amber = seen but updated since. */
+.bk-visited {
+  outline: 2px solid #17c964 !important;
+  outline-offset: -2px;
+}
+
+.bk-visited.bk-has-update {
+  outline-color: #f5a524 !important;
+}
+
+/* Settings panel "hide markers" toggle adds this class to <body>. */
+body.bk-hide-markers .bk-marker {
+  display: none !important;
+}
+
+body.bk-hide-markers .bk-visited {
+  outline: none !important;
+}
