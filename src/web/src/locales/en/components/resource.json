@@ -76,6 +76,7 @@
   "resource.action.refreshCache": "Refresh cache",
   "resource.action.refreshCache.success": "Cache refreshed",
   "resource.action.refreshCache.tooltip": "Clear and rebuild cache for this resource",
+  "resource.action.refreshCache.taskStarted": "Cache refresh task started",
   "resource.operation.pin": "Pin",
   "resource.operation.unpin": "Unpin",
   "resource.operation.enhancements": "Enhancements",
@@ -85,6 +86,7 @@
   "Cover cache has been reset": "Cover cache has been reset",
   "Reset cover cache of current resource": "Reset cover cache of current resource",
 
+  "resource.contextMenu.refreshCacheForCount": "Refresh cache for {{count}} resources",
   "resource.contextMenu.setMediaLibraries": "Set media libraries",
   "resource.contextMenu.setMediaLibrariesForCount": "Set media libraries for {{count}} resources",
   "resource.contextMenu.transferResourceData": "Transfer resource data",

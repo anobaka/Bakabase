@@ -916,6 +916,10 @@ export interface BakabaseAbstractionsModelsInputPathMarkPreviewRequest {
   configJson: string;
 }
 
+export interface BakabaseAbstractionsModelsInputRefreshResourcesCacheInputModel {
+  ids: number[];
+}
+
 export interface BakabaseAbstractionsModelsInputResourceMergeInputModel {
   /** @format int32 */
   targetResourceId: number;
@@ -9565,6 +9569,37 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
+
+    /**
+     * No description
+     *
+     * @tags Cache
+     * @name RefreshResourcesCache
+     * @request POST:/cache/resources/refresh
+     */
+    refreshResourcesCache: (
+      data: BakabaseAbstractionsModelsInputRefreshResourcesCacheInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/cache/resources/refresh`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for refreshResourcesCache
+     * @name refreshResourcesCacheUrl
+     */
+    refreshResourcesCacheUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/cache/resources/refresh`;
+      
+      return baseUrl + path;
+    },
   };
   chat = {
     /**

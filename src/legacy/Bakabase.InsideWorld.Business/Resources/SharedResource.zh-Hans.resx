@@ -384,6 +384,12 @@
   <data name="BTask_Description_ResourceData" xml:space="preserve">
     <value>为所有资源准备封面、可播放项和元数据</value>
   </data>
+  <data name="BTask_Name_RefreshResourcesCache" xml:space="preserve">
+    <value>刷新缓存</value>
+  </data>
+  <data name="BTask_Description_RefreshResourcesCache" xml:space="preserve">
+    <value>为所选资源重建封面和可播放项缓存</value>
+  </data>
   <data name="BTask_MessageOnInterruption_MoveFiles" xml:space="preserve">
     <value>部分文件还在移动中，强制中断可能会导致目标文件或文件夹不完整</value>
   </data>

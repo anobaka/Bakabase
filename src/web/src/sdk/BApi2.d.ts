@@ -1060,6 +1060,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/cache/resources/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RefreshResourcesCache"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/chat/conversations": {
         parameters: {
             query?: never;
@@ -6740,6 +6756,9 @@ export interface components {
             path: string;
             type: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PathMarkType"];
             configJson: string;
+        };
+        "Bakabase.Abstractions.Models.Input.RefreshResourcesCacheInputModel": {
+            ids: number[];
         };
         "Bakabase.Abstractions.Models.Input.ResourceMergeInputModel": {
             /** Format: int32 */
@@ -13959,6 +13978,35 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ResourceFileSystemCache]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ResourceFileSystemCache]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ResourceFileSystemCache]"];
+                };
+            };
+        };
+    };
+    RefreshResourcesCache: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Input.RefreshResourcesCacheInputModel"];
+                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Input.RefreshResourcesCacheInputModel"];
+                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Input.RefreshResourcesCacheInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Input.RefreshResourcesCacheInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                 };
             };
         };

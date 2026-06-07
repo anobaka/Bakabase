@@ -1,7 +1,11 @@
-﻿using System.Threading;
+﻿using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Localization;
+using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Abstractions.Models.Input;
 using Bakabase.Abstractions.Models.View;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Models.Db;
@@ -10,15 +14,22 @@ using Bakabase.Service.Models.View;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Components.Orm;
 using Bootstrap.Components.Orm.Infrastructures;
+using Bootstrap.Components.Tasks;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace Bakabase.Service.Controllers;
 
 [Route("~/cache")]
-public class CacheController(IResourceService resourceService) : Controller
+public class CacheController(
+    IResourceService resourceService,
+    BTaskManager taskManager,
+    IBakabaseLocalizer localizer) : Controller
 {
+    private const string RefreshResourcesCacheTaskId = "RefreshResourcesCache";
+
     [HttpGet]
     [SwaggerOperation(OperationId = "GetCacheOverview")]
     public async Task<SingletonResponse<CacheOverviewViewModel>> GetOverview()
@@ -65,5 +76,46 @@ public class CacheController(IResourceService resourceService) : Controller
     {
         var cache = await resourceService.RefreshResourceCache(resourceId, ct);
         return new SingletonResponse<ResourceFileSystemCache>(cache);
+    }
+
+    [HttpPost("resources/refresh")]
+    [SwaggerOperation(OperationId = "RefreshResourcesCache")]
+    public async Task<BaseResponse> RefreshResourcesCache([FromBody] RefreshResourcesCacheInputModel model)
+    {
+        var ids = model.Ids?.Distinct().ToArray() ?? [];
+        if (ids.Length == 0)
+        {
+            return BaseResponseBuilder.Ok;
+        }
+
+        // Refreshing a large selection scans the filesystem and regenerates thumbnails per
+        // resource, so run it as a cancellable background task instead of blocking the request.
+        await taskManager.Enqueue(
+            BTaskBuilder.Create(RefreshResourcesCacheTaskId)
+                .Named(() => localizer.BTask_Name(RefreshResourcesCacheTaskId))
+                .Describe(() => localizer.BTask_Description(RefreshResourcesCacheTaskId))
+                .OfResourceType(BTaskResourceType.Resource)
+                .ForResources(ids.Cast<object>().ToArray())
+                .ConflictsWith(RefreshResourcesCacheTaskId)
+                .Persistent()
+                .ReplaceIfExists()
+                .Run(async args =>
+                {
+                    await using var scope = args.RootServiceProvider.CreateAsyncScope();
+                    var service = scope.ServiceProvider.GetRequiredService<IResourceService>();
+                    await service.RefreshResourcesCache(
+                        ids,
+                        async (percentage, process) =>
+                        {
+                            await args.UpdateTask(t =>
+                            {
+                                t.Percentage = percentage;
+                                t.Process = process;
+                            });
+                        },
+                        args.CancellationToken);
+                }));
+
+        return BaseResponseBuilder.Ok;
     }
 }

@@ -384,6 +384,12 @@ The version of lux is not limited.</value>
   <data name="BTask_Description_ResourceData" xml:space="preserve">
     <value>Prepare cover, playable item, and metadata data for all resources</value>
   </data>
+  <data name="BTask_Name_RefreshResourcesCache" xml:space="preserve">
+    <value>Refresh cache</value>
+  </data>
+  <data name="BTask_Description_RefreshResourcesCache" xml:space="preserve">
+    <value>Rebuild cover and playable item cache for the selected resources</value>
+  </data>
   <data name="BTask_MessageOnInterruption_MoveFiles" xml:space="preserve">
     <value>Some files are still in the process of being moved; forcibly interrupting may result in incomplete target files or folders.</value>
   </data>

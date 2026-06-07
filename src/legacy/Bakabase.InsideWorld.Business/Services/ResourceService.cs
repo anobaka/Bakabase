@@ -1600,6 +1600,43 @@ namespace Bakabase.InsideWorld.Business.Services
             return await GetResourceCache(resourceId);
         }
 
+        public async Task RefreshResourcesCache(IReadOnlyCollection<int> resourceIds,
+            Func<int, string?, Task>? onProgress, CancellationToken ct)
+        {
+            var ids = resourceIds.Distinct().ToList();
+            var total = ids.Count;
+            if (total == 0)
+            {
+                return;
+            }
+
+            var done = 0;
+            foreach (var id in ids)
+            {
+                ct.ThrowIfCancellationRequested();
+                try
+                {
+                    await RefreshResourceCache(id, ct);
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception e)
+                {
+                    // One bad resource (missing path, unreadable file, ...) shouldn't abort the
+                    // whole batch — log and move on so the rest still get refreshed.
+                    _logger.LogError(e, "Failed to refresh cache for resource {ResourceId}", id);
+                }
+
+                done++;
+                if (onProgress != null)
+                {
+                    await onProgress((int) (done * 100f / total), $"{done}/{total}");
+                }
+            }
+        }
+
         public async Task MarkAsNotPlayed(int id)
         {
             await _orm.UpdateByKey(id, r => r.PlayedAt = null);
