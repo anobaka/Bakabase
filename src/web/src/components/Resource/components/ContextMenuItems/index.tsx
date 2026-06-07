@@ -317,6 +317,26 @@ const ContextMenuItems = ({
         })()}
 
       {/* Built-in menu items */}
+      {selectedResourceIds.length > 1 && (
+        <MenuItem
+          onClick={async () => {
+            // Runs as a background task server-side; a large selection would otherwise
+            // block while every resource is rescanned and its thumbnails regenerated.
+            const rsp = await BApi.cache.refreshResourcesCache({ ids: selectedResourceIds });
+
+            if (!rsp.code) {
+              toast.success(t<string>("resource.action.refreshCache.taskStarted"));
+            }
+          }}
+        >
+          <div className="flex items-center gap-2">
+            <ReloadOutlined className="text-base" />
+            {t<string>("resource.contextMenu.refreshCacheForCount", {
+              count: selectedResourceIds.length,
+            })}
+          </div>
+        </MenuItem>
+      )}
       <MenuItem
         onClick={() => {
           createPortal(MediaLibraryMultiSelector, {

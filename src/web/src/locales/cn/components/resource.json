@@ -76,6 +76,7 @@
   "resource.action.refreshCache": "刷新缓存",
   "resource.action.refreshCache.success": "缓存已刷新",
   "resource.action.refreshCache.tooltip": "清空并重新创建此资源的缓存",
+  "resource.action.refreshCache.taskStarted": "刷新缓存任务已启动",
   "resource.operation.pin": "置顶",
   "resource.operation.unpin": "取消置顶",
   "resource.operation.enhancements": "增强",
@@ -85,6 +86,7 @@
   "Cover cache has been reset": "封面缓存已重置",
   "Reset cover cache of current resource": "重置当前资源的封面缓存",
 
+  "resource.contextMenu.refreshCacheForCount": "刷新 {{count}} 个资源的缓存",
   "resource.contextMenu.setMediaLibraries": "设置媒体库",
   "resource.contextMenu.setMediaLibrariesForCount": "为 {{count}} 个资源设置媒体库",
   "resource.contextMenu.transferResourceData": "转移资源数据",

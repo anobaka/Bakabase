@@ -203,6 +203,69 @@ public sealed class LocalFilePlayableItemProviderCacheTests
     }
 
     [TestMethod]
+    public async Task RefreshResourcesCache_RefreshesEverySelectedResource_AndReportsProgress()
+    {
+        // Two freshly-synced resources both cached as "no playable files"; the batch refresh must
+        // re-discover every one of them and report progress through to 100%.
+        foreach (var dirName in new[] { "Movie1", "Movie2" })
+        {
+            var dir = Path.Combine(_testRoot, dirName);
+            Directory.CreateDirectory(dir);
+            File.WriteAllBytes(Path.Combine(dir, "a.mp4"), Array.Empty<byte>());
+        }
+
+        await _sp.GetRequiredService<IPathMarkService>().Add(new PathMark
+        {
+            Path = _testRoot,
+            Type = PathMarkType.Resource,
+            ConfigJson = JsonConvert.SerializeObject(new ResourceMarkConfig
+            {
+                MatchMode = PathMatchMode.Layer,
+                Layer = 1,
+                FsTypeFilter = PathFilterFsType.Directory
+            }),
+            Priority = 100
+        });
+        await _sp.GetRequiredService<ResourceSyncService>().SyncResources(
+            ResourceSource.PathMark, null, null, new PauseToken(), CancellationToken.None);
+        await AddPlayableProfile("mp4");
+
+        var resources = (await _sp.GetRequiredService<IResourceService>().GetAll()).ToList();
+        Assert.AreEqual(2, resources.Count);
+
+        var cacheOrm = _sp
+            .GetRequiredService<FullMemoryCacheResourceService<BakabaseDbContext, ResourceCacheDbModel, int>>();
+        foreach (var r in resources)
+        {
+            await cacheOrm.Add(new ResourceCacheDbModel
+            {
+                ResourceId = r.Id,
+                CachedTypes = ResourceCacheType.PlayableFiles,
+                PlayableFilePaths = null
+            });
+        }
+
+        var lastPercentage = 0;
+        await _sp.GetRequiredService<IResourceService>().RefreshResourcesCache(
+            resources.Select(r => r.Id).ToList(),
+            (percentage, _) =>
+            {
+                lastPercentage = percentage;
+                return Task.CompletedTask;
+            },
+            CancellationToken.None);
+
+        Assert.AreEqual(100, lastPercentage);
+        foreach (var r in resources)
+        {
+            var cache = await GetCacheRow(r.Id);
+            Assert.IsNotNull(cache);
+            Assert.IsFalse(string.IsNullOrEmpty(cache!.PlayableFilePaths),
+                $"Batch refresh should have re-discovered the playable file for resource {r.Id}");
+        }
+    }
+
+    [TestMethod]
     public async Task InvalidateAsync_ClearsCacheFlag()
     {
         var resource = await SeedResource("Movie", "a.mp4");

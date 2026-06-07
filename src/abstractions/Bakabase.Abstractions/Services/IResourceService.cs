@@ -113,6 +113,13 @@ public interface IResourceService
     /// </summary>
     Task<ResourceFileSystemCache?> RefreshResourceCache(int resourceId, CancellationToken ct);
 
+    /// <summary>
+    /// Refreshes the cache for many resources sequentially, reporting progress. Intended to be
+    /// driven from a background task so a large selection doesn't block a request.
+    /// </summary>
+    Task RefreshResourcesCache(IReadOnlyCollection<int> resourceIds, Func<int, string?, Task>? onProgress,
+        CancellationToken ct);
+
     Task MarkAsNotPlayed(int id);
 
     Task<Resource[]> GetAllGeneratedByMediaLibraryV2(int[]? ids = null, ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None);
