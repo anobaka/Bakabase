@@ -25,6 +25,7 @@ import { useThirdPartyRequestStatisticsStore } from "@/stores/thirdPartyRequestS
 import { optionsStores } from "@/stores/options";
 import { usePathMarksStore } from "@/stores/pathMarks";
 import { useNotificationsStore, type NotificationViewModel } from "@/stores/notifications";
+import { resourceChangedChannel } from "@/services/ResourceChangedChannel";
 
 const hubEndpoint = `${envConfig.apiEndpoint}/hub/ui`;
 
@@ -92,6 +93,11 @@ export const UIHubConnection = () => {
           break;
         case "PathMark":
           usePathMarksStore.getState().updateMark(data);
+          break;
+        case "Resource":
+          // Backend announced these resource ids changed (e.g. cache rebuilt).
+          // Fan out to the active resource list, which reloads just the ones it shows.
+          resourceChangedChannel.publish(data as number[]);
           break;
       }
     });

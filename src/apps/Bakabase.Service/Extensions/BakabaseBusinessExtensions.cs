@@ -219,6 +219,10 @@ namespace Bakabase.Service.Extensions
             // Resource cover cache invalidation service (invalidates cover cache when covers change)
             services.AddHostedService<ResourceCoverCacheInvalidationService>();
 
+            // Bridges resource-data-change events to the web UI over SignalR so the
+            // resource list can reload affected cards (e.g. after a cache refresh).
+            services.AddHostedService<ResourceChangePushService>();
+
             #endregion
             
             return services;

@@ -107,14 +107,17 @@ export function usePlayableItemResolution(
       unsubscribes.forEach((fn) => fn());
       subscribedRef.current = new Set();
     };
-  }, [resource.id, originsToDiscover.join(",")]);
+  }, [resource.id, resource.reloadToken, originsToDiscover.join(",")]);
 
-  // Reset when resource changes
+  // Reset when the resource changes, or when it is force-refreshed (reloadToken bump).
+  // A cache rebuild can change the playable files at the same path, so we must drop the
+  // previously discovered SSE items — otherwise a stale (often empty) result keeps
+  // overriding the freshly returned backend items and the control stays "open folder".
   useEffect(() => {
     setSseItems(new Map());
     subscribedRef.current = new Set();
     setManualTriggers(new Set());
-  }, [resource.id]);
+  }, [resource.id, resource.reloadToken]);
 
   // Build groups
   const groups = useMemo((): OriginGroup[] => {

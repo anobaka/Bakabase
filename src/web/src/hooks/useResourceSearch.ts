@@ -36,8 +36,9 @@ type UseResourceSearchResult = {
   search: (form: SearchForm, options?: SearchOptions) => Promise<Resource[]>;
   /** Manually set resources (useful for external updates) */
   setResources: React.Dispatch<React.SetStateAction<Resource[]>>;
-  /** Reload specific resources by their IDs */
-  reloadResources: (ids: number[]) => Promise<void>;
+  /** Reload specific resources by their IDs. Pass `forceRefresh` after a backend cache
+   * rebuild so cover/playable UI re-resolves from the fresh data instead of stale state. */
+  reloadResources: (ids: number[], options?: { forceRefresh?: boolean }) => Promise<void>;
   /** Remove resources from the list by their IDs (e.g. after deletion) */
   removeResources: (ids: number[]) => void;
 };
@@ -230,19 +231,34 @@ export const useResourceSearch = (): UseResourceSearchResult => {
     [],
   );
 
-  const reloadResources = useCallback(async (ids: number[]) => {
-    const rsp = await BApi.resource.getResourcesByKeys({
-      ids,
-      additionalItems: ResourceAdditionalItem.All,
-    });
+  const reloadResources = useCallback(
+    async (ids: number[], options?: { forceRefresh?: boolean }) => {
+      if (ids.length === 0) {
+        return;
+      }
+      const rsp = await BApi.resource.getResourcesByKeys({
+        ids,
+        additionalItems: ResourceAdditionalItem.All,
+      });
 
-    if (!rsp.code && rsp.data) {
-      const updatedResources = rsp.data as Resource[];
-      const updatedMap = new Map(updatedResources.map((r) => [r.id, r]));
+      if (!rsp.code && rsp.data) {
+        const updatedResources = rsp.data as Resource[];
+        // After a cache refresh paths can be unchanged while the underlying files were
+        // regenerated/rediscovered. Stamp a token so cover URLs bust the browser cache
+        // and playable-item resolution re-resolves instead of reusing stale state.
+        const reloadToken = options?.forceRefresh ? Date.now() : undefined;
+        const updatedMap = new Map(
+          updatedResources.map((r) => [
+            r.id,
+            reloadToken !== undefined ? { ...r, reloadToken } : r,
+          ]),
+        );
 
-      setResources((prev) => prev.map((r) => updatedMap.get(r.id) ?? r));
-    }
-  }, []);
+        setResources((prev) => prev.map((r) => updatedMap.get(r.id) ?? r));
+      }
+    },
+    [],
+  );
 
   // Drop resources from the list immediately after they are deleted. reloadResources
   // can't do this: getResourcesByKeys returns nothing for deleted ids, and its
