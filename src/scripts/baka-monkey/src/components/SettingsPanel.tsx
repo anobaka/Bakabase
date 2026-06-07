@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@heroui/button';
 import { Input } from '@heroui/input';
 import { Popover, PopoverTrigger, PopoverContent } from '@heroui/popover';
@@ -7,6 +7,13 @@ import { IoSettingsSharp, IoWarning } from 'react-icons/io5';
 import { getApiBaseUrl, setApiBaseUrl, getStoredValue, setStoredValue, httpRequest } from '../api';
 import { pingNow } from '../heartbeat';
 import { getOverlayRoot } from '../overlay';
+import {
+  AUTO_TIMEZONE,
+  getBrowserTimeZone,
+  getSupportedTimeZones,
+  getTimeZonePreference,
+  setTimeZonePreference,
+} from '../timezone';
 import { showToast } from './Toast';
 import { t, getLocale, setLocale, onLocaleChange, type Locale } from '../i18n';
 
@@ -15,16 +22,35 @@ const localeOptions: { key: Locale; label: string }[] = [
   { key: 'en', label: 'English' },
 ];
 
+/** Toggle class on <body>; CSS in index.css hides markers + viewed borders. */
+const HIDE_MARKERS_CLASS = 'bk-hide-markers';
+
+// New storage key on purpose: the previous "hide markers" toggle was broken
+// (it targeted stale `.bakabase-*` selectors), so it could persist
+// `markers_visible: false` while never actually hiding anything. Reading the
+// old key now would surprise those users by hiding everything. A fresh key
+// resets everyone to "visible" and the working toggle persists from here on.
+const MARKERS_VISIBLE_KEY = 'markers_visible_v2';
+
 export function SettingsPanel({ siteKey, connected }: { siteKey?: string; connected: boolean }) {
-  const [markersVisible, setMarkersVisible] = useState(() => getStoredValue('markers_visible', true));
+  const [markersVisible, setMarkersVisible] = useState(() => getStoredValue(MARKERS_VISIBLE_KEY, true));
   const [apiUrl, setApiUrl] = useState(() => getApiBaseUrl());
   const [isOpen, setIsOpen] = useState(false);
   const [locale, setLocaleState] = useState(getLocale);
+  const [timeZone, setTimeZoneState] = useState(getTimeZonePreference);
   const [, forceUpdate] = useState(0);
   const [autoBuyThreshold, setAutoBuyThreshold] = useState<string>('');
   const [autoBuyLoading, setAutoBuyLoading] = useState(false);
 
+  const browserTimeZone = useMemo(() => getBrowserTimeZone(), []);
+  const timeZoneOptions = useMemo(() => getSupportedTimeZones(), []);
+
   useEffect(() => onLocaleChange(() => forceUpdate((n) => n + 1)), []);
+
+  // Reflect the persisted markers-visible preference onto <body> on mount.
+  useEffect(() => {
+    document.body.classList.toggle(HIDE_MARKERS_CLASS, !markersVisible);
+  }, [markersVisible]);
 
   // Fetch soulplus auto-buy threshold when panel opens on soulplus site
   useEffect(() => {
@@ -42,15 +68,11 @@ export function SettingsPanel({ siteKey, connected }: { siteKey?: string; connec
   }, [siteKey, isOpen]);
 
   const handleToggleMarkers = () => {
+    // The effect above syncs the `.bk-hide-markers` body class (which index.css
+    // uses to hide our buttons and viewed borders) whenever this state changes.
     const next = !markersVisible;
     setMarkersVisible(next);
-    setStoredValue('markers_visible', next);
-
-    document.querySelectorAll<HTMLElement>(
-      '.bakabase-marker, .bakabase-viewed-overlay, .bakabase-download-btn, .bakabase-parse-btn',
-    ).forEach((el) => {
-      el.style.display = next ? '' : 'none';
-    });
+    setStoredValue(MARKERS_VISIBLE_KEY, next);
   };
 
   const handleSaveApiUrl = () => {
@@ -81,6 +103,11 @@ export function SettingsPanel({ siteKey, connected }: { siteKey?: string; connec
   const handleLocaleChange = (key: Locale) => {
     setLocaleState(key);
     setLocale(key);
+  };
+
+  const handleTimeZoneChange = (key: string) => {
+    setTimeZoneState(key);
+    setTimeZonePreference(key);
   };
 
   return (
@@ -163,6 +190,24 @@ export function SettingsPanel({ siteKey, connected }: { siteKey?: string; connec
               {localeOptions.map((opt) => (
                 <SelectItem key={opt.key}>{opt.label}</SelectItem>
               ))}
+            </Select>
+            <Select
+              size="sm"
+              label={t('timezone')}
+              description={t('timezoneDescription')}
+              portalContainer={getOverlayRoot()}
+              selectedKeys={[timeZone]}
+              onSelectionChange={(keys) => {
+                const selected = [...keys][0] as string;
+                if (selected) handleTimeZoneChange(selected);
+              }}
+            >
+              {[
+                <SelectItem key={AUTO_TIMEZONE}>
+                  {t('timezoneAuto', { tz: browserTimeZone })}
+                </SelectItem>,
+                ...timeZoneOptions.map((tz) => <SelectItem key={tz}>{tz}</SelectItem>),
+              ]}
             </Select>
             {siteKey === 'soulplus' && (
               <>
