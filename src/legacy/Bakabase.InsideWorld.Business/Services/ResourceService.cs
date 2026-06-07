@@ -1597,6 +1597,15 @@ namespace Bakabase.InsideWorld.Business.Services
                 await _resourceCacheOrm.Update(cache);
             }
 
+            // Announce that this resource's cache was rebuilt. The batch refresh loops
+            // through this method, so each resource is published as it finishes; the UI
+            // bridge (ResourceChangePushService) aggregates the burst into periodic
+            // SignalR pushes so the resource list can reload affected cards without a
+            // full re-search. NOTE: do NOT use PublishResourceCoverChanged here — that
+            // event triggers ResourceCoverCacheInvalidationService, which would delete
+            // the cover cache we just rebuilt.
+            ResourceDataChangeEventPublisher.PublishResourcesChanged([resourceId]);
+
             return await GetResourceCache(resourceId);
         }
 

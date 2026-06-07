@@ -166,4 +166,13 @@ export type Resource = {
 
   /** Per-(propertyPool, propertyId) scope priority overrides for this resource */
   scopePreferences?: PropertyValueScopePreference[];
+
+  /**
+   * Client-only token, bumped when this resource is reloaded after a backend cache
+   * refresh. Forces dependent UI to re-resolve from the fresh data even when a path is
+   * unchanged: the cover thumbnail URL appends it to bypass the browser image cache,
+   * and playable-item resolution treats a bump like a new resource so stale SSE
+   * discovery results don't mask the rebuilt cache. Not sent by the backend.
+   */
+  reloadToken?: number;
 };

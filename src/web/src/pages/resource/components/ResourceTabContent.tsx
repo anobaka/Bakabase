@@ -28,6 +28,7 @@ import BusinessConstants from "@/components/BusinessConstants";
 import { Button, Card, CardBody, Link, Pagination, Spinner } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { useResourceSearch } from "@/hooks/useResourceSearch";
+import { resourceChangedChannel } from "@/services/ResourceChangedChannel";
 
 const BasePageSize = 50;
 const getPageSize = (cols: number) =>
@@ -491,6 +492,23 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
     },
     [reloadResources],
   );
+
+  // Reload resources when the backend announces they changed (e.g. cache rebuilt by a
+  // single or batch refresh). Only the ids currently shown in this tab are reloaded;
+  // forceRefresh makes cover and playable UI re-resolve even when their paths are
+  // unchanged (regenerated thumbnail, rediscovered playable files).
+  useEffect(() => {
+    const unsubscribe = resourceChangedChannel.subscribe((ids) => {
+      const currentIds = new Set(resourcesRef.current.map((r) => r.id));
+      const relevant = ids.filter((id) => currentIds.has(id));
+
+      if (relevant.length > 0) {
+        reloadResources(relevant, { forceRefresh: true });
+      }
+    });
+
+    return unsubscribe;
+  }, [reloadResources]);
 
   // Prune deleted resources from the grid immediately (and drop them from the
   // current selection) so the card disappears without waiting for a re-search.

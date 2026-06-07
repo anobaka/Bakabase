@@ -108,8 +108,17 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     // Use resolved covers, or fall back to resource.path
     const coverPaths = coverResolution.covers?.length ? coverResolution.covers : [resource.path];
 
+    // Cache-busting: after a cache refresh the thumbnail file may be regenerated at the
+    // same path, so the URL would otherwise be identical and the browser would serve the
+    // stale cached image. `reloadKey` covers the imperative reload() (cover fallback /
+    // Operations refresh button); `resource.reloadToken` is stamped when the list reloads
+    // the resource after a backend cache-refresh push. Only added once busted so normal
+    // loads keep benefiting from HTTP caching.
+    const reloadToken = resource.reloadToken;
+    const bust = reloadKey > 0 || reloadToken ? `&v=${reloadToken ?? 0}.${reloadKey}` : "";
+
     return coverPaths.map(
-      (coverPath) => `${serverAddress}/tool/thumbnail?path=${encodeURIComponent(coverPath)}`,
+      (coverPath) => `${serverAddress}/tool/thumbnail?path=${encodeURIComponent(coverPath)}${bust}`,
     );
   }, [
     coverResolution.status,
@@ -117,6 +126,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     stableApiEndpoints,
     resource.path,
     reloadKey,
+    resource.reloadToken,
   ]);
 
   useUpdateEffect(() => {
