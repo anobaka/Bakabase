@@ -67,6 +67,7 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
     response: searchResponse,
     search: progressiveSearch,
     reloadResources,
+    removeResources,
   } = useResourceSearch();
   const resourcesRef = useRef(resources);
   // Deferred resources keep the heavy grid render low-priority so filter edits stay responsive.
@@ -491,6 +492,21 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
     [reloadResources],
   );
 
+  // Prune deleted resources from the grid immediately (and drop them from the
+  // current selection) so the card disappears without waiting for a re-search.
+  const onResourcesDeleted = useCallback(
+    (ids: number[]) => {
+      if (ids.length === 0) {
+        return;
+      }
+      removeResources(ids);
+      const idSet = new Set(ids);
+
+      setSelectedIds((prev) => prev.filter((id) => !idSet.has(id)));
+    },
+    [removeResources],
+  );
+
   type GridCellRenderArgs = {
     columnIndex: number;
     key: string;
@@ -532,13 +548,14 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
             selectedResourceIdsRef={selectedIdsRef}
             selectedResourcesRef={selectedResourcesRef}
             selectionModeRef={multiSelectionRef}
+            onResourcesDeleted={onResourcesDeleted}
             onSelected={onSelect}
             onSelectedResourcesChanged={onSelectedResourcesChanged}
           />
         </div>
       );
     },
-    [displayResources, columnCount, onSelect, onSelectedResourcesChanged],
+    [displayResources, columnCount, onSelect, onSelectedResourcesChanged, onResourcesDeleted],
   );
 
   useImperativeHandle(ref, () => ({

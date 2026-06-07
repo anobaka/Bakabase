@@ -38,6 +38,8 @@ type UseResourceSearchResult = {
   setResources: React.Dispatch<React.SetStateAction<Resource[]>>;
   /** Reload specific resources by their IDs */
   reloadResources: (ids: number[]) => Promise<void>;
+  /** Remove resources from the list by their IDs (e.g. after deletion) */
+  removeResources: (ids: number[]) => void;
 };
 
 /**
@@ -242,6 +244,18 @@ export const useResourceSearch = (): UseResourceSearchResult => {
     }
   }, []);
 
+  // Drop resources from the list immediately after they are deleted. reloadResources
+  // can't do this: getResourcesByKeys returns nothing for deleted ids, and its
+  // `updatedMap.get(r.id) ?? r` fallback would keep the stale row in the list.
+  const removeResources = useCallback((ids: number[]) => {
+    if (ids.length === 0) {
+      return;
+    }
+    const idSet = new Set(ids);
+
+    setResources((prev) => prev.filter((r) => !idSet.has(r.id)));
+  }, []);
+
   return {
     resources,
     loading,
@@ -250,6 +264,7 @@ export const useResourceSearch = (): UseResourceSearchResult => {
     search,
     setResources,
     reloadResources,
+    removeResources,
   };
 };
 

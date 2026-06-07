@@ -321,6 +321,8 @@ type Props = {
   selectedResourceIdsRef?: React.RefObject<number[]>;
   selectedResourcesRef?: React.RefObject<ResourceModel[]>;
   onSelectedResourcesChanged?: (ids: number[]) => any;
+  /** Called after resources are deleted so the parent can prune them from the list. */
+  onResourcesDeleted?: (ids: number[]) => any;
   debug?: boolean;
   /** Disable cover click to prevent opening DetailModal */
   disableCoverClick?: boolean;
@@ -341,6 +343,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
     selectedResourceIdsRef,
     selectedResourcesRef,
     onSelectedResourcesChanged,
+    onResourcesDeleted,
     debug,
     disableCoverClick = false,
   } = props;
@@ -873,7 +876,12 @@ const Resource = React.forwardRef((props: Props, ref) => {
           <CheckCircleFilled className="text-primary text-xl drop-shadow-md" />
         </div>
       )}
-      <Operations coverRef={coverRef.current} reload={reload} resource={resource} />
+      <Operations
+        coverRef={coverRef.current}
+        reload={reload}
+        resource={resource}
+        onResourcesDeleted={onResourcesDeleted}
+      />
       <div
         onContextMenu={(e) => {
           if (typeof document.hasFocus === "function" && !document.hasFocus()) return;
@@ -903,6 +911,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
               contextResource={resource}
               selectedResourceIds={selectedResourceIds}
               selectedResources={selectedResources}
+              onResourcesDeleted={onResourcesDeleted}
               onSelectedResourcesChanged={onSelectedResourcesChanged}
             />
           )}
