@@ -245,7 +245,7 @@ public class ResourceProfileIndexService : IResourceProfileIndexService
 
             if (resourcesToInvalidate.Count > 0)
             {
-                await ProcessResourceInvalidations(resourcesToInvalidate, resourceProfileService, args);
+                await ProcessResourceInvalidations(resourcesToInvalidate, resourceProfileService, resourceService, args);
             }
         }
         catch (Exception ex)
@@ -379,6 +379,11 @@ public class ResourceProfileIndexService : IResourceProfileIndexService
             _profilePriorities[profile.Id] = profile.Priority;
         }
 
+        // Resources touched by a profile add/edit/delete: their effective playable-file options
+        // may have changed (the profile gained/lost them, or its playable rules were edited), so
+        // any cached playable-file result must be invalidated to be re-discovered on next access.
+        var affectedResourceIds = new HashSet<int>();
+
         foreach (var profileId in profileIds)
         {
             args.CancellationToken.ThrowIfCancellationRequested();
@@ -389,6 +394,7 @@ public class ResourceProfileIndexService : IResourceProfileIndexService
                 foreach (var resourceId in oldResourceIds)
                 {
                     RemoveProfileFromResource(resourceId, profileId);
+                    affectedResourceIds.Add(resourceId);
                 }
             }
 
@@ -402,6 +408,7 @@ public class ResourceProfileIndexService : IResourceProfileIndexService
                 foreach (var resourceId in matchingResourceIds)
                 {
                     AddProfileToResource(resourceId, profileId);
+                    affectedResourceIds.Add(resourceId);
                 }
             }
             else
@@ -410,28 +417,44 @@ public class ResourceProfileIndexService : IResourceProfileIndexService
                 _profilePriorities.TryRemove(profileId, out _);
             }
         }
+
+        if (affectedResourceIds.Count > 0)
+        {
+            await resourceService.DeleteResourceCacheByResourceIdsAndCacheType(
+                affectedResourceIds, ResourceCacheType.PlayableFiles);
+        }
     }
 
     private async Task ProcessResourceInvalidations(
         HashSet<int> resourceIds,
         IResourceProfileService resourceProfileService,
+        IResourceService resourceService,
         BTaskArgs args)
     {
         _logger.LogDebug("Processing {Count} resource invalidations", resourceIds.Count);
 
         var allProfiles = await resourceProfileService.GetAll();
 
+        // Resources whose matching-profile set actually changed. Their effective playable-file
+        // options come from the highest-priority matching profile, so a change here can make a
+        // previously cached playable-file result stale. This is what lets a freshly-synced
+        // resource auto-recover: it may have been discovered with an empty playable result
+        // before it had been indexed against any profile (GetMatchingProfileIds returned none),
+        // which gets cached as a valid "no playable files" entry; once indexing catches up we
+        // invalidate that entry so the next access re-discovers from the (now resolvable) profile.
+        var matchingChangedResourceIds = new HashSet<int>();
+
         foreach (var resourceId in resourceIds)
         {
             args.CancellationToken.ThrowIfCancellationRequested();
 
             // Clear existing mappings for this resource
-            if (_resourceToProfiles.TryRemove(resourceId, out var oldProfileIds))
+            var oldProfileIds = _resourceToProfiles.TryRemove(resourceId, out var removed)
+                ? removed
+                : Array.Empty<int>();
+            foreach (var profileId in oldProfileIds)
             {
-                foreach (var profileId in oldProfileIds)
-                {
-                    RemoveResourceFromProfile(profileId, resourceId);
-                }
+                RemoveResourceFromProfile(profileId, resourceId);
             }
 
             // Re-evaluate against all profiles
@@ -468,6 +491,18 @@ public class ResourceProfileIndexService : IResourceProfileIndexService
                         .CompareTo(_profilePriorities.GetValueOrDefault(a, 0)));
                 _resourceToProfiles[resourceId] = matchingProfileIds;
             }
+
+            // Order-independent comparison of old vs new matching set.
+            if (!oldProfileIds.OrderBy(x => x).SequenceEqual(matchingProfileIds.OrderBy(x => x)))
+            {
+                matchingChangedResourceIds.Add(resourceId);
+            }
+        }
+
+        if (matchingChangedResourceIds.Count > 0)
+        {
+            await resourceService.DeleteResourceCacheByResourceIdsAndCacheType(
+                matchingChangedResourceIds, ResourceCacheType.PlayableFiles);
         }
     }
 
