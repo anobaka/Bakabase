@@ -175,6 +175,34 @@ public sealed class LocalFilePlayableItemProviderCacheTests
     }
 
     [TestMethod]
+    public async Task RefreshResourceCache_RediscoversPlayableFiles_OverStaleEmptyCache()
+    {
+        // Regression: a resource was cached as "no playable files" (flag set, paths null) — e.g.
+        // discovered before it had been indexed against a playable profile. The file exists and a
+        // matching profile now exists. "Refresh cache" must re-discover it; previously it reloaded
+        // the stale cache via the nested Get and the provider short-circuited, re-saving empty.
+        var resource = await SeedResource("Movie", "a.mp4");
+        await AddPlayableProfile("mp4");
+
+        var cacheOrm = _sp
+            .GetRequiredService<FullMemoryCacheResourceService<BakabaseDbContext, ResourceCacheDbModel, int>>();
+        await cacheOrm.Add(new ResourceCacheDbModel
+        {
+            ResourceId = resource.Id,
+            CachedTypes = ResourceCacheType.PlayableFiles,
+            PlayableFilePaths = null
+        });
+
+        await _sp.GetRequiredService<IResourceService>().RefreshResourceCache(resource.Id, CancellationToken.None);
+
+        var cache = await GetCacheRow(resource.Id);
+        Assert.IsNotNull(cache);
+        Assert.IsTrue(cache!.CachedTypes.HasFlag(ResourceCacheType.PlayableFiles));
+        Assert.IsFalse(string.IsNullOrEmpty(cache.PlayableFilePaths),
+            "RefreshResourceCache should re-discover the playable file instead of keeping the stale empty cache");
+    }
+
+    [TestMethod]
     public async Task InvalidateAsync_ClearsCacheFlag()
     {
         var resource = await SeedResource("Movie", "a.mp4");

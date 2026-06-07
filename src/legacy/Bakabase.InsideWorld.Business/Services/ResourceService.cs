@@ -1556,6 +1556,22 @@ namespace Bakabase.InsideWorld.Business.Services
                 cache.PlayableFilePaths = null;
                 cache.CachedTypes &= ~ResourceCacheType.PlayableFiles;
 
+                // Persist the invalidation immediately so the nested Get(...) below doesn't see
+                // the previous CachedTypes flag and short-circuit to returning the stale cached
+                // playable files (LocalFilePlayableItemProvider.GetPlayableItemsAsync returns the
+                // cached paths — including a cached "empty" result — as soon as the PlayableFiles
+                // flag is set). Mirrors the cover branch above; without it, "refresh cache" can
+                // never re-discover playable files for a resource that was cached as empty.
+                if (isNew)
+                {
+                    await _resourceCacheOrm.Add(cache);
+                    isNew = false;
+                }
+                else
+                {
+                    await _resourceCacheOrm.Update(cache);
+                }
+
                 var playableProviders = GetRequiredService<IEnumerable<IPlayableItemProvider>>();
                 var localPlayableProvider = playableProviders.FirstOrDefault(p => p.Origin == DataOrigin.FileSystem);
                 var playableResource = await Get(resourceId, ResourceAdditionalItem.PlayableItem);
