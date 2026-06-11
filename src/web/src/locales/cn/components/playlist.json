@@ -11,6 +11,7 @@
   "playlist.label.name": "播放列表名称",
   "playlist.label.enterName": "输入播放列表名称",
   "playlist.label.nameRequired": "名称不能为空",
+  "playlist.action.openWithPlayer": "用外部播放器全部打开",
   "playlist.action.create": "创建",
   "playlist.label.loading": "正在加载播放列表...",
   "playlist.label.notFound": "未找到播放列表",

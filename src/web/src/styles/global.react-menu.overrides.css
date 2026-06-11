@@ -138,10 +138,11 @@
   content: none !important;
 }
 
-/* Submenu positioning */
+/* SubMenu wrapper <li> — keep it inset-free, or the label item's left edge
+   drifts 4px right of its sibling menu items. The submenu popup itself is a
+   .szh-menu and is already styled above. */
 .szh-menu__submenu {
-  padding: 4px;
-  border-radius: 12px;
+  padding: 0;
 }
 
 /* Radio/Checkbox items */

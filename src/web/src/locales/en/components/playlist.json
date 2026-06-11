@@ -11,6 +11,7 @@
   "playlist.label.name": "Playlist Name",
   "playlist.label.enterName": "Enter playlist name",
   "playlist.label.nameRequired": "Name can not be empty",
+  "playlist.action.openWithPlayer": "Open all with external player",
   "playlist.action.create": "Create",
   "playlist.label.loading": "Loading playlist...",
   "playlist.label.notFound": "Playlist not found",

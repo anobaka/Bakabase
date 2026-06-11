@@ -2195,6 +2195,17 @@ namespace Bakabase.InsideWorld.Business.Services
             return BaseResponseBuilder.Ok;
         }
 
+        public async Task MarkPlayed(IReadOnlyDictionary<int, string> playedItemsByResourceId)
+        {
+            var now = DateTime.Now;
+            foreach (var (resourceId, item) in playedItemsByResourceId)
+            {
+                await _orm.UpdateByKey(resourceId, r => r.PlayedAt = now);
+                await _playHistoryService.Add(new PlayHistoryDbModel
+                    { ResourceId = resourceId, Item = item, PlayedAt = now });
+            }
+        }
+
         public async Task<BaseResponse> ChangeMediaLibrary(int[] ids, int mediaLibraryId, Dictionary<int, string>? newPaths = null)
         {
             // Verify media library exists
