@@ -232,6 +232,879 @@ export const OsPlatformLabel: Record<OsPlatform, string> = {
   [OsPlatform.FreeBsd]: 'FreeBsd'
 };
 
+export enum BatchPlaySkipReason {
+  NoPlayableFiles = 1,
+  AllFilesMissing = 2,
+  ResourceNotFound = 3,
+  NoFilesMatchingPlayer = 4
+}
+
+export const batchPlaySkipReasons = [
+  { label: 'NoPlayableFiles', value: BatchPlaySkipReason.NoPlayableFiles },
+  { label: 'AllFilesMissing', value: BatchPlaySkipReason.AllFilesMissing },
+  { label: 'ResourceNotFound', value: BatchPlaySkipReason.ResourceNotFound },
+  { label: 'NoFilesMatchingPlayer', value: BatchPlaySkipReason.NoFilesMatchingPlayer }
+] as const;
+
+export const BatchPlaySkipReasonLabel: Record<BatchPlaySkipReason, string> = {
+  [BatchPlaySkipReason.NoPlayableFiles]: 'NoPlayableFiles',
+  [BatchPlaySkipReason.AllFilesMissing]: 'AllFilesMissing',
+  [BatchPlaySkipReason.ResourceNotFound]: 'ResourceNotFound',
+  [BatchPlaySkipReason.NoFilesMatchingPlayer]: 'NoFilesMatchingPlayer'
+};
+
+export enum BatchPlayCandidateType {
+  ProfilePlayer = 1,
+  KnownPlayer = 2
+}
+
+export const batchPlayCandidateTypes = [
+  { label: 'ProfilePlayer', value: BatchPlayCandidateType.ProfilePlayer },
+  { label: 'KnownPlayer', value: BatchPlayCandidateType.KnownPlayer }
+] as const;
+
+export const BatchPlayCandidateTypeLabel: Record<BatchPlayCandidateType, string> = {
+  [BatchPlayCandidateType.ProfilePlayer]: 'ProfilePlayer',
+  [BatchPlayCandidateType.KnownPlayer]: 'KnownPlayer'
+};
+
+export enum BatchPlayCapability {
+  None = 0,
+  PlaylistFile = 1,
+  MultiFileArguments = 2
+}
+
+export const batchPlayCapabilities = [
+  { label: 'None', value: BatchPlayCapability.None },
+  { label: 'PlaylistFile', value: BatchPlayCapability.PlaylistFile },
+  { label: 'MultiFileArguments', value: BatchPlayCapability.MultiFileArguments }
+] as const;
+
+export const BatchPlayCapabilityLabel: Record<BatchPlayCapability, string> = {
+  [BatchPlayCapability.None]: 'None',
+  [BatchPlayCapability.PlaylistFile]: 'PlaylistFile',
+  [BatchPlayCapability.MultiFileArguments]: 'MultiFileArguments'
+};
+
+export enum BatchPlayFileSelectionMode {
+  FirstFilePerResource = 1,
+  AllFiles = 2
+}
+
+export const batchPlayFileSelectionModes = [
+  { label: 'FirstFilePerResource', value: BatchPlayFileSelectionMode.FirstFilePerResource },
+  { label: 'AllFiles', value: BatchPlayFileSelectionMode.AllFiles }
+] as const;
+
+export const BatchPlayFileSelectionModeLabel: Record<BatchPlayFileSelectionMode, string> = {
+  [BatchPlayFileSelectionMode.FirstFilePerResource]: 'FirstFilePerResource',
+  [BatchPlayFileSelectionMode.AllFiles]: 'AllFiles'
+};
+
+export enum BatchPlayLaunchMethod {
+  PlaylistFile = 1,
+  MultiFileArguments = 2
+}
+
+export const batchPlayLaunchMethods = [
+  { label: 'PlaylistFile', value: BatchPlayLaunchMethod.PlaylistFile },
+  { label: 'MultiFileArguments', value: BatchPlayLaunchMethod.MultiFileArguments }
+] as const;
+
+export const BatchPlayLaunchMethodLabel: Record<BatchPlayLaunchMethod, string> = {
+  [BatchPlayLaunchMethod.PlaylistFile]: 'PlaylistFile',
+  [BatchPlayLaunchMethod.MultiFileArguments]: 'MultiFileArguments'
+};
+
+export enum BackgroundTaskName {
+  SyncMediaLibrary = 1,
+  PrepareCache = 2,
+  MoveFiles = 3,
+  Enhance = 4
+}
+
+export const backgroundTaskNames = [
+  { label: 'SyncMediaLibrary', value: BackgroundTaskName.SyncMediaLibrary },
+  { label: 'PrepareCache', value: BackgroundTaskName.PrepareCache },
+  { label: 'MoveFiles', value: BackgroundTaskName.MoveFiles },
+  { label: 'Enhance', value: BackgroundTaskName.Enhance }
+] as const;
+
+export const BackgroundTaskNameLabel: Record<BackgroundTaskName, string> = {
+  [BackgroundTaskName.SyncMediaLibrary]: 'SyncMediaLibrary',
+  [BackgroundTaskName.PrepareCache]: 'PrepareCache',
+  [BackgroundTaskName.MoveFiles]: 'MoveFiles',
+  [BackgroundTaskName.Enhance]: 'Enhance'
+};
+
+export enum BuiltinPropertyForDisplayName {
+  Filename = 15,
+  Name = 27
+}
+
+export const builtinPropertyForDisplayNames = [
+  { label: 'Filename', value: BuiltinPropertyForDisplayName.Filename },
+  { label: 'Name', value: BuiltinPropertyForDisplayName.Name }
+] as const;
+
+export const BuiltinPropertyForDisplayNameLabel: Record<BuiltinPropertyForDisplayName, string> = {
+  [BuiltinPropertyForDisplayName.Filename]: 'Filename',
+  [BuiltinPropertyForDisplayName.Name]: 'Name'
+};
+
+export enum IndexOperationType {
+  Update = 0,
+  Remove = 1
+}
+
+export const indexOperationTypes = [
+  { label: 'Update', value: IndexOperationType.Update },
+  { label: 'Remove', value: IndexOperationType.Remove }
+] as const;
+
+export const IndexOperationTypeLabel: Record<IndexOperationType, string> = {
+  [IndexOperationType.Update]: 'Update',
+  [IndexOperationType.Remove]: 'Remove'
+};
+
+export enum PostParserSource {
+  SoulPlus = 5
+}
+
+export const postParserSources = [
+  { label: 'SoulPlus', value: PostParserSource.SoulPlus }
+] as const;
+
+export const PostParserSourceLabel: Record<PostParserSource, string> = {
+  [PostParserSource.SoulPlus]: 'SoulPlus'
+};
+
+export enum PostParserTaskStatus {
+  None = 0,
+  Pending = 1,
+  Complete = 2,
+  Failed = 3,
+  Deleted = 4
+}
+
+export const postParserTaskStatuses = [
+  { label: 'None', value: PostParserTaskStatus.None },
+  { label: 'Pending', value: PostParserTaskStatus.Pending },
+  { label: 'Complete', value: PostParserTaskStatus.Complete },
+  { label: 'Failed', value: PostParserTaskStatus.Failed },
+  { label: 'Deleted', value: PostParserTaskStatus.Deleted }
+] as const;
+
+export const PostParserTaskStatusLabel: Record<PostParserTaskStatus, string> = {
+  [PostParserTaskStatus.None]: 'None',
+  [PostParserTaskStatus.Pending]: 'Pending',
+  [PostParserTaskStatus.Complete]: 'Complete',
+  [PostParserTaskStatus.Failed]: 'Failed',
+  [PostParserTaskStatus.Deleted]: 'Deleted'
+};
+
+export enum PostParseTarget {
+  DownloadInfo = 1
+}
+
+export const postParseTargets = [
+  { label: 'DownloadInfo', value: PostParseTarget.DownloadInfo }
+] as const;
+
+export const PostParseTargetLabel: Record<PostParseTarget, string> = {
+  [PostParseTarget.DownloadInfo]: 'DownloadInfo'
+};
+
+export enum FileNameModifierCaseType {
+  TitleCase = 1,
+  UpperCase = 2,
+  LowerCase = 3,
+  CamelCase = 4,
+  PascalCase = 5
+}
+
+export const fileNameModifierCaseTypes = [
+  { label: 'TitleCase', value: FileNameModifierCaseType.TitleCase },
+  { label: 'UpperCase', value: FileNameModifierCaseType.UpperCase },
+  { label: 'LowerCase', value: FileNameModifierCaseType.LowerCase },
+  { label: 'CamelCase', value: FileNameModifierCaseType.CamelCase },
+  { label: 'PascalCase', value: FileNameModifierCaseType.PascalCase }
+] as const;
+
+export const FileNameModifierCaseTypeLabel: Record<FileNameModifierCaseType, string> = {
+  [FileNameModifierCaseType.TitleCase]: 'TitleCase',
+  [FileNameModifierCaseType.UpperCase]: 'UpperCase',
+  [FileNameModifierCaseType.LowerCase]: 'LowerCase',
+  [FileNameModifierCaseType.CamelCase]: 'CamelCase',
+  [FileNameModifierCaseType.PascalCase]: 'PascalCase'
+};
+
+export enum FileNameModifierFileNameTarget {
+  FileName = 1,
+  FileNameWithoutExtension = 2,
+  Extension = 3,
+  ExtensionWithoutDot = 4
+}
+
+export const fileNameModifierFileNameTargets = [
+  { label: 'FileName', value: FileNameModifierFileNameTarget.FileName },
+  { label: 'FileNameWithoutExtension', value: FileNameModifierFileNameTarget.FileNameWithoutExtension },
+  { label: 'Extension', value: FileNameModifierFileNameTarget.Extension },
+  { label: 'ExtensionWithoutDot', value: FileNameModifierFileNameTarget.ExtensionWithoutDot }
+] as const;
+
+export const FileNameModifierFileNameTargetLabel: Record<FileNameModifierFileNameTarget, string> = {
+  [FileNameModifierFileNameTarget.FileName]: 'FileName',
+  [FileNameModifierFileNameTarget.FileNameWithoutExtension]: 'FileNameWithoutExtension',
+  [FileNameModifierFileNameTarget.Extension]: 'Extension',
+  [FileNameModifierFileNameTarget.ExtensionWithoutDot]: 'ExtensionWithoutDot'
+};
+
+export enum FileNameModifierOperationType {
+  Insert = 1,
+  AddDateTime = 2,
+  Delete = 3,
+  Replace = 4,
+  ChangeCase = 5,
+  AddAlphabetSequence = 6,
+  Reverse = 7
+}
+
+export const fileNameModifierOperationTypes = [
+  { label: 'Insert', value: FileNameModifierOperationType.Insert },
+  { label: 'AddDateTime', value: FileNameModifierOperationType.AddDateTime },
+  { label: 'Delete', value: FileNameModifierOperationType.Delete },
+  { label: 'Replace', value: FileNameModifierOperationType.Replace },
+  { label: 'ChangeCase', value: FileNameModifierOperationType.ChangeCase },
+  { label: 'AddAlphabetSequence', value: FileNameModifierOperationType.AddAlphabetSequence },
+  { label: 'Reverse', value: FileNameModifierOperationType.Reverse }
+] as const;
+
+export const FileNameModifierOperationTypeLabel: Record<FileNameModifierOperationType, string> = {
+  [FileNameModifierOperationType.Insert]: 'Insert',
+  [FileNameModifierOperationType.AddDateTime]: 'AddDateTime',
+  [FileNameModifierOperationType.Delete]: 'Delete',
+  [FileNameModifierOperationType.Replace]: 'Replace',
+  [FileNameModifierOperationType.ChangeCase]: 'ChangeCase',
+  [FileNameModifierOperationType.AddAlphabetSequence]: 'AddAlphabetSequence',
+  [FileNameModifierOperationType.Reverse]: 'Reverse'
+};
+
+export enum FileNameModifierPosition {
+  Start = 1,
+  End = 2,
+  AtPosition = 3,
+  AfterText = 4,
+  BeforeText = 5
+}
+
+export const fileNameModifierPositions = [
+  { label: 'Start', value: FileNameModifierPosition.Start },
+  { label: 'End', value: FileNameModifierPosition.End },
+  { label: 'AtPosition', value: FileNameModifierPosition.AtPosition },
+  { label: 'AfterText', value: FileNameModifierPosition.AfterText },
+  { label: 'BeforeText', value: FileNameModifierPosition.BeforeText }
+] as const;
+
+export const FileNameModifierPositionLabel: Record<FileNameModifierPosition, string> = {
+  [FileNameModifierPosition.Start]: 'Start',
+  [FileNameModifierPosition.End]: 'End',
+  [FileNameModifierPosition.AtPosition]: 'AtPosition',
+  [FileNameModifierPosition.AfterText]: 'AfterText',
+  [FileNameModifierPosition.BeforeText]: 'BeforeText'
+};
+
+export enum IwFsAttribute {
+  Hidden = 1
+}
+
+export const iwFsAttributes = [
+  { label: 'Hidden', value: IwFsAttribute.Hidden }
+] as const;
+
+export const IwFsAttributeLabel: Record<IwFsAttribute, string> = {
+  [IwFsAttribute.Hidden]: 'Hidden'
+};
+
+export enum IwFsEntryChangeType {
+  Created = 1,
+  Renamed = 2,
+  Changed = 3,
+  Deleted = 4
+}
+
+export const iwFsEntryChangeTypes = [
+  { label: 'Created', value: IwFsEntryChangeType.Created },
+  { label: 'Renamed', value: IwFsEntryChangeType.Renamed },
+  { label: 'Changed', value: IwFsEntryChangeType.Changed },
+  { label: 'Deleted', value: IwFsEntryChangeType.Deleted }
+] as const;
+
+export const IwFsEntryChangeTypeLabel: Record<IwFsEntryChangeType, string> = {
+  [IwFsEntryChangeType.Created]: 'Created',
+  [IwFsEntryChangeType.Renamed]: 'Renamed',
+  [IwFsEntryChangeType.Changed]: 'Changed',
+  [IwFsEntryChangeType.Deleted]: 'Deleted'
+};
+
+export enum IwFsType {
+  Unknown = 0,
+  Directory = 100,
+  Image = 200,
+  CompressedFileEntry = 300,
+  CompressedFilePart = 400,
+  Symlink = 500,
+  Video = 600,
+  Audio = 700,
+  Drive = 1000,
+  Invalid = 10000
+}
+
+export const iwFsTypes = [
+  { label: 'Unknown', value: IwFsType.Unknown },
+  { label: 'Directory', value: IwFsType.Directory },
+  { label: 'Image', value: IwFsType.Image },
+  { label: 'CompressedFileEntry', value: IwFsType.CompressedFileEntry },
+  { label: 'CompressedFilePart', value: IwFsType.CompressedFilePart },
+  { label: 'Symlink', value: IwFsType.Symlink },
+  { label: 'Video', value: IwFsType.Video },
+  { label: 'Audio', value: IwFsType.Audio },
+  { label: 'Drive', value: IwFsType.Drive },
+  { label: 'Invalid', value: IwFsType.Invalid }
+] as const;
+
+export const IwFsTypeLabel: Record<IwFsType, string> = {
+  [IwFsType.Unknown]: 'Unknown',
+  [IwFsType.Directory]: 'Directory',
+  [IwFsType.Image]: 'Image',
+  [IwFsType.CompressedFileEntry]: 'CompressedFileEntry',
+  [IwFsType.CompressedFilePart]: 'CompressedFilePart',
+  [IwFsType.Symlink]: 'Symlink',
+  [IwFsType.Video]: 'Video',
+  [IwFsType.Audio]: 'Audio',
+  [IwFsType.Drive]: 'Drive',
+  [IwFsType.Invalid]: 'Invalid'
+};
+
+export enum PixivDownloadTaskType {
+  Search = 1,
+  Ranking = 2,
+  Following = 3
+}
+
+export const pixivDownloadTaskTypes = [
+  { label: 'Search', value: PixivDownloadTaskType.Search },
+  { label: 'Ranking', value: PixivDownloadTaskType.Ranking },
+  { label: 'Following', value: PixivDownloadTaskType.Following }
+] as const;
+
+export const PixivDownloadTaskTypeLabel: Record<PixivDownloadTaskType, string> = {
+  [PixivDownloadTaskType.Search]: 'Search',
+  [PixivDownloadTaskType.Ranking]: 'Ranking',
+  [PixivDownloadTaskType.Following]: 'Following'
+};
+
+export enum PixivNamingFields {
+  IllustrationId = 0,
+  IllustrationTitle = 1,
+  UploadDate = 2,
+  Tags = 3,
+  UserId = 4,
+  UserName = 5,
+  PageNo = 6,
+  Extension = 7
+}
+
+export const pixivNamingFields = [
+  { label: 'IllustrationId', value: PixivNamingFields.IllustrationId },
+  { label: 'IllustrationTitle', value: PixivNamingFields.IllustrationTitle },
+  { label: 'UploadDate', value: PixivNamingFields.UploadDate },
+  { label: 'Tags', value: PixivNamingFields.Tags },
+  { label: 'UserId', value: PixivNamingFields.UserId },
+  { label: 'UserName', value: PixivNamingFields.UserName },
+  { label: 'PageNo', value: PixivNamingFields.PageNo },
+  { label: 'Extension', value: PixivNamingFields.Extension }
+] as const;
+
+export const PixivNamingFieldsLabel: Record<PixivNamingFields, string> = {
+  [PixivNamingFields.IllustrationId]: 'IllustrationId',
+  [PixivNamingFields.IllustrationTitle]: 'IllustrationTitle',
+  [PixivNamingFields.UploadDate]: 'UploadDate',
+  [PixivNamingFields.Tags]: 'Tags',
+  [PixivNamingFields.UserId]: 'UserId',
+  [PixivNamingFields.UserName]: 'UserName',
+  [PixivNamingFields.PageNo]: 'PageNo',
+  [PixivNamingFields.Extension]: 'Extension'
+};
+
+export enum PatreonDownloadTaskType {
+  Creator = 1,
+  Following = 2,
+  SinglePost = 3
+}
+
+export const patreonDownloadTaskTypes = [
+  { label: 'Creator', value: PatreonDownloadTaskType.Creator },
+  { label: 'Following', value: PatreonDownloadTaskType.Following },
+  { label: 'SinglePost', value: PatreonDownloadTaskType.SinglePost }
+] as const;
+
+export const PatreonDownloadTaskTypeLabel: Record<PatreonDownloadTaskType, string> = {
+  [PatreonDownloadTaskType.Creator]: 'Creator',
+  [PatreonDownloadTaskType.Following]: 'Following',
+  [PatreonDownloadTaskType.SinglePost]: 'SinglePost'
+};
+
+export enum PatreonNamingFields {
+  PostId = 0,
+  PostTitle = 1,
+  PublishDate = 2,
+  CreatorId = 3,
+  CreatorName = 4,
+  TierLevel = 5,
+  FileNo = 6,
+  Extension = 7
+}
+
+export const patreonNamingFields = [
+  { label: 'PostId', value: PatreonNamingFields.PostId },
+  { label: 'PostTitle', value: PatreonNamingFields.PostTitle },
+  { label: 'PublishDate', value: PatreonNamingFields.PublishDate },
+  { label: 'CreatorId', value: PatreonNamingFields.CreatorId },
+  { label: 'CreatorName', value: PatreonNamingFields.CreatorName },
+  { label: 'TierLevel', value: PatreonNamingFields.TierLevel },
+  { label: 'FileNo', value: PatreonNamingFields.FileNo },
+  { label: 'Extension', value: PatreonNamingFields.Extension }
+] as const;
+
+export const PatreonNamingFieldsLabel: Record<PatreonNamingFields, string> = {
+  [PatreonNamingFields.PostId]: 'PostId',
+  [PatreonNamingFields.PostTitle]: 'PostTitle',
+  [PatreonNamingFields.PublishDate]: 'PublishDate',
+  [PatreonNamingFields.CreatorId]: 'CreatorId',
+  [PatreonNamingFields.CreatorName]: 'CreatorName',
+  [PatreonNamingFields.TierLevel]: 'TierLevel',
+  [PatreonNamingFields.FileNo]: 'FileNo',
+  [PatreonNamingFields.Extension]: 'Extension'
+};
+
+export enum FantiaDownloadTaskType {
+  Creator = 1,
+  Following = 2,
+  SinglePost = 3
+}
+
+export const fantiaDownloadTaskTypes = [
+  { label: 'Creator', value: FantiaDownloadTaskType.Creator },
+  { label: 'Following', value: FantiaDownloadTaskType.Following },
+  { label: 'SinglePost', value: FantiaDownloadTaskType.SinglePost }
+] as const;
+
+export const FantiaDownloadTaskTypeLabel: Record<FantiaDownloadTaskType, string> = {
+  [FantiaDownloadTaskType.Creator]: 'Creator',
+  [FantiaDownloadTaskType.Following]: 'Following',
+  [FantiaDownloadTaskType.SinglePost]: 'SinglePost'
+};
+
+export enum FantiaNamingFields {
+  PostId = 0,
+  PostTitle = 1,
+  PublishDate = 2,
+  FanclubId = 3,
+  FanclubName = 4,
+  FileNo = 5,
+  Extension = 6
+}
+
+export const fantiaNamingFields = [
+  { label: 'PostId', value: FantiaNamingFields.PostId },
+  { label: 'PostTitle', value: FantiaNamingFields.PostTitle },
+  { label: 'PublishDate', value: FantiaNamingFields.PublishDate },
+  { label: 'FanclubId', value: FantiaNamingFields.FanclubId },
+  { label: 'FanclubName', value: FantiaNamingFields.FanclubName },
+  { label: 'FileNo', value: FantiaNamingFields.FileNo },
+  { label: 'Extension', value: FantiaNamingFields.Extension }
+] as const;
+
+export const FantiaNamingFieldsLabel: Record<FantiaNamingFields, string> = {
+  [FantiaNamingFields.PostId]: 'PostId',
+  [FantiaNamingFields.PostTitle]: 'PostTitle',
+  [FantiaNamingFields.PublishDate]: 'PublishDate',
+  [FantiaNamingFields.FanclubId]: 'FanclubId',
+  [FantiaNamingFields.FanclubName]: 'FanclubName',
+  [FantiaNamingFields.FileNo]: 'FileNo',
+  [FantiaNamingFields.Extension]: 'Extension'
+};
+
+export enum FanboxDownloadTaskType {
+  Creator = 1,
+  Following = 2,
+  SinglePost = 3
+}
+
+export const fanboxDownloadTaskTypes = [
+  { label: 'Creator', value: FanboxDownloadTaskType.Creator },
+  { label: 'Following', value: FanboxDownloadTaskType.Following },
+  { label: 'SinglePost', value: FanboxDownloadTaskType.SinglePost }
+] as const;
+
+export const FanboxDownloadTaskTypeLabel: Record<FanboxDownloadTaskType, string> = {
+  [FanboxDownloadTaskType.Creator]: 'Creator',
+  [FanboxDownloadTaskType.Following]: 'Following',
+  [FanboxDownloadTaskType.SinglePost]: 'SinglePost'
+};
+
+export enum FanboxNamingFields {
+  PostId = 0,
+  PostTitle = 1,
+  PublishDate = 2,
+  CreatorId = 3,
+  CreatorName = 4,
+  FileNo = 5,
+  Extension = 6
+}
+
+export const fanboxNamingFields = [
+  { label: 'PostId', value: FanboxNamingFields.PostId },
+  { label: 'PostTitle', value: FanboxNamingFields.PostTitle },
+  { label: 'PublishDate', value: FanboxNamingFields.PublishDate },
+  { label: 'CreatorId', value: FanboxNamingFields.CreatorId },
+  { label: 'CreatorName', value: FanboxNamingFields.CreatorName },
+  { label: 'FileNo', value: FanboxNamingFields.FileNo },
+  { label: 'Extension', value: FanboxNamingFields.Extension }
+] as const;
+
+export const FanboxNamingFieldsLabel: Record<FanboxNamingFields, string> = {
+  [FanboxNamingFields.PostId]: 'PostId',
+  [FanboxNamingFields.PostTitle]: 'PostTitle',
+  [FanboxNamingFields.PublishDate]: 'PublishDate',
+  [FanboxNamingFields.CreatorId]: 'CreatorId',
+  [FanboxNamingFields.CreatorName]: 'CreatorName',
+  [FanboxNamingFields.FileNo]: 'FileNo',
+  [FanboxNamingFields.Extension]: 'Extension'
+};
+
+export enum ExHentaiDownloadTaskType {
+  SingleWork = 1,
+  Watched = 2,
+  List = 3
+}
+
+export const exHentaiDownloadTaskTypes = [
+  { label: 'SingleWork', value: ExHentaiDownloadTaskType.SingleWork },
+  { label: 'Watched', value: ExHentaiDownloadTaskType.Watched },
+  { label: 'List', value: ExHentaiDownloadTaskType.List }
+] as const;
+
+export const ExHentaiDownloadTaskTypeLabel: Record<ExHentaiDownloadTaskType, string> = {
+  [ExHentaiDownloadTaskType.SingleWork]: 'SingleWork',
+  [ExHentaiDownloadTaskType.Watched]: 'Watched',
+  [ExHentaiDownloadTaskType.List]: 'List'
+};
+
+export enum ExHentaiNamingFields {
+  GalleryId = 0,
+  GalleryToken = 1,
+  RawName = 2,
+  Name = 3,
+  Category = 4,
+  PageTitle = 5,
+  Extension = 6
+}
+
+export const exHentaiNamingFields = [
+  { label: 'GalleryId', value: ExHentaiNamingFields.GalleryId },
+  { label: 'GalleryToken', value: ExHentaiNamingFields.GalleryToken },
+  { label: 'RawName', value: ExHentaiNamingFields.RawName },
+  { label: 'Name', value: ExHentaiNamingFields.Name },
+  { label: 'Category', value: ExHentaiNamingFields.Category },
+  { label: 'PageTitle', value: ExHentaiNamingFields.PageTitle },
+  { label: 'Extension', value: ExHentaiNamingFields.Extension }
+] as const;
+
+export const ExHentaiNamingFieldsLabel: Record<ExHentaiNamingFields, string> = {
+  [ExHentaiNamingFields.GalleryId]: 'GalleryId',
+  [ExHentaiNamingFields.GalleryToken]: 'GalleryToken',
+  [ExHentaiNamingFields.RawName]: 'RawName',
+  [ExHentaiNamingFields.Name]: 'Name',
+  [ExHentaiNamingFields.Category]: 'Category',
+  [ExHentaiNamingFields.PageTitle]: 'PageTitle',
+  [ExHentaiNamingFields.Extension]: 'Extension'
+};
+
+export enum CienDownloadTaskType {
+  Creator = 1,
+  Following = 2,
+  SinglePost = 3
+}
+
+export const cienDownloadTaskTypes = [
+  { label: 'Creator', value: CienDownloadTaskType.Creator },
+  { label: 'Following', value: CienDownloadTaskType.Following },
+  { label: 'SinglePost', value: CienDownloadTaskType.SinglePost }
+] as const;
+
+export const CienDownloadTaskTypeLabel: Record<CienDownloadTaskType, string> = {
+  [CienDownloadTaskType.Creator]: 'Creator',
+  [CienDownloadTaskType.Following]: 'Following',
+  [CienDownloadTaskType.SinglePost]: 'SinglePost'
+};
+
+export enum CienNamingFields {
+  ArticleId = 0,
+  ArticleTitle = 1,
+  PublishDate = 2,
+  AuthorId = 3,
+  AuthorName = 4,
+  FileNo = 5,
+  Extension = 6
+}
+
+export const cienNamingFields = [
+  { label: 'ArticleId', value: CienNamingFields.ArticleId },
+  { label: 'ArticleTitle', value: CienNamingFields.ArticleTitle },
+  { label: 'PublishDate', value: CienNamingFields.PublishDate },
+  { label: 'AuthorId', value: CienNamingFields.AuthorId },
+  { label: 'AuthorName', value: CienNamingFields.AuthorName },
+  { label: 'FileNo', value: CienNamingFields.FileNo },
+  { label: 'Extension', value: CienNamingFields.Extension }
+] as const;
+
+export const CienNamingFieldsLabel: Record<CienNamingFields, string> = {
+  [CienNamingFields.ArticleId]: 'ArticleId',
+  [CienNamingFields.ArticleTitle]: 'ArticleTitle',
+  [CienNamingFields.PublishDate]: 'PublishDate',
+  [CienNamingFields.AuthorId]: 'AuthorId',
+  [CienNamingFields.AuthorName]: 'AuthorName',
+  [CienNamingFields.FileNo]: 'FileNo',
+  [CienNamingFields.Extension]: 'Extension'
+};
+
+export enum BilibiliDownloadTaskType {
+  Favorites = 1
+}
+
+export const bilibiliDownloadTaskTypes = [
+  { label: 'Favorites', value: BilibiliDownloadTaskType.Favorites }
+] as const;
+
+export const BilibiliDownloadTaskTypeLabel: Record<BilibiliDownloadTaskType, string> = {
+  [BilibiliDownloadTaskType.Favorites]: 'Favorites'
+};
+
+export enum BilibiliNamingFields {
+  UploaderId = 0,
+  UploaderName = 1,
+  AId = 2,
+  BvId = 3,
+  PostTitle = 4,
+  CId = 5,
+  PartNo = 6,
+  PartName = 7,
+  QualityName = 8,
+  Extension = 9
+}
+
+export const bilibiliNamingFields = [
+  { label: 'UploaderId', value: BilibiliNamingFields.UploaderId },
+  { label: 'UploaderName', value: BilibiliNamingFields.UploaderName },
+  { label: 'AId', value: BilibiliNamingFields.AId },
+  { label: 'BvId', value: BilibiliNamingFields.BvId },
+  { label: 'PostTitle', value: BilibiliNamingFields.PostTitle },
+  { label: 'CId', value: BilibiliNamingFields.CId },
+  { label: 'PartNo', value: BilibiliNamingFields.PartNo },
+  { label: 'PartName', value: BilibiliNamingFields.PartName },
+  { label: 'QualityName', value: BilibiliNamingFields.QualityName },
+  { label: 'Extension', value: BilibiliNamingFields.Extension }
+] as const;
+
+export const BilibiliNamingFieldsLabel: Record<BilibiliNamingFields, string> = {
+  [BilibiliNamingFields.UploaderId]: 'UploaderId',
+  [BilibiliNamingFields.UploaderName]: 'UploaderName',
+  [BilibiliNamingFields.AId]: 'AId',
+  [BilibiliNamingFields.BvId]: 'BvId',
+  [BilibiliNamingFields.PostTitle]: 'PostTitle',
+  [BilibiliNamingFields.CId]: 'CId',
+  [BilibiliNamingFields.PartNo]: 'PartNo',
+  [BilibiliNamingFields.PartName]: 'PartName',
+  [BilibiliNamingFields.QualityName]: 'QualityName',
+  [BilibiliNamingFields.Extension]: 'Extension'
+};
+
+export enum DownloaderStatus {
+  JustCreated = 0,
+  Starting = 100,
+  Downloading = 200,
+  Complete = 300,
+  Failed = 400,
+  Stopping = 500,
+  Stopped = 600
+}
+
+export const downloaderStatuses = [
+  { label: 'JustCreated', value: DownloaderStatus.JustCreated },
+  { label: 'Starting', value: DownloaderStatus.Starting },
+  { label: 'Downloading', value: DownloaderStatus.Downloading },
+  { label: 'Complete', value: DownloaderStatus.Complete },
+  { label: 'Failed', value: DownloaderStatus.Failed },
+  { label: 'Stopping', value: DownloaderStatus.Stopping },
+  { label: 'Stopped', value: DownloaderStatus.Stopped }
+] as const;
+
+export const DownloaderStatusLabel: Record<DownloaderStatus, string> = {
+  [DownloaderStatus.JustCreated]: 'JustCreated',
+  [DownloaderStatus.Starting]: 'Starting',
+  [DownloaderStatus.Downloading]: 'Downloading',
+  [DownloaderStatus.Complete]: 'Complete',
+  [DownloaderStatus.Failed]: 'Failed',
+  [DownloaderStatus.Stopping]: 'Stopping',
+  [DownloaderStatus.Stopped]: 'Stopped'
+};
+
+export enum DownloaderStopBy {
+  ManuallyStop = 1,
+  AppendToTheQueue = 2,
+  Defer = 3
+}
+
+export const downloaderStopBies = [
+  { label: 'ManuallyStop', value: DownloaderStopBy.ManuallyStop },
+  { label: 'AppendToTheQueue', value: DownloaderStopBy.AppendToTheQueue },
+  { label: 'Defer', value: DownloaderStopBy.Defer }
+] as const;
+
+export const DownloaderStopByLabel: Record<DownloaderStopBy, string> = {
+  [DownloaderStopBy.ManuallyStop]: 'ManuallyStop',
+  [DownloaderStopBy.AppendToTheQueue]: 'AppendToTheQueue',
+  [DownloaderStopBy.Defer]: 'Defer'
+};
+
+export enum DownloadTaskAction {
+  StartManually = 1,
+  Restart = 2,
+  Disable = 3,
+  StartAutomatically = 4
+}
+
+export const downloadTaskActions = [
+  { label: 'StartManually', value: DownloadTaskAction.StartManually },
+  { label: 'Restart', value: DownloadTaskAction.Restart },
+  { label: 'Disable', value: DownloadTaskAction.Disable },
+  { label: 'StartAutomatically', value: DownloadTaskAction.StartAutomatically }
+] as const;
+
+export const DownloadTaskActionLabel: Record<DownloadTaskAction, string> = {
+  [DownloadTaskAction.StartManually]: 'StartManually',
+  [DownloadTaskAction.Restart]: 'Restart',
+  [DownloadTaskAction.Disable]: 'Disable',
+  [DownloadTaskAction.StartAutomatically]: 'StartAutomatically'
+};
+
+export enum DownloadTaskActionOnConflict {
+  NotSet = 0,
+  StopOthers = 1,
+  Ignore = 2
+}
+
+export const downloadTaskActionOnConflicts = [
+  { label: 'NotSet', value: DownloadTaskActionOnConflict.NotSet },
+  { label: 'StopOthers', value: DownloadTaskActionOnConflict.StopOthers },
+  { label: 'Ignore', value: DownloadTaskActionOnConflict.Ignore }
+] as const;
+
+export const DownloadTaskActionOnConflictLabel: Record<DownloadTaskActionOnConflict, string> = {
+  [DownloadTaskActionOnConflict.NotSet]: 'NotSet',
+  [DownloadTaskActionOnConflict.StopOthers]: 'StopOthers',
+  [DownloadTaskActionOnConflict.Ignore]: 'Ignore'
+};
+
+export enum DownloadTaskDbModelStatus {
+  InProgress = 100,
+  Disabled = 200,
+  Complete = 300,
+  Failed = 400
+}
+
+export const downloadTaskDbModelStatuses = [
+  { label: 'InProgress', value: DownloadTaskDbModelStatus.InProgress },
+  { label: 'Disabled', value: DownloadTaskDbModelStatus.Disabled },
+  { label: 'Complete', value: DownloadTaskDbModelStatus.Complete },
+  { label: 'Failed', value: DownloadTaskDbModelStatus.Failed }
+] as const;
+
+export const DownloadTaskDbModelStatusLabel: Record<DownloadTaskDbModelStatus, string> = {
+  [DownloadTaskDbModelStatus.InProgress]: 'InProgress',
+  [DownloadTaskDbModelStatus.Disabled]: 'Disabled',
+  [DownloadTaskDbModelStatus.Complete]: 'Complete',
+  [DownloadTaskDbModelStatus.Failed]: 'Failed'
+};
+
+export enum DownloadTaskStartMode {
+  AutoStart = 1,
+  ManualStart = 2
+}
+
+export const downloadTaskStartModes = [
+  { label: 'AutoStart', value: DownloadTaskStartMode.AutoStart },
+  { label: 'ManualStart', value: DownloadTaskStartMode.ManualStart }
+] as const;
+
+export const DownloadTaskStartModeLabel: Record<DownloadTaskStartMode, string> = {
+  [DownloadTaskStartMode.AutoStart]: 'AutoStart',
+  [DownloadTaskStartMode.ManualStart]: 'ManualStart'
+};
+
+export enum DownloadTaskStatus {
+  Idle = 100,
+  InQueue = 200,
+  Starting = 300,
+  Downloading = 400,
+  Stopping = 500,
+  Complete = 600,
+  Failed = 700,
+  Disabled = 800
+}
+
+export const downloadTaskStatuses = [
+  { label: 'Idle', value: DownloadTaskStatus.Idle },
+  { label: 'InQueue', value: DownloadTaskStatus.InQueue },
+  { label: 'Starting', value: DownloadTaskStatus.Starting },
+  { label: 'Downloading', value: DownloadTaskStatus.Downloading },
+  { label: 'Stopping', value: DownloadTaskStatus.Stopping },
+  { label: 'Complete', value: DownloadTaskStatus.Complete },
+  { label: 'Failed', value: DownloadTaskStatus.Failed },
+  { label: 'Disabled', value: DownloadTaskStatus.Disabled }
+] as const;
+
+export const DownloadTaskStatusLabel: Record<DownloadTaskStatus, string> = {
+  [DownloadTaskStatus.Idle]: 'Idle',
+  [DownloadTaskStatus.InQueue]: 'InQueue',
+  [DownloadTaskStatus.Starting]: 'Starting',
+  [DownloadTaskStatus.Downloading]: 'Downloading',
+  [DownloadTaskStatus.Stopping]: 'Stopping',
+  [DownloadTaskStatus.Complete]: 'Complete',
+  [DownloadTaskStatus.Failed]: 'Failed',
+  [DownloadTaskStatus.Disabled]: 'Disabled'
+};
+
+export enum DependentComponentStatus {
+  NotInstalled = 1,
+  Installed = 2,
+  Installing = 3
+}
+
+export const dependentComponentStatuses = [
+  { label: 'NotInstalled', value: DependentComponentStatus.NotInstalled },
+  { label: 'Installed', value: DependentComponentStatus.Installed },
+  { label: 'Installing', value: DependentComponentStatus.Installing }
+] as const;
+
+export const DependentComponentStatusLabel: Record<DependentComponentStatus, string> = {
+  [DependentComponentStatus.NotInstalled]: 'NotInstalled',
+  [DependentComponentStatus.Installed]: 'Installed',
+  [DependentComponentStatus.Installing]: 'Installing'
+};
+
 export enum CategoryResourceDisplayNameSegmentType {
   StaticText = 1,
   Property = 2,
@@ -1247,795 +2120,6 @@ export const BTaskTypeLabel: Record<BTaskType, string> = {
   [BTaskType.CopyFiles]: 'CopyFiles',
   [BTaskType.Download]: 'Download',
   [BTaskType.Any]: 'Any'
-};
-
-export enum BackgroundTaskName {
-  SyncMediaLibrary = 1,
-  PrepareCache = 2,
-  MoveFiles = 3,
-  Enhance = 4
-}
-
-export const backgroundTaskNames = [
-  { label: 'SyncMediaLibrary', value: BackgroundTaskName.SyncMediaLibrary },
-  { label: 'PrepareCache', value: BackgroundTaskName.PrepareCache },
-  { label: 'MoveFiles', value: BackgroundTaskName.MoveFiles },
-  { label: 'Enhance', value: BackgroundTaskName.Enhance }
-] as const;
-
-export const BackgroundTaskNameLabel: Record<BackgroundTaskName, string> = {
-  [BackgroundTaskName.SyncMediaLibrary]: 'SyncMediaLibrary',
-  [BackgroundTaskName.PrepareCache]: 'PrepareCache',
-  [BackgroundTaskName.MoveFiles]: 'MoveFiles',
-  [BackgroundTaskName.Enhance]: 'Enhance'
-};
-
-export enum BuiltinPropertyForDisplayName {
-  Filename = 15,
-  Name = 27
-}
-
-export const builtinPropertyForDisplayNames = [
-  { label: 'Filename', value: BuiltinPropertyForDisplayName.Filename },
-  { label: 'Name', value: BuiltinPropertyForDisplayName.Name }
-] as const;
-
-export const BuiltinPropertyForDisplayNameLabel: Record<BuiltinPropertyForDisplayName, string> = {
-  [BuiltinPropertyForDisplayName.Filename]: 'Filename',
-  [BuiltinPropertyForDisplayName.Name]: 'Name'
-};
-
-export enum IndexOperationType {
-  Update = 0,
-  Remove = 1
-}
-
-export const indexOperationTypes = [
-  { label: 'Update', value: IndexOperationType.Update },
-  { label: 'Remove', value: IndexOperationType.Remove }
-] as const;
-
-export const IndexOperationTypeLabel: Record<IndexOperationType, string> = {
-  [IndexOperationType.Update]: 'Update',
-  [IndexOperationType.Remove]: 'Remove'
-};
-
-export enum PostParserSource {
-  SoulPlus = 5
-}
-
-export const postParserSources = [
-  { label: 'SoulPlus', value: PostParserSource.SoulPlus }
-] as const;
-
-export const PostParserSourceLabel: Record<PostParserSource, string> = {
-  [PostParserSource.SoulPlus]: 'SoulPlus'
-};
-
-export enum PostParserTaskStatus {
-  None = 0,
-  Pending = 1,
-  Complete = 2,
-  Failed = 3,
-  Deleted = 4
-}
-
-export const postParserTaskStatuses = [
-  { label: 'None', value: PostParserTaskStatus.None },
-  { label: 'Pending', value: PostParserTaskStatus.Pending },
-  { label: 'Complete', value: PostParserTaskStatus.Complete },
-  { label: 'Failed', value: PostParserTaskStatus.Failed },
-  { label: 'Deleted', value: PostParserTaskStatus.Deleted }
-] as const;
-
-export const PostParserTaskStatusLabel: Record<PostParserTaskStatus, string> = {
-  [PostParserTaskStatus.None]: 'None',
-  [PostParserTaskStatus.Pending]: 'Pending',
-  [PostParserTaskStatus.Complete]: 'Complete',
-  [PostParserTaskStatus.Failed]: 'Failed',
-  [PostParserTaskStatus.Deleted]: 'Deleted'
-};
-
-export enum PostParseTarget {
-  DownloadInfo = 1
-}
-
-export const postParseTargets = [
-  { label: 'DownloadInfo', value: PostParseTarget.DownloadInfo }
-] as const;
-
-export const PostParseTargetLabel: Record<PostParseTarget, string> = {
-  [PostParseTarget.DownloadInfo]: 'DownloadInfo'
-};
-
-export enum FileNameModifierCaseType {
-  TitleCase = 1,
-  UpperCase = 2,
-  LowerCase = 3,
-  CamelCase = 4,
-  PascalCase = 5
-}
-
-export const fileNameModifierCaseTypes = [
-  { label: 'TitleCase', value: FileNameModifierCaseType.TitleCase },
-  { label: 'UpperCase', value: FileNameModifierCaseType.UpperCase },
-  { label: 'LowerCase', value: FileNameModifierCaseType.LowerCase },
-  { label: 'CamelCase', value: FileNameModifierCaseType.CamelCase },
-  { label: 'PascalCase', value: FileNameModifierCaseType.PascalCase }
-] as const;
-
-export const FileNameModifierCaseTypeLabel: Record<FileNameModifierCaseType, string> = {
-  [FileNameModifierCaseType.TitleCase]: 'TitleCase',
-  [FileNameModifierCaseType.UpperCase]: 'UpperCase',
-  [FileNameModifierCaseType.LowerCase]: 'LowerCase',
-  [FileNameModifierCaseType.CamelCase]: 'CamelCase',
-  [FileNameModifierCaseType.PascalCase]: 'PascalCase'
-};
-
-export enum FileNameModifierFileNameTarget {
-  FileName = 1,
-  FileNameWithoutExtension = 2,
-  Extension = 3,
-  ExtensionWithoutDot = 4
-}
-
-export const fileNameModifierFileNameTargets = [
-  { label: 'FileName', value: FileNameModifierFileNameTarget.FileName },
-  { label: 'FileNameWithoutExtension', value: FileNameModifierFileNameTarget.FileNameWithoutExtension },
-  { label: 'Extension', value: FileNameModifierFileNameTarget.Extension },
-  { label: 'ExtensionWithoutDot', value: FileNameModifierFileNameTarget.ExtensionWithoutDot }
-] as const;
-
-export const FileNameModifierFileNameTargetLabel: Record<FileNameModifierFileNameTarget, string> = {
-  [FileNameModifierFileNameTarget.FileName]: 'FileName',
-  [FileNameModifierFileNameTarget.FileNameWithoutExtension]: 'FileNameWithoutExtension',
-  [FileNameModifierFileNameTarget.Extension]: 'Extension',
-  [FileNameModifierFileNameTarget.ExtensionWithoutDot]: 'ExtensionWithoutDot'
-};
-
-export enum FileNameModifierOperationType {
-  Insert = 1,
-  AddDateTime = 2,
-  Delete = 3,
-  Replace = 4,
-  ChangeCase = 5,
-  AddAlphabetSequence = 6,
-  Reverse = 7
-}
-
-export const fileNameModifierOperationTypes = [
-  { label: 'Insert', value: FileNameModifierOperationType.Insert },
-  { label: 'AddDateTime', value: FileNameModifierOperationType.AddDateTime },
-  { label: 'Delete', value: FileNameModifierOperationType.Delete },
-  { label: 'Replace', value: FileNameModifierOperationType.Replace },
-  { label: 'ChangeCase', value: FileNameModifierOperationType.ChangeCase },
-  { label: 'AddAlphabetSequence', value: FileNameModifierOperationType.AddAlphabetSequence },
-  { label: 'Reverse', value: FileNameModifierOperationType.Reverse }
-] as const;
-
-export const FileNameModifierOperationTypeLabel: Record<FileNameModifierOperationType, string> = {
-  [FileNameModifierOperationType.Insert]: 'Insert',
-  [FileNameModifierOperationType.AddDateTime]: 'AddDateTime',
-  [FileNameModifierOperationType.Delete]: 'Delete',
-  [FileNameModifierOperationType.Replace]: 'Replace',
-  [FileNameModifierOperationType.ChangeCase]: 'ChangeCase',
-  [FileNameModifierOperationType.AddAlphabetSequence]: 'AddAlphabetSequence',
-  [FileNameModifierOperationType.Reverse]: 'Reverse'
-};
-
-export enum FileNameModifierPosition {
-  Start = 1,
-  End = 2,
-  AtPosition = 3,
-  AfterText = 4,
-  BeforeText = 5
-}
-
-export const fileNameModifierPositions = [
-  { label: 'Start', value: FileNameModifierPosition.Start },
-  { label: 'End', value: FileNameModifierPosition.End },
-  { label: 'AtPosition', value: FileNameModifierPosition.AtPosition },
-  { label: 'AfterText', value: FileNameModifierPosition.AfterText },
-  { label: 'BeforeText', value: FileNameModifierPosition.BeforeText }
-] as const;
-
-export const FileNameModifierPositionLabel: Record<FileNameModifierPosition, string> = {
-  [FileNameModifierPosition.Start]: 'Start',
-  [FileNameModifierPosition.End]: 'End',
-  [FileNameModifierPosition.AtPosition]: 'AtPosition',
-  [FileNameModifierPosition.AfterText]: 'AfterText',
-  [FileNameModifierPosition.BeforeText]: 'BeforeText'
-};
-
-export enum IwFsAttribute {
-  Hidden = 1
-}
-
-export const iwFsAttributes = [
-  { label: 'Hidden', value: IwFsAttribute.Hidden }
-] as const;
-
-export const IwFsAttributeLabel: Record<IwFsAttribute, string> = {
-  [IwFsAttribute.Hidden]: 'Hidden'
-};
-
-export enum IwFsEntryChangeType {
-  Created = 1,
-  Renamed = 2,
-  Changed = 3,
-  Deleted = 4
-}
-
-export const iwFsEntryChangeTypes = [
-  { label: 'Created', value: IwFsEntryChangeType.Created },
-  { label: 'Renamed', value: IwFsEntryChangeType.Renamed },
-  { label: 'Changed', value: IwFsEntryChangeType.Changed },
-  { label: 'Deleted', value: IwFsEntryChangeType.Deleted }
-] as const;
-
-export const IwFsEntryChangeTypeLabel: Record<IwFsEntryChangeType, string> = {
-  [IwFsEntryChangeType.Created]: 'Created',
-  [IwFsEntryChangeType.Renamed]: 'Renamed',
-  [IwFsEntryChangeType.Changed]: 'Changed',
-  [IwFsEntryChangeType.Deleted]: 'Deleted'
-};
-
-export enum IwFsType {
-  Unknown = 0,
-  Directory = 100,
-  Image = 200,
-  CompressedFileEntry = 300,
-  CompressedFilePart = 400,
-  Symlink = 500,
-  Video = 600,
-  Audio = 700,
-  Drive = 1000,
-  Invalid = 10000
-}
-
-export const iwFsTypes = [
-  { label: 'Unknown', value: IwFsType.Unknown },
-  { label: 'Directory', value: IwFsType.Directory },
-  { label: 'Image', value: IwFsType.Image },
-  { label: 'CompressedFileEntry', value: IwFsType.CompressedFileEntry },
-  { label: 'CompressedFilePart', value: IwFsType.CompressedFilePart },
-  { label: 'Symlink', value: IwFsType.Symlink },
-  { label: 'Video', value: IwFsType.Video },
-  { label: 'Audio', value: IwFsType.Audio },
-  { label: 'Drive', value: IwFsType.Drive },
-  { label: 'Invalid', value: IwFsType.Invalid }
-] as const;
-
-export const IwFsTypeLabel: Record<IwFsType, string> = {
-  [IwFsType.Unknown]: 'Unknown',
-  [IwFsType.Directory]: 'Directory',
-  [IwFsType.Image]: 'Image',
-  [IwFsType.CompressedFileEntry]: 'CompressedFileEntry',
-  [IwFsType.CompressedFilePart]: 'CompressedFilePart',
-  [IwFsType.Symlink]: 'Symlink',
-  [IwFsType.Video]: 'Video',
-  [IwFsType.Audio]: 'Audio',
-  [IwFsType.Drive]: 'Drive',
-  [IwFsType.Invalid]: 'Invalid'
-};
-
-export enum PixivDownloadTaskType {
-  Search = 1,
-  Ranking = 2,
-  Following = 3
-}
-
-export const pixivDownloadTaskTypes = [
-  { label: 'Search', value: PixivDownloadTaskType.Search },
-  { label: 'Ranking', value: PixivDownloadTaskType.Ranking },
-  { label: 'Following', value: PixivDownloadTaskType.Following }
-] as const;
-
-export const PixivDownloadTaskTypeLabel: Record<PixivDownloadTaskType, string> = {
-  [PixivDownloadTaskType.Search]: 'Search',
-  [PixivDownloadTaskType.Ranking]: 'Ranking',
-  [PixivDownloadTaskType.Following]: 'Following'
-};
-
-export enum PixivNamingFields {
-  IllustrationId = 0,
-  IllustrationTitle = 1,
-  UploadDate = 2,
-  Tags = 3,
-  UserId = 4,
-  UserName = 5,
-  PageNo = 6,
-  Extension = 7
-}
-
-export const pixivNamingFields = [
-  { label: 'IllustrationId', value: PixivNamingFields.IllustrationId },
-  { label: 'IllustrationTitle', value: PixivNamingFields.IllustrationTitle },
-  { label: 'UploadDate', value: PixivNamingFields.UploadDate },
-  { label: 'Tags', value: PixivNamingFields.Tags },
-  { label: 'UserId', value: PixivNamingFields.UserId },
-  { label: 'UserName', value: PixivNamingFields.UserName },
-  { label: 'PageNo', value: PixivNamingFields.PageNo },
-  { label: 'Extension', value: PixivNamingFields.Extension }
-] as const;
-
-export const PixivNamingFieldsLabel: Record<PixivNamingFields, string> = {
-  [PixivNamingFields.IllustrationId]: 'IllustrationId',
-  [PixivNamingFields.IllustrationTitle]: 'IllustrationTitle',
-  [PixivNamingFields.UploadDate]: 'UploadDate',
-  [PixivNamingFields.Tags]: 'Tags',
-  [PixivNamingFields.UserId]: 'UserId',
-  [PixivNamingFields.UserName]: 'UserName',
-  [PixivNamingFields.PageNo]: 'PageNo',
-  [PixivNamingFields.Extension]: 'Extension'
-};
-
-export enum PatreonDownloadTaskType {
-  Creator = 1,
-  Following = 2,
-  SinglePost = 3
-}
-
-export const patreonDownloadTaskTypes = [
-  { label: 'Creator', value: PatreonDownloadTaskType.Creator },
-  { label: 'Following', value: PatreonDownloadTaskType.Following },
-  { label: 'SinglePost', value: PatreonDownloadTaskType.SinglePost }
-] as const;
-
-export const PatreonDownloadTaskTypeLabel: Record<PatreonDownloadTaskType, string> = {
-  [PatreonDownloadTaskType.Creator]: 'Creator',
-  [PatreonDownloadTaskType.Following]: 'Following',
-  [PatreonDownloadTaskType.SinglePost]: 'SinglePost'
-};
-
-export enum PatreonNamingFields {
-  PostId = 0,
-  PostTitle = 1,
-  PublishDate = 2,
-  CreatorId = 3,
-  CreatorName = 4,
-  TierLevel = 5,
-  FileNo = 6,
-  Extension = 7
-}
-
-export const patreonNamingFields = [
-  { label: 'PostId', value: PatreonNamingFields.PostId },
-  { label: 'PostTitle', value: PatreonNamingFields.PostTitle },
-  { label: 'PublishDate', value: PatreonNamingFields.PublishDate },
-  { label: 'CreatorId', value: PatreonNamingFields.CreatorId },
-  { label: 'CreatorName', value: PatreonNamingFields.CreatorName },
-  { label: 'TierLevel', value: PatreonNamingFields.TierLevel },
-  { label: 'FileNo', value: PatreonNamingFields.FileNo },
-  { label: 'Extension', value: PatreonNamingFields.Extension }
-] as const;
-
-export const PatreonNamingFieldsLabel: Record<PatreonNamingFields, string> = {
-  [PatreonNamingFields.PostId]: 'PostId',
-  [PatreonNamingFields.PostTitle]: 'PostTitle',
-  [PatreonNamingFields.PublishDate]: 'PublishDate',
-  [PatreonNamingFields.CreatorId]: 'CreatorId',
-  [PatreonNamingFields.CreatorName]: 'CreatorName',
-  [PatreonNamingFields.TierLevel]: 'TierLevel',
-  [PatreonNamingFields.FileNo]: 'FileNo',
-  [PatreonNamingFields.Extension]: 'Extension'
-};
-
-export enum FantiaDownloadTaskType {
-  Creator = 1,
-  Following = 2,
-  SinglePost = 3
-}
-
-export const fantiaDownloadTaskTypes = [
-  { label: 'Creator', value: FantiaDownloadTaskType.Creator },
-  { label: 'Following', value: FantiaDownloadTaskType.Following },
-  { label: 'SinglePost', value: FantiaDownloadTaskType.SinglePost }
-] as const;
-
-export const FantiaDownloadTaskTypeLabel: Record<FantiaDownloadTaskType, string> = {
-  [FantiaDownloadTaskType.Creator]: 'Creator',
-  [FantiaDownloadTaskType.Following]: 'Following',
-  [FantiaDownloadTaskType.SinglePost]: 'SinglePost'
-};
-
-export enum FantiaNamingFields {
-  PostId = 0,
-  PostTitle = 1,
-  PublishDate = 2,
-  FanclubId = 3,
-  FanclubName = 4,
-  FileNo = 5,
-  Extension = 6
-}
-
-export const fantiaNamingFields = [
-  { label: 'PostId', value: FantiaNamingFields.PostId },
-  { label: 'PostTitle', value: FantiaNamingFields.PostTitle },
-  { label: 'PublishDate', value: FantiaNamingFields.PublishDate },
-  { label: 'FanclubId', value: FantiaNamingFields.FanclubId },
-  { label: 'FanclubName', value: FantiaNamingFields.FanclubName },
-  { label: 'FileNo', value: FantiaNamingFields.FileNo },
-  { label: 'Extension', value: FantiaNamingFields.Extension }
-] as const;
-
-export const FantiaNamingFieldsLabel: Record<FantiaNamingFields, string> = {
-  [FantiaNamingFields.PostId]: 'PostId',
-  [FantiaNamingFields.PostTitle]: 'PostTitle',
-  [FantiaNamingFields.PublishDate]: 'PublishDate',
-  [FantiaNamingFields.FanclubId]: 'FanclubId',
-  [FantiaNamingFields.FanclubName]: 'FanclubName',
-  [FantiaNamingFields.FileNo]: 'FileNo',
-  [FantiaNamingFields.Extension]: 'Extension'
-};
-
-export enum FanboxDownloadTaskType {
-  Creator = 1,
-  Following = 2,
-  SinglePost = 3
-}
-
-export const fanboxDownloadTaskTypes = [
-  { label: 'Creator', value: FanboxDownloadTaskType.Creator },
-  { label: 'Following', value: FanboxDownloadTaskType.Following },
-  { label: 'SinglePost', value: FanboxDownloadTaskType.SinglePost }
-] as const;
-
-export const FanboxDownloadTaskTypeLabel: Record<FanboxDownloadTaskType, string> = {
-  [FanboxDownloadTaskType.Creator]: 'Creator',
-  [FanboxDownloadTaskType.Following]: 'Following',
-  [FanboxDownloadTaskType.SinglePost]: 'SinglePost'
-};
-
-export enum FanboxNamingFields {
-  PostId = 0,
-  PostTitle = 1,
-  PublishDate = 2,
-  CreatorId = 3,
-  CreatorName = 4,
-  FileNo = 5,
-  Extension = 6
-}
-
-export const fanboxNamingFields = [
-  { label: 'PostId', value: FanboxNamingFields.PostId },
-  { label: 'PostTitle', value: FanboxNamingFields.PostTitle },
-  { label: 'PublishDate', value: FanboxNamingFields.PublishDate },
-  { label: 'CreatorId', value: FanboxNamingFields.CreatorId },
-  { label: 'CreatorName', value: FanboxNamingFields.CreatorName },
-  { label: 'FileNo', value: FanboxNamingFields.FileNo },
-  { label: 'Extension', value: FanboxNamingFields.Extension }
-] as const;
-
-export const FanboxNamingFieldsLabel: Record<FanboxNamingFields, string> = {
-  [FanboxNamingFields.PostId]: 'PostId',
-  [FanboxNamingFields.PostTitle]: 'PostTitle',
-  [FanboxNamingFields.PublishDate]: 'PublishDate',
-  [FanboxNamingFields.CreatorId]: 'CreatorId',
-  [FanboxNamingFields.CreatorName]: 'CreatorName',
-  [FanboxNamingFields.FileNo]: 'FileNo',
-  [FanboxNamingFields.Extension]: 'Extension'
-};
-
-export enum ExHentaiDownloadTaskType {
-  SingleWork = 1,
-  Watched = 2,
-  List = 3
-}
-
-export const exHentaiDownloadTaskTypes = [
-  { label: 'SingleWork', value: ExHentaiDownloadTaskType.SingleWork },
-  { label: 'Watched', value: ExHentaiDownloadTaskType.Watched },
-  { label: 'List', value: ExHentaiDownloadTaskType.List }
-] as const;
-
-export const ExHentaiDownloadTaskTypeLabel: Record<ExHentaiDownloadTaskType, string> = {
-  [ExHentaiDownloadTaskType.SingleWork]: 'SingleWork',
-  [ExHentaiDownloadTaskType.Watched]: 'Watched',
-  [ExHentaiDownloadTaskType.List]: 'List'
-};
-
-export enum ExHentaiNamingFields {
-  GalleryId = 0,
-  GalleryToken = 1,
-  RawName = 2,
-  Name = 3,
-  Category = 4,
-  PageTitle = 5,
-  Extension = 6
-}
-
-export const exHentaiNamingFields = [
-  { label: 'GalleryId', value: ExHentaiNamingFields.GalleryId },
-  { label: 'GalleryToken', value: ExHentaiNamingFields.GalleryToken },
-  { label: 'RawName', value: ExHentaiNamingFields.RawName },
-  { label: 'Name', value: ExHentaiNamingFields.Name },
-  { label: 'Category', value: ExHentaiNamingFields.Category },
-  { label: 'PageTitle', value: ExHentaiNamingFields.PageTitle },
-  { label: 'Extension', value: ExHentaiNamingFields.Extension }
-] as const;
-
-export const ExHentaiNamingFieldsLabel: Record<ExHentaiNamingFields, string> = {
-  [ExHentaiNamingFields.GalleryId]: 'GalleryId',
-  [ExHentaiNamingFields.GalleryToken]: 'GalleryToken',
-  [ExHentaiNamingFields.RawName]: 'RawName',
-  [ExHentaiNamingFields.Name]: 'Name',
-  [ExHentaiNamingFields.Category]: 'Category',
-  [ExHentaiNamingFields.PageTitle]: 'PageTitle',
-  [ExHentaiNamingFields.Extension]: 'Extension'
-};
-
-export enum CienDownloadTaskType {
-  Creator = 1,
-  Following = 2,
-  SinglePost = 3
-}
-
-export const cienDownloadTaskTypes = [
-  { label: 'Creator', value: CienDownloadTaskType.Creator },
-  { label: 'Following', value: CienDownloadTaskType.Following },
-  { label: 'SinglePost', value: CienDownloadTaskType.SinglePost }
-] as const;
-
-export const CienDownloadTaskTypeLabel: Record<CienDownloadTaskType, string> = {
-  [CienDownloadTaskType.Creator]: 'Creator',
-  [CienDownloadTaskType.Following]: 'Following',
-  [CienDownloadTaskType.SinglePost]: 'SinglePost'
-};
-
-export enum CienNamingFields {
-  ArticleId = 0,
-  ArticleTitle = 1,
-  PublishDate = 2,
-  AuthorId = 3,
-  AuthorName = 4,
-  FileNo = 5,
-  Extension = 6
-}
-
-export const cienNamingFields = [
-  { label: 'ArticleId', value: CienNamingFields.ArticleId },
-  { label: 'ArticleTitle', value: CienNamingFields.ArticleTitle },
-  { label: 'PublishDate', value: CienNamingFields.PublishDate },
-  { label: 'AuthorId', value: CienNamingFields.AuthorId },
-  { label: 'AuthorName', value: CienNamingFields.AuthorName },
-  { label: 'FileNo', value: CienNamingFields.FileNo },
-  { label: 'Extension', value: CienNamingFields.Extension }
-] as const;
-
-export const CienNamingFieldsLabel: Record<CienNamingFields, string> = {
-  [CienNamingFields.ArticleId]: 'ArticleId',
-  [CienNamingFields.ArticleTitle]: 'ArticleTitle',
-  [CienNamingFields.PublishDate]: 'PublishDate',
-  [CienNamingFields.AuthorId]: 'AuthorId',
-  [CienNamingFields.AuthorName]: 'AuthorName',
-  [CienNamingFields.FileNo]: 'FileNo',
-  [CienNamingFields.Extension]: 'Extension'
-};
-
-export enum BilibiliDownloadTaskType {
-  Favorites = 1
-}
-
-export const bilibiliDownloadTaskTypes = [
-  { label: 'Favorites', value: BilibiliDownloadTaskType.Favorites }
-] as const;
-
-export const BilibiliDownloadTaskTypeLabel: Record<BilibiliDownloadTaskType, string> = {
-  [BilibiliDownloadTaskType.Favorites]: 'Favorites'
-};
-
-export enum BilibiliNamingFields {
-  UploaderId = 0,
-  UploaderName = 1,
-  AId = 2,
-  BvId = 3,
-  PostTitle = 4,
-  CId = 5,
-  PartNo = 6,
-  PartName = 7,
-  QualityName = 8,
-  Extension = 9
-}
-
-export const bilibiliNamingFields = [
-  { label: 'UploaderId', value: BilibiliNamingFields.UploaderId },
-  { label: 'UploaderName', value: BilibiliNamingFields.UploaderName },
-  { label: 'AId', value: BilibiliNamingFields.AId },
-  { label: 'BvId', value: BilibiliNamingFields.BvId },
-  { label: 'PostTitle', value: BilibiliNamingFields.PostTitle },
-  { label: 'CId', value: BilibiliNamingFields.CId },
-  { label: 'PartNo', value: BilibiliNamingFields.PartNo },
-  { label: 'PartName', value: BilibiliNamingFields.PartName },
-  { label: 'QualityName', value: BilibiliNamingFields.QualityName },
-  { label: 'Extension', value: BilibiliNamingFields.Extension }
-] as const;
-
-export const BilibiliNamingFieldsLabel: Record<BilibiliNamingFields, string> = {
-  [BilibiliNamingFields.UploaderId]: 'UploaderId',
-  [BilibiliNamingFields.UploaderName]: 'UploaderName',
-  [BilibiliNamingFields.AId]: 'AId',
-  [BilibiliNamingFields.BvId]: 'BvId',
-  [BilibiliNamingFields.PostTitle]: 'PostTitle',
-  [BilibiliNamingFields.CId]: 'CId',
-  [BilibiliNamingFields.PartNo]: 'PartNo',
-  [BilibiliNamingFields.PartName]: 'PartName',
-  [BilibiliNamingFields.QualityName]: 'QualityName',
-  [BilibiliNamingFields.Extension]: 'Extension'
-};
-
-export enum DownloaderStatus {
-  JustCreated = 0,
-  Starting = 100,
-  Downloading = 200,
-  Complete = 300,
-  Failed = 400,
-  Stopping = 500,
-  Stopped = 600
-}
-
-export const downloaderStatuses = [
-  { label: 'JustCreated', value: DownloaderStatus.JustCreated },
-  { label: 'Starting', value: DownloaderStatus.Starting },
-  { label: 'Downloading', value: DownloaderStatus.Downloading },
-  { label: 'Complete', value: DownloaderStatus.Complete },
-  { label: 'Failed', value: DownloaderStatus.Failed },
-  { label: 'Stopping', value: DownloaderStatus.Stopping },
-  { label: 'Stopped', value: DownloaderStatus.Stopped }
-] as const;
-
-export const DownloaderStatusLabel: Record<DownloaderStatus, string> = {
-  [DownloaderStatus.JustCreated]: 'JustCreated',
-  [DownloaderStatus.Starting]: 'Starting',
-  [DownloaderStatus.Downloading]: 'Downloading',
-  [DownloaderStatus.Complete]: 'Complete',
-  [DownloaderStatus.Failed]: 'Failed',
-  [DownloaderStatus.Stopping]: 'Stopping',
-  [DownloaderStatus.Stopped]: 'Stopped'
-};
-
-export enum DownloaderStopBy {
-  ManuallyStop = 1,
-  AppendToTheQueue = 2,
-  Defer = 3
-}
-
-export const downloaderStopBies = [
-  { label: 'ManuallyStop', value: DownloaderStopBy.ManuallyStop },
-  { label: 'AppendToTheQueue', value: DownloaderStopBy.AppendToTheQueue },
-  { label: 'Defer', value: DownloaderStopBy.Defer }
-] as const;
-
-export const DownloaderStopByLabel: Record<DownloaderStopBy, string> = {
-  [DownloaderStopBy.ManuallyStop]: 'ManuallyStop',
-  [DownloaderStopBy.AppendToTheQueue]: 'AppendToTheQueue',
-  [DownloaderStopBy.Defer]: 'Defer'
-};
-
-export enum DownloadTaskAction {
-  StartManually = 1,
-  Restart = 2,
-  Disable = 3,
-  StartAutomatically = 4
-}
-
-export const downloadTaskActions = [
-  { label: 'StartManually', value: DownloadTaskAction.StartManually },
-  { label: 'Restart', value: DownloadTaskAction.Restart },
-  { label: 'Disable', value: DownloadTaskAction.Disable },
-  { label: 'StartAutomatically', value: DownloadTaskAction.StartAutomatically }
-] as const;
-
-export const DownloadTaskActionLabel: Record<DownloadTaskAction, string> = {
-  [DownloadTaskAction.StartManually]: 'StartManually',
-  [DownloadTaskAction.Restart]: 'Restart',
-  [DownloadTaskAction.Disable]: 'Disable',
-  [DownloadTaskAction.StartAutomatically]: 'StartAutomatically'
-};
-
-export enum DownloadTaskActionOnConflict {
-  NotSet = 0,
-  StopOthers = 1,
-  Ignore = 2
-}
-
-export const downloadTaskActionOnConflicts = [
-  { label: 'NotSet', value: DownloadTaskActionOnConflict.NotSet },
-  { label: 'StopOthers', value: DownloadTaskActionOnConflict.StopOthers },
-  { label: 'Ignore', value: DownloadTaskActionOnConflict.Ignore }
-] as const;
-
-export const DownloadTaskActionOnConflictLabel: Record<DownloadTaskActionOnConflict, string> = {
-  [DownloadTaskActionOnConflict.NotSet]: 'NotSet',
-  [DownloadTaskActionOnConflict.StopOthers]: 'StopOthers',
-  [DownloadTaskActionOnConflict.Ignore]: 'Ignore'
-};
-
-export enum DownloadTaskDbModelStatus {
-  InProgress = 100,
-  Disabled = 200,
-  Complete = 300,
-  Failed = 400
-}
-
-export const downloadTaskDbModelStatuses = [
-  { label: 'InProgress', value: DownloadTaskDbModelStatus.InProgress },
-  { label: 'Disabled', value: DownloadTaskDbModelStatus.Disabled },
-  { label: 'Complete', value: DownloadTaskDbModelStatus.Complete },
-  { label: 'Failed', value: DownloadTaskDbModelStatus.Failed }
-] as const;
-
-export const DownloadTaskDbModelStatusLabel: Record<DownloadTaskDbModelStatus, string> = {
-  [DownloadTaskDbModelStatus.InProgress]: 'InProgress',
-  [DownloadTaskDbModelStatus.Disabled]: 'Disabled',
-  [DownloadTaskDbModelStatus.Complete]: 'Complete',
-  [DownloadTaskDbModelStatus.Failed]: 'Failed'
-};
-
-export enum DownloadTaskStartMode {
-  AutoStart = 1,
-  ManualStart = 2
-}
-
-export const downloadTaskStartModes = [
-  { label: 'AutoStart', value: DownloadTaskStartMode.AutoStart },
-  { label: 'ManualStart', value: DownloadTaskStartMode.ManualStart }
-] as const;
-
-export const DownloadTaskStartModeLabel: Record<DownloadTaskStartMode, string> = {
-  [DownloadTaskStartMode.AutoStart]: 'AutoStart',
-  [DownloadTaskStartMode.ManualStart]: 'ManualStart'
-};
-
-export enum DownloadTaskStatus {
-  Idle = 100,
-  InQueue = 200,
-  Starting = 300,
-  Downloading = 400,
-  Stopping = 500,
-  Complete = 600,
-  Failed = 700,
-  Disabled = 800
-}
-
-export const downloadTaskStatuses = [
-  { label: 'Idle', value: DownloadTaskStatus.Idle },
-  { label: 'InQueue', value: DownloadTaskStatus.InQueue },
-  { label: 'Starting', value: DownloadTaskStatus.Starting },
-  { label: 'Downloading', value: DownloadTaskStatus.Downloading },
-  { label: 'Stopping', value: DownloadTaskStatus.Stopping },
-  { label: 'Complete', value: DownloadTaskStatus.Complete },
-  { label: 'Failed', value: DownloadTaskStatus.Failed },
-  { label: 'Disabled', value: DownloadTaskStatus.Disabled }
-] as const;
-
-export const DownloadTaskStatusLabel: Record<DownloadTaskStatus, string> = {
-  [DownloadTaskStatus.Idle]: 'Idle',
-  [DownloadTaskStatus.InQueue]: 'InQueue',
-  [DownloadTaskStatus.Starting]: 'Starting',
-  [DownloadTaskStatus.Downloading]: 'Downloading',
-  [DownloadTaskStatus.Stopping]: 'Stopping',
-  [DownloadTaskStatus.Complete]: 'Complete',
-  [DownloadTaskStatus.Failed]: 'Failed',
-  [DownloadTaskStatus.Disabled]: 'Disabled'
-};
-
-export enum DependentComponentStatus {
-  NotInstalled = 1,
-  Installed = 2,
-  Installing = 3
-}
-
-export const dependentComponentStatuses = [
-  { label: 'NotInstalled', value: DependentComponentStatus.NotInstalled },
-  { label: 'Installed', value: DependentComponentStatus.Installed },
-  { label: 'Installing', value: DependentComponentStatus.Installing }
-] as const;
-
-export const DependentComponentStatusLabel: Record<DependentComponentStatus, string> = {
-  [DependentComponentStatus.NotInstalled]: 'NotInstalled',
-  [DependentComponentStatus.Installed]: 'Installed',
-  [DependentComponentStatus.Installing]: 'Installing'
 };
 
 export enum CaptchaType {

@@ -3615,6 +3615,90 @@ export interface BakabaseModulesNotificationAbstractionsModelsViewNotificationVi
   readAt?: string;
 }
 
+export interface BakabaseModulesPlayerAbstractionsModelsDomainBatchPlayCandidate {
+  key: string;
+  /** [1: ProfilePlayer, 2: KnownPlayer] */
+  type: BakabaseModulesPlayerAbstractionsModelsDomainConstantsBatchPlayCandidateType;
+  displayName: string;
+  executablePath: string;
+  /** [0: None, 1: PlaylistFile, 2: MultiFileArguments] */
+  capabilities: BakabaseModulesPlayerAbstractionsModelsDomainConstantsBatchPlayCapability;
+  commandTemplate?: string;
+  capabilitiesAssumed: boolean;
+  supportedExtensions?: string[];
+  /** @format int32 */
+  matchedResourceCount?: number;
+  /** @format int32 */
+  matchedFileCount?: number;
+}
+
+export interface BakabaseModulesPlayerAbstractionsModelsDomainBatchPlayResult {
+  playerName: string;
+  /** [1: PlaylistFile, 2: MultiFileArguments] */
+  launchMethod: BakabaseModulesPlayerAbstractionsModelsDomainConstantsBatchPlayLaunchMethod;
+  /** @format int32 */
+  resourceCount: number;
+  /** @format int32 */
+  fileCount: number;
+  skippedResources: BakabaseModulesPlayerAbstractionsModelsDomainBatchPlaySkippedResource[];
+  /** @format int32 */
+  missingFileCount: number;
+}
+
+/**
+ * [1: NoPlayableFiles, 2: AllFilesMissing, 3: ResourceNotFound, 4: NoFilesMatchingPlayer]
+ * @format int32
+ */
+export type BakabaseModulesPlayerAbstractionsModelsDomainBatchPlaySkipReason = 1 | 2 | 3 | 4;
+
+export interface BakabaseModulesPlayerAbstractionsModelsDomainBatchPlaySkippedResource {
+  /** @format int32 */
+  resourceId: number;
+  /** [1: NoPlayableFiles, 2: AllFilesMissing, 3: ResourceNotFound, 4: NoFilesMatchingPlayer] */
+  reason: BakabaseModulesPlayerAbstractionsModelsDomainBatchPlaySkipReason;
+}
+
+/**
+ * [1: ProfilePlayer, 2: KnownPlayer]
+ * @format int32
+ */
+export type BakabaseModulesPlayerAbstractionsModelsDomainConstantsBatchPlayCandidateType = 1 | 2;
+
+/**
+ * [0: None, 1: PlaylistFile, 2: MultiFileArguments]
+ * @format int32
+ */
+export type BakabaseModulesPlayerAbstractionsModelsDomainConstantsBatchPlayCapability = 0 | 1 | 2;
+
+/**
+ * [1: FirstFilePerResource, 2: AllFiles]
+ * @format int32
+ */
+export type BakabaseModulesPlayerAbstractionsModelsDomainConstantsBatchPlayFileSelectionMode =
+  | 1
+  | 2;
+
+/**
+ * [1: PlaylistFile, 2: MultiFileArguments]
+ * @format int32
+ */
+export type BakabaseModulesPlayerAbstractionsModelsDomainConstantsBatchPlayLaunchMethod = 1 | 2;
+
+export interface BakabaseModulesPlayerAbstractionsModelsInputBatchPlayCandidatesInputModel {
+  resourceIds: number[];
+}
+
+export interface BakabaseModulesPlayerAbstractionsModelsInputBatchPlayInputModel {
+  resourceIds: number[];
+  playerKey: string;
+  /** [1: FirstFilePerResource, 2: AllFiles] */
+  fileSelectionMode: BakabaseModulesPlayerAbstractionsModelsDomainConstantsBatchPlayFileSelectionMode;
+}
+
+export interface BakabaseModulesPlayerAbstractionsModelsInputPlaylistBatchPlayInputModel {
+  playerKey: string;
+}
+
 /**
  * [1: Name, 2: ReleaseDate, 3: Author, 4: Publisher, 5: Series, 6: Tag, 7: Language, 8: Original, 9: Actor, 10: VoiceActor, 11: Duration, 12: Director, 13: Singer, 14: EpisodeCount, 15: Resolution, 16: AspectRatio, 17: SubtitleLanguage, 18: VideoCodec, 19: IsCensored, 20: Is3D, 21: ImageCount, 22: IsAi, 23: Developer, 24: Character, 25: AudioFormat, 26: Bitrate, 27: Platform, 28: SubscriptionPlatform, 29: Type]
  * @format int32
@@ -5134,6 +5218,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesHealth
   data?: BakabaseModulesHealthScoreModelsViewHealthScoreProfileViewModel[];
 }
 
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesPlayerAbstractionsModelsDomainBatchPlayCandidate {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesPlayerAbstractionsModelsDomainBatchPlayCandidate[];
+}
+
 export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesPropertyModelsViewPropertyViewModel {
   /** @format int32 */
   code: number;
@@ -6003,6 +6094,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesH
   code: number;
   message?: string;
   data?: BakabaseModulesHealthScoreModelsViewHealthScoreProfileViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPlayerAbstractionsModelsDomainBatchPlayResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesPlayerAbstractionsModelsDomainBatchPlayResult;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPresetsAbstractionsModelsMediaLibraryTemplatePresetDataPool {
@@ -19341,6 +19439,117 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       return baseUrl + path;
     },
+  };
+  player = {
+    /**
+     * No description
+     *
+     * @tags Player
+     * @name GetBatchPlayCandidates
+     * @request POST:/player/batch-play/candidates
+     */
+    getBatchPlayCandidates: (
+      data: BakabaseModulesPlayerAbstractionsModelsInputBatchPlayCandidatesInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesPlayerAbstractionsModelsDomainBatchPlayCandidate,
+        any
+      >({
+        path: `/player/batch-play/candidates`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getBatchPlayCandidates
+     * @name getBatchPlayCandidatesUrl
+     */
+    getBatchPlayCandidatesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/player/batch-play/candidates`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Player
+     * @name BatchPlayResources
+     * @request POST:/player/batch-play
+     */
+    batchPlayResources: (
+      data: BakabaseModulesPlayerAbstractionsModelsInputBatchPlayInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPlayerAbstractionsModelsDomainBatchPlayResult,
+        any
+      >({
+        path: `/player/batch-play`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for batchPlayResources
+     * @name batchPlayResourcesUrl
+     */
+    batchPlayResourcesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/player/batch-play`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Player
+     * @name GetPlaylistBatchPlayCandidates
+     * @request GET:/player/playlist/{playlistId}/batch-play/candidates
+     */
+    getPlaylistBatchPlayCandidates: (playlistId: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesPlayerAbstractionsModelsDomainBatchPlayCandidate,
+        any
+      >({
+        path: `/player/playlist/${playlistId}/batch-play/candidates`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Player
+     * @name BatchPlayPlaylist
+     * @request POST:/player/playlist/{playlistId}/batch-play
+     */
+    batchPlayPlaylist: (
+      playlistId: number,
+      data: BakabaseModulesPlayerAbstractionsModelsInputPlaylistBatchPlayInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPlayerAbstractionsModelsDomainBatchPlayResult,
+        any
+      >({
+        path: `/player/playlist/${playlistId}/batch-play`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
   };
   playHistory = {
     /**

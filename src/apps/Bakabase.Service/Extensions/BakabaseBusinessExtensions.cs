@@ -32,6 +32,7 @@ using Bakabase.Modules.BulkModification.Extensions;
 using Bakabase.Modules.HealthScore.Extensions;
 using Bakabase.Modules.Notification.Abstractions.Components;
 using Bakabase.Modules.Notification.Extensions;
+using Bakabase.Modules.Player.Extensions;
 using Bakabase.Modules.Subscription.Abstractions.Components;
 using Bakabase.Modules.Subscription.Extensions;
 using Bakabase.Modules.Workflow.Abstractions.Components;
@@ -194,6 +195,24 @@ namespace Bakabase.Service.Extensions
             services.AddFileNameModifier();
 
             services.AddPlayList();
+
+            services.AddPlayerModule();
+            services.AddScoped<Bakabase.Modules.Player.Abstractions.Components.IBatchPlayPlaylistSource,
+                Bakabase.Service.Services.PlaylistBatchPlaySource>();
+            // Temp playlists must live under AppData (appdata-paths rule), but the
+            // module cannot reference Infrastructures — bridge it here. AppService
+            // is resolved lazily so test hosts without it still work.
+            services.AddSingleton<Microsoft.Extensions.Options.IConfigureOptions<
+                Bakabase.Modules.Player.Abstractions.Models.Domain.PlayerModuleOptions>>(sp =>
+                new Microsoft.Extensions.Options.ConfigureOptions<
+                    Bakabase.Modules.Player.Abstractions.Models.Domain.PlayerModuleOptions>(o =>
+                {
+                    var appService = sp.GetService<Bakabase.Infrastructures.Components.App.AppService>();
+                    if (appService != null)
+                    {
+                        o.TempPlaylistDirectory = appService.RequestAppDataDirectory("temp", "playlists");
+                    }
+                }));
 
             services.AddBakaTracing();
 

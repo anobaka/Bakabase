@@ -82,6 +82,14 @@ public interface IResourceService
     /// </summary>
     Task<BaseResponse> PlayItem(int resourceId, DataOrigin origin, string key);
 
+    /// <summary>
+    /// Records that the given resources were just played (PlayedAt + one play
+    /// history entry per resource) without launching anything. Used by batch
+    /// play, where a single launch covers many resources.
+    /// </summary>
+    /// <param name="playedItemsByResourceId">Resource id → representative played item (e.g. first file).</param>
+    Task MarkPlayed(IReadOnlyDictionary<int, string> playedItemsByResourceId);
+
     Task<BaseResponse> ChangeMediaLibrary(int[] ids, int mediaLibraryId, Dictionary<int, string>? newPaths = null);
     Task<BaseResponse> ChangePath(int[] ids, Dictionary<int, string> newPaths);
 

@@ -9,6 +9,7 @@ import { Divider } from "@heroui/react";
 import { AiOutlineDelete, AiOutlinePlayCircle, AiOutlinePlusCircle } from "react-icons/ai";
 
 import { toast } from "@/components/bakaui";
+import BatchPlayButton from "@/components/Playlist/components/BatchPlayButton";
 import PlaylistDetail from "@/components/Playlist/Detail/index";
 import { Button, Modal, Input } from "@/components/bakaui";
 import { PlaylistItemType, IwFsType } from "@/sdk/constants";
@@ -113,6 +114,8 @@ const Collection = ({ addingResourceId }: Props) => {
                         {t<string>("playlist.label.addItHere")}
                       </Button>
                     )}
+
+                    {pl.items && pl.items.length > 0 && <BatchPlayButton playlistId={pl.id} />}
 
                     {pl.items && pl.items.length > 0 && (
                       <Button

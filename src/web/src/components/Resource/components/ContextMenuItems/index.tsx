@@ -20,6 +20,7 @@ import {
 import React, { useCallback, useEffect, useState } from "react";
 
 import PropertyValuePanel from "./PropertyValuePanel";
+import BatchPlayMenuItems from "./BatchPlayMenuItems";
 
 import MediaLibraryMultiSelector from "@/components/MediaLibraryMultiSelector";
 import { EnhancementAdditionalItem, PropertyPool, ResourceAdditionalItem } from "@/sdk/constants";
@@ -317,6 +318,7 @@ const ContextMenuItems = ({
         })()}
 
       {/* Built-in menu items */}
+      <BatchPlayMenuItems selectedResourceIds={selectedResourceIds} />
       {selectedResourceIds.length > 1 && (
         <MenuItem
           onClick={async () => {
