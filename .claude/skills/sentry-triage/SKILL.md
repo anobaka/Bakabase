@@ -1,6 +1,6 @@
 ---
 name: sentry-triage
-description: Pull all unresolved issues from Sentry (bakabase.sentry.io), triage each, reuse or create concise Chinese GitHub issues with labels, fix them on a feature branch, and open a PR that auto-closes those issues. Use when the user asks to process, triage, or fix Sentry issues / production errors.
+description: Pull unresolved issues from Sentry (bakabase.sentry.io) for the bakabase-web and bakabase-service projects, triage each, reuse or create concise Chinese GitHub issues with labels, fix them on a feature branch, and open a PR that auto-closes those issues. Use when the user asks to process, triage, or fix Sentry issues / production errors.
 ---
 
 # Sentry Issue Triage Workflow
@@ -43,11 +43,13 @@ Sentry org slug: `bakabase`. API base: `https://bakabase.sentry.io/api/0`.
 Authenticate every request with the header
 `Authorization: Bearer <BAKABASE_SENTRY_PAT>`.
 
-1. List projects: `GET /organizations/bakabase/projects/`.
-2. For each project, list unresolved issues — follow `Link`-header cursor
-   pagination until exhausted:
+Scope: only the projects `bakabase-web` and `bakabase-service`. Do **not**
+list or scan any other project in the org.
+
+1. For each of the two project slugs, list unresolved issues — follow
+   `Link`-header cursor pagination until exhausted:
    `GET /projects/bakabase/<project-slug>/issues/?query=is%3Aunresolved&sort=freq&limit=100`
-3. For each issue, fetch the latest event for its stack trace:
+2. For each issue, fetch the latest event for its stack trace:
    `GET /issues/<issueId>/events/latest/`
 
 From each issue keep `shortId`, `title`, `culprit`, `level`, `count`,
