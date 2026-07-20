@@ -4,6 +4,7 @@
   "appUpdate.restartToUpdate": "Click to restart and update",
   "appUpdate.failed": "Update failed",
   "appUpdate.clickToRetry": "Click to retry",
+  "appUpdate.dismiss": "Dismiss until next launch",
   "common.enabled": "Enabled",
   "common.disabled": "Disabled",
   "Close": "Close",
