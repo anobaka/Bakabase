@@ -4,7 +4,7 @@ import type { BakabaseInfrastructuresComponentsAppUpgradeAbstractionsAppVersionI
 
 import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ReloadOutlined, WarningOutlined } from "@ant-design/icons";
+import { CloseOutlined, ReloadOutlined, WarningOutlined } from "@ant-design/icons";
 
 import { Button, Progress, Spinner, Tooltip } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
@@ -23,6 +23,7 @@ interface ViewProps {
   state: AppUpdateBannerViewState;
   onRestart: () => void;
   onRetry: () => void;
+  onDismiss: () => void;
 }
 
 // Mirrors HeroUI `Button size="sm" variant="bordered"` so the checking and
@@ -35,6 +36,7 @@ export const AppUpdateBannerView: React.FC<ViewProps> = ({
   state,
   onRestart,
   onRetry,
+  onDismiss,
 }) => {
   const { t } = useTranslation();
 
@@ -88,18 +90,38 @@ export const AppUpdateBannerView: React.FC<ViewProps> = ({
   if (state.kind === "failed") {
     return (
       <div className={wrapperClass}>
-        <Tooltip
-          content={`${t<string>("appUpdate.failed")} ${state.error ? `(${t(state.error)})` : ""}`}
-          isDisabled={!collapsed}
-          placement="right"
-        >
-          <Button color="danger" isIconOnly={collapsed} size="sm" variant="flat" onPress={onRetry}>
-            <WarningOutlined />
-            {!collapsed && (
-              <span className={labelClass}>{t<string>("appUpdate.clickToRetry")}</span>
-            )}
-          </Button>
-        </Tooltip>
+        <div className={`flex items-center gap-1 ${collapsed ? "flex-col" : "justify-between"}`}>
+          <Tooltip
+            content={`${t<string>("appUpdate.failed")} ${state.error ? `(${t(state.error)})` : ""}`}
+            isDisabled={!collapsed}
+            placement="right"
+          >
+            <Button
+              aria-label={t<string>("appUpdate.clickToRetry")}
+              color="danger"
+              isIconOnly={collapsed}
+              size="sm"
+              variant="flat"
+              onPress={onRetry}
+            >
+              <WarningOutlined />
+              {!collapsed && (
+                <span className={labelClass}>{t<string>("appUpdate.clickToRetry")}</span>
+              )}
+            </Button>
+          </Tooltip>
+          <Tooltip content={t<string>("appUpdate.dismiss")} placement="right">
+            <Button
+              aria-label={t<string>("appUpdate.dismiss")}
+              isIconOnly
+              size="sm"
+              variant="light"
+              onPress={onDismiss}
+            >
+              <CloseOutlined />
+            </Button>
+          </Tooltip>
+        </div>
       </div>
     );
   }
@@ -180,7 +202,11 @@ const AppUpdateBanner: React.FC<Props> = ({ collapsed }) => {
   } else if (status === UpdaterStatus.PendingRestart) {
     viewState = { kind: "pendingRestart" };
   } else if (status === UpdaterStatus.Failed) {
-    viewState = { kind: "failed", error: appUpdaterState.error };
+    // Let the user dismiss the failed banner for the current run so a transient
+    // network failure doesn't leave a persistent warning icon in the sidebar.
+    viewState = appUpdaterState.failureDismissed
+      ? { kind: "hidden" }
+      : { kind: "failed", error: appUpdaterState.error };
   } else if (
     status === UpdaterStatus.Running ||
     (hasNewVersion && status !== UpdaterStatus.UpToDate)
@@ -198,6 +224,7 @@ const AppUpdateBanner: React.FC<Props> = ({ collapsed }) => {
     <AppUpdateBannerView
       collapsed={collapsed}
       state={viewState}
+      onDismiss={() => appUpdaterState.dismissFailure()}
       onRestart={() => BApi.updater.restartAndUpdateApp()}
       onRetry={() => BApi.updater.startUpdatingApp()}
     />

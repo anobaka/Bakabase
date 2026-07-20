@@ -50,6 +50,7 @@ const AppUpdateBannerTest = () => {
               <AppUpdateBannerView
                 collapsed={collapsed}
                 state={c.state}
+                onDismiss={() => console.log("dismiss")}
                 onRestart={() => console.log("restart")}
                 onRetry={() => console.log("retry")}
               />
