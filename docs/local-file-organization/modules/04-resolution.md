@@ -11,7 +11,7 @@
 ```
 ParsedClues ──（Override 前置：人工裁定过的条目直接采用）──▶
   ① Generate     依序运行生成器实例；出现确定性候选可提前终止（早停，可配）
-  ② Consolidate  候选池归拢：等价分组 → 合并（内核固定算法，配置驱动）
+  ② Consolidate  候选池归拢（断言 > 键 join > 启发式；纯函数，可无损重放）
   ③ Decide       top1 + 歧义差 + banding 映射 → Resolved(band) 或 NeedsReview
 ```
 
@@ -19,7 +19,7 @@ ParsedClues ──（Override 前置：人工裁定过的条目直接采用）�
 
 ## 候选契约（MatchCandidate）
 
-所有生成器产出、Runner 消费的统一结构。边界判据：**是不是"作品"这个概念本身必有的东西**——而不是"判定是否需要"（那个判据挡不住域字段蔓延：音乐会想加 albumArtist、漫画想加卷数，god record 迟早出现；`year` 本身就是影视偏见，单曲/软件/图集没有年份这个身份概念）。
+所有生成器产出、Runner 消费的统一结构。边界判据：**是不是"作品"这个概念本身必有的东西**——而不是"判定是否需要"（那个判据挡不住域字段蔓延；`year` 本身就是影视偏见，单曲/软件/图集没有年份这个身份概念）。
 
 ```csharp
 public sealed record MatchCandidate
@@ -50,7 +50,7 @@ public enum CandidateBasis
 }
 ```
 
-- `Features` 就是 [foundations 类型系统](../foundations.md#类型系统)的 FieldBag：Provider 组件经 `FieldDefinition[]` 声明产出字段（"字段随组件走"），适配器负责把 payload 填进去（[03](03-providers.md)）。**冗余与歧义的解药**：字段词汇按组件声明、按 key 隔离，不在中心 record 上累积属性。
+- `Features` 就是 [foundations 类型系统](../foundations.md#类型系统)的 FieldBag：Provider 组件经 `FieldDefinition[]` 声明产出字段（"字段随组件走"），适配器负责把 payload 填进去（[03](03-providers.md)）。字段词汇按组件声明、按 key 隔离，不在中心 record 上累积属性。
 - 判定逻辑对 year 之类的使用退化为**配置里的 feature 引用**（见 FeaturePredicate）——内核代码里没有任何域字段名。
 
 ## ① Generate：候选生成器
@@ -78,7 +78,43 @@ public interface ICandidateGenerator
 
 ## ② Consolidate：候选归拢（内核固定阶段）
 
-跨 Provider 的同一作品会以多个候选出现；不归拢 → **假歧义**（96 vs 95 被迫进复核）+ 多源身份丢失。归拢固化在内核、仅暴露参数。比较语义复用 **Comparison 模块**的策略（StrictEqual/FixedTolerance/SameDay/SetIntersection…）：
+**它只回答一个封闭问题：这几个候选是不是同一作品。** 三个容易混淆的问题及其归属——理解本阶段的前提：
+
+| 问题 | 谁回答 | 规则 | 错了的后果 |
+|---|---|---|---|
+| ① 是不是同一作品 | Consolidate | 断言 > 键 join > 标题门槛+谓词表 | 错并/漏并——有旗、有断言、可重放 |
+| ② 合并候选上展示哪个值 | Consolidate 的唯一合并规则 | 全字段同一条：fill-empty + 打旗 | 复核页显示偏差；**不落库** |
+| ③ 字段的权威值到底是什么 | **[05 富集](05-enrichment.md)**（不是本阶段） | per-field 策略 + provenance | 可改策略零请求重算、[07](07-execution.md) 可重整理 |
+
+问题③是无限的（每个域有自己的字段与权威源）——所以被整个隔离出本阶段。**一旦让 Consolidate 顺便回答"哪个值对"，它就会膨胀成无限逻辑的泥球；这条边界是本设计最重要的一条。**
+
+### 逻辑封闭性（穷举）
+
+```
+等价判定（问题①）：
+  a. 人工断言：NotSameWork 一票否决；IsSameWork 直接并          ← 最高优先级（人 > 源数据）
+  b. 确定性：身份键相交 或 外站链接互指                          ← 键 join，不存在"判错"
+  c. 启发式：归一化标题相等（门槛）且 谓词表全过                  ← 谓词表是配置数据，不是代码分支
+合并（问题②）：
+  d. 唯一规则：按分数序 fill-empty——先到先写、后来者只填空、
+     同键不同值 → 打旗。不存在"替代/覆盖"。全字段同构，零特判。
+产出：
+  e. 身份并集 + max 分数（+可选佐证加分）+ 旗 + RawPayloads 按源原样保留
+```
+
+**这就是全部逻辑，不随域增长**：谓词表之外的任何字段不参与等价判定——两个候选可以有 50 个 feature 不同，只要键连上（或断言/门槛+谓词成立）照并，没连上照分。新增一个域，Consolidator 的代码增量为**零**，变的只是该域内置 Pipeline 的谓词配置行。
+
+### 纯函数与非破坏
+
+```
+Consolidate : (候选池, 配置, 断言) → (新池, 冲突旗)     // 无 I/O、确定性
+```
+
+合并候选是**派生视图**：原料（各源 RawPayloads）绝不融合，因此任何等价判定错误都可**无损重放**——修正断言/配置后重算，什么都不会丢。"错并"不是数据损坏，是一个可重算视图的错误。
+
+### 配置与实现
+
+比较语义复用 **Comparison 模块**策略（StrictEqual/FixedTolerance/SameDay/SetIntersection…）：
 
 ```csharp
 public sealed record ConsolidationConfig
@@ -87,35 +123,44 @@ public sealed record ConsolidationConfig
     // 启发式并组谓词表。动画内置 Pipeline 默认：[("year", FixedTolerance{1}), ("workType", StrictEqual)]
     // —— "year" 只出现在这里（配置），不出现在内核代码里。
     public IReadOnlyList<FeaturePredicate> HeuristicPredicates { get; init; } = [];
-    public decimal CorroborationBonus { get; init; } = 0;   // 佐证加分，默认 0
+    public decimal CorroborationBonus { get; init; } = 0;
 }
 public sealed record FeaturePredicate(string FeatureKey, ComparisonMode Mode, string? ArgJson);
+
+// 人工同一性断言（来自 OrganizeOverride 的 IsSameWork / NotSameWork），跨 Job 生效
+public sealed record IdentityAssertions(
+    IReadOnlySet<SourceKeyPair> SameWork, IReadOnlySet<SourceKeyPair> NotSameWork);
 ```
 
 ```csharp
-public sealed class CandidateConsolidator(ISpecialTextService specialText, IComparisonStrategyResolver strategies)
+public sealed class CandidateConsolidator(
+    ISpecialTextService specialText, IAliasService alias, IComparisonStrategyResolver strategies)
 {
-    public ConsolidationResult Consolidate(IReadOnlyList<MatchCandidate> pool, ConsolidationConfig config)
+    public ConsolidationResult Consolidate(
+        IReadOnlyList<MatchCandidate> pool, ConsolidationConfig config, IdentityAssertions assertions)
     {
         if (pool.Count < 2) return new(pool.ToList(), []);
 
-        var uf = new UnionFind(pool.Count);                    // 1) 并查集分组
+        var uf = new UnionFind(pool.Count);
         for (var i = 0; i < pool.Count; i++)
         for (var j = i + 1; j < pool.Count; j++)
         {
-            if (IsDeterministicallyLinked(pool[i], pool[j]) ||          // 永远启用
-                (config.EnableHeuristicJoin && IsHeuristicallyLinked(pool[i], pool[j], config)))
+            var (a, b) = (pool[i], pool[j]);
+            if (assertions.DeniesUnion(a.Identity, b.Identity)) continue;   // a. 否决高于键 join：
+                                                                            //    人 > 源数据（外链也会指错）
+            if (assertions.ForcesUnion(a.Identity, b.Identity)
+                || IsDeterministicallyLinked(a, b)                          // b.
+                || (config.EnableHeuristicJoin && IsHeuristicallyLinked(a, b, config)))  // c.
                 uf.Union(i, j);
         }
 
-        var conflicts = new List<MergeConflict>();             // 2) 每组合并为一个候选
+        var conflicts = new List<MergeConflict>();
         var merged = uf.Groups()
             .Select(g => g.Count == 1 ? pool[g[0]] : MergeGroup(g.Select(x => pool[x]).ToList(), config, conflicts))
             .ToList();
         return new(merged, conflicts);
     }
 
-    // 键相等 = join，不存在"判错"（除非源数据本身错）
     private static bool IsDeterministicallyLinked(MatchCandidate a, MatchCandidate b) =>
         a.Identity.Overlaps(b.Identity)
         || a.Links.Any(l => b.Identity.Contains(l.Source, l.Key))
@@ -123,20 +168,25 @@ public sealed class CandidateConsolidator(ISpecialTextService specialText, IComp
 
     private bool IsHeuristicallyLinked(MatchCandidate a, MatchCandidate b, ConsolidationConfig config)
     {
-        if (!HasNormalizedTitleMatch(a.Titles, b.Titles)) return false;   // 门槛：归一化标题相等
+        if (!HasNormalizedTitleMatch(a, b)) return false;      // 门槛
         foreach (var p in config.HeuristicPredicates)
         {
             var va = a.Features.GetRaw(p.FeatureKey);
             var vb = b.Features.GetRaw(p.FeatureKey);
-            if (va is null || vb is null) return false;        // 缺值 → 谓词不可用 → 保守拒绝并组
+            if (va is null || vb is null) return false;        // 缺值 → 谓词不可用 → 保守拒绝
             if (!strategies.Get(p.Mode).AreEquivalent(va, vb, p.ArgJson)) return false;
         }
         return true;
     }
 
-    private bool HasNormalizedTitleMatch(LocalizedText a, LocalizedText b) =>
-        a.Values.Any(ta => b.Values.Any(tb =>
-            specialText.Standardize(ta).Equals(specialText.Standardize(tb), StringComparison.OrdinalIgnoreCase)));
+    // 门槛比较在「标题 ∪ 别名展开」集合上做；SpecialText 归一化吸收写法变体（全半角/空格/标点）
+    private bool HasNormalizedTitleMatch(MatchCandidate a, MatchCandidate b)
+    {
+        var ta = a.Titles.Values.SelectMany(alias.Expand)
+                 .Select(specialText.Standardize).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return b.Titles.Values.SelectMany(alias.Expand)
+                 .Select(specialText.Standardize).Any(ta.Contains);
+    }
 
     private static MatchCandidate MergeGroup(List<MatchCandidate> members, ConsolidationConfig config,
         List<MergeConflict> conflicts)
@@ -145,7 +195,7 @@ public sealed class CandidateConsolidator(ISpecialTextService specialText, IComp
         var top = byScore[0];
         var identity = WorkIdentitySet.Union(members.Select(m => m.Identity));
 
-        // Titles 与 Features 同一条规则：高分方先写入、后来者只填空；值不同 → 记冲突旗
+        // 规则 d（唯一合并规则）：fill-empty——已写入的值不会被覆盖，不存在"替代"
         var titles = new Dictionary<string, string>();
         foreach (var m in byScore)
         foreach (var (lang, title) in m.Titles)
@@ -177,7 +227,25 @@ public sealed class CandidateConsolidator(ISpecialTextService specialText, IComp
 }
 ```
 
-合并出的薄值（Titles/Features 上的胜出值）**仅供复核展示与重打分，从不落库**——权威值由 [05](05-enrichment.md) 按 per-field 策略从各源 payload 选出。启发式并组的候选携带 `HeuristicallyMerged` 标记，供 Decide 与复核页消费。
+### title 在归拢中的角色
+
+title 是唯一有特殊地位的字段（它是启发式路径的门槛），其余字段一律走谓词表或被无视：
+
+| 路径 | title 的角色 | title 不一样时 |
+|---|---|---|
+| 断言 / 键 join | **不参与判定**——键说了算 | 照并；同语言不同值 → `title[lang]` 冲突旗。该旗常是**粒度错位**信号（外链把系列条目连到季条目/剧场版）——`DowngradeOnMergeConflict` 针对的正是它 |
+| 启发式 | **门槛条件**：别名展开 + 归一化后任一语言对相等才继续 | **不并，无降级手段**——保守漏并 → 假歧义进复核 → 人工 `IsSameWork` + 沉淀 Alias → 重放即并上 |
+
+```
+A{bangumi, ja:進撃の巨人, 96}  B{tmdb, ja:進撃の巨人 第三期, 95}，外链互指
+  → 键 join 照并；title[ja] 冲突旗 →（可配）降档进复核     ← 粒度错位让人看一眼
+A{ja:進撃の巨人, 96}  B{ja:進撃の巨人, 95}，无外链
+  → 门槛过 + year±1/workType 过 → 启发式合并（带 HeuristicallyMerged 旗）
+A{ja:進撃の巨人, 96}  B{en:Attack on Titan, 95}，无外链
+  → 任何语言对不相等 → 不并 → 假歧义复核 → IsSameWork → 下轮并上
+```
+
+跨语言不同名（一边只有 ja、一边只有 en）字符串比较无解——那是键连接与人工断言的领地，不是启发式该赌的。
 
 ## ③ Decide：裁决
 
@@ -201,8 +269,9 @@ public sealed class MatchDecider
         var ranked = pool.OrderByDescending(c => c.Score).ToList();
         var top = ranked[0];
 
-        // 1) 确定性 Basis 直通（早停通常已在 Generate 发生，这里兜底；交叉检验旗除外）
-        if (top.Basis is CandidateBasis.KeyLookup or CandidateBasis.UserTable && !top.HasFlag(CandidateFlag.CrossValidationFailed))
+        // 1) 确定性 Basis 直通（早停通常已在 Generate 发生，这里兜底；交叉检验失败旗除外）
+        if (top.Basis is CandidateBasis.KeyLookup or CandidateBasis.UserTable
+            && !top.HasFlag(CandidateFlag.CrossValidationFailed))
             return MatchDecision.Resolved(top, MatchBand.High);
 
         // 2) 歧义保护：Consolidate 之后仍打架的才是真歧义
@@ -237,24 +306,26 @@ public sealed class MatchDecider
 
 ## 误判模式与防线
 
-判定是不完美信息下的统计决策，**误判不可能为零**。架构目标是控制"错误的期望成本"：把错误尽量推向"多一次人工"（便宜、可见），而不是"错数据落盘"（贵、隐蔽）。四条通用防线：**保守默认**（缺值拒并、歧义降档、Medium 默认复核）、**可见**（Explanation/冲突旗/启发式合并旗/provenance——每个结论能回答"为什么"）、**可纠**（复核改判 → Override 断言永久生效；执行层可 [Undo](07-execution.md)）、**可调**（谓词/阈值/gap/降档开关全是 Pipeline 配置，用真实库标定）。
+判定是不完美信息下的统计决策，**误判不可能为零**。架构目标是控制"错误的期望成本"：把错误推向"多一次人工"（便宜、可见），而不是"错数据落盘"（贵、隐蔽）。四条通用防线：**保守默认**（缺值拒并、歧义降档、Medium 默认复核）、**可见**（Explanation/冲突旗/HeuristicallyMerged 旗/provenance）、**可纠**（断言 + 重放 + [Undo](07-execution.md)）、**可调**（谓词/阈值/gap/降档开关全是 Pipeline 配置）。
 
 | 误判模式 | 错误方向 | 防线 |
 |---|---|---|
-| **错并**：启发式连接把同名同年的不同作品并成一个（重制版/剧场版/同名漫改） | 错数据（身份集合被污染） | 谓词全过 + 标题归一相等才并；`HeuristicallyMerged` 旗复核可见；错并通常伴随字段冲突 → 冲突旗 + `DowngradeOnMergeConflict`；复核页"拆开合并" → 写 `NotSameWork` 断言，下轮遵守 |
-| **漏并**：同一作品因标题写法差异没并上 → 假歧义 | 多人工（不错数据） | 进复核后人工确认 → 写 `IsSameWork` 断言 + 顺手沉淀 Alias；下轮自动并 |
-| **薄值选错**：合并候选上 year/标题取了错误一方 | 展示偏差 | 薄值不落库，权威值在 [05](05-enrichment.md) 按 per-field 策略决定；冲突旗展示双值 |
-| **高分错配**：线索本身误导（文件名嵌错码、蹭名作关键词） | 错数据（最危险类） | `code-lookup` 的 **CrossValidateWithTitle**：键命中后与标题线索做相似度交叉检验，不符 → 打旗降档进复核；全量 journal 可回滚；复核页事后改判 → 自动重整理 |
-| **阈值边界**：89 分被拦（成本人工）/ 91 分错配（危险） | 双向 | 阈值 per-Pipeline 可调；`MediumAction.Sample` 抽样审计 High 边界；banding 分布可观测，指导标定 |
-| **歧义差错判**：gap 太小放过真歧义 / 太大复核爆量 | 双向 | 同上，per-Pipeline 标定；复核量本身是收敛指标 |
+| **错并**：启发式把同名同年的不同作品并成一个 | 派生视图错误（可重算） | 门槛+谓词全过才并；`HeuristicallyMerged` 旗；错并常伴字段冲突 → 冲突旗 + 降档；复核"拆开合并" → `NotSameWork` 断言 → **重放归拢，无损重算** |
+| **漏并**：同作不同写法没并上 → 假歧义 | 多人工（不错数据） | 复核确认 → `IsSameWork` 断言 + 沉淀 Alias → 重放即并 |
+| **薄值选错**：合并候选展示了错误一方的值 | 展示偏差 | fill-empty 不覆盖 + 冲突旗展示双值；权威值在 [05](05-enrichment.md) |
+| **高分错配**：线索误导（嵌错码/蹭名作关键词） | 错数据（最危险类） | `code-lookup` 的 CrossValidateWithTitle 打旗降档；journal 可回滚；复核改判 → 自动重整理 |
+| **阈值边界**：89 被拦 / 91 错配 | 双向 | 阈值 per-Pipeline 可调；`MediumAction.Sample` 抽样审计；banding 分布可观测 |
+| **歧义差错判**：gap 太小放过真歧义 / 太大复核爆量 | 双向 | 同上标定；复核量本身是收敛指标 |
 
-Override 断言因此扩展为：
+## Override（人工裁定）
 
 ```
 OrganizeOverride   Fingerprint(条目指纹，键), Kind(ForcedIdentity / ForcedTitle / ForcedPipeline / Skip
                    / IsSameWork / NotSameWork), PayloadJson, CreatedAt
-                   // IsSameWork/NotSameWork 以 (source,key) 对为主体，Consolidate 优先遵守，跨 Job 生效
 ```
+
+- 条目级断言（ForcedIdentity/ForcedTitle/ForcedPipeline/Skip）在 Runner 前置消费。
+- **同一性断言**（IsSameWork/NotSameWork，以 (source,key) 对为主体）作为 `IdentityAssertions` 输入 Consolidate，**优先级最高**（否决高于键 join——外链也会指错，人说了算），跨 Job 生效。
 
 ## 走查示例
 
@@ -269,7 +340,7 @@ OrganizeOverride   Fingerprint(条目指纹，键), Kind(ForcedIdentity / Forced
 
 输入 2：[LoliHouse] 進撃の巨人 S03
   ① code-lookup：无码 → 0 候选；fuzzy-search：池 = [A{bangumi, 96}, B{tmdb, 95}]
-  ② consolidate：A/B 外站 id 互指（确定性连接）→ 池 = [AB{bangumi+tmdb, 96}]
+  ② consolidate：A/B 外站 id 互指（键 join）→ 池 = [AB{bangumi+tmdb, 96}]
   ③ decide：96 ≥ high，次高 60、差 36 > gap → Resolved(High)
 
   反事实：跳过 consolidate → 96 vs 95 差 1 < gap → 假歧义进复核，且人工选 A 后身份只剩 {bangumi}
@@ -282,7 +353,7 @@ OrganizeOverride   Fingerprint(条目指纹，键), Kind(ForcedIdentity / Forced
 
 ## 完成后获得的能力
 
-- 纯逻辑层：线索集 + Provider（可 mock）→ 可解释的身份判定；打分、归拢、歧义、误判防线全量单测。
+- 纯逻辑层：线索集 + Provider（可 mock）→ 可解释的身份判定；打分、归拢（含断言重放）、歧义、误判防线全量单测。
 - 配合 01–03 的调试页端到端验证"这个文件名能不能认出来、为什么认错"。
 - Override（含正/负同一性断言）落地后，人工纠错一次、永久生效。
 
