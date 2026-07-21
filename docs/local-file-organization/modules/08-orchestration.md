@@ -23,7 +23,7 @@ Pipeline = 作用域/Detector
 |---|---|---|---|
 | 同人音声/DLsite | pattern(rj-code) → pattern(filename) | dlsite | code-lookup → fuzzy-search（Medium 全复核） |
 | 通用音频 | embedded-tag → pattern(filename) | （空） | clue-direct(标签)（不联网定名；缺标签→复核） |
-| 动画 | pattern(filename，字幕组词表) → nfo | bangumi → tmdb | fuzzy-search（FanOutUnion；启发式归拢开） |
+| 动画 | pattern(filename，字幕组词表) → nfo | bangumi → tmdb | fuzzy-search（FanOutUnion；启发式归拢：year±1 + workType 相等） |
 | 漫画/本子 | comicinfo → pattern(gallery-token) → pattern(filename) | exhentai → bangumi | fuzzy-search |
 | 音乐 | embedded-tag → pattern(filename) | musicbrainz | code-lookup(MBID) → fingerprint → fuzzy-search |
 | 电影/剧集 | pattern(imdb-code) → pattern(sxxeyy) → pattern(filename) | tmdb | code-lookup → fuzzy-search |

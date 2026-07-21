@@ -23,7 +23,7 @@ public sealed record ProviderCapabilities(
     string[] ExternalIdKinds);       // payload 携带哪些外站 id（如 AniList 带 MAL id）→ 供身份对齐
 ```
 
-`MatchCandidate` 携带：多语言标题、年份、类型、本站 id、外站 id 列表、原始 payload、以及按组件 `Fields` 声明填充的 [FieldBag](../foundations.md#类型系统)。
+`MatchCandidate`（契约定义见 [04](04-resolution.md#候选契约matchcandidate)）中，适配器负责填充：作品身份/多语言标题/外站 id 链接（canonical 部分），以及按组件 `Fields` 声明填进 `Features`（[FieldBag](../foundations.md#类型系统)）的域数据（year/workType/albumArtist…——candidate 上**没有**这些专属属性，全部走类型化字段袋）；原始 payload 按源保留。
 
 ## 与 ThirdParty 模块的关系
 
