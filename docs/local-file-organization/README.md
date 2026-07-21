@@ -1,6 +1,6 @@
 # 本地文件自动整理（Organizer）· 设计文档
 
-> 状态：**设计阶段**（尚未开工）。本目录是该功能的**唯一真相源**：每个概念只在其归属文档中定义一次，其余文档以链接引用，不做内容复制。
+> 状态：**Pending（挂起）**。设计讨论在身份判定层（04 Consolidate 的等价语义/粒度问题）尚未收敛，决定先落地范围更小、边界清晰的**[文件清洗（File Cleaning Workflow）](../file-cleaning-workflow.md)**——它吸收了本设计 [01 文本处理规则](modules/01-text-processing.md)的方向（SpecialText 用户自定义类型 + FileNameModifier 节点化），并直接构建在现有 Workflow 模块上。恢复讨论时本目录仍是唯一真相源：每个概念只在其归属文档中定义一次，其余文档以链接引用，不做内容复制。
 
 ## 目标
 
