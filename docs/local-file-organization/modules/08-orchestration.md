@@ -12,23 +12,23 @@
 Pipeline = 作用域/Detector
          + 有序 Extractor 实例（02）
          + 有序 Provider 实例（03）
-         + Resolver 链与 banding/检索策略配置（04）
+         + 候选生成器实例与判定配置（早停/consolidate/banding）（04）
          + 富集策略（05）
          + 默认规则预设绑定（06）
 ```
 
 内置种子（只读、可 fork）覆盖主流场景；构成一览：
 
-| 内置 Pipeline | Extractor 链 | Provider 链 | Resolver 链 |
+| 内置 Pipeline | Extractor 链 | Provider 链 | 候选生成器（有序）+ 判定配置 |
 |---|---|---|---|
-| 同人音声/DLsite | pattern(rj-code) → pattern(filename) | dlsite | exact-code → fuzzy（Medium 全复核） |
-| 通用音频 | embedded-tag → pattern(filename) | （空） | tag-first（不联网定名；缺标签→复核） |
-| 动画 | pattern(filename，字幕组词表) → nfo | bangumi → tmdb | fuzzy → merge |
-| 漫画/本子 | comicinfo → pattern(gallery-token) → pattern(filename) | exhentai → bangumi | fuzzy |
-| 音乐 | embedded-tag → pattern(filename) | musicbrainz | exact-code(MBID) → fingerprint → fuzzy |
-| 电影/剧集 | pattern(imdb-code) → pattern(sxxeyy) → pattern(filename) | tmdb | exact-code → fuzzy |
-| 游戏 | pattern(steam-appid) → pattern(filename) | steam | exact-code → fuzzy |
-| AV | pattern(av-code) | javbus → javdb → … | 仅 exact-code（无码→复核） |
+| 同人音声/DLsite | pattern(rj-code) → pattern(filename) | dlsite | code-lookup → fuzzy-search（Medium 全复核） |
+| 通用音频 | embedded-tag → pattern(filename) | （空） | clue-direct(标签)（不联网定名；缺标签→复核） |
+| 动画 | pattern(filename，字幕组词表) → nfo | bangumi → tmdb | fuzzy-search（FanOutUnion；启发式归拢开） |
+| 漫画/本子 | comicinfo → pattern(gallery-token) → pattern(filename) | exhentai → bangumi | fuzzy-search |
+| 音乐 | embedded-tag → pattern(filename) | musicbrainz | code-lookup(MBID) → fingerprint → fuzzy-search |
+| 电影/剧集 | pattern(imdb-code) → pattern(sxxeyy) → pattern(filename) | tmdb | code-lookup → fuzzy-search |
+| 游戏 | pattern(steam-appid) → pattern(filename) | steam | code-lookup → fuzzy-search |
+| AV | pattern(av-code) | javbus → javdb → … | 仅 code-lookup（无码→复核） |
 
 典型用例：非 RJ 规范的音声库 → 把目录作用域绑到「通用音频」，或 fork「同人音声/DLsite」摘掉 rj-code/dlsite 组件——零代码。
 
@@ -50,7 +50,7 @@ Discovered → Routed → Extracted → Parsed → Resolved / NeedsReview → Pl
 
 ```
 OrganizePipeline   Name, ForkedFromId?, ScopeJson, ComponentsJson(有序组件实例+配置),
-                   ResolverConfigJson(banding/检索策略), FieldMappingJson, Enabled
+                   ResolverConfigJson(生成器链/早停/consolidate/banding), FieldMappingJson, Enabled
 OrganizeJob        RuleSetId, SourceRoots, Mode(DryRun/Apply), Stats, CreatedAt
 OrganizeItem       JobId, Path, Fingerprint, State, PipelineId?,
                    CluesJson, MatchJson(候选+得分), MetadataJson(按 Provider 分开缓存),

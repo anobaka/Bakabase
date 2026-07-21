@@ -31,7 +31,7 @@
 | 原子能力 | [01 文本处理规则](modules/01-text-processing.md) | 用户定义规则，对"一段文本"清洗 + 类型化提取（来源无关） |
 | 原子能力 | [02 条目提取器](modules/02-extractors.md) | 面向文件/目录采集线索：文本规则应用 + 结构化读取 |
 | 原子能力 | [03 元数据 Provider](modules/03-providers.md) | 外部站点统一适配：搜候选 / 精确码取 / 按身份富集 |
-| 决策能力 | [04 身份判定](modules/04-resolution.md) | Resolver 责任链：线索 → 身份 + 置信档 + 解释 |
+| 决策能力 | [04 身份判定](modules/04-resolution.md) | 候选生成 → 归拢 → 裁决：线索 → 身份 + 置信档 + 解释 |
 | 决策能力 | [05 字段富集](modules/05-enrichment.md) | 多库并行取详情，per-field 合并，带来源追溯 |
 | 落盘能力 | [06 布局](modules/06-layout.md) | 路径模板 DSL + 整理规则集：完全自由的目录/命名表达 |
 | 落盘能力 | [07 执行](modules/07-execution.md) | 计划 / journal / 回滚 / 资源一致性联动 |

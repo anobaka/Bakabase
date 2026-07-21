@@ -31,8 +31,8 @@ Extractor、Provider、Resolver 策略、Detector 都遵循同一套组件机制
 ```csharp
 public interface IOrganizerComponentDescriptor
 {
-    string Kind { get; }                          // "extractor.pattern" / "provider.dlsite" / "resolver.fuzzy"
-    OrganizerSlot Slot { get; }                   // Detector / Extractor / Provider / ResolverPolicy
+    string Kind { get; }                          // "extractor.pattern" / "provider.dlsite" / "resolver.fuzzy-search"
+    OrganizerSlot Slot { get; }                   // Detector / Extractor / Provider / CandidateGenerator
     string DisplayName { get; }
     Type? ConfigType { get; }                     // 配置 schema，编辑器据此渲染表单
     ComponentApplicability Applicability { get; } // 适用形态：音频/压缩包/任意…（编辑器校验）

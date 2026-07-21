@@ -2,7 +2,7 @@
 
 > 层级：决策能力 ｜ 依赖：[03 Provider](03-providers.md)（`EnrichAsync`）、[04 身份判定](04-resolution.md)（身份集合）、[foundations 类型系统](../foundations.md#类型系统)（FieldBag/provenance） ｜ 被依赖：[06 布局](06-layout.md)（模板取值）、[07 执行](07-execution.md)（属性写入）
 >
-> 职责：身份定案后，从多个 Provider 并行取详情，把字段 **union** 成一个带来源追溯的 [FieldBag](../foundations.md#类型系统) + 规范字段集。**[04](04-resolution.md) 定身份，本模块填字段**——边界在 Final 之后、Plan 之前。
+> 职责：身份定案后，从多个 Provider 并行取详情，把字段 **union** 成一个带来源追溯的 [FieldBag](../foundations.md#类型系统) + 规范字段集。**[04](04-resolution.md) 定身份，本模块填字段**——边界在裁决（Decide）之后、Plan 之前。
 
 ## 并行 union
 
