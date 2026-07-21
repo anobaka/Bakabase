@@ -51,8 +51,8 @@ footer{margin-top:40px;color:var(--dim);font-size:12px;border-top:1px solid var(
 </style></head><body><div class="wrap">
 <h1>Bakabase · 自动整理本地文件 · 架构 v2</h1>
 <p class="sub">在初版「五轴可插拔」骨架之上，与 Bakabase 现有模块体系（ThirdParty / Enhancer / Property / BTask / PathMark / Comparison…）深度融合的落地版设计</p>
-<p class="note">本页替代初版 <code class="i">architecture_1.html</code> 成为<b>单一来源</b>。初版验证了「同一骨架 + 五个可插拔轴」的核心洞见，本版解决三件事：<b>① 落进 Bakabase 的真实模块与数据模型</b>（不再是独立 sln）；<b>② 命名/目录结构从"插件内置"升级为"用户完全自定义的规则系统"</b>；<b>③ 域特定字段获得基于 StandardValue 的类型安全</b>。所有引用的类型与路径均已在当前代码库中核实。</p>
-<div class="toc"><a href="#s0">0 Review 结论</a><a href="#s1">1 概念表</a><a href="#s2">2 分层架构</a><a href="#s3">3 现有资产复用</a><a href="#s4">4 内核与状态机</a><a href="#s5">5 域插件契约 v2</a><a href="#s6">6 匹配层</a><a href="#s7">7 自定义命名与目录规则</a><a href="#s8">8 域字段类型安全</a><a href="#s9">9 混合库与 IP 合集</a><a href="#s10">10 计划/执行/回滚</a><a href="#s11">11 现有模块调整</a><a href="#s12">12 场景矩阵</a><a href="#s13">13 实施路线图</a><a href="#s14">14 风险与未决点</a></div>
+<p class="note">本页替代初版 <code class="i">architecture_1.html</code> 成为<b>单一来源</b>。初版验证了「同一骨架 + 五个可插拔轴」的核心洞见，本版解决四件事：<b>① 落进 Bakabase 的真实模块与数据模型</b>（不再是独立 sln）；<b>② 命名/目录结构从"插件内置"升级为"用户完全自定义的规则系统"</b>；<b>③ 域特定字段获得基于 StandardValue 的类型安全</b>；<b>④ 整理能力全面组件化</b>——分层中每层的组件用户可自由选换，内置 Pipeline 覆盖主流场景、可 fork 自定义（§5）。所有引用的类型与路径均已在当前代码库中核实。</p>
+<div class="toc"><a href="#s0">0 Review 结论</a><a href="#s1">1 概念表</a><a href="#s2">2 分层架构</a><a href="#s3">3 现有资产复用</a><a href="#s4">4 内核与状态机</a><a href="#s5">5 组件与 Pipeline</a><a href="#s6">6 匹配层</a><a href="#s7">7 自定义命名与目录规则</a><a href="#s8">8 域字段类型安全</a><a href="#s9">9 混合库与 IP 合集</a><a href="#s10">10 计划/执行/回滚</a><a href="#s11">11 现有模块调整</a><a href="#s12">12 场景矩阵</a><a href="#s13">13 实施路线图</a><a href="#s14">14 风险与未决点</a></div>
 
 <h2 id="s0"><span class="n">§0</span>Review 结论：初版 → v2 调整总览</h2>
 <p>初版的骨架（扫描 → 采集证据 → 解析 → 匹配 → 命名/定位 → 计划 → 执行/回滚，五轴插件化）<b>整体成立，予以保留</b>。以下是逐项调整及理由：</p>
@@ -60,6 +60,7 @@ footer{margin-top:40px;color:var(--dim);font-size:12px;border-top:1px solid var(
 <tr><td>独立 <code class="i">MediaOrganizer.sln</code>，零依赖纯 BCL 内核</td><td>落地为 <code class="i">Bakabase.Modules.Organizer</code>（+ 域插件子目录），注册进现有 DI / Controller / SignalR / EF 体系</td><td>Bakabase 已有完整的模块化骨架（Abstractions/Components/Services/Models/Extensions 五段式 + <code class="i">tests/</code> 每模块一测试工程）；独立 sln 会导致双份 HTTP 栈、双份存储、双份任务系统</td></tr>
 <tr><td>Provider 装饰器栈：Caching → RateLimit → Retry</td><td>删除。复用 <code class="i">ThirdParty</code> 模块的 <code class="i">AddBakabaseHttpClient</code> + 各站点 <code class="i">HttpMessageHandler</code>（已带限流/Cookie/代理），响应缓存落在 <code class="i">OrganizeItem.MetadataJson</code> 与 <code class="i">ResourceSourceLink.MetadataJson</code></td><td>33 个第三方客户端已按同一套 HTTP 基建实现；再造装饰器是重复建设</td></tr>
 <tr><td>轴④ 结构模型 + 轴⑤ 命名模板<b>内置于插件</b>（<code class="i">IStructureModel</code> / <code class="i">INamingPolicy</code>）</td><td><b>移出插件</b>，改为用户完全自定义的「整理规则系统」（§7）：规则 = 作用域过滤 + 路径模板 DSL + 冲突策略。插件只提供<b>字段 schema + 默认规则预设</b></td><td>用户要求「按 IP&gt;类型&gt;文件」或「平铺 &lt;IP&gt;-&lt;类型&gt;-&lt;文件&gt;」等任意布局；结构写死在插件里做不到完全自由，也无法表达跨域混合合集</td></tr>
+<tr><td>域插件 <code class="i">IDomainPlugin</code> 是密封的五轴打包</td><td>进一步拆为「组件调色板 + Pipeline 数据」（§5）：信号提取器 / Provider / Resolver 策略皆为独立组件，Pipeline 存 DB；内置 Pipeline 只读可 fork，"域"退化为字段词汇表 + 标签</td><td>密封包摘不掉对个别用户无效甚至有害的能力（如非 RJ 规范的音声库里，RJ 正则误命中 + 精确码短路 = 高置信错配）；组件化让"摘掉/换掉某层能力"零代码</td></tr>
 <tr><td><code class="i">ResolvedWork.Extra</code>：<code class="i">Dictionary&lt;string,string&gt;</code> 字符串袋</td><td>类型安全的 <code class="i">DomainFieldBag</code>：字段定义携带 <code class="i">StandardValueType</code> + 建议 <code class="i">PropertyType</code>，typed 读写 + 与资源属性双向转换（§8）</td><td>Bakabase 已有 9 种 StandardValue + 16 种 PropertyType 的成熟转换体系；<code class="i">IEnhancerTargetDescriptor</code> 已示范同一模式（ValueType + PropertyType 并列）</td></tr>
 <tr><td>存储层 IStateStore/IMatchCache/… 内存 ↔ SQLite ↔ Redis 可换</td><td>直接 <code class="i">BakabaseDbContext</code> 新表（EF 迁移生成），文件类产物入 <code class="i">IAppService.AppDataDirectory</code></td><td>单机单用户桌面应用，无 Redis 场景；repo 规则也要求用户数据一律走 AppData</td></tr>
 <tr><td>执行 = 纯文件系统 move/rename + journal</td><td>执行与<b>资源一致性联动</b>：移动时同步更新 <code class="i">Resource.Path</code>、PathMark、媒体库归属；匹配到的元数据经 Enhancer 转换链写入属性并登记 <code class="i">ResourceSourceLink</code>（§10）</td><td>初版最大盲区：被整理的文件很多已是 Bakabase 资源，裸移动会丢失属性值 / 播放历史 / 标记；这是融合版最重要的增量</td></tr>
@@ -70,7 +71,9 @@ footer{margin-top:40px;color:var(--dim);font-size:12px;border-top:1px solid var(
 
 <h2 id="s1"><span class="n">§1</span>概念表<span class="sx">初版 HTML 未解释的概念 + v2 新概念，一次说清</span></h2>
 <table><tr><th style="width:16%">概念</th><th>含义</th><th style="width:30%">对应 Bakabase 概念 / 落点</th></tr>
-<tr><td class="dom">Domain（域）</td><td>一类整理场景的封装单位：动画、音乐、同人音声、漫画…。一个域 = 一份「如何识别这类文件、去哪些数据源查、有哪些专属字段」的打包。<b>域 ≠ 媒体库</b>：同一个媒体库（甚至同一个目录）里可以混着多个域的条目，由路由按置信度分流</td><td>新接口 <code class="i">IOrganizerDomain</code>（§5）。与 <code class="i">MediaType</code>（扩展名分组）相关但不等同：MediaType 是文件形态，Domain 是内容语义</td></tr>
+<tr><td class="dom">Domain（域）</td><td>一类整理场景的语义标签：动画、音乐、同人音声、漫画…。<b>域 ≠ 媒体库</b>：同一目录可混多个域的条目。v2 中域<b>不再是密封的行为单元</b>——「如何识别、去哪查」由 Pipeline 的组件组合承载，域只保留字段词汇表（§8）与路由/展示标签两个职责</td><td>字段词汇表 = 随组件的代码声明（§5/§8）。与 <code class="i">MediaType</code>（扩展名分组）相关但不等同：MediaType 是文件形态，Domain 是内容语义</td></tr>
+<tr><td class="dom">Component（组件）</td><td>某个槽位契约的一个实现：信号提取器、Provider 适配器、Resolver 策略、Detector…。代码注册，带配置 schema、适用性元数据、产出字段声明；同一组件可在多条 Pipeline 中以不同配置实例化</td><td><code class="i">IOrganizerComponentDescriptor</code> + <code class="i">OrganizerComponentRegistry</code>（§5，借鉴 Workflow 模块 ActivityRegistry 模式）</td></tr>
+<tr><td class="dom">Pipeline（流水线）</td><td>一条可运行的整理配置：作用域/Detector + 有序信号组件 + Parser + 有序 Provider + Resolver 策略参数 + 字段映射 + 默认规则预设。<b>是数据不是代码</b>；内置 Pipeline 为只读种子，用户可 fork 后增删组件、调参</td><td><code class="i">OrganizePipeline</code> 表（§4/§5）</td></tr>
 <tr><td class="dom">Signal / Evidence（信号/证据）</td><td>能帮助确定「这是哪部作品」的一切线索：文件名、目录名、RJ/tt 等强编码、内嵌标签（ID3/Vorbis）、伴随文件（ComicInfo.xml / .nfo）、声学指纹、图像 pHash。证据有强弱：强编码 &gt; 指纹 &gt; 内嵌标签 &gt; 文件名</td><td>新接口 <code class="i">ISignalExtractor</code>；文件名清洗复用 <code class="i">ISpecialTextService</code>，压缩包内嗅探复用 <code class="i">CompressedFileService</code></td></tr>
 <tr><td class="dom">状态机各状态</td><td><b>Discovered</b> 已扫描发现；<b>Routed</b> 已确定所属域（或确定无域→Skipped）；<b>Signaled</b> 证据采集完毕（例如"从文件名里提出了 RJ01017217"）；<b>Parsed</b> 证据解析为结构化线索（标题/年份/话数/编码）；<b>Resolved</b> 已匹配到规范作品（高置信）；<b>NeedsReview</b> 低置信/歧义，等人工；<b>Planned</b> 已生成目标路径与操作序列（干跑终点）；<b>Applied</b> 已落盘执行；<b>Skipped</b>/<b>Failed</b> 终态</td><td><code class="i">OrganizeItem.State</code> 列（§4）。每次状态推进即 checkpoint 落库 → 断点续跑</td></tr>
 <tr><td class="dom">Provider（数据源）</td><td>一个外部元数据库的查询能力：按关键词搜、按精确码取、（可选）按指纹取。声明自己的能力（Capabilities），由 Resolver 编排</td><td>薄适配器 <code class="i">IMetadataProviderAdapter</code> 包装 ThirdParty 模块现有 33 个客户端（§3）</td></tr>
@@ -87,8 +90,8 @@ footer{margin-top:40px;color:var(--dim);font-size:12px;border-top:1px solid var(
 <div class="layer"><div class="lab">触发层 · M0 手动 / M4 自动</div><div class="row"><span class="box">整理向导 UI（选根目录 + 规则集 → 预览 → 确认）</span><span class="box">BTask 一次性任务（fluent builder）</span><span class="box">FileMover 监听目录（后期接入）</span><span class="box">Workflow 模块触发器/活动（后期）</span></div></div>
 <div class="flowdown">▼</div>
 <div class="layer"><div class="lab">整理内核 · Bakabase.Modules.Organizer（新）</div><div class="row"><span class="box core">DomainRouter 路由</span><span class="box core">OrganizePipeline 状态机循环</span><span class="box core">Route→Signal→Parse→Match→Plan</span><span class="box core">规则引擎 + 路径模板渲染</span><span class="box core">PlanExecutor 执行/回滚（journal）</span><span class="box core">复核队列 / Override</span></div></div>
-<div class="flowdown">▼ 按 Detector 置信度选中域</div>
-<div class="layer"><div class="lab">域插件层 · IOrganizerDomain（每场景一个，同模块内子目录，非独立程序集）</div><div class="row"><span class="box plug">同人音声（M0）</span><span class="box plug">动画（M2）</span><span class="box plug">漫画（M3）</span><span class="box plug">音乐（M3）</span><span class="box plug">电影/剧集</span><span class="box plug">游戏</span><span class="box plug">画集/图集</span></div></div>
+<div class="flowdown">▼ 按作用域绑定与 Detector 置信度选中 Pipeline</div>
+<div class="layer"><div class="lab">Pipeline 层 · 组件组合的数据化配置（内置只读可 fork；组件代码注册于 OrganizerComponentRegistry）</div><div class="row"><span class="box plug">内置：同人音声/DLsite（M0）</span><span class="box plug">内置：通用音频（M1）</span><span class="box plug">内置：动画（M2）</span><span class="box plug">内置：漫画 · 音乐（M3）</span><span class="box plug">内置：电影/剧集 · 游戏 · AV</span><span class="box plug t-new">用户 fork 的自定义 Pipeline</span></div></div>
 <div class="flowdown">▼ 适配</div>
 <div class="layer"><div class="lab">Provider 层 · 复用 Bakabase.Modules.ThirdParty（33 个客户端 + 统一 HTTP 基建）</div><div class="row"><span class="box prov">DLsite</span><span class="box prov">Bangumi</span><span class="box prov">Tmdb</span><span class="box prov">ExHentai</span><span class="box prov">Steam</span><span class="box prov">Pixiv…</span><span class="box prov t-new">新增：AniList · MusicBrainz/AcoustID · MangaDex（按里程碑）</span></div></div>
 <div class="flowdown">▲▼ 一致性联动（v2 新增的关键层）</div>
@@ -96,7 +99,7 @@ footer{margin-top:40px;color:var(--dim);font-size:12px;border-top:1px solid var(
 <div class="flowdown">▼</div>
 <div class="layer"><div class="lab">存储层 · BakabaseDbContext（EF/SQLite）+ AppData</div><div class="row"><span class="box store">OrganizeRuleSet / OrganizeRule</span><span class="box store">OrganizeJob / OrganizeItem</span><span class="box store">OrganizeOverride</span><span class="box store">OrganizeJournalEntry</span></div></div>
 </div>
-<p class="note">内核域无关、稳定；域插件封装差异；Provider 与存储全部复用现有基建。与初版的分层相比，多出「资源域联动」一层——它是把"文件整理工具"变成"Bakabase 的整理能力"的分水岭。</p>
+<p class="note">内核域无关、稳定；场景差异由组件与 Pipeline 配置承载；Provider 与存储全部复用现有基建。与初版的分层相比，多出「资源域联动」一层——它是把"文件整理工具"变成"Bakabase 的整理能力"的分水岭。</p>
 
 <h2 id="s3"><span class="n">§3</span>现有资产复用映射<span class="sx">初版概念 ↔ 代码库中已存在的实现</span></h2>
 <table><tr><th style="width:22%">初版概念</th><th style="width:14%">状态</th><th>Bakabase 现有资产（已核实）</th></tr>
@@ -117,11 +120,14 @@ footer{margin-top:40px;color:var(--dim);font-size:12px;border-top:1px solid var(
 <div class="life"><span class="st">Discovered</span><span class="ar">→</span><span class="st">Routed</span><span class="ar">→</span><span class="st">Signaled</span><span class="ar">→</span><span class="st">Parsed</span><span class="ar">→</span><span class="st ok">Resolved</span><span class="ar">/</span><span class="st rev">NeedsReview</span><span class="ar">→</span><span class="st ok">Planned</span><span class="ar">→</span><span class="st term">Applied</span><span class="ar">｜</span><span class="st term">Skipped</span><span class="ar">/</span><span class="st err">Failed</span></div>
 <ul><li>每次状态推进即写库（checkpoint）→ 断点续跑：重跑时跳过已 Applied/Skipped，NeedsReview 保留待裁定。</li><li>强证据（精确码/指纹）从 Signaled 可直达 Resolved；NeedsReview 经人工裁定（写 Override）后重入队。</li><li>干跑（默认）终点是 Planned；Applied 只能由用户确认计划后触发，两者是不同的 BTask。</li><li>循环体内逐条目 <code class="i">await args.YieldAsync()</code>，暂停/取消语义与 BTask 规范一致。</li></ul>
 <h3>4.2 数据表（EF 迁移生成，禁手写）</h3>
-<pre class="code"><code>OrganizeRuleSet   规则集：Name, TargetRoot(整理目标根), Rules(有序), DefaultCollision, Enabled
+<pre class="code"><code>OrganizePipeline  流水线：Name, ForkedFromId?(内置预设来源), ScopeJson(作用域绑定),
+                  ComponentsJson(有序组件实例+各自配置), ResolverConfigJson(阈值/分档),
+                  FieldMappingJson(域字段→属性), Enabled   <span class="cm">// 内置 Pipeline 为只读种子数据（§5）</span>
+OrganizeRuleSet   规则集：Name, TargetRoot(整理目标根), Rules(有序), DefaultCollision, Enabled
 OrganizeRule      规则：RuleSetId, Priority, Scope(过滤 JSON, 复用 ResourceSearchFilterGroup),
-                  DomainId?, PathTemplate, CollisionPolicy
+                  PipelineId?, PathTemplate, CollisionPolicy
 OrganizeJob       一轮运行：RuleSetId, SourceRoots, Mode(DryRun/Apply), Stats, CreatedAt
-OrganizeItem      条目状态机：JobId, Path, Fingerprint(路径+大小+mtime 摘要), State, DomainId?,
+OrganizeItem      条目状态机：JobId, Path, Fingerprint(路径+大小+mtime 摘要), State, PipelineId?,
                   SignalsJson, ParsedJson, MatchJson(候选+得分), MetadataJson(命中作品原始数据),
                   PlannedPath?, Error?, Attempts
 OrganizeOverride  人工裁定：Fingerprint(键), Kind(ForcedIdentity/ForcedTitle/ForcedDomain/Skip),
@@ -136,31 +142,52 @@ OrganizeJournalEntry  执行账本：JobId, Seq, Op(Move/Rename/Mkdir/MergeDir),
     .Persistent().StartImmediately()
     .Run(async args => { /* 流水线循环，逐条目 YieldAsync + UpdateTask 进度 */ }));</code></pre>
 
-<h2 id="s5"><span class="n">§5</span>域插件契约 v2<span class="sx">五轴保留，但轴④⑤退位给用户规则</span></h2>
-<p>初版五轴中，<b>①信号 ②主键 ③数据源</b>仍由插件提供；<b>④结构 ⑤命名</b>改由用户规则系统承载（§7），插件降级为提供<b>字段 schema + 默认规则预设</b>。这样「布局完全自由」与「开箱即用」两者兼得：</p>
-<pre class="code"><code>public interface IOrganizerDomain
+<h2 id="s5"><span class="n">§5</span>组件与 Pipeline<span class="sx">域插件契约的终局形态：骨架固定，槽内自由</span></h2>
+<p>初版把五轴密封在 <code class="i">IDomainPlugin</code> 里；v2 初稿先把轴④⑤移交用户规则（§7）；本节走完最后一步——<b>轴①②③也组件化，用户可自由选择分层中每一层用到的组件</b>。驱动用例：并非所有同人音声库都遵循 RJ/DLsite 规范，对这类用户，RJ 提取器与 DLsite Provider 不仅无效，还会在随机数字上误命中、并借"精确码短路"生成高置信错配——密封的域插件摘不掉这块能力，组件化可以。</p>
+<h3>5.1 模型：组件（代码）+ Pipeline（数据）</h3>
+<pre class="code"><code><span class="cm">// 组件：每个槽位契约的一个实现，注册进 OrganizerComponentRegistry
+//（注册表 / 描述符 / 配置表单三件套借鉴 Workflow 模块的 ActivityRegistry 模式）</span>
+public interface IOrganizerComponentDescriptor
 {
-    string DomainId { get; }                                   <span class="cm">// "doujin-audio"</span>
-    IDomainDetector Detector { get; }                          <span class="cm">// 路由：Detect(item) → 0~100 置信度</span>
-    IReadOnlyList&lt;ISignalExtractor&gt; SignalExtractors { get; }  <span class="cm">// 轴① 证据采集</span>
-    ISignalParser Parser { get; }                              <span class="cm">// 证据 → 结构化线索(标题/码/话数…)</span>
-    IReadOnlyList&lt;IMetadataProviderAdapter&gt; Providers { get; } <span class="cm">// 轴③ ThirdParty 客户端适配</span>
-    IMatchResolver Resolver { get; }                           <span class="cm">// 轴② 默认 DefaultMatchResolver</span>
-    DomainFieldDefinition[] Fields { get; }                    <span class="cm">// 域特定字段 schema（§8，类型安全）</span>
-    OrganizeRulePreset[] DefaultRulePresets { get; }           <span class="cm">// 旧轴④⑤：仅作为用户规则的出厂默认值</span>
+    string Kind { get; }                          <span class="cm">// "signal.rj-code" / "provider.dlsite" / "resolver.fuzzy"</span>
+    OrganizerSlot Slot { get; }                   <span class="cm">// Detector / Signal / Parser / Provider / ResolverPolicy</span>
+    string DisplayName { get; }
+    Type? ConfigType { get; }                     <span class="cm">// 配置 schema，编辑器据此渲染表单</span>
+    ComponentApplicability Applicability { get; } <span class="cm">// 适用形态：音频/压缩包/任意…（编辑器校验）</span>
+    DomainFieldDefinition[] Fields { get; }       <span class="cm">// 该组件产出的域字段（§8）→ 字段随组件走</span>
 }
 
-public interface IMetadataProviderAdapter
+public interface IMetadataProviderAdapter         <span class="cm">// Provider 槽的组件契约（包装 ThirdParty 客户端）</span>
 {
-    string Name { get; }                                       <span class="cm">// "DLsite"，与 ResourceSource 对齐</span>
-    ProviderCapabilities Capabilities { get; }                 <span class="cm">// SupportsExactCode/Fingerprint/Languages/搜索</span>
+    string Name { get; }                          <span class="cm">// "DLsite"，与 ResourceSource 对齐</span>
+    ProviderCapabilities Capabilities { get; }    <span class="cm">// SupportsExactCode/Fingerprint/Languages/搜索</span>
     Task&lt;IReadOnlyList&lt;MatchCandidate&gt;&gt; SearchAsync(ProviderQuery q, CancellationToken ct);
     Task&lt;MatchCandidate?&gt; GetByCodeAsync(string code, CancellationToken ct);
-}</code></pre>
-<ul><li><b>插件形态</b>：<code class="i">Bakabase.Modules.Organizer/Domains/{DoujinAudio,Anime,…}/</code> 子目录 + DI 枚举注册（同 Enhancer 的多实现注册模式），不做独立程序集/热插拔——桌面应用无此需求，编译期全量即可。</li><li><b>Detector 与混合库</b>：一个目录树里动漫/音声/音乐混放时，路由对每个条目取各域 Detector 最高置信；两域得分接近（差 &lt; 阈值）→ NeedsReview 而非硬选，避免错域整理。</li><li><b>Adapter 很薄</b>：例如 DLsite 适配器内部就是现有 <code class="i">DLsiteClient.ParseWorkDetailById</code>；Bangumi 适配器包一层 subject 搜索。新数据源（AniList/MusicBrainz）按 ThirdParty 现有约定新增客户端，Organizer 只见 Adapter。</li></ul>
+}
+
+<span class="cm">// Pipeline 是数据（OrganizePipeline 表，§4），不是代码：
+//   作用域/Detector + 有序 Signal 组件实例(各带配置) + Parser + 有序 Provider 实例
+// + Resolver 策略参数(阈值/分档) + 域字段→属性映射 + 默认规则预设绑定</span></code></pre>
+<ul>
+<li><b>骨架固定，槽内自由</b>：Route→Signal→Parse→Match→Plan 的阶段顺序不可重排，用户的自由是"每个槽用哪些组件、什么顺序、什么参数"。非法组合（如先 Match 后 Signal）从模型上无法表达，编辑器因此是「勾选 + 排序 + 调参」，不是连线画布。</li>
+<li><b>内置 Pipeline 可 fork</b>：内置 Pipeline 为只读种子数据，覆盖主流场景（§12 每行一条）；不满足时 fork 成用户 Pipeline（copy-on-write）再增删组件、调参。内置预设升级后，fork 收到"上游已更新"提示，不被强制同步。</li>
+<li><b>路由</b>：显式作用域绑定（"这个目录用这条 Pipeline"）优先于 Detector 置信度竞争；多条 Pipeline 得分接近（差 &lt; 阈值）→ NeedsReview 而非硬选，避免错管线整理。</li>
+<li><b>字段随组件走</b>：Pipeline 可用的域字段 = 其组件 <code class="i">Fields</code> 的并集。模板编辑器据此提示占位符——<code class="i">{dlsite.circle}</code> 只在含 DLsite Provider 的 Pipeline 里可用，与 §8 的类型安全形成闭环。</li>
+<li><b>"域"的残余</b>：不再有密封的 <code class="i">IOrganizerDomain</code> 接口。域退化为：字段词汇表（随组件的代码声明，§8）+ 路由/展示/统计用的标签。</li>
+<li><b>代码形态</b>：组件实现位于 <code class="i">Bakabase.Modules.Organizer/Components/{Detectors,Signals,Parsers,Providers,Resolvers}/</code>，DI 枚举注册（同 Enhancer 多实现模式）；不做独立程序集/热插拔——桌面应用无此需求。Adapter 很薄：DLsite 适配器内部就是现有 <code class="i">DLsiteClient.ParseWorkDetailById</code>，新数据源按 ThirdParty 现有约定新增客户端。</li>
+<li><b>驱动用例的解法</b>：非 RJ 规范的音声库 → 把目录作用域绑到内置「通用音频」Pipeline（文件名清洗 + 内嵌标签信号，无 RJ/DLsite 组件），或 fork 音声 Pipeline 摘掉这两个组件——零代码，误命中的反效果彻底消失。</li>
+</ul>
+<h3>5.2 与 Workflow 模块的关系：复用模式，不复用引擎</h3>
+<p>Pipeline 高度动态，自然的问题是要不要直接跑在现有 Workflow 模块（typed-item 线性链 + Runner + Rehydrator）上。结论：<b>不作为执行引擎</b>，三个结构性错配：</p>
+<ul>
+<li><b>一次性流过 vs 跨轮状态机</b>：Workflow 的 item 在单次 run 内单向流过链条，结局是 Keep/Drop/Replace；整理条目需要跨 run 的持久状态——NeedsReview 停车等人（可能数日）、裁定后重入队、Override 跨轮生效、断点续跑。收敛闭环恰恰长在这些机制上。</li>
+<li><b>逐条独立 vs 聚合阶段</b>：Plan 期必须跨条目——同 Job 目标撞车检测、Comparison 去重闸门、franchise 聚拢；per-item 链没有聚合语义。</li>
+<li><b>直通执行 vs 两阶段确认</b>：干跑→人工确认→执行→journal/回滚 的安全模型在 Workflow 中不存在。另外，把 Evidence/ParsedClues/MatchCandidate 等强类型阶段契约压进 item-type 字符串标签 + configJson，会拆掉 §8 刚建立的类型安全。</li>
+</ul>
+<p><b>正确的分工</b>：Workflow 管「什么时候整理、整理完干什么」——注册"运行某 Pipeline / 规则集"活动与"整理完成"触发器（§11），供用户在 Workflow 编辑器里编排 订阅→下载→整理→通知 的跨功能链路；Organizer Pipeline 管「怎么整理」，内部仍是 §4 的槽式状态机。<b>复用的是模式</b>：组件注册表、descriptor 驱动的配置表单、运行统计展示等借鉴或直接共用 Workflow 的前端实现。descriptor/配置 schema 是否抽成两模块共享的抽象——暂不抽，待 Organizer 第一版落地、看到真实重复再决定。</p>
 
 <h2 id="s6"><span class="n">§6</span>匹配层<span class="sx">与初版一致的骨架 + Bakabase 化的细节</span></h2>
-<ol><li><b>证据强度排序</b>：精确码（RJ/tt/序列号/包名）&gt; 指纹（AcoustID/pHash，后期）&gt; 内嵌标签/伴随文件 &gt; 文件名。</li><li><b>精确码短路</b>：命中 <code class="i">SupportsExactCode</code> 的 Provider 直接 <code class="i">GetByCodeAsync</code> → 置信 High，跳过模糊与复核。DLsite 增强器现有 <code class="i">[BVR]J\d{6,10}</code> 正则即第一个信号提取器。</li><li><b>模糊打分</b>：清洗（SpecialText）→ 别名展开（Alias）→ 跨 Provider 搜索 → 每候选 × 各语言标题取最高 Dice 相似度 → 年份/类型一致性加权。</li><li><b>跨库合并</b>：不同 Provider 命中同一作品（外链 id 互指或标题+年份强一致）→ 合并补齐语言与字段（AniList 补产地、Bangumi 补中文名）。</li><li><b>分档</b>：High 自动 Resolved；Medium 可配置（自动过 / 抽样复核）；Low/None → NeedsReview。阈值全局默认 + 每规则集可覆盖。</li><li><b>Override 优先</b>：进入匹配前先查 <code class="i">OrganizeOverride</code>（按条目指纹）——人工裁定过的直接采用，这是收敛闭环的另一半。</li><li><b>身份落库</b>：Applied 之后写 <code class="i">ResourceSourceLink</code>（Source + SourceKey + MetadataJson）。Enhancer 后续增强同一资源时优先读该链接（§11 调整点 2），不再从文件名瞎猜关键词——整理与增强从两套匹配收敛为一套。</li></ol>
+<ol><li><b>证据强度排序</b>：精确码（RJ/tt/序列号/包名）&gt; 指纹（AcoustID/pHash，后期）&gt; 内嵌标签/伴随文件 &gt; 文件名。</li><li><b>精确码短路</b>：命中 <code class="i">SupportsExactCode</code> 的 Provider 直接 <code class="i">GetByCodeAsync</code> → 置信 High，跳过模糊与复核。DLsite 增强器现有 <code class="i">[BVR]J\d{6,10}</code> 正则即第一个信号提取器。</li><li><b>模糊打分</b>：清洗（SpecialText）→ 别名展开（Alias）→ 跨 Provider 搜索 → 每候选 × 各语言标题取最高 Dice 相似度 → 年份/类型一致性加权。</li><li><b>跨库合并</b>：不同 Provider 命中同一作品（外链 id 互指或标题+年份强一致）→ 合并补齐语言与字段（AniList 补产地、Bangumi 补中文名）。</li><li><b>分档</b>：High 自动 Resolved；Medium 可配置（自动过 / 抽样复核）；Low/None → NeedsReview。阈值属于 Pipeline 的 Resolver 策略配置（内置预设给默认值，fork 可调）。</li><li><b>Override 优先</b>：进入匹配前先查 <code class="i">OrganizeOverride</code>（按条目指纹）——人工裁定过的直接采用，这是收敛闭环的另一半。</li><li><b>身份落库</b>：Applied 之后写 <code class="i">ResourceSourceLink</code>（Source + SourceKey + MetadataJson）。Enhancer 后续增强同一资源时优先读该链接（§11 调整点 2），不再从文件名瞎猜关键词——整理与增强从两套匹配收敛为一套。</li></ol>
 
 <h2 id="s7"><span class="n">§7</span>用户自定义命名与目录规则<span class="sx">回答「完全自由的布局」</span></h2>
 <h3>7.1 模型：规则集 → 规则 → 路径模板</h3>
@@ -191,7 +218,7 @@ group        := "[" ... "]"               <span class="cm">// 组内任一占位
 <div class="dim"># 规则 B：平铺 &lt;IP&gt;-&lt;类型&gt;-&lt;文件&gt;</div>
 <div>Z:/Flat/物语系列-动画-化物語 [2009].mkv</div>
 <div>Z:/Flat/物语系列-音乐-君の知らない物語.flac</div></div>
-<ul><li><b>渲染管线</b>：占位符求值 → 空值组丢弃 → 逐段 sanitize（Windows 非法字符、保留名、260 长度预算自顶向下分配）→ 拼接目标路径。求值器对域字段走 <code class="i">DomainFieldBag</code>（§8），对 <code class="i">prop()</code> 走现有 StandardValue 显示值处理器——与显示名模板同一取值路径。</li><li><b>实时预览</b>：规则编辑页右侧用抽样条目即时渲染目标树（媒体库模板编辑器的 SamplePaths 模式），保存前所见即所得。</li><li><b>与 ResourceProfile.NameTemplate 的关系</b>：刻意分离。NameTemplate 决定<b>显示名</b>（虚拟层），OrganizeRule 决定<b>物理路径</b>；共享同一模板引擎与语法，但互不影响——用户可以物理平铺 + 显示名分层，反之亦然。</li></ul>
+<ul><li><b>渲染管线</b>：占位符求值 → 空值组丢弃 → 逐段 sanitize（Windows 非法字符、保留名、260 长度预算自顶向下分配）→ 拼接目标路径。求值器对域字段走 <code class="i">DomainFieldBag</code>（§8），对 <code class="i">prop()</code> 走现有 StandardValue 显示值处理器——与显示名模板同一取值路径。</li><li><b>实时预览</b>：规则编辑页右侧用抽样条目即时渲染目标树（媒体库模板编辑器的 SamplePaths 模式），保存前所见即所得。</li><li><b>占位符可用性随 Pipeline</b>：域字段占位符按作用域内可能命中的 Pipeline 组件集合提示与校验（§5"字段随组件走"）；引用了不可用字段的模板在预览中高亮，运行时按 <code class="i">|</code> 回退链降级。</li><li><b>与 ResourceProfile.NameTemplate 的关系</b>：刻意分离。NameTemplate 决定<b>显示名</b>（虚拟层），OrganizeRule 决定<b>物理路径</b>；共享同一模板引擎与语法，但互不影响——用户可以物理平铺 + 显示名分层，反之亦然。</li></ul>
 
 <h2 id="s8"><span class="n">§8</span>域特定字段的类型安全设计<span class="sx">回答「Extra 是否要 type-safe」——要，且不发明第二套类型系统</span></h2>
 <p>结论：<b>需要</b>。字符串袋在三处会出问题：模板格式化（<code class="i">{music.trackNo:pad(2)}</code> 需要知道是数字）、写回资源属性（需要 StandardValue 类型对齐，类型错配会损坏数据）、跨库合并（同字段不同 Provider 的值要能比较）。但类型骨架<b>复用 StandardValueType/PropertyType</b>，与 <code class="i">IEnhancerTargetDescriptor</code>（ValueType + PropertyType 并列）同构：</p>
@@ -219,7 +246,7 @@ public sealed class DomainFieldBag       <span class="cm">// ResolvedWork.Extra 
 <ul><li><b>与属性的双向转换</b>：用户在域设置页把字段映射到资源属性（如 circle → 自定义属性「社团」，缺省按 <code class="i">SuggestedPropertyType</code> 自动建属性——Enhancer target 的 options 自动建属性已是同一模式）。写入走 <code class="i">PropertyValueFactory</code>；类型不同时走 <code class="i">StandardValueSystem.GetConversionRule</code> 的既有转换规则并提示损失。</li><li><b>通用规范字段</b>（title/year/code/franchise/workType）不进袋子，是 <code class="i">MatchedWork</code> 的强类型属性；袋子只装真正域特定的部分。这保持了初版"不污染通用模型"的意图，同时把类型安全做满。</li><li><b>不做的事</b>：不为每个域生成专属 C# record + 反射映射（收益低、迁移成本高）；不引入运行时 schema 语言（字段 schema 就是 C# 声明，随插件编译）。</li></ul>
 
 <h2 id="s9"><span class="n">§9</span>混合库与 IP 合集<span class="sx">按 IP 聚合动画/漫画/音乐/画集</span></h2>
-<ol><li><b>IP 是规范化属性，不是新实体</b>：整理器把解析出的 franchise 写入一个内置约定的属性（Multilevel「系列/IP」，支持层级如 物语系列/伤物语）。它同时服务于：路径模板 <code class="i">{franchise}</code>、资源搜索/筛选、显示名模板。</li><li><b>FranchiseResolver 解析链</b>（可各域覆盖）：<ol><li>Provider 关系图：Bangumi subject 关联（动画↔漫画↔音乐同 IP）、AniList relations、DLsite 系列字段 —— 强证据；</li><li>别名聚类：Alias 模块 + SpecialText 清洗后的标题聚类 —— 中证据；</li><li>用户裁定：复核页手动归属，写 Override —— 最高优先级。</li></ol></li><li><b>跨域一致性</b>：同一 Job 内，不同域的条目解析出的 franchise 经别名表归一（「Monogatari Series」=「物语系列」），确保动画和 OST 落进同一个合集目录。</li><li><b>混合目录路由</b>：§5 的 Detector 置信度分流保证一个乱堆目录里各条目各归各域；franchise 属性再把它们在<b>目标布局</b>上重新聚拢——分流与聚合解耦，这正是轴④⑤退位给规则系统后才可能的表达。</li></ol>
+<ol><li><b>IP 是规范化属性，不是新实体</b>：整理器把解析出的 franchise 写入一个内置约定的属性（Multilevel「系列/IP」，支持层级如 物语系列/伤物语）。它同时服务于：路径模板 <code class="i">{franchise}</code>、资源搜索/筛选、显示名模板。</li><li><b>FranchiseResolver 解析链</b>（可各域覆盖）：<ol><li>Provider 关系图：Bangumi subject 关联（动画↔漫画↔音乐同 IP）、AniList relations、DLsite 系列字段 —— 强证据；</li><li>别名聚类：Alias 模块 + SpecialText 清洗后的标题聚类 —— 中证据；</li><li>用户裁定：复核页手动归属，写 Override —— 最高优先级。</li></ol></li><li><b>跨域一致性</b>：同一 Job 内，不同域的条目解析出的 franchise 经别名表归一（「Monogatari Series」=「物语系列」），确保动画和 OST 落进同一个合集目录。</li><li><b>混合目录路由</b>：§5 的作用域绑定 + Detector 置信度分流保证一个乱堆目录里各条目各归其 Pipeline；franchise 属性再把它们在<b>目标布局</b>上重新聚拢——分流与聚合解耦，这正是轴④⑤退位给规则系统后才可能的表达。</li></ol>
 
 <h2 id="s10"><span class="n">§10</span>计划 / 执行 / 回滚与资源一致性<span class="sx">v2 的关键增量层</span></h2>
 <h3>10.1 计划（干跑，默认形态）</h3>
@@ -236,26 +263,27 @@ public sealed class DomainFieldBag       <span class="cm">// ResolvedWork.Extra 
 <tr><td class="dom">FileNameModifier</td><td>保留为手动工具，不合并。其操作枚举（Case/增删替换）可被模板 formatter 引用复用</td><td>职责清晰：确定性批量改名 vs 语义化整理</td></tr>
 <tr><td class="dom">ResourceSource 枚举</td><td>扩展为与 Provider 名对齐的完整清单（Bangumi/Tmdb/AniList/MusicBrainz…）</td><td>ResourceSourceLink 成为全域身份登记表</td></tr>
 <tr><td class="dom">Comparison</td><td>暴露一个服务级入口供 Organizer 在 Plan 阶段调用（当前面向 UI 会话）</td><td>移动前发现「目标库里已有同作」→ 提示合并/跳过，而非制造重复</td></tr>
-<tr><td class="dom">Workflow</td><td>后期（M4）注册 Organizer 的触发器（"整理完成"）与活动（"对 item 运行规则集"），item 类型走 <code class="i">IWorkflowItemTypeDescriptor</code></td><td>订阅→下载→整理→通知 的全链自动化由用户在 Workflow 编辑器里自由编排</td></tr>
+<tr><td class="dom">Workflow</td><td><b>复用模式，不复用引擎</b>（§5.2）：Organizer 不跑在 WorkflowRunner 上；组件注册表、descriptor 配置表单、运行统计等机制借鉴或共用其前端实现。M4 注册触发器（"整理完成"）与活动（"运行某 Pipeline / 规则集"），item 类型走 <code class="i">IWorkflowItemTypeDescriptor</code></td><td>外层自动化（订阅→下载→整理→通知）由用户在 Workflow 编辑器编排；整理内核保持强类型状态机与两阶段安全模型</td></tr>
 <tr><td class="dom">ResourceProfile</td><td>不改。NameTemplate 继续只管显示名；文档与 UI 明确两套模板的分工（§7.2）</td><td>避免"改显示名模板导致文件被移动"的惊吓</td></tr></table>
 
 <h2 id="s12"><span class="n">§12</span>场景差异矩阵<span class="sx">标注 Provider 现状：<span class="tag t-have">已有</span> = ThirdParty 已存在客户端，<span class="tag t-todo">需新增</span></span></h2>
-<table><tr><th>场景</th><th>① 主信号</th><th>② 主键</th><th>③ 数据源</th><th>④⑤ 默认规则预设（用户可改）</th></tr>
-<tr><td class="dom">同人音声 <span class="tag t-code">码</span></td><td>RJ/VJ/BJ 码</td><td>DLsite 产品码（精确）</td><td><span class="tag t-have">DLsite</span></td><td class="mono">音声/[{code}] {dlsite.circle} - {title}</td></tr>
+<table><tr><th>内置 Pipeline</th><th>① 主信号</th><th>② 主键</th><th>③ 数据源</th><th>④⑤ 默认规则预设（用户可改）</th></tr>
+<tr><td class="dom">同人音声/DLsite <span class="tag t-code">码</span></td><td>RJ/VJ/BJ 码</td><td>DLsite 产品码（精确）</td><td><span class="tag t-have">DLsite</span></td><td class="mono">音声/[{code}] {dlsite.circle} - {title}</td></tr>
+<tr><td class="dom">通用音频（非 RJ 规范音声等）<span class="tag t-fuzzy">模糊</span></td><td>内嵌标签+文件名</td><td>标签/模糊（可无外部源）</td><td>（可空）<span class="tag t-todo">MusicBrainz 可选</span></td><td class="mono">音声/{music.albumArtist|title}/{title}</td></tr>
 <tr><td class="dom">动画 <span class="tag t-fuzzy">模糊</span></td><td>目录/文件名</td><td>模糊标题→id</td><td><span class="tag t-have">Bangumi</span> <span class="tag t-have">Tmdb</span> <span class="tag t-todo">AniList</span></td><td class="mono">{franchise|title}/动画/{title} [{year}]</td></tr>
 <tr><td class="dom">漫画/本子 <span class="tag t-fuzzy">模糊</span></td><td>目录名+ComicInfo</td><td>id / 画廊哈希</td><td><span class="tag t-have">ExHentai</span> <span class="tag t-have">Bangumi</span> <span class="tag t-todo">MangaDex</span></td><td class="mono">{franchise|title}/漫画/{title} (vol.{vol:pad(2)})</td></tr>
 <tr><td class="dom">音乐 <span class="tag t-fp">指纹</span></td><td>内嵌标签(+指纹)</td><td>标签/MBID</td><td><span class="tag t-todo">MusicBrainz</span> <span class="tag t-todo">AcoustID(可选)</span></td><td class="mono">{music.albumArtist}/{music.album}/{music.trackNo:pad(2)} {title}</td></tr>
 <tr><td class="dom">电影/剧集 <span class="tag t-code">码</span>/<span class="tag t-fuzzy">模糊</span></td><td>文件名(tt/SxxEyy)</td><td>TMDB/IMDb id</td><td><span class="tag t-have">Tmdb</span></td><td class="mono">{title} ({year})/{title} SxxEyy</td></tr>
 <tr><td class="dom">游戏 <span class="tag t-code">码</span></td><td>文件名+appid</td><td>Steam appid / 序列号</td><td><span class="tag t-have">Steam</span> <span class="tag t-todo">IGDB</span></td><td class="mono">游戏/{platform}/{title}</td></tr>
 <tr><td class="dom">AV <span class="tag t-code">码</span></td><td>番号</td><td>番号（精确）</td><td><span class="tag t-have">Javbus/Javdb/…（10+ 站）</span></td><td class="mono">{av.code} {title}</td></tr></table>
-<p class="note">三种主键原型（码/指纹/模糊）与初版一致；Bakabase 的既有 Provider 覆盖面已足够先做 4 个域而无需任何新客户端。</p>
+<p class="note">三种主键原型（码/指纹/模糊）与初版一致；每行即一条内置 Pipeline（只读种子，可 fork 调整组件，§5）。Bakabase 的既有 Provider 覆盖面已足够先做 4 条内置 Pipeline 而无需任何新客户端。</p>
 
 <h2 id="s13"><span class="n">§13</span>实施路线图<span class="sx">垂直切片、每步可收敛可交付</span></h2>
 <table><tr><th style="width:9%">里程碑</th><th>内容</th><th style="width:34%">验收 / 收敛指标</th></tr>
-<tr><td class="dom">M0</td><td>内核表 + 状态机流水线 + <b>同人音声域</b>（RJ 码短路，复用 DLsiteClient）+ 干跑计划 + journal 执行/回滚 + 最小复核列表页</td><td>一个混乱音声目录端到端整理成功；kill 进程后续跑不重不漏；Undo 完整还原；RJ 码条目 0 人工</td></tr>
-<tr><td class="dom">M1</td><td>规则集/模板 DSL + 规则编辑器（实时预览目标树）+ 冲突策略 + Resource.Path/PathMark 联动 + ResourceSourceLink 登记与属性写入</td><td>用户可自由表达分层/平铺布局；已入库资源整理后属性与播放记录零丢失</td></tr>
-<tr><td class="dom">M2</td><td><b>动画域</b>（模糊打分：SpecialText 清洗 + Alias + 跨 Provider 合并）+ Override 全流程 + Enhancer SourceLink 快路径</td><td>复核率随轮次单调下降（Override 命中率可观测）；同一文件不会被问第二遍</td></tr>
-<tr><td class="dom">M3</td><td><b>漫画 + 音乐域</b>（TagLib 标签信号；MusicBrainz 客户端）+ franchise 解析链 + IP 合集布局 + Comparison 去重闸门</td><td>动画/漫画/OST/画集按 IP 聚拢的演示库跑通；重复作品在 Plan 期被拦截</td></tr>
+<tr><td class="dom">M0</td><td>内核表（含 OrganizePipeline）+ 状态机流水线 + 组件注册表 + 内置<b>「同人音声/DLsite」Pipeline</b>（RJ 码短路，复用 DLsiteClient；纯种子数据，暂无编辑器）+ 干跑计划 + journal 执行/回滚 + 最小复核列表页</td><td>一个混乱音声目录端到端整理成功；kill 进程后续跑不重不漏；Undo 完整还原；RJ 码条目 0 人工</td></tr>
+<tr><td class="dom">M1</td><td>规则集/模板 DSL + 规则编辑器（实时预览目标树）+ 冲突策略 + Resource.Path/PathMark 联动 + ResourceSourceLink 登记与属性写入 + <b>Pipeline fork 与最小编辑器</b>（组件开关/排序/阈值）+ 内置「通用音频」预设</td><td>用户可自由表达分层/平铺布局；已入库资源整理后属性与播放记录零丢失；非 RJ 规范用户可零代码摘除 DLsite 能力</td></tr>
+<tr><td class="dom">M2</td><td>内置<b>动画 Pipeline</b>（模糊打分：SpecialText 清洗 + Alias + 跨 Provider 合并）+ Override 全流程 + Enhancer SourceLink 快路径 + Pipeline 编辑器完整版（适用性校验/上游更新提示）</td><td>复核率随轮次单调下降（Override 命中率可观测）；同一文件不会被问第二遍</td></tr>
+<tr><td class="dom">M3</td><td>内置<b>漫画 / 音乐 Pipeline</b>（TagLib 标签信号；MusicBrainz 客户端）+ franchise 解析链 + IP 合集布局 + Comparison 去重闸门</td><td>动画/漫画/OST/画集按 IP 聚拢的演示库跑通；重复作品在 Plan 期被拦截</td></tr>
 <tr><td class="dom">M4</td><td>watcher 自动整理（FileMover 进料口）+ Workflow 触发器/活动 + AI 辅助低置信消歧 + 规则预设分享（Sharable 体系）</td><td>下载→整理→通知全自动链路；低置信条目 AI 建议采纳率可观测</td></tr></table>
 <p class="note">每个里程碑都是可发布的完整功能，不存在「基建全铺完才见效」的阶段。M0 选同人音声是因为：精确码型近零歧义、Provider 已存在、单域即可验证内核全部机制（状态机/计划/journal/复核/续跑）。</p>
 
@@ -267,7 +295,8 @@ public sealed class DomainFieldBag       <span class="cm">// ResolvedWork.Extra 
 <li><b>Provider 风控</b>：批量整理的请求量远超增强器单资源模式。依赖现有各站点 Handler 限流 + Job 级并发上限（每 Provider 独立信号量）+ MetadataJson 缓存优先。</li>
 <li><b>压缩包语义</b>：音声/漫画大量以压缩包为条目单位。M0 将压缩包视为叶子条目（不解包）；解包整理（借 CompressedFileService）列为 M3 未决项。</li>
 <li><b>franchise 权威性</b>：跨库 IP 归属没有全局权威源，别名聚类会有错并。默认仅强证据（Provider 关系图）自动归并，聚类结果一律进复核。</li>
-<li><b>词表外挂</b>：各域 Parser 的正则/词表是否如初版建议外挂为数据文件并走 Sharable 分享体系——倾向于是，M4 决策。</li>
+<li><b>内置预设与 fork 漂移</b>：内置 Pipeline 迭代后用户 fork 不自动跟进，可能长期落后甚至引用已废弃组件。缓解：fork 记录 <code class="i">ForkedFromId</code>，上游变更时提示 diff；组件实例支持"重置为上游默认"；废弃组件保留兼容运行并在编辑器中标记。</li>
+<li><b>词表外挂</b>：各 Parser 组件的正则/词表是否如初版建议外挂为数据文件并走 Sharable 分享体系（Pipeline 本身也可分享）——倾向于是，M4 决策。</li>
 </ul>
 <footer>Bakabase · 自动整理本地文件 · 架构 v2（融合版）· 本页为单一来源，替代初版 architecture_1.html。引用的既有类型/路径均已在当前代码库核实。</footer>
 </div></body></html>
