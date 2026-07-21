@@ -277,6 +277,26 @@ public sealed class DomainFieldBag       <span class="cm">// ResolvedWork.Extra 
 <tr><td class="dom">游戏 <span class="tag t-code">码</span></td><td>文件名+appid</td><td>Steam appid / 序列号</td><td><span class="tag t-have">Steam</span> <span class="tag t-todo">IGDB</span></td><td class="mono">游戏/{platform}/{title}</td></tr>
 <tr><td class="dom">AV <span class="tag t-code">码</span></td><td>番号</td><td>番号（精确）</td><td><span class="tag t-have">Javbus/Javdb/…（10+ 站）</span></td><td class="mono">{av.code} {title}</td></tr></table>
 <p class="note">三种主键原型（码/指纹/模糊）与初版一致；每行即一条内置 Pipeline（只读种子，可 fork 调整组件，§5）。Bakabase 的既有 Provider 覆盖面已足够先做 4 条内置 Pipeline 而无需任何新客户端。</p>
+<h3>12.1 内置 Pipeline 组件构成<span class="sx"> 统一骨架下的槽位填充对照（Detector → Signal 链 → Parser → Provider 链 → Resolver 链）</span></h3>
+<p>组件以 <code class="i">kind</code> 标注；同名组件 = 同一份代码、不同配置实例。上表给出布局预设，本表给出各槽位的具体填充：</p>
+<table><tr><th style="width:15%">内置 Pipeline</th><th>Signal 链（有序 = 证据强度序）</th><th>Provider 链（有序）</th><th>Resolver 链</th><th style="width:22%">特有字段（决定模板占位符）</th></tr>
+<tr><td class="dom">同人音声/DLsite</td><td class="mono">signal.rj-code → signal.filename</td><td class="mono">provider.dlsite</td><td class="mono">exact-code → fuzzy<span class="tag">高阈值，Medium 全复核</span></td><td class="mono">dlsite.circle/cv/releaseDate</td></tr>
+<tr><td class="dom">通用音频</td><td class="mono">signal.embedded-tag → signal.filename</td><td><b>（空）</b>，可选挂 MusicBrainz</td><td class="mono">tag-first<span class="tag">不联网：标签→清洗文件名定名；缺标签→复核</span></td><td class="mono">music.albumArtist/album/trackNo</td></tr>
+<tr><td class="dom">动画</td><td class="mono">signal.filename<span class="tag">字幕组词表清洗</span> → signal.nfo</td><td class="mono">provider.bangumi → provider.tmdb（→ anilist）</td><td class="mono">fuzzy<span class="tag">Alias 展开+Dice+年份加权</span> → merge<span class="tag">跨库补语言</span></td><td class="mono">anime.season/episode/subGroup/origin</td></tr>
+<tr><td class="dom">漫画/本子</td><td class="mono">signal.comicinfo → signal.gallery-token<span class="tag">[作者] 题名 [汉化组] 语法</span> → signal.filename</td><td class="mono">provider.exhentai → provider.bangumi（→ mangadex）</td><td class="mono">fuzzy<span class="tag">括号语法定制权重</span></td><td class="mono">manga.author/volume/translator/parody</td></tr>
+<tr><td class="dom">音乐</td><td class="mono">signal.embedded-tag → signal.filename（→ 可选 signal.acoustid）</td><td class="mono">provider.musicbrainz</td><td class="mono">exact-code<span class="tag">标签内 MBID</span> → fingerprint → fuzzy</td><td class="mono">通用音频字段 + music.mbid/discNo</td></tr>
+<tr><td class="dom">电影/剧集</td><td class="mono">signal.imdb-code<span class="tag">tt</span> → signal.sxxeyy → signal.filename</td><td class="mono">provider.tmdb</td><td class="mono">exact-code → fuzzy</td><td class="mono">video.season/episode/edition</td></tr>
+<tr><td class="dom">游戏</td><td class="mono">signal.steam-appid → signal.filename</td><td class="mono">provider.steam（→ igdb）</td><td class="mono">exact-code → fuzzy</td><td class="mono">game.platform/developer</td></tr>
+<tr><td class="dom">AV</td><td class="mono">signal.av-code<span class="tag">番号</span></td><td class="mono">provider.javbus → provider.javdb → …<span class="tag">现有 10+ 客户端依序 fallback</span></td><td class="mono"><b>仅 exact-code</b><span class="tag">无码→复核，不做模糊</span></td><td class="mono">av.code/actress/studio</td></tr></table>
+<p><b>Detector 槽</b>未列入表中，因为都很薄：<code class="i">detector.extension</code>（扩展名组）是共同底座，个别管线叠加特征加分项（音声叠"路径含 RJ 码"、动画叠"[字幕组] 括号风格"、漫画叠"图片序列目录/压缩包"）。同人音声/DLsite 与通用音频对同一个音频文件竞争时：有码前者胜出，无码后者接住——非 RJ 规范用户的默认行为开箱即正确，连 fork 都不需要。</p>
+<p>真正把八条管线区分开的是四条线：</p>
+<ul>
+<li><b>Resolver 姿态是个光谱</b>：AV 是"仅精确码，宁可复核不可猜"（该域模糊匹配风险过高）；音声/电影/游戏/音乐是"精确码短路 → 模糊兜底"；动画/漫画是"纯模糊 + 打分分档"；通用音频干脆<b>不做外部匹配</b>——它证明 Provider 槽可以为空，整理不必然等于刮削。</li>
+<li><b>主信号来源不同</b>：码（音声/AV/电影/游戏）、内嵌标签（音频/音乐）、伴随文件（漫画 ComicInfo、影视 nfo）、纯文件名（动画）。Signal 链的顺序就是证据强度的顺序。</li>
+<li><b>字段词汇表随组件走</b>：模板里能写 <code class="i">{dlsite.circle}</code> 还是 <code class="i">{manga.translator}</code>，完全由该 Pipeline 装了哪些组件决定（§5"字段随组件走"）。</li>
+<li><b>复核阈值不同</b>：音声标题短、模糊不可靠 → Medium 档全复核；动画标题信息量大 → Medium 可配置为抽查。</li>
+</ul>
+<p class="note"><b>组件复用收益</b>：<code class="i">signal.filename</code>（SpecialText 清洗）出现在全部 8 条中；<code class="i">resolver.fuzzy</code> 一份代码五处配置；<code class="i">signal.embedded-tag</code> 同时服务通用音频与音乐——通用音频本质上就是"音乐 Pipeline fork 掉 Provider"的形态，反向验证了 fork 模型的合理性。</p>
 
 <h2 id="s13"><span class="n">§13</span>实施路线图<span class="sx">垂直切片、每步可收敛可交付</span></h2>
 <table><tr><th style="width:9%">里程碑</th><th>内容</th><th style="width:34%">验收 / 收敛指标</th></tr>
