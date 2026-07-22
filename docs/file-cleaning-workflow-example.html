@@ -68,7 +68,7 @@ footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(
 
 <h2><span class="n">§2</span>流程定义（13 个节点，含每节点配置）</h2>
 
-<div class="node trigger"><div class="head"><span class="no">T</span><span class="kind">fileCleaning.manual</span><span class="chip cat-trigger">触发器</span></div>
+<div class="node trigger"><div class="head"><span class="no">T</span><span class="kind">fs.manualScan</span><span class="chip cat-trigger">触发器</span></div>
 <div class="io"><span class="t">IN</span> —（手动触发 payload：roots + 枚举配置）　<span class="t">OUT</span> item.fs.entry × N</div>
 <table class="cfg">
 <tr><td>roots（constants）</td><td class="mono">["D:/Downloads"]</td></tr>
@@ -207,7 +207,7 @@ footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(
 <li><b>软契约（编辑器 lint 级）= 变量供需</b>：capture 按配置声明"提供 var:x"，template 声明 <code class="i">requiredVars</code>——编辑器静态核对上游供给链（含 expand 继承与系统变量），缺口给 warning 而非 error（capture 可能条件性命中，运行期由 requiredVars 跳过兜底）。</li>
 </ul>
 <table class="t"><tr><th>节点</th><th>契约（IN）</th><th>基数</th><th>变量</th></tr>
-<tr><td class="mono">T fileCleaning.manual</td><td class="mono">payload → item.fs.entry</td><td>0→N</td><td>注入系统变量</td></tr>
+<tr><td class="mono">T fs.manualScan</td><td class="mono">payload → item.fs.entry</td><td>0→N</td><td>注入系统变量</td></tr>
 <tr><td class="mono">1 filter.fs.byRegex</td><td class="mono">item.fs.entry（精确类型）</td><td>1→0/1</td><td>—</td></tr>
 <tr><td class="mono">2–4 removeWrapped/trim</td><td class="mono">facet: ITextWorkpiece</td><td>1→1</td><td>—</td></tr>
 <tr><td class="mono">5 capture</td><td class="mono">facet: ITextWorkpiece</td><td>1→1</td><td class="mono">提供 title</td></tr>

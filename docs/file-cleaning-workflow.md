@@ -61,7 +61,7 @@ public sealed record FsEntryItem
 
 纯文本算法仍沉淀在无状态服务 `TextOps`（供 file-name-modifier 页与将来的 Organizer 复用）；文本节点是 `TextOps` 经 facet 暴露给 workflow 的形态。
 
-### 触发器：`fileCleaning.manual`（= 用户说的 constants 节点 + 获取子级节点）
+### 触发器：`fs.manualScan`（= 用户说的 constants 节点 + 获取子级节点）
 
 手动触发器，payload 即用户录入的常量与枚举配置：
 
