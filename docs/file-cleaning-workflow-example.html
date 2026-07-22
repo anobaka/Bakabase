@@ -51,7 +51,7 @@ footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(
 </style></head><body><div class="wrap">
 <h1>文件清洗流程示例 · 动画下载目录标准化</h1>
 <p class="sub">多层级（文件夹 + 其内文件）· 节点联动（文件改名依赖父文件夹节点的清洗结果）· 每节点完整配置与出入参契约</p>
-<p class="note">配套设计文档：<code class="i">docs/file-cleaning-workflow.md</code>。本例同时是设计探针——它需要的「链中展开 / 变量与系统变量 / 模板重建名 / facet 契约」机制已并入设计文档（见 §6 设计增量）。</p>
+<p class="note">配套设计文档：<a href="file-cleaning-workflow.html">file-cleaning-workflow.html</a>。本例同时是设计探针——它需要的「链中展开 / 变量与系统变量 / 模板重建名 / 能力契约」机制已并入设计文档（见 §6 设计增量）。</p>
 
 <h2><span class="n">§1</span>起始状态与目标</h2>
 <pre class="tree">D:/Downloads/
@@ -86,7 +86,7 @@ footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(
 <div class="flow">▼</div>
 
 <div class="node transform"><div class="head"><span class="no">2</span><span class="kind">transform.text.removeWrapped</span><span class="chip cat-transform">Transform · 通用文本</span></div>
-<div class="io"><span class="t">IN</span> facet:ITextWorkpiece（本链此处 = item.fs.entry，<b>作用于其工作文本 WorkingName</b>）　<span class="t">OUT</span> 同 ｜ 基数 1→1</div>
+<div class="io"><span class="t">IN</span> 能力:ITextWorkpiece（本链此处 = item.fs.entry，<b>作用于其工作文本 WorkingName</b>）　<span class="t">OUT</span> 同 ｜ 基数 1→1</div>
 <table class="cfg">
 <tr><td>wrappers</td><td class="mono">[] 【】 （textSetRef = builtin:Wrapper）</td></tr>
 <tr><td>textSet</td><td>自定义文本集 <code class="i">「字幕组名单」</code>（textSetRef = custom:1；含 LoliHouse、桜都字幕组、桜都字幕組…）</td></tr>
@@ -95,7 +95,7 @@ footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(
 <div class="flow">▼</div>
 
 <div class="node transform"><div class="head"><span class="no">3</span><span class="kind">transform.text.removeWrapped</span><span class="chip cat-transform">Transform · 通用文本</span></div>
-<div class="io"><span class="t">IN</span> facet:ITextWorkpiece　<span class="t">OUT</span> 同 ｜ 基数 1→1</div>
+<div class="io"><span class="t">IN</span> 能力:ITextWorkpiece　<span class="t">OUT</span> 同 ｜ 基数 1→1</div>
 <table class="cfg">
 <tr><td>wrappers</td><td class="mono">[]</td></tr>
 <tr><td>textSet</td><td>自定义文本集 <code class="i">「质量与发布标签」</code>（textSetRef = custom:2；1080p、WebRip、HEVC、AAC、Fin、简繁内封…）</td></tr>
@@ -104,14 +104,14 @@ footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(
 <div class="flow">▼</div>
 
 <div class="node transform"><div class="head"><span class="no">4</span><span class="kind">transform.text.trim</span><span class="chip cat-transform">Transform · 通用文本</span></div>
-<div class="io"><span class="t">IN</span> facet:ITextWorkpiece　<span class="t">OUT</span> 同 ｜ 基数 1→1</div>
+<div class="io"><span class="t">IN</span> 能力:ITextWorkpiece　<span class="t">OUT</span> 同 ｜ 基数 1→1</div>
 <table class="cfg">
 <tr><td>collapseSpaces / trimEnds / removeEmptyWrappers</td><td class="mono">true / true / true</td></tr></table>
 <div class="fx">清掉删除后残留的连续空格与空括号对。</div></div>
 <div class="flow">▼</div>
 
 <div class="node transform"><div class="head"><span class="no">5</span><span class="kind">transform.text.capture</span><span class="chip cat-transform">Transform · 通用文本</span></div>
-<div class="io"><span class="t">IN</span> facet:ITextWorkpiece　<span class="t">OUT</span> 同 ｜ 基数 1→1 ｜ <span class="v">提供 var:title</span>（软契约，编辑器 lint 供下游校验）</div>
+<div class="io"><span class="t">IN</span> 能力:ITextWorkpiece　<span class="t">OUT</span> 同 ｜ 基数 1→1 ｜ <span class="v">提供 var:title</span>（软契约，编辑器 lint 供下游校验）</div>
 <table class="cfg">
 <tr><td>pattern</td><td class="mono">^(?&lt;title&gt;.+)$</td></tr>
 <tr><td>onMiss</td><td class="mono">SkipSilently（不设变量）</td></tr></table>
@@ -137,23 +137,23 @@ footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(
 <div class="flow">▼</div>
 
 <div class="node transform"><div class="head"><span class="no">8</span><span class="kind">transform.text.removeWrapped</span><span class="chip cat-transform">Transform · 通用文本</span></div>
-<div class="io"><span class="t">IN</span> facet:ITextWorkpiece（此处 item 均为文件）　<span class="t">OUT</span> 同 ｜ 基数 1→1</div>
+<div class="io"><span class="t">IN</span> 能力:ITextWorkpiece（此处 item 均为文件）　<span class="t">OUT</span> 同 ｜ 基数 1→1</div>
 <table class="cfg"><tr><td>（配置同节点 2）</td><td>wrappers [] 【】 ｜ textSet 「字幕组名单」 ｜ EqualsAny</td></tr></table></div>
 <div class="flow">▼</div>
 
 <div class="node transform"><div class="head"><span class="no">9</span><span class="kind">transform.text.removeWrapped</span><span class="chip cat-transform">Transform · 通用文本</span></div>
-<div class="io"><span class="t">IN</span> facet:ITextWorkpiece　<span class="t">OUT</span> 同 ｜ 基数 1→1</div>
+<div class="io"><span class="t">IN</span> 能力:ITextWorkpiece　<span class="t">OUT</span> 同 ｜ 基数 1→1</div>
 <table class="cfg"><tr><td>（配置同节点 3）</td><td>wrappers [] ｜ textSet 「质量与发布标签」 ｜ ContainsAny</td></tr></table>
 <div class="fx"><span class="in">[桜都字幕組] 藥屋少女的呢喃 [01][1080p][繁体].mkv</span> → <span class="out">藥屋少女的呢喃 [01].mkv</span>（[01] 不含质量词，保留）</div></div>
 <div class="flow">▼</div>
 
 <div class="node transform"><div class="head"><span class="no">10</span><span class="kind">transform.text.trim</span><span class="chip cat-transform">Transform · 通用文本</span></div>
-<div class="io"><span class="t">IN</span> facet:ITextWorkpiece　<span class="t">OUT</span> 同 ｜ 基数 1→1</div>
+<div class="io"><span class="t">IN</span> 能力:ITextWorkpiece　<span class="t">OUT</span> 同 ｜ 基数 1→1</div>
 <table class="cfg"><tr><td>（配置同节点 4）</td><td class="mono">true / true / true</td></tr></table></div>
 <div class="flow">▼</div>
 
 <div class="node transform"><div class="head"><span class="no">11</span><span class="kind">transform.text.capture</span><span class="chip cat-transform">Transform · 通用文本</span></div>
-<div class="io"><span class="t">IN</span> facet:ITextWorkpiece　<span class="t">OUT</span> 同 ｜ 基数 1→1 ｜ <span class="v">提供 var:ep</span>（onMiss 时不提供）</div>
+<div class="io"><span class="t">IN</span> 能力:ITextWorkpiece　<span class="t">OUT</span> 同 ｜ 基数 1→1 ｜ <span class="v">提供 var:ep</span>（onMiss 时不提供）</div>
 <table class="cfg">
 <tr><td>pattern</td><td class="mono">(?:-\s*|\[)(?&lt;ep&gt;\d{2,3})(?:\]|\s|$)</td></tr>
 <tr><td>onMiss</td><td class="mono">SkipSilently</td></tr></table>
@@ -161,7 +161,7 @@ footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(
 <div class="flow">▼</div>
 
 <div class="node transform"><div class="head"><span class="no">12</span><span class="kind">transform.text.template</span><span class="chip cat-transform">Transform · 通用文本</span><span class="chip scope">requiredVars: [title, ep]</span></div>
-<div class="io"><span class="t">IN</span> facet:ITextWorkpiece　<span class="t">OUT</span> 同 ｜ 基数 1→1 ｜ <span class="v">需要 var:title、var:ep</span>（缺失→节点跳过；编辑器 lint 上游供给：title←节点5经继承、ep←节点11）</div>
+<div class="io"><span class="t">IN</span> 能力:ITextWorkpiece　<span class="t">OUT</span> 同 ｜ 基数 1→1 ｜ <span class="v">需要 var:title、var:ep</span>（缺失→节点跳过；编辑器 lint 上游供给：title←节点5经继承、ep←节点11）</div>
 <table class="cfg">
 <tr><td>template</td><td class="mono">{var:title} - {var:ep:pad(2)}{var:extension}</td></tr>
 <tr><td>缺变量行为</td><td class="mono">requiredVars 任一缺失 → 整节点跳过（工作文本保持上游清洗结果）</td></tr></table>
@@ -203,29 +203,29 @@ footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(
 <p>本功能的节点与其他功能（exhentai / pixiv / subscription…）注册在<b>同一个</b>活动注册表里，但不会互相冲突，隔离靠三层机制：</p>
 <ul>
 <li><b>kind 命名空间</b>：注册表以 kind 字符串为唯一键（<code class="i">WorkflowActivityKinds.Build</code> 校验段格式）——<code class="i">transform.text.*</code> / <code class="i">*.fs.*</code> 与 <code class="i">*.exhentai.*</code> 等天然不撞。</li>
-<li><b>硬契约（编辑器报错级）分两种形态</b>：fs 域节点（filter/expand/saveName）声明 <code class="i">AcceptedInputItemTypes = ["item.fs.entry"]</code>——精确类型白名单；<b>通用文本节点声明 <code class="i">AcceptedItemFacet = typeof(ITextWorkpiece)</code></b>——接受任何 CLR 类型实现该 facet 的 item，编辑器经 <code class="i">IWorkflowItemTypeDescriptor.ClrType</code> 静态校验实现关系。"作用于哪个 property"由 item 类型声明工作文本统一回答（<code class="i">FsEntryItem.WorkingText ≡ WorkingName</code>，编辑器在节点卡上显示"作用于：WorkingName"）；ExHentai 画廊链放不进 <code class="i">action.fs.saveName</code>（类型白名单拦截），但若画廊 item 将来实现 ITextWorkpiece，同一批文本节点直接可用于清洗其标题——按契约互操作，不是冲突。</li>
+<li><b>硬契约（编辑器报错级）分两种形态</b>：fs 域节点（filter/expand/saveName）声明 <code class="i">AcceptedInputItemTypes = ["item.fs.entry"]</code>——精确类型白名单；<b>通用文本节点声明 <code class="i">AcceptedItemInterface = typeof(ITextWorkpiece)</code></b>——接受任何 CLR 类型实现该能力接口的 item，编辑器经 <code class="i">IWorkflowItemTypeDescriptor.ClrType</code> 静态校验实现关系。"作用于哪个 property"由 item 类型声明工作文本统一回答（<code class="i">FsEntryItem.WorkingText ≡ WorkingName</code>，编辑器在节点卡上显示"作用于：WorkingName"）；ExHentai 画廊链放不进 <code class="i">action.fs.saveName</code>（类型白名单拦截），但若画廊 item 将来实现 ITextWorkpiece，同一批文本节点直接可用于清洗其标题——按契约互操作，不是冲突。</li>
 <li><b>软契约（编辑器 lint 级）= 变量供需</b>：capture 按配置声明"提供 var:x"，template 声明 <code class="i">requiredVars</code>——编辑器静态核对上游供给链（含 expand 继承与系统变量），缺口给 warning 而非 error（capture 可能条件性命中，运行期由 requiredVars 跳过兜底）。</li>
 </ul>
 <table class="t"><tr><th>节点</th><th>契约（IN）</th><th>基数</th><th>变量</th></tr>
 <tr><td class="mono">T fs.manualScan</td><td class="mono">payload → item.fs.entry</td><td>0→N</td><td>注入系统变量</td></tr>
 <tr><td class="mono">1 filter.fs.byRegex</td><td class="mono">item.fs.entry（精确类型）</td><td>1→0/1</td><td>—</td></tr>
-<tr><td class="mono">2–4 removeWrapped/trim</td><td class="mono">facet: ITextWorkpiece</td><td>1→1</td><td>—</td></tr>
-<tr><td class="mono">5 capture</td><td class="mono">facet: ITextWorkpiece</td><td>1→1</td><td class="mono">提供 title</td></tr>
+<tr><td class="mono">2–4 removeWrapped/trim</td><td class="mono">能力: ITextWorkpiece</td><td>1→1</td><td>—</td></tr>
+<tr><td class="mono">5 capture</td><td class="mono">能力: ITextWorkpiece</td><td>1→1</td><td class="mono">提供 title</td></tr>
 <tr><td class="mono">6 saveName（目录实例）</td><td class="mono">item.fs.entry（精确类型）</td><td>1→1</td><td>—（副作用：目录计划）</td></tr>
 <tr><td class="mono">7 expand.fs.children</td><td class="mono">item.fs.entry（精确类型）</td><td><b>1→N</b></td><td>继承全部 + 注入 extension/parentName</td></tr>
-<tr><td class="mono">8–10 removeWrapped/trim</td><td class="mono">facet: ITextWorkpiece</td><td>1→1</td><td>—</td></tr>
-<tr><td class="mono">11 capture</td><td class="mono">facet: ITextWorkpiece</td><td>1→1</td><td class="mono">提供 ep（onMiss 不提供）</td></tr>
-<tr><td class="mono">12 template</td><td class="mono">facet: ITextWorkpiece</td><td>1→1</td><td class="mono">需要 title + ep</td></tr>
+<tr><td class="mono">8–10 removeWrapped/trim</td><td class="mono">能力: ITextWorkpiece</td><td>1→1</td><td>—</td></tr>
+<tr><td class="mono">11 capture</td><td class="mono">能力: ITextWorkpiece</td><td>1→1</td><td class="mono">提供 ep（onMiss 不提供）</td></tr>
+<tr><td class="mono">12 template</td><td class="mono">能力: ITextWorkpiece</td><td>1→1</td><td class="mono">需要 title + ep</td></tr>
 <tr><td class="mono">13 saveName（文件实例）</td><td class="mono">item.fs.entry（精确类型）</td><td>1→1（终点）</td><td>—（副作用：文件计划/改名）</td></tr></table>
 
 <h2><span class="n">§6</span>本例暴露并已并入设计的增量</h2>
 <ul>
 <li><b>链中展开</b>：<code class="i">expand.fs.children</code>（引擎新增 <code class="i">ExpandTo</code> outcome）——多层级处理与变量继承的前提。v1 仅 <code class="i">ChildrenOnly</code>：父项计划在展开前存盘，混合流经<b>链序</b>表达，文本节点因此零 fs 感知（scope 选项被移除）。</li>
-<li><b>facet 契约</b>：<code class="i">ITextWorkpiece</code>（WorkingText + Variables）+ 描述符 <code class="i">AcceptedItemFacet</code> + 经 ClrType 的编辑器校验——文本节点真正通用，"作用于哪个 property"由 item 类型一处声明统一回答。</li>
+<li><b>能力契约</b>：<code class="i">ITextWorkpiece</code>（WorkingText + WithWorkingText）+ 描述符 <code class="i">AcceptedItemInterface</code> + 经 ClrType 的编辑器校验——文本节点真正通用，"作用于哪个 property"由 item 类型一处声明统一回答。</li>
 <li><b>变量机制</b>：<code class="i">Variables</code> + <code class="i">transform.text.capture</code>（具名捕获，不改文本）+ <code class="i">{var:name(:formatter)}</code> 插值 + <b>系统变量</b>（fs 域注入 <code class="i">var:extension</code> / <code class="i">var:parentName</code>——fs 语义进入通用文本节点的唯一通道）。</li>
 <li><b>模板重建名</b>：<code class="i">transform.text.template</code>——跨层级信息（父标题 + 自身集数 + 系统变量）组合命名的表达方式。</li>
 <li><b>requiredVars</b>：缺变量跳过本节点（SP1 的兜底路径）。</li>
 <li><b>Apply 排序</b>：<code class="i">DeepestFirst</code>——按路径深度从深到浅执行，与计划记录顺序解耦。</li>
 </ul>
-<footer>文件清洗流程示例 · 配套 docs/file-cleaning-workflow.md（设计增量已同步）</footer>
+<footer>文件清洗流程示例 · 配套 <a href="file-cleaning-workflow.html">file-cleaning-workflow.html</a>（设计增量已同步）</footer>
 </div></body></html>

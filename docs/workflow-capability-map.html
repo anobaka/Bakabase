@@ -1,0 +1,87 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Workflow 能力全景：现状盘点与扩展路线</title>
+<style>
+:root{--bg:#0e1116;--panel:#161b22;--panel2:#1c222c;--code:#0b0e14;--line:#2a313c;
+--ink:#e6e9ef;--mut:#98a2b0;--dim:#6b7482;--a:#6ea8fe;--g:#5ecb9e;--y:#e6b566;--r:#e8776f;--p:#b08cff;--c:#4bc0d9;--chip:#222a35;}
+@media (prefers-color-scheme:light){:root{--bg:#f6f7f9;--panel:#fff;--panel2:#eef1f5;--code:#f4f6f9;--line:#e2e6ec;
+--ink:#1a1f27;--mut:#586274;--dim:#8a94a3;--a:#2f6fed;--g:#1f9d6b;--y:#a9761f;--r:#cf4d43;--p:#7a52d6;--c:#1893ad;--chip:#eef1f5;}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);line-height:1.62;
+font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin:0 auto;padding:40px 22px 80px}
+h1{font-size:25px;margin:0 0 6px}.sub{color:var(--mut);font-size:14.5px;margin:0 0 4px}
+h2{font-size:17px;margin:36px 0 8px;padding-bottom:8px;border-bottom:1px solid var(--line);scroll-margin-top:12px}
+h2 .n{color:var(--dim);font-weight:700;margin-right:8px}
+p{margin:9px 0}
+ul{margin:9px 0 9px 4px;padding-left:22px}li{margin:4px 0}
+.note{font-size:12.5px;color:var(--dim);margin:10px 0}
+b{font-weight:650}
+a{color:var(--a)}
+code.i{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;background:var(--chip);padding:1px 5px;border-radius:5px}
+table{width:100%;border-collapse:collapse;font-size:13px;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:10px 0}
+th,td{padding:8px 11px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:var(--panel2);color:var(--mut);font-weight:600;font-size:12px}
+tr:last-child td{border-bottom:none}
+td.k{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:12px;white-space:nowrap}
+td.e{font-weight:700;white-space:nowrap}
+.mono{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:12px}
+.tag{display:inline-block;font-size:10.5px;padding:1px 7px;border-radius:20px;background:var(--chip);color:var(--mut)}
+.t-have{color:var(--g);border:1px solid var(--g)}.t-new{color:var(--p);border:1px solid var(--p)}.t-later{color:var(--y);border:1px solid var(--y)}
+.rule{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--a);border-radius:10px;padding:10px 14px;margin:10px 0;font-size:13px}
+footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(--line);padding-top:14px}
+</style></head><body><div class="wrap">
+<h1>Workflow 能力全景：现状盘点与扩展路线</h1>
+<p class="sub">视角：Workflow 模块整体，而非某个场景。<a href="file-cleaning-workflow.html">文件清洗</a>是多数扩展的第一个用户，但每项扩展都是跨场景通用能力</p>
+<p class="note">现状均已在代码中核实：<code class="i">src/modules/Bakabase.Modules.Workflow</code> + <code class="i">src/apps/Bakabase.Service/Components/Workflow</code>。</p>
+
+<h2><span class="n">§1</span>引擎现状（能力层）</h2>
+<table><tr><th style="width:16%">能力</th><th>现状</th></tr>
+<tr><td>定义与编辑</td><td><code class="i">WorkflowDefinition</code> CRUD + 链式编辑器；<code class="i">WorkflowDefinitionService</code> 左到右追踪"当前 item 类型"做静态校验</td></tr>
+<tr><td>类型系统</td><td>item type 字符串标签 + 描述符（DisplayName + <b>ClrType</b>）；活动契约 <code class="i">AcceptedInputItemTypes</code>（空 = 任意；异构触发器 "any" 哨兵不匹配非空清单）+ <code class="i">OutputBehavior</code>（Passthrough / Fixed / <b>AdaptToNext</b>——AI 节点按下游需求适配输出类型，靠 ClrType 做 JSON 形状推断）</td></tr>
+<tr><td>执行</td><td><code class="i">WorkflowRunner</code> per-item 驱动；outcome = Keep / Drop / Replace；per-activity OnItemError；<code class="i">WorkflowRunRehydrator</code> 运行恢复；runs 持久化 + 步骤统计</td></tr>
+<tr><td>触发</td><td>触发器注册表；<code class="i">Matches(payload, filterJson)</code> 定义级过滤；<code class="i">ExtractItems</code> 产出初始 item 列表</td></tr>
+<tr><td>UI</td><td>workflow 页：定义编辑器（picker 按 Group 分桶）、运行记录</td></tr></table>
+
+<h2><span class="n">§2</span>节点现状盘点</h2>
+<table><tr><th>触发器（2）</th><th>产出类型</th></tr>
+<tr><td class="k">subscription.updated</td><td>subscription item（源锁定时为具体类型，否则 "any" 哨兵）</td></tr>
+<tr><td class="k">downloader.completed</td><td>downloader completed task</td></tr></table>
+<p><b>Item 类型（5）</b>：subscription any ｜ pixiv illust ｜ exhentai gallery ｜ search query ｜ downloader completed</p>
+<table><tr><th>活动（5）</th><th>类别</th><th>契约</th><th>说明</th></tr>
+<tr><td class="k">subscriptionItemTitleContains</td><td>Filter</td><td>任意 / passthrough</td><td>名挂 subscription 组，契约实际通用</td></tr>
+<tr><td class="k">ai transform</td><td>Transform</td><td>任意 / <b>AdaptToNext</b></td><td>通用 AI 节点（提示词驱动，形状推断）</td></tr>
+<tr><td class="k">exhentai.queryToGallery</td><td>Transform</td><td>searchQuery → gallery（Fixed）</td><td></td></tr>
+<tr><td class="k">notification.create</td><td>Action</td><td>任意 / passthrough</td><td>通用通知</td></tr>
+<tr><td class="k">exhentai.enqueueDownload</td><td>Action</td><td>gallery</td><td></td></tr></table>
+<div class="rule">结论：当前节点面覆盖"订阅 → 过滤 → AI 加工 → 下载/通知"一条业务线的最小集；引擎骨架（类型校验、注册表、runs）质量好但被消费得很少。</div>
+
+<h2><span class="n">§3</span>引擎扩展清单（均跨场景通用；标注第一个用户）</h2>
+<table><tr><th style="width:4%">#</th><th style="width:17%">扩展</th><th>内容</th><th style="width:16%">第一个用户</th><th style="width:24%">通用价值</th></tr>
+<tr><td class="e">E1</td><td><b>手动触发 + 参数面板</b></td><td>触发器新形态：用户带 payload 手动运行（当前只有事件触发）</td><td class="k">fs.manualScan</td><td>一切"对一批输入执行流程"；也是调试任何工作流的入口</td></tr>
+<tr><td class="e">E2</td><td><b>链中展开 ExpandTo</b></td><td><code class="i">WorkflowItemOutcome</code> 新增第四种裁决 <code class="i">ExpandTo(items)</code>（1→N，与 fs 无关）；<b>基数是描述符的静态声明</b>：<code class="i">Cardinality: OneToOne | OneToMany</code>，编辑器据此做视觉标识 / picker 筛选 / 下游类型追踪 / 统计口径。Category 与基数正交（Filter 即 1→0/1）</td><td class="k">expand.fs.children</td><td>画廊→多图、feed→多条目、压缩包→内容物、资源→可播放文件…</td></tr>
+<tr><td class="e">E3</td><td><b>能力契约</b><br><span class="tag">原称 facet，已弃用</span></td><td>描述符增加 <code class="i">AcceptedItemInterface: Type</code>——接受任何 CLR 类型实现该接口的 item（经描述符 ClrType 静态校验）。它是对"当前类型"的<b>谓词</b>，当前类型不变 → 强制 Passthrough。解决 O(N×M) 维护问题：新 item 类型实现一次接口，整族节点自动可用</td><td class="k">transform.text.* × ITextWorkpiece</td><td>一切"按能力而非按类型"的节点族（未来 IHasCover、IHasSourceUrl…）</td></tr>
+<tr><td class="e">E4</td><td><b>变量机制（引擎级随行袋）</b></td><td>Runner 为每个 item 维护变量袋（<b>不进 item 类型</b>），经 <code class="i">ctx.Variables</code> 暴露；ExpandTo 子项继承副本；随 run 持久化。写入：capture（具名捕获组名即变量名）/ 域系统变量注入 / 后续 setVariable。读取：配置 schema 标记"支持插值"的字段，引擎统一解析 <code class="i">{var:name(:formatter)}</code>。编辑器沿链推导"此处可用变量集"→ <b>自动补全 + lint</b>（软契约）</td><td class="k">capture/template + fs 系统变量</td><td>当前节点间<b>没有任何数据通道</b>；变量是通用联动机制，任何 item 类型零成本获得</td></tr>
+<tr><td class="e">E5</td><td><b>两阶段运行</b></td><td>run 产出"计划"，确认后按计划执行（不重跑链）：Preview → diff 确认 → Apply</td><td class="k">action.fs.saveName</td><td>一切有副作用的批量 action（批量入队、批量修改）都该有干跑</td></tr>
+<tr><td class="e">E6</td><td>定时 / 监听触发<span class="tag t-later">后续</span></td><td>cron 触发器；目录监听（FileMover 进料口形态）</td><td>自动清洗</td><td>全部定时自动化</td></tr></table>
+
+<h2><span class="n">§4</span>节点扩展清单（按域）</h2>
+<table><tr><th style="width:16%">域</th><th>节点</th><th style="width:20%">状态</th></tr>
+<tr><td>fs <span class="tag t-new">新</span></td><td class="mono">触发器 fs.manualScan（constants+枚举）｜ filter.fs.byRegex / byExtension / byType ｜ expand.fs.children ｜ transform.fs.fileNameOp ｜ action.fs.saveName</td><td><a href="file-cleaning-workflow.html">清洗设计</a>已定稿</td></tr>
+<tr><td>text <span class="tag t-new">新，能力契约通用</span></td><td class="mono">transform.text.removeWrapped / removeTexts / trim / capture / template</td><td>同上；依赖 <a href="file-cleaning-workflow.html#s5">SpecialText 扩展</a></td></tr>
+<tr><td>通用（补充候选）</td><td class="mono">filter.common.byVariable（按变量过滤，E4 配套）｜ action.common.setVariable（常量/映射写变量）</td><td>实现 E4 时顺手评估</td></tr>
+<tr><td>既有域延伸（候选）</td><td class="mono">action.downloader.enqueue 泛化（当前仅 exhentai）｜ action.resource.registerPath（fs 条目登记入库/触发同步，打通清洗→入库）</td><td>按需求排期</td></tr>
+<tr><td>organizer <span class="tag t-later">挂起</span></td><td>触发器"整理完成"、活动"运行某 Pipeline/规则集"</td><td>随 <a href="local-file-organization/README.md">Organizer</a> 复活</td></tr></table>
+
+<h2><span class="n">§5</span>串联视角：扩展如何互相成立</h2>
+<ul>
+<li>E1+E2+E4 组合出"手动对文件系统跑多层级联动流程"（清洗的骨架）；</li>
+<li>E3 使 text 节点族对<b>任何</b>未来 item 类型开放（画廊标题清洗零成本）；</li>
+<li>E5 是所有落盘类 action 的安全模型，与 E1 组合出"手动预览-确认"的标准交互；</li>
+<li>E6 + 既有 <code class="i">downloader.completed</code> 触发器 + fs/text 节点 = "下载完成 → 自动清洗 → 通知"全自动链，届时引擎零新增。</li>
+</ul>
+
+<h2><span class="n">§6</span>实施顺序建议</h2>
+<div class="rule">E1 → E3+E4（text 节点按<a href="file-cleaning-workflow.html">清洗设计</a>规范<b>生而通用</b>，与变量机制同批落地；前置 SpecialText 扩展）→ E2 → E5。E6 独立，随自动化需求排期。</div>
+<footer>Workflow 能力全景 · 关联：<a href="file-cleaning-workflow.html">文件清洗设计</a> · <a href="file-cleaning-workflow-example.html">完整示例</a></footer>
+</div></body></html>
