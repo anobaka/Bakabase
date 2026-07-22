@@ -30,27 +30,35 @@ public sealed record FsEntryItem
     public Dictionary<string, string> Variables { get; init; } = new();
     // 变量：capture 节点写入、后续节点经 {var:name(:formatter)} 插值消费；
     // expand 展开子项时可继承（inheritVariables）——这是"节点 x 依赖节点 y 结果"的传递通道。
+    // fs 域产出 item 时自动注入只读系统变量：var:extension、var:parentName。
     // 变量只在 item 内流动、随继承下发，链保持线性 per-item，无全局状态。
 }
+// FsEntryItem 实现 ITextWorkpiece：WorkingText ≡ WorkingName（通用文本节点由此作用于它，见"规范"节）
 ```
 
 核心不变量：**链上一切文本变更只作用于 `WorkingName`；磁盘操作只发生在 saveName 节点**。这天然把"计算新名字"与"落盘"分成两段，预览因此免费。
 
-**类型契约**：本功能全部活动声明 `AcceptedInputItemTypes = ["item.fs.entry"]`，触发器 `ResolveOutputItemType` 亦返回该类型——编辑器/`WorkflowDefinitionService` 的左到右类型校验使本功能节点与其他功能（exhentai/pixiv 等）的专属节点**天然互斥**；`AcceptedInputItemTypes` 为空的通用节点（如未来的通知 action）可自由插入本链，是特性而非冲突。变量提供/需求（capture 提供、template 需要）作为**软契约**由编辑器 lint（warning 而非 error——capture 可能条件性命中）。节点出入参明细见[示例](file-cleaning-workflow-example.html) §5。
+**类型契约（硬校验，编辑器报错级）**分两种形态：fs 域节点（filter/expand/saveName/fileNameOp）声明 `AcceptedInputItemTypes = ["item.fs.entry"]`；**通用文本节点声明 `AcceptedItemFacet = typeof(ITextWorkpiece)`**（见下"规范"节）——接受任何实现该 facet 的 item 类型，编辑器经 `IWorkflowItemTypeDescriptor.ClrType` 静态校验。两种形态都使本功能节点与其他功能（exhentai/pixiv 等）的专属节点**互斥或按契约互操作**，不存在冲突。变量提供/需求（capture 提供、template 需要）作为**软契约**由编辑器 lint（warning 而非 error——capture 可能条件性命中）。节点出入参明细见[示例](file-cleaning-workflow-example.html) §5。
 
-**节点通用选项**（所有 fs 域活动支持）：
-- `scope: Files | Directories | Both`——不命中的 item **原样放行**（跳过 ≠ 丢弃）。这是混合 item（文件+目录）流经同一条线性链的前提。
+**节点通用选项**：
 - `requiredVars: string[]`——任一变量缺失则跳过本节点（如模板节点缺 `ep` 时保住上游清洗结果）。
 
 ## 节点设计
 
-### 规范：能力层与节点层（为什么 kind 是 `transform.fs.*` 而不是 `transform.text.*`）
+### 规范：通用文本节点与 facet 契约（"trim 的是哪个 property？"的系统性回答）
 
-纯文本操作（FileNameModifier 操作集、removeWrapped/removeTexts、trim、正则捕获、模板插值）实现为无状态服务 **`TextOps`**——**这才是通用文本处理组件**：不感知 workflow、不感知文件系统，输入字符串输出字符串，供本功能节点、file-name-modifier 页、（将来）Organizer 共同复用。
+文本节点（trim/removeWrapped/removeTexts/capture/template）是**真正通用的** `transform.text.*`——它们**只认识"工作文本"**，不认识文件系统。规范分三条：
 
-workflow 节点是该能力**对具体 item 类型的绑定**：v1 绑定到 `item.fs.entry` 的 `WorkingName`（并带 `scope` 这类 fs 专属选项），因此 kind 的模块段是 `fs` 而非 `text`——名实相符，节点的出入参类型（`item.fs.entry`）与命名空间一致。
+1. **facet 契约**：定义 `ITextWorkpiece { string WorkingText; IDictionary<string,string> Variables }`。文本节点的输入契约不是具体 item 类型，而是 `AcceptedItemFacet = typeof(ITextWorkpiece)`——接受任何 CLR 类型实现该接口的 item；编辑器经 `IWorkflowItemTypeDescriptor.ClrType`（描述符本就携带）静态校验实现关系，强校验不减弱。
+2. **"作用于什么"由 item 类型声明，一处回答、处处生效**：`FsEntryItem.WorkingText ≡ WorkingName`（其类型描述符如此声明，编辑器在节点卡上显示"作用于：WorkingName"）。将来画廊 item 声明 `WorkingText ≡ Title`，同一批文本节点直接可用——不存在"每个节点各自解释 trim 什么"的问题。
+3. **fs 语义进入文本节点的唯一通道是系统变量**：fs 域在产出 item 时自动注入只读变量 `var:extension`、`var:parentName`（模板写 `{var:extension}` 而非 fs 专属占位符）。文本节点因此零 fs 感知。
 
-演进路径（当前不做）：当第二个需要文本处理的 item 类型出现（如对画廊标题做清洗），节点层可经 **facet 机制**泛化——活动描述符增加 `AcceptedItemFacet: Type`（接口），编辑器经 `IWorkflowItemTypeDescriptor.ClrType` 校验实现关系，届时文本节点提升为真正的 `transform.text.*` 并剥离 fs 专属选项。与"descriptor 共享抽象暂不抽取"同一姿势：**能力先通用（服务层），节点先具体（fs 绑定），等第二个消费者出现再泛化节点层。**
+两个刻意的例外与删减：
+
+- `transform.fs.fileNameOp` **留在 fs 域**：它包装 FileNameModifier 的操作集，其 Target（全名/不含扩展名/扩展名）语义就是文件名结构——名字本身已回答作用目标。
+- **删除 `scope` 选项**：它是文本节点上的 fs 泄漏。混合流（目录+文件）改由**链序**表达：目录段 → `saveName`（目录计划）→ `expand`（ChildrenOnly，之后链上只有文件）→ 文件段 → `saveName`（文件计划）。文本节点因此不需要知道 item 是文件还是目录。
+
+纯文本算法仍沉淀在无状态服务 `TextOps`（供 file-name-modifier 页与将来的 Organizer 复用）；文本节点是 `TextOps` 经 facet 暴露给 workflow 的形态。
 
 ### 触发器：`fileCleaning.manual`（= 用户说的 constants 节点 + 获取子级节点）
 
@@ -76,8 +84,8 @@ workflow 节点是该能力**对具体 item 类型的绑定**：v1 绑定到 `it
 | 配置 | 说明 |
 |---|---|
 | `target` / `extensionFilter` | Files / Directories / Both + 扩展名过滤 |
-| `emit` | `ChildrenOnly` / `ChildrenThenSelf`（子项先流过后续节点，父项随后跟进——配合 saveName 的 DeepestFirst 排序） |
-| `inheritVariables` | 子项继承父项 Variables（跨层级联动的通道） |
+| `emit` | v1 仅 `ChildrenOnly`（父项被展开消费——其改名计划应在展开**前**由 saveName 节点记录，混合流经链序表达；`ChildrenThenSelf` 留待真实需求） |
+| `inheritVariables` | 子项继承父项 Variables（跨层级联动的通道）；展开时同步注入子项的系统变量（extension/parentName） |
 
 ### Filter 活动（可选，收窄处理范围）
 
@@ -89,16 +97,16 @@ workflow 节点是该能力**对具体 item 类型的绑定**：v1 绑定到 `it
 
 ### Transform 活动（文本变更节点，任意个、任意序）
 
-| kind | 行为 | 配置 |
-|---|---|---|
-| `transform.fs.fileNameOp` | 包装 FileNameModifier 的**全部**既有操作 | Target（全名/不含扩展名/扩展名）× Operation × Position × 参数——与 file-name-modifier 页同一套模型与 UI 组件 |
-| `transform.fs.removeWrapped` | **删除包装符内命中文本集的片段**（用户举例的场景） | 包装符对（引用 SpecialText Wrapper 或自定义对）+ 文本集引用（见下）+ 命中方式（等于/包含/正则） |
-| `transform.fs.removeTexts` | 删除命中文本集的裸文本片段 | 文本集引用 + 命中方式 |
-| `transform.fs.trim` | 清理残留：连续空格/头尾空白与分隔符/空括号对 | 开关组 |
-| `transform.fs.capture` | **不改名，只捕获**：正则具名捕获组 → 写入 `Variables` | source（WorkingName/Path/ParentName）+ pattern + onMiss（SkipSilently/标记） |
-| `transform.fs.template` | 以模板**重建** WorkingName（跨层级信息组合命名的表达方式） | template（`{var:x(:pad(n))}` / `{originalName}` / `{extension}` 插值）+ requiredVars |
+| kind | 契约 | 行为 | 配置 |
+|---|---|---|---|
+| `transform.text.removeWrapped` | facet | **删除包装符内命中文本集的片段**（用户举例的场景） | 包装符对（TextSetRef，如 builtin:Wrapper）+ 文本集引用 + 命中方式（等于/包含/正则） |
+| `transform.text.removeTexts` | facet | 删除命中文本集的裸文本片段 | 文本集引用 + 命中方式 |
+| `transform.text.trim` | facet | 清理残留：连续空格/头尾空白与分隔符/空括号对 | 开关组 |
+| `transform.text.capture` | facet | **不改文本，只捕获**：正则具名捕获组 → 写入 `Variables` | pattern + onMiss（SkipSilently/标记）。作用于工作文本；路径/扩展名等 fs 上下文经系统变量获得 |
+| `transform.text.template` | facet | 以模板**重建**工作文本（跨层级信息组合命名的表达方式） | template（`{var:x(:pad(n))}` / `{originalText}` 插值；文件扩展名写 `{var:extension}`）+ requiredVars |
+| `transform.fs.fileNameOp` | item.fs.entry | 包装 FileNameModifier 的**全部**既有操作（**刻意留在 fs 域**：其 Target 语义即文件名结构，名字已回答作用目标） | Target（全名/不含扩展名/扩展名）× Operation × Position × 参数——与 file-name-modifier 页同一套模型与 UI 组件 |
 
-每个 Transform 输出 `item with { WorkingName = 新值 }`（Workflow 的 `ReplaceWith`，类型不变仍是 `item.fs.entry`——编辑器类型校验直接通过）。
+每个 Transform 输出 `item with { WorkingText = 新值 }`（Workflow 的 `ReplaceWith`，item 类型不变——编辑器校验直通）。
 
 ### Action 活动：`action.fs.saveName`
 
@@ -148,8 +156,8 @@ FileRenameRecord   RunId, Seq, Path(父目录), From, To, RenamedAt, Undone
 
 ```
 触发器: roots=[D:/Anime], enumerate={target:Directories, depth:1}
-节点 1: transform.fs.removeWrapped  包装符=[]/【】  文本集=自定义「字幕组名单」
-节点 2: transform.fs.trim           清理残留空格
+节点 1: transform.text.removeWrapped  包装符=[]/【】  文本集=自定义「字幕组名单」
+节点 2: transform.text.trim           清理残留空格
 节点 3: action.fs.saveName
 
 预览:
