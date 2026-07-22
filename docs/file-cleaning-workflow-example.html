@@ -38,6 +38,8 @@ pre.tree .del{color:var(--r)}pre.tree .add{color:var(--g)}pre.tree .dim{color:va
 .cfg tr:last-child td{border-bottom:none}
 .cfg .mono, .mono{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:12px}
 .fx{font-size:12px;color:var(--dim);margin-top:6px;padding-top:6px;border-top:1px dashed var(--line)}
+.io{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;color:var(--dim);margin:0 0 6px}
+.io .t{color:var(--c);font-weight:600}.io .v{color:var(--p)}
 .fx .in{color:var(--r)}.fx .out{color:var(--g)}.fx .var{color:var(--c)}
 .flow{ text-align:center;color:var(--dim);font-size:14px;margin:-2px 0}
 table.t{width:100%;border-collapse:collapse;font-size:12.5px;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:10px 0}
@@ -66,6 +68,7 @@ footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(
 <h2><span class="n">§2</span>流程定义（12 个节点，含每节点配置）</h2>
 
 <div class="node trigger"><div class="head"><span class="no">T</span><span class="kind">fileCleaning.manual</span><span class="chip cat-trigger">触发器</span></div>
+<div class="io"><span class="t">IN</span> —（手动触发 payload：roots + 枚举配置）　<span class="t">OUT</span> item.fs.entry × N</div>
 <table class="cfg">
 <tr><td>roots（constants）</td><td class="mono">["D:/Downloads"]</td></tr>
 <tr><td>enumerate.target</td><td class="mono">Directories</td></tr>
@@ -74,6 +77,7 @@ footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(
 <div class="flow">▼</div>
 
 <div class="node filter"><div class="head"><span class="no">1</span><span class="kind">filter.fs.byRegex</span><span class="chip cat-filter">Filter</span></div>
+<div class="io"><span class="t">IN</span> item.fs.entry　<span class="t">OUT</span> item.fs.entry ｜ 基数 1→0/1（不命中即 Drop，该树到此终止）</div>
 <table class="cfg">
 <tr><td>pattern</td><td class="mono">\[.+?\]</td></tr>
 <tr><td>mode</td><td class="mono">Match（命中才保留）</td></tr></table>
@@ -81,28 +85,32 @@ footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(
 <div class="flow">▼</div>
 
 <div class="node transform"><div class="head"><span class="no">2</span><span class="kind">transform.text.removeWrapped</span><span class="chip cat-transform">Transform</span><span class="chip scope">scope: Directories</span></div>
+<div class="io"><span class="t">IN</span> item.fs.entry　<span class="t">OUT</span> item.fs.entry ｜ 基数 1→1（scope 不命中原样放行）</div>
 <table class="cfg">
-<tr><td>wrappers</td><td class="mono">[] 【】 （引用 SpecialText Wrapper）</td></tr>
+<tr><td>wrappers</td><td class="mono">[] 【】 （textSetRef = builtin:Wrapper）</td></tr>
 <tr><td>textSet</td><td>自定义文本集 <code class="i">「字幕组名单」</code>（含 LoliHouse、桜都字幕组、桜都字幕組…）</td></tr>
 <tr><td>match</td><td class="mono">EqualsAny（括号内容全等于集合任一项）</td></tr></table>
 <div class="fx"><span class="in">[LoliHouse] 葬送のフリーレン…</span> → <span class="out">葬送のフリーレン Sousou no Frieren [WebRip 1080p HEVC-10bit AAC]</span></div></div>
 <div class="flow">▼</div>
 
 <div class="node transform"><div class="head"><span class="no">3</span><span class="kind">transform.text.removeWrapped</span><span class="chip cat-transform">Transform</span><span class="chip scope">scope: Directories</span></div>
+<div class="io"><span class="t">IN</span> item.fs.entry　<span class="t">OUT</span> item.fs.entry ｜ 基数 1→1</div>
 <table class="cfg">
 <tr><td>wrappers</td><td class="mono">[]</td></tr>
-<tr><td>textSet</td><td>自定义文本集 <code class="i">「质量与发布标签」</code>（1080p、WebRip、HEVC、AAC、Fin、简繁内封…）</td></tr>
+<tr><td>textSet</td><td>自定义文本集 <code class="i">「质量与发布标签」</code>（textSetRef = custom:2；1080p、WebRip、HEVC、AAC、Fin、简繁内封…）</td></tr>
 <tr><td>match</td><td class="mono">ContainsAny（括号内容包含集合任一项即整段删除）</td></tr></table>
 <div class="fx"><span class="in">药屋少女的呢喃 [01-24 Fin][1080p][简繁内封]</span> → <span class="out">药屋少女的呢喃</span></div></div>
 <div class="flow">▼</div>
 
 <div class="node transform"><div class="head"><span class="no">4</span><span class="kind">transform.text.trim</span><span class="chip cat-transform">Transform</span><span class="chip scope">scope: Directories</span></div>
+<div class="io"><span class="t">IN</span> item.fs.entry　<span class="t">OUT</span> item.fs.entry ｜ 基数 1→1</div>
 <table class="cfg">
 <tr><td>collapseSpaces / trimEnds / removeEmptyWrappers</td><td class="mono">true / true / true</td></tr></table>
 <div class="fx">清掉删除后残留的连续空格与空括号对。</div></div>
 <div class="flow">▼</div>
 
 <div class="node transform"><div class="head"><span class="no">5</span><span class="kind">transform.text.capture</span><span class="chip cat-transform">Transform</span><span class="chip scope">scope: Directories</span></div>
+<div class="io"><span class="t">IN</span> item.fs.entry　<span class="t">OUT</span> item.fs.entry ｜ 基数 1→1 ｜ <span class="v">提供 var:title</span>（软契约，编辑器 lint 供下游校验）</div>
 <table class="cfg">
 <tr><td>source</td><td class="mono">WorkingName</td></tr>
 <tr><td>pattern</td><td class="mono">^(?&lt;title&gt;.+)$</td></tr>
@@ -111,6 +119,7 @@ footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(
 <div class="flow">▼</div>
 
 <div class="node expand"><div class="head"><span class="no">6</span><span class="kind">expand.fs.children</span><span class="chip cat-expand">Expand（链中 1→N）</span></div>
+<div class="io"><span class="t">IN</span> item.fs.entry（目录）　<span class="t">OUT</span> item.fs.entry ｜ 基数 1→N+1（ExpandTo；类型不变，编辑器校验直通）｜ <span class="v">子项继承 Variables</span></div>
 <table class="cfg">
 <tr><td>target</td><td class="mono">Files</td></tr>
 <tr><td>extensionFilter</td><td class="mono">["mkv", "mka", "ass"]</td></tr>
@@ -120,20 +129,24 @@ footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(
 <div class="flow">▼</div>
 
 <div class="node transform"><div class="head"><span class="no">7</span><span class="kind">transform.text.removeWrapped</span><span class="chip cat-transform">Transform</span><span class="chip scope">scope: Files</span></div>
+<div class="io"><span class="t">IN</span> item.fs.entry　<span class="t">OUT</span> item.fs.entry ｜ 基数 1→1（目录项 scope 不命中，原样放行）</div>
 <table class="cfg"><tr><td>（配置同节点 2）</td><td>wrappers [] 【】 ｜ textSet 「字幕组名单」 ｜ EqualsAny</td></tr></table>
 <div class="fx">目录项流经此节点时因 scope 不命中而<b>原样放行</b>（跳过≠丢弃）。</div></div>
 <div class="flow">▼</div>
 
 <div class="node transform"><div class="head"><span class="no">8</span><span class="kind">transform.text.removeWrapped</span><span class="chip cat-transform">Transform</span><span class="chip scope">scope: Files</span></div>
+<div class="io"><span class="t">IN</span> item.fs.entry　<span class="t">OUT</span> item.fs.entry ｜ 基数 1→1</div>
 <table class="cfg"><tr><td>（配置同节点 3）</td><td>wrappers [] ｜ textSet 「质量与发布标签」 ｜ ContainsAny</td></tr></table>
 <div class="fx"><span class="in">[桜都字幕組] 藥屋少女的呢喃 [01][1080p][繁体].mkv</span> → <span class="out">藥屋少女的呢喃 [01].mkv</span>（[01] 不含质量词，保留）</div></div>
 <div class="flow">▼</div>
 
 <div class="node transform"><div class="head"><span class="no">9</span><span class="kind">transform.text.trim</span><span class="chip cat-transform">Transform</span><span class="chip scope">scope: Files</span></div>
+<div class="io"><span class="t">IN</span> item.fs.entry　<span class="t">OUT</span> item.fs.entry ｜ 基数 1→1</div>
 <table class="cfg"><tr><td>（配置同节点 4）</td><td class="mono">true / true / true</td></tr></table></div>
 <div class="flow">▼</div>
 
 <div class="node transform"><div class="head"><span class="no">10</span><span class="kind">transform.text.capture</span><span class="chip cat-transform">Transform</span><span class="chip scope">scope: Files</span></div>
+<div class="io"><span class="t">IN</span> item.fs.entry　<span class="t">OUT</span> item.fs.entry ｜ 基数 1→1 ｜ <span class="v">提供 var:ep</span>（onMiss 时不提供）</div>
 <table class="cfg">
 <tr><td>source</td><td class="mono">WorkingName</td></tr>
 <tr><td>pattern</td><td class="mono">(?:-\s*|\[)(?&lt;ep&gt;\d{2,3})(?:\]|\s|$)</td></tr>
@@ -142,6 +155,7 @@ footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(
 <div class="flow">▼</div>
 
 <div class="node transform"><div class="head"><span class="no">11</span><span class="kind">transform.text.template</span><span class="chip cat-transform">Transform</span><span class="chip scope">scope: Files</span><span class="chip scope">requiredVars: [title, ep]</span></div>
+<div class="io"><span class="t">IN</span> item.fs.entry　<span class="t">OUT</span> item.fs.entry ｜ 基数 1→1 ｜ <span class="v">需要 var:title、var:ep</span>（缺失→节点跳过；编辑器 lint 上游供给：title←节点5经继承、ep←节点10）</div>
 <table class="cfg">
 <tr><td>template</td><td class="mono">{var:title} - {var:ep:pad(2)}{extension}</td></tr>
 <tr><td>缺变量行为</td><td class="mono">requiredVars 任一缺失 → 整节点跳过（WorkingName 保持上游清洗结果）</td></tr></table>
@@ -149,6 +163,7 @@ footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(
 <div class="flow">▼</div>
 
 <div class="node action"><div class="head"><span class="no">12</span><span class="kind">action.fs.saveName</span><span class="chip cat-action">Action</span><span class="chip scope">scope: Both</span></div>
+<div class="io"><span class="t">IN</span> item.fs.entry　<span class="t">OUT</span> item.fs.entry（链终点）｜ 基数 1→1 ｜ 副作用：Preview 记计划 / Apply 改名 + FileRenameRecord</div>
 <table class="cfg">
 <tr><td>mode</td><td class="mono">Preview（默认；确认后按计划 Apply）</td></tr>
 <tr><td>applyOrder</td><td class="mono">DeepestFirst（先改文件、后改父目录 → 父目录改名不会使子计划路径失效）</td></tr>
@@ -178,7 +193,26 @@ footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(
 └─ <span class="kept">Comiket103/</span>                            <span class="dim">← 未触碰</span></pre>
 <p class="note">Apply 顺序（DeepestFirst）：8 个文件先改，2 个目录后改；全部写入 <code class="i">FileRenameRecord</code>，一键逆序撤销。</p>
 
-<h2><span class="n">§5</span>本例暴露并已并入设计的增量</h2>
+<h2><span class="n">§5</span>Workflow 视角：类型契约与冲突隔离</h2>
+<p>本功能的节点与其他功能（exhentai / pixiv / subscription…）注册在<b>同一个</b>活动注册表里，但不会互相冲突，隔离靠三层机制：</p>
+<ul>
+<li><b>kind 命名空间</b>：注册表以 kind 字符串为唯一键（<code class="i">WorkflowActivityKinds.Build</code> 校验段格式）——<code class="i">transform.text.*</code> / <code class="i">filter.fs.*</code> / <code class="i">expand.fs.*</code> / <code class="i">action.fs.*</code> 与 <code class="i">*.exhentai.*</code> 等天然不撞。</li>
+<li><b>硬契约 = item 类型白名单（编辑器报错级）</b>：本功能全部活动声明 <code class="i">AcceptedInputItemTypes = ["item.fs.entry"]</code>，触发器输出同类型。编辑器与 <code class="i">WorkflowDefinitionService</code> 左到右追踪当前类型——ExHentai 画廊链里放不进 <code class="i">action.fs.saveName</code>（item.exhentai.gallery ∉ 白名单），反之亦然。<code class="i">expand.fs.children</code> 是基数变化（1→N）不是类型变化，校验直通。</li>
+<li><b>软契约 = 变量供需（编辑器 lint 级）</b>：capture 节点按配置声明"提供 var:x"，template 声明 <code class="i">requiredVars</code>——编辑器静态核对上游供给链（含 expand 继承），缺口给 warning 而非 error（capture 可能条件性命中，运行期由 requiredVars 跳过兜底）。</li>
+</ul>
+<p class="note">互操作是特性不是冲突：<code class="i">AcceptedInputItemTypes</code> 为空的通用节点（如未来的"发通知"action）接受任意类型，可自由插入本链；picker 按 Group 分桶展示，无关节点不会混入视野。</p>
+<table class="t"><tr><th>节点</th><th>IN → OUT</th><th>基数</th><th>变量契约</th></tr>
+<tr><td class="mono">T fileCleaning.manual</td><td class="mono">payload → item.fs.entry</td><td>0→N</td><td>—</td></tr>
+<tr><td class="mono">1 filter.fs.byRegex</td><td class="mono">item.fs.entry → 同</td><td>1→0/1</td><td>—</td></tr>
+<tr><td class="mono">2–4 removeWrapped/trim ×3</td><td class="mono">item.fs.entry → 同</td><td>1→1</td><td>—</td></tr>
+<tr><td class="mono">5 capture</td><td class="mono">item.fs.entry → 同</td><td>1→1</td><td class="mono">提供 title</td></tr>
+<tr><td class="mono">6 expand.fs.children</td><td class="mono">item.fs.entry → 同</td><td><b>1→N+1</b></td><td>子项继承全部变量</td></tr>
+<tr><td class="mono">7–9 removeWrapped/trim ×3</td><td class="mono">item.fs.entry → 同</td><td>1→1</td><td>—</td></tr>
+<tr><td class="mono">10 capture</td><td class="mono">item.fs.entry → 同</td><td>1→1</td><td class="mono">提供 ep（onMiss 不提供）</td></tr>
+<tr><td class="mono">11 template</td><td class="mono">item.fs.entry → 同</td><td>1→1</td><td class="mono">需要 title + ep</td></tr>
+<tr><td class="mono">12 action.fs.saveName</td><td class="mono">item.fs.entry → 同（终点）</td><td>1→1</td><td>—（副作用：计划/改名）</td></tr></table>
+
+<h2><span class="n">§6</span>本例暴露并已并入设计的增量</h2>
 <ul>
 <li><b>链中展开</b>：<code class="i">expand.fs.children</code>（引擎新增 <code class="i">ExpandTo</code> outcome）——多层级处理与变量继承的前提，从"开放问题"转正。</li>
 <li><b>变量机制</b>：<code class="i">FsEntryItem.Variables</code> + <code class="i">transform.text.capture</code>（正则具名捕获，不改名）+ 配置中 <code class="i">{var:name(:formatter)}</code> 插值——节点联动的通道。</li>

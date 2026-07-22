@@ -36,6 +36,8 @@ public sealed record FsEntryItem
 
 核心不变量：**链上一切文本变更只作用于 `WorkingName`；磁盘操作只发生在 saveName 节点**。这天然把"计算新名字"与"落盘"分成两段，预览因此免费。
 
+**类型契约**：本功能全部活动声明 `AcceptedInputItemTypes = ["item.fs.entry"]`，触发器 `ResolveOutputItemType` 亦返回该类型——编辑器/`WorkflowDefinitionService` 的左到右类型校验使本功能节点与其他功能（exhentai/pixiv 等）的专属节点**天然互斥**；`AcceptedInputItemTypes` 为空的通用节点（如未来的通知 action）可自由插入本链，是特性而非冲突。变量提供/需求（capture 提供、template 需要）作为**软契约**由编辑器 lint（warning 而非 error——capture 可能条件性命中）。节点出入参明细见[示例](file-cleaning-workflow-example.html) §5。
+
 **节点通用选项**（所有 fs 域活动支持）：
 - `scope: Files | Directories | Both`——不命中的 item **原样放行**（跳过 ≠ 丢弃）。这是混合 item（文件+目录）流经同一条线性链的前提。
 - `requiredVars: string[]`——任一变量缺失则跳过本节点（如模板节点缺 `ep` 时保住上游清洗结果）。
@@ -117,14 +119,16 @@ FileRenameRecord   RunId, Seq, Path(父目录), From, To, RenamedAt, Undone
 
 ## SpecialText 扩展：用户自定义文本类型（文本集）
 
-现状：`SpecialTextType` 固定枚举七种（Useless/Wrapper/Standardization/Volume/Trim/DateTime/Language），行为 (Type, Value1, Value2)。扩展方案（最小改动）：
+现状：`SpecialTextType` 固定枚举七种（Useless/Wrapper/Standardization/Volume/Trim/DateTime/Language），行为 (Type, Value1, Value2)。扩展方案：
 
 1. 枚举新增 `SpecialTextType.Custom = 100`；
-2. `SpecialText` 表加一列 `string? CustomTypeName`（仅 Type=Custom 时有值）——同名即同一个"文本集"，不引入新表；
-3. text 管理页：自定义类型与内置类型并列展示，支持建集、批量录入、导入导出；
-4. 节点里的"文本集引用" = 内置类型名或自定义类型名（如「字幕组名单」「广告词」）。
+2. 新增小表 `CustomTextType(Id, Name, Description?)`——**类型需要稳定 id**：节点按 id 引用，改名不破坏引用；元数据与将来的分享有落点；
+3. `SpecialText` 表加可空列 `CustomTypeId`（仅 Type=Custom 时有值，FK → CustomTextType）；自定义行 Value1 = 文本，Value2 暂不用；
+4. 节点里的"文本集引用"统一为一个判别引用 `TextSetRef`：序列化形如 `builtin:{枚举值}` 或 `custom:{id}`——`removeWrapped.textSet` 等参数因此既能引用内置类型也能引用自定义集；
+5. text 管理页：自定义类型与内置类型并列展示，支持建集、批量录入、导入导出；示例用的「质量与发布标签」以**可编辑的种子数据**下发（而非硬编码内置类型）；
+6. **对既有消费点零影响**：legacy 代码均按具体枚举值查询，`Custom` 行对它们不可见。
 
-> EF 迁移按仓库规则 CLI 生成、纯 schema。若未来自定义类型需要元数据（描述/颜色/分享），再升级为独立表，引用方式不变。
+> EF 迁移按仓库规则 CLI 生成、纯 schema。**实施顺序：本扩展是整个功能唯一的 schema 变更，第一步先做**——独立可交付（text 页增强本身就有价值），节点实现全部依赖它。
 
 ## 执行与 UI
 
