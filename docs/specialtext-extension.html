@@ -37,127 +37,144 @@ td.k{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:12px;
 footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(--line);padding-top:14px}
 </style></head><body><div class="wrap">
 <h1>SpecialText 扩展 · 文本系统架构设计</h1>
-<p class="sub">自定义文本类型成为一等公民；词汇（vocabulary）与操作（operations）分离；文本系统迁入独立模块</p>
-<p class="note">状态：<b>设计定稿，实施第一步</b>（<a href="workflow-capability-map.html">能力全景</a>实施顺序的前置项）。前提：全部仓库仅 Bakabase 自身消费，<b>接口与方法可自由退役/改名</b>——本设计据此做干净拆分而非兼容打补丁。消费方：<a href="file-cleaning-workflow.html">文件清洗</a>的 text 节点与文本集引用。</p>
-<div class="toc"><a href="#s1">1 现状盘点</a><a href="#s2">2 目标与原则</a><a href="#s3">3 数据模型与迁移</a><a href="#s4">4 服务重构</a><a href="#s5">5 消费点迁移</a><a href="#s6">6 种子机制</a><a href="#s7">7 API 与前端</a><a href="#s8">8 实施切分</a><a href="#s9">9 风险与开放问题</a></div>
+<p class="sub">内置与自定义合并为单一抽象 TextType；词汇（vocabulary）与操作（operations）分离；文本系统迁入独立模块</p>
+<p class="note">状态：<b>设计定稿，实施第一步</b>（<a href="workflow-capability-map.html">能力全景</a>实施顺序的前置项）。前提：全部仓库仅 Bakabase 自身消费，<b>接口、方法、模型、表名均可自由退役/改名</b>——本设计据此做统一重塑而非兼容打补丁。消费方：<a href="file-cleaning-workflow.html">文件清洗</a>的 text 节点与文本集引用。</p>
+<div class="toc"><a href="#s1">1 现状盘点</a><a href="#s2">2 目标与原则</a><a href="#s3">3 统一数据模型</a><a href="#s4">4 服务重构</a><a href="#s5">5 消费点迁移</a><a href="#s6">6 数据迁移与种子</a><a href="#s7">7 API 与前端</a><a href="#s8">8 实施切分</a><a href="#s9">9 风险与开放问题</a></div>
 
 <h2 id="s1"><span class="n">§1</span>现状盘点<span class="note">（已在代码核实）</span></h2>
 <table><tr><th style="width:18%">项</th><th>现状</th></tr>
 <tr><td>数据模型</td><td class="mono">SpecialText { Id, Value1(≤64, required), Value2(≤64), Type }；SpecialTextType 固定枚举七种：Useless=1 / Wrapper=3 / Standardization=4 / Volume=6 / Trim=7 / DateTime=8 / Language=9</td></tr>
 <tr><td>服务</td><td><code class="i">ISpecialTextService</code>（abstractions）+ <code class="i">SpecialTextService</code>（legacy Business）。活跃方法：<code class="i">Pretreatment</code>（清洗）、<code class="i">GetAll(表达式过滤)</code>、<code class="i">GetAllWrappers</code>、<code class="i">TryToParseDateTime</code>×2、CRUD（Add/Patch/DeleteByKey/AddRange/Count）、<code class="i">AddPrefabs</code>（种子）。接口中另有十余个<b>已注释的废弃成员</b>（历史包袱）</td></tr>
 <tr><td>种子</td><td><code class="i">SpecialTextPrefabs.Texts</code> 静态预制 + <code class="i">AddPrefabs()</code> 补缺式投放</td></tr>
-<tr><td>消费面</td><td>约 15 个文件：关键词增强器族（Pretreatment）、BakabaseEnhancer（GetAll 原始行 ×6：wrapper/语言/卷词表）、ResourceService 显示名（Wrapper 对）、Comparison 归一化、下载器命名（Pixiv/Bilibili/Abstract）、FileController、MediaLibraryTemplateService、SpecialTextController（CRUD API）、text 前端页、SpecialTextServiceTests</td></tr></table>
-<div class="rule warn">三个问题：① 类型封闭——用户无法定义自己的文本集（<a href="file-cleaning-workflow.html">清洗节点</a>的硬需求）；② 单接口混合三种职责（词汇存储 CRUD / 文本操作 / 种子），操作方法难以独立单测与复用；③ 接口里大量注释废弃成员，是"只加不减"历史的直接证据——这次一并清理。</div>
+<tr><td>消费面</td><td>约 15 个文件：关键词增强器族（Pretreatment）、BakabaseEnhancer（GetAll 原始行 ×6：wrapper/语言/卷词表）、ResourceService 显示名（Wrapper 对）、Comparison 归一化、下载器命名（Pixiv/Bilibili/Abstract）、FileController、MediaLibraryTemplateService、SpecialTextController（CRUD API）、text 前端页、SpecialTextServiceTests</td></tr>
+<tr><td>数据迁移先例</td><td class="mono">Bakabase.Migrations 已有 app 级迁移器体系（V220Migrator / V230Migrator / PathsRelocationMigrator）——数据转换在应用启动期执行，EF 迁移保持纯 schema（仓库规则）</td></tr></table>
+<div class="rule warn">三个问题：① 类型封闭——用户无法定义自己的文本集（<a href="file-cleaning-workflow.html">清洗节点</a>的硬需求）；② 单接口混合三种职责（词汇存储 CRUD / 文本操作 / 种子）；③ 若内置走枚举、自定义走新表，则"选类型"的每个 UI 与每个引用都要处理两套形态——判别引用（builtin:x / custom:y）是缝合的味道，不是设计。</div>
 
 <h2 id="s2"><span class="n">§2</span>目标与原则</h2>
 <ol>
-<li><b>自定义类型一等公民</b>：用户可建任意命名文本集（字幕组名单、广告词…），与内置类型并列管理，被节点按稳定 id 引用（改名不破坏引用）。</li>
-<li><b>词汇与操作分离</b>：存什么词（vocabulary）与拿词做什么（operations）是两个服务。操作服务即<a href="file-cleaning-workflow.html">清洗设计</a>中的 <code class="i">TextOps</code>——无状态、纯函数化、全量可单测，workflow 文本节点 / 增强器 / 下载器 / 对比归一共用。</li>
-<li><b>独立模块安家</b>：新建 <code class="i">Bakabase.Modules.Text</code>（models / services / extensions 标准五段式），承载词汇服务、TextOps、以及后续的 workflow 文本节点实现。legacy 的 SpecialTextService 退役。</li>
-<li><b>内置语义零变化</b>：七种内置类型的行为与消费语义完全不变，只换调用入口；Custom 行对 legacy 语义不可见（按具体枚举值查询天然隔离）。</li>
+<li><b>单一抽象</b>：内置与自定义类型合并为一个实体 <code class="i">TextType</code>，<b>单一 id 空间</b>——节点/选择器/API 眼中只有"文本类型列表"，引用就是一个 <code class="i">typeId</code>，判别前缀（builtin:/custom:）不存在。内置性通过 <code class="i">WellKnown</code> 句柄表达，是行的属性而非另一种实体。</li>
+<li><b>词汇与操作分离</b>：存什么词（vocabulary）与拿词做什么（operations）是两个服务。操作服务即<a href="file-cleaning-workflow.html">清洗设计</a>中的 <code class="i">TextOps</code>——无状态、纯函数化、全量可单测。</li>
+<li><b>独立模块安家</b>：新建 <code class="i">Bakabase.Modules.Text</code>，承载词汇服务、TextOps、以及后续的 workflow 文本节点。legacy 的 SpecialTextService、<code class="i">SpecialText</code> 命名整体退役。</li>
+<li><b>内置语义零变化、用户数据不丢</b>：七种内置类型的行为与消费语义不变（换句柄不换行为）；既有 SpecialText 行经 app 级迁移器转入新表（七值查表映射，成本极低），不接受数据丢失。</li>
 </ol>
 
-<h2 id="s3"><span class="n">§3</span>数据模型与迁移</h2>
-<pre class="code"><code><span class="cm">// 枚举：新增一个成员，既有值不动</span>
-public enum SpecialTextType { Useless = 1, Wrapper = 3, Standardization = 4,
-    Volume = 6, Trim = 7, DateTime = 8, Language = 9, <b>Custom = 100</b> }
+<h2 id="s3"><span class="n">§3</span>统一数据模型</h2>
+<pre class="code"><code><span class="cm">// 类型：内置与自定义同表同权，单一 id 空间</span>
+TextType  { Id, Name(≤64, 唯一), WellKnown?: WellKnownTextType,   <span class="cm">// 非空 = 内置（代码句柄）</span>
+            Shape: Values | Pairs,                                 <span class="cm">// 值集合 / 成对集合</span>
+            Description?(≤256), CreatedAt }
 
-<span class="cm">// 新表：自定义类型（需要稳定 id——节点按 id 引用，改名不破坏引用；元数据与将来分享的落点）</span>
-CustomTextType { Id, Name(≤64, 唯一), Description?(≤256), CreatedAt }
+<span class="cm">// 条目：原 SpecialText 行的新家</span>
+TextEntry { Id, TypeId(FK → TextType), Value1(≤64), Value2(≤64) }  <span class="cm">// Pairs 型用 Value1+Value2</span>
 
-<span class="cm">// 既有表：加一列（仅 Type=Custom 时有值）</span>
-SpecialText { Id, Value1(≤64), Value2(≤64), Type, <b>CustomTypeId?（FK → CustomTextType）</b> }
-<span class="cm">// 自定义行：Value1 = 文本，Value2 暂不用</span>
-
-<span class="cm">// 文本集引用：判别联合，节点配置中序列化为 "builtin:3" / "custom:12"</span>
-public readonly record struct TextSetRef(TextSetKind Kind, int Key);   <span class="cm">// Kind: Builtin | Custom</span></code></pre>
-<p class="note">EF 迁移按仓库规则 CLI 生成、纯 schema（一张新表 + 一列 + 枚举成员）。枚举变更后 <code class="i">yarn gen-sdk</code> 重生成前端常量（api-conventions）。</p>
+<span class="cm">// 代码句柄：值沿用原枚举，语义由消费点绑定；SpecialTextType / SpecialText 命名退役</span>
+public enum WellKnownTextType { Useless = 1, Wrapper = 3, Standardization = 4,
+    Volume = 6, Trim = 7, DateTime = 8, Language = 9 }</code></pre>
+<table><tr><th>规则</th><th>内置（WellKnown ≠ null）</th><th>自定义</th></tr>
+<tr><td>删除类型 / 改名</td><td>❌ 拒绝（Name 为规范名，前端按 WellKnown 键做本地化显示）</td><td>✅</td></tr>
+<tr><td>增删条目</td><td>✅（今天即允许，行为不变）</td><td>✅</td></tr>
+<tr><td>Shape</td><td>种子固定：Wrapper / Standardization = Pairs，其余 = Values</td><td>建类型时二选一——<b>自定义 Pairs 直接可用作 removeWrapped 的包装符对</b>（统一抽象的直接红利）</td></tr>
+<tr><td>语义</td><td>由代码消费点经 WellKnown 句柄绑定（清洗/日期解析/显示名包装符…）</td><td>无内置语义，仅被节点/功能按 typeId 引用</td></tr></table>
+<p class="note">EF 迁移纯 schema：两张新表 + 枚举（gen-sdk 重生成）。旧 <code class="i">SpecialText</code> 表保留至数据迁移完成，PR3 的清理迁移中 drop（§6/§8）。</p>
 
 <h2 id="s4"><span class="n">§4</span>服务重构：一拆二，旧接口退役</h2>
 <pre class="code"><code><span class="cm">// Bakabase.Modules.Text —— 文本系统的家</span>
 
-public interface ITextVocabularyService        <span class="cm">// 词汇：存储、集合、种子（带内存缓存，CRUD 时失效）</span>
+public interface ITextVocabularyService        <span class="cm">// 词汇：类型、条目、集合解析、种子（内存缓存，CRUD 失效）</span>
 {
-    <span class="cm">// 行 CRUD（承接原 Add/Patch/DeleteByKey/AddRange/Count；表达式过滤退役，改显式参数——
-    //  现存 6 个 GetAll 调用点全部是按 Type 查询，显式参数足够且更利于缓存）</span>
-    Task&lt;List&lt;SpecialText&gt;&gt; GetAll(SpecialTextType? type = null, int? customTypeId = null);
-    Task&lt;SpecialText&gt; Add(SpecialTextAddInputModel model);
-    Task Patch(int id, SpecialTextPatchInputModel model);
-    Task Delete(int id);
-    Task AddRange(List&lt;SpecialText&gt; texts);
+    <span class="cm">// 类型（内置+自定义一个列表——节点选择器/管理页的唯一数据源）</span>
+    Task&lt;List&lt;TextTypeDescriptor&gt;&gt; GetTypes();
+    Task&lt;TextType&gt; AddType(string name, TextTypeShape shape, string? description);
+    Task RenameType(int id, string name);                <span class="cm">// WellKnown 行拒绝</span>
+    Task DeleteType(int id, bool deleteEntries);         <span class="cm">// WellKnown 行拒绝</span>
 
-    <span class="cm">// 自定义类型</span>
-    Task&lt;List&lt;CustomTextType&gt;&gt; GetCustomTypes();
-    Task&lt;CustomTextType&gt; AddCustomType(string name, string? description);
-    Task RenameCustomType(int id, string name);          <span class="cm">// 按 id 引用 → 改名安全</span>
-    Task DeleteCustomType(int id, bool deleteTexts);
+    <span class="cm">// 条目 CRUD（承接原 Add/Patch/DeleteByKey/AddRange）</span>
+    Task&lt;List&lt;TextEntry&gt;&gt; GetEntries(int typeId);
+    Task&lt;TextEntry&gt; AddEntry(int typeId, string value1, string? value2 = null);
+    Task PatchEntry(int id, string value1, string? value2);
+    Task DeleteEntry(int id);
+    Task AddEntries(int typeId, List&lt;(string Value1, string? Value2)&gt; entries);
 
-    <span class="cm">// 文本集解析——消费方唯一的"读词"入口</span>
-    Task&lt;TextSet&gt; ResolveSet(TextSetRef @ref);           <span class="cm">// Wrapper → 成对；其余 → 值列表</span>
+    <span class="cm">// 集合解析——消费方唯一的"读词"入口；WellKnown 重载供代码消费点使用</span>
+    Task&lt;TextSet&gt; ResolveSet(int typeId);                <span class="cm">// Pairs → 成对；Values → 值列表</span>
+    Task&lt;TextSet&gt; ResolveSet(WellKnownTextType wellKnown);
+    Task&lt;int&gt; GetTypeId(WellKnownTextType wellKnown);
 
     Task EnsureSeeds();                                  <span class="cm">// 承接 AddPrefabs（§6）</span>
 }
 
+public sealed record TextTypeDescriptor(                 <span class="cm">// 聚合视图：选择器与管理页直接消费</span>
+    int Id, string Name, WellKnownTextType? WellKnown, TextTypeShape Shape,
+    string? Description, int EntryCount)
+{ public bool IsBuiltin =&gt; WellKnown != null; }
+
 public interface ITextOps                      <span class="cm">// 操作：无状态核心 + 词汇注入，全量可单测</span>
 {
-    Task&lt;string&gt; Clean(string text);                     <span class="cm">// 承接 Pretreatment（保留 profile 扩展位：
-                                                          //  判等归一化 vs 检索归一化，Organizer 复活时启用）</span>
-    Task&lt;string&gt; RemoveWrapped(string text, TextSetRef wrappers, TextSetRef set, TextMatchMode mode);
-    Task&lt;string&gt; RemoveTexts(string text, TextSetRef set, TextMatchMode mode);
+    Task&lt;string&gt; Clean(string text);                     <span class="cm">// 承接 Pretreatment（保留 profile 扩展位）</span>
+    Task&lt;string&gt; RemoveWrapped(string text, int wrappersTypeId, int setTypeId, TextMatchMode mode);
+    Task&lt;string&gt; RemoveTexts(string text, int setTypeId, TextMatchMode mode);
     string Trim(string text, TrimOptions options);
     Task&lt;DateTime?&gt; TryParseDateTime(string? text);      <span class="cm">// 承接 TryToParseDateTime（词表驱动）</span>
     string Interpolate(string template, IReadOnlyDictionary&lt;string, string&gt; variables);
-                                                         <span class="cm">// {var:x(:pad(n))} —— 供 template 节点与 E4 插值共用</span>
+                                                         <span class="cm">// {var:x(:pad(n))} —— template 节点与 E4 插值共用</span>
 }</code></pre>
 <table><tr><th>现成员（ISpecialTextService）</th><th>去向</th></tr>
 <tr><td class="k">Pretreatment(name)</td><td class="k">ITextOps.Clean</td></tr>
-<tr><td class="k">GetAllWrappers()</td><td class="k">ITextVocabularyService.ResolveSet(builtin:Wrapper)</td></tr>
+<tr><td class="k">GetAllWrappers()</td><td class="k">ResolveSet(WellKnownTextType.Wrapper)</td></tr>
 <tr><td class="k">TryToParseDateTime ×2</td><td class="k">ITextOps.TryParseDateTime</td></tr>
-<tr><td class="k">GetAll(表达式过滤)</td><td class="k">GetAll(type, customTypeId)（显式参数）</td></tr>
-<tr><td class="k">Add / Patch / DeleteByKey / AddRange / Count</td><td class="k">ITextVocabularyService 对应方法（Count 并入前端分页需要时再加）</td></tr>
+<tr><td class="k">GetAll(表达式过滤)</td><td class="k">GetEntries(typeId) / ResolveSet(wellKnown)（现存 6 个调用点全部是按 Type 查询，句柄化后更利于缓存）</td></tr>
+<tr><td class="k">Add / Patch / DeleteByKey / AddRange / Count</td><td class="k">条目 CRUD 对应方法（Count 随管理页分页需要再加）</td></tr>
 <tr><td class="k">AddPrefabs()</td><td class="k">EnsureSeeds()</td></tr>
 <tr><td class="k">全部已注释的废弃成员</td><td><b>删除</b>（不迁移）</td></tr>
-<tr><td class="k">ISpecialTextService / SpecialTextService(legacy)</td><td><b>退役删除</b>；实现迁入 Bakabase.Modules.Text，逻辑平移 + 拆分</td></tr></table>
+<tr><td class="k">ISpecialTextService / SpecialTextService / SpecialTextType / SpecialText 模型与表</td><td><b>整体退役</b>：实现迁入 Bakabase.Modules.Text（TextType/TextEntry/WellKnownTextType），旧表经 §6 数据迁移后 drop</td></tr></table>
 
 <h2 id="s5"><span class="n">§5</span>消费点迁移（同一 PR 内全量切换）</h2>
 <table><tr><th style="width:34%">消费者</th><th>现调用</th><th>迁移后</th></tr>
 <tr><td>关键词增强器族（AbstractKeywordEnhancer + DLsite/Bangumi/Tmdb/Av/ExHentai）</td><td class="k">Pretreatment</td><td class="k">ITextOps.Clean</td></tr>
-<tr><td>BakabaseEnhancer（wrapper/语言/卷 词表原始行）</td><td class="k">GetAll ×6</td><td class="k">GetAll(type) / ResolveSet</td></tr>
-<tr><td>ResourceService 显示名包装符</td><td class="k">GetAll(Type==Wrapper)</td><td class="k">ResolveSet(builtin:Wrapper)</td></tr>
+<tr><td>BakabaseEnhancer（wrapper/语言/卷 词表原始行）</td><td class="k">GetAll ×6</td><td class="k">ResolveSet(wellKnown) / GetEntries</td></tr>
+<tr><td>ResourceService 显示名包装符</td><td class="k">GetAll(Type==Wrapper)</td><td class="k">ResolveSet(WellKnownTextType.Wrapper)</td></tr>
 <tr><td>Comparison 归一化对比</td><td class="k">Pretreatment</td><td class="k">ITextOps.Clean</td></tr>
 <tr><td>下载器命名（Pixiv/Bilibili/Abstract）</td><td class="k">Pretreatment</td><td class="k">ITextOps.Clean</td></tr>
 <tr><td>FileController / MediaLibraryTemplateService</td><td class="k">GetAll / Pretreatment</td><td>对应新方法</td></tr>
-<tr><td>SpecialTextController</td><td class="k">CRUD + AddPrefabs</td><td>vocabulary 方法 + 新增自定义类型端点（§7）</td></tr>
-<tr><td>SpecialTextServiceTests</td><td>旧服务</td><td>拆为 VocabularyTests + TextOpsTests（后者纯函数，不需要 DB fixture）</td></tr>
-<tr><td><b>workflow 文本节点（新）</b></td><td>—</td><td class="k">ITextOps + ResolveSet（<a href="file-cleaning-workflow.html">清洗设计</a> 3.4）</td></tr></table>
-<div class="rule">迁移审计项：全仓库检索<b>无类型过滤</b>的 <code class="i">GetAll</code> 调用——若存在，必须确认其语义是否应包含 Custom 行（默认不应包含；新签名 <code class="i">GetAll()</code> 无参时返回全部行仅供管理页使用）。</div>
+<tr><td>SpecialTextController</td><td class="k">CRUD + AddPrefabs</td><td>类型/条目端点（§7）；路由更名为 text 域</td></tr>
+<tr><td>SpecialTextServiceTests</td><td>旧服务</td><td>拆为 VocabularyTests + TextOpsTests（后者纯函数，无需 DB fixture）</td></tr>
+<tr><td><b>workflow 文本节点（新）</b></td><td>—</td><td class="k">ITextOps + ResolveSet(typeId)（<a href="file-cleaning-workflow.html">清洗设计</a> 3.4）</td></tr></table>
+<div class="rule">迁移审计项：全仓库检索<b>无类型过滤</b>的旧 <code class="i">GetAll</code> 调用——确认其语义是否应包含自定义类型条目（默认不应；新接口按 typeId 取数，天然不会误伤）。</div>
 
-<h2 id="s6"><span class="n">§6</span>种子机制</h2>
+<h2 id="s6"><span class="n">§6</span>数据迁移与种子</h2>
+<h3>数据迁移（app 级迁移器，先例：PathsRelocationMigrator）</h3>
+<ol>
+<li>PR2 启动期迁移器 <code class="i">TextSystemMigrator</code>：<code class="i">EnsureSeeds()</code> 先投放七个内置 TextType 行 → 将旧 <code class="i">SpecialText</code> 行按 <code class="i">Type</code> 七值查表映射为对应类型的 <code class="i">TextEntry</code>（含用户自行添加的词条，<b>不丢数据</b>）→ 完成后写入迁移完成标记（app options，与 V220/V230 同模式）。</li>
+<li>EF 迁移始终纯 schema（仓库规则）：建表在 PR1，drop 旧表在 PR3 的清理迁移（确认迁移器标记已写入后才发布）。</li>
+</ol>
+<h3>种子</h3>
 <ul>
-<li><code class="i">SpecialTextPrefabs</code> → <code class="i">TextSeedData</code>：内置类型预制词（现有内容原样平移，仍为补缺式投放）+ <b>自定义种子集</b>（首个：「质量与发布标签」——1080p/WebRip/HEVC/Fin/简繁内封…，供 removeWrapped 节点开箱即用）。</li>
-<li><b>幂等语义</b>：内置词补缺式（现行为不变）；自定义种子集<b>只投放一次</b>——在 app options 记录已投放种子版本（种子账本），用户删除集或删词后<b>不复活</b>。种子集与用户自建集同表同权，无特殊标记。</li>
+<li><code class="i">SpecialTextPrefabs</code> → <code class="i">TextSeedData</code>：七个内置类型行（WellKnown + Shape）+ 内置预制词（现有内容平移，仍为补缺式）+ <b>自定义种子集</b>（首个：「质量与发布标签」——供 removeWrapped 节点开箱即用）。</li>
+<li><b>幂等语义</b>：内置词补缺式（现行为不变）；自定义种子集<b>只投放一次</b>（app options 种子账本），用户删除不复活；种子集与用户自建集同表同权。</li>
 </ul>
 
 <h2 id="s7"><span class="n">§7</span>API 与前端</h2>
 <ul>
-<li><b>Controller</b>：SpecialTextController 保留既有路由（行 CRUD / 预制投放改调新服务），新增自定义类型端点（list/add/rename/delete）与 <code class="i">ResolveSet</code> 预览端点（供节点配置表单回显集合内容）。SDK 按 api-conventions 重生成并随 PR 提交。</li>
-<li><b>text 页</b>：改为两个分区——内置类型（现有 UI 平移）+ 自定义类型（建集、改名、批量录入〔逐行粘贴〕、导入/导出 JSON）。</li>
-<li><b>TextSetRef 选择器组件</b>：下拉分组展示"内置 / 自定义"，供 workflow 节点配置表单复用（removeWrapped 的 wrappers 与 textSet 参数、removeTexts 的 set 参数）。</li>
+<li><b>Controller</b>：更名为 text 域路由。端点：<code class="i">GetTypes</code>（聚合列表——<b>选择器与管理页共用这一个接口</b>）、类型 CRUD（内置行服务端拒绝删/改名）、条目 CRUD、<code class="i">ResolveSet(typeId)</code> 预览（节点配置表单回显集合内容）。SDK 按 api-conventions 重生成并随 PR 提交。</li>
+<li><b>text 页</b>：<b>一个统一列表</b>（不再内置/自定义两个分区）——内置行带 <span class="tag">内置</span> 徽标、名称本地化、禁用删除/改名；其余交互一致：批量录入（逐行粘贴）、Pairs 型成对录入、导入/导出 JSON。</li>
+<li><b>TextType 选择器组件</b>：单个下拉、单一列表（内置徽标区分，按 Shape 过滤——wrappers 参数只列 Pairs 型），供 workflow 节点配置表单复用。没有"两种引用"的概念。</li>
 </ul>
 
 <h2 id="s8"><span class="n">§8</span>实施切分（三个可独立合并的 PR）</h2>
 <table><tr><th style="width:10%">PR</th><th>内容</th><th style="width:28%">验收</th></tr>
-<tr><td class="k">PR1 schema</td><td>枚举 Custom=100 + CustomTextType 表 + SpecialText.CustomTypeId 列（EF CLI 迁移）+ gen-sdk</td><td>零行为变化；迁移可回滚</td></tr>
-<tr><td class="k">PR2 模块与拆分</td><td>新建 Bakabase.Modules.Text；ITextVocabularyService + ITextOps 落地（逻辑自 legacy 平移+拆分）；<b>退役 ISpecialTextService</b> 并全量切换 ~15 个消费文件；Controller 改调新服务（路由不变）；测试拆分</td><td>dotnet build 全绿；SpecialText 相关测试全过；text 页与既有功能行为无回归</td></tr>
-<tr><td class="k">PR3 自定义类型 UI 与种子</td><td>自定义类型端点 + text 页分区 + TextSetRef 选择器 + TextSeedData/种子账本 + 「质量与发布标签」种子集</td><td>用户可建集/录入/引用；种子幂等（删除不复活）</td></tr></table>
-<p class="note">PR2 是唯一的大改，但风险受控：调用点仅 ~15 个文件、语义一一对应（§4 映射表）、且操作逻辑平移后立即获得纯函数单测覆盖。PR3 之后，<a href="file-cleaning-workflow.html">清洗功能</a>的节点实现即可开始（E1/E3/E4 并行推进）。</p>
+<tr><td class="k">PR1 schema</td><td>TextType / TextEntry 两张新表 + WellKnownTextType 枚举（EF CLI 迁移，纯 schema）+ gen-sdk。旧表旧服务原样运行</td><td>零行为变化；迁移可回滚</td></tr>
+<tr><td class="k">PR2 模块与切换</td><td>新建 Bakabase.Modules.Text；ITextVocabularyService + ITextOps 落地（逻辑自 legacy 平移+拆分）；种子（内置类型行）+ <b>TextSystemMigrator 数据迁移器</b>；<b>退役 ISpecialTextService</b> 并全量切换 ~15 个消费文件；Controller 更名改造；测试拆分</td><td>dotnet build 全绿；文本相关测试全过；既有功能无回归；旧行全部迁入新表</td></tr>
+<tr><td class="k">PR3 UI 与清理</td><td>text 页统一列表 + TextType 选择器组件 + TextSeedData「质量与发布标签」种子集 + 导入导出 + <b>清理迁移 drop 旧 SpecialText 表</b></td><td>用户可建集/录入/引用；种子幂等（删除不复活）；旧表移除</td></tr></table>
+<p class="note">PR2 是唯一的大改，但风险受控：调用点 ~15 个文件、语义一一对应（§4 映射表）、操作逻辑平移后立即获得纯函数单测覆盖、数据迁移是七值查表。PR3 之后，<a href="file-cleaning-workflow.html">清洗功能</a>的节点实现即可开始（E1/E3/E4 并行推进）。</p>
 
 <h2 id="s9"><span class="n">§9</span>风险与开放问题</h2>
 <ul>
-<li><b>Value1 长度（≤64）</b>：字幕组名/质量词足够；若自定义场景出现长文本（整句广告），PR1 时一并评估扩到 128。</li>
-<li><b>Clean 的双 profile</b>：判等归一化（保守，保留序数/卷号）vs 检索归一化（激进）——接口预留参数位，Organizer 复活时启用，当前单一行为与 Pretreatment 一致。</li>
-<li><b>分享</b>：自定义集走 Sharable 体系导入导出——PR3 仅做 JSON 导入导出，Sharable 集成随使用量决策。</li>
-<li><b>Volume/Language 等富语义类型的自定义化</b>：本设计只开放"值集合"型自定义；带解析语义的自定义类型（如自定义日期格式）不在本期范围。</li>
+<li><b>数据迁移器的幂等与失败恢复</b>：迁移器需可重入（按旧行 id 断点续迁或整体事务）；完成标记写入前旧表只读不删。</li>
+<li><b>Value1 长度（≤64）</b>：字幕组名/质量词足够；若出现长文本需求，PR1 建表时一并评估 128。</li>
+<li><b>内置类型 Name 本地化</b>：行内 Name 存规范英文名，前端按 WellKnown 键取本地化显示——避免把 UI 文案存进数据库。</li>
+<li><b>Clean 的双 profile</b>（判等 vs 检索归一化）：接口预留参数位，Organizer 复活时启用。</li>
+<li><b>富语义自定义类型</b>（自定义日期格式等带解析语义者）不在本期范围；本期自定义仅 Values / Pairs 两种 Shape。</li>
+<li><b>分享</b>：自定义集导入/导出 JSON 先行，Sharable 集成随使用量决策。</li>
 </ul>
 <footer>SpecialText 扩展设计 · 关联：<a href="file-cleaning-workflow.html">文件清洗设计</a> · <a href="workflow-capability-map.html">Workflow 能力全景</a></footer>
 </div></body></html>

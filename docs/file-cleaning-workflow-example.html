@@ -88,8 +88,8 @@ footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(
 <div class="node transform"><div class="head"><span class="no">2</span><span class="kind">transform.text.removeWrapped</span><span class="chip cat-transform">Transform · 通用文本</span></div>
 <div class="io"><span class="t">IN</span> 能力:ITextWorkpiece（本链此处 = item.fs.entry，<b>作用于其工作文本 WorkingName</b>）　<span class="t">OUT</span> 同 ｜ 基数 1→1</div>
 <table class="cfg">
-<tr><td>wrappers</td><td class="mono">[] 【】 （textSetRef = builtin:Wrapper）</td></tr>
-<tr><td>textSet</td><td>自定义文本集 <code class="i">「字幕组名单」</code>（textSetRef = custom:1；含 LoliHouse、桜都字幕组、桜都字幕組…）</td></tr>
+<tr><td>wrappers</td><td class="mono">[] 【】 （textTypeId = #3「包装符」，内置·Pairs）</td></tr>
+<tr><td>textSet</td><td>自定义文本集 <code class="i">「字幕组名单」</code>（textTypeId = #11「字幕组名单」，自定义；含 LoliHouse、桜都字幕组、桜都字幕組…）</td></tr>
 <tr><td>match</td><td class="mono">EqualsAny（括号内容全等于集合任一项）</td></tr></table>
 <div class="fx"><span class="in">[LoliHouse] 葬送のフリーレン…</span> → <span class="out">葬送のフリーレン Sousou no Frieren [WebRip 1080p HEVC-10bit AAC]</span></div></div>
 <div class="flow">▼</div>
@@ -98,7 +98,7 @@ footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(
 <div class="io"><span class="t">IN</span> 能力:ITextWorkpiece　<span class="t">OUT</span> 同 ｜ 基数 1→1</div>
 <table class="cfg">
 <tr><td>wrappers</td><td class="mono">[]</td></tr>
-<tr><td>textSet</td><td>自定义文本集 <code class="i">「质量与发布标签」</code>（textSetRef = custom:2；1080p、WebRip、HEVC、AAC、Fin、简繁内封…）</td></tr>
+<tr><td>textSet</td><td>自定义文本集 <code class="i">「质量与发布标签」</code>（textTypeId = #12「质量与发布标签」，自定义种子集；1080p、WebRip、HEVC、AAC、Fin、简繁内封…）</td></tr>
 <tr><td>match</td><td class="mono">ContainsAny（括号内容包含集合任一项即整段删除）</td></tr></table>
 <div class="fx"><span class="in">药屋少女的呢喃 [01-24 Fin][1080p][简繁内封]</span> → <span class="out">药屋少女的呢喃</span></div></div>
 <div class="flow">▼</div>

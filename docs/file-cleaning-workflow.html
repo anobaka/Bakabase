@@ -105,7 +105,7 @@ public sealed record FsEntryItem : ITextWorkpiece
 
 <h3>3.4 Transform 活动（文本变更节点，任意个、任意序）</h3>
 <table><tr><th>kind</th><th>契约</th><th>行为</th><th>配置</th></tr>
-<tr><td class="k">transform.text.removeWrapped</td><td><span class="tag">能力: ITextWorkpiece</span></td><td><b>删除包装符内命中文本集的片段</b></td><td>包装符对（TextSetRef，如 builtin:Wrapper）+ 文本集引用 + 命中方式（等于/包含/正则）</td></tr>
+<tr><td class="k">transform.text.removeWrapped</td><td><span class="tag">能力: ITextWorkpiece</span></td><td><b>删除包装符内命中文本集的片段</b></td><td>包装符类型引用 + 文本集类型引用（统一 <code class="i">TextType</code> id，§5）+ 命中方式（等于/包含/正则）</td></tr>
 <tr><td class="k">transform.text.removeTexts</td><td><span class="tag">能力: ITextWorkpiece</span></td><td>删除命中文本集的裸文本片段</td><td>文本集引用 + 命中方式</td></tr>
 <tr><td class="k">transform.text.trim</td><td><span class="tag">能力: ITextWorkpiece</span></td><td>清理残留：连续空格/头尾空白/空括号对</td><td>开关组</td></tr>
 <tr><td class="k">transform.text.capture</td><td><span class="tag">能力: ITextWorkpiece</span></td><td><b>不改文本，只捕获</b>：正则具名捕获组 → 写入随行袋（组名即变量名）</td><td>pattern + onMiss（SkipSilently/标记）</td></tr>
@@ -129,16 +129,14 @@ FileRenameRecord   RunId, Seq, Path(父目录), From, To, RenamedAt, Undone   <s
 
 <h2 id="s5"><span class="n">§5</span>SpecialText 扩展：用户自定义文本类型（文本集）</h2>
 <p class="note"><b>完整架构设计（现状盘点 / 服务拆分 ITextVocabularyService + ITextOps / 消费点迁移 / PR 切分）见 <a href="specialtext-extension.html">specialtext-extension.html</a></b>，本节仅存要点概览。</p>
-<p>现状：<code class="i">SpecialTextType</code> 固定枚举七种（Useless/Wrapper/Standardization/Volume/Trim/DateTime/Language），行为 (Type, Value1, Value2)。扩展方案：</p>
+<p>要点（详细模型/服务/迁移以扩展设计文档为准）：</p>
 <ol>
-<li>枚举新增 <code class="i">SpecialTextType.Custom = 100</code>；</li>
-<li>新增小表 <code class="i">CustomTextType(Id, Name, Description?)</code>——<b>类型需要稳定 id</b>：节点按 id 引用，改名不破坏引用；元数据与将来的分享有落点；</li>
-<li><code class="i">SpecialText</code> 表加可空列 <code class="i">CustomTypeId</code>（FK）；自定义行 Value1 = 文本；</li>
-<li>节点的"文本集引用"统一为判别引用 <code class="i">TextSetRef</code>：<code class="i">builtin:{枚举值}</code> 或 <code class="i">custom:{id}</code>；</li>
-<li>text 管理页并列展示内置与自定义类型，支持建集/批量录入/导入导出；示例的「质量与发布标签」以<b>可编辑种子数据</b>下发；</li>
-<li><b>对既有消费点零影响</b>：legacy 均按具体枚举值查询，Custom 行不可见。</li>
+<li><b>单一抽象</b>：内置与自定义合并为一个实体 <code class="i">TextType</code>（+ <code class="i">TextEntry</code> 条目表），<b>单一 id 空间</b>——节点的文本集引用就是一个 <code class="i">typeId</code>，不存在 builtin:/custom: 判别前缀。内置性 = 行上的 <code class="i">WellKnown</code> 句柄（不可删/不可改名，语义由代码消费点绑定）。</li>
+<li><b>Shape</b>：类型分 Values / Pairs 两种形态；自定义 Pairs 直接可用作 removeWrapped 的包装符对。</li>
+<li><b>选择器</b>：<code class="i">GetTypes()</code> 聚合列表是节点配置表单与 text 管理页的唯一数据源（内置徽标区分，按 Shape 过滤）。</li>
+<li><b>数据不丢</b>：旧 SpecialText 行经 app 级迁移器（V220/V230 先例）七值查表转入新表；EF 迁移保持纯 schema。「质量与发布标签」以可编辑种子集下发（只投一次，删除不复活）。</li>
 </ol>
-<div class="rule"><b>实施顺序：本扩展是整个功能唯一的 schema 变更，第一步先做</b>——独立可交付（text 页增强本身有价值），节点实现全部依赖它。EF 迁移按仓库规则 CLI 生成、纯 schema。</div>
+<div class="rule"><b>实施顺序：本扩展是整个功能唯一的 schema 变更，第一步先做</b>（PR1 建表 → PR2 服务拆分与全量切换 → PR3 UI/种子/清理），节点实现全部依赖它。</div>
 
 <h2 id="s6"><span class="n">§6</span>执行与 UI</h2>
 <ul>
