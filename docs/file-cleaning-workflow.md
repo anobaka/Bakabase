@@ -49,7 +49,8 @@ public sealed record FsEntryItem
 
 文本节点（trim/removeWrapped/removeTexts/capture/template）是**真正通用的** `transform.text.*`——它们**只认识"工作文本"**，不认识文件系统。规范分三条：
 
-1. **facet 契约**：定义 `ITextWorkpiece { string WorkingText; IDictionary<string,string> Variables }`。文本节点的输入契约不是具体 item 类型，而是 `AcceptedItemFacet = typeof(ITextWorkpiece)`——接受任何 CLR 类型实现该接口的 item；编辑器经 `IWorkflowItemTypeDescriptor.ClrType`（描述符本就携带）静态校验实现关系，强校验不减弱。
+1. **facet 契约**：定义 `ITextWorkpiece { string WorkingText; IDictionary<string,string> Variables; ITextWorkpiece WithWorkingText(string) }`。文本节点的输入契约不是具体 item 类型，而是 `AcceptedItemFacet = typeof(ITextWorkpiece)`——接受任何 CLR 类型实现该接口的 item；编辑器经 `IWorkflowItemTypeDescriptor.ClrType`（描述符本就携带）静态校验实现关系，强校验不减弱。
+   **facet 是对"当前类型"的能力谓词，不是类型本身**：校验通过后链上的当前类型**不变**（类比泛型约束 `where T : ITextWorkpiece`，T 还是 T）。因此有一条强制配对规则——**facet 节点必须 Passthrough**（输出类型 = 输入的具体类型，禁止 Fixed 输出），否则具体类型在链上丢失，下游精确类型节点（如 `action.fs.saveName`）将接不住。运行时由 `WithWorkingText` 返回实现方自身的具体类型保证（`FsEntryItem` 实现为 `this with { WorkingName = t }`）；capture 只写 `Variables` 不改文本，直接 `KeepItem`。链上"当前类型"从头到尾是 `item.fs.entry`，facet 节点与精确类型节点（saveName）因此可任意穿插串联。
 2. **"作用于什么"由 item 类型声明，一处回答、处处生效**：`FsEntryItem.WorkingText ≡ WorkingName`（其类型描述符如此声明，编辑器在节点卡上显示"作用于：WorkingName"）。将来画廊 item 声明 `WorkingText ≡ Title`，同一批文本节点直接可用——不存在"每个节点各自解释 trim 什么"的问题。
 3. **fs 语义进入文本节点的唯一通道是系统变量**：fs 域在产出 item 时自动注入只读变量 `var:extension`、`var:parentName`（模板写 `{var:extension}` 而非 fs 专属占位符）。文本节点因此零 fs 感知。
 
