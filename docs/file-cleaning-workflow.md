@@ -27,10 +27,18 @@ public sealed record FsEntryItem
     public required bool IsDirectory { get; init; }
     public required string OriginalName { get; init; } // 进入链时的名字（不含路径）
     public required string WorkingName { get; init; }  // 工作名：文本变更节点只改它，不碰磁盘
+    public Dictionary<string, string> Variables { get; init; } = new();
+    // 变量：capture 节点写入、后续节点经 {var:name(:formatter)} 插值消费；
+    // expand 展开子项时可继承（inheritVariables）——这是"节点 x 依赖节点 y 结果"的传递通道。
+    // 变量只在 item 内流动、随继承下发，链保持线性 per-item，无全局状态。
 }
 ```
 
 核心不变量：**链上一切文本变更只作用于 `WorkingName`；磁盘操作只发生在 saveName 节点**。这天然把"计算新名字"与"落盘"分成两段，预览因此免费。
+
+**节点通用选项**（所有 fs 域活动支持）：
+- `scope: Files | Directories | Both`——不命中的 item **原样放行**（跳过 ≠ 丢弃）。这是混合 item（文件+目录）流经同一条线性链的前提。
+- `requiredVars: string[]`——任一变量缺失则跳过本节点（如模板节点缺 `ep` 时保住上游清洗结果）。
 
 ## 节点设计
 
@@ -51,7 +59,15 @@ public sealed record FsEntryItem
 
 `ExtractItems` 对每个 root 按配置枚举，产出 `FsEntryItem` 列表——"针对全部子文件（夹）轮询跑后面的节点"就是 Runner 的既有语义，引擎零改动。
 
-> 为什么第一版把 constants 与枚举合并进触发器：现有 Runner 的 `WorkflowItemOutcome` 只有 Keep/Drop/Replace，**没有链中 1→N 展开**。若后续需要"枚举出子级后再枚举孙级"这类链中展开，引擎增加一个 `ExpandTo(IReadOnlyList<object>)` outcome 即可（小改，向后兼容）——列入开放问题，第一版不做。
+> constants 与首层枚举合并进触发器；**更深层级用链中展开节点**（下方 Expand）。引擎为此新增 `WorkflowItemOutcome.ExpandTo(IReadOnlyList<object>)`（小改、向后兼容）——多层级示例（父目录净标题传给文件命名）证明了它是必需项，已从开放问题转正。
+
+### Expand 活动：`expand.fs.children`（链中 1→N）
+
+| 配置 | 说明 |
+|---|---|
+| `target` / `extensionFilter` | Files / Directories / Both + 扩展名过滤 |
+| `emit` | `ChildrenOnly` / `ChildrenThenSelf`（子项先流过后续节点，父项随后跟进——配合 saveName 的 DeepestFirst 排序） |
+| `inheritVariables` | 子项继承父项 Variables（跨层级联动的通道） |
 
 ### Filter 活动（可选，收窄处理范围）
 
@@ -69,6 +85,8 @@ public sealed record FsEntryItem
 | `transform.text.removeWrapped` | **删除包装符内命中文本集的片段**（用户举例的场景） | 包装符对（引用 SpecialText Wrapper 或自定义对）+ 文本集引用（见下）+ 命中方式（等于/包含/正则） |
 | `transform.text.removeTexts` | 删除命中文本集的裸文本片段 | 文本集引用 + 命中方式 |
 | `transform.text.trim` | 清理残留：连续空格/头尾空白与分隔符/空括号对 | 开关组 |
+| `transform.text.capture` | **不改名，只捕获**：正则具名捕获组 → 写入 `Variables` | source（WorkingName/Path/ParentName）+ pattern + onMiss（SkipSilently/标记） |
+| `transform.text.template` | 以模板**重建** WorkingName（跨层级信息组合命名的表达方式） | template（`{var:x(:pad(n))}` / `{originalName}` / `{extension}` 插值）+ requiredVars |
 
 每个 Transform 输出 `item with { WorkingName = 新值 }`（Workflow 的 `ReplaceWith`，类型不变仍是 `item.fs.entry`——编辑器类型校验直接通过）。
 
@@ -79,6 +97,7 @@ public sealed record FsEntryItem
   - **Preview（默认）**：不碰磁盘，把 `(Path, OriginalName → WorkingName)` 记入本次 run 的改名计划；
   - **Apply**：执行改名，写 `FileRenameRecord` 日志。
 - 内置防线（不可关闭）：改名前 sanitize（非法字符/保留名/结尾点空格）；目标重名冲突 → 该条记入冲突列表跳过，不中断整个 run；路径长度预检。
+- **Apply 排序 `DeepestFirst`**：按路径深度从深到浅执行（先文件后父目录）——父目录改名不会使子条目计划路径失效。
 
 ## 预览 → 确认 → 应用 → 撤销
 
@@ -135,9 +154,12 @@ FileRenameRecord   RunId, Seq, Path(父目录), From, To, RenamedAt, Undone
 - Workflow 模块获得第一个文件系统域的触发器与活动集，为后续自动化（下载完成→自动清洗）铺路。
 - FileNameModifier 的能力从单页工具升级为可编排节点，原页面保留不动。
 
+## 完整示例
+
+多层级 + 节点联动（文件命名依赖父目录节点捕获的净标题）的 12 节点完整走查，含每节点配置与 item 流转表：**[file-cleaning-workflow-example.html](file-cleaning-workflow-example.html)**。
+
 ## 开放问题
 
-- 链中 1→N 展开（`ExpandTo` outcome）：等真实需求出现再做。
-- 递归深度 >1 时父子目录同 run 改名的顺序问题（先子后父可避免路径失效）——实现时定。
 - 文本集是否需要分享（Sharable 体系）——倾向于要，随自定义类型使用量决策。
 - 定时/监听触发（FileMover 进料口式自动清洗）——依赖 Workflow 触发器形态，后续版本。
+- `ExpandTo` 在 Workflow 编辑器类型校验中的表达（展开节点的输出 item 类型仍是 `item.fs.entry`，校验可直通；但步骤统计需理解 1→N）。
