@@ -44,6 +44,14 @@ public sealed record FsEntryItem
 
 ## 节点设计
 
+### 规范：能力层与节点层（为什么 kind 是 `transform.fs.*` 而不是 `transform.text.*`）
+
+纯文本操作（FileNameModifier 操作集、removeWrapped/removeTexts、trim、正则捕获、模板插值）实现为无状态服务 **`TextOps`**——**这才是通用文本处理组件**：不感知 workflow、不感知文件系统，输入字符串输出字符串，供本功能节点、file-name-modifier 页、（将来）Organizer 共同复用。
+
+workflow 节点是该能力**对具体 item 类型的绑定**：v1 绑定到 `item.fs.entry` 的 `WorkingName`（并带 `scope` 这类 fs 专属选项），因此 kind 的模块段是 `fs` 而非 `text`——名实相符，节点的出入参类型（`item.fs.entry`）与命名空间一致。
+
+演进路径（当前不做）：当第二个需要文本处理的 item 类型出现（如对画廊标题做清洗），节点层可经 **facet 机制**泛化——活动描述符增加 `AcceptedItemFacet: Type`（接口），编辑器经 `IWorkflowItemTypeDescriptor.ClrType` 校验实现关系，届时文本节点提升为真正的 `transform.text.*` 并剥离 fs 专属选项。与"descriptor 共享抽象暂不抽取"同一姿势：**能力先通用（服务层），节点先具体（fs 绑定），等第二个消费者出现再泛化节点层。**
+
 ### 触发器：`fileCleaning.manual`（= 用户说的 constants 节点 + 获取子级节点）
 
 手动触发器，payload 即用户录入的常量与枚举配置：
@@ -83,12 +91,12 @@ public sealed record FsEntryItem
 
 | kind | 行为 | 配置 |
 |---|---|---|
-| `transform.text.fileNameOp` | 包装 FileNameModifier 的**全部**既有操作 | Target（全名/不含扩展名/扩展名）× Operation × Position × 参数——与 file-name-modifier 页同一套模型与 UI 组件 |
-| `transform.text.removeWrapped` | **删除包装符内命中文本集的片段**（用户举例的场景） | 包装符对（引用 SpecialText Wrapper 或自定义对）+ 文本集引用（见下）+ 命中方式（等于/包含/正则） |
-| `transform.text.removeTexts` | 删除命中文本集的裸文本片段 | 文本集引用 + 命中方式 |
-| `transform.text.trim` | 清理残留：连续空格/头尾空白与分隔符/空括号对 | 开关组 |
-| `transform.text.capture` | **不改名，只捕获**：正则具名捕获组 → 写入 `Variables` | source（WorkingName/Path/ParentName）+ pattern + onMiss（SkipSilently/标记） |
-| `transform.text.template` | 以模板**重建** WorkingName（跨层级信息组合命名的表达方式） | template（`{var:x(:pad(n))}` / `{originalName}` / `{extension}` 插值）+ requiredVars |
+| `transform.fs.fileNameOp` | 包装 FileNameModifier 的**全部**既有操作 | Target（全名/不含扩展名/扩展名）× Operation × Position × 参数——与 file-name-modifier 页同一套模型与 UI 组件 |
+| `transform.fs.removeWrapped` | **删除包装符内命中文本集的片段**（用户举例的场景） | 包装符对（引用 SpecialText Wrapper 或自定义对）+ 文本集引用（见下）+ 命中方式（等于/包含/正则） |
+| `transform.fs.removeTexts` | 删除命中文本集的裸文本片段 | 文本集引用 + 命中方式 |
+| `transform.fs.trim` | 清理残留：连续空格/头尾空白与分隔符/空括号对 | 开关组 |
+| `transform.fs.capture` | **不改名，只捕获**：正则具名捕获组 → 写入 `Variables` | source（WorkingName/Path/ParentName）+ pattern + onMiss（SkipSilently/标记） |
+| `transform.fs.template` | 以模板**重建** WorkingName（跨层级信息组合命名的表达方式） | template（`{var:x(:pad(n))}` / `{originalName}` / `{extension}` 插值）+ requiredVars |
 
 每个 Transform 输出 `item with { WorkingName = 新值 }`（Workflow 的 `ReplaceWith`，类型不变仍是 `item.fs.entry`——编辑器类型校验直接通过）。
 
@@ -134,14 +142,14 @@ FileRenameRecord   RunId, Seq, Path(父目录), From, To, RenamedAt, Undone
 
 - 流程定义、编辑、运行记录全部走 workflow 页既有 UI；本功能新增的是：触发器配置面板（roots + 枚举配置）、三类活动的配置表单（复用 file-name-modifier 页的操作编辑组件）、预览 diff 面板（可参考 BulkModification 预览页交互）。
 - 运行承载沿用 Workflow 的 run 机制；大目录场景下 run 内部逐条目 yield，进度在 run 详情展示。
-- 入口：workflow 页新建"文件清洗"模板；file-name-modifier 页加一个"升级为清洗流程"引导（把当前操作集一键转为 `transform.text.fileNameOp` 节点）。
+- 入口：workflow 页新建"文件清洗"模板；file-name-modifier 页加一个"升级为清洗流程"引导（把当前操作集一键转为 `transform.fs.fileNameOp` 节点）。
 
 ## 走查示例（用户场景原样落地）
 
 ```
 触发器: roots=[D:/Anime], enumerate={target:Directories, depth:1}
-节点 1: transform.text.removeWrapped  包装符=[]/【】  文本集=自定义「字幕组名单」
-节点 2: transform.text.trim           清理残留空格
+节点 1: transform.fs.removeWrapped  包装符=[]/【】  文本集=自定义「字幕组名单」
+节点 2: transform.fs.trim           清理残留空格
 节点 3: action.fs.saveName
 
 预览:
