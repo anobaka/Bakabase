@@ -128,6 +128,7 @@ public sealed record FsEntryItem : ITextWorkpiece
 FileRenameRecord   RunId, Seq, Path(父目录), From, To, RenamedAt, Undone   <span class="cm">// 保留期默认 30 天</span></code></pre>
 
 <h2 id="s5"><span class="n">§5</span>SpecialText 扩展：用户自定义文本类型（文本集）</h2>
+<p class="note"><b>完整架构设计（现状盘点 / 服务拆分 ITextVocabularyService + ITextOps / 消费点迁移 / PR 切分）见 <a href="specialtext-extension.html">specialtext-extension.html</a></b>，本节仅存要点概览。</p>
 <p>现状：<code class="i">SpecialTextType</code> 固定枚举七种（Useless/Wrapper/Standardization/Volume/Trim/DateTime/Language），行为 (Type, Value1, Value2)。扩展方案：</p>
 <ol>
 <li>枚举新增 <code class="i">SpecialTextType.Custom = 100</code>；</li>
