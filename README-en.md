@@ -9,7 +9,7 @@ Bakabase helps you manage your local media — anime, comics, audio dramas, douj
 ## Table of Contents
 
 - [Download](#download)
-- [Beta Features](#beta-features)
+- [Features](#features)
   - [Data Cards](#data-cards)
   - [Customizable Resource Detail Layout](#customizable-resource-detail-layout)
   - [Steam, DLsite, ExHentai Integration](#steam-dlsite-exhentai-integration)
@@ -17,7 +17,6 @@ Bakabase helps you manage your local media — anime, comics, audio dramas, douj
   - [AI Features](#ai-features)
   - [Resource Health Score](#resource-health-score)
   - [Other Improvements](#other-improvements)
-- [Stable Features](#stable-features)
   - [Resource Management](#resource-management)
   - [Metadata Enhancement](#metadata-enhancement)
   - [Media Library Configuration](#media-library-configuration)
@@ -33,15 +32,11 @@ Bakabase helps you manage your local media — anime, comics, audio dramas, douj
 - [Stable](https://github.com/anobaka/Bakabase/releases/latest)
 - [Beta](https://github.com/anobaka/Bakabase/releases) — includes new features that aren't fully stable yet
 
-> ## ✅ AppData loss risk fully resolved (2.3.0-beta.75)
+> ## ⚠️ Upgrading from a pre-2.3 version
 >
-> Starting with `2.3.0-beta.75`, the Windows default AppData directory moved from `%LocalAppData%\Bakabase` (which coincided with the Velopack install root) to `%LocalAppData%\Bakabase.AppData`. **Upgrades, uninstalls, and installer "Repair" no longer touch user data.** **Most users need to do nothing.**
->
-> **Edge case**: if you ran any of `2.3.0-beta.69` ~ `2.3.0-beta.74` and **did not** customise the app data path in Settings, after upgrading to `≥ 2.3.0-beta.75` the app will appear "freshly installed" — your data is intact but no longer auto-loaded. To recover: type `%LocalAppData%\Bakabase` into the Windows Explorer address bar, press Enter, copy the expanded full path from the address bar (looks like `C:\Users\<you>\AppData\Local\Bakabase`), then paste it into Bakabase **Settings → System Information → App Data Path → Modify** and restart.
->
-> Versions older than `2.3.0-beta.69` still carry the original in-app upgrade data loss risk; back up before upgrading per [#1070](https://github.com/anobaka/Bakabase/issues/1070). macOS and Linux are unaffected by either issue.
+> 2.3 ships a brand-new installer and auto-updater and **cannot be upgraded in place from pre-2.3 versions**. Download the 2.3 installer once and install it as a fresh app; every update after that is one-click from inside the app again. To keep data from an older install, launch the new 2.3 build first, then point **Settings → System Information → App Data Path → Modify** at your old data folder.
 
-## Beta Features
+## Features
 
 ### Data Cards
 
@@ -149,7 +144,7 @@ Score your resources by configurable rules so you can spot at a glance which one
 - **Unified Enhancer Property Config**: Manage all enhancer-to-property mappings in one place; see at a glance where each property's data comes from.
 - **Quick Property Setting via Context Menu**: Set or batch-set property values from the right-click menu, with configurable presets.
 - **UI Customization**: Adjust resource cover size and other display details.
-- **macOS Support**: Available in beta; Linux is still in development.
+- **Cross-platform**: macOS is now supported; Linux is still in development.
 
 <details open>
 <summary>Screenshots</summary>
@@ -163,8 +158,6 @@ Score your resources by configurable rules so you can spot at a glance which one
 ![UI Customization](https://github.com/anobaka/Bakabase.Docs/blob/main/imgs/v23/ui-customization.png)
 
 </details>
-
-## Stable Features
 
 ### Resource Management
 
