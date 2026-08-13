@@ -266,4 +266,4 @@ Contributions are welcome — see the [development docs](https://bakabase.anobak
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=anobaka/Bakabase&type=Date)](https://www.star-history.com/#anobaka/Bakabase&Date)
+[![Star History Chart](https://star-history.dera.page/svg?repos=anobaka/Bakabase&type=Date)](https://star-history.dera.page/#anobaka/Bakabase&type=date)
