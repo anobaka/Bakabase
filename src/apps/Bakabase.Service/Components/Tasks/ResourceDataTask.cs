@@ -8,7 +8,9 @@ using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
+using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
+using Bootstrap.Components.Configuration.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -46,6 +48,13 @@ public class ResourceDataTask : AbstractPredefinedBTaskBuilder
         var sourceLinkService = scope.ServiceProvider.GetRequiredService<IResourceSourceLinkService>();
         var metadataSyncService = scope.ServiceProvider.GetRequiredService<ISourceMetadataSyncService>();
         var reservedPropertyValueService = scope.ServiceProvider.GetRequiredService<IReservedPropertyValueService>();
+        var uiOptions = scope.ServiceProvider.GetRequiredService<IBOptions<UIOptions>>();
+
+        // This task exists to warm the caches. With the playable-file cache switched off
+        // there is nothing to warm — resolving here would rescan every resource directory
+        // on every run (the providers report NotStarted while the cache is disabled) and
+        // would be thrown away anyway. Playable files are then discovered live, on demand.
+        var preparePlayableItems = !uiOptions.Value.Resource.DisablePlayableFileCache;
 
         var resources = await resourceService.GetAll(
             additionalItems: ResourceAdditionalItem.Cover | ResourceAdditionalItem.PlayableItem);
@@ -80,7 +89,7 @@ public class ResourceDataTask : AbstractPredefinedBTaskBuilder
             // Phase 2: PlayableItem providers — resolve if any applicable provider is NotStarted or Failed
             try
             {
-                var needsPlayableWork = playableItemProviders
+                var needsPlayableWork = preparePlayableItems && playableItemProviders
                     .Where(p => p.AppliesTo(resource))
                     .Any(p =>
                     {

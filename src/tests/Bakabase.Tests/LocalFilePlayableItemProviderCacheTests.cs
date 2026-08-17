@@ -11,8 +11,10 @@ using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Models.Db;
 using Bakabase.InsideWorld.Business.Services;
+using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.Constants.Aos;
 using Bakabase.TestKit.Utils;
+using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Orm;
 using Bootstrap.Components.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -287,5 +289,56 @@ public sealed class LocalFilePlayableItemProviderCacheTests
 
         resource.Cache = new ResourceFileSystemCache { CachedTypes = [ResourceCacheType.PlayableFiles] };
         Assert.AreEqual(DataStatus.Ready, Provider().GetStatus(resource));
+    }
+
+    private void DisablePlayableFileCache()
+        => _sp.GetRequiredService<IBOptions<UIOptions>>().Value.Resource.DisablePlayableFileCache = true;
+
+    [TestMethod]
+    public async Task CacheDisabled_DiscoveryIsNotPersisted()
+    {
+        // The user switched the cache off; discovery must stop writing rows. Previously the
+        // provider persisted unconditionally, so the cache "kept generating" while disabled.
+        var resource = await SeedResource("Movie", "a.mp4");
+        await AddPlayableProfile("mp4");
+        DisablePlayableFileCache();
+
+        var result = await Provider().GetPlayableItemsAsync(resource, CancellationToken.None);
+
+        Assert.AreEqual(1, result.Items.Count, "discovery itself must still work, just without caching");
+        Assert.IsNull(await GetCacheRow(resource.Id));
+    }
+
+    [TestMethod]
+    public async Task CacheDisabled_IgnoresExistingCache_AndRescans()
+    {
+        // A cache row left over from before the switch was flipped must not be served —
+        // that is the "still takes effect" half of the bug.
+        var resource = await SeedResource("Movie", "a.mp4");
+        await AddPlayableProfile("mp4");
+        resource.Cache = new ResourceFileSystemCache
+        {
+            CachedTypes = [ResourceCacheType.PlayableFiles],
+            PlayableFilePaths = ["/elsewhere/stale.mp4"]
+        };
+        DisablePlayableFileCache();
+
+        var result = await Provider().GetPlayableItemsAsync(resource, CancellationToken.None);
+
+        Assert.AreEqual(1, result.Items.Count);
+        Assert.IsTrue(result.Items[0].Key.EndsWith("a.mp4"),
+            $"expected a freshly discovered file, got '{result.Items[0].Key}'");
+    }
+
+    [TestMethod]
+    public async Task CacheDisabled_GetStatusIsAlwaysNotStarted()
+    {
+        // NotStarted is what makes the resource list and the discovery stream resolve
+        // playable files live instead of trusting the cache.
+        var resource = await SeedResource("Movie");
+        resource.Cache = new ResourceFileSystemCache { CachedTypes = [ResourceCacheType.PlayableFiles] };
+        DisablePlayableFileCache();
+
+        Assert.AreEqual(DataStatus.NotStarted, Provider().GetStatus(resource));
     }
 }

@@ -12,9 +12,11 @@ using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Models.Db;
+using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.StandardValue.Abstractions.Configurations;
 using Bakabase.Modules.StandardValue.Extensions;
+using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Orm;
 using Microsoft.Extensions.Logging;
 using DomainResource = Bakabase.Abstractions.Models.Domain.Resource;
@@ -26,22 +28,31 @@ public class LocalFilePlayableItemProvider : IPlayableItemProvider
     private readonly IResourceProfileService _resourceProfileService;
     private readonly ISystemPlayer _systemPlayer;
     private readonly FullMemoryCacheResourceService<BakabaseDbContext, ResourceCacheDbModel, int> _resourceCacheOrm;
+    private readonly IBOptions<UIOptions> _uiOptions;
     private readonly ILogger<LocalFilePlayableItemProvider> _logger;
 
     public LocalFilePlayableItemProvider(
         IResourceProfileService resourceProfileService,
         ISystemPlayer systemPlayer,
         FullMemoryCacheResourceService<BakabaseDbContext, ResourceCacheDbModel, int> resourceCacheOrm,
+        IBOptions<UIOptions> uiOptions,
         ILogger<LocalFilePlayableItemProvider> logger)
     {
         _resourceProfileService = resourceProfileService;
         _systemPlayer = systemPlayer;
         _resourceCacheOrm = resourceCacheOrm;
+        _uiOptions = uiOptions;
         _logger = logger;
     }
 
     public DataOrigin Origin => DataOrigin.FileSystem;
     public int Priority => 20;
+
+    /// <summary>
+    /// The user-facing "use filesystem playable file cache" switch. While it is off the
+    /// cache is neither read nor written — discovery happens live, on demand, every time.
+    /// </summary>
+    private bool CacheDisabled => _uiOptions.Value.Resource.DisablePlayableFileCache;
 
     public bool AppliesTo(DomainResource resource)
     {
@@ -50,6 +61,14 @@ public class LocalFilePlayableItemProvider : IPlayableItemProvider
 
     public DataStatus GetStatus(DomainResource resource)
     {
+        // With the cache off there is nothing pre-computed to serve, so the resource is
+        // always "not started" — that is what makes the callers (resource list, discovery
+        // stream) resolve playable files live instead of trusting a stale cache row.
+        if (CacheDisabled)
+        {
+            return DataStatus.NotStarted;
+        }
+
         return resource.Cache?.CachedTypes.Contains(ResourceCacheType.PlayableFiles) == true
             ? DataStatus.Ready
             : DataStatus.NotStarted;
@@ -60,7 +79,7 @@ public class LocalFilePlayableItemProvider : IPlayableItemProvider
         // Check cache first. The CachedTypes flag alone means "already discovered";
         // PlayableFilePaths is null when the resource has zero playable files, which is
         // still a valid cached result and must not trigger a rescan.
-        if (resource.Cache?.CachedTypes.Contains(ResourceCacheType.PlayableFiles) == true)
+        if (!CacheDisabled && resource.Cache?.CachedTypes.Contains(ResourceCacheType.PlayableFiles) == true)
         {
             var cachedItems = (resource.Cache.PlayableFilePaths ?? []).Select(p => new Abstractions.Models.Domain.PlayableItem
             {
@@ -240,6 +259,11 @@ public class LocalFilePlayableItemProvider : IPlayableItemProvider
 
     private async Task CachePlayableFiles(int resourceId, string[] playableFiles)
     {
+        if (CacheDisabled)
+        {
+            return;
+        }
+
         var cache = await _resourceCacheOrm.GetByKey(resourceId, true);
         var isNewCache = cache == null;
         cache ??= new ResourceCacheDbModel { ResourceId = resourceId };

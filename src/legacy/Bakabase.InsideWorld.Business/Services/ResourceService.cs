@@ -1166,24 +1166,64 @@ namespace Bakabase.InsideWorld.Business.Services
             return result.Items;
         }
 
+        /// <summary>
+        /// Number of resources probed live before giving up when the playable-file cache
+        /// can't answer. Each probe walks a resource directory, so this is deliberately
+        /// bounded rather than a full scan.
+        /// </summary>
+        private const int RandomPlayLiveProbeLimit = 30;
+
         public async Task<BaseResponse> PlayRandomResource()
         {
-            var playableCaches = await _resourceCacheOrm.GetAll(x => !string.IsNullOrEmpty(x.PlayableFilePaths));
-            if (playableCaches.Count == 0)
+            var existingResourceIds = (await GetAllDbModels(null, false)).Select(r => r.Id).ToHashSet();
+            if (existingResourceIds.Count == 0)
             {
                 return BaseResponseBuilder.BuildBadRequest("No playable resource was found.");
             }
 
-            var randomIndex = Random.Shared.Next(playableCaches.Count);
-            var cache = playableCaches[randomIndex];
-            var playableFiles = cache.PlayableFilePaths?.DeserializeAsStandardValue<List<string>>(StandardValueType.ListString);
-            var file = playableFiles?.FirstOrDefault();
-            if (file == null)
+            if (!_uiOptions.Value.Resource.DisablePlayableFileCache)
             {
-                return BaseResponseBuilder.BuildBadRequest("No playable file was found.");
+                // Cache rows outlive their resource (deleting a resource — e.g. after its
+                // media library and the owning path mark were removed — leaves the row
+                // behind), so a cache row is only a candidate while its resource still
+                // exists. Picking a dangling one used to hand PlayItem an unknown id and
+                // surface as a 404.
+                var candidates = (await _resourceCacheOrm.GetAll(x => !string.IsNullOrEmpty(x.PlayableFilePaths)))
+                    .Where(c => existingResourceIds.Contains(c.ResourceId))
+                    .ToList();
+
+                while (candidates.Count > 0)
+                {
+                    var randomIndex = Random.Shared.Next(candidates.Count);
+                    var cache = candidates[randomIndex];
+                    candidates.RemoveAt(randomIndex);
+
+                    var file = cache.PlayableFilePaths
+                        ?.DeserializeAsStandardValue<List<string>>(StandardValueType.ListString)
+                        ?.FirstOrDefault();
+                    if (file != null)
+                    {
+                        return await PlayItem(cache.ResourceId, DataOrigin.FileSystem, file);
+                    }
+                }
             }
 
-            return await PlayItem(cache.ResourceId, DataOrigin.FileSystem, file);
+            // Either the cache is disabled, not built yet, or holds nothing usable — probe a
+            // bounded number of random resources live instead of reporting "nothing playable".
+            var shuffledIds = existingResourceIds.ToArray();
+            Random.Shared.Shuffle(shuffledIds);
+
+            foreach (var resourceId in shuffledIds.Take(RandomPlayLiveProbeLimit))
+            {
+                var items = await DiscoverPlayableItems(resourceId, CancellationToken.None);
+                var item = items.FirstOrDefault();
+                if (item != null)
+                {
+                    return await PlayItem(resourceId, item.Origin, item.Key);
+                }
+            }
+
+            return BaseResponseBuilder.BuildBadRequest("No playable resource was found.");
         }
 
         public async Task<bool> Any(Func<Abstractions.Models.Db.ResourceDbModel, bool>? selector = null)
@@ -2371,6 +2411,16 @@ namespace Bakabase.InsideWorld.Business.Services
             await sourceLinkService.DeleteByResourceIds(ids);
             var scopePreferenceService = GetRequiredService<IPropertyValueScopePreferenceService>();
             await scopePreferenceService.RemoveByResourceIds(ids);
+
+            // The cache row is keyed by ResourceId with no FK, so it survives the resource
+            // unless we drop it here. Leftovers are not just dead weight: PlayRandomResource
+            // picks from this table, and a row pointing at a deleted resource used to make
+            // "random play" fail with a 404.
+            await _resourceCacheOrm.RemoveAll(c => ids.Contains(c.ResourceId));
+            foreach (var id in ids)
+            {
+                TryDeleteLocalCoverThumbnail(id);
+            }
         }
 
         public string BuildDisplayNameForResource(Resource resource, string template,
