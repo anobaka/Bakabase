@@ -175,7 +175,9 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
 
       return () => {
         log("Disposing", rootRef);
-        rootRef?.current?.dispose();
+        // Unmount cleanup cannot await, so a rejection here would surface as an unhandled
+        // rejection. Teardown failing changes nothing we can act on.
+        rootRef?.current?.dispose().catch((e) => log("Failed to dispose root entry", e));
         clearTimeout(inputBlurHandlerRef.current);
       };
     }, []);

@@ -8,11 +8,13 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Configuration;
+using Bakabase.Abstractions.Exceptions;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.App.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Dependency.Discovery;
+using Bakabase.InsideWorld.Business.Components.Dependency.Exceptions;
 using Bakabase.InsideWorld.Models.Constants;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -51,7 +53,23 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency
 
         protected string GetExecutableWithValidation(string name) => Status == DependentComponentStatus.Installed
             ? Path.Combine(Context.Location!, name)
-            : throw new Exception($"{DisplayName} is not ready");
+            : throw CreateNotReadyException();
+
+        /// <summary>
+        /// The component is not usable yet — either still downloading or never installed. Both are
+        /// things the user resolves from the system settings page, so this is a
+        /// <see cref="DependencyNotInstalledException"/> (an <see cref="IUserActionableException"/>)
+        /// rather than a bare <see cref="Exception"/>: a bare one reads as a crash and ends up in
+        /// the error dashboard.
+        /// </summary>
+        private DependencyNotInstalledException CreateNotReadyException()
+        {
+            var localizer = _globalServiceProvider.GetRequiredService<IDependencyLocalizer>();
+            var message = Status == DependentComponentStatus.Installing
+                ? localizer.Dependency_Installing_Message(DisplayName)
+                : localizer.Dependency_NotInstalled_Message(DisplayName);
+            return new DependencyNotInstalledException(KeyInLocalizer, DisplayName, message);
+        }
 
         /// <summary>
         /// Override this property to declare dependencies that must be installed before this component.
@@ -80,9 +98,12 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency
 
                 if (dependencyService.Status == DependentComponentStatus.Installing)
                 {
+                    // Expected: the user kicked off this install while a prerequisite is still
+                    // downloading. Not a defect — see CreateNotReadyException.
                     var message = dependencyLocalizer.Dependency_Installing_Message(dependencyService.DisplayName);
                     Logger.LogWarning(message);
-                    throw new InvalidOperationException(message);
+                    throw new DependencyNotInstalledException(dependencyService.Id, dependencyService.DisplayName,
+                        message);
                 }
 
                 if (dependencyService.Status != DependentComponentStatus.Installed)

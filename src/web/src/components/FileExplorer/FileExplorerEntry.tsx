@@ -201,7 +201,10 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
   }, []);
 
   useEffect(() => {
-    initialize(entry);
+    // Floating promise — nothing awaits an effect body, so an unhandled rejection here is
+    // reported as a crash. initialize() talks to the backend and touches the DOM after
+    // awaiting, both of which can fail on unmount or while the service is going down.
+    initialize(entry).catch((e) => log("Failed to initialize entry", e));
 
     // Debounced resize handler to prevent excessive re-renders
     const resizeObserver = new ResizeObserver(() => {
@@ -226,7 +229,7 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
 
   useUpdateEffect(() => {
     // log('1234567890');
-    initialize(entry);
+    initialize(entry).catch((e) => log("Failed to initialize entry", e));
   }, [entry]);
 
   const renderFileSystemInfo = useCallback(() => {

@@ -334,15 +334,26 @@ class RootEntry extends Entry {
         }, 500);
       }
 
-      this.childrenWidth = this._ref?.dom!.parentElement?.clientWidth ?? 0;
+      // Everything above awaits HTTP round-trips, and initialize() itself is called as a
+      // floating promise from a React effect — so the component can unmount while we wait and
+      // `dom` goes null. `_ref?.dom!` asserted that possibility away (IEntryRef.dom is declared
+      // nullable) and threw "Cannot read properties of null (reading 'parentElement')". Guard
+      // it the way recalculateChildrenWidth already does.
+      const dom = this._ref?.dom;
 
-      this._resizeObserver = new ResizeObserver((c) => {
-        const parent = c[0];
+      if (dom) {
+        this.childrenWidth = dom.parentElement?.clientWidth ?? 0;
 
-        log("Size of parent changed", parent);
-        this.recalculateChildrenWidth();
-      });
-      this._resizeObserver.observe(this._ref!.dom!);
+        this._resizeObserver = new ResizeObserver((c) => {
+          const parent = c[0];
+
+          log("Size of parent changed", parent);
+          this.recalculateChildrenWidth();
+        });
+        this._resizeObserver.observe(dom);
+      } else {
+        log("No dom to observe — entry was detached while initializing");
+      }
     }
   }
 
@@ -352,7 +363,15 @@ class RootEntry extends Entry {
     log("Stopping watcher", this, this.path, this._fsWatcher);
     clearInterval(this._fsWatcher);
     clearInterval(this._keepAliveInterval);
-    await BApi.file.stopWatchingChangesInFileProcessorWorkspace();
+    // Best-effort. This releases server-side watcher state, so when the backend is already
+    // gone — app shutting down, service restarting, page unloading — the fetch rejects with
+    // "Failed to fetch" and there is nothing left to release anyway. Swallowing it matters
+    // because every caller is a floating promise, where a rejection reads as a crash.
+    try {
+      await BApi.file.stopWatchingChangesInFileProcessorWorkspace();
+    } catch (e) {
+      log("Failed to stop watching, ignoring", e);
+    }
     useIwFsEntryChangeEventsStore.getState().clear();
     // }
   }

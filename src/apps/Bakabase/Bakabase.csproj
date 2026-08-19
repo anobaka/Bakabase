@@ -11,9 +11,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Avalonia" Version="11.3.0" />
-        <PackageReference Include="Avalonia.Desktop" Version="11.3.0" />
-        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.0" />
+        <PackageReference Include="Avalonia" Version="11.3.20" />
+        <PackageReference Include="Avalonia.Desktop" Version="11.3.20" />
+        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.20" />
         <PackageReference Include="HttpCloak" Version="1.6.1" />
         <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3856.49" Condition="$([MSBuild]::IsOSPlatform('Windows'))" />
         <PackageReference Include="Velopack" Version="0.0.1298" />

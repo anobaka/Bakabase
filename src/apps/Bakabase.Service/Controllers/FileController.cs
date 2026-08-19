@@ -900,18 +900,15 @@ namespace Bakabase.Service.Controllers
             return BaseResponseBuilder.Ok;
         }
 
-        [HttpPost("move-entries")]
-        [SwaggerOperation(OperationId = "MoveEntries")]
-        public async Task<BaseResponse> MoveEntries([FromBody] FileMoveRequestModel model)
+        /// <summary>
+        /// Reject copying/moving a directory into its own subtree up-front, instead of letting the
+        /// BTask blow up later with an Exception that lands in Sentry — and giving the user a 400
+        /// they can act on. DirectoryUtils runs its own check for safety; this one is stricter about
+        /// the separator boundary, so <c>D:\A\Book</c> → <c>D:\A\Book2</c> is correctly allowed here.
+        /// </summary>
+        private static BaseResponse? RejectNestedDestination(string[] paths, string destDir, string verb)
         {
-            var paths = model.EntryPaths.FindTopLevelPaths();
-            // Directory.CreateDirectory(model.DestDir);
-
-            // Reject moving a folder into its own subtree up-front, instead of
-            // letting the BTask blow up later with an Exception that lands in
-            // Sentry. The same check runs again inside DirectoryUtils.MoveAsync
-            // for safety, but catching it here also gives the user a 400.
-            var normalizedDest = Path.GetFullPath(model.DestDir).TrimEnd(
+            var normalizedDest = Path.GetFullPath(destDir).TrimEnd(
                 Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
             foreach (var path in paths)
             {
@@ -922,8 +919,24 @@ namespace Bakabase.Service.Controllers
                         StringComparison.OrdinalIgnoreCase))
                 {
                     return BaseResponseBuilder.BuildBadRequest(
-                        $"Cannot move '{path}' into its own subdirectory '{model.DestDir}'.");
+                        $"Cannot {verb} '{path}' into its own subdirectory '{destDir}'.");
                 }
+            }
+
+            return null;
+        }
+
+        [HttpPost("move-entries")]
+        [SwaggerOperation(OperationId = "MoveEntries")]
+        public async Task<BaseResponse> MoveEntries([FromBody] FileMoveRequestModel model)
+        {
+            var paths = model.EntryPaths.FindTopLevelPaths();
+            // Directory.CreateDirectory(model.DestDir);
+
+            var nested = RejectNestedDestination(paths, model.DestDir, "move");
+            if (nested != null)
+            {
+                return nested;
             }
 
             await _fsOptionsManager.SaveAsync(options =>
@@ -980,6 +993,12 @@ namespace Bakabase.Service.Controllers
         public async Task<BaseResponse> CopyEntries([FromBody] FileMoveRequestModel model)
         {
             var paths = model.EntryPaths.FindTopLevelPaths();
+
+            var nested = RejectNestedDestination(paths, model.DestDir, "copy");
+            if (nested != null)
+            {
+                return nested;
+            }
 
             await _fsOptionsManager.SaveAsync(options =>
             {
