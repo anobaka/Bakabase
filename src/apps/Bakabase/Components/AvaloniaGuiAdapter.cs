@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -46,15 +47,37 @@ public class AvaloniaGuiAdapter : GuiAdapter, ITrayIconController
     public override T InvokeInGuiContext<T>(Func<T> func) =>
         Dispatcher.UIThread.Invoke(func);
 
+    /// <summary>
+    /// Cached one per state. BTaskManager flips its running flag whenever any task starts or
+    /// finishes, so this is called constantly; building a fresh <see cref="WindowIcon"/> each time
+    /// re-decoded the .ico and — on Avalonia before 11.3.8, which had no finalizer on Win32Icon —
+    /// leaked a GDI handle per call until the process ran out and tray interactions started
+    /// failing. Two long-lived icons and an early-out on "no change" keep that churn at zero.
+    /// </summary>
+    private readonly Dictionary<bool, WindowIcon> _trayIcons = new();
+    private bool? _trayIconIsRunning;
+
     public void SetTrayIcon(bool isRunning)
     {
         Dispatcher.UIThread.Invoke(() =>
         {
+            if (_trayIconIsRunning == isRunning)
+            {
+                return;
+            }
+
             try
             {
-                var assetName = isRunning ? "tray-running" : "favicon";
-                _app.AppTrayIcon.Icon = new WindowIcon(
-                    AssetLoader.Open(new Uri($"avares://Bakabase/Assets/{assetName}.ico")));
+                if (!_trayIcons.TryGetValue(isRunning, out var icon))
+                {
+                    var assetName = isRunning ? "tray-running" : "favicon";
+                    icon = new WindowIcon(
+                        AssetLoader.Open(new Uri($"avares://Bakabase/Assets/{assetName}.ico")));
+                    _trayIcons[isRunning] = icon;
+                }
+
+                _app.AppTrayIcon.Icon = icon;
+                _trayIconIsRunning = isRunning;
             }
             catch (System.ComponentModel.Win32Exception)
             {

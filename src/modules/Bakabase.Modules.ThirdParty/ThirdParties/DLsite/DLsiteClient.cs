@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
+using Bakabase.Abstractions.Exceptions;
 using Bakabase.Abstractions.Helpers;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Dtos;
@@ -18,9 +19,11 @@ using JsonSerializer = System.Text.Json.JsonSerializer;
 namespace Bakabase.Modules.ThirdParty.ThirdParties.DLsite;
 
 /// <summary>
-/// Thrown when DLsite returns 401/403, indicating an authentication issue.
+/// Thrown when DLsite returns 401/403, indicating an authentication issue. The user's cookie
+/// has expired or was pasted wrong — they re-capture it from the DLsite settings page, so this
+/// is an <see cref="IUserActionableException"/> and is kept out of the error dashboard.
 /// </summary>
-public class DLsiteAuthException(string message) : Exception(message);
+public class DLsiteAuthException(string message) : Exception(message), IUserActionableException;
 
 /// <summary>
 /// Thrown when a download URL has expired and needs to be re-resolved.

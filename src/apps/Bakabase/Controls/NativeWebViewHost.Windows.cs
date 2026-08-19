@@ -333,6 +333,25 @@ public partial class NativeWebViewHost
         }
     }
 
+    /// <summary>
+    /// Push the current client size into the WebView2 controller.
+    ///
+    /// This runs from the SizeChanged handler, i.e. inside Avalonia's layout pass, so anything
+    /// escaping here takes down the window being laid out — including the initial layout pass of
+    /// <c>Window.Show()</c>, which is how it reached users: re-opening the main window from the
+    /// tray after the WebView2 controller had died crashed the app.
+    ///
+    /// A non-null check cannot pre-empt it. WebView2 fails this call in two ways we only learn
+    /// about by making it:
+    ///   * <see cref="InvalidOperationException"/> — the controller was disposed out from under
+    ///     us (e.g. the browser process died while the window was hidden). It never recovers, so
+    ///     we drop our references and stop driving it.
+    ///   * <see cref="COMException"/> 0x8007139F (ERROR_INVALID_STATE) — alive, but not currently
+    ///     in a state that accepts a bounds change. Transient; the next size change retries.
+    ///
+    /// Both arrive wrapped in a <see cref="System.Reflection.TargetInvocationException"/> because
+    /// the property is set reflectively.
+    /// </summary>
     private void ResizeWebView2()
     {
         if (_winController == null || _winHwnd == IntPtr.Zero) return;
@@ -341,12 +360,29 @@ public partial class NativeWebViewHost
 
         // controller.Bounds = new Rectangle(0, 0, width, height)
         var boundsProperty = _winController.GetType().GetProperty("Bounds");
-        if (boundsProperty != null)
+        if (boundsProperty == null) return;
+
+        // CoreWebView2Controller.Bounds uses System.Drawing.Rectangle
+        var rectType = boundsProperty.PropertyType;
+        var rectInstance = Activator.CreateInstance(rectType, 0, 0, rect.Right, rect.Bottom);
+        try
         {
-            // CoreWebView2Controller.Bounds uses System.Drawing.Rectangle
-            var rectType = boundsProperty.PropertyType;
-            var rectInstance = Activator.CreateInstance(rectType, 0, 0, rect.Right, rect.Bottom);
             boundsProperty.SetValue(_winController, rectInstance);
+        }
+        catch (System.Reflection.TargetInvocationException ex) when (
+            ex.InnerException is InvalidOperationException or COMException)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"[NativeWebViewHost] WebView2 resize skipped: {ex.InnerException.Message}");
+
+            if (ex.InnerException is InvalidOperationException)
+            {
+                // Disposed for good. Clearing the references also makes DestroyWindows skip its
+                // Close() call, which would throw the same way.
+                _winController = null;
+                _winWebView = null;
+                _winWebView2Ready = false;
+            }
         }
     }
 

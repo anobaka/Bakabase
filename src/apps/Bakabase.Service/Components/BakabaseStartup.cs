@@ -3,6 +3,7 @@ using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Components.Network;
 using Bakabase.Abstractions.Components.Tasks;
+using Bakabase.Abstractions.Exceptions;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Services;
 using Bakabase.Infrastructures.Components.App;
@@ -237,11 +238,12 @@ namespace Bakabase.Service.Components
                             {
                                 return null;
                             }
-                            // Expected: dependency (7-Zip / ffmpeg / lux / …)
-                            // not yet installed — the UI prompts the user to
-                            // install it, this is not a defect.
-                            if (ex is Bakabase.InsideWorld.Business.Components.Dependency.Exceptions
-                                .DependencyNotInstalledException)
+                            // Conditions the user resolves themselves — a dependency
+                            // (7-Zip / ffmpeg / lux / …) not installed yet, an expired
+                            // DLsite cookie, … Bakabase already surfaces these in the
+                            // UI; they are not defects. Mark the exception type with
+                            // IUserActionableException instead of adding a case here.
+                            if (ex is IUserActionableException)
                             {
                                 return null;
                             }
