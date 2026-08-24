@@ -126,19 +126,22 @@ its `Closes #N` line to the commit for the change.
 
 ### Skip CI for docs / `.claude` changes
 
-`deploy.yml` ("Build and Deploy") auto-runs **only on push to `release/v*`**
-— pushing a release branch is a deliberate publish. `main` / `debug-actions`
-are **not** auto-deployed; they deploy only via manual `workflow_dispatch`, so
-merging several PRs into `main` no longer fires a release per merge (batch
-them, then dispatch when ready). `ci.yml` runs only on PRs and is enforced as
-a required status check via branch protection, so the merge commit is never
-re-tested and deploy is no longer gated on CI.
+`deploy.yml` ("Build and Deploy") auto-runs on **every push to `main`** and on
+push to `release/v*`. A `main` push publishes a beta; a `release/v*` push
+publishes the corresponding stable. The version is never decided by the
+workflow — `version.json` owns it and the pipeline reads it through nbgv, so
+each `main` commit gets its own beta number. `debug-actions` is **not**
+auto-deployed; deploy it via manual `workflow_dispatch`. `ci.yml` runs only on
+PRs and is enforced as a required status check via branch protection, so the
+merge commit is never re-tested and deploy is not gated on CI.
 
-`[skip ci]` therefore only matters on the auto-deploy branch: add it to a
-commit you push to `release/v*` that touches **only** documentation,
-`.claude/**`, or other non-code files, to skip that release build. It does
-**not** affect `Closes #N` issue auto-closing. On `main` nothing auto-deploys,
-so the directive is moot there.
+Because `main` auto-deploys, add **`[skip ci]`** to a commit that touches
+**only** documentation, `.claude/**`, or other non-code files, so it doesn't
+burn a full build + OSS deploy + GitHub release. It does **not** affect
+`Closes #N` issue auto-closing.
+
+Do **not** skip CI for `.github/**` changes — CI/CD config edits should run
+the pipeline so the change itself gets validated.
 
 ```
 docs: 更新 GitHub issue 管理工作流程 [skip ci]
