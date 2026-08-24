@@ -170,18 +170,30 @@ jobs:
         run: |
           VERSION="${{ needs.prepare.outputs.version }}"
           v=$(echo "$VERSION" | tr '[:upper:]' '[:lower:]')
-          if [[ "$v" == *beta* ]]; then
-            MANIFEST=releases.beta.json
-          elif [[ "$v" == *rc* ]]; then
-            MANIFEST=releases.rc.json
+          # Must mirror the channel logic in _build.yml ("Determine Velopack
+          # channel"): beta/rc pack with `--channel beta`, stable packs with no
+          # `--channel` at all. Without one Velopack falls back to its per-OS
+          # default channel, so a stable build emits releases.win.json /
+          # releases.osx.json -- never an unsuffixed releases.json.
+          if [[ "$v" == *beta* || "$v" == *rc* ]]; then
+            CHANNEL=beta
           else
-            MANIFEST=releases.json
+            CHANNEL=
           fi
-          echo "Verifying manifest: $MANIFEST, expected version: $VERSION"
 
           PLATFORMS=(win-x64 osx-x64 osx-arm64)
           FAILED=()
           for plat in "${PLATFORMS[@]}"; do
+            if [ -n "$CHANNEL" ]; then
+              MANIFEST="releases.${CHANNEL}.json"
+            else
+              case "$plat" in
+                win-*) MANIFEST=releases.win.json ;;
+                osx-*) MANIFEST=releases.osx.json ;;
+                *) echo "::error::No default Velopack channel known for platform $plat"; exit 1 ;;
+              esac
+            fi
+            echo "[$plat] verifying manifest: $MANIFEST, expected version: $VERSION"
             URL="https://cdn-public.anobaka.com/app/bakabase/releases/${plat}/${MANIFEST}"
             OK=0
             for i in $(seq 1 6); do
