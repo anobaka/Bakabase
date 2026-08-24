@@ -1,16 +1,22 @@
 name: Build and Deploy
 
 on:
-  # Auto-deploy only on the release branches — pushing a release/v* branch is a
-  # deliberate publish. main / debug-actions are NOT auto-deployed: merging
-  # several PRs into main shouldn't fire a release per merge, so batch them and
-  # publish via the manual workflow_dispatch below when ready.
-  # (CI no longer gates this; branch protection requires CI to pass before a PR
-  # can merge, so whatever lands here was already validated on the PR.)
+  # Auto-deploy every push to main and to the release branches: a main push
+  # publishes a beta, a release/v* push publishes the corresponding stable.
+  # Nothing here inspects the branch to decide a version — version.json owns
+  # that and the whole pipeline reads it through nbgv (main is currently
+  # "2.4.0-beta.{height}", so each commit gets its own beta number).
+  #
+  # CI does not gate this: ci.yml runs on pull_request only and is a required
+  # status check via branch protection, so whatever lands on main was already
+  # validated on its PR. (Deploy used to chain off CI via `workflow_run`; that
+  # cannot work now that CI deliberately skips merge commits.)
+  #
+  # debug-actions is intentionally left out — deploy it via workflow_dispatch.
   push:
-    branches: [ 'release/v*' ]
-  # Manual trigger: deploy any ref on demand — main betas, debug-actions, or a
-  # re-deploy without a new commit. Pick the branch when dispatching.
+    branches: [ main, 'release/v*' ]
+  # Manual trigger: deploy any ref on demand — debug-actions, or a re-deploy
+  # without a new commit. Pick the branch when dispatching.
   workflow_dispatch:
 
 # Don't cancel an in-progress deploy — OSS uploads + GitHub releases shouldn't
