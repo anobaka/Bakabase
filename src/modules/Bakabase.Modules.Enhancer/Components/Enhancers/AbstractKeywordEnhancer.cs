@@ -12,6 +12,7 @@ using Bakabase.Modules.StandardValue.Abstractions.Services;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Bakabase.Abstractions.Components.Text;
 
 namespace Bakabase.Modules.Enhancer.Components.Enhancers;
 
@@ -20,7 +21,7 @@ public abstract class
         ILoggerFactory loggerFactory,
         IFileManager fileManager,
         IStandardValueService standardValueService,
-        ISpecialTextService specialTextService,
+        ITextOps textOps,
         IServiceProvider serviceProvider)
     : AbstractEnhancer<TEnumTarget, TContext,
         TEnhancerOptions>(loggerFactory, fileManager, serviceProvider) where TEnumTarget : Enum
@@ -119,7 +120,7 @@ public abstract class
         if (options.PretreatKeyword == true)
         {
             var originalKeyword = keyword;
-            keyword = await specialTextService.Pretreatment(keyword);
+            keyword = await textOps.Clean(keyword);
             TracingContext?.AddTrace(LogLevel.Information, Localizer.Enhance(),
                 Localizer.Enhancer_KeywordAfterPretreatment(keyword));
             logCollector.LogInfo(EnhancementLogEvent.KeywordPretreated,

@@ -14,7 +14,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
         IServiceProvider serviceProvider,
         IStringLocalizer<SharedResource> localizer,
         ExHentaiClient client,
-        ISpecialTextService specialTextService,
+        ITextVocabularyService specialTextService,
         IHostEnvironment env)
         : ExHentaiListDownloader(serviceProvider, localizer, client,
             specialTextService, env)

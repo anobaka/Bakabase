@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using Bakabase.Abstractions.Services;
+using Bakabase.Abstractions.Components.Text;
 
 namespace Bakabase.Modules.Comparison.Abstractions.Models;
 
@@ -9,7 +10,7 @@ namespace Bakabase.Modules.Comparison.Abstractions.Models;
 /// </summary>
 public class ComparisonContext : IDisposable
 {
-    private readonly ISpecialTextService _specialTextService;
+    private readonly ITextOps _textOps;
 
     // 文本清洗缓存
     private readonly ConcurrentDictionary<string, string> _normalizedTextCache = new();
@@ -17,9 +18,9 @@ public class ComparisonContext : IDisposable
     // 数字提取缓存
     private readonly ConcurrentDictionary<(string Text, string Pattern), int?> _extractedNumberCache = new();
 
-    public ComparisonContext(ISpecialTextService specialTextService)
+    public ComparisonContext(ITextOps textOps)
     {
-        _specialTextService = specialTextService;
+        _textOps = textOps;
     }
 
     /// <summary>
@@ -33,7 +34,7 @@ public class ComparisonContext : IDisposable
         return _normalizedTextCache.GetOrAdd(rawText, text =>
         {
             // 同步调用异步方法
-            return _specialTextService.Pretreatment(text).GetAwaiter().GetResult();
+            return _textOps.Clean(text).GetAwaiter().GetResult();
         });
     }
 

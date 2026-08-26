@@ -1,4 +1,5 @@
 ﻿using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Abstractions.Components.Text;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
 using Bakabase.Modules.Enhancer.Abstractions.Components;
@@ -24,15 +25,16 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai
         ILoggerFactory loggerFactory,
         ExHentaiClient exHentaiClient,
         IServiceProvider services,
-        ISpecialTextService specialTextService,
+        ITextVocabularyService textVocabularyService,
         IFileManager fileManager,
         IStandardValueService standardValueService,
+        ITextOps textOps,
         IServiceProvider serviceProvider)
-        : AbstractKeywordEnhancer<ExHentaiEnhancerTarget, ExHentaiEnhancerContext, IKeywordEnhancerOptions>(loggerFactory, fileManager, standardValueService, specialTextService, serviceProvider)
+        : AbstractKeywordEnhancer<ExHentaiEnhancerTarget, ExHentaiEnhancerContext, IKeywordEnhancerOptions>(loggerFactory, fileManager, standardValueService, textOps, serviceProvider)
     {
         private readonly ExHentaiClient _exHentaiClient = exHentaiClient;
         private readonly IServiceProvider _services = services;
-        private readonly ISpecialTextService _specialTextService = specialTextService;
+        private readonly ITextVocabularyService _textVocabularyService = textVocabularyService;
         private const string UrlKeywordRegex = "[a-zA-Z0-9]{10,}";
 
         protected override async Task<ExHentaiEnhancerContext?> BuildContextInternal(string keyword, Resource resource, IKeywordEnhancerOptions options, EnhancementLogCollector logCollector, CancellationToken ct)
@@ -43,7 +45,7 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai
             var names = new List<string> {resource.FileName}.Where(a => a.IsNotEmpty()).ToArray();
             if (names.Any(n => System.Text.RegularExpressions.Regex.IsMatch(n, UrlKeywordRegex)))
             {
-                var wrappers = await _specialTextService.GetAll(x => x.Type == SpecialTextType.Wrapper);
+                var wrappers = (await _textVocabularyService.ResolveSet(WellKnownTextType.Wrapper)).Pairs;
                 var urlKeywordCandidates = new List<(string Str, string Keyword)>();
                 foreach (var wrapper in wrappers)
                 {

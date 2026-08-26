@@ -15,7 +15,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
     /// </summary>
     public class PixivRankingDownloader(
         IServiceProvider serviceProvider,
-        ISpecialTextService specialTextService,
+        ITextVocabularyService specialTextService,
         PixivClient client)
         : AbstractPixivDownloader(serviceProvider, specialTextService,
             client)

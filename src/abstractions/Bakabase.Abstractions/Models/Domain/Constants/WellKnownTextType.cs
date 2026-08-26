@@ -1,8 +1,8 @@
-namespace Bakabase.Modules.Text.Abstractions.Models.Domain.Constants;
+namespace Bakabase.Abstractions.Models.Domain.Constants;
 
 /// <summary>
 /// Code handle for a text type whose semantics are bound at a consumption site (cleaning,
-/// date parsing, display-name wrappers, ...). A <see cref="Db.TextType"/> row carrying one of
+/// date parsing, display-name wrappers, ...). A <see cref="Bakabase.Modules.Text.Abstractions.Models.Db.TextType"/> row carrying one of
 /// these is a builtin: it cannot be renamed or deleted, though its entries stay editable.
 /// Rows without a handle are user-defined and have no semantics beyond being referenced by id.
 ///

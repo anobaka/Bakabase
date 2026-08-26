@@ -13,11 +13,12 @@ using Bakabase.Modules.StandardValue.Models.Domain;
 using Bakabase.Modules.ThirdParty.ThirdParties.Tmdb;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.Logging;
+using Bakabase.Abstractions.Components.Text;
 
 namespace Bakabase.Modules.Enhancer.Components.Enhancers.Tmdb;
 
-public class TmdbEnhancer(ILoggerFactory loggerFactory, TmdbClient client, IFileManager fileManager, IStandardValueService standardValueService, ISpecialTextService specialTextService, IServiceProvider serviceProvider)
-    : AbstractKeywordEnhancer<TmdbEnhancerTarget, TmdbEnhancerContext, IKeywordEnhancerOptions>(loggerFactory, fileManager, standardValueService, specialTextService, serviceProvider)
+public class TmdbEnhancer(ILoggerFactory loggerFactory, TmdbClient client, IFileManager fileManager, IStandardValueService standardValueService, ITextOps textOps, IServiceProvider serviceProvider)
+    : AbstractKeywordEnhancer<TmdbEnhancerTarget, TmdbEnhancerContext, IKeywordEnhancerOptions>(loggerFactory, fileManager, standardValueService, textOps, serviceProvider)
 {
     protected override async Task<TmdbEnhancerContext?> BuildContextInternal(string keyword, Resource resource, IKeywordEnhancerOptions options,
         EnhancementLogCollector logCollector, CancellationToken ct)

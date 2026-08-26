@@ -4,7 +4,7 @@ namespace Bakabase.Modules.Text.Abstractions.Models.Db;
 
 /// <summary>
 /// One entry of a <see cref="TextType"/>. What the two values mean is the type's
-/// <see cref="Domain.Constants.TextTypeShape"/>; both slots exist regardless of shape so no data
+/// <see cref="Bakabase.Abstractions.Models.Domain.Constants.TextTypeShape"/>; both slots exist regardless of shape so no data
 /// is lost when a type's shape says only the first one is used.
 /// </summary>
 public record TextEntry

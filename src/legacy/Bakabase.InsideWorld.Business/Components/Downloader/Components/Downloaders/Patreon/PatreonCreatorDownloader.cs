@@ -13,7 +13,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
     {
         public override PatreonDownloadTaskType EnumTaskType => PatreonDownloadTaskType.Creator;
 
-        public PatreonCreatorDownloader(IServiceProvider serviceProvider, ISpecialTextService specialTextService) : base(serviceProvider, specialTextService)
+        public PatreonCreatorDownloader(IServiceProvider serviceProvider, ITextVocabularyService specialTextService) : base(serviceProvider, specialTextService)
         {
         }
 

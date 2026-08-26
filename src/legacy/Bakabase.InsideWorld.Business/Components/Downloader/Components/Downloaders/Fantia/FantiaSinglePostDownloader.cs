@@ -13,7 +13,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
     {
         public override FantiaDownloadTaskType EnumTaskType => FantiaDownloadTaskType.SinglePost;
 
-        public FantiaSinglePostDownloader(IServiceProvider serviceProvider, ISpecialTextService specialTextService) : base(serviceProvider, specialTextService)
+        public FantiaSinglePostDownloader(IServiceProvider serviceProvider, ITextVocabularyService specialTextService) : base(serviceProvider, specialTextService)
         {
         }
 

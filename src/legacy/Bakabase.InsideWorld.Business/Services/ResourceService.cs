@@ -66,7 +66,7 @@ namespace Bakabase.InsideWorld.Business.Services
     {
         private readonly FullMemoryCacheResourceService<BakabaseDbContext, ResourceDbModel, int> _orm;
         private readonly FullMemoryCacheResourceService<BakabaseDbContext, ResourceCacheDbModel, int> _resourceCacheOrm;
-        private readonly ISpecialTextService _specialTextService;
+        private readonly ITextVocabularyService _textVocabularyService;
         private IMediaLibraryV2Service MediaLibraryV2Service => GetRequiredService<IMediaLibraryV2Service>();
         private IResourceProfileService ResourceProfileService => GetRequiredService<IResourceProfileService>();
         private IMediaLibraryResourceMappingService MediaLibraryResourceMappingService => GetRequiredService<IMediaLibraryResourceMappingService>();
@@ -104,7 +104,7 @@ namespace Bakabase.InsideWorld.Business.Services
             CancellationToken = ct
         };
 
-        public ResourceService(IServiceProvider serviceProvider, ISpecialTextService specialTextService,
+        public ResourceService(IServiceProvider serviceProvider, ITextVocabularyService textVocabularyService,
             IAliasService aliasService, 
             ILogger<ResourceService> logger,
             ICustomPropertyService customPropertyService, ICustomPropertyValueService customPropertyValueService,
@@ -121,7 +121,7 @@ namespace Bakabase.InsideWorld.Business.Services
             IBOptions<InsideWorld.Models.Configs.UIOptions> uiOptions,
             IPropertyValueScopeResolver scopeResolver) : base(serviceProvider)
         {
-            _specialTextService = specialTextService;
+            _textVocabularyService = textVocabularyService;
             _aliasService = aliasService;
             _logger = logger;
             _customPropertyService = customPropertyService;
@@ -655,8 +655,7 @@ namespace Bakabase.InsideWorld.Business.Services
                                 {
                                     using (MiniProfiler.Current.Step("DisplayName"))
                                     {
-                                        var wrappers = (await _specialTextService.GetAll(x => x.Type == SpecialTextType.Wrapper))
-                                            .Select(x => (Left: x.Value1, Right: x.Value2!)).ToArray();
+                                        var wrappers = (await _textVocabularyService.ResolveSet(WellKnownTextType.Wrapper)).ToLeftRightPairs();
 
                                         // Extract name templates from unified profile data (already fetched)
                                         Dictionary<int, string?> templateMap;

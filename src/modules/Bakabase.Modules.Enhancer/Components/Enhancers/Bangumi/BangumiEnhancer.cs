@@ -12,6 +12,7 @@ using Bakabase.Modules.ThirdParty.ThirdParties.Bangumi;
 using Bakabase.Modules.ThirdParty.ThirdParties.Bangumi.Models;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.Logging;
+using Bakabase.Abstractions.Components.Text;
 
 namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bangumi;
 
@@ -20,10 +21,10 @@ public class BangumiEnhancer(
     BangumiClient client,
     IFileManager fileManager,
     IStandardValueService standardValueService,
-    ISpecialTextService specialTextService,
+    ITextOps textOps,
     IServiceProvider serviceProvider)
     : AbstractKeywordEnhancer<BangumiEnhancerTarget, BangumiEnhancerContext, IBangumiEnhancerOptions>(loggerFactory, fileManager,
-        standardValueService, specialTextService, serviceProvider)
+        standardValueService, textOps, serviceProvider)
 {
     private static string? GetCategoryString(BangumiSubjectType? type) => type switch
     {

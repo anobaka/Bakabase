@@ -14,6 +14,8 @@ using Microsoft.Extensions.Localization;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.Formats.Png;
+using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Abstractions.Extensions;
 
 namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloaders.ExHentai
 {
@@ -21,12 +23,12 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
     {
         protected readonly IStringLocalizer<SharedResource> Localizer;
         protected readonly ExHentaiClient Client;
-        protected readonly ISpecialTextService SpecialTextService;
+        protected readonly ITextVocabularyService SpecialTextService;
         protected readonly IHostEnvironment Env;
         
         protected AbstractExHentaiDownloader(IServiceProvider serviceProvider,
             IStringLocalizer<SharedResource> localizer,
-            ExHentaiClient client, ISpecialTextService specialTextService,
+            ExHentaiClient client, ITextVocabularyService specialTextService,
             IHostEnvironment env) : base(serviceProvider)
         {
             Localizer = localizer;
@@ -115,7 +117,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                 {ExHentaiNamingFields.Category, detail.Category},
             };
 
-            var wrappers = await SpecialTextService.GetAllWrappers();
+            var wrappers = (await SpecialTextService.ResolveSet(WellKnownTextType.Wrapper)).ToPairMap();
 
             //var limit = await _client.GetImageLimits();
             //if (limit.Rest <= imageTitleAndPageUrls.Length)

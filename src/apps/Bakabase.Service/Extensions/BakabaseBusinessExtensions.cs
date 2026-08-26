@@ -49,6 +49,8 @@ using Bakabase.Modules.Enhancer.Extensions;
 using Bakabase.Modules.Presets.Extensions;
 using Bakabase.Modules.Property.Extensions;
 using Bakabase.Modules.StandardValue.Extensions;
+using Bakabase.Modules.Text.Components;
+using Bakabase.Modules.Text.Extensions;
 using Bakabase.Modules.Comparison.Extensions;
 using Bakabase.Modules.DataCard.Extensions;
 using Bakabase.InsideWorld.Business.Components.Resolvers;
@@ -59,7 +61,6 @@ using Bootstrap.Components.Orm;
 using Bootstrap.Components.Orm.Infrastructures;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using SpecialText = Bakabase.Abstractions.Models.Db.SpecialText;
 
 namespace Bakabase.Service.Extensions
 {
@@ -102,7 +103,8 @@ namespace Bakabase.Service.Extensions
             services.AddAlias<BakabaseDbContext>();
             services.AddProperty<BakabaseDbContext>();
             services.AddEnhancers<BakabaseDbContext>();
-            services.AddStandardValue<SpecialTextService>();
+            services.AddText<BakabaseDbContext>();
+            services.AddStandardValue<TextOps>();
             services.AddReservedProperty();
 
             services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, ResourceDbModel, int>>();
@@ -113,9 +115,6 @@ namespace Bakabase.Service.Extensions
                 .AddScoped<IResourceMoveService,
                     Bakabase.InsideWorld.Business.Components.ResourceMove.ResourceMoveService>();
             services.AddSingleton<IPropertyValueScopeResolver, PropertyValueScopeResolver>();
-            services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, SpecialText, int>>();
-            services.AddScoped<SpecialTextService>();
-            services.AddScoped<ISpecialTextService>(sp => sp.GetRequiredService<SpecialTextService>());
             services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, ResourceCacheDbModel, int>>();
             services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, PlayHistoryDbModel, int>>();
             services.AddScoped<IPlayHistoryService, PlayHistoryService>();

@@ -12,6 +12,7 @@ using Bakabase.Modules.StandardValue.Abstractions.Services;
 using Bakabase.Modules.ThirdParty.ThirdParties.DLsite;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.Logging;
+using Bakabase.Abstractions.Components.Text;
 
 namespace Bakabase.Modules.Enhancer.Components.Enhancers.DLsite;
 
@@ -25,7 +26,7 @@ public class DLsiteEnhancer : AbstractKeywordEnhancer<DLsiteEnhancerTarget, DLsi
     /// </summary>
     private static readonly System.Text.RegularExpressions.Regex IdRegex = new System.Text.RegularExpressions.Regex(@"[BVR]J\d{6,10}");
 
-    public DLsiteEnhancer(ILoggerFactory loggerFactory, IFileManager fileManager, DLsiteClient client, IStandardValueService standardValueService, ISpecialTextService specialTextService, IServiceProvider serviceProvider) : base(loggerFactory, fileManager, standardValueService, specialTextService, serviceProvider)
+    public DLsiteEnhancer(ILoggerFactory loggerFactory, IFileManager fileManager, DLsiteClient client, IStandardValueService standardValueService, ITextOps textOps, IServiceProvider serviceProvider) : base(loggerFactory, fileManager, standardValueService, textOps, serviceProvider)
     {
         _client = client;
         _standardValueService = standardValueService;

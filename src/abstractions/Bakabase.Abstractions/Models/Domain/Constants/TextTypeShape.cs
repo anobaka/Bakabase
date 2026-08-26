@@ -1,4 +1,4 @@
-namespace Bakabase.Modules.Text.Abstractions.Models.Domain.Constants;
+namespace Bakabase.Abstractions.Models.Domain.Constants;
 
 /// <summary>
 /// How a type's entries use their two value slots. Drives editing UI, the type picker's

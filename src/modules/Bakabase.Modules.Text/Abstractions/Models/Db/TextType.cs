@@ -1,5 +1,5 @@
 using System.ComponentModel.DataAnnotations;
-using Bakabase.Modules.Text.Abstractions.Models.Domain.Constants;
+using Bakabase.Abstractions.Models.Domain.Constants;
 
 namespace Bakabase.Modules.Text.Abstractions.Models.Db;
 

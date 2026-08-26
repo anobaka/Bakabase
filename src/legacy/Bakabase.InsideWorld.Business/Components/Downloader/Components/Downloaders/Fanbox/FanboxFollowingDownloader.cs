@@ -13,7 +13,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
     {
         public override FanboxDownloadTaskType EnumTaskType => FanboxDownloadTaskType.Following;
 
-        public FanboxFollowingDownloader(IServiceProvider serviceProvider, ISpecialTextService specialTextService) : base(serviceProvider, specialTextService)
+        public FanboxFollowingDownloader(IServiceProvider serviceProvider, ITextVocabularyService specialTextService) : base(serviceProvider, specialTextService)
         {
         }
 

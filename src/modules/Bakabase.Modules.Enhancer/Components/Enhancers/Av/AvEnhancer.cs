@@ -14,6 +14,7 @@ using Bakabase.Modules.StandardValue.Abstractions.Services;
 using Bakabase.Modules.ThirdParty.ThirdParties.Av;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.Logging;
+using Bakabase.Abstractions.Components.Text;
 
 namespace Bakabase.Modules.Enhancer.Components.Enhancers.Av;
 
@@ -23,8 +24,8 @@ public class AvEnhancer(
     IEnumerable<IAvClient> avClients,
     IHttpClientFactory httpClientFactory,
     IAvSourceOptionsProvider avOptionsProvider,
-    IStandardValueService standardValueService, ISpecialTextService specialTextService, IServiceProvider serviceProvider)
-    : AbstractKeywordEnhancer<AvEnhancerTarget, AvEnhancerContext, IKeywordEnhancerOptions>(loggerFactory, fileManager, standardValueService, specialTextService, serviceProvider)
+    IStandardValueService standardValueService, ITextOps textOps, IServiceProvider serviceProvider)
+    : AbstractKeywordEnhancer<AvEnhancerTarget, AvEnhancerContext, IKeywordEnhancerOptions>(loggerFactory, fileManager, standardValueService, textOps, serviceProvider)
 {
     protected override EnhancerId TypedId => EnhancerId.Av;
 
