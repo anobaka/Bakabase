@@ -49,6 +49,13 @@ namespace Bakabase.InsideWorld.Models.Configs
         public ProxyModel Proxy { get; set; } = new() {Mode = ProxyMode.DoNotUse};
 
         /// <summary>
+        /// Per-source proxy overrides, keyed by <see cref="Constants.ThirdPartyId"/>. A source with no
+        /// entry uses <see cref="Proxy"/>, so this stays empty until someone actually wants one
+        /// downloader routed differently from the rest.
+        /// </summary>
+        public Dictionary<int, ProxyModel>? ThirdPartyProxies { get; set; }
+
+        /// <summary>
         /// Extra URLs the user wants a proxy connectivity test to hit, on top of the
         /// built-in presets. Null/empty means presets only.
         /// </summary>

@@ -4927,3 +4927,13 @@ export const ProxyTestSites: readonly ProxyTestSite[] = [
 ] as const;
 
 export const DefaultProxyTestSiteIds: readonly string[] = ["google", "youtube", "github"] as const;
+
+export const ProxyCapableThirdPartyIds: readonly ThirdPartyId[] = [
+  ThirdPartyId.ExHentai,
+  ThirdPartyId.Pixiv,
+  ThirdPartyId.Bilibili,
+  ThirdPartyId.DLsite,
+  ThirdPartyId.Bangumi,
+  ThirdPartyId.SoulPlus,
+  ThirdPartyId.Tmdb
+] as const;
