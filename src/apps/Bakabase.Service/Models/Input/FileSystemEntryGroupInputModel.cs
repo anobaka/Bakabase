@@ -7,6 +7,12 @@ public enum FileSystemEntryGroupStrategyType
     Similarity = 0,
     KeyExtraction = 1,
     Affix = 2,
+
+    /// <summary>
+    /// Groups by parsed AV product code (LABEL-SERIAL), tolerating case, separator and
+    /// surrounding junk differences that defeat a plain regex.
+    /// </summary>
+    ProductCode = 3,
 }
 
 public enum FileSystemEntryGroupAffixDirection

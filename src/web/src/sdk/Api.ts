@@ -4395,7 +4395,7 @@ export type BakabaseServiceModelsInputFileSystemEntryGroupAffixDirection = 0 | 1
 export interface BakabaseServiceModelsInputFileSystemEntryGroupInputModel {
   paths: string[];
   groupInternal: boolean;
-  /** [0: Similarity, 1: KeyExtraction, 2: Affix] */
+  /** [0: Similarity, 1: KeyExtraction, 2: Affix, 3: ProductCode] */
   strategyType: BakabaseServiceModelsInputFileSystemEntryGroupStrategyType;
   /**
    * @format double
@@ -4415,10 +4415,10 @@ export interface BakabaseServiceModelsInputFileSystemEntryGroupInputModel {
 }
 
 /**
- * [0: Similarity, 1: KeyExtraction, 2: Affix]
+ * [0: Similarity, 1: KeyExtraction, 2: Affix, 3: ProductCode]
  * @format int32
  */
-export type BakabaseServiceModelsInputFileSystemEntryGroupStrategyType = 0 | 1 | 2;
+export type BakabaseServiceModelsInputFileSystemEntryGroupStrategyType = 0 | 1 | 2 | 3;
 
 export interface BakabaseServiceModelsInputIdBasedDataSortInputModel {
   ids: number[];

@@ -232,6 +232,219 @@ export const OsPlatformLabel: Record<OsPlatform, string> = {
   [OsPlatform.FreeBsd]: 'FreeBsd'
 };
 
+export enum SteamMetadataField {
+  Name = 1,
+  Type = 2,
+  ShortDescription = 3,
+  DetailedDescription = 4,
+  HeaderImage = 5,
+  CapsuleImage = 6,
+  Developers = 7,
+  Publishers = 8,
+  Genres = 9,
+  Categories = 10,
+  MetacriticScore = 11,
+  ReleaseDate = 12
+}
+
+export const steamMetadataFields = [
+  { label: 'Name', value: SteamMetadataField.Name },
+  { label: 'Type', value: SteamMetadataField.Type },
+  { label: 'ShortDescription', value: SteamMetadataField.ShortDescription },
+  { label: 'DetailedDescription', value: SteamMetadataField.DetailedDescription },
+  { label: 'HeaderImage', value: SteamMetadataField.HeaderImage },
+  { label: 'CapsuleImage', value: SteamMetadataField.CapsuleImage },
+  { label: 'Developers', value: SteamMetadataField.Developers },
+  { label: 'Publishers', value: SteamMetadataField.Publishers },
+  { label: 'Genres', value: SteamMetadataField.Genres },
+  { label: 'Categories', value: SteamMetadataField.Categories },
+  { label: 'MetacriticScore', value: SteamMetadataField.MetacriticScore },
+  { label: 'ReleaseDate', value: SteamMetadataField.ReleaseDate }
+] as const;
+
+export const SteamMetadataFieldLabel: Record<SteamMetadataField, string> = {
+  [SteamMetadataField.Name]: 'Name',
+  [SteamMetadataField.Type]: 'Type',
+  [SteamMetadataField.ShortDescription]: 'ShortDescription',
+  [SteamMetadataField.DetailedDescription]: 'DetailedDescription',
+  [SteamMetadataField.HeaderImage]: 'HeaderImage',
+  [SteamMetadataField.CapsuleImage]: 'CapsuleImage',
+  [SteamMetadataField.Developers]: 'Developers',
+  [SteamMetadataField.Publishers]: 'Publishers',
+  [SteamMetadataField.Genres]: 'Genres',
+  [SteamMetadataField.Categories]: 'Categories',
+  [SteamMetadataField.MetacriticScore]: 'MetacriticScore',
+  [SteamMetadataField.ReleaseDate]: 'ReleaseDate'
+};
+
+export enum ExHentaiMetadataField {
+  Name = 1,
+  RawName = 2,
+  Introduction = 3,
+  Rate = 4,
+  Category = 5,
+  CoverUrl = 6,
+  FileCount = 7,
+  PageCount = 8
+}
+
+export const exHentaiMetadataFields = [
+  { label: 'Name', value: ExHentaiMetadataField.Name },
+  { label: 'RawName', value: ExHentaiMetadataField.RawName },
+  { label: 'Introduction', value: ExHentaiMetadataField.Introduction },
+  { label: 'Rate', value: ExHentaiMetadataField.Rate },
+  { label: 'Category', value: ExHentaiMetadataField.Category },
+  { label: 'CoverUrl', value: ExHentaiMetadataField.CoverUrl },
+  { label: 'FileCount', value: ExHentaiMetadataField.FileCount },
+  { label: 'PageCount', value: ExHentaiMetadataField.PageCount }
+] as const;
+
+export const ExHentaiMetadataFieldLabel: Record<ExHentaiMetadataField, string> = {
+  [ExHentaiMetadataField.Name]: 'Name',
+  [ExHentaiMetadataField.RawName]: 'RawName',
+  [ExHentaiMetadataField.Introduction]: 'Introduction',
+  [ExHentaiMetadataField.Rate]: 'Rate',
+  [ExHentaiMetadataField.Category]: 'Category',
+  [ExHentaiMetadataField.CoverUrl]: 'CoverUrl',
+  [ExHentaiMetadataField.FileCount]: 'FileCount',
+  [ExHentaiMetadataField.PageCount]: 'PageCount'
+};
+
+export enum ExHentaiCategory {
+  Unknown = 0,
+  Misc = 1,
+  Doushijin = 2,
+  Manga = 4,
+  ArtistCG = 8,
+  GameCG = 16,
+  ImageSet = 32,
+  Cosplay = 64,
+  AsianPorn = 128,
+  NonH = 256,
+  Western = 512
+}
+
+export const exHentaiCategories = [
+  { label: 'Unknown', value: ExHentaiCategory.Unknown },
+  { label: 'Misc', value: ExHentaiCategory.Misc },
+  { label: 'Doushijin', value: ExHentaiCategory.Doushijin },
+  { label: 'Manga', value: ExHentaiCategory.Manga },
+  { label: 'ArtistCG', value: ExHentaiCategory.ArtistCG },
+  { label: 'GameCG', value: ExHentaiCategory.GameCG },
+  { label: 'ImageSet', value: ExHentaiCategory.ImageSet },
+  { label: 'Cosplay', value: ExHentaiCategory.Cosplay },
+  { label: 'AsianPorn', value: ExHentaiCategory.AsianPorn },
+  { label: 'NonH', value: ExHentaiCategory.NonH },
+  { label: 'Western', value: ExHentaiCategory.Western }
+] as const;
+
+export const ExHentaiCategoryLabel: Record<ExHentaiCategory, string> = {
+  [ExHentaiCategory.Unknown]: 'Unknown',
+  [ExHentaiCategory.Misc]: 'Misc',
+  [ExHentaiCategory.Doushijin]: 'Doushijin',
+  [ExHentaiCategory.Manga]: 'Manga',
+  [ExHentaiCategory.ArtistCG]: 'ArtistCG',
+  [ExHentaiCategory.GameCG]: 'GameCG',
+  [ExHentaiCategory.ImageSet]: 'ImageSet',
+  [ExHentaiCategory.Cosplay]: 'Cosplay',
+  [ExHentaiCategory.AsianPorn]: 'AsianPorn',
+  [ExHentaiCategory.NonH]: 'NonH',
+  [ExHentaiCategory.Western]: 'Western'
+};
+
+export enum ExHentaiConnectionStatus {
+  Ok = 1,
+  InvalidCookie = 2,
+  IpBanned = 3,
+  UnknownError = 4
+}
+
+export const exHentaiConnectionStatuses = [
+  { label: 'Ok', value: ExHentaiConnectionStatus.Ok },
+  { label: 'InvalidCookie', value: ExHentaiConnectionStatus.InvalidCookie },
+  { label: 'IpBanned', value: ExHentaiConnectionStatus.IpBanned },
+  { label: 'UnknownError', value: ExHentaiConnectionStatus.UnknownError }
+] as const;
+
+export const ExHentaiConnectionStatusLabel: Record<ExHentaiConnectionStatus, string> = {
+  [ExHentaiConnectionStatus.Ok]: 'Ok',
+  [ExHentaiConnectionStatus.InvalidCookie]: 'InvalidCookie',
+  [ExHentaiConnectionStatus.IpBanned]: 'IpBanned',
+  [ExHentaiConnectionStatus.UnknownError]: 'UnknownError'
+};
+
+export enum DLsiteMetadataField {
+  Name = 1,
+  Introduction = 2,
+  Rating = 3,
+  CoverUrls = 4
+}
+
+export const dLsiteMetadataFields = [
+  { label: 'Name', value: DLsiteMetadataField.Name },
+  { label: 'Introduction', value: DLsiteMetadataField.Introduction },
+  { label: 'Rating', value: DLsiteMetadataField.Rating },
+  { label: 'CoverUrls', value: DLsiteMetadataField.CoverUrls }
+] as const;
+
+export const DLsiteMetadataFieldLabel: Record<DLsiteMetadataField, string> = {
+  [DLsiteMetadataField.Name]: 'Name',
+  [DLsiteMetadataField.Introduction]: 'Introduction',
+  [DLsiteMetadataField.Rating]: 'Rating',
+  [DLsiteMetadataField.CoverUrls]: 'CoverUrls'
+};
+
+export enum BangumiSubjectType {
+  All = 0,
+  Anime = 1,
+  Book = 2,
+  Music = 3,
+  Game = 4,
+  Real = 5
+}
+
+export const bangumiSubjectTypes = [
+  { label: 'All', value: BangumiSubjectType.All },
+  { label: 'Anime', value: BangumiSubjectType.Anime },
+  { label: 'Book', value: BangumiSubjectType.Book },
+  { label: 'Music', value: BangumiSubjectType.Music },
+  { label: 'Game', value: BangumiSubjectType.Game },
+  { label: 'Real', value: BangumiSubjectType.Real }
+] as const;
+
+export const BangumiSubjectTypeLabel: Record<BangumiSubjectType, string> = {
+  [BangumiSubjectType.All]: 'All',
+  [BangumiSubjectType.Anime]: 'Anime',
+  [BangumiSubjectType.Book]: 'Book',
+  [BangumiSubjectType.Music]: 'Music',
+  [BangumiSubjectType.Game]: 'Game',
+  [BangumiSubjectType.Real]: 'Real'
+};
+
+export enum ThirdPartyRequestResultType {
+  Succeed = 1,
+  TimedOut = 2,
+  Banned = 3,
+  Canceled = 4,
+  Failed = 1000
+}
+
+export const thirdPartyRequestResultTypes = [
+  { label: 'Succeed', value: ThirdPartyRequestResultType.Succeed },
+  { label: 'TimedOut', value: ThirdPartyRequestResultType.TimedOut },
+  { label: 'Banned', value: ThirdPartyRequestResultType.Banned },
+  { label: 'Canceled', value: ThirdPartyRequestResultType.Canceled },
+  { label: 'Failed', value: ThirdPartyRequestResultType.Failed }
+] as const;
+
+export const ThirdPartyRequestResultTypeLabel: Record<ThirdPartyRequestResultType, string> = {
+  [ThirdPartyRequestResultType.Succeed]: 'Succeed',
+  [ThirdPartyRequestResultType.TimedOut]: 'TimedOut',
+  [ThirdPartyRequestResultType.Banned]: 'Banned',
+  [ThirdPartyRequestResultType.Canceled]: 'Canceled',
+  [ThirdPartyRequestResultType.Failed]: 'Failed'
+};
+
 export enum BatchPlaySkipReason {
   NoPlayableFiles = 1,
   AllFilesMissing = 2,
@@ -4097,219 +4310,6 @@ export const aliasExceptionTypes = [
 
 export const AliasExceptionTypeLabel: Record<AliasExceptionType, string> = {
   [AliasExceptionType.ConflictAliasGroup]: 'ConflictAliasGroup'
-};
-
-export enum SteamMetadataField {
-  Name = 1,
-  Type = 2,
-  ShortDescription = 3,
-  DetailedDescription = 4,
-  HeaderImage = 5,
-  CapsuleImage = 6,
-  Developers = 7,
-  Publishers = 8,
-  Genres = 9,
-  Categories = 10,
-  MetacriticScore = 11,
-  ReleaseDate = 12
-}
-
-export const steamMetadataFields = [
-  { label: 'Name', value: SteamMetadataField.Name },
-  { label: 'Type', value: SteamMetadataField.Type },
-  { label: 'ShortDescription', value: SteamMetadataField.ShortDescription },
-  { label: 'DetailedDescription', value: SteamMetadataField.DetailedDescription },
-  { label: 'HeaderImage', value: SteamMetadataField.HeaderImage },
-  { label: 'CapsuleImage', value: SteamMetadataField.CapsuleImage },
-  { label: 'Developers', value: SteamMetadataField.Developers },
-  { label: 'Publishers', value: SteamMetadataField.Publishers },
-  { label: 'Genres', value: SteamMetadataField.Genres },
-  { label: 'Categories', value: SteamMetadataField.Categories },
-  { label: 'MetacriticScore', value: SteamMetadataField.MetacriticScore },
-  { label: 'ReleaseDate', value: SteamMetadataField.ReleaseDate }
-] as const;
-
-export const SteamMetadataFieldLabel: Record<SteamMetadataField, string> = {
-  [SteamMetadataField.Name]: 'Name',
-  [SteamMetadataField.Type]: 'Type',
-  [SteamMetadataField.ShortDescription]: 'ShortDescription',
-  [SteamMetadataField.DetailedDescription]: 'DetailedDescription',
-  [SteamMetadataField.HeaderImage]: 'HeaderImage',
-  [SteamMetadataField.CapsuleImage]: 'CapsuleImage',
-  [SteamMetadataField.Developers]: 'Developers',
-  [SteamMetadataField.Publishers]: 'Publishers',
-  [SteamMetadataField.Genres]: 'Genres',
-  [SteamMetadataField.Categories]: 'Categories',
-  [SteamMetadataField.MetacriticScore]: 'MetacriticScore',
-  [SteamMetadataField.ReleaseDate]: 'ReleaseDate'
-};
-
-export enum ExHentaiMetadataField {
-  Name = 1,
-  RawName = 2,
-  Introduction = 3,
-  Rate = 4,
-  Category = 5,
-  CoverUrl = 6,
-  FileCount = 7,
-  PageCount = 8
-}
-
-export const exHentaiMetadataFields = [
-  { label: 'Name', value: ExHentaiMetadataField.Name },
-  { label: 'RawName', value: ExHentaiMetadataField.RawName },
-  { label: 'Introduction', value: ExHentaiMetadataField.Introduction },
-  { label: 'Rate', value: ExHentaiMetadataField.Rate },
-  { label: 'Category', value: ExHentaiMetadataField.Category },
-  { label: 'CoverUrl', value: ExHentaiMetadataField.CoverUrl },
-  { label: 'FileCount', value: ExHentaiMetadataField.FileCount },
-  { label: 'PageCount', value: ExHentaiMetadataField.PageCount }
-] as const;
-
-export const ExHentaiMetadataFieldLabel: Record<ExHentaiMetadataField, string> = {
-  [ExHentaiMetadataField.Name]: 'Name',
-  [ExHentaiMetadataField.RawName]: 'RawName',
-  [ExHentaiMetadataField.Introduction]: 'Introduction',
-  [ExHentaiMetadataField.Rate]: 'Rate',
-  [ExHentaiMetadataField.Category]: 'Category',
-  [ExHentaiMetadataField.CoverUrl]: 'CoverUrl',
-  [ExHentaiMetadataField.FileCount]: 'FileCount',
-  [ExHentaiMetadataField.PageCount]: 'PageCount'
-};
-
-export enum ExHentaiCategory {
-  Unknown = 0,
-  Misc = 1,
-  Doushijin = 2,
-  Manga = 4,
-  ArtistCG = 8,
-  GameCG = 16,
-  ImageSet = 32,
-  Cosplay = 64,
-  AsianPorn = 128,
-  NonH = 256,
-  Western = 512
-}
-
-export const exHentaiCategories = [
-  { label: 'Unknown', value: ExHentaiCategory.Unknown },
-  { label: 'Misc', value: ExHentaiCategory.Misc },
-  { label: 'Doushijin', value: ExHentaiCategory.Doushijin },
-  { label: 'Manga', value: ExHentaiCategory.Manga },
-  { label: 'ArtistCG', value: ExHentaiCategory.ArtistCG },
-  { label: 'GameCG', value: ExHentaiCategory.GameCG },
-  { label: 'ImageSet', value: ExHentaiCategory.ImageSet },
-  { label: 'Cosplay', value: ExHentaiCategory.Cosplay },
-  { label: 'AsianPorn', value: ExHentaiCategory.AsianPorn },
-  { label: 'NonH', value: ExHentaiCategory.NonH },
-  { label: 'Western', value: ExHentaiCategory.Western }
-] as const;
-
-export const ExHentaiCategoryLabel: Record<ExHentaiCategory, string> = {
-  [ExHentaiCategory.Unknown]: 'Unknown',
-  [ExHentaiCategory.Misc]: 'Misc',
-  [ExHentaiCategory.Doushijin]: 'Doushijin',
-  [ExHentaiCategory.Manga]: 'Manga',
-  [ExHentaiCategory.ArtistCG]: 'ArtistCG',
-  [ExHentaiCategory.GameCG]: 'GameCG',
-  [ExHentaiCategory.ImageSet]: 'ImageSet',
-  [ExHentaiCategory.Cosplay]: 'Cosplay',
-  [ExHentaiCategory.AsianPorn]: 'AsianPorn',
-  [ExHentaiCategory.NonH]: 'NonH',
-  [ExHentaiCategory.Western]: 'Western'
-};
-
-export enum ExHentaiConnectionStatus {
-  Ok = 1,
-  InvalidCookie = 2,
-  IpBanned = 3,
-  UnknownError = 4
-}
-
-export const exHentaiConnectionStatuses = [
-  { label: 'Ok', value: ExHentaiConnectionStatus.Ok },
-  { label: 'InvalidCookie', value: ExHentaiConnectionStatus.InvalidCookie },
-  { label: 'IpBanned', value: ExHentaiConnectionStatus.IpBanned },
-  { label: 'UnknownError', value: ExHentaiConnectionStatus.UnknownError }
-] as const;
-
-export const ExHentaiConnectionStatusLabel: Record<ExHentaiConnectionStatus, string> = {
-  [ExHentaiConnectionStatus.Ok]: 'Ok',
-  [ExHentaiConnectionStatus.InvalidCookie]: 'InvalidCookie',
-  [ExHentaiConnectionStatus.IpBanned]: 'IpBanned',
-  [ExHentaiConnectionStatus.UnknownError]: 'UnknownError'
-};
-
-export enum DLsiteMetadataField {
-  Name = 1,
-  Introduction = 2,
-  Rating = 3,
-  CoverUrls = 4
-}
-
-export const dLsiteMetadataFields = [
-  { label: 'Name', value: DLsiteMetadataField.Name },
-  { label: 'Introduction', value: DLsiteMetadataField.Introduction },
-  { label: 'Rating', value: DLsiteMetadataField.Rating },
-  { label: 'CoverUrls', value: DLsiteMetadataField.CoverUrls }
-] as const;
-
-export const DLsiteMetadataFieldLabel: Record<DLsiteMetadataField, string> = {
-  [DLsiteMetadataField.Name]: 'Name',
-  [DLsiteMetadataField.Introduction]: 'Introduction',
-  [DLsiteMetadataField.Rating]: 'Rating',
-  [DLsiteMetadataField.CoverUrls]: 'CoverUrls'
-};
-
-export enum BangumiSubjectType {
-  All = 0,
-  Anime = 1,
-  Book = 2,
-  Music = 3,
-  Game = 4,
-  Real = 5
-}
-
-export const bangumiSubjectTypes = [
-  { label: 'All', value: BangumiSubjectType.All },
-  { label: 'Anime', value: BangumiSubjectType.Anime },
-  { label: 'Book', value: BangumiSubjectType.Book },
-  { label: 'Music', value: BangumiSubjectType.Music },
-  { label: 'Game', value: BangumiSubjectType.Game },
-  { label: 'Real', value: BangumiSubjectType.Real }
-] as const;
-
-export const BangumiSubjectTypeLabel: Record<BangumiSubjectType, string> = {
-  [BangumiSubjectType.All]: 'All',
-  [BangumiSubjectType.Anime]: 'Anime',
-  [BangumiSubjectType.Book]: 'Book',
-  [BangumiSubjectType.Music]: 'Music',
-  [BangumiSubjectType.Game]: 'Game',
-  [BangumiSubjectType.Real]: 'Real'
-};
-
-export enum ThirdPartyRequestResultType {
-  Succeed = 1,
-  TimedOut = 2,
-  Banned = 3,
-  Canceled = 4,
-  Failed = 1000
-}
-
-export const thirdPartyRequestResultTypes = [
-  { label: 'Succeed', value: ThirdPartyRequestResultType.Succeed },
-  { label: 'TimedOut', value: ThirdPartyRequestResultType.TimedOut },
-  { label: 'Banned', value: ThirdPartyRequestResultType.Banned },
-  { label: 'Canceled', value: ThirdPartyRequestResultType.Canceled },
-  { label: 'Failed', value: ThirdPartyRequestResultType.Failed }
-] as const;
-
-export const ThirdPartyRequestResultTypeLabel: Record<ThirdPartyRequestResultType, string> = {
-  [ThirdPartyRequestResultType.Succeed]: 'Succeed',
-  [ThirdPartyRequestResultType.TimedOut]: 'TimedOut',
-  [ThirdPartyRequestResultType.Banned]: 'Banned',
-  [ThirdPartyRequestResultType.Canceled]: 'Canceled',
-  [ThirdPartyRequestResultType.Failed]: 'Failed'
 };
 
 export enum StandardValueConversionRule {

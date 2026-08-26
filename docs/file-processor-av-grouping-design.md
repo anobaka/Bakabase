@@ -2,10 +2,24 @@
 
 | 字段 | 值 |
 |---|---|
-| 状态 | **设计中，未实施** — 等待选型确认 |
+| 状态 | **已实施** — 见 §0 实施记录 |
 | 分支 | `claude/app-optimization-fixes-i2dsnx` |
 | 最后更新 | 2026-08-26 |
-| 相关代码 | `src/apps/Bakabase.Service/Services/FileSystemEntryGroupingService.cs`<br>`src/web/src/components/FileExplorer/components/GroupModal.tsx` |
+| 相关代码 | `src/apps/Bakabase.Service/Services/FileSystemEntryGroupingService.cs`<br>`src/modules/Bakabase.Modules.ThirdParty/ThirdParties/Av/AvProductCode.cs`<br>`src/web/src/components/FileExplorer/components/GroupModal.tsx` |
+
+---
+
+## 0. 实施记录
+
+方案 A + B 已落地，方案 C 按建议暂缓。与原设计的偏差：
+
+| 偏差点 | 原设计 | 实际实现 | 原因 |
+|---|---|---|---|
+| 归一化的落点 | 独立的归一化管线，作用于所有策略 | 归一化收进 `AvProductCodeParser`，另外把分组字典改为 `OrdinalIgnoreCase` | 全局归一化会改变用户自填正则的语义；3.1/3.4 由字典比较器解决，其余归一化只有番号解析需要 |
+| 大写噪声 (3.3) | 「厂牌只取 token 末尾连续的字母段」 | `SSSSSSSXDVD-101pl` 判定为**无番号**，不再产出任何键 | 没有厂牌名单时，`SSSSSSSXDVD` 这一整段 11 个字母里没有任何信号能指出噪声在哪里结束。产出 `SSXDVD-101` 或 `SSSSSSXDVD-101` 都只是换一个错误答案；不匹配会让文件留在 untouched 里被用户看见，更诚实。小写噪声（`sssssssXDVD-101pl`，有大小写边界）能正确解析 |
+| 共享组件的范围 | 番号解析由分组 / Freejavbt / Airav 三处共用 | 只新增了共享组件并接入分组；两个 client 未改动 | 它们的正则锚定在页面标题上下文，替换需要单独验证抓取行为，不适合和本次改动混在一起 |
+
+新策略为 `FileSystemEntryGroupStrategyType.ProductCode = 3`，前端多一个「番号 / Product code」页签，无需填正则也无需调阈值。第 3 节的输入表已固化为 `AvProductCodeParserTests` 的用例。
 
 ---
 
