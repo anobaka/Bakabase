@@ -136,7 +136,7 @@ FileRenameRecord   RunId, Seq, Path(父目录), From, To, RenamedAt, Undone   <s
 <li><b>选择器</b>：<code class="i">GetTypes()</code> 聚合列表是节点配置表单与 text 管理页的唯一数据源（内置徽标区分，<b>按 Shape 精确过滤</b>）。</li>
 <li><b>数据不丢</b>：旧 SpecialText 行经 app 级迁移器（V220/V230 先例）七值查表转入新表，Value2 原样保留；EF 迁移保持纯 schema 且<b>不 drop 旧表</b>（迁移器在 EF 之后运行，drop 会导致跨版本升级丢数据）。「质量与发布标签」以可编辑种子集下发（只投一次，删除不复活）。</li>
 </ol>
-<div class="rule"><b>实施顺序：本扩展是整个功能唯一的 schema 变更，第一步先做</b>（PR1 建表 → PR2 服务拆分与全量切换 → PR3 UI/种子），节点实现全部依赖它。</div>
+<div class="rule"><b>实施顺序：本扩展是整个功能唯一的 schema 变更，第一步先做</b>（PR1 建表 → PR2 服务拆分与全量切换 → PR3 UI/种子），节点实现全部依赖它。<b>已完成</b>——三个 PR 均已合入，与本设计的偏差见<a href="specialtext-extension.html#s8">扩展设计 §8 实施偏差</a>。</div>
 
 <h2 id="s6"><span class="n">§6</span>执行与 UI</h2>
 <ul>

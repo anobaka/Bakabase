@@ -58,7 +58,7 @@ footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(
 
 <h2><span class="n">§3</span>引擎扩展清单（均跨场景通用；标注第一个用户）</h2>
 <table><tr><th style="width:4%">#</th><th style="width:17%">扩展</th><th>内容</th><th style="width:16%">第一个用户</th><th style="width:24%">通用价值</th></tr>
-<tr><td class="e">E1</td><td><b>手动触发 + 参数面板</b></td><td>触发器新形态：用户带 payload 手动运行（当前只有事件触发）</td><td class="k">fs.manualScan</td><td>一切"对一批输入执行流程"；也是调试任何工作流的入口</td></tr>
+<tr><td class="e">E1</td><td><b>手动触发 + 参数面板</b><span class="tag t-have">已完成</span></td><td>触发器契约新增 <code class="i">RequiresManualPayload</code> + <code class="i">BuildManualPayload(triggerFilterJson, argsJson)</code>（默认实现把用户填的 JSON 反序列化为 <code class="i">PayloadType</code>，于是<b>每个事件触发器天生可回放调试</b>；参数长在定义上的触发器覆写它，从自身配置构造 payload——<code class="i">fs.manualScan</code> 将走这条）。<code class="i">POST workflow/{id}/run</code> 跳过触发器过滤与启用开关；payload 在写 run 行<b>之前</b>构造，坏 payload 是失败的请求而不是一条注定失败的运行记录。触发器描述符附带 payload 字段表，前端据此渲染骨架而非空白框</td><td class="k">fs.manualScan</td><td>一切"对一批输入执行流程"；也是调试任何工作流的入口</td></tr>
 <tr><td class="e">E2</td><td><b>链中展开 ExpandTo</b></td><td><code class="i">WorkflowItemOutcome</code> 新增第四种裁决 <code class="i">ExpandTo(items)</code>（1→N，与 fs 无关）；<b>基数是描述符的静态声明</b>：<code class="i">Cardinality: OneToOne | OneToMany</code>，编辑器据此做视觉标识 / picker 筛选 / 下游类型追踪 / 统计口径。Category 与基数正交（Filter 即 1→0/1）</td><td class="k">expand.fs.children</td><td>画廊→多图、feed→多条目、压缩包→内容物、资源→可播放文件…</td></tr>
 <tr><td class="e">E3</td><td><b>能力契约</b><br><span class="tag">原称 facet，已弃用</span></td><td>描述符增加 <code class="i">AcceptedItemInterface: Type</code>——接受任何 CLR 类型实现该接口的 item（经描述符 ClrType 静态校验）。它是对"当前类型"的<b>谓词</b>，当前类型不变 → 强制 Passthrough。解决 O(N×M) 维护问题：新 item 类型实现一次接口，整族节点自动可用</td><td class="k">transform.text.* × ITextWorkpiece</td><td>一切"按能力而非按类型"的节点族（未来 IHasCover、IHasSourceUrl…）</td></tr>
 <tr><td class="e">E4</td><td><b>变量机制（引擎级随行袋）</b></td><td>Runner 为每个 item 维护变量袋（<b>不进 item 类型</b>），经 <code class="i">ctx.Variables</code> 暴露；ExpandTo 子项继承副本；随 run 持久化。写入：capture（具名捕获组名即变量名）/ 域系统变量注入 / 后续 setVariable。读取：配置 schema 标记"支持插值"的字段，引擎统一解析 <code class="i">{var:name(:formatter)}</code>。编辑器沿链推导"此处可用变量集"→ <b>自动补全 + lint</b>（软契约）</td><td class="k">capture/template + fs 系统变量</td><td>当前节点间<b>没有任何数据通道</b>；变量是通用联动机制，任何 item 类型零成本获得</td></tr>
@@ -82,6 +82,7 @@ footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(
 </ul>
 
 <h2><span class="n">§6</span>实施顺序建议</h2>
-<div class="rule">前置：<a href="specialtext-extension.html">SpecialText 扩展</a>（PR1 schema → PR2 服务拆分 → PR3 自定义类型 UI 与种子）→ E1 → E3+E4（text 节点按<a href="file-cleaning-workflow.html">清洗设计</a>规范<b>生而通用</b>，与变量机制同批落地）→ E2 → E5。E6 独立，随自动化需求排期。</div>
+<div class="rule">前置：<a href="specialtext-extension.html">SpecialText 扩展</a><span class="tag t-have">已完成</span>（PR1 schema → PR2 服务拆分 → PR3 自定义类型 UI）→ E1<span class="tag t-have">已完成</span> → <b>E3+E4<span class="tag t-new">下一步</span></b>（text 节点按<a href="file-cleaning-workflow.html">清洗设计</a>规范<b>生而通用</b>，与变量机制同批落地）→ E2 → E5。E6 独立，随自动化需求排期。</div>
+<p class="note">E1 落地时顺带修掉一个引擎级阻塞：<code class="i">WorkflowRunner</code> 注入的是<b>解析它的那个 scope</b> 的 <code class="i">IServiceProvider</code>（字段名却叫 <code class="i">_rootServices</code>），而三个调用方都把它捕获进随后才执行的 BTask 闭包——scope 早已释放，每次运行第一行创建 scope 就抛 <code class="i">ObjectDisposedException</code>。改注入 <code class="i">IServiceScopeFactory</code>；回归测试按真实调用形态构造：scope 内解析 → 释放 scope → 执行。</p>
 <footer>Workflow 能力全景 · 关联：<a href="file-cleaning-workflow.html">文件清洗设计</a> · <a href="file-cleaning-workflow-example.html">完整示例</a></footer>
 </div></body></html>

@@ -38,7 +38,7 @@ footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(
 </style></head><body><div class="wrap">
 <h1>SpecialText 扩展 · 文本系统架构设计</h1>
 <p class="sub">内置与自定义合并为单一抽象 TextType；词汇（vocabulary）与操作（operations）分离；文本系统迁入独立模块</p>
-<p class="note">状态：<b>设计定稿（已过代码审计），实施第一步</b>（<a href="workflow-capability-map.html">能力全景</a>实施顺序的前置项）。前提：全部仓库仅 Bakabase 自身消费，<b>接口、方法、模型、表名均可自由退役/改名</b>——本设计据此做统一重塑而非兼容打补丁。消费方：<a href="file-cleaning-workflow.html">文件清洗</a>的 text 节点与文本集引用。</p>
+<p class="note">状态：<b>已实施完成</b>（<a href="workflow-capability-map.html">能力全景</a>实施顺序的前置项，已出栈）。三个 PR 全部落地，实施中相对本设计的偏差见 <a href="#s8">§8 实施偏差</a>。前提：全部仓库仅 Bakabase 自身消费，<b>接口、方法、模型、表名均可自由退役/改名</b>——本设计据此做统一重塑而非兼容打补丁。消费方：<a href="file-cleaning-workflow.html">文件清洗</a>的 text 节点与文本集引用。</p>
 <div class="rule warn"><b>代码审计修订记录</b>（逐项对照最新 main 的真实代码，证据见各节）：<b>① Shape 两态 → 三态</b>（Language 也是双值；定界符对与替换映射语义不同，前端今天已按三种渲染）；<b>② 取消 drop 旧表</b>（迁移器在 EF 迁移之后跑 + 禁止手改迁移文件 ⇒ 跨版本升级必丢数据）；<b>③ 补 <code class="i">ICustomDateTimeParser</code> 隐藏契约</b>（漏了会静默退化日期解析）；<b>④ 改动半径 15 → 43 文件</b>（12 个真调用 + 25 个 downloader 透传）；<b>⑤ 前端补 4 处耦合 + 1 个 API 断裂点</b>；<b>⑥ 补 pretreatment 端点</b>；<b>⑦ 迁移器门控更正</b>为全局版本阈值而非专属标记。</div>
 <div class="toc"><a href="#s1">1 现状盘点</a><a href="#s2">2 目标与原则</a><a href="#s3">3 统一数据模型</a><a href="#s4">4 服务重构</a><a href="#s5">5 消费点迁移</a><a href="#s6">6 数据迁移与种子</a><a href="#s7">7 API 与前端</a><a href="#s8">8 实施切分</a><a href="#s9">9 风险与开放问题</a></div>
 
@@ -202,6 +202,14 @@ public interface ITextOps                      <span class="cm">// 操作：无�
 <tr><td class="k">PR2 模块与切换</td><td>新建 Bakabase.Modules.Text；ITextVocabularyService + ITextOps 落地（逻辑自 legacy 平移+拆分，<b>实现方兼实现 ICustomDateTimeParser</b> 并改 <code class="i">AddStandardValue&lt;T&gt;</code>）；种子（内置类型行）+ <b>TextSystemMigrator 数据迁移器</b>；<b>退役 ISpecialTextService</b>——12 个调用点按 §4 映射切换、25 个 downloader 机械改构造签名（共 43 文件）；Controller 改造（含保留 pretreatment 端点）；测试拆分</td><td>dotnet build 全绿；文本相关测试全过；日期解析自定义格式仍生效（ICustomDateTimeParser 回归点）；旧行全部迁入新表且旧表仍在</td></tr>
 <tr><td class="k">PR3 UI 与种子</td><td>text 页统一列表（改为从 GetTypes 取类型、按 Shape 驱动渲染）+ TextType 选择器组件 + 4 处前端耦合改造（§7）+ TextSeedData「质量与发布标签」种子集 + 导入导出</td><td>用户可建集/录入/引用；种子幂等（删除不复活）；显示名模板编辑器等 4 处无回归</td></tr></table>
 <p class="note">PR2 是唯一的大改，风险受控：真正有语义的调用点 12 个（§4 映射表一一对应），其余 31 个是机械改签名；操作逻辑平移后立即获得纯函数单测覆盖；数据迁移是七值查表且可重入。<b>无 drop 旧表步骤</b>（§6）。PR3 之后，<a href="file-cleaning-workflow.html">清洗功能</a>的节点实现即可开始（E1/E3/E4 并行推进）。</p>
+
+<h3>实施偏差（以代码为准）</h3>
+<table><tr><th style="width:26%">设计原文</th><th>实际实施</th><th style="width:34%">原因</th></tr>
+<tr><td><code class="i">EnsureSeeds()</code> 由迁移器投放内置类型行</td><td>拆成两个方法：<code class="i">EnsureBuiltinTypes()</code>（只建类型行）与 <code class="i">AddPrefabEntries()</code>（只补条目）。前者<b>每次启动</b>在 <code class="i">BakabaseHost.ExecuteCustomProgress</code> 调用，后者仅由用户点击触发</td><td>内置类型行是代码定义的不变量，不该依赖一次性迁移器——迁移器门控写错过一次，结果管理页只剩两个类型。条目是用户数据，自动补会让删掉的复活</td></tr>
+<tr><td><code class="i">ResolveSet(WellKnown)</code> 缺失时按需建行</td><td>纯读：缺失返回空集合</td><td>消费方共用 scoped DbContext 且多处并发解析，读路径写库会撞出 <code class="i">A second operation was started on this context instance</code>（线上表现为 500）</td></tr>
+<tr><td>（未涉及）</td><td><code class="i">WellKnown</code> / <code class="i">Name</code> 索引<b>非唯一</b>，重复内置行由启动时 <code class="i">MergeDuplicateBuiltins()</code> 合并</td><td>schema 迁移跑在修复之前，唯一索引会让"恰好需要修复"的库起不来</td></tr>
+<tr><td>旧 <code class="i">SpecialText</code> 模型原样保留在 <code class="i">Bakabase.Abstractions</code></td><td>模型降级为 <code class="i">Bakabase.InsideWorld.Business</code> 的 <code class="i">LegacySpecialText</code>（<code class="i">Type</code> 改为裸 int），<code class="i">SpecialTextType</code> 枚举与无用领域模型删除；<b>表仍保留映射</b></td><td>该枚举仍被生成进前端 <code class="i">constants.ts</code>（死 API）。表不 drop 的结论不变（§6）</td></tr>
+<tr><td>PR3 含「质量与发布标签」自定义种子集 + 导入导出</td><td><b>未做</b></td><td>非阻塞项，待清洗节点有真实引用后再定内容</td></tr></table>
 
 <h2 id="s9"><span class="n">§9</span>风险与开放问题</h2>
 <ul>
