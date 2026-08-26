@@ -22,6 +22,7 @@ using Bakabase.Modules.Property.Extensions;
 using Bakabase.Service.Extensions;
 using Bakabase.Service.Models.Input;
 using Bakabase.Service.Models.View;
+using Bakabase.Service.Services;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Extensions;
@@ -925,8 +926,59 @@ namespace Bakabase.Service.Controllers
                     options.CustomProxies = model.CustomProxies.Select(c => c.ToOptions()).ToList();
                 }
 
+                if (model.CustomTestSites != null)
+                {
+                    options.CustomTestSites = model.CustomTestSites;
+                }
+
+                if (model.SelectedPresetTestSiteIds != null)
+                {
+                    options.SelectedPresetTestSiteIds = model.SelectedPresetTestSiteIds;
+                }
             });
             return BaseResponseBuilder.Ok;
+        }
+
+        [HttpPost("network/proxy-test")]
+        [SwaggerOperation(OperationId = "TestProxy")]
+        public async Task<ListResponse<ProxyTestResultViewModel>> TestProxy(
+            [FromBody] ProxyTestInputModel model,
+            [FromServices] ProxyTestService proxyTestService)
+        {
+            var options = _bakabaseOptionsManager.Get<NetworkOptions>().Value;
+
+            var address = model.Address;
+            NetworkOptions.ProxyOptions.ProxyCredentials? credentials = null;
+
+            if (string.IsNullOrWhiteSpace(address) && !string.IsNullOrEmpty(model.CustomProxyId))
+            {
+                var saved = options.CustomProxies?.FirstOrDefault(p => p.Id == model.CustomProxyId);
+                address = saved?.Address;
+                credentials = saved?.Credentials;
+            }
+
+            // Null (rather than empty) means "not specified", so fall back to what the user
+            // saved; an explicitly empty list means "test none of these".
+            var presetIds = model.PresetSiteIds
+                            ?? options.SelectedPresetTestSiteIds
+                            ?? ProxyTestSites.DefaultSelectedIds.ToList();
+            var customSites = model.CustomSites ?? options.CustomTestSites ?? [];
+
+            var presetTargets = ProxyTestSites.All
+                .Where(s => presetIds.Contains(s.Id))
+                .Select(s => new ProxyTestTarget(s.Id, s.Name, s.Url));
+            var customTargets = customSites
+                .Where(u => !string.IsNullOrWhiteSpace(u))
+                .Select(u => new ProxyTestTarget(u, u, u));
+
+            var targets = presetTargets.Concat(customTargets)
+                .DistinctBy(t => t.Url)
+                .ToArray();
+
+            var results = await proxyTestService.TestAsync(address, credentials, targets,
+                model.UseSystemProxy, HttpContext.RequestAborted);
+
+            return new ListResponse<ProxyTestResultViewModel>(results);
         }
 
         [HttpGet("task")]

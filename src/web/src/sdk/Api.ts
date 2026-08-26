@@ -1631,10 +1631,13 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputJ
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputNetworkOptionsPatchInputModel {
   customProxies?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputNetworkOptionsPatchInputModelProxyOptions[];
   proxy?: BakabaseInsideWorldModelsConfigsNetworkOptionsProxyModel;
+  customTestSites?: string[];
+  selectedPresetTestSiteIds?: string[];
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputNetworkOptionsPatchInputModelProxyOptions {
   id?: string;
+  name?: string;
   address: string;
   credentials?: BakabaseInsideWorldModelsConfigsNetworkOptionsProxyOptionsProxyCredentials;
 }
@@ -2144,6 +2147,8 @@ export interface BakabaseInsideWorldModelsConfigsJavLibraryOptionsCollectorOptio
 export interface BakabaseInsideWorldModelsConfigsNetworkOptions {
   customProxies?: BakabaseInsideWorldModelsConfigsNetworkOptionsProxyOptions[];
   proxy: BakabaseInsideWorldModelsConfigsNetworkOptionsProxyModel;
+  customTestSites?: string[];
+  selectedPresetTestSiteIds?: string[];
 }
 
 /**
@@ -2160,6 +2165,7 @@ export interface BakabaseInsideWorldModelsConfigsNetworkOptionsProxyModel {
 
 export interface BakabaseInsideWorldModelsConfigsNetworkOptionsProxyOptions {
   id: string;
+  name?: string;
   address: string;
   credentials?: BakabaseInsideWorldModelsConfigsNetworkOptionsProxyOptionsProxyCredentials;
 }
@@ -4410,6 +4416,14 @@ export interface BakabaseServiceModelsInputIdBasedDataSortInputModel {
   ids: number[];
 }
 
+export interface BakabaseServiceModelsInputProxyTestInputModel {
+  customProxyId?: string;
+  address?: string;
+  useSystemProxy: boolean;
+  presetSiteIds?: string[];
+  customSites?: string[];
+}
+
 export interface BakabaseServiceModelsInputResourceCoverSaveInputModel {
   base64String: string;
   /** [1: Replace, 2: Prepend] */
@@ -4785,6 +4799,18 @@ export interface BakabaseServiceModelsViewPropertyTypeForManuallySettingValueVie
   properties?: BakabaseModulesPropertyModelsViewPropertyViewModel[];
   unavailableReason?: string;
   isAvailable: boolean;
+}
+
+export interface BakabaseServiceModelsViewProxyTestResultViewModel {
+  id: string;
+  name: string;
+  url: string;
+  succeeded: boolean;
+  /** @format int32 */
+  statusCode?: number;
+  /** @format int32 */
+  elapsedMs: number;
+  error?: string;
 }
 
 export interface BakabaseServiceModelsViewResourceAncestorViewModel {
@@ -5356,6 +5382,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModels
   code: number;
   message?: string;
   data?: BakabaseServiceModelsViewPropertyTypeForManuallySettingValueViewModel[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewProxyTestResultViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewProxyTestResultViewModel[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewResourceEnhancements {
@@ -17814,6 +17847,37 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchNetworkOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/network`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Options
+     * @name TestProxy
+     * @request POST:/options/network/proxy-test
+     */
+    testProxy: (data: BakabaseServiceModelsInputProxyTestInputModel, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewProxyTestResultViewModel,
+        any
+      >({
+        path: `/options/network/proxy-test`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for testProxy
+     * @name testProxyUrl
+     */
+    testProxyUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/options/network/proxy-test`;
       
       return baseUrl + path;
     },

@@ -71,6 +71,7 @@ namespace Bakabase.Service.Extensions
 
             services.TryAddSingleton<IwFsWatcher>();
             services.AddSingleton<Bakabase.Service.Services.FileSystemEntryGroupingService>();
+            services.AddSingleton<Bakabase.Service.Services.ProxyTestService>();
 
             #region Optimized after V190
 

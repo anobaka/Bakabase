@@ -6,7 +6,7 @@ import type { SettingItem } from "@/pages/configuration/components/SettingsSecti
 
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
-import { AiOutlineDelete } from "react-icons/ai";
+import { AiOutlineDelete, AiOutlineEdit, AiOutlineThunderbolt } from "react-icons/ai";
 
 import BApi from "@/sdk/BApi";
 import { Button, Input, Modal, Select, Switch } from "@/components/bakaui";
@@ -14,6 +14,7 @@ import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContext
 import { useNetworkOptionsStore, useAppOptionsStore } from "@/stores/options";
 import { OnboardingModal, useOnboarding } from "@/components/Onboarding";
 import SettingsSection from "@/pages/configuration/components/SettingsSection";
+import ProxyTestModal from "@/pages/configuration/components/Others/ProxyTestModal";
 
 enum ProxyMode {
   DoNotUse = 0,
@@ -47,8 +48,10 @@ const Others: React.FC<OthersProps> = ({ applyPatches, query }) => {
       label: t("configuration.others.proxy.useSystem"),
       value: ProxyMode.UseSystem.toString(),
     },
+    // Named proxies read as "Home VPN (http://…)"; unnamed ones keep showing just the
+    // address, which is all there was before names existed.
     ...(networkOptions.customProxies?.map((c) => ({
-      label: c.address!,
+      label: c.name ? `${c.name} (${c.address})` : c.address!,
       value: c.id!,
     })) ?? []),
   ];
@@ -66,6 +69,63 @@ const Others: React.FC<OthersProps> = ({ applyPatches, query }) => {
   }
 
   selectedProxy ??= ProxyMode.DoNotUse.toString();
+
+  const selectedCustomProxy =
+    networkOptions?.proxy?.mode === ProxyMode.UseCustom
+      ? networkOptions.customProxies?.find((c) => c.id === networkOptions.proxy?.customProxyId)
+      : undefined;
+
+  type CustomProxy = NonNullable<typeof networkOptions.customProxies>[number];
+
+  /** Add when called with nothing, edit in place when given an existing proxy. */
+  const openProxyEditor = (existing?: CustomProxy) => {
+    let name = existing?.name ?? "";
+    let address = existing?.address ?? "";
+
+    createPortal(Modal, {
+      defaultVisible: true,
+      size: "lg",
+      title: t(
+        existing
+          ? "configuration.others.proxy.editModal.title"
+          : "configuration.others.proxy.addModal.title",
+      ),
+      children: (
+        <div className="flex flex-col gap-3">
+          <Input
+            defaultValue={name}
+            label={t("configuration.others.proxy.name")}
+            placeholder={t("configuration.others.proxy.name.placeholder")}
+            onValueChange={(v) => (name = v)}
+          />
+          <Input
+            isRequired
+            defaultValue={address}
+            label={t("configuration.others.proxy.address")}
+            placeholder={t("configuration.others.proxy.tip")}
+            onValueChange={(v) => (address = v)}
+          />
+        </div>
+      ),
+      onOk: async () => {
+        if (!address?.length) {
+          toast.error(t("common.error.invalidData"));
+          throw new Error("Invalid data");
+        }
+
+        const trimmedName = name.trim() || undefined;
+        const existingProxies = networkOptions.customProxies ?? [];
+        const customProxies = existing
+          ? existingProxies.map((c) =>
+              c.id === existing.id ? { ...c, name: trimmedName, address } : c,
+            )
+          : [...existingProxies, { name: trimmedName, address }];
+
+        await BApi.options.patchNetworkOptions({ customProxies });
+        toast.success(t("common.success.saved"));
+      },
+    });
+  };
 
   const otherSettings: SettingItem[] = [
     {
@@ -114,38 +174,50 @@ const Others: React.FC<OthersProps> = ({ applyPatches, query }) => {
               />
             </div>
 
-            <Button
-              color="primary"
-              size="sm"
-              onClick={() => {
-                let p: string;
-
-                createPortal(Modal, {
-                  defaultVisible: true,
-                  size: "lg",
-                  title: t("configuration.others.proxy.addModal.title"),
-                  children: (
-                    <Input
-                      placeholder={t("configuration.others.proxy.tip")}
-                      onValueChange={(v) => (p = v)}
-                    />
-                  ),
-                  onOk: async () => {
-                    if (p === undefined || p.length === 0) {
-                      toast.error(t("common.error.invalidData"));
-                      throw new Error("Invalid data");
-                    }
-                    await BApi.options.patchNetworkOptions({
-                      customProxies: [...(networkOptions.customProxies ?? []), { address: p }],
-                    });
-                  },
-                });
-              }}
-            >
+            <Button color="primary" size="sm" onClick={() => openProxyEditor()}>
               {t("common.action.add")}
             </Button>
-            {networkOptions?.proxy?.mode === ProxyMode.UseCustom &&
-              networkOptions?.proxy?.customProxyId && (
+
+            {/* Testing is offered for whatever is selected, including "do not use" —
+                comparing a proxy against a direct connection is how you tell a broken
+                proxy apart from a broken network. */}
+            <Button
+              size="sm"
+              variant="flat"
+              onPress={() =>
+                createPortal(ProxyTestModal, {
+                  customProxyId: selectedCustomProxy?.id,
+                  useSystemProxy: networkOptions?.proxy?.mode === ProxyMode.UseSystem,
+                  proxyLabel: selectedCustomProxy
+                    ? (selectedCustomProxy.name ?? selectedCustomProxy.address!)
+                    : networkOptions?.proxy?.mode === ProxyMode.UseSystem
+                      ? t("configuration.others.proxy.useSystem")
+                      : t("configuration.others.proxy.test.directConnection"),
+                  initialPresetIds: networkOptions.selectedPresetTestSiteIds ?? undefined,
+                  initialCustomSites: networkOptions.customTestSites ?? undefined,
+                  onSelectionPersist: (presetSiteIds, customTestSites) => {
+                    BApi.options.patchNetworkOptions({
+                      selectedPresetTestSiteIds: presetSiteIds,
+                      customTestSites,
+                    });
+                  },
+                })
+              }
+            >
+              <AiOutlineThunderbolt className="text-base" />
+              {t("configuration.others.proxy.test")}
+            </Button>
+
+            {selectedCustomProxy && (
+              <>
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="light"
+                  onPress={() => openProxyEditor(selectedCustomProxy)}
+                >
+                  <AiOutlineEdit className="text-lg" />
+                </Button>
                 <Button
                   isIconOnly
                   color="danger"
@@ -153,7 +225,7 @@ const Others: React.FC<OthersProps> = ({ applyPatches, query }) => {
                   variant="light"
                   onClick={async () => {
                     const remaining = (networkOptions.customProxies ?? []).filter(
-                      (c) => c.id !== networkOptions.proxy?.customProxyId,
+                      (c) => c.id !== selectedCustomProxy.id,
                     );
 
                     await BApi.options.patchNetworkOptions({
@@ -165,7 +237,8 @@ const Others: React.FC<OthersProps> = ({ applyPatches, query }) => {
                 >
                   <AiOutlineDelete className="text-lg" />
                 </Button>
-              )}
+              </>
+            )}
           </div>
         );
       },
