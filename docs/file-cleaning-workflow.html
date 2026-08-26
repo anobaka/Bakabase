@@ -132,11 +132,11 @@ FileRenameRecord   RunId, Seq, Path(父目录), From, To, RenamedAt, Undone   <s
 <p>要点（详细模型/服务/迁移以扩展设计文档为准）：</p>
 <ol>
 <li><b>单一抽象</b>：内置与自定义合并为一个实体 <code class="i">TextType</code>（+ <code class="i">TextEntry</code> 条目表），<b>单一 id 空间</b>——节点的文本集引用就是一个 <code class="i">typeId</code>，不存在 builtin:/custom: 判别前缀。内置性 = 行上的 <code class="i">WellKnown</code> 句柄（不可删/不可改名，语义由代码消费点绑定）。</li>
-<li><b>Shape</b>：类型分 Values / Pairs 两种形态；自定义 Pairs 直接可用作 removeWrapped 的包装符对。</li>
-<li><b>选择器</b>：<code class="i">GetTypes()</code> 聚合列表是节点配置表单与 text 管理页的唯一数据源（内置徽标区分，按 Shape 过滤）。</li>
-<li><b>数据不丢</b>：旧 SpecialText 行经 app 级迁移器（V220/V230 先例）七值查表转入新表；EF 迁移保持纯 schema。「质量与发布标签」以可编辑种子集下发（只投一次，删除不复活）。</li>
+<li><b>Shape 三态</b>：<code class="i">Values</code> / <code class="i">DelimiterPair</code>（左右定界符）/ <code class="i">MappingPair</code>（from→to）。<b>removeWrapped 的 wrappers 参数只接受 DelimiterPair 型</b>——两值不等于同一形态（Standardization/Language 是映射，喂给包装符参数无意义）；自定义 DelimiterPair 可直接用作包装符对。</li>
+<li><b>选择器</b>：<code class="i">GetTypes()</code> 聚合列表是节点配置表单与 text 管理页的唯一数据源（内置徽标区分，<b>按 Shape 精确过滤</b>）。</li>
+<li><b>数据不丢</b>：旧 SpecialText 行经 app 级迁移器（V220/V230 先例）七值查表转入新表，Value2 原样保留；EF 迁移保持纯 schema 且<b>不 drop 旧表</b>（迁移器在 EF 之后运行，drop 会导致跨版本升级丢数据）。「质量与发布标签」以可编辑种子集下发（只投一次，删除不复活）。</li>
 </ol>
-<div class="rule"><b>实施顺序：本扩展是整个功能唯一的 schema 变更，第一步先做</b>（PR1 建表 → PR2 服务拆分与全量切换 → PR3 UI/种子/清理），节点实现全部依赖它。</div>
+<div class="rule"><b>实施顺序：本扩展是整个功能唯一的 schema 变更，第一步先做</b>（PR1 建表 → PR2 服务拆分与全量切换 → PR3 UI/种子），节点实现全部依赖它。</div>
 
 <h2 id="s6"><span class="n">§6</span>执行与 UI</h2>
 <ul>
