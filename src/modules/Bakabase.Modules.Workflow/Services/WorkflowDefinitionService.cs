@@ -22,12 +22,6 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
     private readonly BTaskManager _taskManager;
     private readonly WorkflowRunner<TDbContext> _runner;
 
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        PropertyNameCaseInsensitive = true,
-    };
-
     public WorkflowDefinitionService(
         TDbContext db,
         IWorkflowTriggerRegistry triggers,
@@ -137,18 +131,29 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
             total, pageIndex, pageSize);
     }
 
-    public async Task<WorkflowRun> RunNowAsync(int definitionId, object payload, CancellationToken ct = default)
+    public async Task<WorkflowRun> RunManuallyAsync(int definitionId, string? argsJson,
+        CancellationToken ct = default)
     {
         var def = await Defs.FirstOrDefaultAsync(d => d.Id == definitionId, ct)
-            ?? throw new InvalidOperationException($"Workflow #{definitionId} not found");
+                  ?? throw new InvalidOperationException($"Workflow #{definitionId} not found");
+
+        if (!_triggers.TryGet(def.TriggerKind, out var trigger))
+        {
+            throw new InvalidOperationException($"Unknown trigger kind: {def.TriggerKind}");
+        }
+
+        // Built before the row is written so an unusable payload surfaces as a failed request
+        // rather than a persisted run that dies the moment it starts.
+        var payload = trigger.BuildManualPayload(def.TriggerFilterJson, argsJson);
+        var payloadJson = JsonSerializer.Serialize(payload, WorkflowJson.Options);
 
         var run = new WorkflowRunDbModel
         {
             WorkflowDefinitionId = def.Id,
             Status = WorkflowRunStatus.Pending,
             StartedAt = DateTime.Now,
-            PayloadJson = JsonSerializer.Serialize(payload, JsonOptions),
-            PayloadSummary = "manual run",
+            PayloadJson = payloadJson,
+            PayloadSummary = Summarize(payloadJson),
         };
         Runs.Add(run);
         await _db.SaveChangesAsync(ct);
@@ -161,6 +166,9 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
 
         return run.ToDomainModel();
     }
+
+    private static string Summarize(string payloadJson) =>
+        payloadJson.Length > 200 ? payloadJson[..200] + "…" : payloadJson;
 
     // ------- helpers -------
 

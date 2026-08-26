@@ -19,8 +19,13 @@ public interface IWorkflowDefinitionService
     Task<SearchResponse<WorkflowRun>> SearchRunsAsync(WorkflowRunSearchInputModel input);
 
     /// <summary>
-    /// Manually trigger a run with a user-supplied payload (e.g. from the UI "Run now" button
-    /// or a test endpoint). Bypasses trigger filtering — runs unconditionally.
+    /// Start a run by hand. The payload comes from the definition's trigger — see
+    /// <see cref="Components.IWorkflowTrigger.BuildManualPayload"/> — so <paramref name="argsJson"/>
+    /// is whatever that trigger asks the user for, or null when it asks for nothing.
+    ///
+    /// Deliberately skips both gates the event path applies: the trigger filter (the user is
+    /// naming this definition, not broadcasting an event) and the enabled flag (a definition is
+    /// most worth running by hand precisely while it is switched off and being built).
     /// </summary>
-    Task<WorkflowRun> RunNowAsync(int definitionId, object payload, CancellationToken ct = default);
+    Task<WorkflowRun> RunManuallyAsync(int definitionId, string? argsJson, CancellationToken ct = default);
 }

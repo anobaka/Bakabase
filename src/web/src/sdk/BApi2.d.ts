@@ -6320,6 +6320,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/workflow/{id}/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RunWorkflowManually"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/workflow/activities": {
         parameters: {
             query?: never;
@@ -9821,6 +9837,9 @@ export interface components {
             enabled?: boolean;
             activities?: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowActivityInputModel"][];
         };
+        "Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowManualRunInputModel": {
+            argsJson?: string;
+        };
         "Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowActivityDescriptorViewModel": {
             kind: string;
             displayName: string;
@@ -9888,6 +9907,8 @@ export interface components {
         "Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowTriggerDescriptorViewModel": {
             kind: string;
             displayName: string;
+            requiresManualPayload: boolean;
+            payloadFields: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowItemTypeFieldViewModel"][];
         };
         "Bakabase.Service.Controllers.AppDataPathController+RelocateRequest": {
             targetPath: string;
@@ -11710,6 +11731,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowDefinitionViewModel"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowRunViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowRunViewModel"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.AppDataPathController+ValidateResponse]": {
             /** Format: int32 */
@@ -25798,6 +25825,37 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowTriggerDescriptorViewModel]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowTriggerDescriptorViewModel]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowTriggerDescriptorViewModel]"];
+                };
+            };
+        };
+    };
+    RunWorkflowManually: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowManualRunInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowManualRunInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowManualRunInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowManualRunInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowRunViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowRunViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowRunViewModel]"];
                 };
             };
         };

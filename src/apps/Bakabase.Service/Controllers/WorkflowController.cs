@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
@@ -70,7 +71,27 @@ public class WorkflowController(
     public ListResponse<WorkflowTriggerDescriptorViewModel> GetTriggers()
     {
         return new ListResponse<WorkflowTriggerDescriptorViewModel>(triggers.All.Select(t =>
-            new WorkflowTriggerDescriptorViewModel { Kind = t.Kind, DisplayName = t.DisplayName }));
+            new WorkflowTriggerDescriptorViewModel
+            {
+                Kind = t.Kind,
+                DisplayName = t.DisplayName,
+                RequiresManualPayload = t.RequiresManualPayload,
+                PayloadFields = t.RequiresManualPayload ? BuildFieldVms(t.PayloadType) : [],
+            }));
+    }
+
+    /// <summary>
+    /// Start a run of this definition now. Neither the trigger filter nor the enabled flag
+    /// applies — the user named this definition, and one being switched off is exactly when
+    /// running it by hand is most useful.
+    /// </summary>
+    [HttpPost("{id:int}/run")]
+    [SwaggerOperation(OperationId = "RunWorkflowManually")]
+    public async Task<SingletonResponse<WorkflowRunViewModel>> RunManually(
+        int id, [FromBody] WorkflowManualRunInputModel model, CancellationToken ct)
+    {
+        var run = await service.RunManuallyAsync(id, model.ArgsJson, ct);
+        return new SingletonResponse<WorkflowRunViewModel>(WorkflowRunViewModel.From(run));
     }
 
     [HttpGet("activities")]
@@ -100,9 +121,20 @@ public class WorkflowController(
             itemTypes.All.Select(BuildItemTypeVm));
     }
 
-    private static WorkflowItemTypeDescriptorViewModel BuildItemTypeVm(IWorkflowItemTypeDescriptor d)
-    {
-        var fields = d.ClrType
+    private static WorkflowItemTypeDescriptorViewModel BuildItemTypeVm(IWorkflowItemTypeDescriptor d) =>
+        new()
+        {
+            ItemType = d.ItemType,
+            DisplayName = d.DisplayName,
+            Fields = BuildFieldVms(d.ClrType),
+        };
+
+    /// <summary>
+    /// Reflect a CLR type into the field list the UI renders — the type pill for item types, the
+    /// payload hint for manual runs. Names are camel-cased to match how the value is serialized.
+    /// </summary>
+    private static List<WorkflowItemTypeFieldViewModel> BuildFieldVms(Type clrType) =>
+        clrType
             .GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
             .Where(p => p.CanRead)
             .Select(p => new WorkflowItemTypeFieldViewModel
@@ -112,13 +144,6 @@ public class WorkflowController(
                 Nullable = IsNullableProperty(p),
             })
             .ToList();
-        return new WorkflowItemTypeDescriptorViewModel
-        {
-            ItemType = d.ItemType,
-            DisplayName = d.DisplayName,
-            Fields = fields,
-        };
-    }
 
     private static string FriendlyTypeName(Type t)
     {

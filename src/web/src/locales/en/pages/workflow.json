@@ -91,5 +91,9 @@
   "workflow.activity.createNotification.summary.with": "title: \"{{title}}\"",
   "workflow.activity.createNotification.summary.noTitle": "Empty title — configure one to enable saving.",
   "workflow.itemType.from.trigger": "Trigger out →",
-  "workflow.itemType.noFields": "No declared fields (heterogeneous or empty)."
+  "workflow.itemType.noFields": "No declared fields (heterogeneous or empty).",
+  "workflow.manualRun.tooltip": "Run now",
+  "workflow.manualRun.title": "Run \"{{name}}\" now",
+  "workflow.manualRun.hint": "This trigger fires on an event, so a manual run needs a payload to stand in for one. It runs regardless of the trigger filter and the enabled switch.",
+  "workflow.manualRun.started": "Run started"
 }

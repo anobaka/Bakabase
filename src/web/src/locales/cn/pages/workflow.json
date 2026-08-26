@@ -90,5 +90,9 @@
   "workflow.activity.createNotification.summary.with": "标题：\"{{title}}\"",
   "workflow.activity.createNotification.summary.noTitle": "标题为空 —— 配置后才能保存。",
   "workflow.itemType.from.trigger": "触发器输出 →",
-  "workflow.itemType.noFields": "无声明字段（异构或空类型）。"
+  "workflow.itemType.noFields": "无声明字段（异构或空类型）。",
+  "workflow.manualRun.tooltip": "立即运行",
+  "workflow.manualRun.title": "立即运行“{{name}}”",
+  "workflow.manualRun.hint": "该触发器由事件触发，手动运行需要提供一份 payload 代替事件。手动运行不受触发器过滤条件和启用开关限制。",
+  "workflow.manualRun.started": "已开始运行"
 }

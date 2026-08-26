@@ -8,15 +8,17 @@ import {
   DeleteOutlined,
   EditOutlined,
   HistoryOutlined,
+  PlayCircleOutlined,
   PlusCircleOutlined,
 } from "@ant-design/icons";
 
 import WorkflowEditor from "@/components/Workflow/WorkflowEditor";
 import WorkflowRunsDrawer from "@/components/Workflow/WorkflowRunsDrawer";
+import ManualRunModal from "@/components/Workflow/ManualRunModal";
 import { getWorkflowTriggerUI } from "@/components/Workflow/Triggers";
 import { activityDisplayName, triggerDisplayName } from "@/components/Workflow/displayNames";
 import BApi from "@/sdk/BApi";
-import { Button, Chip, Modal, Spinner, Switch } from "@/components/bakaui";
+import { Button, Chip, Modal, Spinner, Switch, toast } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
 type WorkflowVm =
@@ -63,6 +65,31 @@ const WorkflowPage: React.FC = () => {
   }, [load]);
 
   const triggerNameByKind = new Map(triggers.map((tr) => [tr.kind, tr.displayName]));
+  const triggerByKind = new Map(triggers.map((tr) => [tr.kind, tr]));
+
+  // A manual run bypasses the enabled switch and the trigger filter, so it works on a workflow
+  // that is still being built — which is when trying it out matters most.
+  const handleRun = async (wf: WorkflowVm) => {
+    const trigger = triggerByKind.get(wf.triggerKind);
+
+    if (trigger?.requiresManualPayload) {
+      createPortal(ManualRunModal, {
+        workflowId: wf.id,
+        workflowName: wf.name,
+        trigger,
+        onRan: () => setRunsDrawerFor(wf),
+      });
+
+      return;
+    }
+
+    const rsp = await BApi.workflow.runWorkflowManually(wf.id, {});
+
+    if (!rsp.code) {
+      toast.success(t<string>("workflow.manualRun.started"));
+      setRunsDrawerFor(wf);
+    }
+  };
 
   const handleAdd = () => createPortal(WorkflowEditor, { triggers, onSaved: load });
   const handleEdit = (wf: WorkflowVm) =>
@@ -155,6 +182,16 @@ const WorkflowPage: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-1">
+                  <Button
+                    isIconOnly
+                    color="primary"
+                    size="sm"
+                    title={t<string>("workflow.manualRun.tooltip")}
+                    variant="light"
+                    onPress={() => handleRun(wf)}
+                  >
+                    <PlayCircleOutlined className="text-lg" />
+                  </Button>
                   <Button
                     isIconOnly
                     size="sm"

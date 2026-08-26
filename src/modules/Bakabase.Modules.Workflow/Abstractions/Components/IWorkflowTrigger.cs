@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace Bakabase.Modules.Workflow.Abstractions.Components;
 
 /// <summary>
@@ -34,4 +36,44 @@ public interface IWorkflowTrigger
     /// — the editor mirrors it client-side.
     /// </summary>
     string ResolveOutputItemType(string? triggerFilterJson);
+
+    /// <summary>
+    /// Whether starting a run by hand needs the user to supply a payload.
+    ///
+    /// True for an event trigger: running one manually is a replay, and something has to stand
+    /// in for the event that never happened. A trigger whose inputs are fully described by the
+    /// definition's own configuration — a scan over configured roots, say — returns false, and
+    /// its <see cref="BuildManualPayload"/> ignores the args entirely.
+    /// </summary>
+    bool RequiresManualPayload => true;
+
+    /// <summary>
+    /// Build the payload for a manual run. The default reads it from what the user typed, which
+    /// is what makes every event trigger debuggable without each one writing code for it;
+    /// triggers that carry their parameters on the definition override this and build from
+    /// <paramref name="triggerFilterJson"/> instead.
+    ///
+    /// Throws <see cref="InvalidOperationException"/> with a message meant for the user — this
+    /// runs inside the request that asked for the run, so a bad payload is reported there rather
+    /// than becoming a failed run to go looking for.
+    /// </summary>
+    object BuildManualPayload(string? triggerFilterJson, string? argsJson)
+    {
+        if (string.IsNullOrWhiteSpace(argsJson))
+        {
+            throw new InvalidOperationException(
+                $"Trigger [{Kind}] needs a payload to be run manually.");
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize(argsJson, PayloadType, WorkflowJson.Options)
+                   ?? throw new InvalidOperationException("The payload deserialized to null.");
+        }
+        catch (JsonException ex)
+        {
+            throw new InvalidOperationException(
+                $"The payload does not match {PayloadType.Name}: {ex.Message}", ex);
+        }
+    }
 }

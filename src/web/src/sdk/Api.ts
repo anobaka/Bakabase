@@ -4210,6 +4210,10 @@ export interface BakabaseModulesWorkflowAbstractionsModelsInputWorkflowDefinitio
   activities?: BakabaseModulesWorkflowAbstractionsModelsInputWorkflowActivityInputModel[];
 }
 
+export interface BakabaseModulesWorkflowAbstractionsModelsInputWorkflowManualRunInputModel {
+  argsJson?: string;
+}
+
 export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowActivityDescriptorViewModel {
   kind: string;
   displayName: string;
@@ -4287,6 +4291,8 @@ export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowRunViewMod
 export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowTriggerDescriptorViewModel {
   kind: string;
   displayName: string;
+  requiresManualPayload: boolean;
+  payloadFields: BakabaseModulesWorkflowAbstractionsModelsViewWorkflowItemTypeFieldViewModel[];
 }
 
 export interface BakabaseServiceControllersAppDataPathControllerRelocateRequest {
@@ -6438,6 +6444,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesW
   code: number;
   message?: string;
   data?: BakabaseModulesWorkflowAbstractionsModelsViewWorkflowDefinitionViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowRunViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesWorkflowAbstractionsModelsViewWorkflowRunViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceControllersAppDataPathControllerValidateResponse {
@@ -22625,6 +22638,30 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       return baseUrl + path;
     },
+
+    /**
+     * No description
+     *
+     * @tags Workflow
+     * @name RunWorkflowManually
+     * @request POST:/workflow/{id}/run
+     */
+    runWorkflowManually: (
+      id: number,
+      data: BakabaseModulesWorkflowAbstractionsModelsInputWorkflowManualRunInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowRunViewModel,
+        any
+      >({
+        path: `/workflow/${id}/run`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
 
     /**
      * No description
