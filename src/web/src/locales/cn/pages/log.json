@@ -1,4 +1,5 @@
 {
+  "log.tip.rawLogDirectory": "本页只展示记录到数据库中的日志。完整的原始日志文件位于上面的目录中——需要查看启动、崩溃或第三方输出等未进入下表的内容时，请直接打开该目录。",
   "log.filter.time": "时间",
   "log.filter.level": "级别",
   "log.filter.all": "全部",
