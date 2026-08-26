@@ -286,6 +286,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
                 })
                 .ToArray();
             var startedTasks = new List<DownloadTask>();
+            BaseResponse? firstFailure = null;
 
             foreach (var tt in filteredTasks)
             {
@@ -300,9 +301,23 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
                         {
                             continue;
                         }
+
+                        return rsp;
                     }
 
-                    return rsp;
+                    // A task that cannot even start — expired cookie, missing download path,
+                    // any other rejected configuration — used to abort the whole pass without
+                    // writing anything down. Nothing was persisted and no downloader was ever
+                    // created, so the task list looked exactly as it did before the click.
+                    // Record the reason on the task instead and carry on, so the failure is
+                    // visible and the queue is seen moving to the next task.
+                    if (tasks.TryGetValue(tt, out var dbModel))
+                    {
+                        await MarkAsFailedToStart(dbModel, rsp.Message);
+                    }
+
+                    firstFailure ??= rsp;
+                    continue;
                 }
 
                 startedTasks.Add(tt);
@@ -316,7 +331,24 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
                 dd?.ResetStatus();
             }
 
-            return BaseResponseBuilder.Ok;
+            // Surfaced so a manual start still reports why it could not run; an automatic
+            // pass discards it, having already recorded the failure on the task itself.
+            return firstFailure ?? BaseResponseBuilder.Ok;
+        }
+
+        /// <summary>
+        /// Persists a start-time rejection (invalid cookie, bad configuration, ...) onto the task
+        /// and pushes it, so the reason reaches the UI even when no downloader was ever created.
+        /// </summary>
+        private async Task MarkAsFailedToStart(DownloadTaskDbModel task, string? message)
+        {
+            task.Status = DownloadTaskDbModelStatus.Failed;
+            task.Message = message;
+            task.DownloadStatusUpdateDt = DateTime.Now;
+
+            await Update(task);
+            await UiHub.Clients.All.GetIncrementalData(nameof(DownloadTask),
+                ToDto(new[] {task}).FirstOrDefault()!);
         }
 
         public async Task OnNameAcquired(int taskId, string name) =>

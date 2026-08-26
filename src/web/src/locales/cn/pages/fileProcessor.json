@@ -36,6 +36,7 @@
   "fileProcessor.ai.totalFiles": "文件总数",
   "fileProcessor.ai.totalDirectories": "目录总数",
   "fileProcessor.ai.workingDirectory": "工作目录",
+  "fileProcessor.ai.workingDirectory.description": "即文件处理器当前显示的目录，也就是它的根目录。浏览到其他目录时会随之改变。",
   "fileProcessor.ai.selectedPaths": "已选择 {{count}} 个路径",
   "fileProcessor.ai.noPathsSelected": "未选择路径",
 

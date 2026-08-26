@@ -122,7 +122,11 @@ const DownloaderPage = () => {
         actionOnConflict,
       },
       {
-        showErrorToast: (r) => (r.code >= 404 || r.code < 200) && r.code != ResponseCode.Conflict,
+        // 400-level rejections used to fall through this predicate (it only caught
+        // >= 404), so a start refused for an expired cookie or bad configuration
+        // produced no feedback whatsoever — the click looked ignored. Report every
+        // error code except Conflict, which has its own modal below.
+        showErrorToast: (r) => r.code >= 400 && r.code != ResponseCode.Conflict,
       },
     );
 
