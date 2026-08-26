@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import { Button, Input, Select, SelectItem } from "@heroui/react";
 
 import AccountsPanel, { type AccountField } from "../base/AccountsPanel";
+import ProxyField from "../base/ProxyField";
 import ConfigurableThirdPartyPanel, {
   type ConfigFieldTab,
 } from "../base/ConfigurableThirdPartyPanel";
@@ -14,7 +15,7 @@ import ThirdPartyConfigModal from "../base/ThirdPartyConfigModal";
 import TampermonkeyInstallButton from "../base/TampermonkeyInstallButton";
 
 import { toast } from "@/components/bakaui";
-import { CookieValidatorTarget } from "@/sdk/constants";
+import { CookieValidatorTarget, ThirdPartyId } from "@/sdk/constants";
 import { useSoulPlusOptionsStore } from "@/stores/options";
 import BApi from "@/sdk/BApi";
 
@@ -131,6 +132,7 @@ export const SoulPlusConfigPanel: FC<SoulPlusConfigPanelProps> = ({ fields = "al
         title: t("thirdPartyConfig.group.other"),
         content: (
           <div className="space-y-4">
+            <ProxyField thirdPartyId={ThirdPartyId.SoulPlus} />
             <Input
               label={t<string>("thirdPartyConfig.label.autoBuyThreshold")}
               size="sm"

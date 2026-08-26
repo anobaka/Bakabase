@@ -4,6 +4,7 @@ import { useEffect, useState, type FC } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, Input } from "@heroui/react";
 
+import ProxyField from "../base/ProxyField";
 import ConfigurableThirdPartyPanel, {
   type ConfigFieldTab,
 } from "../base/ConfigurableThirdPartyPanel";
@@ -11,6 +12,7 @@ import ThirdPartyConfigModal from "../base/ThirdPartyConfigModal";
 
 import { toast } from "@/components/bakaui";
 import { useTmdbOptionsStore } from "@/stores/options";
+import { ThirdPartyId } from "@/sdk/constants";
 
 export enum TmdbConfigField {
   Settings = "settings",
@@ -54,6 +56,7 @@ export const TmdbConfigPanel: FC<TmdbConfigPanelProps> = ({
       <h3 className="text-small font-semibold text-default-700">
         {t<string>("thirdPartyConfig.group.dataFetch")}
       </h3>
+      <ProxyField thirdPartyId={ThirdPartyId.Tmdb} />
       <div className="grid grid-cols-2 gap-4">
         <Input
           label={t<string>("thirdPartyConfig.label.maxConcurrency")}
