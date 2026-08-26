@@ -11,6 +11,7 @@
   "resource.search.selectAllFiltered": "Select all {{count}} filtered resources (including those not currently loaded).",
   "resource.search.playlist": "Playlist",
   "resource.search.recentlyPlayed": "Recently played",
+  "resource.tab.rename": "Rename this tab",
 
   "resource.empty.title": "No Resources Found",
   "resource.empty.checkCriteria": "Check Search Criteria",

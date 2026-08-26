@@ -249,6 +249,11 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
 
                     if (Status == DownloaderStatus.Downloading)
                     {
+                        // Drop the in-flight step text before flipping to a terminal state. The DTO reads
+                        // Current straight off the downloader and the status change is what pushes it to the
+                        // UI, so this has to happen first — otherwise a finished task keeps rendering its last
+                        // step (e.g. "downloading torrent file") right next to a Complete badge.
+                        Current = null;
                         Status = DownloaderStatus.Complete;
                         FailureTimes = 0;
                         if (OnProgress != null)

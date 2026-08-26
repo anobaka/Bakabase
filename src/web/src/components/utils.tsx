@@ -209,6 +209,11 @@ export function useTraceUpdate(props, logPrefix) {
   const prev = useRef(props);
 
   useEffect(() => {
+    // Diffing every prop on every render is a debugging aid, not something to ship.
+    if (!import.meta.env.DEV) {
+      return;
+    }
+
     const changedProps = Object.entries(props).reduce((ps, [k, v]) => {
       if (prev.current[k] !== v) {
         ps[k] = [prev.current[k], v];
@@ -539,10 +544,23 @@ export function getStandardParentPath(path?: string): string | undefined {
   return `${prefix}${suffix}`;
 }
 
+const noopLogger = (..._args: unknown[]) => {};
+
+/**
+ * Debug logger, active only in development.
+ *
+ * These loggers sit in hot paths — every SignalR frame, every task row of a long
+ * list — and `console.log` is neither free nor forgetful: it serializes on each
+ * call and the devtools console keeps the logged objects alive, so a long-running
+ * page steadily degrades. `import.meta.env.DEV` is inlined by Vite, so the whole
+ * thing folds away to a no-op in production bundles.
+ */
 export function buildLogger(key: string) {
-  return ((...args) => {
-    return Function.prototype.bind.call(console.log, console, chalk.blue(`[${key}]`));
-  })();
+  if (!import.meta.env.DEV) {
+    return noopLogger;
+  }
+
+  return Function.prototype.bind.call(console.log, console, chalk.blue(`[${key}]`));
 }
 
 export function createSelection(field: any, start: number, end: number) {

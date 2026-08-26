@@ -762,4 +762,7 @@ The version of lux is not limited.</value>
   <data name="BTask_Description_WorkflowRunCleanup" xml:space="preserve">
     <value>Per workflow definition, keep the most recent 50 run rows and delete the rest.</value>
   </data>
+  <data name="Downloader_ExHentai_DownloadingTorrent" xml:space="preserve">
+    <value>Downloading torrent file...</value>
+  </data>
 </root>
