@@ -23,6 +23,7 @@ import BApi from "@/sdk/BApi";
 import { LogLevel } from "@/sdk/constants";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { Modal } from "@/components/bakaui";
+import FilePathValue from "@/components/FilePathValue";
 
 export default function LogPage() {
   const { t } = useTranslation();
@@ -43,7 +44,12 @@ export default function LogPage() {
   });
   const [dateRange, setDateRange] = useState<RangeValue<DateValue> | null>(null);
   const [expandedMsg, setExpandedMsg] = useState<string | null>(null);
+  const [logPath, setLogPath] = useState<string>();
   const { createPortal } = useBakabaseContext();
+
+  useEffect(() => {
+    BApi.app.getAppInfo().then((a) => setLogPath(a.data?.logPath ?? undefined));
+  }, []);
 
   useEffect(() => {
     search();
@@ -79,6 +85,14 @@ export default function LogPage() {
 
   return (
     <div className="p-4">
+      {/* This page only lists what the app recorded into its database. The raw
+          per-run log files hold more (startup, crashes, third-party output), so
+          point at them rather than leaving the user to hunt for the directory. */}
+      {logPath && (
+        <div className="mb-4 rounded-medium border border-default-200 dark:border-default-100 px-3 py-2">
+          <FilePathValue description={t<string>("log.tip.rawLogDirectory")} path={logPath} />
+        </div>
+      )}
       <div className="flex flex-wrap gap-4 items-center mb-4">
         <div className="flex items-center gap-1 min-w-[260px]">
           <span className="font-medium mr-2 min-w-[60px]">{t<string>("log.filter.time")}</span>

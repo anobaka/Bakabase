@@ -1,4 +1,5 @@
 {
+  "log.tip.rawLogDirectory": "This page lists what the app recorded to its database. The complete raw log files live in the directory above — open it when you need startup, crash or third-party output that never reached the table below.",
   "log.filter.time": "Time",
   "log.filter.level": "Level",
   "log.filter.all": "All",
