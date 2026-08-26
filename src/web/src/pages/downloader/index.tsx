@@ -52,7 +52,6 @@ import { isThirdPartyDeveloping } from "@/pages/downloader/models";
 import DevelopingChip from "@/components/Chips/DevelopingChip";
 import Configurations from "@/pages/downloader/components/Configurations";
 import BApi from "@/sdk/BApi";
-import { buildLogger, useTraceUpdate } from "@/components/utils";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import ThirdPartyIcon from "@/components/ThirdPartyIcon";
 import { useDownloadTasksStore } from "@/stores/downloadTasks";
@@ -112,18 +111,6 @@ const DownloaderPage = () => {
   const { createPortal } = useBakabaseContext();
 
   const [taskListHeight, setTaskListHeight] = useState(0);
-
-  useTraceUpdate(
-    {
-      form,
-      tasks,
-      selectedTaskIds,
-      menuProps,
-    },
-    "DownloaderPage",
-  );
-
-  log("Rendering");
 
   const startTasksManually = async (
     ids: number[],
@@ -321,8 +308,6 @@ const DownloaderPage = () => {
     loadDownloaderDefinitions();
   }, []);
 
-  console.log(selectedTaskIdsRef.current, SelectionMode[selectionModeRef.current]);
-
   const onTaskClick = (taskId: number, e?: any) => {
     const nextMode = e
       ? e.shiftKey
@@ -333,7 +318,6 @@ const DownloaderPage = () => {
       : SelectionMode.Default;
 
     selectionModeRef.current = nextMode;
-    console.log(SelectionMode[selectionModeRef.current]);
     switch (selectionModeRef.current) {
       case SelectionMode.Default:
         if (selectedTaskIdsRef.current.includes(taskId) && selectedTaskIdsRef.current.length == 1) {
@@ -385,8 +369,6 @@ const DownloaderPage = () => {
   }
 
   const filteredTasks = tasks.filter((x) => taskFilters.every((f) => f(x)));
-
-  console.log(form, filteredTasks);
 
   // Keep the latest filtered tasks available to the (once-registered) key handler.
   const filteredTasksRef = useRef(filteredTasks);
@@ -570,10 +552,18 @@ const DownloaderPage = () => {
                       .filter((t) => t.status == DownloadTaskStatus.Complete)
                       .map((t) => t.id);
 
-                    if (ids.length === 0) return;
+                    // Silently returning here used to make the menu item look broken; say why
+                    // nothing happened instead.
+                    if (ids.length === 0) {
+                      toast.warning(t<string>("downloader.toast.noCompletedTasks"));
+
+                      return;
+                    }
                     createPortal(Modal, {
                       defaultVisible: true,
-                      title: t<string>("downloader.confirm.deleteTasks", { count: ids.length }),
+                      title: t<string>("downloader.confirm.deleteCompletedTasks", {
+                        count: ids.length,
+                      }),
                       onOk: async () => {
                         await BApi.downloadTask.deleteDownloadTasks({ ids });
                       },
@@ -585,10 +575,16 @@ const DownloaderPage = () => {
                       .filter((t) => t.status == DownloadTaskStatus.Failed)
                       .map((t) => t.id);
 
-                    if (ids.length === 0) return;
+                    if (ids.length === 0) {
+                      toast.warning(t<string>("downloader.toast.noFailedTasks"));
+
+                      return;
+                    }
                     createPortal(Modal, {
                       defaultVisible: true,
-                      title: t<string>("downloader.confirm.deleteTasks", { count: ids.length }),
+                      title: t<string>("downloader.confirm.deleteFailedTasks", {
+                        count: ids.length,
+                      }),
                       onOk: async () => {
                         await BApi.downloadTask.deleteDownloadTasks({ ids });
                       },
@@ -667,8 +663,6 @@ const DownloaderPage = () => {
               const selected = selectedTaskIds.indexOf(task.id) > -1;
               const Icon = DownloadTaskTypeIconMap[task.thirdPartyId!]?.[task.type];
 
-              log("rendering task", task);
-
               return (
                 <ListboxItem
                   key={task.id}
@@ -680,7 +674,6 @@ const DownloaderPage = () => {
                     role="button"
                     tabIndex={0}
                     onContextMenu={e => {
-                      console.log(`Opening context menu from ${task.id}:${task.name}`);
                       e.preventDefault();
                       if (!selectedTaskIdsRef.current.includes(task.id)) {
                         setSelectedTaskIds([task.id]);
@@ -937,7 +930,5 @@ type SearchForm = {
   keyword?: string;
   thirdPartyIds?: ThirdPartyId[];
 };
-
-const log = buildLogger("DownloadPage");
 
 export default DownloaderPage;

@@ -74,7 +74,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
 
                 if (onCurrentChanged != null)
                 {
-                    await onCurrentChanged("正在下载种子文件...");
+                    await onCurrentChanged(Localizer["Downloader_ExHentai_DownloadingTorrent"]);
                 }
 
                 await Client.DownloadTorrent(bestTorrent.DownloadUrl, path);

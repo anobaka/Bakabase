@@ -5,9 +5,9 @@ import type { SearchForm as ResourceSearchForm } from "@/pages/resource/models";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AiOutlineClose } from "react-icons/ai";
-import { MdSavedSearch } from "react-icons/md";
+import { MdSavedSearch, MdEdit } from "react-icons/md";
 
-import { Button, Input } from "@/components/bakaui";
+import { Button, Input, Tooltip } from "@/components/bakaui";
 import { useResourceOptionsStore } from "@/stores/options";
 import { usePendingSearchStore } from "@/stores/pendingSearch";
 import BApi from "@/sdk/BApi.tsx";
@@ -206,8 +206,6 @@ const ResourcePage = () => {
     }
   };
 
-  console.log("saved searches", savedSearches);
-
   if (!resourceOptions.initialized) {
     return null;
   }
@@ -237,7 +235,31 @@ const ResourcePage = () => {
                   // variant="flat"
                   color={isActive ? "primary" : "default"}
                 >
-                  <MdSavedSearch className="text-lg" />
+                  {/* The tab name is renameable, but nothing said so. Swapping the
+                      saved-search glyph for a pencil on hover advertises it, and makes
+                      the icon itself the click target so renaming no longer depends on
+                      discovering the double-click. */}
+                  <Tooltip content={t<string>("resource.tab.rename")} placement="top">
+                    <div
+                      className="relative w-[18px] h-[18px] shrink-0"
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        beginRename(s.id);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          beginRename(s.id);
+                        }
+                      }}
+                    >
+                      <MdSavedSearch className="text-lg absolute inset-0 transition-opacity group-hover:opacity-0" />
+                      <MdEdit className="text-lg absolute inset-0 opacity-0 transition-opacity group-hover:opacity-100" />
+                    </div>
+                  </Tooltip>
                   <div className="relative">
                     <span
                       className={`text-sm font-medium max-w-[150px] truncate block ${isEditing ? "invisible" : ""}`}

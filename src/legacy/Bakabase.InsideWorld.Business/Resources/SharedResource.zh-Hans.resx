@@ -762,4 +762,7 @@
   <data name="BTask_Description_WorkflowRunCleanup" xml:space="preserve">
     <value>每个工作流定义只保留最近 50 条 run 记录，其余删除。</value>
   </data>
+  <data name="Downloader_ExHentai_DownloadingTorrent" xml:space="preserve">
+    <value>正在下载种子文件...</value>
+  </data>
 </root>

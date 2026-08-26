@@ -11,6 +11,7 @@
   "resource.search.selectAllFiltered": "选择全部 {{count}} 个筛选结果（包括尚未加载的）。",
   "resource.search.playlist": "播放列表",
   "resource.search.recentlyPlayed": "最近播放",
+  "resource.tab.rename": "重命名此标签页",
 
   "resource.empty.title": "未找到资源",
   "resource.empty.checkCriteria": "检查搜索条件",
