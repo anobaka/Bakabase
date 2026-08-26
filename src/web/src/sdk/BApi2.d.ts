@@ -3904,6 +3904,22 @@ export interface paths {
         patch: operations["PatchNetworkOptions"];
         trace?: never;
     };
+    "/options/network/proxy-test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["TestProxy"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/options/task": {
         parameters: {
             query?: never;
@@ -7464,9 +7480,12 @@ export interface components {
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.NetworkOptionsPatchInputModel": {
             customProxies?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.NetworkOptionsPatchInputModel+ProxyOptions"][];
             proxy?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.NetworkOptions+ProxyModel"];
+            customTestSites?: string[];
+            selectedPresetTestSiteIds?: string[];
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.NetworkOptionsPatchInputModel+ProxyOptions": {
             id?: string;
+            name?: string;
             address: string;
             credentials?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.NetworkOptions+ProxyOptions+ProxyCredentials"];
         };
@@ -7889,6 +7908,8 @@ export interface components {
         "Bakabase.InsideWorld.Models.Configs.NetworkOptions": {
             customProxies?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.NetworkOptions+ProxyOptions"][];
             proxy: components["schemas"]["Bakabase.InsideWorld.Models.Configs.NetworkOptions+ProxyModel"];
+            customTestSites?: string[];
+            selectedPresetTestSiteIds?: string[];
         };
         /**
          * Format: int32
@@ -7902,6 +7923,7 @@ export interface components {
         };
         "Bakabase.InsideWorld.Models.Configs.NetworkOptions+ProxyOptions": {
             id: string;
+            name?: string;
             address: string;
             credentials?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.NetworkOptions+ProxyOptions+ProxyCredentials"];
         };
@@ -9686,6 +9708,13 @@ export interface components {
         "Bakabase.Service.Models.Input.IdBasedDataSortInputModel": {
             ids: number[];
         };
+        "Bakabase.Service.Models.Input.ProxyTestInputModel": {
+            customProxyId?: string;
+            address?: string;
+            useSystemProxy: boolean;
+            presetSiteIds?: string[];
+            customSites?: string[];
+        };
         "Bakabase.Service.Models.Input.ResourceCoverSaveInputModel": {
             base64String: string;
             saveMode: components["schemas"]["Bakabase.InsideWorld.Models.Constants.CoverSaveMode"];
@@ -10012,6 +10041,17 @@ export interface components {
             properties?: components["schemas"]["Bakabase.Modules.Property.Models.View.PropertyViewModel"][];
             unavailableReason?: string;
             readonly isAvailable: boolean;
+        };
+        "Bakabase.Service.Models.View.ProxyTestResultViewModel": {
+            id: string;
+            name: string;
+            url: string;
+            succeeded: boolean;
+            /** Format: int32 */
+            statusCode?: number;
+            /** Format: int32 */
+            elapsedMs: number;
+            error?: string;
         };
         "Bakabase.Service.Models.View.ResourceAncestorViewModel": {
             /** Format: int32 */
@@ -10502,6 +10542,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Models.View.PropertyTypeForManuallySettingValueViewModel"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ProxyTestResultViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.ProxyTestResultViewModel"][];
         };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourceEnhancements]": {
             /** Format: int32 */
@@ -20164,6 +20210,35 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    TestProxy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.ProxyTestInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.ProxyTestInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.ProxyTestInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.ProxyTestInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ProxyTestResultViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ProxyTestResultViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ProxyTestResultViewModel]"];
                 };
             };
         };

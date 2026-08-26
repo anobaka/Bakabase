@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Text;
 using Bakabase.Abstractions.Components.Configuration;
+using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.Modules.ThirdParty.ThirdParties.Av;
 using Bootstrap.Components.Miscellaneous;
 
@@ -18,7 +19,27 @@ namespace Bakabase.Service.Components
             sb.Append(GenerateExtensionMediaTypeMap());
             sb.Append(Environment.NewLine);
             sb.Append(GenerateAvSourceIds());
+            sb.Append(Environment.NewLine);
+            sb.Append(GenerateProxyTestSites());
             return sb.ToString();
+        }
+
+        private static string GenerateProxyTestSites()
+        {
+            var nl = Environment.NewLine;
+            var entries = ProxyTestSites.All
+                .Select(s => $"  {{ id: \"{s.Id}\", name: \"{s.Name}\", url: \"{s.Url}\" }}")
+                .ToList();
+            var defaults = ProxyTestSites.DefaultSelectedIds.Select(id => $"\"{id}\"");
+
+            return
+                $"export interface ProxyTestSite {{ id: string; name: string; url: string }}{nl}" +
+                $"{nl}" +
+                $"export const ProxyTestSites: readonly ProxyTestSite[] = [{nl}" +
+                string.Join("," + nl, entries) + nl +
+                $"] as const;{nl}" +
+                $"{nl}" +
+                $"export const DefaultProxyTestSiteIds: readonly string[] = [{string.Join(", ", defaults)}] as const;{nl}";
         }
 
         private static string GenerateExtensionMediaTypeMap()

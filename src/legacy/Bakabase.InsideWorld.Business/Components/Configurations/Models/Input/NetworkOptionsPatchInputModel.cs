@@ -9,6 +9,7 @@ public record NetworkOptionsPatchInputModel
     public record ProxyOptions
     {
         public string? Id { get; set; }
+        public string? Name { get; set; }
         public string Address { get; set; } = null!;
         public NetworkOptions.ProxyOptions.ProxyCredentials? Credentials { get; set; }
 
@@ -17,6 +18,7 @@ public record NetworkOptionsPatchInputModel
             return new NetworkOptions.ProxyOptions
             {
                 Id = Id ?? Guid.NewGuid().ToString(),
+                Name = Name,
                 Address = Address,
                 Credentials = Credentials
             };
@@ -26,4 +28,10 @@ public record NetworkOptionsPatchInputModel
 
     public List<ProxyOptions>? CustomProxies { get; set; }
     public NetworkOptions.ProxyModel? Proxy { get; set; }
+
+    /// <summary>Null leaves the saved list untouched; an empty list clears it.</summary>
+    public List<string>? CustomTestSites { get; set; }
+
+    /// <summary>Null leaves the saved selection untouched; an empty list clears it.</summary>
+    public List<string>? SelectedPresetTestSiteIds { get; set; }
 }
