@@ -947,6 +947,15 @@ namespace Bakabase.Service.Controllers
                 {
                     options.SelectedPresetTestSiteIds = model.SelectedPresetTestSiteIds;
                 }
+
+                if (model.ThirdPartyProxies != null)
+                {
+                    // Entries set to inherit carry no information, so drop them rather than
+                    // persisting a growing map of no-ops.
+                    options.ThirdPartyProxies = model.ThirdPartyProxies.Count == 0
+                        ? null
+                        : model.ThirdPartyProxies;
+                }
             });
             return BaseResponseBuilder.Ok;
         }

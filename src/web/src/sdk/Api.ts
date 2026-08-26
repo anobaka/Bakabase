@@ -1639,6 +1639,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputN
   proxy?: BakabaseInsideWorldModelsConfigsNetworkOptionsProxyModel;
   customTestSites?: string[];
   selectedPresetTestSiteIds?: string[];
+  thirdPartyProxies?: Record<string, BakabaseInsideWorldModelsConfigsNetworkOptionsProxyModel>;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputNetworkOptionsPatchInputModelProxyOptions {
@@ -2153,6 +2154,7 @@ export interface BakabaseInsideWorldModelsConfigsJavLibraryOptionsCollectorOptio
 export interface BakabaseInsideWorldModelsConfigsNetworkOptions {
   customProxies?: BakabaseInsideWorldModelsConfigsNetworkOptionsProxyOptions[];
   proxy: BakabaseInsideWorldModelsConfigsNetworkOptionsProxyModel;
+  thirdPartyProxies?: Record<string, BakabaseInsideWorldModelsConfigsNetworkOptionsProxyModel>;
   customTestSites?: string[];
   selectedPresetTestSiteIds?: string[];
 }

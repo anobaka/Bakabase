@@ -45,7 +45,9 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
             ThirdPartyId = thirdPartyId;
             _cookieContainer = cookieContainer;
             _options = options;
-            Proxy = webProxy;
+            // Bound to this source rather than using the global proxy directly, so a downloader can be
+            // routed differently from the rest. Falls back to the global setting when it has no override.
+            Proxy = webProxy.ForThirdParty(thirdPartyId);
             // Disable automatic cookie handling since we manage cookies manually via headers
             UseCookies = false;
             _threadsSemaphore = new SemaphoreSlim(options.MaxConcurrency, int.MaxValue);

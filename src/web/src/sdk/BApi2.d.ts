@@ -7488,6 +7488,9 @@ export interface components {
             proxy?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.NetworkOptions+ProxyModel"];
             customTestSites?: string[];
             selectedPresetTestSiteIds?: string[];
+            thirdPartyProxies?: {
+                [key: string]: components["schemas"]["Bakabase.InsideWorld.Models.Configs.NetworkOptions+ProxyModel"];
+            };
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.NetworkOptionsPatchInputModel+ProxyOptions": {
             id?: string;
@@ -7914,6 +7917,9 @@ export interface components {
         "Bakabase.InsideWorld.Models.Configs.NetworkOptions": {
             customProxies?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.NetworkOptions+ProxyOptions"][];
             proxy: components["schemas"]["Bakabase.InsideWorld.Models.Configs.NetworkOptions+ProxyModel"];
+            thirdPartyProxies?: {
+                [key: string]: components["schemas"]["Bakabase.InsideWorld.Models.Configs.NetworkOptions+ProxyModel"];
+            };
             customTestSites?: string[];
             selectedPresetTestSiteIds?: string[];
         };

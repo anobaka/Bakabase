@@ -15,6 +15,7 @@ import { useNetworkOptionsStore, useAppOptionsStore } from "@/stores/options";
 import { OnboardingModal, useOnboarding } from "@/components/Onboarding";
 import SettingsSection from "@/pages/configuration/components/SettingsSection";
 import ProxyTestModal from "@/pages/configuration/components/Others/ProxyTestModal";
+import ThirdPartyProxyModal from "@/pages/configuration/components/Others/ThirdPartyProxyModal";
 
 enum ProxyMode {
   DoNotUse = 0,
@@ -239,6 +240,37 @@ const Others: React.FC<OthersProps> = ({ applyPatches, query }) => {
                 </Button>
               </>
             )}
+          </div>
+        );
+      },
+    },
+    {
+      id: "thirdPartyProxies",
+      label: t("configuration.others.proxy.perSource"),
+      tip: t("configuration.others.proxy.perSource.description"),
+      keywords: ["proxy", "downloader", "source", "per-site", "代理", "下载器", "站点"],
+      render: () => {
+        const overrideCount = Object.keys(networkOptions.thirdPartyProxies ?? {}).length;
+
+        return (
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="flat"
+              onPress={() =>
+                createPortal(ThirdPartyProxyModal, {
+                  customProxies: networkOptions.customProxies ?? [],
+                  thirdPartyProxies: networkOptions.thirdPartyProxies,
+                })
+              }
+            >
+              {t("configuration.others.proxy.perSource.configure")}
+            </Button>
+            <span className="text-xs text-foreground-400">
+              {overrideCount > 0
+                ? t("configuration.others.proxy.perSource.count", { count: overrideCount })
+                : t("configuration.others.proxy.perSource.none")}
+            </span>
           </div>
         );
       },

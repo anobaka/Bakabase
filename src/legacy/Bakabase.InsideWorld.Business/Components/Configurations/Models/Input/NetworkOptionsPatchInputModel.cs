@@ -34,4 +34,10 @@ public record NetworkOptionsPatchInputModel
 
     /// <summary>Null leaves the saved selection untouched; an empty list clears it.</summary>
     public List<string>? SelectedPresetTestSiteIds { get; set; }
+
+    /// <summary>
+    /// Per-source proxy overrides keyed by ThirdPartyId. Null leaves them untouched; an empty
+    /// dictionary clears them all back to inheriting the global proxy.
+    /// </summary>
+    public Dictionary<int, NetworkOptions.ProxyModel>? ThirdPartyProxies { get; set; }
 }
