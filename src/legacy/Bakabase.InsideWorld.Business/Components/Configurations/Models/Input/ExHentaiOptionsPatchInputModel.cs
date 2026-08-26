@@ -17,4 +17,6 @@ public class ExHentaiOptionsPatchInputModel
     public int? MaxRetries { get; set; }
     public int? RequestTimeout { get; set; }
     public bool? ShowCover { get; set; }
+    public int? AutoSyncIntervalMinutes { get; set; }
+    public int? TorrentCheckValidityHours { get; set; }
 }

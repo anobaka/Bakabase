@@ -401,6 +401,18 @@ namespace Bakabase.Service.Controllers
                 {
                     options.ShowCover = model.ShowCover.Value;
                 }
+
+                // The UI has always sent this, but the patch model never carried it, so the
+                // binder dropped it and the setting silently failed to save.
+                if (model.AutoSyncIntervalMinutes.HasValue)
+                {
+                    options.AutoSyncIntervalMinutes = model.AutoSyncIntervalMinutes.Value;
+                }
+
+                if (model.TorrentCheckValidityHours.HasValue)
+                {
+                    options.TorrentCheckValidityHours = model.TorrentCheckValidityHours.Value;
+                }
             });
             return BaseResponseBuilder.Ok;
         }

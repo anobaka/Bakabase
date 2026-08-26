@@ -246,12 +246,55 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
                 ToDto(new[] {task}).FirstOrDefault()!);
         }
 
+        /// <summary>
+        /// Stamps a task as probed-and-torrentless. Persisted on the task so a later run can skip the
+        /// probe entirely, unlike the manager's in-memory verdict which is dropped once a task ends.
+        /// </summary>
+        public async Task RecordNoTorrentVerdict(int taskId, DateTime checkedAt)
+        {
+            var task = await GetByKey(taskId);
+            if (task == null)
+            {
+                return;
+            }
+
+            var domain = task.ToDomainModel(DownloaderManager)!;
+            var options = domain.GetTypedOptions<ExHentaiTaskOptions>();
+
+            if (options.NoTorrentCheckedAt == checkedAt)
+            {
+                return;
+            }
+
+            options.NoTorrentCheckedAt = checkedAt;
+            domain.SetTypedOptions(options);
+            task.Options = domain.Options;
+
+            await Update(task);
+        }
+
         // True when an ExHentai task will end up downloading images (so under torrent-priority it should
         // run after torrent-bearing tasks): it has been probed and has no torrent, or it opts out of
         // torrents (PreferTorrent off), in which case we honor that and download its images.
-        private bool IsExHentaiImageOnly(DownloadTask task) =>
-            DownloaderManager.IsKnownNoTorrent(task.Id) ||
-            !task.GetTypedOptions<ExHentaiTaskOptions>().PreferTorrent;
+        private bool IsExHentaiImageOnly(DownloadTask task, int? torrentCheckValidityHours)
+        {
+            if (DownloaderManager.IsKnownNoTorrent(task.Id))
+            {
+                return true;
+            }
+
+            var options = task.GetTypedOptions<ExHentaiTaskOptions>();
+
+            if (!options.PreferTorrent)
+            {
+                return true;
+            }
+
+            // A still-valid persisted verdict counts the same as an in-memory one, so ordering
+            // survives a restart instead of every task looking un-probed again.
+            return ExHentaiTorrentCheckPolicy.IsNoTorrentVerdictFresh(options.NoTorrentCheckedAt,
+                torrentCheckValidityHours, DateTime.Now);
+        }
 
         public async Task<BaseResponse> TryStartAllTasks(DownloadTaskStartMode mode, int[]? ids,
             DownloadTaskActionOnConflict actionOnConflict)
@@ -270,8 +313,9 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
                     };
                 }).ToArray();
 
-            var prioritizeExTorrent = GetRequiredService<IBOptionsManager<ExHentaiOptions>>().Value
-                .PrioritizeTasksWithTorrent;
+            var exHentaiOptions = GetRequiredService<IBOptionsManager<ExHentaiOptions>>().Value;
+            var prioritizeExTorrent = exHentaiOptions.PrioritizeTasksWithTorrent;
+            var torrentCheckValidityHours = exHentaiOptions.TorrentCheckValidityHours;
             var filteredTasks = targetTasks.GroupBy(a => a.ThirdPartyId)
                 .Select(g =>
                 {
@@ -281,7 +325,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
                     // torrent-bearing left. Stable FIFO (by id) within each tier.
                     if (prioritizeExTorrent && g.Key == ThirdPartyId.ExHentai)
                     {
-                        return g.OrderBy(t => IsExHentaiImageOnly(t) ? 1 : 0)
+                        return g.OrderBy(t => IsExHentaiImageOnly(t, torrentCheckValidityHours) ? 1 : 0)
                             .ThenBy(t => t.Id)
                             .First();
                     }

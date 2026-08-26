@@ -97,7 +97,9 @@ export const ExHentaiConfigPanel: FC<ExHentaiConfigPanelProps> = ({ fields = "al
         content: (
           <AutoSyncPanel
             autoSyncIntervalMinutes={options?.autoSyncIntervalMinutes}
-            onSave={(v) => patch({ autoSyncIntervalMinutes: v })}
+            // The patch applies only values that are present, so clearing has to be sent as 0
+            // rather than null — which the backend already treats as disabled.
+            onSave={(v) => patch({ autoSyncIntervalMinutes: v ?? 0 })}
           />
         ),
       },
@@ -211,6 +213,16 @@ export const ExHentaiConfigPanel: FC<ExHentaiConfigPanelProps> = ({ fields = "al
             >
               <Checkbox value="yes">{t("common.label.yes")}</Checkbox>
             </CheckboxGroup>
+            <NumberInput
+              description={t<string>("downloader.tip.torrentCheckValidityHoursDesc")}
+              isDisabled={!(options?.preferTorrent ?? true)}
+              label={t<string>("downloader.label.torrentCheckValidityHours")}
+              min={0}
+              // 0 is the documented "always re-check" value, matching the backend, so an empty
+              // box does not need to mean something different from what the user can type.
+              value={options?.torrentCheckValidityHours ?? 0}
+              onValueChange={(v) => patch({ torrentCheckValidityHours: Number.isNaN(v) ? 0 : v })}
+            />
           </div>
         ),
       },

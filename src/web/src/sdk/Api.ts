@@ -1321,6 +1321,8 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
   namingConvention?: string;
   preferTorrent: boolean;
   prioritizeTasksWithTorrent: boolean;
+  /** @format int32 */
+  torrentCheckValidityHours?: number;
   skipExisting: boolean;
   /** @format int32 */
   maxRetries: number;
@@ -1582,6 +1584,10 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputE
   /** @format int32 */
   requestTimeout?: number;
   showCover?: boolean;
+  /** @format int32 */
+  autoSyncIntervalMinutes?: number;
+  /** @format int32 */
+  torrentCheckValidityHours?: number;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputFanboxOptionsPatchInputModel {
