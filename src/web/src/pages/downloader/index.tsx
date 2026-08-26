@@ -9,6 +9,7 @@ import { ControlledMenu, MenuItem, useMenuState } from "@szhsin/react-menu";
 import { useUpdate, useUpdateEffect } from "react-use";
 import { useTranslation } from "react-i18next";
 import {
+  AiOutlineAim,
   AiOutlineDelete,
   AiOutlineEdit,
   AiOutlineEllipsis,
@@ -38,6 +39,7 @@ import {
   ListboxItem,
   Modal,
   toast,
+  Tooltip,
 } from "@/components/bakaui";
 import "@szhsin/react-menu/dist/index.css";
 import "@szhsin/react-menu/dist/transitions/slide.css";
@@ -65,6 +67,35 @@ import { toAbsoluteBackendUrl } from "@/config/env.ts";
 import { CircularProgress } from "@heroui/react";
 
 import { DownloadTaskTypeIconMap } from "./components/TaskDetailModal/models";
+
+/** Row height handed to the listbox virtualizer; also how "locate" computes a scroll offset. */
+const TASK_ITEM_HEIGHT = 75;
+
+/** Statuses that count as "where the queue is right now", most specific first. */
+const ACTIVE_STATUSES: DownloadTaskStatus[] = [
+  DownloadTaskStatus.Downloading,
+  DownloadTaskStatus.Starting,
+  DownloadTaskStatus.Stopping,
+  DownloadTaskStatus.InQueue,
+];
+
+/**
+ * The virtualized listbox owns its own scroller, and HeroUI exposes no imperative
+ * scroll API for it, so find the scrolling element by inspecting the subtree.
+ */
+const findScrollContainer = (root: HTMLElement | null): HTMLElement | null => {
+  if (!root) return null;
+
+  const candidates = [root, ...Array.from(root.querySelectorAll<HTMLElement>("*"))];
+
+  return (
+    candidates.find((el) => {
+      const overflowY = getComputedStyle(el).overflowY;
+
+      return (overflowY === "auto" || overflowY === "scroll") && el.scrollHeight > el.clientHeight;
+    }) ?? null
+  );
+};
 
 // const testTasks: DownloadTask[] = [
 //   {
@@ -379,6 +410,46 @@ const DownloaderPage = () => {
 
   filteredTasksRef.current = filteredTasks;
 
+  // The active task can sit thousands of rows down; scrolling to find it by hand is
+  // the reported pain point. Jump straight to it and select it so it stands out.
+  const locateActiveTask = () => {
+    const index = ACTIVE_STATUSES.reduce((found, status) => {
+      if (found > -1) return found;
+
+      return filteredTasks.findIndex((task) => task.status == status);
+    }, -1);
+
+    if (index < 0) {
+      // Distinguish "nothing is running" from "it's running but filtered out", which
+      // otherwise looks like a broken button.
+      const hiddenByFilter = tasks.some((task) => ACTIVE_STATUSES.includes(task.status!));
+
+      toast.warning(
+        t<string>(
+          hiddenByFilter
+            ? "downloader.toast.activeTaskFilteredOut"
+            : "downloader.toast.noActiveTask",
+        ),
+      );
+
+      return;
+    }
+
+    const container = findScrollContainer(taskListRef.current);
+
+    if (container) {
+      // Centre it rather than pinning it to the top, so surrounding tasks give context.
+      const target = index * TASK_ITEM_HEIGHT - (container.clientHeight - TASK_ITEM_HEIGHT) / 2;
+
+      container.scrollTo({
+        top: Math.max(0, target),
+        behavior: "smooth",
+      });
+    }
+
+    setSelectedTaskIds([filteredTasks[index].id]);
+  };
+
   // Ctrl/Cmd+A selects all filtered tasks, but only while focus is inside the
   // task list, so it doesn't hijack the shortcut elsewhere on the page.
   useEffect(() => {
@@ -419,13 +490,13 @@ const DownloaderPage = () => {
                   // color={isSelected ? "primary" : "default"}
                   variant={isSelected ? "solid" : "flat"}
                   onPress={() => {
-                    let thirdPartyIds = form.thirdPartyIds || [];
+                    // Build a new array rather than pushing into the one state already
+                    // holds, so the previous form never mutates under us.
+                    const current = form.thirdPartyIds ?? [];
+                    const thirdPartyIds = isSelected
+                      ? current.filter((a) => a != s.value)
+                      : [...current, s.value];
 
-                    if (isSelected) {
-                      thirdPartyIds = thirdPartyIds.filter((a) => a != s.value);
-                    } else {
-                      thirdPartyIds.push(s.value);
-                    }
                     setForm({
                       ...form,
                       thirdPartyIds,
@@ -461,13 +532,11 @@ const DownloaderPage = () => {
                   // color={chipColor}
                   variant={isSelected ? "solid" : "flat"}
                   onPress={() => {
-                    let statuses = form.statuses || [];
+                    const current = form.statuses ?? [];
+                    const statuses = isSelected
+                      ? current.filter((a) => a != s.value)
+                      : [...current, s.value];
 
-                    if (isSelected) {
-                      statuses = statuses.filter((a) => a != s.value);
-                    } else {
-                      statuses.push(s.value);
-                    }
                     setForm({
                       ...form,
                       statuses,
@@ -539,6 +608,12 @@ const DownloaderPage = () => {
             <AiOutlineStop className={"text-base"} />
             {t<string>("downloader.action.stopAll")}
           </Button>
+          <Tooltip content={t<string>("downloader.action.locateActive.tip")} placement="bottom">
+            <Button size={"small"} variant={"flat"} onPress={locateActiveTask}>
+              <AiOutlineAim className={"text-base"} />
+              {t<string>("downloader.action.locateActive")}
+            </Button>
+          </Tooltip>
         </div>
         <div className="flex items-center gap-1">
           <Dropdown>
@@ -659,7 +734,7 @@ const DownloaderPage = () => {
             variant={"flat"}
             virtualization={{
               maxListboxHeight: taskListHeight,
-              itemHeight: 75,
+              itemHeight: TASK_ITEM_HEIGHT,
             }}
           >
             {filteredTasks.map((task) => {
