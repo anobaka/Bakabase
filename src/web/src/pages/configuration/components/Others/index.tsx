@@ -2,29 +2,18 @@
 
 import type { Key } from "@react-types/shared";
 import type { BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputNetworkOptionsPatchInputModel } from "@/sdk/Api";
+import type { SettingItem } from "@/pages/configuration/components/SettingsSection";
 
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
-import { AiOutlineQuestionCircle, AiOutlineDelete } from "react-icons/ai";
+import { AiOutlineDelete } from "react-icons/ai";
 
 import BApi from "@/sdk/BApi";
-import {
-  Button,
-  Input,
-  Modal,
-  Select,
-  Table,
-  TableBody,
-  TableCell,
-  TableColumn,
-  TableHeader,
-  TableRow,
-  Tooltip,
-  Switch,
-} from "@/components/bakaui";
+import { Button, Input, Modal, Select, Switch } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { useNetworkOptionsStore, useAppOptionsStore } from "@/stores/options";
 import { OnboardingModal, useOnboarding } from "@/components/Onboarding";
+import SettingsSection from "@/pages/configuration/components/SettingsSection";
 
 enum ProxyMode {
   DoNotUse = 0,
@@ -38,9 +27,10 @@ interface OthersProps {
     patches: T,
     success?: (rsp: unknown) => void,
   ) => void;
+  query?: string;
 }
 
-const Others: React.FC<OthersProps> = ({ applyPatches }) => {
+const Others: React.FC<OthersProps> = ({ applyPatches, query }) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const { showOnboarding, resetOnboarding, completeOnboarding } = useOnboarding();
@@ -77,11 +67,13 @@ const Others: React.FC<OthersProps> = ({ applyPatches }) => {
 
   selectedProxy ??= ProxyMode.DoNotUse.toString();
 
-  const otherSettings = [
+  const otherSettings: SettingItem[] = [
     {
-      label: "configuration.others.proxy",
-      tip: "configuration.others.proxy.tip",
-      renderValue: () => {
+      id: "proxy",
+      label: t("configuration.others.proxy"),
+      tip: t("configuration.others.proxy.tip"),
+      keywords: ["network", "socks", "http proxy", "代理", "网络"],
+      render: () => {
         return (
           <div className="flex items-center gap-2">
             <div style={{ width: 300 }}>
@@ -179,9 +171,11 @@ const Others: React.FC<OthersProps> = ({ applyPatches }) => {
       },
     },
     {
-      label: "configuration.others.enableTracking",
-      tip: "configuration.others.enableTracking.tip",
-      renderValue: () => {
+      id: "enableTracking",
+      label: t("configuration.others.enableTracking"),
+      tip: t("configuration.others.enableTracking.tip"),
+      keywords: ["telemetry", "analytics", "privacy", "统计", "隐私"],
+      render: () => {
         return (
           <Switch
             isSelected={appOptions.enableAnonymousDataTracking}
@@ -194,9 +188,11 @@ const Others: React.FC<OthersProps> = ({ applyPatches }) => {
       },
     },
     {
-      label: "configuration.others.maxParallelism",
-      tip: "configuration.others.maxParallelism.tip",
-      renderValue: () => {
+      id: "maxParallelism",
+      label: t("configuration.others.maxParallelism"),
+      tip: t("configuration.others.maxParallelism.tip"),
+      keywords: ["concurrency", "threads", "performance", "并发", "性能"],
+      render: () => {
         return (
           <Input
             className="w-24"
@@ -221,8 +217,10 @@ const Others: React.FC<OthersProps> = ({ applyPatches }) => {
       },
     },
     {
-      label: "onboarding.viewAgain",
-      renderValue: () => {
+      id: "onboarding",
+      label: t("onboarding.viewAgain"),
+      keywords: ["tutorial", "guide", "intro", "引导", "教程"],
+      render: () => {
         return (
           <Button color="primary" size="sm" variant="flat" onPress={resetOnboarding}>
             {t("onboarding.viewAgain")}
@@ -233,45 +231,15 @@ const Others: React.FC<OthersProps> = ({ applyPatches }) => {
   ];
 
   return (
-    <div className="group">
+    <>
       <OnboardingModal visible={showOnboarding} onComplete={completeOnboarding} />
-      <div className="settings">
-        <Table removeWrapper>
-          <TableHeader>
-            <TableColumn width={200}>{t("configuration.others.title")}</TableColumn>
-            <TableColumn>&nbsp;</TableColumn>
-          </TableHeader>
-          <TableBody>
-            {otherSettings.map((c, i) => {
-              return (
-                <TableRow key={i} className="hover:bg-[var(--bakaui-overlap-background)]">
-                  <TableCell>
-                    <div className="flex items-center">
-                      {c.tip ? (
-                        <Tooltip
-                          className="max-w-[300px]"
-                          color="secondary"
-                          content={t(c.tip)}
-                          placement="top"
-                        >
-                          <div className="flex items-center gap-1">
-                            {t(c.label)}
-                            <AiOutlineQuestionCircle className="text-base" />
-                          </div>
-                        </Tooltip>
-                      ) : (
-                        t(c.label)
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>{c.renderValue()}</TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
+      <SettingsSection
+        items={otherSettings}
+        keywords={["misc", "miscellaneous", "其他"]}
+        query={query}
+        title={t("configuration.others.title")}
+      />
+    </>
   );
 };
 

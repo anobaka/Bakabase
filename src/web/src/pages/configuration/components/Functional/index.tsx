@@ -1,35 +1,32 @@
 "use client";
 
+import type { SettingItem } from "@/pages/configuration/components/SettingsSection";
+
 import { useTranslation } from "react-i18next";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableColumn,
-  TableHeader,
-  TableRow,
-  Radio,
-  RadioGroup,
-} from "@heroui/react";
+import { Radio, RadioGroup } from "@heroui/react";
 
 import { CloseBehavior, startupPages } from "@/sdk/constants";
 import { useAppOptionsStore, useUiOptionsStore } from "@/stores/options";
 import BApi from "@/sdk/BApi";
+import SettingsSection from "@/pages/configuration/components/SettingsSection";
 
 interface FunctionalProps {
   applyPatches: <T>(api: (patches: T) => Promise<{ code?: number }>, patches: T) => void;
+  query?: string;
 }
 
-const Functional: React.FC<FunctionalProps> = ({ applyPatches }) => {
+const Functional: React.FC<FunctionalProps> = ({ applyPatches, query }) => {
   const { t } = useTranslation();
 
   const appOptions = useAppOptionsStore((state) => state.data);
   const uiOptions = useUiOptionsStore((state) => state.data);
 
-  const functionSettings = [
+  const functionSettings: SettingItem[] = [
     {
-      label: "configuration.functional.startupPage",
-      renderCell: () => {
+      id: "startupPage",
+      label: t("configuration.functional.startupPage"),
+      keywords: ["startup", "home", "启动页"],
+      render: () => {
         return (
           <RadioGroup
             orientation={"horizontal"}
@@ -53,8 +50,10 @@ const Functional: React.FC<FunctionalProps> = ({ applyPatches }) => {
       },
     },
     {
-      label: "configuration.functional.exitBehavior",
-      renderCell: () => {
+      id: "exitBehavior",
+      label: t("configuration.functional.exitBehavior"),
+      keywords: ["close", "quit", "exit", "关闭", "退出"],
+      render: () => {
         return (
           <RadioGroup
             orientation={"horizontal"}
@@ -80,29 +79,12 @@ const Functional: React.FC<FunctionalProps> = ({ applyPatches }) => {
   ];
 
   return (
-    <div className="group">
-      {/* <Title title={i18n.t<string>('Functional configurations')} /> */}
-      <div className="settings">
-        <Table removeWrapper>
-          <TableHeader>
-            <TableColumn width={200}>{t<string>("configuration.functional.title")}</TableColumn>
-            <TableColumn>&nbsp;</TableColumn>
-          </TableHeader>
-          <TableBody>
-            {functionSettings.map((c, i) => {
-              return (
-                <TableRow key={i} className="hover:bg-[var(--bakaui-overlap-background)]">
-                  <TableCell>
-                    <div className="flex items-center">{t(c.label)}</div>
-                  </TableCell>
-                  <TableCell>{c.renderCell()}</TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
+    <SettingsSection
+      items={functionSettings}
+      keywords={["functional", "behaviour", "behavior"]}
+      query={query}
+      title={t<string>("configuration.functional.title")}
+    />
   );
 };
 

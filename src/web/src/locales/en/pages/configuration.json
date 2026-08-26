@@ -1,4 +1,6 @@
 {
+  "configuration.search.placeholder": "Search settings",
+  "configuration.search.noResults": "No settings match \"{{keyword}}\"",
   "configuration.dependency.title": "Dependent components",
   "configuration.dependency.defaultLocation": "Default location",
   "configuration.dependency.notInstalled": "Not installed",
