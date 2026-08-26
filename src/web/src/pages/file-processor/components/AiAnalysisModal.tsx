@@ -26,6 +26,7 @@ import {
   Input,
   Textarea,
   toast,
+  Tooltip,
 } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import AiFeatureButton from "@/components/AiFeatureButton";
@@ -622,8 +623,16 @@ const AiAnalysisModal = ({ directoryPath, filePaths, onDestroyed }: Props) => {
         <div className="flex flex-col gap-1 mb-2 px-1">
           {directoryPath && (
             <div className="text-xs text-default-400">
-              {t("fileProcessor.ai.workingDirectory")}:{" "}
-              <span className="text-default-500">{directoryPath}</span>
+              <Tooltip
+                className="max-w-[300px]"
+                content={t("fileProcessor.ai.workingDirectory.description")}
+                placement="top"
+              >
+                <span className="underline decoration-dotted underline-offset-2 cursor-help">
+                  {t("fileProcessor.ai.workingDirectory")}
+                </span>
+              </Tooltip>
+              : <span className="text-default-500">{directoryPath}</span>
             </div>
           )}
           {filePaths.length > 0 ? (

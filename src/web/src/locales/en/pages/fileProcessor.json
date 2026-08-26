@@ -36,6 +36,7 @@
   "fileProcessor.ai.totalFiles": "Total Files",
   "fileProcessor.ai.totalDirectories": "Total Directories",
   "fileProcessor.ai.workingDirectory": "Working directory",
+  "fileProcessor.ai.workingDirectory.description": "The directory the file processor is currently showing — its root. Browsing into another directory changes it.",
   "fileProcessor.ai.selectedPaths": "{{count}} paths selected",
   "fileProcessor.ai.noPathsSelected": "No paths selected",
 

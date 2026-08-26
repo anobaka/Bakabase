@@ -6,6 +6,8 @@ import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CloseOutlined, ReloadOutlined, WarningOutlined } from "@ant-design/icons";
 
+import { describeUpdateError } from "./describeUpdateError";
+
 import { Button, Progress, Spinner, Tooltip } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 import { UpdaterStatus } from "@/sdk/constants";
@@ -88,14 +90,19 @@ export const AppUpdateBannerView: React.FC<ViewProps> = ({
   }
 
   if (state.kind === "failed") {
+    const described = describeUpdateError(state.error);
+    // An expired certificate on the update endpoint reaches us as .NET's generic
+    // "SSL connection could not be established", which reads like a flaky network.
+    // Say what actually went wrong, and keep the raw text underneath it.
+    const explanation = described ? t<string>(described.messageKey) : undefined;
+    const tooltipContent = [t<string>("appUpdate.failed"), explanation, described?.detail]
+      .filter(Boolean)
+      .join(" — ");
+
     return (
       <div className={wrapperClass}>
         <div className={`flex items-center gap-1 ${collapsed ? "flex-col" : "justify-between"}`}>
-          <Tooltip
-            content={`${t<string>("appUpdate.failed")} ${state.error ? `(${t(state.error)})` : ""}`}
-            isDisabled={!collapsed}
-            placement="right"
-          >
+          <Tooltip className="max-w-[320px]" content={tooltipContent} placement="right">
             <Button
               aria-label={t<string>("appUpdate.clickToRetry")}
               color="danger"
@@ -112,8 +119,8 @@ export const AppUpdateBannerView: React.FC<ViewProps> = ({
           </Tooltip>
           <Tooltip content={t<string>("appUpdate.dismiss")} placement="right">
             <Button
-              aria-label={t<string>("appUpdate.dismiss")}
               isIconOnly
+              aria-label={t<string>("appUpdate.dismiss")}
               size="sm"
               variant="light"
               onPress={onDismiss}
@@ -122,11 +129,19 @@ export const AppUpdateBannerView: React.FC<ViewProps> = ({
             </Button>
           </Tooltip>
         </div>
+        {/* Expanded sidebar previously showed nothing at all — the cause was only
+            reachable by hovering while collapsed. */}
+        {!collapsed && explanation && (
+          <div className="text-[11px] leading-snug text-foreground-500 break-words">
+            {explanation}
+          </div>
+        )}
       </div>
     );
   }
 
   const versionLabel = state.version ?? "";
+
   return (
     <div className={wrapperClass}>
       <Tooltip
