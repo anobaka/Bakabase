@@ -16,7 +16,19 @@ namespace Bakabase.Modules.Workflow.Components;
 /// </summary>
 public class WorkflowRunner<TDbContext> where TDbContext : DbContext
 {
-    private readonly IServiceProvider _rootServices;
+    /// <summary>
+    /// Scope factory rather than an injected IServiceProvider.
+    /// </summary>
+    /// <remarks>
+    /// This type is scoped, so an injected IServiceProvider is the scope that resolved it — not the
+    /// root, despite what a name like "rootServices" would suggest. Every caller enqueues a BTask
+    /// whose body calls <see cref="ExecuteAsync"/> later, by which time that scope is long disposed,
+    /// so creating a scope from it threw ObjectDisposedException and the run failed before it began.
+    /// IServiceScopeFactory always creates scopes from the root container and stays usable after the
+    /// resolving scope is gone.
+    /// </remarks>
+    private readonly IServiceScopeFactory _scopeFactory;
+
     private readonly IWorkflowTriggerRegistry _triggers;
     private readonly IWorkflowActivityRegistry _activities;
     private readonly ILogger<WorkflowRunner<TDbContext>> _logger;
@@ -28,12 +40,12 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
     };
 
     public WorkflowRunner(
-        IServiceProvider rootServices,
+        IServiceScopeFactory scopeFactory,
         IWorkflowTriggerRegistry triggers,
         IWorkflowActivityRegistry activities,
         ILogger<WorkflowRunner<TDbContext>> logger)
     {
-        _rootServices = rootServices;
+        _scopeFactory = scopeFactory;
         _triggers = triggers;
         _activities = activities;
         _logger = logger;
@@ -42,7 +54,7 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
     public async Task ExecuteAsync(int runId, BTaskArgs btaskArgs)
     {
         var ct = btaskArgs.CancellationToken;
-        await using var scope = _rootServices.CreateAsyncScope();
+        await using var scope = _scopeFactory.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<TDbContext>();
 
         var run = await db.Set<WorkflowRunDbModel>().FirstOrDefaultAsync(r => r.Id == runId, ct);
