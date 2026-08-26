@@ -119,6 +119,10 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<ComparisonResultGroupMemberDbModel> ComparisonResultGroupMembers { get; set; }
         public DbSet<ComparisonResultPairDbModel> ComparisonResultPairs { get; set; }
 
+        // Text module tables
+        public DbSet<Modules.Text.Abstractions.Models.Db.TextType> TextTypes { get; set; }
+        public DbSet<Modules.Text.Abstractions.Models.Db.TextEntry> TextEntries { get; set; }
+
         public BakabaseDbContext()
         {
         }
