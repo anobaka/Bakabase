@@ -12,12 +12,13 @@ import MetadataMappingPanel from "../base/MetadataMappingPanel";
 import TampermonkeyInstallButton from "../base/TampermonkeyInstallButton";
 import AutoSyncPanel from "../base/AutoSyncPanel";
 import ThirdPartyConfigModal from "../base/ThirdPartyConfigModal";
+import ProxyField from "../base/ProxyField";
 
 import { Checkbox, Chip, NumberInput, toast } from "@/components/bakaui";
 import { FileSystemSelectorButton } from "@/components/FileSystemSelector";
 import BApi from "@/sdk/BApi";
 import { useExHentaiOptionsStore } from "@/stores/options";
-import { CookieValidatorTarget, ResourceSource } from "@/sdk/constants";
+import { CookieValidatorTarget, ResourceSource, ThirdPartyId } from "@/sdk/constants";
 import PreferTorrentField from "@/pages/downloader/components/TaskDetailModal/components/PreferTorrentField";
 
 export enum ExHentaiConfigField {
@@ -198,6 +199,7 @@ export const ExHentaiConfigPanel: FC<ExHentaiConfigPanelProps> = ({ fields = "al
               value={options?.namingConvention || ""}
               onValueChange={(v) => patch({ namingConvention: v })}
             />
+            <ProxyField thirdPartyId={ThirdPartyId.ExHentai} />
             <PreferTorrentField
               preferTorrent={options?.preferTorrent ?? true}
               onChange={(v) => patch({ preferTorrent: v })}

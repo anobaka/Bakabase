@@ -9,6 +9,7 @@ import { Textarea } from "@heroui/react";
 
 import AccountsPanel, { type AccountField } from "./AccountsPanel";
 import ConfigurableThirdPartyPanel, { type ConfigFieldTab } from "./ConfigurableThirdPartyPanel";
+import ProxyField from "./ProxyField";
 
 import { Chip, NumberInput, toast } from "@/components/bakaui";
 import { FileSystemSelectorButton } from "@/components/FileSystemSelector";
@@ -135,6 +136,8 @@ export default function CookieDownloaderConfigPanel({
         title: t("thirdPartyConfig.group.download"),
         content: (
           <div className="space-y-4">
+            {/* Renders nothing for sources that cannot honour a per-source proxy. */}
+            <ProxyField thirdPartyId={thirdPartyId} />
             <div>
               <span className="text-sm font-medium">
                 {t<string>("thirdPartyConfig.field.defaultPath.label")}

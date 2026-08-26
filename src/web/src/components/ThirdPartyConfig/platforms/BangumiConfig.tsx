@@ -5,13 +5,14 @@ import { useTranslation } from "react-i18next";
 import { Button, Input } from "@heroui/react";
 
 import AccountsPanel, { type AccountField } from "../base/AccountsPanel";
+import ProxyField from "../base/ProxyField";
 import ConfigurableThirdPartyPanel, {
   type ConfigFieldTab,
 } from "../base/ConfigurableThirdPartyPanel";
 import ThirdPartyConfigModal from "../base/ThirdPartyConfigModal";
 
 import { toast } from "@/components/bakaui";
-import { CookieValidatorTarget } from "@/sdk/constants";
+import { CookieValidatorTarget, ThirdPartyId } from "@/sdk/constants";
 import { useBangumiOptionsStore } from "@/stores/options";
 
 export enum BangumiConfigField {
@@ -85,6 +86,7 @@ export const BangumiConfigPanel: FC<BangumiConfigPanelProps> = ({ fields = "all"
         title: t("thirdPartyConfig.group.dataFetch"),
         content: (
           <div className="space-y-4">
+            <ProxyField thirdPartyId={ThirdPartyId.Bangumi} />
             <div className="grid grid-cols-2 gap-4">
               <Input
                 label={t<string>("thirdPartyConfig.label.maxConcurrency")}

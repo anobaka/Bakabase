@@ -8,6 +8,7 @@ import { AiOutlineDelete, AiOutlinePlus } from "react-icons/ai";
 import AccountsPanel, { type AccountField } from "../base/AccountsPanel";
 import MetadataMappingPanel from "../base/MetadataMappingPanel";
 import AutoSyncPanel from "../base/AutoSyncPanel";
+import ProxyField from "../base/ProxyField";
 import ConfigurableThirdPartyPanel, {
   type ConfigFieldTab,
 } from "../base/ConfigurableThirdPartyPanel";
@@ -18,7 +19,7 @@ import { FileSystemSelectorButton } from "@/components/FileSystemSelector";
 import { useDLsiteOptionsStore } from "@/stores/options";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { FileSystemSelectorModal } from "@/components/FileSystemSelector";
-import { CookieValidatorTarget, ResourceSource } from "@/sdk/constants";
+import { CookieValidatorTarget, ResourceSource, ThirdPartyId } from "@/sdk/constants";
 import { LeStatusIndicator } from "@/pages/dlsite-works/components/LeStatusIndicator";
 
 export enum DLsiteConfigField {
@@ -233,6 +234,7 @@ export const DLsiteConfigPanel: FC<DLsiteConfigPanelProps> = ({
         title: t("thirdPartyConfig.group.download"),
         content: (
           <div className="space-y-4">
+            <ProxyField thirdPartyId={ThirdPartyId.DLsite} />
             <div>
               <span className="text-sm font-medium">
                 {t<string>("thirdPartyConfig.field.defaultPath.label")}
