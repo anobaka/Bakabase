@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Bakabase.Abstractions.Extensions;
+using Bakabase.Modules.ThirdParty.ThirdParties.Av;
 using Bakabase.Service.Models.Input;
 using Bakabase.Service.Models.View;
 using Bootstrap.Extensions;
@@ -33,6 +34,7 @@ public class FileSystemEntryGroupingService(ILogger<FileSystemEntryGroupingServi
                 FileSystemEntryGroupStrategyType.Similarity => GroupBySimilarity(candidates, model.SimilarityThreshold),
                 FileSystemEntryGroupStrategyType.KeyExtraction => GroupByKeyExtraction(candidates, model.KeyExtractionRegex),
                 FileSystemEntryGroupStrategyType.Affix => GroupByAffix(candidates, model.AffixDirection, model.AffixMinLength),
+                FileSystemEntryGroupStrategyType.ProductCode => GroupByProductCode(candidates),
                 _ => []
             };
 
@@ -173,7 +175,9 @@ public class FileSystemEntryGroupingService(ILogger<FileSystemEntryGroupingServi
             return [];
         }
 
-        var byKey = new Dictionary<string, List<Candidate>>(StringComparer.Ordinal);
+        // OrdinalIgnoreCase, not Ordinal: filenames mix case freely, and grouping XDVD-101 apart
+        // from xdvd-101 is never what the user meant.
+        var byKey = new Dictionary<string, List<Candidate>>(StringComparer.OrdinalIgnoreCase);
         foreach (var c in candidates)
         {
             string? extracted;
@@ -192,6 +196,42 @@ public class FileSystemEntryGroupingService(ILogger<FileSystemEntryGroupingServi
         }
 
         return byKey
+            .Where(kv => kv.Value.Count > 1)
+            .Select(kv => new InternalGroup(kv.Key, kv.Value))
+            .ToList();
+    }
+
+    /// <summary>
+    /// Groups by parsed AV product code.
+    /// </summary>
+    /// <remarks>
+    /// Unlike the key-extraction strategy this needs no regex from the user, and unlike the
+    /// similarity strategy it needs no threshold — a code either parses or it does not. That
+    /// matters because no single similarity threshold can both tolerate junk around a code and
+    /// still keep two different codes apart: the noisy pair scores well below the pair of genuinely
+    /// different works.
+    ///
+    /// The canonical LABEL-SERIAL form becomes the folder name, so a group assembled from
+    /// <c>xdvd-101</c>, <c>XDVD101</c> and <c>sssssssXDVD-101pl</c> lands in one tidy
+    /// <c>XDVD-101</c> directory.
+    /// </remarks>
+    private static List<InternalGroup> GroupByProductCode(List<Candidate> candidates)
+    {
+        var byCode = new Dictionary<string, List<Candidate>>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var c in candidates)
+        {
+            var code = AvProductCodeParser.ParseNormalized(c.Key);
+
+            if (code.IsNullOrEmpty())
+            {
+                continue;
+            }
+
+            byCode.GetOrAdd(code!, _ => []).Add(c);
+        }
+
+        return byCode
             .Where(kv => kv.Value.Count > 1)
             .Select(kv => new InternalGroup(kv.Key, kv.Value))
             .ToList();
@@ -326,6 +366,25 @@ public class FileSystemEntryGroupingService(ILogger<FileSystemEntryGroupingServi
                 {
                     return [];
                 }
+            }
+            case FileSystemEntryGroupStrategyType.ProductCode:
+            {
+                // The canonical code rarely appears verbatim in the name (case and separator
+                // differ), so highlight the label and serial where they actually sit.
+                var parsed = AvProductCodeParser.Parse(candidate.Key);
+                if (parsed == null) return [];
+
+                var labelIdx = name.IndexOf(parsed.Label, StringComparison.OrdinalIgnoreCase);
+                if (labelIdx < 0) return [];
+
+                var serialIdx = name.IndexOf(parsed.Serial, labelIdx + parsed.Label.Length,
+                    StringComparison.Ordinal);
+
+                // One span from the label through the serial keeps any separator between them
+                // highlighted too, which is what the user is comparing.
+                var end = serialIdx < 0 ? labelIdx + parsed.Label.Length : serialIdx + parsed.Serial.Length;
+
+                return [new FileSystemEntryGroupResultViewModel.MatchSpan {Start = labelIdx, Length = end - labelIdx}];
             }
             case FileSystemEntryGroupStrategyType.Affix:
             {

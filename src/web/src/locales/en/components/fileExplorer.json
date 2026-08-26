@@ -61,6 +61,8 @@
   "fileExplorer.groupModal.mode.affix": "Structural (prefix/suffix)",
   "fileExplorer.groupModal.mode.affixShort": "Structural",
   "fileExplorer.groupModal.mode.affixDesc": "Best when groups of files share a common opening or trailing piece (e.g. vacation_001, ep1_show)",
+  "fileExplorer.groupModal.mode.productCodeShort": "Product code",
+  "fileExplorer.groupModal.mode.productCodeDesc": "Groups by AV product code, ignoring case, separators and junk around it — XDVD-101, xdvd-101, XDVD101 and sssssssXDVD-101pl all end up in one XDVD-101 folder. No regex or threshold needed.",
   "fileExplorer.groupModal.keyExtraction.regexLabel": "Regex",
   "fileExplorer.groupModal.keyExtraction.regexDesc": "If your regex has a capture group, the first one is used as the grouping key; otherwise the whole match is used. Entries that produce the same key are merged into one group.",
   "fileExplorer.groupModal.keyExtraction.regexPlaceholder": "e.g. ^(.+?)\\s+S\\d+E\\d+",

@@ -61,6 +61,8 @@
   "fileExplorer.groupModal.mode.affix": "结构（前缀/后缀）",
   "fileExplorer.groupModal.mode.affixShort": "结构",
   "fileExplorer.groupModal.mode.affixDesc": "适合一组文件名共享开头或结尾片段（如 vacation_001、ep1_show）的场景",
+  "fileExplorer.groupModal.mode.productCodeShort": "番号",
+  "fileExplorer.groupModal.mode.productCodeDesc": "按 AV 番号分组，忽略大小写、分隔符以及前后的杂乱字符——XDVD-101、xdvd-101、XDVD101、sssssssXDVD-101pl 会全部归入同一个 XDVD-101 目录。无需填写正则或调节阈值。",
   "fileExplorer.groupModal.keyExtraction.regexLabel": "正则",
   "fileExplorer.groupModal.keyExtraction.regexDesc": "如果有 capture group，使用首个 capture 作为分组键；否则使用整个匹配片段。匹配出相同 key 的项会合并到同一组。",
   "fileExplorer.groupModal.keyExtraction.regexPlaceholder": "如 ^(.+?)\\s+S\\d+E\\d+",

@@ -20,8 +20,11 @@ import FileChangePreview from "@/components/FileChangePreview";
 
 const KEY_EXTRACTION_PRESETS: { labelKey: string; regex: string }[] = [
   {
+    // Case- and separator-tolerant, unlike the original [A-Z]{2,6}-\d{2,5} which missed
+    // xdvd-101 and XDVD101 entirely. The dedicated product-code strategy handles surrounding
+    // junk as well and is the better choice for AV libraries.
     labelKey: "fileExplorer.groupModal.keyExtraction.presetAv",
-    regex: "([A-Z]{2,6}-\\d{2,5})",
+    regex: "([A-Za-z]{2,10}-?\\d{2,8})",
   },
   {
     labelKey: "fileExplorer.groupModal.keyExtraction.presetTvShow",
@@ -48,6 +51,7 @@ const StrategyType = {
   Similarity: 0,
   KeyExtraction: 1,
   Affix: 2,
+  ProductCode: 3,
 } as const;
 
 const AffixDirection = {
@@ -196,7 +200,9 @@ const GroupModal = ({ entries = [], groupInternal, onDestroyed }: Props) => {
       ? "fileExplorer.groupModal.mode.similarityDesc"
       : strategyType === StrategyType.KeyExtraction
         ? "fileExplorer.groupModal.mode.keyExtractionDesc"
-        : "fileExplorer.groupModal.mode.affixDesc";
+        : strategyType === StrategyType.Affix
+          ? "fileExplorer.groupModal.mode.affixDesc"
+          : "fileExplorer.groupModal.mode.productCodeDesc";
 
   return (
     <Modal
@@ -240,6 +246,10 @@ const GroupModal = ({ entries = [], groupInternal, onDestroyed }: Props) => {
             <Tab
               key={String(StrategyType.Affix)}
               title={t<string>("fileExplorer.groupModal.mode.affixShort")}
+            />
+            <Tab
+              key={String(StrategyType.ProductCode)}
+              title={t<string>("fileExplorer.groupModal.mode.productCodeShort")}
             />
           </Tabs>
           <p className="text-xs opacity-70 leading-relaxed">{t<string>(modeDescriptionKey)}</p>

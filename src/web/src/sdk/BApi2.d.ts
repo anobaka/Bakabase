@@ -9713,10 +9713,10 @@ export interface components {
         };
         /**
          * Format: int32
-         * @description [0: Similarity, 1: KeyExtraction, 2: Affix]
+         * @description [0: Similarity, 1: KeyExtraction, 2: Affix, 3: ProductCode]
          * @enum {integer}
          */
-        "Bakabase.Service.Models.Input.FileSystemEntryGroupStrategyType": 0 | 1 | 2;
+        "Bakabase.Service.Models.Input.FileSystemEntryGroupStrategyType": 0 | 1 | 2 | 3;
         "Bakabase.Service.Models.Input.IdBasedDataSortInputModel": {
             ids: number[];
         };
