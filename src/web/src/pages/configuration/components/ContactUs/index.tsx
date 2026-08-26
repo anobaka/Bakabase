@@ -1,27 +1,23 @@
 "use client";
 
+import type { SettingItem } from "@/pages/configuration/components/SettingsSection";
+
 import React from "react";
 import { GithubOutlined } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 
 import Urls from "@/cons/Urls";
 import qqGroupImg from "@/assets/qq-group.png";
-import {
-  Button,
-  Table,
-  TableRow,
-  TableBody,
-  TableCell,
-  TableColumn,
-  TableHeader,
-} from "@/components/bakaui";
+import { Button } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
+import SettingsSection from "@/pages/configuration/components/SettingsSection";
 
-const contacts = [
+const contacts: SettingItem[] = [
   {
+    id: "github",
     label: "Github",
-    value: (
-      // <ExternalLink to={Urls.Github}>
+    keywords: ["source", "issue", "repository", "仓库", "源码"],
+    render: () => (
       <Button
         color={"default"}
         size={"sm"}
@@ -32,42 +28,30 @@ const contacts = [
         <GithubOutlined className={"text-lg"} />
         <span className={"font-bold"}>Github</span>
       </Button>
-      // </ExternalLink>
     ),
   },
   {
+    id: "qq",
     label: "QQ",
-    value: <img alt="QQ" src={qqGroupImg} />,
+    keywords: ["group", "chat", "群", "交流"],
+    render: () => <img alt="QQ" className="max-w-[200px]" src={qqGroupImg} />,
   },
-  // {
-  //   label: 'WeChat',
-  //   value: <ExternalLink to={Urls.WeChatQrCode}>Github</ExternalLink>,
-  // },
 ];
-const ContactUs = () => {
+
+interface ContactUsProps {
+  query?: string;
+}
+
+const ContactUs: React.FC<ContactUsProps> = ({ query }) => {
   const { t } = useTranslation();
 
   return (
-    <div className="group">
-      <div className="settings">
-        <Table isCompact removeWrapper>
-          <TableHeader>
-            <TableColumn width={200}>{t<string>("configuration.contact.title")}</TableColumn>
-            <TableColumn>&nbsp;</TableColumn>
-          </TableHeader>
-          <TableBody>
-            {contacts.map((c, i) => {
-              return (
-                <TableRow key={i} className={"hover:bg-[var(--bakaui-overlap-background)]"}>
-                  <TableCell>{t<string>(c.label)}</TableCell>
-                  <TableCell>{c.value}</TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
+    <SettingsSection
+      items={contacts}
+      keywords={["contact", "support", "community", "联系", "反馈"]}
+      query={query}
+      title={t<string>("configuration.contact.title")}
+    />
   );
 };
 

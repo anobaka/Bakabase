@@ -1,24 +1,15 @@
 "use client";
 
 import type { ChipProps, InputProps, NumberInputProps } from "@/components/bakaui";
+import type { SettingItem } from "@/pages/configuration/components/SettingsSection";
 
 import React from "react";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 import { AiOutlineNumber } from "react-icons/ai";
 
-import {
-  Chip,
-  Input,
-  NumberInput,
-  Snippet,
-  Table,
-  TableBody,
-  TableCell,
-  TableColumn,
-  TableHeader,
-  TableRow,
-} from "@/components/bakaui";
+import { Chip, Input, NumberInput, Snippet } from "@/components/bakaui";
+import SettingsSection from "@/pages/configuration/components/SettingsSection";
 import { useAppContextStore } from "@/stores/appContext";
 import { useAppOptionsStore } from "@/stores/options";
 import { RuntimeMode } from "@/sdk/constants";
@@ -26,7 +17,11 @@ import ExternalLink from "@/components/ExternalLink";
 import { EditableValue } from "@/components/EditableValue";
 import BApi from "@/sdk/BApi";
 
-const Development: React.FC = () => {
+interface DevelopmentProps {
+  query?: string;
+}
+
+const Development: React.FC<DevelopmentProps> = ({ query }) => {
   const { t } = useTranslation();
   const appContext = useAppContextStore((state) => state);
   const appOptions = useAppOptionsStore((state) => state.data);
@@ -165,22 +160,28 @@ const Development: React.FC = () => {
     );
   };
 
-  const items: { label: string; value: React.ReactNode }[] = [
+  const items: SettingItem[] = [
     {
-      label: "configuration.development.apiEndpoints",
-      value: appContext.apiEndpoints && (
-        <div className="flex flex-wrap gap-1 items-center">
-          {appContext.apiEndpoints?.map((x, idx) => (
-            <Snippet key={idx} size="sm" symbol={<>&nbsp;</>} variant="flat">
-              {x}
-            </Snippet>
-          ))}
-        </div>
-      ),
+      id: "apiEndpoints",
+      label: t("configuration.development.apiEndpoints"),
+      keywords: ["api", "endpoint", "url", "接口"],
+      render: () =>
+        appContext.apiEndpoints && (
+          <div className="flex flex-wrap gap-1 items-center">
+            {appContext.apiEndpoints?.map((x, idx) => (
+              <Snippet key={idx} size="sm" symbol={<>&nbsp;</>} variant="flat">
+                {x}
+              </Snippet>
+            ))}
+          </div>
+        ),
     },
     {
-      label: "configuration.development.apiDocument",
-      value: apiDocumentUrl && <ExternalLink href={apiDocumentUrl}>{apiDocumentUrl}</ExternalLink>,
+      id: "apiDocument",
+      label: t("configuration.development.apiDocument"),
+      keywords: ["swagger", "openapi", "docs", "文档"],
+      render: () =>
+        apiDocumentUrl && <ExternalLink href={apiDocumentUrl}>{apiDocumentUrl}</ExternalLink>,
     },
   ];
 
@@ -192,35 +193,27 @@ const Development: React.FC = () => {
   ) {
     items.push(
       {
-        label: "configuration.development.listeningPortCount",
-        value: renderListeningPortCount(),
+        id: "listeningPortCount",
+        label: t("configuration.development.listeningPortCount"),
+        keywords: ["port", "端口"],
+        render: renderListeningPortCount,
       },
       {
-        label: "configuration.development.listeningPorts",
-        value: renderListeningPorts(),
+        id: "listeningPorts",
+        label: t("configuration.development.listeningPorts"),
+        keywords: ["port", "端口"],
+        render: renderListeningPorts,
       },
     );
   }
 
   return (
-    <Table isCompact removeWrapper>
-      <TableHeader>
-        <TableColumn width={200}>{t("configuration.development.title")}</TableColumn>
-        <TableColumn>&nbsp;</TableColumn>
-      </TableHeader>
-      <TableBody>
-        {items.map((c, i) => {
-          return (
-            <TableRow key={i} className="hover:bg-[var(--bakaui-overlap-background)]">
-              <TableCell>
-                <div className="flex items-center gap-1">{t(c.label)}</div>
-              </TableCell>
-              <TableCell>{c.value}</TableCell>
-            </TableRow>
-          );
-        })}
-      </TableBody>
-    </Table>
+    <SettingsSection
+      items={items}
+      keywords={["developer", "debug", "开发"]}
+      query={query}
+      title={t("configuration.development.title")}
+    />
   );
 };
 

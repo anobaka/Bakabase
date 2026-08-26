@@ -4,6 +4,7 @@ import type {
   BakabaseInfrastructuresComponentsAppModelsResponseModelsAppInfo,
   BakabaseInfrastructuresComponentsAppUpgradeAbstractionsAppVersionInfo,
 } from "@/sdk/Api";
+import type { SettingItem } from "@/pages/configuration/components/SettingsSection";
 
 import Markdown from "react-markdown";
 import React, { useEffect, useState } from "react";
@@ -16,18 +17,9 @@ import { UpdaterStatus, DataPathSource } from "@/sdk/constants";
 import ExternalLink from "@/components/ExternalLink";
 import { useAppUpdaterStateStore } from "@/stores/appUpdaterState";
 import { useAppOptionsStore } from "@/stores/options";
-import {
-  Button,
-  Table,
-  TableRow,
-  TableBody,
-  TableCell,
-  TableColumn,
-  TableHeader,
-  Chip,
-  Modal,
-  Switch,
-} from "@/components/bakaui";
+import { Button, Chip, Modal, Switch } from "@/components/bakaui";
+import FilePathValue from "@/components/FilePathValue";
+import SettingsSection from "@/pages/configuration/components/SettingsSection";
 import BApi from "@/sdk/BApi";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import {
@@ -43,9 +35,10 @@ interface AppInfoProps {
     patches: T,
     success?: (rsp: unknown) => void,
   ) => void;
+  query?: string;
 }
 
-const AppInfo: React.FC<AppInfoProps> = ({ appInfo, applyPatches }) => {
+const AppInfo: React.FC<AppInfoProps> = ({ appInfo, applyPatches, query }) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const [newVersion, setNewVersion] =
@@ -202,23 +195,7 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo, applyPatches }) => {
   };
 
   const renderPathValue = (path: string, description?: string) => (
-    <div className="flex flex-col gap-1">
-      <div className="flex items-center gap-1">
-        <Snippet hideSymbol size="sm" variant="bordered">
-          {path}
-        </Snippet>
-        <Button
-          isIconOnly
-          color="primary"
-          size="sm"
-          variant="light"
-          onPress={() => BApi.tool.openFileOrDirectory({ path })}
-        >
-          <FolderOpenOutlined className="text-base" />
-        </Button>
-      </div>
-      {description && <span className="text-xs text-foreground-400">{description}</span>}
-    </div>
+    <FilePathValue description={description} path={path} />
   );
 
   const renderDataPathSource = () => {
@@ -251,10 +228,15 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo, applyPatches }) => {
     );
   };
 
-  const buildAppInfoDataSource = () => {
-    const items: { label: string; value: React.ReactNode }[] = [
+  const buildAppInfoDataSource = (): SettingItem[] => {
+    const items: (Omit<SettingItem, "label" | "render"> & {
+      label: string;
+      value: React.ReactNode;
+    })[] = [
       {
+        id: "appDataPath",
         label: "configuration.appInfo.appDataPath",
+        keywords: ["path", "directory", "folder", "数据", "目录"],
         value: (
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-1 flex-wrap">
@@ -291,29 +273,41 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo, applyPatches }) => {
       ...(appInfo.anchorPath && appInfo.anchorPath !== appInfo.appDataPath
         ? [
             {
+              id: "anchorPath",
               label: "configuration.appInfo.anchorPath",
+              keywords: ["path", "目录"],
               value: renderPathValue(appInfo.anchorPath, t("configuration.appInfo.tip.anchorPath")),
             },
           ]
         : []),
       {
+        id: "dataPath",
         label: "configuration.appInfo.dataPath",
+        keywords: ["path", "database", "目录", "数据"],
         value: renderPathValue(appInfo.dataPath, t("configuration.appInfo.tip.dataPath")),
       },
       {
+        id: "tempFilesPath",
         label: "configuration.appInfo.tempFilesPath",
+        keywords: ["path", "cache", "temp", "缓存", "临时"],
         value: renderPathValue(appInfo.tempFilesPath, t("configuration.appInfo.tip.tempFilesPath")),
       },
       {
+        id: "logPath",
         label: "configuration.appInfo.logPath",
+        keywords: ["path", "log", "日志", "目录"],
         value: renderPathValue(appInfo.logPath, t("configuration.appInfo.tip.logPath")),
       },
       {
+        id: "backupPath",
         label: "configuration.appInfo.backupPath",
+        keywords: ["path", "backup", "备份"],
         value: renderPathValue(appInfo.backupPath, t("configuration.appInfo.tip.backupPath")),
       },
       {
+        id: "coreVersion",
         label: "configuration.appInfo.coreVersion",
+        keywords: ["version", "build", "版本"],
         value: (
           <Chip radius="sm" variant="light">
             {appInfo.coreVersion}
@@ -321,7 +315,9 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo, applyPatches }) => {
         ),
       },
       {
+        id: "latestVersion",
         label: "configuration.appInfo.latestVersion",
+        keywords: ["update", "upgrade", "release", "更新", "版本"],
         value: (
           <div className="flex items-center gap-3 flex-wrap">
             {renderNewVersion()}
@@ -355,32 +351,22 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo, applyPatches }) => {
       },
     ];
 
-    return items.map((x) => ({ ...x, label: t(x.label) }));
+    return items.map(({ value, ...x }) => ({ ...x, label: t(x.label), render: () => value }));
   };
 
   return (
-    <div className="group">
-      <RelocationRestartGate />
-      <LegacyAppDataNoticeBanner />
-      <div className="settings">
-        <Table isCompact removeWrapper>
-          <TableHeader>
-            <TableColumn width={200}>{t("configuration.appInfo.title")}</TableColumn>
-            <TableColumn>&nbsp;</TableColumn>
-          </TableHeader>
-          <TableBody>
-            {buildAppInfoDataSource().map((c, i) => {
-              return (
-                <TableRow key={i} className="hover:bg-[var(--bakaui-overlap-background)]">
-                  <TableCell>{c.label}</TableCell>
-                  <TableCell>{c.value}</TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
+    <SettingsSection
+      header={
+        <>
+          <RelocationRestartGate />
+          <LegacyAppDataNoticeBanner />
+        </>
+      }
+      items={buildAppInfoDataSource()}
+      keywords={["about", "app", "version", "关于", "应用"]}
+      query={query}
+      title={t("configuration.appInfo.title")}
+    />
   );
 };
 
