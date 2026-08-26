@@ -103,6 +103,26 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
         /// <summary>Record that a task has been probed and has no torrent (ExHentai torrent-priority).</summary>
         public void MarkNoTorrent(int taskId) => _noTorrentTaskIds[taskId] = 0;
 
+        /// <summary>
+        /// Records the no-torrent verdict in memory and on the task itself, so it outlives both the
+        /// current run and a restart. Best-effort: failing to persist must not break the download.
+        /// </summary>
+        public async Task MarkNoTorrentAsync(int taskId)
+        {
+            MarkNoTorrent(taskId);
+
+            try
+            {
+                await using var scope = _serviceProvider.CreateAsyncScope();
+                var service = scope.ServiceProvider.GetRequiredService<DownloadTaskService>();
+                await service.RecordNoTorrentVerdict(taskId, DateTime.Now);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Failed to persist the no-torrent verdict for task {TaskId}", taskId);
+            }
+        }
+
         /// <summary>Whether a task is already known (this run) to have no torrent.</summary>
         public bool IsKnownNoTorrent(int taskId) => _noTorrentTaskIds.ContainsKey(taskId);
 

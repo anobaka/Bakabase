@@ -7188,6 +7188,8 @@ export interface components {
             namingConvention?: string;
             preferTorrent: boolean;
             prioritizeTasksWithTorrent: boolean;
+            /** Format: int32 */
+            torrentCheckValidityHours?: number;
             skipExisting: boolean;
             /** Format: int32 */
             maxRetries: number;
@@ -7436,6 +7438,10 @@ export interface components {
             /** Format: int32 */
             requestTimeout?: number;
             showCover?: boolean;
+            /** Format: int32 */
+            autoSyncIntervalMinutes?: number;
+            /** Format: int32 */
+            torrentCheckValidityHours?: number;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.FanboxOptionsPatchInputModel": {
             accounts?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ThirdPartyAccount"][];

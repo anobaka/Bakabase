@@ -46,7 +46,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             CancellationToken ct,
             bool preferTorrent = true,
             bool deferIfNoTorrent = false,
-            Action? onNoTorrentDetected = null)
+            Func<Task>? onNoTorrentDetected = null)
         {
             // Only fetch torrent info when preferTorrent is true
             var detail = await Client.ParseDetail(url, preferTorrent);
@@ -92,13 +92,19 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                 return;
             }
 
-            // Reached here => this gallery has no torrent. Under torrent-priority, yield the slot back
-            // to the queue (after recording the verdict) so torrent-bearing tasks are drained first.
-            // The deferred task is re-selected only once no un-probed task remains, at which point this
-            // method is called again with deferIfNoTorrent=false and proceeds to download images.
+            // Reached here => this gallery has no torrent. Record that whenever we actually probed,
+            // not just on the deferring path: the verdict is what lets a later run skip the probe,
+            // and it is equally true when torrent-priority is off.
+            if (preferTorrent && onNoTorrentDetected != null)
+            {
+                await onNoTorrentDetected();
+            }
+
+            // Under torrent-priority, yield the slot back to the queue so torrent-bearing tasks are
+            // drained first. The deferred task is re-selected only once no un-probed task remains, at
+            // which point this method is called again with deferIfNoTorrent=false and downloads images.
             if (deferIfNoTorrent)
             {
-                onNoTorrentDetected?.Invoke();
                 throw new DownloadDeferredException();
             }
 

@@ -60,6 +60,20 @@ namespace Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain
         /// </summary>
         public bool PrioritizeTasksWithTorrent { get; set; }
 
+        /// <summary>
+        /// How long a "this gallery has no torrent" verdict stays valid, in hours.
+        /// Null or 0 keeps the previous behaviour of re-probing every time.
+        /// </summary>
+        /// <remarks>
+        /// Re-running a large set of tasks otherwise re-probes every gallery from scratch, and with
+        /// the default one-second request interval that walk dominates the run. Within the validity
+        /// window a known-torrentless gallery skips the probe entirely. Torrents are only ever added
+        /// to a gallery, never removed, so the verdict going stale costs a delayed torrent rather
+        /// than a wrong download — which is why this is a plain expiry and not a correctness
+        /// mechanism.
+        /// </remarks>
+        public int? TorrentCheckValidityHours { get; set; }
+
         public bool SkipExisting { get; set; }
         public int MaxRetries { get; set; }
         public int RequestTimeout { get; set; }

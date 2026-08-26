@@ -90,6 +90,8 @@
   "downloader.tip.preferTorrentDesc": "If available, download torrent files instead of downloading images directly.",
   "downloader.label.prioritizeTasksWithTorrent": "Prioritize tasks that have a torrent",
   "downloader.tip.prioritizeTasksWithTorrentDesc": "When enabled, tasks are probed one by one and those that have a torrent are finished first (only the .torrent file is downloaded), while tasks without a torrent are pushed to the back to download images last. SingleWork tasks only; requires \"Prefer torrent download\".",
+  "downloader.label.torrentCheckValidityHours": "Remember \"no torrent\" for (hours)",
+  "downloader.tip.torrentCheckValidityHoursDesc": "Once a gallery has been found to have no torrent, skip probing it again for this long. Re-running a large set of tasks otherwise re-checks every gallery from scratch. The result is stored on the task, so it survives a restart. 0 always re-checks.",
   "downloader.tip.exHentaiUserscript": "You can use our Tampermonkey userscript to download from ExHentai with one click.",
   "downloader.tip.goToThirdPartyIntegration": "Go to Third-Party Integration",
   "downloader.bilibili.selectFavorites": "Select favorites",

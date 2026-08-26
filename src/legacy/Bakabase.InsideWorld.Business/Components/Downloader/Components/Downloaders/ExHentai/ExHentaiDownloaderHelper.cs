@@ -51,7 +51,10 @@ public class ExHentaiDownloaderHelper(
 
         var options = new ExHentaiTaskOptions
         {
-            PreferTorrent = patch?.PreferTorrent ?? preferTorrentDefault
+            PreferTorrent = patch?.PreferTorrent ?? preferTorrentDefault,
+            // Carried over rather than reset, so re-submitting a task does not throw away a
+            // still-valid no-torrent verdict.
+            NoTorrentCheckedAt = patch?.NoTorrentCheckedAt
         };
         return JsonSerializer.Serialize(options, JsonSerializerOptions.Web);
     }

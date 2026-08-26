@@ -26,19 +26,27 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
         {
             var exOptions = GetRequiredService<IBOptionsManager<ExHentaiOptions>>().Value;
             var manager = DownloaderManager;
+
+            // A verdict recorded on the task survives restarts, so a re-run of a large set does not
+            // walk every gallery again. While it holds, skip the torrent probe outright.
+            var verdictIsFresh = ExHentaiTorrentCheckPolicy.IsNoTorrentVerdictFresh(
+                options.NoTorrentCheckedAt, exOptions.TorrentCheckValidityHours, DateTime.Now);
+            var knownToHaveNoTorrent = verdictIsFresh || manager.IsKnownNoTorrent(task.Id);
+
             // Defer (probe-then-yield) only on the first pass of an un-probed task. Once it is known to
             // have no torrent, it is re-run with deferIfNoTorrent=false and downloads images normally.
             var deferIfNoTorrent = exOptions.PrioritizeTasksWithTorrent
                                    && options.PreferTorrent
-                                   && !manager.IsKnownNoTorrent(task.Id);
+                                   && !knownToHaveNoTorrent;
 
             await DownloadSingleWork(task.Key, task.Checkpoint, task.DownloadPath, OnNameAcquiredInternal,
                 async current =>
                 {
                     Current = current;
                     await OnCurrentChangedInternal();
-                }, OnProgressInternal, OnCheckpointChangedInternal, ct, options.PreferTorrent,
-                deferIfNoTorrent, () => manager.MarkNoTorrent(task.Id));
+                }, OnProgressInternal, OnCheckpointChangedInternal, ct,
+                options.PreferTorrent && !knownToHaveNoTorrent,
+                deferIfNoTorrent, () => manager.MarkNoTorrentAsync(task.Id));
         }
     }
 }
