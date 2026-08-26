@@ -72,7 +72,11 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
             try
             {
                 var task = (await GetByKey(taskId)).ToDomainModel(DownloaderManager)!;
-                if (getter(task) != value)
+                // Equals, not !=: both sides are `object`, so != compares references. Boxed
+                // decimals and strings rebuilt from the database are never reference-equal,
+                // which made this guard always true — every progress tick wrote to the
+                // database and broadcast over SignalR even when the value had not moved.
+                if (!Equals(getter(task), value))
                 {
                     setter(task, value);
                     // Logger.LogInformation(

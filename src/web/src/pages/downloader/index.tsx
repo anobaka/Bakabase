@@ -71,6 +71,35 @@ import { DownloadTaskTypeIconMap } from "./components/TaskDetailModal/models";
 /** Row height handed to the listbox virtualizer; also how "locate" computes a scroll offset. */
 const TASK_ITEM_HEIGHT = 75;
 
+/**
+ * Formatting a timestamp with moment is not cheap, and every task row does it twice on
+ * every render — of which there is one per pushed progress update. The result depends
+ * only on the input string, so cache it.
+ */
+const formattedDateTimeCache = new Map<string, string>();
+
+const formatTaskDateTime = (value?: string | Date | null): string => {
+  if (!value) return "";
+
+  // A Date instance is a fresh object per push, so key on its epoch instead.
+  const key = value instanceof Date ? String(value.getTime()) : value;
+  const cached = formattedDateTimeCache.get(key);
+
+  if (cached !== undefined) return cached;
+
+  // nextStartDt keeps producing new values as tasks are rescheduled, so bound the cache
+  // rather than letting it grow for the life of the page.
+  if (formattedDateTimeCache.size > 5000) {
+    formattedDateTimeCache.clear();
+  }
+
+  const formatted = moment(value).format("YYYY-MM-DD HH:mm:ss");
+
+  formattedDateTimeCache.set(key, formatted);
+
+  return formatted;
+};
+
 /** Statuses that count as "where the queue is right now", most specific first. */
 const ACTIVE_STATUSES: DownloadTaskStatus[] = [
   DownloadTaskStatus.Downloading,
@@ -808,13 +837,13 @@ const DownloaderPage = () => {
                           {task.nextStartDt && (
                             <Chip color={"default"} size={"sm"}>
                               {t<string>("downloader.label.nextStartTime")}:
-                              {moment(task.nextStartDt).format("YYYY-MM-DD HH:mm:ss")}
+                              {formatTaskDateTime(task.nextStartDt)}
                             </Chip>
                           )}
                           <Chip color="default" size="sm">
                             {t("downloader.label.createdAt")}
                             &nbsp;
-                            {moment(task.createdAt).format("YYYY-MM-DD HH:mm:ss")}
+                            {formatTaskDateTime(task.createdAt)}
                           </Chip>
                         </div>
                       </div>
