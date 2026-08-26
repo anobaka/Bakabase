@@ -3,11 +3,11 @@
 import { useTranslation } from "react-i18next";
 
 import { Chip, Link, Modal, Tooltip } from "@/components/bakaui";
-import { SpecialTextType } from "@/sdk/constants";
+import { WellKnownTextType } from "@/sdk/constants";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
 interface IProps {
-  type: SpecialTextType;
+  type: WellKnownTextType;
 }
 const IntegrateWithSpecialTextLabel = ({ type }: IProps) => {
   const { t } = useTranslation();
@@ -16,17 +16,17 @@ const IntegrateWithSpecialTextLabel = ({ type }: IProps) => {
   let tooltipContent = "";
 
   switch (type) {
-    case SpecialTextType.DateTime:
+    case WellKnownTextType.DateTime:
       tooltipContent = t<string>(
         "Data will be attempted to be converted into date&time data according to relevant conversions.",
       );
       break;
-    case SpecialTextType.Useless:
-    case SpecialTextType.Language:
-    case SpecialTextType.Wrapper:
-    case SpecialTextType.Standardization:
-    case SpecialTextType.Volume:
-    case SpecialTextType.Trim:
+    case WellKnownTextType.Useless:
+    case WellKnownTextType.Language:
+    case WellKnownTextType.Wrapper:
+    case WellKnownTextType.Standardization:
+    case WellKnownTextType.Volume:
+    case WellKnownTextType.Trim:
       tooltipContent = t<string>("Data will be processed with special texts.");
       break;
     default:

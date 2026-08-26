@@ -16,7 +16,7 @@ import { createEnhancerTargetOptions } from "../../models";
 import TargetOptions from "./TargetOptions";
 
 import { Autocomplete, AutocompleteItem, Button, Chip, Tooltip } from "@/components/bakaui";
-import { SpecialTextType, StandardValueType } from "@/sdk/constants";
+import { StandardValueType, WellKnownTextType } from "@/sdk/constants";
 import { IntegrateWithSpecialTextLabel } from "@/components/SpecialText";
 import { buildLogger } from "@/components/utils";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
@@ -39,9 +39,9 @@ interface Props {
 }
 
 const StdValueSpecialTextIntegrationMap: {
-  [key in StandardValueType]?: SpecialTextType;
+  [key in StandardValueType]?: WellKnownTextType;
 } = {
-  [StandardValueType.DateTime]: SpecialTextType.DateTime,
+  [StandardValueType.DateTime]: WellKnownTextType.DateTime,
 };
 
 const log = buildLogger("TargetRow");

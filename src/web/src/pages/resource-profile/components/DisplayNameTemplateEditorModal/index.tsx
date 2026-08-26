@@ -14,7 +14,7 @@ import {
   builtinPropertyForDisplayNames,
   PropertyPool,
   PropertyType,
-  SpecialTextType,
+  WellKnownTextType,
 } from "@/sdk/constants.ts";
 import { getEnumKey } from "@/i18n";
 
@@ -123,12 +123,14 @@ const DisplayNameTemplateEditorModal = ({ template, properties, onSubmit, ...pro
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const init = useCallback(async () => {
-    const tr = await BApi.specialText.getAllSpecialTexts();
-    const texts = tr.data?.[SpecialTextType.Wrapper] || [];
-    const wrappersData = texts.map((text) => ({
-      left: text.value1!,
-      right: text.value2!,
-    }));
+    // Types now live in one id space, so the wrapper type is found by its well-known handle
+    // rather than by indexing the response with an enum value.
+    const tr = await BApi.text.getAllTextTypes();
+    const wrapperType = (tr.data ?? []).find((t) => t.wellKnown == WellKnownTextType.Wrapper);
+    const entries = wrapperType ? ((await BApi.text.getTextEntries(wrapperType.id)).data ?? []) : [];
+    const wrappersData = entries
+      .filter((e) => e.value1 && e.value2)
+      .map((e) => ({ left: e.value1!, right: e.value2! }));
 
     setWrappers(wrappersData);
 

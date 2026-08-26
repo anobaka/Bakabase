@@ -2272,6 +2272,54 @@ export const StandardValueTypeLabel: Record<StandardValueType, string> = {
   [StandardValueType.ListTag]: 'ListTag'
 };
 
+export enum TextTypeShape {
+  Values = 1,
+  DelimiterPair = 2,
+  MappingPair = 3
+}
+
+export const textTypeShapes = [
+  { label: 'Values', value: TextTypeShape.Values },
+  { label: 'DelimiterPair', value: TextTypeShape.DelimiterPair },
+  { label: 'MappingPair', value: TextTypeShape.MappingPair }
+] as const;
+
+export const TextTypeShapeLabel: Record<TextTypeShape, string> = {
+  [TextTypeShape.Values]: 'Values',
+  [TextTypeShape.DelimiterPair]: 'DelimiterPair',
+  [TextTypeShape.MappingPair]: 'MappingPair'
+};
+
+export enum WellKnownTextType {
+  Useless = 1,
+  Wrapper = 3,
+  Standardization = 4,
+  Volume = 6,
+  Trim = 7,
+  DateTime = 8,
+  Language = 9
+}
+
+export const wellKnownTextTypes = [
+  { label: 'Useless', value: WellKnownTextType.Useless },
+  { label: 'Wrapper', value: WellKnownTextType.Wrapper },
+  { label: 'Standardization', value: WellKnownTextType.Standardization },
+  { label: 'Volume', value: WellKnownTextType.Volume },
+  { label: 'Trim', value: WellKnownTextType.Trim },
+  { label: 'DateTime', value: WellKnownTextType.DateTime },
+  { label: 'Language', value: WellKnownTextType.Language }
+] as const;
+
+export const WellKnownTextTypeLabel: Record<WellKnownTextType, string> = {
+  [WellKnownTextType.Useless]: 'Useless',
+  [WellKnownTextType.Wrapper]: 'Wrapper',
+  [WellKnownTextType.Standardization]: 'Standardization',
+  [WellKnownTextType.Volume]: 'Volume',
+  [WellKnownTextType.Trim]: 'Trim',
+  [WellKnownTextType.DateTime]: 'DateTime',
+  [WellKnownTextType.Language]: 'Language'
+};
+
 export enum TextProcessingOperation {
   Delete = 1,
   SetWithFixedValue = 2,
@@ -2315,6 +2363,24 @@ export const TextProcessingOperationLabel: Record<TextProcessingOperation, strin
   [TextProcessingOperation.ReplaceFromEnd]: 'ReplaceFromEnd',
   [TextProcessingOperation.ReplaceFromAnyPosition]: 'ReplaceFromAnyPosition',
   [TextProcessingOperation.ReplaceWithRegex]: 'ReplaceWithRegex'
+};
+
+export enum TextMatchMode {
+  EqualsAny = 1,
+  ContainsAny = 2,
+  RegexAny = 3
+}
+
+export const textMatchModes = [
+  { label: 'EqualsAny', value: TextMatchMode.EqualsAny },
+  { label: 'ContainsAny', value: TextMatchMode.ContainsAny },
+  { label: 'RegexAny', value: TextMatchMode.RegexAny }
+] as const;
+
+export const TextMatchModeLabel: Record<TextMatchMode, string> = {
+  [TextMatchMode.EqualsAny]: 'EqualsAny',
+  [TextMatchMode.ContainsAny]: 'ContainsAny',
+  [TextMatchMode.RegexAny]: 'RegexAny'
 };
 
 export enum BTaskDuplicateIdHandling {
