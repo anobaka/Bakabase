@@ -23,17 +23,17 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
     {
         protected readonly IStringLocalizer<SharedResource> Localizer;
         protected readonly ExHentaiClient Client;
-        protected readonly ITextVocabularyService SpecialTextService;
+        protected readonly ITextVocabularyService TextVocabularyService;
         protected readonly IHostEnvironment Env;
         
         protected AbstractExHentaiDownloader(IServiceProvider serviceProvider,
             IStringLocalizer<SharedResource> localizer,
-            ExHentaiClient client, ITextVocabularyService specialTextService,
+            ExHentaiClient client, ITextVocabularyService textVocabularyService,
             IHostEnvironment env) : base(serviceProvider)
         {
             Localizer = localizer;
             Client = client;
-            SpecialTextService = specialTextService;
+            TextVocabularyService = textVocabularyService;
             Env = env;
         }
 
@@ -117,7 +117,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                 {ExHentaiNamingFields.Category, detail.Category},
             };
 
-            var wrappers = (await SpecialTextService.ResolveSet(WellKnownTextType.Wrapper)).ToPairMap();
+            var wrappers = (await TextVocabularyService.ResolveSet(WellKnownTextType.Wrapper)).ToPairMap();
 
             //var limit = await _client.GetImageLimits();
             //if (limit.Rest <= imageTitleAndPageUrls.Length)

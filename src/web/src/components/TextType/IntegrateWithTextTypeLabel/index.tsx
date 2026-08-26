@@ -9,29 +9,16 @@ import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContext
 interface IProps {
   type: WellKnownTextType;
 }
-const IntegrateWithSpecialTextLabel = ({ type }: IProps) => {
+
+/** Marks a field whose value is run through one of the builtin text types, and links to it. */
+const IntegrateWithTextTypeLabel = ({ type }: IProps) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
-  let tooltipContent = "";
-
-  switch (type) {
-    case WellKnownTextType.DateTime:
-      tooltipContent = t<string>(
-        "Data will be attempted to be converted into date&time data according to relevant conversions.",
-      );
-      break;
-    case WellKnownTextType.Useless:
-    case WellKnownTextType.Language:
-    case WellKnownTextType.Wrapper:
-    case WellKnownTextType.Standardization:
-    case WellKnownTextType.Volume:
-    case WellKnownTextType.Trim:
-      tooltipContent = t<string>("Data will be processed with special texts.");
-      break;
-    default:
-      break;
-  }
+  const tooltipContent =
+    type === WellKnownTextType.DateTime
+      ? t<string>("textType.integration.dateTime.tip")
+      : t<string>("textType.integration.default.tip");
 
   return (
     <Tooltip
@@ -40,15 +27,14 @@ const IntegrateWithSpecialTextLabel = ({ type }: IProps) => {
           {tooltipContent}
           <Link
             className={"active:no-underline cursor-pointer"}
-            // href={'#'}
             size={"sm"}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
 
               createPortal(Modal, {
-                title: t<string>("We are leaving current page"),
-                children: t<string>("Are you sure?"),
+                title: t<string>("textType.integration.leaving.title"),
+                children: t<string>("textType.integration.leaving.message"),
                 defaultVisible: true,
                 onOk: () => {
                   window.location.href = "/text";
@@ -56,18 +42,18 @@ const IntegrateWithSpecialTextLabel = ({ type }: IProps) => {
               });
             }}
           >
-            {t<string>("Click to check special texts")}
+            {t<string>("textType.integration.action")}
           </Link>
         </div>
       }
     >
       <Chip radius={"sm"} size={"sm"} variant={"flat"}>
-        {t<string>("Integrate with special text")}
+        {t<string>("textType.integration.label")}
       </Chip>
     </Tooltip>
   );
 };
 
-IntegrateWithSpecialTextLabel.displayName = "IntegrateWithSpecialTextLabel";
+IntegrateWithTextTypeLabel.displayName = "IntegrateWithTextTypeLabel";
 
-export default IntegrateWithSpecialTextLabel;
+export default IntegrateWithTextTypeLabel;

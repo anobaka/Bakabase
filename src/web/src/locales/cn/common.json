@@ -195,7 +195,7 @@
   "menu.extensionGroup": "文件类型分组",
   "menu.cache": "缓存",
   "menu.alias": "别名",
-  "menu.specialText": "文本处理",
+  "menu.text": "文本处理",
   "menu.playHistory": "播放历史",
   "menu.bulkModification": "批量修改",
   "menu.comparison": "去重对比",

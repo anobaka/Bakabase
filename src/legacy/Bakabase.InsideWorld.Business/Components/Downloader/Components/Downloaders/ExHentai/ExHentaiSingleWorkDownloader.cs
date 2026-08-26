@@ -15,10 +15,10 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
         IServiceProvider serviceProvider,
         IStringLocalizer<SharedResource> localizer,
         ExHentaiClient client,
-        ITextVocabularyService specialTextService,
+        ITextVocabularyService textVocabularyService,
         IHostEnvironment env)
         : AbstractExHentaiDownloader(serviceProvider, localizer,
-            client, specialTextService, env)
+            client, textVocabularyService, env)
     {
         public override ExHentaiDownloadTaskType EnumTaskType => ExHentaiDownloadTaskType.SingleWork;
 

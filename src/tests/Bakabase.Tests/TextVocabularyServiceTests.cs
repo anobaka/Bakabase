@@ -59,7 +59,7 @@ public sealed class TextVocabularyServiceTests
     [TestMethod]
     public async Task RenameAndDelete_RejectedForBuiltinTypes()
     {
-        await _vocabulary.EnsureSeeds();
+        await _vocabulary.AddPrefabEntries();
         var wrapperId = await _vocabulary.GetTypeId(WellKnownTextType.Wrapper);
 
         await Assert.ThrowsExceptionAsync<InvalidOperationException>(
@@ -80,21 +80,21 @@ public sealed class TextVocabularyServiceTests
     }
 
     [TestMethod]
-    public async Task EnsureSeeds_IsIdempotent()
+    public async Task AddPrefabEntries_IsIdempotent()
     {
-        await _vocabulary.EnsureSeeds();
+        await _vocabulary.AddPrefabEntries();
         var afterFirst = (await _vocabulary.GetTypes()).Sum(t => t.EntryCount);
         Assert.IsTrue(afterFirst > 0);
 
-        await _vocabulary.EnsureSeeds();
+        await _vocabulary.AddPrefabEntries();
         var afterSecond = (await _vocabulary.GetTypes()).Sum(t => t.EntryCount);
         Assert.AreEqual(afterFirst, afterSecond);
     }
 
     [TestMethod]
-    public async Task EnsureSeeds_DoesNotResurrectDeletedEntriesWithinTheSameRun()
+    public async Task AddPrefabEntries_ToppedUpOneByOne()
     {
-        await _vocabulary.EnsureSeeds();
+        await _vocabulary.AddPrefabEntries();
         var uselessId = await _vocabulary.GetTypeId(WellKnownTextType.Useless);
         var victim = (await _vocabulary.GetEntries(uselessId)).First();
 
@@ -103,14 +103,14 @@ public sealed class TextVocabularyServiceTests
 
         // A rerun tops the entry back up — the point of this test is that it stays a top-up, i.e.
         // exactly one row returns rather than the whole prefab set being duplicated.
-        await _vocabulary.EnsureSeeds();
+        await _vocabulary.AddPrefabEntries();
         Assert.AreEqual(afterDelete + 1, (await _vocabulary.GetEntries(uselessId)).Count);
     }
 
     [TestMethod]
     public async Task ResolveSet_PairShape_ExposesPairs()
     {
-        await _vocabulary.EnsureSeeds();
+        await _vocabulary.AddPrefabEntries();
 
         var set = await _vocabulary.ResolveSet(WellKnownTextType.Wrapper);
 
@@ -122,7 +122,7 @@ public sealed class TextVocabularyServiceTests
     [TestMethod]
     public async Task ResolveSet_ValuesShape_ExposesNoPairsEvenWhenSecondValuesExist()
     {
-        await _vocabulary.EnsureSeeds();
+        await _vocabulary.AddPrefabEntries();
 
         // Volume prefabs carry an ordinal in the second value that no consumer reads; it must be
         // preserved in storage yet stay out of the resolved pairs.

@@ -26,7 +26,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
         private IStringLocalizer<SharedResource> _localizer;
         private readonly IHostEnvironment _env;
         private readonly BilibiliClient _client;
-        private readonly ITextVocabularyService _specialTextService;
+        private readonly ITextVocabularyService _textVocabularyService;
 
         public override ThirdPartyId ThirdPartyId => ThirdPartyId.Bilibili;
         public override BilibiliDownloadTaskType EnumTaskType => BilibiliDownloadTaskType.Favorites;
@@ -34,12 +34,12 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
         private readonly LuxService _luxService;
 
         public BilibiliDownloader(IStringLocalizer<SharedResource> localizer,
-            BilibiliClient client, ITextVocabularyService specialTextService,
+            BilibiliClient client, ITextVocabularyService textVocabularyService,
             IHostEnvironment env, IServiceProvider serviceProvider, LuxService luxService) : base(serviceProvider)
         {
             _localizer = localizer;
             _client = client;
-            _specialTextService = specialTextService;
+            _textVocabularyService = textVocabularyService;
             _env = env;
             _luxService = luxService;
         }
@@ -179,7 +179,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                                             $"[{postIndex + 1}/{totalCount}][{post.Upper?.Name}]{post.Title} - P{i} - {bestQuality?.Description}";
                                         await OnCurrentChangedInternal();
 
-                                        var wrappers = (await _specialTextService.ResolveSet(WellKnownTextType.Wrapper)).ToPairMap();
+                                        var wrappers = (await _textVocabularyService.ResolveSet(WellKnownTextType.Wrapper)).ToPairMap();
 
                                         var keyFilename = await BuildDownloadFilename(videoValues);
 

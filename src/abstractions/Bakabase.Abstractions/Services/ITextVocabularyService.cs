@@ -38,15 +38,28 @@ public interface ITextVocabularyService
     /// </summary>
     Task<TextSet> ResolveSet(int typeId);
 
-    /// <inheritdoc cref="ResolveSet(int)"/>
+    /// <summary>
+    /// Resolves a builtin's set. Purely a read: a builtin whose row does not exist yet resolves to
+    /// an empty set rather than being created here, because consumers call this on hot paths where
+    /// writing would race other consumers sharing the same scoped DbContext.
+    /// <see cref="EnsureBuiltinTypes"/> at startup is what guarantees the rows exist.
+    /// </summary>
     Task<TextSet> ResolveSet(WellKnownTextType wellKnown);
 
+    /// <summary>Id of a builtin's row. Throws when it is missing (see <see cref="EnsureBuiltinTypes"/>).</summary>
     Task<int> GetTypeId(WellKnownTextType wellKnown);
 
     /// <summary>
-    /// Ensures builtin types exist and tops up their prefab entries. Idempotent: an entry already
-    /// present under its type is left alone, so user deletions of prefab entries are not undone
-    /// within a run and re-adding stays a no-op.
+    /// Creates any missing builtin type rows, without touching entries. Builtin types are defined
+    /// in code, so their rows are an invariant: this runs once at startup, before anything reads
+    /// them, and keeps the management page showing every builtin regardless of seeding history.
     /// </summary>
-    Task EnsureSeeds();
+    Task EnsureBuiltinTypes();
+
+    /// <summary>
+    /// Tops up the prefab entries of builtin types — the "add prefabs" action. Deliberately
+    /// separate from <see cref="EnsureBuiltinTypes"/> and never run automatically: entries are the
+    /// user's data, and re-adding them on every launch would resurrect ones they deleted.
+    /// </summary>
+    Task AddPrefabEntries();
 }

@@ -6000,7 +6000,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/text/seeds": {
+    "/text/prefabs": {
         parameters: {
             query?: never;
             header?: never;
@@ -6009,7 +6009,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["EnsureTextSeeds"];
+        post: operations["AddTextPrefabEntries"];
         delete?: never;
         options?: never;
         head?: never;
@@ -25212,7 +25212,7 @@ export interface operations {
             };
         };
     };
-    EnsureTextSeeds: {
+    AddTextPrefabEntries: {
         parameters: {
             query?: never;
             header?: never;

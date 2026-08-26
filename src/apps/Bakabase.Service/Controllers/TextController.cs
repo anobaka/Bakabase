@@ -87,11 +87,15 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "ResolveTextSet")]
         public async Task<SingletonResponse<TextSet>> ResolveSet(int typeId) => new(await vocabulary.ResolveSet(typeId));
 
-        [HttpPost("seeds")]
-        [SwaggerOperation(OperationId = "EnsureTextSeeds")]
-        public async Task<BaseResponse> EnsureSeeds()
+        /// <summary>
+        /// Tops up the builtin types' prefab entries. User-triggered only — see
+        /// <see cref="ITextVocabularyService.AddPrefabEntries"/> for why this never runs on its own.
+        /// </summary>
+        [HttpPost("prefabs")]
+        [SwaggerOperation(OperationId = "AddTextPrefabEntries")]
+        public async Task<BaseResponse> AddPrefabEntries()
         {
-            await vocabulary.EnsureSeeds();
+            await vocabulary.AddPrefabEntries();
             return BaseResponseBuilder.Ok;
         }
 

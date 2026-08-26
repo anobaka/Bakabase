@@ -3,8 +3,13 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 namespace Bakabase.Modules.Text.Components;
 
 /// <summary>
-/// Ships the builtin types and their starter entries. Carried over verbatim from the retired
-/// <c>SpecialTextPrefabs</c>, plus the shape each type actually uses.
+/// Ships the builtin types and their starter entries.
+///
+/// The type rows are an invariant — <see cref="Bakabase.Abstractions.Services.ITextVocabularyService.EnsureBuiltinTypes"/>
+/// recreates any that are missing on every startup. The entries are only a starting point: they are
+/// written by <c>AddPrefabEntries</c>, which the user triggers, and deleting one is meant to stick.
+/// Names here are storage-level identifiers; the UI renders builtins through their
+/// <c>WellKnownTextType</c> handle so they can be localized.
 /// </summary>
 public static class TextSeedData
 {

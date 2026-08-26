@@ -2206,36 +2206,6 @@ export const SearchOperationLabel: Record<SearchOperation, string> = {
   [SearchOperation.NotMatches]: 'NotMatches'
 };
 
-export enum SpecialTextType {
-  Useless = 1,
-  Wrapper = 3,
-  Standardization = 4,
-  Volume = 6,
-  Trim = 7,
-  DateTime = 8,
-  Language = 9
-}
-
-export const specialTextTypes = [
-  { label: 'Useless', value: SpecialTextType.Useless },
-  { label: 'Wrapper', value: SpecialTextType.Wrapper },
-  { label: 'Standardization', value: SpecialTextType.Standardization },
-  { label: 'Volume', value: SpecialTextType.Volume },
-  { label: 'Trim', value: SpecialTextType.Trim },
-  { label: 'DateTime', value: SpecialTextType.DateTime },
-  { label: 'Language', value: SpecialTextType.Language }
-] as const;
-
-export const SpecialTextTypeLabel: Record<SpecialTextType, string> = {
-  [SpecialTextType.Useless]: 'Useless',
-  [SpecialTextType.Wrapper]: 'Wrapper',
-  [SpecialTextType.Standardization]: 'Standardization',
-  [SpecialTextType.Volume]: 'Volume',
-  [SpecialTextType.Trim]: 'Trim',
-  [SpecialTextType.DateTime]: 'DateTime',
-  [SpecialTextType.Language]: 'Language'
-};
-
 export enum StandardValueType {
   String = 1,
   ListString = 2,

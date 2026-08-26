@@ -17,7 +17,7 @@ import TargetOptions from "./TargetOptions";
 
 import { Autocomplete, AutocompleteItem, Button, Chip, Tooltip } from "@/components/bakaui";
 import { StandardValueType, WellKnownTextType } from "@/sdk/constants";
-import { IntegrateWithSpecialTextLabel } from "@/components/SpecialText";
+import { IntegrateWithTextTypeLabel } from "@/components/TextType";
 import { buildLogger } from "@/components/utils";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import PropertyMatcher from "@/components/PropertyMatcher";
@@ -38,7 +38,7 @@ interface Props {
   readOnly?: boolean;
 }
 
-const StdValueSpecialTextIntegrationMap: {
+const StdValueTextTypeIntegrationMap: {
   [key in StandardValueType]?: WellKnownTextType;
 } = {
   [StandardValueType.DateTime]: WellKnownTextType.DateTime,
@@ -114,7 +114,7 @@ const TargetRow = (props: Props) => {
     ? (dt ?? t<string>("enhancer.target.default.label"))
     : descriptor.name;
   const isDefaultTargetOfDynamic = descriptor.isDynamic && dt == undefined;
-  const integratedSpecialTextType = StdValueSpecialTextIntegrationMap[descriptor.valueType];
+  const integratedTextType = StdValueTextTypeIntegrationMap[descriptor.valueType];
 
   let property: IProperty | undefined;
 
@@ -198,8 +198,8 @@ const TargetRow = (props: Props) => {
                     name: descriptor.name,
                   }}
                 />
-                {integratedSpecialTextType && (
-                  <IntegrateWithSpecialTextLabel type={integratedSpecialTextType} />
+                {integratedTextType && (
+                  <IntegrateWithTextTypeLabel type={integratedTextType} />
                 )}
                 {descriptor.description && (
                   <Tooltip

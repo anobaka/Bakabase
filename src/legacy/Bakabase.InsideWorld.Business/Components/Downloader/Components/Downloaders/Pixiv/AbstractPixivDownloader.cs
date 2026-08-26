@@ -16,13 +16,13 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
 {
     public abstract class AbstractPixivDownloader : AbstractDownloader<PixivDownloadTaskType>
     {
-        private readonly ITextVocabularyService _specialTextService;
+        private readonly ITextVocabularyService _textVocabularyService;
         protected readonly PixivClient Client;
         public override ThirdPartyId ThirdPartyId => ThirdPartyId.Pixiv;
-        protected AbstractPixivDownloader(IServiceProvider serviceProvider, ITextVocabularyService specialTextService,
+        protected AbstractPixivDownloader(IServiceProvider serviceProvider, ITextVocabularyService textVocabularyService,
             PixivClient client) : base(serviceProvider)
         {
-            _specialTextService = specialTextService;
+            _textVocabularyService = textVocabularyService;
             Client = client;
         }
 
@@ -41,7 +41,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
         {
             await ChangeCurrent(nameContext);
 
-            var wrappers = (await _specialTextService.ResolveSet(WellKnownTextType.Wrapper)).ToPairMap();
+            var wrappers = (await _textVocabularyService.ResolveSet(WellKnownTextType.Wrapper)).ToPairMap();
 
             var lastFileNameValues = nameContext.ToLastFileNameValues();
             if (lastFileNameValues != null)

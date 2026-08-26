@@ -195,7 +195,7 @@
   "menu.extensionGroup": "File Type Groups",
   "menu.cache": "Cache",
   "menu.alias": "Alias",
-  "menu.specialText": "Text Processing",
+  "menu.text": "Text Processing",
   "menu.playHistory": "Play History",
   "menu.bulkModification": "Bulk Modification",
   "menu.comparison": "Duplicate Check",

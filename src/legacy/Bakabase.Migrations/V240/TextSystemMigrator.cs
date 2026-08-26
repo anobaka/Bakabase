@@ -17,10 +17,12 @@ namespace Bakabase.Migrations.V240;
 /// and one id space.
 ///
 /// Implementation notes:
-/// - The old table and model are deliberately kept. App migrators run *after* EF schema
-///   migrations, so a migration dropping <c>SpecialTexts</c> would delete the source before this
-///   ever reads it whenever a user upgrades across the release that introduced the copy. Leaving
-///   the table in place as a dormant relic costs two small columns and removes that hazard.
+/// - The old table and model are deliberately kept (as
+///   <see cref="Bakabase.InsideWorld.Business.Models.Db.LegacySpecialText"/>). App migrators run
+///   *after* EF schema migrations, so a migration dropping <c>SpecialTexts</c> would delete the
+///   source before this ever reads it whenever a user upgrades across the release that introduced
+///   the copy. Leaving the table in place as a dormant relic costs two small columns and removes
+///   that hazard.
 /// - Re-entrant: the gate is the global AppOptions version, so a crash mid-copy means a rerun.
 ///   Entries already present under their target type (matched on both values) are skipped, which
 ///   also keeps this consistent with how prefabs are topped up.
@@ -30,18 +32,20 @@ namespace Bakabase.Migrations.V240;
 public class TextSystemMigrator(IServiceProvider serviceProvider) : AbstractMigrator(serviceProvider)
 {
     /// <summary>
-    /// Pinned just below the build height shipping the unified text vocabulary, so every DB that
-    /// still holds only legacy rows runs the copy exactly once on next launch.
+    /// Must sit at or above the build height that ships the unified text vocabulary — a threshold
+    /// below it never fires, since the gate asks whether the installed version is older. Landing a
+    /// little high only costs a few no-op startups: the copy skips entries that already exist.
     /// </summary>
-    protected override string ApplyOnVersionEqualsOrBeforeString => "2.4.0-beta";
+    protected override string ApplyOnVersionEqualsOrBeforeString => "2.4.0-beta.99";
 
     protected override async Task MigrateAfterDbMigrationInternal(object? context)
     {
         var logger = GetRequiredService<ILoggerFactory>().CreateLogger<TextSystemMigrator>();
         var vocabulary = GetRequiredService<ITextVocabularyService>();
 
-        // Creates the builtin types (and tops up their prefabs) so legacy rows have somewhere to land.
-        await vocabulary.EnsureSeeds();
+        // Only the type rows: prefab entries are the user's data, and the rows being copied below
+        // already are whichever prefabs they kept.
+        await vocabulary.EnsureBuiltinTypes();
 
         var dbCtx = GetRequiredService<BakabaseDbContext>();
         var legacyRows = await dbCtx.SpecialTexts.AsNoTracking().ToListAsync();
@@ -89,6 +93,6 @@ public class TextSystemMigrator(IServiceProvider serviceProvider) : AbstractMigr
     /// The new handles reuse the legacy enum's values, so this is a straight cast guarded against
     /// rows carrying a value no longer defined.
     /// </summary>
-    private static WellKnownTextType? MapType(SpecialTextType type) =>
-        Enum.IsDefined(typeof(WellKnownTextType), (int) type) ? (WellKnownTextType) (int) type : null;
+    private static WellKnownTextType? MapType(int type) =>
+        Enum.IsDefined(typeof(WellKnownTextType), type) ? (WellKnownTextType) type : null;
 }

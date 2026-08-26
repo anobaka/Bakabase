@@ -14,12 +14,12 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
 {
     public abstract class AbstractFantiaDownloader : AbstractDownloader<FantiaDownloadTaskType>
     {
-        private readonly ITextVocabularyService _specialTextService;
+        private readonly ITextVocabularyService _textVocabularyService;
         public override ThirdPartyId ThirdPartyId => ThirdPartyId.Fantia;
 
-        protected AbstractFantiaDownloader(IServiceProvider serviceProvider, ITextVocabularyService specialTextService) : base(serviceProvider)
+        protected AbstractFantiaDownloader(IServiceProvider serviceProvider, ITextVocabularyService textVocabularyService) : base(serviceProvider)
         {
-            _specialTextService = specialTextService;
+            _textVocabularyService = textVocabularyService;
         }
 
         protected override async Task StartCore(DownloadTask task, CancellationToken ct)

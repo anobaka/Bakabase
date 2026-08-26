@@ -202,6 +202,7 @@ const TextPage = () => {
             defaultSelectedKeys={[String(TextTypeShape.Values)]}
             dataSource={Object.keys(shapeLabels).map((k) => ({
               label: t<string>(shapeLabels[parseInt(k, 10) as TextTypeShape]),
+              description: t<string>(`${shapeLabels[parseInt(k, 10) as TextTypeShape]}.hint`),
               value: k,
             }))}
             label={t<string>("text.label.shape")}
@@ -292,7 +293,15 @@ const TextPage = () => {
                         </Chip>
                       )}
                     </span>
-                    <span className={"text-xs text-default-400"}>{description}</span>
+                    <span className={"text-xs text-default-400"}>
+                      {description}
+                      {type.wellKnown == undefined && (
+                        <>
+                          {description ? " · " : ""}
+                          {t<string>(shapeLabels[type.shape])}
+                        </>
+                      )}
+                    </span>
                   </div>
                 </TableCell>
                 <TableCell>
@@ -371,7 +380,7 @@ const TextPage = () => {
           size={"sm"}
           variant={"light"}
           onClick={() => {
-            BApi.text.ensureTextSeeds().then((a) => {
+            BApi.text.addTextPrefabEntries().then((a) => {
               if (!a.code) {
                 loadData();
               }

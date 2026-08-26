@@ -136,12 +136,12 @@ namespace Bakabase.Service.Controllers
                     fileMoverTargets.Count);
             }
 
-            // Alias, Special Text
+            // Alias, text vocabulary
             var aliasCount = await _aliasService.Count();
-            var stCount = (await _textVocabularyService.GetTypes()).Sum(t => t.EntryCount);
+            var textEntryCount = (await _textVocabularyService.GetTypes()).Sum(t => t.EntryCount);
             ds.OtherCounts.Add([
                 new("Aliases", aliasCount),
-                new("SpecialTexts", stCount)
+                new("Text entries", textEntryCount)
             ]);
             
             // Passwords

@@ -140,45 +140,113 @@ public class TextVocabularyService<TDbContext>(
 
     public async Task<TextSet> ResolveSet(WellKnownTextType wellKnown)
     {
-        var type = await GetOrCreateBuiltin(wellKnown);
+        var type = await FindBuiltin(wellKnown);
+        if (type == null)
+        {
+            // Before startup seeding has run (or if a row was removed out of band) a builtin simply
+            // has nothing to say — same as the empty list the old type-filtered query returned.
+            // Creating it here instead would write on a read path, and consumers share a scoped
+            // DbContext, so two of them resolving at once would collide mid-SaveChanges.
+            return new TextSet {Shape = TextTypeShape.Values};
+        }
+
         var entries = await entryOrm.GetAll(e => e.TypeId == type.Id);
         return BuildSet(type, entries);
     }
 
-    public async Task<int> GetTypeId(WellKnownTextType wellKnown) => (await GetOrCreateBuiltin(wellKnown)).Id;
-
-    public async Task EnsureSeeds()
+    public async Task<int> GetTypeId(WellKnownTextType wellKnown)
     {
-        var existingTypes = await typeOrm.GetAll();
-        var typeByWellKnown = existingTypes.Where(t => t.WellKnown.HasValue)
-            .ToDictionary(t => t.WellKnown!.Value, t => t);
+        var type = await FindBuiltin(wellKnown);
+        if (type == null)
+        {
+            throw new KeyNotFoundException(
+                $"Builtin text type [{wellKnown}] is missing; startup seeding should have created it.");
+        }
+
+        return type.Id;
+    }
+
+    public async Task EnsureBuiltinTypes()
+    {
+        await MergeDuplicateBuiltins();
+
+        var existing = (await typeOrm.GetAll())
+            .Where(t => t.WellKnown.HasValue)
+            .Select(t => t.WellKnown!.Value)
+            .ToHashSet();
+
+        var missing = TextSeedData.BuiltinTypes
+            .Where(b => !existing.Contains(b.WellKnown))
+            .Select(b => new Abstractions.Models.Db.TextType
+            {
+                Name = b.Name,
+                WellKnown = b.WellKnown,
+                Shape = b.Shape,
+                CreatedAt = DateTime.Now
+            })
+            .ToList();
+
+        if (missing.Count > 0)
+        {
+            await typeOrm.AddRange(missing);
+        }
+    }
+
+    /// <summary>
+    /// Collapses duplicate rows for a builtin onto the oldest one, moving any entries across. An
+    /// earlier build provisioned builtins lazily on read, which could race into two rows for the
+    /// same handle; repairing here rather than with a unique index keeps such a database able to
+    /// start at all, since schema migrations run before this could clean up after them.
+    /// </summary>
+    private async Task MergeDuplicateBuiltins()
+    {
+        var duplicateGroups = (await typeOrm.GetAll())
+            .Where(t => t.WellKnown.HasValue)
+            .GroupBy(t => t.WellKnown!.Value)
+            .Where(g => g.Count() > 1)
+            .ToList();
+
+        foreach (var group in duplicateGroups)
+        {
+            var ordered = group.OrderBy(t => t.Id).ToList();
+            var survivor = ordered[0];
+            foreach (var duplicate in ordered.Skip(1))
+            {
+                var entries = await entryOrm.GetAll(e => e.TypeId == duplicate.Id);
+                foreach (var entry in entries)
+                {
+                    await entryOrm.UpdateByKey(entry.Id, e => e.TypeId = survivor.Id);
+                }
+
+                await typeOrm.RemoveByKey(duplicate.Id);
+            }
+        }
+    }
+
+    public async Task AddPrefabEntries()
+    {
+        await EnsureBuiltinTypes();
+
+        var typeByWellKnown = (await typeOrm.GetAll())
+            .Where(t => t.WellKnown.HasValue)
+            // Grouped rather than keyed directly: a duplicate builtin row must degrade into
+            // picking one, not into throwing halfway through the user's action.
+            .GroupBy(t => t.WellKnown!.Value)
+            .ToDictionary(g => g.Key, g => g.First());
 
         foreach (var builtin in TextSeedData.BuiltinTypes)
         {
-            if (!typeByWellKnown.TryGetValue(builtin.WellKnown, out var type))
-            {
-                type = (await typeOrm.Add(new Abstractions.Models.Db.TextType
-                {
-                    Name = builtin.Name,
-                    WellKnown = builtin.WellKnown,
-                    Shape = builtin.Shape,
-                    CreatedAt = DateTime.Now
-                })).Data;
-                typeByWellKnown[builtin.WellKnown] = type;
-            }
-
-            if (builtin.Entries.Count == 0)
+            if (builtin.Entries.Count == 0 || !typeByWellKnown.TryGetValue(builtin.WellKnown, out var type))
             {
                 continue;
             }
 
-            // Top up prefabs without resurrecting entries the user deleted in an earlier run: only
-            // rows absent right now are added, and the comparison keys on both values so pair-shaped
-            // types do not collapse into their first value.
-            var existing = (await entryOrm.GetAll(e => e.TypeId == type.Id))
+            // Only rows absent right now are added, so entries the user deleted stay deleted for
+            // this run; the comparison keys on both values so pair shapes do not collapse into one.
+            var existingEntries = (await entryOrm.GetAll(e => e.TypeId == type.Id))
                 .Select(e => (e.Value1, e.Value2))
                 .ToHashSet();
-            var missing = builtin.Entries.Where(e => !existing.Contains((e.Value1, e.Value2))).ToList();
+            var missing = builtin.Entries.Where(e => !existingEntries.Contains((e.Value1, e.Value2))).ToList();
             if (missing.Count > 0)
             {
                 await AddEntries(type.Id, missing);
@@ -215,28 +283,8 @@ public class TextVocabularyService<TDbContext>(
         return type;
     }
 
-    /// <summary>
-    /// Builtins are defined in code, so a missing row is provisioned on demand rather than thrown
-    /// over: consumers resolve wrapper or date-format sets during ordinary work and must not depend
-    /// on seeding having run first (a fresh database, or a test that never seeded).
-    /// </summary>
-    private async Task<Abstractions.Models.Db.TextType> GetOrCreateBuiltin(WellKnownTextType wellKnown)
-    {
-        var type = await typeOrm.GetFirstOrDefault(t => t.WellKnown == wellKnown);
-        if (type != null)
-        {
-            return type;
-        }
-
-        var definition = TextSeedData.BuiltinTypes.FirstOrDefault(t => t.WellKnown == wellKnown);
-        return (await typeOrm.Add(new Abstractions.Models.Db.TextType
-        {
-            Name = definition?.Name ?? wellKnown.ToString(),
-            WellKnown = wellKnown,
-            Shape = definition?.Shape ?? TextTypeShape.Values,
-            CreatedAt = DateTime.Now
-        })).Data;
-    }
+    private async Task<Abstractions.Models.Db.TextType?> FindBuiltin(WellKnownTextType wellKnown) =>
+        await typeOrm.GetFirstOrDefault(t => t.WellKnown == wellKnown);
 
     private static void EnsureNotBuiltin(Abstractions.Models.Db.TextType type, string action)
     {

@@ -21753,24 +21753,24 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Text
-     * @name EnsureTextSeeds
-     * @request POST:/text/seeds
+     * @name AddTextPrefabEntries
+     * @request POST:/text/prefabs
      */
-    ensureTextSeeds: (params: RequestParams = {}) =>
+    addTextPrefabEntries: (params: RequestParams = {}) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/text/seeds`,
+        path: `/text/prefabs`,
         method: "POST",
         format: "json",
         ...params,
       }),
 
     /**
-     * @description Build URL for ensureTextSeeds
-     * @name ensureTextSeedsUrl
+     * @description Build URL for addTextPrefabEntries
+     * @name addTextPrefabEntriesUrl
      */
-    ensureTextSeedsUrl: () => {
+    addTextPrefabEntriesUrl: () => {
       const baseUrl = this.baseUrl || "";
-      let path = `/text/seeds`;
+      let path = `/text/prefabs`;
       
       return baseUrl + path;
     },

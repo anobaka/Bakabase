@@ -25,7 +25,7 @@ public sealed class TextOpsTests
         _sp = await TestServiceBuilder.BuildServiceProvider();
         _ops = _sp.GetRequiredService<ITextOps>();
         _vocabulary = _sp.GetRequiredService<ITextVocabularyService>();
-        await _vocabulary.EnsureSeeds();
+        await _vocabulary.AddPrefabEntries();
     }
 
     private async Task AddEntry(WellKnownTextType type, string value1, string? value2 = null)
