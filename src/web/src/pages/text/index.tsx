@@ -405,6 +405,7 @@ const TextPage = () => {
         <div className="mt-2 flex items-center gap-2">
           <Button
             color="primary"
+            isDisabled={!testInput.trim()}
             isLoading={isRunning}
             size="sm"
             onClick={async () => {
