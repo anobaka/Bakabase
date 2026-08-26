@@ -111,6 +111,7 @@ const DownloaderPage = () => {
   >([]);
 
   const tasks = useDownloadTasksStore((state) => state.tasks);
+  const patchTasks = useDownloadTasksStore((state) => state.patchTasks);
   // const tasks = testTasks;
 
   // Build third party filter from downloader definitions, sorted by value ASC
@@ -143,22 +144,50 @@ const DownloaderPage = () => {
 
   const [taskListHeight, setTaskListHeight] = useState(0);
 
+  /**
+   * Reflect an action on the row straight away, and put the old value back if the call
+   * is rejected. The server pushes authoritative state over SignalR either way; this
+   * only covers the gap, which was long enough to read as "the button did nothing".
+   */
+  const withOptimisticStatus = async <T extends { code: number }>(
+    ids: number[],
+    status: DownloadTaskStatus,
+    action: () => Promise<T>,
+  ): Promise<T> => {
+    const previous = new Map<number, DownloadTaskStatus | undefined>();
+
+    for (const id of ids) {
+      previous.set(id, tasksRef.current.find((t) => t.id == id)?.status);
+    }
+    patchTasks(ids, { status });
+
+    const rsp = await action();
+
+    if (rsp.code !== ResponseCode.Success) {
+      previous.forEach((s, id) => patchTasks([id], { status: s }));
+    }
+
+    return rsp;
+  };
+
   const startTasksManually = async (
     ids: number[],
     actionOnConflict = DownloadTaskActionOnConflict.NotSet,
   ) => {
-    const rsp = await BApi.downloadTask.startDownloadTasks(
-      {
-        ids,
-        actionOnConflict,
-      },
-      {
-        // 400-level rejections used to fall through this predicate (it only caught
-        // >= 404), so a start refused for an expired cookie or bad configuration
-        // produced no feedback whatsoever — the click looked ignored. Report every
-        // error code except Conflict, which has its own modal below.
-        showErrorToast: (r) => r.code >= 400 && r.code != ResponseCode.Conflict,
-      },
+    const rsp = await withOptimisticStatus(ids, DownloadTaskStatus.Starting, () =>
+      BApi.downloadTask.startDownloadTasks(
+        {
+          ids,
+          actionOnConflict,
+        },
+        {
+          // 400-level rejections used to fall through this predicate (it only caught
+          // >= 404), so a start refused for an expired cookie or bad configuration
+          // produced no feedback whatsoever — the click looked ignored. Report every
+          // error code except Conflict, which has its own modal below.
+          showErrorToast: (r) => r.code >= 400 && r.code != ResponseCode.Conflict,
+        },
+      ),
     );
 
     if (rsp.code == ResponseCode.Conflict) {
@@ -232,7 +261,11 @@ const DownloaderPage = () => {
         </MenuItem>
         <MenuItem
           className={"flex items-center gap-2"}
-          onClick={() => BApi.downloadTask.stopDownloadTasks(selectedTaskIdsRef.current)}
+          onClick={() =>
+            withOptimisticStatus(selectedTaskIdsRef.current, DownloadTaskStatus.Stopping, () =>
+              BApi.downloadTask.stopDownloadTasks(selectedTaskIdsRef.current),
+            )
+          }
         >
           <MdAccessTime />
           {moreThanOne && (
@@ -386,11 +419,11 @@ const DownloaderPage = () => {
 
   const taskFilters: ((task: any) => boolean)[] = [];
 
-  if (form.thirdPartyIds && form.thirdPartyIds.length > 0) {
-    taskFilters.push((t) => form.thirdPartyIds!.includes(t.thirdPartyId));
+  if (form.thirdPartyId != undefined) {
+    taskFilters.push((t) => t.thirdPartyId === form.thirdPartyId);
   }
-  if (form.statuses && form.statuses.length > 0) {
-    taskFilters.push((t) => form.statuses!.includes(t.status));
+  if (form.status != undefined) {
+    taskFilters.push((t) => t.status === form.status);
   }
 
   if (form.keyword != undefined && form.keyword.length > 0) {
@@ -482,7 +515,7 @@ const DownloaderPage = () => {
             {sortedThirdPartyIds.map((s) => {
               const count = tasks.filter((t) => t.thirdPartyId == s.value).length;
               const isDeveloping = isThirdPartyDeveloping(s.value);
-              const isSelected = form.thirdPartyIds?.some((a) => a == s.value);
+              const isSelected = form.thirdPartyId === s.value;
 
               return (
                 <Button
@@ -490,16 +523,11 @@ const DownloaderPage = () => {
                   // color={isSelected ? "primary" : "default"}
                   variant={isSelected ? "solid" : "flat"}
                   onPress={() => {
-                    // Build a new array rather than pushing into the one state already
-                    // holds, so the previous form never mutates under us.
-                    const current = form.thirdPartyIds ?? [];
-                    const thirdPartyIds = isSelected
-                      ? current.filter((a) => a != s.value)
-                      : [...current, s.value];
-
+                    // Clicking the active source clears the filter, so there is still a way
+                    // back to "all" without a separate reset control.
                     setForm({
                       ...form,
-                      thirdPartyIds,
+                      thirdPartyId: isSelected ? undefined : s.value,
                     });
                   }}
                 >
@@ -524,7 +552,7 @@ const DownloaderPage = () => {
             {downloadTaskStatuses.map((s) => {
               const count = tasks.filter((t) => t.status == s.value).length;
               const chipColor = DownloadTaskStatusIceLabelStatusMap[s.value! as DownloadTaskStatus];
-              const isSelected = form.statuses?.some((a) => a == s.value);
+              const isSelected = form.status === s.value;
 
               return (
                 <Button
@@ -532,14 +560,9 @@ const DownloaderPage = () => {
                   // color={chipColor}
                   variant={isSelected ? "solid" : "flat"}
                   onPress={() => {
-                    const current = form.statuses ?? [];
-                    const statuses = isSelected
-                      ? current.filter((a) => a != s.value)
-                      : [...current, s.value];
-
                     setForm({
                       ...form,
-                      statuses,
+                      status: isSelected ? undefined : s.value,
                     });
                   }}
                 >
@@ -867,7 +890,11 @@ const DownloaderPage = () => {
                                   size={"sm"}
                                   variant={"light"}
                                   onPress={() => {
-                                    BApi.downloadTask.stopDownloadTasks([task.id]);
+                                    withOptimisticStatus(
+                                      [task.id],
+                                      DownloadTaskStatus.Stopping,
+                                      () => BApi.downloadTask.stopDownloadTasks([task.id]),
+                                    );
                                   }}
                                 >
                                   <AiOutlineStop className={"text-lg"} />
@@ -1005,9 +1032,10 @@ enum SelectionMode {
 }
 
 type SearchForm = {
-  statuses?: DownloadTaskStatus[];
+  /** Single-select: clicking the active chip clears it. */
+  status?: DownloadTaskStatus;
   keyword?: string;
-  thirdPartyIds?: ThirdPartyId[];
+  thirdPartyId?: ThirdPartyId;
 };
 
 export default DownloaderPage;
