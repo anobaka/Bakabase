@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -57,6 +58,22 @@ public partial class App : Application
             // Wire up tray events now that Host is available
             AppTrayIcon.Clicked += (_, _) => _guiAdapter.Show();
 
+            // desktop.Exit below covers the graceful exits only. Anything that ends the
+            // process without unwinding Avalonia — Environment.Exit from Velopack's
+            // ApplyUpdatesAndRestart, a fatal-error bail-out, Ctrl+C on a console run —
+            // would otherwise leave the icon registered with Explorer until the user
+            // happens to hover it. ProcessExit fires for all of those.
+            AppDomain.CurrentDomain.ProcessExit += (_, _) => SetTrayIconVisible(false);
+
+            // A previous instance that was hard-killed (VS "Stop Debugging", Task Manager,
+            // a crash) ran none of the above and left its icon behind. Nothing in *that*
+            // process can fix it after the fact, so the next launch cleans up instead.
+            _ = System.Threading.Tasks.Task.Run(async () =>
+            {
+                await System.Threading.Tasks.Task.Delay(TimeSpan.FromSeconds(2));
+                TrayIconGhostSweeper.Sweep();
+            });
+
             var openItem = AppTrayIcon.Menu!.Items.OfType<NativeMenuItem>().First(i => i.Header == "Open");
             var exitItem = AppTrayIcon.Menu!.Items.OfType<NativeMenuItem>().First(i => i.Header == "Exit");
             openItem.Click += (_, _) => _guiAdapter.Show();
@@ -66,9 +83,36 @@ public partial class App : Application
 
             desktop.Exit += (_, _) =>
             {
-                AppTrayIcon.IsVisible = false;
+                SetTrayIconVisible(false);
                 Host?.Dispose();
             };
+        }
+    }
+
+    /// <summary>
+    /// Registers / unregisters the tray icon with the shell (Shell_NotifyIcon NIM_ADD /
+    /// NIM_DELETE on Windows). Idempotent, never throws, and safe to call from any thread —
+    /// most callers are exit paths, where an exception would be worse than a leftover icon.
+    /// </summary>
+    public void SetTrayIconVisible(bool visible)
+    {
+        try
+        {
+            if (Dispatcher.UIThread.CheckAccess())
+            {
+                AppTrayIcon.IsVisible = visible;
+            }
+            else
+            {
+                // Bounded wait: on the ProcessExit path the UI thread is still pumping, but
+                // if it ever isn't we must not stall the process on its way out.
+                Dispatcher.UIThread.Invoke(() => AppTrayIcon.IsVisible = visible,
+                    DispatcherPriority.Send, CancellationToken.None, TimeSpan.FromSeconds(2));
+            }
+        }
+        catch
+        {
+            // Already torn down / dispatcher gone — nothing left to clean up.
         }
     }
 
