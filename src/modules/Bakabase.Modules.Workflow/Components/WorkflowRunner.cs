@@ -33,12 +33,6 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
     private readonly IWorkflowActivityRegistry _activities;
     private readonly ILogger<WorkflowRunner<TDbContext>> _logger;
 
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        PropertyNameCaseInsensitive = true,
-    };
-
     public WorkflowRunner(
         IServiceScopeFactory scopeFactory,
         IWorkflowTriggerRegistry triggers,
@@ -83,7 +77,7 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
         {
             payload = string.IsNullOrEmpty(run.PayloadJson)
                 ? throw new InvalidOperationException("Run has no payload")
-                : JsonSerializer.Deserialize(run.PayloadJson, trigger.PayloadType, JsonOptions)
+                : JsonSerializer.Deserialize(run.PayloadJson, trigger.PayloadType, WorkflowJson.Options)
                   ?? throw new InvalidOperationException("Payload deserialized to null");
         }
         catch (Exception ex)
@@ -204,7 +198,7 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
 
             run.OutputCount = items.Count;
             run.FailedItemCount = failedTotal;
-            run.StepStatsJson = JsonSerializer.Serialize(stepStats, JsonOptions);
+            run.StepStatsJson = JsonSerializer.Serialize(stepStats, WorkflowJson.Options);
             run.Status = WorkflowRunStatus.Success;
             run.CompletedAt = DateTime.Now;
             definition.LastRunAt = run.CompletedAt;
@@ -215,7 +209,7 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
             run.Status = WorkflowRunStatus.Cancelled;
             run.CompletedAt = DateTime.Now;
             run.FailedItemCount = failedTotal;
-            run.StepStatsJson = JsonSerializer.Serialize(stepStats, JsonOptions);
+            run.StepStatsJson = JsonSerializer.Serialize(stepStats, WorkflowJson.Options);
             throw;
         }
         catch (Exception ex)
@@ -224,7 +218,7 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
             run.Status = WorkflowRunStatus.Failed;
             run.ErrorMessage = ex.Message;
             run.FailedItemCount = failedTotal;
-            run.StepStatsJson = JsonSerializer.Serialize(stepStats, JsonOptions);
+            run.StepStatsJson = JsonSerializer.Serialize(stepStats, WorkflowJson.Options);
             run.CompletedAt = DateTime.Now;
             definition.LastError = ex.Message;
             definition.LastRunAt = run.CompletedAt;
