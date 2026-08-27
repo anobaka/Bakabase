@@ -7417,6 +7417,8 @@ export interface components {
             requestTimeout?: number;
             showCover?: boolean;
             deleteArchiveAfterExtraction?: boolean;
+            /** Format: int32 */
+            autoSyncIntervalMinutes?: number;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.DownloaderGlobalOptionsPatchInputModel": {
             autoStartAfterCreation?: boolean;
@@ -7537,6 +7539,9 @@ export interface components {
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.SteamOptionsPatchInputModel": {
             accounts?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Options.SteamAccount"][];
             showCover?: boolean;
+            /** Format: int32 */
+            autoSyncIntervalMinutes?: number;
+            language?: string;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.TaskOptionsPatchInputModel": {
             tasks?: components["schemas"]["Bakabase.Abstractions.Models.Db.BTaskDbModel"][];
