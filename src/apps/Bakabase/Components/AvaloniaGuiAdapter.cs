@@ -90,6 +90,8 @@ public class AvaloniaGuiAdapter : GuiAdapter, ITrayIconController
         });
     }
 
+    public void SetTrayIconVisible(bool visible) => _app.SetTrayIconVisible(visible);
+
     [GuiContextInterceptor]
     public override void ShowFatalErrorWindow(string message, string title = "Fatal Error")
     {

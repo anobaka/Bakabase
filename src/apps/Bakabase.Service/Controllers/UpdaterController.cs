@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Gui;
 using Bakabase.Infrastructures.Components.App.Upgrade;
 using Bakabase.Infrastructures.Components.App.Upgrade.Abstractions;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
@@ -13,10 +14,12 @@ namespace Bakabase.Service.Controllers
     public class UpdaterController : Controller
     {
         private readonly AppUpdater _appUpdater;
+        private readonly ITrayIconController? _trayIconController;
 
-        public UpdaterController(AppUpdater appUpdater)
+        public UpdaterController(AppUpdater appUpdater, ITrayIconController? trayIconController = null)
         {
             _appUpdater = appUpdater;
+            _trayIconController = trayIconController;
         }
 
         [HttpGet("app/new-version")]
@@ -45,7 +48,23 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "RestartAndUpdateApp")]
         public async Task<BaseResponse> RestartAndUpdateApp()
         {
-            await _appUpdater.ApplyUpdatesAndRestart();
+            // ApplyUpdatesAndRestart hands over to Velopack and ends in Environment.Exit, so
+            // the GUI never gets an orderly shutdown. Drop the tray icon here, while the app
+            // is still healthy, or Windows keeps painting it next to the icon of the freshly
+            // restarted instance until the user hovers over it.
+            _trayIconController?.SetTrayIconVisible(false);
+            try
+            {
+                await _appUpdater.ApplyUpdatesAndRestart();
+            }
+            catch
+            {
+                // The call never returns on success, so getting here means we are staying
+                // alive after all — put the icon back.
+                _trayIconController?.SetTrayIconVisible(true);
+                throw;
+            }
+
             return BaseResponseBuilder.Ok;
         }
     }
