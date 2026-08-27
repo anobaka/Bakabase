@@ -20,4 +20,5 @@ public class DLsiteOptionsPatchInputModel
     public int? RequestTimeout { get; set; }
     public bool? ShowCover { get; set; }
     public bool? DeleteArchiveAfterExtraction { get; set; }
+    public int? AutoSyncIntervalMinutes { get; set; }
 }

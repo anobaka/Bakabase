@@ -1561,6 +1561,8 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputD
   requestTimeout?: number;
   showCover?: boolean;
   deleteArchiveAfterExtraction?: boolean;
+  /** @format int32 */
+  autoSyncIntervalMinutes?: number;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputDownloaderGlobalOptionsPatchInputModel {
@@ -1691,6 +1693,9 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputS
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputSteamOptionsPatchInputModel {
   accounts?: BakabaseAbstractionsModelsDomainOptionsSteamAccount[];
   showCover?: boolean;
+  /** @format int32 */
+  autoSyncIntervalMinutes?: number;
+  language?: string;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputTaskOptionsPatchInputModel {

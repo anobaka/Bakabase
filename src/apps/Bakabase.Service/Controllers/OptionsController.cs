@@ -1311,6 +1311,13 @@ namespace Bakabase.Service.Controllers
                 {
                     options.ScanFolders = model.ScanFolders;
                 }
+
+                // The UI has always sent this, but the patch model never carried it, so the
+                // binder dropped it and the setting silently failed to save.
+                if (model.AutoSyncIntervalMinutes.HasValue)
+                {
+                    options.AutoSyncIntervalMinutes = model.AutoSyncIntervalMinutes.Value;
+                }
             });
             return BaseResponseBuilder.Ok;
         }
@@ -1336,6 +1343,20 @@ namespace Bakabase.Service.Controllers
                 if (model.ShowCover.HasValue)
                 {
                     options.ShowCover = model.ShowCover.Value;
+                }
+
+                // Both of these were sent by the UI but absent from the patch model, so the
+                // binder dropped them and neither setting ever saved.
+                if (model.AutoSyncIntervalMinutes.HasValue)
+                {
+                    options.AutoSyncIntervalMinutes = model.AutoSyncIntervalMinutes.Value;
+                }
+
+                if (model.Language != null)
+                {
+                    // Empty means "follow the app language", which is what null represents in
+                    // storage — a null on the wire cannot say that, it only means "unspecified".
+                    options.Language = string.IsNullOrWhiteSpace(model.Language) ? null : model.Language;
                 }
             });
             return BaseResponseBuilder.Ok;

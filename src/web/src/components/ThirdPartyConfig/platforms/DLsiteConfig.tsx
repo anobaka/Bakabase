@@ -355,7 +355,9 @@ export const DLsiteConfigPanel: FC<DLsiteConfigPanelProps> = ({
         content: (
           <AutoSyncPanel
             autoSyncIntervalMinutes={options?.autoSyncIntervalMinutes}
-            onSave={(v) => patch({ autoSyncIntervalMinutes: v })}
+            // The patch applies only values that are present, so clearing has to be sent as 0
+            // rather than null — which the backend already treats as disabled.
+            onSave={(v) => patch({ autoSyncIntervalMinutes: v ?? 0 })}
           />
         ),
       },

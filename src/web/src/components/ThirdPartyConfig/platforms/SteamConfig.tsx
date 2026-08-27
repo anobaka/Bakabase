@@ -94,7 +94,9 @@ export const SteamConfigPanel: FC<SteamConfigPanelProps> = ({ fields = "all" }) 
             onSelectionChange={async (keys) => {
               const selected = Array.from(keys)[0] as string | undefined;
 
-              await patch({ language: selected ?? null });
+              // Empty string, not null: the patch ignores absent values, so null could never
+              // clear the language back to following the app's.
+              await patch({ language: selected ?? "" });
               toast.success(t("thirdPartyConfig.success.saved"));
             }}
           >
@@ -129,7 +131,9 @@ export const SteamConfigPanel: FC<SteamConfigPanelProps> = ({ fields = "all" }) 
         content: (
           <AutoSyncPanel
             autoSyncIntervalMinutes={steamOptions?.autoSyncIntervalMinutes}
-            onSave={(v) => patch({ autoSyncIntervalMinutes: v })}
+            // The patch applies only values that are present, so clearing has to be sent as 0
+            // rather than null — which the backend already treats as disabled.
+            onSave={(v) => patch({ autoSyncIntervalMinutes: v ?? 0 })}
           />
         ),
       },
