@@ -1930,6 +1930,51 @@ export const PropertyValueTypeLabel: Record<PropertyValueType, string> = {
   [PropertyValueType.Dynamic]: 'Dynamic'
 };
 
+export enum RemoteAccessMode {
+  Disabled = 0,
+  Authenticated = 1,
+  Open = 2
+}
+
+export const remoteAccessModes = [
+  { label: 'Disabled', value: RemoteAccessMode.Disabled },
+  { label: 'Authenticated', value: RemoteAccessMode.Authenticated },
+  { label: 'Open', value: RemoteAccessMode.Open }
+] as const;
+
+export const RemoteAccessModeLabel: Record<RemoteAccessMode, string> = {
+  [RemoteAccessMode.Disabled]: 'Disabled',
+  [RemoteAccessMode.Authenticated]: 'Authenticated',
+  [RemoteAccessMode.Open]: 'Open'
+};
+
+export enum RemoteDevicePlatform {
+  Unknown = 0,
+  Windows = 1,
+  MacOS = 2,
+  Linux = 3,
+  Android = 4,
+  IOS = 5
+}
+
+export const remoteDevicePlatforms = [
+  { label: 'Unknown', value: RemoteDevicePlatform.Unknown },
+  { label: 'Windows', value: RemoteDevicePlatform.Windows },
+  { label: 'MacOS', value: RemoteDevicePlatform.MacOS },
+  { label: 'Linux', value: RemoteDevicePlatform.Linux },
+  { label: 'Android', value: RemoteDevicePlatform.Android },
+  { label: 'IOS', value: RemoteDevicePlatform.IOS }
+] as const;
+
+export const RemoteDevicePlatformLabel: Record<RemoteDevicePlatform, string> = {
+  [RemoteDevicePlatform.Unknown]: 'Unknown',
+  [RemoteDevicePlatform.Windows]: 'Windows',
+  [RemoteDevicePlatform.MacOS]: 'MacOS',
+  [RemoteDevicePlatform.Linux]: 'Linux',
+  [RemoteDevicePlatform.Android]: 'Android',
+  [RemoteDevicePlatform.IOS]: 'IOS'
+};
+
 export enum ReservedProperty {
   Introduction = 12,
   Rating = 13,
@@ -4703,6 +4748,30 @@ export const PresetResourceTypeLabel: Record<PresetResourceType, string> = {
   [PresetResourceType.MotionManga]: 'MotionManga',
   [PresetResourceType.Mod]: 'Mod',
   [PresetResourceType.Tool]: 'Tool'
+};
+
+export enum RemoteAccessDenialReason {
+  None = 0,
+  Disabled = 1,
+  Unauthenticated = 2,
+  HostOnly = 3,
+  PathNotServable = 4
+}
+
+export const remoteAccessDenialReasons = [
+  { label: 'None', value: RemoteAccessDenialReason.None },
+  { label: 'Disabled', value: RemoteAccessDenialReason.Disabled },
+  { label: 'Unauthenticated', value: RemoteAccessDenialReason.Unauthenticated },
+  { label: 'HostOnly', value: RemoteAccessDenialReason.HostOnly },
+  { label: 'PathNotServable', value: RemoteAccessDenialReason.PathNotServable }
+] as const;
+
+export const RemoteAccessDenialReasonLabel: Record<RemoteAccessDenialReason, string> = {
+  [RemoteAccessDenialReason.None]: 'None',
+  [RemoteAccessDenialReason.Disabled]: 'Disabled',
+  [RemoteAccessDenialReason.Unauthenticated]: 'Unauthenticated',
+  [RemoteAccessDenialReason.HostOnly]: 'HostOnly',
+  [RemoteAccessDenialReason.PathNotServable]: 'PathNotServable'
 };
 
 export enum WorkflowActivityCategory {

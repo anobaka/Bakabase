@@ -28,6 +28,9 @@ public class TestBOptionsManager<TOptions> : IBOptionsManager<TOptions> where TO
 
     public Task SaveAsync(Action<TOptions> modify)
     {
-        throw new NotImplementedException();
+        // The real manager applies the mutation to the live instance and persists it;
+        // in-memory, applying it is the whole job.
+        modify(_value);
+        return Task.CompletedTask;
     }
 }

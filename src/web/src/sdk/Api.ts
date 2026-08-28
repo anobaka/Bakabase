@@ -256,6 +256,18 @@ export type BakabaseAbstractionsModelsDomainConstantsPropertyValueScope =
   | 1009;
 
 /**
+ * [0: Disabled, 1: Authenticated, 2: Open]
+ * @format int32
+ */
+export type BakabaseAbstractionsModelsDomainConstantsRemoteAccessMode = 0 | 1 | 2;
+
+/**
+ * [0: Unknown, 1: Windows, 2: MacOS, 3: Linux, 4: Android, 5: IOS]
+ * @format int32
+ */
+export type BakabaseAbstractionsModelsDomainConstantsRemoteDevicePlatform = 0 | 1 | 2 | 3 | 4 | 5;
+
+/**
  * [12: Introduction, 13: Rating, 22: Cover, 27: Name]
  * @format int32
  */
@@ -4437,6 +4449,24 @@ export interface BakabaseServiceModelsInputProxyTestInputModel {
   customSites?: string[];
 }
 
+export interface BakabaseServiceModelsInputRemoteAccessModeInputModel {
+  /** [0: Disabled, 1: Authenticated, 2: Open] */
+  mode?: BakabaseAbstractionsModelsDomainConstantsRemoteAccessMode;
+}
+
+export interface BakabaseServiceModelsInputRemoteDevicePairInputModel {
+  /** @minLength 1 */
+  pairingCode: string;
+  deviceName?: string;
+  /** [0: Unknown, 1: Windows, 2: MacOS, 3: Linux, 4: Android, 5: IOS] */
+  platform: BakabaseAbstractionsModelsDomainConstantsRemoteDevicePlatform;
+}
+
+export interface BakabaseServiceModelsInputRemoteDeviceRenameInputModel {
+  /** @minLength 1 */
+  name: string;
+}
+
 export interface BakabaseServiceModelsInputResourceCoverSaveInputModel {
   base64String: string;
   /** [1: Replace, 2: Prepend] */
@@ -4824,6 +4854,47 @@ export interface BakabaseServiceModelsViewProxyTestResultViewModel {
   /** @format int32 */
   elapsedMs: number;
   error?: string;
+}
+
+export interface BakabaseServiceModelsViewRemoteAccessClientContextViewModel {
+  isLocal: boolean;
+  /** [0: Disabled, 1: Authenticated, 2: Open] */
+  mode: BakabaseAbstractionsModelsDomainConstantsRemoteAccessMode;
+  paired: boolean;
+  deviceId?: string;
+  deviceName?: string;
+}
+
+export interface BakabaseServiceModelsViewRemoteAccessPairingCodeViewModel {
+  code: string;
+  /** @format date-time */
+  expiresAt: string;
+}
+
+export interface BakabaseServiceModelsViewRemoteAccessSettingsViewModel {
+  /** [0: Disabled, 1: Authenticated, 2: Open] */
+  mode: BakabaseAbstractionsModelsDomainConstantsRemoteAccessMode;
+  pairingCode?: string;
+  /** @format date-time */
+  pairingCodeExpiresAt?: string;
+  devices: BakabaseServiceModelsViewRemoteDeviceViewModel[];
+}
+
+export interface BakabaseServiceModelsViewRemoteDevicePairingViewModel {
+  token: string;
+  deviceId: string;
+  deviceName: string;
+}
+
+export interface BakabaseServiceModelsViewRemoteDeviceViewModel {
+  id: string;
+  name: string;
+  /** [0: Unknown, 1: Windows, 2: MacOS, 3: Linux, 4: Android, 5: IOS] */
+  platform: BakabaseAbstractionsModelsDomainConstantsRemoteDevicePlatform;
+  /** @format date-time */
+  createdAt: string;
+  /** @format date-time */
+  lastSeenAt?: string;
 }
 
 export interface BakabaseServiceModelsViewResourceAncestorViewModel {
@@ -6259,6 +6330,34 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceM
   code: number;
   message?: string;
   data?: BakabaseServiceModelsViewFilePlayabilityViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewRemoteAccessClientContextViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewRemoteAccessClientContextViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewRemoteAccessPairingCodeViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewRemoteAccessPairingCodeViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewRemoteAccessSettingsViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewRemoteAccessSettingsViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewRemoteDevicePairingViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewRemoteDevicePairingViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceHierarchyContextViewModel {
@@ -20206,6 +20305,195 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       return baseUrl + path;
     },
+  };
+  remoteAccess = {
+    /**
+     * No description
+     *
+     * @tags RemoteAccess
+     * @name GetRemoteAccessContext
+     * @request GET:/remote-access/context
+     */
+    getRemoteAccessContext: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewRemoteAccessClientContextViewModel,
+        any
+      >({
+        path: `/remote-access/context`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getRemoteAccessContext
+     * @name getRemoteAccessContextUrl
+     */
+    getRemoteAccessContextUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/remote-access/context`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags RemoteAccess
+     * @name PairRemoteDevice
+     * @request POST:/remote-access/pair
+     */
+    pairRemoteDevice: (
+      data: BakabaseServiceModelsInputRemoteDevicePairInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewRemoteDevicePairingViewModel,
+        any
+      >({
+        path: `/remote-access/pair`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for pairRemoteDevice
+     * @name pairRemoteDeviceUrl
+     */
+    pairRemoteDeviceUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/remote-access/pair`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags RemoteAccess
+     * @name GetRemoteAccessSettings
+     * @request GET:/remote-access/settings
+     */
+    getRemoteAccessSettings: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewRemoteAccessSettingsViewModel,
+        any
+      >({
+        path: `/remote-access/settings`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getRemoteAccessSettings
+     * @name getRemoteAccessSettingsUrl
+     */
+    getRemoteAccessSettingsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/remote-access/settings`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags RemoteAccess
+     * @name SetRemoteAccessMode
+     * @request PUT:/remote-access/mode
+     */
+    setRemoteAccessMode: (
+      data: BakabaseServiceModelsInputRemoteAccessModeInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/remote-access/mode`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for setRemoteAccessMode
+     * @name setRemoteAccessModeUrl
+     */
+    setRemoteAccessModeUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/remote-access/mode`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags RemoteAccess
+     * @name IssueRemoteAccessPairingCode
+     * @request POST:/remote-access/pairing-code
+     */
+    issueRemoteAccessPairingCode: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewRemoteAccessPairingCodeViewModel,
+        any
+      >({
+        path: `/remote-access/pairing-code`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for issueRemoteAccessPairingCode
+     * @name issueRemoteAccessPairingCodeUrl
+     */
+    issueRemoteAccessPairingCodeUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/remote-access/pairing-code`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags RemoteAccess
+     * @name RevokeRemoteDevice
+     * @request DELETE:/remote-access/devices/{deviceId}
+     */
+    revokeRemoteDevice: (deviceId: string, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/remote-access/devices/${deviceId}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags RemoteAccess
+     * @name RenameRemoteDevice
+     * @request PUT:/remote-access/devices/{deviceId}/name
+     */
+    renameRemoteDevice: (
+      deviceId: string,
+      data: BakabaseServiceModelsInputRemoteDeviceRenameInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/remote-access/devices/${deviceId}/name`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
   };
   source = {
     /**

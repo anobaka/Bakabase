@@ -28,6 +28,7 @@ using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.RequestModels;
+using Bakabase.Service.Components.RemoteAccess;
 using Bakabase.Service.Extensions;
 using Bakabase.Service.Models.Input;
 using Bakabase.Service.Models.View;
@@ -1150,6 +1151,7 @@ namespace Bakabase.Service.Controllers
 
         [HttpGet("playability")]
         [SwaggerOperation(OperationId = "CheckFilePlayability")]
+        [RemoteAccessible(PathParameters = [nameof(fullname)])]
         public async Task<SingletonResponse<FilePlayabilityViewModel>> CheckPlayability(string fullname)
         {
             var result = new FilePlayabilityViewModel();
@@ -1366,6 +1368,7 @@ namespace Bakabase.Service.Controllers
 
         [HttpGet("play")]
         [SwaggerOperation(OperationId = "PlayFile")]
+        [RemoteAccessible(PathParameters = [nameof(fullname)])]
         public async Task<IActionResult> Play(string fullname)
         {
             var ext = Path.GetExtension(fullname);

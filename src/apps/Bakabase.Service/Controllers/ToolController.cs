@@ -29,6 +29,7 @@ using MimeKit;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
+using Bakabase.Service.Components.RemoteAccess;
 using Swashbuckle.AspNetCore.Annotations;
 using Image = SixLabors.ImageSharp.Image;
 
@@ -118,6 +119,7 @@ namespace Bakabase.Service.Controllers
         [HttpGet("thumbnail")]
         [SwaggerOperation(OperationId = "GetThumbnail")]
         [ResponseCache(VaryByQueryKeys = [nameof(path), nameof(w), nameof(h)], Duration = 30 * 60)]
+        [RemoteAccessible(PathParameters = [nameof(path)])]
         public async Task<IActionResult> GetThumbnail(string path, int? w, int? h)
         {
             // Check if path contains compressed file separator (e.g., "archive.zip!folder/image.jpg")
