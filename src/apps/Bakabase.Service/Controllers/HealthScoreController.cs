@@ -9,6 +9,7 @@ using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
+using Bakabase.Service.Components.RemoteAccess;
 
 namespace Bakabase.Service.Controllers;
 
@@ -20,6 +21,7 @@ public class HealthScoreController(
 {
     [HttpGet("profiles")]
     [SwaggerOperation(OperationId = "GetAllHealthScoreProfiles")]
+    [RemoteAccessible]
     public async Task<ListResponse<HealthScoreProfileViewModel>> GetAll()
     {
         var dbs = await service.GetAllDbModels();
@@ -29,6 +31,7 @@ public class HealthScoreController(
 
     [HttpGet("profiles/{id:int}")]
     [SwaggerOperation(OperationId = "GetHealthScoreProfile")]
+    [RemoteAccessible]
     public async Task<SingletonResponse<HealthScoreProfileViewModel?>> Get(int id)
     {
         var db = await service.GetDbModel(id);
@@ -96,6 +99,7 @@ public class HealthScoreController(
 
     [HttpGet("scores")]
     [SwaggerOperation(OperationId = "GetHealthScores")]
+    [RemoteAccessible]
     public async Task<SingletonResponse<Dictionary<int, decimal>>> GetScores([FromQuery] int[] resourceIds)
     {
         var scores = await service.GetAggregatedScores(resourceIds ?? []);
@@ -104,6 +108,7 @@ public class HealthScoreController(
 
     [HttpGet("resource/{resourceId:int}/diagnosis")]
     [SwaggerOperation(OperationId = "GetHealthScoreDiagnosisForResource")]
+    [RemoteAccessible]
     public async Task<ListResponse<ResourceHealthScoreRowViewModel>> Diagnosis(int resourceId)
     {
         var rows = await service.GetRowsForResource(resourceId);
@@ -119,6 +124,7 @@ public class HealthScoreController(
 
     [HttpGet("predicates")]
     [SwaggerOperation(OperationId = "GetAllFilePredicates")]
+    [RemoteAccessible]
     public ListResponse<FilePredicateDescriptorViewModel> GetPredicates()
     {
         var list = predicates.All.Select(p => new FilePredicateDescriptorViewModel

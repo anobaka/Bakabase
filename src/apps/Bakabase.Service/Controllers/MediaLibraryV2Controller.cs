@@ -9,6 +9,7 @@ using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
+using Bakabase.Service.Components.RemoteAccess;
 
 namespace Bakabase.Service.Controllers;
 
@@ -20,6 +21,7 @@ public class MediaLibraryV2Controller(
 {
     [HttpGet]
     [SwaggerOperation(OperationId = "GetAllMediaLibraryV2")]
+    [RemoteAccessible]
     public async Task<ListResponse<MediaLibraryV2>> GetAll(
         MediaLibraryV2AdditionalItem additionalItems = MediaLibraryV2AdditionalItem.None)
     {
@@ -29,6 +31,7 @@ public class MediaLibraryV2Controller(
 
     [HttpGet("{id:int}")]
     [SwaggerOperation(OperationId = "GetMediaLibraryV2")]
+    [RemoteAccessible]
     public async Task<SingletonResponse<MediaLibraryV2>> Get(int id)
     {
         var item = await service.Get(id);
@@ -82,6 +85,7 @@ public class MediaLibraryV2Controller(
     /// </summary>
     [HttpGet("{id:int}/resources")]
     [SwaggerOperation(OperationId = "GetMediaLibraryV2Resources")]
+    [RemoteAccessible]
     public async Task<ListResponse<MediaLibraryResourceMapping>> GetResources(int id)
     {
         var mappings = await mappingService.GetByMediaLibraryId(id);
@@ -93,6 +97,7 @@ public class MediaLibraryV2Controller(
     /// </summary>
     [HttpGet("{id:int}/resource-count")]
     [SwaggerOperation(OperationId = "GetMediaLibraryV2ResourceCount")]
+    [RemoteAccessible]
     public async Task<SingletonResponse<int>> GetResourceCount(int id)
     {
         var mappings = await mappingService.GetByMediaLibraryId(id);
@@ -115,6 +120,7 @@ public class MediaLibraryV2Controller(
     /// </summary>
     [HttpGet("{id:int}/statistics")]
     [SwaggerOperation(OperationId = "GetMediaLibraryV2Statistics")]
+    [RemoteAccessible]
     public async Task<SingletonResponse<MediaLibraryStatistics>> GetStatistics(int id)
     {
         var mediaLibrary = await service.Get(id);

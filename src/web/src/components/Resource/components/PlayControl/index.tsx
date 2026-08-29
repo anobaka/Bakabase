@@ -24,6 +24,8 @@ import { DataOrigin, DataStatus, ResourceDataType } from "@/sdk/constants";
 import { useUiOptionsStore } from "@/stores/options";
 import { usePlayableItemResolution } from "@/hooks/usePlayableItemResolution";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import { useIsRemoteClient } from "@/stores/remoteAccess";
+import { useResourceBrowserPlayer } from "@/hooks/useResourceBrowserPlayer";
 import envConfig from "@/config/env";
 
 // Play control status for UI rendering
@@ -140,6 +142,8 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const uiOptionsStore = useUiOptionsStore();
+  const isRemoteClient = useIsRemoteClient();
+  const openInBrowserPlayer = useResourceBrowserPlayer();
   const resourceUiOptions = uiOptionsStore.data?.resource;
 
   // Use the playable item resolution hook which handles SSE discovery internally
@@ -236,6 +240,25 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
 
   // Play a PlayableItem via unified PlayItem API (all sources go through resolvers)
   const playItem = async (item: PlayableItem) => {
+    // On another device the API would launch a player on the host's desktop and
+    // report success to someone who cannot see it. Local files stream into the
+    // page instead; the other origins (Steam, ExHentai, …) have nothing to show
+    // remotely and say so rather than pretending.
+    if (isRemoteClient) {
+      if (item.origin === DataOrigin.FileSystem) {
+        try {
+          await openInBrowserPlayer(resource, item.key);
+          afterPlaying?.();
+        } catch (e) {
+          toast.error(String(e));
+        }
+      } else {
+        toast.error(t<string>("resource.play.hostOnly"));
+      }
+
+      return;
+    }
+
     try {
       const rsp = await playItemApi(resource.id, item.origin, item.key);
 
@@ -287,11 +310,19 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
 
   /** Open the resource's folder */
   const handleOpenFolder = useCallback(() => {
+    // Opening a folder happens in the host's file manager, so from another device
+    // it would pop a window on someone else's screen.
+    if (isRemoteClient) {
+      toast.error(t<string>("resource.play.hostOnly"));
+
+      return;
+    }
+
     BApi.tool.openFileOrDirectory({
       path: resource.path,
       openInDirectory: resource.isFile,
     });
-  }, [resource.path, resource.isFile]);
+  }, [resource.path, resource.isFile, isRemoteClient, t]);
 
   /** Handle click when no playable files found */
   const handleNotFound = useCallback(() => {

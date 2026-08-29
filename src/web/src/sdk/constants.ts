@@ -4925,6 +4925,7 @@ export const CompressedFileDetectionResultStatusLabel: Record<CompressedFileDete
 };
 
 export const ExtensionMediaTypes: Record<string, MediaType> = {
+  ".3gp": MediaType.Video,
   ".avi": MediaType.Video,
   ".bmp": MediaType.Image,
   ".exe": MediaType.Application,
@@ -4938,6 +4939,7 @@ export const ExtensionMediaTypes: Record<string, MediaType> = {
   ".mid": MediaType.Audio,
   ".midi": MediaType.Audio,
   ".mkv": MediaType.Video,
+  ".mov": MediaType.Video,
   ".mp3": MediaType.Audio,
   ".mp4": MediaType.Video,
   ".mpeg": MediaType.Video,
@@ -4952,9 +4954,7 @@ export const ExtensionMediaTypes: Record<string, MediaType> = {
   ".weba": MediaType.Audio,
   ".webm": MediaType.Video,
   ".webp": MediaType.Image,
-  ".wmv": MediaType.Video,
-  "3gp": MediaType.Video,
-  "mov": MediaType.Video
+  ".wmv": MediaType.Video
 };
 
 export const AvSourceIds: readonly string[] = [

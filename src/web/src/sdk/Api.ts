@@ -13112,6 +13112,28 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Resource
+     * @name MarkResourceAsPlayed
+     * @request POST:/resource/{id}/played-at
+     */
+    markResourceAsPlayed: (
+      id: number,
+      query?: {
+        item?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/${id}/played-at`,
+        method: "POST",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
      * @name GetResourceSearchKeywordRecommendation
      * @request GET:/resource/search/keyword-recommendation
      */

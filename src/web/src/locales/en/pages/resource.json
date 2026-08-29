@@ -12,7 +12,6 @@
   "resource.search.playlist": "Playlist",
   "resource.search.recentlyPlayed": "Recently played",
   "resource.tab.rename": "Rename this tab",
-
   "resource.empty.title": "No Resources Found",
   "resource.empty.checkCriteria": "Check Search Criteria",
   "resource.empty.checkCriteriaDesc": "Current filters may be too restrictive. Try resetting the search criteria to show all resources.",
@@ -23,19 +22,16 @@
   "resource.empty.configurePathMark": "Configure Path Marks",
   "resource.empty.configurePathMarkDesc": "Path marks define how to identify and parse resources. By configuring path mark rules, the system can extract resource names, tags, and other information from file paths.",
   "resource.empty.goToPathMarkConfig": "Go to Configuration",
-
   "resource.order.label": "Orders",
   "resource.order.placeholder": "Select orders",
   "resource.order.asc": "Asc",
   "resource.order.desc": "Desc",
-
   "ResourceSearchSortableProperty.FileCreateDt": "File Create Date",
   "ResourceSearchSortableProperty.FileModifyDt": "File Modify Date",
   "ResourceSearchSortableProperty.Filename": "Filename",
   "ResourceSearchSortableProperty.AddDt": "Add Date",
   "ResourceSearchSortableProperty.PlayedAt": "Last Played At",
   "ResourceSearchSortableProperty.HealthScore": "Health Score",
-
   "resource.display.title": "Display options",
   "resource.display.columnCount": "Column count",
   "resource.display.fillCover": "Fill cover",
@@ -88,16 +84,13 @@
   "resource.display.contextMenu.selectValue": "Select value",
   "resource.display.contextMenu.noPresetValues": "No preset values",
   "resource.display.contextMenu.removeItem": "Remove",
-
   "resource.shortcut.title": "Shortcuts",
   "resource.shortcut.selectMultiple": "Select multiple resources",
   "resource.shortcut.selectRange": "Select range of resources",
   "resource.shortcut.moreActions": "More actions",
-
   "resource.recentlyPlayed.title": "Recently played",
   "resource.recentlyPlayed.count": "{{count}} resources",
   "resource.recentlyPlayed.empty": "No recently played resources",
-
   "resource.detailLayout.label": "Detail layout",
   "resource.detailLayout.title": "Resource detail layout",
   "resource.detailLayout.adjustLayout": "Adjust detail layout",
@@ -169,5 +162,9 @@
   "resource.detailLayout.sample.profiles.audioLabel": "Audio",
   "resource.detailLayout.sample.profiles.audioValue": "DTS-HD MA 5.1",
   "resource.detailLayout.sample.profiles.subsLabel": "Subs",
-  "resource.detailLayout.sample.profiles.subsValue": "EN, CN, JP"
+  "resource.detailLayout.sample.profiles.subsValue": "EN, CN, JP",
+  "play": {
+    "hostOnly": "This runs on the machine hosting Bakabase and is not available from this device.",
+    "noFilesToPreview": "No files to preview"
+  }
 }

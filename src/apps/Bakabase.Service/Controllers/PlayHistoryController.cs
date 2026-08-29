@@ -20,6 +20,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Org.BouncyCastle.Math.EC.Rfc7748;
 using Swashbuckle.AspNetCore.Annotations;
+using Bakabase.Service.Components.RemoteAccess;
 
 namespace Bakabase.Service.Controllers
 {
@@ -27,6 +28,7 @@ namespace Bakabase.Service.Controllers
     public class PlayHistoryController(IPlayHistoryService service, IGuiAdapter guiAdapter) : Controller
     {
         [SwaggerOperation(OperationId = "SearchPlayHistories")]
+        [RemoteAccessible]
         [HttpGet]
         public async Task<SearchResponse<PlayHistoryDbModel>> SearchGroups(PlayHistorySearchInputModel model)
         {

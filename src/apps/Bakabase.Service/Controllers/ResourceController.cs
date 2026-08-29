@@ -39,6 +39,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using StackExchange.Profiling;
 using Swashbuckle.AspNetCore.Annotations;
+using Bakabase.Service.Components.RemoteAccess;
 
 namespace Bakabase.Service.Controllers;
 
@@ -62,6 +63,7 @@ public class ResourceController(
 {
     [HttpGet("search-operation")]
     [SwaggerOperation(OperationId = "GetSearchOperationsForProperty")]
+    [RemoteAccessible]
     public async Task<ListResponse<SearchOperation>> GetSearchOperationsForProperty(
         PropertyPool propertyPool, int propertyId)
     {
@@ -86,6 +88,7 @@ public class ResourceController(
 
     [HttpGet("search-operation/by-type")]
     [SwaggerOperation(OperationId = "GetSearchOperationsByPropertyType")]
+    [RemoteAccessible]
     public ListResponse<SearchOperation> GetSearchOperationsByPropertyType(PropertyType propertyType)
     {
         var psh = PropertySystem.Property.TryGetSearchHandler(propertyType);
@@ -94,6 +97,7 @@ public class ResourceController(
 
     [HttpGet("filter-value-property")]
     [SwaggerOperation(OperationId = "GetFilterValueProperty")]
+    [RemoteAccessible]
     public async Task<SingletonResponse<PropertyViewModel>> GetFilterValueProperty(PropertyPool propertyPool,
         int propertyId,
         SearchOperation operation)
@@ -116,6 +120,7 @@ public class ResourceController(
 
     [HttpGet("last-search")]
     [SwaggerOperation(OperationId = "GetLastResourceSearch")]
+    [RemoteAccessible]
     public async Task<SingletonResponse<ResourceSearchViewModel?>> GetLastResourceSearch()
     {
         var ls = resourceOptionsManager.Value.LastSearchV2;
@@ -176,6 +181,7 @@ public class ResourceController(
 
     [HttpGet("saved-search")]
     [SwaggerOperation(OperationId = "GetSavedSearch")]
+    [RemoteAccessible]
     public async Task<SingletonResponse<SavedSearchViewModel>> GetSavedSearch(string id)
     {
         var searches = resourceOptionsManager.Value.SavedSearches;
@@ -203,11 +209,20 @@ public class ResourceController(
 
     [HttpPost("search")]
     [SwaggerOperation(OperationId = "SearchResources")]
+    [RemoteAccessible]
     public async Task<SearchResponse<Resource>> Search([FromBody] ResourceSearchInputModel model, bool saveSearch, string? searchId = null, ResourceAdditionalItem additionalItems = ResourceAdditionalItem.All)
     {
         using (MiniProfiler.Current.Step("StandardPageable"))
         {
             model.StandardPageable();
+        }
+
+        // Searching is read-only for a remote viewer: remembering the criteria would
+        // overwrite the last search (and any saved search) the person at the host
+        // machine left behind, from a device that is only browsing.
+        if (saveSearch && HttpContext.GetRemoteAccessContext() is {IsUnrestricted: false})
+        {
+            saveSearch = false;
         }
 
         if (saveSearch)
@@ -251,6 +266,7 @@ public class ResourceController(
 
     [HttpPost("search/ids")]
     [SwaggerOperation(OperationId = "SearchAllResourceIds")]
+    [RemoteAccessible]
     public async Task<ListResponse<int>> SearchAllIds([FromBody] ResourceSearchInputModel model)
     {
         model.StandardPageable();
@@ -262,6 +278,7 @@ public class ResourceController(
 
     [HttpGet("keys")]
     [SwaggerOperation(OperationId = "GetResourcesByKeys")]
+    [RemoteAccessible]
     public async Task<ListResponse<Resource>> GetByKeys([FromQuery] int[] ids,
         ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None)
     {
@@ -270,6 +287,7 @@ public class ResourceController(
 
     [HttpGet("{id:int}/hierarchy-context")]
     [SwaggerOperation(OperationId = "GetResourceHierarchyContext")]
+    [RemoteAccessible]
     public async Task<SingletonResponse<ResourceHierarchyContextViewModel>> GetHierarchyContext(int id)
     {
         var (ancestors, childrenCount) = await service.GetHierarchyContext(id);
@@ -334,6 +352,7 @@ public class ResourceController(
 
     [HttpPost("media-library-mappings")]
     [SwaggerOperation(OperationId = "GetResourceMediaLibraryMappings")]
+    [RemoteAccessible]
     public async Task<SingletonResponse<Dictionary<int, int[]>>> GetMediaLibraryMappings([FromBody] int[] resourceIds)
     {
         var mappings = await mappingService.GetByResourceIds(resourceIds);
@@ -363,6 +382,7 @@ public class ResourceController(
 
     [HttpGet("{id}/previewer")]
     [SwaggerOperation(OperationId = "GetResourceDataForPreviewer")]
+    [RemoteAccessible]
     public async Task<ListResponse<PreviewerItem>> GetResourceDataForPreviewer(int id)
     {
         var resource = await service.Get(id, ResourceAdditionalItem.None);
@@ -440,6 +460,7 @@ public class ResourceController(
 
     [HttpGet("{id:int}/property-value-scope-preference")]
     [SwaggerOperation(OperationId = "GetResourcePropertyValueScopePreferences")]
+    [RemoteAccessible]
     public async Task<ListResponse<PropertyValueScopePreference>> GetPropertyValueScopePreferences(int id)
     {
         var prefs = await scopePreferenceService.GetByResourceIds(new[] {id});
@@ -526,6 +547,7 @@ public class ResourceController(
 
     [HttpGet("{id}/playable-items")]
     [SwaggerOperation(OperationId = "GetResourcePlayableItems")]
+    [RemoteAccessible]
     public async Task<ListResponse<PlayableItem>> GetPlayableItems(int id)
     {
         var items = await service.DiscoverPlayableItems(id, HttpContext.RequestAborted);
@@ -568,6 +590,7 @@ public class ResourceController(
 
     [HttpGet("paths")]
     [SwaggerOperation(OperationId = "SearchResourcePaths")]
+    [RemoteAccessible]
     public async Task<ListResponse<ResourcePathInfoViewModel>> SearchPaths(string keyword)
     {
         var resources =
@@ -592,6 +615,29 @@ public class ResourceController(
     public async Task<BaseResponse> MarkAsNotPlayed(int id)
     {
         await service.MarkAsNotPlayed(id);
+        return BaseResponseBuilder.Ok;
+    }
+
+    /// <summary>
+    /// Records that a resource was played, for playback the server did not start
+    /// itself.
+    /// <para>
+    /// Launching a player through <c>/play-item</c> writes the history as a side
+    /// effect, but playing in the browser never did — so watching something on a
+    /// phone, or in the built-in player on the host, left no trace in "last played"
+    /// or the history page. The player calls this when playback actually begins.
+    /// </para>
+    /// </summary>
+    /// <param name="item">
+    /// The file that was played, identifying which part of a multi-file resource it
+    /// was. Optional; the resource's own timestamp is updated either way.
+    /// </param>
+    [HttpPost("{id:int}/played-at")]
+    [SwaggerOperation(OperationId = "MarkResourceAsPlayed")]
+    [RemoteAccessible]
+    public async Task<BaseResponse> MarkAsPlayed(int id, [FromQuery] string? item)
+    {
+        await service.MarkPlayed(new Dictionary<int, string> {[id] = item ?? string.Empty});
         return BaseResponseBuilder.Ok;
     }
 
@@ -652,6 +698,7 @@ public class ResourceController(
     /// </summary>
     [HttpGet("{id:int}/media-libraries")]
     [SwaggerOperation(OperationId = "GetResourceMediaLibraries")]
+    [RemoteAccessible]
     public async Task<ListResponse<MediaLibraryResourceMapping>> GetResourceMediaLibraries(int id)
     {
         var mappings = await mappingService.GetByResourceId(id);
@@ -770,6 +817,7 @@ public class ResourceController(
     /// </summary>
     [HttpGet("{id:int}/source-links")]
     [SwaggerOperation(OperationId = "GetResourceSourceLinks")]
+    [RemoteAccessible]
     public async Task<ListResponse<ResourceSourceLink>> GetResourceSourceLinks(int id)
     {
         var sourceLinkService = HttpContext.RequestServices.GetRequiredService<IResourceSourceLinkService>();
@@ -783,6 +831,7 @@ public class ResourceController(
     /// </summary>
     [HttpGet("{id:int}/conflicts")]
     [SwaggerOperation(OperationId = "GetResourceConflicts")]
+    [RemoteAccessible]
     public async Task<ListResponse<Resource>> GetResourceConflicts(int id,
         ResourceAdditionalItem additionalItems = ResourceAdditionalItem.All)
     {

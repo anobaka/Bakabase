@@ -5353,7 +5353,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post?: never;
+        post: operations["MarkResourceAsPlayed"];
         delete: operations["MarkResourceAsNotPlayed"];
         options?: never;
         head?: never;
@@ -23482,6 +23482,32 @@ export interface operations {
                 "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceCoverSaveInputModel"];
             };
         };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    MarkResourceAsPlayed: {
+        parameters: {
+            query?: {
+                item?: string;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description OK */
             200: {
