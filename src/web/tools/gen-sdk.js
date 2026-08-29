@@ -117,9 +117,11 @@ function buildUrlBuilders(content) {
       code += `
       // Build query string
       if (${queryParamObj.name}) {
-        const queryString = Object.keys(${queryParamObj.name})
-          .filter(key => ${queryParamObj.name}[key] !== undefined && ${queryParamObj.name}[key] !== null)
-          .map(key => \`\${encodeURIComponent(key)}=\${encodeURIComponent(String(${queryParamObj.name}[key]))}\`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so \`query[key]\` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(${queryParamObj.name})
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => \`\${encodeURIComponent(key)}=\${encodeURIComponent(String(value))}\`)
           .join("&");
 
         return baseUrl + path + (queryString ? \`?\${queryString}\` : "");

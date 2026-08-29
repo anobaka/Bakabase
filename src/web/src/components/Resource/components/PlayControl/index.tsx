@@ -26,6 +26,7 @@ import { usePlayableItemResolution } from "@/hooks/usePlayableItemResolution";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { useIsRemoteClient } from "@/stores/remoteAccess";
 import { useResourceBrowserPlayer } from "@/hooks/useResourceBrowserPlayer";
+import PlayOnThisDevice from "@/components/Resource/components/PlayOnThisDevice";
 import envConfig from "@/config/env";
 
 // Play control status for UI rendering
@@ -246,12 +247,18 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
     // remotely and say so rather than pretending.
     if (isRemoteClient) {
       if (item.origin === DataOrigin.FileSystem) {
-        try {
-          await openInBrowserPlayer(resource, item.key);
-          afterPlaying?.();
-        } catch (e) {
-          toast.error(String(e));
-        }
+        // Browser playback is one option among several: for anything the browser
+        // cannot demux, handing the file to a native player on this device is
+        // both better quality and free for the server.
+        createPortal(PlayOnThisDevice, {
+          resource,
+          filePath: item.key,
+          onPlayInBrowser: () => {
+            openInBrowserPlayer(resource, item.key)
+              .then(() => afterPlaying?.())
+              .catch((e) => toast.error(String(e)));
+          },
+        });
       } else {
         toast.error(t<string>("resource.play.hostOnly"));
       }

@@ -1367,6 +1367,39 @@ namespace Bakabase.Service.Controllers
             }
         }
 
+        /// <summary>
+        /// Serves a file's own bytes, unchanged.
+        /// <para>
+        /// This is the URL handed to a native player. VLC, Infuse, MX and the rest
+        /// demux and decode everything themselves, so probing the file and deciding
+        /// between direct play, remux and transcode — all of which
+        /// <see cref="Play"/> does — is wasted work that can only get in their way.
+        /// Range requests are enabled, which is what makes seeking work.
+        /// </para>
+        /// <para>
+        /// Deliberately not archive-aware: an entry inside a zip is not a thing an
+        /// external player can seek within, and <see cref="Play"/> already streams
+        /// those for the browser.
+        /// </para>
+        /// </summary>
+        [HttpGet("raw")]
+        [SwaggerOperation(OperationId = "GetRawFile")]
+        [RemoteAccessible(PathParameters = [nameof(fullname)])]
+        public IActionResult GetRaw(string fullname)
+        {
+            if (!System.IO.File.Exists(fullname))
+            {
+                return NotFound();
+            }
+
+            var stream = new FileStream(fullname, FileMode.Open, FileAccess.Read, FileShare.Read);
+            HttpContext.RequestAborted.Register(() => stream.Dispose());
+
+            // MimeKit answers "application/octet-stream" for anything it does not
+            // know, which is exactly right here: the player decides, not us.
+            return File(stream, MimeTypes.GetMimeType(fullname), enableRangeProcessing: true);
+        }
+
         [HttpGet("play")]
         [SwaggerOperation(OperationId = "PlayFile")]
         [RemoteAccessible(PathParameters = [nameof(fullname)])]

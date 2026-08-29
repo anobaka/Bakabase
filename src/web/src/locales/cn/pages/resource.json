@@ -166,5 +166,25 @@
   "play": {
     "hostOnly": "该操作在运行 Bakabase 的主机上执行，当前设备无法使用。",
     "noFilesToPreview": "没有可预览的文件"
+  },
+  "playOnThisDevice": {
+    "title": "在此设备播放",
+    "playInBrowser": "在浏览器中播放",
+    "playInBrowserHint": "适用于图片、文本、音频和大部分 H.264 视频。其余格式需要在主机上转换，画质有损且无法拖动进度。",
+    "nativePlayers": "用本设备上的播放器打开",
+    "nativePlayersHint": "播放器直接拉取文件并自行解码——原画质、可拖动，主机不做任何转换。浏览器无法得知你装了哪些播放器，请自行选择。",
+    "needsSetup": "需配置",
+    "unofficial": "未经验证",
+    "copyStreamUrl": "复制链接",
+    "copyStreamUrlHint": "粘贴到任意播放器的「打开网络串流」。即使一键跳转不可用，这个方式始终有效。",
+    "copied": "链接已复制",
+    "copyFailed": "复制链接失败",
+    "platform": {
+      "android": "Android",
+      "ios": "iOS",
+      "windows": "Windows",
+      "macos": "macOS",
+      "linux": "Linux"
+    }
   }
 }

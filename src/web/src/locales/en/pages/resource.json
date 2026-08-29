@@ -166,5 +166,25 @@
   "play": {
     "hostOnly": "This runs on the machine hosting Bakabase and is not available from this device.",
     "noFilesToPreview": "No files to preview"
+  },
+  "playOnThisDevice": {
+    "title": "Play on this device",
+    "playInBrowser": "Play in browser",
+    "playInBrowserHint": "Works for images, text, audio and most H.264 video. Anything else has to be converted on the host, which costs quality and cannot be seeked.",
+    "nativePlayers": "Open in a player on this device",
+    "nativePlayersHint": "The player pulls the file directly and decodes it itself — full quality, seeking works, and the host does no conversion. The browser cannot tell which players you have installed, so pick yours.",
+    "needsSetup": "needs setup",
+    "unofficial": "unverified",
+    "copyStreamUrl": "Copy the link",
+    "copyStreamUrlHint": "Paste it into any player's \"open network stream\". This always works, even where a one-tap link does not.",
+    "copied": "Link copied",
+    "copyFailed": "Could not copy the link",
+    "platform": {
+      "android": "Android",
+      "ios": "iOS",
+      "windows": "Windows",
+      "macos": "macOS",
+      "linux": "Linux"
+    }
   }
 }
