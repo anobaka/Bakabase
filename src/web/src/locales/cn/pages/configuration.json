@@ -238,25 +238,17 @@
   "configuration.ai.cache.detail": "缓存详情",
   "configuration.ai.cache.cacheKey": "缓存键",
   "configuration.ai.cache.responseContent": "响应内容",
-  "remoteAccess": {
-    "title": "远程访问",
-    "mode": {
-      "label": "其他设备访问",
-      "tip": "无论如何设置，Bakabase 都会监听网络；这里决定是否响应本机以外的请求。凡是能连上的设备都视为可信设备（没有登录），所以请只在可信任的网络中开启，不要做端口转发。",
-      "disabled": "关闭 — 仅本机",
-      "enabled": "开启 — 可浏览和观看",
-      "unrestricted": "开启 — 不做限制"
-    },
-    "address": {
-      "label": "其他设备访问地址",
-      "tip": "在另一台设备上打开其中之一。具体哪个可用取决于该设备所在的网络。",
-      "none": "当前没有可用的网络接口。",
-      "copied": "地址已复制",
-      "copyFailed": "复制地址失败"
-    },
-    "unrestrictedWarning": {
-      "label": "警告",
-      "description": "其他设备同时也能删除文件、修改设置、在本机启动程序。会打开窗口的操作将出现在本机屏幕上，而非对方设备。"
-    }
-  }
+  "configuration.remoteAccess.title": "远程访问",
+  "configuration.remoteAccess.mode.label": "其他设备访问",
+  "configuration.remoteAccess.mode.tip": "无论如何设置，Bakabase 都会监听网络；这里决定是否响应本机以外的请求。凡是能连上的设备都视为可信设备（没有登录），所以请只在可信任的网络中开启，不要做端口转发。",
+  "configuration.remoteAccess.mode.disabled": "关闭 — 仅本机",
+  "configuration.remoteAccess.mode.enabled": "开启 — 可浏览和观看",
+  "configuration.remoteAccess.mode.unrestricted": "开启 — 不做限制",
+  "configuration.remoteAccess.address.label": "其他设备访问地址",
+  "configuration.remoteAccess.address.tip": "在另一台设备上打开其中之一。具体哪个可用取决于该设备所在的网络。",
+  "configuration.remoteAccess.address.none": "当前没有可用的网络接口。",
+  "configuration.remoteAccess.address.copied": "地址已复制",
+  "configuration.remoteAccess.address.copyFailed": "复制地址失败",
+  "configuration.remoteAccess.unrestrictedWarning.label": "警告",
+  "configuration.remoteAccess.unrestrictedWarning.description": "其他设备同时也能删除文件、修改设置、在本机启动程序。会打开窗口的操作将出现在本机屏幕上，而非对方设备。"
 }

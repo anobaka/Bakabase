@@ -238,25 +238,17 @@
   "configuration.ai.cache.detail": "Cache Detail",
   "configuration.ai.cache.cacheKey": "Cache Key",
   "configuration.ai.cache.responseContent": "Response Content",
-  "remoteAccess": {
-    "title": "Remote access",
-    "mode": {
-      "label": "Access from other devices",
-      "tip": "Bakabase listens on the network either way; this decides whether anything other than this machine is served. Every device that can reach it is trusted — there is no login — so keep this to a network you trust and do not port-forward it.",
-      "disabled": "Off — only this machine",
-      "enabled": "On — browse and watch",
-      "unrestricted": "On — no restrictions"
-    },
-    "address": {
-      "label": "Address for other devices",
-      "tip": "Open one of these on the other device. Which one works depends on the network it is joined to.",
-      "none": "No network interface is currently reachable.",
-      "copied": "Address copied",
-      "copyFailed": "Could not copy the address"
-    },
-    "unrestrictedWarning": {
-      "label": "Warning",
-      "description": "Other devices can also delete files, change settings and launch programs on this machine. Actions that open a window will do so on this screen, not theirs."
-    }
-  }
+  "configuration.remoteAccess.mode.label": "Access from other devices",
+  "configuration.remoteAccess.mode.tip": "Bakabase listens on the network either way; this decides whether anything other than this machine is served. Every device that can reach it is trusted — there is no login — so keep this to a network you trust and do not port-forward it.",
+  "configuration.remoteAccess.mode.disabled": "Off — only this machine",
+  "configuration.remoteAccess.mode.enabled": "On — browse and watch",
+  "configuration.remoteAccess.mode.unrestricted": "On — no restrictions",
+  "configuration.remoteAccess.address.label": "Address for other devices",
+  "configuration.remoteAccess.address.tip": "Open one of these on the other device. Which one works depends on the network it is joined to.",
+  "configuration.remoteAccess.address.none": "No network interface is currently reachable.",
+  "configuration.remoteAccess.address.copied": "Address copied",
+  "configuration.remoteAccess.address.copyFailed": "Could not copy the address",
+  "configuration.remoteAccess.unrestrictedWarning.label": "Warning",
+  "configuration.remoteAccess.unrestrictedWarning.description": "Other devices can also delete files, change settings and launch programs on this machine. Actions that open a window will do so on this screen, not theirs.",
+  "configuration.remoteAccess.title": "Remote access"
 }

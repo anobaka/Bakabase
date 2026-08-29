@@ -163,28 +163,22 @@
   "resource.detailLayout.sample.profiles.audioValue": "DTS-HD MA 5.1",
   "resource.detailLayout.sample.profiles.subsLabel": "Subs",
   "resource.detailLayout.sample.profiles.subsValue": "EN, CN, JP",
-  "play": {
-    "hostOnly": "This runs on the machine hosting Bakabase and is not available from this device.",
-    "noFilesToPreview": "No files to preview"
-  },
-  "playOnThisDevice": {
-    "title": "Play on this device",
-    "playInBrowser": "Play in browser",
-    "playInBrowserHint": "Works for images, text, audio and most H.264 video. Anything else has to be converted on the host, which costs quality and cannot be seeked.",
-    "nativePlayers": "Open in a player on this device",
-    "nativePlayersHint": "The player pulls the file directly and decodes it itself — full quality, seeking works, and the host does no conversion. The browser cannot tell which players you have installed, so pick yours.",
-    "needsSetup": "needs setup",
-    "unofficial": "unverified",
-    "copyStreamUrl": "Copy the link",
-    "copyStreamUrlHint": "Paste it into any player's \"open network stream\". This always works, even where a one-tap link does not.",
-    "copied": "Link copied",
-    "copyFailed": "Could not copy the link",
-    "platform": {
-      "android": "Android",
-      "ios": "iOS",
-      "windows": "Windows",
-      "macos": "macOS",
-      "linux": "Linux"
-    }
-  }
+  "resource.play.hostOnly": "This runs on the machine hosting Bakabase and is not available from this device.",
+  "resource.play.noFilesToPreview": "No files to preview",
+  "resource.playOnThisDevice.title": "Play on this device",
+  "resource.playOnThisDevice.playInBrowser": "Play in browser",
+  "resource.playOnThisDevice.playInBrowserHint": "Works for images, text, audio and most H.264 video. Anything else has to be converted on the host, which costs quality and cannot be seeked.",
+  "resource.playOnThisDevice.nativePlayers": "Open in a player on this device",
+  "resource.playOnThisDevice.nativePlayersHint": "The player pulls the file directly and decodes it itself — full quality, seeking works, and the host does no conversion. The browser cannot tell which players you have installed, so pick yours.",
+  "resource.playOnThisDevice.needsSetup": "needs setup",
+  "resource.playOnThisDevice.unofficial": "unverified",
+  "resource.playOnThisDevice.copyStreamUrl": "Copy the link",
+  "resource.playOnThisDevice.copyStreamUrlHint": "Paste it into any player's \"open network stream\". This always works, even where a one-tap link does not.",
+  "resource.playOnThisDevice.copied": "Link copied",
+  "resource.playOnThisDevice.copyFailed": "Could not copy the link",
+  "resource.playOnThisDevice.platform.android": "Android",
+  "resource.playOnThisDevice.platform.ios": "iOS",
+  "resource.playOnThisDevice.platform.windows": "Windows",
+  "resource.playOnThisDevice.platform.macos": "macOS",
+  "resource.playOnThisDevice.platform.linux": "Linux"
 }
