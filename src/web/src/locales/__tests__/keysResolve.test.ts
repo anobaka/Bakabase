@@ -19,29 +19,11 @@ const localesDir = resolve(__dirname, "..");
 const srcDir = resolve(__dirname, "../..");
 
 /**
- * Keys that were already unanswered before this check existed. They are real
- * gaps, listed rather than fixed so the check can go in without dragging along
- * unrelated changes — remove an entry when you add its translation.
+ * Escape hatch for a key that genuinely cannot be answered yet. Empty on
+ * purpose: every key in the app resolves today, and it should stay that way —
+ * add an entry only with a reason, and remove it once the translation lands.
  */
-const KNOWN_MISSING = new Set([
-  "FileNameModifier.Title",
-  "Position.Beginning",
-  "Position.End",
-  "TextOperation.Backward",
-  "TextOperation.Forward",
-  "common.empty.noData",
-  "common.error.invalidData",
-  "common.label.selected",
-  "common.label.tip",
-  "common.success.deleted",
-  "common.unit.months",
-  "common.unit.years",
-  "comparison.validation.propertyRequired",
-  "comparison.validation.regexPatternRequired",
-  "comparison.validation.vetoThresholdRange",
-  "comparison.validation.weightPositive",
-  "configuration.thirdParty.configure",
-]);
+const KNOWN_MISSING = new Set<string>([]);
 
 const walk = (dir: string, match: (path: string) => boolean): string[] => {
   const out: string[] = [];

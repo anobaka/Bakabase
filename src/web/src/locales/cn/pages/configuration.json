@@ -250,5 +250,6 @@
   "configuration.remoteAccess.address.copied": "地址已复制",
   "configuration.remoteAccess.address.copyFailed": "复制地址失败",
   "configuration.remoteAccess.unrestrictedWarning.label": "警告",
-  "configuration.remoteAccess.unrestrictedWarning.description": "其他设备同时也能删除文件、修改设置、在本机启动程序。会打开窗口的操作将出现在本机屏幕上，而非对方设备。"
+  "configuration.remoteAccess.unrestrictedWarning.description": "其他设备同时也能删除文件、修改设置、在本机启动程序。会打开窗口的操作将出现在本机屏幕上，而非对方设备。",
+  "configuration.thirdParty.configure": "配置"
 }

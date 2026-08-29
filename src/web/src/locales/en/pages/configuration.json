@@ -250,5 +250,6 @@
   "configuration.remoteAccess.address.copyFailed": "Could not copy the address",
   "configuration.remoteAccess.unrestrictedWarning.label": "Warning",
   "configuration.remoteAccess.unrestrictedWarning.description": "Other devices can also delete files, change settings and launch programs on this machine. Actions that open a window will do so on this screen, not theirs.",
-  "configuration.remoteAccess.title": "Remote access"
+  "configuration.remoteAccess.title": "Remote access",
+  "configuration.thirdParty.configure": "Configure"
 }

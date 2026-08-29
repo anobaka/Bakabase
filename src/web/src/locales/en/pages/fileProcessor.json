@@ -6,7 +6,6 @@
   "fileProcessor.label.currentPath": "Current Path",
   "fileProcessor.tip.moveToAnotherPath": "You can move it to another path.",
   "fileProcessor.tip.orDeleteIt": "Or delete it?",
-
   "fileProcessor.ai.title": "AI Analysis",
   "fileProcessor.ai.analyzeStructure": "Analyze Structure",
   "fileProcessor.ai.analyzeStructure.description": "Analyze current directory structure with AI",
@@ -39,13 +38,10 @@
   "fileProcessor.ai.workingDirectory.description": "The directory the file processor is currently showing — its root. Browsing into another directory changes it.",
   "fileProcessor.ai.selectedPaths": "{{count}} paths selected",
   "fileProcessor.ai.noPathsSelected": "No paths selected",
-
   "fileProcessor.ai.referencePaths": "Reference Paths",
   "fileProcessor.ai.referencePaths.description": "Select paths that are already well-organized. AI will use them as standards and won't suggest changes to them.",
-
   "fileProcessor.ai.customGroupingLogic": "Custom Grouping Logic (optional)",
   "fileProcessor.ai.customGroupingLogicPlaceholder": "Describe how you want files to be grouped, e.g. 'Group by file type' or 'Group by project name'",
-
   "fileProcessor.ai.operations": "Operations",
   "fileProcessor.ai.selectAll": "Select All",
   "fileProcessor.ai.apply": "Apply",
@@ -56,8 +52,8 @@
   "fileProcessor.ai.applyPartialSuccess": "{{success}} operation(s) succeeded, {{failure}} operation(s) failed",
   "fileProcessor.ai.rawTextFallback": "The current model does not support structured output. One-click apply is not available.",
   "fileProcessor.ai.viewResults": "View Results",
-
   "fileProcessor.ai.opType.Rename": "Rename",
   "fileProcessor.ai.opType.Move": "Move",
-  "fileProcessor.ai.opType.CreateDirectory": "Create Directory"
+  "fileProcessor.ai.opType.CreateDirectory": "Create Directory",
+  "FileNameModifier.Title": "File name modifier"
 }
