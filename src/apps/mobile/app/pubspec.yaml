@@ -1,0 +1,32 @@
+name: bakabase_mobile
+description: "Thin companion app for a Bakabase server on the local network."
+publish_to: "none"
+
+# App version is independent of the desktop version.json; compatibility with the
+# server is negotiated via the remote-access protocol version, not version
+# numbers. Release tags use mobile-v{version}.
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.10.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # Pinned to 2.x on purpose; 3.x changes provider APIs.
+  flutter_riverpod: ^2.6.1
+  dio: ^5.7.0
+  # mDNS/Bonjour through the platform NSD APIs — the only discovery route a
+  # SideStore-signed iOS build may use (raw multicast needs an entitlement
+  # sideloaded apps cannot hold).
+  bonsoir: ^5.1.11
+  shared_preferences: ^2.3.0
+  cached_network_image: ^3.4.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true

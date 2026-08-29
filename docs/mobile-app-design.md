@@ -2,11 +2,36 @@
 
 | 字段 | 值 |
 |---|---|
-| 状态 | 设计稿（待评审） |
+| 状态 | M0 已实施、M1 已实施 — 见 §0 实施记录 |
 | 分支 | `claude/bakabase-dual-platform-app-emytk3` |
 | 最后更新 | 2026-08-29 |
 | 依赖 | PR #1262（cross-device-resource-access，已合并） |
 | 相关代码 | `src/modules/Bakabase.Modules.RemoteAccess/`<br>`src/apps/Bakabase.Service/Components/RemoteAccess/`<br>`src/apps/Bakabase.Service/Components/Playback/VideoDeliveryPlanner.cs`<br>`src/apps/Bakabase.Service/Controllers/FileController.cs`（`/files/raw`、`/files/play`、`/files/playability`）<br>`src/web/src/components/Resource/components/PlayOnThisDevice/playerSchemes.ts` |
+
+---
+
+## 0. 实施记录
+
+### M0（服务端前置，issue #1263）
+
+S1–S4 已按 §6 落地于 `Bakabase.Modules.RemoteAccess/Components/Discovery/`；mDNS 应答器为自实现精简版（未引第三方 DNS 库）。与原设计的偏差：
+
+| 偏差点 | 原设计 | 实际实现 | 原因 |
+|---|---|---|---|
+| 文件流路由 | 文中写作 `/files/raw` 等 | 实际为 `/file/raw`、`/file/play`、`/file/playability`（`FileController` 路由是 `~/file`） | 原文笔误，以代码为准 |
+| UDP 探测应答 | "回同样内容的 JSON" | 回 `BAKABASE_HERE_V1 {json}`（带前缀便于客户端过滤） | 协议明确化 |
+| S5 Dart 生成管线 | gen-sdk 扩展 | 暂缓：M1 客户端手写薄封装（见下） | 端点面还小，避免过早引入生成器 |
+
+### M1（App 骨架）
+
+`src/apps/mobile/app/`（Flutter 3.47.2，CI 以此版本 pin）。发现（bonsoir mDNS + Android UDP 探测 + 手动输入）、协议版本握手、服务器档案、媒体库筛选 + 关键字搜索 + 资源网格 + 详情页均已落地。偏差：
+
+| 偏差点 | 原设计 | 实际实现 | 原因 |
+|---|---|---|---|
+| 包结构 | `app/` + `packages/`（api/discovery/player 三包） | 单 app 包 + 分层目录（`lib/core`、`lib/discovery`、`lib/features`） | 单人维护三包纯开销；目录已按包边界切分，ohos/M2 需要时再机械拆出 |
+| API 客户端 | swagger 生成并提交 | 手写 `BakabaseApiClient`（约 10 个端点的薄封装） | 同 S5 暂缓理由；模型字段名与 swagger 一致，迁移成本低 |
+| M1 播放 | —（原计划 M2） | 详情页提供"复制流地址"（`/file/raw`）并上报 played-at | 不引入 media_kit 前的最小可用播放路径 |
+| CI | 设想 ci.yml 加 paths-ignore | 未改 ci.yml；mobile-ci.yml 独立、path-filtered、不设 required | required check 不能 path-filter（不触发则永远 pending） |
 
 ---
 
