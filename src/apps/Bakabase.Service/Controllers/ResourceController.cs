@@ -453,6 +453,9 @@ public class ResourceController(
 
     [HttpPut("{id:int}/property-value")]
     [SwaggerOperation(OperationId = "PutResourcePropertyValue")]
+    // The write lands in the database, not on the host's screen, so it is
+    // meaningful from another device — rating from a phone is the use case.
+    [RemoteAccessible]
     public async Task<BaseResponse> PutPropertyValue(int id, [FromBody] ResourcePropertyValuePutInputModel model)
     {
         return await service.PutPropertyValue(id, model);

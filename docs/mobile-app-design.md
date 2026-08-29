@@ -2,7 +2,7 @@
 
 | 字段 | 值 |
 |---|---|
-| 状态 | M0–M3 已实施 — 见 §0 实施记录 |
+| 状态 | M0–M4 已实施 — 见 §0 实施记录 |
 | 分支 | `claude/bakabase-dual-platform-app-emytk3` |
 | 最后更新 | 2026-08-29 |
 | 依赖 | PR #1262（cross-device-resource-access，已合并） |
@@ -40,6 +40,10 @@ S1–S4 已按 §6 落地于 `Bakabase.Modules.RemoteAccess/Components/Discovery
 ### M3（CI 与分发）
 
 `mobile-release.yml`：tag `mobile-v*` 触发 → Android split-per-abi APK + macOS runner 出 unsigned IPA → GitHub Release → `scripts/mobile/build_sidestore_source.py`（stdlib、无状态：从全部 `mobile-v*` release 重建）生成 source.json 并强推到 `sidestore` 孤儿分支。SideStore 源地址：`https://raw.githubusercontent.com/anobaka/Bakabase/sidestore/source.json`。与原设计的偏差：source.json 不放 `docs/`（main 受分支保护，workflow 无法直推），改用独立无保护分支托管。
+
+### M4（打磨）
+
+排序菜单（AddDt/PlayedAt/FileModifyDt/Filename + 方向）、播放历史页（`/play-history` + `/resource/keys` 批量解析标题封面）、详情页评分（读 `properties[2][13]`，写 `PUT /resource/{id}/property-value`）、服务器切换（断开回连接页，档案一键直连）。服务端配套：`PutResourcePropertyValue` 标记 `[RemoteAccessible]`（属性写入落库不落屏，符合该标记语义；单端点放开，bulk 写仍 host-only）。S6（精简搜索 ViewModel）未做——待真机实测数据量再决定。
 
 ---
 

@@ -7,7 +7,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api_client.dart';
 import '../../core/connection.dart';
 import '../../core/models.dart';
+import '../history/history_page.dart';
 import '../resource/resource_page.dart';
+
+/// The sort choices offered in the grid; values mirror the server's
+/// ResourceSearchSortableProperty.
+enum SortChoice {
+  addDt(6, 'Recently added'),
+  playedAt(11, 'Recently played'),
+  fileModifyDt(2, 'File modified'),
+  filename(3, 'Filename');
+
+  const SortChoice(this.property, this.label);
+
+  final int property;
+  final String label;
+}
 
 /// The main browsing surface: media-library chips, keyword search, and an
 /// infinite-scrolling resource grid. All state is server-side; this page only
@@ -28,6 +43,8 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
 
   List<MediaLibrary> _libraries = const [];
   int? _selectedLibraryId;
+  SortChoice _sort = SortChoice.addDt;
+  bool _sortAsc = false;
 
   final List<ResourceSummary> _resources = [];
   int _page = 0;
@@ -92,6 +109,8 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
         mediaLibraryId: _selectedLibraryId,
         page: _page + 1,
         pageSize: _pageSize,
+        sortProperty: _sort.property,
+        sortAsc: _sortAsc,
       );
       if (!mounted) {
         return;
@@ -126,9 +145,43 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
       appBar: AppBar(
         title: Text(connection.server.name),
         actions: [
+          PopupMenuButton<String>(
+            tooltip: 'Sort',
+            icon: const Icon(Icons.sort),
+            onSelected: (value) {
+              setState(() {
+                if (value == 'direction') {
+                  _sortAsc = !_sortAsc;
+                } else {
+                  _sort = SortChoice.values.byName(value);
+                }
+              });
+              _reload();
+            },
+            itemBuilder: (context) => [
+              for (final choice in SortChoice.values)
+                CheckedPopupMenuItem(
+                  value: choice.name,
+                  checked: _sort == choice,
+                  child: Text(choice.label),
+                ),
+              const PopupMenuDivider(),
+              PopupMenuItem(
+                value: 'direction',
+                child: Text(_sortAsc ? 'Ascending ↑' : 'Descending ↓'),
+              ),
+            ],
+          ),
           IconButton(
-            tooltip: 'Disconnect',
-            icon: const Icon(Icons.link_off),
+            tooltip: 'Play history',
+            icon: const Icon(Icons.history),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => HistoryPage(api: _api)),
+            ),
+          ),
+          IconButton(
+            tooltip: 'Switch server',
+            icon: const Icon(Icons.swap_horiz),
             onPressed: () => ref.read(connectionProvider.notifier).disconnect(),
           ),
         ],

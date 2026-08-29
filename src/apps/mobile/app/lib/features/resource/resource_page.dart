@@ -25,11 +25,13 @@ class ResourcePage extends StatefulWidget {
 class _ResourcePageState extends State<ResourcePage> {
   List<PlayableItem>? _items;
   String? _error;
+  double? _rating;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _loadRating();
   }
 
   Future<void> _load() async {
@@ -41,6 +43,30 @@ class _ResourcePageState extends State<ResourcePage> {
     } on ApiException catch (e) {
       if (mounted) {
         setState(() => _error = e.message);
+      }
+    }
+  }
+
+  Future<void> _loadRating() async {
+    try {
+      final rating = await widget.api.resourceRating(widget.resource.id);
+      if (mounted) {
+        setState(() => _rating = rating);
+      }
+    } on ApiException {
+      // Stars just stay empty; rating is a convenience.
+    }
+  }
+
+  Future<void> _setRating(double value) async {
+    final previous = _rating;
+    setState(() => _rating = value);
+    try {
+      await widget.api.setRating(widget.resource.id, value);
+    } on ApiException catch (e) {
+      if (mounted) {
+        setState(() => _rating = previous);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
       }
     }
   }
@@ -183,7 +209,29 @@ class _ResourcePageState extends State<ResourcePage> {
           Text(resource.title, style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 4),
           Text(resource.path, style: Theme.of(context).textTheme.bodySmall),
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              for (var star = 1; star <= 5; star++)
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  icon: Icon(
+                    (_rating ?? 0) >= star
+                        ? Icons.star
+                        : (_rating ?? 0) >= star - 0.5
+                            ? Icons.star_half
+                            : Icons.star_border,
+                    color: Colors.amber,
+                  ),
+                  onPressed: () => _setRating(star.toDouble()),
+                ),
+              if (_rating != null)
+                Text(_rating!.toStringAsFixed(1),
+                    style: Theme.of(context).textTheme.bodySmall),
+            ],
+          ),
+          const SizedBox(height: 8),
           if (_error != null)
             Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error))
           else if (_items == null)

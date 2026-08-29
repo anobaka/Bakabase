@@ -38,6 +38,12 @@ class BakabaseApiClient {
   /// grid needs. Values mirror ResourceAdditionalItem on the server.
   static const int _gridAdditionalItems = 288 | 2048 | 16416;
 
+  /// ResourceAdditionalItem.Properties — property values, for reading ratings.
+  static const int _propertiesAdditionalItem = 32;
+
+  /// PropertyPool.Reserved / ReservedProperty.Rating on the server.
+  static const int _reservedRatingPropertyId = 13;
+
   Future<ServerInfo> serverInfo() async {
     final data = await _get('/remote-access/server-info');
     return ServerInfo.fromJson(_dataOf(data));
@@ -48,16 +54,25 @@ class BakabaseApiClient {
     return (_listOf(data)).map(MediaLibrary.fromJson).toList();
   }
 
-  Future<SearchResult> search({
+  /// Builds the POST /resource/search body. Static and pure so the filter and
+  /// order DSL — the part that silently returns wrong results when malformed —
+  /// is unit-testable.
+  static Map<String, dynamic> buildSearchBody({
     String? keyword,
     int? mediaLibraryId,
     int page = 1,
     int pageSize = 60,
-  }) async {
-    final body = <String, dynamic>{
+    int? sortProperty,
+    bool sortAsc = false,
+  }) {
+    return <String, dynamic>{
       'page': page,
       'pageSize': pageSize,
       if (keyword != null && keyword.trim().isNotEmpty) 'keyword': keyword.trim(),
+      if (sortProperty != null)
+        'orders': [
+          {'property': sortProperty, 'asc': sortAsc},
+        ],
       if (mediaLibraryId != null)
         'group': {
           'combinator': 1,
@@ -75,12 +90,28 @@ class BakabaseApiClient {
           ],
         },
     };
+  }
 
+  Future<SearchResult> search({
+    String? keyword,
+    int? mediaLibraryId,
+    int page = 1,
+    int pageSize = 60,
+    int? sortProperty,
+    bool sortAsc = false,
+  }) async {
     final response = await _request(
       'POST',
       '/resource/search',
       queryParameters: {'additionalItems': _gridAdditionalItems},
-      body: body,
+      body: buildSearchBody(
+        keyword: keyword,
+        mediaLibraryId: mediaLibraryId,
+        page: page,
+        pageSize: pageSize,
+        sortProperty: sortProperty,
+        sortAsc: sortAsc,
+      ),
     );
 
     final resources = (response['data'] as List<dynamic>? ?? const [])
@@ -99,6 +130,74 @@ class BakabaseApiClient {
   Future<List<PlayableItem>> playableItems(int resourceId) async {
     final data = await _get('/resource/$resourceId/playable-items');
     return (_listOf(data)).map(PlayableItem.fromJson).toList();
+  }
+
+  /// Play history, newest first, with total count for paging.
+  Future<(List<PlayHistoryEntry>, int)> playHistory({int page = 1, int pageSize = 50}) async {
+    final response = await _request('GET', '/play-history',
+        queryParameters: {'pageIndex': page, 'pageSize': pageSize});
+    final entries = _listOf(response).map(PlayHistoryEntry.fromJson).toList();
+    return (entries, (response['totalCount'] as num?)?.toInt() ?? entries.length);
+  }
+
+  /// Batch-resolves resources by id — how the history page turns ids into
+  /// titles and covers.
+  Future<List<ResourceSummary>> resourcesByIds(List<int> ids) async {
+    if (ids.isEmpty) {
+      return const [];
+    }
+    final response = await _request('GET', '/resource/keys', queryParameters: {
+      'ids': ids,
+      'additionalItems': _gridAdditionalItems,
+    });
+    return _listOf(response).map(ResourceSummary.fromJson).toList();
+  }
+
+  /// Pulls the reserved Rating value out of a full resource JSON payload.
+  /// Static and pure for tests; the pool/property keys mirror the server
+  /// (`properties[Reserved=2][Rating=13].values[0].value`).
+  static double? ratingFromResourceJson(Map<String, dynamic> json) {
+    final properties = json['properties'];
+    if (properties is! Map<String, dynamic>) {
+      return null;
+    }
+    final reserved = properties['2'];
+    if (reserved is! Map<String, dynamic>) {
+      return null;
+    }
+    final rating = reserved['$_reservedRatingPropertyId'];
+    if (rating is! Map<String, dynamic>) {
+      return null;
+    }
+    final values = rating['values'];
+    if (values is! List || values.isEmpty) {
+      return null;
+    }
+    final first = values.first;
+    if (first is! Map<String, dynamic>) {
+      return null;
+    }
+    final value = first['value'];
+    return value is num ? value.toDouble() : null;
+  }
+
+  Future<double?> resourceRating(int resourceId) async {
+    final response = await _request('GET', '/resource/keys', queryParameters: {
+      'ids': [resourceId],
+      'additionalItems': _propertiesAdditionalItem,
+    });
+    final list = _listOf(response);
+    return list.isEmpty ? null : ratingFromResourceJson(list.first);
+  }
+
+  /// Writes the reserved Rating. The value is the Decimal dbValue's
+  /// StandardValue serialization — a plain numeric string.
+  Future<void> setRating(int resourceId, double rating) async {
+    await _request('PUT', '/resource/$resourceId/property-value', body: {
+      'propertyId': _reservedRatingPropertyId,
+      'isCustomProperty': false,
+      'value': rating.toString(),
+    });
   }
 
   /// Records that playback started on this device; the server writes the play

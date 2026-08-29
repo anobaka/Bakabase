@@ -108,6 +108,22 @@ class SearchResult {
   bool get hasMore => page * pageSize < totalCount;
 }
 
+class PlayHistoryEntry {
+  const PlayHistoryEntry({required this.resourceId, this.item, this.playedAt});
+
+  final int resourceId;
+
+  /// Which file of a multi-file resource was played; null when unknown.
+  final String? item;
+  final String? playedAt;
+
+  static PlayHistoryEntry fromJson(Map<String, dynamic> json) => PlayHistoryEntry(
+        resourceId: (json['resourceId'] as num).toInt(),
+        item: json['item'] as String?,
+        playedAt: json['playedAt'] as String?,
+      );
+}
+
 class PlayableItem {
   const PlayableItem({required this.key, this.displayName});
 
