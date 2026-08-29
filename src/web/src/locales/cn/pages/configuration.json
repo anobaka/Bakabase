@@ -9,12 +9,10 @@
   "configuration.dependency.updating": "更新中",
   "configuration.dependency.failedToGetVersion": "获取新版本信息失败",
   "configuration.dependency.notAvailableOnCurrentPlatform": "当前平台不支持",
-
   "configuration.thirdParty.title": "第三方配置",
   "configuration.thirdParty.validateCookie": "验证 Cookie",
   "configuration.thirdParty.cookieValid": "Cookie 有效",
   "configuration.thirdParty.invalidCookie": "无效的 Cookie",
-
   "configuration.functional.title": "功能配置",
   "configuration.functional.startupPage": "启动页面",
   "configuration.functional.startupPage.default": "默认",
@@ -23,9 +21,7 @@
   "configuration.functional.exitBehavior.minimize": "最小化",
   "configuration.functional.exitBehavior.exit": "退出",
   "configuration.functional.exitBehavior.prompt": "询问",
-
   "configuration.contact.title": "联系我们",
-
   "configuration.appInfo.title": "系统信息",
   "configuration.appInfo.appDataPath": "应用数据路径",
   "configuration.appInfo.dataPath": "数据路径",
@@ -43,12 +39,10 @@
   "configuration.appInfo.failedToUpdateApp": "更新应用失败",
   "configuration.appInfo.clickToRetry": "点击此处重试",
   "configuration.appInfo.downloading": "下载中",
-
   "configuration.legacyNotice.title": "检测到旧版安装目录中残留数据",
   "configuration.legacyNotice.description": "从 2.3 版本开始，应用升级会自动清理旧的安装目录，旧版本写在那里的 AppData 现在已无人引用，可以备份后删除以释放空间。",
   "configuration.legacyNotice.openButton": "打开目录",
   "configuration.legacyNotice.dismissButton": "我知道了，不再提示",
-
   "configuration.dataPath.modify.button": "修改",
   "configuration.dataPath.error.title": "无法迁移",
   "configuration.dataPath.error.targetWas": "目标路径",
@@ -82,13 +76,11 @@
   "configuration.dataPath.validation.noWritePermission": "目标路径没有写入权限。",
   "configuration.dataPath.validation.insufficientSpace": "目标磁盘剩余空间不足。",
   "configuration.dataPath.validation.unknown": "校验失败。",
-
   "configuration.appInfo.dataPathSource.label": "路径来源",
   "configuration.appInfo.dataPathSource.default": "平台默认位置",
   "configuration.appInfo.dataPathSource.userConfigured": "用户自定义",
   "configuration.appInfo.dataPathSource.environment": "环境变量 {{name}}",
   "configuration.appInfo.anchorPath": "路径锚点",
-
   "configuration.appInfo.tip.appDataPath": "这是存储核心数据文件的位置，如非必要请勿更改。[系统] - [日志] 中的日志保存在 bootstrap_log.* 文件中，可以安全删除。",
   "configuration.appInfo.tip.appDataPath.manualMerge": "如果想在保持当前路径的前提下导入旧数据，也可以手动操作：1) 点击右侧文件夹图标打开当前目录；2) 完全关闭 Bakabase；3) 把旧 AppData 内的所有文件复制覆盖到当前目录；4) 重新打开 Bakabase。",
   "configuration.appInfo.tip.appDataPath.installRootRiskNotice": "若数据保存在程序安装目录内，通过卸载程序卸载 Bakabase 或在安装包中执行\"修复\"时，这些数据会被一并删除。如需保留数据，请先将路径改到安装目录之外。",
@@ -97,7 +89,6 @@
   "configuration.appInfo.tip.tempFilesPath": "这是存储临时文件的目录。",
   "configuration.appInfo.tip.logPath": "描述应用运行状态的详细信息。如果应用运行异常，您可以将日志文件发送给开发者；如果一切正常，也可以删除它们。",
   "configuration.appInfo.tip.backupPath": "首次使用新版本应用时会创建数据备份，如果一切正常可以删除它们。您可以下载相应版本的应用，使用备份文件覆盖应用数据路径来恢复数据。",
-
   "configuration.others.title": "其他设置",
   "configuration.others.proxy": "代理",
   "configuration.others.proxy.tip": "您可以为网络请求设置代理，例如 socks5://127.0.0.1:18888",
@@ -122,7 +113,6 @@
   "configuration.others.enableTracking.tip": "我们使用 Microsoft Clarity（会话录像/热图）、Google Analytics 4（功能使用 / 版本分布）和 Sentry（错误诊断）来改进产品质量。不会收集您的文件路径、文件名、媒体库内容或任何账号信息。您可以随时关闭此开关。",
   "configuration.others.maxParallelism": "CPU 线程数",
   "configuration.others.maxParallelism.tip": "CPU 密集型操作的并行线程数。设为 1 表示单线程。留空使用默认值（CPU 核心数的一半）。",
-
   "configuration.development.title": "开发",
   "configuration.development.apiEndpoints": "API 端点",
   "configuration.development.apiDocument": "API 文档",
@@ -137,7 +127,6 @@
   "configuration.development.tip.portsInput": "输入以逗号分隔的端口，例如 34567, 34568",
   "configuration.development.input.portsPlaceholder": "例如 34567, 34568",
   "configuration.development.error.tooManyPorts": "端口过多。最多支持 {{max}} 个端口。",
-
   "configuration.ai.title": "AI / LLM",
   "configuration.ai.providers": "AI 服务提供商",
   "configuration.ai.noProviders": "尚未配置任何提供商，请添加一个以开始使用。",
@@ -185,7 +174,6 @@
   "configuration.ai.feature.useCustom": "专用配置",
   "configuration.ai.feature.defaultConfigWarning": "正在编辑全局默认配置，修改将影响所有使用默认配置的功能",
   "configuration.ai.feature.notConfigured": "未配置",
-
   "configuration.ai.usage.title": "用量统计",
   "configuration.ai.usage.totalTokens": "总 Tokens",
   "configuration.ai.usage.todayTokens": "今日 Tokens",
@@ -198,7 +186,6 @@
   "configuration.ai.usage.calls": "{{count}} 次调用",
   "configuration.ai.usage.tokens": "{{count}} tokens",
   "configuration.ai.usage.noData": "暂无用量数据",
-
   "configuration.ai.auditLog.title": "审计日志",
   "configuration.ai.auditLog.provider": "提供商",
   "configuration.ai.auditLog.model": "模型",
@@ -223,9 +210,7 @@
   "configuration.ai.auditLog.allProviders": "全部提供商",
   "configuration.ai.auditLog.detail": "详情",
   "configuration.ai.auditLog.noContent": "无内容",
-
   "configuration.ai.tools.header": "工具",
-
   "configuration.ai.quota.title": "限额管理",
   "configuration.ai.quota.auditContent": "记录请求/响应内容",
   "configuration.ai.quota.dailyLimit": "每日 Token 限额",
@@ -235,7 +220,6 @@
   "configuration.ai.quota.monthUsage": "本月已用: {{used}}",
   "configuration.ai.quota.enableAuditContent": "记录请求/响应内容",
   "configuration.ai.quota.enableAuditContentTip": "启用后将在审计日志中记录请求和响应摘要，便于调试，但会增加存储占用",
-
   "configuration.ai.cache.title": "缓存管理",
   "configuration.ai.cache.responseCache": "响应缓存",
   "configuration.ai.cache.enableCache": "启用响应缓存",
@@ -253,5 +237,26 @@
   "configuration.ai.cache.allProviders": "全部提供商",
   "configuration.ai.cache.detail": "缓存详情",
   "configuration.ai.cache.cacheKey": "缓存键",
-  "configuration.ai.cache.responseContent": "响应内容"
+  "configuration.ai.cache.responseContent": "响应内容",
+  "remoteAccess": {
+    "title": "远程访问",
+    "mode": {
+      "label": "其他设备访问",
+      "tip": "无论如何设置，Bakabase 都会监听网络；这里决定是否响应本机以外的请求。凡是能连上的设备都视为可信设备（没有登录），所以请只在可信任的网络中开启，不要做端口转发。",
+      "disabled": "关闭 — 仅本机",
+      "enabled": "开启 — 可浏览和观看",
+      "unrestricted": "开启 — 不做限制"
+    },
+    "address": {
+      "label": "其他设备访问地址",
+      "tip": "在另一台设备上打开其中之一。具体哪个可用取决于该设备所在的网络。",
+      "none": "当前没有可用的网络接口。",
+      "copied": "地址已复制",
+      "copyFailed": "复制地址失败"
+    },
+    "unrestrictedWarning": {
+      "label": "警告",
+      "description": "其他设备同时也能删除文件、修改设置、在本机启动程序。会打开窗口的操作将出现在本机屏幕上，而非对方设备。"
+    }
+  }
 }

@@ -14,8 +14,6 @@ interface IRemoteAccessState {
    */
   isLocal: boolean;
   mode: RemoteAccessMode;
-  paired: boolean;
-  deviceName?: string;
   load: () => Promise<void>;
 }
 
@@ -25,7 +23,6 @@ export const useRemoteAccessStore = create<IRemoteAccessState>((set) => ({
   // common case, and it must not flicker through a "remote" rendering on start.
   isLocal: true,
   mode: RemoteAccessMode.Disabled,
-  paired: false,
   load: async () => {
     try {
       const rsp = await BApi.remoteAccess.getRemoteAccessContext();
@@ -36,8 +33,6 @@ export const useRemoteAccessStore = create<IRemoteAccessState>((set) => ({
           initialized: true,
           isLocal: data.isLocal ?? true,
           mode: data.mode ?? RemoteAccessMode.Disabled,
-          paired: data.paired ?? false,
-          deviceName: data.deviceName ?? undefined,
         });
       }
     } catch {

@@ -3,12 +3,16 @@ using System;
 namespace Bakabase.Service.Components.RemoteAccess
 {
     /// <summary>
-    /// Marks a controller or action as reachable from a device other than the host.
+    /// Marks a controller or action as meaningful from a device other than the host.
     /// <para>
-    /// The gate is default-deny: an endpoint without this attribute is refused for
-    /// remote callers, so a newly added endpoint is closed until someone decides it
-    /// is safe to open. Put it on a controller to open all of its actions, and use
-    /// <c>[RemoteAccessible(false)]</c> on the individual actions that must stay on
+    /// This is not a permission: every device that can reach Bakabase is trusted.
+    /// It records where an action's effect lands. Launching a player, opening a
+    /// folder or deleting a file happens on the host machine, so calling it from a
+    /// phone would put a window on a screen the caller cannot see and report success.
+    /// </para>
+    /// <para>
+    /// Default-deny, so an endpoint nobody has thought about yet fails visibly
+    /// ("not available from this device") rather than doing something invisible on
     /// the host.
     /// </para>
     /// </summary>
@@ -29,11 +33,5 @@ namespace Bakabase.Service.Components.RemoteAccess
         /// media library or Bakabase's own cache.
         /// </summary>
         public string[] PathParameters { get; set; } = [];
-
-        /// <summary>
-        /// Reachable before a device has paired. Only the pairing handshake itself
-        /// should set this.
-        /// </summary>
-        public bool AllowAnonymous { get; set; }
     }
 }

@@ -7,19 +7,6 @@ namespace Bakabase.Service.Components.RemoteAccess
     {
         private const string ContextKey = "Bakabase.RemoteAccess.Context";
 
-        /// <summary>
-        /// Name of the cookie carrying a paired device's token. A cookie rather than a
-        /// header because <c>&lt;img&gt;</c>, <c>&lt;video&gt;</c> and <c>EventSource</c>
-        /// cannot set headers, and those are how the UI loads covers and media.
-        /// </summary>
-        public const string DeviceTokenCookieName = "bkb_device";
-
-        /// <summary>
-        /// Query parameter carrying a signed single-path token, for URLs opened by
-        /// something that has no cookie at all — a native player handed a link.
-        /// </summary>
-        public const string PathTokenQueryKey = "bkbt";
-
         public static void SetRemoteAccessContext(this HttpContext httpContext, RemoteAccessContext context) =>
             httpContext.Items[ContextKey] = context;
 

@@ -10,8 +10,8 @@ using Microsoft.AspNetCore.Mvc.Filters;
 namespace Bakabase.Service.Components.RemoteAccess
 {
     /// <summary>
-    /// The inner half of the gate: decides whether a remote caller may reach this
-    /// particular action.
+    /// The inner half of the gate: decides whether an action means anything when
+    /// called from a device other than the host.
     /// <para>
     /// Default-deny. An action is reachable only if it, or its controller, carries
     /// <see cref="RemoteAccessibleAttribute"/> with <c>Allowed</c> set. That way the
@@ -32,17 +32,8 @@ namespace Bakabase.Service.Components.RemoteAccess
                 return;
             }
 
-            var attribute = FindAttribute(context);
-
-            if (attribute is {Allowed: true})
+            if (FindAttribute(context) is {Allowed: true})
             {
-                if (attribute.AllowAnonymous || remoteContext?.Device != null)
-                {
-                    return;
-                }
-
-                Deny(context, HttpStatusCode.Unauthorized, ResponseCode.Unauthenticated,
-                    RemoteAccessDenialReason.Unauthenticated, "This device is not paired with Bakabase.");
                 return;
             }
 

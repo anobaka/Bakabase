@@ -15,6 +15,11 @@ public static class ServiceCollectionExtensions
     /// Registers the remote-access gate. The application layer supplies
     /// <paramref name="defaultMode"/> because only it knows the runtime mode.
     /// </summary>
+    /// <remarks>
+    /// The caller must also register an
+    /// <see cref="Abstractions.Components.IListeningAddressProvider"/>; only the
+    /// application layer knows what the host is bound to.
+    /// </remarks>
     public static IServiceCollection AddRemoteAccess(this IServiceCollection services,
         RemoteAccessMode defaultMode)
     {

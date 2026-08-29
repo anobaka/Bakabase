@@ -9,12 +9,10 @@
   "configuration.dependency.updating": "Updating",
   "configuration.dependency.failedToGetVersion": "Failed to get information of new version",
   "configuration.dependency.notAvailableOnCurrentPlatform": "Not available on current platform",
-
   "configuration.thirdParty.title": "Third Party Configurations",
   "configuration.thirdParty.validateCookie": "Validate cookie",
   "configuration.thirdParty.cookieValid": "Cookie is good",
   "configuration.thirdParty.invalidCookie": "Invalid cookie",
-
   "configuration.functional.title": "Functional configurations",
   "configuration.functional.startupPage": "Startup page",
   "configuration.functional.startupPage.default": "Default",
@@ -23,9 +21,7 @@
   "configuration.functional.exitBehavior.minimize": "Minimize",
   "configuration.functional.exitBehavior.exit": "Exit",
   "configuration.functional.exitBehavior.prompt": "Prompt",
-
   "configuration.contact.title": "Contact us",
-
   "configuration.appInfo.title": "System information",
   "configuration.appInfo.appDataPath": "App Data Path",
   "configuration.appInfo.dataPath": "Data Path",
@@ -43,12 +39,10 @@
   "configuration.appInfo.failedToUpdateApp": "Failed to update app",
   "configuration.appInfo.clickToRetry": "Click here to retry",
   "configuration.appInfo.downloading": "Downloading",
-
   "configuration.legacyNotice.title": "Old install AppData detected",
   "configuration.legacyNotice.description": "Starting with 2.3, upgrades wipe the previous install directory; AppData written there by older versions is no longer referenced and can be backed up + deleted to free space.",
   "configuration.legacyNotice.openButton": "Open folder",
   "configuration.legacyNotice.dismissButton": "Got it, do not remind",
-
   "configuration.dataPath.modify.button": "Change",
   "configuration.dataPath.error.title": "Cannot relocate",
   "configuration.dataPath.error.targetWas": "Target path",
@@ -82,13 +76,11 @@
   "configuration.dataPath.validation.noWritePermission": "No write permission for the target.",
   "configuration.dataPath.validation.insufficientSpace": "Insufficient free space on the target disk.",
   "configuration.dataPath.validation.unknown": "Validation failed.",
-
   "configuration.appInfo.dataPathSource.label": "Path source",
   "configuration.appInfo.dataPathSource.default": "Platform default location",
   "configuration.appInfo.dataPathSource.userConfigured": "User configured",
   "configuration.appInfo.dataPathSource.environment": "Environment variable {{name}}",
   "configuration.appInfo.anchorPath": "Path anchor",
-
   "configuration.appInfo.tip.appDataPath": "This is where core data files stored and DO NOT change them if not necessary. The logs in [System] - [Logs] are saved in bootstrap_log.* files, they can be safely deleted.",
   "configuration.appInfo.tip.appDataPath.manualMerge": "To bring data from a previous install over without changing this path, you can also do it by hand: 1) click the folder icon to open the current directory; 2) fully close Bakabase; 3) copy and overwrite the current directory with the contents of the old AppData; 4) reopen Bakabase.",
   "configuration.appInfo.tip.appDataPath.installRootRiskNotice": "Data kept inside the application install directory is removed when you uninstall Bakabase or run \"Repair\" from the installer. To keep it, switch the path to a directory outside the install tree first.",
@@ -97,7 +89,6 @@
   "configuration.appInfo.tip.tempFilesPath": "This is a directory where temporary files are stored.",
   "configuration.appInfo.tip.logPath": "Detailed information which describing the running states of app. You can send log files to developer if the app is not running normally, and you can delete them also if everything is ok.",
   "configuration.appInfo.tip.backupPath": "A data backup will be created when using the new version of app first time, you can delete them if everything is ok. You can download the corresponding version of the app and use the backup files to overwrite the App Data Path for data recovery.",
-
   "configuration.others.title": "Other settings",
   "configuration.others.proxy": "Proxy",
   "configuration.others.proxy.tip": "You can set a proxy for network requests, such as socks5://127.0.0.1:18888",
@@ -122,7 +113,6 @@
   "configuration.others.enableTracking.tip": "We use Microsoft Clarity (session recordings / heatmaps), Google Analytics 4 (feature usage / version distribution), and Sentry (error diagnostics) to improve product quality. We never collect file paths, file names, library contents, or account information. You can turn this off at any time.",
   "configuration.others.maxParallelism": "CPU utilization",
   "configuration.others.maxParallelism.tip": "Degree of parallelism for CPU-intensive operations. Set to 1 for minimum utilization. Leave empty for default (half of CPU cores).",
-
   "configuration.development.title": "Development",
   "configuration.development.apiEndpoints": "API endpoints",
   "configuration.development.apiDocument": "API document",
@@ -137,7 +127,6 @@
   "configuration.development.tip.portsInput": "Enter ports separated by commas, e.g. 34567, 34568",
   "configuration.development.input.portsPlaceholder": "e.g. 34567, 34568",
   "configuration.development.error.tooManyPorts": "Too many ports. Up to {{max}} ports are supported.",
-
   "configuration.ai.title": "AI / LLM",
   "configuration.ai.providers": "AI Providers",
   "configuration.ai.noProviders": "No providers configured. Add one to get started.",
@@ -185,7 +174,6 @@
   "configuration.ai.feature.useCustom": "Custom",
   "configuration.ai.feature.defaultConfigWarning": "Editing global default config. Changes will affect all features using the default.",
   "configuration.ai.feature.notConfigured": "Not configured",
-
   "configuration.ai.usage.title": "Usage Statistics",
   "configuration.ai.usage.totalTokens": "Total Tokens",
   "configuration.ai.usage.todayTokens": "Today",
@@ -198,7 +186,6 @@
   "configuration.ai.usage.calls": "{{count}} calls",
   "configuration.ai.usage.tokens": "{{count}} tokens",
   "configuration.ai.usage.noData": "No usage data yet",
-
   "configuration.ai.auditLog.title": "Audit Log",
   "configuration.ai.auditLog.provider": "Provider",
   "configuration.ai.auditLog.model": "Model",
@@ -223,9 +210,7 @@
   "configuration.ai.auditLog.allProviders": "All providers",
   "configuration.ai.auditLog.detail": "Detail",
   "configuration.ai.auditLog.noContent": "No content",
-
   "configuration.ai.tools.header": "Tool",
-
   "configuration.ai.quota.title": "Quota",
   "configuration.ai.quota.auditContent": "Log request/response",
   "configuration.ai.quota.dailyLimit": "Daily Token Limit",
@@ -235,7 +220,6 @@
   "configuration.ai.quota.monthUsage": "This month: {{used}}",
   "configuration.ai.quota.enableAuditContent": "Log request/response content",
   "configuration.ai.quota.enableAuditContentTip": "When enabled, request and response summaries will be logged for debugging. Increases storage usage.",
-
   "configuration.ai.cache.title": "Cache",
   "configuration.ai.cache.responseCache": "Response Cache",
   "configuration.ai.cache.enableCache": "Enable response cache",
@@ -253,5 +237,26 @@
   "configuration.ai.cache.allProviders": "All providers",
   "configuration.ai.cache.detail": "Cache Detail",
   "configuration.ai.cache.cacheKey": "Cache Key",
-  "configuration.ai.cache.responseContent": "Response Content"
+  "configuration.ai.cache.responseContent": "Response Content",
+  "remoteAccess": {
+    "title": "Remote access",
+    "mode": {
+      "label": "Access from other devices",
+      "tip": "Bakabase listens on the network either way; this decides whether anything other than this machine is served. Every device that can reach it is trusted — there is no login — so keep this to a network you trust and do not port-forward it.",
+      "disabled": "Off — only this machine",
+      "enabled": "On — browse and watch",
+      "unrestricted": "On — no restrictions"
+    },
+    "address": {
+      "label": "Address for other devices",
+      "tip": "Open one of these on the other device. Which one works depends on the network it is joined to.",
+      "none": "No network interface is currently reachable.",
+      "copied": "Address copied",
+      "copyFailed": "Could not copy the address"
+    },
+    "unrestrictedWarning": {
+      "label": "Warning",
+      "description": "Other devices can also delete files, change settings and launch programs on this machine. Actions that open a window will do so on this screen, not theirs."
+    }
+  }
 }

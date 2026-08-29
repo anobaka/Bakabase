@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bootstrap.Components.Configuration.Abstractions;
 
@@ -12,12 +10,16 @@ namespace Bakabase.Abstractions.Models.Domain.Options;
 /// every setting on this class.
 /// </para>
 /// <para>
+/// Deliberately just a switch: whatever can reach the port is treated as
+/// trusted, so there is no pairing, no per-device credential, and no access list
+/// to keep in sync. That makes the LAN itself the security boundary — reasonable
+/// on a home network, not something to port-forward.
+/// </para>
+/// <para>
 /// Caveat: "loopback" is decided from the connection's peer address. Putting a
 /// reverse proxy in front of Bakabase on the same machine makes every request
-/// look local and bypasses the gate — that is also what happens today, without
-/// any gate at all, but it means a proxied deployment has to do its own
-/// authentication. Bakabase deliberately does not trust forwarded headers, since
-/// a client could otherwise claim to be local just by sending one.
+/// look local. Bakabase deliberately does not trust forwarded headers, since a
+/// client could otherwise claim to be local just by sending one.
 /// </para>
 /// </summary>
 [Options(fileKey: "remote-access")]
@@ -25,26 +27,11 @@ public class RemoteAccessOptions
 {
     /// <summary>
     /// Explicit mode chosen by the user. Null means "use the runtime default",
-    /// which is <see cref="RemoteAccessMode.Open"/> under Docker (preserving the
-    /// behavior containerized installs have always had) and
+    /// which is <see cref="RemoteAccessMode.Unrestricted"/> under Docker (preserving
+    /// the behavior containerized installs have always had) and
     /// <see cref="RemoteAccessMode.Disabled"/> everywhere else.
     /// </summary>
     public RemoteAccessMode? Mode { get; set; }
-
-    /// <summary>
-    /// HMAC key for signed media URLs. Generated on demand; never leaves the server.
-    /// </summary>
-    public string? SigningSecret { get; set; }
-
-    /// <summary>
-    /// Short code a new device presents once to pair. Cleared after it expires or
-    /// is consumed.
-    /// </summary>
-    public string? PairingCode { get; set; }
-
-    public DateTime? PairingCodeExpiresAt { get; set; }
-
-    public List<RemoteDevice> Devices { get; set; } = [];
 
     /// <summary>
     /// Whether remote clients may trigger the live ffmpeg transcode path. Off by

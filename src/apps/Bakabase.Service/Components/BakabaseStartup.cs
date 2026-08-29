@@ -41,6 +41,7 @@ using Bakabase.Modules.ThirdParty.ThirdParties.Patreon;
 using Bakabase.Modules.ThirdParty.ThirdParties.Bangumi;
 using Bakabase.Modules.ThirdParty.ThirdParties.SoulPlus;
 using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.RemoteAccess.Abstractions.Components;
 using Bakabase.Modules.RemoteAccess.Extensions;
 using Bakabase.Service.Components.RemoteAccess;
 using Bakabase.Service.Components.Tasks;
@@ -108,8 +109,9 @@ namespace Bakabase.Service.Components
             // it keeps that as its default; a desktop install starts closed, which is a
             // behavior change for anyone who was quietly relying on LAN reachability.
             services.AddRemoteAccess(AppService.RuntimeMode == RuntimeMode.Docker
-                ? RemoteAccessMode.Open
+                ? RemoteAccessMode.Unrestricted
                 : RemoteAccessMode.Disabled);
+            services.AddSingleton<IListeningAddressProvider, AppContextListeningAddressProvider>();
 
             // Configured rather than passed to AddMvc because the base AppStartup owns
             // that call; MvcOptions configuration is order-independent.
