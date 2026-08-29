@@ -2,7 +2,7 @@
 
 | 字段 | 值 |
 |---|---|
-| 状态 | M0 已实施、M1 已实施 — 见 §0 实施记录 |
+| 状态 | M0–M3 已实施 — 见 §0 实施记录 |
 | 分支 | `claude/bakabase-dual-platform-app-emytk3` |
 | 最后更新 | 2026-08-29 |
 | 依赖 | PR #1262（cross-device-resource-access，已合并） |
@@ -32,6 +32,14 @@ S1–S4 已按 §6 落地于 `Bakabase.Modules.RemoteAccess/Components/Discovery
 | API 客户端 | swagger 生成并提交 | 手写 `BakabaseApiClient`（约 10 个端点的薄封装） | 同 S5 暂缓理由；模型字段名与 swagger 一致，迁移成本低 |
 | M1 播放 | —（原计划 M2） | 详情页提供"复制流地址"（`/file/raw`）并上报 played-at | 不引入 media_kit 前的最小可用播放路径 |
 | CI | 设想 ci.yml 加 paths-ignore | 未改 ci.yml；mobile-ci.yml 独立、path-filtered、不设 required | required check 不能 path-filter（不触发则永远 pending） |
+
+### M2（播放）
+
+内置 media_kit 播放器（直拉 `/file/raw`）、外部播放器调起（Android 用 `android_intent_plus` 构造真实 Intent 而非 Web 的 `intent://` 链接；iOS x-callback 深链 + `LSApplicationQueriesSchemes`）、漫画阅读器（压缩包条目走 `/file/play`）。所有播放路径统一上报 played-at。默认行为选择器为每次弹底部菜单，"记住选择"留待 M4+。
+
+### M3（CI 与分发）
+
+`mobile-release.yml`：tag `mobile-v*` 触发 → Android split-per-abi APK + macOS runner 出 unsigned IPA → GitHub Release → `scripts/mobile/build_sidestore_source.py`（stdlib、无状态：从全部 `mobile-v*` release 重建）生成 source.json 并强推到 `sidestore` 孤儿分支。SideStore 源地址：`https://raw.githubusercontent.com/anobaka/Bakabase/sidestore/source.json`。与原设计的偏差：source.json 不放 `docs/`（main 受分支保护，workflow 无法直推），改用独立无保护分支托管。
 
 ---
 
