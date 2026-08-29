@@ -2,7 +2,7 @@
 
 | 字段 | 值 |
 |---|---|
-| 状态 | M0–M4 已实施 — 见 §0 实施记录 |
+| 状态 | M0–M4 已实施、M5 已出报告 — 见 §0 实施记录 |
 | 分支 | `claude/bakabase-dual-platform-app-emytk3` |
 | 最后更新 | 2026-08-29 |
 | 依赖 | PR #1262（cross-device-resource-access，已合并） |
@@ -44,6 +44,10 @@ S1–S4 已按 §6 落地于 `Bakabase.Modules.RemoteAccess/Components/Discovery
 ### M4（打磨）
 
 排序菜单（AddDt/PlayedAt/FileModifyDt/Filename + 方向）、播放历史页（`/play-history` + `/resource/keys` 批量解析标题封面）、详情页评分（读 `properties[2][13]`，写 `PUT /resource/{id}/property-value`）、服务器切换（断开回连接页，档案一键直连）。服务端配套：`PutResourcePropertyValue` 标记 `[RemoteAccessible]`（属性写入落库不落屏，符合该标记语义；单端点放开，bulk 写仍 host-only）。S6（精简搜索 ViewModel）未做——待真机实测数据量再决定。
+
+### M5（鸿蒙）
+
+技术验证报告见 [`mobile-harmonyos-report.md`](./mobile-harmonyos-report.md)。结论维持 Later：fork 工具链落后（3.27-ohos vs 我们的 3.47）、media_kit 无稳定 ohos 支持是主要阻塞；UDP 探测通道与 discovery/playback 实现边界让未来适配保持为"加一个平台实现"。报告中列出了重新立项的触发条件。
 
 ---
 
