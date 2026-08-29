@@ -10,7 +10,7 @@ import { AiOutlineCopy } from "react-icons/ai";
 
 import BApi from "@/sdk/BApi";
 import { RemoteAccessMode } from "@/sdk/constants";
-import { Button, Chip, Select } from "@/components/bakaui";
+import { Button, Chip, Select, Switch } from "@/components/bakaui";
 import SettingsSection from "@/pages/configuration/components/SettingsSection";
 import { useRemoteAccessStore } from "@/stores/remoteAccess";
 
@@ -123,6 +123,27 @@ const RemoteAccess: React.FC<RemoteAccessProps> = ({ query }) => {
             {t("configuration.remoteAccess.address.none")}
           </span>
         ),
+    });
+
+    items.push({
+      id: "live-transcode",
+      label: t("configuration.remoteAccess.liveTranscode.label"),
+      tip: t("configuration.remoteAccess.liveTranscode.tip"),
+      keywords: ["transcode", "ffmpeg", "video", "转码"],
+      render: () => (
+        <Switch
+          isSelected={settings?.allowLiveTranscode ?? false}
+          size="sm"
+          onValueChange={async (checked) => {
+            const rsp = await BApi.remoteAccess.setRemoteAccessLiveTranscode({ allow: checked });
+
+            if (!rsp.code) {
+              toast.success(t("common.success.saved"));
+              await load();
+            }
+          }}
+        />
+      ),
     });
 
     if (mode === RemoteAccessMode.Unrestricted) {

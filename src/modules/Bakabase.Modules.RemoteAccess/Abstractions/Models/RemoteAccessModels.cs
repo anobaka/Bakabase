@@ -20,7 +20,14 @@ public enum RemoteAccessDenialReason
     HostOnly = 2,
 
     /// <summary>The requested path is outside every media library and cache root.</summary>
-    PathNotServable = 3
+    PathNotServable = 3,
+
+    /// <summary>
+    /// The video needs a live ffmpeg transcode and the host has not allowed remote
+    /// callers to start one. The client should hand the stream to a native player
+    /// instead.
+    /// </summary>
+    TranscodeDisabled = 4
 }
 
 /// <summary>
@@ -45,3 +52,26 @@ public record RemoteAccessContext
 /// <param name="Url">e.g. <c>http://192.168.1.5:34567</c>.</param>
 /// <param name="InterfaceName">The network interface it belongs to, to help pick.</param>
 public record RemoteAccessAddress(string Url, string InterfaceName);
+
+/// <summary>
+/// What this install tells other devices about itself — the payload behind the
+/// discovery beacon and the <c>server-info</c> endpoint, kept identical so a
+/// client learns the same facts whichever way it found the server.
+/// </summary>
+/// <param name="Id">Stable install identity; survives IP changes and restarts.</param>
+/// <param name="Name">Human-readable name to show in a server picker.</param>
+/// <param name="Port">
+/// First listening port, or null before Kestrel has reported one. The port is
+/// chosen at runtime on desktop installs, which is why discovery has to carry it.
+/// </param>
+/// <param name="AppVersion">Application version, informational.</param>
+/// <param name="ProtocolVersion">
+/// Remote API contract version (<see cref="RemoteAccessProtocol.CurrentVersion"/>);
+/// clients compare it against the range they support before talking further.
+/// </param>
+public record RemoteAccessServerDescriptor(
+    string Id,
+    string Name,
+    int? Port,
+    string AppVersion,
+    int ProtocolVersion);

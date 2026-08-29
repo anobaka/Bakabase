@@ -9,4 +9,9 @@ namespace Bakabase.Service.Models.Input
         /// </summary>
         public RemoteAccessMode? Mode { get; set; }
     }
+
+    public record RemoteAccessLiveTranscodeInputModel
+    {
+        public bool Allow { get; set; }
+    }
 }

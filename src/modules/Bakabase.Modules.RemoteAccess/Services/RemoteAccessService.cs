@@ -1,11 +1,9 @@
-using System.Net;
-using System.Net.NetworkInformation;
-using System.Net.Sockets;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Domain.Options;
 using Bakabase.Modules.RemoteAccess.Abstractions.Components;
 using Bakabase.Modules.RemoteAccess.Abstractions.Models;
 using Bakabase.Modules.RemoteAccess.Abstractions.Services;
+using Bakabase.Modules.RemoteAccess.Components;
 using Bootstrap.Components.Configuration.Abstractions;
 using Microsoft.Extensions.Logging;
 
@@ -14,9 +12,12 @@ namespace Bakabase.Modules.RemoteAccess.Services;
 public class RemoteAccessService(
     IBOptionsManager<RemoteAccessOptions> optionsManager,
     RemoteAccessDefaults defaults,
+    RemoteAccessHostInfo hostInfo,
     IListeningAddressProvider listeningAddressProvider,
     ILogger<RemoteAccessService> logger) : IRemoteAccessService
 {
+    private readonly SemaphoreSlim _serverIdLock = new(1, 1);
+
     public RemoteAccessMode GetEffectiveMode() => optionsManager.Value.Mode ?? defaults.Mode;
 
     public async Task SetModeAsync(RemoteAccessMode? mode)
@@ -35,7 +36,7 @@ public class RemoteAccessService(
 
         var addresses = new List<RemoteAccessAddress>();
 
-        foreach (var (ip, interfaceName) in GetLocalNetworkAddresses())
+        foreach (var (ip, interfaceName) in LocalNetworkAddresses.EnumerateIPv4(logger))
         {
             foreach (var port in ports)
             {
@@ -44,6 +45,67 @@ public class RemoteAccessService(
         }
 
         return addresses;
+    }
+
+    public async Task<string> GetOrCreateServerIdAsync()
+    {
+        var existing = optionsManager.Value.ServerId;
+        if (!string.IsNullOrWhiteSpace(existing))
+        {
+            return existing;
+        }
+
+        await _serverIdLock.WaitAsync();
+        try
+        {
+            existing = optionsManager.Value.ServerId;
+            if (!string.IsNullOrWhiteSpace(existing))
+            {
+                return existing;
+            }
+
+            var id = Guid.NewGuid().ToString("N");
+            await optionsManager.SaveAsync(o => o.ServerId = id);
+            logger.LogInformation("Generated server id {ServerId}", id);
+            return id;
+        }
+        finally
+        {
+            _serverIdLock.Release();
+        }
+    }
+
+    public bool GetAllowLiveTranscode() => optionsManager.Value.AllowLiveTranscode;
+
+    public async Task SetAllowLiveTranscodeAsync(bool allow)
+    {
+        await optionsManager.SaveAsync(o => o.AllowLiveTranscode = allow);
+        logger.LogInformation("Remote live transcode set to {Allow}", allow);
+    }
+
+    public async Task<RemoteAccessServerDescriptor> GetServerDescriptorAsync()
+    {
+        var id = await GetOrCreateServerIdAsync();
+        var ports = GetListeningPorts();
+
+        return new RemoteAccessServerDescriptor(
+            id,
+            GetServerName(),
+            ports.Count > 0 ? ports[0] : null,
+            hostInfo.AppVersion,
+            RemoteAccessProtocol.CurrentVersion);
+    }
+
+    private static string GetServerName()
+    {
+        try
+        {
+            return Environment.MachineName;
+        }
+        catch
+        {
+            return "Bakabase";
+        }
     }
 
     private IReadOnlyList<int> GetListeningPorts()
@@ -62,43 +124,5 @@ public class RemoteAccessService(
         }
 
         return ports;
-    }
-
-    /// <summary>
-    /// IPv4 addresses of interfaces that are up and are not loopback or tunnels —
-    /// the ones another device on the same network could actually route to.
-    /// </summary>
-    private IEnumerable<(string Ip, string InterfaceName)> GetLocalNetworkAddresses()
-    {
-        NetworkInterface[] interfaces;
-        try
-        {
-            interfaces = NetworkInterface.GetAllNetworkInterfaces();
-        }
-        catch (Exception e)
-        {
-            logger.LogWarning(e, "Could not enumerate network interfaces; no reachable addresses will be shown");
-            yield break;
-        }
-
-        foreach (var ni in interfaces)
-        {
-            if (ni.OperationalStatus != OperationalStatus.Up ||
-                ni.NetworkInterfaceType is NetworkInterfaceType.Loopback or NetworkInterfaceType.Tunnel)
-            {
-                continue;
-            }
-
-            foreach (var info in ni.GetIPProperties().UnicastAddresses)
-            {
-                if (info.Address.AddressFamily != AddressFamily.InterNetwork ||
-                    IPAddress.IsLoopback(info.Address))
-                {
-                    continue;
-                }
-
-                yield return (info.Address.ToString(), ni.Name);
-            }
-        }
     }
 }

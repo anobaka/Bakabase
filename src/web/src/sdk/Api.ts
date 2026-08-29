@@ -4443,6 +4443,10 @@ export interface BakabaseServiceModelsInputProxyTestInputModel {
   customSites?: string[];
 }
 
+export interface BakabaseServiceModelsInputRemoteAccessLiveTranscodeInputModel {
+  allow: boolean;
+}
+
 export interface BakabaseServiceModelsInputRemoteAccessModeInputModel {
   /** [0: Disabled, 1: Enabled, 2: Unrestricted] */
   mode?: BakabaseAbstractionsModelsDomainConstantsRemoteAccessMode;
@@ -4848,10 +4852,21 @@ export interface BakabaseServiceModelsViewRemoteAccessClientContextViewModel {
   mode: BakabaseAbstractionsModelsDomainConstantsRemoteAccessMode;
 }
 
+export interface BakabaseServiceModelsViewRemoteAccessServerInfoViewModel {
+  id: string;
+  name: string;
+  appVersion: string;
+  /** @format int32 */
+  protocolVersion: number;
+  /** [0: Disabled, 1: Enabled, 2: Unrestricted] */
+  mode: BakabaseAbstractionsModelsDomainConstantsRemoteAccessMode;
+}
+
 export interface BakabaseServiceModelsViewRemoteAccessSettingsViewModel {
   /** [0: Disabled, 1: Enabled, 2: Unrestricted] */
   mode: BakabaseAbstractionsModelsDomainConstantsRemoteAccessMode;
   addresses: BakabaseServiceModelsViewRemoteAccessAddressViewModel[];
+  allowLiveTranscode: boolean;
 }
 
 export interface BakabaseServiceModelsViewResourceAncestorViewModel {
@@ -6294,6 +6309,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceM
   code: number;
   message?: string;
   data?: BakabaseServiceModelsViewRemoteAccessClientContextViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewRemoteAccessServerInfoViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewRemoteAccessServerInfoViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewRemoteAccessSettingsViewModel {
@@ -20468,6 +20490,35 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags RemoteAccess
+     * @name GetRemoteAccessServerInfo
+     * @request GET:/remote-access/server-info
+     */
+    getRemoteAccessServerInfo: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewRemoteAccessServerInfoViewModel,
+        any
+      >({
+        path: `/remote-access/server-info`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getRemoteAccessServerInfo
+     * @name getRemoteAccessServerInfoUrl
+     */
+    getRemoteAccessServerInfoUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/remote-access/server-info`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags RemoteAccess
      * @name GetRemoteAccessSettings
      * @request GET:/remote-access/settings
      */
@@ -20520,6 +20571,37 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     setRemoteAccessModeUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/remote-access/mode`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags RemoteAccess
+     * @name SetRemoteAccessLiveTranscode
+     * @request PUT:/remote-access/live-transcode
+     */
+    setRemoteAccessLiveTranscode: (
+      data: BakabaseServiceModelsInputRemoteAccessLiveTranscodeInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/remote-access/live-transcode`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for setRemoteAccessLiveTranscode
+     * @name setRemoteAccessLiveTranscodeUrl
+     */
+    setRemoteAccessLiveTranscodeUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/remote-access/live-transcode`;
       
       return baseUrl + path;
     },

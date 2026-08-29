@@ -39,6 +39,28 @@ namespace Bakabase.Service.Controllers
         }
 
         /// <summary>
+        /// Who this server is — same facts as the discovery beacon broadcasts, so a
+        /// client that typed an address by hand still learns the install's identity,
+        /// name and protocol version before talking further.
+        /// </summary>
+        [HttpGet("server-info")]
+        [SwaggerOperation(OperationId = "GetRemoteAccessServerInfo")]
+        [RemoteAccessible]
+        public async Task<SingletonResponse<RemoteAccessServerInfoViewModel>> GetServerInfo()
+        {
+            var descriptor = await remoteAccessService.GetServerDescriptorAsync();
+
+            return new SingletonResponse<RemoteAccessServerInfoViewModel>(new RemoteAccessServerInfoViewModel
+            {
+                Id = descriptor.Id,
+                Name = descriptor.Name,
+                AppVersion = descriptor.AppVersion,
+                ProtocolVersion = descriptor.ProtocolVersion,
+                Mode = remoteAccessService.GetEffectiveMode()
+            });
+        }
+
+        /// <summary>
         /// The current mode plus the addresses another device can open. Host-only:
         /// this is the page remote access is configured from.
         /// </summary>
@@ -51,7 +73,8 @@ namespace Bakabase.Service.Controllers
                 Mode = remoteAccessService.GetEffectiveMode(),
                 Addresses = remoteAccessService.GetReachableAddresses()
                     .Select(a => new RemoteAccessAddressViewModel {Url = a.Url, InterfaceName = a.InterfaceName})
-                    .ToList()
+                    .ToList(),
+                AllowLiveTranscode = remoteAccessService.GetAllowLiveTranscode()
             });
         }
 
@@ -60,6 +83,14 @@ namespace Bakabase.Service.Controllers
         public async Task<BaseResponse> SetMode([FromBody] RemoteAccessModeInputModel model)
         {
             await remoteAccessService.SetModeAsync(model.Mode);
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpPut("live-transcode")]
+        [SwaggerOperation(OperationId = "SetRemoteAccessLiveTranscode")]
+        public async Task<BaseResponse> SetLiveTranscode([FromBody] RemoteAccessLiveTranscodeInputModel model)
+        {
+            await remoteAccessService.SetAllowLiveTranscodeAsync(model.Allow);
             return BaseResponseBuilder.Ok;
         }
     }

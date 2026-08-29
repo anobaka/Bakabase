@@ -21,4 +21,23 @@ public interface IRemoteAccessService
     /// interface and listening port. Used to tell the user what to type into a phone.
     /// </summary>
     IReadOnlyList<RemoteAccessAddress> GetReachableAddresses();
+
+    /// <summary>
+    /// This install's stable identity, generated and persisted on first use.
+    /// </summary>
+    Task<string> GetOrCreateServerIdAsync();
+
+    /// <summary>
+    /// Whether remote callers may start a live ffmpeg transcode. Loopback callers
+    /// are never subject to this.
+    /// </summary>
+    bool GetAllowLiveTranscode();
+
+    Task SetAllowLiveTranscodeAsync(bool allow);
+
+    /// <summary>
+    /// The payload discovery and <c>server-info</c> both serve — see
+    /// <see cref="RemoteAccessServerDescriptor"/>.
+    /// </summary>
+    Task<RemoteAccessServerDescriptor> GetServerDescriptorAsync();
 }

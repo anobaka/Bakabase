@@ -39,4 +39,11 @@ public class RemoteAccessOptions
     /// native player rather than burning host CPU per viewer.
     /// </summary>
     public bool AllowLiveTranscode { get; set; }
+
+    /// <summary>
+    /// Stable identity of this Bakabase install, generated once on first use.
+    /// Lets a client recognize "the server I paired my library browsing with"
+    /// across IP changes and restarts — the address is transient, this is not.
+    /// </summary>
+    public string? ServerId { get; set; }
 }
