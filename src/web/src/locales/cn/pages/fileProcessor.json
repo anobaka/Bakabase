@@ -6,7 +6,6 @@
   "fileProcessor.label.currentPath": "当前路径",
   "fileProcessor.tip.moveToAnotherPath": "您可以将其移动到其他路径。",
   "fileProcessor.tip.orDeleteIt": "或者删除它？",
-
   "fileProcessor.ai.title": "AI 分析",
   "fileProcessor.ai.analyzeStructure": "分析结构",
   "fileProcessor.ai.analyzeStructure.description": "使用 AI 分析当前目录结构",
@@ -39,13 +38,10 @@
   "fileProcessor.ai.workingDirectory.description": "即文件处理器当前显示的目录，也就是它的根目录。浏览到其他目录时会随之改变。",
   "fileProcessor.ai.selectedPaths": "已选择 {{count}} 个路径",
   "fileProcessor.ai.noPathsSelected": "未选择路径",
-
   "fileProcessor.ai.referencePaths": "参考路径",
   "fileProcessor.ai.referencePaths.description": "选择已经组织良好的路径作为范本。AI 将以它们为标准，不会建议修改这些路径。",
-
   "fileProcessor.ai.customGroupingLogic": "自定义分组逻辑（可选）",
-  "fileProcessor.ai.customGroupingLogicPlaceholder": "描述您希望文件如何分组，例如\u201c按文件类型分组\u201d或\u201c按项目名称分组\u201d",
-
+  "fileProcessor.ai.customGroupingLogicPlaceholder": "描述您希望文件如何分组，例如“按文件类型分组”或“按项目名称分组”",
   "fileProcessor.ai.operations": "操作列表",
   "fileProcessor.ai.selectAll": "全选",
   "fileProcessor.ai.apply": "应用",
@@ -56,8 +52,8 @@
   "fileProcessor.ai.applyPartialSuccess": "{{success}} 个操作成功，{{failure}} 个操作失败",
   "fileProcessor.ai.rawTextFallback": "当前模型不支持格式化输出，无法使用一键操作。",
   "fileProcessor.ai.viewResults": "查看结果",
-
   "fileProcessor.ai.opType.Rename": "重命名",
   "fileProcessor.ai.opType.Move": "移动",
-  "fileProcessor.ai.opType.CreateDirectory": "创建目录"
+  "fileProcessor.ai.opType.CreateDirectory": "创建目录",
+  "FileNameModifier.Title": "文件名修改器"
 }

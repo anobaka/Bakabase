@@ -85,7 +85,6 @@
   "Cover cache": "封面缓存",
   "Cover cache has been reset": "封面缓存已重置",
   "Reset cover cache of current resource": "重置当前资源的封面缓存",
-
   "resource.contextMenu.batchPlay.label": "通过外部工具一起打开 {{count}} 个资源",
   "resource.contextMenu.batchPlay.lastUsed": " · 上次使用",
   "resource.contextMenu.batchPlay.scanning": "正在扫描可用播放器…",
@@ -125,7 +124,6 @@
   "resource.contextMenu.presetFilled": "已为您填充了预设值",
   "resource.contextMenu.applyValue": "应用",
   "resource.contextMenu.cancel": "取消",
-
   "propertyValueEditor.noOptions": "该属性暂无可选项。请先配置属性以添加可选值。",
   "propertyValueEditor.editPropertyConfig": "修改属性配置",
   "The following properties are not bound to resource profiles": "以下属性未绑定到资源扩展",
@@ -138,7 +136,6 @@
   "Visible scopes": "可见作用域",
   "This filter is used for quick check and does not change the priority of property value scopes.": "此筛选器仅用于快速查看，不会改变属性值作用域的优先级。",
   "You can click on the scope button to change the priority of the property value scopes.": "您可以点击作用域按钮来改变属性值作用域的优先级。",
-
   "resource.action.aiTranslate": "AI 翻译",
   "resource.action.aiTranslate.tooltip": "使用 AI 将所有文本属性翻译为当前语言",
   "resource.ai.translating": "翻译中...",
@@ -155,7 +152,6 @@
   "resource.ai.applied": "已应用",
   "resource.ai.targetLanguage": "目标语言",
   "resource.ai.modelConfig": "模型配置",
-
   "resource.conflict.tooltip": "发现 {{count}} 个冲突资源",
   "resource.conflict.title": "冲突处理",
   "resource.conflict.loading": "加载冲突数据...",
@@ -172,12 +168,29 @@
   "resource.conflict.apply": "执行",
   "resource.conflict.mergeSuccess": "资源合并成功",
   "resource.conflict.mergeFailed": "资源合并失败",
-
   "resource.playControl.tooltip.launchAsSource": "作为{{source}}资源启动",
   "resource.playControl.tooltip.discoveringFiles": "正在发现可播放文件...",
   "resource.playControl.menu.openVia": "通过 {{source}} 打开",
   "resource.source.FileSystem": "本地文件",
   "resource.source.Steam": "Steam",
   "resource.source.DLsite": "DLsite",
-  "resource.source.ExHentai": "ExHentai"
+  "resource.source.ExHentai": "ExHentai",
+  "resource.play.hostOnly": "该操作在运行 Bakabase 的主机上执行，当前设备无法使用。",
+  "resource.play.noFilesToPreview": "没有可预览的文件",
+  "resource.playOnThisDevice.title": "在此设备播放",
+  "resource.playOnThisDevice.playInBrowser": "在浏览器中播放",
+  "resource.playOnThisDevice.playInBrowserHint": "适用于图片、文本、音频和大部分 H.264 视频。其余格式需要在主机上转换，画质有损且无法拖动进度。",
+  "resource.playOnThisDevice.nativePlayers": "用本设备上的播放器打开",
+  "resource.playOnThisDevice.nativePlayersHint": "播放器直接拉取文件并自行解码——原画质、可拖动，主机不做任何转换。浏览器无法得知你装了哪些播放器，请自行选择。",
+  "resource.playOnThisDevice.needsSetup": "需配置",
+  "resource.playOnThisDevice.unofficial": "未经验证",
+  "resource.playOnThisDevice.copyStreamUrl": "复制链接",
+  "resource.playOnThisDevice.copyStreamUrlHint": "粘贴到任意播放器的「打开网络串流」。即使一键跳转不可用，这个方式始终有效。",
+  "resource.playOnThisDevice.copied": "链接已复制",
+  "resource.playOnThisDevice.copyFailed": "复制链接失败",
+  "resource.playOnThisDevice.platform.android": "Android",
+  "resource.playOnThisDevice.platform.ios": "iOS",
+  "resource.playOnThisDevice.platform.windows": "Windows",
+  "resource.playOnThisDevice.platform.macos": "macOS",
+  "resource.playOnThisDevice.platform.linux": "Linux"
 }

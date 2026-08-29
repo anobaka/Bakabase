@@ -18,27 +18,22 @@
   "comparison.action.hideGroup": "Hide this group",
   "comparison.action.unhideGroup": "Unhide this group",
   "comparison.action.viewNetworkGraph": "View relationship graph",
-
   "comparison.confirm.navigateToSpecialText": "You are about to leave this page and navigate to the Special Text configuration page. Any unsaved changes will be lost. Do you want to continue?",
   "comparison.confirm.delete": "Are you sure you want to delete the plan \"{{name}}\"?",
   "comparison.confirm.clearResults": "Are you sure you want to clear all results for \"{{name}}\"?",
-
   "comparison.success.duplicated": "Plan duplicated successfully",
   "comparison.success.taskStarted": "Comparison task started",
   "comparison.success.resultsCleared": "Results cleared successfully",
-
   "comparison.error.taskFailed": "Failed to start comparison task",
   "comparison.error.nameRequired": "Name is required",
   "comparison.error.rulesRequired": "At least one rule is required",
   "comparison.error.propertyRequired": "All rules must have a property selected",
-
   "comparison.empty.noPlans": "No comparison plans",
   "comparison.empty.description": "Create a comparison plan to find duplicate or similar resources",
   "comparison.empty.noRules": "No rules defined. Add at least one rule.",
   "comparison.empty.noFilters": "No filters configured (will compare all resources)",
   "comparison.empty.noResults": "No comparison results found",
   "comparison.empty.noResources": "No resources in this group",
-
   "comparison.label.planCount": "Total plans",
   "comparison.label.ruleCount": "{{count}} rules",
   "comparison.label.resultGroups": "{{count}} groups found",
@@ -72,16 +67,13 @@
   "comparison.label.filters": "Filters",
   "comparison.label.includeHidden": "Include hidden groups",
   "comparison.label.primaryResource": "Primary resource (suggested to keep)",
-
   "comparison.hint.viewResourcesInMainPage": "You can view these resources on the main resource page by searching with their IDs",
   "comparison.hint.rerunAfterEdit": "After editing resource information, you need to re-execute the comparison plan to generate new results",
   "comparison.hint.configureRulesAfterCreation": "You can configure rules and filters in the plan details after creation",
   "comparison.hint.filtersConfigured": "Filters configured",
-
   "comparison.propertyPool.internal": "Internal",
   "comparison.propertyPool.reserved": "Reserved",
   "comparison.propertyPool.custom": "Custom",
-
   "comparison.mode.strictEqual": "Strict Equal",
   "comparison.mode.strictEqual.description": "Binary score: 1 if exactly equal, 0 otherwise. E.g. 4 vs 4 → 1, 4 vs 5 → 0",
   "comparison.mode.normalizedText": "Normalized Text",
@@ -104,14 +96,12 @@
   "comparison.mode.sameDay.description": "Binary score: 1 if same calendar date, 0 otherwise. E.g. 2024-01-01 10:00 vs 2024-01-01 22:00 → 1",
   "comparison.mode.extensionMap": "Extension Map",
   "comparison.mode.extensionMap.description": "Compares file extension distribution (0~1). E.g. [.jpg,.jpg,.png] vs [.jpg,.png,.png] → distribution similarity",
-
   "comparison.nullBehavior.skip": "Skip",
   "comparison.nullBehavior.skip.description": "Skip this rule, does not affect final score",
   "comparison.nullBehavior.fail": "Fail",
   "comparison.nullBehavior.fail.description": "Rule scores 0",
   "comparison.nullBehavior.pass": "Pass",
   "comparison.nullBehavior.pass.description": "Rule scores 1",
-
   "comparison.description.filters": "Optional, narrow down the resources to compare. If not set, all resources will be compared",
   "comparison.description.rules": "Required, define criteria for determining resource similarity",
   "comparison.description.execute": "Run comparison task and view results",
@@ -127,14 +117,12 @@
   "comparison.description.tolerancePercent": "Maximum allowed relative difference (0~1). E.g. 0.2 means 20%: values 4 and 5 match (1/5=20%)",
   "comparison.description.windowHours": "Maximum allowed time difference in hours. E.g. 24: times within 24 hours match",
   "comparison.description.regexPattern": "Custom regex pattern to extract numbers. Leave empty to use built-in patterns (e.g. v1, ep2, #3)",
-
   "comparison.scoring.title": "Scoring Explanation",
   "comparison.scoring.formula": "Total = Σ(Rule Score × Rule Weight) / Σ(Rule Weight) × 100%",
   "comparison.scoring.ruleScore": "Each rule calculates a score between 0~1 based on its comparison mode",
   "comparison.scoring.weightedSum": "Rule scores are multiplied by their weights, summed, then divided by total weight for weighted average",
   "comparison.scoring.threshold": "When Total Score ≥ Threshold, two resources are considered similar/duplicate",
   "comparison.scoring.example": "Example: Rule A (weight 2) scores 0.8, Rule B (weight 1) scores 0.6, Total = (0.8×2 + 0.6×1) / (2+1) × 100% = 73.3%",
-
   "comparison.networkGraph.title": "Resource Relationship Graph",
   "comparison.networkGraph.hint": "Only relationships with similarity above the plan threshold are shown. Hover over a connection to see detailed comparison.",
   "comparison.networkGraph.truncatedWarning": "Showing {{shown}}/{{total}} relationships (limited for performance)",
@@ -144,5 +132,9 @@
   "comparison.networkGraph.ruleDetails": "Rule Details",
   "comparison.networkGraph.skipped": "Skipped",
   "comparison.networkGraph.vetoed": "Vetoed",
-  "comparison.networkGraph.noData": "No relationship data available"
+  "comparison.networkGraph.noData": "No relationship data available",
+  "comparison.validation.propertyRequired": "Pick a property",
+  "comparison.validation.regexPatternRequired": "Enter a regular expression",
+  "comparison.validation.weightPositive": "Weight must be greater than 0",
+  "comparison.validation.vetoThresholdRange": "Veto threshold must be between 0 and 1"
 }

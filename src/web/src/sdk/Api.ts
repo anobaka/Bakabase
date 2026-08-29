@@ -256,6 +256,12 @@ export type BakabaseAbstractionsModelsDomainConstantsPropertyValueScope =
   | 1009;
 
 /**
+ * [0: Disabled, 1: Enabled, 2: Unrestricted]
+ * @format int32
+ */
+export type BakabaseAbstractionsModelsDomainConstantsRemoteAccessMode = 0 | 1 | 2;
+
+/**
  * [12: Introduction, 13: Rating, 22: Cover, 27: Name]
  * @format int32
  */
@@ -4437,6 +4443,11 @@ export interface BakabaseServiceModelsInputProxyTestInputModel {
   customSites?: string[];
 }
 
+export interface BakabaseServiceModelsInputRemoteAccessModeInputModel {
+  /** [0: Disabled, 1: Enabled, 2: Unrestricted] */
+  mode?: BakabaseAbstractionsModelsDomainConstantsRemoteAccessMode;
+}
+
 export interface BakabaseServiceModelsInputResourceCoverSaveInputModel {
   base64String: string;
   /** [1: Replace, 2: Prepend] */
@@ -4824,6 +4835,23 @@ export interface BakabaseServiceModelsViewProxyTestResultViewModel {
   /** @format int32 */
   elapsedMs: number;
   error?: string;
+}
+
+export interface BakabaseServiceModelsViewRemoteAccessAddressViewModel {
+  url: string;
+  interfaceName: string;
+}
+
+export interface BakabaseServiceModelsViewRemoteAccessClientContextViewModel {
+  isLocal: boolean;
+  /** [0: Disabled, 1: Enabled, 2: Unrestricted] */
+  mode: BakabaseAbstractionsModelsDomainConstantsRemoteAccessMode;
+}
+
+export interface BakabaseServiceModelsViewRemoteAccessSettingsViewModel {
+  /** [0: Disabled, 1: Enabled, 2: Unrestricted] */
+  mode: BakabaseAbstractionsModelsDomainConstantsRemoteAccessMode;
+  addresses: BakabaseServiceModelsViewRemoteAccessAddressViewModel[];
 }
 
 export interface BakabaseServiceModelsViewResourceAncestorViewModel {
@@ -6261,6 +6289,20 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceM
   data?: BakabaseServiceModelsViewFilePlayabilityViewModel;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewRemoteAccessClientContextViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewRemoteAccessClientContextViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewRemoteAccessSettingsViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewRemoteAccessSettingsViewModel;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceHierarchyContextViewModel {
   /** @format int32 */
   code: number;
@@ -7617,9 +7659,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -8379,9 +8423,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -8480,9 +8526,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -8591,9 +8639,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -8638,9 +8688,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -8713,9 +8765,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -8757,9 +8811,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -8801,9 +8857,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -8870,9 +8928,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -10325,9 +10385,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -10376,9 +10438,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -10766,9 +10830,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -11192,9 +11258,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -11271,9 +11339,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -11986,9 +12056,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -12035,9 +12107,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -12092,9 +12166,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -12202,9 +12278,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -12249,9 +12327,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -12293,9 +12373,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -12340,9 +12422,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -12396,9 +12480,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -12478,9 +12564,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -12542,9 +12630,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -12962,9 +13052,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -13013,6 +13105,28 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Resource
+     * @name MarkResourceAsPlayed
+     * @request POST:/resource/{id}/played-at
+     */
+    markResourceAsPlayed: (
+      id: number,
+      query?: {
+        item?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/${id}/played-at`,
+        method: "POST",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
      * @name GetResourceSearchKeywordRecommendation
      * @request GET:/resource/search/keyword-recommendation
      */
@@ -13052,9 +13166,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -13719,9 +13835,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -13821,9 +13939,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -14051,9 +14171,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -14110,9 +14232,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -14165,9 +14289,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -14212,9 +14338,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -14256,9 +14384,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -14307,9 +14437,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -14439,9 +14571,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -14610,9 +14744,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -14657,9 +14793,56 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags File
+     * @name GetRawFile
+     * @request GET:/file/raw
+     */
+    getRawFile: (
+      query?: {
+        fullname?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/file/raw`,
+        method: "GET",
+        query: query,
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getRawFile
+     * @name getRawFileUrl
+     */
+    getRawFileUrl: (query?: {
+        fullname?: string;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/file/raw`;
+      
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -14700,9 +14883,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -14779,9 +14964,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -14823,9 +15010,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -14870,9 +15059,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -14919,9 +15110,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -15059,9 +15252,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -15155,9 +15350,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -15254,9 +15451,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -15399,9 +15598,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -15672,9 +15873,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -15858,9 +16061,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -16168,9 +16373,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -16494,9 +16701,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -16755,9 +16964,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -18736,9 +18947,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -18830,9 +19043,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -18974,9 +19189,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -19018,9 +19235,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -19434,9 +19653,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -19506,9 +19727,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -19683,9 +19906,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -20196,13 +20421,105 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
+      
+      return baseUrl + path;
+    },
+  };
+  remoteAccess = {
+    /**
+     * No description
+     *
+     * @tags RemoteAccess
+     * @name GetRemoteAccessContext
+     * @request GET:/remote-access/context
+     */
+    getRemoteAccessContext: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewRemoteAccessClientContextViewModel,
+        any
+      >({
+        path: `/remote-access/context`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getRemoteAccessContext
+     * @name getRemoteAccessContextUrl
+     */
+    getRemoteAccessContextUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/remote-access/context`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags RemoteAccess
+     * @name GetRemoteAccessSettings
+     * @request GET:/remote-access/settings
+     */
+    getRemoteAccessSettings: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewRemoteAccessSettingsViewModel,
+        any
+      >({
+        path: `/remote-access/settings`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getRemoteAccessSettings
+     * @name getRemoteAccessSettingsUrl
+     */
+    getRemoteAccessSettingsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/remote-access/settings`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags RemoteAccess
+     * @name SetRemoteAccessMode
+     * @request PUT:/remote-access/mode
+     */
+    setRemoteAccessMode: (
+      data: BakabaseServiceModelsInputRemoteAccessModeInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/remote-access/mode`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for setRemoteAccessMode
+     * @name setRemoteAccessModeUrl
+     */
+    setRemoteAccessModeUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/remote-access/mode`;
       
       return baseUrl + path;
     },
@@ -20448,9 +20765,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -20516,9 +20835,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -20612,9 +20933,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -20662,9 +20985,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -21025,9 +21350,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -21072,9 +21399,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -21121,9 +21450,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -21199,9 +21530,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -21250,9 +21583,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -21299,9 +21634,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -21343,9 +21680,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -21387,9 +21726,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
@@ -21545,9 +21886,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       // Build query string
       if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join("&");
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");

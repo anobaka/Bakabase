@@ -93,6 +93,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bakabase.Modules.Player", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bakabase.Modules.Player.Tests", "tests\Bakabase.Modules.Player.Tests\Bakabase.Modules.Player.Tests.csproj", "{4033B5DE-9488-4E62-8A72-104EB27CD539}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bakabase.Modules.RemoteAccess", "modules\Bakabase.Modules.RemoteAccess\Bakabase.Modules.RemoteAccess.csproj", "{0EBC88C9-04CD-4A00-96BD-4281EED00085}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Company|Any CPU = Company|Any CPU
@@ -790,6 +792,24 @@ Global
 		{4033B5DE-9488-4E62-8A72-104EB27CD539}.Release|x64.Build.0 = Release|Any CPU
 		{4033B5DE-9488-4E62-8A72-104EB27CD539}.Release|x86.ActiveCfg = Release|Any CPU
 		{4033B5DE-9488-4E62-8A72-104EB27CD539}.Release|x86.Build.0 = Release|Any CPU
+		{0EBC88C9-04CD-4A00-96BD-4281EED00085}.Company|Any CPU.ActiveCfg = Debug|Any CPU
+		{0EBC88C9-04CD-4A00-96BD-4281EED00085}.Company|Any CPU.Build.0 = Debug|Any CPU
+		{0EBC88C9-04CD-4A00-96BD-4281EED00085}.Company|x64.ActiveCfg = Debug|Any CPU
+		{0EBC88C9-04CD-4A00-96BD-4281EED00085}.Company|x64.Build.0 = Debug|Any CPU
+		{0EBC88C9-04CD-4A00-96BD-4281EED00085}.Company|x86.ActiveCfg = Debug|Any CPU
+		{0EBC88C9-04CD-4A00-96BD-4281EED00085}.Company|x86.Build.0 = Debug|Any CPU
+		{0EBC88C9-04CD-4A00-96BD-4281EED00085}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0EBC88C9-04CD-4A00-96BD-4281EED00085}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0EBC88C9-04CD-4A00-96BD-4281EED00085}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{0EBC88C9-04CD-4A00-96BD-4281EED00085}.Debug|x64.Build.0 = Debug|Any CPU
+		{0EBC88C9-04CD-4A00-96BD-4281EED00085}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{0EBC88C9-04CD-4A00-96BD-4281EED00085}.Debug|x86.Build.0 = Debug|Any CPU
+		{0EBC88C9-04CD-4A00-96BD-4281EED00085}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0EBC88C9-04CD-4A00-96BD-4281EED00085}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0EBC88C9-04CD-4A00-96BD-4281EED00085}.Release|x64.ActiveCfg = Release|Any CPU
+		{0EBC88C9-04CD-4A00-96BD-4281EED00085}.Release|x64.Build.0 = Release|Any CPU
+		{0EBC88C9-04CD-4A00-96BD-4281EED00085}.Release|x86.ActiveCfg = Release|Any CPU
+		{0EBC88C9-04CD-4A00-96BD-4281EED00085}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -833,6 +853,7 @@ Global
 		{61B0FBB7-0EEA-4659-ABE0-383C656D4609} = {8B728E85-2F02-43E7-A3D1-32CDB437DFEC}
 		{8570DCE0-A603-4AD6-A28D-5B28F8C1D7F9} = {CA253913-39DE-BFD0-C9A3-4B7EC6FBDF17}
 		{4033B5DE-9488-4E62-8A72-104EB27CD539} = {8B728E85-2F02-43E7-A3D1-32CDB437DFEC}
+		{0EBC88C9-04CD-4A00-96BD-4281EED00085} = {CA253913-39DE-BFD0-C9A3-4B7EC6FBDF17}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {0EDB2DE5-2794-4737-A47F-105A2CCFFD16}

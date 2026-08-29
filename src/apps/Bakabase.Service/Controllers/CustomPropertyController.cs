@@ -34,6 +34,7 @@ using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using StackExchange.Profiling;
+using Bakabase.Service.Components.RemoteAccess;
 
 namespace Bakabase.Service.Controllers
 {
@@ -49,6 +50,7 @@ namespace Bakabase.Service.Controllers
     {
         [HttpGet("all")]
         [SwaggerOperation(OperationId = "GetAllCustomProperties")]
+        [RemoteAccessible]
         public async Task<ListResponse<CustomPropertyViewModel>> GetAll(
             CustomPropertyAdditionalItem additionalItems = CustomPropertyAdditionalItem.None)
         {
@@ -72,6 +74,7 @@ namespace Bakabase.Service.Controllers
 
         [HttpGet("ids")]
         [SwaggerOperation(OperationId = "GetCustomPropertyByKeys")]
+        [RemoteAccessible]
         public async Task<ListResponse<CustomPropertyViewModel>> GetByKeys(int[] ids,
             CustomPropertyAdditionalItem additionalItems = CustomPropertyAdditionalItem.None)
         {

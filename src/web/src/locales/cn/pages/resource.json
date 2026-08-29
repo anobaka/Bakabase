@@ -12,7 +12,6 @@
   "resource.search.playlist": "播放列表",
   "resource.search.recentlyPlayed": "最近播放",
   "resource.tab.rename": "重命名此标签页",
-
   "resource.empty.title": "未找到资源",
   "resource.empty.checkCriteria": "检查搜索条件",
   "resource.empty.checkCriteriaDesc": "当前的筛选条件可能过于严格，尝试重置搜索条件以显示所有资源。",
@@ -23,19 +22,16 @@
   "resource.empty.configurePathMark": "配置路径标记",
   "resource.empty.configurePathMarkDesc": "路径标记用于定义如何识别和解析资源。通过配置路径标记规则，系统可以从文件路径中提取资源名称、标签等信息。",
   "resource.empty.goToPathMarkConfig": "前往配置",
-
   "resource.order.label": "排序",
   "resource.order.placeholder": "选择排序方式",
   "resource.order.asc": "升序",
   "resource.order.desc": "降序",
-
   "ResourceSearchSortableProperty.FileCreateDt": "文件创建时间",
   "ResourceSearchSortableProperty.FileModifyDt": "文件修改时间",
   "ResourceSearchSortableProperty.Filename": "文件名",
   "ResourceSearchSortableProperty.AddDt": "添加时间",
   "ResourceSearchSortableProperty.PlayedAt": "上次播放时间",
   "ResourceSearchSortableProperty.HealthScore": "健康分",
-
   "resource.display.title": "显示选项",
   "resource.display.columnCount": "列数",
   "resource.display.fillCover": "填充封面",
@@ -88,16 +84,13 @@
   "resource.display.contextMenu.selectValue": "选择值",
   "resource.display.contextMenu.noPresetValues": "无预设值",
   "resource.display.contextMenu.removeItem": "移除",
-
   "resource.shortcut.title": "快捷键",
   "resource.shortcut.selectMultiple": "选择多个资源",
   "resource.shortcut.selectRange": "选择一段范围的资源",
   "resource.shortcut.moreActions": "更多操作",
-
   "resource.recentlyPlayed.title": "最近播放",
   "resource.recentlyPlayed.count": "{{count}} 个资源",
   "resource.recentlyPlayed.empty": "没有最近播放的资源",
-
   "resource.detailLayout.label": "详情布局",
   "resource.detailLayout.title": "资源详情布局",
   "resource.detailLayout.adjustLayout": "调整详情布局",

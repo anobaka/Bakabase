@@ -32,8 +32,8 @@ namespace Bakabase.Abstractions.Components.Configuration
             ".webm",
             ".mpeg",
             ".rmvb",
-            "3gp",
-            "mov"
+            ".3gp",
+            ".mov"
         );
 
         public static readonly ImmutableHashSet<string> AudioExtensions = ImmutableHashSet.Create(

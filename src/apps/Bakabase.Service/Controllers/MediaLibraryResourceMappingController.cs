@@ -6,6 +6,7 @@ using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
+using Bakabase.Service.Components.RemoteAccess;
 
 namespace Bakabase.Service.Controllers;
 
@@ -15,6 +16,7 @@ public class MediaLibraryResourceMappingController(IMediaLibraryResourceMappingS
 {
     [HttpGet]
     [SwaggerOperation(OperationId = "GetAllMediaLibraryResourceMappings")]
+    [RemoteAccessible]
     public async Task<ListResponse<MediaLibraryResourceMapping>> GetAll()
     {
         var items = await service.GetAll();
@@ -23,6 +25,7 @@ public class MediaLibraryResourceMappingController(IMediaLibraryResourceMappingS
 
     [HttpGet("by-resource/{resourceId:int}")]
     [SwaggerOperation(OperationId = "GetMappingsByResourceId")]
+    [RemoteAccessible]
     public async Task<ListResponse<MediaLibraryResourceMapping>> GetByResourceId(int resourceId)
     {
         var items = await service.GetByResourceId(resourceId);
@@ -31,6 +34,7 @@ public class MediaLibraryResourceMappingController(IMediaLibraryResourceMappingS
 
     [HttpGet("by-media-library/{mediaLibraryId:int}")]
     [SwaggerOperation(OperationId = "GetMappingsByMediaLibraryId")]
+    [RemoteAccessible]
     public async Task<ListResponse<MediaLibraryResourceMapping>> GetByMediaLibraryId(int mediaLibraryId)
     {
         var items = await service.GetByMediaLibraryId(mediaLibraryId);

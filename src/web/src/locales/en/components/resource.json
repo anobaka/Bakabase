@@ -85,7 +85,6 @@
   "Cover cache": "Cover cache",
   "Cover cache has been reset": "Cover cache has been reset",
   "Reset cover cache of current resource": "Reset cover cache of current resource",
-
   "resource.contextMenu.batchPlay.label": "Open {{count}} resources together with an external tool",
   "resource.contextMenu.batchPlay.lastUsed": " · last used",
   "resource.contextMenu.batchPlay.scanning": "Scanning for players…",
@@ -125,7 +124,6 @@
   "resource.contextMenu.presetFilled": "A preset value has been filled in for you",
   "resource.contextMenu.applyValue": "Apply",
   "resource.contextMenu.cancel": "Cancel",
-
   "propertyValueEditor.noOptions": "This property has no options yet. Please configure the property first to add available options.",
   "propertyValueEditor.editPropertyConfig": "Modify property configuration",
   "The following properties are not bound to resource profiles": "The following properties are not bound to resource profiles",
@@ -138,7 +136,6 @@
   "Visible scopes": "Visible scopes",
   "This filter is used for quick check and does not change the priority of property value scopes.": "This filter is used for quick check and does not change the priority of property value scopes.",
   "You can click on the scope button to change the priority of the property value scopes.": "You can click on the scope button to change the priority of the property value scopes.",
-
   "resource.action.aiTranslate": "AI Translate",
   "resource.action.aiTranslate.tooltip": "Translate all text properties to your language using AI",
   "resource.ai.translating": "Translating...",
@@ -155,7 +152,6 @@
   "resource.ai.applied": "Applied",
   "resource.ai.targetLanguage": "Target Language",
   "resource.ai.modelConfig": "Model Config",
-
   "resource.conflict.tooltip": "{{count}} conflicting resource(s) found",
   "resource.conflict.title": "Conflict Resolution",
   "resource.conflict.loading": "Loading conflict data...",
@@ -172,12 +168,29 @@
   "resource.conflict.apply": "Apply",
   "resource.conflict.mergeSuccess": "Resources merged successfully",
   "resource.conflict.mergeFailed": "Failed to merge resources",
-
   "resource.playControl.tooltip.launchAsSource": "Launch as {{source}} resource",
   "resource.playControl.tooltip.discoveringFiles": "Discovering playable files...",
   "resource.playControl.menu.openVia": "Open via {{source}}",
   "resource.source.FileSystem": "Local files",
   "resource.source.Steam": "Steam",
   "resource.source.DLsite": "DLsite",
-  "resource.source.ExHentai": "ExHentai"
+  "resource.source.ExHentai": "ExHentai",
+  "resource.play.hostOnly": "This runs on the machine hosting Bakabase and is not available from this device.",
+  "resource.play.noFilesToPreview": "No files to preview",
+  "resource.playOnThisDevice.title": "Play on this device",
+  "resource.playOnThisDevice.playInBrowser": "Play in browser",
+  "resource.playOnThisDevice.playInBrowserHint": "Works for images, text, audio and most H.264 video. Anything else has to be converted on the host, which costs quality and cannot be seeked.",
+  "resource.playOnThisDevice.nativePlayers": "Open in a player on this device",
+  "resource.playOnThisDevice.nativePlayersHint": "The player pulls the file directly and decodes it itself — full quality, seeking works, and the host does no conversion. The browser cannot tell which players you have installed, so pick yours.",
+  "resource.playOnThisDevice.needsSetup": "needs setup",
+  "resource.playOnThisDevice.unofficial": "unverified",
+  "resource.playOnThisDevice.copyStreamUrl": "Copy the link",
+  "resource.playOnThisDevice.copyStreamUrlHint": "Paste it into any player's \"open network stream\". This always works, even where a one-tap link does not.",
+  "resource.playOnThisDevice.copied": "Link copied",
+  "resource.playOnThisDevice.copyFailed": "Could not copy the link",
+  "resource.playOnThisDevice.platform.android": "Android",
+  "resource.playOnThisDevice.platform.ios": "iOS",
+  "resource.playOnThisDevice.platform.windows": "Windows",
+  "resource.playOnThisDevice.platform.macos": "macOS",
+  "resource.playOnThisDevice.platform.linux": "Linux"
 }

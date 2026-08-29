@@ -24,6 +24,7 @@ using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using StackExchange.Profiling;
+using Bakabase.Service.Components.RemoteAccess;
 
 namespace Bakabase.Service.Controllers
 {
@@ -38,6 +39,7 @@ namespace Bakabase.Service.Controllers
     {
         [HttpGet("pool/{pool}")]
         [SwaggerOperation(OperationId = "GetPropertiesByPool")]
+        [RemoteAccessible]
         public async Task<ListResponse<PropertyViewModel>> GetByPool(PropertyPool pool, bool includeDeprecated = false)
         {
             using (MiniProfiler.Current.Step($"GetPropertiesByPool({pool}, includeDeprecated: {includeDeprecated})"))
@@ -60,6 +62,7 @@ namespace Bakabase.Service.Controllers
 
         [HttpGet("property-types-for-manually-setting-value")]
         [SwaggerOperation(OperationId = "GetAvailablePropertyTypesForManuallySettingValue")]
+        [RemoteAccessible]
         public async Task<ListResponse<PropertyTypeForManuallySettingValueViewModel>>
             GetAvailablePropertyTypesForManuallySettingValue()
         {
@@ -96,6 +99,7 @@ namespace Bakabase.Service.Controllers
 
         [HttpGet("pool/{pool}/id/{id}/biz-value")]
         [SwaggerOperation(OperationId = "GetPropertyBizValue")]
+        [RemoteAccessible]
         public async Task<SingletonResponse<string>> GetBizValue(PropertyPool pool, int id, string? dbValue)
         {
             var property = await service.GetProperty(pool, id);
@@ -106,6 +110,7 @@ namespace Bakabase.Service.Controllers
 
         [HttpGet("pool/{pool}/id/{id}/db-value")]
         [SwaggerOperation(OperationId = "GetPropertyDbValue")]
+        [RemoteAccessible]
         public async Task<SingletonResponse<string>> GetDbValue(PropertyPool pool, int id, string? bizValue)
         {
             var property = await service.GetProperty(pool, id);
@@ -116,6 +121,7 @@ namespace Bakabase.Service.Controllers
 
         [HttpGet("best-matching")]
         [SwaggerOperation(OperationId = "FindBestMatchingProperty")]
+        [RemoteAccessible]
         public async Task<SingletonResponse<PropertyViewModel?>> FindBestMatchingProperty(PropertyType type,
             string name)
         {

@@ -1930,6 +1930,24 @@ export const PropertyValueTypeLabel: Record<PropertyValueType, string> = {
   [PropertyValueType.Dynamic]: 'Dynamic'
 };
 
+export enum RemoteAccessMode {
+  Disabled = 0,
+  Enabled = 1,
+  Unrestricted = 2
+}
+
+export const remoteAccessModes = [
+  { label: 'Disabled', value: RemoteAccessMode.Disabled },
+  { label: 'Enabled', value: RemoteAccessMode.Enabled },
+  { label: 'Unrestricted', value: RemoteAccessMode.Unrestricted }
+] as const;
+
+export const RemoteAccessModeLabel: Record<RemoteAccessMode, string> = {
+  [RemoteAccessMode.Disabled]: 'Disabled',
+  [RemoteAccessMode.Enabled]: 'Enabled',
+  [RemoteAccessMode.Unrestricted]: 'Unrestricted'
+};
+
 export enum ReservedProperty {
   Introduction = 12,
   Rating = 13,
@@ -4705,6 +4723,27 @@ export const PresetResourceTypeLabel: Record<PresetResourceType, string> = {
   [PresetResourceType.Tool]: 'Tool'
 };
 
+export enum RemoteAccessDenialReason {
+  None = 0,
+  Disabled = 1,
+  HostOnly = 2,
+  PathNotServable = 3
+}
+
+export const remoteAccessDenialReasons = [
+  { label: 'None', value: RemoteAccessDenialReason.None },
+  { label: 'Disabled', value: RemoteAccessDenialReason.Disabled },
+  { label: 'HostOnly', value: RemoteAccessDenialReason.HostOnly },
+  { label: 'PathNotServable', value: RemoteAccessDenialReason.PathNotServable }
+] as const;
+
+export const RemoteAccessDenialReasonLabel: Record<RemoteAccessDenialReason, string> = {
+  [RemoteAccessDenialReason.None]: 'None',
+  [RemoteAccessDenialReason.Disabled]: 'Disabled',
+  [RemoteAccessDenialReason.HostOnly]: 'HostOnly',
+  [RemoteAccessDenialReason.PathNotServable]: 'PathNotServable'
+};
+
 export enum WorkflowActivityCategory {
   Filter = 1,
   Action = 2,
@@ -4856,6 +4895,7 @@ export const CompressedFileDetectionResultStatusLabel: Record<CompressedFileDete
 };
 
 export const ExtensionMediaTypes: Record<string, MediaType> = {
+  ".3gp": MediaType.Video,
   ".avi": MediaType.Video,
   ".bmp": MediaType.Image,
   ".exe": MediaType.Application,
@@ -4869,6 +4909,7 @@ export const ExtensionMediaTypes: Record<string, MediaType> = {
   ".mid": MediaType.Audio,
   ".midi": MediaType.Audio,
   ".mkv": MediaType.Video,
+  ".mov": MediaType.Video,
   ".mp3": MediaType.Audio,
   ".mp4": MediaType.Video,
   ".mpeg": MediaType.Video,
@@ -4883,9 +4924,7 @@ export const ExtensionMediaTypes: Record<string, MediaType> = {
   ".weba": MediaType.Audio,
   ".webm": MediaType.Video,
   ".webp": MediaType.Image,
-  ".wmv": MediaType.Video,
-  "3gp": MediaType.Video,
-  "mov": MediaType.Video
+  ".wmv": MediaType.Video
 };
 
 export const AvSourceIds: readonly string[] = [

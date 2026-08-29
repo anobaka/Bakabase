@@ -18,6 +18,7 @@ import MediaPreviewerPage from "@/components/MediaPreviewer";
 import "./index.scss";
 import { useAppContextStore } from "@/stores/appContext";
 import { useUiOptionsStore } from "@/stores/options";
+import { useIsRemoteClient } from "@/stores/remoteAccess";
 import { CoverFit } from "@/sdk/constants";
 import { Carousel, Tooltip, Image, Spinner } from "@/components/bakaui";
 
@@ -78,6 +79,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
   const previewerHoverTimerRef = useRef<any>();
 
   const appContext = useAppContextStore((state) => state);
+  const isRemoteClient = useIsRemoteClient();
 
   const containerRef = useRef<HTMLDivElement>(null);
   const maxCoverRawSizeRef = useRef<{ w: number; h: number }>({
@@ -99,7 +101,13 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
       return null;
     }
 
-    const serverAddresses = stableApiEndpoints ?? [envConfig.apiEndpoint];
+    // The endpoints pushed by the server are rewritten to localhost, so spreading
+    // thumbnail load across them only works on the host. On another device those
+    // URLs point back at the device itself and every cover breaks — there, load
+    // from the origin the page was served from.
+    const serverAddresses = isRemoteClient
+      ? [envConfig.apiEndpoint || window.location.origin]
+      : (stableApiEndpoints ?? [envConfig.apiEndpoint]);
     const resourceServerAddresses =
       serverAddresses.length === 1 ? serverAddresses : serverAddresses.slice(1);
     const serverAddress =
@@ -127,6 +135,9 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     resource.path,
     reloadKey,
     resource.reloadToken,
+    // Starts out assuming local and flips once the server answers, so the URLs
+    // have to be rebuilt when it does.
+    isRemoteClient,
   ]);
 
   useUpdateEffect(() => {

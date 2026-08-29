@@ -47,6 +47,7 @@
         <ProjectReference Include="..\..\modules\Bakabase.Modules.Player\Bakabase.Modules.Player.csproj" />
         <ProjectReference Include="..\..\modules\Bakabase.Modules.Subscription\Bakabase.Modules.Subscription.csproj" />
         <ProjectReference Include="..\..\modules\Bakabase.Modules.Workflow\Bakabase.Modules.Workflow.csproj" />
+        <ProjectReference Include="..\..\modules\Bakabase.Modules.RemoteAccess\Bakabase.Modules.RemoteAccess.csproj" />
     </ItemGroup>
     <ItemGroup>
         <None Update="Assets\favicon.ico">

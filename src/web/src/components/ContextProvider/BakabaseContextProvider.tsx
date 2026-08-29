@@ -24,6 +24,7 @@ import duration from "dayjs/plugin/duration";
 import { UIHubConnection } from "@/components/SignalR/UIHubConnection";
 import { getUiTheme, uuidv4 } from "@/components/utils";
 import { useAppOptionsStore, useUiStyleOptionsStore } from "@/stores/options";
+import { useRemoteAccessStore } from "@/stores/remoteAccess";
 import { UiTheme } from "@/sdk/constants";
 import { allCssVariableDefinitions } from "@/cons/uiStyleVariables";
 import i18n from "@/i18n";
@@ -209,6 +210,11 @@ const BakabaseContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
     BApi.options.getAppOptions().then((r) => {
       setAppOptions(r.data);
     });
+
+    // Ask the server which side of the remote-access gate this browser is on, so
+    // actions that run on the host (launching a player, opening a folder) can be
+    // replaced rather than silently executed on the wrong machine.
+    useRemoteAccessStore.getState().load();
 
     console.log("bakabase context provider initialized");
     // Analytics SDKs init in the appOptions effect below — they need the toggle value

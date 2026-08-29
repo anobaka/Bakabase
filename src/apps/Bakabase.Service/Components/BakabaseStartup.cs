@@ -40,13 +40,19 @@ using Bakabase.Modules.ThirdParty.ThirdParties.Cien;
 using Bakabase.Modules.ThirdParty.ThirdParties.Patreon;
 using Bakabase.Modules.ThirdParty.ThirdParties.Bangumi;
 using Bakabase.Modules.ThirdParty.ThirdParties.SoulPlus;
+using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.RemoteAccess.Abstractions.Components;
+using Bakabase.Modules.RemoteAccess.Extensions;
+using Bakabase.Service.Components.RemoteAccess;
 using Bakabase.Service.Components.Tasks;
 using Bakabase.Service.Extensions;
 using Bakabase.Service.Services;
 using Bootstrap.Components.DependencyInjection;
 using Bootstrap.Components.Orm.Extensions;
 using Bootstrap.Components.Storage.OneDrive;
+using Bootstrap.Models.Constants;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Routing;
@@ -98,6 +104,22 @@ namespace Bakabase.Service.Components
             services.TryAddSingleton<BangumiCookieValidator>();
 
             services.AddSingleton<BakabaseOptionsManagerPool>();
+
+            // Remote access. Docker has always served whoever could reach the port, so
+            // it keeps that as its default; a desktop install starts closed, which is a
+            // behavior change for anyone who was quietly relying on LAN reachability.
+            services.AddRemoteAccess(AppService.RuntimeMode == RuntimeMode.Docker
+                ? RemoteAccessMode.Unrestricted
+                : RemoteAccessMode.Disabled);
+            services.AddSingleton<IListeningAddressProvider, AppContextListeningAddressProvider>();
+
+            // Configured rather than passed to AddMvc because the base AppStartup owns
+            // that call; MvcOptions configuration is order-independent.
+            services.Configure<MvcOptions>(o =>
+            {
+                o.Filters.Add<RemoteAccessAuthorizationFilter>();
+                o.Filters.Add<RemoteAccessPathGuardFilter>();
+            });
 
             services.AddSingleton<ThirdPartyHttpRequestLogger>();
 
@@ -302,6 +324,12 @@ namespace Bakabase.Service.Components
                 var deviceId = app.ApplicationServices.GetRequiredService<IDeviceIdService>().GetOrCreate();
                 SentrySdk.ConfigureScope(scope => scope.User = new SentryUser { Id = deviceId });
             }
+
+            // The remote-access gate goes first so nothing downstream — MiniProfiler,
+            // Swagger, static files, the SignalR hub — is reachable from another
+            // machine before it has been judged. Loopback requests pass straight
+            // through, so this is a no-op for the desktop app.
+            app.UseMiddleware<RemoteAccessMiddleware>();
 
             // Enable MiniProfiler - should be early in the pipeline
             app.UseMiniProfiler();

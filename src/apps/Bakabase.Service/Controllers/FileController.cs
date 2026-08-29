@@ -28,6 +28,8 @@ using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.RequestModels;
+using Bakabase.Service.Components.Playback;
+using Bakabase.Service.Components.RemoteAccess;
 using Bakabase.Service.Extensions;
 using Bakabase.Service.Models.Input;
 using Bakabase.Service.Models.View;
@@ -1150,6 +1152,7 @@ namespace Bakabase.Service.Controllers
 
         [HttpGet("playability")]
         [SwaggerOperation(OperationId = "CheckFilePlayability")]
+        [RemoteAccessible(PathParameters = [nameof(fullname)])]
         public async Task<SingletonResponse<FilePlayabilityViewModel>> CheckPlayability(string fullname)
         {
             var result = new FilePlayabilityViewModel();
@@ -1364,8 +1367,42 @@ namespace Bakabase.Service.Controllers
             }
         }
 
+        /// <summary>
+        /// Serves a file's own bytes, unchanged.
+        /// <para>
+        /// This is the URL handed to a native player. VLC, Infuse, MX and the rest
+        /// demux and decode everything themselves, so probing the file and deciding
+        /// between direct play, remux and transcode — all of which
+        /// <see cref="Play"/> does — is wasted work that can only get in their way.
+        /// Range requests are enabled, which is what makes seeking work.
+        /// </para>
+        /// <para>
+        /// Deliberately not archive-aware: an entry inside a zip is not a thing an
+        /// external player can seek within, and <see cref="Play"/> already streams
+        /// those for the browser.
+        /// </para>
+        /// </summary>
+        [HttpGet("raw")]
+        [SwaggerOperation(OperationId = "GetRawFile")]
+        [RemoteAccessible(PathParameters = [nameof(fullname)])]
+        public IActionResult GetRaw(string fullname)
+        {
+            if (!System.IO.File.Exists(fullname))
+            {
+                return NotFound();
+            }
+
+            var stream = new FileStream(fullname, FileMode.Open, FileAccess.Read, FileShare.Read);
+            HttpContext.RequestAborted.Register(() => stream.Dispose());
+
+            // MimeKit answers "application/octet-stream" for anything it does not
+            // know, which is exactly right here: the player decides, not us.
+            return File(stream, MimeTypes.GetMimeType(fullname), enableRangeProcessing: true);
+        }
+
         [HttpGet("play")]
         [SwaggerOperation(OperationId = "PlayFile")]
+        [RemoteAccessible(PathParameters = [nameof(fullname)])]
         public async Task<IActionResult> Play(string fullname)
         {
             var ext = Path.GetExtension(fullname);
@@ -1410,23 +1447,13 @@ namespace Bakabase.Service.Controllers
                 // Handle video transcoding if needed
                 if (InternalOptions.VideoExtensions.Contains(ext))
                 {
-                    string codecName;
+                    string videoCodec;
+                    string audioCodec;
                     try
                     {
                         var ffprobePath = _ffMpegService.FfProbeExecutable;
-                        var ffprobeResult = await Cli.Wrap(ffprobePath)
-                            .WithArguments(args =>
-                            {
-                                args
-                                    .Add("-v").Add("error")
-                                    .Add("-select_streams").Add("v:0")
-                                    .Add("-show_entries").Add("stream=codec_name")
-                                    .Add("-of").Add("default=noprint_wrappers=1:nokey=1")
-                                    .Add(fullname);
-                            })
-                            .WithValidation(CommandResultValidation.None)
-                            .ExecuteBufferedAsync(HttpContext.RequestAborted);
-                        codecName = ffprobeResult.StandardOutput.Trim();
+                        videoCodec = await ProbeCodecName(ffprobePath, fullname, "v:0");
+                        audioCodec = await ProbeCodecName(ffprobePath, fullname, "a:0");
                     }
                     catch (OperationCanceledException)
                         when (HttpContext.RequestAborted.IsCancellationRequested)
@@ -1435,14 +1462,27 @@ namespace Bakabase.Service.Controllers
                         return new EmptyResult();
                     }
 
-                    // If video is already h264, stream directly
-                    if (codecName.ToLower() == "h264")
+                    var plan = VideoDeliveryPlanner.Plan(fullname, videoCodec, audioCodec);
+                    _logger.LogDebug("Delivering {FileName} by {Method}: {Reason}", Path.GetFileName(fullname),
+                        plan.Method, plan.Reason);
+
+                    if (plan.Method == VideoDeliveryMethod.DirectPlay)
                     {
                         var stream = new FileStream(fullname, FileMode.Open, FileAccess.Read, FileShare.Read);
                         HttpContext.RequestAborted.Register(() => stream.Dispose());
-                        return File(stream, "video/mp4", enableRangeProcessing: true);
+                        // Say what the bytes actually are. This branch only runs for
+                        // containers a browser demuxes, so the honest type is also the
+                        // one that plays — and range requests make it seekable.
+                        return File(stream, MimeTypes.GetMimeType(fullname), enableRangeProcessing: true);
                     }
-                    else
+
+                    if (plan.Method == VideoDeliveryMethod.Remux)
+                    {
+                        return await StreamRemuxed(fullname, plan);
+                    }
+
+                    await FfMpegStreamingSlots.WaitAsync(HttpContext.RequestAborted);
+                    try
                     {
                         // Get hardware acceleration info (cached)
                         var hwAccelInfo =
@@ -1564,6 +1604,10 @@ namespace Bakabase.Service.Controllers
 
                         return new EmptyResult();
                     }
+                    finally
+                    {
+                        FfMpegStreamingSlots.Release();
+                    }
                 }
                 else
                 {
@@ -1575,6 +1619,85 @@ namespace Bakabase.Service.Controllers
             }
 
             return StatusCode((int)HttpStatusCode.UnsupportedMediaType);
+        }
+
+        /// <summary>
+        /// Reads one stream's codec name via ffprobe. Returns empty when the file has
+        /// no such stream, which is how a video without audio is recognised.
+        /// </summary>
+        private async Task<string> ProbeCodecName(string ffprobePath, string fullname, string streamSelector)
+        {
+            var result = await Cli.Wrap(ffprobePath)
+                .WithArguments(args =>
+                {
+                    args
+                        .Add("-v").Add("error")
+                        .Add("-select_streams").Add(streamSelector)
+                        .Add("-show_entries").Add("stream=codec_name")
+                        .Add("-of").Add("default=noprint_wrappers=1:nokey=1")
+                        .Add(fullname);
+                })
+                .WithValidation(CommandResultValidation.None)
+                .ExecuteBufferedAsync(HttpContext.RequestAborted);
+
+            // A file with several streams prints one name per line; the first is the
+            // one the selector asked for.
+            return result.StandardOutput.Split('\n', StringSplitOptions.RemoveEmptyEntries) is [var first, ..]
+                ? first.Trim()
+                : string.Empty;
+        }
+
+        /// <summary>
+        /// Repackages the file into fragmented MP4 without re-encoding the video, so a
+        /// browser can play a stream it would otherwise reject purely because of the
+        /// container or the audio track. Costs a fraction of a transcode.
+        /// <para>
+        /// Like the transcode path this is a pipe, so the response carries no ranges
+        /// and the user cannot seek. That is the trade for not re-encoding; seeking
+        /// needs a segmented (HLS) delivery, which is deliberately not built here.
+        /// </para>
+        /// </summary>
+        private async Task<IActionResult> StreamRemuxed(string fullname, VideoDeliveryPlan plan)
+        {
+            await FfMpegStreamingSlots.WaitAsync(HttpContext.RequestAborted);
+            try
+            {
+                var command = Cli.Wrap(_ffMpegService.FfMpegExecutable)
+                    .WithArguments(args =>
+                    {
+                        args
+                            .Add("-i").Add(fullname)
+                            .Add("-c:v").Add("copy")
+                            .Add("-c:a").Add(plan.CopyAudio ? "copy" : "aac")
+                            .Add("-f").Add("mp4")
+                            .Add("-movflags").Add("frag_keyframe+empty_moov")
+                            .Add("pipe:1");
+                    })
+                    .WithStandardOutputPipe(PipeTarget.ToStream(Response.Body, true));
+
+                Response.ContentType = "video/mp4";
+                var encodedName = Uri.EscapeDataString(Path.GetFileName(fullname));
+                Response.Headers["Content-Disposition"] = $"inline; filename*=UTF-8''{encodedName}";
+
+                try
+                {
+                    await command.ExecuteAsync(HttpContext.RequestAborted);
+                }
+                catch (OperationCanceledException) when (HttpContext.RequestAborted.IsCancellationRequested)
+                {
+                    // Client navigated away / closed the tab; not an error.
+                }
+                catch (CommandExecutionException ex)
+                {
+                    _logger.LogWarning(ex, "Remuxing failed for {FileName}", Path.GetFileName(fullname));
+                }
+
+                return new EmptyResult();
+            }
+            finally
+            {
+                FfMpegStreamingSlots.Release();
+            }
         }
 
         [HttpPost("decompression")]
@@ -1810,6 +1933,15 @@ namespace Bakabase.Service.Controllers
         private static readonly string PngContentType = MimeTypes.GetMimeType(".png");
 
         // Browser-supported video codecs
+        /// <summary>
+        /// Caps how many ffmpeg pipes may run at once. Each remux or transcode is a
+        /// process reading a file and writing into a response; without a cap, a phone
+        /// scrolling a grid of videos could start one per request and bury the host —
+        /// which is the user's daily-driver desktop, not a dedicated server.
+        /// </summary>
+        private static readonly SemaphoreSlim FfMpegStreamingSlots =
+            new(Math.Max(2, Environment.ProcessorCount / 4));
+
         // H.264/AVC: Widely supported across all browsers
         // H.265/HEVC: Safari, partial Chrome/Edge
         // VP8/VP9: Chrome, Firefox, Edge
@@ -1853,6 +1985,7 @@ namespace Bakabase.Service.Controllers
 
         [HttpGet("all-files")]
         [SwaggerOperation(OperationId = "GetAllFiles")]
+        [RemoteAccessible(PathParameters = [nameof(path)])]
         public async Task<ListResponse<string>> GetAllFiles(string path)
         {
             if (System.IO.File.Exists(path))
@@ -1872,6 +2005,7 @@ namespace Bakabase.Service.Controllers
 
         [HttpGet("compressed-file/entries")]
         [SwaggerOperation(OperationId = "GetCompressedFileEntries")]
+        [RemoteAccessible(PathParameters = [nameof(compressedFilePath)])]
         public async Task<ListResponse<CompressedFileEntry>> GetCompressFileEntries(string compressedFilePath)
         {
             var sw = Stopwatch.StartNew();

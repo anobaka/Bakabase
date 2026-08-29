@@ -15,6 +15,7 @@ import ContactUs from "@/pages/configuration/components/ContactUs";
 import Functional from "@/pages/configuration/components/Functional";
 import Others from "@/pages/configuration/components/Others";
 import Development from "@/pages/configuration/components/Development";
+import RemoteAccess from "@/pages/configuration/components/RemoteAccess";
 import {
   normalizeQuery,
   SettingsSearchResults,
@@ -73,6 +74,7 @@ const ConfigurationPage: React.FC = () => {
             <Dependency query={query} />
             <Functional applyPatches={applyPatches} query={query} />
             <Others applyPatches={applyPatches} query={query} />
+            <RemoteAccess query={query} />
             <AppInfo appInfo={appInfo} applyPatches={applyPatches} query={query} />
             <Development query={query} />
             <ContactUs query={query} />

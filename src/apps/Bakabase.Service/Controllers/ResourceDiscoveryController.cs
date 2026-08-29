@@ -5,6 +5,7 @@ using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
+using Bakabase.Service.Components.RemoteAccess;
 
 namespace Bakabase.Service.Controllers;
 
@@ -23,6 +24,7 @@ public class ResourceDiscoveryController(ResourceDiscoveryService discoveryServi
     /// </summary>
     [HttpGet("stream")]
     [SwaggerOperation(OperationId = "StreamResourceDiscovery")]
+    [RemoteAccessible]
     public async Task Stream()
     {
         Response.ContentType = "text/event-stream";
@@ -61,6 +63,7 @@ public class ResourceDiscoveryController(ResourceDiscoveryService discoveryServi
     /// </summary>
     [HttpPost("subscribe")]
     [SwaggerOperation(OperationId = "SubscribeResourceDiscovery")]
+    [RemoteAccessible]
     public async Task<BaseResponse> Subscribe([FromBody] DiscoverySubscribeRequest request)
     {
         await discoveryService.EnqueueRequest(request.ResourceId, request.Origin, request.DataType);
@@ -72,6 +75,7 @@ public class ResourceDiscoveryController(ResourceDiscoveryService discoveryServi
     /// </summary>
     [HttpPost("subscribe/batch")]
     [SwaggerOperation(OperationId = "SubscribeResourceDiscoveryBatch")]
+    [RemoteAccessible]
     public async Task<BaseResponse> SubscribeBatch([FromBody] DiscoverySubscribeRequest[] requests)
     {
         foreach (var request in requests)
