@@ -124,8 +124,20 @@ class BakabaseApiClient {
   }
 
   /// The raw byte stream with range support — what native players get handed.
+  /// Deliberately not archive-aware; use [playFileUrl] for archive entries.
   String rawFileUrl(String path) => Uri.parse(baseUrl)
       .replace(path: '/file/raw', queryParameters: {'fullname': path}).toString();
+
+  /// The browser-oriented delivery endpoint. The one thing the app needs it
+  /// for is entries inside archives (`archive.zip!inner/file`), which the
+  /// server extracts and streams — without seeking.
+  String playFileUrl(String path) => Uri.parse(baseUrl)
+      .replace(path: '/file/play', queryParameters: {'fullname': path}).toString();
+
+  /// Best stream URL for a playable item: raw (seekable) for plain files,
+  /// the extracting endpoint for archive entries.
+  String streamUrl(String path) =>
+      path.contains('!') ? playFileUrl(path) : rawFileUrl(path);
 
   Future<Map<String, dynamic>> _get(String path) => _request('GET', path);
 

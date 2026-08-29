@@ -22,6 +22,14 @@ dependencies:
   bonsoir: ^5.1.11
   shared_preferences: ^2.3.0
   cached_network_image: ^3.4.1
+  # In-app playback: libmpv decodes MKV/HEVC/DTS on-device, which is the whole
+  # point of streaming /file/raw instead of transcoding on the host.
+  media_kit: ^1.1.11
+  media_kit_video: ^1.2.5
+  media_kit_libs_video: ^1.0.5
+  # External-player handoff (ported from the web's playerSchemes.ts).
+  url_launcher: ^6.3.0
+  android_intent_plus: ^5.1.0
 
 dev_dependencies:
   flutter_test:

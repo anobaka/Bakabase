@@ -37,6 +37,14 @@
 	<array>
 		<string>_bakabase._tcp</string>
 	</array>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<!-- External-player hand-off; see lib/playback/external_players.dart. -->
+		<string>vlc-x-callback</string>
+		<string>infuse</string>
+		<string>nplayer-http</string>
+		<string>SenPlayer</string>
+	</array>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Bakabase looks for your Bakabase server on the local network so you can browse and play your library.</string>
 	<key>UIApplicationSceneManifest</key>
