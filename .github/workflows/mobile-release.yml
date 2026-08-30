@@ -65,9 +65,29 @@ jobs:
           merge-multiple: true
           path: dist
 
+      - name: Install ossutil
+        run: |
+          wget -O ossutil64 https://gosspublic.alicdn.com/ossutil/1.7.16/ossutil64
+          chmod +x ossutil64
+
+      # Mirror the raw packages to OSS, same as the desktop installers, so the
+      # release notes can offer Aliyun CDN links next to the GitHub assets.
+      - name: Upload raw packages to OSS
+        env:
+          OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
+          OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+          OSS_ENDPOINT: http://oss-accelerate.aliyuncs.com
+        run: |
+          ./ossutil64 config -e $OSS_ENDPOINT -i $OSS_ACCESS_KEY_ID -k $OSS_ACCESS_KEY_SECRET
+          DEST="oss://anobaka-public/app/bakabase-mobile/archives/${{ needs.prepare.outputs.version }}"
+          for f in dist/*; do
+            ./ossutil64 cp -f "$f" "$DEST/$(basename "$f")"
+          done
+
       - name: Compose release notes
         run: |
           VERSION="${{ needs.prepare.outputs.version }}"
+          CDN="https://cdn-public.anobaka.com/app/bakabase-mobile/archives/$VERSION"
           cat > NOTES.md <<EOF
           ## Bakabase Mobile $VERSION
 
@@ -89,7 +109,13 @@ jobs:
           Free Apple IDs are limited to 3 sideloaded apps and 7-day resigning
           (SideStore refreshes automatically on the same Wi-Fi).
           免费 Apple ID 有 3 个应用与 7 天重签限制（SideStore 可在同一 Wi-Fi 下自动续签）。
+
+          ### Downloads / 下载地址（Aliyun CDN）
           EOF
+
+          for f in dist/*; do
+            echo "- [$(basename "$f")]($CDN/$(basename "$f"))" >> NOTES.md
+          done
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
