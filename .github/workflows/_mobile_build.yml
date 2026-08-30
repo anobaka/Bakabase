@@ -15,9 +15,12 @@ on:
         required: true
         type: string
       build_number:
+        # A string on purpose: github.run_number is a string in expression
+        # context, and a number-typed input rejects it at call time — which
+        # kills the whole workflow before any job starts.
         description: "Numeric build number (--build-number)"
         required: true
-        type: number
+        type: string
       asset_suffix:
         description: "Extra suffix in artifact file names, e.g. '-dev-abc1234'"
         required: false
