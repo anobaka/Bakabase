@@ -31,7 +31,7 @@ SOURCE_TEMPLATE = {
 
 APP_TEMPLATE = {
     "name": "Bakabase Mobile",
-    "bundleIdentifier": "com.bakabase.bakabaseMobile",
+    "bundleIdentifier": "com.bakabase.mobile",
     "developerName": "anobaka",
     "subtitle": "Browse and play your Bakabase library",
     "localizedDescription": (

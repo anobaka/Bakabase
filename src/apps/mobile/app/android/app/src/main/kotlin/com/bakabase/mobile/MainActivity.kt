@@ -1,4 +1,4 @@
-package com.bakabase.bakabase_mobile
+package com.bakabase.mobile
 
 import io.flutter.embedding.android.FlutterActivity
 
