@@ -135,6 +135,26 @@ class BakabaseApiClient {
     return (_listOf(data)).map(PlayableItem.fromJson).toList();
   }
 
+  /// Every file under a path (or the file itself), naturally ordered by the
+  /// server. The ground truth the detail page classifies — playable-items only
+  /// reflects the user's curated profile rules and is often empty.
+  Future<List<String>> allFiles(String path) async {
+    final response = await _request('GET', '/file/all-files', queryParameters: {'path': path});
+    return (response['data'] as List<dynamic>? ?? const []).whereType<String>().toList();
+  }
+
+  /// Entries inside an archive, as full `archive.zip!inner/path` keys the
+  /// file endpoints accept.
+  Future<List<String>> compressedEntries(String archivePath) async {
+    final response = await _request('GET', '/file/compressed-file/entries',
+        queryParameters: {'compressedFilePath': archivePath});
+    return _listOf(response)
+        .map((e) => e['path'] as String?)
+        .whereType<String>()
+        .map((inner) => '$archivePath!$inner')
+        .toList();
+  }
+
   /// Play history, newest first, with total count for paging.
   Future<(List<PlayHistoryEntry>, int)> playHistory({int page = 1, int pageSize = 50}) async {
     final response = await _request('GET', '/play-history',

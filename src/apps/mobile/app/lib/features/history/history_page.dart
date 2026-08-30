@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/api_client.dart';
 import '../../core/models.dart';
+import '../../l10n/app_localizations.dart';
 import '../resource/resource_page.dart';
 
 /// Play history, newest first — including entries this very device created via
@@ -98,8 +99,9 @@ class _HistoryPageState extends State<HistoryPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('Play history')),
+      appBar: AppBar(title: Text(l10n.playHistory)),
       body: _error != null
           ? Center(
               child: Text(
@@ -132,7 +134,7 @@ class _HistoryPageState extends State<HistoryPage> {
                           ),
                         ),
                   title: Text(
-                    resource?.title ?? 'Resource #${entry.resourceId} (removed)',
+                    resource?.title ?? l10n.removedResource(entry.resourceId),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),

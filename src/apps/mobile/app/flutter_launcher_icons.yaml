@@ -1,0 +1,6 @@
+# App icon = the desktop app's logo (src/web/src/assets/logo/bakabase.png).
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/icon.png"
+  remove_alpha_ios: true

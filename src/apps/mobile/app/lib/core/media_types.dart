@@ -23,6 +23,11 @@ const _imageExtensions = {
 /// The server addresses entries inside archives as `archive.zip!inner/path`.
 const archiveEntrySeparator = '!';
 
+/// Mirror of the server's InternalOptions.CompressedFileExtensions.
+const _compressedExtensions = {
+  '.rar', '.7z', '.zip', '.tar', '.bz2', '.gz', '.tgz',
+};
+
 MediaKind classifyPath(String path) {
   final dot = path.lastIndexOf('.');
   if (dot < 0) {
@@ -42,3 +47,33 @@ MediaKind classifyPath(String path) {
 }
 
 bool isArchiveEntry(String path) => path.contains(archiveEntrySeparator);
+
+bool isCompressedFile(String path) {
+  final dot = path.lastIndexOf('.');
+  return dot >= 0 && _compressedExtensions.contains(path.substring(dot).toLowerCase());
+}
+
+/// Natural ordering ("page2" before "page10"), so comic pages read in the
+/// order humans numbered them. The server's all-files endpoint already sorts
+/// naturally; archive entries arrive unsorted and go through this.
+int naturalCompare(String a, String b) {
+  final digits = RegExp(r'\d+|\D+');
+  final aParts = digits.allMatches(a.toLowerCase()).map((m) => m.group(0)!).toList();
+  final bParts = digits.allMatches(b.toLowerCase()).map((m) => m.group(0)!).toList();
+
+  for (var i = 0; i < aParts.length && i < bParts.length; i++) {
+    final aNum = int.tryParse(aParts[i]);
+    final bNum = int.tryParse(bParts[i]);
+    int result;
+    if (aNum != null && bNum != null) {
+      result = aNum.compareTo(bNum);
+    } else {
+      result = aParts[i].compareTo(bParts[i]);
+    }
+    if (result != 0) {
+      return result;
+    }
+  }
+
+  return aParts.length.compareTo(bParts.length);
+}

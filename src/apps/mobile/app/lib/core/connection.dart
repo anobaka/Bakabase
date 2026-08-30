@@ -30,11 +30,19 @@ class Connected extends ServerConnectionState {
   final ServerInfo server;
 }
 
+/// Why a connect attempt failed — as data, so the UI layer owns the wording
+/// (and its translation).
+enum ConnectionFailureKind { network, protocolTooNew, protocolTooOld }
+
 class ConnectionFailed extends ServerConnectionState {
-  const ConnectionFailed(this.baseUrl, this.message, {this.denial});
+  const ConnectionFailed(this.baseUrl, this.kind, this.detail, {this.denial});
 
   final String baseUrl;
-  final String message;
+  final ConnectionFailureKind kind;
+
+  /// The raw error message for [ConnectionFailureKind.network]; the server's
+  /// protocol version for the protocol kinds.
+  final String detail;
   final RemoteAccessDenial? denial;
 }
 
@@ -54,22 +62,19 @@ class ConnectionController extends Notifier<ServerConnectionState> {
     try {
       info = await api.serverInfo();
     } on ApiException catch (e) {
-      state = ConnectionFailed(baseUrl, e.message, denial: e.denial);
+      state = ConnectionFailed(baseUrl, ConnectionFailureKind.network, e.message,
+          denial: e.denial);
       return;
     }
 
     if (info.protocolVersion > maxSupportedProtocol) {
       state = ConnectionFailed(
-        baseUrl,
-        'Server speaks protocol v${info.protocolVersion}; this app supports up to v$maxSupportedProtocol. Update the app.',
-      );
+          baseUrl, ConnectionFailureKind.protocolTooNew, '${info.protocolVersion}');
       return;
     }
     if (info.protocolVersion < minSupportedProtocol) {
       state = ConnectionFailed(
-        baseUrl,
-        'Server speaks protocol v${info.protocolVersion}; this app needs at least v$minSupportedProtocol. Update Bakabase on the host.',
-      );
+          baseUrl, ConnectionFailureKind.protocolTooOld, '${info.protocolVersion}');
       return;
     }
 

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api_client.dart';
 import '../../core/connection.dart';
+import '../../l10n/app_localizations.dart';
 import '../../discovery/discovered_server.dart';
 import '../../discovery/discovery_service.dart';
 
@@ -49,26 +50,27 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final connection = ref.watch(connectionProvider);
     final profiles = ref.watch(serverProfilesProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Connect to Bakabase')),
+      appBar: AppBar(title: Text(l10n.connectTitle)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           if (connection is Connecting)
-            const ListTile(
-              leading: SizedBox(
+            ListTile(
+              leading: const SizedBox(
                 width: 24,
                 height: 24,
                 child: CircularProgressIndicator(strokeWidth: 2),
               ),
-              title: Text('Connecting…'),
+              title: Text(l10n.connecting),
             ),
           if (connection is ConnectionFailed) _FailureCard(failure: connection),
           _SectionHeader(
-            title: 'On this network',
+            title: l10n.onThisNetwork,
             trailing: const SizedBox(
               width: 14,
               height: 14,
@@ -79,13 +81,9 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
             valueListenable: _discovery.servers,
             builder: (context, servers, _) {
               if (servers.isEmpty) {
-                return const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8),
-                  child: Text(
-                    'Searching… Make sure Bakabase is running with remote '
-                    'access enabled, and that this device is on the same '
-                    'network. On iOS, allow local network access when asked.',
-                  ),
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Text(l10n.discoveryHint),
                 );
               }
               return Column(
@@ -107,12 +105,12 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
             },
           ),
           const SizedBox(height: 16),
-          const _SectionHeader(title: 'Remembered'),
+          _SectionHeader(title: l10n.remembered),
           profiles.when(
             data: (list) => list.isEmpty
-                ? const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8),
-                    child: Text('Servers you connect to are remembered here.'),
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Text(l10n.rememberedEmpty),
                   )
                 : Column(
                     children: [
@@ -131,7 +129,7 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
             error: (_, _) => const SizedBox.shrink(),
           ),
           const SizedBox(height: 16),
-          const _SectionHeader(title: 'By address'),
+          _SectionHeader(title: l10n.byAddress),
           Row(
             children: [
               Expanded(
@@ -149,7 +147,7 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
               const SizedBox(width: 8),
               FilledButton(
                 onPressed: _connectManual,
-                child: const Text('Connect'),
+                child: Text(l10n.connect),
               ),
             ],
           ),
@@ -186,12 +184,14 @@ class _FailureCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hint = switch (failure.denial) {
-      RemoteAccessDenial.disabled =>
-        'Remote access is turned off. Enable it in Bakabase on the host '
-            'machine (Settings → Remote access).',
-      _ => failure.message,
-    };
+    final l10n = AppLocalizations.of(context)!;
+    final hint = failure.denial == RemoteAccessDenial.disabled
+        ? l10n.remoteAccessDisabledHint
+        : switch (failure.kind) {
+            ConnectionFailureKind.protocolTooNew => l10n.protocolTooNew(failure.detail),
+            ConnectionFailureKind.protocolTooOld => l10n.protocolTooOld(failure.detail),
+            ConnectionFailureKind.network => failure.detail,
+          };
 
     return Card(
       color: Theme.of(context).colorScheme.errorContainer,
@@ -201,7 +201,7 @@ class _FailureCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Could not connect to ${failure.baseUrl}',
+              l10n.couldNotConnect(failure.baseUrl),
               style: Theme.of(context).textTheme.titleSmall,
             ),
             const SizedBox(height: 4),

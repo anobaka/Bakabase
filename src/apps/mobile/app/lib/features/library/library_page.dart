@@ -3,25 +3,33 @@ import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api_client.dart';
 import '../../core/connection.dart';
 import '../../core/models.dart';
 import '../history/history_page.dart';
 import '../resource/resource_page.dart';
+import '../../l10n/app_localizations.dart';
 
 /// The sort choices offered in the grid; values mirror the server's
-/// ResourceSearchSortableProperty.
+/// ResourceSearchSortableProperty. Labels live in the l10n layer.
 enum SortChoice {
-  addDt(6, 'Recently added'),
-  playedAt(11, 'Recently played'),
-  fileModifyDt(2, 'File modified'),
-  filename(3, 'Filename');
+  addDt(6),
+  playedAt(11),
+  fileModifyDt(2),
+  filename(3);
 
-  const SortChoice(this.property, this.label);
+  const SortChoice(this.property);
 
   final int property;
-  final String label;
+
+  String label(AppLocalizations l10n) => switch (this) {
+        SortChoice.addDt => l10n.sortAddDt,
+        SortChoice.playedAt => l10n.sortPlayedAt,
+        SortChoice.fileModifyDt => l10n.sortFileModifyDt,
+        SortChoice.filename => l10n.sortFilename,
+      };
 }
 
 /// The main browsing surface: media-library chips, keyword search, and an
@@ -136,6 +144,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final connection = ref.watch(connectionProvider);
     if (connection is! Connected) {
       return const SizedBox.shrink();
@@ -146,7 +155,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
         title: Text(connection.server.name),
         actions: [
           PopupMenuButton<String>(
-            tooltip: 'Sort',
+            tooltip: l10n.sortTooltip,
             icon: const Icon(Icons.sort),
             onSelected: (value) {
               setState(() {
@@ -163,24 +172,34 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                 CheckedPopupMenuItem(
                   value: choice.name,
                   checked: _sort == choice,
-                  child: Text(choice.label),
+                  child: Text(choice.label(l10n)),
                 ),
               const PopupMenuDivider(),
               PopupMenuItem(
                 value: 'direction',
-                child: Text(_sortAsc ? 'Ascending ↑' : 'Descending ↓'),
+                child: Text(_sortAsc ? l10n.ascending : l10n.descending),
               ),
             ],
           ),
           IconButton(
-            tooltip: 'Play history',
+            tooltip: l10n.playHistoryTooltip,
             icon: const Icon(Icons.history),
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute<void>(builder: (_) => HistoryPage(api: _api)),
             ),
           ),
           IconButton(
-            tooltip: 'Switch server',
+            // The escape hatch to everything the thin app deliberately does
+            // not implement: the full desktop web UI, in the system browser.
+            tooltip: l10n.openWebUiTooltip,
+            icon: const Icon(Icons.open_in_browser),
+            onPressed: () => launchUrl(
+              Uri.parse(_api.baseUrl),
+              mode: LaunchMode.externalApplication,
+            ),
+          ),
+          IconButton(
+            tooltip: l10n.switchServerTooltip,
             icon: const Icon(Icons.swap_horiz),
             onPressed: () => ref.read(connectionProvider.notifier).disconnect(),
           ),
@@ -192,10 +211,10 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
             child: TextField(
               controller: _keyword,
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.search),
-                hintText: 'Search resources',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.search),
+                hintText: l10n.searchHint,
+                border: const OutlineInputBorder(),
                 isDense: true,
               ),
               onChanged: _onKeywordChanged,
@@ -211,7 +230,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                   Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: FilterChip(
-                      label: const Text('All'),
+                      label: Text(l10n.allLibraries),
                       selected: _selectedLibraryId == null,
                       onSelected: (_) {
                         setState(() => _selectedLibraryId = null);

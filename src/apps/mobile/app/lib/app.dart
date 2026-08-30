@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/connection.dart';
 import 'features/connect/connect_page.dart';
 import 'features/library/library_page.dart';
+import 'l10n/app_localizations.dart';
 
 class BakabaseApp extends ConsumerWidget {
   const BakabaseApp({super.key});
@@ -13,7 +14,11 @@ class BakabaseApp extends ConsumerWidget {
     final connection = ref.watch(connectionProvider);
 
     return MaterialApp(
-      title: 'Bakabase',
+      onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
+      // English + Chinese, following the system locale by default (the
+      // MaterialApp default resolution picks the closest supported locale).
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0E7C6B)),
       ),

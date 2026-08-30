@@ -48,5 +48,23 @@ void main() {
       expect(isArchiveEntry('/a/comic.zip!001.jpg'), isTrue);
       expect(isArchiveEntry('/a/001.jpg'), isFalse);
     });
+
+    test('compressed files are detected by extension', () {
+      expect(isCompressedFile('/a/comic.ZIP'), isTrue);
+      expect(isCompressedFile('/a/comic.cbz'), isFalse);
+      expect(isCompressedFile('/a/movie.mkv'), isFalse);
+    });
+  });
+
+  group('natural ordering', () {
+    test('numbers compare numerically inside names', () {
+      final pages = ['p10.jpg', 'p2.jpg', 'p1.jpg']..sort(naturalCompare);
+      expect(pages, ['p1.jpg', 'p2.jpg', 'p10.jpg']);
+    });
+
+    test('mixed segments and case are handled', () {
+      final files = ['B12', 'a2', 'A10', 'a1']..sort(naturalCompare);
+      expect(files, ['a1', 'a2', 'A10', 'B12']);
+    });
   });
 }
