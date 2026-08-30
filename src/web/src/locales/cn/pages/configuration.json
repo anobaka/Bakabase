@@ -249,6 +249,8 @@
   "configuration.remoteAccess.address.none": "当前没有可用的网络接口。",
   "configuration.remoteAccess.address.copied": "地址已复制",
   "configuration.remoteAccess.address.copyFailed": "复制地址失败",
+  "configuration.remoteAccess.liveTranscode.label": "允许其他设备实时转码",
+  "configuration.remoteAccess.liveTranscode.tip": "部分视频需要重新编码后浏览器才能播放，转码期间会持续占用本机 CPU。关闭时，其他设备会被提示改用本地播放器播放这类视频。",
   "configuration.remoteAccess.unrestrictedWarning.label": "警告",
   "configuration.remoteAccess.unrestrictedWarning.description": "其他设备同时也能删除文件、修改设置、在本机启动程序。会打开窗口的操作将出现在本机屏幕上，而非对方设备。",
   "configuration.thirdParty.configure": "配置"

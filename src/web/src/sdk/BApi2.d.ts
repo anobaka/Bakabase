@@ -3568,6 +3568,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/mobile-app/downloads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetMobileAppDownloads"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/notification": {
         parameters: {
             query?: never;
@@ -4848,6 +4864,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/remote-access/server-info": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetRemoteAccessServerInfo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/remote-access/settings": {
         parameters: {
             query?: never;
@@ -4873,6 +4905,22 @@ export interface paths {
         };
         get?: never;
         put: operations["SetRemoteAccessMode"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/remote-access/live-transcode": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["SetRemoteAccessLiveTranscode"];
         post?: never;
         delete?: never;
         options?: never;
@@ -9802,6 +9850,9 @@ export interface components {
             presetSiteIds?: string[];
             customSites?: string[];
         };
+        "Bakabase.Service.Models.Input.RemoteAccessLiveTranscodeInputModel": {
+            allow: boolean;
+        };
         "Bakabase.Service.Models.Input.RemoteAccessModeInputModel": {
             mode?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.RemoteAccessMode"];
         };
@@ -10123,6 +10174,22 @@ export interface components {
             name: string;
             isDirectory: boolean;
         };
+        "Bakabase.Service.Models.View.MobileAppDownloadFileViewModel": {
+            name: string;
+            platform: string;
+            /** Format: int64 */
+            size: number;
+            githubUrl?: string;
+            cdnUrl?: string;
+        };
+        "Bakabase.Service.Models.View.MobileAppDownloadsViewModel": {
+            version: string;
+            /** Format: date-time */
+            publishedAt?: string;
+            releaseUrl?: string;
+            sidestoreSourceUrl?: string;
+            files: components["schemas"]["Bakabase.Service.Models.View.MobileAppDownloadFileViewModel"][];
+        };
         "Bakabase.Service.Models.View.PropertyTypeForManuallySettingValueViewModel": {
             type: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyType"];
             dbValueType: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.StandardValueType"];
@@ -10151,9 +10218,18 @@ export interface components {
             isLocal: boolean;
             mode: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.RemoteAccessMode"];
         };
+        "Bakabase.Service.Models.View.RemoteAccessServerInfoViewModel": {
+            id: string;
+            name: string;
+            appVersion: string;
+            /** Format: int32 */
+            protocolVersion: number;
+            mode: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.RemoteAccessMode"];
+        };
         "Bakabase.Service.Models.View.RemoteAccessSettingsViewModel": {
             mode: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.RemoteAccessMode"];
             addresses: components["schemas"]["Bakabase.Service.Models.View.RemoteAccessAddressViewModel"][];
+            allowLiveTranscode: boolean;
         };
         "Bakabase.Service.Models.View.ResourceAncestorViewModel": {
             /** Format: int32 */
@@ -11395,11 +11471,23 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Models.View.FilePlayabilityViewModel"];
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.MobileAppDownloadsViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.MobileAppDownloadsViewModel"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.RemoteAccessClientContextViewModel]": {
             /** Format: int32 */
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Models.View.RemoteAccessClientContextViewModel"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.RemoteAccessServerInfoViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.RemoteAccessServerInfoViewModel"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.RemoteAccessSettingsViewModel]": {
             /** Format: int32 */
@@ -19371,6 +19459,28 @@ export interface operations {
             };
         };
     };
+    GetMobileAppDownloads: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.MobileAppDownloadsViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.MobileAppDownloadsViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.MobileAppDownloadsViewModel]"];
+                };
+            };
+        };
+    };
     SearchNotifications: {
         parameters: {
             query?: {
@@ -22423,6 +22533,28 @@ export interface operations {
             };
         };
     };
+    GetRemoteAccessServerInfo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.RemoteAccessServerInfoViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.RemoteAccessServerInfoViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.RemoteAccessServerInfoViewModel]"];
+                };
+            };
+        };
+    };
     GetRemoteAccessSettings: {
         parameters: {
             query?: never;
@@ -22458,6 +22590,35 @@ export interface operations {
                 "application/json": components["schemas"]["Bakabase.Service.Models.Input.RemoteAccessModeInputModel"];
                 "text/json": components["schemas"]["Bakabase.Service.Models.Input.RemoteAccessModeInputModel"];
                 "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.RemoteAccessModeInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    SetRemoteAccessLiveTranscode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.RemoteAccessLiveTranscodeInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.RemoteAccessLiveTranscodeInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.RemoteAccessLiveTranscodeInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.RemoteAccessLiveTranscodeInputModel"];
             };
         };
         responses: {

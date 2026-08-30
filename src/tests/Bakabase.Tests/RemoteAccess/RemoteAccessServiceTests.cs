@@ -29,6 +29,7 @@ public class RemoteAccessServiceTests
         var service = new RemoteAccessService(
             new TestBOptionsManager<RemoteAccessOptions>(options),
             new RemoteAccessDefaults(defaultMode),
+            new RemoteAccessHostInfo("1.2.3-test"),
             new StubListeningAddressProvider(listeningAddresses),
             NullLogger<RemoteAccessService>.Instance);
 
@@ -118,5 +119,63 @@ public class RemoteAccessServiceTests
         {
             Assert.AreEqual(34567, new Uri(address.Url).Port);
         }
+    }
+
+    [TestMethod]
+    public async Task ServerId_IsGeneratedOnce_AndPersisted()
+    {
+        var (service, options) = Build();
+
+        var first = await service.GetOrCreateServerIdAsync();
+        var second = await service.GetOrCreateServerIdAsync();
+
+        Assert.IsFalse(string.IsNullOrWhiteSpace(first));
+        Assert.AreEqual(first, second);
+        Assert.AreEqual(first, options.ServerId);
+    }
+
+    [TestMethod]
+    public async Task ServerId_KeepsAnExistingValue()
+    {
+        var (service, options) = Build();
+        options.ServerId = "pre-existing";
+
+        Assert.AreEqual("pre-existing", await service.GetOrCreateServerIdAsync());
+    }
+
+    [TestMethod]
+    public async Task ServerDescriptor_CarriesIdentityPortAndVersions()
+    {
+        var (service, _) = Build(RemoteAccessMode.Disabled, "http://0.0.0.0:34567", "http://0.0.0.0:34568");
+
+        var descriptor = await service.GetServerDescriptorAsync();
+
+        Assert.IsFalse(string.IsNullOrWhiteSpace(descriptor.Id));
+        Assert.IsFalse(string.IsNullOrWhiteSpace(descriptor.Name));
+        // The first listening port is the one clients are pointed at.
+        Assert.AreEqual(34567, descriptor.Port);
+        Assert.AreEqual("1.2.3-test", descriptor.AppVersion);
+        Assert.AreEqual(RemoteAccessProtocol.CurrentVersion, descriptor.ProtocolVersion);
+    }
+
+    [TestMethod]
+    public async Task ServerDescriptor_HasNoPort_BeforeKestrelReportsOne()
+    {
+        var (service, _) = Build();
+
+        Assert.IsNull((await service.GetServerDescriptorAsync()).Port);
+    }
+
+    [TestMethod]
+    public async Task AllowLiveTranscode_DefaultsOff_AndPersists()
+    {
+        var (service, options) = Build();
+
+        Assert.IsFalse(service.GetAllowLiveTranscode());
+
+        await service.SetAllowLiveTranscodeAsync(true);
+
+        Assert.IsTrue(service.GetAllowLiveTranscode());
+        Assert.IsTrue(options.AllowLiveTranscode);
     }
 }

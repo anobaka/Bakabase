@@ -4443,6 +4443,10 @@ export interface BakabaseServiceModelsInputProxyTestInputModel {
   customSites?: string[];
 }
 
+export interface BakabaseServiceModelsInputRemoteAccessLiveTranscodeInputModel {
+  allow: boolean;
+}
+
 export interface BakabaseServiceModelsInputRemoteAccessModeInputModel {
   /** [0: Disabled, 1: Enabled, 2: Unrestricted] */
   mode?: BakabaseAbstractionsModelsDomainConstantsRemoteAccessMode;
@@ -4812,6 +4816,24 @@ export interface BakabaseServiceModelsViewFileSystemEntryNameViewModel {
   isDirectory: boolean;
 }
 
+export interface BakabaseServiceModelsViewMobileAppDownloadFileViewModel {
+  name: string;
+  platform: string;
+  /** @format int64 */
+  size: number;
+  githubUrl?: string;
+  cdnUrl?: string;
+}
+
+export interface BakabaseServiceModelsViewMobileAppDownloadsViewModel {
+  version: string;
+  /** @format date-time */
+  publishedAt?: string;
+  releaseUrl?: string;
+  sidestoreSourceUrl?: string;
+  files: BakabaseServiceModelsViewMobileAppDownloadFileViewModel[];
+}
+
 export interface BakabaseServiceModelsViewPropertyTypeForManuallySettingValueViewModel {
   /** [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel, 16: Tags] */
   type: BakabaseAbstractionsModelsDomainConstantsPropertyType;
@@ -4848,10 +4870,21 @@ export interface BakabaseServiceModelsViewRemoteAccessClientContextViewModel {
   mode: BakabaseAbstractionsModelsDomainConstantsRemoteAccessMode;
 }
 
+export interface BakabaseServiceModelsViewRemoteAccessServerInfoViewModel {
+  id: string;
+  name: string;
+  appVersion: string;
+  /** @format int32 */
+  protocolVersion: number;
+  /** [0: Disabled, 1: Enabled, 2: Unrestricted] */
+  mode: BakabaseAbstractionsModelsDomainConstantsRemoteAccessMode;
+}
+
 export interface BakabaseServiceModelsViewRemoteAccessSettingsViewModel {
   /** [0: Disabled, 1: Enabled, 2: Unrestricted] */
   mode: BakabaseAbstractionsModelsDomainConstantsRemoteAccessMode;
   addresses: BakabaseServiceModelsViewRemoteAccessAddressViewModel[];
+  allowLiveTranscode: boolean;
 }
 
 export interface BakabaseServiceModelsViewResourceAncestorViewModel {
@@ -6289,11 +6322,25 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceM
   data?: BakabaseServiceModelsViewFilePlayabilityViewModel;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewMobileAppDownloadsViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewMobileAppDownloadsViewModel;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewRemoteAccessClientContextViewModel {
   /** @format int32 */
   code: number;
   message?: string;
   data?: BakabaseServiceModelsViewRemoteAccessClientContextViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewRemoteAccessServerInfoViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewRemoteAccessServerInfoViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewRemoteAccessSettingsViewModel {
@@ -16917,6 +16964,36 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         ...params,
       }),
   };
+  mobileApp = {
+    /**
+     * No description
+     *
+     * @tags MobileApp
+     * @name GetMobileAppDownloads
+     * @request GET:/mobile-app/downloads
+     */
+    getMobileAppDownloads: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewMobileAppDownloadsViewModel,
+        any
+      >({
+        path: `/mobile-app/downloads`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getMobileAppDownloads
+     * @name getMobileAppDownloadsUrl
+     */
+    getMobileAppDownloadsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/mobile-app/downloads`;
+      
+      return baseUrl + path;
+    },
+  };
   notification = {
     /**
      * No description
@@ -20468,6 +20545,35 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags RemoteAccess
+     * @name GetRemoteAccessServerInfo
+     * @request GET:/remote-access/server-info
+     */
+    getRemoteAccessServerInfo: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewRemoteAccessServerInfoViewModel,
+        any
+      >({
+        path: `/remote-access/server-info`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getRemoteAccessServerInfo
+     * @name getRemoteAccessServerInfoUrl
+     */
+    getRemoteAccessServerInfoUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/remote-access/server-info`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags RemoteAccess
      * @name GetRemoteAccessSettings
      * @request GET:/remote-access/settings
      */
@@ -20520,6 +20626,37 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     setRemoteAccessModeUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/remote-access/mode`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags RemoteAccess
+     * @name SetRemoteAccessLiveTranscode
+     * @request PUT:/remote-access/live-transcode
+     */
+    setRemoteAccessLiveTranscode: (
+      data: BakabaseServiceModelsInputRemoteAccessLiveTranscodeInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/remote-access/live-transcode`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for setRemoteAccessLiveTranscode
+     * @name setRemoteAccessLiveTranscodeUrl
+     */
+    setRemoteAccessLiveTranscodeUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/remote-access/live-transcode`;
       
       return baseUrl + path;
     },

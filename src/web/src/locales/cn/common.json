@@ -393,5 +393,20 @@
   "common.label.tip": "提示",
   "common.success.deleted": "删除成功",
   "common.unit.months": "个月",
-  "common.unit.years": "年"
+  "common.unit.years": "年",
+  "menu.mobileApp": "移动 App",
+  "mobileApp.title": "移动 App",
+  "mobileApp.loading": "加载中…",
+  "mobileApp.unavailable": "暂时获取不到下载链接——主机可能离线，或尚未发布过移动端版本。链接来自 CI 生成的清单，会自动重试。",
+  "mobileApp.intro": "在同一网络的手机上浏览和播放媒体库的轻量伴侣应用。需要本 Bakabase 服务并开启远程访问。",
+  "mobileApp.releaseNotes": "版本说明",
+  "mobileApp.cdnLink": "阿里云 CDN",
+  "mobileApp.githubLink": "GitHub",
+  "mobileApp.recommended": "推荐",
+  "mobileApp.androidQrHint": "手机扫码下载 APK（大多数手机选 arm64-v8a），下载后直接安装。",
+  "mobileApp.iosSourceHint": "扫码或复制 SideStore 源地址，在 SideStore 中添加一次，之后的更新会自动到达。",
+  "mobileApp.sidestoreSource": "SideStore 源",
+  "mobileApp.sidestoreSourceLink": "source.json",
+  "mobileApp.unsignedIpa": "未签名 IPA（在 SideStore 中用 + 导入安装）",
+  "mobileApp.iosLimits": "免费 Apple ID 最多可侧载 3 个应用、签名 7 天有效；SideStore 会在同一 Wi-Fi 下自动续签。"
 }

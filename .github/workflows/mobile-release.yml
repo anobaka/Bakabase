@@ -1,0 +1,118 @@
+# Releases the mobile app: split-per-abi APKs for Android, an unsigned IPA for
+# SideStore (which signs on-device with the user's own Apple ID), a GitHub
+# Release under the mobile-v* tag, and a regenerated SideStore source on the
+# `sidestore` branch. Completely separate from the desktop deploy pipeline —
+# mobile versions live in the app's pubspec + tags, not version.json.
+# (The desktop pipeline additionally attaches mobile packages to its own
+# releases when the app changed — see the mobile jobs in deploy.yml.)
+name: Mobile Release
+
+on:
+  push:
+    tags:
+      - "mobile-v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release (e.g. 0.1.0); must match an intent to tag mobile-v{version}"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
+    steps:
+      - name: Resolve version
+        id: version
+        run: |
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            VERSION="${GITHUB_REF_NAME#mobile-v}"
+          else
+            VERSION="${{ inputs.version }}"
+          fi
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-.].+)?$ ]]; then
+            echo "::error::'$VERSION' is not a valid version"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          lower="$(echo "$VERSION" | tr '[:upper:]' '[:lower:]')"
+          if [[ "$lower" == *beta* || "$lower" == *rc* || "$lower" == *alpha* ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    needs: prepare
+    uses: ./.github/workflows/_mobile_build.yml
+    with:
+      version: ${{ needs.prepare.outputs.version }}
+      build_number: ${{ github.run_number }}
+
+  release:
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: mobile-*
+          merge-multiple: true
+          path: dist
+
+      # CDN links in the notes point at the archive path _mobile_distribute
+      # mirrors to right after this job.
+      - name: Compose release notes
+        run: |
+          VERSION="${{ needs.prepare.outputs.version }}"
+          CDN="https://cdn-public.anobaka.com/app/bakabase-mobile/archives/$VERSION"
+          cat > NOTES.md <<EOF
+          ## Bakabase Mobile $VERSION
+
+          Requires a running Bakabase server with remote access enabled.
+          需要一台已开启远程访问的 Bakabase 主服务。
+
+          ### Android
+          Download the APK matching your device (arm64-v8a for most phones).
+          下载与设备匹配的 APK（大多数手机为 arm64-v8a）。
+
+          ### iOS (SideStore)
+          Add this source in SideStore, then install Bakabase Mobile from it —
+          the IPA is unsigned and gets signed on your device with your own
+          Apple ID:
+          在 SideStore 中添加以下源后安装（IPA 未签名，由 SideStore 在你的设备上用你自己的 Apple ID 签名）：
+
+              https://raw.githubusercontent.com/${{ github.repository }}/sidestore/source.json
+
+          Free Apple IDs are limited to 3 sideloaded apps and 7-day resigning
+          (SideStore refreshes automatically on the same Wi-Fi).
+          免费 Apple ID 有 3 个应用与 7 天重签限制（SideStore 可在同一 Wi-Fi 下自动续签）。
+
+          ### Downloads / 下载地址（Aliyun CDN）
+          EOF
+
+          for f in dist/*; do
+            echo "- [$(basename "$f")]($CDN/$(basename "$f"))" >> NOTES.md
+          done
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: mobile-v${{ needs.prepare.outputs.version }}
+          name: Bakabase Mobile ${{ needs.prepare.outputs.version }}
+          body_path: NOTES.md
+          prerelease: ${{ needs.prepare.outputs.prerelease == 'true' }}
+          files: dist/*
+          fail_on_unmatched_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  distribute:
+    needs: [prepare, release]
+    uses: ./.github/workflows/_mobile_distribute.yml
+    secrets: inherit

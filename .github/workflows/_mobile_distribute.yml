@@ -1,0 +1,104 @@
+# Distribution tail shared by every path that publishes mobile packages
+# (mobile-release.yml tag releases, and deploy.yml when the app changed):
+# mirrors the raw files to OSS, regenerates the SideStore source, and writes
+# the download manifest the server's app-download page reads. Runs after the
+# GitHub release exists, because both generators scan the releases API.
+name: Mobile Distribute
+
+on:
+  workflow_call: {}
+
+jobs:
+  distribute:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: mobile-*
+          merge-multiple: true
+          path: dist
+
+      - name: Parse mobile version from artifact names
+        id: version
+        run: |
+          FIRST=$(ls dist | head -1)
+          V="${FIRST#bakabase-mobile-}"
+          V="${V%-android-*}"
+          V="${V%-ios-unsigned.ipa}"
+          if [ -z "$V" ] || [ "$V" = "$FIRST" ]; then
+            echo "::error::Could not parse a version out of '$FIRST'"
+            exit 1
+          fi
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          echo "Mobile version: $V"
+
+      - name: Install ossutil
+        run: |
+          wget -O ossutil64 https://gosspublic.alicdn.com/ossutil/1.7.16/ossutil64
+          chmod +x ossutil64
+
+      - name: Mirror raw packages to OSS archives
+        env:
+          OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
+          OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+          OSS_ENDPOINT: http://oss-accelerate.aliyuncs.com
+        run: |
+          ./ossutil64 config -e $OSS_ENDPOINT -i $OSS_ACCESS_KEY_ID -k $OSS_ACCESS_KEY_SECRET
+          DEST="oss://anobaka-public/app/bakabase-mobile/archives/${{ steps.version.outputs.version }}"
+          for f in dist/*; do
+            ./ossutil64 cp -f "$f" "$DEST/$(basename "$f")"
+          done
+
+      - name: Regenerate SideStore source
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 scripts/mobile/build_sidestore_source.py \
+            --owner "${GITHUB_REPOSITORY%/*}" --repo "${GITHUB_REPOSITORY#*/}" \
+            --out /tmp/source.json
+
+      - name: Publish SideStore source to the sidestore branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir /tmp/sidestore && cd /tmp/sidestore
+          cp /tmp/source.json .
+          git init -b sidestore
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add source.json
+          git commit -m "chore: SideStore source for mobile ${{ steps.version.outputs.version }}"
+          git push --force \
+            "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+            sidestore
+
+      - name: Build and upload the download manifest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
+          OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+        run: |
+          python3 scripts/mobile/build_mobile_manifest.py \
+            --owner "${GITHUB_REPOSITORY%/*}" --repo "${GITHUB_REPOSITORY#*/}" \
+            --out /tmp/manifest.json
+          ./ossutil64 cp -f /tmp/manifest.json oss://anobaka-public/app/bakabase-mobile/manifest.json
+
+      # Best-effort: the server also cache-busts its manifest fetches, so a
+      # failed refresh only delays visibility, never breaks it.
+      - name: Refresh the manifest on the CDN
+        continue-on-error: true
+        run: |
+          curl -sL -o aliyun-cli.tgz https://aliyuncli.alicdn.com/aliyun-cli-linux-latest-amd64.tgz
+          tar xzf aliyun-cli.tgz
+          chmod +x aliyun
+          ./aliyun configure set \
+            --profile default \
+            --mode AK \
+            --access-key-id ${{ secrets.CDN_ACCESS_KEY_ID }} \
+            --access-key-secret ${{ secrets.CDN_ACCESS_KEY_SECRET }} \
+            --region cn-hangzhou
+          ./aliyun cdn RefreshObjectCaches \
+            --ObjectPath "https://cdn-public.anobaka.com/app/bakabase-mobile/manifest.json" \
+            --ObjectType File

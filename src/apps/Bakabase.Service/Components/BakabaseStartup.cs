@@ -109,8 +109,9 @@ namespace Bakabase.Service.Components
             // it keeps that as its default; a desktop install starts closed, which is a
             // behavior change for anyone who was quietly relying on LAN reachability.
             services.AddRemoteAccess(AppService.RuntimeMode == RuntimeMode.Docker
-                ? RemoteAccessMode.Unrestricted
-                : RemoteAccessMode.Disabled);
+                    ? RemoteAccessMode.Unrestricted
+                    : RemoteAccessMode.Disabled,
+                AppService.CoreVersion.ToString());
             services.AddSingleton<IListeningAddressProvider, AppContextListeningAddressProvider>();
 
             // Configured rather than passed to AddMvc because the base AppStartup owns
@@ -122,6 +123,8 @@ namespace Bakabase.Service.Components
             });
 
             services.AddSingleton<ThirdPartyHttpRequestLogger>();
+
+            services.TryAddSingleton<Bakabase.Service.Components.Mobile.MobileAppDownloadService>();
 
             services.AddBakabaseMigrations();
 

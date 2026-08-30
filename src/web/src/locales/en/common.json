@@ -393,5 +393,20 @@
   "common.label.tip": "Tip",
   "common.success.deleted": "Deleted",
   "common.unit.months": "months",
-  "common.unit.years": "years"
+  "common.unit.years": "years",
+  "menu.mobileApp": "Mobile App",
+  "mobileApp.title": "Mobile App",
+  "mobileApp.loading": "Loading…",
+  "mobileApp.unavailable": "Download links are not available right now — the host may be offline, or no mobile release has been published yet. Links come from the CI-generated manifest and are retried automatically.",
+  "mobileApp.intro": "A thin companion app for browsing and playing your library from a phone on the same network. It requires this Bakabase server with remote access enabled.",
+  "mobileApp.releaseNotes": "Release notes",
+  "mobileApp.cdnLink": "Aliyun CDN",
+  "mobileApp.githubLink": "GitHub",
+  "mobileApp.recommended": "Recommended",
+  "mobileApp.androidQrHint": "Scan with your phone to download the APK (arm64-v8a fits most phones), then install it directly.",
+  "mobileApp.iosSourceHint": "Scan or copy the SideStore source URL, add it in SideStore once, and every future update arrives automatically.",
+  "mobileApp.sidestoreSource": "SideStore source",
+  "mobileApp.sidestoreSourceLink": "source.json",
+  "mobileApp.unsignedIpa": "Unsigned IPA (import via SideStore's + button)",
+  "mobileApp.iosLimits": "Free Apple IDs allow up to 3 sideloaded apps with 7-day signing; SideStore re-signs automatically on the same Wi-Fi."
 }

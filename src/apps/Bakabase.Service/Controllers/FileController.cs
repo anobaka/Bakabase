@@ -28,6 +28,8 @@ using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.RequestModels;
+using Bakabase.Modules.RemoteAccess.Abstractions.Models;
+using Bakabase.Modules.RemoteAccess.Abstractions.Services;
 using Bakabase.Service.Components.Playback;
 using Bakabase.Service.Components.RemoteAccess;
 using Bakabase.Service.Extensions;
@@ -1479,6 +1481,24 @@ namespace Bakabase.Service.Controllers
                     if (plan.Method == VideoDeliveryMethod.Remux)
                     {
                         return await StreamRemuxed(fullname, plan);
+                    }
+
+                    // A transcode burns host CPU for as long as the viewer keeps
+                    // watching, so remote callers need the host's explicit opt-in;
+                    // the client is told why and can hand the file to a native
+                    // player instead.
+                    var remoteAccessService =
+                        HttpContext.RequestServices.GetRequiredService<IRemoteAccessService>();
+                    if (RemoteTranscodePolicy.ShouldRefuse(HttpContext.GetRemoteAccessContext(),
+                            remoteAccessService.GetAllowLiveTranscode()))
+                    {
+                        Response.Headers["X-Bakabase-Remote-Access"] =
+                            RemoteAccessDenialReason.TranscodeDisabled.ToString();
+                        return new ObjectResult(BaseResponseBuilder.Build(ResponseCode.Unauthorized,
+                            "This video needs live transcoding, which the host has not enabled for remote devices. Play it in a native player instead."))
+                        {
+                            StatusCode = (int) HttpStatusCode.Forbidden
+                        };
                     }
 
                     await FfMpegStreamingSlots.WaitAsync(HttpContext.RequestAborted);

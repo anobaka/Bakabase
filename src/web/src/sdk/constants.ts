@@ -4405,6 +4405,30 @@ export const DataCardMatchModeLabel: Record<DataCardMatchMode, string> = {
   [DataCardMatchMode.All]: 'All'
 };
 
+export enum RemoteAccessDenialReason {
+  None = 0,
+  Disabled = 1,
+  HostOnly = 2,
+  PathNotServable = 3,
+  TranscodeDisabled = 4
+}
+
+export const remoteAccessDenialReasons = [
+  { label: 'None', value: RemoteAccessDenialReason.None },
+  { label: 'Disabled', value: RemoteAccessDenialReason.Disabled },
+  { label: 'HostOnly', value: RemoteAccessDenialReason.HostOnly },
+  { label: 'PathNotServable', value: RemoteAccessDenialReason.PathNotServable },
+  { label: 'TranscodeDisabled', value: RemoteAccessDenialReason.TranscodeDisabled }
+] as const;
+
+export const RemoteAccessDenialReasonLabel: Record<RemoteAccessDenialReason, string> = {
+  [RemoteAccessDenialReason.None]: 'None',
+  [RemoteAccessDenialReason.Disabled]: 'Disabled',
+  [RemoteAccessDenialReason.HostOnly]: 'HostOnly',
+  [RemoteAccessDenialReason.PathNotServable]: 'PathNotServable',
+  [RemoteAccessDenialReason.TranscodeDisabled]: 'TranscodeDisabled'
+};
+
 export enum ResourceMatcherLeafKind {
   Property = 1,
   File = 2
@@ -4721,27 +4745,6 @@ export const PresetResourceTypeLabel: Record<PresetResourceType, string> = {
   [PresetResourceType.MotionManga]: 'MotionManga',
   [PresetResourceType.Mod]: 'Mod',
   [PresetResourceType.Tool]: 'Tool'
-};
-
-export enum RemoteAccessDenialReason {
-  None = 0,
-  Disabled = 1,
-  HostOnly = 2,
-  PathNotServable = 3
-}
-
-export const remoteAccessDenialReasons = [
-  { label: 'None', value: RemoteAccessDenialReason.None },
-  { label: 'Disabled', value: RemoteAccessDenialReason.Disabled },
-  { label: 'HostOnly', value: RemoteAccessDenialReason.HostOnly },
-  { label: 'PathNotServable', value: RemoteAccessDenialReason.PathNotServable }
-] as const;
-
-export const RemoteAccessDenialReasonLabel: Record<RemoteAccessDenialReason, string> = {
-  [RemoteAccessDenialReason.None]: 'None',
-  [RemoteAccessDenialReason.Disabled]: 'Disabled',
-  [RemoteAccessDenialReason.HostOnly]: 'HostOnly',
-  [RemoteAccessDenialReason.PathNotServable]: 'PathNotServable'
 };
 
 export enum WorkflowActivityCategory {

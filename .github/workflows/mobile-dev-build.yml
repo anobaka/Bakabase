@@ -1,0 +1,93 @@
+# On-demand packaging for ANY branch — the way to get installable packages
+# out of a development branch, which deliberately has no release mechanism.
+# Dispatch it from the Actions page against the branch you need; the packages
+# come out as run artifacts and as raw files on the Aliyun CDN (see the run's
+# summary). The IPA installs through SideStore's "+ / import .ipa".
+# Regular publishing rides the desktop deploy pipeline instead (deploy.yml
+# builds and attaches mobile packages when the app changed).
+name: Mobile Dev Build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-dev-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      suffix: ${{ steps.meta.outputs.suffix }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Derive version and dev suffix from pubspec + sha
+        id: meta
+        run: |
+          VERSION=$(sed -n 's/^version: \([0-9.]*\).*/\1/p' src/apps/mobile/app/pubspec.yaml)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "suffix=-dev-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: prepare
+    uses: ./.github/workflows/_mobile_build.yml
+    with:
+      version: ${{ needs.prepare.outputs.version }}
+      build_number: ${{ github.run_number }}
+      asset_suffix: ${{ needs.prepare.outputs.suffix }}
+      retention_days: 14
+
+  # Mirror the raw files to OSS so they are downloadable as plain files over
+  # the Aliyun CDN — run artifacts are always zip-wrapped and need a GitHub
+  # login, which is awkward for handing a build to a phone.
+  oss:
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: mobile-*
+          merge-multiple: true
+          path: dist
+
+      - name: Install ossutil
+        run: |
+          wget -O ossutil64 https://gosspublic.alicdn.com/ossutil/1.7.16/ossutil64
+          chmod +x ossutil64
+
+      - name: Upload raw packages to OSS
+        env:
+          OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
+          OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+          OSS_ENDPOINT: http://oss-accelerate.aliyuncs.com
+        run: |
+          ./ossutil64 config -e $OSS_ENDPOINT -i $OSS_ACCESS_KEY_ID -k $OSS_ACCESS_KEY_SECRET
+
+          # File names already carry the -dev-{sha} suffix, so every upload is
+          # a fresh CDN object — no cache invalidation needed.
+          BRANCH_SLUG=$(echo "$GITHUB_REF_NAME" | tr '/' '-')
+          DEST="oss://anobaka-public/app/bakabase-mobile/dev/${BRANCH_SLUG}"
+          CDN="https://cdn-public.anobaka.com/app/bakabase-mobile/dev/${BRANCH_SLUG}"
+
+          {
+            echo "## 📦 Dev build ready"
+            echo ""
+            echo "Version: \`${{ needs.prepare.outputs.version }}${{ needs.prepare.outputs.suffix }}\` (branch \`${GITHUB_REF_NAME}\`)"
+            echo ""
+            echo "### Aliyun CDN (raw files)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          for f in dist/*; do
+            ./ossutil64 cp -f "$f" "$DEST/$(basename "$f")"
+            echo "- $CDN/$(basename "$f")" >> "$GITHUB_STEP_SUMMARY"
+          done
+
+          {
+            echo ""
+            echo "Also available zip-wrapped in this run's **Artifacts** (kept 14 days)."
+          } >> "$GITHUB_STEP_SUMMARY"
