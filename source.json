@@ -1,0 +1,26 @@
+{
+  "name": "Bakabase Mobile",
+  "identifier": "com.bakabase.mobile-source",
+  "apps": [
+    {
+      "name": "Bakabase Mobile",
+      "bundleIdentifier": "com.bakabase.mobile",
+      "developerName": "anobaka",
+      "subtitle": "Browse and play your Bakabase library",
+      "localizedDescription": "Thin companion app for a Bakabase server on your local network: auto-discovers the server, browses your libraries, and plays media with on-device decoding.\n\nRequires a running Bakabase server with remote access enabled.",
+      "iconURL": "https://raw.githubusercontent.com/anobaka/Bakabase/main/src/web/src/assets/logo/bakabase.png",
+      "tintColor": "#0E7C6B",
+      "screenshotURLs": [],
+      "versions": [
+        {
+          "version": "0.1.0",
+          "date": "2026-08-30T11:06:36Z",
+          "size": 14786297,
+          "downloadURL": "https://github.com/anobaka/Bakabase/releases/download/v2.4.0-beta.43/bakabase-mobile-0.1.0-ios-unsigned.ipa",
+          "minOSVersion": "15.0",
+          "localizedDescription": "Bakabase Mobile 0.1.0"
+        }
+      ]
+    }
+  ]
+}
