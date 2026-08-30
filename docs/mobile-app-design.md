@@ -43,8 +43,10 @@ S1–S4 已按 §6 落地于 `Bakabase.Modules.RemoteAccess/Components/Discovery
 
 后续演进（同属 M3 范畴）：构建步骤抽成可复用的 `_mobile_build.yml`，三个入口共用——
 1. `mobile-release.yml`（tag 正式发布，同上）；
-2. `deploy.yml` 桌面发布管线：`mobile-changes` job 用 `git diff {上一个 v* tag}..HEAD -- src/apps/mobile scripts/mobile _mobile_build.yml` 判断 App 是否有改动，有则构建并把 APK/IPA 附到当次桌面 release 的 Assets（changelog 自动加移动端段落），无改动则跳过不打包；
-3. `mobile-dev-build.yml`（workflow_dispatch，任意分支）：开发分支无 release 机制，产物以 Actions run artifacts 形式提供下载（保留 14 天），IPA 可经 SideStore 的"导入 .ipa"直接安装。
+2. `deploy.yml` 桌面发布管线：`mobile-changes` job 用 `git diff {上一个 v* tag}..HEAD -- src/apps/mobile scripts/mobile _mobile_build.yml` 判断 App 是否有改动，有则构建并把 APK/IPA 附到当次桌面 release 的 Assets（changelog 自动加移动端段落），无改动则跳过不打包——**这是移动端的常规发布路径**；
+3. `mobile-dev-build.yml`（仅 workflow_dispatch，任意分支）：开发分支无 release 机制，产物以 Actions run artifacts + 阿里云 CDN 裸文件提供（合并前曾临时开过 claude/dev 分支 push 触发，合并时移除）。
+
+分发收口于可复用的 `_mobile_distribute.yml`（上述 1、2 两路发布后共同调用）：镜像裸文件到 OSS `archives/{version}/`、按**资产名**（而非 tag）扫描全部 release 重建 SideStore 源、生成下载清单 `manifest.json` 上传到 OSS 固定路径并刷新 CDN。**下载地址发现机制**：服务端 `MobileAppDownloadService` 拉取该清单（带 cache-bust、1 小时缓存、离线降级），经 `GET /mobile-app/downloads`（`[RemoteAccessible]`）供 Web UI 的"移动 App"一级菜单页展示（双端版本、二维码、阿里云/GitHub 双链接、SideStore 源）。
 
 ### M4（打磨）
 

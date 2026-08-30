@@ -124,6 +124,8 @@ namespace Bakabase.Service.Components
 
             services.AddSingleton<ThirdPartyHttpRequestLogger>();
 
+            services.TryAddSingleton<Bakabase.Service.Components.Mobile.MobileAppDownloadService>();
+
             services.AddBakabaseMigrations();
 
             services.RegisterAllRegisteredTypeAs<ICookieValidator>();

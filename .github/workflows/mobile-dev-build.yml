@@ -1,22 +1,14 @@
 # On-demand packaging for ANY branch — the way to get installable packages
 # out of a development branch, which deliberately has no release mechanism.
-# The APKs and the unsigned IPA come out as run artifacts: open the run page,
-# scroll to "Artifacts", download (a GitHub login with repo access is needed).
-# The IPA installs through SideStore's own "+ / import .ipa" without a source.
+# Dispatch it from the Actions page against the branch you need; the packages
+# come out as run artifacts and as raw files on the Aliyun CDN (see the run's
+# summary). The IPA installs through SideStore's "+ / import .ipa".
+# Regular publishing rides the desktop deploy pipeline instead (deploy.yml
+# builds and attaches mobile packages when the app changed).
 name: Mobile Dev Build
 
 on:
   workflow_dispatch:
-  # Development branches auto-package on pushes that touch the app, so a
-  # testable build is always one push away — without any release machinery.
-  push:
-    branches:
-      - "claude/**"
-      - "dev/**"
-    paths:
-      - "src/apps/mobile/**"
-      - ".github/workflows/_mobile_build.yml"
-      - ".github/workflows/mobile-dev-build.yml"
 
 permissions:
   contents: read

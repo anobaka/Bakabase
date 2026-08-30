@@ -2,26 +2,23 @@
 """Builds the SideStore/AltStore source JSON for Bakabase Mobile.
 
 Regenerates the whole source from the repository's GitHub releases every time
-(stateless): every non-draft release tagged `mobile-v*` that carries an
-`*-ios-unsigned.ipa` asset becomes one entry in `apps[0].versions`, newest
-first. The result is served from the `sidestore` branch, so users add
+(stateless): every unsigned IPA asset — whether it sits on a dedicated
+`mobile-v*` release or on a desktop release that carried a changed app —
+becomes one entry in `apps[0].versions`, newest first, deduplicated by
+version. Users add
 
     https://raw.githubusercontent.com/anobaka/Bakabase/sidestore/source.json
 
 to SideStore once and receive every later release automatically.
 
-Stdlib only — runs on a bare GitHub Actions runner. Auth comes from the
-GITHUB_TOKEN env var (optional locally; unauthenticated works at low rate).
+Stdlib only — runs on a bare GitHub Actions runner.
 """
 
 import argparse
 import json
-import os
 import sys
-import urllib.request
 
-TAG_PREFIX = "mobile-v"
-IPA_SUFFIX = "-ios-unsigned.ipa"
+from mobile_releases import fetch_releases, mobile_assets_of
 
 SOURCE_TEMPLATE = {
     "name": "Bakabase Mobile",
@@ -47,55 +44,33 @@ APP_TEMPLATE = {
 }
 
 
-def fetch_releases(owner: str, repo: str) -> list:
-    releases = []
-    page = 1
-    while True:
-        url = f"https://api.github.com/repos/{owner}/{repo}/releases?per_page=100&page={page}"
-        request = urllib.request.Request(url)
-        request.add_header("Accept", "application/vnd.github+json")
-        token = os.environ.get("GITHUB_TOKEN")
-        if token:
-            request.add_header("Authorization", f"Bearer {token}")
-        with urllib.request.urlopen(request) as response:
-            batch = json.load(response)
-        if not batch:
-            return releases
-        releases.extend(batch)
-        page += 1
-
-
 def build_versions(releases: list) -> list:
-    versions = []
+    by_version = {}
     for release in releases:
+        if release.get("draft"):
+            continue
         tag = release.get("tag_name") or ""
-        if release.get("draft") or not tag.startswith(TAG_PREFIX):
-            continue
-
-        ipa = next(
-            (a for a in release.get("assets", []) if a.get("name", "").endswith(IPA_SUFFIX)),
-            None,
-        )
-        if ipa is None:
-            print(f"skipping {tag}: no {IPA_SUFFIX} asset", file=sys.stderr)
-            continue
-
-        versions.append(
-            {
-                "version": tag[len(TAG_PREFIX):],
-                "date": release.get("published_at") or release.get("created_at"),
-                "size": ipa.get("size", 0),
-                "downloadURL": ipa["browser_download_url"],
+        for version, asset in mobile_assets_of(release):
+            if not asset["name"].endswith(".ipa"):
+                continue
+            date = release.get("published_at") or release.get("created_at") or ""
+            existing = by_version.get(version)
+            if existing and existing["date"] >= date:
+                continue
+            # Desktop release bodies describe the desktop app; only dedicated
+            # mobile releases carry notes about this build.
+            notes = (release.get("body") or "").strip() if tag.startswith("mobile-v") else ""
+            by_version[version] = {
+                "version": version,
+                "date": date,
+                "size": asset.get("size", 0),
+                "downloadURL": asset["browser_download_url"],
                 "minOSVersion": "15.0",
-                "localizedDescription": (release.get("body") or "").strip()
-                    or f"Bakabase Mobile {tag[len(TAG_PREFIX):]}",
+                "localizedDescription": notes or f"Bakabase Mobile {version}",
             }
-        )
 
-    # GitHub returns releases newest-first already, but do not rely on it:
     # SideStore treats versions[0] as the latest.
-    versions.sort(key=lambda v: v["date"] or "", reverse=True)
-    return versions
+    return sorted(by_version.values(), key=lambda v: v["date"], reverse=True)
 
 
 def main() -> int:
@@ -107,7 +82,7 @@ def main() -> int:
 
     versions = build_versions(fetch_releases(args.owner, args.repo))
     if not versions:
-        print("no mobile releases with an unsigned IPA found; refusing to publish an empty source",
+        print("no releases with an unsigned mobile IPA found; refusing to publish an empty source",
               file=sys.stderr)
         return 1
 

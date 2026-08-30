@@ -65,25 +65,8 @@ jobs:
           merge-multiple: true
           path: dist
 
-      - name: Install ossutil
-        run: |
-          wget -O ossutil64 https://gosspublic.alicdn.com/ossutil/1.7.16/ossutil64
-          chmod +x ossutil64
-
-      # Mirror the raw packages to OSS, same as the desktop installers, so the
-      # release notes can offer Aliyun CDN links next to the GitHub assets.
-      - name: Upload raw packages to OSS
-        env:
-          OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
-          OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
-          OSS_ENDPOINT: http://oss-accelerate.aliyuncs.com
-        run: |
-          ./ossutil64 config -e $OSS_ENDPOINT -i $OSS_ACCESS_KEY_ID -k $OSS_ACCESS_KEY_SECRET
-          DEST="oss://anobaka-public/app/bakabase-mobile/archives/${{ needs.prepare.outputs.version }}"
-          for f in dist/*; do
-            ./ossutil64 cp -f "$f" "$DEST/$(basename "$f")"
-          done
-
+      # CDN links in the notes point at the archive path _mobile_distribute
+      # mirrors to right after this job.
       - name: Compose release notes
         run: |
           VERSION="${{ needs.prepare.outputs.version }}"
@@ -129,31 +112,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  sidestore-source:
+  distribute:
     needs: [prepare, release]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Regenerate source.json from all mobile releases
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          python3 scripts/mobile/build_sidestore_source.py \
-            --owner "${GITHUB_REPOSITORY%/*}" --repo "${GITHUB_REPOSITORY#*/}" \
-            --out /tmp/source.json
-
-      - name: Publish to the sidestore branch
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          mkdir /tmp/sidestore && cd /tmp/sidestore
-          cp /tmp/source.json .
-          git init -b sidestore
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add source.json
-          git commit -m "chore: SideStore source for mobile-v${{ needs.prepare.outputs.version }}"
-          git push --force \
-            "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
-            sidestore
+    uses: ./.github/workflows/_mobile_distribute.yml
+    secrets: inherit

@@ -4816,6 +4816,24 @@ export interface BakabaseServiceModelsViewFileSystemEntryNameViewModel {
   isDirectory: boolean;
 }
 
+export interface BakabaseServiceModelsViewMobileAppDownloadFileViewModel {
+  name: string;
+  platform: string;
+  /** @format int64 */
+  size: number;
+  githubUrl?: string;
+  cdnUrl?: string;
+}
+
+export interface BakabaseServiceModelsViewMobileAppDownloadsViewModel {
+  version: string;
+  /** @format date-time */
+  publishedAt?: string;
+  releaseUrl?: string;
+  sidestoreSourceUrl?: string;
+  files: BakabaseServiceModelsViewMobileAppDownloadFileViewModel[];
+}
+
 export interface BakabaseServiceModelsViewPropertyTypeForManuallySettingValueViewModel {
   /** [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel, 16: Tags] */
   type: BakabaseAbstractionsModelsDomainConstantsPropertyType;
@@ -6302,6 +6320,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceM
   code: number;
   message?: string;
   data?: BakabaseServiceModelsViewFilePlayabilityViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewMobileAppDownloadsViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewMobileAppDownloadsViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewRemoteAccessClientContextViewModel {
@@ -16938,6 +16963,36 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
+  };
+  mobileApp = {
+    /**
+     * No description
+     *
+     * @tags MobileApp
+     * @name GetMobileAppDownloads
+     * @request GET:/mobile-app/downloads
+     */
+    getMobileAppDownloads: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewMobileAppDownloadsViewModel,
+        any
+      >({
+        path: `/mobile-app/downloads`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getMobileAppDownloads
+     * @name getMobileAppDownloadsUrl
+     */
+    getMobileAppDownloadsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/mobile-app/downloads`;
+      
+      return baseUrl + path;
+    },
   };
   notification = {
     /**

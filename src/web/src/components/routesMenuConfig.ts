@@ -30,6 +30,7 @@ import {
   AiOutlineBell,
   AiOutlineCloudServer,
   AiOutlinePartition,
+  AiOutlineMobile,
 } from "react-icons/ai";
 import { lazy } from "react";
 import { MdOutlineArticle, MdVideoLibrary } from "react-icons/md";
@@ -58,6 +59,7 @@ import ResourceProfilePage from "@/pages/resource-profile";
 import PathRuleConfigPage from "@/pages/path-mark-config";
 import PathMarksPage from "@/pages/path-marks";
 import ProfilerPage from "@/pages/profiler";
+import MobileAppPage from "@/pages/mobile-app";
 import ComparisonPage from "@/pages/comparison";
 import AiConfigurationPage from "@/pages/ai-configuration";
 import ChatPage from "@/pages/chat";
@@ -447,6 +449,14 @@ export const routesMenuConfig: RouteMenuItem[] = [
         menu: true,
       },
     ],
+  },
+  {
+    name: "menu.mobileApp",
+    path: "/mobile-app",
+    component: MobileAppPage,
+    icon: AiOutlineMobile,
+    layout: "basic",
+    menu: true,
   },
   {
     name: "menu.test",
