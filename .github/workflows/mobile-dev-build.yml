@@ -7,6 +7,16 @@ name: Mobile Dev Build
 
 on:
   workflow_dispatch:
+  # Development branches auto-package on pushes that touch the app, so a
+  # testable build is always one push away — without any release machinery.
+  push:
+    branches:
+      - "claude/**"
+      - "dev/**"
+    paths:
+      - "src/apps/mobile/**"
+      - ".github/workflows/_mobile_build.yml"
+      - ".github/workflows/mobile-dev-build.yml"
 
 permissions:
   contents: read
