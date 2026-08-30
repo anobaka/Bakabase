@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { AiOutlineSetting } from "react-icons/ai";
 
 import { Button, Modal, Checkbox, toast } from "@/components/bakaui";
+import { HelpCenterButton } from "@/components/HelpCenter";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { useResourceOptionsStore } from "@/stores/options";
 import BApi from "@/sdk/BApi";
@@ -113,7 +114,12 @@ const PathMarkSettingsButton = ({
         <Modal
           footer={false}
           size="md"
-          title={t("pathMarkConfig.modal.settingsTitle")}
+          title={
+            <div className="flex items-center gap-1">
+              <span>{t("pathMarkConfig.modal.settingsTitle")}</span>
+              <HelpCenterButton concept="sync" section="concepts" topic="pathMark" />
+            </div>
+          }
           visible={visible}
           onClose={() => setVisible(false)}
         >

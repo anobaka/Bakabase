@@ -18,6 +18,7 @@ import {
 import SyncProgressModal from "./SyncProgressModal";
 
 import { Modal, Button, Chip, Spinner, Tooltip, CircularProgress } from "@/components/bakaui";
+import { HelpCenterButton } from "@/components/HelpCenter";
 import { PathMarkSyncStatus, PathMarkType, BTaskStatus } from "@/sdk/constants";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import BApi from "@/sdk/BApi";
@@ -279,6 +280,7 @@ const PendingSyncListModal = ({
               {totalPending}
             </Chip>
           )}
+          <HelpCenterButton concept="sync" section="concepts" topic="pathMark" />
         </div>
       }
       visible={isOpen}

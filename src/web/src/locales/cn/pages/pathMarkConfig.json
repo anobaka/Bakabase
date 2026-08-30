@@ -119,16 +119,13 @@
   "pathMark.regex.description": "用于匹配从根路径开始的相对路径的正则表达式。",
   "pathMark.applyScope.matchedOnly.description": "仅应用于精确匹配的路径",
   "pathMark.applyScope.matchedAndSubdirectories.description": "应用于匹配的路径及其中的所有路径",
-
   "pathMark.resource.matchMode.description": "可以基于您当前选择的路径进行扩展，如果您只希望选择当前路径，那么使用层级=0 即可。",
   "pathMark.resource.applyScope.matchedOnly.description": "仅当资源路径和您配置的匹配项完全重合时，才将其视为资源。",
   "pathMark.resource.applyScope.matchedAndSubdirectories.description": "当资源和您配置的匹配项完全重合，或是匹配项的任意子文件或文件夹时，才将其视作资源。",
-
   "pathMark.property.matchMode.description": "可以基于您当前选择的路径进行扩展，如果您只希望选择当前路径，那么使用层级=0 即可。",
   "pathMark.property.applyScope.matchedOnly.description": "仅当资源路径和您配置的匹配项完全重合时，才为资源设置您配置的属性和属性值。",
   "pathMark.property.applyScope.matchedAndSubdirectories.description": "当资源和您配置的匹配项完全重合，或是匹配项的子文件或文件夹时，才为资源设置您配置的属性和属性值。",
   "pathMark.property.configDescription": "您可以选择，当资源匹配后，应该将它与哪个属性绑定，以及属性值应该设置成什么。",
-
   "pathMark.mediaLibrary.matchMode.description": "可以基于您当前选择的路径进行扩展，如果您只希望选择当前路径，那么使用层级=0 即可。",
   "pathMark.mediaLibrary.applyScope.matchedOnly.description": "仅当资源路径和您配置的匹配项完全重合时，才将资源关联到您设置的媒体库。",
   "pathMark.mediaLibrary.applyScope.matchedAndSubdirectories.description": "当资源和您配置的匹配项完全重合，或是匹配项的子文件或文件夹时，才将资源关联到您设置的媒体库。",
@@ -140,7 +137,6 @@
   "pathMark.mediaLibrary.explanation": "媒体库标记：将资源归类到指定的媒体库中。",
   "pathMark.mediaLibrary.settingsDescription": "选择目标媒体库，或从路径自动提取。",
   "pathMark.mediaLibrary.importantNote": "媒体库标记不会创建资源，只有路径被「资源标记」匹配到的资源才会被关联到媒体库。",
-
   "markDescription.layer.currentAndSubdirs": "当前层级 + 子目录",
   "markDescription.layer.current": "当前层级",
   "markDescription.layer.suffix": " 层",
@@ -156,42 +152,10 @@
   "markDescription.dirOnly": "仅目录",
   "markDescription.empty": "无描述",
   "markDescription.invalid": "配置无效",
-
   "pathMarkConfig.tip.clickToEditRightClickDelete": "点击编辑，右键删除",
   "pathMarkConfig.status.syncProgress": "同步中: {{progress}}%",
   "pathMarkConfig.tip.recheckAfter": "重新检查于",
   "pathMarkConfig.action.viewAllMarks": "查看全部标记",
-
-  "pathMarkGuide.welcome.title": "欢迎使用路径标记",
-  "pathMarkGuide.welcome.description": "路径标记帮助您通过在文件路径上定义规则来组织媒体库。您可以指定哪些文件是资源、分配属性，并将它们与媒体库关联。",
-
-  "pathMarkGuide.markTypes.title": "三种标记类型",
-  "pathMarkGuide.markTypes.subtitle": "每种标记类型在组织内容方面都有不同的用途。",
-  "pathMarkGuide.markTypes.resource": "资源标记（核心）",
-  "pathMarkGuide.markTypes.resourceDesc": "将文件或文件夹标识为媒体库中的资源。使用层级或正则表达式匹配路径。",
-  "pathMarkGuide.markTypes.resourceImportant": "资源标记是整个系统的基础 - 只有设置了资源标记后，您才能在资源页面中查看和管理您的资源。没有资源标记，系统将无法知道要追踪哪些文件。",
-  "pathMarkGuide.markTypes.property": "属性标记",
-  "pathMarkGuide.markTypes.propertyDesc": "自动为匹配的资源分配属性值（如标签、分类）。",
-  "pathMarkGuide.markTypes.mediaLibrary": "媒体库标记",
-  "pathMarkGuide.markTypes.mediaLibraryDesc": "将资源与特定媒体库关联，便于更好地管理。",
-
-  "pathMarkGuide.configure.title": "如何配置",
-  "pathMarkGuide.configure.subtitle": "按照以下步骤设置您的路径标记。",
-  "pathMarkGuide.configure.step1": "在文件树中导航到一个文件夹并选择它。",
-  "pathMarkGuide.configure.step2": "右键单击或使用「添加标记」按钮创建标记。",
-  "pathMarkGuide.configure.step3": "配置匹配规则并预览受影响的路径。",
-
-  "pathMarkGuide.sync.title": "同步与管理",
-  "pathMarkGuide.sync.subtitle": "标记需要同步后才能生成实际数据。",
-  "pathMarkGuide.sync.explanation": "创建标记后并不会立刻生成资源。同步是读取您设置的标记并生成相应数据（资源、属性、媒体库关联）的过程。",
-  "pathMarkGuide.sync.point1": "默认情况下，自动同步已启用，会在标记变更后自动运行。您可以在设置中禁用自动同步。",
-  "pathMarkGuide.sync.point2": "如果禁用了自动同步，可以使用「待同步」按钮手动触发同步。",
-
-  "pathMarkGuide.skip": "跳过",
-  "pathMarkGuide.previous": "上一步",
-  "pathMarkGuide.next": "下一步",
-  "pathMarkGuide.getStarted": "开始使用",
-
   "pathMarkConfig.label.nextStepHint": "下一步：查看所有已配置的标记，或配置资源扩展来定义增强器、播放器等设置",
   "pathMarkConfig.action.goToResourceProfile": "配置资源扩展",
   "pathMarkConfig.label.keepResourcesOnPathChange": "保持资源身份标识",

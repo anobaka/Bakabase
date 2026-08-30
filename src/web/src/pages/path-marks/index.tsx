@@ -18,9 +18,11 @@ import PathMarkSettingsButton from "@/pages/path-mark-config/components/PathMark
 import PendingSyncButton from "@/pages/path-mark-config/components/PendingSyncButton";
 import CopyMarksSidebar from "@/pages/path-mark-config/components/CopyMarksSidebar";
 import {
-  PathMarkGuideModal,
-  usePathMarkGuide,
-} from "@/pages/path-mark-config/components/PathMarkGuide";
+  HelpCenterButton,
+  HelpCenterModal,
+  PATH_MARK_FIRST_RUN_KEY,
+  useFirstRunHelp,
+} from "@/components/HelpCenter";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { Button, toast, Modal, Spinner, Switch } from "@/components/bakaui";
 import BetaChip from "@/components/Chips/BetaChip";
@@ -30,7 +32,7 @@ const PathMarksPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { createPortal } = useBakabaseContext();
-  const { showGuide, completeGuide } = usePathMarkGuide();
+  const { showFirstRun, completeFirstRun } = useFirstRunHelp(PATH_MARK_FIRST_RUN_KEY);
 
   const [showOnlyInvalid, setShowOnlyInvalid] = useState(false);
 
@@ -261,6 +263,7 @@ const PathMarksPage = () => {
           <div className="flex items-center gap-2">
             <h2 className="text-xl font-semibold">{t("pathMarks.title")}</h2>
             <BetaChip />
+            <HelpCenterButton topic="pathMark" />
           </div>
 
           {/* Actions */}
@@ -345,7 +348,14 @@ const PathMarksPage = () => {
       </div>
 
       {/* First-time user guide */}
-      <PathMarkGuideModal visible={showGuide} onComplete={completeGuide} />
+      {showFirstRun && (
+        <HelpCenterModal
+          firstRun
+          topic="pathMark"
+          visible={showFirstRun}
+          onClose={completeFirstRun}
+        />
+      )}
     </div>
   );
 };

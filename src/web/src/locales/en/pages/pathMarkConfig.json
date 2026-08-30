@@ -119,16 +119,13 @@
   "pathMark.regex.description": "Regular expression pattern to match against the relative path from root.",
   "pathMark.applyScope.matchedOnly.description": "Only apply to the exact matched path",
   "pathMark.applyScope.matchedAndSubdirectories.description": "Apply to matched path and all paths inside it",
-
   "pathMark.resource.matchMode.description": "You can expand from the currently selected path. If you only want to select the current path, use layer=0.",
   "pathMark.resource.applyScope.matchedOnly.description": "Only treat as a resource when the resource path exactly matches the configured pattern.",
   "pathMark.resource.applyScope.matchedAndSubdirectories.description": "Treat as a resource when the resource path exactly matches the configured pattern, or is any file or folder within the match.",
-
   "pathMark.property.matchMode.description": "You can expand from the currently selected path. If you only want to select the current path, use layer=0.",
   "pathMark.property.applyScope.matchedOnly.description": "Only set the configured property and value when the resource path exactly matches the configured pattern.",
   "pathMark.property.applyScope.matchedAndSubdirectories.description": "Set the configured property and value when the resource path exactly matches the configured pattern, or is a file or folder within the match.",
   "pathMark.property.configDescription": "Choose which property to bind to a matched resource, and what value to set.",
-
   "pathMark.mediaLibrary.matchMode.description": "You can expand from the currently selected path. If you only want to select the current path, use layer=0.",
   "pathMark.mediaLibrary.applyScope.matchedOnly.description": "Only associate the resource with the configured media library when the resource path exactly matches the configured pattern.",
   "pathMark.mediaLibrary.applyScope.matchedAndSubdirectories.description": "Associate the resource with the configured media library when the resource path exactly matches the configured pattern, or is a file or folder within the match.",
@@ -140,7 +137,6 @@
   "pathMark.mediaLibrary.explanation": "Media Library Mark: Categorize resources into a specific media library.",
   "pathMark.mediaLibrary.settingsDescription": "Select a target library, or extract it from the path automatically.",
   "pathMark.mediaLibrary.importantNote": "Media library marks don't create resources. Only resources whose paths match a Resource Mark will be linked to the media library.",
-
   "markDescription.layer.currentAndSubdirs": "This layer + subdirs",
   "markDescription.layer.current": "This layer",
   "markDescription.layer.suffix": " layer",
@@ -156,42 +152,10 @@
   "markDescription.dirOnly": "Dirs only",
   "markDescription.empty": "No description",
   "markDescription.invalid": "Invalid config",
-
   "pathMarkConfig.tip.clickToEditRightClickDelete": "Click to edit, right-click to delete",
   "pathMarkConfig.status.syncProgress": "Syncing: {{progress}}%",
   "pathMarkConfig.tip.recheckAfter": "Re-check after",
   "pathMarkConfig.action.viewAllMarks": "View All Marks",
-
-  "pathMarkGuide.welcome.title": "Welcome to Path Marks",
-  "pathMarkGuide.welcome.description": "Path Marks help you organize your media library by defining rules on file paths. You can specify which files are resources, assign properties, and associate them with media libraries.",
-
-  "pathMarkGuide.markTypes.title": "Three Types of Marks",
-  "pathMarkGuide.markTypes.subtitle": "Each mark type serves a different purpose in organizing your content.",
-  "pathMarkGuide.markTypes.resource": "Resource Mark (Core)",
-  "pathMarkGuide.markTypes.resourceDesc": "Identifies files or folders as resources in your library. Use layer or regex to match paths.",
-  "pathMarkGuide.markTypes.resourceImportant": "Resource Mark is the foundation - only after setting it up can you view and manage your resources on the Resource page. Without it, the system won't know which files to track.",
-  "pathMarkGuide.markTypes.property": "Property Mark",
-  "pathMarkGuide.markTypes.propertyDesc": "Assigns property values (like tags, categories) to matched resources automatically.",
-  "pathMarkGuide.markTypes.mediaLibrary": "Media Library Mark",
-  "pathMarkGuide.markTypes.mediaLibraryDesc": "Associates resources with a specific media library for better organization.",
-
-  "pathMarkGuide.configure.title": "How to Configure",
-  "pathMarkGuide.configure.subtitle": "Follow these steps to set up your path marks.",
-  "pathMarkGuide.configure.step1": "Navigate to a folder in the file tree and select it.",
-  "pathMarkGuide.configure.step2": "Right-click or use the Add Mark button to create marks.",
-  "pathMarkGuide.configure.step3": "Configure the matching rules and preview the affected paths.",
-
-  "pathMarkGuide.sync.title": "Sync & Management",
-  "pathMarkGuide.sync.subtitle": "Marks need to be synced to generate actual data.",
-  "pathMarkGuide.sync.explanation": "Creating marks alone doesn't immediately create resources. Syncing is the process that reads your marks and generates the corresponding data (resources, properties, library associations).",
-  "pathMarkGuide.sync.point1": "By default, auto-sync is enabled and will run automatically after marks change. You can disable auto-sync in settings if needed.",
-  "pathMarkGuide.sync.point2": "If auto-sync is disabled, use the \"Pending Sync\" button to manually trigger synchronization.",
-
-  "pathMarkGuide.skip": "Skip",
-  "pathMarkGuide.previous": "Previous",
-  "pathMarkGuide.next": "Next",
-  "pathMarkGuide.getStarted": "Get Started",
-
   "pathMarkConfig.label.nextStepHint": "Next step: View all configured marks, or configure Resource Profiles to define enhancers, players, and other settings",
   "pathMarkConfig.action.goToResourceProfile": "Configure Resource Profiles",
   "pathMarkConfig.label.keepResourcesOnPathChange": "Keep resource identity on path change",
