@@ -34,9 +34,12 @@ class BakabaseApiClient {
   final String baseUrl;
   final Dio _dio;
 
-  /// DisplayName | MediaLibraryName | Cover, the additional items the resource
-  /// grid needs. Values mirror ResourceAdditionalItem on the server.
-  static const int _gridAdditionalItems = 288 | 2048 | 16416;
+  /// ResourceAdditionalItem.All. Must be a value the server's enum DEFINES:
+  /// hand-built bit combinations (e.g. DisplayName|MediaLibraryName|Cover)
+  /// fail model binding, because the composite members share the Properties
+  /// bit and the flags decomposition cannot reassemble them. All is also what
+  /// the web sends for every resource list, so it is the battle-tested path.
+  static const int _gridAdditionalItems = 52064;
 
   /// ResourceAdditionalItem.Properties — property values, for reading ratings.
   static const int _propertiesAdditionalItem = 32;
