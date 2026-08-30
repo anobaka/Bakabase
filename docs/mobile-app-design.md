@@ -41,6 +41,11 @@ S1–S4 已按 §6 落地于 `Bakabase.Modules.RemoteAccess/Components/Discovery
 
 `mobile-release.yml`：tag `mobile-v*` 触发 → Android split-per-abi APK + macOS runner 出 unsigned IPA → GitHub Release → `scripts/mobile/build_sidestore_source.py`（stdlib、无状态：从全部 `mobile-v*` release 重建）生成 source.json 并强推到 `sidestore` 孤儿分支。SideStore 源地址：`https://raw.githubusercontent.com/anobaka/Bakabase/sidestore/source.json`。与原设计的偏差：source.json 不放 `docs/`（main 受分支保护，workflow 无法直推），改用独立无保护分支托管。
 
+后续演进（同属 M3 范畴）：构建步骤抽成可复用的 `_mobile_build.yml`，三个入口共用——
+1. `mobile-release.yml`（tag 正式发布，同上）；
+2. `deploy.yml` 桌面发布管线：`mobile-changes` job 用 `git diff {上一个 v* tag}..HEAD -- src/apps/mobile scripts/mobile _mobile_build.yml` 判断 App 是否有改动，有则构建并把 APK/IPA 附到当次桌面 release 的 Assets（changelog 自动加移动端段落），无改动则跳过不打包；
+3. `mobile-dev-build.yml`（workflow_dispatch，任意分支）：开发分支无 release 机制，产物以 Actions run artifacts 形式提供下载（保留 14 天），IPA 可经 SideStore 的"导入 .ipa"直接安装。
+
 ### M4（打磨）
 
 排序菜单（AddDt/PlayedAt/FileModifyDt/Filename + 方向）、播放历史页（`/play-history` + `/resource/keys` 批量解析标题封面）、详情页评分（读 `properties[2][13]`，写 `PUT /resource/{id}/property-value`）、服务器切换（断开回连接页，档案一键直连）。服务端配套：`PutResourcePropertyValue` 标记 `[RemoteAccessible]`（属性写入落库不落屏，符合该标记语义；单端点放开，bulk 写仍 host-only）。S6（精简搜索 ViewModel）未做——待真机实测数据量再决定。

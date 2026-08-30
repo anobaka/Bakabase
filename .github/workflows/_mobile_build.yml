@@ -1,0 +1,123 @@
+# Reusable mobile build: release APKs (split per ABI) + unsigned IPA.
+# Called by mobile-release.yml (tag releases), mobile-dev-build.yml (branch
+# builds downloadable as run artifacts), and deploy.yml (attaching mobile
+# packages to desktop releases when the app changed).
+#
+# A HarmonyOS job slots in here once the ohos toolchain question is settled —
+# see docs/mobile-harmonyos-report.md for the re-evaluation triggers.
+name: Mobile Build
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: "Version stamped into the binaries (--build-name)"
+        required: true
+        type: string
+      build_number:
+        description: "Numeric build number (--build-number)"
+        required: true
+        type: number
+      asset_suffix:
+        description: "Extra suffix in artifact file names, e.g. '-dev-abc1234'"
+        required: false
+        type: string
+        default: ""
+      ref:
+        description: "Git ref to build; defaults to the calling workflow's sha"
+        required: false
+        type: string
+        default: ""
+      retention_days:
+        description: "How long the run artifacts are kept"
+        required: false
+        type: number
+        default: 90
+
+env:
+  FLUTTER_VERSION: "3.47.2"
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/apps/mobile/app
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      - name: Build split APKs
+        run: |
+          flutter build apk --release --split-per-abi \
+            --build-name="${{ inputs.version }}" \
+            --build-number="${{ inputs.build_number }}"
+
+      - name: Collect artifacts
+        run: |
+          NAME="bakabase-mobile-${{ inputs.version }}${{ inputs.asset_suffix }}"
+          OUT=build/app/outputs/flutter-apk
+          mkdir -p dist
+          for abi in arm64-v8a armeabi-v7a x86_64; do
+            src="$OUT/app-$abi-release.apk"
+            [ -f "$src" ] && cp "$src" "dist/$NAME-android-$abi.apk"
+          done
+          ls -lh dist/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mobile-android
+          path: src/apps/mobile/app/dist/*.apk
+          retention-days: ${{ inputs.retention_days }}
+
+  ios:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: src/apps/mobile/app
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      - name: Build unsigned iOS app
+        run: |
+          flutter build ios --release --no-codesign \
+            --build-name="${{ inputs.version }}" \
+            --build-number="${{ inputs.build_number }}"
+
+      - name: Package unsigned IPA
+        run: |
+          NAME="bakabase-mobile-${{ inputs.version }}${{ inputs.asset_suffix }}"
+          mkdir -p dist Payload
+          cp -r build/ios/iphoneos/Runner.app Payload/
+          zip -qry "dist/$NAME-ios-unsigned.ipa" Payload
+          ls -lh dist/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mobile-ios
+          path: src/apps/mobile/app/dist/*.ipa
+          retention-days: ${{ inputs.retention_days }}

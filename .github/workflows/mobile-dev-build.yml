@@ -1,0 +1,57 @@
+# On-demand packaging for ANY branch — the way to get installable packages
+# out of a development branch, which deliberately has no release mechanism.
+# The APKs and the unsigned IPA come out as run artifacts: open the run page,
+# scroll to "Artifacts", download (a GitHub login with repo access is needed).
+# The IPA installs through SideStore's own "+ / import .ipa" without a source.
+name: Mobile Dev Build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-dev-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      suffix: ${{ steps.meta.outputs.suffix }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Derive version and dev suffix from pubspec + sha
+        id: meta
+        run: |
+          VERSION=$(sed -n 's/^version: \([0-9.]*\).*/\1/p' src/apps/mobile/app/pubspec.yaml)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "suffix=-dev-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: prepare
+    uses: ./.github/workflows/_mobile_build.yml
+    with:
+      version: ${{ needs.prepare.outputs.version }}
+      build_number: ${{ github.run_number }}
+      asset_suffix: ${{ needs.prepare.outputs.suffix }}
+      retention_days: 14
+
+  summary:
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Point at the artifacts
+        run: |
+          {
+            echo "## 📦 Dev build ready"
+            echo ""
+            echo "Version: \`${{ needs.prepare.outputs.version }}${{ needs.prepare.outputs.suffix }}\` (branch \`${GITHUB_REF_NAME}\`)"
+            echo ""
+            echo "Download from this run's **Artifacts** section (kept 14 days):"
+            echo "- \`mobile-android\` — split APKs (install the arm64-v8a one on most phones)"
+            echo "- \`mobile-ios\` — unsigned IPA (import into SideStore via its + button)"
+          } >> "$GITHUB_STEP_SUMMARY"

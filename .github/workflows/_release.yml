@@ -318,6 +318,16 @@ jobs:
           path: ./vpk-artifacts
         continue-on-error: true
 
+      # Present only when deploy.yml's mobile job ran (i.e. the app changed
+      # since the previous release); otherwise this quietly finds nothing.
+      - name: Download mobile artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: mobile-*
+          merge-multiple: true
+          path: ./mobile-artifacts
+        continue-on-error: true
+
       - name: Collect Velopack installers for release
         shell: bash
         run: |
@@ -419,6 +429,18 @@ jobs:
             echo ""
           } >> "$CHANGELOG"
 
+          # Mobile app packages, when this release carries a changed app
+          if ls ./mobile-artifacts/* >/dev/null 2>&1; then
+            {
+              echo "#### Mobile App / 移动端"
+              echo ""
+              echo "This release includes updated mobile packages in the Assets below: Android APKs (pick your ABI, arm64-v8a for most phones) and an unsigned iOS IPA for SideStore."
+              echo ""
+              echo "本次发布包含更新的移动端安装包（见下方 Assets）：Android APK（大多数手机选 arm64-v8a）与供 SideStore 使用的未签名 iOS IPA。"
+              echo ""
+            } >> "$CHANGELOG"
+          fi
+
           echo "--- Generated changelog with download links ---"
           cat "$CHANGELOG"
 
@@ -455,6 +477,7 @@ jobs:
             Bakabase-Setup-${{ inputs.version }}-win-x64.exe
             Bakabase-Setup-${{ inputs.version }}-osx-x64.pkg
             Bakabase-Setup-${{ inputs.version }}-osx-arm64.pkg
+            mobile-artifacts/*
           fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
