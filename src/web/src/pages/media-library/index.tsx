@@ -35,6 +35,7 @@ import {
 import { buildColorValueString } from "@/components/bakaui/components/ColorPicker";
 import { EditableValue } from "@/components/EditableValue";
 import { MediaLibraryTerm } from "@/components/Chips/Terms";
+import { HelpCenterButton } from "@/components/HelpCenter";
 import { serializeStandardValue } from "@/components/StandardValue";
 
 const MediaLibraryPage = () => {
@@ -245,6 +246,7 @@ const MediaLibraryPage = () => {
             >
               {t("mediaLibrary.action.goToPathMarkConfig")}
             </Button>
+            <HelpCenterButton label={t("helpCenter.entry.whatCanPathMarksDo")} topic="pathMark" />
           </div>
         </div>
       </div>
@@ -436,6 +438,7 @@ const MediaLibraryPage = () => {
         >
           {t("mediaLibrary.action.goToPathMarkConfig")}
         </Button>
+        <HelpCenterButton topic="pathMark" />
       </div>
     </div>
   );

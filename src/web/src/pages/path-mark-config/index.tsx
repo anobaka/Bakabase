@@ -11,10 +11,15 @@ import PathMarkTreeView from "./components/PathMarkTreeView";
 import PathMarkSettingsButton from "./components/PathMarkSettingsButton";
 import PendingSyncButton from "./components/PendingSyncButton";
 import usePathMarks from "./hooks/usePathMarks";
-import { PathMarkGuideModal, usePathMarkGuide } from "./components/PathMarkGuide";
 
 import { Button } from "@/components/bakaui";
 import BetaChip from "@/components/Chips/BetaChip";
+import {
+  HelpCenterButton,
+  HelpCenterModal,
+  PATH_MARK_FIRST_RUN_KEY,
+  useFirstRunHelp,
+} from "@/components/HelpCenter";
 
 const PATH_MARK_ROOT_PATH_KEY = "pathMarkConfig.rootPath";
 
@@ -24,7 +29,7 @@ const PathRuleConfigPage = () => {
   const [searchParams] = useSearchParams();
 
   const { loadAllMarks } = usePathMarks();
-  const { showGuide, completeGuide } = usePathMarkGuide();
+  const { showFirstRun, completeFirstRun } = useFirstRunHelp(PATH_MARK_FIRST_RUN_KEY);
 
   const [rootPath, setRootPath] = useState<string>();
   const [rootPathInitialized, setRootPathInitialized] = useState(false);
@@ -68,6 +73,7 @@ const PathRuleConfigPage = () => {
           <div className="flex items-center gap-2">
             <h2 className="text-xl font-semibold">{t("pathMarkConfig.title")}</h2>
             <BetaChip />
+            <HelpCenterButton topic="pathMark" />
           </div>
 
           {/* Actions */}
@@ -129,7 +135,14 @@ const PathRuleConfigPage = () => {
       </div>
 
       {/* First-time user guide */}
-      <PathMarkGuideModal visible={showGuide} onComplete={completeGuide} />
+      {showFirstRun && (
+        <HelpCenterModal
+          firstRun
+          topic="pathMark"
+          visible={showFirstRun}
+          onClose={completeFirstRun}
+        />
+      )}
     </div>
   );
 };

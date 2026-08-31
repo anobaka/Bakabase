@@ -16,6 +16,7 @@ import { usePreview } from "./hooks/usePreview";
 import { PathMarkType, PathMarkApplyScope } from "@/sdk/constants";
 import { Modal, Switch, DurationInput, Button, toast } from "@/components/bakaui";
 import { ResourceTerm, PropertyTerm, MediaLibraryTerm } from "@/components/Chips/Terms";
+import { HelpCenterButton } from "@/components/HelpCenter";
 import BApi from "@/sdk/BApi";
 
 const DEFAULT_EXPIRES_IN_SECONDS = 3600; // 1 hour
@@ -176,6 +177,7 @@ const MarkConfigModal = ({
               ({t("pathMarkConfig.label.pathCount", { count: pathCount })})
             </span>
           )}
+          <HelpCenterButton section="examples" topic="pathMark" />
         </span>
       }
       onDestroyed={onDestroyed}
