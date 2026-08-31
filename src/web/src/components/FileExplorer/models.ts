@@ -22,7 +22,8 @@ export type Capability =
   | "group"
   | "play"
   | "play-first-file"
-  | "create-directory";
+  | "create-directory"
+  | "enter-directory";
 
 export const FileSystemTreeEntryCapabilityMap: Record<Capability, CapabilityDefinition> = {
   select: {
@@ -86,5 +87,8 @@ export const FileSystemTreeEntryCapabilityMap: Record<Capability, CapabilityDefi
   "create-directory": {
     shortcut: { key: "n", nameI18nKey: "fileExplorer.shortcutKey.n" },
     nameI18NKey: "fileExplorer.capability.createDirectory",
+  },
+  "enter-directory": {
+    nameI18NKey: "fileExplorer.capability.enterDirectory",
   },
 };

@@ -297,6 +297,12 @@ export class Entry {
   expanded: boolean = false;
   selected = false;
 
+  /**
+   * Display-only entry (e.g. the parent-directory group headers of the multi-root view):
+   * not selectable, not renamable, not draggable, no operation buttons, no context menu.
+   */
+  passive: boolean = false;
+
   passwordsForDecompressing: string[] = [];
 
   renaming = false;

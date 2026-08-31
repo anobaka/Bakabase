@@ -108,6 +108,7 @@
   "fileExplorer.capability.play": "Play",
   "fileExplorer.capability.playFirstFile": "Play first file",
   "fileExplorer.capability.createDirectory": "Create directory",
+  "fileExplorer.capability.enterDirectory": "Set as working directory",
   "fileExplorer.shortcutKey.leftClick": "Left Click",
   "fileExplorer.shortcutKey.ctrlClick": "Ctrl+Click",
   "fileExplorer.shortcutKey.shiftClick": "Shift+Click",

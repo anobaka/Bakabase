@@ -171,9 +171,14 @@ const ResourceMoveModal = ({ resources, onMoved, onDestroyed }: Props) => {
     }
   }, [selectedDest, previewing, resourceIds, createPortal, finishAfterTaskCreated, t]);
 
+  // A stable filter identity matters: FileExplorer invalidates every node's memoized
+  // filtered children whenever the filter object changes.
+  const explorerFilter = useMemo(() => ({ custom: (e: Entry) => e.isDirectoryOrDrive }), []);
+
   const renderAfterName = useCallback(
     (entry: Entry) => {
-      if (!entry.isDirectoryOrDrive) return null;
+      // Group headers are display-only context, not pickable destinations.
+      if (entry.passive || !entry.isDirectoryOrDrive) return null;
       const isSelected = standardizePath(entry.path) === selectedDest;
 
       return (
@@ -235,7 +240,8 @@ const ResourceMoveModal = ({ resources, onMoved, onDestroyed }: Props) => {
             <FileExplorer
               expandable
               capabilities={["select"]}
-              filter={{ custom: (e) => e.isDirectoryOrDrive }}
+              filter={explorerFilter}
+              keyboard={false}
               renderAfterName={renderAfterName}
               rootPaths={markRoots}
               selectable="disabled"

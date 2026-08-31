@@ -108,6 +108,7 @@
   "fileExplorer.capability.play": "播放",
   "fileExplorer.capability.playFirstFile": "播放第一个文件",
   "fileExplorer.capability.createDirectory": "新建文件夹",
+  "fileExplorer.capability.enterDirectory": "设为工作目录",
   "fileExplorer.shortcutKey.leftClick": "左键点击",
   "fileExplorer.shortcutKey.ctrlClick": "Ctrl+点击",
   "fileExplorer.shortcutKey.shiftClick": "Shift+点击",

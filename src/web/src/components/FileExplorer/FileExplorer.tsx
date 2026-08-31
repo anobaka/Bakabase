@@ -36,6 +36,7 @@ import WrapModal from "./components/WrapModal";
 import ExtractModal from "./components/ExtractModal";
 
 import { Entry } from "@/core/models/FileExplorer/Entry";
+import { IwFsType } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
 import { buildLogger, getStandardParentPath, standardizePath } from "@/components/utils";
 import { useFileExplorerClipboardStore } from "@/stores/fileExplorerClipboard";
@@ -48,13 +49,19 @@ import FolderSelector from "@/components/FolderSelector";
 export type FileExplorerProps = {
   rootPath?: string;
   /**
-   * Multi-root mode: render these paths as the top-level entries of a virtual, pathless root
-   * (each expandable into the real filesystem). The virtual root skips the server-side
-   * filesystem watcher entirely, so multiple explorers can coexist. Navigating (address bar,
-   * double-click, Enter) still switches to a single-root view; going "back" restores the
-   * virtual root.
+   * Multi-root mode: render these paths as the top-level entries of a virtual, pathless root,
+   * grouped under passive parent-directory rows so same-named folders stay distinguishable.
+   * The virtual root skips the server-side filesystem watcher entirely, so multiple explorers
+   * can coexist. Navigating (address bar, Enter) still switches to a single-root view; going
+   * "back" restores the virtual root.
    */
   rootPaths?: string[];
+  /**
+   * Render the shortcuts panel and attach the window-level keyboard/mouse listeners.
+   * Turn off for pure pickers (e.g. the move-destination modal) where global key handling
+   * (copy/cut/paste, delete, navigation) is unwanted.
+   */
+  keyboard?: boolean;
   onSelected?: (entries: Entry[]) => any;
   selectable: "disabled" | "single" | "multiple";
   defaultSelectedPath?: string;
@@ -76,6 +83,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
     {
       rootPath,
       rootPaths,
+      keyboard = true,
       onDoubleClick,
       filter,
       onSelected,
@@ -178,22 +186,66 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
         const virtualRoot = new RootEntry(undefined, showHiddenFilesRef.current);
 
         virtualRoot.children = [];
-        for (const p of rootPathsRef.current!) {
-          const standardized = standardizePath(p);
 
-          if (!standardized) continue;
-          // Missing roots are silently skipped — a mark can point at an unplugged drive.
-          const rsp = await BApi.file
-            .getIwFsEntry({ path: standardized }, { showErrorToast: () => false })
-            .catch(() => undefined);
+        const standardizedPaths = rootPathsRef
+          .current!.map((p) => standardizePath(p))
+          .filter((p): p is string => !!p);
+        // Missing roots are silently skipped — a mark can point at an unplugged drive.
+        const rsps = await Promise.all(
+          standardizedPaths.map((p) =>
+            BApi.file
+              .getIwFsEntry({ path: p }, { showErrorToast: () => false })
+              .catch(() => undefined),
+          ),
+        );
 
-          if (superseded()) return;
+        if (superseded()) return;
 
-          if (rsp?.data?.path) {
-            virtualRoot.children.push(new Entry({ ...rsp.data, parent: virtualRoot }));
+        // Group the roots under passive parent-directory rows so same-named folders stay
+        // distinguishable; roots without a resolvable parent (drive roots) sit directly
+        // under the virtual root. `properties: []` suppresses the per-entry children-count
+        // probe, which enumerates the whole directory server-side — the dominant cost of
+        // opening this view on large libraries.
+        const groups = new Map<string, Entry>();
+
+        for (const rsp of rsps) {
+          if (!rsp?.data?.path) continue;
+          const parentPath = getStandardParentPath(rsp.data.path);
+          let parent: Entry = virtualRoot;
+
+          if (parentPath) {
+            let group = groups.get(parentPath);
+
+            if (!group) {
+              group = new Entry({
+                path: parentPath,
+                name: parentPath,
+                type: IwFsType.Directory,
+                parent: virtualRoot,
+                children: [],
+                expanded: true,
+                passive: true,
+                properties: [],
+              });
+              groups.set(parentPath, group);
+              virtualRoot.children.push(group);
+            }
+            parent = group;
+          }
+
+          const child = new Entry({ ...rsp.data, parent, properties: [] });
+
+          if (parent == virtualRoot) {
+            virtualRoot.children.push(child);
+          } else {
+            parent.children!.push(child);
           }
         }
         virtualRoot.children.sort((a, b) => a.name.localeCompare(b.name));
+        for (const group of groups.values()) {
+          group.children!.sort((a, b) => a.name.localeCompare(b.name));
+          group.refreshFilteredChildren();
+        }
         virtualRoot.refreshFilteredChildren();
         setRoot(virtualRoot);
 
@@ -421,250 +473,252 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
             onChangeWorkingDirectory={initialize}
           />
         </ControlledMenu>
-        <EventListener
-          onClick={(evt) => {
-            if (ignoreClickEvent(evt.target as HTMLElement)) {
-              return;
-            }
-            for (const se of selectedEntriesRef.current) {
-              se.select(false);
-            }
-            setSelectedEntries([]);
-          }}
-          onDelete={() => {
-            if (selectedEntriesRef.current.length > 0 && capabilities?.includes("delete")) {
-              createPortal(DeleteConfirmationModal, {
-                entries: selectedEntriesRef.current,
-                rootPath: rootRef.current?.path,
-              });
-            }
-          }}
-          onKeyDown={(key, evt) => {
-            log("event listener", "key down", key, evt);
-            const c = _.keys(FileSystemTreeEntryCapabilityMap).find(
-              (k) => FileSystemTreeEntryCapabilityMap[k as Capability].shortcut?.key == key,
-            ) as Capability | undefined;
-
-            if (c) {
-              evt.stopPropagation();
-              evt.preventDefault();
-              if (capabilities?.includes(c)) {
-                switch (c) {
-                  case "wrap":
-                    if (selectedEntriesRef.current.length > 0) {
-                      createPortal(WrapModal, {
-                        entries: selectedEntriesRef.current,
-                      });
-                    }
-                    break;
-                  case "extract":
-                    if (selectedEntriesRef.current.length > 0) {
-                      createPortal(ExtractModal, {
-                        entries: selectedEntriesRef.current,
-                      });
-                    }
-                    break;
-                  case "move":
-                    if (selectedEntriesRef.current.length > 0) {
-                      createPortal(FolderSelector, {
-                        onSelect: (path: string) => {
-                          return BApi.file.moveEntries({
-                            destDir: path,
-                            entryPaths: selectedEntriesRef.current.map((e) => e.path),
-                          });
-                        },
-                        sources: ["media library", "custom"],
-                      });
-                    }
-                    break;
-                  case "delete":
-                    break;
-                  case "rename":
-                    break;
-                  case "decompress":
-                    if (selectedEntriesRef.current.length > 0) {
-                      BApi.file.decompressFiles({
-                        paths: selectedEntriesRef.current.map((e) => e.path),
-                      });
-                    }
-                    break;
-                  case "delete-all-same-name":
-                    break;
-                  case "group":
-                    break;
-                  case "play":
-                    break;
-                  case "play-first-file":
-                    if (selectedEntriesRef.current.length == 1) {
-                      selectedEntriesRef.current[0].ref?.playFirstFile();
-                    }
-                    break;
-                }
+        {keyboard && (
+          <EventListener
+            onClick={(evt) => {
+              if (ignoreClickEvent(evt.target as HTMLElement)) {
+                return;
               }
-            } else {
-              switch (key) {
-                case "a": {
-                  if (evt.ctrlKey) {
-                    let parent: Entry | undefined;
+              for (const se of selectedEntriesRef.current) {
+                se.select(false);
+              }
+              setSelectedEntries([]);
+            }}
+            onDelete={() => {
+              if (selectedEntriesRef.current.length > 0 && capabilities?.includes("delete")) {
+                createPortal(DeleteConfirmationModal, {
+                  entries: selectedEntriesRef.current,
+                  rootPath: rootRef.current?.path,
+                });
+              }
+            }}
+            onKeyDown={(key, evt) => {
+              log("event listener", "key down", key, evt);
+              const c = _.keys(FileSystemTreeEntryCapabilityMap).find(
+                (k) => FileSystemTreeEntryCapabilityMap[k as Capability].shortcut?.key == key,
+              ) as Capability | undefined;
 
-                    for (const se of selectedEntriesRef.current) {
-                      if (se.parent) {
-                        if (!parent || parent.path.startsWith(se.parent.path)) {
-                          parent = se.parent;
+              if (c) {
+                evt.stopPropagation();
+                evt.preventDefault();
+                if (capabilities?.includes(c)) {
+                  switch (c) {
+                    case "wrap":
+                      if (selectedEntriesRef.current.length > 0) {
+                        createPortal(WrapModal, {
+                          entries: selectedEntriesRef.current,
+                        });
+                      }
+                      break;
+                    case "extract":
+                      if (selectedEntriesRef.current.length > 0) {
+                        createPortal(ExtractModal, {
+                          entries: selectedEntriesRef.current,
+                        });
+                      }
+                      break;
+                    case "move":
+                      if (selectedEntriesRef.current.length > 0) {
+                        createPortal(FolderSelector, {
+                          onSelect: (path: string) => {
+                            return BApi.file.moveEntries({
+                              destDir: path,
+                              entryPaths: selectedEntriesRef.current.map((e) => e.path),
+                            });
+                          },
+                          sources: ["media library", "custom"],
+                        });
+                      }
+                      break;
+                    case "delete":
+                      break;
+                    case "rename":
+                      break;
+                    case "decompress":
+                      if (selectedEntriesRef.current.length > 0) {
+                        BApi.file.decompressFiles({
+                          paths: selectedEntriesRef.current.map((e) => e.path),
+                        });
+                      }
+                      break;
+                    case "delete-all-same-name":
+                      break;
+                    case "group":
+                      break;
+                    case "play":
+                      break;
+                    case "play-first-file":
+                      if (selectedEntriesRef.current.length == 1) {
+                        selectedEntriesRef.current[0].ref?.playFirstFile();
+                      }
+                      break;
+                  }
+                }
+              } else {
+                switch (key) {
+                  case "a": {
+                    if (evt.ctrlKey) {
+                      let parent: Entry | undefined;
+
+                      for (const se of selectedEntriesRef.current) {
+                        if (se.parent) {
+                          if (!parent || parent.path.startsWith(se.parent.path)) {
+                            parent = se.parent;
+                          }
                         }
                       }
-                    }
-                    parent ??= rootRef.current;
+                      parent ??= rootRef.current;
 
-                    log("Select all filtered children of entry", parent);
+                      log("Select all filtered children of entry", parent);
 
-                    if (parent) {
-                      const newSelectedEntries: Entry[] = [];
+                      if (parent) {
+                        const newSelectedEntries: Entry[] = [];
 
-                      for (const c of parent.filteredChildren) {
-                        newSelectedEntries.push(c);
-                        c.select(true);
-                      }
-                      const others = selectedEntriesRef.current.filter(
-                        (s) => !newSelectedEntries.includes(s),
-                      );
-
-                      for (const o of others) {
-                        o.select(false);
-                      }
-                      setSelectedEntries(newSelectedEntries);
-                    }
-                  }
-                  break;
-                }
-                case "ArrowUp":
-                case "ArrowDown": {
-                  evt.preventDefault();
-                  const lastSelected =
-                    selectedEntriesRef.current[selectedEntriesRef.current.length - 1];
-                  const parent = lastSelected?.parent ?? rootRef.current;
-
-                  if (parent && parent.filteredChildren.length > 0) {
-                    let currentIndex = lastSelected
-                      ? parent.filteredChildren.indexOf(lastSelected)
-                      : -1;
-
-                    let newIndex: number;
-
-                    if (key === "ArrowUp") {
-                      newIndex =
-                        currentIndex <= 0 ? parent.filteredChildren.length - 1 : currentIndex - 1;
-                    } else {
-                      newIndex =
-                        currentIndex >= parent.filteredChildren.length - 1 ? 0 : currentIndex + 1;
-                    }
-
-                    const newEntry = parent.filteredChildren[newIndex];
-
-                    if (newEntry) {
-                      for (const se of selectedEntriesRef.current) {
-                        se.select(false);
-                      }
-                      newEntry.select(true);
-                      setSelectedEntries([newEntry]);
-                      parent.ref?.scrollTo(newEntry.path);
-                    }
-                  }
-                  break;
-                }
-                case "Enter": {
-                  if (selectedEntriesRef.current.length === 1) {
-                    const entry = selectedEntriesRef.current[0];
-
-                    if (entry.isDirectoryOrDrive) {
-                      initialize(entry.path);
-                    }
-                  }
-                  break;
-                }
-                case "c": {
-                  // Support both Ctrl (Windows/Linux) and Command (Mac)
-                  if ((evt.ctrlKey || evt.metaKey) && selectedEntriesRef.current.length > 0) {
-                    evt.preventDefault();
-                    const paths = selectedEntriesRef.current.map((e) => e.path);
-
-                    clipboardStore.copy(paths);
-                    toast.success(t<string>("Copied {{count}} items", { count: paths.length }));
-                  }
-                  break;
-                }
-                case "x": {
-                  // Support both Ctrl (Windows/Linux) and Command (Mac)
-                  if ((evt.ctrlKey || evt.metaKey) && selectedEntriesRef.current.length > 0) {
-                    evt.preventDefault();
-                    const paths = selectedEntriesRef.current.map((e) => e.path);
-
-                    clipboardStore.cut(paths);
-                    toast.success(t<string>("Cut {{count}} items", { count: paths.length }));
-                  }
-                  break;
-                }
-                case "v": {
-                  // Support both Ctrl (Windows/Linux) and Command (Mac)
-                  if ((evt.ctrlKey || evt.metaKey) && clipboardStore.paths.length > 0) {
-                    evt.preventDefault();
-                    const { paths, mode } = clipboardStore;
-
-                    // Determine destination directory based on selection
-                    let destDir: string | undefined;
-
-                    if (selectedEntriesRef.current.length === 0) {
-                      // No selection -> paste to working directory
-                      destDir = rootRef.current?.path;
-                    } else if (
-                      selectedEntriesRef.current.length === 1 &&
-                      selectedEntriesRef.current[0].isDirectoryOrDrive
-                    ) {
-                      // Single directory selected -> paste into it
-                      destDir = selectedEntriesRef.current[0].path;
-                    }
-                    // If file(s) selected or multiple items selected -> don't paste
-
-                    if (destDir) {
-                      // Skip if all items are already in the destination directory (only for cut mode)
-                      if (mode === "cut") {
-                        const allItemsAlreadyInDest = paths.every(
-                          (p) => getStandardParentPath(p) === destDir,
+                        for (const c of parent.filteredChildren) {
+                          newSelectedEntries.push(c);
+                          c.select(true);
+                        }
+                        const others = selectedEntriesRef.current.filter(
+                          (s) => !newSelectedEntries.includes(s),
                         );
 
-                        if (allItemsAlreadyInDest) {
-                          break;
+                        for (const o of others) {
+                          o.select(false);
                         }
+                        setSelectedEntries(newSelectedEntries);
+                      }
+                    }
+                    break;
+                  }
+                  case "ArrowUp":
+                  case "ArrowDown": {
+                    evt.preventDefault();
+                    const lastSelected =
+                      selectedEntriesRef.current[selectedEntriesRef.current.length - 1];
+                    const parent = lastSelected?.parent ?? rootRef.current;
+
+                    if (parent && parent.filteredChildren.length > 0) {
+                      let currentIndex = lastSelected
+                        ? parent.filteredChildren.indexOf(lastSelected)
+                        : -1;
+
+                      let newIndex: number;
+
+                      if (key === "ArrowUp") {
+                        newIndex =
+                          currentIndex <= 0 ? parent.filteredChildren.length - 1 : currentIndex - 1;
+                      } else {
+                        newIndex =
+                          currentIndex >= parent.filteredChildren.length - 1 ? 0 : currentIndex + 1;
                       }
 
-                      const apiCall =
-                        mode === "copy"
-                          ? BApi.file.copyEntries({ destDir, entryPaths: paths })
-                          : BApi.file.moveEntries({ destDir, entryPaths: paths });
+                      const newEntry = parent.filteredChildren[newIndex];
 
-                      apiCall.then(() => {
-                        const message =
-                          mode === "copy"
-                            ? t<string>("Copied {{count}} items", { count: paths.length })
-                            : t<string>("Moved {{count}} items", { count: paths.length });
-
-                        toast.success(message);
-                        if (mode === "cut") {
-                          clipboardStore.clear();
+                      if (newEntry) {
+                        for (const se of selectedEntriesRef.current) {
+                          se.select(false);
                         }
-                      });
+                        newEntry.select(true);
+                        setSelectedEntries([newEntry]);
+                        parent.ref?.scrollTo(newEntry.path);
+                      }
                     }
+                    break;
                   }
-                  break;
+                  case "Enter": {
+                    if (selectedEntriesRef.current.length === 1) {
+                      const entry = selectedEntriesRef.current[0];
+
+                      if (entry.isDirectoryOrDrive) {
+                        initialize(entry.path);
+                      }
+                    }
+                    break;
+                  }
+                  case "c": {
+                    // Support both Ctrl (Windows/Linux) and Command (Mac)
+                    if ((evt.ctrlKey || evt.metaKey) && selectedEntriesRef.current.length > 0) {
+                      evt.preventDefault();
+                      const paths = selectedEntriesRef.current.map((e) => e.path);
+
+                      clipboardStore.copy(paths);
+                      toast.success(t<string>("Copied {{count}} items", { count: paths.length }));
+                    }
+                    break;
+                  }
+                  case "x": {
+                    // Support both Ctrl (Windows/Linux) and Command (Mac)
+                    if ((evt.ctrlKey || evt.metaKey) && selectedEntriesRef.current.length > 0) {
+                      evt.preventDefault();
+                      const paths = selectedEntriesRef.current.map((e) => e.path);
+
+                      clipboardStore.cut(paths);
+                      toast.success(t<string>("Cut {{count}} items", { count: paths.length }));
+                    }
+                    break;
+                  }
+                  case "v": {
+                    // Support both Ctrl (Windows/Linux) and Command (Mac)
+                    if ((evt.ctrlKey || evt.metaKey) && clipboardStore.paths.length > 0) {
+                      evt.preventDefault();
+                      const { paths, mode } = clipboardStore;
+
+                      // Determine destination directory based on selection
+                      let destDir: string | undefined;
+
+                      if (selectedEntriesRef.current.length === 0) {
+                        // No selection -> paste to working directory
+                        destDir = rootRef.current?.path;
+                      } else if (
+                        selectedEntriesRef.current.length === 1 &&
+                        selectedEntriesRef.current[0].isDirectoryOrDrive
+                      ) {
+                        // Single directory selected -> paste into it
+                        destDir = selectedEntriesRef.current[0].path;
+                      }
+                      // If file(s) selected or multiple items selected -> don't paste
+
+                      if (destDir) {
+                        // Skip if all items are already in the destination directory (only for cut mode)
+                        if (mode === "cut") {
+                          const allItemsAlreadyInDest = paths.every(
+                            (p) => getStandardParentPath(p) === destDir,
+                          );
+
+                          if (allItemsAlreadyInDest) {
+                            break;
+                          }
+                        }
+
+                        const apiCall =
+                          mode === "copy"
+                            ? BApi.file.copyEntries({ destDir, entryPaths: paths })
+                            : BApi.file.moveEntries({ destDir, entryPaths: paths });
+
+                        apiCall.then(() => {
+                          const message =
+                            mode === "copy"
+                              ? t<string>("Copied {{count}} items", { count: paths.length })
+                              : t<string>("Moved {{count}} items", { count: paths.length });
+
+                          toast.success(message);
+                          if (mode === "cut") {
+                            clipboardStore.clear();
+                          }
+                        });
+                      }
+                    }
+                    break;
+                  }
                 }
               }
-            }
-          }}
-          onSelectionModeChange={(m) => {
-            selectionModeRef.current = m;
-            forceUpdate();
-          }}
-        />
+            }}
+            onSelectionModeChange={(m) => {
+              selectionModeRef.current = m;
+              forceUpdate();
+            }}
+          />
+        )}
         <div className="flex items-center bg-default-100 dark:bg-default-50">
           <Button
             isIconOnly
@@ -791,7 +845,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
           >
             {t<string>("Recycle bin")}
           </Button>
-          <Shortcuts capabilities={capabilities} />
+          {keyboard && <Shortcuts capabilities={capabilities} />}
         </div>
         <div className={"grow min-h-0"}>
           <FileExplorerEntry

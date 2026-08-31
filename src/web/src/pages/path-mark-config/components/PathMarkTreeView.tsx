@@ -339,7 +339,7 @@ const PathMarkTreeView = ({ rootPath, onMarksChanged, onInitialized }: PathMarkT
       <div className="flex-1 min-w-0 overflow-hidden h-full flex flex-col">
         <FileExplorer
           expandable
-          capabilities={["select", "multi-select", "range-select"]}
+          capabilities={["select", "multi-select", "range-select", "enter-directory"]}
           renderAfterName={renderAfterName}
           renderBeforeRightOperations={renderBeforeRightOperations}
           renderExtraContextMenuItems={renderExtraContextMenuItems}

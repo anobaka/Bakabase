@@ -235,7 +235,7 @@ const TransferMarksModal = ({
         <div className="flex-1 min-h-0 overflow-hidden">
           <FileExplorer
             expandable
-            capabilities={["select"]}
+            capabilities={["select", "enter-directory"]}
             renderAfterName={renderAfterName}
             selectable="disabled"
           />
