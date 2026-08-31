@@ -668,7 +668,6 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
             role="button"
             tabIndex={0}
             onClick={() => {
-              if (entryRef.current.passive) return;
               const r = !switchSelective || switchSelective(entryRef.current);
 
               log(
@@ -682,7 +681,6 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();
-                if (entryRef.current.passive) return;
                 const r = !switchSelective || switchSelective(entryRef.current);
 
                 if (r) {

@@ -76,7 +76,11 @@ export type FileExplorerProps = {
 
 const log = buildLogger("FileExplorer");
 
-export type FileExplorerRef = { root?: Entry };
+export type FileExplorerRef = {
+  root?: Entry;
+  /** Deselect everything, notifying onSelected — e.g. after a host rejects a selection. */
+  clearSelection: () => void;
+};
 
 const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
   (
@@ -321,6 +325,12 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
     useImperativeHandle(ref, (): FileExplorerRef => {
       return {
         root,
+        clearSelection: () => {
+          for (const se of selectedEntriesRef.current) {
+            se.select(false);
+          }
+          setSelectedEntries([]);
+        },
       };
     }, [root]);
 

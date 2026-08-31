@@ -1,12 +1,13 @@
 "use client";
 
 import type { Entry } from "@/core/models/FileExplorer/Entry";
+import type { FileExplorerRef } from "@/components/FileExplorer";
 import type { DestroyableProps } from "@/components/bakaui/types";
 import type { BakabaseAbstractionsModelsViewResourceMovePreviewViewModel } from "@/sdk/Api";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { AiOutlineArrowRight, AiOutlineImport, AiOutlineWarning } from "react-icons/ai";
+import { AiOutlineArrowRight, AiOutlineWarning } from "react-icons/ai";
 
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { Button, Checkbox, Chip, Modal, Spinner, Tooltip, toast } from "@/components/bakaui";
@@ -175,36 +176,32 @@ const ResourceMoveModal = ({ resources, onMoved, onDestroyed }: Props) => {
   // filtered children whenever the filter object changes.
   const explorerFilter = useMemo(() => ({ custom: (e: Entry) => e.isDirectoryOrDrive }), []);
 
-  const renderAfterName = useCallback(
-    (entry: Entry) => {
-      // Group headers are display-only context, not pickable destinations.
-      if (entry.passive || !entry.isDirectoryOrDrive) return null;
-      const isSelected = standardizePath(entry.path) === selectedDest;
+  const explorerRef = useRef<FileExplorerRef | null>(null);
 
-      return (
-        <div className="flex items-center gap-1 ml-2">
-          <Button
-            className={`min-w-0 px-2 h-6 ${isSelected ? "bg-primary text-white" : ""}`}
-            color={isSelected ? "primary" : "default"}
-            size="sm"
-            startContent={<AiOutlineImport className="text-sm" />}
-            variant={isSelected ? "solid" : "flat"}
-            onPress={() => {
-              const path = standardizePath(entry.path)!;
+  // Selecting a row IS picking the destination (group headers included — they stand for
+  // real directories). An invalid pick is rejected with a toast and deselected, which
+  // re-enters here with an empty selection and clears the destination.
+  const onExplorerSelected = useCallback(
+    (entries: Entry[]) => {
+      const entry = entries[0];
 
-              if (validateDest(path)) {
-                setSelectedDest(path);
-              }
-            }}
-          >
-            {isSelected
-              ? t<string>("common.label.selected")
-              : t<string>("resourceMove.action.moveHere")}
-          </Button>
-        </div>
-      );
+      if (!entry) {
+        setSelectedDest(undefined);
+
+        return;
+      }
+
+      const path = standardizePath(entry.path)!;
+
+      if (!validateDest(path)) {
+        explorerRef.current?.clearSelection();
+
+        return;
+      }
+
+      setSelectedDest(path);
     },
-    [selectedDest, validateDest, t],
+    [validateDest],
   );
 
   return (
@@ -239,12 +236,13 @@ const ResourceMoveModal = ({ resources, onMoved, onDestroyed }: Props) => {
           ) : (
             <FileExplorer
               expandable
+              ref={explorerRef}
               capabilities={["select"]}
               filter={explorerFilter}
               keyboard={false}
-              renderAfterName={renderAfterName}
               rootPaths={markRoots}
-              selectable="disabled"
+              selectable="single"
+              onSelected={onExplorerSelected}
             />
           )}
         </div>
@@ -277,7 +275,7 @@ const ResourceMoveModal = ({ resources, onMoved, onDestroyed }: Props) => {
               ) : selectedDest ? (
                 t<string>("resourceMove.action.moveFiles")
               ) : (
-                t<string>("common.action.confirm")
+                t<string>("resourceMove.action.pickDestination")
               )}
             </Button>
           </div>
