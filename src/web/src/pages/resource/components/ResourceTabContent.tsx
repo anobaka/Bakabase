@@ -1,6 +1,7 @@
 "use client";
 
 import type { ResourcesRef } from "./Resources";
+import type { RectSelectionEnd, RectSelectionMode } from "./Resources/useRectSelection";
 import type { SearchForm } from "@/pages/resource/models";
 
 import React, {
@@ -73,6 +74,9 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
   const resourcesRef = useRef(resources);
   // Deferred resources keep the heavy grid render low-priority so filter edits stay responsive.
   const displayResources = useDeferredValue(resources);
+  // Rectangle selection resolves grid indices against whatever the grid is currently
+  // rendering, which is the deferred list rather than `resources`.
+  const displayResourcesRef = useRef(displayResources);
 
   const uiOptionsStore = useUiOptionsStore();
   const uiOptions = uiOptionsStore.data;
@@ -88,6 +92,7 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
 
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const selectedIdsRef = useRef(selectedIds);
+  const selectedIdSetRef = useRef<Set<number>>(new Set());
   // Mirror of selectedIds as a stable RefObject<Resource[]> so we can pass
   // a stable reference to each ResourceCard. The contents update on selection
   // change but the ref object itself never changes, which keeps React.memo
@@ -96,6 +101,12 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
   const multiSelectionRef = useRef(false);
   const lastSelectedIndexRef = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  // Selection as it stood when a rectangle drag began, so Ctrl/Alt drags can extend or
+  // shrink it, and so Escape can put it back.
+  const rectSelectionBaseRef = useRef<number[]>([]);
+  // A rectangle drag ends with a click the browser still delivers. Eat it once, or it
+  // clears the selection that was just made (see onClickRef below).
+  const suppressNextClickRef = useRef(false);
 
   const resourcesComponentRef = useRef<ResourcesRef | null>();
   const rearrangeResources = useCallback(() => {
@@ -194,6 +205,13 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
   };
 
   onClickRef.current = (e: globalThis.MouseEvent) => {
+    if (suppressNextClickRef.current) {
+      suppressNextClickRef.current = false;
+      e.stopPropagation();
+      e.preventDefault();
+
+      return;
+    }
     if (!multiSelectionRef.current && !e.shiftKey) {
       // Don't clear selection if clicking on menu items, modals, or other overlay elements
       const target = e.target as HTMLElement;
@@ -374,7 +392,13 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
   // Sync ref during render phase to ensure renderCell gets the latest value
   if (selectedIdsRef.current !== selectedIds) {
     selectedIdsRef.current = selectedIds;
+    // renderCell asks "is this one selected?" for every visible cell on every render,
+    // and rectangle selection makes multi-thousand-id selections routine, so the answer
+    // has to be O(1) rather than a scan of the whole list.
+    selectedIdSetRef.current = new Set(selectedIds);
   }
+
+  displayResourcesRef.current = displayResources;
 
   const pageContainerRef = useRef<any>();
 
@@ -493,6 +517,56 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
     [reloadResources],
   );
 
+  const onRectSelectionStart = useCallback(() => {
+    rectSelectionBaseRef.current = selectedIdsRef.current;
+  }, []);
+
+  // `indices` are positions in the grid, which renders displayResources.
+  const onRectSelectionChange = useCallback((indices: number[], mode: RectSelectionMode) => {
+    const list = displayResourcesRef.current;
+    const boxedIds: number[] = [];
+
+    for (const index of indices) {
+      const resource = list[index];
+
+      if (resource) {
+        boxedIds.push(resource.id);
+      }
+    }
+
+    const base = rectSelectionBaseRef.current;
+
+    if (mode === "append") {
+      setSelectedIds([...new Set([...base, ...boxedIds])]);
+    } else if (mode === "subtract") {
+      const boxed = new Set(boxedIds);
+
+      setSelectedIds(base.filter((id) => !boxed.has(id)));
+    } else {
+      setSelectedIds(boxedIds);
+    }
+
+    // Keeps a following Shift+Click extending from where the rectangle stopped.
+    lastSelectedIndexRef.current = indices.length > 0 ? indices[indices.length - 1] : null;
+  }, []);
+
+  const onRectSelectionEnd = useCallback(({ cancelled }: RectSelectionEnd) => {
+    if (cancelled) {
+      setSelectedIds(rectSelectionBaseRef.current);
+    }
+  }, []);
+
+  // The window-level click handler above was registered before the grid's own, so it
+  // runs first and would clear the selection before the grid could stop the event.
+  const onRectSelectionSuppressClick = useCallback(() => {
+    suppressNextClickRef.current = true;
+    // The click lands in the same task as the mouseup, so anything still pending here
+    // is a click that never came — don't let it eat an unrelated one later.
+    setTimeout(() => {
+      suppressNextClickRef.current = false;
+    }, 0);
+  }, []);
+
   // Reload resources when the backend announces they changed (e.g. cache rebuilt by a
   // single or batch refresh). Only the ids currently shown in this tab are reloaded;
   // forceRefresh makes cover and playable UI re-resolve even when their paths are
@@ -549,7 +623,7 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
         return null;
       }
       const resource = displayResources[index];
-      const selected = selectedIdsRef.current.includes(resource.id);
+      const selected = selectedIdSetRef.current.has(resource.id);
 
       return (
         <div
@@ -631,8 +705,14 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
               resourcesComponentRef.current = r;
             }}
             cellCount={displayResources.length}
+            // Matches the `p-0.5` wrapper renderCell puts around every card.
+            cellInset={2}
             columnCount={columnCount}
             renderCell={renderCell}
+            onRectSelectionChange={onRectSelectionChange}
+            onRectSelectionEnd={onRectSelectionEnd}
+            onRectSelectionStart={onRectSelectionStart}
+            onRectSelectionSuppressClick={onRectSelectionSuppressClick}
             onScroll={(e) => {
               if (!props.activated) {
                 return;

@@ -1,10 +1,21 @@
 "use client";
 
 import type { GridCellProps } from "react-virtualized";
+import type { RectSelectionEnd, RectSelectionMode } from "./useRectSelection";
 
 import { AutoSizer, CellMeasurer, CellMeasurerCache, Grid } from "react-virtualized";
-import React, { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
+import React, {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useUpdate, useUpdateEffect } from "react-use";
+
+import { useRectSelection } from "./useRectSelection";
 
 const Gap = 10;
 
@@ -33,6 +44,17 @@ type Props = {
   cellCount: number;
   onScroll?: (event: ScrollEvent) => any;
   onScrollToTop?: () => any;
+  /** Padding `renderCell` bakes into every cell, excluded when hit-testing a selection
+   *  rectangle so the gutter between two cards doesn't catch both of them. */
+  cellInset?: number;
+  /** Providing this enables drag-a-rectangle multi-selection over the grid. Receives the
+   *  cell indices the rectangle currently covers, live while the pointer moves. */
+  onRectSelectionChange?: (indices: number[], mode: RectSelectionMode) => any;
+  onRectSelectionStart?: () => any;
+  onRectSelectionEnd?: (result: RectSelectionEnd) => any;
+  /** Fires right before the browser delivers the click that closes a rectangle drag, so
+   *  a document-level click handler above this component can ignore that one. */
+  onRectSelectionSuppressClick?: () => any;
 };
 
 export type ResourcesRef = {
@@ -46,7 +68,22 @@ export type ResourcesRef = {
 };
 
 const Resources = forwardRef<ResourcesRef, Props>(
-  ({ columnCount, loadMore, renderCell, cellCount, onScroll, onScrollToTop }, ref) => {
+  (
+    {
+      columnCount,
+      loadMore,
+      renderCell,
+      cellCount,
+      onScroll,
+      onScrollToTop,
+      cellInset = 0,
+      onRectSelectionChange,
+      onRectSelectionStart,
+      onRectSelectionEnd,
+      onRectSelectionSuppressClick,
+    },
+    ref,
+  ) => {
     const loadingRef = useRef<boolean>(false);
     const gridRef = useRef<any>();
     const cacheRef = useRef(
@@ -145,12 +182,39 @@ const Resources = forwardRef<ResourcesRef, Props>(
       },
     }));
 
+    const containerWidth = containerRef.current?.clientWidth ?? 0;
+    const columnWidth = (containerWidth - verScrollbarWidthRef.current) / columnCount;
+
+    const [rectSelecting, setRectSelecting] = useState(false);
+
+    const getRowHeight = useCallback((index: number) => cacheRef.current.rowHeight({ index }), []);
+
+    const rectOverlayRef = useRectSelection({
+      containerRef,
+      cellCount,
+      columnCount,
+      columnWidth,
+      getRowHeight,
+      cellInset,
+      onStart: onRectSelectionStart,
+      onChange: onRectSelectionChange,
+      onEnd: onRectSelectionEnd,
+      onActiveChange: setRectSelecting,
+      onSuppressClick: onRectSelectionSuppressClick,
+    });
+
+    // While a rectangle is being dragged the cells must not react to the pointer, or
+    // hover-zoomed covers and preview popups fight the drag. Leaving the key out when
+    // idle preserves the Grid's own isScrolling-driven value.
+    const gridContainerStyle = useMemo(
+      () =>
+        rectSelecting
+          ? ({ overflow: "visible", pointerEvents: "none" } as const)
+          : ({ overflow: "visible" } as const),
+      [rectSelecting],
+    );
+
     function renderGrid() {
-      const containerWidth = containerRef.current?.clientWidth ?? 0;
-      const containerHeight = containerRef.current?.clientHeight ?? 0;
-
-      const columnWidth = (containerWidth - verScrollbarWidthRef.current) / columnCount;
-
       return (
         <div
           ref={(r) => {
@@ -159,7 +223,9 @@ const Resources = forwardRef<ResourcesRef, Props>(
               forceUpdate();
             }
           }}
-          className={"grow min-h-[0] overflow-hidden"}
+          className={`grow min-h-[0] overflow-hidden relative ${
+            rectSelecting ? "select-none" : ""
+          }`}
           onWheel={(e) => {
             if (e.deltaY < 0 && scrollTopRef.current == 0) {
               onScrollToTop?.();
@@ -176,9 +242,7 @@ const Resources = forwardRef<ResourcesRef, Props>(
                   // width={containerWidth}
                   columnCount={columnCount}
                   columnWidth={columnWidth}
-                  containerStyle={{
-                    overflow: 'visible',
-                  }}
+                  containerStyle={gridContainerStyle}
                   height={height}
                   overscanIndicesGetter={({
                     cellCount,
@@ -186,24 +250,22 @@ const Resources = forwardRef<ResourcesRef, Props>(
                     startIndex,
                     stopIndex,
                   }) => ({
-                    overscanStartIndex: Math.max(
-                      0,
-                      startIndex - overscanCellsCount,
-                    ),
-                    overscanStopIndex: Math.min(
-                      cellCount - 1,
-                      stopIndex + overscanCellsCount,
-                    ),
+                    overscanStartIndex: Math.max(0, startIndex - overscanCellsCount),
+                    overscanStopIndex: Math.min(cellCount - 1, stopIndex + overscanCellsCount),
                   })}
                   overscanRowCount={2}
                   rowCount={Math.ceil(cellCount / columnCount)}
                   rowHeight={cacheRef.current.rowHeight}
+                  // Grid freezes already-rendered cells while it believes it is scrolling,
+                  // which would hold the selection highlight stale for the whole of an
+                  // edge auto-scroll. Drop the debounce for the duration of the drag.
+                  scrollingResetTimeInterval={rectSelecting ? 0 : undefined}
                   width={width}
-                  onScroll={e => {
+                  onScroll={(e) => {
                     scrollTopRef.current = e.scrollTop;
                     onScroll?.(e);
                   }}
-                  onScrollbarPresenceChange={e => {
+                  onScrollbarPresenceChange={(e) => {
                     const newWidth = e.vertical ? e.size : 0;
                     if (newWidth != verScrollbarWidthRef.current) {
                       verScrollbarWidthRef.current = newWidth;
@@ -214,6 +276,14 @@ const Resources = forwardRef<ResourcesRef, Props>(
               )}
             </AutoSizer>
           )}
+          {/* Selection rectangle. Positioned imperatively by useRectSelection so that
+              dragging it never re-renders the grid. */}
+          <div
+            ref={rectOverlayRef}
+            className={
+              "hidden absolute z-30 pointer-events-none rounded-sm border border-primary bg-primary/20"
+            }
+          />
         </div>
       );
     }

@@ -22,6 +22,18 @@ const shortcuts: Shortcut[] = [
     keys: "Shift + Click",
   },
   {
+    labelKey: "resource.shortcut.rectSelect",
+    keys: "Drag",
+  },
+  {
+    labelKey: "resource.shortcut.rectSelectAppend",
+    keys: (mod) => `${mod} + Drag`,
+  },
+  {
+    labelKey: "resource.shortcut.rectSelectSubtract",
+    keys: "Alt + Drag",
+  },
+  {
     labelKey: "resource.shortcut.moreActions",
     keys: "Right click",
   },
