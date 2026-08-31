@@ -43,6 +43,8 @@ public class TestBakabaseLocalizer : IBakabaseLocalizer
     public string ResourceMove_InterruptedBeforeStart() => "ResourceMove_InterruptedBeforeStart";
     public string ResourceMove_RecordInProgress() => "ResourceMove_RecordInProgress";
     public string ResourceMove_ResourceIsLocked(int resourceId) => $"ResourceMove_ResourceIsLocked_{resourceId}";
+    public string ResourceMove_SiblingPrefixUnsupported(string src, string dest) => $"ResourceMove_SiblingPrefixUnsupported_{src}_{dest}";
+    public string BTask_CannotCleanActiveTask() => "BTask_CannotCleanActiveTask";
     public string CopyFiles() => "CopyFiles";
     public string CopyFile(string src, string dest) => $"CopyFile_{src}_{dest}";
     public string? MessageOnInterruption_CopyFiles() => "MessageOnInterruption_CopyFiles";

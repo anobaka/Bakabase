@@ -140,6 +140,11 @@ namespace Bakabase.InsideWorld.Business.Components
         public string ResourceMove_ResourceIsLocked(int resourceId) =>
             this[nameof(ResourceMove_ResourceIsLocked), resourceId];
 
+        public string ResourceMove_SiblingPrefixUnsupported(string src, string dest) =>
+            this[nameof(ResourceMove_SiblingPrefixUnsupported), src, dest];
+
+        public string BTask_CannotCleanActiveTask() => this[nameof(BTask_CannotCleanActiveTask)];
+
         public string CopyFiles() => this[nameof(CopyFiles)];
         public string CopyFile(string src, string dest) => this[nameof(CopyFile), src, dest];
         public string? MessageOnInterruption_CopyFiles() => BTask_MessageOnInterruption("CopyFiles");

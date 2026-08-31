@@ -197,10 +197,11 @@ public sealed class ResourceMoveServiceTests
     }
 
     [TestMethod]
-    public async Task ExecuteBatch_SourceGoneDestExists_TreatedAsAlreadyMoved()
+    public async Task ExecuteBatch_SourceGoneDestExists_OwnPriorAttempt_TreatedAsAlreadyMoved()
     {
         // Simulates retrying an interrupted record whose files already landed: source is gone,
-        // destination exists, but the DB still points at the old path.
+        // destination exists, the physical move demonstrably started in a prior attempt of
+        // this record, but the DB still points at the old path.
         var destDir = Dir("Dest");
         Dir("Dest", "A");
         var sourcePath = $"{_testRoot.Replace('\\', '/')}/A"; // never created on disk
@@ -210,7 +211,8 @@ public sealed class ResourceMoveServiceTests
         {
             BatchId = "b3", ResourceId = a.Id, SourcePath = a.Path,
             DestPath = $"{destDir.Replace('\\', '/')}/A",
-            Status = ResourceMoveRecordStatus.Pending, CreatedAt = DateTime.Now, Attempts = 1
+            Status = ResourceMoveRecordStatus.Pending, CreatedAt = DateTime.Now, Attempts = 1,
+            PhysicalMoveStarted = true
         });
         await Db.SaveChangesAsync();
 
@@ -220,6 +222,93 @@ public sealed class ResourceMoveServiceTests
         record.Status.Should().Be(ResourceMoveRecordStatus.Succeeded);
         record.Attempts.Should().Be(2);
         (await ResourceService.Get(a.Id))!.Path.Should().EndWith("Dest/A");
+    }
+
+    [TestMethod]
+    public async Task ExecuteBatch_SourceGoneDestIsForeign_Fails()
+    {
+        // Same disk shape as the resume case (source gone, destination present), but no attempt
+        // of this record ever ran the physical primitives — whatever occupies the destination is
+        // someone else's content and must not be claimed as a completed move.
+        var destDir = Dir("Dest");
+        Dir("Dest", "A");
+        var sourcePath = $"{_testRoot.Replace('\\', '/')}/A"; // never created on disk
+        var a = await SeedResource(sourcePath);
+
+        Db.Set<ResourceMoveRecordDbModel>().Add(new ResourceMoveRecordDbModel
+        {
+            BatchId = "b3f", ResourceId = a.Id, SourcePath = a.Path,
+            DestPath = $"{destDir.Replace('\\', '/')}/A",
+            Status = ResourceMoveRecordStatus.Pending, CreatedAt = DateTime.Now
+        });
+        await Db.SaveChangesAsync();
+
+        var act = () => Service.ExecuteBatch("b3f", FakeArgs(_sp));
+        await act.Should().ThrowAsync<BTaskException>();
+
+        var record = await Db.Set<ResourceMoveRecordDbModel>().SingleAsync();
+        record.Status.Should().Be(ResourceMoveRecordStatus.Failed);
+        (await ResourceService.Get(a.Id))!.Path.Should().Be(a.Path, "the DB path must stay untouched");
+    }
+
+    [TestMethod]
+    public async Task ExecuteBatch_Resume_MergesIntoOwnPartialDestination()
+    {
+        // A prior attempt moved f1 and was interrupted; source still holds f2, destination
+        // holds f1. The resume must merge the remainder instead of failing on "destination
+        // exists", and end with everything at the destination.
+        var dirA = Dir("A");
+        await File.WriteAllTextAsync(Path.Combine(dirA, "f2.txt"), "2");
+        var destDir = Dir("Dest");
+        var partialDest = Dir("Dest", "A");
+        await File.WriteAllTextAsync(Path.Combine(partialDest, "f1.txt"), "1");
+        var a = await SeedResource(dirA);
+
+        Db.Set<ResourceMoveRecordDbModel>().Add(new ResourceMoveRecordDbModel
+        {
+            BatchId = "b3r", ResourceId = a.Id, SourcePath = a.Path,
+            DestPath = $"{destDir.Replace('\\', '/')}/A",
+            Status = ResourceMoveRecordStatus.Pending, CreatedAt = DateTime.Now, Attempts = 1,
+            PhysicalMoveStarted = true
+        });
+        await Db.SaveChangesAsync();
+
+        await Service.ExecuteBatch("b3r", FakeArgs(_sp));
+
+        var record = await Db.Set<ResourceMoveRecordDbModel>().SingleAsync();
+        record.Status.Should().Be(ResourceMoveRecordStatus.Succeeded);
+        Directory.Exists(dirA).Should().BeFalse();
+        File.Exists(Path.Combine(destDir, "A", "f1.txt")).Should().BeTrue();
+        File.Exists(Path.Combine(destDir, "A", "f2.txt")).Should().BeTrue();
+        (await ResourceService.Get(a.Id))!.Path.Should().EndWith("Dest/A");
+    }
+
+    [TestMethod]
+    public async Task ExecuteBatch_SiblingPrefixDestination_MovesViaNativeRename()
+    {
+        // /root/A → /root/ABC/A: the destination string starts with the source string without
+        // being under it, which the Bootstrap primitives falsely reject; the service must take
+        // the native-rename fallback instead of failing.
+        var dirA = Dir("A");
+        await File.WriteAllTextAsync(Path.Combine(dirA, "f.txt"), "x");
+        var destDir = Dir("ABC");
+        var a = await SeedResource(dirA);
+
+        Db.Set<ResourceMoveRecordDbModel>().Add(new ResourceMoveRecordDbModel
+        {
+            BatchId = "b3s", ResourceId = a.Id, SourcePath = a.Path,
+            DestPath = $"{destDir.Replace('\\', '/')}/A",
+            Status = ResourceMoveRecordStatus.Pending, CreatedAt = DateTime.Now
+        });
+        await Db.SaveChangesAsync();
+
+        await Service.ExecuteBatch("b3s", FakeArgs(_sp));
+
+        var record = await Db.Set<ResourceMoveRecordDbModel>().SingleAsync();
+        record.Status.Should().Be(ResourceMoveRecordStatus.Succeeded);
+        Directory.Exists(dirA).Should().BeFalse();
+        File.Exists(Path.Combine(destDir, "A", "f.txt")).Should().BeTrue();
+        (await ResourceService.Get(a.Id))!.Path.Should().EndWith("ABC/A");
     }
 
     [TestMethod]
@@ -297,5 +386,25 @@ public sealed class ResourceMoveServiceTests
 
         guard.Release("g1");
         guard.TryReserve("g5", [5], ["/media/a/sub"], out _).Should().BeTrue();
+    }
+
+    [TestMethod]
+    public void Guard_DuplicateBatchId_RejectedInsteadOfOverwritten()
+    {
+        var guard = new ResourceMoveGuard();
+
+        guard.TryReserve("dup", [1], ["/media/a"], out _).Should().BeTrue();
+
+        // A second reservation under the same batch id must not swap out the live one —
+        // otherwise a racing Retry could later release the running batch's reservation.
+        guard.TryReserve("dup", [2], ["/media/b"], out var conflict).Should().BeFalse();
+        conflict.Should().Be("/media/a");
+
+        // The original reservation is intact.
+        guard.IsResourceLocked(1).Should().BeTrue();
+        guard.IsResourceLocked(2).Should().BeFalse();
+
+        guard.Release("dup");
+        guard.TryReserve("dup", [2], ["/media/b"], out _).Should().BeTrue();
     }
 }

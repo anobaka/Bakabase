@@ -28,6 +28,14 @@ public record ResourceMoveRecordDbModel
     /// <summary>How many times execution started for this record (initial run included).</summary>
     public int Attempts { get; set; }
 
+    /// <summary>
+    /// True once an attempt actually invoked the physical move primitives, as opposed to
+    /// failing in the pre-move probe. This is what makes retry semantics safe: a record whose
+    /// destination exists may only be merged into when a previous attempt of THIS record
+    /// created that destination — never when the destination is foreign content.
+    /// </summary>
+    public bool PhysicalMoveStarted { get; set; }
+
     public string? Error { get; set; }
 
     public DateTime CreatedAt { get; set; }

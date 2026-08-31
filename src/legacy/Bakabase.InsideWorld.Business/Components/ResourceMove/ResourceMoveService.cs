@@ -107,22 +107,10 @@ public class ResourceMoveService(
             CreatedAt = now
         }).ToList();
 
-        // Everything the batch touches: the moved resources plus every resource under them.
-        var allDbModels = await resourceService.GetAllDbModels();
-        var affectedResourceIds = new HashSet<int>();
-        foreach (var record in records)
-        {
-            affectedResourceIds.Add(record.ResourceId);
-            foreach (var dbModel in allDbModels)
-            {
-                if (dbModel.Path.IsPathEqualOrUnder(record.SourcePath))
-                {
-                    affectedResourceIds.Add(dbModel.Id);
-                }
-            }
-        }
-
-        var reservedPaths = records.Select(r => r.SourcePath).Concat(records.Select(r => r.DestPath));
+        var reservedPaths = records.Select(r => r.SourcePath).Concat(records.Select(r => r.DestPath))
+            .Distinct().ToList();
+        var affectedResourceIds = await ComputeAffectedResourceIds(reservedPaths,
+            records.Select(r => r.ResourceId));
         if (!guard.TryReserve(batchId, affectedResourceIds, reservedPaths, out var conflictPath))
         {
             return SingletonResponseBuilder<string>.Build(ResponseCode.Conflict,
@@ -142,6 +130,27 @@ public class ResourceMoveService(
         }
 
         return new SingletonResponse<string>(batchId);
+    }
+
+    /// <summary>
+    /// Everything a batch touches: the moved resources themselves, every resource under a
+    /// source or destination path (they move, or gain siblings), and every resource a source
+    /// or destination path sits under (their content changes while files are in flight).
+    /// </summary>
+    private async Task<HashSet<int>> ComputeAffectedResourceIds(IReadOnlyCollection<string> reservedPaths,
+        IEnumerable<int> seedResourceIds)
+    {
+        var allDbModels = await resourceService.GetAllDbModels();
+        var affected = seedResourceIds.ToHashSet();
+        foreach (var dbModel in allDbModels)
+        {
+            if (reservedPaths.Any(p => dbModel.Path.IsPathEqualOrUnder(p) || p.IsPathEqualOrUnder(dbModel.Path)))
+            {
+                affected.Add(dbModel.Id);
+            }
+        }
+
+        return affected;
     }
 
     private async Task EnqueueBatchTask(string batchId, int recordCount, string destDir,
@@ -190,6 +199,11 @@ public class ResourceMoveService(
                     throw;
                 }
 
+                // Whether an earlier attempt of THIS record already ran the physical primitives —
+                // that is what decides whether an existing destination is our own partial output
+                // (safe to merge into) or foreign content (a hard conflict).
+                var resume = record.PhysicalMoveStarted;
+
                 record.Status = ResourceMoveRecordStatus.Moving;
                 record.StartedAt = DateTime.Now;
                 record.Attempts++;
@@ -205,7 +219,7 @@ public class ResourceMoveService(
 
                 try
                 {
-                    await MoveRecordFiles(record, OnProgress, args);
+                    await MoveRecordFiles(record, resume, OnProgress, args);
                     await ApplyPostMoveFixups(record, markIdsToSync);
                     anySucceeded = true;
 
@@ -282,10 +296,14 @@ public class ResourceMoveService(
     }
 
     /// <summary>
-    /// Physically move the record's files. Retry-idempotent: when the source is gone and the
-    /// destination exists, a previous attempt already moved the files — skip straight to fixups.
+    /// Physically move the record's files. Retry-safe via <paramref name="resume"/> (a previous
+    /// attempt of this record already ran the primitives): only then may an existing destination
+    /// be treated as our own partial output — merged into with overwrite, or, when the source is
+    /// fully gone, taken as an already-completed move. Without the flag an existing destination
+    /// is foreign content and the record fails instead of touching it.
     /// </summary>
-    private async Task MoveRecordFiles(ResourceMoveRecordDbModel record, Func<int, Task> onProgress, BTaskArgs args)
+    private async Task MoveRecordFiles(ResourceMoveRecordDbModel record, bool resume, Func<int, Task> onProgress,
+        BTaskArgs args)
     {
         var src = record.SourcePath;
         var dest = record.DestPath;
@@ -295,9 +313,9 @@ public class ResourceMoveService(
 
         if (!srcIsDirectory && !srcIsFile)
         {
-            if (destExists)
+            if (destExists && resume)
             {
-                // Already moved by an earlier (interrupted) attempt.
+                // Already moved by an earlier (interrupted) attempt of this record.
                 await onProgress(100);
                 return;
             }
@@ -306,17 +324,49 @@ public class ResourceMoveService(
                 localizer.ResourceMove_SourceMissing(src));
         }
 
-        if (destExists)
+        if (destExists && !resume)
         {
             throw new BTaskException(localizer.ResourceMove_DestinationExists(dest),
                 localizer.ResourceMove_DestinationExists(dest));
         }
+
+        // Merging only ever targets our own partial output from a previous attempt.
+        var overwrite = destExists && resume;
 
         // The Bootstrap primitives pick rename-vs-copy from Path.GetPathRoot, which on POSIX
         // makes every cross-mount move take the rename path and die with EXDEV (a common
         // docker layout: /downloads and /media as separate volumes). Detect the real mounts
         // and copy+delete explicitly when they differ.
         var crossFileSystem = ResourceMoveFileSystem.AreOnSameFileSystem(src, dest) == false;
+
+        // The Bootstrap directory primitives reject any destination whose raw path string
+        // starts with the source's — the check is unanchored, so the legitimate sibling-prefix
+        // shape (/media/a → /media/abc/a) trips it. Genuine containment was rejected at batch
+        // creation, so hitting this here is always the false positive.
+        var siblingPrefixCollision = srcIsDirectory && dest.StartsWith(src, StringComparison.OrdinalIgnoreCase);
+        if (siblingPrefixCollision && (crossFileSystem || overwrite))
+        {
+            // No copy-based fallback exists for these without reimplementing the primitives.
+            throw new BTaskException(localizer.ResourceMove_SiblingPrefixUnsupported(src, dest),
+                localizer.ResourceMove_SiblingPrefixUnsupported(src, dest));
+        }
+
+        // Persist before the first byte moves; from here on an existing destination on retry
+        // is our own output.
+        if (!record.PhysicalMoveStarted)
+        {
+            record.PhysicalMoveStarted = true;
+            await db.SaveChangesAsync();
+        }
+
+        if (siblingPrefixCollision)
+        {
+            // Same-filesystem and the destination is free — a native rename does the whole job.
+            Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
+            Directory.Move(src, dest);
+            await onProgress(100);
+            return;
+        }
 
         if (srcIsDirectory)
         {
@@ -328,12 +378,19 @@ public class ResourceMoveService(
                     // failure here can drop the half-written destination and keep retry clean.
                     try
                     {
-                        await DirectoryUtils.CopyAsync(src, dest, false, onProgress, args.PauseToken,
+                        await DirectoryUtils.CopyAsync(src, dest, overwrite, onProgress, args.PauseToken,
                             args.CancellationToken);
                     }
                     catch
                     {
-                        ResourceMoveFileSystem.TryDeleteCopyDebris(dest);
+                        if (!resume)
+                        {
+                            // First attempt only: the destination holds nothing but our
+                            // half-written copy. On resume it may hold files whose source
+                            // copies are already deleted — never destroy those.
+                            ResourceMoveFileSystem.TryDeleteCopyDebris(dest);
+                        }
+
                         throw;
                     }
 
@@ -341,7 +398,7 @@ public class ResourceMoveService(
                 }
                 else
                 {
-                    await DirectoryUtils.MoveAsync(src, dest, false, onProgress, args.PauseToken,
+                    await DirectoryUtils.MoveAsync(src, dest, overwrite, onProgress, args.PauseToken,
                         args.CancellationToken);
                 }
             }
@@ -359,13 +416,13 @@ public class ResourceMoveService(
             {
                 // FileUtils.CopyAsync creates the destination directory itself and deletes
                 // its partial destination on failure.
-                await FileUtils.CopyAsync(src, dest, false, onProgress, args.PauseToken,
+                await FileUtils.CopyAsync(src, dest, overwrite, onProgress, args.PauseToken,
                     args.CancellationToken);
                 File.Delete(src);
             }
             else
             {
-                await FileUtils.MoveAsync(src, dest, false, onProgress, args.PauseToken,
+                await FileUtils.MoveAsync(src, dest, overwrite, onProgress, args.PauseToken,
                     args.CancellationToken);
             }
         }
@@ -539,16 +596,10 @@ public class ResourceMoveService(
         }
 
         // Files may sit on either side after a partial move — reserve both subtrees.
-        var allDbModels = await resourceService.GetAllDbModels();
-        var affectedResourceIds = allDbModels
-            .Where(r => r.Path.IsPathEqualOrUnder(record.SourcePath) ||
-                        r.Path.IsPathEqualOrUnder(record.DestPath))
-            .Select(r => r.Id)
-            .Append(record.ResourceId)
-            .ToHashSet();
+        var reservedPaths = new[] { record.SourcePath, record.DestPath };
+        var affectedResourceIds = await ComputeAffectedResourceIds(reservedPaths, [record.ResourceId]);
 
-        if (!guard.TryReserve(record.BatchId, affectedResourceIds, [record.SourcePath, record.DestPath],
-                out var conflictPath))
+        if (!guard.TryReserve(record.BatchId, affectedResourceIds, reservedPaths, out var conflictPath))
         {
             return BaseResponseBuilder.Build(ResponseCode.Conflict,
                 localizer.ResourceMove_ResourcesAreBeingMoved(conflictPath!));

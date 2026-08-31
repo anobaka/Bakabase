@@ -110,6 +110,7 @@ export interface BakabaseAbstractionsModelsDbResourceMoveRecordDbModel {
   status: BakabaseAbstractionsModelsDomainConstantsResourceMoveRecordStatus;
   /** @format int32 */
   attempts: number;
+  physicalMoveStarted: boolean;
   error?: string;
   /** @format date-time */
   createdAt: string;

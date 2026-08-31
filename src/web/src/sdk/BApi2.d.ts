@@ -6392,6 +6392,7 @@ export interface components {
             status: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceMoveRecordStatus"];
             /** Format: int32 */
             attempts: number;
+            physicalMoveStarted: boolean;
             error?: string;
             /** Format: date-time */
             createdAt: string;

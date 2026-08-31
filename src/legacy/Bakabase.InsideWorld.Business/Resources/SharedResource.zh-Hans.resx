@@ -444,6 +444,12 @@
   <data name="ResourceMove_ResourceIsLocked" xml:space="preserve">
     <value>资源 [{0}] 正在移动中，暂时无法进行其他操作</value>
   </data>
+  <data name="ResourceMove_SiblingPrefixUnsupported" xml:space="preserve">
+    <value>无法将 [{0}] 移动到 [{1}]：目标路径的文本以源路径开头，底层文件组件无法在此形态下执行合并或跨设备复制，请重命名源目录或选择其他目标位置</value>
+  </data>
+  <data name="BTask_CannotCleanActiveTask" xml:space="preserve">
+    <value>任务正在执行或等待执行，无法移除，请先停止任务</value>
+  </data>
   <data name="WrongPassword" xml:space="preserve">
     <value>密码错误</value>
   </data>

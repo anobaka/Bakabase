@@ -20,7 +20,10 @@ public class ResourceMoveGuard
     /// <summary>
     /// Reserve the given resource ids and path subtrees for one batch. Fails when any path
     /// overlaps a path already reserved by another batch; <paramref name="conflictPath"/> then
-    /// carries the already-reserved path that collided.
+    /// carries the already-reserved path that collided. A batch id holds at most one live
+    /// reservation: a duplicate is rejected rather than overwritten, so a racing Retry can
+    /// never swap out — and on its own failure release — the reservation of a batch that is
+    /// still executing.
     /// </summary>
     public bool TryReserve(string batchId, IEnumerable<int> resourceIds, IEnumerable<string?> paths,
         out string? conflictPath)
@@ -28,13 +31,14 @@ public class ResourceMoveGuard
         var newPaths = paths.Select(p => p.StandardizePath()).OfType<string>().Distinct().ToList();
         lock (_lock)
         {
-            foreach (var (existingBatchId, reservation) in _reservations)
+            if (_reservations.TryGetValue(batchId, out var own))
             {
-                if (existingBatchId == batchId)
-                {
-                    continue;
-                }
+                conflictPath = own.Paths.FirstOrDefault() ?? newPaths.FirstOrDefault() ?? string.Empty;
+                return false;
+            }
 
+            foreach (var (_, reservation) in _reservations)
+            {
                 foreach (var newPath in newPaths)
                 {
                     var overlapped = reservation.Paths.FirstOrDefault(existing =>

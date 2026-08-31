@@ -444,6 +444,12 @@ The version of lux is not limited.</value>
   <data name="ResourceMove_ResourceIsLocked" xml:space="preserve">
     <value>Resource [{0}] is currently being moved and cannot be modified</value>
   </data>
+  <data name="ResourceMove_SiblingPrefixUnsupported" xml:space="preserve">
+    <value>Cannot move [{0}] to [{1}]: the destination path text begins with the source path, which the underlying file components cannot merge or copy across devices. Rename the source directory or pick another destination.</value>
+  </data>
+  <data name="BTask_CannotCleanActiveTask" xml:space="preserve">
+    <value>An active or pending task cannot be removed; stop it first</value>
+  </data>
   <data name="WrongPassword" xml:space="preserve">
     <value>Wrong password</value>
   </data>

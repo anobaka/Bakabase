@@ -41,6 +41,8 @@ public interface IBakabaseLocalizer
     string ResourceMove_InterruptedBeforeStart();
     string ResourceMove_RecordInProgress();
     string ResourceMove_ResourceIsLocked(int resourceId);
+    string ResourceMove_SiblingPrefixUnsupported(string src, string dest);
+    string BTask_CannotCleanActiveTask();
     string CopyFiles();
     string CopyFile(string src, string dest);
     string? MessageOnInterruption_CopyFiles();
