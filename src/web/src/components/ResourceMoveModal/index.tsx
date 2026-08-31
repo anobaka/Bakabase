@@ -7,10 +7,9 @@ import type { BakabaseAbstractionsModelsViewResourceMovePreviewViewModel } from 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AiOutlineArrowRight, AiOutlineImport, AiOutlineWarning } from "react-icons/ai";
-import { ClockCircleOutlined } from "@ant-design/icons";
 
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import { Button, Chip, Modal, Spinner, Tooltip, toast } from "@/components/bakaui";
+import { Button, Checkbox, Chip, Modal, Spinner, Tooltip, toast } from "@/components/bakaui";
 import { FileExplorer } from "@/components/FileExplorer";
 import { standardizePath } from "@/components/utils";
 import { PathMarkType } from "@/sdk/constants";
@@ -25,6 +24,23 @@ const isPathEqualOrUnder = (candidate?: string, root?: string) => {
   if (c === r) return true;
 
   return c.startsWith(r.endsWith("/") ? r : `${r}/`);
+};
+
+/** Per-browser opt-out of the confirmation step; localStorage may be unavailable. */
+const SKIP_CONFIRM_KEY = "bakabase:resourceMove:skipConfirm";
+const shouldSkipConfirm = () => {
+  try {
+    return localStorage.getItem(SKIP_CONFIRM_KEY) === "1";
+  } catch {
+    return false;
+  }
+};
+const rememberSkipConfirm = () => {
+  try {
+    localStorage.setItem(SKIP_CONFIRM_KEY, "1");
+  } catch {
+    // Ignored: the user simply gets asked again next time.
+  }
 };
 
 type MovableResource = {
@@ -103,10 +119,34 @@ const ResourceMoveModal = ({ resources, onMoved, onDestroyed }: Props) => {
     [sourcePaths, t],
   );
 
+  const finishAfterTaskCreated = useCallback(() => {
+    close();
+    onMoved?.();
+    onDestroyed?.();
+  }, [close, onMoved, onDestroyed]);
+
   const openConfirmModal = useCallback(async () => {
     if (!selectedDest || previewing) return;
     setPreviewing(true);
     try {
+      // The user opted out of the confirmation step — start the move right away.
+      if (shouldSkipConfirm()) {
+        const moveRsp = await BApi.resourceMove.moveResources({
+          resourceIds,
+          destDir: selectedDest,
+        });
+
+        if (moveRsp.code) {
+          toast.danger(moveRsp.message ?? "Failed to create the move task");
+
+          return;
+        }
+        toast.success(t<string>("resourceMove.status.taskCreated"));
+        finishAfterTaskCreated();
+
+        return;
+      }
+
       const rsp = await BApi.resourceMove.previewResourceMove({
         resourceIds,
         destDir: selectedDest,
@@ -124,16 +164,12 @@ const ResourceMoveModal = ({ resources, onMoved, onDestroyed }: Props) => {
         destDir: selectedDest,
         resourceIds,
         preview: rsp.data,
-        onMoved: () => {
-          close();
-          onMoved?.();
-          onDestroyed?.();
-        },
+        onMoved: finishAfterTaskCreated,
       });
     } finally {
       setPreviewing(false);
     }
-  }, [selectedDest, previewing, resourceIds, createPortal, onMoved, onDestroyed]);
+  }, [selectedDest, previewing, resourceIds, createPortal, finishAfterTaskCreated, t]);
 
   const renderAfterName = useCallback(
     (entry: Entry) => {
@@ -169,7 +205,7 @@ const ResourceMoveModal = ({ resources, onMoved, onDestroyed }: Props) => {
   return (
     <Modal
       classNames={{
-        base: "max-w-4xl w-[90vw] h-[80vh]",
+        base: "max-w-5xl w-[92vw] h-[85vh]",
         body: "p-0 overflow-hidden",
       }}
       footer={false}
@@ -183,29 +219,6 @@ const ResourceMoveModal = ({ resources, onMoved, onDestroyed }: Props) => {
       onDestroyed={onDestroyed}
     >
       <div className="flex flex-col h-full">
-        {/* Warnings + selection preview */}
-        <div className="p-4 border-b border-default-200 bg-default-50">
-          <div className="flex items-start gap-2">
-            <AiOutlineWarning className="text-warning text-xl flex-shrink-0 mt-0.5" />
-            <div className="flex-1 text-sm">
-              <p className="font-medium">{t<string>("resourceMove.tip.physicalMove")}</p>
-              <p className="text-default-500 mt-0.5">
-                <ClockCircleOutlined className="mr-1" />
-                {t<string>("resourceMove.tip.mayTakeLong")}
-              </p>
-            </div>
-          </div>
-          {selectedDest && (
-            <div className="mt-2 pt-2 border-t border-default-200 text-sm">
-              <span className="font-medium">{t<string>("resourceMove.label.moveTo")}</span>
-              <code className="text-success ml-1 break-all">{selectedDest}</code>
-            </div>
-          )}
-          <p className="text-xs text-default-500 mt-2">
-            {t<string>("resourceMove.tip.browseAndPick")}
-          </p>
-        </div>
-
         {/* Path-mark roots as a browsable multi-root tree. Must be a flex column: the
             FileExplorer's own root uses `grow`, which is inert inside a block container and
             would collapse the tree area to the toolbar's height. */}
@@ -231,23 +244,37 @@ const ResourceMoveModal = ({ resources, onMoved, onDestroyed }: Props) => {
         </div>
 
         {/* Own footer: keep this modal open while the confirmation step runs. */}
-        <div className="flex justify-end gap-2 p-3 border-t border-default-200">
-          <Button variant="light" onPress={close}>
-            {t<string>("common.action.cancel")}
-          </Button>
-          <Button
-            color="primary"
-            isDisabled={!selectedDest || previewing}
-            onPress={openConfirmModal}
-          >
-            {previewing ? (
-              <Spinner size="sm" />
-            ) : selectedDest ? (
-              t<string>("resourceMove.action.moveFiles")
-            ) : (
-              t<string>("common.action.confirm")
+        <div className="flex items-center justify-between gap-3 p-3 border-t border-default-200">
+          <div className="min-w-0 flex-1 text-sm flex items-center">
+            {selectedDest && (
+              <>
+                <span className="font-medium flex-shrink-0">
+                  {t<string>("resourceMove.label.moveTo")}
+                </span>
+                <code className="text-success ml-1 truncate" title={selectedDest}>
+                  {selectedDest}
+                </code>
+              </>
             )}
-          </Button>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Button variant="light" onPress={close}>
+              {t<string>("common.action.cancel")}
+            </Button>
+            <Button
+              color="primary"
+              isDisabled={!selectedDest || previewing}
+              onPress={openConfirmModal}
+            >
+              {previewing ? (
+                <Spinner size="sm" />
+              ) : selectedDest ? (
+                t<string>("resourceMove.action.moveFiles")
+              ) : (
+                t<string>("common.action.confirm")
+              )}
+            </Button>
+          </div>
         </div>
       </div>
     </Modal>
@@ -270,6 +297,7 @@ const ResourceMoveConfirmModal = ({
 }: ConfirmProps) => {
   const { t } = useTranslation();
   const items = preview.items ?? [];
+  const [dontRemindAgain, setDontRemindAgain] = useState(false);
 
   return (
     <Modal
@@ -293,6 +321,9 @@ const ResourceMoveConfirmModal = ({
         if (rsp.code) {
           throw new Error(rsp.message ?? "Failed to create the move task");
         }
+        if (dontRemindAgain) {
+          rememberSkipConfirm();
+        }
         toast.success(t<string>("resourceMove.status.taskCreated"));
         onMoved();
       }}
@@ -304,7 +335,14 @@ const ResourceMoveConfirmModal = ({
             <p className="text-danger-700 font-medium">
               {t<string>("resourceMove.warning.irreversible")}
             </p>
-            <p className="text-default-600 mt-0.5">{t<string>("resourceMove.tip.mayTakeLong")}</p>
+            <p className="text-default-600 mt-0.5">
+              {t<string>("resourceMove.tip.physicalMove")}
+              &nbsp;
+              {t<string>("resourceMove.tip.mayTakeLong")}
+            </p>
+            <p className="text-default-600 mt-0.5">
+              {t<string>("resourceMove.warning.lockedDuringMove")}
+            </p>
           </div>
         </div>
 
@@ -409,6 +447,10 @@ const ResourceMoveConfirmModal = ({
         </div>
 
         <p className="text-xs text-default-500">{t<string>("resourceMove.confirm.effectsHint")}</p>
+
+        <Checkbox isSelected={dontRemindAgain} size="sm" onValueChange={setDontRemindAgain}>
+          {t<string>("resourceMove.confirm.dontRemindAgain")}
+        </Checkbox>
       </div>
     </Modal>
   );
