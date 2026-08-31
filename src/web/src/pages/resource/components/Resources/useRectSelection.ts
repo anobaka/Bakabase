@@ -99,12 +99,18 @@ const AutoScrollEdge = 48;
 const AutoScrollMinSpeed = 2;
 const AutoScrollMaxSpeed = 24;
 
-/** Elements that own the press themselves, so a rectangle must never start on them.
- *  Anchors are matched with or without an href: a link built on react-aria fires its
- *  press from a global pointerup, which swallowing the trailing click would not stop.
- *  `[role=button]` is deliberately absent — the resource cover carries it and spans
- *  most of every card, which would leave almost nowhere left to drag from. */
-const InteractiveSelector = [
+/** Elements where a press already means something else, so a rectangle must never
+ *  start on them.
+ *
+ *  `.select-text` is the reason a card's title and tag rows can still be highlighted
+ *  and copied with the mouse: those are the only opted-in selectable regions in a UI
+ *  that sets `user-select: none` globally, and dragging there stays text selection.
+ *
+ *  Anchors are matched with or without an href, because a link built on react-aria
+ *  fires its press from a global pointerup that swallowing the trailing click would
+ *  not stop. `[role=button]` is deliberately absent — the resource cover carries it
+ *  and spans most of every card, which would leave almost nowhere left to drag from. */
+const DragExcludedSelector = [
   "button",
   "a",
   "input",
@@ -115,6 +121,7 @@ const InteractiveSelector = [
   "[role='dialog']",
   "[role='menu']",
   ".szh-menu",
+  ".select-text",
 ].join(",");
 
 type Modifiers = {
@@ -364,7 +371,8 @@ export const useRectSelection = (options: Options) => {
           return;
         }
         drag.active = true;
-        // The first few pixels may already have started a native text selection.
+        // Drop any text highlighted earlier, so the rectangle isn't dragged around a
+        // leftover selection.
         window.getSelection()?.removeAllRanges();
         optionsRef.current.onStart?.();
         optionsRef.current.onActiveChange?.(true);
@@ -416,7 +424,7 @@ export const useRectSelection = (options: Options) => {
       }
       const target = e.target as HTMLElement | null;
 
-      if (!target || !container.contains(target) || target.closest(InteractiveSelector)) {
+      if (!target || !container.contains(target) || target.closest(DragExcludedSelector)) {
         return;
       }
       const scroller = container.querySelector<HTMLElement>(".ReactVirtualized__Grid");

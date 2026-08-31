@@ -263,6 +263,49 @@ describe("useRectSelection", () => {
     h.unmount();
   });
 
+  it("leaves selectable text to text selection", () => {
+    const h = setup();
+    // A card's title and tag rows carry .select-text; dragging there must highlight
+    // text rather than start a rectangle.
+    const title = document.createElement("div");
+    const label = document.createElement("span");
+
+    title.className = "select-text resource-limited-content";
+    title.appendChild(label);
+    h.scroller.appendChild(title);
+    beginDrag(h, label);
+
+    expect(h.onStart).not.toHaveBeenCalled();
+    expect(h.onChange).not.toHaveBeenCalled();
+
+    h.unmount();
+  });
+
+  it("keeps going when a live rectangle sweeps over selectable text", () => {
+    const h = setup();
+    // Excluding .select-text must only gate where a drag *starts*. Sweeping across a
+    // card's title or tag row mid-drag has to keep selecting, not hand the gesture
+    // back to text selection.
+    const title = document.createElement("div");
+    const label = document.createElement("span");
+
+    title.className = "select-text resource-limited-content";
+    title.appendChild(label);
+    h.scroller.appendChild(title);
+
+    beginDrag(h);
+    expect(h.onChange).toHaveBeenLastCalledWith([0], "replace");
+
+    label.dispatchEvent(mouse("mousemove", { clientX: 260, clientY: 160, buttons: 1 }));
+    flushFrame();
+    expect(h.onChange).toHaveBeenLastCalledWith([0, 1, 2, 3], "replace");
+
+    label.dispatchEvent(mouse("mouseup", { clientX: 260, clientY: 160, buttons: 0 }));
+    expect(h.onEnd).toHaveBeenCalledWith<[RectSelectionEnd]>({ cancelled: false });
+
+    h.unmount();
+  });
+
   it("ignores a press that is not the primary button", () => {
     const h = setup();
 
