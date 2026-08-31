@@ -3,7 +3,7 @@ globs:
   - "**/Search/Index/**"
   - "**/Modules.Property/**/Properties/**"
   - "**/IPropertyIndexProvider.cs"
-  - "**/PredefinedTasksProvider.cs"
+  - "**/SearchIndexTask.cs"
 ---
 
 # Resource Search Index System
@@ -24,7 +24,7 @@ ResourceSearchIndexService (legacy/)
 ## BTask Integration
 
 - **Task Name**: `SearchIndex`
-- **Location**: `PredefinedTasksProvider.cs`
+- **Location**: `SearchIndexTask.cs` (`src/legacy/.../Search/Index/`)
 - **Type**: One-time startup task (Interval = null)
 - **Progress**: Resets to 0% when rebuilding
 
@@ -142,7 +142,7 @@ Batch processing: 100 items max, 500ms max delay.
 | Index Key | `src/legacy/.../Search/Index/IndexKey.cs` |
 | IPropertyIndexProvider | `src/modules/Bakabase.Modules.Property/Abstractions/Components/IPropertyIndexProvider.cs` |
 | Property Descriptors | `src/modules/Bakabase.Modules.Property/Components/Properties/*/` |
-| BTask Definition | `src/Bakabase.Service/Components/Tasks/PredefinedTasksProvider.cs` |
+| BTask Definition | `src/legacy/.../Search/Index/SearchIndexTask.cs` |
 
 ## Adding New Property Types
 
