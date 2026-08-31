@@ -27,8 +27,6 @@ import { useTranslation } from "react-i18next";
 import {
   ApartmentOutlined,
   CheckCircleFilled,
-  DisconnectOutlined,
-  FileUnknownOutlined,
   FolderOpenOutlined,
   HistoryOutlined,
   LoadingOutlined,
@@ -506,16 +504,6 @@ const Resource = React.forwardRef((props: Props, ref) => {
               <ApartmentOutlined className={""} />
             </Tooltip>
           )}
-          {resource.tags.includes(ResourceTag.PathDoesNotExist) && (
-            <Tooltip content={t<string>("resource.tip.fileNotExist")}>
-              <FileUnknownOutlined className={"text-warning"} />
-            </Tooltip>
-          )}
-          {resource.tags.includes(ResourceTag.UnknownMediaLibrary) && (
-            <Tooltip content={t<string>("resource.tip.unknownMediaLibrary")}>
-              <DisconnectOutlined className={"text-warning"} />
-            </Tooltip>
-          )}
           {resource.status === ResourceStatus.Absent && (
             <Chip color="danger" radius={"sm"} size={"sm"} variant={"flat"}>
               {t("enum.resourceStatus.absent")}
@@ -593,7 +581,6 @@ const Resource = React.forwardRef((props: Props, ref) => {
                 switch (dpk.pool) {
                   case PropertyPool.Internal:
                     switch (dpk.id) {
-                      case ResourceProperty.MediaLibrary:
                       case ResourceProperty.MediaLibraryV2:
                       case ResourceProperty.MediaLibraryV2Multi:
                         // Render multiple chips for multiple media libraries
@@ -630,10 +617,6 @@ const Resource = React.forwardRef((props: Props, ref) => {
                           style.backgroundColor = autoBackgroundColor(resource.mediaLibraryColor);
                         }
                         bizValue = resource.mediaLibraryName;
-                        bizValueType = StandardValueType.String;
-                        break;
-                      case ResourceProperty.Category:
-                        bizValue = resource.category?.name;
                         bizValueType = StandardValueType.String;
                         break;
                       case ResourceProperty.CreatedAt:

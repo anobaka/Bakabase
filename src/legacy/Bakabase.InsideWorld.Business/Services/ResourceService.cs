@@ -2278,6 +2278,11 @@ namespace Bakabase.InsideWorld.Business.Services
 
             await MediaLibraryV2Service.RefreshResourceCount(mediaLibraryId);
 
+            // Path and membership are both indexed (Filename/DirectoryPath/RootPath and
+            // MediaLibraryV2Multi); without this the search index, profile index and UI push
+            // silently go stale — ChangePath below is the reference pattern.
+            ResourceDataChangeEventPublisher.PublishResourcesChanged(ids);
+
             return BaseResponseBuilder.Ok;
         }
 
