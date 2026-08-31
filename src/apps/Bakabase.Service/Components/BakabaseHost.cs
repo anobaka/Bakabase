@@ -154,6 +154,16 @@ namespace Bakabase.Service.Components
                 await rehydrator.MarkInterruptedRunsAsync();
                 await rehydrator.ReEnqueuePendingRunsAsync();
             }
+
+            // Resource move records survive restarts too, but a half-done physical move is not
+            // safe to auto-resume — flip dead Pending/Moving rows to Interrupted so the user can
+            // see and retry them explicitly.
+            await using (var resourceMoveScope = serviceProvider.CreateAsyncScope())
+            {
+                await resourceMoveScope.ServiceProvider
+                    .GetRequiredService<Bakabase.Abstractions.Services.IResourceMoveService>()
+                    .MarkInterruptedOnStartup();
+            }
         }
 
         protected override Task<string?> CheckIfAppCanExitSafely()

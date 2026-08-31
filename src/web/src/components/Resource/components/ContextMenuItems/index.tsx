@@ -8,6 +8,7 @@ import {
   ApiOutlined,
   DeleteOutlined,
   EditOutlined,
+  ExportOutlined,
   FireOutlined,
   FolderOpenOutlined,
   PushpinOutlined,
@@ -25,6 +26,7 @@ import BatchPlayMenuItems from "./BatchPlayMenuItems";
 import MediaLibraryMultiSelector from "@/components/MediaLibraryMultiSelector";
 import { EnhancementAdditionalItem, PropertyPool, ResourceAdditionalItem } from "@/sdk/constants";
 import ResourceTransferModal from "@/components/ResourceTransferModal";
+import ResourceMoveModal from "@/components/ResourceMoveModal";
 import ResourceEnhancementsModal from "@/components/Resource/components/ResourceEnhancementsModal";
 import { PlaylistCollection } from "@/components/Playlist";
 import { Modal, Tooltip, toast } from "@/components/bakaui";
@@ -377,6 +379,32 @@ const ContextMenuItems = ({
                 count: selectedResourceIds.length,
               })
             : t<string>("resource.contextMenu.transferResourceData")}
+        </div>
+      </MenuItem>
+      <MenuItem
+        onClick={() => {
+          const openModal = (resources: { id: number; path?: string | null }[]) =>
+            createPortal(ResourceMoveModal, {
+              resources,
+              onMoved: () => onSelectedResourcesChanged?.(selectedResourceIds),
+            });
+
+          if (selectedResources && selectedResources.length >= selectedResourceIds.length) {
+            openModal(selectedResources);
+          } else {
+            BApi.resource
+              .getResourcesByKeys({ ids: selectedResourceIds })
+              .then((r) => openModal(r.data || []));
+          }
+        }}
+      >
+        <div className={"flex items-center gap-2"}>
+          <ExportOutlined className={"text-base"} />
+          {selectedResourceIds.length > 1
+            ? t<string>("resource.contextMenu.moveCountResources", {
+                count: selectedResourceIds.length,
+              })
+            : t<string>("resource.contextMenu.moveResource")}
         </div>
       </MenuItem>
       <MenuItem

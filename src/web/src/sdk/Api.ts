@@ -95,6 +95,30 @@ export interface BakabaseAbstractionsModelsDbPlayHistoryDbModel {
   playedAt: string;
 }
 
+export interface BakabaseAbstractionsModelsDbResourceMoveRecordDbModel {
+  /** @format int32 */
+  id: number;
+  /** @minLength 1 */
+  batchId: string;
+  /** @format int32 */
+  resourceId: number;
+  /** @minLength 1 */
+  sourcePath: string;
+  /** @minLength 1 */
+  destPath: string;
+  /** [1: Pending, 2: Moving, 3: Succeeded, 4: Failed, 5: Cancelled, 6: Interrupted] */
+  status: BakabaseAbstractionsModelsDomainConstantsResourceMoveRecordStatus;
+  /** @format int32 */
+  attempts: number;
+  error?: string;
+  /** @format date-time */
+  createdAt: string;
+  /** @format date-time */
+  startedAt?: string;
+  /** @format date-time */
+  completedAt?: string;
+}
+
 export interface BakabaseAbstractionsModelsDbSteamAppDbModel {
   /** @format int32 */
   id: number;
@@ -278,6 +302,18 @@ export type BakabaseAbstractionsModelsDomainConstantsResourceCacheType = 1 | 2 |
  * @format int32
  */
 export type BakabaseAbstractionsModelsDomainConstantsResourceDataType = 1 | 2 | 3;
+
+/**
+ * [1: Pending, 2: Moving, 3: Succeeded, 4: Failed, 5: Cancelled, 6: Interrupted]
+ * @format int32
+ */
+export type BakabaseAbstractionsModelsDomainConstantsResourceMoveRecordStatus =
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5
+  | 6;
 
 /**
  * [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc]
@@ -1053,6 +1089,33 @@ export interface BakabaseAbstractionsModelsViewMediaLibraryTemplateImportConfigu
   noNeedToConfigure: boolean;
   uniqueCustomProperties?: BakabaseAbstractionsModelsDomainProperty[];
   uniqueExtensionGroups?: BakabaseAbstractionsModelsDomainExtensionGroup[];
+}
+
+export interface BakabaseAbstractionsModelsViewResourceMovePreviewViewModel {
+  items: BakabaseAbstractionsModelsViewResourceMovePreviewViewModelItem[];
+}
+
+export interface BakabaseAbstractionsModelsViewResourceMovePreviewViewModelItem {
+  /** @format int32 */
+  resourceId: number;
+  sourcePath: string;
+  destPath: string;
+  destConflict: boolean;
+  destInsideSource: boolean;
+  effects: BakabaseAbstractionsModelsViewResourceMovePreviewViewModelMarkEffect[];
+}
+
+export interface BakabaseAbstractionsModelsViewResourceMovePreviewViewModelMarkEffect {
+  /** @format int32 */
+  markId: number;
+  /** [1: Resource, 2: Property, 3: MediaLibrary] */
+  type: BakabaseAbstractionsModelsDomainConstantsPathMarkType;
+  markPath: string;
+  willApply: boolean;
+  propertyName?: string;
+  fixedValue?: string;
+  isDynamic: boolean;
+  mediaLibraryName?: string;
 }
 
 export interface BakabaseAbstractionsModelsViewThirdPartyContentTrackerNearestViewModel {
@@ -4462,6 +4525,12 @@ export interface BakabaseServiceModelsInputResourceMediaLibraryMappingInputModel
   mediaLibraryIds: number[];
 }
 
+export interface BakabaseServiceModelsInputResourceMoveInputModel {
+  resourceIds: number[];
+  /** @minLength 1 */
+  destDir: string;
+}
+
 export interface BakabaseServiceModelsInputResourceOptionsPatchInputModel {
   additionalCoverDiscoveringSources?: BakabaseInsideWorldModelsConstantsAdditionalCoverDiscoveringSource[];
   coverOptions?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainResourceOptionsCoverOptionsModel;
@@ -5050,6 +5119,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsM
   code: number;
   message?: string;
   data?: BakabaseAbstractionsModelsDbPasswordDbModel[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDbResourceMoveRecordDbModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDbResourceMoveRecordDbModel[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainConstantsSearchOperation {
@@ -5788,6 +5864,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstract
   code: number;
   message?: string;
   data?: BakabaseAbstractionsModelsViewMediaLibraryTemplateImportConfigurationViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsViewResourceMovePreviewViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsViewResourceMovePreviewViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsViewThirdPartyContentTrackerNearestViewModel {
@@ -20657,6 +20740,185 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     setRemoteAccessLiveTranscodeUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/remote-access/live-transcode`;
+      
+      return baseUrl + path;
+    },
+  };
+  resourceMove = {
+    /**
+     * No description
+     *
+     * @tags ResourceMove
+     * @name MoveResources
+     * @request POST:/resource-move
+     */
+    moveResources: (
+      data: BakabaseServiceModelsInputResourceMoveInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemString, any>({
+        path: `/resource-move`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for moveResources
+     * @name moveResourcesUrl
+     */
+    moveResourcesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource-move`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceMove
+     * @name PreviewResourceMove
+     * @request POST:/resource-move/preview
+     */
+    previewResourceMove: (
+      data: BakabaseServiceModelsInputResourceMoveInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsViewResourceMovePreviewViewModel,
+        any
+      >({
+        path: `/resource-move/preview`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for previewResourceMove
+     * @name previewResourceMoveUrl
+     */
+    previewResourceMoveUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource-move/preview`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceMove
+     * @name GetResourceMoveRecords
+     * @request GET:/resource-move/records
+     */
+    getResourceMoveRecords: (
+      query?: {
+        /**
+         * @format int32
+         * @default 100
+         */
+        maxCount?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDbResourceMoveRecordDbModel,
+        any
+      >({
+        path: `/resource-move/records`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getResourceMoveRecords
+     * @name getResourceMoveRecordsUrl
+     */
+    getResourceMoveRecordsUrl: (query?: {
+        /**
+         * @format int32
+         * @default 100
+         */
+        maxCount?: number;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource-move/records`;
+      
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceMove
+     * @name RetryResourceMoveRecord
+     * @request POST:/resource-move/records/{id}/retry
+     */
+    retryResourceMoveRecord: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource-move/records/${id}/retry`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceMove
+     * @name DeleteResourceMoveRecord
+     * @request DELETE:/resource-move/records/{id}
+     */
+    deleteResourceMoveRecord: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource-move/records/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceMove
+     * @name DeleteInactiveResourceMoveRecords
+     * @request DELETE:/resource-move/records/inactive
+     */
+    deleteInactiveResourceMoveRecords: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource-move/records/inactive`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for deleteInactiveResourceMoveRecords
+     * @name deleteInactiveResourceMoveRecordsUrl
+     */
+    deleteInactiveResourceMoveRecordsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource-move/records/inactive`;
       
       return baseUrl + path;
     },

@@ -13,6 +13,7 @@ import {
 import { AssistantStatus, POLLING_INTERVAL_MS } from "./constants";
 import { useDraggable } from "./hooks/useDraggable";
 import { TaskTable } from "./components/TaskTable";
+import MoveRecordsTab from "./components/MoveRecordsTab";
 
 import { BTaskStatus } from "@/sdk/constants";
 import {
@@ -289,6 +290,9 @@ const FloatingAssistant = () => {
                 )}
               </div>
             </div>
+          </Tab>
+          <Tab key="moveRecords" title={t("resourceMove.records.tabTitle")}>
+            <MoveRecordsTab />
           </Tab>
           <Tab key="settings" title={t("floatingAssistant.section.quickSettings")}>
             <div className="flex flex-col gap-3 py-2">

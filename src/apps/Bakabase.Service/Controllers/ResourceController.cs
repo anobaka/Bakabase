@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Components.Tasks;
+using Bootstrap.Models.Constants;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
@@ -58,7 +59,9 @@ public class ResourceController(
     IMediaLibraryResourceMappingService mappingService,
     BTaskManager taskManager,
     IBOptionsManager<FileSystemOptions> fsOptionsManager,
-    IPropertyValueScopePreferenceService scopePreferenceService)
+    IPropertyValueScopePreferenceService scopePreferenceService,
+    Bakabase.Abstractions.Components.ResourceMove.ResourceMoveGuard resourceMoveGuard,
+    Bakabase.Abstractions.Components.Localization.IBakabaseLocalizer bakabaseLocalizer)
     : Controller
 {
     [HttpGet("search-operation")]
@@ -568,6 +571,13 @@ public class ResourceController(
     [SwaggerOperation(OperationId = "BulkDeleteResources")]
     public async Task<BaseResponse> BulkDelete([FromBody] BulkDeleteResourcesInputModel model)
     {
+        var lockedId = resourceMoveGuard.FirstLockedResourceId(model.Ids);
+        if (lockedId.HasValue)
+        {
+            return BaseResponseBuilder.Build(ResponseCode.Conflict,
+                bakabaseLocalizer.ResourceMove_ResourceIsLocked(lockedId.Value));
+        }
+
         // Previously DELETE /resource/ids?ids=... — for selections in the tens
         // of thousands the URL outgrew browser/Kestrel limits and the request
         // never left the client (issue #1098).
@@ -587,6 +597,14 @@ public class ResourceController(
     [SwaggerOperation(OperationId = "TransferResourceData")]
     public async Task<BaseResponse> Transfer([FromBody] ResourceTransferInputModel model)
     {
+        var involvedIds = model.Items.SelectMany(i => new[] { i.FromId, i.ToId });
+        var lockedId = resourceMoveGuard.FirstLockedResourceId(involvedIds);
+        if (lockedId.HasValue)
+        {
+            return BaseResponseBuilder.Build(ResponseCode.Conflict,
+                bakabaseLocalizer.ResourceMove_ResourceIsLocked(lockedId.Value));
+        }
+
         await service.Transfer(model);
         return BaseResponseBuilder.Ok;
     }

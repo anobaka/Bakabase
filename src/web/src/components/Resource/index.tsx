@@ -37,7 +37,7 @@ import {
   QuestionCircleOutlined,
 } from "@ant-design/icons";
 import { ControlledMenu } from "@szhsin/react-menu";
-import { AiOutlineFolderOpen, AiOutlinePlayCircle, AiOutlineSync } from "react-icons/ai";
+import { AiOutlineFolderOpen, AiOutlinePlayCircle } from "react-icons/ai";
 import moment from "moment";
 
 import StandardValueRenderer from "../StandardValue/ValueRenderer";
@@ -54,7 +54,9 @@ import BApi from "@/sdk/BApi";
 import ResourceCover from "@/components/Resource/components/ResourceCover";
 import Operations from "@/components/Resource/components/Operations";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import { Button, Chip, Link, Tooltip } from "@/components/bakaui";
+import { Button, Chip, Link, Spinner, Tooltip } from "@/components/bakaui";
+import { selectResourceMovingTask, useBTasksStore } from "@/stores/bTasks";
+import { BTaskStopButton } from "@/components/BTask";
 import {
   DataOrigin,
   PropertyPool,
@@ -351,6 +353,11 @@ const Resource = React.forwardRef((props: Props, ref) => {
   const { createPortal } = useBakabaseContext();
 
   const { t } = useTranslation();
+
+  // Active MoveResources task covering this resource — while present, every interaction on
+  // the card is disabled and a busy overlay is shown. Stable undefined for uncovered cards,
+  // so the virtualized grid doesn't re-render them on task pushes.
+  const movingTask = useBTasksStore(selectResourceMovingTask(resource.id));
 
   // Narrow selectors: any change to the *full* options object would otherwise
   // re-render every visible ResourceCard. Subscribing to specific fields
@@ -670,10 +677,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
                   }
                 }
               } catch (error) {
-                console.warn(
-                  `[Resource:${resource.id}] error rendering display property`,
-                  error,
-                );
+                console.warn(`[Resource:${resource.id}] error rendering display property`, error);
               }
 
               if (bizValue == undefined || bizValueType == undefined) {
@@ -864,6 +868,12 @@ const Resource = React.forwardRef((props: Props, ref) => {
       data-id={resource.id}
       style={style}
       onClickCapture={(e) => {
+        if (movingTask) {
+          e.preventDefault();
+          e.stopPropagation();
+
+          return;
+        }
         if (selectionModeRef?.current || e.shiftKey) {
           onSelected(resource.id, e.shiftKey);
           e.preventDefault();
@@ -876,12 +886,43 @@ const Resource = React.forwardRef((props: Props, ref) => {
           <CheckCircleFilled className="text-primary text-xl drop-shadow-md" />
         </div>
       )}
-      <Operations
-        coverRef={coverRef.current}
-        reload={reload}
-        resource={resource}
-        onResourcesDeleted={onResourcesDeleted}
-      />
+      {!movingTask && (
+        <Operations
+          coverRef={coverRef.current}
+          reload={reload}
+          resource={resource}
+          onResourcesDeleted={onResourcesDeleted}
+        />
+      )}
+      {movingTask && (
+        <div
+          className="absolute inset-0 z-30 rounded bg-white/30 backdrop-blur-[2px] cursor-not-allowed group/moving"
+          onContextMenu={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+        >
+          <div
+            className="absolute left-0 top-0 h-full transition-[width] duration-300 ease-out"
+            style={{
+              width: `${movingTask.percentage ?? 0}%`,
+              background:
+                "linear-gradient(90deg, rgba(105, 226, 248, 0.15), rgba(105, 226, 248, 0.3))",
+            }}
+          />
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
+            <div className="flex items-center gap-1 bg-[var(--theme-body-background)] px-3 py-1 rounded-md text-xs font-medium shadow-md">
+              <Spinner size="sm" />
+              {t<string>("resourceMove.status.moving")}
+              &nbsp;
+              {`${movingTask.percentage ?? 0}%`}
+            </div>
+            <div className="opacity-0 group-hover/moving:opacity-100 transition-opacity">
+              <BTaskStopButton color={"warning"} id={movingTask.id} size={"small"} />
+            </div>
+          </div>
+        </div>
+      )}
       <div
         onContextMenu={(e) => {
           if (typeof document.hasFocus === "function" && !document.hasFocus()) return;

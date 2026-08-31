@@ -251,5 +251,12 @@
   "enum.thirdPartyId.cien": "Ci-en",
   "enum.thirdPartyId.patreon": "Patreon",
   "enum.thirdPartyId.tmdb": "TMDB",
-  "enum.thirdPartyId.steam": "Steam"
+  "enum.thirdPartyId.steam": "Steam",
+
+  "enum.resourceMoveRecordStatus.pending": "Pending",
+  "enum.resourceMoveRecordStatus.moving": "Moving",
+  "enum.resourceMoveRecordStatus.succeeded": "Succeeded",
+  "enum.resourceMoveRecordStatus.failed": "Failed",
+  "enum.resourceMoveRecordStatus.cancelled": "Cancelled",
+  "enum.resourceMoveRecordStatus.interrupted": "Interrupted"
 }

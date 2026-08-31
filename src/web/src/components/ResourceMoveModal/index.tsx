@@ -1,0 +1,362 @@
+"use client";
+
+import type { Entry } from "@/core/models/FileExplorer/Entry";
+import type { DestroyableProps } from "@/components/bakaui/types";
+import type { BakabaseAbstractionsModelsViewResourceMovePreviewViewModel } from "@/sdk/Api";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { AiOutlineArrowRight, AiOutlineImport, AiOutlineWarning } from "react-icons/ai";
+import { ClockCircleOutlined } from "@ant-design/icons";
+
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import { Button, Chip, Modal, Spinner, Tooltip, toast } from "@/components/bakaui";
+import { FileExplorer } from "@/components/FileExplorer";
+import { standardizePath } from "@/components/utils";
+import { PathMarkType } from "@/sdk/constants";
+import BApi from "@/sdk/BApi";
+
+/** Segment-anchored containment: /a contains /a/b but never /abc. */
+const isPathEqualOrUnder = (candidate?: string, root?: string) => {
+  const c = standardizePath(candidate)?.toLowerCase();
+  const r = standardizePath(root)?.toLowerCase();
+
+  if (!c || !r) return false;
+  if (c === r) return true;
+
+  return c.startsWith(r.endsWith("/") ? r : `${r}/`);
+};
+
+type MovableResource = {
+  id: number;
+  path?: string | null;
+};
+
+type Props = {
+  resources: MovableResource[];
+  /** Called after the move task is created (files move in the background). */
+  onMoved?: () => any;
+} & DestroyableProps;
+
+const ResourceMoveModal = ({ resources, onMoved, onDestroyed }: Props) => {
+  const { t } = useTranslation();
+  const { createPortal } = useBakabaseContext();
+
+  const [visible, setVisible] = useState(true);
+  const [markRoots, setMarkRoots] = useState<string[]>();
+  const [selectedDest, setSelectedDest] = useState<string>();
+  const [previewing, setPreviewing] = useState(false);
+
+  useEffect(() => {
+    BApi.pathMark.getAllPathMarkPaths().then((r) => {
+      // Only directories can host a moved resource; a mark on a file still pins down its
+      // directory as a browsable starting point.
+      const roots = [...new Set((r.data ?? []).map((p) => standardizePath(p)!))];
+
+      setMarkRoots(roots);
+    });
+  }, []);
+
+  const resourceIds = useMemo(() => resources.map((r) => r.id), [resources]);
+  const sourcePaths = useMemo(
+    () =>
+      resources.map((r) => standardizePath(r.path ?? undefined)).filter((p): p is string => !!p),
+    [resources],
+  );
+
+  const validateDest = useCallback(
+    (path: string): boolean => {
+      if (sourcePaths.some((sp) => isPathEqualOrUnder(path, sp))) {
+        toast.warning(t<string>("resourceMove.warning.destInsideSource"));
+
+        return false;
+      }
+
+      return true;
+    },
+    [sourcePaths, t],
+  );
+
+  const openConfirmModal = useCallback(async () => {
+    if (!selectedDest || previewing) return;
+    setPreviewing(true);
+    try {
+      const rsp = await BApi.resourceMove.previewResourceMove({
+        resourceIds,
+        destDir: selectedDest,
+      });
+
+      if (rsp.code || !rsp.data) {
+        toast.danger(rsp.message ?? "Failed to preview");
+
+        return;
+      }
+
+      createPortal(ResourceMoveConfirmModal, {
+        destDir: selectedDest,
+        resourceIds,
+        preview: rsp.data,
+        onMoved: () => {
+          setVisible(false);
+          onMoved?.();
+          onDestroyed?.();
+        },
+      });
+    } finally {
+      setPreviewing(false);
+    }
+  }, [selectedDest, previewing, resourceIds, createPortal, onMoved, onDestroyed]);
+
+  const renderAfterName = useCallback(
+    (entry: Entry) => {
+      if (!entry.isDirectoryOrDrive) return null;
+      const isSelected = standardizePath(entry.path) === selectedDest;
+
+      return (
+        <div className="flex items-center gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <Button
+            className={`min-w-0 px-2 h-6 ${isSelected ? "bg-primary text-white" : ""}`}
+            color={isSelected ? "primary" : "default"}
+            size="sm"
+            startContent={<AiOutlineImport className="text-sm" />}
+            variant={isSelected ? "solid" : "flat"}
+            onPress={() => {
+              const path = standardizePath(entry.path)!;
+
+              if (validateDest(path)) {
+                setSelectedDest(path);
+              }
+            }}
+          >
+            {isSelected
+              ? t<string>("common.label.selected")
+              : t<string>("resourceMove.action.moveHere")}
+          </Button>
+        </div>
+      );
+    },
+    [selectedDest, validateDest, t],
+  );
+
+  return (
+    <Modal
+      classNames={{
+        base: "max-w-4xl w-[90vw] h-[80vh]",
+        body: "p-0 overflow-hidden",
+      }}
+      footer={false}
+      title={
+        resourceIds.length > 1
+          ? t<string>("resourceMove.title.forCount", { count: resourceIds.length })
+          : t<string>("resourceMove.title")
+      }
+      visible={visible}
+      onClose={() => setVisible(false)}
+      onDestroyed={onDestroyed}
+    >
+      <div className="flex flex-col h-full">
+        {/* Warnings + selection preview */}
+        <div className="p-4 border-b border-default-200 bg-default-50">
+          <div className="flex items-start gap-2">
+            <AiOutlineWarning className="text-warning text-xl flex-shrink-0 mt-0.5" />
+            <div className="flex-1 text-sm">
+              <p className="font-medium">{t<string>("resourceMove.tip.physicalMove")}</p>
+              <p className="text-default-500 mt-0.5">
+                <ClockCircleOutlined className="mr-1" />
+                {t<string>("resourceMove.tip.mayTakeLong")}
+              </p>
+            </div>
+          </div>
+          {selectedDest && (
+            <div className="mt-2 pt-2 border-t border-default-200 text-sm">
+              <span className="font-medium">{t<string>("resourceMove.label.moveTo")}</span>
+              <code className="text-success ml-1 break-all">{selectedDest}</code>
+            </div>
+          )}
+          <p className="text-xs text-default-500 mt-2">
+            {t<string>("resourceMove.tip.browseAndPick")}
+          </p>
+        </div>
+
+        {/* Path-mark roots as a browsable multi-root tree */}
+        <div className="flex-1 min-h-0 overflow-hidden">
+          {markRoots == undefined ? (
+            <div className="flex items-center justify-center h-full">
+              <Spinner />
+            </div>
+          ) : markRoots.length === 0 ? (
+            <div className="flex items-center justify-center h-full text-sm text-default-500">
+              {t<string>("resourceMove.tip.noMarkRoots")}
+            </div>
+          ) : (
+            <FileExplorer
+              expandable
+              capabilities={["select"]}
+              filter={{ custom: (e) => e.isDirectoryOrDrive }}
+              renderAfterName={renderAfterName}
+              rootPaths={markRoots}
+              selectable="disabled"
+            />
+          )}
+        </div>
+
+        {/* Own footer: keep this modal open while the confirmation step runs. */}
+        <div className="flex justify-end gap-2 p-3 border-t border-default-200">
+          <Button variant="light" onPress={() => setVisible(false)}>
+            {t<string>("common.action.cancel")}
+          </Button>
+          <Button
+            color="primary"
+            isDisabled={!selectedDest || previewing}
+            onPress={openConfirmModal}
+          >
+            {previewing ? (
+              <Spinner size="sm" />
+            ) : selectedDest ? (
+              t<string>("resourceMove.action.moveFiles")
+            ) : (
+              t<string>("common.action.confirm")
+            )}
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+};
+
+type ConfirmProps = {
+  destDir: string;
+  resourceIds: number[];
+  preview: BakabaseAbstractionsModelsViewResourceMovePreviewViewModel;
+  onMoved: () => any;
+} & DestroyableProps;
+
+const ResourceMoveConfirmModal = ({
+  destDir,
+  resourceIds,
+  preview,
+  onMoved,
+  onDestroyed,
+}: ConfirmProps) => {
+  const { t } = useTranslation();
+  const items = preview.items ?? [];
+
+  return (
+    <Modal
+      defaultVisible
+      classNames={{
+        base: "max-w-2xl max-h-[85vh]",
+        body: "overflow-y-auto",
+      }}
+      footer={{
+        actions: ["cancel", "ok"],
+        okProps: {
+          color: "danger",
+          children: t<string>("resourceMove.action.moveFiles"),
+        },
+      }}
+      title={t<string>("resourceMove.confirm.title")}
+      onDestroyed={onDestroyed}
+      onOk={async () => {
+        const rsp = await BApi.resourceMove.moveResources({ resourceIds, destDir });
+
+        if (rsp.code) {
+          throw new Error(rsp.message ?? "Failed to create the move task");
+        }
+        toast.success(t<string>("resourceMove.status.taskCreated"));
+        onMoved();
+      }}
+    >
+      <div className="flex flex-col gap-3">
+        <div className="flex items-start gap-2 p-3 bg-danger-50 border border-danger-200 rounded-lg text-sm">
+          <AiOutlineWarning className="text-danger text-xl flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-danger-700 font-medium">
+              {t<string>("resourceMove.warning.irreversible")}
+            </p>
+            <p className="text-default-600 mt-0.5">{t<string>("resourceMove.tip.mayTakeLong")}</p>
+          </div>
+        </div>
+
+        <div className="text-sm font-medium">
+          {t<string>("resourceMove.confirm.summary", { count: items.length })}
+          <code className="text-success ml-1 break-all">{destDir}</code>
+        </div>
+
+        <div className="flex flex-col gap-2 max-h-[45vh] overflow-y-auto">
+          {items.map((item) => (
+            <div key={item.resourceId} className="border border-default-200 rounded-lg p-2 text-sm">
+              <div
+                className="text-danger line-through font-mono text-xs truncate"
+                title={item.sourcePath}
+              >
+                {item.sourcePath}
+              </div>
+              <div className="flex items-center gap-1 mt-1 min-w-0">
+                <AiOutlineArrowRight className="text-default-400 flex-shrink-0" />
+                <div className="text-success font-mono text-xs truncate" title={item.destPath}>
+                  {item.destPath}
+                </div>
+              </div>
+              {(item.destConflict || item.destInsideSource || (item.effects ?? []).length > 0) && (
+                <div className="flex flex-wrap gap-1 mt-1.5">
+                  {item.destConflict && (
+                    <Chip color="danger" size="sm" variant="flat">
+                      {t<string>("resourceMove.confirm.destConflict")}
+                    </Chip>
+                  )}
+                  {item.destInsideSource && (
+                    <Chip color="danger" size="sm" variant="flat">
+                      {t<string>("resourceMove.warning.destInsideSource")}
+                    </Chip>
+                  )}
+                  {(item.effects ?? []).map((effect) => {
+                    const label =
+                      effect.type === PathMarkType.MediaLibrary
+                        ? effect.isDynamic
+                          ? t<string>("resourceMove.confirm.effect.dynamicMediaLibrary")
+                          : t<string>("resourceMove.confirm.effect.mediaLibrary", {
+                              name: effect.mediaLibraryName ?? "?",
+                            })
+                        : t<string>("resourceMove.confirm.effect.property", {
+                            name: effect.propertyName ?? "?",
+                          }) + (effect.fixedValue ? ` = ${effect.fixedValue}` : "");
+
+                    const chip = (
+                      <Chip
+                        key={effect.markId}
+                        className={effect.willApply ? "" : "opacity-50"}
+                        color={effect.type === PathMarkType.MediaLibrary ? "primary" : "secondary"}
+                        size="sm"
+                        variant="flat"
+                      >
+                        {label}
+                      </Chip>
+                    );
+
+                    return effect.willApply ? (
+                      chip
+                    ) : (
+                      <Tooltip
+                        key={effect.markId}
+                        content={t<string>("resourceMove.confirm.effect.mayNotApply")}
+                      >
+                        {chip}
+                      </Tooltip>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <p className="text-xs text-default-500">{t<string>("resourceMove.confirm.effectsHint")}</p>
+      </div>
+    </Modal>
+  );
+};
+
+ResourceMoveModal.displayName = "ResourceMoveModal";
+
+export default ResourceMoveModal;

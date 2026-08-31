@@ -62,17 +62,18 @@ namespace Bakabase.InsideWorld.Business.Extensions
                 }
 
                 // parent-child relationship sources
+                // allSources is sorted, so a parent always precedes its descendants.
                 var noRelationshipSources = new List<string>();
                 var subSources = new List<string>();
                 foreach (var source in allSources)
                 {
-                    if (noRelationshipSources.All(a => !source.StartsWith(a) || a != source))
+                    if (noRelationshipSources.Any(a => source.IsPathUnder(a)))
                     {
-                        noRelationshipSources.Add(source);
+                        subSources.Add(source);
                     }
                     else
                     {
-                        subSources.Add(source);
+                        noRelationshipSources.Add(source);
                     }
                 }
 
@@ -89,7 +90,7 @@ namespace Bakabase.InsideWorld.Business.Extensions
                 {
                     foreach (var target in options.Targets)
                     {
-                        if (target.Path.StartsWith(source))
+                        if (target.Path.IsPathEqualOrUnder(source))
                         {
                             targetsUnderSources.Add(target.Path);
                         }

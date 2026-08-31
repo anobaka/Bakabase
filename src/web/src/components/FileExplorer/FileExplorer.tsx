@@ -1,7 +1,6 @@
 "use client";
 
 import type { FileExplorerEntryProps } from "./FileExplorerEntry";
-import type { Entry } from "@/core/models/FileExplorer/Entry";
 import type { Capability } from "./models";
 
 import React, {
@@ -36,6 +35,7 @@ import DeleteConfirmationModal from "./components/DeleteConfirmationModal";
 import WrapModal from "./components/WrapModal";
 import ExtractModal from "./components/ExtractModal";
 
+import { Entry } from "@/core/models/FileExplorer/Entry";
 import BApi from "@/sdk/BApi";
 import { buildLogger, getStandardParentPath, standardizePath } from "@/components/utils";
 import { useFileExplorerClipboardStore } from "@/stores/fileExplorerClipboard";
@@ -47,6 +47,14 @@ import FolderSelector from "@/components/FolderSelector";
 
 export type FileExplorerProps = {
   rootPath?: string;
+  /**
+   * Multi-root mode: render these paths as the top-level entries of a virtual, pathless root
+   * (each expandable into the real filesystem). The virtual root skips the server-side
+   * filesystem watcher entirely, so multiple explorers can coexist. Navigating (address bar,
+   * double-click, Enter) still switches to a single-root view; going "back" restores the
+   * virtual root.
+   */
+  rootPaths?: string[];
   onSelected?: (entries: Entry[]) => any;
   selectable: "disabled" | "single" | "multiple";
   defaultSelectedPath?: string;
@@ -67,6 +75,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
   (
     {
       rootPath,
+      rootPaths,
       onDoubleClick,
       filter,
       onSelected,
@@ -87,6 +96,10 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
     const { createPortal } = useBakabaseContext();
 
     const initializedRootPathRef = useRef<string>();
+
+    const rootPathsRef = useRef(rootPaths);
+
+    rootPathsRef.current = rootPaths;
 
     const inputBlurHandlerRef = useRef<ReturnType<typeof setTimeout>>();
 
@@ -146,6 +159,39 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
     }, [selectedEntries]);
 
     const initialize = useCallback(async (path?: string, addToHistory: boolean = true) => {
+      if (path == undefined && (rootPathsRef.current?.length ?? 0) > 0) {
+        shiftSelectionStartRef.current = undefined;
+        if (addToHistory && rootRef.current) {
+          const history = historyRootPathsRef.current;
+
+          if (history.length == 0 || history[history.length - 1] != rootRef.current.path) {
+            setHistoryRootPaths([...history, rootRef.current.path]);
+          }
+        }
+
+        const virtualRoot = new RootEntry(undefined, showHiddenFilesRef.current);
+
+        virtualRoot.children = [];
+        for (const p of rootPathsRef.current!) {
+          const standardized = standardizePath(p);
+
+          if (!standardized) continue;
+          // Missing roots are silently skipped — a mark can point at an unplugged drive.
+          const rsp = await BApi.file
+            .getIwFsEntry({ path: standardized }, { showErrorToast: () => false })
+            .catch(() => undefined);
+
+          if (rsp?.data?.path) {
+            virtualRoot.children.push(new Entry({ ...rsp.data, parent: virtualRoot }));
+          }
+        }
+        virtualRoot.children.sort((a, b) => a.name.localeCompare(b.name));
+        virtualRoot.refreshFilteredChildren();
+        setRoot(virtualRoot);
+
+        return;
+      }
+
       let finalPath = standardizePath(path);
 
       if (finalPath != undefined && finalPath.length > 0) {

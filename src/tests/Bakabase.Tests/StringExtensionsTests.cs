@@ -199,4 +199,65 @@ public sealed class StringExtensionsTests
     }
 
     #endregion
+
+    #region IsPathEqualOrUnder / IsPathUnder
+
+    [TestMethod]
+    public void IsPathEqualOrUnder_MatchesOnSegmentBoundary_NotStringPrefix()
+    {
+        Assert.IsTrue("/a/b".IsPathEqualOrUnder("/a"));
+        Assert.IsFalse("/abc".IsPathEqualOrUnder("/a"));
+        Assert.IsFalse("/a".IsPathEqualOrUnder("/a/b"));
+    }
+
+    [TestMethod]
+    public void IsPathEqualOrUnder_EqualPathsMatch()
+    {
+        Assert.IsTrue("/a/b".IsPathEqualOrUnder("/a/b"));
+        Assert.IsTrue("/a/b/".IsPathEqualOrUnder("/a/b"));
+        Assert.IsTrue(@"C:\a".IsPathEqualOrUnder("C:/a"));
+    }
+
+    [TestMethod]
+    public void IsPathEqualOrUnder_IsCaseInsensitive()
+    {
+        Assert.IsTrue("/Media/Foo".IsPathEqualOrUnder("/media"));
+        Assert.IsTrue("/media/foo".IsPathEqualOrUnder("/MEDIA/FOO"));
+    }
+
+    [TestMethod]
+    public void IsPathEqualOrUnder_NormalizesSeparators()
+    {
+        Assert.IsTrue(@"C:\a\b".IsPathEqualOrUnder("C:/a"));
+        Assert.IsFalse(@"C:\ab".IsPathEqualOrUnder("C:/a"));
+    }
+
+    [TestMethod]
+    public void IsPathEqualOrUnder_HandlesRootsWithTrailingSeparator()
+    {
+        // Standardized drive/filesystem roots keep their trailing slash ("C:/", "/");
+        // the anchor must not double it.
+        Assert.IsTrue("C:/a".IsPathEqualOrUnder("C:"));
+        Assert.IsTrue("C:/a".IsPathEqualOrUnder("C:/"));
+        Assert.IsTrue("/a".IsPathEqualOrUnder("/"));
+    }
+
+    [TestMethod]
+    public void IsPathEqualOrUnder_FalseForNullOrEmpty()
+    {
+        Assert.IsFalse(((string?)null).IsPathEqualOrUnder("/a"));
+        Assert.IsFalse("/a".IsPathEqualOrUnder(null));
+        Assert.IsFalse("".IsPathEqualOrUnder(""));
+    }
+
+    [TestMethod]
+    public void IsPathUnder_ExcludesEqualPaths()
+    {
+        Assert.IsFalse("/a/b".IsPathUnder("/a/b"));
+        Assert.IsFalse("/a/b/".IsPathUnder("/a/b"));
+        Assert.IsTrue("/a/b/c".IsPathUnder("/a/b"));
+        Assert.IsFalse("/abc".IsPathUnder("/a"));
+    }
+
+    #endregion
 }

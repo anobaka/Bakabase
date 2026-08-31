@@ -30,6 +30,8 @@ import { Button, Card, CardBody, Link, Pagination, Spinner } from "@/components/
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { useResourceSearch } from "@/hooks/useResourceSearch";
 import { resourceChangedChannel } from "@/services/ResourceChangedChannel";
+import { useBTasksStore } from "@/stores/bTasks";
+import { BTaskStatus, BTaskType } from "@/sdk/constants";
 
 const BasePageSize = 50;
 const getPageSize = (cols: number) =>
@@ -598,6 +600,73 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
     },
     [removeResources],
   );
+
+  // After a move batch finishes, ask the server which of the moved resources still match
+  // the current search and prune the rest — a resource moved out of the searched scope
+  // should leave this list. Keyed by finished task ids so percentage pushes don't retrigger.
+  const processedMoveTaskIdsRef = useRef(new Set<string>());
+  const finishedMoveTasksFingerprint = useBTasksStore((s) =>
+    s.tasks
+      .filter(
+        (x) =>
+          x.type === BTaskType.MoveResources &&
+          // Error included: a partially failed batch still moved some records' files.
+          (x.status === BTaskStatus.Completed || x.status === BTaskStatus.Error),
+      )
+      .map((x) => x.id)
+      .sort()
+      .join("|"),
+  );
+
+  useEffect(() => {
+    if (!finishedMoveTasksFingerprint) {
+      return;
+    }
+    const finished = useBTasksStore
+      .getState()
+      .tasks.filter(
+        (x) =>
+          x.type === BTaskType.MoveResources &&
+          (x.status === BTaskStatus.Completed || x.status === BTaskStatus.Error) &&
+          !processedMoveTaskIdsRef.current.has(x.id),
+      );
+
+    if (finished.length === 0) {
+      return;
+    }
+    finished.forEach((x) => processedMoveTaskIdsRef.current.add(x.id));
+
+    const movedIds = new Set(finished.flatMap((x) => (x.resourceKeys ?? []).map(Number)));
+    const shownMovedIds = resourcesRef.current.map((r) => r.id).filter((id) => movedIds.has(id));
+
+    if (shownMovedIds.length === 0) {
+      return;
+    }
+
+    // The search index updates asynchronously (sub-second) after path changes — give it a
+    // moment before asking.
+    const timer = setTimeout(async () => {
+      const rsp = await BApi.resource.searchAllResourceIds(
+        searchFormRef.current ?? { page: 1, pageSize: 100000000 },
+      );
+
+      if (rsp.code || !rsp.data) {
+        return;
+      }
+      const stillMatched = new Set(rsp.data);
+      const toRemove = shownMovedIds.filter((id) => !stillMatched.has(id));
+      const toReload = shownMovedIds.filter((id) => stillMatched.has(id));
+
+      if (toRemove.length > 0) {
+        onResourcesDeleted(toRemove);
+      }
+      if (toReload.length > 0) {
+        reloadResources(toReload, { forceRefresh: true });
+      }
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [finishedMoveTasksFingerprint, onResourcesDeleted, reloadResources]);
 
   type GridCellRenderArgs = {
     columnIndex: number;

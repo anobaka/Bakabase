@@ -5520,6 +5520,102 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/resource-move": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MoveResources"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-move/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PreviewResourceMove"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-move/records": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetResourceMoveRecords"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-move/records/{id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RetryResourceMoveRecord"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-move/records/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["DeleteResourceMoveRecord"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-move/records/inactive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["DeleteInactiveResourceMoveRecords"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/resource-profile": {
         parameters: {
             query?: never;
@@ -6285,6 +6381,25 @@ export interface components {
             /** Format: date-time */
             playedAt: string;
         };
+        "Bakabase.Abstractions.Models.Db.ResourceMoveRecordDbModel": {
+            /** Format: int32 */
+            id: number;
+            batchId: string;
+            /** Format: int32 */
+            resourceId: number;
+            sourcePath: string;
+            destPath: string;
+            status: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceMoveRecordStatus"];
+            /** Format: int32 */
+            attempts: number;
+            error?: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            startedAt?: string;
+            /** Format: date-time */
+            completedAt?: string;
+        };
         "Bakabase.Abstractions.Models.Db.SteamAppDbModel": {
             /** Format: int32 */
             id: number;
@@ -6440,6 +6555,12 @@ export interface components {
          * @enum {integer}
          */
         "Bakabase.Abstractions.Models.Domain.Constants.ResourceDataType": 1 | 2 | 3;
+        /**
+         * Format: int32
+         * @description [1: Pending, 2: Moving, 3: Succeeded, 4: Failed, 5: Cancelled, 6: Interrupted]
+         * @enum {integer}
+         */
+        "Bakabase.Abstractions.Models.Domain.Constants.ResourceMoveRecordStatus": 1 | 2 | 3 | 4 | 5 | 6;
         /**
          * Format: int32
          * @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc]
@@ -7057,6 +7178,29 @@ export interface components {
             readonly noNeedToConfigure: boolean;
             uniqueCustomProperties?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Property"][];
             uniqueExtensionGroups?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ExtensionGroup"][];
+        };
+        "Bakabase.Abstractions.Models.View.ResourceMovePreviewViewModel": {
+            items: components["schemas"]["Bakabase.Abstractions.Models.View.ResourceMovePreviewViewModel+Item"][];
+        };
+        "Bakabase.Abstractions.Models.View.ResourceMovePreviewViewModel+Item": {
+            /** Format: int32 */
+            resourceId: number;
+            sourcePath: string;
+            destPath: string;
+            destConflict: boolean;
+            destInsideSource: boolean;
+            effects: components["schemas"]["Bakabase.Abstractions.Models.View.ResourceMovePreviewViewModel+MarkEffect"][];
+        };
+        "Bakabase.Abstractions.Models.View.ResourceMovePreviewViewModel+MarkEffect": {
+            /** Format: int32 */
+            markId: number;
+            type: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PathMarkType"];
+            markPath: string;
+            willApply: boolean;
+            propertyName?: string;
+            fixedValue?: string;
+            isDynamic: boolean;
+            mediaLibraryName?: string;
         };
         "Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerNearestViewModel": {
             contentId: string;
@@ -9863,6 +10007,10 @@ export interface components {
         "Bakabase.Service.Models.Input.ResourceMediaLibraryMappingInputModel": {
             mediaLibraryIds: number[];
         };
+        "Bakabase.Service.Models.Input.ResourceMoveInputModel": {
+            resourceIds: number[];
+            destDir: string;
+        };
         "Bakabase.Service.Models.Input.ResourceOptionsPatchInputModel": {
             additionalCoverDiscoveringSources?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.AdditionalCoverDiscoveringSource"][];
             coverOptions?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ResourceOptions+CoverOptionsModel"];
@@ -10372,6 +10520,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.Db.PasswordDbModel"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Db.ResourceMoveRecordDbModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Models.Db.ResourceMoveRecordDbModel"][];
         };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.Constants.SearchOperation]": {
             /** Format: int32 */
@@ -11014,6 +11168,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.View.MediaLibraryTemplateImportConfigurationViewModel"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ResourceMovePreviewViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Models.View.ResourceMovePreviewViewModel"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerNearestViewModel]": {
             /** Format: int32 */
@@ -23827,6 +23987,158 @@ export interface operations {
                 "application/*+json": components["schemas"]["Bakabase.Service.Controllers.DiscoverySubscribeRequest"][];
             };
         };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    MoveResources: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceMoveInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceMoveInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceMoveInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceMoveInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
+                };
+            };
+        };
+    };
+    PreviewResourceMove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceMoveInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceMoveInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceMoveInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceMoveInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ResourceMovePreviewViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ResourceMovePreviewViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ResourceMovePreviewViewModel]"];
+                };
+            };
+        };
+    };
+    GetResourceMoveRecords: {
+        parameters: {
+            query?: {
+                maxCount?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Db.ResourceMoveRecordDbModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Db.ResourceMoveRecordDbModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Db.ResourceMoveRecordDbModel]"];
+                };
+            };
+        };
+    };
+    RetryResourceMoveRecord: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    DeleteResourceMoveRecord: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    DeleteInactiveResourceMoveRecords: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description OK */
             200: {

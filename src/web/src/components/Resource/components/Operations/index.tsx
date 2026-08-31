@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 import React, { useMemo, useState } from "react";
 import {
   DeleteOutlined,
+  ExportOutlined,
   FireOutlined,
   FolderOpenOutlined,
   LoadingOutlined,
@@ -21,6 +22,7 @@ import { AiOutlinePicture } from "react-icons/ai";
 
 import BApi from "@/sdk/BApi";
 import ResourceEnhancementsModal from "@/components/Resource/components/ResourceEnhancementsModal.tsx";
+import ResourceMoveModal from "@/components/ResourceMoveModal";
 import DeleteResourceConfirmContent from "@/components/Resource/components/DeleteResourceConfirmContent";
 import { EnhancementAdditionalItem, IwFsType } from "@/sdk/constants";
 import { PlaylistCollection } from "@/components/Playlist";
@@ -162,6 +164,13 @@ const Operations = ({ resource, coverRef, reload, onResourcesDeleted }: IProps) 
     });
   };
 
+  const handleMove = () => {
+    createPortal(ResourceMoveModal, {
+      resources: [{ id: resource.id, path: resource.path }],
+      onMoved: () => reload?.(),
+    });
+  };
+
   const showAggregate = displayOperations.includes("aggregate");
   const showPin = displayOperations.includes("pin");
   // Mirrors the right-click "open folder" menu entry — only shown when the
@@ -170,6 +179,7 @@ const Operations = ({ resource, coverRef, reload, onResourcesDeleted }: IProps) 
   const showEnhancements = displayOperations.includes("enhancements");
   const showPreview = displayOperations.includes("preview");
   const showAddToPlaylist = displayOperations.includes("addToPlaylist");
+  const showMove = displayOperations.includes("move") && !!resource.path;
   const showDelete = displayOperations.includes("delete");
 
   const openFolder = () => {
@@ -254,6 +264,14 @@ const Operations = ({ resource, coverRef, reload, onResourcesDeleted }: IProps) 
         },
       });
     }
+    if (showMove) {
+      items.push({
+        key: "move",
+        icon: <ExportOutlined />,
+        label: t<string>("resource.operation.move"),
+        onAction: handleMove,
+      });
+    }
     if (showDelete) {
       items.push({
         key: "delete",
@@ -320,6 +338,14 @@ const Operations = ({ resource, coverRef, reload, onResourcesDeleted }: IProps) 
           },
         },
       ];
+      if (resource.path) {
+        items.push({
+          key: "move",
+          icon: <ExportOutlined />,
+          label: t<string>("resource.operation.move"),
+          onAction: handleMove,
+        });
+      }
     }
 
     // Always add refreshCache if applicable
@@ -458,6 +484,19 @@ const Operations = ({ resource, coverRef, reload, onResourcesDeleted }: IProps) 
         }}
       >
         <VideoCameraAddOutlined className={iconClassName} />
+      </Button>,
+    );
+  }
+  if (showMove) {
+    individualButtons.push(
+      <Button
+        key="move"
+        isIconOnly
+        className={buttonClassName}
+        title={t<string>("resource.operation.move")}
+        onPress={handleMove}
+      >
+        <ExportOutlined className={iconClassName} />
       </Button>,
     );
   }

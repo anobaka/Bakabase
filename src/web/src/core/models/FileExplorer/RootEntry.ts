@@ -363,6 +363,12 @@ class RootEntry extends Entry {
     log("Stopping watcher", this, this.path, this._fsWatcher);
     clearInterval(this._fsWatcher);
     clearInterval(this._keepAliveInterval);
+    // A pathless (virtual multi-root) entry never started the server-side watcher — and the
+    // watcher is a global singleton, so calling stop here would kill a watch some other
+    // explorer instance legitimately owns.
+    if (!this.path) {
+      return;
+    }
     // Best-effort. This releases server-side watcher state, so when the backend is already
     // gone — app shutting down, service restarting, page unloading — the fetch rejects with
     // "Failed to fetch" and there is nothing left to release anyway. Swallowing it matters

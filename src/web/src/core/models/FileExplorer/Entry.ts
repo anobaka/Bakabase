@@ -95,7 +95,7 @@ export class Entry {
 
   async dispose() {}
 
-  private refreshFilteredChildren() {
+  refreshFilteredChildren() {
     const { keyword, types, custom } = this._tmpFilter;
     const lowerCasedKeyword = keyword?.toLowerCase();
 

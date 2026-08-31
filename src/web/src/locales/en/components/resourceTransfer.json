@@ -1,5 +1,6 @@
 {
   "resourceTransfer.title": "Transfer data of resources",
+  "resourceTransfer.tip.dataOnly": "This feature only transfers resource data between resources; it never moves, modifies, or deletes resource files.",
   "resourceTransfer.error.invalidData": "Invalid data",
   "resourceTransfer.filter.pathKeyword": "Path keyword",
   "resourceTransfer.filter.showUnfinishedOnly": "Show unfinished only",

@@ -1,5 +1,6 @@
 {
   "resourceTransfer.title": "转移资源数据",
+  "resourceTransfer.tip.dataOnly": "该功能仅在资源之间转移数据，不会移动、修改或删除任何资源文件。",
   "resourceTransfer.error.invalidData": "无效数据",
   "resourceTransfer.filter.pathKeyword": "路径关键词",
   "resourceTransfer.filter.showUnfinishedOnly": "仅显示未完成",

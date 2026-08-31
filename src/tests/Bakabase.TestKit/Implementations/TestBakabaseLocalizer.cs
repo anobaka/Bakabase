@@ -33,6 +33,16 @@ public class TestBakabaseLocalizer : IBakabaseLocalizer
     public string MoveFile(string src, string dest) => $"MoveFile_{src}_{dest}";
     public string MoveResourceDetail(string srcPath, string mediaLibraryName, string destPath) => "MoveResourceDetail";
     public string MoveResource() => "MoveResource";
+    public string ResourceMove_TaskDescription(int count, string destDir) => $"ResourceMove_TaskDescription_{count}_{destDir}";
+    public string? MessageOnInterruption_MoveResources() => "MessageOnInterruption_MoveResources";
+    public string ResourceMove_SourceMissing(string path) => $"ResourceMove_SourceMissing_{path}";
+    public string ResourceMove_DestinationExists(string path) => $"ResourceMove_DestinationExists_{path}";
+    public string ResourceMove_DestinationInsideSource(string src, string destDir) => $"ResourceMove_DestinationInsideSource_{src}_{destDir}";
+    public string ResourceMove_ResourcesAreBeingMoved(string conflictPath) => $"ResourceMove_ResourcesAreBeingMoved_{conflictPath}";
+    public string ResourceMove_InterruptedByRestart() => "ResourceMove_InterruptedByRestart";
+    public string ResourceMove_InterruptedBeforeStart() => "ResourceMove_InterruptedBeforeStart";
+    public string ResourceMove_RecordInProgress() => "ResourceMove_RecordInProgress";
+    public string ResourceMove_ResourceIsLocked(int resourceId) => $"ResourceMove_ResourceIsLocked_{resourceId}";
     public string CopyFiles() => "CopyFiles";
     public string CopyFile(string src, string dest) => $"CopyFile_{src}_{dest}";
     public string? MessageOnInterruption_CopyFiles() => "MessageOnInterruption_CopyFiles";

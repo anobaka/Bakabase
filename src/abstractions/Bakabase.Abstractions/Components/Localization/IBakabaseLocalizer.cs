@@ -31,6 +31,16 @@ public interface IBakabaseLocalizer
     string MoveFile(string src, string dest);
     string MoveResourceDetail(string srcPath, string mediaLibraryName, string destPath);
     string MoveResource();
+    string ResourceMove_TaskDescription(int count, string destDir);
+    string? MessageOnInterruption_MoveResources();
+    string ResourceMove_SourceMissing(string path);
+    string ResourceMove_DestinationExists(string path);
+    string ResourceMove_DestinationInsideSource(string src, string destDir);
+    string ResourceMove_ResourcesAreBeingMoved(string conflictPath);
+    string ResourceMove_InterruptedByRestart();
+    string ResourceMove_InterruptedBeforeStart();
+    string ResourceMove_RecordInProgress();
+    string ResourceMove_ResourceIsLocked(int resourceId);
     string CopyFiles();
     string CopyFile(string src, string dest);
     string? MessageOnInterruption_CopyFiles();

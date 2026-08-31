@@ -6,7 +6,12 @@ import type { RecursivePartial } from "@/components/types";
 
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { DeleteOutlined, QuestionCircleOutlined, SearchOutlined } from "@ant-design/icons";
+import {
+  DeleteOutlined,
+  InfoCircleOutlined,
+  QuestionCircleOutlined,
+  SearchOutlined,
+} from "@ant-design/icons";
 import toast from "react-hot-toast";
 
 import {
@@ -185,6 +190,10 @@ const ResourceTransferModal = ({ fromResources, onDestroyed }: Props) => {
       }}
     >
       <div className={"flex flex-col gap-1 max-h-full grow overflow-hidden"}>
+        <div className={"flex items-center gap-1 text-xs text-default-500"}>
+          <InfoCircleOutlined className={"text-sm"} />
+          {t<string>("resourceTransfer.tip.dataOnly")}
+        </div>
         <div className={"flex items-center justify-between"}>
           <div className={"flex items-center gap-2"}>
             <div>

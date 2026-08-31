@@ -682,6 +682,12 @@ public class ResourceSyncService : ScopedService
     }
 
     /// <summary>
+    /// Recompute ParentId/IsParent after resource paths changed outside a sync pass
+    /// (e.g. a resource move).
+    /// </summary>
+    public Task RebuildParentChildRelationships(CancellationToken ct) => RebuildAllParentChildRelationships(ct);
+
+    /// <summary>
     /// Rebuilds parent-child relationships for ALL resources based on path hierarchy.
     /// </summary>
     private async Task RebuildAllParentChildRelationships(CancellationToken ct)
