@@ -373,7 +373,10 @@ The version of lux is not limited.</value>
     <value>Prepare resource data</value>
   </data>
   <data name="BTask_Name_MoveFiles" xml:space="preserve">
-    <value>Move files</value>
+    <value>File Mover</value>
+  </data>
+  <data name="BTask_Description_MoveFiles" xml:space="preserve">
+    <value>Periodically moves new files from the configured source directories to their targets, per the File Mover configuration; unrelated to the manual "move resource" operation</value>
   </data>
   <data name="BTask_Description_PrepareCache" xml:space="preserve">
     <value>Prepare cache for resources; caching can improve resource loading speed</value>

@@ -373,7 +373,10 @@
     <value>准备资源数据</value>
   </data>
   <data name="BTask_Name_MoveFiles" xml:space="preserve">
-    <value>移动文件</value>
+    <value>文件移动器</value>
+  </data>
+  <data name="BTask_Description_MoveFiles" xml:space="preserve">
+    <value>按照文件移动器的配置，定期将源目录中的新文件自动移动到目标目录；与手动的「移动资源」操作无关</value>
   </data>
   <data name="BTask_Description_PrepareCache" xml:space="preserve">
     <value>为资源准备缓存，缓存可以提升资源加载速度</value>

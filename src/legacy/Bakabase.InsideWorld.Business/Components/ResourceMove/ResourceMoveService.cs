@@ -163,9 +163,11 @@ public class ResourceMoveService(
             .OfType(BTaskType.MoveResources)
             .OfResourceType(BTaskResourceType.Resource)
             .ForResources(affectedResourceIds.Cast<object>().ToArray())
-            // Serialize move batches among themselves and against the path-mark sync pipeline —
-            // both walk the same resources and paths.
-            .ConflictsWith("MoveResources", "SyncResources", "SyncPathMarks")
+            // Serialize move batches among themselves, against the path-mark sync pipeline
+            // (both walk the same resources and paths), and against the File Mover's recurring
+            // MoveFiles task, whose configured source/target directories may overlap the very
+            // files this batch is relocating.
+            .ConflictsWith("MoveResources", "SyncResources", "SyncPathMarks", "MoveFiles")
             .ReplaceIfExists()
             .Run(async args =>
             {
