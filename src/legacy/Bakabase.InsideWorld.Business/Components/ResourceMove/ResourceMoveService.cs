@@ -312,15 +312,62 @@ public class ResourceMoveService(
                 localizer.ResourceMove_DestinationExists(dest));
         }
 
+        // The Bootstrap primitives pick rename-vs-copy from Path.GetPathRoot, which on POSIX
+        // makes every cross-mount move take the rename path and die with EXDEV (a common
+        // docker layout: /downloads and /media as separate volumes). Detect the real mounts
+        // and copy+delete explicitly when they differ.
+        var crossFileSystem = ResourceMoveFileSystem.AreOnSameFileSystem(src, dest) == false;
+
         if (srcIsDirectory)
         {
-            await DirectoryUtils.MoveAsync(src, dest, false, onProgress, args.PauseToken,
-                args.CancellationToken);
+            try
+            {
+                if (crossFileSystem)
+                {
+                    // Source stays fully intact until the copy has completely landed, so a
+                    // failure here can drop the half-written destination and keep retry clean.
+                    try
+                    {
+                        await DirectoryUtils.CopyAsync(src, dest, false, onProgress, args.PauseToken,
+                            args.CancellationToken);
+                    }
+                    catch
+                    {
+                        ResourceMoveFileSystem.TryDeleteCopyDebris(dest);
+                        throw;
+                    }
+
+                    Directory.Delete(src, true);
+                }
+                else
+                {
+                    await DirectoryUtils.MoveAsync(src, dest, false, onProgress, args.PauseToken,
+                        args.CancellationToken);
+                }
+            }
+            catch
+            {
+                // A failed move leaves the destination's directory skeleton behind; a tree
+                // with no files in it is pure debris and would break the retry probe.
+                ResourceMoveFileSystem.TryDeleteFilelessDirectoryTree(dest);
+                throw;
+            }
         }
         else
         {
-            await FileUtils.MoveAsync(src, dest, false, onProgress, args.PauseToken,
-                args.CancellationToken);
+            if (crossFileSystem)
+            {
+                // FileUtils.CopyAsync creates the destination directory itself and deletes
+                // its partial destination on failure.
+                await FileUtils.CopyAsync(src, dest, false, onProgress, args.PauseToken,
+                    args.CancellationToken);
+                File.Delete(src);
+            }
+            else
+            {
+                await FileUtils.MoveAsync(src, dest, false, onProgress, args.PauseToken,
+                    args.CancellationToken);
+            }
         }
     }
 

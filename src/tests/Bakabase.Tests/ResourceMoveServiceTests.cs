@@ -11,6 +11,7 @@ using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business;
+using Bakabase.InsideWorld.Business.Components.ResourceMove;
 using Bakabase.TestKit.Utils;
 using Bootstrap.Components.Tasks;
 using FluentAssertions;
@@ -248,6 +249,33 @@ public sealed class ResourceMoveServiceTests
         records.Single(r => r.ResourceId == 1).Status.Should().Be(ResourceMoveRecordStatus.Interrupted);
         records.Single(r => r.ResourceId == 2).Status.Should().Be(ResourceMoveRecordStatus.Interrupted);
         records.Single(r => r.ResourceId == 3).Status.Should().Be(ResourceMoveRecordStatus.Succeeded);
+    }
+
+    [TestMethod]
+    public void FileSystemHelpers_SameTempDirectory_IsSameFileSystem()
+    {
+        var a = Dir("FsA");
+        var b = Dir("FsB");
+
+        // Two siblings under the test root always share a mount; the helper must not report
+        // false (null is acceptable when mounts cannot be resolved).
+        ResourceMoveFileSystem.AreOnSameFileSystem(a, b).Should().NotBe(false);
+    }
+
+    [TestMethod]
+    public void FileSystemHelpers_FilelessTreeIsDeleted_TreeWithFilesIsKept()
+    {
+        var fileless = Dir("Debris");
+        Dir("Debris", "Empty1");
+        Dir("Debris", "Empty1", "Empty2");
+        ResourceMoveFileSystem.TryDeleteFilelessDirectoryTree(fileless);
+        Directory.Exists(fileless).Should().BeFalse();
+
+        var withFile = Dir("Partial");
+        Dir("Partial", "Sub");
+        File.WriteAllText(Path.Combine(withFile, "Sub", "f.txt"), "x");
+        ResourceMoveFileSystem.TryDeleteFilelessDirectoryTree(withFile);
+        File.Exists(Path.Combine(withFile, "Sub", "f.txt")).Should().BeTrue();
     }
 
     [TestMethod]
