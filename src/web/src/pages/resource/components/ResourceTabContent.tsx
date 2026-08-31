@@ -92,6 +92,7 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
 
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const selectedIdsRef = useRef(selectedIds);
+  const selectedIdSetRef = useRef<Set<number>>(new Set());
   // Mirror of selectedIds as a stable RefObject<Resource[]> so we can pass
   // a stable reference to each ResourceCard. The contents update on selection
   // change but the ref object itself never changes, which keeps React.memo
@@ -391,6 +392,10 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
   // Sync ref during render phase to ensure renderCell gets the latest value
   if (selectedIdsRef.current !== selectedIds) {
     selectedIdsRef.current = selectedIds;
+    // renderCell asks "is this one selected?" for every visible cell on every render,
+    // and rectangle selection makes multi-thousand-id selections routine, so the answer
+    // has to be O(1) rather than a scan of the whole list.
+    selectedIdSetRef.current = new Set(selectedIds);
   }
 
   displayResourcesRef.current = displayResources;
@@ -618,7 +623,7 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
         return null;
       }
       const resource = displayResources[index];
-      const selected = selectedIdsRef.current.includes(resource.id);
+      const selected = selectedIdSetRef.current.has(resource.id);
 
       return (
         <div
