@@ -178,8 +178,10 @@ const ResourceMoveModal = ({ resources, onMoved, onDestroyed }: Props) => {
           </p>
         </div>
 
-        {/* Path-mark roots as a browsable multi-root tree */}
-        <div className="flex-1 min-h-0 overflow-hidden">
+        {/* Path-mark roots as a browsable multi-root tree. Must be a flex column: the
+            FileExplorer's own root uses `grow`, which is inert inside a block container and
+            would collapse the tree area to the toolbar's height. */}
+        <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
           {markRoots == undefined ? (
             <div className="flex items-center justify-center h-full">
               <Spinner />
