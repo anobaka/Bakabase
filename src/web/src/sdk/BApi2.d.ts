@@ -7183,6 +7183,12 @@ export interface components {
         "Bakabase.Abstractions.Models.View.ResourceMovePreviewViewModel": {
             items: components["schemas"]["Bakabase.Abstractions.Models.View.ResourceMovePreviewViewModel+Item"][];
         };
+        "Bakabase.Abstractions.Models.View.ResourceMovePreviewViewModel+CoveredResource": {
+            /** Format: int32 */
+            resourceId: number;
+            path: string;
+            wasSelected: boolean;
+        };
         "Bakabase.Abstractions.Models.View.ResourceMovePreviewViewModel+Item": {
             /** Format: int32 */
             resourceId: number;
@@ -7191,6 +7197,7 @@ export interface components {
             destConflict: boolean;
             destInsideSource: boolean;
             effects: components["schemas"]["Bakabase.Abstractions.Models.View.ResourceMovePreviewViewModel+MarkEffect"][];
+            coveredResources: components["schemas"]["Bakabase.Abstractions.Models.View.ResourceMovePreviewViewModel+CoveredResource"][];
         };
         "Bakabase.Abstractions.Models.View.ResourceMovePreviewViewModel+MarkEffect": {
             /** Format: int32 */

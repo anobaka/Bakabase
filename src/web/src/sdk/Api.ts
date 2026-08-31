@@ -1096,6 +1096,13 @@ export interface BakabaseAbstractionsModelsViewResourceMovePreviewViewModel {
   items: BakabaseAbstractionsModelsViewResourceMovePreviewViewModelItem[];
 }
 
+export interface BakabaseAbstractionsModelsViewResourceMovePreviewViewModelCoveredResource {
+  /** @format int32 */
+  resourceId: number;
+  path: string;
+  wasSelected: boolean;
+}
+
 export interface BakabaseAbstractionsModelsViewResourceMovePreviewViewModelItem {
   /** @format int32 */
   resourceId: number;
@@ -1104,6 +1111,7 @@ export interface BakabaseAbstractionsModelsViewResourceMovePreviewViewModelItem 
   destConflict: boolean;
   destInsideSource: boolean;
   effects: BakabaseAbstractionsModelsViewResourceMovePreviewViewModelMarkEffect[];
+  coveredResources: BakabaseAbstractionsModelsViewResourceMovePreviewViewModelCoveredResource[];
 }
 
 export interface BakabaseAbstractionsModelsViewResourceMovePreviewViewModelMarkEffect {

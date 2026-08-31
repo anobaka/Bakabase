@@ -24,6 +24,21 @@ public record ResourceMovePreviewViewModel
         public bool DestInsideSource { get; set; }
 
         public List<MarkEffect> Effects { get; set; } = [];
+
+        /// <summary>
+        /// Resources living inside this resource's directory. They physically move with it —
+        /// whether the user selected them or not — so the confirmation must surface them.
+        /// </summary>
+        public List<CoveredResource> CoveredResources { get; set; } = [];
+    }
+
+    public record CoveredResource
+    {
+        public int ResourceId { get; set; }
+        public string Path { get; set; } = null!;
+
+        /// <summary>The user had selected this resource; it was collapsed into its ancestor.</summary>
+        public bool WasSelected { get; set; }
     }
 
     public record MarkEffect

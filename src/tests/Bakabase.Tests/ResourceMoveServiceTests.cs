@@ -312,6 +312,34 @@ public sealed class ResourceMoveServiceTests
     }
 
     [TestMethod]
+    public async Task Preview_ListsResourcesInsideMovedDirectory_WithSelectionFlag()
+    {
+        // A resource inside a moved directory rides along even when it was never selected;
+        // the preview must surface it so nothing moves silently.
+        var dirA = Dir("A");
+        var dirSub = Dir("A", "Sub");
+        Dir("Unrelated");
+        Dir("Dest");
+        var a = await SeedResource(dirA);
+        var sub = await SeedResource(dirSub);
+        await SeedResource(Path.Combine(_testRoot, "Unrelated"));
+
+        var unselected = await Service.Preview([a.Id], Path.Combine(_testRoot, "Dest"));
+
+        unselected.Code.Should().Be(0);
+        var item = unselected.Data!.Items.Single();
+        var covered = item.CoveredResources.Single();
+        covered.ResourceId.Should().Be(sub.Id);
+        covered.WasSelected.Should().BeFalse();
+
+        var bothSelected = await Service.Preview([a.Id, sub.Id], Path.Combine(_testRoot, "Dest"));
+
+        // Collapsed into A's row, but still listed — flagged as having been selected.
+        bothSelected.Data!.Items.Should().ContainSingle();
+        bothSelected.Data!.Items.Single().CoveredResources.Single().WasSelected.Should().BeTrue();
+    }
+
+    [TestMethod]
     public async Task MarkInterruptedOnStartup_FlipsPendingAndMovingRecords()
     {
         Db.Set<ResourceMoveRecordDbModel>().AddRange(

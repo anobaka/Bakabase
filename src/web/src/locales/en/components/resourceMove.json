@@ -13,6 +13,8 @@
   "resourceMove.warning.alreadyAtDestination": "The resource is already in this directory.",
   "resourceMove.confirm.title": "Confirm moving resource files",
   "resourceMove.confirm.summary": "Move {{count}} resource(s) to:",
+  "resourceMove.confirm.coveredResources": "{{count}} more resource(s) inside this directory will move along with it, even though not selected:",
+  "resourceMove.confirm.coveredSelected": "selected",
   "resourceMove.confirm.destConflict": "Destination already exists — this one will fail",
   "resourceMove.confirm.effect.mediaLibrary": "Media library: {{name}}",
   "resourceMove.confirm.effect.dynamicMediaLibrary": "Media library: derived from path",

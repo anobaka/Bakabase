@@ -328,6 +328,33 @@ const ResourceMoveConfirmModal = ({
                   {item.destPath}
                 </div>
               </div>
+              {(item.coveredResources ?? []).length > 0 && (
+                <div className="mt-1.5 text-xs border-t border-default-100 pt-1.5">
+                  <div className="text-warning-600">
+                    {t<string>("resourceMove.confirm.coveredResources", {
+                      count: item.coveredResources!.length,
+                    })}
+                  </div>
+                  <div className="max-h-28 overflow-y-auto mt-0.5 flex flex-col gap-0.5">
+                    {item.coveredResources!.map((c) => (
+                      <div
+                        key={c.resourceId}
+                        className="font-mono text-default-600 truncate"
+                        title={c.path}
+                      >
+                        {c.path.startsWith(`${item.sourcePath}/`)
+                          ? c.path.slice(item.sourcePath!.length + 1)
+                          : c.path}
+                        {c.wasSelected && (
+                          <span className="ml-1 font-sans text-default-400">
+                            ({t<string>("resourceMove.confirm.coveredSelected")})
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               {(item.destConflict || item.destInsideSource || (item.effects ?? []).length > 0) && (
                 <div className="flex flex-wrap gap-1 mt-1.5">
                   {item.destConflict && (

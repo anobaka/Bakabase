@@ -13,6 +13,8 @@
   "resourceMove.warning.alreadyAtDestination": "资源已经位于该目录中。",
   "resourceMove.confirm.title": "确认移动资源文件",
   "resourceMove.confirm.summary": "将 {{count}} 个资源移动至：",
+  "resourceMove.confirm.coveredResources": "该目录内另有 {{count}} 个资源将随之一起移动（即使未被选中）：",
+  "resourceMove.confirm.coveredSelected": "已选中",
   "resourceMove.confirm.destConflict": "目标已存在同名，该条将失败",
   "resourceMove.confirm.effect.mediaLibrary": "媒体库：{{name}}",
   "resourceMove.confirm.effect.dynamicMediaLibrary": "媒体库：由路径动态决定",

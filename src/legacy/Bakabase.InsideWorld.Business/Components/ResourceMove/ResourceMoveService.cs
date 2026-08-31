@@ -511,6 +511,9 @@ public class ResourceMoveService(
             .Where(m => m.Type is PathMarkType.Property or PathMarkType.MediaLibrary)
             .ToList();
 
+        var selectedIds = resourceIds.ToHashSet();
+        var allDbModels = await resourceService.GetAllDbModels();
+
         var vm = new ResourceMovePreviewViewModel();
         foreach (var resource in topLevel)
         {
@@ -521,7 +524,19 @@ public class ResourceMoveService(
                 SourcePath = resource.Path.StandardizePath()!,
                 DestPath = destPath,
                 DestConflict = Directory.Exists(destPath) || File.Exists(destPath),
-                DestInsideSource = standardizedDestDir.IsPathEqualOrUnder(resource.Path)
+                DestInsideSource = standardizedDestDir.IsPathEqualOrUnder(resource.Path),
+                // Everything inside this resource's directory rides along, selected or not —
+                // the confirmation lists them so nothing moves silently.
+                CoveredResources = allDbModels
+                    .Where(m => m.Id != resource.Id && m.Path.IsPathUnder(resource.Path))
+                    .OrderBy(m => m.Path, StringComparer.OrdinalIgnoreCase)
+                    .Select(m => new ResourceMovePreviewViewModel.CoveredResource
+                    {
+                        ResourceId = m.Id,
+                        Path = m.Path.StandardizePath()!,
+                        WasSelected = selectedIds.Contains(m.Id)
+                    })
+                    .ToList()
             };
 
             foreach (var mark in relevantMarks.Where(m => destPath.IsPathEqualOrUnder(m.Path)))
