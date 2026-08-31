@@ -9,33 +9,34 @@ import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContext
 
 interface Shortcut {
   labelKey: string;
-  keys: string | ((modifierKey: string) => string);
+  /** Modifier key names (Ctrl/⌘/Shift/Alt) stay as-is; the action words are localized. */
+  keys: (modifierKey: string, click: string, drag: string, rightClick: string) => string;
 }
 
 const shortcuts: Shortcut[] = [
   {
     labelKey: "resource.shortcut.selectMultiple",
-    keys: (mod) => `${mod} + Click`,
+    keys: (mod, click) => `${mod} + ${click}`,
   },
   {
     labelKey: "resource.shortcut.selectRange",
-    keys: "Shift + Click",
+    keys: (_, click) => `Shift + ${click}`,
   },
   {
     labelKey: "resource.shortcut.rectSelect",
-    keys: "Drag",
+    keys: (_, __, drag) => drag,
   },
   {
     labelKey: "resource.shortcut.rectSelectAppend",
-    keys: (mod) => `${mod} + Drag`,
+    keys: (mod, _, drag) => `${mod} + ${drag}`,
   },
   {
     labelKey: "resource.shortcut.rectSelectSubtract",
-    keys: "Alt + Drag",
+    keys: (_, __, drag) => `Alt + ${drag}`,
   },
   {
     labelKey: "resource.shortcut.moreActions",
-    keys: "Right click",
+    keys: (_, __, ___, rightClick) => rightClick,
   },
 ];
 
@@ -55,6 +56,10 @@ const ShortcutsButton = ({ className }: Props) => {
   }, []);
 
   const openModal = () => {
+    const click = t<string>("resource.shortcut.key.click");
+    const drag = t<string>("resource.shortcut.key.drag");
+    const rightClick = t<string>("resource.shortcut.key.rightClick");
+
     createPortal(Modal, {
       defaultVisible: true,
       size: "sm",
@@ -65,7 +70,7 @@ const ShortcutsButton = ({ className }: Props) => {
           {shortcuts.map((s, idx) => (
             <div key={idx} className="flex items-center justify-between">
               <span>{t<string>(s.labelKey)}</span>
-              <Kbd>{typeof s.keys === "function" ? s.keys(modifierKey) : s.keys}</Kbd>
+              <Kbd>{s.keys(modifierKey, click, drag, rightClick)}</Kbd>
             </div>
           ))}
         </div>
