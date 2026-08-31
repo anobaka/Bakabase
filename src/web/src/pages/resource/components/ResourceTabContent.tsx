@@ -618,18 +618,37 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
       .join("|"),
   );
 
+  // Timers survive fingerprint changes (a second batch finishing must not cancel the first
+  // batch's pending prune); they are cleared only on unmount.
+  const pruneTimersRef = useRef(new Set<ReturnType<typeof setTimeout>>());
+
+  useEffect(
+    () => () => {
+      pruneTimersRef.current.forEach(clearTimeout);
+    },
+    [],
+  );
+
   useEffect(() => {
-    if (!finishedMoveTasksFingerprint) {
-      return;
-    }
-    const finished = useBTasksStore
+    const allFinished = useBTasksStore
       .getState()
       .tasks.filter(
         (x) =>
           x.type === BTaskType.MoveResources &&
-          (x.status === BTaskStatus.Completed || x.status === BTaskStatus.Error) &&
-          !processedMoveTaskIdsRef.current.has(x.id),
+          (x.status === BTaskStatus.Completed || x.status === BTaskStatus.Error),
       );
+
+    // A retried batch reuses its task id (leaving the finished set while it re-runs);
+    // forgetting it here re-arms pruning for its next completion.
+    const finishedIds = new Set(allFinished.map((x) => x.id));
+
+    for (const id of [...processedMoveTaskIdsRef.current]) {
+      if (!finishedIds.has(id)) {
+        processedMoveTaskIdsRef.current.delete(id);
+      }
+    }
+
+    const finished = allFinished.filter((x) => !processedMoveTaskIdsRef.current.has(x.id));
 
     if (finished.length === 0) {
       return;
@@ -646,6 +665,7 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
     // The search index updates asynchronously (sub-second) after path changes — give it a
     // moment before asking.
     const timer = setTimeout(async () => {
+      pruneTimersRef.current.delete(timer);
       const rsp = await BApi.resource.searchAllResourceIds(
         searchFormRef.current ?? { page: 1, pageSize: 100000000 },
       );
@@ -665,7 +685,7 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
       }
     }, 1500);
 
-    return () => clearTimeout(timer);
+    pruneTimersRef.current.add(timer);
   }, [finishedMoveTasksFingerprint, onResourcesDeleted, reloadResources]);
 
   type GridCellRenderArgs = {

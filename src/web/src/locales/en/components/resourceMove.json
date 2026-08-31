@@ -10,6 +10,7 @@
   "resourceMove.action.moveFiles": "Move resource files",
   "resourceMove.warning.irreversible": "This operation is irreversible. Files will be physically moved to the destination.",
   "resourceMove.warning.destInsideSource": "The destination cannot be inside a resource being moved.",
+  "resourceMove.warning.alreadyAtDestination": "The resource is already in this directory.",
   "resourceMove.confirm.title": "Confirm moving resource files",
   "resourceMove.confirm.summary": "Move {{count}} resource(s) to:",
   "resourceMove.confirm.destConflict": "Destination already exists — this one will fail",

@@ -4,7 +4,7 @@ import type { Entry } from "@/core/models/FileExplorer/Entry";
 import type { DestroyableProps } from "@/components/bakaui/types";
 import type { BakabaseAbstractionsModelsViewResourceMovePreviewViewModel } from "@/sdk/Api";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AiOutlineArrowRight, AiOutlineImport, AiOutlineWarning } from "react-icons/ai";
 import { ClockCircleOutlined } from "@ant-design/icons";
@@ -47,6 +47,21 @@ const ResourceMoveModal = ({ resources, onMoved, onDestroyed }: Props) => {
   const [selectedDest, setSelectedDest] = useState<string>();
   const [previewing, setPreviewing] = useState(false);
 
+  // The preview call can outlive the modal; a confirm dialog must not pop up over a page the
+  // user has already dismissed this flow from.
+  const visibleRef = useRef(true);
+  const close = useCallback(() => {
+    visibleRef.current = false;
+    setVisible(false);
+  }, []);
+
+  useEffect(
+    () => () => {
+      visibleRef.current = false;
+    },
+    [],
+  );
+
   useEffect(() => {
     BApi.pathMark.getAllPathMarkPaths().then((r) => {
       // Only directories can host a moved resource; a mark on a file still pins down its
@@ -72,6 +87,17 @@ const ResourceMoveModal = ({ resources, onMoved, onDestroyed }: Props) => {
         return false;
       }
 
+      // The backend rejects a whole batch when any resource would "move" onto its own path.
+      if (
+        sourcePaths.some(
+          (sp) => sp.slice(0, sp.lastIndexOf("/")).toLowerCase() === path.toLowerCase(),
+        )
+      ) {
+        toast.warning(t<string>("resourceMove.warning.alreadyAtDestination"));
+
+        return false;
+      }
+
       return true;
     },
     [sourcePaths, t],
@@ -92,12 +118,14 @@ const ResourceMoveModal = ({ resources, onMoved, onDestroyed }: Props) => {
         return;
       }
 
+      if (!visibleRef.current) return;
+
       createPortal(ResourceMoveConfirmModal, {
         destDir: selectedDest,
         resourceIds,
         preview: rsp.data,
         onMoved: () => {
-          setVisible(false);
+          close();
           onMoved?.();
           onDestroyed?.();
         },
@@ -113,7 +141,7 @@ const ResourceMoveModal = ({ resources, onMoved, onDestroyed }: Props) => {
       const isSelected = standardizePath(entry.path) === selectedDest;
 
       return (
-        <div className="flex items-center gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-1 ml-2">
           <Button
             className={`min-w-0 px-2 h-6 ${isSelected ? "bg-primary text-white" : ""}`}
             color={isSelected ? "primary" : "default"}
@@ -151,7 +179,7 @@ const ResourceMoveModal = ({ resources, onMoved, onDestroyed }: Props) => {
           : t<string>("resourceMove.title")
       }
       visible={visible}
-      onClose={() => setVisible(false)}
+      onClose={close}
       onDestroyed={onDestroyed}
     >
       <div className="flex flex-col h-full">
@@ -204,7 +232,7 @@ const ResourceMoveModal = ({ resources, onMoved, onDestroyed }: Props) => {
 
         {/* Own footer: keep this modal open while the confirmation step runs. */}
         <div className="flex justify-end gap-2 p-3 border-t border-default-200">
-          <Button variant="light" onPress={() => setVisible(false)}>
+          <Button variant="light" onPress={close}>
             {t<string>("common.action.cancel")}
           </Button>
           <Button

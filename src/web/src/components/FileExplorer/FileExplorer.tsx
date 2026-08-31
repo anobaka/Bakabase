@@ -96,6 +96,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
     const { createPortal } = useBakabaseContext();
 
     const initializedRootPathRef = useRef<string>();
+    const initializeSeqRef = useRef(0);
 
     const rootPathsRef = useRef(rootPaths);
 
@@ -159,6 +160,11 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
     }, [selectedEntries]);
 
     const initialize = useCallback(async (path?: string, addToHistory: boolean = true) => {
+      // Each call supersedes any still-awaiting predecessor; a stale one must never setRoot
+      // over a newer navigation.
+      const seq = ++initializeSeqRef.current;
+      const superseded = () => seq != initializeSeqRef.current;
+
       if (path == undefined && (rootPathsRef.current?.length ?? 0) > 0) {
         shiftSelectionStartRef.current = undefined;
         if (addToHistory && rootRef.current) {
@@ -181,6 +187,8 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
             .getIwFsEntry({ path: standardized }, { showErrorToast: () => false })
             .catch(() => undefined);
 
+          if (superseded()) return;
+
           if (rsp?.data?.path) {
             virtualRoot.children.push(new Entry({ ...rsp.data, parent: virtualRoot }));
           }
@@ -196,6 +204,8 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
 
       if (finalPath != undefined && finalPath.length > 0) {
         const isFile = (await BApi.file.checkPathIsFile({ path: finalPath })).data;
+
+        if (superseded()) return;
 
         if (isFile) {
           finalPath = getStandardParentPath(finalPath)!;

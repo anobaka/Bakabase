@@ -10,6 +10,7 @@
   "resourceMove.action.moveFiles": "移动资源文件",
   "resourceMove.warning.irreversible": "该操作不可逆，文件将被物理移动到目标目录。",
   "resourceMove.warning.destInsideSource": "目标目录不能位于待移动资源内部。",
+  "resourceMove.warning.alreadyAtDestination": "资源已经位于该目录中。",
   "resourceMove.confirm.title": "确认移动资源文件",
   "resourceMove.confirm.summary": "将 {{count}} 个资源移动至：",
   "resourceMove.confirm.destConflict": "目标已存在同名，该条将失败",

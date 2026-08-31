@@ -852,6 +852,10 @@ const Resource = React.forwardRef((props: Props, ref) => {
       style={style}
       onClickCapture={(e) => {
         if (movingTask) {
+          // The overlay's own controls (the stop button) must stay clickable.
+          if ((e.target as HTMLElement).closest?.("[data-moving-overlay]")) {
+            return;
+          }
           e.preventDefault();
           e.stopPropagation();
 
@@ -879,6 +883,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
       )}
       {movingTask && (
         <div
+          data-moving-overlay
           className="absolute inset-0 z-30 rounded bg-white/30 backdrop-blur-[2px] cursor-not-allowed group/moving"
           onContextMenu={(e) => {
             e.preventDefault();
