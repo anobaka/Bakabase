@@ -8,13 +8,12 @@ import { useTranslation } from "react-i18next";
 import WhatIsSection from "./WhatIsSection";
 import ExamplesSection from "./ExamplesSection";
 import ComparisonSection from "./ComparisonSection";
-import ConceptsSection from "./ConceptsSection";
 
 import { Tab, Tabs } from "@/components/bakaui";
 
-const sectionIds: PathMarkHelpSectionId[] = ["whatIs", "examples", "comparison", "concepts"];
+const sectionIds: PathMarkHelpSectionId[] = ["whatIs", "examples", "comparison"];
 
-const PathMarkTopic = ({ section, concept }: HelpTopicContentProps) => {
+const PathMarkTopic = ({ section }: HelpTopicContentProps) => {
   const { t } = useTranslation();
   const [activeSection, setActiveSection] = useState<PathMarkHelpSectionId>(section ?? "whatIs");
 
@@ -41,7 +40,6 @@ const PathMarkTopic = ({ section, concept }: HelpTopicContentProps) => {
       {activeSection === "whatIs" && <WhatIsSection />}
       {activeSection === "examples" && <ExamplesSection />}
       {activeSection === "comparison" && <ComparisonSection />}
-      {activeSection === "concepts" && <ConceptsSection concept={concept} />}
     </div>
   );
 };

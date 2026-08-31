@@ -280,7 +280,7 @@ const PendingSyncListModal = ({
               {totalPending}
             </Chip>
           )}
-          <HelpCenterButton concept="sync" section="concepts" topic="pathMark" />
+          <HelpCenterButton concept="sync" topic="pathMark" />
         </div>
       }
       visible={isOpen}

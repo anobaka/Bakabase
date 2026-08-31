@@ -4,12 +4,10 @@
   "helpCenter.action.getStarted": "开始使用",
   "helpCenter.entry.whatCanPathMarksDo": "路径标记能做什么？",
   "helpCenter.topic.pathMark": "路径标记",
-
   "helpCenter.pathMark.section.whatIs": "它是什么",
   "helpCenter.pathMark.section.examples": "示例库",
   "helpCenter.pathMark.section.comparison": "对比常规方案",
   "helpCenter.pathMark.section.concepts": "概念速查",
-
   "helpCenter.pathMark.whatIs.headline": "教 Bakabase 看懂你现有的文件夹结构",
   "helpCenter.pathMark.whatIs.intro": "你不需要为 Bakabase 重新整理文件。路径标记是一组作用在文件路径上的规则：它读取你现有的目录结构，自动识别出资源、为资源填上属性值、并把资源归入媒体库。文件夹怎么放，完全由你决定。",
   "helpCenter.pathMark.whatIs.diagram.treeTitle": "你的文件夹（示例）",
@@ -34,7 +32,6 @@
   "helpCenter.pathMark.whatIs.workflow.step3.title": "同步生成数据",
   "helpCenter.pathMark.whatIs.workflow.step3.desc": "同步会按标记生成资源、属性值和媒体库关联。",
   "helpCenter.pathMark.whatIs.workflow.syncNote": "默认开启自动同步，标记变更后会自动生效；也可以在设置中关闭，改用「待同步」手动触发。",
-
   "helpCenter.pathMark.badge.resource": "资源",
   "helpCenter.pathMark.badge.property": "属性",
   "helpCenter.pathMark.badge.mediaLibrary": "媒体库",
@@ -49,7 +46,6 @@
   "helpCenter.pathMark.badge.boundary": "资源 · 边界",
   "helpCenter.pathMark.badge.autoAdded": "自动收录",
   "helpCenter.pathMark.badge.identityFile": "身份标记文件",
-
   "helpCenter.pathMark.node.movies": "电影",
   "helpCenter.pathMark.node.scifi": "科幻",
   "helpCenter.pathMark.node.drama": "剧情",
@@ -73,7 +69,6 @@
   "helpCenter.pathMark.node.avatarBd": "阿凡达 BD原盘",
   "helpCenter.pathMark.node.downloads": "下载",
   "helpCenter.pathMark.node.newDownload": "昨晚新增的剧集",
-
   "helpCenter.pathMark.ability.layer": "层级匹配",
   "helpCenter.pathMark.ability.anyLevel": "任意层级",
   "helpCenter.pathMark.ability.regex": "正则匹配",
@@ -86,45 +81,37 @@
   "helpCenter.pathMark.ability.multiMark": "多标记叠加",
   "helpCenter.pathMark.ability.schedule": "定时同步",
   "helpCenter.pathMark.ability.identity": "身份保持",
-
   "helpCenter.pathMark.examples.intro": "每个示例都给出文件夹结构、需要添加的标记和同步后的结果。颜色对应标记类型：绿色 = 资源，蓝色 = 属性，紫色 = 媒体库。",
-
   "helpCenter.pathMark.examples.movieBasic.title": "电影收藏入门：每个文件夹一部电影",
   "helpCenter.pathMark.examples.movieBasic.desc": "最常见的结构：电影根目录下每个子文件夹存放一部电影。",
   "helpCenter.pathMark.examples.movieBasic.mark1": "资源标记：层级 = 1，把根目录下的每个子文件夹识别为一个资源。",
   "helpCenter.pathMark.examples.movieBasic.mark2": "媒体库标记：固定关联到「电影」媒体库，范围含子目录。",
   "helpCenter.pathMark.examples.movieBasic.result": "「星际穿越」「盗梦空间」成为资源，并出现在「电影」媒体库中。",
-
   "helpCenter.pathMark.examples.movieGenre.title": "按类型分层的电影库",
   "helpCenter.pathMark.examples.movieGenre.desc": "中间多了一层类型目录？资源可以在任意层级，中间层还能变成属性。",
   "helpCenter.pathMark.examples.movieGenre.mark1": "资源标记：层级 = 2，把第二层子文件夹识别为资源。",
   "helpCenter.pathMark.examples.movieGenre.mark2": "属性标记：属性「类型」，值动态取自第 1 层目录名。",
   "helpCenter.pathMark.examples.movieGenre.result": "资源自动带上「类型 = 科幻 / 剧情」，无需手动填写，即可按类型筛选。",
-
   "helpCenter.pathMark.examples.animeSeason.title": "动画按季度追番",
   "helpCenter.pathMark.examples.animeSeason.desc": "按季度归档的番剧文件夹，季度目录名直接变成属性值。",
   "helpCenter.pathMark.examples.animeSeason.mark1": "资源标记：层级 = 2，每部番剧的文件夹是一个资源。",
   "helpCenter.pathMark.examples.animeSeason.mark2": "属性标记：属性「季度」，值动态取自第 1 层目录名（如 2024-04）。",
   "helpCenter.pathMark.examples.animeSeason.result": "每季新建一个文件夹即可，季度属性自动生成，可按季度回顾。",
-
   "helpCenter.pathMark.examples.mangaAuthor.title": "漫画按作者归档（正则提取）",
   "helpCenter.pathMark.examples.mangaAuthor.desc": "文件夹名是「[作者] 作品名」的形式？用正则把作者提取成属性。",
   "helpCenter.pathMark.examples.mangaAuthor.mark1": "资源标记：层级 = 1，每个作品文件夹是一个资源。",
   "helpCenter.pathMark.examples.mangaAuthor.mark2": "属性标记：属性「作者」，值用正则 \\[(.+?)\\] 从文件夹名中提取。",
   "helpCenter.pathMark.examples.mangaAuthor.result": "作者属性自动填好，点开某位作者即可看到其全部作品。",
-
   "helpCenter.pathMark.examples.musicLibrary.title": "音乐库：艺术家 / 专辑两层结构",
   "helpCenter.pathMark.examples.musicLibrary.desc": "专辑文件夹是资源，上一层的艺术家目录名变成属性。",
   "helpCenter.pathMark.examples.musicLibrary.mark1": "资源标记：层级 = 2，每个专辑文件夹是一个资源。",
   "helpCenter.pathMark.examples.musicLibrary.mark2": "属性标记：属性「艺术家」，值动态取自第 1 层目录名。",
   "helpCenter.pathMark.examples.musicLibrary.result": "按艺术家浏览专辑；同样的思路适用于任何「人名 / 作品」结构。",
-
   "helpCenter.pathMark.examples.autoLibraries.title": "顶层文件夹自动变成媒体库",
   "helpCenter.pathMark.examples.autoLibraries.desc": "不想手动建媒体库？让第一层目录名直接决定媒体库。",
   "helpCenter.pathMark.examples.autoLibraries.mark1": "媒体库标记：动态模式，取第 1 层目录名作为媒体库名，不存在则自动创建。",
   "helpCenter.pathMark.examples.autoLibraries.mark2": "资源标记：层级 = 2，识别每个媒体库下的内容。",
   "helpCenter.pathMark.examples.autoLibraries.result": "新建一个顶层文件夹就等于新建一个媒体库，零额外配置。",
-
   "helpCenter.pathMark.examples.multiMarks.title": "一套文件，多个标记叠加",
   "helpCenter.pathMark.examples.multiMarks.desc": "同一个资源可以同时命中多个标记，各自生效互不影响。",
   "helpCenter.pathMark.examples.multiMarks.mark1": "媒体库标记：根目录 → 「动画」媒体库。",
@@ -132,32 +119,26 @@
   "helpCenter.pathMark.examples.multiMarks.mark3": "属性标记：「季度」动态取自目录名。",
   "helpCenter.pathMark.examples.multiMarks.mark4": "资源标记：层级 = 3。",
   "helpCenter.pathMark.examples.multiMarks.result": "「葬送的芙莉莲」同时获得媒体库、状态、季度三项数据；多个标记的处理顺序可用优先级控制。",
-
   "helpCenter.pathMark.examples.extensionFilter.title": "只把视频文件当资源",
   "helpCenter.pathMark.examples.extensionFilter.desc": "文件夹里混着字幕、封面、元数据文件？用文件类型过滤只挑出正片。",
   "helpCenter.pathMark.examples.extensionFilter.mark1": "资源标记：层级 = 2 + 仅文件 + 限制视频扩展名（可用扩展名组）。",
   "helpCenter.pathMark.examples.extensionFilter.result": "只有 movie.mkv 成为资源，srt / jpg / nfo 不会进入资源列表。",
-
   "helpCenter.pathMark.examples.resourceBoundary.title": "BD 原盘：识别到此为止",
   "helpCenter.pathMark.examples.resourceBoundary.desc": "原盘、成套文件夹的内部结构不应再被拆成更多资源。",
   "helpCenter.pathMark.examples.resourceBoundary.mark1": "资源标记：层级 = 1 + 开启「资源边界」。",
   "helpCenter.pathMark.examples.resourceBoundary.result": "整个原盘文件夹是一个资源，内部的 BDMV / STREAM 结构不会再被识别。",
-
   "helpCenter.pathMark.examples.scopeTag.title": "整个文件夹打同一个标签",
   "helpCenter.pathMark.examples.scopeTag.desc": "把「已完结」目录下的所有资源统一标记，无需逐个设置。",
   "helpCenter.pathMark.examples.scopeTag.mark1": "属性标记：「状态 = 已完结」固定值，应用范围 = 匹配项及子目录。",
   "helpCenter.pathMark.examples.scopeTag.result": "移入「已完结」文件夹的作品自动获得该状态，移出后重新同步即更新。",
-
   "helpCenter.pathMark.examples.scheduledSync.title": "下载目录定期自动收录",
   "helpCenter.pathMark.examples.scheduledSync.desc": "常有新内容进来的目录，让标记定时重新同步。",
   "helpCenter.pathMark.examples.scheduledSync.mark1": "资源标记：层级 = 1 + 开启「定时同步」（如每小时）。",
   "helpCenter.pathMark.examples.scheduledSync.result": "新下载的内容会在下一次定时同步时自动成为资源，无需手动操作。",
-
   "helpCenter.pathMark.examples.keepIdentity.title": "整理文件后，资源数据不丢失",
   "helpCenter.pathMark.examples.keepIdentity.desc": "重命名或移动了资源文件夹，评分、属性、播放记录还在。",
   "helpCenter.pathMark.examples.keepIdentity.mark1": "无需新标记：在路径标记设置中开启「保持资源身份标识」。",
   "helpCenter.pathMark.examples.keepIdentity.result": "系统在资源文件夹中写入 bakabase.json 身份标记；路径变化后重新同步，原有数据自动跟随到新路径。",
-
   "helpCenter.pathMark.comparison.intro": "与常见的两类管理方式相比，路径标记把「文件怎么放」和「数据怎么管」解耦：规则描述结构，数据自动生成。",
   "helpCenter.pathMark.comparison.column.capability": "能力",
   "helpCenter.pathMark.comparison.column.scraper": "常规刮削型媒体管理器",
@@ -177,8 +158,6 @@
   "helpCenter.pathMark.comparison.legend.partial": "部分支持",
   "helpCenter.pathMark.comparison.legend.no": "不支持",
   "helpCenter.pathMark.comparison.note": "「常规刮削型媒体管理器」泛指要求按固定目录规范存放、以刮削元数据为主的工具；「手动分类 / 打标签工具」泛指逐个添加条目、手动维护标签的工具。具体产品能力各有差异，此表仅概括常见形态。",
-
-  "helpCenter.pathMark.concepts.intro": "配置标记时会遇到的概念，点开查看详细说明。",
   "helpCenter.pathMark.concept.layer.name": "层级",
   "helpCenter.pathMark.concept.layer.short": "以目录深度定位匹配项",
   "helpCenter.pathMark.concept.layer.long": "层级从选中的路径开始数：0 = 选中的路径本身，1 = 它的下一层子项，以此类推。层级 = 1 表示「选中目录下的每个子文件夹 / 文件」。",

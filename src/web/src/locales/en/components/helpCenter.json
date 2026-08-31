@@ -4,12 +4,10 @@
   "helpCenter.action.getStarted": "Get Started",
   "helpCenter.entry.whatCanPathMarksDo": "What can path marks do?",
   "helpCenter.topic.pathMark": "Path Marks",
-
   "helpCenter.pathMark.section.whatIs": "What Is It",
   "helpCenter.pathMark.section.examples": "Examples",
   "helpCenter.pathMark.section.comparison": "vs. Typical Tools",
   "helpCenter.pathMark.section.concepts": "Concepts",
-
   "helpCenter.pathMark.whatIs.headline": "Teach Bakabase to understand your existing folder structure",
   "helpCenter.pathMark.whatIs.intro": "You don't need to reorganize your files for Bakabase. Path marks are rules applied to file paths: they read your existing directory structure, automatically identify resources, fill in property values, and assign resources to media libraries. How you arrange your folders is entirely up to you.",
   "helpCenter.pathMark.whatIs.diagram.treeTitle": "Your folders (example)",
@@ -34,7 +32,6 @@
   "helpCenter.pathMark.whatIs.workflow.step3.title": "Sync to generate data",
   "helpCenter.pathMark.whatIs.workflow.step3.desc": "Sync reads your marks and generates resources, property values, and media library associations.",
   "helpCenter.pathMark.whatIs.workflow.syncNote": "Auto-sync is on by default and runs after mark changes; you can disable it in settings and trigger sync manually via \"Pending Sync\".",
-
   "helpCenter.pathMark.badge.resource": "Resource",
   "helpCenter.pathMark.badge.property": "Property",
   "helpCenter.pathMark.badge.mediaLibrary": "Library",
@@ -49,7 +46,6 @@
   "helpCenter.pathMark.badge.boundary": "Resource · Boundary",
   "helpCenter.pathMark.badge.autoAdded": "Auto-added",
   "helpCenter.pathMark.badge.identityFile": "Identity file",
-
   "helpCenter.pathMark.node.movies": "Movies",
   "helpCenter.pathMark.node.scifi": "Sci-Fi",
   "helpCenter.pathMark.node.drama": "Drama",
@@ -73,7 +69,6 @@
   "helpCenter.pathMark.node.avatarBd": "Avatar BD",
   "helpCenter.pathMark.node.downloads": "Downloads",
   "helpCenter.pathMark.node.newDownload": "New episode from last night",
-
   "helpCenter.pathMark.ability.layer": "Layer match",
   "helpCenter.pathMark.ability.anyLevel": "Any depth",
   "helpCenter.pathMark.ability.regex": "Regex match",
@@ -86,45 +81,37 @@
   "helpCenter.pathMark.ability.multiMark": "Stacked marks",
   "helpCenter.pathMark.ability.schedule": "Scheduled sync",
   "helpCenter.pathMark.ability.identity": "Identity keeping",
-
   "helpCenter.pathMark.examples.intro": "Each example shows the folder structure, the marks to add, and the result after sync. Colors match mark types: green = resource, blue = property, purple = media library.",
-
   "helpCenter.pathMark.examples.movieBasic.title": "Movie collection basics: one folder per movie",
   "helpCenter.pathMark.examples.movieBasic.desc": "The most common structure: each subfolder under the movie root holds one movie.",
   "helpCenter.pathMark.examples.movieBasic.mark1": "Resource mark: layer = 1 — each subfolder under the root becomes a resource.",
   "helpCenter.pathMark.examples.movieBasic.mark2": "Media library mark: fixed to the \"Movies\" library, scope includes subdirectories.",
   "helpCenter.pathMark.examples.movieBasic.result": "\"Interstellar\" and \"Inception\" become resources and show up in the \"Movies\" library.",
-
   "helpCenter.pathMark.examples.movieGenre.title": "Movie library with a genre level",
   "helpCenter.pathMark.examples.movieGenre.desc": "An extra genre level in between? Resources can live at any depth, and the middle level can become a property.",
   "helpCenter.pathMark.examples.movieGenre.mark1": "Resource mark: layer = 2 — second-level subfolders become resources.",
   "helpCenter.pathMark.examples.movieGenre.mark2": "Property mark: property \"Genre\", value dynamically taken from the layer-1 folder name.",
   "helpCenter.pathMark.examples.movieGenre.result": "Resources automatically get \"Genre = Sci-Fi / Drama\" without manual input, ready for filtering.",
-
   "helpCenter.pathMark.examples.animeSeason.title": "Anime by season",
   "helpCenter.pathMark.examples.animeSeason.desc": "Anime archived by season — the season folder name becomes a property value directly.",
   "helpCenter.pathMark.examples.animeSeason.mark1": "Resource mark: layer = 2 — each show's folder is one resource.",
   "helpCenter.pathMark.examples.animeSeason.mark2": "Property mark: property \"Season\", value dynamically taken from the layer-1 folder name (e.g. 2024-04).",
   "helpCenter.pathMark.examples.animeSeason.result": "Just create one folder per season — the season property is generated automatically.",
-
   "helpCenter.pathMark.examples.mangaAuthor.title": "Manga by author (regex extraction)",
   "helpCenter.pathMark.examples.mangaAuthor.desc": "Folder names like \"[Author] Title\"? Use a regex to extract the author into a property.",
   "helpCenter.pathMark.examples.mangaAuthor.mark1": "Resource mark: layer = 1 — each title folder is one resource.",
   "helpCenter.pathMark.examples.mangaAuthor.mark2": "Property mark: property \"Author\", value extracted from the folder name with regex \\[(.+?)\\].",
   "helpCenter.pathMark.examples.mangaAuthor.result": "Author properties are filled automatically — open an author to see all their works.",
-
   "helpCenter.pathMark.examples.musicLibrary.title": "Music library: artist / album structure",
   "helpCenter.pathMark.examples.musicLibrary.desc": "Album folders are resources; the artist folder above them becomes a property.",
   "helpCenter.pathMark.examples.musicLibrary.mark1": "Resource mark: layer = 2 — each album folder is one resource.",
   "helpCenter.pathMark.examples.musicLibrary.mark2": "Property mark: property \"Artist\", value dynamically taken from the layer-1 folder name.",
   "helpCenter.pathMark.examples.musicLibrary.result": "Browse albums by artist; the same idea applies to any \"person / work\" structure.",
-
   "helpCenter.pathMark.examples.autoLibraries.title": "Top-level folders become media libraries",
   "helpCenter.pathMark.examples.autoLibraries.desc": "Don't want to create libraries manually? Let layer-1 folder names decide the library.",
   "helpCenter.pathMark.examples.autoLibraries.mark1": "Media library mark: dynamic mode — the layer-1 folder name becomes the library name, auto-created if missing.",
   "helpCenter.pathMark.examples.autoLibraries.mark2": "Resource mark: layer = 2 — recognizes the content under each library.",
   "helpCenter.pathMark.examples.autoLibraries.result": "Creating a new top-level folder equals creating a new media library — zero extra configuration.",
-
   "helpCenter.pathMark.examples.multiMarks.title": "One file tree, multiple stacked marks",
   "helpCenter.pathMark.examples.multiMarks.desc": "The same resource can match several marks at once — each takes effect independently.",
   "helpCenter.pathMark.examples.multiMarks.mark1": "Media library mark: root → \"Anime\" library.",
@@ -132,32 +119,26 @@
   "helpCenter.pathMark.examples.multiMarks.mark3": "Property mark: \"Season\" dynamically taken from the folder name.",
   "helpCenter.pathMark.examples.multiMarks.mark4": "Resource mark: layer = 3.",
   "helpCenter.pathMark.examples.multiMarks.result": "\"Frieren\" gets its library, status, and season all at once; use priority to control processing order when marks interact.",
-
   "helpCenter.pathMark.examples.extensionFilter.title": "Only video files as resources",
   "helpCenter.pathMark.examples.extensionFilter.desc": "Subtitles, posters, and metadata files mixed in? Use file type filtering to pick out the main video.",
   "helpCenter.pathMark.examples.extensionFilter.mark1": "Resource mark: layer = 2 + files only + restrict to video extensions (extension groups supported).",
   "helpCenter.pathMark.examples.extensionFilter.result": "Only movie.mkv becomes a resource — srt / jpg / nfo files stay out of the resource list.",
-
   "helpCenter.pathMark.examples.resourceBoundary.title": "BD rips: recognition stops here",
   "helpCenter.pathMark.examples.resourceBoundary.desc": "The internals of disc rips and other self-contained folders shouldn't be split into more resources.",
   "helpCenter.pathMark.examples.resourceBoundary.mark1": "Resource mark: layer = 1 + \"resource boundary\" enabled.",
   "helpCenter.pathMark.examples.resourceBoundary.result": "The whole disc folder is one resource; its internal BDMV / STREAM structure is never scanned further.",
-
   "helpCenter.pathMark.examples.scopeTag.title": "Tag an entire folder at once",
   "helpCenter.pathMark.examples.scopeTag.desc": "Give every resource under the \"Completed\" folder the same status without touching them one by one.",
   "helpCenter.pathMark.examples.scopeTag.mark1": "Property mark: fixed \"Status = Completed\", apply scope = matched item and subdirectories.",
   "helpCenter.pathMark.examples.scopeTag.result": "Works moved into the \"Completed\" folder get the status automatically; move them out and re-sync to update.",
-
   "helpCenter.pathMark.examples.scheduledSync.title": "Auto-ingest a downloads folder",
   "helpCenter.pathMark.examples.scheduledSync.desc": "For folders that keep receiving new content, let the mark re-sync on a schedule.",
   "helpCenter.pathMark.examples.scheduledSync.mark1": "Resource mark: layer = 1 + \"scheduled sync\" enabled (e.g. hourly).",
   "helpCenter.pathMark.examples.scheduledSync.result": "Newly downloaded content becomes resources at the next scheduled sync — no manual steps.",
-
   "helpCenter.pathMark.examples.keepIdentity.title": "Reorganize files without losing data",
   "helpCenter.pathMark.examples.keepIdentity.desc": "Renamed or moved a resource folder? Ratings, properties, and play history survive.",
   "helpCenter.pathMark.examples.keepIdentity.mark1": "No new mark needed: enable \"Keep resource identity\" in the path mark settings.",
   "helpCenter.pathMark.examples.keepIdentity.result": "Bakabase writes a bakabase.json identity file into each resource folder; after the path changes, re-sync finds the original resource and updates its path.",
-
   "helpCenter.pathMark.comparison.intro": "Compared with the two common approaches, path marks decouple \"how files are arranged\" from \"how data is managed\": rules describe the structure, and data is generated automatically.",
   "helpCenter.pathMark.comparison.column.capability": "Capability",
   "helpCenter.pathMark.comparison.column.scraper": "Scraper-style media manager",
@@ -177,8 +158,6 @@
   "helpCenter.pathMark.comparison.legend.partial": "Partial",
   "helpCenter.pathMark.comparison.legend.no": "Not supported",
   "helpCenter.pathMark.comparison.note": "\"Scraper-style media manager\" refers broadly to tools that require a fixed directory convention and focus on metadata scraping; \"manual tagging tool\" refers to tools where entries and tags are maintained by hand. Individual products vary — this table summarizes typical behavior.",
-
-  "helpCenter.pathMark.concepts.intro": "Concepts you'll meet while configuring marks — expand for details.",
   "helpCenter.pathMark.concept.layer.name": "Layer",
   "helpCenter.pathMark.concept.layer.short": "Locate matches by directory depth",
   "helpCenter.pathMark.concept.layer.long": "Layers are counted from the selected path: 0 = the selected path itself, 1 = its direct children, and so on. Layer = 1 means \"every subfolder / file directly under the selected directory\".",

@@ -117,7 +117,7 @@ const PathMarkSettingsButton = ({
           title={
             <div className="flex items-center gap-1">
               <span>{t("pathMarkConfig.modal.settingsTitle")}</span>
-              <HelpCenterButton concept="sync" section="concepts" topic="pathMark" />
+              <HelpCenterButton concept="sync" topic="pathMark" />
             </div>
           }
           visible={visible}
