@@ -7,11 +7,19 @@ import type { components } from "@/sdk/BApi2";
 import React, { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { AiOutlineArrowLeft, AiOutlineHistory, AiOutlinePlayCircle } from "react-icons/ai";
+import {
+  AiOutlineArrowLeft,
+  AiOutlineExpand,
+  AiOutlineHistory,
+  AiOutlineMinus,
+  AiOutlinePlayCircle,
+  AiOutlinePlus,
+} from "react-icons/ai";
 
 import CanvasNode from "./CanvasNode";
 import InspectorPanel from "./InspectorPanel";
 import NodePalette from "./NodePalette";
+import { useCanvasView } from "./useCanvasView";
 import { useChainDrag } from "./useChainDrag";
 import { getWorkflowActivityUI } from "../Activities";
 import { getWorkflowTriggerUI } from "../Triggers";
@@ -300,6 +308,8 @@ const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => 
     },
   });
 
+  const canvasView = useCanvasView(drag.canvasRef, allDescriptors !== null && itemTypes !== null);
+
   // ---- validation (same rules as before) ----
   const isNameValid = name.trim().length > 0;
   const isTriggerValid = triggerKind.length > 0 && !!triggerUi;
@@ -465,16 +475,19 @@ const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => 
           />
         </div>
 
-        {/* Canvas */}
+        {/* Canvas: a pan/zoom viewport — the chain lives on a transformed world layer, the
+            dot grid follows the view, and dragging empty space pans. */}
         <div
           ref={drag.canvasRef}
-          className="relative min-h-0 overflow-auto p-5"
+          className="relative min-h-0 overflow-hidden touch-none cursor-grab"
           style={{
             backgroundImage:
               "radial-gradient(circle at 1px 1px, hsl(var(--heroui-default-300)) 1px, transparent 0)",
             backgroundSize: "22px 22px",
           }}
+          onPointerDown={canvasView.onPanPointerDown}
         >
+          <div ref={canvasView.worldRef} className="w-max origin-top-left will-change-transform">
           <div className="flex items-center min-h-[140px] w-max pr-8">
             {/* Trigger node */}
             <div
@@ -543,10 +556,51 @@ const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => 
                 : t<string>("workflow.editor.canvas.end")}
             </div>
           </div>
+          </div>
 
-          {/* Remove zone — appears while dragging an existing node. */}
+          {/* View toolbar — fixed to the canvas, outside the transformed world. */}
+          <div className="absolute top-2 right-2 z-10 flex items-center gap-0.5 rounded-lg border border-default-200 bg-content1/85 backdrop-blur px-1 py-0.5">
+            <Button
+              isIconOnly
+              size="sm"
+              title={t<string>("workflow.editor.canvas.zoomOut")}
+              variant="light"
+              onPress={canvasView.zoomOut}
+            >
+              <AiOutlineMinus />
+            </Button>
+            <Button
+              className="min-w-12 px-1 text-xs text-default-500"
+              size="sm"
+              title={t<string>("workflow.editor.canvas.resetZoom")}
+              variant="light"
+              onPress={canvasView.resetZoom}
+            >
+              {canvasView.zoomPct}%
+            </Button>
+            <Button
+              isIconOnly
+              size="sm"
+              title={t<string>("workflow.editor.canvas.zoomIn")}
+              variant="light"
+              onPress={canvasView.zoomIn}
+            >
+              <AiOutlinePlus />
+            </Button>
+            <Button
+              isIconOnly
+              size="sm"
+              title={t<string>("workflow.editor.canvas.fit")}
+              variant="light"
+              onPress={canvasView.fit}
+            >
+              <AiOutlineExpand />
+            </Button>
+          </div>
+
+          {/* Remove zone — appears while dragging an existing node; pinned to the canvas. */}
           <div
-            className={`sticky bottom-1 mx-auto w-fit rounded-lg border-1.5 border-dashed border-danger
+            className={`absolute bottom-2 left-1/2 -translate-x-1/2 z-10 rounded-lg border-1.5 border-dashed border-danger
               px-5 py-1 text-xs text-danger transition-opacity
               ${drag.dragging && drag.dragging.fromIdx != null ? "opacity-100" : "opacity-0 pointer-events-none"}
               ${drag.overRemove ? "bg-danger/20" : "bg-danger/5"}`}

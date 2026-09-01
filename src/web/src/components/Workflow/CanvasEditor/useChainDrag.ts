@@ -113,11 +113,16 @@ export function useChainDrag({
           if (Math.hypot(e.clientX - s.startX, e.clientY - s.startY) < DRAG_START) return;
           s.live = true;
           const ghost = s.sourceEl.cloneNode(true) as HTMLElement;
+          // Match the source's ON-SCREEN size: a node dragged off a zoomed canvas keeps the
+          // size the user grabbed it at (screen rect ÷ layout width = the canvas zoom).
+          const ghostScale =
+            s.sourceEl.getBoundingClientRect().width / Math.max(1, s.sourceEl.offsetWidth);
 
           ghost.dataset.dragGhost = "";
           ghost.style.cssText +=
             ";position:fixed;z-index:60;pointer-events:none;opacity:.92;margin:0;" +
-            `width:${s.sourceEl.offsetWidth}px;transform:translate(-50%,-50%) rotate(1.5deg);` +
+            `width:${s.sourceEl.offsetWidth}px;` +
+            `transform:translate(-50%,-50%) scale(${ghostScale}) rotate(1.5deg);` +
             "box-shadow:0 10px 28px rgba(0,0,0,.35)";
           document.body.appendChild(ghost);
           s.ghost = ghost;

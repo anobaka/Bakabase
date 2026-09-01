@@ -217,5 +217,9 @@
   "workflow.editor.trigger.locked": "已有工作流的触发器不可更换——它的运行记录和计划都挂在触发器上。要换触发器请新建工作流。",
   "workflow.editor.lint.chainBroken": "有节点接不住到达它的条目类型——见标红的节点。",
   "workflow.editor.lint.configIncomplete": "有节点的配置未完成——见橙色圆点。",
-  "workflow.editor.lint.noActivities": "至少加一个节点，工作流才会做事。"
+  "workflow.editor.lint.noActivities": "至少加一个节点，工作流才会做事。",
+  "workflow.editor.canvas.zoomIn": "放大",
+  "workflow.editor.canvas.zoomOut": "缩小",
+  "workflow.editor.canvas.resetZoom": "恢复 100%",
+  "workflow.editor.canvas.fit": "居中显示链条"
 }

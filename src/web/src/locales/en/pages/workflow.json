@@ -218,5 +218,9 @@
   "workflow.editor.trigger.locked": "The trigger can't change on an existing workflow — its runs and plans are tied to it. Create a new workflow to use a different trigger.",
   "workflow.editor.lint.chainBroken": "A node can't accept the item type reaching it — see the red node.",
   "workflow.editor.lint.configIncomplete": "A node's configuration is incomplete — see the orange dot.",
-  "workflow.editor.lint.noActivities": "Add at least one node for the workflow to do anything."
+  "workflow.editor.lint.noActivities": "Add at least one node for the workflow to do anything.",
+  "workflow.editor.canvas.zoomIn": "Zoom in",
+  "workflow.editor.canvas.zoomOut": "Zoom out",
+  "workflow.editor.canvas.resetZoom": "Reset zoom to 100%",
+  "workflow.editor.canvas.fit": "Center the chain"
 }
