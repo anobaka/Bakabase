@@ -81,16 +81,11 @@ export function useChainDrag({
 
   optionsRef.current = { getSlotFit, onDrop, onNodeClick, onPaletteClick };
 
-  const cleanupGhost = () => {
-    const s = session.current;
+  // The active session's cancel function — lets an unmount mid-drag tear everything down
+  // (ghost, window listeners) instead of leaving a frozen card behind.
+  const cancelActive = useRef<(() => void) | null>(null);
 
-    if (s?.ghost) {
-      s.ghost.remove();
-      s.ghost = null;
-    }
-  };
-
-  useEffect(() => () => cleanupGhost(), []);
+  useEffect(() => () => cancelActive.current?.(), []);
 
   const begin = useCallback(
     (ev: React.PointerEvent, kind: string, fromIdx: number | null) => {
@@ -119,6 +114,7 @@ export function useChainDrag({
           s.live = true;
           const ghost = s.sourceEl.cloneNode(true) as HTMLElement;
 
+          ghost.dataset.dragGhost = "";
           ghost.style.cssText +=
             ";position:fixed;z-index:60;pointer-events:none;opacity:.92;margin:0;" +
             `width:${s.sourceEl.offsetWidth}px;transform:translate(-50%,-50%) rotate(1.5deg);` +
@@ -191,16 +187,25 @@ export function useChainDrag({
         }
       };
 
-      const onUp = () => {
+      /**
+       * The ONE exit for a session — pointerup (commit), pointercancel (the browser took
+       * the pointer away: native drag, touch scroll…), or unmount. The ghost is removed
+       * from the CAPTURED session object; reading it back through `session.current` after
+       * nulling it is exactly the bug that used to leave frozen cards on the canvas.
+       */
+      const endSession = (commit: boolean) => {
         window.removeEventListener("pointermove", onMove);
+        window.removeEventListener("pointerup", onUp);
+        window.removeEventListener("pointercancel", onCancel);
+        cancelActive.current = null;
         const s = session.current;
 
         session.current = null;
-        cleanupGhost();
+        s?.ghost?.remove();
         setDragging(null);
         setActiveSlot(null);
         setOverRemove(false);
-        if (!s) return;
+        if (!s || !commit) return;
 
         if (!s.live) {
           if (s.fromIdx != null) optionsRef.current.onNodeClick(s.fromIdx);
@@ -216,9 +221,13 @@ export function useChainDrag({
           s.overRemove,
         );
       };
+      const onUp = () => endSession(true);
+      const onCancel = () => endSession(false);
 
+      cancelActive.current = () => endSession(false);
       window.addEventListener("pointermove", onMove);
-      window.addEventListener("pointerup", onUp, { once: true });
+      window.addEventListener("pointerup", onUp);
+      window.addEventListener("pointercancel", onCancel);
     },
     [],
   );
