@@ -108,7 +108,7 @@ border-radius:10px;padding:5px 18px;font-size:12px;background:color-mix(in srgb,
 
 <h1>Workflow 编辑器重设计</h1>
 <p class="sub">三栏画布布局 · 真实节点拖拽 · 磁性插槽吸附 —— 下面的原型可以直接操作</p>
-<p class="note">状态：<b>设计稿（可交互原型）</b>，等待所有者确认后落地到 <code class="i">src/web/src/components/Workflow</code>。相关：<a href="workflow-capability-map.html">能力全景</a> ｜ <a href="file-cleaning-workflow.html">文件清洗设计</a>。</p>
+<p class="note">状态：<b>已落地</b>（所有者拍板：路由页 / 直接替换 / 批次 C 一并实施）。实现于 <code class="i">src/web/src/components/Workflow/CanvasEditor</code>，路由 <code class="i">/workflows/editor</code>；旧模态编辑器（WorkflowEditor/ActivityCard/ActivityPicker）已移除。本页 §0 原型保留作交互规约的参照。相关：<a href="workflow-capability-map.html">能力全景</a> ｜ <a href="file-cleaning-workflow.html">文件清洗设计</a>。</p>
 
 <h2 id="s0"><span class="n">§0</span>动手试：可交互原型</h2>
 <div class="rule">这不是截图——<b>直接拖</b>。从左侧节点库把节点拖进中间链条：靠近时插槽会<b>磁性张开</b>并发光；松手即插入。链上的节点同样可以拖动换位，或拖向下方的移除区删除；点击任意节点，右侧出现它的配置面板。变暗的节点接不住当前链条的条目类型（悬停可见原因）——这就是类型校验在选择器层面的样子。</div>

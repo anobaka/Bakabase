@@ -14,6 +14,8 @@ interface Props {
   fromTrigger?: boolean;
   /** Red border + dot when the activity at this position can't accept the type. */
   invalid?: boolean;
+  /** Render as an edge on the horizontal canvas (→ connector) instead of the vertical ↓. */
+  horizontal?: boolean;
 }
 
 /**
@@ -21,7 +23,7 @@ interface Props {
  * name; click to reveal a popover with the reflected field list — so users can see exactly
  * what shape is flowing through the chain at any point.
  */
-const ItemTypePill: React.FC<Props> = ({ itemType, index, fromTrigger, invalid }) => {
+const ItemTypePill: React.FC<Props> = ({ itemType, index, fromTrigger, invalid, horizontal }) => {
   const { t } = useTranslation();
   const descriptor = index.get(itemType);
   // The server ships an English display name; the editor prefers a localized version keyed
@@ -31,9 +33,15 @@ const ItemTypePill: React.FC<Props> = ({ itemType, index, fromTrigger, invalid }
   });
 
   return (
-    <div className="flex items-center gap-1 my-1 ml-2">
+    <div
+      className={
+        horizontal
+          ? "flex flex-col items-center gap-0.5 px-1 shrink-0"
+          : "flex items-center gap-1 my-1 ml-2"
+      }
+    >
       <span className="text-default-400 text-xs">
-        {fromTrigger ? t<string>("workflow.itemType.from.trigger") : "↓"}
+        {horizontal ? "→" : fromTrigger ? t<string>("workflow.itemType.from.trigger") : "↓"}
       </span>
       <Popover placement="right">
         <PopoverTrigger>

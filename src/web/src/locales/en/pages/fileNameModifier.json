@@ -91,5 +91,6 @@
   "FileNameModifier.Error.DeleteStartPositionRequired": "Please enter delete start position",
   "FileNameModifier.Error.CaseTypeRequired": "Please select case type",
   "FileNameModifier.Error.AlphabetStartCharRequired": "Please enter start character",
-  "FileNameModifier.Error.AlphabetCountRequired": "Please enter alphabet count"
+  "FileNameModifier.Error.AlphabetCountRequired": "Please enter alphabet count",
+  "FileNameModifier.UpgradeToWorkflow": "Upgrade to a cleaning workflow"
 }

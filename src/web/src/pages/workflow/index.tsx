@@ -4,16 +4,17 @@ import type { components } from "@/sdk/BApi2";
 
 import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import {
   DeleteOutlined,
   EditOutlined,
   HistoryOutlined,
   PlayCircleOutlined,
   PlusCircleOutlined,
+  ThunderboltOutlined,
 } from "@ant-design/icons";
 
 import { HelpCenterButton } from "@/components/HelpCenter";
-import WorkflowEditor from "@/components/Workflow/WorkflowEditor";
 import WorkflowRunsDrawer from "@/components/Workflow/WorkflowRunsDrawer";
 import ManualRunModal from "@/components/Workflow/ManualRunModal";
 import { getWorkflowTriggerUI } from "@/components/Workflow/Triggers";
@@ -38,6 +39,7 @@ function formatTime(iso?: string | null): string | null {
 
 const WorkflowPage: React.FC = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { createPortal } = useBakabaseContext();
 
   const [workflows, setWorkflows] = useState<WorkflowVm[]>([]);
@@ -92,9 +94,9 @@ const WorkflowPage: React.FC = () => {
     }
   };
 
-  const handleAdd = () => createPortal(WorkflowEditor, { triggers, onSaved: load });
-  const handleEdit = (wf: WorkflowVm) =>
-    createPortal(WorkflowEditor, { workflow: wf, triggers, onSaved: load });
+  const handleAdd = () => navigate("/workflows/editor");
+  const handleAddFromTemplate = () => navigate("/workflows/editor?template=fileCleaning");
+  const handleEdit = (wf: WorkflowVm) => navigate(`/workflows/editor?id=${wf.id}`);
   const handleDelete = (wf: WorkflowVm) =>
     createPortal(Modal, {
       defaultVisible: true,
@@ -122,6 +124,14 @@ const WorkflowPage: React.FC = () => {
           onPress={handleAdd}
         >
           {t<string>("workflow.action.add")}
+        </Button>
+        <Button
+          size="sm"
+          startContent={<ThunderboltOutlined />}
+          variant="flat"
+          onPress={handleAddFromTemplate}
+        >
+          {t<string>("workflow.action.addFileCleaning")}
         </Button>
       </div>
 

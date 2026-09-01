@@ -91,5 +91,6 @@
   "FileNameModifier.Error.DeleteStartPositionRequired": "请输入删除起始位置",
   "FileNameModifier.Error.CaseTypeRequired": "请选择大小写类型",
   "FileNameModifier.Error.AlphabetStartCharRequired": "请输入起始字符",
-  "FileNameModifier.Error.AlphabetCountRequired": "请输入字符数量"
+  "FileNameModifier.Error.AlphabetCountRequired": "请输入字符数量",
+  "FileNameModifier.UpgradeToWorkflow": "升级为清洗流程"
 }
