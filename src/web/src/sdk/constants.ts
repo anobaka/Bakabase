@@ -4855,6 +4855,21 @@ export const PresetResourceTypeLabel: Record<PresetResourceType, string> = {
   [PresetResourceType.Tool]: 'Tool'
 };
 
+export enum WorkflowActivityCardinality {
+  OneToOne = 1,
+  OneToMany = 2
+}
+
+export const workflowActivityCardinalities = [
+  { label: 'OneToOne', value: WorkflowActivityCardinality.OneToOne },
+  { label: 'OneToMany', value: WorkflowActivityCardinality.OneToMany }
+] as const;
+
+export const WorkflowActivityCardinalityLabel: Record<WorkflowActivityCardinality, string> = {
+  [WorkflowActivityCardinality.OneToOne]: 'OneToOne',
+  [WorkflowActivityCardinality.OneToMany]: 'OneToMany'
+};
+
 export enum WorkflowActivityCategory {
   Filter = 1,
   Action = 2,

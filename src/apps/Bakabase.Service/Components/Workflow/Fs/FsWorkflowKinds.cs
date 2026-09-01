@@ -16,5 +16,9 @@ public static class FsWorkflowKinds
 
     public static readonly string TransformFileNameOp = WorkflowActivityKinds.Transform(Module, "fileNameOp");
 
+    /// <summary>The design's "expand.fs.children" — expansion is a Transform in the kind
+    /// grammar (category tokens are filter/action/transform only).</summary>
+    public static readonly string TransformExpandChildren = WorkflowActivityKinds.Transform(Module, "expandChildren");
+
     public static readonly string ActionSaveName = WorkflowActivityKinds.Action(Module, "saveName");
 }

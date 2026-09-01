@@ -9856,6 +9856,12 @@ export interface components {
         };
         /**
          * Format: int32
+         * @description [1: OneToOne, 2: OneToMany]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants.WorkflowActivityCardinality": 1 | 2;
+        /**
+         * Format: int32
          * @description [1: Filter, 2: Action, 3: Transform]
          * @enum {integer}
          */
@@ -9918,6 +9924,7 @@ export interface components {
             acceptedInputItemTypes: string[];
             acceptedItemInterface?: string;
             outputBehavior: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants.WorkflowItemTypeBehavior"];
+            cardinality: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants.WorkflowActivityCardinality"];
             fixedOutputItemType?: string;
             isDestructive: boolean;
         };

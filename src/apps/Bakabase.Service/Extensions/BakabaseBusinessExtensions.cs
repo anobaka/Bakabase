@@ -180,6 +180,10 @@ namespace Bakabase.Service.Extensions
             services.AddSingleton<IWorkflowActivity, Components.Workflow.Activities.Transforms.Text.TextRemoveWrappedActivity>();
             services.AddSingleton<IWorkflowActivity, Components.Workflow.Activities.Transforms.Text.TextRemoveTextsActivity>();
             services.AddSingleton<IWorkflowActivity, Components.Workflow.Activities.Transforms.Text.TextTrimActivity>();
+            // Variables + expansion (E4 + E2): capture/template over the bag, fs descent.
+            services.AddSingleton<IWorkflowActivity, Components.Workflow.Activities.Transforms.Text.TextCaptureActivity>();
+            services.AddSingleton<IWorkflowActivity, Components.Workflow.Activities.Transforms.Text.TextTemplateActivity>();
+            services.AddSingleton<IWorkflowActivity, Components.Workflow.Activities.Transforms.FsExpandChildrenActivity>();
 
             services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, ExtensionGroupDbModel, int>>();
             services.AddScoped<IExtensionGroupService, ExtensionGroupService>();

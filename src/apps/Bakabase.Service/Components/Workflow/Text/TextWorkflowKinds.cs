@@ -19,4 +19,11 @@ public static class TextWorkflowKinds
 
     /// <summary>Clean up removal leftovers: repeated whitespace, edge whitespace, empty wrapper pairs.</summary>
     public static readonly string TransformTrim = WorkflowActivityKinds.Transform(Module, "trim");
+
+    /// <summary>Capture named regex groups from the working text into the item's variable bag —
+    /// the text is not changed (capability map E4).</summary>
+    public static readonly string TransformCapture = WorkflowActivityKinds.Transform(Module, "capture");
+
+    /// <summary>Rebuild the working text from a {var:…} template (capability map E4).</summary>
+    public static readonly string TransformTemplate = WorkflowActivityKinds.Transform(Module, "template");
 }

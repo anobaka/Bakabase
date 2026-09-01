@@ -57,6 +57,13 @@ public interface IWorkflowActivity
     WorkflowItemTypeBehavior OutputBehavior => WorkflowItemTypeBehavior.Passthrough;
 
     /// <summary>
+    /// Whether the activity may fan one item out into many (capability map E2). Declaring
+    /// OneToMany is what unlocks returning <see cref="WorkflowItemOutcome.ExpandTo"/>; the
+    /// runner refuses expansion from a OneToOne activity as an engine bug.
+    /// </summary>
+    WorkflowActivityCardinality Cardinality => WorkflowActivityCardinality.OneToOne;
+
+    /// <summary>
     /// Whether this activity's side effect destroys or rewrites user data without a later
     /// confirmation gate (deleting files, overwriting values). Declaring it lets the save-time
     /// validation refuse chains where a model-generated item (AdaptToNext) feeds such a step

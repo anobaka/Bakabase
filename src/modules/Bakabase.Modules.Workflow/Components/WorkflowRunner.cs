@@ -103,7 +103,11 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
             .OrderBy(a => a.Order)
             .ToListAsync(ct);
 
-        var items = trigger.ExtractItems(payload).ToList();
+        // Each item travels with its variable bag (capability map E4) — chain-local named
+        // values that never live inside the item's own CLR shape.
+        var items = trigger.ExtractItems(payload)
+            .Select(i => new WorkItem(i, new Dictionary<string, string>()))
+            .ToList();
         run.InputCount = items.Count;
         run.Status = WorkflowRunStatus.Running;
         await db.SaveChangesAsync(ct);
@@ -149,10 +153,11 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
 
                 var stepInput = items.Count;
                 var stepFailed = 0;
-                var nextItems = new List<object>(items.Count);
-                foreach (var item in items)
+                var nextItems = new List<WorkItem>(items.Count);
+                foreach (var workItem in items)
                 {
                     await btaskArgs.YieldAsync();
+                    var item = workItem.Item;
 
                     if ((acceptedClrTypes.Count > 0 || contract is not null) &&
                         !acceptedClrTypes.Any(t => t.IsInstanceOfType(item)) &&
@@ -171,6 +176,7 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
                         Payload = payload,
                         ActivityConfigJson = activityRow.ConfigJson,
                         TargetItemType = targetItemType,
+                        Variables = workItem.Variables,
                         Services = scope.ServiceProvider,
                         Logger = _logger,
                     };
@@ -211,7 +217,24 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
                         throw;
                     }
 
-                    if (outcome.Keep) nextItems.Add(outcome.Replacement ?? item);
+                    if (outcome.Children is { } children)
+                    {
+                        if (impl.Cardinality != WorkflowActivityCardinality.OneToMany)
+                        {
+                            throw new InvalidOperationException(
+                                $"Step {stepIndex + 1} ({activityRow.Kind}) returned an expansion but " +
+                                "declares OneToOne cardinality — the activity's declaration is broken.");
+                        }
+
+                        // Each child starts from a COPY of the parent's bag: siblings must not
+                        // see each other's later captures (capability map E2/E4).
+                        nextItems.AddRange(children.Select(c =>
+                            new WorkItem(c, new Dictionary<string, string>(workItem.Variables))));
+                    }
+                    else if (outcome.Keep)
+                    {
+                        nextItems.Add(workItem with {Item = outcome.Replacement ?? item});
+                    }
                 }
 
                 items = nextItems;
@@ -278,4 +301,8 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
         if (!_activities.TryGet(activities[index + 1].Kind, out var next)) return null;
         return next.AcceptedInputItemTypes.Count == 1 ? next.AcceptedInputItemTypes[0] : null;
     }
+
+    /// <summary>An item plus its chain-local variable bag (capability map E4). The bag rides
+    /// beside the item so item CLR shapes stay pure data.</summary>
+    private sealed record WorkItem(object Item, Dictionary<string, string> Variables);
 }

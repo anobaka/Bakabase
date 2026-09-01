@@ -25,6 +25,16 @@ public sealed class WorkflowExecutionContext
     /// </summary>
     public string? TargetItemType { get; init; }
 
+    /// <summary>
+    /// The current item's variable bag (capability map E4): named values captured by upstream
+    /// activities (<c>transform.text.capture</c>) and read back by interpolating ones
+    /// (<c>transform.text.template</c>). The bag travels WITH the item, not inside it — an
+    /// item's CLR shape never grows fields for chain-local state. On expansion each child
+    /// inherits a copy of its parent's bag. Mutations are visible to every later step for
+    /// the same item.
+    /// </summary>
+    public IDictionary<string, string> Variables { get; init; } = new Dictionary<string, string>();
+
     /// <summary>DI scope provider — use for resolving scoped services like DbContext.</summary>
     public required IServiceProvider Services { get; init; }
 

@@ -125,6 +125,7 @@ public class WorkflowController(
                 AcceptedInputItemTypes = a.AcceptedInputItemTypes.ToList(),
                 AcceptedItemInterface = a.AcceptedItemInterface?.Name,
                 OutputBehavior = a.OutputBehavior,
+                Cardinality = a.Cardinality,
                 FixedOutputItemType = a.FixedOutputItemType,
                 IsDestructive = a.IsDestructive,
             }));

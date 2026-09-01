@@ -24,6 +24,10 @@ public record WorkflowActivityDescriptorViewModel
 
     public WorkflowItemTypeBehavior OutputBehavior { get; set; }
 
+    /// <summary>OneToMany marks activities that may fan one item out into several (E2) — the
+    /// editor explains their 1→N step statistics with it.</summary>
+    public WorkflowActivityCardinality Cardinality { get; set; } = WorkflowActivityCardinality.OneToOne;
+
     /// <summary>Set only when <see cref="OutputBehavior"/> is Fixed.</summary>
     public string? FixedOutputItemType { get; set; }
 

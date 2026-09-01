@@ -4145,6 +4145,14 @@ export interface BakabaseModulesThirdPartyThirdPartiesBilibiliModelsFavorites {
 }
 
 /**
+ * [1: OneToOne, 2: OneToMany]
+ * @format int32
+ */
+export type BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowActivityCardinality =
+  | 1
+  | 2;
+
+/**
  * [1: Filter, 2: Action, 3: Transform]
  * @format int32
  */
@@ -4230,6 +4238,8 @@ export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowActivityDe
   acceptedItemInterface?: string;
   /** [1: Passthrough, 2: Fixed, 3: AdaptToNext] */
   outputBehavior: BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowItemTypeBehavior;
+  /** [1: OneToOne, 2: OneToMany] */
+  cardinality: BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowActivityCardinality;
   fixedOutputItemType?: string;
   isDestructive: boolean;
 }

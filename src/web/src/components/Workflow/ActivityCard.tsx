@@ -29,6 +29,8 @@ interface Props {
   displayNameFallback?: string;
   /** True when the chain walk says this activity can't accept the type reaching it. */
   incompatible?: boolean;
+  /** Steps before this one — forwarded to variable-aware config forms (E4 hints). */
+  upstream?: Array<{ kind: string; configJson: string }>;
   onChange: (next: ActivityDraft) => void;
   onDelete: () => void;
 }
@@ -46,6 +48,7 @@ const ActivityCard: React.FC<Props> = ({
   draft,
   displayNameFallback,
   incompatible,
+  upstream,
   onChange,
   onDelete,
 }) => {
@@ -124,6 +127,7 @@ const ActivityCard: React.FC<Props> = ({
         <div className="border-t border-default-200 p-3 flex flex-col gap-3">
           {ConfigForm && config !== null ? (
             <ConfigForm
+              upstream={upstream}
               value={config}
               onChange={(next) =>
                 onChange({ ...draft, configJson: ui!.serializeConfig(next) })

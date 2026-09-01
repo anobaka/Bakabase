@@ -380,6 +380,9 @@ const WorkflowEditor: React.FC<Props> = ({
                         displayNameFallback={activityDisplayNameByKind.get(a.kind)}
                         draft={a}
                         incompatible={chain ? !chain.steps[i]?.compatible : false}
+                        upstream={activityDrafts
+                          .slice(0, i)
+                          .map((d) => ({ kind: d.kind, configJson: d.configJson }))}
                         onChange={(next) => updateActivity(i, next)}
                         onDelete={() => deleteActivity(i)}
                       />
