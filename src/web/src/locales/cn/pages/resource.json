@@ -121,7 +121,6 @@
   "resource.detailLayout.gridCols": "栅格列数",
   "resource.detailLayout.gap": "间距 (px)",
   "resource.detailLayout.sectionsHeader": "区块",
-  "resource.detailLayout.dragToMove": "拖动以移动",
   "resource.detailLayout.hideSection": "隐藏此区块",
   "resource.detailLayout.dynamicHeightLabel": "动态高度",
   "resource.detailLayout.section.cover": "封面",
