@@ -63,7 +63,21 @@ public class WorkflowController(
     [SwaggerOperation(OperationId = "DeleteWorkflow")]
     public async Task<BaseResponse> Delete(int id)
     {
+        // Capture the run ids first: DeleteAsync (which may refuse while a run executes)
+        // removes the run rows, and the rename entries keyed on them must not be orphaned.
+        var runIds = new List<int>();
+        var page = 1;
+        while (true)
+        {
+            var runs = await service.SearchRunsAsync(new WorkflowRunSearchInputModel
+                {WorkflowDefinitionId = id, PageIndex = page, PageSize = 200});
+            runIds.AddRange(runs.Data!.Select(r => r.Id));
+            if (runs.Data!.Count < 200) break;
+            page++;
+        }
+
         await service.DeleteAsync(id);
+        await fileRenameEntries.DeleteByRunIds(runIds);
         return BaseResponseBuilder.Ok;
     }
 
@@ -111,6 +125,7 @@ public class WorkflowController(
                 AcceptedInputItemTypes = a.AcceptedInputItemTypes.ToList(),
                 OutputBehavior = a.OutputBehavior,
                 FixedOutputItemType = a.FixedOutputItemType,
+                IsDestructive = a.IsDestructive,
             }));
     }
 
@@ -186,6 +201,37 @@ public class WorkflowController(
         int runId)
     {
         var rows = await fileRenameEntries.GetByRunId(runId);
+        return new ListResponse<Bakabase.Service.Models.View.FileRenameEntryViewModel>(
+            rows.Select(Bakabase.Service.Models.View.FileRenameEntryViewModel.FromDb));
+    }
+
+    /// <summary>The confirm panel's checkbox: Pending ↔ Excluded.</summary>
+    [HttpPut("file-rename-entry/{id:int}/excluded")]
+    [SwaggerOperation(OperationId = "SetFileRenameEntryExcluded")]
+    public async Task<SingletonResponse<Bakabase.Service.Models.View.FileRenameEntryViewModel>> SetFileRenameEntryExcluded(
+        int id, [FromQuery] bool excluded)
+    {
+        var row = await fileRenameEntries.SetExcluded(id, excluded);
+        return new SingletonResponse<Bakabase.Service.Models.View.FileRenameEntryViewModel>(
+            Bakabase.Service.Models.View.FileRenameEntryViewModel.FromDb(row));
+    }
+
+    /// <summary>Execute the run's Pending renames on disk and return the updated plan.</summary>
+    [HttpPost("run/{runId:int}/file-rename-entries/apply")]
+    [SwaggerOperation(OperationId = "ApplyWorkflowRunFileRenames")]
+    public async Task<ListResponse<Bakabase.Service.Models.View.FileRenameEntryViewModel>> ApplyRunFileRenames(int runId)
+    {
+        var rows = await fileRenameEntries.ApplyRun(runId);
+        return new ListResponse<Bakabase.Service.Models.View.FileRenameEntryViewModel>(
+            rows.Select(Bakabase.Service.Models.View.FileRenameEntryViewModel.FromDb));
+    }
+
+    /// <summary>Revert the run's Applied renames and return the updated plan.</summary>
+    [HttpPost("run/{runId:int}/file-rename-entries/undo")]
+    [SwaggerOperation(OperationId = "UndoWorkflowRunFileRenames")]
+    public async Task<ListResponse<Bakabase.Service.Models.View.FileRenameEntryViewModel>> UndoRunFileRenames(int runId)
+    {
+        var rows = await fileRenameEntries.UndoRun(runId);
         return new ListResponse<Bakabase.Service.Models.View.FileRenameEntryViewModel>(
             rows.Select(Bakabase.Service.Models.View.FileRenameEntryViewModel.FromDb));
     }

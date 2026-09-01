@@ -132,7 +132,14 @@ const WorkflowRunsDrawer: React.FC<Props> = ({
                           className="ml-auto"
                           size="sm"
                           variant="light"
-                          onPress={() => createPortal(RenamePlanPanel, { runId: r.id, readOnly: true })}
+                          onPress={() =>
+                            // A finished run's plan is the confirm surface (interactive);
+                            // anything still moving — or already dead — is only a record.
+                            createPortal(RenamePlanPanel, {
+                              runId: r.id,
+                              readOnly: status !== WorkflowRunStatus.Success,
+                            })
+                          }
                         >
                           {t<string>("workflow.renamePlan.open")}
                         </Button>

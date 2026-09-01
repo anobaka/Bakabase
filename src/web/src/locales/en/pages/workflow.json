@@ -127,5 +127,15 @@
   "workflow.renamePlan.status.Excluded": "Excluded",
   "workflow.renamePlan.status.Applied": "Applied",
   "workflow.renamePlan.status.Failed": "Failed",
-  "workflow.renamePlan.status.Undone": "Undone"
+  "workflow.renamePlan.status.Undone": "Undone",
+  "workflow.renamePlan.apply.button": "Apply {{count}} renames",
+  "workflow.renamePlan.apply.confirmTitle": "Apply {{count}} renames to disk?",
+  "workflow.renamePlan.apply.confirmContent": "The files and directories will actually be renamed. Every rename is recorded and can be undone from this panel.",
+  "workflow.renamePlan.apply.done": "Applied {{applied}} renames.",
+  "workflow.renamePlan.apply.partial": "Applied {{applied}}, {{failed}} failed — see the rows marked Failed for reasons.",
+  "workflow.renamePlan.undo.button": "Undo {{count}} applied",
+  "workflow.renamePlan.undo.confirmTitle": "Undo {{count}} applied renames?",
+  "workflow.renamePlan.undo.confirmContent": "Every applied rename is reverted to its original name where the disk still allows it.",
+  "workflow.renamePlan.undo.done": "Undid {{undone}} renames.",
+  "workflow.renamePlan.undo.partial": "Undid {{undone}}, {{blocked}} blocked — see the rows still marked Applied for reasons."
 }

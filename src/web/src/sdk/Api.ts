@@ -4230,6 +4230,7 @@ export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowActivityDe
   /** [1: Passthrough, 2: Fixed, 3: AdaptToNext] */
   outputBehavior: BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowItemTypeBehavior;
   fixedOutputItemType?: string;
+  isDestructive: boolean;
 }
 
 export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowActivityViewModel {
@@ -6546,6 +6547,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceM
   code: number;
   message?: string;
   data?: BakabaseServiceModelsViewFilePlayabilityViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewFileRenameEntryViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewFileRenameEntryViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewMobileAppDownloadsViewModel {
@@ -22767,6 +22775,67 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       >({
         path: `/workflow/run/${runId}/file-rename-entries`,
         method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Workflow
+     * @name SetFileRenameEntryExcluded
+     * @request PUT:/workflow/file-rename-entry/{id}/excluded
+     */
+    setFileRenameEntryExcluded: (
+      id: number,
+      query?: {
+        excluded?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewFileRenameEntryViewModel,
+        any
+      >({
+        path: `/workflow/file-rename-entry/${id}/excluded`,
+        method: "PUT",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Workflow
+     * @name ApplyWorkflowRunFileRenames
+     * @request POST:/workflow/run/{runId}/file-rename-entries/apply
+     */
+    applyWorkflowRunFileRenames: (runId: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewFileRenameEntryViewModel,
+        any
+      >({
+        path: `/workflow/run/${runId}/file-rename-entries/apply`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Workflow
+     * @name UndoWorkflowRunFileRenames
+     * @request POST:/workflow/run/{runId}/file-rename-entries/undo
+     */
+    undoWorkflowRunFileRenames: (runId: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewFileRenameEntryViewModel,
+        any
+      >({
+        path: `/workflow/run/${runId}/file-rename-entries/undo`,
+        method: "POST",
         format: "json",
         ...params,
       }),

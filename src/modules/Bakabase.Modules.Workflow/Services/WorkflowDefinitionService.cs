@@ -68,7 +68,22 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
 
         if (input.Name is not null) entity.Name = input.Name;
         if (input.TriggerFilterJson is not null) entity.TriggerFilterJson = input.TriggerFilterJson;
-        if (input.Enabled is { } enabled) entity.Enabled = enabled;
+        if (input.Enabled is { } enabled)
+        {
+            entity.Enabled = enabled;
+            if (!enabled)
+            {
+                // Disabling means "stop this" to the user, so already-queued runs go with it —
+                // the runner's Pending-only guard makes their stale BTasks no-ops
+                // (capability map §5·发现 9). A run already Running is left to finish.
+                await Runs.Where(r => r.WorkflowDefinitionId == id && r.Status == WorkflowRunStatus.Pending)
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(r => r.Status, _ => WorkflowRunStatus.Cancelled)
+                        .SetProperty(r => r.CompletedAt, _ => DateTime.Now)
+                        .SetProperty(r => r.ErrorMessage, _ => "Cancelled: the workflow was disabled"), ct);
+            }
+        }
+
         entity.UpdatedAt = DateTime.Now;
 
         if (input.Activities is not null)
@@ -86,6 +101,15 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
 
     public async Task DeleteAsync(int id)
     {
+        // A run mid-execution keeps producing side effects after its rows vanish, and its final
+        // save then targets deleted data — refuse instead of racing it (capability map §5·发现 9).
+        // Pending rows don't block: deleting them makes their stale BTasks no-ops.
+        if (await Runs.AnyAsync(r => r.WorkflowDefinitionId == id && r.Status == WorkflowRunStatus.Running))
+        {
+            throw new InvalidOperationException(
+                "A run of this workflow is still executing — wait for it to finish before deleting.");
+        }
+
         await Acts.Where(a => a.WorkflowDefinitionId == id).ExecuteDeleteAsync();
         await Runs.Where(r => r.WorkflowDefinitionId == id).ExecuteDeleteAsync();
         await Defs.Where(d => d.Id == id).ExecuteDeleteAsync();
@@ -200,6 +224,13 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
                     $"Activity {a.Kind} (index {i}) accepts [{string.Join(", ", accepted)}] " +
                     $"but the item type at that position is \"{currentType}\". " +
                     "Insert a transform that produces a compatible type before it.");
+
+            if (impl.IsDestructive && i > 0 &&
+                _activities.TryGet(activities[i - 1].Kind, out var prev) &&
+                prev.OutputBehavior == WorkflowItemTypeBehavior.AdaptToNext)
+                throw new InvalidOperationException(
+                    $"Activity {a.Kind} (index {i}) is destructive and cannot directly consume " +
+                    "model-generated items — put a validating step between them.");
 
             currentType = impl.OutputBehavior switch
             {

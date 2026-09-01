@@ -18,4 +18,8 @@ public record WorkflowActivityDescriptorViewModel
 
     /// <summary>Set only when <see cref="OutputBehavior"/> is Fixed.</summary>
     public string? FixedOutputItemType { get; set; }
+
+    /// <summary>Mirrors <c>IWorkflowActivity.IsDestructive</c> so the editor can apply the same
+    /// "no model-generated input directly into a destructive step" rule the backend enforces.</summary>
+    public bool IsDestructive { get; set; }
 }

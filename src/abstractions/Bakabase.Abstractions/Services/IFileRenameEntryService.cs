@@ -24,4 +24,28 @@ public interface IFileRenameEntryService
     /// Case-insensitive, matching the most restrictive filesystem the plan may execute on.
     /// </summary>
     Task<bool> IsTargetPlanned(int runId, string targetFullPath);
+
+    /// <summary>
+    /// Toggle a row between Pending and Excluded — the confirm panel's checkbox. Any other
+    /// status refuses: an applied or conflicted row is not the user's to include.
+    /// </summary>
+    Task<FileRenameEntry> SetExcluded(int id, bool excluded);
+
+    /// <summary>
+    /// Execute the run's Pending rows on disk, deepest paths first so a renamed parent
+    /// directory cannot invalidate its children's recorded paths. Every row's status is saved
+    /// as it happens — a crash leaves an exact, queryable record of which renames were done.
+    /// One failing row becomes Failed and the rest continue.
+    /// </summary>
+    Task<List<FileRenameEntry>> ApplyRun(int runId);
+
+    /// <summary>
+    /// Replay the run's Applied rows in reverse (shallowest first — parents regain their old
+    /// names before their children's recorded paths are used). Rows that cannot be reverted
+    /// keep Applied with the reason in <see cref="FileRenameEntry.Error"/>.
+    /// </summary>
+    Task<List<FileRenameEntry>> UndoRun(int runId);
+
+    /// <summary>Remove the plan rows of the given runs — definition deletion cleanup.</summary>
+    Task DeleteByRunIds(IReadOnlyCollection<int> runIds);
 }

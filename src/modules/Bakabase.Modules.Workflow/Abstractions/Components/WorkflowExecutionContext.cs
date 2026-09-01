@@ -36,11 +36,21 @@ public sealed class WorkflowExecutionContext
         PropertyNameCaseInsensitive = true,
     };
 
-    /// <summary>Deserialize the current activity's config into a typed shape.</summary>
+    /// <summary>
+    /// Deserialize the current activity's config into a typed shape. Absent config is the
+    /// activity's business (it gets <c>default</c> and applies its own defaults); MALFORMED
+    /// config is not — that throws <see cref="WorkflowActivityConfigException"/>, which fails
+    /// the run rather than silently running the step on defaults.
+    /// </summary>
     public T? GetConfig<T>()
     {
         if (string.IsNullOrEmpty(ActivityConfigJson)) return default;
         try { return JsonSerializer.Deserialize<T>(ActivityConfigJson, JsonOptions); }
-        catch (JsonException) { return default; }
+        catch (JsonException ex)
+        {
+            throw new WorkflowActivityConfigException(
+                $"The step's configuration is not valid for {typeof(T).Name} and the run cannot proceed: {ex.Message}",
+                ex);
+        }
     }
 }

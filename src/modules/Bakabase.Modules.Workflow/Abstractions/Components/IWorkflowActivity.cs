@@ -44,6 +44,16 @@ public interface IWorkflowActivity
     /// <summary>How the activity affects the chain's item type at this position.</summary>
     WorkflowItemTypeBehavior OutputBehavior => WorkflowItemTypeBehavior.Passthrough;
 
+    /// <summary>
+    /// Whether this activity's side effect destroys or rewrites user data without a later
+    /// confirmation gate (deleting files, overwriting values). Declaring it lets the save-time
+    /// validation refuse chains where a model-generated item (AdaptToNext) feeds such a step
+    /// directly — an LLM hallucination must not become a delete target without a human or a
+    /// typed transform in between (capability map §5·发现 7). Plan-recording steps that a human
+    /// later confirms (fs.saveName) are NOT destructive by this definition.
+    /// </summary>
+    bool IsDestructive => false;
+
     /// <summary>The fixed output type when <see cref="OutputBehavior"/> is
     /// <see cref="WorkflowItemTypeBehavior.Fixed"/>; otherwise null.</summary>
     string? FixedOutputItemType => null;

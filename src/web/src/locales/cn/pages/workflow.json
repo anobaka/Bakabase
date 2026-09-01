@@ -126,5 +126,15 @@
   "workflow.renamePlan.status.Excluded": "已排除",
   "workflow.renamePlan.status.Applied": "已应用",
   "workflow.renamePlan.status.Failed": "失败",
-  "workflow.renamePlan.status.Undone": "已撤销"
+  "workflow.renamePlan.status.Undone": "已撤销",
+  "workflow.renamePlan.apply.button": "应用 {{count}} 项改名",
+  "workflow.renamePlan.apply.confirmTitle": "确认将 {{count}} 项改名应用到磁盘？",
+  "workflow.renamePlan.apply.confirmContent": "文件与目录将被实际重命名。每一项改名都会被记录，可随时在本面板撤销。",
+  "workflow.renamePlan.apply.done": "已应用 {{applied}} 项改名。",
+  "workflow.renamePlan.apply.partial": "已应用 {{applied}} 项，{{failed}} 项失败——原因见标记为“失败”的行。",
+  "workflow.renamePlan.undo.button": "撤销 {{count}} 项已应用",
+  "workflow.renamePlan.undo.confirmTitle": "确认撤销 {{count}} 项已应用的改名？",
+  "workflow.renamePlan.undo.confirmContent": "在磁盘仍允许的情况下，每一项已应用的改名都会恢复为原名。",
+  "workflow.renamePlan.undo.done": "已撤销 {{undone}} 项改名。",
+  "workflow.renamePlan.undo.partial": "已撤销 {{undone}} 项，{{blocked}} 项被阻挡——原因见仍标记为“已应用”的行。"
 }

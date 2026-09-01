@@ -31,17 +31,20 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
 
     private readonly IWorkflowTriggerRegistry _triggers;
     private readonly IWorkflowActivityRegistry _activities;
+    private readonly IWorkflowItemTypeRegistry _itemTypes;
     private readonly ILogger<WorkflowRunner<TDbContext>> _logger;
 
     public WorkflowRunner(
         IServiceScopeFactory scopeFactory,
         IWorkflowTriggerRegistry triggers,
         IWorkflowActivityRegistry activities,
+        IWorkflowItemTypeRegistry itemTypes,
         ILogger<WorkflowRunner<TDbContext>> logger)
     {
         _scopeFactory = scopeFactory;
         _triggers = triggers;
         _activities = activities;
+        _itemTypes = itemTypes;
         _logger = logger;
     }
 
@@ -55,6 +58,15 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
         if (run is null)
         {
             _logger.LogWarning("WorkflowRun {RunId} not found — skipping", runId);
+            return;
+        }
+
+        if (run.Status != WorkflowRunStatus.Pending)
+        {
+            // The row was cancelled (e.g. its definition got disabled) or already executed —
+            // the BTask that carried it is stale, and executing anyway is exactly the
+            // "disable didn't stop it" surprise this guard removes (capability map §5·发现 9).
+            _logger.LogInformation("WorkflowRun {RunId} is {Status}, not Pending — skipping", runId, run.Status);
             return;
         }
 
@@ -124,12 +136,29 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
                             "item type — should have been caught at save time");
                 }
 
+                // Type tags are validated at save time, but runtime items are plain objects —
+                // this closes the gap (capability map §5·发现 7): when a step declares accepted
+                // tags, every item must actually BE one of those CLR shapes, and a mismatch
+                // fails the run instead of being silently passed along by a defensive activity.
+                var acceptedClrTypes = impl.AcceptedInputItemTypes
+                    .Select(tag => _itemTypes.Get(tag)?.ClrType)
+                    .Where(t => t != null)
+                    .Cast<Type>()
+                    .ToList();
+
                 var stepInput = items.Count;
                 var stepFailed = 0;
                 var nextItems = new List<object>(items.Count);
                 foreach (var item in items)
                 {
                     await btaskArgs.YieldAsync();
+
+                    if (acceptedClrTypes.Count > 0 && !acceptedClrTypes.Any(t => t.IsInstanceOfType(item)))
+                    {
+                        throw new InvalidOperationException(
+                            $"Step {stepIndex + 1} ({activityRow.Kind}) received a {item.GetType().Name}, " +
+                            $"which is not any of its accepted item shapes — the chain's typing is broken.");
+                    }
 
                     var itemCtx = new WorkflowExecutionContext
                     {
@@ -154,7 +183,10 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
                     }
                     catch (Exception ex)
                     {
-                        if (activityRow.OnItemError == WorkflowActivityErrorBehavior.Skip)
+                        // A broken config hits every item identically; skipping would silently
+                        // run the step on defaults. Always fail the run for it.
+                        if (activityRow.OnItemError == WorkflowActivityErrorBehavior.Skip &&
+                            ex is not WorkflowActivityConfigException)
                         {
                             _logger.LogWarning(ex,
                                 "Workflow run {RunId} activity {Kind} item dropped (skip-on-error)",
