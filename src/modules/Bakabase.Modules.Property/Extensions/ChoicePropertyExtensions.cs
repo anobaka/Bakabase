@@ -47,19 +47,9 @@ namespace Bakabase.Modules.Property.Extensions
                 }
             }
 
-            options.Choices.AddRange(candidates.Select(x =>
-            {
-                var o = new ChoiceOptions
-                {
-                    Label = x.Label!
-                };
-                if (x.DbValue.IsNotEmpty())
-                {
-                    o.Value = x.DbValue!;
-                }
-
-                return o;
-            }));
+            options.Choices.AddRange(candidates.Select(x => x.DbValue.IsNotEmpty()
+                ? new ChoiceOptions {Label = x.Label!, Value = x.DbValue!}
+                : new ChoiceOptions {Label = x.Label!}));
             return true;
         }
     }

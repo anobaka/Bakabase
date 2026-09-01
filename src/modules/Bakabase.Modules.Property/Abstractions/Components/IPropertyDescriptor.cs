@@ -10,6 +10,12 @@ namespace Bakabase.Modules.Property.Abstractions.Components
         StandardValueType DbValueType { get; }
         StandardValueType BizValueType { get; }
 
+        /// <summary>
+        /// Whether DbValues are option ids (Choice/Tags/Multilevel) rather than raw values.
+        /// The descriptor is the single source of truth — PropertyAttributeMap is generated from it.
+        /// </summary>
+        bool IsReferenceValueType { get; }
+
         PropertyType Type { get; }
         // Bakabase.Abstractions.Models.Domain.Property ToDomainModel(CustomPropertyDbModel customProperty);
         // CustomPropertyValue ToDomainModel(CustomPropertyValueDbModel value);

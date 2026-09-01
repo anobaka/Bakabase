@@ -13,6 +13,8 @@ public record MultipleChoicePropertyOptions : ChoicePropertyOptions<List<string>
 public class MultipleChoicePropertyDescriptor
     : AbstractPropertyDescriptor<MultipleChoicePropertyOptions, List<string>, List<string>>
 {
+    public override bool IsReferenceValueType => true;
+
     public override PropertyType Type => PropertyType.MultipleChoice;
 
     /// <summary>

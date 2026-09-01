@@ -1,11 +1,11 @@
-﻿using Bootstrap.Extensions;
+using Bootstrap.Extensions;
 
 namespace Bakabase.Modules.StandardValue.Models.Domain;
 
 public record TagValue(string? Group, string Name)
 {
-    public string? Group { get; set; } = Group.IsNullOrEmpty() ? null : Group;
-    public string Name { get; set; } = Name;
+    public string? Group { get; init; } = Group.IsNullOrEmpty() ? null : Group;
+    public string Name { get; init; } = Name;
 
     public override string ToString()
     {

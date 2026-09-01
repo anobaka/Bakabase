@@ -11,6 +11,8 @@ public record SingleChoicePropertyOptions: ChoicePropertyOptions<string>;
 
 public class SingleChoicePropertyDescriptor : AbstractPropertyDescriptor<SingleChoicePropertyOptions, string, string>
 {
+    public override bool IsReferenceValueType => true;
+
     public override PropertyType Type => Bakabase.Abstractions.Models.Domain.Constants.PropertyType.SingleChoice;
 
     protected override (object DbValue, SearchOperation Operation)? BuildSearchFilterByKeywordInternal(

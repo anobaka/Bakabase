@@ -11,6 +11,8 @@ namespace Bakabase.Modules.Property.Components.Properties.Multilevel;
 
 public class MultilevelPropertyDescriptor : AbstractPropertyDescriptor<MultilevelPropertyOptions, List<string>, List<List<string>>>
 {
+    public override bool IsReferenceValueType => true;
+
     public override PropertyType Type => PropertyType.Multilevel;
 
     /// <summary>

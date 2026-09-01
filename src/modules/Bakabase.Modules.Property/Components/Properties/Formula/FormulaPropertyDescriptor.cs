@@ -7,6 +7,8 @@ namespace Bakabase.Modules.Property.Components.Properties.Formula;
 
 public class FormulaPropertyDescriptor : AbstractPropertyDescriptor<string, string>
 {
+    public override bool IsReferenceValueType => false;
+
     public override PropertyType Type => PropertyType.Formula;
 
     protected override bool IsMatchInternal(string dbValue, SearchOperation operation, object filterValue)

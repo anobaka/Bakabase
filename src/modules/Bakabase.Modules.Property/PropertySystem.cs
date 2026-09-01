@@ -123,21 +123,6 @@ public static class PropertySystem
             PropertyInternals.VirtualPropertyMap.GetValueOrDefault(type);
 
         /// <summary>
-        /// Get expected conversion test data for all property type pairs.
-        /// Primarily for testing/debugging purposes.
-        /// </summary>
-        public static IReadOnlyDictionary<PropertyType,
-            IReadOnlyDictionary<PropertyType, IReadOnlyList<(object? FromBizValue, object? ExpectedBizValue)>>>
-            GetExpectedConversions() =>
-            PropertyInternals.ExpectedConversions
-                .ToDictionary(
-                    kv => kv.Key,
-                    kv => (IReadOnlyDictionary<PropertyType, IReadOnlyList<(object? FromBizValue, object? ExpectedBizValue)>>)
-                        kv.Value.ToDictionary(
-                            inner => inner.Key,
-                            inner => (IReadOnlyList<(object? FromBizValue, object? ExpectedBizValue)>) inner.Value));
-
-        /// <summary>
         /// Combines multiple serialized DB values into a single serialized DB value.
         /// This is NOT string concatenation - it determines how to resolve multiple property values into one.
         /// For collection-type properties (Tags, MultipleChoice, etc.): aggregates all values (union).

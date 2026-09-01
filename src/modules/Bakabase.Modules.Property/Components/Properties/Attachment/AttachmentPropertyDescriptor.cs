@@ -7,6 +7,8 @@ namespace Bakabase.Modules.Property.Components.Properties.Attachment;
 
 public class AttachmentPropertyDescriptor : AbstractPropertyDescriptor<AttachmentPropertyOptions, List<string>, List<string>>
 {
+    public override bool IsReferenceValueType => false;
+
     public override PropertyType Type => PropertyType.Attachment;
 
     /// <summary>

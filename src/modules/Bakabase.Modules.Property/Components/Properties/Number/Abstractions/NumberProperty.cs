@@ -8,6 +8,8 @@ namespace Bakabase.Modules.Property.Components.Properties.Number.Abstractions;
 public abstract class NumberPropertyDescriptor<TOptions> : AbstractPropertyDescriptor<TOptions, decimal?, decimal?>
     where TOptions : class, new()
 {
+    public override bool IsReferenceValueType => false;
+
     protected override bool IsMatchInternal(decimal? dbValue, SearchOperation operation, object filterValue)
     {
         var fv = (decimal) filterValue;

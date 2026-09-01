@@ -6,6 +6,8 @@ namespace Bakabase.Modules.Property.Components.Properties.DateTime;
 
 public class DateTimePropertyDescriptor : AbstractPropertyDescriptor<System.DateTime?, System.DateTime?>
 {
+    public override bool IsReferenceValueType => false;
+
     public override PropertyType Type => PropertyType.DateTime;
 
     protected override bool IsMatchInternal(System.DateTime? dbValue, SearchOperation operation, object filterValue)

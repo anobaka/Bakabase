@@ -8,6 +8,8 @@ namespace Bakabase.Modules.Property.Components.Properties.Tags;
 
 public class TagsPropertyDescriptor : AbstractPropertyDescriptor<TagsPropertyOptions, List<string>, List<TagValue>>
 {
+    public override bool IsReferenceValueType => true;
+
     public override PropertyType Type => PropertyType.Tags;
 
     /// <summary>
@@ -42,7 +44,7 @@ public class TagsPropertyDescriptor : AbstractPropertyDescriptor<TagsPropertyOpt
     protected override (List<string>? DbValue, bool PropertyChanged) PrepareDbValueInternal(
         Bakabase.Abstractions.Models.Domain.Property property, List<TagValue> bizValue)
     {
-        bizValue.TrimAll();
+        bizValue = bizValue.Trimmed();
         if (!bizValue.Any())
         {
             return (null, false);

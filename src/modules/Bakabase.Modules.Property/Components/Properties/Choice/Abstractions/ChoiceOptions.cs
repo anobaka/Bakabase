@@ -2,7 +2,7 @@
 
 public record ChoiceOptions
 {
-    public string Value { get; set; } = Guid.NewGuid().ToString();
-    public string Label { get; set; } = null!;
-    public string? Color { get; set; }
+    public string Value { get; init; } = Guid.NewGuid().ToString();
+    public string Label { get; init; } = null!;
+    public string? Color { get; init; }
 }
