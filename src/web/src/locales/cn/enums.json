@@ -251,5 +251,12 @@
   "enum.thirdPartyId.cien": "Ci-en",
   "enum.thirdPartyId.patreon": "Patreon",
   "enum.thirdPartyId.tmdb": "TMDB",
-  "enum.thirdPartyId.steam": "Steam"
+  "enum.thirdPartyId.steam": "Steam",
+
+  "enum.resourceMoveRecordStatus.pending": "等待中",
+  "enum.resourceMoveRecordStatus.moving": "移动中",
+  "enum.resourceMoveRecordStatus.succeeded": "已完成",
+  "enum.resourceMoveRecordStatus.failed": "失败",
+  "enum.resourceMoveRecordStatus.cancelled": "已取消",
+  "enum.resourceMoveRecordStatus.interrupted": "已中断"
 }

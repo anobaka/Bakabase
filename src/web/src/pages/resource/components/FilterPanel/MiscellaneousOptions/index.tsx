@@ -8,6 +8,7 @@ import {
   CloseOutlined,
   DatabaseOutlined,
   DeleteOutlined,
+  ExportOutlined,
   FireOutlined,
   FolderOpenOutlined,
   FullscreenOutlined,
@@ -374,6 +375,11 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
               key: "addToPlaylist",
               icon: <VideoCameraAddOutlined className="text-base" />,
               label: t<string>("resource.display.addToPlaylist"),
+            },
+            {
+              key: "move",
+              icon: <ExportOutlined className="text-base" />,
+              label: t<string>("resource.operation.move"),
             },
             {
               key: "delete",

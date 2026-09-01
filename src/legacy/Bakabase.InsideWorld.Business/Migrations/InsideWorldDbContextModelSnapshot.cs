@@ -632,6 +632,59 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.ToTable("ResourceMarkEffects");
                 });
 
+            modelBuilder.Entity("Bakabase.Abstractions.Models.Db.ResourceMoveRecordDbModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("BatchId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DestPath")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Error")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("PhysicalMoveStarted")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ResourceId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SourcePath")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BatchId");
+
+                    b.HasIndex("ResourceId");
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("ResourceMoveRecords");
+                });
+
             modelBuilder.Entity("Bakabase.Abstractions.Models.Db.ResourceProfileDbModel", b =>
                 {
                     b.Property<int>("Id")

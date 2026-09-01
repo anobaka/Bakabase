@@ -373,7 +373,10 @@ The version of lux is not limited.</value>
     <value>Prepare resource data</value>
   </data>
   <data name="BTask_Name_MoveFiles" xml:space="preserve">
-    <value>Move files</value>
+    <value>File Mover</value>
+  </data>
+  <data name="BTask_Description_MoveFiles" xml:space="preserve">
+    <value>Periodically moves new files from the configured source directories to their targets, per the File Mover configuration; unrelated to the manual "move resource" operation</value>
   </data>
   <data name="BTask_Description_PrepareCache" xml:space="preserve">
     <value>Prepare cache for resources; caching can improve resource loading speed</value>
@@ -413,6 +416,42 @@ The version of lux is not limited.</value>
   </data>
   <data name="MoveResourceDetail" xml:space="preserve">
     <value>Move resource [{0}] to media library [{1}] and with new path [{2}]</value>
+  </data>
+  <data name="ResourceMove_TaskDescription" xml:space="preserve">
+    <value>Move {0} resource(s) to [{1}]</value>
+  </data>
+  <data name="BTask_MessageOnInterruption_MoveResources" xml:space="preserve">
+    <value>Some resource files are still being moved; forcibly interrupting may leave files split between the source and the destination. Interrupted moves can be retried from the move records.</value>
+  </data>
+  <data name="ResourceMove_SourceMissing" xml:space="preserve">
+    <value>Source path [{0}] does not exist</value>
+  </data>
+  <data name="ResourceMove_DestinationExists" xml:space="preserve">
+    <value>Destination path [{0}] already exists</value>
+  </data>
+  <data name="ResourceMove_DestinationInsideSource" xml:space="preserve">
+    <value>Cannot move [{0}] into its own subdirectory [{1}]</value>
+  </data>
+  <data name="ResourceMove_ResourcesAreBeingMoved" xml:space="preserve">
+    <value>Another move task is already working on [{0}]</value>
+  </data>
+  <data name="ResourceMove_InterruptedByRestart" xml:space="preserve">
+    <value>Interrupted by process restart</value>
+  </data>
+  <data name="ResourceMove_InterruptedBeforeStart" xml:space="preserve">
+    <value>Interrupted before start</value>
+  </data>
+  <data name="ResourceMove_RecordInProgress" xml:space="preserve">
+    <value>This move record is still in progress</value>
+  </data>
+  <data name="ResourceMove_ResourceIsLocked" xml:space="preserve">
+    <value>Resource [{0}] is currently being moved and cannot be modified</value>
+  </data>
+  <data name="ResourceMove_SiblingPrefixUnsupported" xml:space="preserve">
+    <value>Cannot move [{0}] to [{1}]: the destination path text begins with the source path, which the underlying file components cannot merge or copy across devices. Rename the source directory or pick another destination.</value>
+  </data>
+  <data name="BTask_CannotCleanActiveTask" xml:space="preserve">
+    <value>An active or pending task cannot be removed; stop it first</value>
   </data>
   <data name="WrongPassword" xml:space="preserve">
     <value>Wrong password</value>

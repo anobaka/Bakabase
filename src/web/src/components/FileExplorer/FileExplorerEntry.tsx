@@ -664,7 +664,7 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
               currentEntryDomRef.current = r;
             }}
             className={`entry-main box-content flex items-center justify-between h-6 py-[5px] pl-1 pr-2 relative rounded-md mx-1 border-l-[3px] border-l-transparent transition-all duration-150 ${entryRef.current?.selected ? "selected" : ""} ${entryRef.current.expanded ? "border-b-[var(--theme-border-color)]" : ""} ${isDragOver ? "bg-primary/20 border-l-primary" : ""} ${clipboardStore.paths.includes(entryRef.current.path) ? (clipboardStore.mode === "cut" ? "opacity-50 border-l-warning" : "border-l-success") : ""}`}
-            draggable={!entryRef.current.isDrive}
+            draggable={!entryRef.current.isDrive && !entryRef.current.passive}
             role="button"
             tabIndex={0}
             onClick={() => {
@@ -690,6 +690,12 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
               }
             }}
             onContextMenu={(e) => {
+              if (entryRef.current.passive) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                return;
+              }
               if (!entryRef.current.selected) {
                 if (!switchSelective || switchSelective(entryRef.current)) {
                   entryRef.current.selected = true;
@@ -741,7 +747,7 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
             }}
           >
             <div
-              className={`flex items-center flex-1 overflow-hidden text-sm gap-0.5 ${entry.isDirectoryOrDrive ? "font-medium" : "font-normal opacity-90"}`}
+              className={`flex items-center flex-1 overflow-hidden text-sm gap-0.5 ${entry.passive ? "opacity-60" : entry.isDirectoryOrDrive ? "font-medium" : "font-normal opacity-90"}`}
             >
               <div className="things-before-name flex items-center">
                 <LeftIcon entry={entryRef.current} expandable={expandable} loading={loading} />
@@ -760,6 +766,7 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
               <EditableFileName
                 disabled={
                   entry.isDrive ||
+                  entry.passive ||
                   !capabilities?.includes("rename") ||
                   entry.status == EntryStatus.Error
                 }
@@ -794,17 +801,19 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
                       </OperationButton>
                     </Tooltip>
                   )}
-                <Tooltip content={t<string>("fileExplorer.tip.openInMediaPlayer")}>
-                  <OperationButton
-                    isIconOnly
-                    color={"success"}
-                    onPress={(e) => {
-                      play(entryRef.current);
-                    }}
-                  >
-                    <BsCollectionPlayFill className={"text-base"} />
-                  </OperationButton>
-                </Tooltip>
+                {capabilities?.includes("play") && (
+                  <Tooltip content={t<string>("fileExplorer.tip.openInMediaPlayer")}>
+                    <OperationButton
+                      isIconOnly
+                      color={"success"}
+                      onPress={(e) => {
+                        play(entryRef.current);
+                      }}
+                    >
+                      <BsCollectionPlayFill className={"text-base"} />
+                    </OperationButton>
+                  </Tooltip>
+                )}
                 <TailingOperations
                   capabilities={capabilities}
                   entry={entry}

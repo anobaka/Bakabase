@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
@@ -11,7 +12,7 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace Bakabase.Service.Controllers
 {
     [Route("~/background-task")]
-    public class BackgroundTaskController(BTaskManager btm) : Controller
+    public class BackgroundTaskController(BTaskManager btm, IBakabaseLocalizer localizer) : Controller
     {
         [HttpPost("{id}/run")]
         [SwaggerOperation(OperationId = "StartBackgroundTask")]
@@ -75,6 +76,14 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "CleanBackgroundTask")]
         public async Task<BaseResponse> Clean(string id)
         {
+            // Removing a task that is still running or queued would only drop it from the UI —
+            // its work (and any resource locks it pushes to clients) would silently live on.
+            var task = btm.GetTaskViewModel(id);
+            if (task != null && task.Status.IsActiveOrPending())
+            {
+                return BaseResponseBuilder.BuildBadRequest(localizer.BTask_CannotCleanActiveTask());
+            }
+
             await btm.Clean(id);
             return BaseResponseBuilder.Ok;
         }

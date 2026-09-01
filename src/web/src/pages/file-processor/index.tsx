@@ -165,8 +165,10 @@ const FileProcessorPage = () => {
                   "rename",
                   "delete-all-same-name",
                   "group",
+                  "play",
                   "play-first-file",
                   "create-directory",
+                  "enter-directory",
                 ]}
                 renderExtraContextMenuItems={renderExtraContextMenuItems}
                 rootPath={rootPath}

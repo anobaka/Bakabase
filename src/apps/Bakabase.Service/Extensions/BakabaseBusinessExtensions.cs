@@ -108,6 +108,10 @@ namespace Bakabase.Service.Extensions
             services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, ResourceDbModel, int>>();
             services.AddScoped<IResourceLegacySearchService, ResourceLegacySearchService>();
             services.AddScoped<IResourceService, ResourceService>();
+            services.AddSingleton<Bakabase.Abstractions.Components.ResourceMove.ResourceMoveGuard>();
+            services
+                .AddScoped<IResourceMoveService,
+                    Bakabase.InsideWorld.Business.Components.ResourceMove.ResourceMoveService>();
             services.AddSingleton<IPropertyValueScopeResolver, PropertyValueScopeResolver>();
             services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, SpecialText, int>>();
             services.AddScoped<SpecialTextService>();

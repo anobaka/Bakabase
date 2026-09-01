@@ -111,7 +111,7 @@ const Panel = (props: FileSystemSelectorProps) => {
           rootRef.current = r;
           log("ref", r);
         }}
-        capabilities={["rename", "select"]}
+        capabilities={["rename", "select", "enter-directory"]}
         defaultSelectedPath={defaultSelectedPath}
         filter={{
           custom: (e) => filter(e, "visible"),

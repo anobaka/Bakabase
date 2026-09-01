@@ -2005,6 +2005,33 @@ export const ResourceDataTypeLabel: Record<ResourceDataType, string> = {
   [ResourceDataType.Metadata]: 'Metadata'
 };
 
+export enum ResourceMoveRecordStatus {
+  Pending = 1,
+  Moving = 2,
+  Succeeded = 3,
+  Failed = 4,
+  Cancelled = 5,
+  Interrupted = 6
+}
+
+export const resourceMoveRecordStatuses = [
+  { label: 'Pending', value: ResourceMoveRecordStatus.Pending },
+  { label: 'Moving', value: ResourceMoveRecordStatus.Moving },
+  { label: 'Succeeded', value: ResourceMoveRecordStatus.Succeeded },
+  { label: 'Failed', value: ResourceMoveRecordStatus.Failed },
+  { label: 'Cancelled', value: ResourceMoveRecordStatus.Cancelled },
+  { label: 'Interrupted', value: ResourceMoveRecordStatus.Interrupted }
+] as const;
+
+export const ResourceMoveRecordStatusLabel: Record<ResourceMoveRecordStatus, string> = {
+  [ResourceMoveRecordStatus.Pending]: 'Pending',
+  [ResourceMoveRecordStatus.Moving]: 'Moving',
+  [ResourceMoveRecordStatus.Succeeded]: 'Succeeded',
+  [ResourceMoveRecordStatus.Failed]: 'Failed',
+  [ResourceMoveRecordStatus.Cancelled]: 'Cancelled',
+  [ResourceMoveRecordStatus.Interrupted]: 'Interrupted'
+};
+
 export enum ResourceSource {
   PathMark = 1,
   Steam = 2,

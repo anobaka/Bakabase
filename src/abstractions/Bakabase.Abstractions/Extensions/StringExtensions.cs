@@ -211,6 +211,58 @@ public static class StringExtensions
         return sp;
     }
 
+    /// <summary>
+    /// Whether <paramref name="candidate"/> equals, or sits beneath, <paramref name="root"/>,
+    /// compared on whole path segments — "/a" contains "/a/b" but never "/abc". Both sides are
+    /// standardized first; comparison is OrdinalIgnoreCase, matching how the resource layer
+    /// compares stored paths everywhere else.
+    /// </summary>
+    public static bool IsPathEqualOrUnder(this string? candidate, string? root)
+    {
+        var c = candidate.StandardizePath();
+        var r = root.StandardizePath();
+        if (c == null || r == null)
+        {
+            return false;
+        }
+
+        if (string.Equals(c, r, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return IsUnderCore(c, r);
+    }
+
+    /// <summary>
+    /// Strict variant of <see cref="IsPathEqualOrUnder"/>: <paramref name="candidate"/> must sit
+    /// beneath <paramref name="root"/>; an equal path returns false.
+    /// </summary>
+    public static bool IsPathUnder(this string? candidate, string? root)
+    {
+        var c = candidate.StandardizePath();
+        var r = root.StandardizePath();
+        if (c == null || r == null)
+        {
+            return false;
+        }
+
+        return IsUnderCore(c, r);
+    }
+
+    private static bool IsUnderCore(string standardizedCandidate, string standardizedRoot)
+    {
+        // Anchor on the separator so /media/library-other does not match /media/library.
+        // A standardized drive root ("C:/") or filesystem root ("/") already ends with the
+        // separator, so appending another would break the prefix.
+        var prefix = standardizedRoot.EndsWith(InternalOptions.DirSeparator)
+            ? standardizedRoot
+            : standardizedRoot + InternalOptions.DirSeparator;
+
+        return standardizedCandidate.Length > prefix.Length &&
+               standardizedCandidate.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
+    }
+
     public static bool IsUncPath(this string? path)
     {
         if (string.IsNullOrEmpty(path))

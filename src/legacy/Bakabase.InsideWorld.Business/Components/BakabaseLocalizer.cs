@@ -115,6 +115,36 @@ namespace Bakabase.InsideWorld.Business.Components
 
         public string MoveResource() => this[nameof(MoveResource)];
 
+        public string ResourceMove_TaskDescription(int count, string destDir) =>
+            this[nameof(ResourceMove_TaskDescription), count, destDir];
+
+        public string? MessageOnInterruption_MoveResources() => BTask_MessageOnInterruption("MoveResources");
+
+        public string ResourceMove_SourceMissing(string path) => this[nameof(ResourceMove_SourceMissing), path];
+
+        public string ResourceMove_DestinationExists(string path) =>
+            this[nameof(ResourceMove_DestinationExists), path];
+
+        public string ResourceMove_DestinationInsideSource(string src, string destDir) =>
+            this[nameof(ResourceMove_DestinationInsideSource), src, destDir];
+
+        public string ResourceMove_ResourcesAreBeingMoved(string conflictPath) =>
+            this[nameof(ResourceMove_ResourcesAreBeingMoved), conflictPath];
+
+        public string ResourceMove_InterruptedByRestart() => this[nameof(ResourceMove_InterruptedByRestart)];
+
+        public string ResourceMove_InterruptedBeforeStart() => this[nameof(ResourceMove_InterruptedBeforeStart)];
+
+        public string ResourceMove_RecordInProgress() => this[nameof(ResourceMove_RecordInProgress)];
+
+        public string ResourceMove_ResourceIsLocked(int resourceId) =>
+            this[nameof(ResourceMove_ResourceIsLocked), resourceId];
+
+        public string ResourceMove_SiblingPrefixUnsupported(string src, string dest) =>
+            this[nameof(ResourceMove_SiblingPrefixUnsupported), src, dest];
+
+        public string BTask_CannotCleanActiveTask() => this[nameof(BTask_CannotCleanActiveTask)];
+
         public string CopyFiles() => this[nameof(CopyFiles)];
         public string CopyFile(string src, string dest) => this[nameof(CopyFile), src, dest];
         public string? MessageOnInterruption_CopyFiles() => BTask_MessageOnInterruption("CopyFiles");

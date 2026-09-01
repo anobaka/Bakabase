@@ -58,6 +58,7 @@ import enFileSystemSelector from "@/locales/en/components/fileSystemSelector.jso
 import enFileChangePreview from "@/locales/en/components/fileChangePreview.json";
 import enPlaylist from "@/locales/en/components/playlist.json";
 import enResourceTransfer from "@/locales/en/components/resourceTransfer.json";
+import enResourceMove from "@/locales/en/components/resourceMove.json";
 import enBakaChat from "@/locales/en/components/bakaChat.json";
 import enNotificationCenter from "@/locales/en/components/notificationCenter.json";
 import enHelpCenter from "@/locales/en/components/helpCenter.json";
@@ -119,6 +120,7 @@ import cnFileSystemSelector from "@/locales/cn/components/fileSystemSelector.jso
 import cnFileChangePreview from "@/locales/cn/components/fileChangePreview.json";
 import cnPlaylist from "@/locales/cn/components/playlist.json";
 import cnResourceTransfer from "@/locales/cn/components/resourceTransfer.json";
+import cnResourceMove from "@/locales/cn/components/resourceMove.json";
 import cnBakaChat from "@/locales/cn/components/bakaChat.json";
 import cnNotificationCenter from "@/locales/cn/components/notificationCenter.json";
 import cnHelpCenter from "@/locales/cn/components/helpCenter.json";
@@ -179,6 +181,7 @@ const enResources = {
   ...enFileChangePreview,
   ...enPlaylist,
   ...enResourceTransfer,
+  ...enResourceMove,
   ...enBakaChat,
   ...enNotificationCenter,
   ...enHelpCenter,
@@ -240,6 +243,7 @@ const cnResources = {
   ...cnFileChangePreview,
   ...cnPlaylist,
   ...cnResourceTransfer,
+  ...cnResourceMove,
   ...cnBakaChat,
   ...cnNotificationCenter,
   ...cnHelpCenter,

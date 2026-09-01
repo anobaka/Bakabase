@@ -95,7 +95,7 @@ export class Entry {
 
   async dispose() {}
 
-  private refreshFilteredChildren() {
+  refreshFilteredChildren() {
     const { keyword, types, custom } = this._tmpFilter;
     const lowerCasedKeyword = keyword?.toLowerCase();
 
@@ -296,6 +296,13 @@ export class Entry {
 
   expanded: boolean = false;
   selected = false;
+
+  /**
+   * Context-only entry (e.g. the parent-directory group headers of the multi-root view):
+   * not renamable, not draggable, no operation buttons, no context menu. It remains
+   * selectable — it stands for a real directory the host may accept as a pick.
+   */
+  passive: boolean = false;
 
   passwordsForDecompressing: string[] = [];
 

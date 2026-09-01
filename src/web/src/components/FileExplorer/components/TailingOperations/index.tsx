@@ -31,6 +31,12 @@ const TailingOperations = (props: Props) => {
   const { createPortal } = useBakabaseContext();
   const { entry, capabilities, onEnterDirectory } = props;
 
+  // Display-only rows (multi-root group headers) carry no operations at all — a refresh
+  // would even replace their curated children with the directory's real contents.
+  if (entry.passive) {
+    return null;
+  }
+
   const isExtractable =
     capabilities?.includes("extract") &&
     entry.isDirectory &&
@@ -51,7 +57,7 @@ const TailingOperations = (props: Props) => {
       >
         <FolderOpenOutlined className={"text-base"} />
       </OperationButton>
-      {entry.isDirectoryOrDrive && onEnterDirectory && (
+      {entry.isDirectoryOrDrive && onEnterDirectory && capabilities?.includes("enter-directory") && (
         <Tooltip content={t<string>("fileExplorer.action.enterDirectory")} placement={"top"}>
           <Button
             isIconOnly

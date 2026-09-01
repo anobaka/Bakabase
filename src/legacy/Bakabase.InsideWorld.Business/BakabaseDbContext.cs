@@ -71,6 +71,8 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<ResourceMarkEffectDbModel> ResourceMarkEffects { get; set; }
         public DbSet<PropertyMarkEffectDbModel> PropertyMarkEffects { get; set; }
 
+        public DbSet<ResourceMoveRecordDbModel> ResourceMoveRecords { get; set; }
+
         // AI module tables (provider unified across LLM and AIGC capabilities)
         public DbSet<AiProviderDbModel> AiProviders { get; set; }
         public DbSet<LlmUsageLogDbModel> LlmUsageLogs { get; set; }
@@ -447,6 +449,13 @@ namespace Bakabase.InsideWorld.Business
                 t.HasIndex(x => x.WorkflowDefinitionId);
                 t.HasIndex(x => x.Status);
                 t.HasIndex(x => x.StartedAt);
+            });
+
+            modelBuilder.Entity<ResourceMoveRecordDbModel>(t =>
+            {
+                t.HasIndex(x => x.BatchId);
+                t.HasIndex(x => x.Status);
+                t.HasIndex(x => x.ResourceId);
             });
         }
     }
