@@ -40,6 +40,7 @@ footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(
 </style></head><body><div class="wrap">
 <h1>Workflow 能力全景：现状盘点与扩展路线</h1>
 <p class="sub">视角：Workflow 模块整体，而非某个场景。<a href="file-cleaning-workflow.html">文件清洗</a>是多数扩展的第一个用户，但每项扩展都是跨场景通用能力</p>
+<div class="rule"><b>定位（所有者 2026-09 明确）：Workflow 是 Bakabase 应用最底层的通用自动化层。</b>三类扩展与引擎的三个插槽一一对应——任意内部事件（逐个埋点 + 一个触发器类）→ 触发器注册表；用户自定义流程（仅由已开发节点组成）→ 定义 + 链式编辑器；任意动作（写文件、写数据…，逐个开发）→ 活动注册表。引擎对节点内容不理解（payload / config 均为不透明 JSON），只做编排——这正是"逐个开发、引擎零改动"能成立的原因。候选事件/动作全景见 <a href="#s6">§6</a>，通用化的引擎级前提见 <a href="#s5">§5 第二轮发现</a>。</div>
 <p class="note">现状与结论均已在代码中逐条核实：<code class="i">src/modules/Bakabase.Modules.Workflow</code> + <code class="i">src/apps/Bakabase.Service/Components/Workflow</code> + 前端 <code class="i">src/web/src/components/Workflow</code>。<b><a href="#s5">§5</a> 记录了本轮逐行复核后与初版设计假设不符的地方</b>，实施顺序（<a href="#s8">§8</a>）因此有两个待选方案。</p>
 
 <h2 id="s0"><span class="n">§0</span>代号速查</h2>
@@ -160,7 +161,7 @@ for 每个 activity（从左到右）:
 <tr><td class="e">E6</td><td>定时 / 监听触发<span class="tag t-later">后续</span></td><td>cron 触发器；目录监听（FileMover 进料口形态）</td><td>自动清洗</td><td>全部定时自动化</td></tr></table>
 
 <h2 id="s5"><span class="n">§5</span>本轮代码复核发现（与初版设计假设不符）</h2>
-<p>初版设计写作时未逐行读过引擎。下面四条是逐行复核后修正的事实，每条都影响排期。</p>
+<p>初版设计写作时未逐行读过引擎。第一轮（发现 1–4）修正与初版假设不符的事实；第二轮（发现 5–9）来自"通用化审计"——3 路并行代码扫描 + 一轮独立复核，复核对全部结论逐条开文件验证。每条都影响排期。</p>
 
 <h3 id="f1">发现 1 · 引擎从未成功执行过一次运行<span class="tag t-have">已修复</span></h3>
 <div class="rule warn"><code class="i">WorkflowRunner</code> 注入了 <code class="i">IServiceProvider</code> 并把字段命名为 <code class="i">_rootServices</code>，但它注册为 scoped，拿到的其实是<b>解析它的那个 scope</b>。三个调用方（启动时的 rehydrator、事件总线、定义服务）都把 runner 捕获进<b>随后</b>才执行的 BTask 闭包，那时 scope 早已释放——<code class="i">ExecuteAsync</code> 第一行创建 scope 取 DbContext 就抛 <code class="i">ObjectDisposedException</code>，运行还没开始就失败。<br>
@@ -179,6 +180,23 @@ for 每个 activity（从左到右）:
 <div class="rule"><code class="i">WorkflowRunStepStat</code> 已经是 <code class="i">InputCount</code> / <code class="i">OutputCount</code> 两个独立计数，天然能表达 1→N，<b>统计模型不需要改</b>（初版把它列为开放问题）。实际要改的只有 <code class="i">WorkflowItemOutcome</code>（一个 readonly record struct）和 runner 的 per-item 循环。<br>
 <b>对计划的影响</b>：E2 可以排得比原计划更靠前或更靠后都不痛，它不再是重活。</div>
 
+<h3>第二轮：通用化审计（引擎作为应用级自动化层的前提）</h3>
+
+<h3 id="f5">发现 5 · 活动配置解析失败被静默吞成默认值</h3>
+<div class="rule warn"><code class="i">WorkflowExecutionContext.GetConfig&lt;T&gt;</code>（:40-45）对坏 JSON 做 <code class="i">catch (JsonException) { return default; }</code>——配置损坏/过期的节点按<b>默认配置</b>执行，任何地方都不报错。既有过滤器在默认配置下刻意"全量放行"（怕误删），于是：<b>坏的过滤器配置 → 无声放行全部条目 → 下游若是写盘动作，就在未过滤的集合上执行</b>。同族问题：payload 属性改名后，存量 Pending run 反序列化时该字段静默变 null（System.Text.Json 忽略未知成员）。<br><b>对"任意动作"的含义</b>：破坏性动作开闸前，配置解析失败必须从"默默用默认值"改成"运行失败并说明原因"。</div>
+
+<h3 id="f6">发现 6 · 整个 run 共享一个 DI scope 和一个 DbContext</h3>
+<div class="rule warn"><code class="i">WorkflowRunner.ExecuteAsync</code> 为整个 run 建一个 scope（:51-52），每个 item 的 <code class="i">ctx.Services</code> 都是它——活动解析到的 scoped 服务（DbContext 在内）与 runner 共享实例。后果：活动里任何 <code class="i">SaveChangesAsync</code> 都会<b>提前刷出</b> runner 正在跟踪的 run/definition 行；长运行的 change tracker 随 items × steps 无界增长；活动把 context 弄脏会毒化 runner 自己 <code class="i">finally</code> 里的收尾保存（run 卡 Running → 下次启动变 Interrupted）。<br><b>对"任意动作"的含义</b>：写数据类动作要么在自己的子 scope 里干活，要么 runner 改为 per-item scope——二选一，不能放任。</div>
+
+<h3 id="f7">发现 7 · 运行时 item 是未校验的 object；AI 节点把 LLM 文本直接变成带类型的 item</h3>
+<div class="rule warn">类型标签只在<b>保存期</b>校验；运行时 runner 从不核对 item 的 CLR 类型与链上声明是否一致，具体活动各自防御——且防御方式是"类型不符<b>默默放行</b>（KeepItem）"而非丢弃。三个不同标签共享同一个 ClrType（SubscriptionAny/PixivIllust/ExHentaiGallery → SubscriptionItem），AI 节点按 ClrType 反查描述符时"多标签共 CLR 型时是模糊的"，其输出路径是把 LLM 原文 <code class="i">JsonSerializer.Deserialize</code> 成目标 ClrType——<b>幻觉出来的字段值就成了全类型化的 item</b>。今天它变成一个真实下载任务；通用层里它会变成文件删除或数据更新的目标，LLM 与副作用之间没有任何校验闸门。（AiTransformActivity.cs:91-104）</div>
+
+<h3 id="f8">发现 8 · 事件内联发布、无事件日志、不匹配即永久丢弃</h3>
+<div class="rule warn">生产者在自己的调用路径上 <code class="i">await PublishAsync</code>（今天仅 2 个埋点：DownloadTaskService.cs:231、SubscriptionService.cs:206）——每个事件都在生产者路径上做一次定义查询 + 可能的写行，bus/DB 异常会打回生产者。<code class="i">matched.Count == 0 → return</code>：没人订阅的事件<b>不落任何痕迹</b>，事后创建/启用的定义永远看不到它；定义的过滤器抛异常只 LogWarning 跳过，该定义会<b>无限期静默错过</b>事件且 LastError 不被设置。<br><b>对"任意事件"的含义</b>：埋点铺开之前要决定——高频事件（属性变更、文件扫描）是否需要节流/离线队列，以及"我的自动化没触发"要不要留取证轨迹。</div>
+
+<h3 id="f9">发现 9 · 定义变更没有在途保护</h3>
+<div class="rule warn"><code class="i">DeleteAsync</code> 是三个裸 <code class="i">ExecuteDeleteAsync</code>（活动、runs、定义），不检查是否有在途 run——删除后在途 run 继续执行副作用，收尾保存落在已删除的行上。runner 在<b>执行时现读</b>活动链（:95-98）——先排队后编辑，等于旧 payload 跑新链。<code class="i">ExecuteAsync</code> 不复查 <code class="i">Enabled</code>——禁用定义不撤销已排队的 run（只有重启后的 rehydrator 会过滤）。<br><b>对用户的含义</b>：发现一条破坏性链在乱跑 → 点禁用（排队中的照跑）或删除（在途的继续写盘），用户合理地以为已经停住了，实际没有。</div>
+
 <h2 id="s6"><span class="n">§6</span>节点扩展清单（按域）</h2>
 <table><tr><th style="width:16%">域</th><th>节点</th><th style="width:20%">状态</th></tr>
 <tr><td>fs <span class="tag t-new">新</span></td><td class="mono">触发器 fs.manualScan（constants+枚举）｜ filter.fs.byRegex / byExtension / byType ｜ expand.fs.children ｜ transform.fs.fileNameOp ｜ action.fs.saveName</td><td><a href="file-cleaning-workflow.html">清洗设计</a>已定稿</td></tr>
@@ -186,6 +204,53 @@ for 每个 activity（从左到右）:
 <tr><td>通用（补充候选）</td><td class="mono">filter.common.byVariable（按变量过滤，E4 配套）｜ action.common.setVariable（常量/映射写变量）</td><td>实现 E4 时顺手评估</td></tr>
 <tr><td>既有域延伸（候选）</td><td class="mono">action.downloader.enqueue 泛化（当前仅 exhentai）｜ action.resource.registerPath（fs 条目登记入库/触发同步，打通清洗→入库）</td><td>按需求排期</td></tr>
 <tr><td>organizer <span class="tag t-later">挂起</span></td><td>触发器"整理完成"、活动"运行某 Pipeline/规则集"</td><td>随 <a href="local-file-organization/README.md">Organizer</a> 复活</td></tr></table>
+
+<h3 id="s6-triggers">候选触发器全景（通用化审计产出，每条均经代码核实）</h3>
+<p>这是"任意内部事件（逐个开发）"的菜单：应用里<b>已经存在</b>的事件面，接入成本 = 一行埋点 + 一个触发器类。按需取用，不是排期承诺。</p>
+<div class="rule"><b>四个杠杆点</b>（一座桥覆盖一族事件，优先做）：① <code class="i">ResourceDataChangeEventHub</code>——资源 changed/removed/cover_changed 已是进程内事件枢纽，五处服务在发布、SignalR 已桥接，接工作流总线是第三个订阅者而已；② <code class="i">BTaskManager.OnTaskChange</code>——所有 BTask 终态（SearchIndex、同步、比对、移动、解压…）汇聚于此，一座桥 + 按任务 Id/终态过滤 = 一族"任务完成"触发器；③ <code class="i">DownloaderManager</code> 事件组（status/name/checkpoint/progress）——failed/stopped 触发器是对既有 completed 的复制粘贴；④ <code class="i">FileMover</code> 的 FileSystemWatcher（FileMover.cs:240）——<b>全应用唯一的目录监听面</b>，E6"监听触发"的现成落点。</div>
+<table><tr><th style="width:13%">域</th><th style="width:26%">候选</th><th>天然 payload / 备注</th><th style="width:30%">证据</th></tr>
+<tr><td rowspan="7">resource</td><td class="k">resource.changed</td><td>ResourceIds（已有进程内事件，5 处发布点）</td><td class="mono">Events/ResourceDataChangeEventHub.cs:8</td></tr>
+<tr><td class="k">resource.created</td><td>save 内部有新旧分流点，完整 Resource 域对象在作用域内</td><td class="mono">ResourceService.cs:1031</td></tr>
+<tr><td class="k">resource.removed</td><td>ids；删除前路径与是否删文件在作用域内</td><td class="mono">ResourceService.cs:188</td></tr>
+<tr><td class="k">resource.cover_changed</td><td>ids + 封面路径（两处发布点）</td><td class="mono">ResourceDataChangeEventHub.cs:10</td></tr>
+<tr><td class="k">resource.played</td><td>ResourceId + Item + PlayedAt（只有开始，无播放结束面）</td><td class="mono">ResourceService.cs:2200</td></tr>
+<tr><td class="k">resource.moved / move_failed</td><td>ResourceMoveRecord：ResourceId、SourcePath、DestPath、Attempts</td><td class="mono">ResourceMoveService.cs:228</td></tr>
+<tr><td class="k">resource.sync.completed</td><td>ResourceSyncResult（创建/更新/删除计数）+ 来源</td><td class="mono">PathSyncManager.cs:311</td></tr>
+<tr><td rowspan="2">pathmark</td><td class="k">pathmark.sync.completed</td><td>PathMarkSyncResult（整批）</td><td class="mono">PathSyncManager.cs:351</td></tr>
+<tr><td class="k">pathmark.status_changed</td><td>逐 mark 的状态迁移（比整批更细）</td><td class="mono">PathMarkService.cs:37</td></tr>
+<tr><td>enhancer</td><td class="k">enhancement.applied</td><td>enhancerId + 完整 Resource + enhancements 列表 + 错误</td><td class="mono">EnhancerService.cs:603</td></tr>
+<tr><td rowspan="2">downloader</td><td class="k">downloader.failed / stopped</td><td>与既有 completed 同一字段集，接入是复制粘贴</td><td class="mono">DownloadTaskService.cs:145</td></tr>
+<tr><td class="k">downloader.name_acquired / checkpoint</td><td>taskId + 字符串值（低频；progress 高频需节流）</td><td class="mono">DownloaderManager.cs:95</td></tr>
+<tr><td rowspan="3">fs / 任务</td><td class="k">filemover.files_moved</td><td>逐条 {source, dest} 或整轮汇总</td><td class="mono">FileMover.cs:143</td></tr>
+<tr><td class="k">filemover.watched_file_appeared</td><td>FileSystemWatcher Created/Changed/Renamed——E6 落点</td><td class="mono">FileMover.cs:240</td></tr>
+<tr><td class="k">btask.state_changed</td><td>BTaskViewModel（Id/Status/Data）——一座桥覆盖全部任务终态；解压完成也走这里</td><td class="mono">BTaskManager.cs:141</td></tr>
+<tr><td rowspan="6">其他</td><td class="k">comparison.finished</td><td>planId + 重复组（资源 id 簇）+ 评分对</td><td class="mono">ComparisonService.cs:279</td></tr>
+<tr><td class="k">postparser.task_parsed</td><td>PostParserTask（含解析结果/错误）</td><td class="mono">PostParserTaskService.cs:233</td></tr>
+<tr><td class="k">bulkmodification.applied</td><td>bm Id + 命中资源 + 逐资源 diff</td><td class="mono">BulkModificationService.cs:345</td></tr>
+<tr><td class="k">thirdparty.request_completed</td><td>每次三方请求完成（已是 C# event）</td><td class="mono">ThirdPartyHttpRequestLogger.cs:16</td></tr>
+<tr><td class="k">options.changed</td><td>任意配置类型变更（AspNetCoreOptionsManager.OnChange）</td><td class="mono">Bootstrap/…/AspNetCoreOptionsManager.cs:62</td></tr>
+<tr><td class="k">notification.created / dependency.state_changed</td><td>通用应用事件面 / ffmpeg 等依赖状态迁移</td><td class="mono">NotificationService.cs:27；DependentComponentService.cs:241</td></tr></table>
+
+<h3 id="s6-actions">候选动作全景（同上）</h3>
+<p>"任意动作（逐个开发）"的菜单：<b>服务方法已存在</b>，动作类只是"item 供目标 + config 供参数"的适配层。三类特例单独标注：<span class="tag">全局 pass</span>= 无 per-item 输入，只能做"触发一轮"；<span class="tag">需下沉</span>= 逻辑在 controller 里，先提炼成服务；<span class="tag">变换形</span>= 本质是 Transform 不是 Action。</p>
+<table><tr><th style="width:13%">域</th><th style="width:27%">候选</th><th>item / config 如何供给输入</th><th style="width:28%">证据</th></tr>
+<tr><td rowspan="6">fs</td><td class="k">action.fs.decompress</td><td>item 供档案路径；config 供 overwrite/密码（7z 缺失时抛依赖异常）</td><td class="mono">CompressedFileService.cs:84</td></tr>
+<tr><td class="k">action.fs.rename / move / delete</td><td>item 供路径；config 供名字模板 / DestDir <span class="tag">delete 需下沉</span></td><td class="mono">FileController.cs:817/936/781</td></tr>
+<tr><td class="k">action.fs.batchRename</td><td>纯规则引擎（FileNameModifier 操作列表即 config）——清洗 fileNameOp 的地基</td><td class="mono">IFileNameModifier.cs:17</td></tr>
+<tr><td class="k">action.archive.test</td><td>探测档案完整性/密码，返回 TestResult——<span class="tag">filter 形</span></td><td class="mono">CompressedFileService.cs:367</td></tr>
+<tr><td class="k">action.fs.runFileMoverPass</td><td><span class="tag">全局 pass</span>：目标来自 FileSystemOptions，忽略 item</td><td class="mono">FileMover.cs:177</td></tr>
+<tr><td class="k">action.resource.moveTracked</td><td><b>最强移动原语</b>：持久化、可重试、可恢复的批量移动（清洗 saveName 的近亲）</td><td class="mono">IResourceMoveService.cs:19</td></tr>
+<tr><td rowspan="5">resource</td><td class="k">action.resource.setPropertyValue</td><td>item 供 resourceId；config 供 PropertyId + 值——<b>"写数据"的主通道</b></td><td class="mono">ResourceService.cs:1785</td></tr>
+<tr><td class="k">action.resource.setMediaLibraries / changePath</td><td>item 供 id；config 供库 ids / 路径模板（changePath 需逐资源算新路径）</td><td class="mono">ResourceService.cs:1727/2288</td></tr>
+<tr><td class="k">action.resource.delete</td><td>item 供 ids；config 供 deleteFiles 布尔——干净契合但破坏性最高</td><td class="mono">ResourceService.cs:150</td></tr>
+<tr><td class="k">action.resource.markPlayed / pin / saveCover / refreshCache</td><td>轻量 item+config 契合（saveCover 需 item 携带图像来源）</td><td class="mono">ResourceService.cs:2237/2329/1313/1526</td></tr>
+<tr><td class="k">action.resource.syncFromSource</td><td><span class="tag">全局 pass</span>（按 ResourceSource）</td><td class="mono">ResourceSyncService.cs:69</td></tr>
+<tr><td>enhancer</td><td class="k">action.enhancer.enhance / reapply</td><td>item 供 resourceId；config 圈定 enhancerIds（reapply 不重抓）</td><td class="mono">EnhancerService.cs:740/754</td></tr>
+<tr><td>pathmark</td><td class="k">action.pathmark.add / enqueueSync</td><td>声明式"路径 ↔ 资源/属性/库"绑定——<b>清洗 → 入库的正道</b>；enqueueSync 是线程安全的排队入口</td><td class="mono">IPathMarkService.cs:44；IPathMarkSyncService.cs:14</td></tr>
+<tr><td>downloader</td><td class="k">action.download.enqueue（泛化）</td><td>DownloadTaskService.AddRange 已是通用汇——需 ThirdPartyId/Type/Key 从 item+config 拼</td><td class="mono">DownloadTaskService.cs:481</td></tr>
+<tr><td>text / ai</td><td class="k">text.clean / ai.translate</td><td><span class="tag">变换形</span>：应做成 Transform（改工作文本/字段），不是 Action</td><td class="mono">TextOps.cs:21；AiTranslationService.cs:14</td></tr>
+<tr><td>编排</td><td class="k">subscription.check / comparison.run / bulkModification.apply / healthScore.run / workflow.run</td><td>触发既有的成批流程；bulkModification.apply 自带 Filter+Preview 前置；<code class="i">workflow.run</code>（= RunManuallyAsync）是<b>流程组合原语</b>——链尾拉起另一条定义</td><td class="mono">SubscriptionService.cs:123；ComparisonService.cs:186；BulkModificationService.cs:220；HealthScoreService.cs:333；WorkflowDefinitionService.cs:134</td></tr>
+<tr><td>playlist</td><td class="k">action.playlist.setItems</td><td>Items 是全量替换语义，"追加"动作需读改写</td><td class="mono">PlayListService.cs:21</td></tr></table>
 
 <h2 id="s7"><span class="n">§7</span>串联视角：扩展如何互相成立</h2>
 <ul>
@@ -229,6 +294,10 @@ for 每个 activity（从左到右）:
 <div class="rule ask">
 <b>问题 4 · 前后端两份类型推导是否先收敛</b><span class="tag t-open">未定</span><br>
 现状见 <a href="#f2">发现 2</a>。能力契约（E3）会让手写镜像更复杂；可以在做 E3 之前把契约元数据统一由后端下发、前端只做渲染。
+</div>
+<div class="rule ask">
+<b>问题 5 · 通用化加固（发现 5–9）何时做</b><span class="tag t-open">未定</span><br>
+两种排法：随清洗批次顺带（如 E5 批次顺带修 <a href="#f9">发现 9</a> 的禁用/删除语义），或单列一个"引擎加固"批次。我的判断：<a href="#f5">发现 5</a>（配置静默默认）、<a href="#f7">发现 7</a>（item 无运行时校验 + LLM 直通副作用）、<a href="#f9">发现 9</a>（变更无在途保护）是"任意破坏性动作"开闸前的<b>硬前提</b>；<a href="#f6">发现 6</a>（共享 scope）与 <a href="#f8">发现 8</a>（事件日志）可随规模后置。
 </div>
 
 <h2 id="s10"><span class="n">§10</span>历史开放问题（已消解）</h2>
