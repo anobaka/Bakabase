@@ -2,6 +2,7 @@ import type { WorkflowTriggerUI } from "./types";
 
 import { SubscriptionUpdatedTriggerUI } from "./SubscriptionUpdated";
 import { DownloaderCompletedTriggerUI } from "./DownloaderCompleted";
+import { FsManualScanTriggerUI } from "./FsManualScan";
 
 /**
  * Registry of trigger UIs keyed by their backend `kind`.
@@ -11,6 +12,7 @@ import { DownloaderCompletedTriggerUI } from "./DownloaderCompleted";
 export const workflowTriggerRegistry: Record<string, WorkflowTriggerUI<any>> = {
   [SubscriptionUpdatedTriggerUI.kind]: SubscriptionUpdatedTriggerUI,
   [DownloaderCompletedTriggerUI.kind]: DownloaderCompletedTriggerUI,
+  [FsManualScanTriggerUI.kind]: FsManualScanTriggerUI,
 };
 
 export function getWorkflowTriggerUI(kind: string): WorkflowTriggerUI<any> | undefined {

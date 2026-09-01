@@ -223,6 +223,7 @@ const WorkflowPage: React.FC = () => {
       {runsDrawerFor && (
         <WorkflowRunsDrawer
           isOpen
+          triggerKind={runsDrawerFor.triggerKind}
           workflowDefinitionId={runsDrawerFor.id}
           workflowName={runsDrawerFor.name}
           onClose={() => setRunsDrawerFor(null)}

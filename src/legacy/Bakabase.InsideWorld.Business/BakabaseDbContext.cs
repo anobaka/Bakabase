@@ -125,6 +125,7 @@ namespace Bakabase.InsideWorld.Business
         // Text module tables
         public DbSet<Modules.Text.Abstractions.Models.Db.TextType> TextTypes { get; set; }
         public DbSet<Modules.Text.Abstractions.Models.Db.TextEntry> TextEntries { get; set; }
+        public DbSet<FileRenameEntry> FileRenameEntries { get; set; }
 
         public BakabaseDbContext()
         {
@@ -171,6 +172,13 @@ namespace Bakabase.InsideWorld.Business
             modelBuilder.Entity<Modules.Text.Abstractions.Models.Db.TextEntry>(t =>
             {
                 t.HasIndex(a => a.TypeId);
+            });
+
+            modelBuilder.Entity<FileRenameEntry>(t =>
+            {
+                t.HasIndex(a => a.RunId);
+                // Apply/undo iterate a run's rows by status; the composite spares a scan per click.
+                t.HasIndex(a => new {a.RunId, a.Status});
             });
 
             modelBuilder.Entity<PasswordDbModel>(t =>

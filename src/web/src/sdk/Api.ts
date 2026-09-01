@@ -175,6 +175,12 @@ export type BakabaseAbstractionsModelsDomainConstantsDataStatus = 1 | 2 | 3;
 export type BakabaseAbstractionsModelsDomainConstantsEnhancementRecordStatus = 1 | 2;
 
 /**
+ * [1: Pending, 2: Conflict, 3: Excluded, 4: Applied, 5: Failed, 6: Undone]
+ * @format int32
+ */
+export type BakabaseAbstractionsModelsDomainConstantsFileRenameStatus = 1 | 2 | 3 | 4 | 5 | 6;
+
+/**
  * [1: Simple, 2: Advanced]
  * @format int32
  */
@@ -4922,6 +4928,25 @@ export interface BakabaseServiceModelsViewFilePlayabilityViewModel {
   error?: string;
 }
 
+export interface BakabaseServiceModelsViewFileRenameEntryViewModel {
+  /** @format int32 */
+  id: number;
+  /** @format int32 */
+  runId: number;
+  /** @format int32 */
+  seq: number;
+  path: string;
+  from: string;
+  to: string;
+  /** [1: Pending, 2: Conflict, 3: Excluded, 4: Applied, 5: Failed, 6: Undone] */
+  status: BakabaseAbstractionsModelsDomainConstantsFileRenameStatus;
+  error?: string;
+  /** @format date-time */
+  createdAt: string;
+  /** @format date-time */
+  appliedAt?: string;
+}
+
 export interface BakabaseServiceModelsViewFileRenameResult {
   oldPath: string;
   newPath: string;
@@ -5594,6 +5619,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModels
   code: number;
   message?: string;
   data?: BakabaseServiceModelsViewCustomPropertyViewModel[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewFileRenameEntryViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewFileRenameEntryViewModel[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewFileRenameResult {
@@ -22720,6 +22752,24 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       return baseUrl + path;
     },
+
+    /**
+     * No description
+     *
+     * @tags Workflow
+     * @name GetWorkflowRunFileRenameEntries
+     * @request GET:/workflow/run/{runId}/file-rename-entries
+     */
+    getWorkflowRunFileRenameEntries: (runId: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewFileRenameEntryViewModel,
+        any
+      >({
+        path: `/workflow/run/${runId}/file-rename-entries`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
 
     /**
      * No description

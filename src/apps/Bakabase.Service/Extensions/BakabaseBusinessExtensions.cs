@@ -170,6 +170,12 @@ namespace Bakabase.Service.Extensions
             services.AddSingleton<IWorkflowActivity, ExHentaiQueryToGalleryActivity>();
             services.AddSingleton<IWorkflowActivity, ExHentaiEnqueueDownloadActivity>();
             services.AddSingleton<IWorkflowActivity, CreateNotificationActivity>();
+            // File-cleaning vertical (fs domain).
+            services.AddSingleton<IWorkflowTrigger, FsManualScanTrigger>();
+            services.AddSingleton<IWorkflowItemTypeDescriptor, Components.Workflow.Fs.FsEntryItemTypeDescriptor>();
+            services.AddSingleton<IWorkflowActivity, FsFileNameOpActivity>();
+            services.AddSingleton<IWorkflowActivity, FsSaveNameActivity>();
+            services.AddScoped<IFileRenameEntryService, FileRenameEntryService>();
 
             services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, ExtensionGroupDbModel, int>>();
             services.AddScoped<IExtensionGroupService, ExtensionGroupService>();

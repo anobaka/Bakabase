@@ -7,9 +7,11 @@ import { useTranslation } from "react-i18next";
 import { Drawer, DrawerBody, DrawerContent, DrawerFooter, DrawerHeader } from "@heroui/react";
 
 import { activityDisplayName } from "./displayNames";
+import RenamePlanPanel from "./RenamePlanPanel";
 
 import BApi from "@/sdk/BApi";
-import { Chip, Pagination, Spinner } from "@/components/bakaui";
+import { Button, Chip, Pagination, Spinner } from "@/components/bakaui";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { WorkflowRunStatus, WorkflowRunStatusLabel } from "@/sdk/constants";
 
 type RunVm =
@@ -18,6 +20,8 @@ type RunVm =
 interface Props {
   workflowDefinitionId: number;
   workflowName: string;
+  /** Lets fs-domain runs surface their rename plan; other domains have none to show. */
+  triggerKind?: string;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -53,10 +57,12 @@ function formatDuration(start: string, end?: string | null): string | null {
 const WorkflowRunsDrawer: React.FC<Props> = ({
   workflowDefinitionId,
   workflowName,
+  triggerKind,
   isOpen,
   onClose,
 }) => {
   const { t } = useTranslation();
+  const { createPortal } = useBakabaseContext();
   const [runs, setRuns] = useState<RunVm[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(1);
@@ -120,6 +126,16 @@ const WorkflowRunsDrawer: React.FC<Props> = ({
                       </span>
                       {duration && (
                         <span className="text-xs text-default-400">· {duration}</span>
+                      )}
+                      {triggerKind === "fs.manualScan" && (
+                        <Button
+                          className="ml-auto"
+                          size="sm"
+                          variant="light"
+                          onPress={() => createPortal(RenamePlanPanel, { runId: r.id, readOnly: true })}
+                        >
+                          {t<string>("workflow.renamePlan.open")}
+                        </Button>
                       )}
                     </div>
                     <div className="text-xs text-default-500 flex flex-wrap gap-x-3">

@@ -9,4 +9,5 @@ export const WorkflowItemTypes = {
   ExHentaiGallery: "item.exhentai.gallery",
   SearchQuery: "item.searchQuery",
   DownloaderCompleted: "item.downloader.completed",
+  FsEntry: "item.fs.entry",
 } as const;

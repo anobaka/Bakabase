@@ -6368,6 +6368,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/workflow/run/{runId}/file-rename-entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetWorkflowRunFileRenameEntries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/workflow/{id}/runs": {
         parameters: {
             query?: never;
@@ -6534,6 +6550,12 @@ export interface components {
          * @enum {integer}
          */
         "Bakabase.Abstractions.Models.Domain.Constants.EnhancementRecordStatus": 1 | 2;
+        /**
+         * Format: int32
+         * @description [1: Pending, 2: Conflict, 3: Excluded, 4: Applied, 5: Failed, 6: Undone]
+         * @enum {integer}
+         */
+        "Bakabase.Abstractions.Models.Domain.Constants.FileRenameStatus": 1 | 2 | 3 | 4 | 5 | 6;
         /**
          * Format: int32
          * @description [1: Simple, 2: Advanced]
@@ -10420,6 +10442,23 @@ export interface components {
             height?: number;
             error?: string;
         };
+        "Bakabase.Service.Models.View.FileRenameEntryViewModel": {
+            /** Format: int32 */
+            id: number;
+            /** Format: int32 */
+            runId: number;
+            /** Format: int32 */
+            seq: number;
+            path: string;
+            from: string;
+            to: string;
+            status: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.FileRenameStatus"];
+            error?: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            appliedAt?: string;
+        };
         "Bakabase.Service.Models.View.FileRenameResult": {
             oldPath: string;
             newPath: string;
@@ -10993,6 +11032,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Models.View.CustomPropertyViewModel"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.FileRenameEntryViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.FileRenameEntryViewModel"][];
         };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.FileRenameResult]": {
             /** Format: int32 */
@@ -25900,6 +25945,30 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowItemTypeDescriptorViewModel]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowItemTypeDescriptorViewModel]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowItemTypeDescriptorViewModel]"];
+                };
+            };
+        };
+    };
+    GetWorkflowRunFileRenameEntries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.FileRenameEntryViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.FileRenameEntryViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.FileRenameEntryViewModel]"];
                 };
             };
         };

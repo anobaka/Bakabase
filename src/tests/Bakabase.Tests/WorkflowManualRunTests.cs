@@ -135,8 +135,10 @@ public sealed class WorkflowManualRunTests
     }
 
     /// <summary>
-    /// The descriptor drives which panel the UI shows, so the two halves of the contract have to
-    /// stay in step: a trigger that asks for nothing must also not reject an empty payload.
+    /// The descriptor drives which panel the UI shows: event triggers ask the user for a payload,
+    /// definition-configured triggers don't. The latter may still REJECT a broken or missing
+    /// definition config — that's the "bad setup fails the request, not the run" contract, so no
+    /// blanket "must accept empty" assertion belongs here.
     /// </summary>
     [TestMethod]
     public void RequiresManualPayload_DefaultsToTrueAndIsOptedOutOf()
@@ -145,7 +147,5 @@ public sealed class WorkflowManualRunTests
 
         Assert.IsTrue(triggers.Get("downloader.completed")!.RequiresManualPayload);
         Assert.IsFalse(triggers.Get(ConfiguredScanTrigger.TriggerKind)!.RequiresManualPayload);
-        Assert.IsTrue(triggers.All.Where(t => !t.RequiresManualPayload)
-            .All(t => t.BuildManualPayload(null, null) != null));
     }
 }

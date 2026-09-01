@@ -20,7 +20,8 @@ public class WorkflowController(
     IWorkflowDefinitionService service,
     IWorkflowTriggerRegistry triggers,
     IWorkflowActivityRegistry activities,
-    IWorkflowItemTypeRegistry itemTypes) : Controller
+    IWorkflowItemTypeRegistry itemTypes,
+    Bakabase.Abstractions.Services.IFileRenameEntryService fileRenameEntries) : Controller
 {
     [HttpGet]
     [SwaggerOperation(OperationId = "SearchWorkflows")]
@@ -173,6 +174,20 @@ public class WorkflowController(
         if (p.PropertyType.IsValueType) return false;
         var ctx = new System.Reflection.NullabilityInfoContext();
         return ctx.Create(p).ReadState == System.Reflection.NullabilityState.Nullable;
+    }
+
+    /// <summary>
+    /// The rename plan a run's saveName step recorded. One endpoint for both faces of the
+    /// RenamePlanPanel — the interactive confirm surface and the read-only run-detail view.
+    /// </summary>
+    [HttpGet("run/{runId:int}/file-rename-entries")]
+    [SwaggerOperation(OperationId = "GetWorkflowRunFileRenameEntries")]
+    public async Task<ListResponse<Bakabase.Service.Models.View.FileRenameEntryViewModel>> GetRunFileRenameEntries(
+        int runId)
+    {
+        var rows = await fileRenameEntries.GetByRunId(runId);
+        return new ListResponse<Bakabase.Service.Models.View.FileRenameEntryViewModel>(
+            rows.Select(Bakabase.Service.Models.View.FileRenameEntryViewModel.FromDb));
     }
 
     [HttpGet("{id:int}/runs")]

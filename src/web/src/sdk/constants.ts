@@ -1549,6 +1549,33 @@ export const FileExtensionGroupLabel: Record<FileExtensionGroup, string> = {
   [FileExtensionGroup.Archive]: 'Archive'
 };
 
+export enum FileRenameStatus {
+  Pending = 1,
+  Conflict = 2,
+  Excluded = 3,
+  Applied = 4,
+  Failed = 5,
+  Undone = 6
+}
+
+export const fileRenameStatuses = [
+  { label: 'Pending', value: FileRenameStatus.Pending },
+  { label: 'Conflict', value: FileRenameStatus.Conflict },
+  { label: 'Excluded', value: FileRenameStatus.Excluded },
+  { label: 'Applied', value: FileRenameStatus.Applied },
+  { label: 'Failed', value: FileRenameStatus.Failed },
+  { label: 'Undone', value: FileRenameStatus.Undone }
+] as const;
+
+export const FileRenameStatusLabel: Record<FileRenameStatus, string> = {
+  [FileRenameStatus.Pending]: 'Pending',
+  [FileRenameStatus.Conflict]: 'Conflict',
+  [FileRenameStatus.Excluded]: 'Excluded',
+  [FileRenameStatus.Applied]: 'Applied',
+  [FileRenameStatus.Failed]: 'Failed',
+  [FileRenameStatus.Undone]: 'Undone'
+};
+
 export enum FilterDisplayMode {
   Simple = 1,
   Advanced = 2
@@ -1562,6 +1589,24 @@ export const filterDisplayModes = [
 export const FilterDisplayModeLabel: Record<FilterDisplayMode, string> = {
   [FilterDisplayMode.Simple]: 'Simple',
   [FilterDisplayMode.Advanced]: 'Advanced'
+};
+
+export enum FsScanTarget {
+  Files = 1,
+  Directories = 2,
+  Both = 3
+}
+
+export const fsScanTargets = [
+  { label: 'Files', value: FsScanTarget.Files },
+  { label: 'Directories', value: FsScanTarget.Directories },
+  { label: 'Both', value: FsScanTarget.Both }
+] as const;
+
+export const FsScanTargetLabel: Record<FsScanTarget, string> = {
+  [FsScanTarget.Files]: 'Files',
+  [FsScanTarget.Directories]: 'Directories',
+  [FsScanTarget.Both]: 'Both'
 };
 
 export enum InitializationContentType {
