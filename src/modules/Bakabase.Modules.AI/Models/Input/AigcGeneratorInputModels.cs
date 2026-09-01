@@ -7,7 +7,7 @@ public record AigcGeneratorPropertyPresetInputModel
 {
     public required PropertyPool Pool { get; init; }
     public required int PropertyId { get; init; }
-    /// <summary>Serialized BizValue (StandardValueSystem.Serialize).</summary>
+    /// <summary>Serialized BizValue (SerializeAsStandardValue).</summary>
     public string? SerializedBizValue { get; init; }
 }
 

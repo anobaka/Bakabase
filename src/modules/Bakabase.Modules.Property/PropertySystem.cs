@@ -7,6 +7,7 @@ using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.Property.Components.Accessors;
 using Bakabase.Modules.Property.Components.BuiltinProperty;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
+using Bakabase.Modules.StandardValue.Extensions;
 using Bakabase.Modules.StandardValue.Abstractions.Models.Domain.Constants;
 using SvSystem = Bakabase.Modules.StandardValue.StandardValueSystem;
 
@@ -140,7 +141,7 @@ public static class PropertySystem
             // Deserialize all non-null values
             var values = serializedDbValues
                 .Where(s => !string.IsNullOrEmpty(s))
-                .Select(s => SvSystem.Deserialize(s, dbValueType))
+                .Select(s => s!.DeserializeAsStandardValue(dbValueType))
                 .ToList();
 
             if (values.Count == 0) return null;
@@ -149,7 +150,7 @@ public static class PropertySystem
             var combined = SvSystem.Combine(values, dbValueType);
 
             // Serialize back
-            return SvSystem.Serialize(combined, dbValueType);
+            return combined?.SerializeAsStandardValue(dbValueType);
         }
     }
 
@@ -289,7 +290,7 @@ public static class PropertySystem
         public static string? SerializeFilterValue(object? value, PropertyType propertyType, SearchOperation operation)
         {
             var (dbValueType, _) = GetFilterValueTypes(propertyType, operation);
-            return SvSystem.Serialize(value, dbValueType);
+            return value?.SerializeAsStandardValue(dbValueType);
         }
 
         /// <summary>
@@ -302,7 +303,7 @@ public static class PropertySystem
         public static object? DeserializeFilterValue(string? serialized, PropertyType propertyType, SearchOperation operation)
         {
             var (dbValueType, _) = GetFilterValueTypes(propertyType, operation);
-            return SvSystem.Deserialize(serialized, dbValueType);
+            return serialized?.DeserializeAsStandardValue(dbValueType);
         }
 
         /// <summary>
@@ -353,11 +354,11 @@ public static class PropertySystem
             }
 
             // Deserialize from source type, convert, and re-serialize to target type
-            var value = SvSystem.Deserialize(serializedValue, fromDbType);
+            var value = serializedValue.DeserializeAsStandardValue(fromDbType);
             if (value == null) return null;
 
             var converted = SvSystem.Convert(value, fromDbType, toDbType);
-            return SvSystem.Serialize(converted, toDbType);
+            return converted?.SerializeAsStandardValue(toDbType);
         }
 
         /// <summary>

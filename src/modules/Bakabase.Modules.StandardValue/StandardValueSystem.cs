@@ -9,33 +9,14 @@ using Bakabase.Modules.StandardValue.Models.Domain;
 namespace Bakabase.Modules.StandardValue;
 
 /// <summary>
-/// Unified entry point for the StandardValue system.
-/// Provides type-safe access to value creation, serialization, conversion, and validation.
+/// Unified entry point for the StandardValue system: conversion, validation, handlers.
+/// Serialization has exactly one API — the SerializeAsStandardValue /
+/// DeserializeAsStandardValue extension methods in
+/// Bakabase.Modules.StandardValue.Extensions (tolerant by default; pass
+/// throwOnError: true to surface malformed data).
 /// </summary>
 public static class StandardValueSystem
 {
-    #region Serialization
-
-    /// <summary>
-    /// Serialize a value to string representation.
-    /// </summary>
-    public static string? Serialize(object? value, StandardValueType type) =>
-        value?.SerializeAsStandardValue(type);
-
-    /// <summary>
-    /// Deserialize a string to value.
-    /// </summary>
-    public static object? Deserialize(string? serialized, StandardValueType type) =>
-        serialized?.DeserializeAsStandardValue(type);
-
-    /// <summary>
-    /// Deserialize a string to typed value.
-    /// </summary>
-    public static T? Deserialize<T>(string? serialized, StandardValueType type) =>
-        serialized == null ? default : serialized.DeserializeAsStandardValue<T>(type);
-
-    #endregion
-
     #region Conversion
 
     /// <summary>

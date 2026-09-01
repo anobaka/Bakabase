@@ -5,7 +5,7 @@ namespace Bakabase.Modules.AI.Models.Db;
 
 /// <summary>
 /// A fixed property value applied to every Resource produced by a generator.
-/// Stored as a serialized BizValue using StandardValueSystem.Serialize.
+/// Stored as a serialized BizValue using SerializeAsStandardValue.
 /// </summary>
 public record AigcGeneratorPropertyPresetDbModel
 {
@@ -17,8 +17,8 @@ public record AigcGeneratorPropertyPresetDbModel
     public int PropertyId { get; set; }
 
     /// <summary>
-    /// Serialized BizValue produced by StandardValueSystem.Serialize.
-    /// Reverse via StandardValueSystem.Deserialize using the property's BizValueType.
+    /// Serialized BizValue produced by SerializeAsStandardValue.
+    /// Reverse via DeserializeAsStandardValue using the property's BizValueType.
     /// </summary>
     public string? SerializedBizValue { get; set; }
 }
