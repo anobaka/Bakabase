@@ -261,13 +261,13 @@ for 每个 activity（从左到右）:
 </ul>
 
 <h2 id="s8"><span class="n">§8</span>实施顺序：两个待选方案</h2>
-<p>前置的 <a href="specialtext-extension.html">SpecialText 扩展</a><span class="tag t-have">已完成</span>，<b>手动触发（E1）</b><span class="tag t-have">已完成</span>。之后的顺序有两个方案，<b>尚未拍板</b>。</p>
+<p>前置的 <a href="specialtext-extension.html">SpecialText 扩展</a><span class="tag t-have">已完成</span>，<b>手动触发（E1）</b><span class="tag t-have">已完成</span>。<b>已拍板（所有者 2026-09-01）：采用方案 B（薄纵切）</b>；方案 A 保留作记录。</p>
 
-<h3>方案 A · 按引擎能力横切（初版顺序）</h3>
+<h3>方案 A · 按引擎能力横切（初版顺序，未采用）</h3>
 <div class="rule">能力契约 + 变量（E3+E4，text 节点按<a href="file-cleaning-workflow.html">清洗设计</a>规范生而通用，与变量机制同批落地）→ 链中展开（E2）→ 两阶段运行（E5）。定时/监听（E6）独立排期。</div>
 <p class="note">优点：每批是一个完整的通用能力，概念干净。缺点：<b>落盘与撤销（E5）排在最后，所以在全部做完之前用户一次也用不上这个功能</b>，中间几批也无法用真实场景验收。</p>
 
-<h3>方案 B · 薄纵切（复核后建议）</h3>
+<h3>方案 B · 薄纵切（复核后建议，<b>已采用</b>）</h3>
 <p>先打通最窄的一条端到端链，再逐步加宽。判据是每批结束时<b>用户能做什么</b>：</p>
 <table><tr><th style="width:6%">批次</th><th style="width:14%">主题</th><th>内容</th><th style="width:28%">做完之后用户能做什么</th></tr>
 <tr><td class="e">0</td><td><b>地基</b><span class="tag t-have">已完成</span></td><td>runner scope 修复（<a href="#f1">发现 1</a>）+ 手动触发（E1）；建议补一步：把两条既有业务线各跑一次真实场景</td><td>能手动跑一条工作流并看到它成功</td></tr>
@@ -278,26 +278,26 @@ for 每个 activity（从左到右）:
 <tr><td class="e">5</td><td><b>自动化</b>（E6）</td><td>cron / 目录监听触发</td><td>下载完成 → 自动清洗</td></tr></table>
 <div class="rule">核心理由：<b>没有 Apply 的清洗流程是玩具</b>，所以两阶段运行必须提前到第 2 批；能力契约与变量是"让它更强"，不是"让它可用"，可以后置。代价：<code class="i">fileNameOp</code> 先落在 fs 域、text 节点族晚一批到——而这两者本来就是设计里刻意分开的两条线（见<a href="file-cleaning-workflow.html">清洗设计 §3.0</a>），不构成返工。</div>
 
-<h2 id="s9"><span class="n">§9</span>待拍板</h2>
-<div class="rule ask">
-<b>问题 1 · 顺序</b><span class="tag t-open">未定</span><br>
-方案 A（按引擎能力横切）还是方案 B（薄纵切）。
+<h2 id="s9"><span class="n">§9</span>已拍板决定（所有者 2026-09-01）</h2>
+<div class="rule">
+<b>决定 1 · 顺序：方案 B（薄纵切）</b><span class="tag t-have">已决</span><br>
+按 <a href="#s8">§8 方案 B</a> 的批次推进。所有者判断最终会全部做完，但仍按纵切排序——每批以真实场景验收，中途调整方向零沉没成本。
 </div>
-<div class="rule ask">
-<b>问题 2 · 预览面板落点</b><span class="tag t-open">未定</span><br>
-批次 1 的改名预览塞进 run 详情，还是做独立的 diff 面板（照 BulkModification 那套交互）。后者体验好，代价是多做一个面板。
+<div class="rule">
+<b>决定 2 · 预览面板：两种都有，同一组件双形态</b><span class="tag t-have">已决</span><br>
+做一个 <code class="i">RenamePlanPanel</code> 组件（diff 着色、冲突高亮、统计条），带 <code class="i">readOnly</code> 形态：交互面板（预览 → 勾选排除 → 应用）与 run 详情里的只读记录渲染<b>同一组件、同一数据端点</b>，不存在第二套实现，漂移无从发生。所有者的前提条件即"能复用组件不产生漂移"——以此为约束，若将来两形态被迫分叉，回退为仅独立面板。
 </div>
-<div class="rule ask">
-<b>问题 3 · 计划怎么存</b><span class="tag t-open">未定</span><br>
-独立表（利于逐条勾选排除 + 撤销回放）还是塞进 <code class="i">WorkflowRun</code> 的 JSON 字段（省一次建表，但勾选排除与撤销都要在 JSON 里翻找）。倾向独立表。
+<div class="rule">
+<b>决定 3 · 计划存独立表，且计划行与改名记录合一</b><span class="tag t-have">已决</span><br>
+一张表：RunId / Seq / Path / From / To / Status（Pending → Excluded / Conflict / Applied / Failed / Undone）/ 时间戳。应用即状态迁移（Pending→Applied），撤销逆序回放 Applied 行——计划、执行进度、撤销记录是同一行的生命周期，崩溃后一条查询即知精确进度。批次 1 先建表只用 Pending/Conflict，批次 2 启用其余状态。
 </div>
-<div class="rule ask">
-<b>问题 4 · 前后端两份类型推导是否先收敛</b><span class="tag t-open">未定</span><br>
-现状见 <a href="#f2">发现 2</a>。能力契约（E3）会让手写镜像更复杂；可以在做 E3 之前把契约元数据统一由后端下发、前端只做渲染。
+<div class="rule">
+<b>决定 4 · 类型推导收敛：数据收敛（B1），E3 动工之前做</b><span class="tag t-have">已决</span><br>
+算法保留前后端两份（沿链推导很小很稳定），<b>事实只有一份</b>：后端在描述符里下发契约元数据（item 类型的 <code class="i">implementsInterfaces</code>、活动的 <code class="i">acceptedItemInterface</code> 等），前端判断退化为通用集合运算——契约演进只改后端元数据。E1 的 <code class="i">payloadFields</code> 已是同一模式的先例。
 </div>
-<div class="rule ask">
-<b>问题 5 · 通用化加固（发现 5–9）何时做</b><span class="tag t-open">未定</span><br>
-两种排法：随清洗批次顺带（如 E5 批次顺带修 <a href="#f9">发现 9</a> 的禁用/删除语义），或单列一个"引擎加固"批次。我的判断：<a href="#f5">发现 5</a>（配置静默默认）、<a href="#f7">发现 7</a>（item 无运行时校验 + LLM 直通副作用）、<a href="#f9">发现 9</a>（变更无在途保护）是"任意破坏性动作"开闸前的<b>硬前提</b>；<a href="#f6">发现 6</a>（共享 scope）与 <a href="#f8">发现 8</a>（事件日志）可随规模后置。
+<div class="rule">
+<b>决定 5 · 加固：硬前提并入批次 2 验收标准</b><span class="tag t-have">已决</span><br>
+<a href="#f5">发现 5</a>（配置解析失败 → 运行失败并报因）、<a href="#f9">发现 9</a>（禁用撤销已排队 run、删除拒绝在途）、<a href="#f7">发现 7</a> 便宜半（runner 逐 item 校验 CLR 类型 + 编辑器禁止 AI 节点直接上游于破坏性动作）——三者是<b>批次 2 验收清单的必选项</b>，不是搭头。发现 7 贵的那一半（LLM 输出字段级校验闸门）等真有"AI → 写盘"需求再做；<a href="#f6">发现 6</a> 以代码规约顶住（活动不得在 ctx 的 scope 上 SaveChanges，需要写库时自建子 scope）；<a href="#f8">发现 8</a>（事件日志）随 E6/事件铺开时做。
 </div>
 
 <h2 id="s10"><span class="n">§10</span>历史开放问题（已消解）</h2>
