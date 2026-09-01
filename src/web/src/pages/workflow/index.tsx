@@ -12,6 +12,7 @@ import {
   PlusCircleOutlined,
 } from "@ant-design/icons";
 
+import { HelpCenterButton } from "@/components/HelpCenter";
 import WorkflowEditor from "@/components/Workflow/WorkflowEditor";
 import WorkflowRunsDrawer from "@/components/Workflow/WorkflowRunsDrawer";
 import ManualRunModal from "@/components/Workflow/ManualRunModal";
@@ -113,6 +114,7 @@ const WorkflowPage: React.FC = () => {
     <div className="flex flex-col gap-3 p-4">
       <div className="flex items-center gap-2">
         <h2 className="text-lg font-semibold">{t<string>("workflow.title")}</h2>
+        <HelpCenterButton topic="workflow" />
         <Button
           color="primary"
           size="sm"

@@ -6,12 +6,15 @@ import type { ComponentType, ReactNode } from "react";
  * contributes one overview entry to the left navigation, plus (optionally)
  * a group of concept entries rendered below it.
  */
-export type HelpTopicId = "pathMark";
+export type HelpTopicId = "pathMark" | "workflow";
 
 /** Horizontal tabs inside the path mark overview. Extend as more topics arrive. */
 export type PathMarkHelpSectionId = "whatIs" | "examples" | "comparison";
 
-export type HelpSectionId = PathMarkHelpSectionId;
+/** Horizontal tabs inside the workflow overview. */
+export type WorkflowHelpSectionId = "whatIs" | "examples";
+
+export type HelpSectionId = PathMarkHelpSectionId | WorkflowHelpSectionId;
 
 /** Where a help entry point should land inside the help center. */
 export interface HelpTarget {
