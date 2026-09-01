@@ -19,6 +19,7 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
     private readonly TDbContext _db;
     private readonly IWorkflowTriggerRegistry _triggers;
     private readonly IWorkflowActivityRegistry _activities;
+    private readonly IWorkflowItemTypeRegistry _itemTypes;
     private readonly BTaskManager _taskManager;
     private readonly WorkflowRunner<TDbContext> _runner;
 
@@ -26,12 +27,14 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
         TDbContext db,
         IWorkflowTriggerRegistry triggers,
         IWorkflowActivityRegistry activities,
+        IWorkflowItemTypeRegistry itemTypes,
         BTaskManager taskManager,
         WorkflowRunner<TDbContext> runner)
     {
         _db = db;
         _triggers = triggers;
         _activities = activities;
+        _itemTypes = itemTypes;
         _taskManager = taskManager;
         _runner = runner;
     }
@@ -218,11 +221,25 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
             if (!_activities.TryGet(a.Kind, out var impl))
                 throw new InvalidOperationException($"Unknown activity kind: {a.Kind}");
 
-            var accepted = impl.AcceptedInputItemTypes;
-            if (accepted.Count > 0 && !accepted.Contains(currentType))
+            var contract = impl.AcceptedItemInterface;
+            if (contract is not null && impl.OutputBehavior != WorkflowItemTypeBehavior.Passthrough)
                 throw new InvalidOperationException(
-                    $"Activity {a.Kind} (index {i}) accepts [{string.Join(", ", accepted)}] " +
-                    $"but the item type at that position is \"{currentType}\". " +
+                    $"Activity {a.Kind} declares a capability contract ({contract.Name}) but is not " +
+                    "Passthrough — a contract-accepting activity works on whatever type arrives and " +
+                    "cannot change it. The activity's declaration is broken.");
+
+            // Accepted when the tag is listed, OR the tag's CLR shape implements the activity's
+            // capability contract (capability map E3). Both surfaces empty = accepts any type.
+            var accepted = impl.AcceptedInputItemTypes;
+            var acceptsByContract = contract is not null &&
+                                    _itemTypes.Get(currentType)?.ClrType is { } clr &&
+                                    contract.IsAssignableFrom(clr);
+            if ((accepted.Count > 0 || contract is not null) &&
+                !accepted.Contains(currentType) && !acceptsByContract)
+                throw new InvalidOperationException(
+                    $"Activity {a.Kind} (index {i}) accepts [{string.Join(", ", accepted)}]" +
+                    (contract is null ? "" : $" or any type implementing {contract.Name}") +
+                    $" but the item type at that position is \"{currentType}\". " +
                     "Insert a transform that produces a compatible type before it.");
 
             if (impl.IsDestructive && i > 0 &&

@@ -9916,6 +9916,7 @@ export interface components {
             category: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants.WorkflowActivityCategory"];
             group: string;
             acceptedInputItemTypes: string[];
+            acceptedItemInterface?: string;
             outputBehavior: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants.WorkflowItemTypeBehavior"];
             fixedOutputItemType?: string;
             isDestructive: boolean;
@@ -9949,6 +9950,7 @@ export interface components {
             itemType: string;
             displayName: string;
             fields: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowItemTypeFieldViewModel"][];
+            implementsInterfaces: string[];
         };
         "Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowItemTypeFieldViewModel": {
             name: string;

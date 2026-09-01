@@ -1,6 +1,6 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { AiOutlineBell, AiOutlineCloudDownload, AiOutlineFolderOpen, AiOutlineFunction, AiOutlineRobot } from "react-icons/ai";
+import { AiOutlineBell, AiOutlineCloudDownload, AiOutlineFolderOpen, AiOutlineFontSize, AiOutlineFunction, AiOutlineRobot } from "react-icons/ai";
 
 import ThirdPartyLabel from "@/components/ThirdPartyLabel";
 import { ThirdPartyId } from "@/sdk/constants";
@@ -50,6 +50,13 @@ const GroupLabel: React.FC<{ group: string }> = ({ group }) => {
         <span className="inline-flex items-center gap-2">
           <AiOutlineFolderOpen />
           <span>{t<string>("workflow.group.fs")}</span>
+        </span>
+      );
+    case "text":
+      return (
+        <span className="inline-flex items-center gap-2">
+          <AiOutlineFontSize />
+          <span>{t<string>("workflow.group.text")}</span>
         </span>
       );
     default:

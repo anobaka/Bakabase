@@ -176,6 +176,10 @@ namespace Bakabase.Service.Extensions
             services.AddSingleton<IWorkflowActivity, FsFileNameOpActivity>();
             services.AddSingleton<IWorkflowActivity, FsSaveNameActivity>();
             services.AddScoped<IFileRenameEntryService, FileRenameEntryService>();
+            // Text family (E3): contract-accepting transforms over any ITextWorkpiece item.
+            services.AddSingleton<IWorkflowActivity, Components.Workflow.Activities.Transforms.Text.TextRemoveWrappedActivity>();
+            services.AddSingleton<IWorkflowActivity, Components.Workflow.Activities.Transforms.Text.TextRemoveTextsActivity>();
+            services.AddSingleton<IWorkflowActivity, Components.Workflow.Activities.Transforms.Text.TextTrimActivity>();
 
             services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, ExtensionGroupDbModel, int>>();
             services.AddScoped<IExtensionGroupService, ExtensionGroupService>();

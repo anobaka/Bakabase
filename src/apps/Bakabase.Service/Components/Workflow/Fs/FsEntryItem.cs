@@ -9,7 +9,7 @@ namespace Bakabase.Service.Components.Workflow.Fs;
 /// in the preview phase only records a plan. "Compute the new name" and "write it to disk" are
 /// therefore two phases by construction, and preview costs nothing extra.
 /// </summary>
-public sealed record FsEntryItem
+public sealed record FsEntryItem : ITextWorkpiece
 {
     /// <summary>Full path as it is on disk right now.</summary>
     public required string Path { get; init; }
@@ -23,6 +23,12 @@ public sealed record FsEntryItem
     /// new value here; comparing it against <see cref="OriginalName"/> is how saveName knows
     /// whether there is anything to do.</summary>
     public required string WorkingName { get; init; }
+
+    /// <summary>The text-family contract (capability map E3): the working text of a filesystem
+    /// entry IS its working name, so every <c>transform.text.*</c> activity applies here.</summary>
+    public string WorkingText => WorkingName;
+
+    public object WithWorkingText(string workingText) => this with {WorkingName = workingText};
 }
 
 public class FsEntryItemTypeDescriptor : IWorkflowItemTypeDescriptor

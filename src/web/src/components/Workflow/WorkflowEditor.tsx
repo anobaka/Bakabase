@@ -141,14 +141,15 @@ const WorkflowEditor: React.FC<Props> = ({
   );
   const chain = useMemo(
     () =>
-      startItemType === null
+      startItemType === null || itemTypes === null
         ? null
         : walkChain(
             startItemType,
             activityDrafts.map((a) => ({ kind: a.kind, configJson: a.configJson })),
             descriptorByKind,
+            itemTypes,
           ),
-    [startItemType, activityDrafts, descriptorByKind],
+    [startItemType, activityDrafts, descriptorByKind, itemTypes],
   );
 
   // Activities offered in the picker. AI transform is hidden — users add destination
@@ -156,20 +157,20 @@ const WorkflowEditor: React.FC<Props> = ({
   // is classified as "direct" (accepts current type) or "bridge" (single accepted type,
   // reachable via an AI transform). Multi-accept or unreachable activities are dropped.
   const addableWithFit = useMemo<DescriptorWithFit[]>(() => {
-    if (!allDescriptors || chain === null) return [];
+    if (!allDescriptors || chain === null || itemTypes === null) return [];
     const aiAvailable = !!getWorkflowActivityUI(AI_TRANSFORM_KIND)
       && !!allDescriptors.find((d) => d.kind === AI_TRANSFORM_KIND);
     const currentType = chain.typeAfter;
     return allDescriptors
       .filter((d) => d.kind !== AI_TRANSFORM_KIND)
       .filter((d) => !!getWorkflowActivityUI(d.kind))
-      .map((d) => classifyActivity(d, currentType))
+      .map((d) => classifyActivity(d, currentType, itemTypes))
       .filter((x): x is DescriptorWithFit =>
         x !== null && (x.fit === "direct" || aiAvailable))
       // Suppress bridge variants when their target type equals the current type — that's
       // really a direct fit being misclassified by the "single accepted" heuristic.
       .filter((x) => !(x.fit === "bridge" && x.bridgeTargetType === chain.typeAfter));
-  }, [allDescriptors, chain]);
+  }, [allDescriptors, chain, itemTypes]);
 
   const onTriggerKindChange = (next: string) => {
     setTriggerKind(next);

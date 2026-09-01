@@ -123,6 +123,7 @@ public class WorkflowController(
                 Category = a.Category,
                 Group = a.Group,
                 AcceptedInputItemTypes = a.AcceptedInputItemTypes.ToList(),
+                AcceptedItemInterface = a.AcceptedItemInterface?.Name,
                 OutputBehavior = a.OutputBehavior,
                 FixedOutputItemType = a.FixedOutputItemType,
                 IsDestructive = a.IsDestructive,
@@ -143,6 +144,13 @@ public class WorkflowController(
             ItemType = d.ItemType,
             DisplayName = d.DisplayName,
             Fields = BuildFieldVms(d.ClrType),
+            // Only interfaces deriving from the contract marker — CLR plumbing (IEquatable…)
+            // must not leak into the editor's compatibility metadata.
+            ImplementsInterfaces = d.ClrType.GetInterfaces()
+                .Where(i => typeof(IWorkflowItemContract).IsAssignableFrom(i) &&
+                            i != typeof(IWorkflowItemContract))
+                .Select(i => i.Name)
+                .ToList(),
         };
 
     /// <summary>

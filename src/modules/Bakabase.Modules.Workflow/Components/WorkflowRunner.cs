@@ -145,6 +145,7 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
                     .Where(t => t != null)
                     .Cast<Type>()
                     .ToList();
+                var contract = impl.AcceptedItemInterface;
 
                 var stepInput = items.Count;
                 var stepFailed = 0;
@@ -153,7 +154,9 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
                 {
                     await btaskArgs.YieldAsync();
 
-                    if (acceptedClrTypes.Count > 0 && !acceptedClrTypes.Any(t => t.IsInstanceOfType(item)))
+                    if ((acceptedClrTypes.Count > 0 || contract is not null) &&
+                        !acceptedClrTypes.Any(t => t.IsInstanceOfType(item)) &&
+                        !(contract?.IsInstanceOfType(item) ?? false))
                     {
                         throw new InvalidOperationException(
                             $"Step {stepIndex + 1} ({activityRow.Kind}) received a {item.GetType().Name}, " +

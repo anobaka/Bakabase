@@ -11,6 +11,14 @@ public record WorkflowItemTypeDescriptorViewModel
     /// one public read/write or init-only property.
     /// </summary>
     public List<WorkflowItemTypeFieldViewModel> Fields { get; set; } = [];
+
+    /// <summary>
+    /// Names of the capability contracts the type's CLR shape implements (interfaces deriving
+    /// from <c>IWorkflowItemContract</c>, e.g. "ITextWorkpiece"). The frontend matches these
+    /// against activities' <c>acceptedItemInterface</c> — one fact source, generic evaluation
+    /// on both sides (capability map §9·决定 4).
+    /// </summary>
+    public List<string> ImplementsInterfaces { get; set; } = [];
 }
 
 public record WorkflowItemTypeFieldViewModel

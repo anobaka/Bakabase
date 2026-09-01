@@ -4227,6 +4227,7 @@ export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowActivityDe
   category: BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowActivityCategory;
   group: string;
   acceptedInputItemTypes: string[];
+  acceptedItemInterface?: string;
   /** [1: Passthrough, 2: Fixed, 3: AdaptToNext] */
   outputBehavior: BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowItemTypeBehavior;
   fixedOutputItemType?: string;
@@ -4265,6 +4266,7 @@ export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowItemTypeDe
   itemType: string;
   displayName: string;
   fields: BakabaseModulesWorkflowAbstractionsModelsViewWorkflowItemTypeFieldViewModel[];
+  implementsInterfaces: string[];
 }
 
 export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowItemTypeFieldViewModel {

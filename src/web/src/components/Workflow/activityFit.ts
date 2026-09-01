@@ -1,4 +1,5 @@
 import type { components } from "@/sdk/BApi2";
+import type { WorkflowItemTypeIndex } from "./itemTypeRegistry";
 
 type ActivityDescriptorVm =
   components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowActivityDescriptorViewModel"];
@@ -28,13 +29,22 @@ export interface DescriptorWithFit {
 export function classifyActivity(
   descriptor: ActivityDescriptorVm,
   currentType: string,
+  itemTypes: WorkflowItemTypeIndex,
 ): DescriptorWithFit | null {
   const accepted = descriptor.acceptedInputItemTypes ?? [];
-  // Empty accepted = accepts any concrete type, including the heterogeneous "any" tag.
-  if (accepted.length === 0 || accepted.includes(currentType)) {
+  const contract = descriptor.acceptedItemInterface ?? null;
+  // Direct when: both accept surfaces are empty (any type), the tag is listed, or the
+  // current type implements the activity's capability contract (E3). Same rule as the
+  // backend's ValidateActivities; the facts all come from the descriptors.
+  if (
+    (accepted.length === 0 && !contract) ||
+    accepted.includes(currentType) ||
+    (!!contract && itemTypes.implementsInterfaces(currentType).includes(contract))
+  ) {
     return { descriptor, fit: "direct" };
   }
   // Single-accept activities can be bridged by an AI transform that emits exactly that type.
+  // Contract-only activities have no concrete bridge target, so they never classify as bridge.
   if (accepted.length === 1) {
     return { descriptor, fit: "bridge", bridgeTargetType: accepted[0] };
   }

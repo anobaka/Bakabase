@@ -14,4 +14,5 @@ public static class WorkflowActivityGroups
     public const string Notification = "notification";
     public const string Downloader = "downloader";
     public const string Fs = "fs";
+    public const string Text = "text";
 }

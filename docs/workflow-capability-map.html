@@ -271,9 +271,9 @@ for 每个 activity（从左到右）:
 <p>先打通最窄的一条端到端链，再逐步加宽。判据是每批结束时<b>用户能做什么</b>：</p>
 <table><tr><th style="width:6%">批次</th><th style="width:14%">主题</th><th>内容</th><th style="width:28%">做完之后用户能做什么</th></tr>
 <tr><td class="e">0</td><td><b>地基</b><span class="tag t-have">已完成</span></td><td>runner scope 修复（<a href="#f1">发现 1</a>）+ 手动触发（E1）；建议补一步：把两条既有业务线各跑一次真实场景</td><td>能手动跑一条工作流并看到它成功</td></tr>
-<tr><td class="e">1</td><td><b>最小纵切</b></td><td><code class="i">fs.manualScan</code> 触发器 + <code class="i">transform.fs.fileNameOp</code>（直接包既有 FileNameModifier，<b>不依赖能力契约与变量</b>）+ <code class="i">action.fs.saveName</code> 只做 Preview</td><td>选目录 → 看到改名预览</td></tr>
-<tr><td class="e">2</td><td><b>落盘</b>（E5）</td><td>计划表 + Apply + <code class="i">FileRenameRecord</code> + 撤销</td><td><b>功能真正可用</b>：预览 → 确认 → 落盘 → 可撤销</td></tr>
-<tr><td class="e">3</td><td><b>文本族</b>（E3）</td><td>能力契约 + <code class="i">transform.text.removeWrapped / removeTexts / trim</code></td><td>清洗能力变强（词表驱动地删噪声）</td></tr>
+<tr><td class="e">1</td><td><b>最小纵切</b><span class="tag t-have">已完成</span></td><td><code class="i">fs.manualScan</code> 触发器 + <code class="i">transform.fs.fileNameOp</code>（直接包既有 FileNameModifier，<b>不依赖能力契约与变量</b>）+ <code class="i">action.fs.saveName</code> 只做 Preview</td><td>选目录 → 看到改名预览</td></tr>
+<tr><td class="e">2</td><td><b>落盘</b>（E5）<span class="tag t-have">已完成</span></td><td>计划表 + Apply + <code class="i">FileRenameRecord</code> + 撤销（含决定 5 的加固项：配置失败即失败、禁用/删除守卫、runner 逐 item CLR 校验、IsDestructive 规则）</td><td><b>功能真正可用</b>：预览 → 确认 → 落盘 → 可撤销</td></tr>
+<tr><td class="e">3</td><td><b>文本族</b>（E3）<span class="tag t-have">已完成</span></td><td>能力契约（<code class="i">AcceptedItemInterface</code> + <code class="i">ITextWorkpiece</code>，描述符下发 <code class="i">implementsInterfaces</code>/<code class="i">acceptedItemInterface</code>——决定 4 的 B1 数据收敛与之同批落地）+ <code class="i">transform.text.removeWrapped / removeTexts / trim</code></td><td>清洗能力变强（词表驱动地删噪声）</td></tr>
 <tr><td class="e">4</td><td><b>联动</b>（E4+E2）</td><td>变量随行袋 + <code class="i">capture</code> / <code class="i">template</code> + <code class="i">expand.fs.children</code></td><td>多层级、跨层级信息组合命名（<a href="file-cleaning-workflow-example.html">13 节点示例</a>的完整形态）</td></tr>
 <tr><td class="e">5</td><td><b>自动化</b>（E6）</td><td>cron / 目录监听触发</td><td>下载完成 → 自动清洗</td></tr></table>
 <div class="rule">核心理由：<b>没有 Apply 的清洗流程是玩具</b>，所以两阶段运行必须提前到第 2 批；能力契约与变量是"让它更强"，不是"让它可用"，可以后置。代价：<code class="i">fileNameOp</code> 先落在 fs 域、text 节点族晚一批到——而这两者本来就是设计里刻意分开的两条线（见<a href="file-cleaning-workflow.html">清洗设计 §3.0</a>），不构成返工。</div>
