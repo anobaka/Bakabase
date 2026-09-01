@@ -13,6 +13,7 @@ import { usePendingSearchStore } from "@/stores/pendingSearch";
 import BApi from "@/sdk/BApi.tsx";
 import ResourceTabContent from "@/pages/resource/components/ResourceTabContent";
 import RecentlyPlayedDrawer from "@/pages/resource/components/RecentlyPlayedDrawer";
+import SearchSummary, { hasSearchSummary } from "@/pages/resource/components/SearchSummary";
 import { buildAutoTabName } from "@/pages/resource/utils/buildAutoTabName";
 
 type SavedSearch =
@@ -261,17 +262,28 @@ const ResourcePage = () => {
                     </div>
                   </Tooltip>
                   <div className="relative">
-                    <span
-                      className={`text-sm font-medium max-w-[150px] truncate block ${isEditing ? "invisible" : ""}`}
-                      onDoubleClick={(e) => {
-                        if (isActive) {
-                          e.stopPropagation();
-                          beginRename(s.id);
-                        }
-                      }}
+                    {/* The name is where the tab's identity lives, so it also
+                        carries the search-criteria digest. Hanging it on the
+                        name rather than the whole button keeps it from firing
+                        at the same time as the rename hint on the icon. */}
+                    <Tooltip
+                      content={<SearchSummary form={liveSearchForms[s.id]} />}
+                      delay={300}
+                      isDisabled={isEditing || !hasSearchSummary(liveSearchForms[s.id])}
+                      placement="bottom"
                     >
-                      {getDisplayName(s, i)}
-                    </span>
+                      <span
+                        className={`text-sm font-medium max-w-[150px] truncate block ${isEditing ? "invisible" : ""}`}
+                        onDoubleClick={(e) => {
+                          if (isActive) {
+                            e.stopPropagation();
+                            beginRename(s.id);
+                          }
+                        }}
+                      >
+                        {getDisplayName(s, i)}
+                      </span>
+                    </Tooltip>
                     {isEditing && (
                       <Input
                         ref={inputRef}
