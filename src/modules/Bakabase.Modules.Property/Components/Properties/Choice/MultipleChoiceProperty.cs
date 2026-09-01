@@ -109,8 +109,7 @@ public class MultipleChoicePropertyDescriptor
             var propertyChanged = options.AddChoices(true, goodValues.ToArray(), null);
             var stringValues = goodValues.Select(v => options.Choices?.Find(c => c.Label == v)?.Value).OfType<string>()
                 .ToList();
-            var nv = stringValues.Any() ? new ListStringValueBuilder(stringValues).Value : null;
-            return (nv, propertyChanged);
+            return (stringValues.Any() ? stringValues : null, propertyChanged);
         }
 
         return (null, false);

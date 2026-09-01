@@ -10,85 +10,19 @@ using Bakabase.Modules.StandardValue.Models.Domain;
 namespace Bakabase.Modules.Property.Components;
 
 /// <summary>
-/// Type-safe factory for creating Property values.
+/// Type-safe helpers for reference-type property values (Choice/Tags/Multilevel),
+/// whose DbValues are option ids and BizValues are labels.
 ///
 /// API Pattern:
-/// - BuildDbValue/BuildBizValue: Direct construction (when you have raw values)
-/// - MatchDbValue/MatchBizValue: Match through options (for reference types like Choice)
-/// - *Serialized: Returns serialized string version
+/// - BuildDbValue/BuildBizValue: Direct construction (when you already have ids/labels)
+/// - MatchDbValue/MatchBizValue: Match through options (label &lt;-&gt; id)
+/// - *Serialized: Returns the serialized (wire-format) string
+///
+/// Non-reference types need no factory: their DbValue equals the raw value —
+/// serialize with SerializeAsStandardValue directly.
 /// </summary>
 public static class PropertyValueFactory
 {
-    #region Text Types (SingleLineText, MultilineText, Formula)
-
-    /// <summary>
-    /// SingleLineText property value factory
-    /// </summary>
-    public static class SingleLineText
-    {
-        // === DbValue ===
-        public static string? BuildDbValue(string? value) => value?.Trim();
-        public static string? BuildDbValueSerialized(string? value) =>
-            BuildDbValue(value)?.SerializeAsStandardValue(StandardValueType.String);
-
-        // === BizValue ===
-        public static string? BuildBizValue(string? value) => value?.Trim();
-        public static string? BuildBizValueSerialized(string? value) =>
-            BuildBizValue(value)?.SerializeAsStandardValue(StandardValueType.String);
-
-        // Legacy compatibility
-        [Obsolete("Use BuildDbValue instead")]
-        public static string? Db(string? value) => BuildDbValue(value);
-        [Obsolete("Use BuildBizValue instead")]
-        public static string? Biz(string? dbValue) => BuildBizValue(dbValue);
-    }
-
-    /// <summary>
-    /// MultilineText property value factory
-    /// </summary>
-    public static class MultilineText
-    {
-        // === DbValue ===
-        public static string? BuildDbValue(string? value) => value?.Trim();
-        public static string? BuildDbValueSerialized(string? value) =>
-            BuildDbValue(value)?.SerializeAsStandardValue(StandardValueType.String);
-
-        // === BizValue ===
-        public static string? BuildBizValue(string? value) => value?.Trim();
-        public static string? BuildBizValueSerialized(string? value) =>
-            BuildBizValue(value)?.SerializeAsStandardValue(StandardValueType.String);
-
-        // Legacy compatibility
-        [Obsolete("Use BuildDbValue instead")]
-        public static string? Db(string? value) => BuildDbValue(value);
-        [Obsolete("Use BuildBizValue instead")]
-        public static string? Biz(string? dbValue) => BuildBizValue(dbValue);
-    }
-
-    /// <summary>
-    /// Formula property value factory
-    /// </summary>
-    public static class Formula
-    {
-        // === DbValue ===
-        public static string? BuildDbValue(string? value) => value?.Trim();
-        public static string? BuildDbValueSerialized(string? value) =>
-            BuildDbValue(value)?.SerializeAsStandardValue(StandardValueType.String);
-
-        // === BizValue ===
-        public static string? BuildBizValue(string? value) => value?.Trim();
-        public static string? BuildBizValueSerialized(string? value) =>
-            BuildBizValue(value)?.SerializeAsStandardValue(StandardValueType.String);
-
-        // Legacy compatibility
-        [Obsolete("Use BuildDbValue instead")]
-        public static string? Db(string? value) => BuildDbValue(value);
-        [Obsolete("Use BuildBizValue instead")]
-        public static string? Biz(string? dbValue) => BuildBizValue(dbValue);
-    }
-
-    #endregion
-
     #region Choice Types (SingleChoice, MultipleChoice)
 
     /// <summary>
@@ -191,26 +125,6 @@ public static class PropertyValueFactory
             SingleChoicePropertyOptions? options,
             string? dbValue) =>
             MatchBizValue(options, dbValue)?.SerializeAsStandardValue(StandardValueType.String);
-
-        // Legacy compatibility
-        [Obsolete("Use MatchDbValue instead")]
-        public static string? Db(SingleChoicePropertyOptions? options, string? label) =>
-            MatchDbValue(options, label);
-
-        [Obsolete("Use MatchDbValue with addOnMiss: true instead")]
-        public static (string? DbValue, bool OptionsChanged) DbWithAutoCreate(
-            SingleChoicePropertyOptions options, string? label)
-        {
-            if (string.IsNullOrEmpty(label)) return (null, false);
-            var existingCount = options.Choices?.Count ?? 0;
-            var result = MatchDbValue(options, label, addOnMiss: true);
-            var changed = (options.Choices?.Count ?? 0) > existingCount;
-            return (result, changed);
-        }
-
-        [Obsolete("Use MatchBizValue instead")]
-        public static string? Biz(SingleChoicePropertyOptions? options, string? dbValue) =>
-            MatchBizValue(options, dbValue);
     }
 
     /// <summary>
@@ -351,258 +265,6 @@ public static class PropertyValueFactory
             MultipleChoicePropertyOptions? options,
             List<string>? dbValues) =>
             MatchBizValue(options, dbValues)?.SerializeAsStandardValue(StandardValueType.ListString);
-
-        // Legacy compatibility
-        [Obsolete("Use MatchDbValue instead")]
-        public static List<string>? Db(MultipleChoicePropertyOptions? options, IEnumerable<string>? labels) =>
-            MatchDbValue(options, labels);
-
-        [Obsolete("Use MatchDbValue with addOnMiss: true instead")]
-        public static (List<string>? DbValue, bool OptionsChanged) DbWithAutoCreate(
-            MultipleChoicePropertyOptions options, IEnumerable<string>? labels)
-        {
-            if (labels == null) return (null, false);
-            var existingCount = options.Choices?.Count ?? 0;
-            var result = MatchDbValue(options, labels, addOnMiss: true);
-            var changed = (options.Choices?.Count ?? 0) > existingCount;
-            return (result, changed);
-        }
-
-        [Obsolete("Use MatchBizValue instead")]
-        public static List<string>? Biz(MultipleChoicePropertyOptions? options, List<string>? dbValues) =>
-            MatchBizValue(options, dbValues);
-    }
-
-    #endregion
-
-    #region Numeric Types (Number, Percentage, Rating)
-
-    /// <summary>
-    /// Number property value factory
-    /// </summary>
-    public static class Number
-    {
-        // === DbValue ===
-        public static decimal? BuildDbValue(decimal? value) => value;
-        public static string? BuildDbValueSerialized(decimal? value) =>
-            value?.SerializeAsStandardValue(StandardValueType.Decimal);
-
-        // === BizValue ===
-        public static decimal? BuildBizValue(decimal? value) => value;
-        public static string? BuildBizValueSerialized(decimal? value) =>
-            value?.SerializeAsStandardValue(StandardValueType.Decimal);
-
-        // Legacy compatibility
-        [Obsolete("Use BuildDbValue instead")]
-        public static decimal? Db(decimal? value) => BuildDbValue(value);
-        [Obsolete("Use BuildBizValue instead")]
-        public static decimal? Biz(decimal? dbValue) => BuildBizValue(dbValue);
-    }
-
-    /// <summary>
-    /// Percentage property value factory
-    /// </summary>
-    public static class Percentage
-    {
-        // === DbValue ===
-        public static decimal? BuildDbValue(decimal? value) => value;
-        public static string? BuildDbValueSerialized(decimal? value) =>
-            value?.SerializeAsStandardValue(StandardValueType.Decimal);
-
-        // === BizValue ===
-        public static decimal? BuildBizValue(decimal? value) => value;
-        public static string? BuildBizValueSerialized(decimal? value) =>
-            value?.SerializeAsStandardValue(StandardValueType.Decimal);
-
-        // Legacy compatibility
-        [Obsolete("Use BuildDbValue instead")]
-        public static decimal? Db(decimal? value) => BuildDbValue(value);
-        [Obsolete("Use BuildBizValue instead")]
-        public static decimal? Biz(decimal? dbValue) => BuildBizValue(dbValue);
-    }
-
-    /// <summary>
-    /// Rating property value factory
-    /// </summary>
-    public static class Rating
-    {
-        // === DbValue ===
-        public static decimal? BuildDbValue(decimal? value) => value;
-        public static string? BuildDbValueSerialized(decimal? value) =>
-            value?.SerializeAsStandardValue(StandardValueType.Decimal);
-
-        // === BizValue ===
-        public static decimal? BuildBizValue(decimal? value) => value;
-        public static string? BuildBizValueSerialized(decimal? value) =>
-            value?.SerializeAsStandardValue(StandardValueType.Decimal);
-
-        // Legacy compatibility
-        [Obsolete("Use BuildDbValue instead")]
-        public static decimal? Db(decimal? value) => BuildDbValue(value);
-        [Obsolete("Use BuildBizValue instead")]
-        public static decimal? Biz(decimal? dbValue) => BuildBizValue(dbValue);
-    }
-
-    #endregion
-
-    #region Other Types
-
-    /// <summary>
-    /// Boolean property value factory
-    /// </summary>
-    public static class Boolean
-    {
-        // === DbValue ===
-        public static bool? BuildDbValue(bool? value) => value;
-        public static string? BuildDbValueSerialized(bool? value) =>
-            value?.SerializeAsStandardValue(StandardValueType.Boolean);
-
-        // === BizValue ===
-        public static bool? BuildBizValue(bool? value) => value;
-        public static string? BuildBizValueSerialized(bool? value) =>
-            value?.SerializeAsStandardValue(StandardValueType.Boolean);
-
-        // Legacy compatibility
-        [Obsolete("Use BuildDbValue instead")]
-        public static bool? Db(bool? value) => BuildDbValue(value);
-        [Obsolete("Use BuildBizValue instead")]
-        public static bool? Biz(bool? dbValue) => BuildBizValue(dbValue);
-    }
-
-    /// <summary>
-    /// Link property value factory
-    /// </summary>
-    public static class Link
-    {
-        // === DbValue ===
-        public static LinkValue? BuildDbValue(string? text, string? url)
-        {
-            var lv = new LinkValue(text, url);
-            return lv.IsEmpty ? null : lv;
-        }
-
-        public static LinkValue? BuildDbValue(LinkValue? value) =>
-            value?.IsEmpty == true ? null : value;
-
-        public static string? BuildDbValueSerialized(string? text, string? url) =>
-            BuildDbValue(text, url)?.SerializeAsStandardValue(StandardValueType.Link);
-
-        public static string? BuildDbValueSerialized(LinkValue? value) =>
-            BuildDbValue(value)?.SerializeAsStandardValue(StandardValueType.Link);
-
-        // === BizValue ===
-        public static LinkValue? BuildBizValue(LinkValue? value) => value;
-
-        public static string? BuildBizValueSerialized(LinkValue? value) =>
-            value?.SerializeAsStandardValue(StandardValueType.Link);
-
-        // Legacy compatibility
-        [Obsolete("Use BuildDbValue instead")]
-        public static LinkValue? Db(string? text, string? url) => BuildDbValue(text, url);
-        [Obsolete("Use BuildDbValue instead")]
-        public static LinkValue? Db(LinkValue? value) => BuildDbValue(value);
-        [Obsolete("Use BuildBizValue instead")]
-        public static LinkValue? Biz(LinkValue? dbValue) => BuildBizValue(dbValue);
-    }
-
-    /// <summary>
-    /// Attachment property value factory
-    /// </summary>
-    public static class Attachment
-    {
-        // === DbValue ===
-        public static List<string>? BuildDbValue(IEnumerable<string>? paths)
-        {
-            var result = paths?.Where(p => !string.IsNullOrEmpty(p)).ToList();
-            return result?.Count > 0 ? result : null;
-        }
-
-        public static List<string>? BuildDbValue(params string[] paths) =>
-            BuildDbValue(paths.AsEnumerable());
-
-        public static string? BuildDbValueSerialized(IEnumerable<string>? paths) =>
-            BuildDbValue(paths)?.SerializeAsStandardValue(StandardValueType.ListString);
-
-        public static string? BuildDbValueSerialized(params string[] paths) =>
-            BuildDbValueSerialized(paths.AsEnumerable());
-
-        // === BizValue ===
-        public static List<string>? BuildBizValue(List<string>? value) => value;
-
-        public static string? BuildBizValueSerialized(List<string>? value) =>
-            value?.SerializeAsStandardValue(StandardValueType.ListString);
-
-        // Legacy compatibility
-        [Obsolete("Use BuildDbValue instead")]
-        public static List<string>? Db(IEnumerable<string>? paths) => BuildDbValue(paths);
-        [Obsolete("Use BuildBizValue instead")]
-        public static List<string>? Biz(List<string>? dbValue) => BuildBizValue(dbValue);
-    }
-
-    /// <summary>
-    /// Date property value factory
-    /// </summary>
-    public static class Date
-    {
-        // === DbValue ===
-        public static System.DateTime? BuildDbValue(System.DateTime? value) => value;
-        public static string? BuildDbValueSerialized(System.DateTime? value) =>
-            value?.SerializeAsStandardValue(StandardValueType.DateTime);
-
-        // === BizValue ===
-        public static System.DateTime? BuildBizValue(System.DateTime? value) => value;
-        public static string? BuildBizValueSerialized(System.DateTime? value) =>
-            value?.SerializeAsStandardValue(StandardValueType.DateTime);
-
-        // Legacy compatibility
-        [Obsolete("Use BuildDbValue instead")]
-        public static System.DateTime? Db(System.DateTime? value) => BuildDbValue(value);
-        [Obsolete("Use BuildBizValue instead")]
-        public static System.DateTime? Biz(System.DateTime? dbValue) => BuildBizValue(dbValue);
-    }
-
-    /// <summary>
-    /// DateTime property value factory
-    /// </summary>
-    public static class DateTime
-    {
-        // === DbValue ===
-        public static System.DateTime? BuildDbValue(System.DateTime? value) => value;
-        public static string? BuildDbValueSerialized(System.DateTime? value) =>
-            value?.SerializeAsStandardValue(StandardValueType.DateTime);
-
-        // === BizValue ===
-        public static System.DateTime? BuildBizValue(System.DateTime? value) => value;
-        public static string? BuildBizValueSerialized(System.DateTime? value) =>
-            value?.SerializeAsStandardValue(StandardValueType.DateTime);
-
-        // Legacy compatibility
-        [Obsolete("Use BuildDbValue instead")]
-        public static System.DateTime? Db(System.DateTime? value) => BuildDbValue(value);
-        [Obsolete("Use BuildBizValue instead")]
-        public static System.DateTime? Biz(System.DateTime? dbValue) => BuildBizValue(dbValue);
-    }
-
-    /// <summary>
-    /// Time property value factory
-    /// </summary>
-    public static class Time
-    {
-        // === DbValue ===
-        public static TimeSpan? BuildDbValue(TimeSpan? value) => value;
-        public static string? BuildDbValueSerialized(TimeSpan? value) =>
-            value?.SerializeAsStandardValue(StandardValueType.Time);
-
-        // === BizValue ===
-        public static TimeSpan? BuildBizValue(TimeSpan? value) => value;
-        public static string? BuildBizValueSerialized(TimeSpan? value) =>
-            value?.SerializeAsStandardValue(StandardValueType.Time);
-
-        // Legacy compatibility
-        [Obsolete("Use BuildDbValue instead")]
-        public static TimeSpan? Db(TimeSpan? value) => BuildDbValue(value);
-        [Obsolete("Use BuildBizValue instead")]
-        public static TimeSpan? Biz(TimeSpan? dbValue) => BuildBizValue(dbValue);
     }
 
     #endregion
@@ -756,26 +418,6 @@ public static class PropertyValueFactory
             TagsPropertyOptions? options,
             List<string>? dbValues) =>
             MatchBizValue(options, dbValues)?.SerializeAsStandardValue(StandardValueType.ListTag);
-
-        // Legacy compatibility
-        [Obsolete("Use MatchDbValue instead")]
-        public static List<string>? Db(TagsPropertyOptions? options, IEnumerable<TagValue>? tags) =>
-            MatchDbValue(options, tags);
-
-        [Obsolete("Use MatchDbValue with addOnMiss: true instead")]
-        public static (List<string>? DbValue, bool OptionsChanged) DbWithAutoCreate(
-            TagsPropertyOptions options, IEnumerable<TagValue>? tags)
-        {
-            if (tags == null) return (null, false);
-            var existingCount = options.Tags?.Count ?? 0;
-            var result = MatchDbValue(options, tags, addOnMiss: true);
-            var changed = (options.Tags?.Count ?? 0) > existingCount;
-            return (result, changed);
-        }
-
-        [Obsolete("Use MatchBizValue instead")]
-        public static List<TagValue>? Biz(TagsPropertyOptions? options, List<string>? dbValues) =>
-            MatchBizValue(options, dbValues);
     }
 
     /// <summary>
@@ -921,32 +563,6 @@ public static class PropertyValueFactory
             MultilevelPropertyOptions? options,
             List<string>? dbValues) =>
             MatchBizValue(options, dbValues)?.SerializeAsStandardValue(StandardValueType.ListListString);
-
-        // Legacy compatibility
-        [Obsolete("Use MatchDbValue instead")]
-        public static List<string>? Db(MultilevelPropertyOptions? options, IEnumerable<List<string>>? paths) =>
-            MatchDbValue(options, paths);
-
-        [Obsolete("Use MatchDbValue with addOnMiss: true instead")]
-        public static (List<string>? DbValue, bool OptionsChanged) DbWithAutoCreate(
-            MultilevelPropertyOptions options, IEnumerable<List<string>>? paths)
-        {
-            if (paths == null) return (null, false);
-            var existingNodeCount = CountNodes(options.Data);
-            var result = MatchDbValue(options, paths, addOnMiss: true);
-            var changed = CountNodes(options.Data) > existingNodeCount;
-            return (result, changed);
-        }
-
-        private static int CountNodes(List<MultilevelDataOptions>? data)
-        {
-            if (data == null) return 0;
-            return data.Sum(d => 1 + CountNodes(d.Children));
-        }
-
-        [Obsolete("Use MatchBizValue instead")]
-        public static List<List<string>>? Biz(MultilevelPropertyOptions? options, List<string>? dbValues) =>
-            MatchBizValue(options, dbValues);
     }
 
     #endregion

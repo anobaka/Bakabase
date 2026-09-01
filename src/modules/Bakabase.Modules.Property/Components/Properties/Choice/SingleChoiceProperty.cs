@@ -132,8 +132,7 @@ public class SingleChoicePropertyDescriptor : AbstractPropertyDescriptor<SingleC
             var options = (property.Options as SingleChoicePropertyOptions)!;
             var propertyChanged = options.AddChoices(true, [bizValue], null);
             var stringValue = options.Choices?.Find(x => x.Label == bizValue)?.Value;
-            var nv = new StringValueBuilder(stringValue).Value;
-            return (nv, propertyChanged);
+            return (stringValue, propertyChanged);
         }
 
         return (null, false);
