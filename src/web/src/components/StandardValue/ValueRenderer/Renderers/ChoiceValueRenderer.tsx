@@ -20,9 +20,15 @@ import { useFilterOptionsThreshold } from "@/hooks/useFilterOptionsThreshold";
 
 type Data = { label: string; value: string; color?: string };
 
-type ChoiceValueRendererProps = ValueRendererProps<string[]> & {
+/**
+ * value (biz) carries display labels; editor.value (db) carries choice ids.
+ * The two are both string[] — never mix them: selection state must only ever
+ * be derived from editor.value.
+ */
+type ChoiceValueRendererProps = ValueRendererProps<string[], string[]> & {
   multiple?: boolean;
   getDataSource?: () => Promise<Data[]>;
+  /** Index-parallel to `value`; build both from the same source array. */
   valueAttributes?: { color?: string }[];
   size?: "sm" | "md" | "lg";
 };
@@ -105,7 +111,10 @@ const ChoiceValueRenderer = (props: ChoiceValueRendererProps) => {
   // Note: defaultEditing is no longer used for ChoiceValueRenderer
   // because inline editing (showing first 30 options) is always enabled when !isReadonly
 
-  const selectedValues = editor?.value || value || [];
+  // Selection is tracked by choice ids (db values). `value` holds display
+  // labels (biz values) — falling back to it here would compare labels
+  // against ids and silently never match.
+  const selectedValues = editor?.value || [];
 
   const toggleValue = (itemValue: string) => {
     if (isReadonly || !editor?.onValueChange) return;

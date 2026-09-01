@@ -37,11 +37,13 @@ export {
   convertFromApiValue,
   filterMultilevelData,
   findNodeChainInMultilevelData,
+  findNodeChainByLabels,
   // Type-safe versions
   serializeStandardValueTyped,
   deserializeStandardValueTyped,
   convertFromApiValueTyped,
 } from "./helpers";
+export type { SerializedStandardValue } from "./helpers";
 
 // Renderers and Editors
 export {

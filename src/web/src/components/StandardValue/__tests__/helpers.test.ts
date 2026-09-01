@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   deserializeStandardValue,
+  findNodeChainByLabels,
   serializeStandardValue,
 } from "@/components/StandardValue/helpers";
 import { StandardValueType } from "@/sdk/constants";
@@ -60,5 +61,30 @@ describe("deserializeStandardValue - ListTag", () => {
     const roundTripped = deserializeStandardValue(serialized!, StandardValueType.ListTag);
 
     expect(roundTripped).toEqual(original);
+  });
+});
+
+describe("findNodeChainByLabels", () => {
+  const data = [
+    {
+      value: "1",
+      label: "Category",
+      color: "red",
+      children: [{ value: "2", label: "Sub", color: "blue" }],
+    },
+    { value: "3", label: "Other" },
+  ];
+
+  it("returns the node chain matching each level's label", () => {
+    const chain = findNodeChainByLabels(data, ["Category", "Sub"]);
+
+    expect(chain?.map((n) => n.value)).toEqual(["1", "2"]);
+    expect(chain?.map((n) => n.color)).toEqual(["red", "blue"]);
+  });
+
+  it("returns undefined when any level does not match", () => {
+    expect(findNodeChainByLabels(data, ["Category", "Missing"])).toBeUndefined();
+    expect(findNodeChainByLabels(data, ["Missing"])).toBeUndefined();
+    expect(findNodeChainByLabels(data, [])).toBeUndefined();
   });
 });

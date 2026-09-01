@@ -6,16 +6,18 @@ import type { Dayjs } from "dayjs";
 import type { Duration } from "dayjs/plugin/duration";
 import type {
   IProperty,
-  ChoiceOption,
-  TagOption,
   AttachmentPropertyOptions,
+  SingleChoicePropertyOptions,
+  MultipleChoicePropertyOptions,
+  TypedMultilevelPropertyOptions,
+  TypedTagsPropertyOptions,
 } from "@/components/Property/models";
 import type { LinkValue, TagValue } from "@/components/StandardValue/models";
 import type { ValueRendererSize } from "@/components/StandardValue/ValueRenderer/models";
+import type { SerializedStandardValue } from "@/components/StandardValue";
 
 import { useTranslation } from "react-i18next";
 import React from "react";
-import _ from "lodash";
 
 import { PropertyType, StandardValueType, PropertyPool, InternalProperty } from "@/sdk/constants";
 import { getDbValueType, getBizValueType } from "@/components/Property/PropertySystem";
@@ -33,6 +35,7 @@ import {
   TagsValueRenderer,
   TimeValueRenderer,
   deserializeStandardValue,
+  findNodeChainByLabels,
   findNodeChainInMultilevelData,
   serializeStandardValue,
 } from "@/components/StandardValue";
@@ -44,17 +47,20 @@ export type DataPool = {};
 export type Props = {
   property: IProperty;
   /**
-   * Serialized
+   * Both arguments are serialized (wire-format) strings, not raw values.
    */
-  onValueChange?: (dbValue?: string, bizValue?: string) => any;
+  onValueChange?: (
+    dbValue?: SerializedStandardValue,
+    bizValue?: SerializedStandardValue,
+  ) => any;
   /**
-   * Serialized
+   * Serialized (wire-format) biz value.
    */
-  bizValue?: string;
+  bizValue?: SerializedStandardValue;
   /**
-   * Serialized
+   * Serialized (wire-format) db value.
    */
-  dbValue?: string;
+  dbValue?: SerializedStandardValue;
   variant?: "default" | "light";
   defaultEditing?: boolean;
   size?: ValueRendererSize;
@@ -177,7 +183,9 @@ const PropertyValueRenderer = (props: Props) => {
       );
     }
     case PropertyType.SingleChoice: {
-      const typedDv = dv as string;
+      const options = property.options as SingleChoicePropertyOptions | undefined;
+      const choices = options?.choices ?? [];
+      const typedDv = dv as string | undefined;
 
       const oc =
         onValueChange == undefined
@@ -200,25 +208,20 @@ const PropertyValueRenderer = (props: Props) => {
           }
         : undefined;
 
-      // console.log(editor, property);
-
-      const typedBv =
-        (bv as string) ??
-        (property.options?.choices ?? []).find((x: ChoiceOption) => x.value == typedDv)?.label;
-      // Strict equality: dv is a single choice id here, and substring matching
-      // (String.includes) would false-positive on ids that prefix each other.
-      const vas: ChoiceOption[] = _.sortBy(
-        property.options?.choices?.filter((o: ChoiceOption) => o.value == typedDv) ?? [],
-        (x: ChoiceOption) => x.value == typedDv,
-      );
+      // Strict equality: dv is a single choice id, and substring matching
+      // would false-positive on ids that prefix each other. Label and color
+      // come from the same lookup so they can never misalign.
+      const matchedChoice = choices.find((c) => c.value === typedDv);
+      const typedBv = (bv as string) ?? matchedChoice?.label;
+      const vas = matchedChoice ? [{ color: matchedChoice.color }] : undefined;
 
       return (
         <ChoiceValueRenderer
           defaultEditing={defaultEditing}
           editor={editor}
-          getDataSource={async () => {
-            return property.options?.choices ?? [];
-          }}
+          getDataSource={async () =>
+            choices.map((c) => ({ value: c.value, label: c.label ?? "", color: c.color }))
+          }
           isEditing={isEditing}
           isReadonly={isReadonly}
           size={size}
@@ -229,25 +232,35 @@ const PropertyValueRenderer = (props: Props) => {
       );
     }
     case PropertyType.MultipleChoice: {
-      const typedDv = dv as string[];
-      const typedBv =
-        (bv as string[]) ??
-        (property.options?.choices ?? [])
-          .filter((x: ChoiceOption) => typedDv?.includes(x.value))
-          .map((x: ChoiceOption) => x.label);
-      const vas: ChoiceOption[] = _.sortBy(
-        property.options?.choices?.filter((o: ChoiceOption) => dv?.includes(o.value)) ?? [],
-        (x: ChoiceOption) => typedDv?.findIndex((d) => d == x.value),
-      );
+      const options = property.options as MultipleChoicePropertyOptions | undefined;
+      const choices = options?.choices ?? [];
+      const typedDv = dv as string[] | undefined;
+      const serverBv = bv as string[] | undefined;
+
+      // Derive labels and colors from one pass over the same source array so
+      // the two index-parallel props can never misalign — the server-provided
+      // biz value can drop entries the client-side dv lookup would keep.
+      const entries =
+        serverBv != null
+          ? serverBv.map((label) => ({
+              label,
+              color: choices.find((c) => c.label === label)?.color,
+            }))
+          : (typedDv ?? [])
+              .map((v) => choices.find((c) => c.value === v))
+              .filter((c) => c?.label != null)
+              .map((c) => ({ label: c!.label!, color: c!.color }));
+      const typedBv = entries.length > 0 ? entries.map((e) => e.label) : undefined;
+      const vas = entries.map((e) => ({ color: e.color }));
 
       return (
         <ChoiceValueRenderer
           multiple
           defaultEditing={defaultEditing}
           editor={simpleEditor}
-          getDataSource={async () => {
-            return property.options?.choices ?? [];
-          }}
+          getDataSource={async () =>
+            choices.map((c) => ({ value: c.value, label: c.label ?? "", color: c.color }))
+          }
           isEditing={isEditing}
           isReadonly={isReadonly}
           size={size}
@@ -410,25 +423,44 @@ const PropertyValueRenderer = (props: Props) => {
       );
     }
     case PropertyType.Multilevel: {
-      const typedDv = dv as string[];
-      const tbv = typedDv
-        ?.map((v) => findNodeChainInMultilevelData(property?.options?.data || [], v))
-        .filter((x) => x != undefined);
-      const typedBv = (bv as string[][]) ?? tbv?.map((x) => x!.map((y) => y.label));
-      const vas = tbv?.map((v) => v!.map((x) => ({ color: x.color })));
+      const options = property.options as TypedMultilevelPropertyOptions | undefined;
+      const data = options?.data ?? [];
+      const typedDv = dv as string[] | undefined;
+      const serverBv = bv as string[][] | undefined;
 
-      // log(tbv, bv, vas);
+      // Label chains and their node colors are derived together: from the
+      // server-provided label chains (colors looked up by label per level), or
+      // from the client-side id lookup — never one from each.
+      const entries =
+        serverBv != null
+          ? serverBv.map((chain) => {
+              const nodeChain = findNodeChainByLabels(data, chain);
+
+              return {
+                labels: chain,
+                colors: nodeChain
+                  ? nodeChain.map((n) => ({ color: n.color }))
+                  : chain.map(() => ({})),
+              };
+            })
+          : (typedDv ?? [])
+              .map((v) => findNodeChainInMultilevelData(data, v))
+              .filter((chain) => chain != undefined)
+              .map((chain) => ({
+                labels: chain!.map((n) => n.label ?? ""),
+                colors: chain!.map((n) => ({ color: n.color })),
+              }));
+      const typedBv = entries.length > 0 ? entries.map((e) => e.labels) : undefined;
+      const vas = entries.map((e) => e.colors);
 
       return (
         <MultilevelValueRenderer
           defaultEditing={defaultEditing}
           editor={simpleEditor}
-          getDataSource={async () => {
-            return property?.options?.data || [];
-          }}
+          getDataSource={async () => data}
           isEditing={isEditing}
           isReadonly={isReadonly}
-          multiple={!(property?.options?.valueIsSingleton ?? false)}
+          multiple={!(options?.valueIsSingleton ?? false)}
           size={size}
           value={typedBv}
           valueAttributes={vas}
@@ -437,29 +469,39 @@ const PropertyValueRenderer = (props: Props) => {
       );
     }
     case PropertyType.Tags: {
-      const typedDv = dv as string[];
-      const tags = (property.options?.tags || []) as TagOption[];
+      const options = property.options as TypedTagsPropertyOptions | undefined;
+      const tags = options?.tags ?? [];
+      const typedDv = dv as string[] | undefined;
+      const serverBv = bv as TagValue[] | undefined;
 
-      const typedBv =
-        (bv as TagValue[]) ??
-        tags
-          .filter((x: TagOption) => dv?.includes(x.value))
-          .map((x: TagOption) => ({
-            group: x.group,
-            name: x.name,
-          }));
-      const vas = _.sortBy(
-        tags.filter((o: TagOption) => typedDv?.includes(o.value)),
-        (x: TagOption) => typedDv?.findIndex((d) => d == x.value),
-      );
+      // Tag values and their colors are derived together so the index-parallel
+      // props can never misalign (see MultipleChoice above).
+      const entries =
+        serverBv != null
+          ? serverBv.map((tv) => ({
+              tag: tv,
+              color: tags.find((t) => (t.group ?? "") === (tv.group ?? "") && t.name === tv.name)
+                ?.color,
+            }))
+          : (typedDv ?? [])
+              .map((v) => tags.find((t) => t.value === v))
+              .filter((t) => t?.name != null)
+              .map((t) => ({ tag: { group: t!.group, name: t!.name! }, color: t!.color }));
+      const typedBv = entries.length > 0 ? entries.map((e) => e.tag) : undefined;
+      const vas = entries.map((e) => ({ color: e.color }));
 
       return (
         <TagsValueRenderer
           defaultEditing={defaultEditing}
           editor={simpleEditor}
-          getDataSource={async () => {
-            return property?.options?.tags || [];
-          }}
+          getDataSource={async () =>
+            tags.map((t) => ({
+              value: t.value,
+              name: t.name ?? "",
+              group: t.group,
+              color: t.color,
+            }))
+          }
           isEditing={isEditing}
           isReadonly={isReadonly}
           size={size}

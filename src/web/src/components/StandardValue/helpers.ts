@@ -61,6 +61,32 @@ export const findNodeChainInMultilevelData = <V>(
 };
 
 /**
+ * Walk the multilevel tree matching one label per depth, returning the node
+ * chain, or undefined when any level has no matching label. Used to look up
+ * node attributes (e.g. colors) for a label chain that came from the server,
+ * where node ids are not available.
+ */
+export const findNodeChainByLabels = <V>(
+  data: MultilevelData<V>[],
+  labels: (string | undefined)[],
+): MultilevelData<V>[] | undefined => {
+  const chain: MultilevelData<V>[] = [];
+  let level = data;
+
+  for (const label of labels) {
+    const node = level.find((d) => d.label === label);
+
+    if (!node) {
+      return undefined;
+    }
+    chain.push(node);
+    level = node.children ?? [];
+  }
+
+  return chain.length > 0 ? chain : undefined;
+};
+
+/**
  * Parse a .NET TimeSpan-formatted string to milliseconds.
  * Accepts both "c" format ("[-][d.]hh:mm:ss[.fffffff]") and
  * "g" format ("[-][d:]h:mm:ss[.FFFFFFF]"), as well as a raw
@@ -156,11 +182,23 @@ const Serialization = {
 };
 
 /**
+ * A string produced by serializeStandardValue — the wire/storage format shared
+ * with the backend, never a raw runtime value. For text types the two happen to
+ * look identical, so keep the distinction in signatures: anything typed as
+ * SerializedStandardValue must come from serializeStandardValue (or the API),
+ * and must go through deserializeStandardValue before use.
+ *
+ * (Kept as a plain alias rather than a branded type until the tsc baseline is
+ * clean enough to enforce it project-wide.)
+ */
+export type SerializedStandardValue = string;
+
+/**
  * Deserialize a string to the correct runtime type.
  * Use deserializeStandardValueTyped for type-safe access.
  */
 export const deserializeStandardValue = (
-  value: string | null,
+  value: SerializedStandardValue | null,
   type: StandardValueType,
 ): any | undefined => {
   if (value == undefined) {
@@ -282,7 +320,7 @@ export const deserializeStandardValue = (
  * Returns correctly typed value based on StandardValueType.
  */
 export function deserializeStandardValueTyped<T extends StandardValueType>(
-  value: string | null,
+  value: SerializedStandardValue | null,
   type: T,
 ): StandardValueOf<T> | undefined {
   return deserializeStandardValue(value, type) as StandardValueOf<T> | undefined;
@@ -295,7 +333,7 @@ export function deserializeStandardValueTyped<T extends StandardValueType>(
 export const serializeStandardValue = (
   value: any | null,
   type: StandardValueType,
-): string | undefined => {
+): SerializedStandardValue | undefined => {
   if (value == undefined) {
     return undefined;
   }
@@ -391,6 +429,6 @@ export const serializeStandardValue = (
 export function serializeStandardValueTyped<T extends StandardValueType>(
   value: StandardValueOf<T> | null | undefined,
   type: T,
-): string | undefined {
+): SerializedStandardValue | undefined {
   return serializeStandardValue(value, type);
 }

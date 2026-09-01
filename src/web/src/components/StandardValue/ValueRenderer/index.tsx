@@ -1,6 +1,7 @@
 import type { Dayjs } from "dayjs";
 import type { Duration } from "dayjs/plugin/duration";
 import type { LinkValue, TagValue } from "@/components/StandardValue/models";
+import type { StandardValueOf } from "@/components/Property/PropertySystem";
 
 import dj from "dayjs";
 
@@ -19,16 +20,23 @@ import {
 } from "@/components/StandardValue";
 import { buildLogger } from "@/components/utils";
 
-type Props = {
-  value?: any;
-  type: StandardValueType;
+type Props<T extends StandardValueType = StandardValueType> = {
+  /**
+   * The runtime (deserialized) value matching `type`. Typed callers get
+   * compile-time checking via the StandardValueOf mapping; the DateTime/Time
+   * branches additionally tolerate raw API shapes (string/number) at runtime.
+   */
+  value?: StandardValueOf<T> | string | number | null;
+  type: T;
   variant?: "default" | "light";
   propertyType?: PropertyType;
 };
 
 const log = buildLogger("StandardValueRenderer");
 
-const StandardValueRenderer = (props: Props) => {
+const StandardValueRenderer = <T extends StandardValueType = StandardValueType>(
+  props: Props<T>,
+) => {
   const { value, type, variant = "default", propertyType } = props;
 
   // log(props);

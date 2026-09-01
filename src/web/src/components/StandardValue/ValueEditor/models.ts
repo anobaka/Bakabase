@@ -1,4 +1,4 @@
-export type ValueEditorProps<TDbValue = any, TBizValue = TDbValue> = {
+export type ValueEditorProps<TDbValue, TBizValue = TDbValue> = {
   value?: TDbValue;
   onValueChange?: (dbValue?: TDbValue, bizValue?: TBizValue) => any;
   onCancel?: () => any;
