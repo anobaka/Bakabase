@@ -202,9 +202,14 @@ export const deserializeStandardValue = (
       return undefined;
     }
     case StandardValueType.Boolean: {
-      if (value === "True") {
+      // Historic writers produced "True"/"False" (bool.ToString() on the backend),
+      // while the conversion/display layer emits "1"/"0" — accept all of them,
+      // mirroring the backend's tolerant deserializer.
+      const normalized = value.trim().toLowerCase();
+
+      if (normalized === "true" || normalized === "1") {
         return true;
-      } else if (value === "False") {
+      } else if (normalized === "false" || normalized === "0") {
         return false;
       }
 
@@ -241,14 +246,23 @@ export const deserializeStandardValue = (
               Serialization.EscapeChar,
             );
 
-            if (tagSegments) {
-              return {
-                group: tagSegments[0],
-                name: tagSegments[1],
-              };
+            if (!tagSegments || tagSegments.length === 0) {
+              return null;
             }
 
-            return null;
+            // Well-formed entries carry two segments (group,name); a single-segment
+            // legacy/corrupted entry is a group-less tag — same as the backend.
+            const [group, name] =
+              tagSegments.length === 1 ? [undefined, tagSegments[0]] : tagSegments;
+
+            if (!name) {
+              return null;
+            }
+
+            return {
+              group: group || undefined,
+              name,
+            };
           })
           .filter((p) => p != null);
       }

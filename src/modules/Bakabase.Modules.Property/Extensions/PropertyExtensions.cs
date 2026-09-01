@@ -1,5 +1,4 @@
 ﻿using System.Collections.Concurrent;
-using System.Text.Json;
 using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Exceptions;
 using Bakabase.Abstractions.Models.Domain;
@@ -10,14 +9,11 @@ using Bakabase.Modules.Property.Models.View;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bootstrap.Extensions;
 using Newtonsoft.Json;
-using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace Bakabase.Modules.Property.Extensions;
 
 public static class PropertyExtensions
 {
-    private static readonly JsonSerializerOptions CamelCaseJsonOptions = JsonSerializerOptions.Web;
-
     private static readonly ConcurrentDictionary<StandardValueType, PropertyType[]>
         StandardValueTypeCustomPropertyTypesMap = new(
             Enum.GetValues<PropertyType>()
@@ -28,15 +24,17 @@ public static class PropertyExtensions
 
     /// <summary>
     /// Get the DB value type for a PropertyType.
+    /// Throws for unknown types instead of returning an invalid default(StandardValueType).
     /// </summary>
     public static StandardValueType GetDbValueType(this PropertyType type) =>
-        PropertySystem.Property.TryGetAttribute(type)?.DbValueType ?? default;
+        PropertySystem.Property.GetDbValueType(type);
 
     /// <summary>
     /// Get the Biz value type for a PropertyType.
+    /// Throws for unknown types instead of returning an invalid default(StandardValueType).
     /// </summary>
     public static StandardValueType GetBizValueType(this PropertyType type) =>
-        PropertySystem.Property.TryGetAttribute(type)?.BizValueType ?? default;
+        PropertySystem.Property.GetBizValueType(type);
 
     public static PropertyType[]? GetCompatibleCustomPropertyTypes(this StandardValueType bizValueType) =>
         StandardValueTypeCustomPropertyTypesMap.GetValueOrDefault(bizValueType);
@@ -82,14 +80,16 @@ public static class PropertyExtensions
     }
 
     /// <summary>
-    /// Batch convert DbModels to DomainModels with optimized Options deserialization
+    /// Batch convert DbModels to DomainModels.
+    /// Options are written by Newtonsoft (see ToDbModel), so they must be read back with the
+    /// same stack — a second JSON library here caused single/batch paths to drift.
     /// </summary>
     public static List<CustomProperty> ToDomainModelsBatch(this IEnumerable<CustomPropertyDbModel> dbModels)
     {
         var dbModelList = dbModels.ToList();
         var result = new List<CustomProperty>(dbModelList.Count);
 
-        // Group by Type to batch deserialize options
+        // Group by Type so the descriptor lookup happens once per type
         var groupedByType = dbModelList.GroupBy(d => d.Type).ToList();
 
         foreach (var typeGroup in groupedByType)
@@ -109,10 +109,9 @@ public static class PropertyExtensions
                     Order = dbModel.Order
                 };
 
-                // Deserialize options if present (using System.Text.Json for better performance)
                 if (dbModel.Options.IsNotEmpty() && descriptor?.OptionsType != null)
                 {
-                    p.Options = JsonSerializer.Deserialize(dbModel.Options, descriptor.OptionsType, CamelCaseJsonOptions);
+                    p.Options = JsonConvert.DeserializeObject(dbModel.Options, descriptor.OptionsType);
                 }
 
                 result.Add(p);

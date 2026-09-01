@@ -205,8 +205,10 @@ const PropertyValueRenderer = (props: Props) => {
       const typedBv =
         (bv as string) ??
         (property.options?.choices ?? []).find((x: ChoiceOption) => x.value == typedDv)?.label;
+      // Strict equality: dv is a single choice id here, and substring matching
+      // (String.includes) would false-positive on ids that prefix each other.
       const vas: ChoiceOption[] = _.sortBy(
-        property.options?.choices?.filter((o: ChoiceOption) => dv?.includes(o.value)) ?? [],
+        property.options?.choices?.filter((o: ChoiceOption) => o.value == typedDv) ?? [],
         (x: ChoiceOption) => x.value == typedDv,
       );
 
@@ -426,7 +428,7 @@ const PropertyValueRenderer = (props: Props) => {
           }}
           isEditing={isEditing}
           isReadonly={isReadonly}
-          multiple={property?.options?.valueIsSingleton ?? true}
+          multiple={!(property?.options?.valueIsSingleton ?? false)}
           size={size}
           value={typedBv}
           valueAttributes={vas}

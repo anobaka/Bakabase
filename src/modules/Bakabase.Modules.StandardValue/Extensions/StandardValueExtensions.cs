@@ -41,12 +41,32 @@ public static class StandardValueExtensions
                         ? dec
                         : decimal.Parse(serializedValue, NumberStyles.Float, CultureInfo.CurrentCulture);
                 case StandardValueType.Boolean:
-                    return bool.Parse(serializedValue);
+                {
+                    // Historic writers produced "True"/"False" (bool.ToString()), while the
+                    // conversion/display layer emits "1"/"0" — accept all of them on read.
+                    var trimmed = serializedValue.Trim();
+                    if (bool.TryParse(trimmed, out var b))
+                    {
+                        return b;
+                    }
+
+                    return trimmed switch
+                    {
+                        "1" => true,
+                        "0" => false,
+                        _ => throw new FormatException($"'{serializedValue}' is not a valid boolean value")
+                    };
+                }
                 case StandardValueType.Link:
                 {
+                    // Well-formed payloads always carry two segments (text,url); tolerate a
+                    // single-segment legacy/corrupted payload as a text-only link instead of
+                    // silently dropping the whole value.
                     var data = serializedValue.SplitWithEscapeChar(SerializationLowLevelSeparator,
                         SerializationSeparatorEscapeChar);
-                    return data == null ? null : new LinkValue(data[0], data[1]);
+                    return data == null || data.Count == 0
+                        ? null
+                        : new LinkValue(data[0], data.Count > 1 ? data[1] : null);
                 }
                 case StandardValueType.DateTime:
                     return DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(serializedValue)).ToLocalTime().DateTime;
@@ -57,9 +77,20 @@ public static class StandardValueExtensions
                         SerializationLowLevelSeparator, SerializationSeparatorEscapeChar);
                 case StandardValueType.ListTag:
                 {
+                    // Well-formed entries always carry two segments (group,name); tolerate a
+                    // single-segment entry as a group-less tag instead of failing the whole list.
                     var data = serializedValue.SplitWithEscapeChar(SerializationHighLevelSeparator,
                         SerializationLowLevelSeparator, SerializationSeparatorEscapeChar);
-                    return data?.Select(d => new TagValue(d[0], d[1])).ToList();
+                    return data?
+                        .Select(d => d.Count switch
+                        {
+                            0 => null,
+                            1 => new TagValue(null, d[0]),
+                            _ => new TagValue(d[0], d[1])
+                        })
+                        .Where(t => !string.IsNullOrEmpty(t?.Name))
+                        .OfType<TagValue>()
+                        .ToList();
                 }
             }
 
@@ -79,7 +110,7 @@ public static class StandardValueExtensions
     public static T? DeserializeAsStandardValue<T>(this string serializedValue, StandardValueType valueType,
         bool throwOnError = false)
     {
-        var v = DeserializeAsStandardValue(serializedValue, valueType);
+        var v = DeserializeAsStandardValue(serializedValue, valueType, throwOnError);
         return v is T v1 ? v1 : default;
     }
 
@@ -102,9 +133,16 @@ public static class StandardValueExtensions
                 case StandardValueType.Decimal:
                     // Always write with InvariantCulture so the stored format is
                     // culture-independent (and matches the frontend, which parses with `.`).
-                    return rawValue is decimal dec
-                        ? dec.ToString(CultureInfo.InvariantCulture)
-                        : rawValue.ToString();
+                    // Non-decimal numerics (int/double/…) are normalized through decimal;
+                    // anything non-numeric is a type mismatch and must not be stored.
+                    return rawValue switch
+                    {
+                        decimal dec => dec.ToString(CultureInfo.InvariantCulture),
+                        sbyte or byte or short or ushort or int or uint or long or ulong or float or double =>
+                            System.Convert.ToDecimal(rawValue, CultureInfo.InvariantCulture)
+                                .ToString(CultureInfo.InvariantCulture),
+                        _ => null
+                    };
                 case StandardValueType.Link:
                 {
                     return rawValue is LinkValue lv
@@ -112,7 +150,8 @@ public static class StandardValueExtensions
                         : null;
                 }
                 case StandardValueType.Boolean:
-                    return rawValue.ToString();
+                    // Keep bool.ToString()'s "True"/"False" — that's what all stored data uses.
+                    return rawValue is bool b ? b.ToString() : null;
                 case StandardValueType.DateTime:
                 {
                     // ToUniversalTime() first: new DateTimeOffset(dt) throws for

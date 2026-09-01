@@ -126,6 +126,7 @@ public static class PropertyValueFactory
             string? label,
             bool addOnMiss = false)
         {
+            label = label?.Trim();
             if (string.IsNullOrEmpty(label)) return null;
 
             var existing = options?.Choices?.FirstOrDefault(c => c.Label == label);
@@ -264,7 +265,11 @@ public static class PropertyValueFactory
         {
             if (labels == null) return null;
 
-            var labelsArray = labels.Where(l => !string.IsNullOrEmpty(l)).ToArray();
+            var labelsArray = labels
+                .Select(l => l?.Trim())
+                .Where(l => !string.IsNullOrEmpty(l))
+                .Select(l => l!)
+                .ToArray();
             if (labelsArray.Length == 0) return null;
 
             if (addOnMiss && options != null)

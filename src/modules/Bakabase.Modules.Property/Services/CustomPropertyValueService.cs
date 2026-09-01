@@ -68,16 +68,19 @@ namespace Bakabase.Modules.Property.Services
                 await CustomPropertyService.GetAll(x => propertyIds.Contains(x.Id),
                     CustomPropertyAdditionalItem.None, returnCopy);
             var propertyMap = properties.ToDictionary(x => x.Id);
-            // var dtoList = values.Select(v => new CustomPropertyValue
-            // {
-            //     Id = v.Id, 
-            //     Property = propertyMap[v.PropertyId], 
-            //     PropertyId = v.PropertyId, 
-            //     ResourceId = v.ResourceId,
-            //     Scope = v.Scope,
-            //     Value = DictionaryExtensions.GetOrAdd(DbValueCache, v.Id,
-            //         () => v.Value?.DeserializeAsStandardValue(propertyMap[v.PropertyId].DbValueType))
-            // }).ToList();
+
+            // Values can outlive their property (orphans) — skip them instead of
+            // failing the whole query with a KeyNotFoundException.
+            var orphanPropertyIds = propertyIds.Where(id => !propertyMap.ContainsKey(id)).ToHashSet();
+            if (orphanPropertyIds.Count > 0)
+            {
+                logger.LogWarning(
+                    "Skipping {Count} custom property values whose properties no longer exist. Property ids: {PropertyIds}",
+                    values.Count(v => orphanPropertyIds.Contains(v.PropertyId)),
+                    string.Join(',', orphanPropertyIds));
+                values = values.Where(v => !orphanPropertyIds.Contains(v.PropertyId)).ToList();
+            }
+
             var dtoList = values.Select(v => v.ToDomainModel(propertyMap[v.PropertyId].Type)).ToList();
 
             foreach (var ai in SpecificEnumUtils<CustomPropertyValueAdditionalItem>.Values)

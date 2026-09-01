@@ -32,7 +32,8 @@ public class MultilevelPropertyDescriptor : AbstractPropertyDescriptor<Multileve
     protected override (object DbValue, SearchOperation Operation)? BuildSearchFilterByKeywordInternal(Bakabase.Abstractions.Models.Domain.Property property, string keyword)
     {
         var options = property.Options as MultilevelPropertyOptions;
-        var nodes = options?.Data?.Select(d => d.FindNode(x => x.Label.Contains(keyword)))
+        var nodes = options?.Data?
+            .Select(d => d.FindNode(x => x.Label.Contains(keyword, StringComparison.OrdinalIgnoreCase)))
             .OfType<MultilevelDataOptions>().ToList();
         if (nodes?.Any() != true)
         {

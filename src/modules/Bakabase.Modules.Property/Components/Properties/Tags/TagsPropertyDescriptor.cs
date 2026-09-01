@@ -32,7 +32,9 @@ public class TagsPropertyDescriptor : AbstractPropertyDescriptor<TagsPropertyOpt
         string keyword)
     {
         var options = property.Options as TagsPropertyOptions;
-        var values = options?.Tags?.Where(t => t.Group?.Contains(keyword) == true || t.Name.Contains(keyword))
+        var values = options?.Tags?.Where(t =>
+                t.Group?.Contains(keyword, StringComparison.OrdinalIgnoreCase) == true ||
+                t.Name.Contains(keyword, StringComparison.OrdinalIgnoreCase))
             .Select(t => t.Value).ToHashSet();
         return values?.Any() == true ? (values, SearchOperation.In) : null;
     }

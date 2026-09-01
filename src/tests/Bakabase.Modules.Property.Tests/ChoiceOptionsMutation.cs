@@ -88,4 +88,43 @@ public sealed class ChoiceOptionsMutation
         Assert.ThrowsException<Exception>(
             () => { _ = new SingleChoicePropertyOptions().AddChoices(false, ["A", "B"], ["only-one"]); });
     }
+
+    [TestMethod]
+    public void AddChoices_UntrimmedLabel_IsTrimmedAndDeduped()
+    {
+        var options = new SingleChoicePropertyOptions
+        {
+            Choices = [new ChoiceOptions { Label = "foo", Value = "id-foo" }]
+        };
+        // " foo " is the same label as "foo" after trimming — nothing to add.
+        Assert.IsFalse(options.AddChoices(true, [" foo "], null));
+        Assert.AreEqual(1, options.Choices!.Count);
+
+        // A genuinely new label is stored trimmed.
+        Assert.IsTrue(options.AddChoices(true, ["  bar  "], null));
+        Assert.AreEqual("bar", options.Choices.Last().Label);
+    }
+
+    [TestMethod]
+    public void AddChoices_EmptyLabelsMixedWithValid_OnlyValidAdded()
+    {
+        var options = new SingleChoicePropertyOptions();
+        Assert.IsTrue(options.AddChoices(true, ["", "   ", "x"], null));
+        Assert.AreEqual(1, options.Choices!.Count);
+        Assert.AreEqual("x", options.Choices[0].Label);
+    }
+
+    [TestMethod]
+    public void AddChoices_DbValuesStayAlignedWhenDuplicatesAreSkipped()
+    {
+        var options = new SingleChoicePropertyOptions
+        {
+            Choices = [new ChoiceOptions { Label = "A", Value = "id-a" }]
+        };
+        // "A" is skipped as duplicate; "B" must still get its paired id, and the
+        // pre-filter length check must not misfire.
+        Assert.IsTrue(options.AddChoices(true, ["A", "B"], ["id-a2", "id-b"]));
+        Assert.AreEqual(2, options.Choices!.Count);
+        Assert.AreEqual("id-b", options.Choices.First(c => c.Label == "B").Value);
+    }
 }

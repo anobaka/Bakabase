@@ -117,7 +117,7 @@ namespace Bakabase.Modules.Property.Components.Properties
             {
                 Operation = sf.Value.Operation,
                 DbValue = sf.Value.DbValue,
-                PropertyPool = PropertyPool.Custom,
+                PropertyPool = property.Pool,
                 PropertyId = property.Id,
                 Property = property
             };

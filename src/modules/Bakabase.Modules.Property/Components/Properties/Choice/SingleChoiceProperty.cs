@@ -17,7 +17,8 @@ public class SingleChoicePropertyDescriptor : AbstractPropertyDescriptor<SingleC
         Bakabase.Abstractions.Models.Domain.Property property, string keyword)
     {
         var options = property.Options as SingleChoicePropertyOptions;
-        var ids = options?.Choices?.Where(c => c.Label.Contains(keyword)).Select(x => x.Value).ToList();
+        var ids = options?.Choices?.Where(c => c.Label.Contains(keyword, StringComparison.OrdinalIgnoreCase))
+            .Select(x => x.Value).ToList();
         return ids?.Any() == true ? (ids, SearchOperation.In) : null;
     }
 
@@ -38,7 +39,8 @@ public class SingleChoicePropertyDescriptor : AbstractPropertyDescriptor<SingleC
                 return operation == SearchOperation.In ? fv.Contains(dbValue) : !fv.Contains(dbValue);
             }
             default:
-                return true;
+                // Unknown operations never match — consistent with every other descriptor.
+                return false;
         }
     }
 
