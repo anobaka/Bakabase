@@ -21,8 +21,12 @@ namespace Bakabase.Modules.Property.Abstractions.Components
         // CustomPropertyValue ToDomainModel(CustomPropertyValueDbModel value);
         object? GetBizValue(Bakabase.Abstractions.Models.Domain.Property property, object? dbValue);
 
+        /// <summary>
+        /// Convert a BizValue to a DbValue. For reference types, <paramref name="policy"/>
+        /// decides whether unmatched entries create new options (the default) or are dropped.
+        /// </summary>
         (object? DbValue, bool PropertyChanged) PrepareDbValue(Bakabase.Abstractions.Models.Domain.Property property,
-            object? bizValue);
+            object? bizValue, PropertyValueMatchPolicy policy = PropertyValueMatchPolicy.AutoCreateOptions);
 
         object? InitializeOptions() => null;
         Type? OptionsType => null;

@@ -102,20 +102,28 @@ public class MultilevelPropertyDescriptor : AbstractPropertyDescriptor<Multileve
         {SearchOperation.IsNull, null}, {SearchOperation.IsNotNull, null}
     };
 
-    protected override (List<string>? DbValue, bool PropertyChanged) PrepareDbValueInternal(Bakabase.Abstractions.Models.Domain.Property property, List<List<string>> bizValue)
+    protected override (List<string>? DbValue, bool PropertyChanged) PrepareDbValueInternal(
+        Bakabase.Abstractions.Models.Domain.Property property, List<List<string>> bizValue,
+        PropertyValueMatchPolicy policy)
     {
         if (bizValue.Any())
         {
             bizValue.TrimAll();
-            var options = ((property.Options ??= new MultilevelPropertyOptions()) as MultilevelPropertyOptions)!;
-            if (options.ValueIsSingleton)
+            var autoCreate = policy == PropertyValueMatchPolicy.AutoCreateOptions;
+            if (autoCreate)
+            {
+                property.Options ??= new MultilevelPropertyOptions();
+            }
+
+            var options = property.Options as MultilevelPropertyOptions;
+            if (options?.ValueIsSingleton == true)
             {
                 bizValue = bizValue.Take(1).ToList();
             }
 
-            var propertyChanged = options.AddBranchOptions(bizValue);
+            var propertyChanged = autoCreate && options!.AddBranchOptions(bizValue);
 
-            var branches = options.Data ?? [];
+            var branches = options?.Data ?? [];
             var values = branches.FindValuesByLabelChains(bizValue).OfType<string>().ToList();
 
             return (values.Any() ? values : null, propertyChanged);
@@ -126,11 +134,13 @@ public class MultilevelPropertyDescriptor : AbstractPropertyDescriptor<Multileve
 
     protected override List<List<string>>? GetBizValueInternal(Bakabase.Abstractions.Models.Domain.Property property, List<string> value)
     {
+        // Drop ids whose node no longer exists instead of surfacing the raw id as a
+        // label chain — consistent with the other reference types.
         var data = new List<List<string>>();
         var options = property.Options as MultilevelPropertyOptions;
-        foreach (var v in value)
+        if (options?.Data != null)
         {
-            if (options?.Data != null)
+            foreach (var v in value)
             {
                 foreach (var d in options.Data)
                 {
@@ -141,12 +151,8 @@ public class MultilevelPropertyDescriptor : AbstractPropertyDescriptor<Multileve
                     }
                 }
             }
-            else
-            {
-                data.Add([v]);
-            }
         }
 
-        return data;
+        return data.Count > 0 ? data : null;
     }
 }

@@ -1,5 +1,6 @@
 ﻿using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Models.Domain;
 using Bakabase.Modules.Property.Components.Properties.Choice.Abstractions;
 using Bakabase.Modules.Property.Extensions;
@@ -125,15 +126,21 @@ public class SingleChoicePropertyDescriptor : AbstractPropertyDescriptor<SingleC
     }
 
     protected override (string? DbValue, bool PropertyChanged) PrepareDbValueInternal(
-        Bakabase.Abstractions.Models.Domain.Property property, string bizValue)
+        Bakabase.Abstractions.Models.Domain.Property property, string bizValue,
+        PropertyValueMatchPolicy policy)
     {
         bizValue = bizValue.Trim();
         if (!string.IsNullOrEmpty(bizValue))
         {
-            property.Options ??= new SingleChoicePropertyOptions();
-            var options = (property.Options as SingleChoicePropertyOptions)!;
-            var propertyChanged = options.AddChoices(true, [bizValue], null);
-            var stringValue = options.Choices?.Find(x => x.Label == bizValue)?.Value;
+            var propertyChanged = false;
+            if (policy == PropertyValueMatchPolicy.AutoCreateOptions)
+            {
+                property.Options ??= new SingleChoicePropertyOptions();
+                propertyChanged = ((SingleChoicePropertyOptions) property.Options).AddChoices(true, [bizValue], null);
+            }
+
+            var options = property.Options as SingleChoicePropertyOptions;
+            var stringValue = options?.Choices?.Find(x => x.Label == bizValue)?.Value;
             return (stringValue, propertyChanged);
         }
 

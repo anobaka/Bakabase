@@ -42,44 +42,59 @@ public class TagsPropertyDescriptor : AbstractPropertyDescriptor<TagsPropertyOpt
     }
 
     protected override (List<string>? DbValue, bool PropertyChanged) PrepareDbValueInternal(
-        Bakabase.Abstractions.Models.Domain.Property property, List<TagValue> bizValue)
+        Bakabase.Abstractions.Models.Domain.Property property, List<TagValue> bizValue,
+        PropertyValueMatchPolicy policy)
     {
-        bizValue = bizValue.Trimmed();
+        bizValue = bizValue.Trimmed().Where(t => !string.IsNullOrEmpty(t.Name)).ToList();
         if (!bizValue.Any())
         {
             return (null, false);
         }
 
+        var autoCreate = policy == PropertyValueMatchPolicy.AutoCreateOptions;
+        if (autoCreate)
+        {
+            property.Options ??= new TagsPropertyOptions();
+        }
+
+        var options = property.Options as TagsPropertyOptions;
+        if (autoCreate)
+        {
+            options!.Tags ??= [];
+        }
+
         var dbValue = new List<string>();
         var propertyChanged = false;
-        var options =
-            ((property.Options ??= new TagsPropertyOptions()) as
-                TagsPropertyOptions)!;
-        options.Tags ??= [];
         foreach (var tag in bizValue)
         {
-            var definedTag = options.Tags.FirstOrDefault(x => x.Name == tag.Name && x.Group == tag.Group);
+            var definedTag = options?.Tags?.FirstOrDefault(x => x.Name == tag.Name && x.Group == tag.Group);
             if (definedTag == null)
             {
+                if (!autoCreate)
+                {
+                    continue;
+                }
+
                 definedTag = new TagsPropertyOptions.TagOptions(tag.Group, tag.Name)
                     {Value = TagsPropertyOptions.TagOptions.GenerateValue()};
-                options.Tags.Add(definedTag);
+                options!.Tags!.Add(definedTag);
                 propertyChanged = true;
             }
 
             dbValue.Add(definedTag.Value);
         }
 
-        return (dbValue, propertyChanged);
+        return (dbValue.Any() ? dbValue : null, propertyChanged);
     }
 
     protected override List<TagValue>? GetBizValueInternal(Bakabase.Abstractions.Models.Domain.Property property,
         List<string> value)
     {
         var options = property.Options as TagsPropertyOptions;
-        return value
+        var tags = value
             .Select(v => options?.Tags?.FirstOrDefault(x => x.Value == v)?.ToTagValue()).OfType<TagValue>()
             .ToList();
+        return tags.Count > 0 ? tags : null;
     }
 
     protected override bool IsMatchInternal(List<string> dbValue, SearchOperation operation, object filterValue)

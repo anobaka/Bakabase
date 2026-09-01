@@ -101,15 +101,22 @@ public class MultipleChoicePropertyDescriptor
     }
 
     protected override (List<string>? DbValue, bool PropertyChanged) PrepareDbValueInternal(
-        Bakabase.Abstractions.Models.Domain.Property property, List<string> bizValue)
+        Bakabase.Abstractions.Models.Domain.Property property, List<string> bizValue,
+        PropertyValueMatchPolicy policy)
     {
         var goodValues = bizValue.TrimAndRemoveEmpty();
         if (goodValues?.Any() == true)
         {
-            property.Options ??= new MultipleChoicePropertyOptions();
-            var options = (property.Options as MultipleChoicePropertyOptions)!;
-            var propertyChanged = options.AddChoices(true, goodValues.ToArray(), null);
-            var stringValues = goodValues.Select(v => options.Choices?.Find(c => c.Label == v)?.Value).OfType<string>()
+            var propertyChanged = false;
+            if (policy == PropertyValueMatchPolicy.AutoCreateOptions)
+            {
+                property.Options ??= new MultipleChoicePropertyOptions();
+                propertyChanged =
+                    ((MultipleChoicePropertyOptions) property.Options).AddChoices(true, goodValues.ToArray(), null);
+            }
+
+            var options = property.Options as MultipleChoicePropertyOptions;
+            var stringValues = goodValues.Select(v => options?.Choices?.Find(c => c.Label == v)?.Value).OfType<string>()
                 .ToList();
             return (stringValues.Any() ? stringValues : null, propertyChanged);
         }

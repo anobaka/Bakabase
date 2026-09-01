@@ -84,11 +84,13 @@ public static class PropertySystem
         }
 
         /// <summary>
-        /// Convert BizValue to DbValue for a property.
+        /// Convert BizValue to DbValue for a property. For reference types the policy decides
+        /// whether unmatched entries create new options (default) or are dropped.
         /// </summary>
         public static (object? DbValue, bool PropertyChanged) ToDbValue(
-            Bakabase.Abstractions.Models.Domain.Property property, object? bizValue) =>
-            GetDescriptor(property.Type).PrepareDbValue(property, bizValue);
+            Bakabase.Abstractions.Models.Domain.Property property, object? bizValue,
+            PropertyValueMatchPolicy policy = PropertyValueMatchPolicy.AutoCreateOptions) =>
+            GetDescriptor(property.Type).PrepareDbValue(property, bizValue, policy);
 
         /// <summary>
         /// Get the search handler for a PropertyType.

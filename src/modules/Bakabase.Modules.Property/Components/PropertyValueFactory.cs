@@ -4,6 +4,7 @@ using Bakabase.Modules.Property.Components.Properties.Choice.Abstractions;
 using Bakabase.Modules.Property.Components.Properties.Multilevel;
 using Bakabase.Modules.Property.Components.Properties.Tags;
 using Bakabase.Modules.Property.Extensions;
+using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bakabase.Modules.StandardValue.Models.Domain;
 
@@ -23,6 +24,13 @@ namespace Bakabase.Modules.Property.Components;
 /// </summary>
 public static class PropertyValueFactory
 {
+    private static Bakabase.Abstractions.Models.Domain.Property VirtualProperty(PropertyType type, object options) =>
+        new(PropertyPool.Custom, 0, type, null, options);
+
+    private static PropertyValueMatchPolicy Policy(bool addOnMiss) => addOnMiss
+        ? PropertyValueMatchPolicy.AutoCreateOptions
+        : PropertyValueMatchPolicy.MatchOnly;
+
     #region Choice Types (SingleChoice, MultipleChoice)
 
     /// <summary>
@@ -60,22 +68,11 @@ public static class PropertyValueFactory
             string? label,
             bool addOnMiss = false)
         {
-            label = label?.Trim();
-            if (string.IsNullOrEmpty(label)) return null;
-
-            var existing = options?.Choices?.FirstOrDefault(c => c.Label == label);
-            if (existing != null)
-            {
-                return existing.Value;
-            }
-
-            if (addOnMiss && options != null)
-            {
-                options.AddChoices(true, [label], null);
-                return options.Choices?.FirstOrDefault(c => c.Label == label)?.Value;
-            }
-
-            return null;
+            // Thin wrapper over the descriptor — the single implementation of matching.
+            if (options == null) return null;
+            var property = VirtualProperty(PropertyType.SingleChoice, options);
+            var (dbValue, _) = PropertySystem.Property.ToDbValue(property, label, Policy(addOnMiss));
+            return dbValue as string;
         }
 
         /// <summary>
@@ -114,8 +111,9 @@ public static class PropertyValueFactory
             SingleChoicePropertyOptions? options,
             string? dbValue)
         {
-            if (string.IsNullOrEmpty(dbValue)) return null;
-            return options?.Choices?.FirstOrDefault(c => c.Value == dbValue)?.Label;
+            if (options == null || string.IsNullOrEmpty(dbValue)) return null;
+            return PropertySystem.Property.ToBizValue(
+                VirtualProperty(PropertyType.SingleChoice, options), dbValue) as string;
         }
 
         /// <summary>
@@ -177,26 +175,11 @@ public static class PropertyValueFactory
             IEnumerable<string>? labels,
             bool addOnMiss = false)
         {
-            if (labels == null) return null;
-
-            var labelsArray = labels
-                .Select(l => l?.Trim())
-                .Where(l => !string.IsNullOrEmpty(l))
-                .Select(l => l!)
-                .ToArray();
-            if (labelsArray.Length == 0) return null;
-
-            if (addOnMiss && options != null)
-            {
-                options.AddChoices(true, labelsArray, null);
-            }
-
-            var result = labelsArray
-                .Select(l => options?.Choices?.FirstOrDefault(c => c.Label == l)?.Value)
-                .OfType<string>()
-                .ToList();
-
-            return result.Count > 0 ? result : null;
+            // Thin wrapper over the descriptor — the single implementation of matching.
+            if (options == null || labels == null) return null;
+            var property = VirtualProperty(PropertyType.MultipleChoice, options);
+            var (dbValue, _) = PropertySystem.Property.ToDbValue(property, labels.ToList(), Policy(addOnMiss));
+            return dbValue as List<string>;
         }
 
         /// <summary>
@@ -250,12 +233,9 @@ public static class PropertyValueFactory
             MultipleChoicePropertyOptions? options,
             List<string>? dbValues)
         {
-            if (dbValues == null || dbValues.Count == 0) return null;
-            var result = dbValues
-                .Select(v => options?.Choices?.FirstOrDefault(c => c.Value == v)?.Label)
-                .OfType<string>()
-                .ToList();
-            return result.Count > 0 ? result : null;
+            if (options == null || dbValues == null || dbValues.Count == 0) return null;
+            return PropertySystem.Property.ToBizValue(
+                VirtualProperty(PropertyType.MultipleChoice, options), dbValues) as List<string>;
         }
 
         /// <summary>
@@ -321,33 +301,11 @@ public static class PropertyValueFactory
             IEnumerable<TagValue>? tags,
             bool addOnMiss = false)
         {
-            if (tags == null) return null;
-
-            var tagList = tags.Where(t => !string.IsNullOrEmpty(t.Name)).ToList();
-            if (tagList.Count == 0) return null;
-
-            if (addOnMiss && options != null)
-            {
-                options.Tags ??= [];
-                foreach (var tag in tagList)
-                {
-                    var existing = options.Tags.FirstOrDefault(x => x.Name == tag.Name && x.Group == tag.Group);
-                    if (existing == null)
-                    {
-                        options.Tags.Add(new TagsPropertyOptions.TagOptions(tag.Group, tag.Name)
-                        {
-                            Value = TagsPropertyOptions.TagOptions.GenerateValue()
-                        });
-                    }
-                }
-            }
-
-            var result = tagList
-                .Select(t => options?.Tags?.FirstOrDefault(x => x.Name == t.Name && x.Group == t.Group)?.Value)
-                .OfType<string>()
-                .ToList();
-
-            return result.Count > 0 ? result : null;
+            // Thin wrapper over the descriptor — the single implementation of matching.
+            if (options == null || tags == null) return null;
+            var property = VirtualProperty(PropertyType.Tags, options);
+            var (dbValue, _) = PropertySystem.Property.ToDbValue(property, tags.ToList(), Policy(addOnMiss));
+            return dbValue as List<string>;
         }
 
         /// <summary>
@@ -401,14 +359,9 @@ public static class PropertyValueFactory
             TagsPropertyOptions? options,
             List<string>? dbValues)
         {
-            if (dbValues == null || dbValues.Count == 0) return null;
-
-            var result = dbValues
-                .Select(v => options?.Tags?.FirstOrDefault(x => x.Value == v)?.ToTagValue())
-                .OfType<TagValue>()
-                .ToList();
-
-            return result.Count > 0 ? result : null;
+            if (options == null || dbValues == null || dbValues.Count == 0) return null;
+            return PropertySystem.Property.ToBizValue(
+                VirtualProperty(PropertyType.Tags, options), dbValues) as List<TagValue>;
         }
 
         /// <summary>
@@ -470,21 +423,14 @@ public static class PropertyValueFactory
             IEnumerable<List<string>>? paths,
             bool addOnMiss = false)
         {
-            if (paths == null || options?.Data == null && !addOnMiss) return null;
-
+            // Thin wrapper over the descriptor — the single implementation of matching.
+            if (options == null || paths == null) return null;
             var pathList = paths.Where(p => p.Count > 0).ToList();
             if (pathList.Count == 0) return null;
 
-            if (addOnMiss && options != null)
-            {
-                options.AddBranchOptions(pathList);
-            }
-
-            var result = options?.Data?.FindValuesByLabelChains(pathList)
-                .OfType<string>()
-                .ToList();
-
-            return result?.Count > 0 ? result : null;
+            var property = VirtualProperty(PropertyType.Multilevel, options);
+            var (dbValue, _) = PropertySystem.Property.ToDbValue(property, pathList, Policy(addOnMiss));
+            return dbValue as List<string>;
         }
 
         /// <summary>
@@ -538,22 +484,9 @@ public static class PropertyValueFactory
             MultilevelPropertyOptions? options,
             List<string>? dbValues)
         {
-            if (dbValues == null || dbValues.Count == 0 || options?.Data == null) return null;
-
-            var result = new List<List<string>>();
-            foreach (var v in dbValues)
-            {
-                foreach (var d in options.Data)
-                {
-                    var chain = d.FindLabelChain(v);
-                    if (chain != null)
-                    {
-                        result.Add(chain.ToList());
-                    }
-                }
-            }
-
-            return result.Count > 0 ? result : null;
+            if (options == null || dbValues == null || dbValues.Count == 0) return null;
+            return PropertySystem.Property.ToBizValue(
+                VirtualProperty(PropertyType.Multilevel, options), dbValues) as List<List<string>>;
         }
 
         /// <summary>
