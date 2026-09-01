@@ -127,7 +127,9 @@ const WorkflowRunsDrawer: React.FC<Props> = ({
                       {duration && (
                         <span className="text-xs text-default-400">· {duration}</span>
                       )}
-                      {triggerKind === "fs.manualScan" && (
+                      {["fs.manualScan", "fs.scheduledScan", "fs.watch"].includes(
+                        triggerKind ?? "",
+                      ) && (
                         <Button
                           className="ml-auto"
                           size="sm"

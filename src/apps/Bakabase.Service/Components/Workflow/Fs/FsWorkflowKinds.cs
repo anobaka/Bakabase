@@ -14,6 +14,12 @@ public static class FsWorkflowKinds
     /// trigger (its parameters live on the definition, not in an event).</summary>
     public static readonly string TriggerManualScan = WorkflowTriggerKinds.Build(Module, "manualScan");
 
+    /// <summary>The manual scan on a clock (E6) — same configuration plus an interval.</summary>
+    public static readonly string TriggerScheduledScan = WorkflowTriggerKinds.Build(Module, "scheduledScan");
+
+    /// <summary>Entries appearing in watched directories, after a settle period (E6).</summary>
+    public static readonly string TriggerWatch = WorkflowTriggerKinds.Build(Module, "watch");
+
     public static readonly string TransformFileNameOp = WorkflowActivityKinds.Transform(Module, "fileNameOp");
 
     /// <summary>The design's "expand.fs.children" — expansion is a Transform in the kind

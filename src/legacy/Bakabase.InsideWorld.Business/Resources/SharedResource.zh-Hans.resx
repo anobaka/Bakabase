@@ -804,4 +804,13 @@
   <data name="Downloader_ExHentai_DownloadingTorrent" xml:space="preserve">
     <value>正在下载种子文件...</value>
   </data>
+  <data name="BTask_Name_WorkflowScheduler" xml:space="preserve">
+    <value>工作流调度</value>
+  </data>
+  <data name="BTask_Description_WorkflowScheduler" xml:space="preserve">
+    <value>按各工作流配置的间隔到点启动定时工作流</value>
+  </data>
+  <data name="BTask_MessageOnInterruption_WorkflowScheduler" xml:space="preserve">
+    <value>应用未运行期间定时工作流不会启动</value>
+  </data>
 </root>

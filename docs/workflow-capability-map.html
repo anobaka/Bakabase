@@ -51,7 +51,7 @@ footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(
 <tr><td class="e">E3</td><td><b>能力契约</b></td><td>节点声明"我要能改文本的东西"，而不是逐个列举类型</td><td><span class="tag t-have">已完成</span></td></tr>
 <tr><td class="e">E4</td><td><b>变量</b></td><td>节点之间传值的通道（前面捕获的集数，后面拼进新名字）</td><td><span class="tag t-have">已完成</span></td></tr>
 <tr><td class="e">E5</td><td><b>两阶段运行</b></td><td>先出计划给人确认，再落盘；可撤销</td><td><span class="tag t-have">已完成</span></td></tr>
-<tr><td class="e">E6</td><td><b>定时 / 监听触发</b></td><td>到点自动跑，或盯着目录变化自动跑</td><td><span class="tag t-later">后续</span></td></tr></table>
+<tr><td class="e">E6</td><td><b>定时 / 监听触发</b></td><td>到点自动跑，或盯着目录变化自动跑</td><td><span class="tag t-have">已完成</span></td></tr></table>
 <p class="note">详细内容见 <a href="#s4">§4</a>。<a href="file-cleaning-workflow.html">清洗设计</a>中出现的 E1–E6 引用指向的就是这张表。</p>
 
 <h2 id="s1"><span class="n">§1</span>核心概念关系</h2>
@@ -158,7 +158,7 @@ for 每个 activity（从左到右）:
 <tr><td class="e">E3</td><td><b>能力契约</b><br><span class="tag">原称 facet，已弃用</span></td><td>描述符增加 <code class="i">AcceptedItemInterface: Type</code>——接受任何 CLR 类型实现该接口的 item（经描述符 ClrType 静态校验）。它是对"当前类型"的<b>谓词</b>，当前类型不变 → 强制 Passthrough。解决 O(N×M) 维护问题：新 item 类型实现一次接口，整族节点自动可用。<b>接入成本是双份的</b>：<a href="#f2">§5·发现 2</a></td><td class="k">transform.text.* × ITextWorkpiece</td><td>一切"按能力而非按类型"的节点族（未来 IHasCover、IHasSourceUrl…）</td></tr>
 <tr><td class="e">E4</td><td><b>变量</b></td><td>Runner 为每个 item 维护变量袋（<b>不进 item 类型</b>），经 <code class="i">ctx.Variables</code> 暴露；展开时子项继承副本；随 run 持久化。写入：capture（具名捕获组名即变量名）/ 域系统变量注入 / 后续 setVariable。读取：配置 schema 标记"支持插值"的字段，引擎统一解析 <code class="i">{var:name(:formatter)}</code>。编辑器沿链推导"此处可用变量集"→ <b>自动补全 + lint</b>（软契约）。<b>唯一需要改运行时数据模型的引擎扩展</b></td><td class="k">capture/template + fs 系统变量</td><td>当前节点间<b>没有任何数据通道</b>；变量是通用联动机制，任何 item 类型零成本获得</td></tr>
 <tr><td class="e">E5</td><td><b>两阶段运行</b></td><td>run 产出"计划"，确认后按计划执行（不重跑链，避免两次运行之间磁盘漂移）：Preview → diff 确认 → Apply → 可撤销。<b>需要建表</b>：<a href="#f3">§5·发现 3</a></td><td class="k">action.fs.saveName</td><td>一切有副作用的批量 action（批量入队、批量修改）都该有干跑</td></tr>
-<tr><td class="e">E6</td><td>定时 / 监听触发<span class="tag t-later">后续</span></td><td>cron 触发器；目录监听（FileMover 进料口形态）</td><td>自动清洗</td><td>全部定时自动化</td></tr></table>
+<tr><td class="e">E6</td><td>定时 / 监听触发<span class="tag t-have">已完成</span></td><td>调度：<code class="i">IWorkflowScheduledTrigger</code> + 每分钟一次的 WorkflowScheduler BTask（<code class="i">fs.scheduledScan</code> = 手动扫描 + intervalMinutes，经手动运行同一路径启动，绝不叠队）。监听：<code class="i">fs.watch</code> + WorkflowFsWatchService（FileSystemWatcher per root，静默期满才按定义各自的过滤条件发布——载荷携带原文 filterJson，Matches 即字符串相等，相同过滤只发布一次）。<b>实施说明</b>：监听服务独立实现而非挂进 FileMover 内部（进料口"形态"，非共用实例）。</td><td>自动清洗</td><td>全部定时自动化</td></tr></table>
 
 <h2 id="s5"><span class="n">§5</span>本轮代码复核发现（与初版设计假设不符）</h2>
 <p>初版设计写作时未逐行读过引擎。第一轮（发现 1–4）修正与初版假设不符的事实；第二轮（发现 5–9）来自"通用化审计"——3 路并行代码扫描 + 一轮独立复核，复核对全部结论逐条开文件验证。每条都影响排期。</p>
@@ -275,7 +275,7 @@ for 每个 activity（从左到右）:
 <tr><td class="e">2</td><td><b>落盘</b>（E5）<span class="tag t-have">已完成</span></td><td>计划表 + Apply + <code class="i">FileRenameRecord</code> + 撤销（含决定 5 的加固项：配置失败即失败、禁用/删除守卫、runner 逐 item CLR 校验、IsDestructive 规则）</td><td><b>功能真正可用</b>：预览 → 确认 → 落盘 → 可撤销</td></tr>
 <tr><td class="e">3</td><td><b>文本族</b>（E3）<span class="tag t-have">已完成</span></td><td>能力契约（<code class="i">AcceptedItemInterface</code> + <code class="i">ITextWorkpiece</code>，描述符下发 <code class="i">implementsInterfaces</code>/<code class="i">acceptedItemInterface</code>——决定 4 的 B1 数据收敛与之同批落地）+ <code class="i">transform.text.removeWrapped / removeTexts / trim</code></td><td>清洗能力变强（词表驱动地删噪声）</td></tr>
 <tr><td class="e">4</td><td><b>联动</b>（E4+E2）<span class="tag t-have">已完成</span></td><td>变量随行袋（<code class="i">ctx.Variables</code>，展开时子项继承副本）+ <code class="i">capture</code> / <code class="i">template</code>（含 fs 系统变量 extension/originalName/parentName、编辑器可用变量提示与 lint）+ <code class="i">transform.fs.expandChildren</code>（E2：<code class="i">ExpandTo</code> + <code class="i">Cardinality</code>）。<b>实施偏差</b>：变量袋只活在运行内存中、不随 run 持久化——尚无任何消费点需要读回历史 run 的变量；等出现（如 run 详情逐 item 调试视图）再补。</td><td>多层级、跨层级信息组合命名（<a href="file-cleaning-workflow-example.html">13 节点示例</a>的完整形态）</td></tr>
-<tr><td class="e">5</td><td><b>自动化</b>（E6）</td><td>cron / 目录监听触发</td><td>下载完成 → 自动清洗</td></tr></table>
+<tr><td class="e">5</td><td><b>自动化</b>（E6）<span class="tag t-have">已完成</span></td><td>定时扫描触发器 + 目录监听触发器（静默期 + 每定义过滤）</td><td>下载完成 → 自动清洗</td></tr></table>
 <div class="rule">核心理由：<b>没有 Apply 的清洗流程是玩具</b>，所以两阶段运行必须提前到第 2 批；能力契约与变量是"让它更强"，不是"让它可用"，可以后置。代价：<code class="i">fileNameOp</code> 先落在 fs 域、text 节点族晚一批到——而这两者本来就是设计里刻意分开的两条线（见<a href="file-cleaning-workflow.html">清洗设计 §3.0</a>），不构成返工。</div>
 
 <h2 id="s9"><span class="n">§9</span>已拍板决定（所有者 2026-09-01）</h2>

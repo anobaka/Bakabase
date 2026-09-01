@@ -186,5 +186,14 @@
   "workflow.activity.fsExpandChildren.target.label": "Emit children",
   "workflow.activity.fsExpandChildren.includeSelf.label": "Keep the directory itself in the chain too",
   "workflow.activity.fsExpandChildren.summary.text": "directories → their children ({{detail}})",
-  "workflow.activity.fsExpandChildren.summary.includeSelf": "keeps the directory"
+  "workflow.activity.fsExpandChildren.summary.includeSelf": "keeps the directory",
+  "workflow.trigger.fsScheduledScan.displayName": "Scheduled filesystem scan",
+  "workflow.trigger.fsScheduledScan.interval.label": "Run every (minutes)",
+  "workflow.trigger.fsScheduledScan.interval.description": "0 turns the schedule off — the definition stays runnable by hand.",
+  "workflow.trigger.fsScheduledScan.summary.every": "every {{minutes}} min",
+  "workflow.trigger.fsScheduledScan.summary.manualOnly": "schedule off — manual only",
+  "workflow.trigger.fsWatch.displayName": "Directory watch",
+  "workflow.trigger.fsWatch.settle.label": "Settle (seconds)",
+  "workflow.trigger.fsWatch.settle.description": "An entry fires only after staying unchanged this long — files still being copied must not be renamed.",
+  "workflow.trigger.fsWatch.summary.settle": "settle {{seconds}}s"
 }

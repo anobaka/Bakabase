@@ -185,5 +185,14 @@
   "workflow.activity.fsExpandChildren.target.label": "产出子条目",
   "workflow.activity.fsExpandChildren.includeSelf.label": "目录自身也保留在链上",
   "workflow.activity.fsExpandChildren.summary.text": "目录 → 其子条目（{{detail}}）",
-  "workflow.activity.fsExpandChildren.summary.includeSelf": "保留目录自身"
+  "workflow.activity.fsExpandChildren.summary.includeSelf": "保留目录自身",
+  "workflow.trigger.fsScheduledScan.displayName": "定时文件系统扫描",
+  "workflow.trigger.fsScheduledScan.interval.label": "运行间隔（分钟）",
+  "workflow.trigger.fsScheduledScan.interval.description": "0 表示关闭定时——该定义仍可手动运行。",
+  "workflow.trigger.fsScheduledScan.summary.every": "每 {{minutes}} 分钟",
+  "workflow.trigger.fsScheduledScan.summary.manualOnly": "定时已关——仅手动",
+  "workflow.trigger.fsWatch.displayName": "目录监听",
+  "workflow.trigger.fsWatch.settle.label": "静默期（秒）",
+  "workflow.trigger.fsWatch.settle.description": "条目保持不变达到该时长后才会触发——正在拷贝的文件不能被改名。",
+  "workflow.trigger.fsWatch.summary.settle": "静默 {{seconds}} 秒"
 }

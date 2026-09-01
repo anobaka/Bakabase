@@ -184,6 +184,10 @@ namespace Bakabase.Service.Extensions
             services.AddSingleton<IWorkflowActivity, Components.Workflow.Activities.Transforms.Text.TextCaptureActivity>();
             services.AddSingleton<IWorkflowActivity, Components.Workflow.Activities.Transforms.Text.TextTemplateActivity>();
             services.AddSingleton<IWorkflowActivity, Components.Workflow.Activities.Transforms.FsExpandChildrenActivity>();
+            // Automation (E6): scheduled scan + directory watch.
+            services.AddSingleton<IWorkflowTrigger, FsScheduledScanTrigger>();
+            services.AddSingleton<IWorkflowTrigger, FsWatchTrigger>();
+            services.AddHostedService<Components.Workflow.WorkflowFsWatchService>();
 
             services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, ExtensionGroupDbModel, int>>();
             services.AddScoped<IExtensionGroupService, ExtensionGroupService>();
