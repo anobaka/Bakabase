@@ -16,6 +16,7 @@
   "resource.tab.summary.filters": "Filters",
   "resource.tab.summary.tags": "Tags",
   "resource.tab.summary.order": "Order",
+  "resource.tab.summary.empty": "No search criteria",
   "resource.tab.summary.unknownProperty": "Unknown property",
   "resource.tab.summary.more": "+{{count}} more",
   "resource.empty.title": "No Resources Found",

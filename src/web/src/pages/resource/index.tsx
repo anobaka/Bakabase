@@ -13,7 +13,7 @@ import { usePendingSearchStore } from "@/stores/pendingSearch";
 import BApi from "@/sdk/BApi.tsx";
 import ResourceTabContent from "@/pages/resource/components/ResourceTabContent";
 import RecentlyPlayedDrawer from "@/pages/resource/components/RecentlyPlayedDrawer";
-import SearchSummary, { hasSearchSummary } from "@/pages/resource/components/SearchSummary";
+import SearchSummary from "@/pages/resource/components/SearchSummary";
 import { buildAutoTabName } from "@/pages/resource/utils/buildAutoTabName";
 
 type SavedSearch =
@@ -37,6 +37,14 @@ const ResourcePage = () => {
   const [liveSearchForms, setLiveSearchForms] = useState<
     Record<string, ResourceSearchForm | undefined>
   >({});
+  // Criteria of tabs that aren't mounted — only the active tab is on first
+  // paint, so without this every other tab's tooltip would have nothing to
+  // show. Fetched on hover rather than up front so a long tab bar doesn't
+  // fire a request per tab while the page is still loading its resources.
+  const [fetchedSearchForms, setFetchedSearchForms] = useState<
+    Record<string, ResourceSearchForm | undefined>
+  >({});
+  const requestedSearchIdsRef = useRef(new Set<string>());
   const resourceOptions = useResourceOptionsStore();
   const pendingSearch = usePendingSearchStore((s) => s.pendingSearch);
   const consumePendingSearch = usePendingSearchStore((s) => s.consumePendingSearch);
@@ -52,6 +60,30 @@ const ResourcePage = () => {
     },
     [],
   );
+
+  // Pulls a tab's criteria for the tooltip. The saved-search endpoint returns
+  // filters already resolved to property names and biz values, which the
+  // options store's raw copy is not. A failed request leaves nothing behind so
+  // the next hover retries.
+  const ensureSearchForm = useCallback((searchId: string) => {
+    if (requestedSearchIdsRef.current.has(searchId)) return;
+    requestedSearchIdsRef.current.add(searchId);
+
+    BApi.resource
+      .getSavedSearch({ id: searchId })
+      .then((r) => {
+        const search = r.data?.search;
+
+        if (search) {
+          setFetchedSearchForms((prev) => ({ ...prev, [searchId]: search }));
+        } else {
+          requestedSearchIdsRef.current.delete(searchId);
+        }
+      })
+      .catch(() => {
+        requestedSearchIdsRef.current.delete(searchId);
+      });
+  }, []);
 
   const creatingTabRef = useRef(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -222,9 +254,22 @@ const ResourcePage = () => {
           {ss.map((s, i) => {
             const isActive = activeSearchId == s.id || (activeSearchId == undefined && i == 0);
             const isEditing = editingId == s.id;
+            // A mounted tab reports its criteria live, so its edits show up in
+            // the tooltip without a round trip; everything else falls back to
+            // the copy fetched on hover.
+            const liveForm = liveSearchForms[s.id];
+            const summaryForm = liveForm ?? fetchedSearchForms[s.id];
+            const revealSummary = () => {
+              if (!liveForm) ensureSearchForm(s.id);
+            };
 
             return (
-              <div key={s.id} className="group flex items-center">
+              <div
+                key={s.id}
+                className="group flex items-center"
+                onFocus={revealSummary}
+                onMouseEnter={revealSummary}
+              >
                 <Button
                   className="gap-1 pr-1"
                   onPress={() => {
@@ -267,9 +312,9 @@ const ResourcePage = () => {
                         name rather than the whole button keeps it from firing
                         at the same time as the rename hint on the icon. */}
                     <Tooltip
-                      content={<SearchSummary form={liveSearchForms[s.id]} />}
+                      content={<SearchSummary form={summaryForm} loading={!summaryForm} />}
                       delay={300}
-                      isDisabled={isEditing || !hasSearchSummary(liveSearchForms[s.id])}
+                      isDisabled={isEditing}
                       placement="bottom"
                     >
                       <span

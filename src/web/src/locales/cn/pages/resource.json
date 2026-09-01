@@ -16,6 +16,7 @@
   "resource.tab.summary.filters": "筛选",
   "resource.tab.summary.tags": "标签",
   "resource.tab.summary.order": "排序",
+  "resource.tab.summary.empty": "无搜索条件",
   "resource.tab.summary.unknownProperty": "未知属性",
   "resource.tab.summary.more": "还有 {{count}} 项",
   "resource.empty.title": "未找到资源",
