@@ -38,7 +38,7 @@ footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(
 </style></head><body><div class="wrap">
 <h1>文件清洗（File Cleaning Workflow）· 设计</h1>
 <p class="sub">Workflow + File Renamer 的组合：用户自定义清洗流程（constants → 枚举子级 → 文本变更节点 → 保存文件名），针对文件夹执行，带预览与撤销</p>
-<p class="note">状态：<b>设计中，当前焦点</b>。前置的 <a href="specialtext-extension.html">SpecialText 扩展</a>与<b>手动触发</b>已完成；<b>实施顺序尚未拍板</b>，两个待选方案与四个待决问题见<a href="workflow-capability-map.html#s7">能力全景 §7–§8</a>。关联文档：<a href="workflow-capability-map.html">Workflow 能力全景</a>（E1–E6 代号速查见其 <a href="workflow-capability-map.html#s0">§0</a>） ｜ <a href="file-cleaning-workflow-example.html">13 节点完整示例</a> ｜ <a href="local-file-organization/README.md">Organizer（已挂起）</a>——本功能独立成立，不依赖 Organizer 任何概念；若其复活，本功能的文本节点可被复用为原子能力。</p>
+<p class="note">状态：<b>设计中，当前焦点</b>。前置的 <a href="specialtext-extension.html">SpecialText 扩展</a>与<b>手动触发</b>已完成；<b>实施顺序尚未拍板</b>，两个待选方案与四个待决问题见<a href="workflow-capability-map.html#s8">能力全景 §8–§9</a>。核心概念关系与"清洗如何用到它们"见<a href="workflow-capability-map.html#s1">能力全景 §1</a>。关联文档：<a href="workflow-capability-map.html">Workflow 能力全景</a>（E1–E6 代号速查见其 <a href="workflow-capability-map.html#s0">§0</a>） ｜ <a href="file-cleaning-workflow-example.html">13 节点完整示例</a> ｜ <a href="local-file-organization/README.md">Organizer（已挂起）</a>——本功能独立成立，不依赖 Organizer 任何概念；若其复活，本功能的文本节点可被复用为原子能力。</p>
 <div class="toc"><a href="#s1">1 承载决策</a><a href="#s2">2 Item 模型与类型契约</a><a href="#s3">3 节点设计</a><a href="#s4">4 预览/应用/撤销</a><a href="#s5">5 SpecialText 扩展</a><a href="#s6">6 执行与 UI</a><a href="#s7">7 能力与示例</a><a href="#s8">8 开放问题</a></div>
 
 <h2 id="s1"><span class="n">§1</span>承载决策：直接构建在现有 Workflow 模块上</h2>
@@ -49,7 +49,7 @@ footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(
 <tr><td>逐值轮询执行</td><td>Runner 的 per-item 驱动（trigger <code class="i">ExtractItems</code> 产出初始 item 列表）</td></tr>
 <tr><td>运行记录</td><td>WorkflowRun 持久化 + 步骤统计</td></tr></table>
 <p>文本操作能力复用 <b>FileNameModifier</b>（7 种操作 × 目标区域 × 位置，纯字符串函数，已有实现与测试）；文本集能力复用并扩展 <b>SpecialText</b>（§5）。本功能依赖的引擎扩展（手动触发 E1<span class="tag">已完成</span>、链中展开 E2、能力契约 E3、变量 E4、两阶段运行 E5）统一定义在<a href="workflow-capability-map.html">能力全景</a>——均为跨场景通用能力，清洗只是第一个用户。</p>
-<div class="rule"><b>复核修正</b>：逐行读过引擎后，初版对它的判断需要更正——<code class="i">WorkflowRunner</code> 拿到的是解析它的那个 scope 的 provider，而所有调用方都把它捕获进随后才执行的 BTask，因此<b>引擎在 2026-08 之前从未成功执行过一次运行</b>。也就是说本功能不是建在一个已验证的地基上，而是建在一个刚刚第一次跑通的地基上。详情与另外三条修正见<a href="workflow-capability-map.html#s4">能力全景 §4</a>。</div>
+<div class="rule"><b>复核修正</b>：逐行读过引擎后，初版对它的判断需要更正——<code class="i">WorkflowRunner</code> 拿到的是解析它的那个 scope 的 provider，而所有调用方都把它捕获进随后才执行的 BTask，因此<b>引擎在 2026-08 之前从未成功执行过一次运行</b>。也就是说本功能不是建在一个已验证的地基上，而是建在一个刚刚第一次跑通的地基上。详情与另外三条修正见<a href="workflow-capability-map.html#s5">能力全景 §5</a>。</div>
 
 <h2 id="s2"><span class="n">§2</span>Item 模型与类型契约</h2>
 <pre class="code"><code><span class="cm">// ItemType: "item.fs.entry"（注册 IWorkflowItemTypeDescriptor）</span>
@@ -138,7 +138,7 @@ FileRenameRecord   RunId, Seq, Path(父目录), From, To, RenamedAt, Undone   <s
 <li><b>数据不丢</b>：旧 SpecialText 行经 app 级迁移器（V220/V230 先例）七值查表转入新表，Value2 原样保留；EF 迁移保持纯 schema 且<b>不 drop 旧表</b>（迁移器在 EF 之后运行，drop 会导致跨版本升级丢数据）。「质量与发布标签」以可编辑种子集下发（只投一次，删除不复活）。</li>
 </ol>
 <div class="rule"><b>实施顺序：本扩展第一步先做</b>（PR1 建表 → PR2 服务拆分与全量切换 → PR3 UI/种子），节点实现全部依赖它。<b>已完成</b>——三个 PR 均已合入，与本设计的偏差见<a href="specialtext-extension.html#s8">扩展设计 §8 实施偏差</a>。<br>
-<b>更正</b>：此处原写"本扩展是整个功能唯一的 schema 变更"，不成立——<a href="workflow-capability-map.html#s3">两阶段运行（E5）</a>的计划表与 <code class="i">FileRenameRecord</code> 是第二次建表（<a href="workflow-capability-map.html#f3">能力全景 §4·发现 3</a>）。</div>
+<b>更正</b>：此处原写"本扩展是整个功能唯一的 schema 变更"，不成立——<a href="workflow-capability-map.html#s4">两阶段运行（E5）</a>的计划表与 <code class="i">FileRenameRecord</code> 是第二次建表（<a href="workflow-capability-map.html#f3">能力全景 §5·发现 3</a>）。</div>
 
 <h2 id="s6"><span class="n">§6</span>执行与 UI</h2>
 <ul>
@@ -160,8 +160,8 @@ FileRenameRecord   RunId, Seq, Path(父目录), From, To, RenamedAt, Undone   <s
 <ul>
 <li>文本集是否走 Sharable 分享——倾向于要，随使用量决策。</li>
 <li>定时/监听触发（FileMover 进料口式自动清洗）——依赖能力全景 E6。</li>
-<li><s>ExpandTo 在编辑器统计口径中的表达（类型校验直通，但步骤统计需理解 1→N）。</s>——已消解：<code class="i">WorkflowRunStepStat</code> 的 InputCount / OutputCount 本就是两个独立计数，天然表达 1→N（<a href="workflow-capability-map.html#f4">能力全景 §4·发现 4</a>）。</li>
-<li>预览面板落点、计划的存储形态、前后端两份类型推导是否收敛——三个待拍板项见<a href="workflow-capability-map.html#s8">能力全景 §8</a>。</li>
+<li><s>ExpandTo 在编辑器统计口径中的表达（类型校验直通，但步骤统计需理解 1→N）。</s>——已消解：<code class="i">WorkflowRunStepStat</code> 的 InputCount / OutputCount 本就是两个独立计数，天然表达 1→N（<a href="workflow-capability-map.html#f4">能力全景 §5·发现 4</a>）。</li>
+<li>预览面板落点、计划的存储形态、前后端两份类型推导是否收敛——三个待拍板项见<a href="workflow-capability-map.html#s9">能力全景 §9</a>。</li>
 </ul>
 <footer>文件清洗设计 · 关联：<a href="workflow-capability-map.html">Workflow 能力全景</a> · <a href="file-cleaning-workflow-example.html">完整示例</a></footer>
 </div></body></html>

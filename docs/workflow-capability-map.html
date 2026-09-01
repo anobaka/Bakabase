@@ -30,6 +30,9 @@ td.e{font-weight:700;white-space:nowrap;color:var(--dim)}
 .tag{display:inline-block;font-size:10.5px;padding:1px 7px;border-radius:20px;background:var(--chip);color:var(--mut)}
 .t-have{color:var(--g);border:1px solid var(--g)}.t-new{color:var(--p);border:1px solid var(--p)}.t-later{color:var(--y);border:1px solid var(--y)}
 .t-open{color:var(--r);border:1px solid var(--r)}
+pre.dia{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:12px 14px;overflow-x:auto;margin:10px 0;
+font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:12px;line-height:1.5;white-space:pre}
+pre.dia .have{color:var(--g)}pre.dia .new{color:var(--p)}pre.dia .cm{color:var(--dim)}
 .rule{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--a);border-radius:10px;padding:10px 14px;margin:10px 0;font-size:13px}
 .rule.warn{border-left-color:var(--r)}
 .rule.ask{border-left-color:var(--y)}
@@ -37,7 +40,7 @@ footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(
 </style></head><body><div class="wrap">
 <h1>Workflow 能力全景：现状盘点与扩展路线</h1>
 <p class="sub">视角：Workflow 模块整体，而非某个场景。<a href="file-cleaning-workflow.html">文件清洗</a>是多数扩展的第一个用户，但每项扩展都是跨场景通用能力</p>
-<p class="note">现状与结论均已在代码中逐条核实：<code class="i">src/modules/Bakabase.Modules.Workflow</code> + <code class="i">src/apps/Bakabase.Service/Components/Workflow</code> + 前端 <code class="i">src/web/src/components/Workflow</code>。<b><a href="#s4">§4</a> 记录了本轮逐行复核后与初版设计假设不符的地方</b>，实施顺序（<a href="#s7">§7</a>）因此有两个待选方案。</p>
+<p class="note">现状与结论均已在代码中逐条核实：<code class="i">src/modules/Bakabase.Modules.Workflow</code> + <code class="i">src/apps/Bakabase.Service/Components/Workflow</code> + 前端 <code class="i">src/web/src/components/Workflow</code>。<b><a href="#s5">§5</a> 记录了本轮逐行复核后与初版设计假设不符的地方</b>，实施顺序（<a href="#s8">§8</a>）因此有两个待选方案。</p>
 
 <h2 id="s0"><span class="n">§0</span>代号速查</h2>
 <p>下面六项引擎扩展在几份文档里都用 <b>E1–E6</b> 互相引用。代号只是索引，含义以名称为准：</p>
@@ -48,17 +51,93 @@ footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(
 <tr><td class="e">E4</td><td><b>变量</b></td><td>节点之间传值的通道（前面捕获的集数，后面拼进新名字）</td><td><span class="tag t-new">未做</span></td></tr>
 <tr><td class="e">E5</td><td><b>两阶段运行</b></td><td>先出计划给人确认，再落盘；可撤销</td><td><span class="tag t-new">未做</span></td></tr>
 <tr><td class="e">E6</td><td><b>定时 / 监听触发</b></td><td>到点自动跑，或盯着目录变化自动跑</td><td><span class="tag t-later">后续</span></td></tr></table>
-<p class="note">详细内容见 <a href="#s3">§3</a>。<a href="file-cleaning-workflow.html">清洗设计</a>中出现的 E1–E6 引用指向的就是这张表。</p>
+<p class="note">详细内容见 <a href="#s4">§4</a>。<a href="file-cleaning-workflow.html">清洗设计</a>中出现的 E1–E6 引用指向的就是这张表。</p>
 
-<h2 id="s1"><span class="n">§1</span>引擎现状（能力层）</h2>
+<h2 id="s1"><span class="n">§1</span>核心概念关系</h2>
+<p>先把引擎有哪些零件、它们怎么咬合讲清楚。<span class="tag t-have">现有</span>= 代码里已经有；<span class="tag t-new">需新增</span>= 六项扩展之一要加的；<span class="tag t-have">E1 已完成</span>= 本轮刚加的。</p>
+
+<h3>1.1 定义期：用户搭出来的东西</h3>
+<pre class="dia"><code>WorkflowDefinition  <span class="have">[现有]</span>          ← 用户在 workflow 页编辑器里搭出来的一条流程
+  ├─ TriggerKind        "downloader.completed" / "fs.manualScan"
+  ├─ TriggerFilterJson  <span class="cm">不透明 JSON，由该触发器自己的 UI 负责读写</span>
+  ├─ Enabled            <span class="cm">只管事件触发；手动运行不看它</span>
+  └─ Activities[]       <span class="cm">有序，index 即 Order</span>
+       ├─ Kind          "transform.text.trim"
+       ├─ ConfigJson    <span class="cm">不透明 JSON，由该活动自己的 UI 负责读写</span>
+       └─ OnItemError   Skip | Fail</code></pre>
+<p class="note">两个 <code class="i">*Json</code> 是引擎与节点之间的<b>唯一约定</b>：引擎不理解内容，只负责存取与传递。这是节点能自由扩展而引擎不动的根本原因。</p>
+
+<h3>1.2 注册表：代码里声明的三类零件</h3>
+<table><tr><th style="width:22%">概念</th><th>它回答什么</th><th style="width:34%">成员</th></tr>
+<tr><td><code class="i">IWorkflowTrigger</code><br><span class="tag t-have">现有</span></td><td>这条流程<b>什么时候</b>跑、跑的时候<b>拿到哪些东西</b></td><td class="mono">Kind / DisplayName / PayloadType<br>Matches(payload, filterJson)<br>ExtractItems(payload) → item[]<br>ResolveOutputItemType(filterJson)<br><span class="tag t-have">E1</span> RequiresManualPayload<br><span class="tag t-have">E1</span> BuildManualPayload(filterJson, argsJson)</td></tr>
+<tr><td><code class="i">IWorkflowItemTypeDescriptor</code><br><span class="tag t-have">现有</span></td><td>链上流动的<b>是什么东西</b></td><td class="mono">ItemType（字符串标签）<br>DisplayName<br><b>ClrType</b> <span class="cm">← 静态校验与形状推断都靠它</span></td></tr>
+<tr><td><code class="i">IWorkflowActivity</code><br><span class="tag t-have">现有</span></td><td>拿到一个东西<b>做什么</b></td><td class="mono">Kind / DisplayName / Category / Group<br>AcceptedInputItemTypes（空 = 任意）<br>OutputBehavior（Passthrough/Fixed/AdaptToNext）<br>ProcessItemAsync(ctx, item) → Outcome<br><span class="tag t-new">E3</span> AcceptedItemInterface<br><span class="tag t-new">E2</span> Cardinality</td></tr></table>
+
+<h3>1.3 执行期：一次运行怎么走完</h3>
+<pre class="dia"><code><span class="cm">── 两个入口 ──────────────────────────────────────────────────</span>
+事件源 ──PublishAsync──▶ IWorkflowEventBus <span class="have">[现有]</span>
+                          └─ 取 Enabled 且 TriggerKind 匹配的定义
+                             └─ 逐个 trigger.Matches(payload, filterJson)
+用户点「运行」 ──POST workflow/{id}/run──▶ RunManuallyAsync <span class="new">[E1 已完成]</span>
+                          └─ trigger.BuildManualPayload(filterJson, argsJson)
+                             <span class="cm">不看 Enabled、不过 Matches——用户点名的就是这一条</span>
+        │
+        ▼
+建 WorkflowRun 行（Pending + PayloadJson） ──▶ Enqueue BTask <span class="have">[现有]</span>
+        │
+        ▼
+WorkflowRunner.ExecuteAsync(runId) <span class="have">[现有]</span>
+   1. 反序列化 PayloadJson  <span class="cm">（按 trigger.PayloadType）</span>
+   2. items = trigger.ExtractItems(payload)
+   3. for 每个 activity（按 Order）:
+        for 每个 item:
+            outcome = activity.ProcessItemAsync(ctx, item)
+                      ├ Keep            <span class="have">[现有]</span>  原样留下
+                      ├ Drop            <span class="have">[现有]</span>  从链上移除
+                      ├ ReplaceWith(x)  <span class="have">[现有]</span>  换成新值
+                      └ ExpandTo(xs)    <span class="new">[E2 需新增]</span>  1 → N
+        记 WorkflowRunStepStat(StepIndex, In, Out, Failed) <span class="have">[现有]</span>
+   4. 落 Status / OutputCount / StepStatsJson
+
+ctx = WorkflowExecutionContext <span class="have">[现有]</span>
+   RunId / Payload / ActivityConfigJson / TargetItemType / Services / Logger
+   Variables  <span class="new">[E4 需新增]</span>  <span class="cm">per-item 随行袋，节点之间唯一的数据通道</span></code></pre>
+
+<h3>1.4 编辑期：类型怎么被校验</h3>
+<pre class="dia"><code>当前类型 := trigger.ResolveOutputItemType(TriggerFilterJson)
+for 每个 activity（从左到右）:
+    断言  当前类型 ∈ activity.AcceptedInputItemTypes   <span class="cm">（空清单 = 接受任意）</span>
+    <span class="new">[E3]</span> 或   当前类型的 ClrType 实现 AcceptedItemInterface
+    当前类型 := OutputBehavior 决定
+                Passthrough  → 不变
+                Fixed        → FixedOutputItemType
+                AdaptToNext  → 看下游节点要什么</code></pre>
+<div class="rule warn">这段推导<b>在前后端各写了一遍</b>：后端 <code class="i">WorkflowDefinitionService.ValidateActivities</code>（保存时拦截），前端 <code class="i">chainWalk.ts</code> + <code class="i">activityFit.ts</code>（picker 筛选与即时报错）。任何契约演进都要同步两处——见 <a href="#f2">§5·发现 2</a>，这也是<a href="#s9">§9·问题 4</a> 的由来。</div>
+
+<h3>1.5 文件清洗如何落在这些概念上</h3>
+<p>关键结论：<b>清洗的绝大部分是"新增节点"，不是"改引擎"</b>。下表左列是用户视角的需求，右列是它实际用到的核心概念。</p>
+<table><tr><th style="width:26%">清洗里的一句话需求</th><th>用到的核心概念</th><th style="width:16%">性质</th></tr>
+<tr><td>"对这几个目录的子项跑流程"</td><td>触发器 <code class="i">fs.manualScan</code>：roots + 枚举配置存进 <code class="i">TriggerFilterJson</code>，<code class="i">ExtractItems</code> 枚举出 <code class="i">FsEntryItem</code> 列表</td><td>新增<b>节点</b><br><span class="cm">引擎不动</span></td></tr>
+<tr><td>"点一下就跑"</td><td><code class="i">RequiresManualPayload = false</code> + <code class="i">BuildManualPayload</code> 从自身配置构造 payload</td><td><span class="tag t-have">E1 已完成</span></td></tr>
+<tr><td>被处理的东西是文件/目录</td><td>item 类型 <code class="i">item.fs.entry</code>，ClrType = <code class="i">FsEntryItem</code>（Path / IsDirectory / OriginalName / <b>WorkingName</b>）</td><td>新增<b>item 类型</b><br><span class="cm">引擎不动</span></td></tr>
+<tr><td>"只要 mkv" / "只要文件夹"</td><td>Category = Filter 的活动，Outcome 用 Keep / Drop</td><td><span class="tag t-have">现有机制</span></td></tr>
+<tr><td>"删掉 [字幕组] 这段"</td><td>Category = Transform 的活动，Outcome 用 ReplaceWith（换成改了 WorkingName 的 item）</td><td><span class="tag t-have">现有机制</span></td></tr>
+<tr><td>"同一批文本节点将来也能用在画廊标题上"</td><td><code class="i">AcceptedItemInterface = typeof(ITextWorkpiece)</code>；<code class="i">FsEntryItem.WorkingText ≡ WorkingName</code></td><td><span class="tag t-new">E3 需新增</span></td></tr>
+<tr><td>"进目录，对它的子文件继续处理"</td><td>Outcome 用 <code class="i">ExpandTo(children)</code>，活动声明 <code class="i">Cardinality = OneToMany</code></td><td><span class="tag t-new">E2 需新增</span></td></tr>
+<tr><td>"把前面认出来的集数拼进新名字"</td><td><code class="i">ctx.Variables</code> 随行袋 + 配置字段里的 <code class="i">{var:ep}</code> 插值</td><td><span class="tag t-new">E4 需新增</span></td></tr>
+<tr><td>"先看预览、确认了再改，还能撤销"</td><td>run 产出计划 → 确认 → Apply；计划表 + <code class="i">FileRenameRecord</code></td><td><span class="tag t-new">E5 需新增</span></td></tr>
+<tr><td>"下载完成后自动清洗一遍"</td><td>既有触发器 <code class="i">downloader.completed</code> + fs/text 节点直接串起来</td><td><span class="tag t-have">现有触发器</span><br><span class="cm">引擎零新增</span></td></tr></table>
+<div class="rule">换句话说：清洗真正要求引擎改动的只有<b>四处</b>——能力契约（E3）、展开裁决 + 基数（E2）、随行袋（E4）、两阶段与计划表（E5）。其余全部是在既有插槽里注册新的触发器、item 类型与活动。这也是<a href="#s8">§8 方案 B</a>能把批次 1 做成"不依赖 E3/E4"的原因：<code class="i">transform.fs.fileNameOp</code> 只用现有机制就能跑通。</div>
+
+<h2 id="s2"><span class="n">§2</span>引擎现状（能力层）</h2>
 <table><tr><th style="width:16%">能力</th><th>现状</th></tr>
 <tr><td>定义与编辑</td><td><code class="i">WorkflowDefinition</code> CRUD + 链式编辑器；<code class="i">WorkflowDefinitionService</code> 左到右追踪"当前 item 类型"做静态校验</td></tr>
 <tr><td>类型系统</td><td>item type 字符串标签 + 描述符（DisplayName + <b>ClrType</b>）；活动契约 <code class="i">AcceptedInputItemTypes</code>（空 = 任意；异构触发器 "any" 哨兵不匹配非空清单）+ <code class="i">OutputBehavior</code>（Passthrough / Fixed / <b>AdaptToNext</b>——AI 节点按下游需求适配输出类型，靠 ClrType 做 JSON 形状推断）</td></tr>
-<tr><td>执行</td><td><code class="i">WorkflowRunner</code> per-item 驱动；outcome = Keep / Drop / Replace；per-activity OnItemError；<code class="i">WorkflowRunRehydrator</code> 运行恢复；runs 持久化 + 步骤统计。<b>2026-08 之前从未真正执行成功过一次</b>，见 <a href="#f1">§4·发现 1</a></td></tr>
+<tr><td>执行</td><td><code class="i">WorkflowRunner</code> per-item 驱动；outcome = Keep / Drop / Replace；per-activity OnItemError；<code class="i">WorkflowRunRehydrator</code> 运行恢复；runs 持久化 + 步骤统计。<b>2026-08 之前从未真正执行成功过一次</b>，见 <a href="#f1">§5·发现 1</a></td></tr>
 <tr><td>触发</td><td>触发器注册表；<code class="i">Matches(payload, filterJson)</code> 定义级过滤；<code class="i">ExtractItems</code> 产出初始 item 列表；<b>手动触发</b>（E1）已落地：<code class="i">POST workflow/{id}/run</code></td></tr>
 <tr><td>UI</td><td>workflow 页：定义编辑器（picker 按 Group 分桶）、运行记录、手动运行面板</td></tr></table>
 
-<h2 id="s2"><span class="n">§2</span>节点现状盘点</h2>
+<h2 id="s3"><span class="n">§3</span>节点现状盘点</h2>
 <table><tr><th>触发器（2）</th><th>产出类型</th></tr>
 <tr><td class="k">subscription.updated</td><td>subscription item（源锁定时为具体类型，否则 "any" 哨兵）</td></tr>
 <tr><td class="k">downloader.completed</td><td>downloader completed task</td></tr></table>
@@ -71,16 +150,16 @@ footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(
 <tr><td class="k">exhentai.enqueueDownload</td><td>Action</td><td>gallery</td><td></td></tr></table>
 <div class="rule">结论（已修正）：节点面覆盖"订阅 → 过滤 → AI 加工 → 下载/通知"一条业务线的最小集。引擎骨架的<b>设计</b>是完整的，但直到本轮之前它<b>一次也没跑通过</b>——所以"被消费得很少"这个判断不对，真实情况是"从未被成功消费过"。这改变了扩展的起点：不是在已验证的地基上加节点，而是在刚刚第一次跑通的地基上加。</div>
 
-<h2 id="s3"><span class="n">§3</span>引擎扩展清单（均跨场景通用；标注第一个用户）</h2>
+<h2 id="s4"><span class="n">§4</span>引擎扩展清单（均跨场景通用；标注第一个用户）</h2>
 <table><tr><th style="width:4%">代号</th><th style="width:15%">名称</th><th>内容</th><th style="width:14%">第一个用户</th><th style="width:20%">通用价值</th></tr>
 <tr><td class="e">E1</td><td><b>手动触发</b><br><span class="tag t-have">已完成</span></td><td>触发器契约新增 <code class="i">RequiresManualPayload</code> + <code class="i">BuildManualPayload(triggerFilterJson, argsJson)</code>。默认实现把用户填的 JSON 反序列化为 <code class="i">PayloadType</code>，于是<b>每个事件触发器天生可回放调试</b>；参数长在定义上的触发器覆写它，从自身配置构造 payload——<code class="i">fs.manualScan</code> 将走这条。<code class="i">POST workflow/{id}/run</code> 跳过触发器过滤与启用开关（用户点的是这一条定义；且工作流正在搭建、开关关着时最需要试跑）。payload 在写 run 行<b>之前</b>构造，坏 payload 是一个失败的请求，而不是一条注定失败的运行记录。触发器描述符附带 payload 字段表，前端据此渲染骨架而非空白框</td><td class="k">fs.manualScan</td><td>一切"对一批输入执行流程"；也是调试任何工作流的入口</td></tr>
-<tr><td class="e">E2</td><td><b>链中展开</b></td><td><code class="i">WorkflowItemOutcome</code> 新增第四种裁决 <code class="i">ExpandTo(items)</code>（1→N，与 fs 无关）；<b>基数是描述符的静态声明</b>：<code class="i">Cardinality: OneToOne | OneToMany</code>，编辑器据此做视觉标识 / picker 筛选 / 下游类型追踪。Category 与基数正交（Filter 即 1→0/1）。<b>比预估便宜</b>：<a href="#f4">§4·发现 4</a></td><td class="k">expand.fs.children</td><td>画廊→多图、feed→多条目、压缩包→内容物、资源→可播放文件…</td></tr>
-<tr><td class="e">E3</td><td><b>能力契约</b><br><span class="tag">原称 facet，已弃用</span></td><td>描述符增加 <code class="i">AcceptedItemInterface: Type</code>——接受任何 CLR 类型实现该接口的 item（经描述符 ClrType 静态校验）。它是对"当前类型"的<b>谓词</b>，当前类型不变 → 强制 Passthrough。解决 O(N×M) 维护问题：新 item 类型实现一次接口，整族节点自动可用。<b>接入成本是双份的</b>：<a href="#f2">§4·发现 2</a></td><td class="k">transform.text.* × ITextWorkpiece</td><td>一切"按能力而非按类型"的节点族（未来 IHasCover、IHasSourceUrl…）</td></tr>
+<tr><td class="e">E2</td><td><b>链中展开</b></td><td><code class="i">WorkflowItemOutcome</code> 新增第四种裁决 <code class="i">ExpandTo(items)</code>（1→N，与 fs 无关）；<b>基数是描述符的静态声明</b>：<code class="i">Cardinality: OneToOne | OneToMany</code>，编辑器据此做视觉标识 / picker 筛选 / 下游类型追踪。Category 与基数正交（Filter 即 1→0/1）。<b>比预估便宜</b>：<a href="#f4">§5·发现 4</a></td><td class="k">expand.fs.children</td><td>画廊→多图、feed→多条目、压缩包→内容物、资源→可播放文件…</td></tr>
+<tr><td class="e">E3</td><td><b>能力契约</b><br><span class="tag">原称 facet，已弃用</span></td><td>描述符增加 <code class="i">AcceptedItemInterface: Type</code>——接受任何 CLR 类型实现该接口的 item（经描述符 ClrType 静态校验）。它是对"当前类型"的<b>谓词</b>，当前类型不变 → 强制 Passthrough。解决 O(N×M) 维护问题：新 item 类型实现一次接口，整族节点自动可用。<b>接入成本是双份的</b>：<a href="#f2">§5·发现 2</a></td><td class="k">transform.text.* × ITextWorkpiece</td><td>一切"按能力而非按类型"的节点族（未来 IHasCover、IHasSourceUrl…）</td></tr>
 <tr><td class="e">E4</td><td><b>变量</b></td><td>Runner 为每个 item 维护变量袋（<b>不进 item 类型</b>），经 <code class="i">ctx.Variables</code> 暴露；展开时子项继承副本；随 run 持久化。写入：capture（具名捕获组名即变量名）/ 域系统变量注入 / 后续 setVariable。读取：配置 schema 标记"支持插值"的字段，引擎统一解析 <code class="i">{var:name(:formatter)}</code>。编辑器沿链推导"此处可用变量集"→ <b>自动补全 + lint</b>（软契约）。<b>唯一需要改运行时数据模型的引擎扩展</b></td><td class="k">capture/template + fs 系统变量</td><td>当前节点间<b>没有任何数据通道</b>；变量是通用联动机制，任何 item 类型零成本获得</td></tr>
-<tr><td class="e">E5</td><td><b>两阶段运行</b></td><td>run 产出"计划"，确认后按计划执行（不重跑链，避免两次运行之间磁盘漂移）：Preview → diff 确认 → Apply → 可撤销。<b>需要建表</b>：<a href="#f3">§4·发现 3</a></td><td class="k">action.fs.saveName</td><td>一切有副作用的批量 action（批量入队、批量修改）都该有干跑</td></tr>
+<tr><td class="e">E5</td><td><b>两阶段运行</b></td><td>run 产出"计划"，确认后按计划执行（不重跑链，避免两次运行之间磁盘漂移）：Preview → diff 确认 → Apply → 可撤销。<b>需要建表</b>：<a href="#f3">§5·发现 3</a></td><td class="k">action.fs.saveName</td><td>一切有副作用的批量 action（批量入队、批量修改）都该有干跑</td></tr>
 <tr><td class="e">E6</td><td>定时 / 监听触发<span class="tag t-later">后续</span></td><td>cron 触发器；目录监听（FileMover 进料口形态）</td><td>自动清洗</td><td>全部定时自动化</td></tr></table>
 
-<h2 id="s4"><span class="n">§4</span>本轮代码复核发现（与初版设计假设不符）</h2>
+<h2 id="s5"><span class="n">§5</span>本轮代码复核发现（与初版设计假设不符）</h2>
 <p>初版设计写作时未逐行读过引擎。下面四条是逐行复核后修正的事实，每条都影响排期。</p>
 
 <h3 id="f1">发现 1 · 引擎从未成功执行过一次运行<span class="tag t-have">已修复</span></h3>
@@ -90,17 +169,17 @@ footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(
 
 <h3 id="f2">发现 2 · 类型推导有前后端两份实现</h3>
 <div class="rule warn">后端 <code class="i">WorkflowDefinitionService.ValidateActivities</code> 沿链追踪当前 item 类型做保存期校验；前端 <code class="i">chainWalk.ts</code> + <code class="i">activityFit.ts</code> 是它的<b>手写镜像</b>，用于 picker 筛选与即时报错。<br>
-<b>对计划的影响</b>：E3 能力契约要同时插进这两处。初版把 E3 当作"一次声明、整族可用"的省力方案，但它<b>自身</b>的接入成本是双份的，且此后每次契约演进都要同步两边。是否先把契约元数据统一由后端下发、前端只做渲染，是一个待拍板项（<a href="#s8">§8·问题 4</a>）。</div>
+<b>对计划的影响</b>：E3 能力契约要同时插进这两处。初版把 E3 当作"一次声明、整族可用"的省力方案，但它<b>自身</b>的接入成本是双份的，且此后每次契约演进都要同步两边。是否先把契约元数据统一由后端下发、前端只做渲染，是一个待拍板项（<a href="#s9">§9·问题 4</a>）。</div>
 
 <h3 id="f3">发现 3 · 两阶段运行需要第二次 schema 变更</h3>
-<div class="rule warn"><a href="file-cleaning-workflow.html#s5">清洗设计 §5</a> 写的"本扩展是整个功能唯一的 schema 变更"不成立：E5 的计划表 + <code class="i">FileRenameRecord</code> 是继 SpecialText 之后的第二次建表。<br>
-<b>对计划的影响</b>：E5 不是纯逻辑扩展，排期要按"带迁移的批次"估。计划存独立表还是塞进 <code class="i">WorkflowRun</code> 的 JSON 字段，是一个待拍板项（<a href="#s8">§8·问题 3</a>）。</div>
+<div class="rule warn"><a href="file-cleaning-workflow.html#s6">清洗设计 §5</a> 写的"本扩展是整个功能唯一的 schema 变更"不成立：E5 的计划表 + <code class="i">FileRenameRecord</code> 是继 SpecialText 之后的第二次建表。<br>
+<b>对计划的影响</b>：E5 不是纯逻辑扩展，排期要按"带迁移的批次"估。计划存独立表还是塞进 <code class="i">WorkflowRun</code> 的 JSON 字段，是一个待拍板项（<a href="#s9">§9·问题 3</a>）。</div>
 
 <h3 id="f4">发现 4 · 链中展开比预估便宜</h3>
 <div class="rule"><code class="i">WorkflowRunStepStat</code> 已经是 <code class="i">InputCount</code> / <code class="i">OutputCount</code> 两个独立计数，天然能表达 1→N，<b>统计模型不需要改</b>（初版把它列为开放问题）。实际要改的只有 <code class="i">WorkflowItemOutcome</code>（一个 readonly record struct）和 runner 的 per-item 循环。<br>
 <b>对计划的影响</b>：E2 可以排得比原计划更靠前或更靠后都不痛，它不再是重活。</div>
 
-<h2 id="s5"><span class="n">§5</span>节点扩展清单（按域）</h2>
+<h2 id="s6"><span class="n">§6</span>节点扩展清单（按域）</h2>
 <table><tr><th style="width:16%">域</th><th>节点</th><th style="width:20%">状态</th></tr>
 <tr><td>fs <span class="tag t-new">新</span></td><td class="mono">触发器 fs.manualScan（constants+枚举）｜ filter.fs.byRegex / byExtension / byType ｜ expand.fs.children ｜ transform.fs.fileNameOp ｜ action.fs.saveName</td><td><a href="file-cleaning-workflow.html">清洗设计</a>已定稿</td></tr>
 <tr><td>text <span class="tag t-new">新，能力契约通用</span></td><td class="mono">transform.text.removeWrapped / removeTexts / trim / capture / template</td><td>同上；依赖的 <a href="specialtext-extension.html">SpecialText 扩展</a><span class="tag t-have">已完成</span></td></tr>
@@ -108,7 +187,7 @@ footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(
 <tr><td>既有域延伸（候选）</td><td class="mono">action.downloader.enqueue 泛化（当前仅 exhentai）｜ action.resource.registerPath（fs 条目登记入库/触发同步，打通清洗→入库）</td><td>按需求排期</td></tr>
 <tr><td>organizer <span class="tag t-later">挂起</span></td><td>触发器"整理完成"、活动"运行某 Pipeline/规则集"</td><td>随 <a href="local-file-organization/README.md">Organizer</a> 复活</td></tr></table>
 
-<h2 id="s6"><span class="n">§6</span>串联视角：扩展如何互相成立</h2>
+<h2 id="s7"><span class="n">§7</span>串联视角：扩展如何互相成立</h2>
 <ul>
 <li><b>手动触发 + 链中展开 + 变量</b>组合出"手动对文件系统跑多层级联动流程"（清洗的骨架）；</li>
 <li><b>能力契约</b>使 text 节点族对<b>任何</b>未来 item 类型开放（画廊标题清洗零成本）；</li>
@@ -116,7 +195,7 @@ footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(
 <li><b>定时/监听触发</b> + 既有 <code class="i">downloader.completed</code> 触发器 + fs/text 节点 = "下载完成 → 自动清洗 → 通知"全自动链，届时引擎零新增。</li>
 </ul>
 
-<h2 id="s7"><span class="n">§7</span>实施顺序：两个待选方案</h2>
+<h2 id="s8"><span class="n">§8</span>实施顺序：两个待选方案</h2>
 <p>前置的 <a href="specialtext-extension.html">SpecialText 扩展</a><span class="tag t-have">已完成</span>，<b>手动触发（E1）</b><span class="tag t-have">已完成</span>。之后的顺序有两个方案，<b>尚未拍板</b>。</p>
 
 <h3>方案 A · 按引擎能力横切（初版顺序）</h3>
@@ -134,7 +213,7 @@ footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(
 <tr><td class="e">5</td><td><b>自动化</b>（E6）</td><td>cron / 目录监听触发</td><td>下载完成 → 自动清洗</td></tr></table>
 <div class="rule">核心理由：<b>没有 Apply 的清洗流程是玩具</b>，所以两阶段运行必须提前到第 2 批；能力契约与变量是"让它更强"，不是"让它可用"，可以后置。代价：<code class="i">fileNameOp</code> 先落在 fs 域、text 节点族晚一批到——而这两者本来就是设计里刻意分开的两条线（见<a href="file-cleaning-workflow.html">清洗设计 §3.0</a>），不构成返工。</div>
 
-<h2 id="s8"><span class="n">§8</span>待拍板</h2>
+<h2 id="s9"><span class="n">§9</span>待拍板</h2>
 <div class="rule ask">
 <b>问题 1 · 顺序</b><span class="tag t-open">未定</span><br>
 方案 A（按引擎能力横切）还是方案 B（薄纵切）。
@@ -152,7 +231,7 @@ footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(
 现状见 <a href="#f2">发现 2</a>。能力契约（E3）会让手写镜像更复杂；可以在做 E3 之前把契约元数据统一由后端下发、前端只做渲染。
 </div>
 
-<h2 id="s9"><span class="n">§9</span>历史开放问题（已消解）</h2>
+<h2 id="s10"><span class="n">§10</span>历史开放问题（已消解）</h2>
 <ul>
 <li><s>链中展开在编辑器统计口径中的表达</s>——统计模型无需改动，见 <a href="#f4">发现 4</a>。</li>
 </ul>
