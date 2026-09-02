@@ -158,7 +158,7 @@ public class AvaloniaGuiAdapter : GuiAdapter, ITrayIconController
             var webView = _mainWindow.FindControl<NativeWebViewHost>("WebView")!;
             webView.Navigate(url);
 
-            _mainWindow.Closing += async (_, args) =>
+            _mainWindow.Closing += (_, args) =>
             {
                 // Programmatic shutdown (CloseBehavior.Exit, tray Exit, /restart) goes
                 // through Shutdown() → desktop.Shutdown() → this Closing event. The user's
@@ -168,10 +168,16 @@ public class AvaloniaGuiAdapter : GuiAdapter, ITrayIconController
 
                 args.Cancel = true;
 
-                // Deliberately not `onClosing` (AppHost.TryToExit): that method hides the
-                // window before the "tasks are still running" check and double-acts on the
+                // Posted, not awaited inline: the coordinator opens a modal dialog owned by
+                // this very window, and its first leg runs synchronously, so awaiting here
+                // would call ShowDialog while the window is still dispatching its own Closing
+                // event. Deferring to the next dispatcher pass lets that unwind first.
+                //
+                // Deliberately not `onClosing` (AppHost.TryToExit) either: that method hides
+                // the window before the "tasks are still running" check and double-acts on the
                 // tray path. ExitCoordinator owns the whole flow instead — see its remarks.
-                await _app.ExitCoordinator.RequestExitAsync(ExitTrigger.WindowClose);
+                Dispatcher.UIThread.Post(
+                    () => _ = _app.ExitCoordinator.RequestExitAsync(ExitTrigger.WindowClose));
             };
         }
         catch (Exception ex)

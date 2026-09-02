@@ -55,6 +55,13 @@ public sealed class ExitCoordinator(App app, AvaloniaGuiAdapter gui)
     private static readonly TimeSpan ForceQuitOfferDelay = TimeSpan.FromSeconds(6);
 
     /// <summary>
+    /// Ceiling on that otherwise-unbounded wait when there is no window to offer "Quit now" on
+    /// — a display that never came up, or one that has gone away. Without it a headless or
+    /// broken-display session could never quit.
+    /// </summary>
+    private static readonly TimeSpan NoUiCriticalTaskTimeout = TimeSpan.FromSeconds(30);
+
+    /// <summary>
     /// Ceiling on stopping the web host itself. Unlike background tasks this should always be
     /// quick; if a hosted service wedges, exiting must not become impossible.
     /// </summary>
@@ -221,6 +228,34 @@ public sealed class ExitCoordinator(App app, AvaloniaGuiAdapter gui)
         // letting it through would kill the process mid-flush.
         gui.BeginDeferredShutdown();
 
+        try
+        {
+            await RunWindDownAsync();
+        }
+        catch (Exception e)
+        {
+            Serilog.Log.Error(e, "Error while shutting down gracefully");
+        }
+        finally
+        {
+            try
+            {
+                Serilog.Log.CloseAndFlush();
+            }
+            catch
+            {
+                // Nothing left to log to.
+            }
+
+            // Unconditional. The latch set by BeginDeferredShutdown suppresses every other
+            // route out of the process, so failing to clear it here would leave the app
+            // impossible to quit — a far worse outcome than whatever went wrong above.
+            gui.CompleteDeferredShutdown();
+        }
+    }
+
+    private async Task RunWindDownAsync()
+    {
         app.SetTrayIconVisible(false);
         gui.Hide();
 
@@ -242,13 +277,7 @@ public sealed class ExitCoordinator(App app, AvaloniaGuiAdapter gui)
             // Only put a window on screen if the shutdown is slow enough to need one.
             if (await Task.WhenAny(windDown, Task.Delay(ProgressWindowDelay)) != windDown)
             {
-                progress = new ExitProgressWindow();
-                progress.ForceQuitRequested += () =>
-                {
-                    // ReSharper disable once AccessToDisposedClosure
-                    try { forceQuit.Cancel(); } catch (ObjectDisposedException) { /* already gone */ }
-                };
-                progress.Show();
+                progress = TryShowProgressWindow(forceQuit);
             }
 
             await windDown;
@@ -257,29 +286,45 @@ public sealed class ExitCoordinator(App app, AvaloniaGuiAdapter gui)
         {
             // "Quit now" — the user accepted the consequences.
         }
-        catch (Exception e)
-        {
-            Serilog.Log.Error(e, "Error while shutting down gracefully");
-        }
         finally
         {
             if (progress != null)
             {
-                progress.AllowClose();
-                progress.Close();
+                try
+                {
+                    progress.AllowClose();
+                    progress.Close();
+                }
+                catch (Exception e)
+                {
+                    Serilog.Log.Warning(e, "Failed to close the shutdown progress window");
+                }
             }
         }
+    }
 
+    /// <summary>
+    /// A display that has gone away (headless session, X11 dropped, compositor restart) must
+    /// not abort the wind-down — the user just does not get to watch it or force it along.
+    /// </summary>
+    private static ExitProgressWindow? TryShowProgressWindow(CancellationTokenSource forceQuit)
+    {
         try
         {
-            Serilog.Log.CloseAndFlush();
+            var window = new ExitProgressWindow();
+            window.ForceQuitRequested += () =>
+            {
+                // ReSharper disable once AccessToDisposedClosure
+                try { forceQuit.Cancel(); } catch (ObjectDisposedException) { /* already gone */ }
+            };
+            window.Show();
+            return window;
         }
-        catch
+        catch (Exception e)
         {
-            // Nothing left to log to.
+            Serilog.Log.Warning(e, "Could not show the shutdown progress window");
+            return null;
         }
-
-        gui.CompleteDeferredShutdown();
     }
 
     /// <summary>
@@ -403,6 +448,17 @@ public sealed class ExitCoordinator(App app, AvaloniaGuiAdapter gui)
             if (!forceQuitOffered && waited >= ForceQuitOfferDelay)
             {
                 forceQuitOffered = offerForceQuit();
+
+                if (!forceQuitOffered && waited >= NoUiCriticalTaskTimeout)
+                {
+                    // No window came up, so there is nobody to ask and no button to press.
+                    // Waiting on unbounded critical work would leave a process that cannot be
+                    // quit; a bounded grace period is the lesser evil.
+                    Serilog.Log.Warning(
+                        "Proceeding with shutdown after {Timeout} with {Count} critical task(s) still active and no UI to ask",
+                        NoUiCriticalTaskTimeout, remaining.Count);
+                    return;
+                }
             }
 
             await Task.Delay(TaskPollInterval, ct);
