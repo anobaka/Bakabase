@@ -20,6 +20,7 @@
   "common.action.edit": "Edit",
   "common.action.add": "Add",
   "common.action.remove": "Remove",
+  "common.action.rename": "Rename",
   "common.action.create": "Create",
   "common.action.close": "Close",
   "common.action.start": "Start",

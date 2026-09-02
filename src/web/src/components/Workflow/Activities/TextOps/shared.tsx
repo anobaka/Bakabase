@@ -1,15 +1,17 @@
 "use client";
 
 import type { components } from "@/sdk/BApi2";
+import type { TextMatchMode, TextTypeShape } from "@/sdk/constants";
 
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import BApi from "@/sdk/BApi";
 import { Select } from "@/components/bakaui";
-import { TextMatchMode, TextTypeShape, textMatchModes } from "@/sdk/constants";
+import { textMatchModes } from "@/sdk/constants";
 
-export type TextTypeVm = components["schemas"]["Bakabase.Abstractions.Models.Domain.TextTypeDescriptor"];
+export type TextTypeVm =
+  components["schemas"]["Bakabase.Abstractions.Models.Domain.TextTypeDescriptor"];
 
 /**
  * One fetch per page load, shared by every text node's form and summary. Types added on the

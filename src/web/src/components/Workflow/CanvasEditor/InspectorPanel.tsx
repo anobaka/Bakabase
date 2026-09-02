@@ -2,18 +2,20 @@
 
 import type { ActivityDraft, CanvasSelection } from "./types";
 import type { components } from "@/sdk/BApi2";
+import type { WorkflowActivityCategory } from "@/sdk/constants";
 
 import React from "react";
 import { useTranslation } from "react-i18next";
 
-import { CategoryTone } from "./CanvasNode";
 import { getWorkflowActivityUI } from "../Activities";
 import { getWorkflowTriggerUI } from "../Triggers";
 import { activityDisplayName, triggerDisplayName } from "../displayNames";
 
+import { CategoryTone } from "./CanvasNode";
+
 import { HelpCenterButton } from "@/components/HelpCenter";
 import { Select, Switch } from "@/components/bakaui";
-import { WorkflowActivityCategory, WorkflowActivityErrorBehavior } from "@/sdk/constants";
+import { WorkflowActivityErrorBehavior } from "@/sdk/constants";
 
 type TriggerDescriptorVm =
   components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowTriggerDescriptorViewModel"];
@@ -69,7 +71,11 @@ const InspectorPanel: React.FC<Props> = ({
             {t<string>("workflow.editor.category.trigger")}
           </div>
           <div className="text-sm font-semibold">
-            {triggerDisplayName(t, triggerKind, triggers.find((x) => x.kind === triggerKind)?.displayName)}
+            {triggerDisplayName(
+              t,
+              triggerKind,
+              triggers.find((x) => x.kind === triggerKind)?.displayName,
+            )}
           </div>
         </div>
         <Select
@@ -98,10 +104,7 @@ const InspectorPanel: React.FC<Props> = ({
           <FilterForm value={filter} onChange={onFilterChange} />
         )}
         <div className="border-t border-default-200 pt-2">
-          <HelpCenterButton
-            label={t<string>("workflow.editor.inspector.help")}
-            topic="workflow"
-          />
+          <HelpCenterButton label={t<string>("workflow.editor.inspector.help")} topic="workflow" />
         </div>
       </div>
     );

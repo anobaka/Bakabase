@@ -20,6 +20,7 @@
   "common.action.edit": "编辑",
   "common.action.add": "添加",
   "common.action.remove": "移除",
+  "common.action.rename": "重命名",
   "common.action.create": "创建",
   "common.action.close": "关闭",
   "common.action.start": "开始",
