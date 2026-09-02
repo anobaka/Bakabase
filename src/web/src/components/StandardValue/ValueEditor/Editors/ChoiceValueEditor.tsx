@@ -1,6 +1,6 @@
 "use client";
 
-import type { ValueEditorProps } from "../../models";
+import type { ValueEditorProps } from "../models";
 import type { DestroyableProps } from "@/components/bakaui/types";
 
 import { useTranslation } from "react-i18next";
@@ -75,7 +75,9 @@ const ChoiceValueEditor = (props: ChoiceValueEditorProps) => {
           ? t<string>("No choices available, please check your configurations")
           : dataSource
               .filter(
-                (d) => keyword.length == 0 || d.label.toLowerCase().includes(keyword.toLowerCase()),
+                (d) =>
+                  keyword.length == 0 ||
+                  (d.label ?? "").toLowerCase().includes(keyword.toLowerCase()),
               )
               .map((d) => {
                 return (

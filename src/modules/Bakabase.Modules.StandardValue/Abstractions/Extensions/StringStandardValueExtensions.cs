@@ -1,4 +1,5 @@
-﻿using Bakabase.Modules.StandardValue.Abstractions.Models.Domain.Constants;
+﻿using System.Globalization;
+using Bakabase.Modules.StandardValue.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Components.ValueHandlers;
 using Bakabase.Modules.StandardValue.Models.Domain;
 using Bootstrap.Extensions;
@@ -26,7 +27,16 @@ public static class StringStandardValueExtensions
             return null;
         }
 
-        return decimal.TryParse(value, out var number) ? number : null;
+        // InvariantCulture first so results don't depend on the machine's locale
+        // (matching how decimals are serialized); fall back to CurrentCulture for
+        // user-typed regional formats. NumberStyles.Float disallows group
+        // separators, removing the "1,234" ambiguity.
+        if (decimal.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var number))
+        {
+            return number;
+        }
+
+        return decimal.TryParse(value, NumberStyles.Float, CultureInfo.CurrentCulture, out number) ? number : null;
     }
 
     public static List<string>? ConvertToListString(this string? value) => value?.Trim()

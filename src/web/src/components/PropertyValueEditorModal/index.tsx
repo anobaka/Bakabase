@@ -9,7 +9,7 @@
  *
  * For all types:
  *   Uses PropertyValueRenderer(Editor) for value input.
- *   Returns bizValue via onSubmit callback.
+ *   Returns the serialized db value via onSubmit.
  */
 
 import React, { useState } from "react";
@@ -27,6 +27,7 @@ import PropertyValueRenderer from "@/components/Property/components/PropertyValu
 
 import type { IProperty } from "@/components/Property/models";
 import type { DestroyableProps } from "@/components/bakaui/types";
+import type { SerializedStandardValue } from "@/components/StandardValue";
 
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import PropertyModal from "@/components/PropertyModal";
@@ -36,7 +37,8 @@ interface Props extends DestroyableProps {
   property: IProperty;
   /** Title override. Defaults to property name. */
   title?: string;
-  onSubmit: (dbValue: string) => void;
+  /** Receives the serialized (wire-format) db value, not a raw value. */
+  onSubmit: (serializedDbValue: SerializedStandardValue) => void;
 }
 
 const PropertyValueEditorModal: React.FC<Props> = ({
@@ -50,9 +52,8 @@ const PropertyValueEditorModal: React.FC<Props> = ({
   const isReference = isReferenceValueType(initialProperty.type);
 
   const [property, setProperty] = useState<IProperty>(initialProperty);
-  // Track the latest dbValue from the editor. Use empty string as initial
-  // to distinguish "not yet changed" from "changed to undefined/null".
-  const [selectedDbValue, setSelectedDbValue] = useState<string | null>(null);
+  // Latest serialized db value from the editor; null until the user picks one.
+  const [selectedDbValue, setSelectedDbValue] = useState<SerializedStandardValue | null>(null);
   const [editorKey, setEditorKey] = useState(0);
 
   // Check if reference property has options

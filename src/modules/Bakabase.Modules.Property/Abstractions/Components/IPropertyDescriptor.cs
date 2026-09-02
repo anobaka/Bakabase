@@ -10,13 +10,23 @@ namespace Bakabase.Modules.Property.Abstractions.Components
         StandardValueType DbValueType { get; }
         StandardValueType BizValueType { get; }
 
+        /// <summary>
+        /// Whether DbValues are option ids (Choice/Tags/Multilevel) rather than raw values.
+        /// The descriptor is the single source of truth — PropertyAttributeMap is generated from it.
+        /// </summary>
+        bool IsReferenceValueType { get; }
+
         PropertyType Type { get; }
         // Bakabase.Abstractions.Models.Domain.Property ToDomainModel(CustomPropertyDbModel customProperty);
         // CustomPropertyValue ToDomainModel(CustomPropertyValueDbModel value);
         object? GetBizValue(Bakabase.Abstractions.Models.Domain.Property property, object? dbValue);
 
+        /// <summary>
+        /// Convert a BizValue to a DbValue. For reference types, <paramref name="policy"/>
+        /// decides whether unmatched entries create new options (the default) or are dropped.
+        /// </summary>
         (object? DbValue, bool PropertyChanged) PrepareDbValue(Bakabase.Abstractions.Models.Domain.Property property,
-            object? bizValue);
+            object? bizValue, PropertyValueMatchPolicy policy = PropertyValueMatchPolicy.AutoCreateOptions);
 
         object? InitializeOptions() => null;
         Type? OptionsType => null;

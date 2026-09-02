@@ -6,6 +6,8 @@ namespace Bakabase.Modules.Property.Components.Properties.Boolean;
 
 public class BooleanPropertyDescriptor : AbstractPropertyDescriptor<bool?, bool?>
 {
+    public override bool IsReferenceValueType => false;
+
     protected override bool IsMatchInternal(bool? dbValue, SearchOperation operation, object filterValue)
     {
         var fv = (filterValue as bool?)!;

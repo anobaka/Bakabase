@@ -1,5 +1,6 @@
 ﻿using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Models.Domain;
 using Bakabase.Modules.Property.Components.Properties.Choice.Abstractions;
 using Bakabase.Modules.Property.Extensions;
@@ -11,13 +12,16 @@ public record SingleChoicePropertyOptions: ChoicePropertyOptions<string>;
 
 public class SingleChoicePropertyDescriptor : AbstractPropertyDescriptor<SingleChoicePropertyOptions, string, string>
 {
+    public override bool IsReferenceValueType => true;
+
     public override PropertyType Type => Bakabase.Abstractions.Models.Domain.Constants.PropertyType.SingleChoice;
 
     protected override (object DbValue, SearchOperation Operation)? BuildSearchFilterByKeywordInternal(
         Bakabase.Abstractions.Models.Domain.Property property, string keyword)
     {
         var options = property.Options as SingleChoicePropertyOptions;
-        var ids = options?.Choices?.Where(c => c.Label.Contains(keyword)).Select(x => x.Value).ToList();
+        var ids = options?.Choices?.Where(c => c.Label.Contains(keyword, StringComparison.OrdinalIgnoreCase))
+            .Select(x => x.Value).ToList();
         return ids?.Any() == true ? (ids, SearchOperation.In) : null;
     }
 
@@ -38,7 +42,8 @@ public class SingleChoicePropertyDescriptor : AbstractPropertyDescriptor<SingleC
                 return operation == SearchOperation.In ? fv.Contains(dbValue) : !fv.Contains(dbValue);
             }
             default:
-                return true;
+                // Unknown operations never match — consistent with every other descriptor.
+                return false;
         }
     }
 
@@ -121,17 +126,22 @@ public class SingleChoicePropertyDescriptor : AbstractPropertyDescriptor<SingleC
     }
 
     protected override (string? DbValue, bool PropertyChanged) PrepareDbValueInternal(
-        Bakabase.Abstractions.Models.Domain.Property property, string bizValue)
+        Bakabase.Abstractions.Models.Domain.Property property, string bizValue,
+        PropertyValueMatchPolicy policy)
     {
         bizValue = bizValue.Trim();
         if (!string.IsNullOrEmpty(bizValue))
         {
-            property.Options ??= new SingleChoicePropertyOptions();
-            var options = (property.Options as SingleChoicePropertyOptions)!;
-            var propertyChanged = options.AddChoices(true, [bizValue], null);
-            var stringValue = options.Choices?.Find(x => x.Label == bizValue)?.Value;
-            var nv = new StringValueBuilder(stringValue).Value;
-            return (nv, propertyChanged);
+            var propertyChanged = false;
+            if (policy == PropertyValueMatchPolicy.AutoCreateOptions)
+            {
+                property.Options ??= new SingleChoicePropertyOptions();
+                propertyChanged = ((SingleChoicePropertyOptions) property.Options).AddChoices(true, [bizValue], null);
+            }
+
+            var options = property.Options as SingleChoicePropertyOptions;
+            var stringValue = options?.Choices?.Find(x => x.Label == bizValue)?.Value;
+            return (stringValue, propertyChanged);
         }
 
         return (null, false);

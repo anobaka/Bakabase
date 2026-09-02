@@ -2,7 +2,7 @@
 
 ## Overview
 
-`Bakabase.Modules.Property` defines 16 property types with DB/Biz value conversion, built-in property mappings, and type-safe accessors.
+`Bakabase.Modules.Property` defines 16 property types with DB/Biz value conversion, built-in property mappings, and descriptor-driven type attributes.
 
 ## Property Types & Value Mappings
 
@@ -25,7 +25,12 @@
 | Multilevel | ListString | ListListString | Yes |
 | Tags | ListString | ListTag | Yes |
 
-**Reference Types**: Store UUIDs in DB, display labels in Biz.
+**Reference Types**: Store option ids (UUIDs) in DB, display labels in Biz.
+
+**Single source of truth**: this table is *generated from the descriptors* —
+Db/BizValueType are inferred from each descriptor's generic arguments and
+`IsReferenceValueType` is an abstract member every descriptor must implement
+(omitting it fails the build). `PropertyAttributeMapGolden` locks the table.
 
 ## Two-Layer Value System
 
@@ -40,24 +45,9 @@ Biz Value (user-facing) <-> PrepareDbValue/GetBizValue <-> DB Value (storage)
 
 ```csharp
 using Bakabase.Modules.Property;
-using Bakabase.Modules.Property.Components;
+using Bakabase.Modules.Property.Abstractions.Components;
 
-// === Value Creation ===
-var str = PropertySystem.Value.Create.String("hello");
-var list = PropertySystem.Value.Create.ListString("a", "b");
-
-// === Property Value Factory (use PropertyValueFactory directly) ===
-var dbValue = PropertyValueFactory.SingleChoice.Db(options, "label");
-var bizValue = PropertyValueFactory.SingleChoice.Biz(options, dbValue);
-var (tagDbValue, changed) = PropertyValueFactory.Tags.DbWithAutoCreate(options, tagList);
-
-// === Built-in Properties (via PropertySystem.Builtin) ===
-var mlProperty = PropertySystem.Builtin.Get(ResourceProperty.MediaLibraryV2Multi);
-var rating = PropertySystem.Builtin.Rating;              // Reserved property
-var filename = PropertySystem.Builtin.Filename;          // Internal property
-var mediaLib = PropertySystem.Builtin.MediaLibraryV2Multi;
-
-// === Property Info ===
+// === Property Info (descriptor-derived) ===
 var descriptor = PropertySystem.Property.GetDescriptor(PropertyType.Tags);
 var dbType = PropertySystem.Property.GetDbValueType(PropertyType.Tags);
 var bizType = PropertySystem.Property.GetBizValueType(PropertyType.Tags);
@@ -65,79 +55,52 @@ bool isRef = PropertySystem.Property.IsReferenceValueType(PropertyType.Tags);
 
 // === Value Conversion ===
 var bizValue = PropertySystem.Property.ToBizValue(property, dbValue);
+
+// Write path (default): unmatched labels create options and mutate property.Options
 var (dbValue, changed) = PropertySystem.Property.ToDbValue(property, bizValue);
+
+// Read/validate path: never mutates options, unmatched entries are dropped
+var (matched, _) = PropertySystem.Property.ToDbValue(property, bizValue,
+    PropertyValueMatchPolicy.MatchOnly);
+
+// === Built-in Properties ===
+var p = PropertySystem.Builtin.Get(ResourceProperty.Rating);
+var mla = PropertySystem.Builtin.MediaLibraryV2Multi; // int-based media library accessor
 ```
 
-## PropertyValueFactory (Type-Safe)
+## Unified miss behavior
+
+When a stored DbValue references an option that no longer exists, **every**
+read path drops the entry (and returns null when nothing is left) — no path
+leaks raw UUIDs to the UI. `DescriptorMissBehavior` tests lock this.
+
+## PropertyValueFactory (reference types only)
+
+Only Choice/Tags/Multilevel need a factory (their db/biz values differ).
+`Match*` methods are thin wrappers over the descriptors — `addOnMiss` maps to
+`PropertyValueMatchPolicy`.
 
 ```csharp
 using Bakabase.Modules.Property.Components;
 
-// Text properties
-var dbValue = PropertyValueFactory.SingleLineText.Db("hello");
-var bizValue = PropertyValueFactory.MultilineText.Biz(dbValue);
+var dbValue = PropertyValueFactory.SingleChoice.MatchDbValue(options, "Label");            // MatchOnly
+var dbValue2 = PropertyValueFactory.SingleChoice.MatchDbValue(options, "New", addOnMiss: true);
+var bizValue = PropertyValueFactory.MultipleChoice.MatchBizValue(options, dbValues);
+var tagIds = PropertyValueFactory.Tags.MatchDbValue(options, tagValues, addOnMiss: true);
+var chains = PropertyValueFactory.Multilevel.MatchBizValue(options, dbValues);
 
-// Choice properties
-var dbValue = PropertyValueFactory.SingleChoice.Db(options, "Label");
-var (dbValue, optionsChanged) = PropertyValueFactory.SingleChoice.DbWithAutoCreate(options, "NewLabel");
-var bizValue = PropertyValueFactory.SingleChoice.Biz(options, dbValue);
-
-// Multiple choice
-var dbValue = PropertyValueFactory.MultipleChoice.Db(options, new[] { "Label1", "Label2" });
-var bizValue = PropertyValueFactory.MultipleChoice.Biz(options, dbValue);
-
-// Tags
-var (dbValue, changed) = PropertyValueFactory.Tags.DbWithAutoCreate(options, tagValues);
-var bizValue = PropertyValueFactory.Tags.Biz(options, dbValue);
-
-// Multilevel
-var (dbValue, changed) = PropertyValueFactory.Multilevel.DbWithAutoCreate(options, paths);
-var bizValue = PropertyValueFactory.Multilevel.Biz(options, dbValue);
-
-// Numbers, DateTime, etc.
-var dbValue = PropertyValueFactory.Number.Db(123.45m);
-var dbValue = PropertyValueFactory.DateTime.Db(DateTime.Now);
+// Build*/Build*Serialized exist for when you already hold ids/labels.
 ```
 
-## Built-in Property Accessors
-
-```csharp
-using Bakabase.Modules.Property.Components;
-
-// Internal properties
-var filename = BuiltinProperties.Internal.Filename;
-var createdAt = BuiltinProperties.Internal.CreatedAt;
-var mediaLibrary = BuiltinProperties.Internal.MediaLibraryV2Multi; // Use this, not MediaLibraryV2
-
-// Reserved properties
-var rating = BuiltinProperties.Reserved.Rating;
-var intro = BuiltinProperties.Reserved.Introduction;
-var cover = BuiltinProperties.Reserved.Cover;
-
-// Use accessor methods
-var dbValue = filename.ToDbValue("test.txt");
-var bizValue = createdAt.ToBizValue(dbValue);
-
-// For choice properties
-var dbValue = BuiltinProperties.Internal.MediaLibraryV2Multi.ToDbValue(options, labels);
-var bizValue = BuiltinProperties.Internal.MediaLibraryV2Multi.ToBizValue(options, dbValue);
-```
+Non-reference types need no factory — serialize raw values with
+`SerializeAsStandardValue` (see `standard-value.md`).
 
 ## Property Type Conversion
 
 ```csharp
 // Using IPropertyTypeConverter (injected)
 var result = await propertyTypeConverter.ConvertValueAsync(fromProperty, toProperty, dbValue);
-// result.NewDbValue - converted value
-// result.PropertyOptionsChanged - if options were modified
-// result.UpdatedToProperty - property with updated options
-
-// Preview conversion
 var preview = await propertyTypeConverter.PreviewConversionAsync(fromProperty, toType, dbValues);
-// preview.Changes - list of values that would change
-
-// Batch conversion
-var result = await propertyTypeConverter.ConvertValuesAsync(fromProperty, toProperty, dbValues);
 ```
 
 ## MediaLibraryV2 Migration
@@ -147,20 +110,9 @@ var result = await propertyTypeConverter.ConvertValuesAsync(fromProperty, toProp
 ```csharp
 using Bakabase.Modules.Property.Components;
 
-// Check if legacy property
 bool isLegacy = MediaLibraryV2Adapter.IsLegacyProperty(pool, id);
-
-// Write: Single -> Multi
 var multiDbValue = MediaLibraryV2Adapter.ToMultiDbValue(singleDbValue);
-
-// Read: Multi -> Single (for backward compatibility)
-var singleDbValue = MediaLibraryV2Adapter.ToSingleDbValue(multiDbValue);
-
-// Read normalized (always List<string>)
 var normalized = MediaLibraryV2Adapter.ReadAsMulti(dbValue);
-
-// Get actual property for operations
-var actualProperty = MediaLibraryV2Adapter.GetActualProperty(pool, id);
 ```
 
 **For new code**: Use `ResourceProperty.MediaLibraryV2Multi` directly.
@@ -171,19 +123,21 @@ var actualProperty = MediaLibraryV2Adapter.GetActualProperty(pool, id);
 |---------|------|
 | PropertySystem | `src/modules/Bakabase.Modules.Property/PropertySystem.cs` |
 | PropertyValueFactory | `src/modules/Bakabase.Modules.Property/Components/PropertyValueFactory.cs` |
-| BuiltinProperties | `src/modules/Bakabase.Modules.Property/Components/BuiltinProperties.cs` |
+| PropertyValueMatchPolicy | `src/modules/Bakabase.Modules.Property/Abstractions/Components/PropertyValueMatchPolicy.cs` |
+| BuiltinProperties | `src/modules/Bakabase.Modules.Property/Components/BuiltinProperty/BuiltinProperties.cs` |
 | IPropertyTypeConverter | `src/modules/Bakabase.Modules.Property/Abstractions/Components/IPropertyTypeConverter.cs` |
-| PropertyTypeConverter | `src/modules/Bakabase.Modules.Property/Components/PropertyTypeConverter.cs` |
 | MediaLibraryV2Adapter | `src/modules/Bakabase.Modules.Property/Components/MediaLibraryV2Adapter.cs` |
 | PropertyInternals (internal) | `src/modules/Bakabase.Modules.Property/Components/PropertyInternals.cs` |
 | Property descriptors | `src/modules/Bakabase.Modules.Property/Components/Properties/` |
 
 ## Best Practices
 
-1. **Use PropertyValueFactory.{Type}.Db/Biz** for type-safe property value construction
-2. **Use PropertySystem.Value.Create** for StandardValue creation
-3. **Use PropertySystem.Builtin** or **BuiltinProperties** for Internal/Reserved property access
-4. **Use IPropertyTypeConverter** for property type conversions (injected service)
-5. **Use MediaLibraryV2Multi** instead of MediaLibraryV2 for new code
-6. **Reference types store UUIDs** - never store display labels in DB
-7. **Use DbWithAutoCreate** when you want options to be auto-added
+1. **Descriptors are the source of truth** — a new PropertyType needs a
+   descriptor; type attributes and search/index behavior all come from it.
+2. **Choose the ToDbValue policy deliberately** — `AutoCreateOptions` on write
+   paths (enhancers, user edits), `MatchOnly` for validation/lookup.
+3. **Use PropertyValueFactory.{Type}.Match\*** only for reference types.
+4. **Use MediaLibraryV2Multi** instead of MediaLibraryV2 for new code.
+5. **Reference types store UUIDs** — never store display labels in DB.
+6. **Frontend mirror**: `src/web/src/components/Property/PropertySystem.ts`
+   keeps the same attribute table for the UI — update both when a mapping changes.

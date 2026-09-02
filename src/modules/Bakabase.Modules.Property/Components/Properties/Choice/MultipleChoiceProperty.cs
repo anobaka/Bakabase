@@ -13,6 +13,8 @@ public record MultipleChoicePropertyOptions : ChoicePropertyOptions<List<string>
 public class MultipleChoicePropertyDescriptor
     : AbstractPropertyDescriptor<MultipleChoicePropertyOptions, List<string>, List<string>>
 {
+    public override bool IsReferenceValueType => true;
+
     public override PropertyType Type => PropertyType.MultipleChoice;
 
     /// <summary>
@@ -93,32 +95,45 @@ public class MultipleChoicePropertyDescriptor
         Bakabase.Abstractions.Models.Domain.Property property, string keyword)
     {
         var options = property.Options as MultipleChoicePropertyOptions;
-        var ids = options?.Choices?.Where(c => c.Label.Contains(keyword)).Select(x => x.Value).ToList();
+        var ids = options?.Choices?.Where(c => c.Label.Contains(keyword, StringComparison.OrdinalIgnoreCase))
+            .Select(x => x.Value).ToList();
         return ids?.Any() == true ? (ids, SearchOperation.In) : null;
     }
 
     protected override (List<string>? DbValue, bool PropertyChanged) PrepareDbValueInternal(
-        Bakabase.Abstractions.Models.Domain.Property property, List<string> bizValue)
+        Bakabase.Abstractions.Models.Domain.Property property, List<string> bizValue,
+        PropertyValueMatchPolicy policy)
     {
         var goodValues = bizValue.TrimAndRemoveEmpty();
         if (goodValues?.Any() == true)
         {
-            property.Options ??= new MultipleChoicePropertyOptions();
-            var options = (property.Options as MultipleChoicePropertyOptions)!;
-            var propertyChanged = options.AddChoices(true, goodValues.ToArray(), null);
-            var stringValues = goodValues.Select(v => options.Choices?.Find(c => c.Label == v)?.Value).OfType<string>()
+            var propertyChanged = false;
+            if (policy == PropertyValueMatchPolicy.AutoCreateOptions)
+            {
+                property.Options ??= new MultipleChoicePropertyOptions();
+                propertyChanged =
+                    ((MultipleChoicePropertyOptions) property.Options).AddChoices(true, goodValues.ToArray(), null);
+            }
+
+            var options = property.Options as MultipleChoicePropertyOptions;
+            var stringValues = goodValues.Select(v => options?.Choices?.Find(c => c.Label == v)?.Value).OfType<string>()
                 .ToList();
-            var nv = stringValues.Any() ? new ListStringValueBuilder(stringValues).Value : null;
-            return (nv, propertyChanged);
+            return (stringValues.Any() ? stringValues : null, propertyChanged);
         }
 
         return (null, false);
     }
 
-    protected override List<string> GetBizValueInternal(Bakabase.Abstractions.Models.Domain.Property property,
+    protected override List<string>? GetBizValueInternal(Bakabase.Abstractions.Models.Domain.Property property,
         List<string> value)
     {
+        // Drop entries whose choice no longer exists instead of leaking the raw
+        // UUID to the user — consistent with SingleChoice/Tags/PropertyValueFactory.
         var options = property.Options as MultipleChoicePropertyOptions;
-        return value.Select(v => options?.Choices?.FirstOrDefault(c => c.Value == v)?.Label ?? v).ToList();
+        var labels = value
+            .Select(v => options?.Choices?.FirstOrDefault(c => c.Value == v)?.Label)
+            .OfType<string>()
+            .ToList();
+        return labels.Count > 0 ? labels : null;
     }
 }

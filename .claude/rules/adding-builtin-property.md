@@ -31,8 +31,9 @@ Tags: **[Both]** / **[Internal]** / **[Reserved]**. *(optional)* = only when app
 - [ ] **[Both]** `PropertyInternals.BuiltinPropertyMap` — add `new Property(pool, (int)ResourceProperty.X, PropertyType.Y)`.
   `src/modules/Bakabase.Modules.Property/Components/PropertyInternals.cs`
 - [ ] **[Both]** Same file — add to `InternalPropertyMap` *(internal)* or `ReservedPropertyMap` *(reserved)*.
-- [ ] **[Both]** `BuiltinProperties` — add a typed accessor (`BuiltinProperties.Internal.X` / `.Reserved.X`).
-  `src/modules/Bakabase.Modules.Property/Components/BuiltinProperty/BuiltinProperties.cs`
+- [ ] **[Both]** `BuiltinProperties.Get/TryGet` resolve the new member automatically via
+  `BuiltinPropertyMap` — no per-property accessor is needed (only
+  `MediaLibraryV2Multi` keeps a specialized accessor).
 - [ ] **[Both]** Localization — `BuiltinPropertyName_{X}` in **both** `PropertyResource.resx` and `PropertyResource.zh-Hans.resx`.
   `src/modules/Bakabase.Modules.Property/Resources/`
 

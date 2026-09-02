@@ -14,13 +14,6 @@ namespace Bakabase.Modules.StandardValue.Components.ValueHandlers
     {
         public abstract StandardValueType Type { get; }
 
-        private Dictionary<StandardValueType, StandardValueConversionRule>? _possibleConversionLosses;
-
-        public Dictionary<StandardValueType, StandardValueConversionRule> ConversionRules =>
-            (_possibleConversionLosses ??= new Dictionary<StandardValueType, StandardValueConversionRule>(
-                StandardValueSystem.GetAllConversionRules()[Type]));
-
-
         public object? Convert(object? currentValue,
             StandardValueType toType)
         {

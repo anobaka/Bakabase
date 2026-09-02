@@ -7,10 +7,9 @@ using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.Property.Components.Accessors;
 using Bakabase.Modules.Property.Components.BuiltinProperty;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
+using Bakabase.Modules.StandardValue.Extensions;
 using Bakabase.Modules.StandardValue.Abstractions.Models.Domain.Constants;
 using SvSystem = Bakabase.Modules.StandardValue.StandardValueSystem;
-using SvTypes = Bakabase.Modules.StandardValue.Models.Domain;
-using SvComponents = Bakabase.Modules.StandardValue.Components;
 
 namespace Bakabase.Modules.Property;
 
@@ -21,100 +20,9 @@ namespace Bakabase.Modules.Property;
 public static class PropertySystem
 {
     /// <summary>
-    /// StandardValue operations - creating, serializing, converting values.
-    /// Delegates to SvSystem for implementation.
-    /// </summary>
-    public static class Value
-    {
-        /// <summary>
-        /// Type-safe StandardValue factory.
-        /// Usage: PropertySystem.Value.Create.String("hello")
-        /// </summary>
-        public static StandardValueFactoryAccessor Create => default;
-
-        /// <summary>
-        /// Serialize a value to string representation.
-        /// </summary>
-        public static string? Serialize(object? value, StandardValueType type) =>
-            SvSystem.Serialize(value, type);
-
-        /// <summary>
-        /// Serialize a typed StandardValue.
-        /// </summary>
-        public static string? Serialize<T>(SvComponents.StandardValue<T>? value) =>
-            SvSystem.Serialize(value);
-
-        /// <summary>
-        /// Deserialize a string to value.
-        /// </summary>
-        public static object? Deserialize(string? serialized, StandardValueType type) =>
-            SvSystem.Deserialize(serialized, type);
-
-        /// <summary>
-        /// Deserialize a string to typed value.
-        /// </summary>
-        public static T? Deserialize<T>(string? serialized, StandardValueType type) =>
-            SvSystem.Deserialize<T>(serialized, type);
-
-        /// <summary>
-        /// Validate that a value matches the expected StandardValueType.
-        /// </summary>
-        public static bool Validate(object? value, StandardValueType expectedType) =>
-            SvSystem.Validate(value, expectedType);
-
-        /// <summary>
-        /// Infer StandardValueType from a CLR type.
-        /// </summary>
-        public static StandardValueType? InferType<T>() =>
-            SvSystem.InferType<T>();
-
-        /// <summary>
-        /// Infer StandardValueType from a value.
-        /// </summary>
-        public static StandardValueType? InferType(object? value) =>
-            SvSystem.InferType(value);
-
-        /// <summary>
-        /// Get the value handler for a StandardValueType.
-        /// </summary>
-        public static IStandardValueHandler GetHandler(StandardValueType type) =>
-            SvSystem.GetHandler(type);
-
-        /// <summary>
-        /// Convert value between StandardValueTypes (sync, no custom datetime parsing).
-        /// For async conversion with datetime parsing, use IStandardValueService.
-        /// </summary>
-        public static object? Convert(object? value, StandardValueType fromType, StandardValueType toType) =>
-            SvSystem.Convert(value, fromType, toType);
-
-        /// <summary>
-        /// Get the conversion rules (flags indicating what info might be lost) for a type pair.
-        /// </summary>
-        public static StandardValueConversionRule GetConversionRules(
-            StandardValueType fromType, StandardValueType toType) =>
-            SvSystem.GetConversionRules(fromType, toType);
-
-        /// <summary>
-        /// Get all conversion rules between all StandardValueTypes.
-        /// Key: fromType -> toType -> rules flags
-        /// </summary>
-        public static IReadOnlyDictionary<StandardValueType,
-            IReadOnlyDictionary<StandardValueType, StandardValueConversionRule>> GetAllConversionRules() =>
-            SvSystem.GetAllConversionRules();
-
-        /// <summary>
-        /// Get expected conversion test data for all type pairs.
-        /// Primarily for testing/debugging purposes.
-        /// </summary>
-        public static IReadOnlyDictionary<StandardValueType,
-            IReadOnlyDictionary<StandardValueType, IReadOnlyList<(object? FromValue, object? ExpectedValue)>>>
-            GetExpectedConversions() =>
-            SvSystem.GetExpectedConversions();
-    }
-
-    /// <summary>
     /// Property operations - descriptors, type info, value conversion.
-    /// For property value construction, use PropertyValueFactory.{Type}.Db/Biz directly.
+    /// For value serialization/conversion use StandardValueSystem; for reference-type
+    /// value matching use PropertyValueFactory.{Type}.Match*.
     /// </summary>
     public static class Property
     {
@@ -177,11 +85,13 @@ public static class PropertySystem
         }
 
         /// <summary>
-        /// Convert BizValue to DbValue for a property.
+        /// Convert BizValue to DbValue for a property. For reference types the policy decides
+        /// whether unmatched entries create new options (default) or are dropped.
         /// </summary>
         public static (object? DbValue, bool PropertyChanged) ToDbValue(
-            Bakabase.Abstractions.Models.Domain.Property property, object? bizValue) =>
-            GetDescriptor(property.Type).PrepareDbValue(property, bizValue);
+            Bakabase.Abstractions.Models.Domain.Property property, object? bizValue,
+            PropertyValueMatchPolicy policy = PropertyValueMatchPolicy.AutoCreateOptions) =>
+            GetDescriptor(property.Type).PrepareDbValue(property, bizValue, policy);
 
         /// <summary>
         /// Get the search handler for a PropertyType.
@@ -216,21 +126,6 @@ public static class PropertySystem
             PropertyInternals.VirtualPropertyMap.GetValueOrDefault(type);
 
         /// <summary>
-        /// Get expected conversion test data for all property type pairs.
-        /// Primarily for testing/debugging purposes.
-        /// </summary>
-        public static IReadOnlyDictionary<PropertyType,
-            IReadOnlyDictionary<PropertyType, IReadOnlyList<(object? FromBizValue, object? ExpectedBizValue)>>>
-            GetExpectedConversions() =>
-            PropertyInternals.ExpectedConversions
-                .ToDictionary(
-                    kv => kv.Key,
-                    kv => (IReadOnlyDictionary<PropertyType, IReadOnlyList<(object? FromBizValue, object? ExpectedBizValue)>>)
-                        kv.Value.ToDictionary(
-                            inner => inner.Key,
-                            inner => (IReadOnlyList<(object? FromBizValue, object? ExpectedBizValue)>) inner.Value));
-
-        /// <summary>
         /// Combines multiple serialized DB values into a single serialized DB value.
         /// This is NOT string concatenation - it determines how to resolve multiple property values into one.
         /// For collection-type properties (Tags, MultipleChoice, etc.): aggregates all values (union).
@@ -246,7 +141,7 @@ public static class PropertySystem
             // Deserialize all non-null values
             var values = serializedDbValues
                 .Where(s => !string.IsNullOrEmpty(s))
-                .Select(s => SvSystem.Deserialize(s, dbValueType))
+                .Select(s => s!.DeserializeAsStandardValue(dbValueType))
                 .ToList();
 
             if (values.Count == 0) return null;
@@ -255,113 +150,22 @@ public static class PropertySystem
             var combined = SvSystem.Combine(values, dbValueType);
 
             // Serialize back
-            return SvSystem.Serialize(combined, dbValueType);
+            return combined?.SerializeAsStandardValue(dbValueType);
         }
     }
 
     /// <summary>
-    /// Built-in property access - Internal and Reserved properties.
-    /// For generic properties, only Definition is exposed.
-    /// For specialized properties (MediaLibraryV2Multi, ParentResource), full accessor is available.
-    /// Use PropertyValueFactory for value construction.
+    /// Built-in property access - Internal and Reserved property definitions by enum.
+    /// MediaLibraryV2Multi keeps a specialized accessor (int-based media library ids).
     /// </summary>
     public static class Builtin
     {
-        #region Internal Properties - Definitions
-
-        /// <summary>
-        /// Resource filename (SingleLineText) - property definition
-        /// Use PropertyValueFactory.SingleLineText for value construction.
-        /// </summary>
-        public static Bakabase.Abstractions.Models.Domain.Property Filename =>
-            BuiltinProperties.Internal.Filename.Definition;
-
-        /// <summary>
-        /// Parent directory path (SingleLineText) - property definition
-        /// Use PropertyValueFactory.SingleLineText for value construction.
-        /// </summary>
-        public static Bakabase.Abstractions.Models.Domain.Property DirectoryPath =>
-            BuiltinProperties.Internal.DirectoryPath.Definition;
-
-        /// <summary>
-        /// Record creation time (DateTime) - property definition
-        /// Use PropertyValueFactory.DateTime for value construction.
-        /// </summary>
-        public static Bakabase.Abstractions.Models.Domain.Property CreatedAt =>
-            BuiltinProperties.Internal.CreatedAt.Definition;
-
-        /// <summary>
-        /// File system creation time (DateTime) - property definition
-        /// Use PropertyValueFactory.DateTime for value construction.
-        /// </summary>
-        public static Bakabase.Abstractions.Models.Domain.Property FileCreatedAt =>
-            BuiltinProperties.Internal.FileCreatedAt.Definition;
-
-        /// <summary>
-        /// File system modification time (DateTime) - property definition
-        /// Use PropertyValueFactory.DateTime for value construction.
-        /// </summary>
-        public static Bakabase.Abstractions.Models.Domain.Property FileModifiedAt =>
-            BuiltinProperties.Internal.FileModifiedAt.Definition;
-
-        /// <summary>
-        /// Last playback time (DateTime) - property definition
-        /// Use PropertyValueFactory.DateTime for value construction.
-        /// </summary>
-        public static Bakabase.Abstractions.Models.Domain.Property PlayedAt =>
-            BuiltinProperties.Internal.PlayedAt.Definition;
-
-        /// <summary>
-        /// Aggregated health score (Number) - property definition.
-        /// Written by the HealthScore module; null when no profile has scored the resource.
-        /// </summary>
-        public static Bakabase.Abstractions.Models.Domain.Property HealthScore =>
-            BuiltinProperties.Internal.HealthScore.Definition;
-
-        #endregion
-
-        #region Internal Properties - Specialized Accessors
-
         /// <summary>
         /// Media library binding with multiple choice support.
         /// Provides int-based API since media library IDs are integers.
         /// </summary>
         public static MediaLibraryPropertyAccessor MediaLibraryV2Multi =>
-            BuiltinProperties.Internal.MediaLibraryV2Multi;
-
-        /// <summary>
-        /// Parent resource link (SingleChoice).
-        /// Provides int-based API since resource IDs are integers.
-        /// </summary>
-        public static ParentResourcePropertyAccessor ParentResource =>
-            BuiltinProperties.Internal.ParentResource;
-
-        #endregion
-
-        #region Reserved Properties - Definitions
-
-        /// <summary>
-        /// User rating (Rating/Decimal) - property definition
-        /// Use PropertyValueFactory.Number for value construction.
-        /// </summary>
-        public static Bakabase.Abstractions.Models.Domain.Property Rating =>
-            BuiltinProperties.Reserved.Rating.Definition;
-
-        /// <summary>
-        /// Resource description (MultilineText) - property definition
-        /// Use PropertyValueFactory.MultilineText for value construction.
-        /// </summary>
-        public static Bakabase.Abstractions.Models.Domain.Property Introduction =>
-            BuiltinProperties.Reserved.Introduction.Definition;
-
-        /// <summary>
-        /// Cover image paths (Attachment/ListString) - property definition
-        /// Use PropertyValueFactory.Attachment for value construction.
-        /// </summary>
-        public static Bakabase.Abstractions.Models.Domain.Property Cover =>
-            BuiltinProperties.Reserved.Cover.Definition;
-
-        #endregion
+            BuiltinProperties.MediaLibraryV2Multi;
 
         /// <summary>
         /// Get property definition by ResourceProperty enum.
@@ -398,7 +202,7 @@ public static class PropertySystem
         /// Provides type-safe methods to build filter values for media library searches.
         /// </summary>
         public static MediaLibraryPropertyAccessor MediaLibraryV2Multi =>
-            BuiltinProperties.Internal.MediaLibraryV2Multi;
+            BuiltinProperties.MediaLibraryV2Multi;
 
         /// <summary>
         /// Get the property to use for filter value based on operation.
@@ -486,7 +290,7 @@ public static class PropertySystem
         public static string? SerializeFilterValue(object? value, PropertyType propertyType, SearchOperation operation)
         {
             var (dbValueType, _) = GetFilterValueTypes(propertyType, operation);
-            return Value.Serialize(value, dbValueType);
+            return value?.SerializeAsStandardValue(dbValueType);
         }
 
         /// <summary>
@@ -499,7 +303,7 @@ public static class PropertySystem
         public static object? DeserializeFilterValue(string? serialized, PropertyType propertyType, SearchOperation operation)
         {
             var (dbValueType, _) = GetFilterValueTypes(propertyType, operation);
-            return Value.Deserialize(serialized, dbValueType);
+            return serialized?.DeserializeAsStandardValue(dbValueType);
         }
 
         /// <summary>
@@ -550,11 +354,11 @@ public static class PropertySystem
             }
 
             // Deserialize from source type, convert, and re-serialize to target type
-            var value = Value.Deserialize(serializedValue, fromDbType);
+            var value = serializedValue.DeserializeAsStandardValue(fromDbType);
             if (value == null) return null;
 
             var converted = SvSystem.Convert(value, fromDbType, toDbType);
-            return Value.Serialize(converted, toDbType);
+            return converted?.SerializeAsStandardValue(toDbType);
         }
 
         /// <summary>
@@ -609,30 +413,5 @@ public static class PropertySystem
         }
     }
 
-    /// <summary>
-    /// Accessor struct for StandardValueFactory (allows static class syntax).
-    /// Delegates to SvSystem.Create for implementation.
-    /// </summary>
-    public readonly struct StandardValueFactoryAccessor
-    {
-        public SvComponents.StandardValue<string> String(string? value) => SvSystem.Create.String(value);
-        public SvComponents.StandardValue<List<string>> ListString(List<string>? value) => SvSystem.Create.ListString(value);
-        public SvComponents.StandardValue<List<string>> ListString(params string[] values) => SvSystem.Create.ListString(values);
-        public SvComponents.StandardValue<decimal> Decimal(decimal value) => SvSystem.Create.Decimal(value);
-        public SvComponents.StandardValue<decimal>? Decimal(decimal? value) => SvSystem.Create.Decimal(value);
-        public SvComponents.StandardValue<SvTypes.LinkValue> Link(string? text, string? url) => SvSystem.Create.Link(text, url);
-        public SvComponents.StandardValue<SvTypes.LinkValue> Link(SvTypes.LinkValue? value) => SvSystem.Create.Link(value);
-        public SvComponents.StandardValue<bool> Boolean(bool value) => SvSystem.Create.Boolean(value);
-        public SvComponents.StandardValue<bool>? Boolean(bool? value) => SvSystem.Create.Boolean(value);
-        public SvComponents.StandardValue<DateTime> DateTime(DateTime value) => SvSystem.Create.DateTime(value);
-        public SvComponents.StandardValue<DateTime>? DateTime(DateTime? value) => SvSystem.Create.DateTime(value);
-        public SvComponents.StandardValue<TimeSpan> Time(TimeSpan value) => SvSystem.Create.Time(value);
-        public SvComponents.StandardValue<TimeSpan>? Time(TimeSpan? value) => SvSystem.Create.Time(value);
-        public SvComponents.StandardValue<List<List<string>>> ListListString(List<List<string>>? value) => SvSystem.Create.ListListString(value);
-        public SvComponents.StandardValue<List<List<string>>> ListListString(params List<string>[] values) => SvSystem.Create.ListListString(values);
-        public SvComponents.StandardValue<List<SvTypes.TagValue>> ListTag(List<SvTypes.TagValue>? value) => SvSystem.Create.ListTag(value);
-        public SvComponents.StandardValue<List<SvTypes.TagValue>> ListTag(params SvTypes.TagValue[] values) => SvSystem.Create.ListTag(values);
-        public SvComponents.StandardValue<List<SvTypes.TagValue>> ListTag(params (string? Group, string Name)[] values) => SvSystem.Create.ListTag(values);
-    }
 
 }

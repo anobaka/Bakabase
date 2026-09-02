@@ -238,7 +238,7 @@ public sealed class Combine
         var result = PropertySystem.Property.CombineSerializedDbValues(PropertyType.MultipleChoice, values);
 
         // Assert
-        var deserialized = StandardValueSystem.Deserialize<List<string>>(result, StandardValueType.ListString);
+        var deserialized = result!.DeserializeAsStandardValue<List<string>>(StandardValueType.ListString);
         deserialized.Should().BeEquivalentTo(new[] { "a", "b", "c" });
     }
 
@@ -267,7 +267,7 @@ public sealed class Combine
         var result = PropertySystem.Property.CombineSerializedDbValues(PropertyType.Tags, values);
 
         // Assert
-        var deserialized = StandardValueSystem.Deserialize<List<TagValue>>(result, StandardValueType.ListTag);
+        var deserialized = result!.DeserializeAsStandardValue<List<TagValue>>(StandardValueType.ListTag);
         deserialized.Should().HaveCount(3);
         deserialized.Should().ContainEquivalentOf(new TagValue("Group1", "Tag1"));
         deserialized.Should().ContainEquivalentOf(new TagValue(null, "Tag2"));
@@ -299,7 +299,7 @@ public sealed class Combine
         var result = PropertySystem.Property.CombineSerializedDbValues(PropertyType.Multilevel, values);
 
         // Assert
-        var deserialized = StandardValueSystem.Deserialize<List<List<string>>>(result, StandardValueType.ListListString);
+        var deserialized = result!.DeserializeAsStandardValue<List<List<string>>>(StandardValueType.ListListString);
         deserialized.Should().HaveCount(3); // Deduplicated
     }
 

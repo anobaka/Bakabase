@@ -27,10 +27,17 @@ internal static class StandardValueInternals
         new(Handlers.ToDictionary(d => d.Type, d => d));
 
     /// <summary>
-    /// Expected conversion test data.
+    /// Golden conversion example data (also served by the type-conversion overview API).
+    /// Built lazily: the reflection walk over ExpectedConversions fields is not worth a
+    /// type-load failure or startup cost when nothing asks for examples.
     /// </summary>
-    public static readonly Dictionary<StandardValueType,
-            Dictionary<StandardValueType, List<(object? FromValue, object? ExpectedValue)>>> ExpectedConversions =
+    public static Dictionary<StandardValueType,
+        Dictionary<StandardValueType, List<(object? FromValue, object? ExpectedValue)>>> ExpectedConversions =>
+        LazyExpectedConversions.Value;
+
+    private static readonly Lazy<Dictionary<StandardValueType,
+            Dictionary<StandardValueType, List<(object? FromValue, object? ExpectedValue)>>>>
+        LazyExpectedConversions = new(() =>
             SpecificEnumUtils<StandardValueType>.Values.ToDictionary(d => d, fromType =>
                 SpecificEnumUtils<StandardValueType>.Values.ToDictionary(c => c,
                     toType =>
@@ -55,7 +62,7 @@ internal static class StandardValueInternals
                         // Console.WriteLine($@"{fromType.ToString(),-20}{toType.ToString(),-20}{dataSet.Count}");
 
                         return dataSet;
-                    }));
+                    })));
 
     /// <summary>
     /// Conversion rules between StandardValueTypes.

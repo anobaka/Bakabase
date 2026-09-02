@@ -1,4 +1,3 @@
-﻿using Bakabase.Abstractions.Extensions;
 using Bakabase.Modules.Property.Components.Properties.Choice.Abstractions;
 using Bootstrap.Extensions;
 
@@ -7,7 +6,7 @@ namespace Bakabase.Modules.Property.Extensions
     public static class ChoicePropertyExtensions
     {
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="options"></param>
@@ -18,46 +17,40 @@ namespace Bakabase.Modules.Property.Extensions
         public static bool AddChoices<T>(this ChoicePropertyOptions<T> options, bool ignoreSameValue,
             string[] values, string[]? dbValues)
         {
-            // if (options.AllowAddingNewDataDynamically)
+            // Validate before any filtering so a caller-side mismatch is always surfaced,
+            // and so label/id pairs stay aligned through the trim/dedupe steps below.
+            if (dbValues != null && dbValues.Length != values.Length)
             {
-                var goodValues = values.TrimAndRemoveEmpty()?.ToArray();
-                if (goodValues?.Any() == true)
+                throw new Exception(
+                    $"Count of {nameof(values)} and {nameof(dbValues)} must be same if {nameof(dbValues)} is specified");
+            }
+
+            var candidates = values
+                .Select((v, i) => (Label: v?.Trim(), DbValue: dbValues?[i]))
+                .Where(x => !string.IsNullOrEmpty(x.Label))
+                .ToList();
+            if (candidates.Count == 0)
+            {
+                return false;
+            }
+
+            options.Choices ??= [];
+            if (ignoreSameValue)
+            {
+                // Seed with existing labels so duplicates are skipped; Add() also
+                // de-duplicates repeated labels inside this call.
+                var seen = options.Choices.Select(c => c.Label).ToHashSet();
+                candidates = candidates.Where(x => seen.Add(x.Label!)).ToList();
+                if (candidates.Count == 0)
                 {
-                    options.Choices ??= [];
-                    if (ignoreSameValue)
-                    {
-                        var current = options.Choices.Select(c => c.Label).ToHashSet();
-                        values = values.ToHashSet().Except(current).ToArray();
-                    }
-
-                    if (values.Any())
-                    {
-                        if (dbValues != null && dbValues.Length != values.Length)
-                        {
-                            throw new Exception(
-                                $"Count of {nameof(values)} and {nameof(dbValues)} must be same if {nameof(dbValues)} is specified");
-                        }
-
-                        options.Choices.AddRange(values.Select((v, i) =>
-                        {
-                            var o = new ChoiceOptions
-                            {
-                                Label = v
-                            };
-                            var id = dbValues?[i];
-                            if (id.IsNotEmpty())
-                            {
-                                o.Value = id;
-                            }
-
-                            return o;
-                        }));
-                        return true;
-                    }
+                    return false;
                 }
             }
 
-            return false;
+            options.Choices.AddRange(candidates.Select(x => x.DbValue.IsNotEmpty()
+                ? new ChoiceOptions {Label = x.Label!, Value = x.DbValue!}
+                : new ChoiceOptions {Label = x.Label!}));
+            return true;
         }
     }
 }

@@ -6,6 +6,8 @@ namespace Bakabase.Modules.Property.Components.Properties.Time;
 
 public class TimePropertyDescriptor : AbstractPropertyDescriptor<TimeSpan?, TimeSpan?>
 {
+    public override bool IsReferenceValueType => false;
+
     public override PropertyType Type => PropertyType.Time;
 
     protected override bool IsMatchInternal(TimeSpan? dbValue, SearchOperation operation, object filterValue)

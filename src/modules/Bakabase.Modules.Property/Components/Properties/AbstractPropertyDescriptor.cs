@@ -17,8 +17,21 @@ namespace Bakabase.Modules.Property.Components.Properties
         IPropertyIndexProvider,
         IPropertyIndexSearcher
     {
-        public StandardValueType DbValueType => PropertySystem.Property.GetDbValueType(Type);
-        public StandardValueType BizValueType => PropertySystem.Property.GetBizValueType(Type);
+        // Derived from the generic arguments so a descriptor's declared CLR types and its
+        // StandardValueTypes can never disagree; PropertyAttributeMap is generated from these.
+        public StandardValueType DbValueType { get; } = InferValueType(SpecificTypeUtils<TDbValue>.Type);
+        public StandardValueType BizValueType { get; } = InferValueType(SpecificTypeUtils<TBizValue>.Type);
+
+        private static StandardValueType InferValueType(Type type)
+        {
+            var underlying = Nullable.GetUnderlyingType(type) ?? type;
+            return underlying.InferStandardValueType() ??
+                   throw new InvalidOperationException(
+                       $"{type.FullName} has no StandardValueType mapping; a property descriptor's generic arguments must be standard value CLR types");
+        }
+
+        /// <inheritdoc cref="IPropertyDescriptor.IsReferenceValueType"/>
+        public abstract bool IsReferenceValueType { get; }
 
         public abstract PropertyType Type { get; }
 
@@ -27,16 +40,18 @@ namespace Bakabase.Modules.Property.Components.Properties
         }
 
         public (object? DbValue, bool PropertyChanged) PrepareDbValue(
-            Bakabase.Abstractions.Models.Domain.Property property, object? bizValue)
+            Bakabase.Abstractions.Models.Domain.Property property, object? bizValue,
+            PropertyValueMatchPolicy policy = PropertyValueMatchPolicy.AutoCreateOptions)
         {
             EnsureOptionsType(property.Options);
             return bizValue is TBizValue typedBizValue
-                ? PrepareDbValueInternal(property, typedBizValue)
+                ? PrepareDbValueInternal(property, typedBizValue, policy)
                 : (null, false);
         }
 
         protected virtual (TDbValue? DbValue, bool PropertyChanged) PrepareDbValueInternal(
-            Bakabase.Abstractions.Models.Domain.Property property, TBizValue bizValue) =>
+            Bakabase.Abstractions.Models.Domain.Property property, TBizValue bizValue,
+            PropertyValueMatchPolicy policy) =>
             (bizValue is TDbValue x ? x : default, false);
 
         public object? GetBizValue(Bakabase.Abstractions.Models.Domain.Property property, object? dbValue)
@@ -117,7 +132,7 @@ namespace Bakabase.Modules.Property.Components.Properties
             {
                 Operation = sf.Value.Operation,
                 DbValue = sf.Value.DbValue,
-                PropertyPool = PropertyPool.Custom,
+                PropertyPool = property.Pool,
                 PropertyId = property.Id,
                 Property = property
             };

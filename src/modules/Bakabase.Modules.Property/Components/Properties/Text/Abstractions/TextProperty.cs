@@ -7,6 +7,8 @@ namespace Bakabase.Modules.Property.Components.Properties.Text.Abstractions;
 
 public abstract class TextPropertyDescriptor<TDbValue, TBizValue> : AbstractPropertyDescriptor<TDbValue, TBizValue>
 {
+    public override bool IsReferenceValueType => false;
+
     protected override (object DbValue, SearchOperation Operation)? BuildSearchFilterByKeywordInternal(Bakabase.Abstractions.Models.Domain.Property property, string keyword)
     {
         return (keyword, SearchOperation.Contains);

@@ -5,8 +5,8 @@ namespace Bakabase.Modules.StandardValue.Models.Domain;
 
 public record LinkValue(string? Text, string? Url)
 {
-    public string? Text { get; set; } = Text;
-    public string? Url { get; set; } = Url;
+    public string? Text { get; init; } = Text;
+    public string? Url { get; init; } = Url;
 
     public override string? ToString()
     {

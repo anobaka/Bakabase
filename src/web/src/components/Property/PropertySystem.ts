@@ -209,10 +209,11 @@ export interface SingleChoicePropertyOptions {
 
 /**
  * Options for MultipleChoice property.
+ * defaultValue mirrors the backend ChoicePropertyOptions&lt;List&lt;string&gt;&gt;.
  */
 export interface MultipleChoicePropertyOptions {
   choices: ChoiceOption[];
-  defaultValue?: string;
+  defaultValue?: string[];
 }
 
 /**
@@ -239,10 +240,13 @@ export interface RatingPropertyOptions {
 
 /**
  * Options for Multilevel property.
+ * Mirrors the backend MultilevelPropertyOptions (defaultValue: List&lt;string&gt;,
+ * valueIsSingleton limits the value to a single chain).
  */
 export interface MultilevelPropertyOptions {
   data?: MultilevelData<string>[];
-  defaultValue?: string;
+  defaultValue?: string[];
+  valueIsSingleton?: boolean;
 }
 
 /**

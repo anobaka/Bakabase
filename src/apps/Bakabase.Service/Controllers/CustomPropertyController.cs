@@ -150,7 +150,7 @@ namespace Bakabase.Service.Controllers
                 {
                     var fromStdType = PropertySystem.Property.GetBizValueType(v);
                     var toStdType = PropertySystem.Property.GetBizValueType(d);
-                    var rulesFlag = PropertySystem.Value.GetConversionRules(fromStdType, toStdType);
+                    var rulesFlag = StandardValueSystem.GetConversionRules(fromStdType, toStdType);
                     return SpecificEnumUtils<StandardValueConversionRule>.Values.Select(x =>
                     {
                         if (!rulesFlag.HasFlag(x))
