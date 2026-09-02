@@ -23,6 +23,12 @@ public partial class App : Application
     private ISystemService _systemService = null!;
     public BakabaseHost? Host { get; private set; }
 
+    /// <summary>
+    /// Single owner of every user-initiated exit. Assigned alongside <see cref="Host"/>, which
+    /// happens before the main window (and therefore before anything can ask to close).
+    /// </summary>
+    public ExitCoordinator ExitCoordinator { get; private set; } = null!;
+
     public TrayIcon AppTrayIcon { get; private set; } = null!;
 
     public override void Initialize()
@@ -54,6 +60,7 @@ public partial class App : Application
             AppService.SetCulture(options.Language);
 
             Host = new BakabaseHost(_guiAdapter, _systemService);
+            ExitCoordinator = new ExitCoordinator(this, _guiAdapter);
 
             // Wire up tray events now that Host is available
             AppTrayIcon.Clicked += (_, _) => _guiAdapter.Show();
@@ -77,7 +84,11 @@ public partial class App : Application
             var openItem = AppTrayIcon.Menu!.Items.OfType<NativeMenuItem>().First(i => i.Header == "Open");
             var exitItem = AppTrayIcon.Menu!.Items.OfType<NativeMenuItem>().First(i => i.Header == "Exit");
             openItem.Click += (_, _) => _guiAdapter.Show();
-            exitItem.Click += async (_, _) => await Host.TryToExit(true);
+
+            // Not Host.TryToExit(true): that path calls Shutdown() and then falls through into
+            // its own close-behaviour switch, so a tray exit with CloseBehavior.Prompt raises a
+            // confirmation dialog while Avalonia is already tearing down.
+            exitItem.Click += async (_, _) => await ExitCoordinator.RequestExitAsync(ExitTrigger.TrayMenu);
 
             await Host.Start(desktop.Args ?? []);
 

@@ -52,7 +52,8 @@ const Functional: React.FC<FunctionalProps> = ({ applyPatches, query }) => {
     {
       id: "exitBehavior",
       label: t("configuration.functional.exitBehavior"),
-      keywords: ["close", "quit", "exit", "关闭", "退出"],
+      tip: t<string>("configuration.functional.exitBehavior.tip"),
+      keywords: ["close", "quit", "exit", "tray", "关闭", "退出", "托盘"],
       render: () => {
         return (
           <RadioGroup

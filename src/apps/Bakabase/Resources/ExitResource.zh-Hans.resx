@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Exit_DialogTitle" xml:space="preserve">
+    <value>关闭 Bakabase</value>
+  </data>
+  <data name="Exit_Heading" xml:space="preserve">
+    <value>要关闭 Bakabase 吗？</value>
+  </data>
+  <data name="Exit_Subheading" xml:space="preserve">
+    <value>最小化到通知区域，后台任务可以继续运行。</value>
+  </data>
+  <data name="Exit_Minimize" xml:space="preserve">
+    <value>最小化到托盘</value>
+  </data>
+  <data name="Exit_Exit" xml:space="preserve">
+    <value>退出</value>
+  </data>
+  <data name="Exit_Cancel" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="Exit_Remember" xml:space="preserve">
+    <value>记住我的选择</value>
+  </data>
+  <data name="Exit_RememberHint" xml:space="preserve">
+    <value>之后可在「设置 → 功能 → 退出行为」中修改。</value>
+  </data>
+  <data name="Exit_BusyHeading" xml:space="preserve">
+    <value>仍有后台任务在运行</value>
+  </data>
+  <data name="Exit_BusyBody" xml:space="preserve">
+    <value>现在退出会中断这些任务，未保存的改动可能会丢失。</value>
+  </data>
+  <data name="Exit_BusyMore" xml:space="preserve">
+    <value>等 {0} 项</value>
+  </data>
+  <data name="Exit_ClosingTitle" xml:space="preserve">
+    <value>正在关闭 Bakabase</value>
+  </data>
+  <data name="Exit_ClosingHeading" xml:space="preserve">
+    <value>正在关闭 Bakabase…</value>
+  </data>
+  <data name="Exit_ClosingStoppingTasks" xml:space="preserve">
+    <value>正在结束后台任务…</value>
+  </data>
+  <data name="Exit_ClosingSavingData" xml:space="preserve">
+    <value>正在保存数据…</value>
+  </data>
+  <data name="Exit_ClosingDone" xml:space="preserve">
+    <value>已完成</value>
+  </data>
+  <data name="Exit_ClosingRemaining" xml:space="preserve">
+    <value>还有 {0} 项任务正在收尾</value>
+  </data>
+  <data name="Exit_ForceQuit" xml:space="preserve">
+    <value>立即退出</value>
+  </data>
+  <data name="Exit_ForceQuitHint" xml:space="preserve">
+    <value>关闭耗时比平常更久。立即退出可能导致未保存的改动丢失。</value>
+  </data>
+</root>

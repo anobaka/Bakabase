@@ -10,12 +10,10 @@ using Avalonia.Threading;
 using Bakabase.Abstractions.Components.Gui;
 using Bakabase.Infrastructures.Components.Gui;
 using Bakabase.Infrastructures.Components.SystemService;
-using Bakabase.Infrastructures.Resources;
 using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.Controls;
 using Bakabase.Windows;
 using Bootstrap.Extensions;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Bakabase.Components;
 
@@ -25,20 +23,49 @@ public class AvaloniaGuiAdapter : GuiAdapter, ITrayIconController
     private InitializationWindow? _initializationWindow;
     private ErrorWindow? _errorWindow;
     private MainWindow? _mainWindow;
-    private ExitConfirmationDialog? _exitConfirmationDialog;
 
     /// <summary>
     /// Set when the app is exiting via <see cref="Shutdown"/> — i.e. programmatic exit
     /// (CloseBehavior.Exit, tray Exit, /restart endpoint, fatal error). Lets the main
     /// window's Closing handler distinguish "user clicked the X" from "we're already on
-    /// our way out" and skip the TryToExit prompt in the latter case. Showing the prompt
+    /// our way out" and skip the exit prompt in the latter case. Showing the prompt
     /// while Avalonia is tearing down produces a frozen dialog.
     /// </summary>
     private bool _isShuttingDown;
 
+    /// <summary>
+    /// While set, <see cref="Shutdown"/> records the request instead of acting on it.
+    ///
+    /// <see cref="ExitCoordinator"/> stops the web host on its way out, and AppHost registers
+    /// <c>ApplicationStopping -> IGuiAdapter.Shutdown</c>. Without this latch that callback
+    /// would end the Avalonia lifetime — and with it the process — while the coordinator is
+    /// still flushing data, which is precisely the work it stopped the host to allow.
+    /// </summary>
+    private bool _deferShutdown;
+
+    /// <summary>Owner for modal dialogs. Null until the main window exists.</summary>
+    internal Window? MainWindow => _mainWindow;
+
     public AvaloniaGuiAdapter(App app)
     {
         _app = app;
+    }
+
+    /// <summary>
+    /// Hands control of the actual teardown to <see cref="ExitCoordinator"/>. Must be paired
+    /// with <see cref="CompleteDeferredShutdown"/>.
+    /// </summary>
+    internal void BeginDeferredShutdown()
+    {
+        _isShuttingDown = true;
+        _deferShutdown = true;
+    }
+
+    /// <summary>Ends the Avalonia lifetime for real, once the wind-down is done.</summary>
+    internal void CompleteDeferredShutdown()
+    {
+        _deferShutdown = false;
+        Shutdown();
     }
 
     public override void InvokeInGuiContext(Action action) =>
@@ -135,12 +162,16 @@ public class AvaloniaGuiAdapter : GuiAdapter, ITrayIconController
             {
                 // Programmatic shutdown (CloseBehavior.Exit, tray Exit, /restart) goes
                 // through Shutdown() → desktop.Shutdown() → this Closing event. The user's
-                // intent to leave is already established, and showing the TryToExit prompt
+                // intent to leave is already established, and showing the exit prompt
                 // during Avalonia teardown produces a frozen dialog.
                 if (_isShuttingDown) return;
 
                 args.Cancel = true;
-                await onClosing();
+
+                // Deliberately not `onClosing` (AppHost.TryToExit): that method hides the
+                // window before the "tasks are still running" check and double-acts on the
+                // tray path. ExitCoordinator owns the whole flow instead — see its remarks.
+                await _app.ExitCoordinator.RequestExitAsync(ExitTrigger.WindowClose);
             };
         }
         catch (Exception ex)
@@ -168,6 +199,14 @@ public class AvaloniaGuiAdapter : GuiAdapter, ITrayIconController
     public override void Shutdown()
     {
         _isShuttingDown = true;
+
+        // The coordinator is mid-teardown and will call CompleteDeferredShutdown when the
+        // data is safely on disk. Ending the lifetime here would cut that short.
+        if (_deferShutdown)
+        {
+            return;
+        }
+
         if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             desktop.Shutdown();
@@ -195,126 +234,126 @@ public class AvaloniaGuiAdapter : GuiAdapter, ITrayIconController
         }
     }
 
-    private async void _onExitConfirmationDialogClosing(CloseBehavior behavior,
-        Func<CloseBehavior, bool, Task> onClosed)
-    {
-        var remember = _exitConfirmationDialog?.FindControl<CheckBox>("RememberCheckBox")?.IsChecked ?? false;
-        if (behavior != CloseBehavior.Cancel)
-        {
-            _exitConfirmationDialog?.Close();
-            _exitConfirmationDialog = null;
-        }
-
-        await onClosed(behavior, remember);
-    }
-
+    /// <summary>
+    /// Kept because <see cref="GuiAdapter"/> declares it, but the app's own exit paths go
+    /// through <see cref="ExitCoordinator"/> instead — only <c>AppHost.TryToExit</c> calls
+    /// this, and nothing we control calls that any more.
+    ///
+    /// The previous implementation fired <paramref name="onClosed"/> twice per interaction:
+    /// picking Exit or Minimize called <c>Close()</c>, whose Closing handler reported
+    /// <see cref="CloseBehavior.Cancel"/>, and only then did the real choice arrive.
+    /// </summary>
     [GuiContextInterceptor]
     public override void ShowConfirmationDialogOnFirstTimeExiting(Func<CloseBehavior, bool, Task> onClosed)
     {
-        if (_exitConfirmationDialog == null)
-        {
-            _exitConfirmationDialog =
-                new ExitConfirmationDialog(_app.Host!.Host.Services.GetRequiredService<AppLocalizer>());
-            _exitConfirmationDialog.FindControl<Button>("ExitBtn")!.Click += (_, _) =>
-            {
-                _onExitConfirmationDialogClosing(CloseBehavior.Exit, onClosed);
-            };
-            _exitConfirmationDialog.FindControl<Button>("MinimizeBtn")!.Click += (_, _) =>
-            {
-                _onExitConfirmationDialogClosing(CloseBehavior.Minimize, onClosed);
-            };
-            _exitConfirmationDialog.Closing += (_, _) =>
-            {
-                onClosed(CloseBehavior.Cancel, false);
-                _exitConfirmationDialog = null;
-            };
-        }
-
-        _exitConfirmationDialog.FindControl<CheckBox>("RememberCheckBox")!.IsChecked = false;
-        _exitConfirmationDialog.Show();
+        _ = PromptAndReportAsync(onClosed);
     }
 
+    private async Task PromptAndReportAsync(Func<CloseBehavior, bool, Task> onClosed)
+    {
+        var result = await ExitConfirmationDialog.PromptAsync(
+            _mainWindow,
+            new ExitPromptOptions(AllowMinimize: true, ShowRemember: true, []));
+
+        var behavior = result.Choice switch
+        {
+            ExitChoice.Minimize => CloseBehavior.Minimize,
+            ExitChoice.Exit => CloseBehavior.Exit,
+            _ => CloseBehavior.Cancel
+        };
+
+        await onClosed(behavior, result.Remember);
+    }
+
+    /// <summary>
+    /// Synchronous by contract (<see cref="IGuiAdapter"/> returns <see cref="bool"/>), which
+    /// makes it a deadlock trap: <see cref="GuiContextInterceptorAttribute"/> already puts us
+    /// on the UI thread, so the old body's <c>Dispatcher.UIThread.InvokeAsync(...)</c> queued
+    /// the dialog behind the very thread it then blocked with
+    /// <c>tcs.Task.GetAwaiter().GetResult()</c> — the job could never run and the app froze.
+    ///
+    /// Building the dialog inline and pumping a nested <see cref="DispatcherFrame"/> keeps the
+    /// blocking signature while letting the UI thread keep servicing input.
+    /// </summary>
     [GuiContextInterceptor]
     public override bool ShowConfirmDialog(string message, string caption)
     {
-        var tcs = new TaskCompletionSource<bool>();
+        var confirmed = false;
 
-        Dispatcher.UIThread.InvokeAsync(async () =>
+        var dialog = new Window
         {
-            var dialog = new Window
-            {
-                Title = caption,
-                SizeToContent = SizeToContent.WidthAndHeight,
-                WindowStartupLocation = WindowStartupLocation.CenterScreen,
-                CanResize = false,
-                Topmost = true
-            };
+            Title = caption,
+            Width = 420,
+            SizeToContent = SizeToContent.Height,
+            WindowStartupLocation = _mainWindow is {IsVisible: true}
+                ? WindowStartupLocation.CenterOwner
+                : WindowStartupLocation.CenterScreen,
+            CanResize = false,
+            ShowInTaskbar = false
+            // Background intentionally unset: Window picks up the theme's own brush, which
+            // follows ChangeUiTheme. Hardcoding one is what made the old exit dialog unreadable
+            // in dark mode.
+        };
 
-            var okButton = new Button
-            {
-                Content = "OK",
-                Width = 80,
-                Height = 30,
-                HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center
-            };
-            okButton.Click += (_, _) =>
-            {
-                tcs.TrySetResult(true);
-                dialog.Close();
-            };
+        var okButton = new Button
+        {
+            Content = "OK",
+            MinWidth = 88,
+            IsDefault = true,
+            HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center
+        };
+        okButton.Classes.Add("accent");
+        okButton.Click += (_, _) =>
+        {
+            confirmed = true;
+            dialog.Close();
+        };
 
-            var cancelButton = new Button
-            {
-                Content = "Cancel",
-                Width = 80,
-                Height = 30,
-                HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center
-            };
-            cancelButton.Click += (_, _) =>
-            {
-                tcs.TrySetResult(false);
-                dialog.Close();
-            };
+        var cancelButton = new Button
+        {
+            Content = "Cancel",
+            MinWidth = 88,
+            IsCancel = true,
+            HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center
+        };
+        cancelButton.Click += (_, _) => dialog.Close();
 
-            dialog.Content = new StackPanel
+        dialog.Content = new StackPanel
+        {
+            Margin = new Avalonia.Thickness(24),
+            Spacing = 20,
+            Children =
             {
-                Margin = new Avalonia.Thickness(20),
-                Children =
+                new TextBlock
                 {
-                    new TextBlock
-                    {
-                        Text = message,
-                        FontSize = 14,
-                        Margin = new Avalonia.Thickness(0, 0, 0, 20),
-                        TextWrapping = Avalonia.Media.TextWrapping.Wrap,
-                        MaxWidth = 400
-                    },
-                    new StackPanel
-                    {
-                        Orientation = Avalonia.Layout.Orientation.Horizontal,
-                        HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
-                        Spacing = 20,
-                        Children = { okButton, cancelButton }
-                    }
+                    Text = message,
+                    FontSize = 14,
+                    TextWrapping = Avalonia.Media.TextWrapping.Wrap
+                },
+                new StackPanel
+                {
+                    Orientation = Avalonia.Layout.Orientation.Horizontal,
+                    HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right,
+                    Spacing = 10,
+                    Children = {cancelButton, okButton}
                 }
-            };
-
-            dialog.Closing += (_, _) =>
-            {
-                tcs.TrySetResult(false);
-            };
-
-            if (_mainWindow != null)
-            {
-                await dialog.ShowDialog(_mainWindow);
             }
-            else
-            {
-                dialog.Show();
-            }
-        });
+        };
 
-        return tcs.Task.GetAwaiter().GetResult();
+        var frame = new DispatcherFrame();
+        dialog.Closed += (_, _) => frame.Continue = false;
+
+        if (_mainWindow is {IsVisible: true})
+        {
+            _ = dialog.ShowDialog(_mainWindow);
+        }
+        else
+        {
+            dialog.Show();
+        }
+
+        Dispatcher.UIThread.PushFrame(frame);
+        return confirmed;
     }
 
     [GuiContextInterceptor]

@@ -4,54 +4,155 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    Title="Exiting"
+    Title="Close Bakabase"
+    Width="460"
+    SizeToContent="Height"
     CanResize="False"
-    SizeToContent="WidthAndHeight"
-    Topmost="True"
-    WindowStartupLocation="CenterScreen"
+    ShowInTaskbar="False"
+    Icon="/Assets/favicon.png"
+    WindowStartupLocation="CenterOwner"
+    Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
     mc:Ignorable="d">
-    <StackPanel
-        Margin="20"
-        HorizontalAlignment="Center"
-        VerticalAlignment="Center">
-        <TextBlock Name="Tip" FontSize="16">Are you sure you want to exit?</TextBlock>
-        <CheckBox
-            Name="RememberCheckBox"
-            Margin="0,15,0,15"
-            VerticalContentAlignment="Center"
-            FontSize="14">
-            Remember my choice
-        </CheckBox>
-        <StackPanel Orientation="Horizontal">
-            <Button
-                Name="MinimizeBtn"
-                Width="100"
-                Height="30"
-                Margin="0,0,30,0"
-                Padding="0"
-                HorizontalContentAlignment="Center"
-                VerticalContentAlignment="Center"
-                Background="#03c1fd"
-                BorderBrush="Transparent"
-                FontSize="16"
-                Foreground="White"
-                CornerRadius="3">
-                Minimize
-            </Button>
-            <Button
-                Name="ExitBtn"
-                Width="100"
-                Height="30"
-                Padding="0"
-                HorizontalContentAlignment="Center"
-                VerticalContentAlignment="Center"
-                Background="#ffffff"
-                BorderBrush="#FFD9DBDE"
-                FontSize="16"
-                Foreground="#1f2633"
-                CornerRadius="3">
-                Exit
-            </Button>
-        </StackPanel>
-    </StackPanel>
+
+    <DockPanel LastChildFill="True">
+
+        <!--
+            Action bar sits in its own tinted band so the buttons read as a footer rather
+            than as more body content. DockPanel.Dock="Bottom" before the fill child is
+            required: the last child of a DockPanel always fills.
+        -->
+        <Border
+            DockPanel.Dock="Bottom"
+            Padding="24,16"
+            Background="{DynamicResource SystemControlBackgroundListLowBrush}"
+            BorderBrush="{DynamicResource SystemControlTransientBorderBrush}"
+            BorderThickness="0,1,0,0">
+            <StackPanel
+                HorizontalAlignment="Right"
+                Orientation="Horizontal"
+                Spacing="10">
+                <Button
+                    Name="CancelBtn"
+                    MinWidth="88"
+                    HorizontalContentAlignment="Center"
+                    IsCancel="True"
+                    Content="Cancel" />
+                <Button
+                    Name="ExitBtn"
+                    MinWidth="88"
+                    HorizontalContentAlignment="Center"
+                    Content="Exit" />
+                <Button
+                    Name="MinimizeBtn"
+                    MinWidth="132"
+                    Classes="accent"
+                    HorizontalContentAlignment="Center"
+                    IsDefault="True"
+                    Content="Minimize to tray" />
+            </StackPanel>
+        </Border>
+
+        <Grid Margin="24,24,24,20" RowDefinitions="Auto,Auto,Auto">
+
+            <!-- Header: app mark + heading + one line of explanation. -->
+            <Grid Grid.Row="0" ColumnDefinitions="Auto,*">
+                <!--
+                    favicon.png has no alpha channel, so on a dark background it would read as
+                    a bare white square. Clipping it into a rounded tile with a hairline border
+                    turns that into a deliberate app mark in both themes.
+                -->
+                <Border
+                    Grid.Column="0"
+                    Width="40"
+                    Height="40"
+                    Margin="0,2,14,0"
+                    VerticalAlignment="Top"
+                    BorderBrush="{DynamicResource SystemControlTransientBorderBrush}"
+                    BorderThickness="1"
+                    ClipToBounds="True"
+                    CornerRadius="9">
+                    <Image Source="/Assets/favicon.png" Stretch="UniformToFill" />
+                </Border>
+                <StackPanel Grid.Column="1" Spacing="5">
+                    <TextBlock
+                        Name="Heading"
+                        FontSize="17"
+                        FontWeight="SemiBold"
+                        Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                        Text="Close Bakabase?"
+                        TextWrapping="Wrap" />
+                    <TextBlock
+                        Name="Subheading"
+                        FontSize="13"
+                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                        Text="Bakabase can keep running in the notification area so background tasks continue."
+                        TextWrapping="Wrap" />
+                </StackPanel>
+            </Grid>
+
+            <!-- Shown only while tasks that would lose data are still running. -->
+            <Border
+                Name="BusyPanel"
+                Grid.Row="1"
+                Margin="0,18,0,0"
+                Padding="14,12"
+                Background="{DynamicResource SystemControlBackgroundListLowBrush}"
+                BorderBrush="{DynamicResource SystemControlTransientBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="6"
+                IsVisible="False">
+                <Grid ColumnDefinitions="Auto,*">
+                    <Path
+                        Grid.Column="0"
+                        Width="18"
+                        Height="18"
+                        Margin="0,1,10,0"
+                        VerticalAlignment="Top"
+                        Data="M12,3.2 L22.4,21 L1.6,21 Z M12,9.6 L12,15.4 M12,17.9 L12,18.1"
+                        Stroke="{DynamicResource SystemControlErrorTextForegroundBrush}"
+                        StrokeJoin="Round"
+                        StrokeLineCap="Round"
+                        StrokeThickness="1.7" />
+                    <StackPanel Grid.Column="1" Spacing="6">
+                        <TextBlock
+                            Name="BusyHeading"
+                            FontSize="13"
+                            FontWeight="SemiBold"
+                            Foreground="{DynamicResource SystemControlErrorTextForegroundBrush}"
+                            Text="Background tasks are still running"
+                            TextWrapping="Wrap" />
+                        <StackPanel Name="BusyTaskList" Spacing="3" />
+                        <TextBlock
+                            Name="BusyBody"
+                            FontSize="12"
+                            Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                            Text="Exiting now interrupts them and unsaved changes may be lost."
+                            TextWrapping="Wrap" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <StackPanel
+                Name="RememberPanel"
+                Grid.Row="2"
+                Margin="0,18,0,0"
+                Spacing="2">
+                <CheckBox
+                    Name="RememberCheckBox"
+                    MinHeight="0"
+                    Padding="8,0,0,0"
+                    VerticalContentAlignment="Center"
+                    FontSize="13"
+                    Content="Remember my choice" />
+                <TextBlock
+                    Name="RememberHint"
+                    Margin="30,0,0,0"
+                    FontSize="11"
+                    Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                    Text="You can change this later under Settings → Functional → Exit behavior."
+                    TextWrapping="Wrap" />
+            </StackPanel>
+
+        </Grid>
+    </DockPanel>
 </Window>
