@@ -15,9 +15,9 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
     /// </summary>
     public class PixivRankingDownloader(
         IServiceProvider serviceProvider,
-        ISpecialTextService specialTextService,
+        ITextVocabularyService textVocabularyService,
         PixivClient client)
-        : AbstractPixivDownloader(serviceProvider, specialTextService,
+        : AbstractPixivDownloader(serviceProvider, textVocabularyService,
             client)
     {
         public override PixivDownloadTaskType EnumTaskType => PixivDownloadTaskType.Ranking;

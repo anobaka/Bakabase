@@ -50,6 +50,7 @@ public class WorkflowRunnerScopeTests
         services.AddDbContext<TestWorkflowDbContext>(o => o.UseSqlite(connection));
         services.AddSingleton<IWorkflowTriggerRegistry>(new WorkflowTriggerRegistry([]));
         services.AddSingleton<IWorkflowActivityRegistry>(new WorkflowActivityRegistry([]));
+        services.AddSingleton<IWorkflowItemTypeRegistry>(new WorkflowItemTypeRegistry([]));
         services.AddSingleton(NullLogger<WorkflowRunner<TestWorkflowDbContext>>.Instance);
         services.AddScoped<WorkflowRunner<TestWorkflowDbContext>>();
 

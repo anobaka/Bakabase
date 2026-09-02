@@ -49,6 +49,8 @@ using Bakabase.Modules.Enhancer.Extensions;
 using Bakabase.Modules.Presets.Extensions;
 using Bakabase.Modules.Property.Extensions;
 using Bakabase.Modules.StandardValue.Extensions;
+using Bakabase.Modules.Text.Components;
+using Bakabase.Modules.Text.Extensions;
 using Bakabase.Modules.Comparison.Extensions;
 using Bakabase.Modules.DataCard.Extensions;
 using Bakabase.InsideWorld.Business.Components.Resolvers;
@@ -59,7 +61,6 @@ using Bootstrap.Components.Orm;
 using Bootstrap.Components.Orm.Infrastructures;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using SpecialText = Bakabase.Abstractions.Models.Db.SpecialText;
 
 namespace Bakabase.Service.Extensions
 {
@@ -102,7 +103,8 @@ namespace Bakabase.Service.Extensions
             services.AddAlias<BakabaseDbContext>();
             services.AddProperty<BakabaseDbContext>();
             services.AddEnhancers<BakabaseDbContext>();
-            services.AddStandardValue<SpecialTextService>();
+            services.AddText<BakabaseDbContext>();
+            services.AddStandardValue<TextOps>();
             services.AddReservedProperty();
 
             services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, ResourceDbModel, int>>();
@@ -113,9 +115,6 @@ namespace Bakabase.Service.Extensions
                 .AddScoped<IResourceMoveService,
                     Bakabase.InsideWorld.Business.Components.ResourceMove.ResourceMoveService>();
             services.AddSingleton<IPropertyValueScopeResolver, PropertyValueScopeResolver>();
-            services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, SpecialText, int>>();
-            services.AddScoped<SpecialTextService>();
-            services.AddScoped<ISpecialTextService>(sp => sp.GetRequiredService<SpecialTextService>());
             services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, ResourceCacheDbModel, int>>();
             services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, PlayHistoryDbModel, int>>();
             services.AddScoped<IPlayHistoryService, PlayHistoryService>();
@@ -171,6 +170,24 @@ namespace Bakabase.Service.Extensions
             services.AddSingleton<IWorkflowActivity, ExHentaiQueryToGalleryActivity>();
             services.AddSingleton<IWorkflowActivity, ExHentaiEnqueueDownloadActivity>();
             services.AddSingleton<IWorkflowActivity, CreateNotificationActivity>();
+            // File-cleaning vertical (fs domain).
+            services.AddSingleton<IWorkflowTrigger, FsManualScanTrigger>();
+            services.AddSingleton<IWorkflowItemTypeDescriptor, Components.Workflow.Fs.FsEntryItemTypeDescriptor>();
+            services.AddSingleton<IWorkflowActivity, FsFileNameOpActivity>();
+            services.AddSingleton<IWorkflowActivity, FsSaveNameActivity>();
+            services.AddScoped<IFileRenameEntryService, FileRenameEntryService>();
+            // Text family (E3): contract-accepting transforms over any ITextWorkpiece item.
+            services.AddSingleton<IWorkflowActivity, Components.Workflow.Activities.Transforms.Text.TextRemoveWrappedActivity>();
+            services.AddSingleton<IWorkflowActivity, Components.Workflow.Activities.Transforms.Text.TextRemoveTextsActivity>();
+            services.AddSingleton<IWorkflowActivity, Components.Workflow.Activities.Transforms.Text.TextTrimActivity>();
+            // Variables + expansion (E4 + E2): capture/template over the bag, fs descent.
+            services.AddSingleton<IWorkflowActivity, Components.Workflow.Activities.Transforms.Text.TextCaptureActivity>();
+            services.AddSingleton<IWorkflowActivity, Components.Workflow.Activities.Transforms.Text.TextTemplateActivity>();
+            services.AddSingleton<IWorkflowActivity, Components.Workflow.Activities.Transforms.FsExpandChildrenActivity>();
+            // Automation (E6): scheduled scan + directory watch.
+            services.AddSingleton<IWorkflowTrigger, FsScheduledScanTrigger>();
+            services.AddSingleton<IWorkflowTrigger, FsWatchTrigger>();
+            services.AddHostedService<Components.Workflow.WorkflowFsWatchService>();
 
             services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, ExtensionGroupDbModel, int>>();
             services.AddScoped<IExtensionGroupService, ExtensionGroupService>();

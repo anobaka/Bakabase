@@ -804,4 +804,13 @@ The version of lux is not limited.</value>
   <data name="Downloader_ExHentai_DownloadingTorrent" xml:space="preserve">
     <value>Downloading torrent file...</value>
   </data>
+  <data name="BTask_Name_WorkflowScheduler" xml:space="preserve">
+    <value>Workflow scheduler</value>
+  </data>
+  <data name="BTask_Description_WorkflowScheduler" xml:space="preserve">
+    <value>Starts scheduled workflows when their interval elapses</value>
+  </data>
+  <data name="BTask_MessageOnInterruption_WorkflowScheduler" xml:space="preserve">
+    <value>Scheduled workflows will not start until the app runs again</value>
+  </data>
 </root>

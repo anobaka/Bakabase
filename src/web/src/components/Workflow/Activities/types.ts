@@ -2,6 +2,12 @@ import type React from "react";
 
 import type { WorkflowActivityCategory } from "@/sdk/constants";
 
+/** A step somewhere before the one being configured — enough for variable hints. */
+export interface UpstreamActivityRef {
+  kind: string;
+  configJson: string;
+}
+
 /**
  * Per-activity UI bundle, mirroring the SubscriptionProvider registry pattern.
  * The backend registry decides what's *compatible* (per trigger); this frontend
@@ -28,6 +34,15 @@ export interface WorkflowActivityUI<TConfig = unknown> {
    * `nextActivityRequiredType`) is built into chainWalk, so most activities can omit this.
    */
   resolveAdaptedOutputType?: (configJson: string, nextActivityRequiredType: string | null) => string | null;
-  ConfigForm: React.FC<{ value: TConfig; onChange: (v: TConfig) => void }>;
+  /**
+   * `upstream` (the steps before this position) is provided so variable-aware forms
+   * (capture/template) can offer "variables available here" hints — the E4 soft contract.
+   * Most forms ignore it.
+   */
+  ConfigForm: React.FC<{
+    value: TConfig;
+    onChange: (v: TConfig) => void;
+    upstream?: UpstreamActivityRef[];
+  }>;
   Summary: React.FC<{ config: TConfig }>;
 }

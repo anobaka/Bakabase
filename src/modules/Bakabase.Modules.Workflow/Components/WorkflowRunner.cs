@@ -31,23 +31,20 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
 
     private readonly IWorkflowTriggerRegistry _triggers;
     private readonly IWorkflowActivityRegistry _activities;
+    private readonly IWorkflowItemTypeRegistry _itemTypes;
     private readonly ILogger<WorkflowRunner<TDbContext>> _logger;
-
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        PropertyNameCaseInsensitive = true,
-    };
 
     public WorkflowRunner(
         IServiceScopeFactory scopeFactory,
         IWorkflowTriggerRegistry triggers,
         IWorkflowActivityRegistry activities,
+        IWorkflowItemTypeRegistry itemTypes,
         ILogger<WorkflowRunner<TDbContext>> logger)
     {
         _scopeFactory = scopeFactory;
         _triggers = triggers;
         _activities = activities;
+        _itemTypes = itemTypes;
         _logger = logger;
     }
 
@@ -61,6 +58,15 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
         if (run is null)
         {
             _logger.LogWarning("WorkflowRun {RunId} not found — skipping", runId);
+            return;
+        }
+
+        if (run.Status != WorkflowRunStatus.Pending)
+        {
+            // The row was cancelled (e.g. its definition got disabled) or already executed —
+            // the BTask that carried it is stale, and executing anyway is exactly the
+            // "disable didn't stop it" surprise this guard removes (capability map §5·发现 9).
+            _logger.LogInformation("WorkflowRun {RunId} is {Status}, not Pending — skipping", runId, run.Status);
             return;
         }
 
@@ -83,7 +89,7 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
         {
             payload = string.IsNullOrEmpty(run.PayloadJson)
                 ? throw new InvalidOperationException("Run has no payload")
-                : JsonSerializer.Deserialize(run.PayloadJson, trigger.PayloadType, JsonOptions)
+                : JsonSerializer.Deserialize(run.PayloadJson, trigger.PayloadType, WorkflowJson.Options)
                   ?? throw new InvalidOperationException("Payload deserialized to null");
         }
         catch (Exception ex)
@@ -97,7 +103,11 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
             .OrderBy(a => a.Order)
             .ToListAsync(ct);
 
-        var items = trigger.ExtractItems(payload).ToList();
+        // Each item travels with its variable bag (capability map E4) — chain-local named
+        // values that never live inside the item's own CLR shape.
+        var items = trigger.ExtractItems(payload)
+            .Select(i => new WorkItem(i, new Dictionary<string, string>()))
+            .ToList();
         run.InputCount = items.Count;
         run.Status = WorkflowRunStatus.Running;
         await db.SaveChangesAsync(ct);
@@ -130,12 +140,33 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
                             "item type — should have been caught at save time");
                 }
 
+                // Type tags are validated at save time, but runtime items are plain objects —
+                // this closes the gap (capability map §5·发现 7): when a step declares accepted
+                // tags, every item must actually BE one of those CLR shapes, and a mismatch
+                // fails the run instead of being silently passed along by a defensive activity.
+                var acceptedClrTypes = impl.AcceptedInputItemTypes
+                    .Select(tag => _itemTypes.Get(tag)?.ClrType)
+                    .Where(t => t != null)
+                    .Cast<Type>()
+                    .ToList();
+                var contract = impl.AcceptedItemInterface;
+
                 var stepInput = items.Count;
                 var stepFailed = 0;
-                var nextItems = new List<object>(items.Count);
-                foreach (var item in items)
+                var nextItems = new List<WorkItem>(items.Count);
+                foreach (var workItem in items)
                 {
                     await btaskArgs.YieldAsync();
+                    var item = workItem.Item;
+
+                    if ((acceptedClrTypes.Count > 0 || contract is not null) &&
+                        !acceptedClrTypes.Any(t => t.IsInstanceOfType(item)) &&
+                        !(contract?.IsInstanceOfType(item) ?? false))
+                    {
+                        throw new InvalidOperationException(
+                            $"Step {stepIndex + 1} ({activityRow.Kind}) received a {item.GetType().Name}, " +
+                            $"which is not any of its accepted item shapes — the chain's typing is broken.");
+                    }
 
                     var itemCtx = new WorkflowExecutionContext
                     {
@@ -145,6 +176,7 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
                         Payload = payload,
                         ActivityConfigJson = activityRow.ConfigJson,
                         TargetItemType = targetItemType,
+                        Variables = workItem.Variables,
                         Services = scope.ServiceProvider,
                         Logger = _logger,
                     };
@@ -160,7 +192,10 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
                     }
                     catch (Exception ex)
                     {
-                        if (activityRow.OnItemError == WorkflowActivityErrorBehavior.Skip)
+                        // A broken config hits every item identically; skipping would silently
+                        // run the step on defaults. Always fail the run for it.
+                        if (activityRow.OnItemError == WorkflowActivityErrorBehavior.Skip &&
+                            ex is not WorkflowActivityConfigException)
                         {
                             _logger.LogWarning(ex,
                                 "Workflow run {RunId} activity {Kind} item dropped (skip-on-error)",
@@ -182,7 +217,24 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
                         throw;
                     }
 
-                    if (outcome.Keep) nextItems.Add(outcome.Replacement ?? item);
+                    if (outcome.Children is { } children)
+                    {
+                        if (impl.Cardinality != WorkflowActivityCardinality.OneToMany)
+                        {
+                            throw new InvalidOperationException(
+                                $"Step {stepIndex + 1} ({activityRow.Kind}) returned an expansion but " +
+                                "declares OneToOne cardinality — the activity's declaration is broken.");
+                        }
+
+                        // Each child starts from a COPY of the parent's bag: siblings must not
+                        // see each other's later captures (capability map E2/E4).
+                        nextItems.AddRange(children.Select(c =>
+                            new WorkItem(c, new Dictionary<string, string>(workItem.Variables))));
+                    }
+                    else if (outcome.Keep)
+                    {
+                        nextItems.Add(workItem with {Item = outcome.Replacement ?? item});
+                    }
                 }
 
                 items = nextItems;
@@ -204,7 +256,7 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
 
             run.OutputCount = items.Count;
             run.FailedItemCount = failedTotal;
-            run.StepStatsJson = JsonSerializer.Serialize(stepStats, JsonOptions);
+            run.StepStatsJson = JsonSerializer.Serialize(stepStats, WorkflowJson.Options);
             run.Status = WorkflowRunStatus.Success;
             run.CompletedAt = DateTime.Now;
             definition.LastRunAt = run.CompletedAt;
@@ -215,7 +267,7 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
             run.Status = WorkflowRunStatus.Cancelled;
             run.CompletedAt = DateTime.Now;
             run.FailedItemCount = failedTotal;
-            run.StepStatsJson = JsonSerializer.Serialize(stepStats, JsonOptions);
+            run.StepStatsJson = JsonSerializer.Serialize(stepStats, WorkflowJson.Options);
             throw;
         }
         catch (Exception ex)
@@ -224,7 +276,7 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
             run.Status = WorkflowRunStatus.Failed;
             run.ErrorMessage = ex.Message;
             run.FailedItemCount = failedTotal;
-            run.StepStatsJson = JsonSerializer.Serialize(stepStats, JsonOptions);
+            run.StepStatsJson = JsonSerializer.Serialize(stepStats, WorkflowJson.Options);
             run.CompletedAt = DateTime.Now;
             definition.LastError = ex.Message;
             definition.LastRunAt = run.CompletedAt;
@@ -249,4 +301,8 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
         if (!_activities.TryGet(activities[index + 1].Kind, out var next)) return null;
         return next.AcceptedInputItemTypes.Count == 1 ? next.AcceptedInputItemTypes[0] : null;
     }
+
+    /// <summary>An item plus its chain-local variable bag (capability map E4). The bag rides
+    /// beside the item so item CLR shapes stay pure data.</summary>
+    private sealed record WorkItem(object Item, Dictionary<string, string> Variables);
 }

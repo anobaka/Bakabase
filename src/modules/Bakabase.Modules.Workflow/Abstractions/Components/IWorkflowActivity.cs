@@ -41,8 +41,37 @@ public interface IWorkflowActivity
     /// </summary>
     IReadOnlyList<string> AcceptedInputItemTypes => [];
 
+    /// <summary>
+    /// Capability contract (capability map E3): when set, the activity also accepts any current
+    /// type whose descriptor <c>ClrType</c> implements this interface — a predicate over the
+    /// type, evaluated statically at save time and against the live instance at run time. The
+    /// contract must derive from <see cref="IWorkflowItemContract"/> so descriptors can report
+    /// it. Because the activity then works on "whatever the item is", it cannot change the
+    /// chain's type: a contract-accepting activity must declare Passthrough (validated on save).
+    /// Combines with <see cref="AcceptedInputItemTypes"/> as OR; when both are empty/null the
+    /// activity accepts any type.
+    /// </summary>
+    Type? AcceptedItemInterface => null;
+
     /// <summary>How the activity affects the chain's item type at this position.</summary>
     WorkflowItemTypeBehavior OutputBehavior => WorkflowItemTypeBehavior.Passthrough;
+
+    /// <summary>
+    /// Whether the activity may fan one item out into many (capability map E2). Declaring
+    /// OneToMany is what unlocks returning <see cref="WorkflowItemOutcome.ExpandTo"/>; the
+    /// runner refuses expansion from a OneToOne activity as an engine bug.
+    /// </summary>
+    WorkflowActivityCardinality Cardinality => WorkflowActivityCardinality.OneToOne;
+
+    /// <summary>
+    /// Whether this activity's side effect destroys or rewrites user data without a later
+    /// confirmation gate (deleting files, overwriting values). Declaring it lets the save-time
+    /// validation refuse chains where a model-generated item (AdaptToNext) feeds such a step
+    /// directly — an LLM hallucination must not become a delete target without a human or a
+    /// typed transform in between (capability map §5·发现 7). Plan-recording steps that a human
+    /// later confirms (fs.saveName) are NOT destructive by this definition.
+    /// </summary>
+    bool IsDestructive => false;
 
     /// <summary>The fixed output type when <see cref="OutputBehavior"/> is
     /// <see cref="WorkflowItemTypeBehavior.Fixed"/>; otherwise null.</summary>

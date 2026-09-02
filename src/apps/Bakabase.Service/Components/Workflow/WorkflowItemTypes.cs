@@ -22,4 +22,7 @@ public static class WorkflowItemTypes
 
     /// <summary>A completed download task — emitted by the downloader.completed trigger.</summary>
     public const string DownloaderCompleted = "item.downloader.completed";
+
+    /// <summary>A filesystem entry (file or directory) — emitted by the fs.manualScan trigger.</summary>
+    public const string FsEntry = "item.fs.entry";
 }

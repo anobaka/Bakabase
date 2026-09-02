@@ -6,12 +6,14 @@ import "./index.scss";
 import { useTranslation } from "react-i18next";
 import { ArrowRightOutlined } from "@ant-design/icons";
 
-import { SpecialTextType, specialTextTypes } from "@/sdk/constants";
+import { TextTypeShape, WellKnownTextType } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
 import {
   Button,
   Chip,
+  Input,
   Modal,
+  Select,
   Table,
   TableBody,
   TableCell,
@@ -22,21 +24,22 @@ import {
   Divider,
 } from "@/components/bakaui";
 
-import type { SpecialText } from "@/pages/text/models";
+import type { TextEntry, TextType } from "@/pages/text/models";
 
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import DetailPage from "@/pages/text/Detail";
 
-const tagRenders: Record<string, (t: SpecialText) => React.ReactNode> = {
-  Single: (t: SpecialText) => t.value1,
-  Wrapper: (t: SpecialText) => (
+/** How an entry reads depends on its type's shape, so rendering keys off that rather than the type. */
+const entryRenders: Record<TextTypeShape, (t: TextEntry) => React.ReactNode> = {
+  [TextTypeShape.Values]: (t) => t.value1,
+  [TextTypeShape.DelimiterPair]: (t) => (
     <>
       {t.value1}
       <span className={"opacity-50"}>...</span>
       {t.value2}
     </>
   ),
-  Value1ToValue2: (t: SpecialText) => (
+  [TextTypeShape.MappingPair]: (t) => (
     <span className={"flex items-center gap-1"}>
       {t.value1}
       <ArrowRightOutlined className={"text-small opacity-50"} />
@@ -45,49 +48,45 @@ const tagRenders: Record<string, (t: SpecialText) => React.ReactNode> = {
   ),
 };
 
-const typeTagRendersMapping: Partial<Record<SpecialTextType, (t: SpecialText) => React.ReactNode>> =
-  {
-    [SpecialTextType.Useless]: tagRenders.Single,
-    [SpecialTextType.Language]: tagRenders.Value1ToValue2,
-    [SpecialTextType.Wrapper]: tagRenders.Wrapper,
-    [SpecialTextType.Standardization]: tagRenders.Value1ToValue2,
-    [SpecialTextType.Volume]: tagRenders.Single,
-    [SpecialTextType.Trim]: tagRenders.Single,
-  };
-
-const typeDescriptions = {
-  [SpecialTextType.Useless]: "text.typeDescription.useless",
-  [SpecialTextType.Language]: "text.typeDescription.language",
-  [SpecialTextType.Wrapper]: "text.typeDescription.wrapper",
-  [SpecialTextType.Standardization]: "text.typeDescription.standardization",
-  [SpecialTextType.Volume]: "text.typeDescription.volume",
-  [SpecialTextType.Trim]: "text.typeDescription.trim",
-  [SpecialTextType.DateTime]: "text.typeDescription.dateTime",
+const typeDescriptions: Partial<Record<WellKnownTextType, string>> = {
+  [WellKnownTextType.Useless]: "text.typeDescription.useless",
+  [WellKnownTextType.Language]: "text.typeDescription.language",
+  [WellKnownTextType.Wrapper]: "text.typeDescription.wrapper",
+  [WellKnownTextType.Standardization]: "text.typeDescription.standardization",
+  [WellKnownTextType.Volume]: "text.typeDescription.volume",
+  [WellKnownTextType.Trim]: "text.typeDescription.trim",
+  [WellKnownTextType.DateTime]: "text.typeDescription.dateTime",
 };
 
-const usedInMapping: Record<SpecialTextType, string[]> = {
-  [SpecialTextType.Useless]: ["text.usedIn.textPretreatment"],
-  [SpecialTextType.Language]: ["text.usedIn.bakabaseEnhancerAnalysis"],
-  [SpecialTextType.Wrapper]: [
+const usedInMapping: Partial<Record<WellKnownTextType, string[]>> = {
+  [WellKnownTextType.Useless]: ["text.usedIn.textPretreatment"],
+  [WellKnownTextType.Language]: ["text.usedIn.bakabaseEnhancerAnalysis"],
+  [WellKnownTextType.Wrapper]: [
     "text.usedIn.textPretreatment",
     "text.usedIn.resourceDisplayNameTemplate",
     "text.usedIn.exhentaiEnhancerAnalysis",
   ],
-  [SpecialTextType.Standardization]: ["text.usedIn.textPretreatment"],
-  [SpecialTextType.Volume]: ["text.usedIn.bakabaseEnhancerAnalysis"],
-  [SpecialTextType.Trim]: ["text.usedIn.textPretreatment"],
-  [SpecialTextType.DateTime]: [
+  [WellKnownTextType.Standardization]: ["text.usedIn.textPretreatment"],
+  [WellKnownTextType.Volume]: ["text.usedIn.bakabaseEnhancerAnalysis"],
+  [WellKnownTextType.Trim]: ["text.usedIn.textPretreatment"],
+  [WellKnownTextType.DateTime]: [
     "text.usedIn.bakabaseEnhancerAnalysis",
     "text.usedIn.parsingOrConvertingPropertyValue",
   ],
 };
+
+const shapeLabels: Record<TextTypeShape, string> = {
+  [TextTypeShape.Values]: "text.shape.values",
+  [TextTypeShape.DelimiterPair]: "text.shape.delimiterPair",
+  [TextTypeShape.MappingPair]: "text.shape.mappingPair",
+};
+
 const TextPage = () => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
-  const [textsMap, setTextsMap] = useState<{
-    [key in SpecialTextType]?: SpecialText[];
-  }>({});
+  const [types, setTypes] = useState<TextType[]>([]);
+  const [entriesMap, setEntriesMap] = useState<Record<number, TextEntry[]>>({});
 
   const [testInput, setTestInput] = useState<string>("");
   const [testResult, setTestResult] = useState<string>("");
@@ -135,46 +134,127 @@ const TextPage = () => {
     loadData();
   }, []);
 
-  const loadData = () => {
-    BApi.specialText.getAllSpecialTexts().then((t) => {
-      const data = t.data || {};
-      const ts = specialTextTypes.reduce<{
-        [key in SpecialTextType]?: SpecialText[];
-      }>((s, t) => {
-        const list = data[t.value] ?? [];
+  const loadData = async () => {
+    const r = await BApi.text.getAllTextTypes();
+    const list = (r.data ?? []) as TextType[];
 
-        list.sort((a, b) => a.value1.localeCompare(b.value1));
-        s[t.value] = list.map((l) => ({
-          id: l.id!,
-          value1: l.value1!,
-          value2: l.value2,
-          type: l.type,
-        }));
+    setTypes(list);
 
-        return s;
-      }, {});
+    const entries = await Promise.all(
+      list.map(async (type) => {
+        const er = await BApi.text.getTextEntries(type.id);
+        const items = ((er.data ?? []) as TextEntry[])
+          .slice()
+          .sort((a, b) => a.value1.localeCompare(b.value1));
 
-      setTextsMap(ts);
-    });
+        return [type.id, items] as const;
+      }),
+    );
+
+    setEntriesMap(Object.fromEntries(entries));
   };
 
-  const renderDetail = (c: SpecialText) => {
-    let text = c;
+  const editEntry = (type: TextType, entry: TextEntry) => {
+    let draft = entry;
 
     createPortal(Modal, {
       defaultVisible: true,
+      title: type.name,
       children: (
         <div className={"flex items-center gap-2"}>
-          <DetailPage value={c} onChange={(t) => (text = t)} />
+          <DetailPage shape={type.shape} value={entry} onChange={(v) => (draft = v)} />
         </div>
       ),
       size: "lg",
       onOk: async () => {
-        if (c.id > 0) {
-          await BApi.specialText.patchSpecialText(c.id, text);
+        if (draft.id > 0) {
+          await BApi.text.patchTextEntry(draft.id, {
+            value1: draft.value1,
+            value2: draft.value2,
+          });
         } else {
-          await BApi.specialText.addSpecialText(text);
+          await BApi.text.addTextEntry(type.id, {
+            value1: draft.value1,
+            value2: draft.value2,
+          });
         }
+        await loadData();
+      },
+    });
+  };
+
+  const createType = () => {
+    let name = "";
+    let shape: TextTypeShape = TextTypeShape.Values;
+    let description = "";
+
+    createPortal(Modal, {
+      defaultVisible: true,
+      title: t<string>("text.action.addType"),
+      children: (
+        <div className={"flex flex-col gap-2"}>
+          <Input
+            required
+            label={t<string>("text.label.typeName")}
+            onValueChange={(v) => (name = v)}
+          />
+          <Select
+            defaultSelectedKeys={[String(TextTypeShape.Values)]}
+            dataSource={Object.keys(shapeLabels).map((k) => ({
+              label: t<string>(shapeLabels[parseInt(k, 10) as TextTypeShape]),
+              description: t<string>(`${shapeLabels[parseInt(k, 10) as TextTypeShape]}.hint`),
+              value: k,
+            }))}
+            label={t<string>("text.label.shape")}
+            onSelectionChange={(keys) => {
+              const key = Array.from(keys ?? [])[0];
+
+              if (key != undefined) {
+                shape = parseInt(key.toString(), 10) as TextTypeShape;
+              }
+            }}
+          />
+          <Input
+            label={t<string>("text.label.typeDescription")}
+            onValueChange={(v) => (description = v)}
+          />
+        </div>
+      ),
+      onOk: async () => {
+        await BApi.text.addTextType({ name, shape, description });
+        await loadData();
+      },
+    });
+  };
+
+  const renameType = (type: TextType) => {
+    let name = type.name;
+
+    createPortal(Modal, {
+      defaultVisible: true,
+      title: t<string>("text.action.renameType"),
+      children: (
+        <Input
+          required
+          defaultValue={type.name}
+          label={t<string>("text.label.typeName")}
+          onValueChange={(v) => (name = v)}
+        />
+      ),
+      onOk: async () => {
+        await BApi.text.renameTextType(type.id, { name });
+        await loadData();
+      },
+    });
+  };
+
+  const deleteType = (type: TextType) => {
+    createPortal(Modal, {
+      defaultVisible: true,
+      title: t<string>("text.confirm.deleteTypeTitle"),
+      children: t<string>("text.confirm.deleteTypeMessage", { name: type.name }),
+      onOk: async () => {
+        await BApi.text.deleteTextType(type.id);
         await loadData();
       },
     });
@@ -190,90 +270,117 @@ const TextPage = () => {
           <TableColumn>{t<string>("text.label.opt")}</TableColumn>
         </TableHeader>
         <TableBody>
-          {Object.keys(textsMap).map((typeStr) => {
-            const type = parseInt(typeStr, 10) as SpecialTextType;
-            const texts = textsMap[type] ?? [];
+          {types.map((type) => {
+            const entries = entriesMap[type.id] ?? [];
+            const render = entryRenders[type.shape] ?? entryRenders[TextTypeShape.Values];
+            const usedIn = type.wellKnown == undefined ? [] : (usedInMapping[type.wellKnown] ?? []);
+            const description =
+              type.wellKnown == undefined
+                ? type.description
+                : t<string>(typeDescriptions[type.wellKnown] ?? "");
 
             return (
-              <TableRow key={type}>
+              <TableRow key={type.id}>
                 <TableCell>
                   <div className={"flex flex-col"}>
-                    <span>{t<string>(`SpecialTextType.${SpecialTextType[type]}`)}</span>
+                    <span className={"flex items-center gap-1"}>
+                      {type.wellKnown == undefined
+                        ? type.name
+                        : t<string>(`WellKnownTextType.${WellKnownTextType[type.wellKnown]}`)}
+                      {type.wellKnown != undefined && (
+                        <Chip color={"default"} radius={"sm"} size={"sm"} variant={"flat"}>
+                          {t<string>("text.label.builtin")}
+                        </Chip>
+                      )}
+                    </span>
                     <span className={"text-xs text-default-400"}>
-                      {t<string>(typeDescriptions[type])}
+                      {description}
+                      {type.wellKnown == undefined && (
+                        <>
+                          {description ? " · " : ""}
+                          {t<string>(shapeLabels[type.shape])}
+                        </>
+                      )}
                     </span>
                   </div>
                 </TableCell>
                 <TableCell>
                   <div className={"flex gap-1 flex-wrap"}>
-                    {usedInMapping[type].map((x, xi) => {
-                      return (
-                        <Chip key={xi} color={"default"} radius={"sm"} size={"sm"} variant={"flat"}>
-                          {t<string>(x)}
-                        </Chip>
-                      );
-                    })}
+                    {usedIn.map((x, xi) => (
+                      <Chip key={xi} color={"default"} radius={"sm"} size={"sm"} variant={"flat"}>
+                        {t<string>(x)}
+                      </Chip>
+                    ))}
                   </div>
                 </TableCell>
                 <TableCell>
                   <div className={"flex flex-wrap gap-1"}>
-                    {texts.map((c) => {
-                      const renderer = typeTagRendersMapping[c.type] ?? tagRenders.Single;
-
-                      return (
-                        <Chip
-                          radius={"sm"}
-                          variant={"bordered"}
-                          onClose={() => {
-                            createPortal(Modal, {
-                              title: t<string>("text.confirm.deleteTitle"),
-                              defaultVisible: true,
-                              onOk: async () => {
-                                await BApi.specialText.deleteSpecialText(c.id);
-                                await loadData();
-                              },
-                            });
-                          }}
-                          key={c.id}
-                          // size={'sm'}
-                          onClick={() => {
-                            renderDetail(c);
-                          }}
-                        >
-                          {renderer(c)}
-                        </Chip>
-                      );
-                    })}
+                    {entries.map((c) => (
+                      <Chip
+                        key={c.id}
+                        radius={"sm"}
+                        variant={"bordered"}
+                        onClick={() => editEntry(type, c)}
+                        onClose={() => {
+                          createPortal(Modal, {
+                            title: t<string>("text.confirm.deleteTitle"),
+                            defaultVisible: true,
+                            onOk: async () => {
+                              await BApi.text.deleteTextEntry(c.id);
+                              await loadData();
+                            },
+                          });
+                        }}
+                      >
+                        {render(c)}
+                      </Chip>
+                    ))}
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Button
-                    color={"primary"}
-                    size={"sm"}
-                    variant={"light"}
-                    onClick={() =>
-                      renderDetail({
-                        type: type,
-                        id: 0,
-                        value1: "",
-                      })
-                    }
-                  >
-                    {t<string>("common.action.add")}
-                  </Button>
+                  <div className={"flex items-center gap-1"}>
+                    <Button
+                      color={"primary"}
+                      size={"sm"}
+                      variant={"light"}
+                      onClick={() =>
+                        editEntry(type, { id: 0, typeId: type.id, value1: "", value2: "" })
+                      }
+                    >
+                      {t<string>("common.action.add")}
+                    </Button>
+                    {type.wellKnown == undefined && (
+                      <>
+                        <Button size={"sm"} variant={"light"} onClick={() => renameType(type)}>
+                          {t<string>("common.action.rename")}
+                        </Button>
+                        <Button
+                          color={"danger"}
+                          size={"sm"}
+                          variant={"light"}
+                          onClick={() => deleteType(type)}
+                        >
+                          {t<string>("common.action.delete")}
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             );
           })}
         </TableBody>
       </Table>
-      <div className={"opt"}>
+      <div className={"opt flex items-center gap-2"}>
+        <Button color={"primary"} size={"sm"} variant={"light"} onClick={createType}>
+          {t<string>("text.action.addType")}
+        </Button>
         <Button
           color={"primary"}
           size={"sm"}
           variant={"light"}
           onClick={() => {
-            BApi.specialText.addSpecialTextPrefabs().then((a) => {
+            BApi.text.addTextPrefabEntries().then((a) => {
               if (!a.code) {
                 loadData();
               }
@@ -298,12 +405,13 @@ const TextPage = () => {
         <div className="mt-2 flex items-center gap-2">
           <Button
             color="primary"
+            isDisabled={!testInput.trim()}
             isLoading={isRunning}
             size="sm"
             onClick={async () => {
               setIsRunning(true);
               try {
-                const r = await BApi.specialText.pretreatText({ text: testInput });
+                const r = await BApi.text.cleanText({ text: testInput });
 
                 setTestResult(r.data ?? "");
               } finally {

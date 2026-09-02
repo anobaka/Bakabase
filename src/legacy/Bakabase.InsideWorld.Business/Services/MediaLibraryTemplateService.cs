@@ -43,7 +43,7 @@ namespace Bakabase.InsideWorld.Business.Services;
 public class MediaLibraryTemplateService<TDbContext>(
     FullMemoryCacheResourceService<TDbContext, MediaLibraryTemplateDbModel, int> orm,
     IStandardValueService standardValueService,
-    ISpecialTextService specialTextService,
+    ITextVocabularyService textVocabularyService,
     IExtensionGroupService extensionGroupService,
     IPropertyService propertyService,
     ICustomPropertyService customPropertyService,
@@ -290,8 +290,7 @@ public class MediaLibraryTemplateService<TDbContext>(
 
         if (template.DisplayNameTemplate.IsNotEmpty())
         {
-            var wrappers = (await specialTextService.GetAll(x => x.Type == SpecialTextType.Wrapper))
-                .Select(x => (Left: x.Value1, Right: x.Value2!)).ToArray();
+            var wrappers = (await textVocabularyService.ResolveSet(WellKnownTextType.Wrapper)).ToLeftRightPairs();
             foreach (var r in resourcesMap.Values)
             {
                 r.DisplayName = ResourceService.BuildDisplayNameForResource(r, template.DisplayNameTemplate, wrappers);
@@ -811,8 +810,7 @@ public class MediaLibraryTemplateService<TDbContext>(
             {
                 if (template.DisplayNameTemplate.IsNotEmpty())
                 {
-                    var wrappers = (await specialTextService.GetAll(x => x.Type == SpecialTextType.Wrapper))
-                        .Select(x => (Left: x.Value1, Right: x.Value2!)).ToArray();
+                    var wrappers = (await textVocabularyService.ResolveSet(WellKnownTextType.Wrapper)).ToLeftRightPairs();
                     foreach (var r in resources)
                     {
                         r.DisplayName =

@@ -5,6 +5,14 @@ import { SubscriptionItemTitleContainsUI } from "./SubscriptionItemTitleContains
 import { AiTransformUI } from "./AiTransform";
 import { ExHentaiQueryToGalleryUI } from "./ExHentaiQueryToGallery";
 import { CreateNotificationUI } from "./CreateNotification";
+import { FsFileNameOpUI } from "./FsFileNameOp";
+import { FsSaveNameUI } from "./FsSaveName";
+import { TextRemoveWrappedUI } from "./TextOps/RemoveWrapped";
+import { TextRemoveTextsUI } from "./TextOps/RemoveTexts";
+import { TextTrimUI } from "./TextOps/Trim";
+import { TextCaptureUI } from "./TextOps/Capture";
+import { TextTemplateUI } from "./TextOps/Template";
+import { FsExpandChildrenUI } from "./FsExpandChildren";
 
 export const workflowActivityRegistry: Record<string, WorkflowActivityUI<any>> = {
   [SubscriptionItemTitleContainsUI.kind]: SubscriptionItemTitleContainsUI,
@@ -12,6 +20,14 @@ export const workflowActivityRegistry: Record<string, WorkflowActivityUI<any>> =
   [ExHentaiQueryToGalleryUI.kind]: ExHentaiQueryToGalleryUI,
   [ExHentaiEnqueueDownloadUI.kind]: ExHentaiEnqueueDownloadUI,
   [CreateNotificationUI.kind]: CreateNotificationUI,
+  [FsFileNameOpUI.kind]: FsFileNameOpUI,
+  [FsSaveNameUI.kind]: FsSaveNameUI,
+  [TextRemoveWrappedUI.kind]: TextRemoveWrappedUI,
+  [TextRemoveTextsUI.kind]: TextRemoveTextsUI,
+  [TextTrimUI.kind]: TextTrimUI,
+  [TextCaptureUI.kind]: TextCaptureUI,
+  [TextTemplateUI.kind]: TextTemplateUI,
+  [FsExpandChildrenUI.kind]: FsExpandChildrenUI,
 };
 
 export function getWorkflowActivityUI(kind: string): WorkflowActivityUI<any> | undefined {

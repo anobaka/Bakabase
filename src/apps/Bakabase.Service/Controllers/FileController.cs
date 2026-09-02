@@ -55,13 +55,14 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MimeKit;
 using Swashbuckle.AspNetCore.Annotations;
+using Bakabase.Abstractions.Components.Text;
 
 namespace Bakabase.Service.Controllers
 {
     [Route("~/file")]
     public class FileController : Controller
     {
-        private readonly ISpecialTextService _specialTextService;
+        private readonly ITextOps _textOps;
         private readonly IWebHostEnvironment _env;
         private readonly BTaskManager _taskManager;
         private readonly CompressedFileService _compressedFileService;
@@ -79,7 +80,7 @@ namespace Bakabase.Service.Controllers
         private readonly AppService _appService;
         private readonly Bakabase.Service.Services.FileSystemEntryGroupingService _groupingService;
 
-        public FileController(ISpecialTextService specialTextService, IWebHostEnvironment env,
+        public FileController(ITextOps textOps, IWebHostEnvironment env,
             CompressedFileService compressedFileService, IBOptionsManager<FileSystemOptions> fsOptionsManager,
             IwFsWatcher fileProcessorWatcher, PasswordService passwordService, ILogger<FileController> logger,
             BakabaseLocalizer localizer, BTaskManager taskManager, IGuiAdapter guiAdapter,
@@ -87,7 +88,7 @@ namespace Bakabase.Service.Controllers
             ISystemPlayer systemPlayer, IFileManager fileManager, AppService appService,
             Bakabase.Service.Services.FileSystemEntryGroupingService groupingService)
         {
-            _specialTextService = specialTextService;
+            _textOps = textOps;
             _env = env;
             _compressedFileService = compressedFileService;
             _fsOptionsManager = fsOptionsManager;
@@ -1136,7 +1137,7 @@ namespace Bakabase.Service.Controllers
         public async Task<BaseResponse> StandardizeEntryName(string path)
         {
             var filename = Path.GetFileName(path);
-            var newName = await _specialTextService.Pretreatment(filename);
+            var newName = await _textOps.Clean(filename);
             if (filename == newName)
             {
                 return BaseResponseBuilder.NotModified;

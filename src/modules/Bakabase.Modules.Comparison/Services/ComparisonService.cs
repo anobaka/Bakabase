@@ -21,6 +21,7 @@ using Bootstrap.Extensions;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Bakabase.Abstractions.Components.Text;
 
 namespace Bakabase.Modules.Comparison.Services;
 
@@ -31,7 +32,7 @@ public class ComparisonService<TDbContext> : ResourceService<TDbContext, Compari
     private readonly ResourceService<TDbContext, ComparisonResultGroupDbModel, int> _groupOrm;
     private readonly ResourceService<TDbContext, ComparisonResultGroupMemberDbModel, int> _memberOrm;
     private readonly ResourceService<TDbContext, ComparisonResultPairDbModel, int> _pairOrm;
-    private readonly ISpecialTextService _specialTextService;
+    private readonly ITextOps _textOps;
     private readonly IPropertyService _propertyService;
     private readonly BTaskManager _taskManager;
     private readonly Dictionary<ComparisonMode, IComparisonStrategy> _strategies;
@@ -43,7 +44,7 @@ public class ComparisonService<TDbContext> : ResourceService<TDbContext, Compari
         ResourceService<TDbContext, ComparisonResultGroupDbModel, int> groupOrm,
         ResourceService<TDbContext, ComparisonResultGroupMemberDbModel, int> memberOrm,
         ResourceService<TDbContext, ComparisonResultPairDbModel, int> pairOrm,
-        ISpecialTextService specialTextService,
+        ITextOps textOps,
         IPropertyService propertyService,
         BTaskManager taskManager,
         IEnumerable<IComparisonStrategy> strategies,
@@ -54,7 +55,7 @@ public class ComparisonService<TDbContext> : ResourceService<TDbContext, Compari
         _groupOrm = groupOrm;
         _memberOrm = memberOrm;
         _pairOrm = pairOrm;
-        _specialTextService = specialTextService;
+        _textOps = textOps;
         _propertyService = propertyService;
         _taskManager = taskManager;
         _strategies = strategies.ToDictionary(s => s.Mode);
@@ -243,7 +244,7 @@ public class ComparisonService<TDbContext> : ResourceService<TDbContext, Compari
         }
 
         // 4. 初始化缓存上下文
-        using var context = new ComparisonContext(_specialTextService);
+        using var context = new ComparisonContext(_textOps);
 
         // 5. 计算相似度矩阵
         var pairs = new List<(int r1, int r2, double score, List<RuleScoreDetail> details)>();
@@ -503,7 +504,7 @@ public class ComparisonService<TDbContext> : ResourceService<TDbContext, Compari
 
     public double CalculateSimilarity(Resource r1, Resource r2, ComparisonPlan plan)
     {
-        using var context = new ComparisonContext(_specialTextService);
+        using var context = new ComparisonContext(_textOps);
         return CalculateSimilarityInternal(r1, r2, plan, context);
     }
 

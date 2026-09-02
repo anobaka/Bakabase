@@ -5,11 +5,13 @@ import type { OperationWithId } from "./useFileNameModifier";
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import {
   AiOutlineEdit,
   AiOutlineEye,
   AiOutlineEyeInvisible,
   AiOutlineFolderAdd,
+  AiOutlinePartition,
   AiOutlinePlusCircle,
   AiOutlineUndo,
 } from "react-icons/ai";
@@ -37,6 +39,7 @@ import { useFileNameModifier } from "./useFileNameModifier";
 import BApi from "@/sdk/BApi";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { FileSystemSelectorModal } from "@/components/FileSystemSelector";
+import { EDITOR_SEED_STORAGE_KEY } from "@/components/Workflow/CanvasEditor/templates";
 
 export interface FileNameModificationResult {
   originalPath: string;
@@ -79,6 +82,7 @@ import { detectCommonPrefix } from "./utils";
 
 const FileNameModifier: React.FC<FileNameModifierProps> = ({ initialFilePaths = [], onClose }) => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { createPortal } = useBakabaseContext();
   const {
     operations,
@@ -367,7 +371,38 @@ const FileNameModifier: React.FC<FileNameModifierProps> = ({ initialFilePaths = 
     <div className="flex flex-col min-h-0 grow md:flex-row gap-4">
       {/* 左侧：操作配置区域 */}
       <Card className="flex-1 flex flex-col min-w-0 p-4">
-        <h5 className="font-semibold mb-2">{t<string>("FileNameModifier.OperationsList")}</h5>
+        <div className="flex items-center justify-between mb-2 gap-2">
+          <h5 className="font-semibold">{t<string>("FileNameModifier.OperationsList")}</h5>
+          {/* The design's "upgrade to a cleaning workflow" entry (file-cleaning §6): the
+              current operation set becomes a fileNameOp node in a prefilled workflow. */}
+          <Button
+            size="sm"
+            startContent={<AiOutlinePartition />}
+            variant="light"
+            onClick={() => {
+              sessionStorage.setItem(
+                EDITOR_SEED_STORAGE_KEY,
+                JSON.stringify({
+                  nameKey: "workflow.template.fileCleaning.name",
+                  triggerKind: "fs.manualScan",
+                  activities: [
+                    {
+                      kind: "transform.fs.fileNameOp",
+                      configJson: JSON.stringify({
+                        operations: operations.map(({ id, ...op }) => op),
+                      }),
+                    },
+                    { kind: "transform.text.trim" },
+                    { kind: "action.fs.saveName" },
+                  ],
+                }),
+              );
+              navigate("/workflows/editor?seed=1");
+            }}
+          >
+            {t<string>("FileNameModifier.UpgradeToWorkflow")}
+          </Button>
+        </div>
         <div className="flex-1 overflow-y-auto rounded p-2">
           {operations.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-gray-400">

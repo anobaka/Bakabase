@@ -14,12 +14,12 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
 {
     public abstract class AbstractPatreonDownloader : AbstractDownloader<PatreonDownloadTaskType>
     {
-        private readonly ISpecialTextService _specialTextService;
+        private readonly ITextVocabularyService _textVocabularyService;
         public override ThirdPartyId ThirdPartyId => ThirdPartyId.Patreon;
 
-        protected AbstractPatreonDownloader(IServiceProvider serviceProvider, ISpecialTextService specialTextService) : base(serviceProvider)
+        protected AbstractPatreonDownloader(IServiceProvider serviceProvider, ITextVocabularyService textVocabularyService) : base(serviceProvider)
         {
-            _specialTextService = specialTextService;
+            _textVocabularyService = textVocabularyService;
         }
 
         protected override async Task StartCore(DownloadTask task, CancellationToken ct)

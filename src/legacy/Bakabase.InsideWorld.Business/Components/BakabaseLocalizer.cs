@@ -97,8 +97,6 @@ namespace Bakabase.InsideWorld.Business.Components
         public string Downloader_FailedToStart(string taskName, string message) =>
             this[nameof(Downloader_FailedToStart), taskName, message];
 
-        public string SpecialText_HistoricalLanguageValue2ShouldBeModified() =>
-            this[nameof(SpecialText_HistoricalLanguageValue2ShouldBeModified)];
 
         public string Unknown() => this[nameof(Unknown)];
         public string Failed()

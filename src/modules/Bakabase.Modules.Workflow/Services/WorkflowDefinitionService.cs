@@ -19,25 +19,22 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
     private readonly TDbContext _db;
     private readonly IWorkflowTriggerRegistry _triggers;
     private readonly IWorkflowActivityRegistry _activities;
+    private readonly IWorkflowItemTypeRegistry _itemTypes;
     private readonly BTaskManager _taskManager;
     private readonly WorkflowRunner<TDbContext> _runner;
-
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        PropertyNameCaseInsensitive = true,
-    };
 
     public WorkflowDefinitionService(
         TDbContext db,
         IWorkflowTriggerRegistry triggers,
         IWorkflowActivityRegistry activities,
+        IWorkflowItemTypeRegistry itemTypes,
         BTaskManager taskManager,
         WorkflowRunner<TDbContext> runner)
     {
         _db = db;
         _triggers = triggers;
         _activities = activities;
+        _itemTypes = itemTypes;
         _taskManager = taskManager;
         _runner = runner;
     }
@@ -74,7 +71,22 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
 
         if (input.Name is not null) entity.Name = input.Name;
         if (input.TriggerFilterJson is not null) entity.TriggerFilterJson = input.TriggerFilterJson;
-        if (input.Enabled is { } enabled) entity.Enabled = enabled;
+        if (input.Enabled is { } enabled)
+        {
+            entity.Enabled = enabled;
+            if (!enabled)
+            {
+                // Disabling means "stop this" to the user, so already-queued runs go with it —
+                // the runner's Pending-only guard makes their stale BTasks no-ops
+                // (capability map §5·发现 9). A run already Running is left to finish.
+                await Runs.Where(r => r.WorkflowDefinitionId == id && r.Status == WorkflowRunStatus.Pending)
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(r => r.Status, _ => WorkflowRunStatus.Cancelled)
+                        .SetProperty(r => r.CompletedAt, _ => DateTime.Now)
+                        .SetProperty(r => r.ErrorMessage, _ => "Cancelled: the workflow was disabled"), ct);
+            }
+        }
+
         entity.UpdatedAt = DateTime.Now;
 
         if (input.Activities is not null)
@@ -92,6 +104,15 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
 
     public async Task DeleteAsync(int id)
     {
+        // A run mid-execution keeps producing side effects after its rows vanish, and its final
+        // save then targets deleted data — refuse instead of racing it (capability map §5·发现 9).
+        // Pending rows don't block: deleting them makes their stale BTasks no-ops.
+        if (await Runs.AnyAsync(r => r.WorkflowDefinitionId == id && r.Status == WorkflowRunStatus.Running))
+        {
+            throw new InvalidOperationException(
+                "A run of this workflow is still executing — wait for it to finish before deleting.");
+        }
+
         await Acts.Where(a => a.WorkflowDefinitionId == id).ExecuteDeleteAsync();
         await Runs.Where(r => r.WorkflowDefinitionId == id).ExecuteDeleteAsync();
         await Defs.Where(d => d.Id == id).ExecuteDeleteAsync();
@@ -137,18 +158,29 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
             total, pageIndex, pageSize);
     }
 
-    public async Task<WorkflowRun> RunNowAsync(int definitionId, object payload, CancellationToken ct = default)
+    public async Task<WorkflowRun> RunManuallyAsync(int definitionId, string? argsJson,
+        CancellationToken ct = default)
     {
         var def = await Defs.FirstOrDefaultAsync(d => d.Id == definitionId, ct)
-            ?? throw new InvalidOperationException($"Workflow #{definitionId} not found");
+                  ?? throw new InvalidOperationException($"Workflow #{definitionId} not found");
+
+        if (!_triggers.TryGet(def.TriggerKind, out var trigger))
+        {
+            throw new InvalidOperationException($"Unknown trigger kind: {def.TriggerKind}");
+        }
+
+        // Built before the row is written so an unusable payload surfaces as a failed request
+        // rather than a persisted run that dies the moment it starts.
+        var payload = trigger.BuildManualPayload(def.TriggerFilterJson, argsJson);
+        var payloadJson = JsonSerializer.Serialize(payload, WorkflowJson.Options);
 
         var run = new WorkflowRunDbModel
         {
             WorkflowDefinitionId = def.Id,
             Status = WorkflowRunStatus.Pending,
             StartedAt = DateTime.Now,
-            PayloadJson = JsonSerializer.Serialize(payload, JsonOptions),
-            PayloadSummary = "manual run",
+            PayloadJson = payloadJson,
+            PayloadSummary = Summarize(payloadJson),
         };
         Runs.Add(run);
         await _db.SaveChangesAsync(ct);
@@ -161,6 +193,9 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
 
         return run.ToDomainModel();
     }
+
+    private static string Summarize(string payloadJson) =>
+        payloadJson.Length > 200 ? payloadJson[..200] + "…" : payloadJson;
 
     // ------- helpers -------
 
@@ -186,12 +221,33 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
             if (!_activities.TryGet(a.Kind, out var impl))
                 throw new InvalidOperationException($"Unknown activity kind: {a.Kind}");
 
-            var accepted = impl.AcceptedInputItemTypes;
-            if (accepted.Count > 0 && !accepted.Contains(currentType))
+            var contract = impl.AcceptedItemInterface;
+            if (contract is not null && impl.OutputBehavior != WorkflowItemTypeBehavior.Passthrough)
                 throw new InvalidOperationException(
-                    $"Activity {a.Kind} (index {i}) accepts [{string.Join(", ", accepted)}] " +
-                    $"but the item type at that position is \"{currentType}\". " +
+                    $"Activity {a.Kind} declares a capability contract ({contract.Name}) but is not " +
+                    "Passthrough — a contract-accepting activity works on whatever type arrives and " +
+                    "cannot change it. The activity's declaration is broken.");
+
+            // Accepted when the tag is listed, OR the tag's CLR shape implements the activity's
+            // capability contract (capability map E3). Both surfaces empty = accepts any type.
+            var accepted = impl.AcceptedInputItemTypes;
+            var acceptsByContract = contract is not null &&
+                                    _itemTypes.Get(currentType)?.ClrType is { } clr &&
+                                    contract.IsAssignableFrom(clr);
+            if ((accepted.Count > 0 || contract is not null) &&
+                !accepted.Contains(currentType) && !acceptsByContract)
+                throw new InvalidOperationException(
+                    $"Activity {a.Kind} (index {i}) accepts [{string.Join(", ", accepted)}]" +
+                    (contract is null ? "" : $" or any type implementing {contract.Name}") +
+                    $" but the item type at that position is \"{currentType}\". " +
                     "Insert a transform that produces a compatible type before it.");
+
+            if (impl.IsDestructive && i > 0 &&
+                _activities.TryGet(activities[i - 1].Kind, out var prev) &&
+                prev.OutputBehavior == WorkflowItemTypeBehavior.AdaptToNext)
+                throw new InvalidOperationException(
+                    $"Activity {a.Kind} (index {i}) is destructive and cannot directly consume " +
+                    "model-generated items — put a validating step between them.");
 
             currentType = impl.OutputBehavior switch
             {

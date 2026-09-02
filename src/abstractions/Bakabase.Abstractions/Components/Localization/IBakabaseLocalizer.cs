@@ -23,7 +23,7 @@ public interface IBakabaseLocalizer
     string ValueIsNotSet(string name);
     string NewFolderName();
     string Downloader_FailedToStart(string taskName, string message);
-    string SpecialText_HistoricalLanguageValue2ShouldBeModified();
+
     string Unknown();
     string Failed();
     string Decompress();

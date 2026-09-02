@@ -13,6 +13,8 @@ using Bakabase.InsideWorld.Models.Constants;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Abstractions.Extensions;
 
 namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloaders
 {
@@ -39,7 +41,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
         private DownloaderStatus _status = DownloaderStatus.JustCreated;
         protected readonly ILogger Logger;
         private readonly IDownloaderFactory _downloaderFactory;
-        private readonly ISpecialTextService _specialTextService;
+        private readonly ITextVocabularyService _textVocabularyService;
 
         protected IServiceProvider ServiceProvider;
         public string? Checkpoint { get; protected set; }
@@ -57,7 +59,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             ServiceProvider = serviceProvider;
             Logger = serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(GetType());
             _downloaderFactory = serviceProvider.GetRequiredService<IDownloaderFactory>();
-            _specialTextService = serviceProvider.GetRequiredService<ISpecialTextService>();
+            _textVocabularyService = serviceProvider.GetRequiredService<ITextVocabularyService>();
             Definition = DownloaderInternals.DownloaderTypeDefinitionMap[GetType()];
         }
 
@@ -111,7 +113,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                 }
             }
 
-            var wrappers = await _specialTextService.GetAllWrappers();
+            var wrappers = (await _textVocabularyService.ResolveSet(WellKnownTextType.Wrapper)).ToPairMap();
 
             // Remove empty wrappers
             if (wrappers.Any())

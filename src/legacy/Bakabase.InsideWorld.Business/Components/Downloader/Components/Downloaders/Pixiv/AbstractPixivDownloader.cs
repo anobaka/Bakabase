@@ -10,18 +10,19 @@ using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.ThirdParty.ThirdParties.Pixiv;
 using Bootstrap.Extensions;
+using Bakabase.Abstractions.Extensions;
 
 namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloaders.Pixiv
 {
     public abstract class AbstractPixivDownloader : AbstractDownloader<PixivDownloadTaskType>
     {
-        private readonly ISpecialTextService _specialTextService;
+        private readonly ITextVocabularyService _textVocabularyService;
         protected readonly PixivClient Client;
         public override ThirdPartyId ThirdPartyId => ThirdPartyId.Pixiv;
-        protected AbstractPixivDownloader(IServiceProvider serviceProvider, ISpecialTextService specialTextService,
+        protected AbstractPixivDownloader(IServiceProvider serviceProvider, ITextVocabularyService textVocabularyService,
             PixivClient client) : base(serviceProvider)
         {
-            _specialTextService = specialTextService;
+            _textVocabularyService = textVocabularyService;
             Client = client;
         }
 
@@ -40,11 +41,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
         {
             await ChangeCurrent(nameContext);
 
-            var wrappers =
-                (await _specialTextService.GetAll(a => a.Type == SpecialTextType.Wrapper))
-                .Where(a => a.Value1.IsNotEmpty() && a.Value2.IsNotEmpty())
-                .GroupBy(a => a.Value1)
-                .ToDictionary(a => a.Key, a => a.FirstOrDefault()!.Value2);
+            var wrappers = (await _textVocabularyService.ResolveSet(WellKnownTextType.Wrapper)).ToPairMap();
 
             var lastFileNameValues = nameContext.ToLastFileNameValues();
             if (lastFileNameValues != null)

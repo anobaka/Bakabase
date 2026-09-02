@@ -1,0 +1,167 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>文件清洗（File Cleaning Workflow）· 设计</title>
+<style>
+:root{--bg:#0e1116;--panel:#161b22;--panel2:#1c222c;--code:#0b0e14;--line:#2a313c;
+--ink:#e6e9ef;--mut:#98a2b0;--dim:#6b7482;--a:#6ea8fe;--g:#5ecb9e;--y:#e6b566;--r:#e8776f;--p:#b08cff;--c:#4bc0d9;--chip:#222a35;}
+@media (prefers-color-scheme:light){:root{--bg:#f6f7f9;--panel:#fff;--panel2:#eef1f5;--code:#f4f6f9;--line:#e2e6ec;
+--ink:#1a1f27;--mut:#586274;--dim:#8a94a3;--a:#2f6fed;--g:#1f9d6b;--y:#a9761f;--r:#cf4d43;--p:#7a52d6;--c:#1893ad;--chip:#eef1f5;}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);line-height:1.62;
+font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin:0 auto;padding:40px 22px 80px}
+h1{font-size:25px;margin:0 0 6px}.sub{color:var(--mut);font-size:14.5px;margin:0 0 4px}
+.toc{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 16px;margin:18px 0 4px;font-size:13px}
+.toc a{color:var(--a);text-decoration:none;margin-right:14px;white-space:nowrap;line-height:2}
+h2{font-size:17px;margin:36px 0 8px;padding-bottom:8px;border-bottom:1px solid var(--line);scroll-margin-top:12px}
+h2 .n{color:var(--dim);font-weight:700;margin-right:8px}
+h3{font-size:14.5px;margin:20px 0 6px}
+p{margin:9px 0}
+ul,ol{margin:9px 0 9px 4px;padding-left:22px}li{margin:4px 0}
+.note{font-size:12.5px;color:var(--dim);margin:10px 0}
+b{font-weight:650}
+a{color:var(--a)}
+code.i{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;background:var(--chip);padding:1px 5px;border-radius:5px}
+pre.code{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:12px 14px;overflow-x:auto;margin:10px 0;
+font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:12px;line-height:1.55;white-space:pre}
+pre.code .cm{color:var(--g);font-style:italic}
+table{width:100%;border-collapse:collapse;font-size:13px;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:10px 0}
+th,td{padding:8px 11px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:var(--panel2);color:var(--mut);font-weight:600;font-size:12px}
+tr:last-child td{border-bottom:none}
+td.k{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:12px;white-space:nowrap}
+.mono{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:12px}
+.rule{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--a);border-radius:10px;padding:10px 14px;margin:10px 0;font-size:13px}
+.rule.warn{border-left-color:var(--y)}
+.tag{display:inline-block;font-size:10.5px;padding:1px 7px;border-radius:20px;background:var(--chip);color:var(--mut);border:1px solid var(--dim)}
+footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(--line);padding-top:14px}
+</style></head><body><div class="wrap">
+<h1>文件清洗（File Cleaning Workflow）· 设计</h1>
+<p class="sub">Workflow + File Renamer 的组合：用户自定义清洗流程（constants → 枚举子级 → 文本变更节点 → 保存文件名），针对文件夹执行，带预览与撤销</p>
+<p class="note">状态：<b>已完成（批次 1–5 全部落地）</b>。批次 1（最小纵切）、批次 2（落盘 + 加固）、批次 3（文本族 E3 + B1 收敛）、批次 4（联动 E4+E2）、批次 5（自动化 E6：定时扫描 + 目录监听）均已合入。前置的 <a href="specialtext-extension.html">SpecialText 扩展</a>与<b>手动触发</b>已完成；实施顺序<b>已拍板为薄纵切</b>，批次表与五项决定见<a href="workflow-capability-map.html#s8">能力全景 §8–§9</a>。核心概念关系与"清洗如何用到它们"见<a href="workflow-capability-map.html#s1">能力全景 §1</a>。关联文档：<a href="workflow-capability-map.html">Workflow 能力全景</a>（E1–E6 代号速查见其 <a href="workflow-capability-map.html#s0">§0</a>） ｜ <a href="file-cleaning-workflow-example.html">13 节点完整示例</a> ｜ <a href="local-file-organization/README.md">Organizer（已挂起）</a>——本功能独立成立，不依赖 Organizer 任何概念；若其复活，本功能的文本节点可被复用为原子能力。</p>
+<div class="toc"><a href="#s1">1 承载决策</a><a href="#s2">2 Item 模型与类型契约</a><a href="#s3">3 节点设计</a><a href="#s4">4 预览/应用/撤销</a><a href="#s5">5 SpecialText 扩展</a><a href="#s6">6 执行与 UI</a><a href="#s7">7 能力与示例</a><a href="#s8">8 开放问题</a></div>
+
+<h2 id="s1"><span class="n">§1</span>承载决策：直接构建在现有 Workflow 模块上</h2>
+<p>Organizer 当初不复用 WorkflowRunner 的三个理由（跨轮状态机、聚合阶段、两阶段确认）在本功能上<b>全部不成立</b>：清洗是线性 per-item 流程、无跨条目聚合、预览由计划模式实现。Workflow 已有的正是所需骨架：</p>
+<table><tr><th>需求</th><th>Workflow 现有能力</th></tr>
+<tr><td>用户自定义流程</td><td>WorkflowDefinition + 链式编辑器（typed-item 校验）</td></tr>
+<tr><td>节点分类</td><td>Activity 三类：Filter / Action / Transform</td></tr>
+<tr><td>逐值轮询执行</td><td>Runner 的 per-item 驱动（trigger <code class="i">ExtractItems</code> 产出初始 item 列表）</td></tr>
+<tr><td>运行记录</td><td>WorkflowRun 持久化 + 步骤统计</td></tr></table>
+<p>文本操作能力复用 <b>FileNameModifier</b>（7 种操作 × 目标区域 × 位置，纯字符串函数，已有实现与测试）；文本集能力复用并扩展 <b>SpecialText</b>（§5）。本功能依赖的引擎扩展（手动触发 E1<span class="tag">已完成</span>、链中展开 E2、能力契约 E3、变量 E4、两阶段运行 E5）统一定义在<a href="workflow-capability-map.html">能力全景</a>——均为跨场景通用能力，清洗只是第一个用户。</p>
+<div class="rule"><b>复核修正</b>：逐行读过引擎后，初版对它的判断需要更正——<code class="i">WorkflowRunner</code> 拿到的是解析它的那个 scope 的 provider，而所有调用方都把它捕获进随后才执行的 BTask，因此<b>引擎在 2026-08 之前从未成功执行过一次运行</b>。也就是说本功能不是建在一个已验证的地基上，而是建在一个刚刚第一次跑通的地基上。详情与另外三条修正见<a href="workflow-capability-map.html#s5">能力全景 §5</a>。</div>
+
+<h2 id="s2"><span class="n">§2</span>Item 模型与类型契约</h2>
+<pre class="code"><code><span class="cm">// ItemType: "item.fs.entry"（注册 IWorkflowItemTypeDescriptor）</span>
+public sealed record FsEntryItem : ITextWorkpiece
+{
+    public required string Path { get; init; }         <span class="cm">// 当前完整路径</span>
+    public required bool IsDirectory { get; init; }
+    public required string OriginalName { get; init; } <span class="cm">// 进入链时的名字（不含路径）</span>
+    public required string WorkingName { get; init; }  <span class="cm">// 工作名：文本节点只改它，不碰磁盘</span>
+
+    <span class="cm">// ITextWorkpiece：工作文本 ≡ WorkingName——"文本节点作用于什么"由此一处声明</span>
+    public string WorkingText => WorkingName;
+    public ITextWorkpiece WithWorkingText(string t) => this with { WorkingName = t };
+}</code></pre>
+<div class="rule"><b>变量不在 item 上</b>：变量是<b>引擎级随行袋</b>（Runner 为每个 item 维护、经 <code class="i">ctx.Variables</code> 暴露、ExpandTo 时子项继承副本、随 run 持久化）——任何 item 类型零成本获得变量能力，详见<a href="workflow-capability-map.html">能力全景 E4</a>。fs 域在触发器/expand 产出 item 时向袋内注入只读<b>系统变量</b>：<code class="i">var:extension</code>、<code class="i">var:parentName</code>。</div>
+<div class="rule"><b>核心不变量</b>：链上一切文本变更只作用于工作文本；磁盘操作只发生在 saveName 节点。"计算新名字"与"落盘"天然分成两段，预览因此免费。</div>
+<p><b>类型契约（硬校验，编辑器报错级）分两种形态</b>：fs 域节点（filter/expand/saveName/fileNameOp）声明 <code class="i">AcceptedInputItemTypes = ["item.fs.entry"]</code>（精确类型白名单）；<b>通用文本节点声明能力契约 <code class="i">AcceptedItemInterface = typeof(ITextWorkpiece)</code></b>——接受任何 CLR 类型实现该接口的 item，编辑器经 <code class="i">IWorkflowItemTypeDescriptor.ClrType</code> 静态校验。两种形态使本功能节点与其他功能的专属节点<b>互斥或按契约互操作</b>，不存在冲突。变量供需（capture 提供、template 需要）作为<b>软契约</b>由编辑器 lint（warning 而非 error——capture 可能条件性命中）。</p>
+<p><b>节点通用选项</b>：<code class="i">requiredVars: string[]</code>——任一变量缺失则跳过本节点（如模板节点缺 <code class="i">ep</code> 时保住上游清洗结果）。</p>
+
+<h2 id="s3"><span class="n">§3</span>节点设计</h2>
+<h3>3.0 规范：通用文本节点与能力契约（"trim 的是哪个 property？"的系统性回答）</h3>
+<p>文本节点（trim/removeWrapped/removeTexts/capture/template）是<b>真正通用的</b> <code class="i">transform.text.*</code>——只认识"工作文本"，不认识文件系统：</p>
+<ol>
+<li><b>能力契约</b>：<code class="i">ITextWorkpiece { string WorkingText; ITextWorkpiece WithWorkingText(string) }</code>。<b>它是对"当前类型"的能力谓词，不是类型本身</b>：校验通过后链上的当前类型不变（类比泛型约束 <code class="i">where T : ITextWorkpiece</code>，T 还是 T）。强制配对规则：<b>能力契约节点必须 Passthrough</b>（禁止 Fixed 输出），否则具体类型在链上丢失、下游精确类型节点接不住。运行时由 <code class="i">WithWorkingText</code> 返回实现方具体类型保证；capture 只写随行袋不改文本，直接 KeepItem。链上"当前类型"从头到尾是 <code class="i">item.fs.entry</code>，能力契约节点与精确类型节点可任意穿插。</li>
+<li><b>"作用于什么"由 item 类型声明，一处回答、处处生效</b>：<code class="i">FsEntryItem.WorkingText ≡ WorkingName</code>，编辑器在节点卡上显示"作用于：WorkingName"。将来画廊 item 声明 <code class="i">WorkingText ≡ Title</code>，同一批文本节点直接可用。</li>
+<li><b>fs 语义进入文本节点的唯一通道是系统变量</b>（模板写 <code class="i">{var:extension}</code>，无 fs 专属占位符），文本节点零 fs 感知。</li>
+</ol>
+<div class="rule warn">两个刻意决策：<code class="i">transform.fs.fileNameOp</code> <b>留在 fs 域</b>（其 Target 语义即文件名结构，名字已回答作用目标）；<b>无 scope 选项</b>——混合流（目录+文件）由<b>链序</b>表达：目录段 → saveName（目录计划）→ expand（ChildrenOnly，此后链上只有文件）→ 文件段 → saveName（文件计划）。</div>
+<p class="note">纯文本算法沉淀在无状态服务 <code class="i">TextOps</code>（供 file-name-modifier 页与将来的 Organizer 复用）；文本节点是 TextOps 经能力契约暴露给 workflow 的形态。</p>
+
+<h3>3.1 触发器：<code class="i">fs.manualScan</code>（= constants 节点 + 获取子级节点）</h3>
+<pre class="code"><code>{
+  "roots": ["D:/Anime", "E:/Downloads"],   <span class="cm">// constants：写死的目录列表</span>
+  "enumerate": {
+    "target": "Directories | Files | Both",
+    "depth": 1,                            <span class="cm">// 枚举深度（1 = 直接子级）</span>
+    "extensionFilter": ["mkv", "zip"]      <span class="cm">// 可选</span>
+  }
+}</code></pre>
+<p><code class="i">ExtractItems</code> 对每个 root 按配置枚举产出 <code class="i">FsEntryItem</code> 列表——"针对全部子级轮询跑后面的节点"就是 Runner 既有语义。constants 与首层枚举合并进触发器；<b>更深层级用链中展开节点</b>（3.2）。</p>
+
+<h3>3.2 Expand 活动：<code class="i">expand.fs.children</code>（链中 1→N）</h3>
+<p>依赖引擎扩展 E2（<code class="i">WorkflowItemOutcome.ExpandTo</code>）。<b>基数是描述符的静态声明</b>：活动声明 <code class="i">Cardinality: OneToOne（默认）| OneToMany</code>，编辑器据此做视觉标识、picker 筛选与统计口径；Category 与基数正交（本节点形式上是 Transform + OneToMany）。</p>
+<table><tr><th>配置</th><th>说明</th></tr>
+<tr><td class="k">target / extensionFilter</td><td>Files / Directories / Both + 扩展名过滤</td></tr>
+<tr><td class="k">emit</td><td>v1 仅 ChildrenOnly（父项被展开消费——其改名计划应在展开<b>前</b>由 saveName 记录）</td></tr>
+<tr><td class="k">inheritVariables</td><td>子项继承父项随行袋副本；同步注入子项系统变量（extension/parentName）</td></tr></table>
+
+<h3>3.3 Filter 活动</h3>
+<table><tr><th>kind</th><th>行为</th></tr>
+<tr><td class="k">filter.fs.byRegex</td><td>工作名匹配/不匹配正则</td></tr>
+<tr><td class="k">filter.fs.byExtension</td><td>按扩展名/扩展名组（复用 ExtensionGroup）</td></tr>
+<tr><td class="k">filter.fs.byType</td><td>只要文件 / 只要文件夹</td></tr></table>
+
+<h3>3.4 Transform 活动（文本变更节点，任意个、任意序）</h3>
+<table><tr><th>kind</th><th>契约</th><th>行为</th><th>配置</th></tr>
+<tr><td class="k">transform.text.removeWrapped</td><td><span class="tag">能力: ITextWorkpiece</span></td><td><b>删除包装符内命中文本集的片段</b></td><td>包装符类型引用 + 文本集类型引用（统一 <code class="i">TextType</code> id，§5）+ 命中方式（等于/包含/正则）</td></tr>
+<tr><td class="k">transform.text.removeTexts</td><td><span class="tag">能力: ITextWorkpiece</span></td><td>删除命中文本集的裸文本片段</td><td>文本集引用 + 命中方式</td></tr>
+<tr><td class="k">transform.text.trim</td><td><span class="tag">能力: ITextWorkpiece</span></td><td>清理残留：连续空格/头尾空白/空括号对</td><td>开关组</td></tr>
+<tr><td class="k">transform.text.capture</td><td><span class="tag">能力: ITextWorkpiece</span></td><td><b>不改文本，只捕获</b>：正则具名捕获组 → 写入随行袋（组名即变量名）</td><td>pattern + onMiss（SkipSilently/标记）</td></tr>
+<tr><td class="k">transform.text.template</td><td><span class="tag">能力: ITextWorkpiece</span></td><td>以模板<b>重建</b>工作文本（跨层级信息组合命名）</td><td>template（<code class="i">{var:x(:pad(n))}</code> / <code class="i">{originalText}</code>；扩展名写 <code class="i">{var:extension}</code>）+ requiredVars</td></tr>
+<tr><td class="k">transform.fs.fileNameOp</td><td><span class="tag">item.fs.entry</span></td><td>包装 FileNameModifier 全部既有操作（刻意留在 fs 域）</td><td>Target × Operation × Position × 参数——与 file-name-modifier 页同一套模型与 UI 组件</td></tr></table>
+
+<h3>3.5 Action 活动：<code class="i">action.fs.saveName</code></h3>
+<ul>
+<li>工作名 == 原名 → 跳过；不同 → Preview（默认，只记计划）/ Apply（执行改名 + 写 FileRenameRecord）。</li>
+<li>内置防线（不可关闭）：sanitize（非法字符/保留名/结尾点空格）、目标重名冲突记入冲突表跳过不中断、路径长度预检。</li>
+<li><b>Apply 排序 DeepestFirst</b>：按路径深度从深到浅执行——父目录改名不使子条目计划失效，与计划记录顺序解耦。</li>
+</ul>
+
+<h2 id="s4"><span class="n">§4</span>预览 → 确认 → 应用 → 撤销</h2>
+<pre class="code"><code>「预览」 ─▶ run(Preview)：全链执行，saveName 只记计划
+            └─▶ UI 展示 diff（旧名 → 新名，冲突高亮），可逐条勾选排除
+「应用」 ─▶ 对预览产出的计划执行改名（不重跑链，避免两次运行间磁盘漂移）→ 逐条写 FileRenameRecord
+「撤销」 ─▶ 逆序回放该次 run 的 FileRenameRecord（To → From）
+
+FileRenameRecord   RunId, Seq, Path(父目录), From, To, RenamedAt, Undone   <span class="cm">// 保留期默认 30 天</span></code></pre>
+
+<h2 id="s5"><span class="n">§5</span>SpecialText 扩展：用户自定义文本类型（文本集）</h2>
+<p class="note"><b>完整架构设计（现状盘点 / 服务拆分 ITextVocabularyService + ITextOps / 消费点迁移 / PR 切分）见 <a href="specialtext-extension.html">specialtext-extension.html</a></b>，本节仅存要点概览。</p>
+<p>要点（详细模型/服务/迁移以扩展设计文档为准）：</p>
+<ol>
+<li><b>单一抽象</b>：内置与自定义合并为一个实体 <code class="i">TextType</code>（+ <code class="i">TextEntry</code> 条目表），<b>单一 id 空间</b>——节点的文本集引用就是一个 <code class="i">typeId</code>，不存在 builtin:/custom: 判别前缀。内置性 = 行上的 <code class="i">WellKnown</code> 句柄（不可删/不可改名，语义由代码消费点绑定）。</li>
+<li><b>Shape 三态</b>：<code class="i">Values</code> / <code class="i">DelimiterPair</code>（左右定界符）/ <code class="i">MappingPair</code>（from→to）。<b>removeWrapped 的 wrappers 参数只接受 DelimiterPair 型</b>——两值不等于同一形态（Standardization/Language 是映射，喂给包装符参数无意义）；自定义 DelimiterPair 可直接用作包装符对。</li>
+<li><b>选择器</b>：<code class="i">GetTypes()</code> 聚合列表是节点配置表单与 text 管理页的唯一数据源（内置徽标区分，<b>按 Shape 精确过滤</b>）。</li>
+<li><b>数据不丢</b>：旧 SpecialText 行经 app 级迁移器（V220/V230 先例）七值查表转入新表，Value2 原样保留；EF 迁移保持纯 schema 且<b>不 drop 旧表</b>（迁移器在 EF 之后运行，drop 会导致跨版本升级丢数据）。「质量与发布标签」以可编辑种子集下发（只投一次，删除不复活）。</li>
+</ol>
+<div class="rule"><b>实施顺序：本扩展第一步先做</b>（PR1 建表 → PR2 服务拆分与全量切换 → PR3 UI/种子），节点实现全部依赖它。<b>已完成</b>——三个 PR 均已合入，与本设计的偏差见<a href="specialtext-extension.html#s8">扩展设计 §8 实施偏差</a>。<br>
+<b>更正</b>：此处原写"本扩展是整个功能唯一的 schema 变更"，不成立——<a href="workflow-capability-map.html#s4">两阶段运行（E5）</a>的计划表与 <code class="i">FileRenameRecord</code> 是第二次建表（<a href="workflow-capability-map.html#f3">能力全景 §5·发现 3</a>）。</div>
+
+<h2 id="s6"><span class="n">§6</span>执行与 UI</h2>
+<ul>
+<li>定义、编辑、运行记录走 workflow 页既有 UI；新增：触发器配置面板（roots + 枚举）、活动配置表单（复用 file-name-modifier 页操作编辑组件）、预览 diff 面板（参考 BulkModification 预览交互）、变量自动补全（输入 <code class="i">{</code> 弹出该位置可用变量集，见能力全景 E4）。</li>
+<li>运行承载沿用 Workflow run 机制；大目录逐条目 yield，进度在 run 详情展示。</li>
+<li>入口：workflow 页"文件清洗"模板；file-name-modifier 页"升级为清洗流程"引导（当前操作集一键转为 fileNameOp 节点）。</li>
+</ul>
+
+<h2 id="s7"><span class="n">§7</span>完成后获得的能力 · 完整示例</h2>
+<ul>
+<li>零代码定义任意清洗流程：录常量目录 → 枚举 → 组合文本变更 → 预览确认 → 落盘可撤销。</li>
+<li>自定义文本集成为一等公民（字幕组名单、广告词…），跨流程复用、可维护。</li>
+<li>Workflow 获得第一个文件系统域的触发器与活动集，为自动化（下载完成→自动清洗）铺路。</li>
+<li>FileNameModifier 从单页工具升级为可编排节点，原页面保留。</li>
+</ul>
+<p>多层级 + 节点联动的 13 节点完整走查（每节点配置、出入参契约、item 流转表）：<b><a href="file-cleaning-workflow-example.html">file-cleaning-workflow-example.html</a></b>。</p>
+
+<h2 id="s8"><span class="n">§8</span>开放问题</h2>
+<ul>
+<li>文本集是否走 Sharable 分享——倾向于要，随使用量决策。</li>
+<li>定时/监听触发（FileMover 进料口式自动清洗）——依赖能力全景 E6。</li>
+<li><s>ExpandTo 在编辑器统计口径中的表达（类型校验直通，但步骤统计需理解 1→N）。</s>——已消解：<code class="i">WorkflowRunStepStat</code> 的 InputCount / OutputCount 本就是两个独立计数，天然表达 1→N（<a href="workflow-capability-map.html#f4">能力全景 §5·发现 4</a>）。</li>
+<li>预览面板落点、计划的存储形态、前后端两份类型推导是否收敛——三个待拍板项见<a href="workflow-capability-map.html#s9">能力全景 §9</a>。</li>
+</ul>
+<footer>文件清洗设计 · 关联：<a href="workflow-capability-map.html">Workflow 能力全景</a> · <a href="file-cleaning-workflow-example.html">完整示例</a></footer>
+</div></body></html>

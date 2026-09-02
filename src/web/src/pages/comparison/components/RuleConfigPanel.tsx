@@ -244,10 +244,10 @@ const RuleConfigPanel = ({
   const hasError = (field: string) => !!getError(field);
   const navigate = useNavigate();
 
-  const handleNavigateToSpecialText = () => {
+  const handleNavigateToText = () => {
     createPortal(Modal, {
       title: t("Confirm"),
-      children: t("comparison.confirm.navigateToSpecialText"),
+      children: t("comparison.confirm.navigateToText"),
       footer: {
         actions: ["ok", "cancel"],
       },
@@ -452,9 +452,9 @@ const RuleConfigPanel = ({
               <Link
                 className="text-xs cursor-pointer"
                 underline="always"
-                onPress={handleNavigateToSpecialText}
+                onPress={handleNavigateToText}
               >
-                {t("comparison.action.configureSpecialText")}
+                {t("comparison.action.configureText")}
               </Link>
             </span>
           </div>

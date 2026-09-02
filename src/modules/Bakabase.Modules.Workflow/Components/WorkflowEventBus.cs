@@ -23,12 +23,6 @@ public class WorkflowEventBus<TDbContext> : IWorkflowEventBus where TDbContext :
     private readonly WorkflowRunner<TDbContext> _runner;
     private readonly ILogger<WorkflowEventBus<TDbContext>> _logger;
 
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        PropertyNameCaseInsensitive = true,
-    };
-
     public WorkflowEventBus(
         TDbContext db,
         IWorkflowTriggerRegistry triggers,
@@ -62,7 +56,7 @@ public class WorkflowEventBus<TDbContext> : IWorkflowEventBus where TDbContext :
             .ToListAsync(ct);
         if (defs.Count == 0) return;
 
-        var payloadJson = JsonSerializer.Serialize<object>(payload, JsonOptions);
+        var payloadJson = JsonSerializer.Serialize<object>(payload, WorkflowJson.Options);
         var payloadSummary = SummarizePayload(payload);
         var matched = new List<WorkflowRunDbModel>();
 
@@ -110,7 +104,7 @@ public class WorkflowEventBus<TDbContext> : IWorkflowEventBus where TDbContext :
     {
         try
         {
-            var json = JsonSerializer.Serialize<object>(payload, JsonOptions);
+            var json = JsonSerializer.Serialize<object>(payload, WorkflowJson.Options);
             return json.Length > 200 ? json[..200] + "…" : json;
         }
         catch { return null; }

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Bakabase.Abstractions.Services;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -129,6 +130,11 @@ namespace Bakabase.Service.Components
                     }
                 });
             }
+
+            // Builtin text types are defined in code, so their rows are an invariant. Creating
+            // them here — post-migration, before anything serves a request — keeps reads pure and
+            // the management page complete regardless of what seeding history a database has.
+            await scope.ServiceProvider.GetRequiredService<ITextVocabularyService>().EnsureBuiltinTypes();
 
             // Warm in-memory caches that depend on tables created by migrations.
             // Must run here (post-migration) — not via IHostedService, which fires

@@ -25,6 +25,16 @@ public sealed class WorkflowExecutionContext
     /// </summary>
     public string? TargetItemType { get; init; }
 
+    /// <summary>
+    /// The current item's variable bag (capability map E4): named values captured by upstream
+    /// activities (<c>transform.text.capture</c>) and read back by interpolating ones
+    /// (<c>transform.text.template</c>). The bag travels WITH the item, not inside it — an
+    /// item's CLR shape never grows fields for chain-local state. On expansion each child
+    /// inherits a copy of its parent's bag. Mutations are visible to every later step for
+    /// the same item.
+    /// </summary>
+    public IDictionary<string, string> Variables { get; init; } = new Dictionary<string, string>();
+
     /// <summary>DI scope provider — use for resolving scoped services like DbContext.</summary>
     public required IServiceProvider Services { get; init; }
 
@@ -36,11 +46,21 @@ public sealed class WorkflowExecutionContext
         PropertyNameCaseInsensitive = true,
     };
 
-    /// <summary>Deserialize the current activity's config into a typed shape.</summary>
+    /// <summary>
+    /// Deserialize the current activity's config into a typed shape. Absent config is the
+    /// activity's business (it gets <c>default</c> and applies its own defaults); MALFORMED
+    /// config is not — that throws <see cref="WorkflowActivityConfigException"/>, which fails
+    /// the run rather than silently running the step on defaults.
+    /// </summary>
     public T? GetConfig<T>()
     {
         if (string.IsNullOrEmpty(ActivityConfigJson)) return default;
         try { return JsonSerializer.Deserialize<T>(ActivityConfigJson, JsonOptions); }
-        catch (JsonException) { return default; }
+        catch (JsonException ex)
+        {
+            throw new WorkflowActivityConfigException(
+                $"The step's configuration is not valid for {typeof(T).Name} and the run cannot proceed: {ex.Message}",
+                ex);
+        }
     }
 }

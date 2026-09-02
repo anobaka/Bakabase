@@ -1,0 +1,404 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Workflow 编辑器重设计 · 三栏画布 + 磁性拖拽</title>
+<style>
+:root{--bg:#0e1116;--panel:#161b22;--panel2:#1c222c;--code:#0b0e14;--line:#2a313c;
+--ink:#e6e9ef;--mut:#98a2b0;--dim:#6b7482;--a:#6ea8fe;--g:#5ecb9e;--y:#e6b566;--r:#e8776f;--p:#b08cff;--c:#4bc0d9;--chip:#222a35;
+--slot:#6ea8fe;}
+@media (prefers-color-scheme:light){:root{--bg:#f6f7f9;--panel:#fff;--panel2:#eef1f5;--code:#f4f6f9;--line:#e2e6ec;
+--ink:#1a1f27;--mut:#586274;--dim:#8a94a3;--a:#2f6fed;--g:#1f9d6b;--y:#a9761f;--r:#cf4d43;--p:#7a52d6;--c:#1893ad;--chip:#eef1f5;--slot:#2f6fed;}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);line-height:1.62;
+font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:40px 22px 80px}
+h1{font-size:25px;margin:0 0 6px}.sub{color:var(--mut);font-size:14.5px;margin:0 0 4px}
+h2{font-size:17px;margin:36px 0 8px;padding-bottom:8px;border-bottom:1px solid var(--line);scroll-margin-top:12px}
+h2 .n{color:var(--dim);font-weight:700;margin-right:8px}
+h3{font-size:14.5px;margin:20px 0 6px;color:var(--mut)}
+p{margin:9px 0}
+ul{margin:9px 0 9px 4px;padding-left:22px}li{margin:4px 0}
+.note{font-size:12.5px;color:var(--dim);margin:10px 0}
+b{font-weight:650}
+a{color:var(--a)}
+code.i{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;background:var(--chip);padding:1px 5px;border-radius:5px}
+table{width:100%;border-collapse:collapse;font-size:13px;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:10px 0}
+th,td{padding:8px 11px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:var(--panel2);color:var(--mut);font-weight:600;font-size:12px}
+tr:last-child td{border-bottom:none}
+.rule{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--a);border-radius:10px;padding:10px 14px;margin:10px 0;font-size:13px}
+.rule.warn{border-left-color:var(--r)}
+.rule.ask{border-left-color:var(--y)}
+.tag{display:inline-block;font-size:10.5px;padding:1px 7px;border-radius:20px;background:var(--chip);color:var(--mut);border:1px solid var(--dim)}
+
+/* ============ prototype ============ */
+.proto{border:1px solid var(--line);border-radius:14px;overflow:hidden;margin:14px 0;background:var(--panel);user-select:none}
+.pt-top{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--line);background:var(--panel2)}
+.pt-top input[type=text]{background:var(--code);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:5px 10px;font-size:13px;width:200px}
+.pt-top .spacer{flex:1}
+.pt-btn{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:5px 12px;font-size:12.5px;cursor:pointer}
+.pt-btn.primary{background:var(--a);border-color:var(--a);color:#fff}
+.pt-hint{font-size:11.5px;color:var(--y)}
+.pt-body{display:grid;grid-template-columns:210px 1fr 280px;min-height:430px}
+@media (max-width:900px){.pt-body{grid-template-columns:1fr}.pt-side,.pt-insp{border-left:none!important;border-right:none!important;border-top:1px solid var(--line)}}
+.pt-side{border-right:1px solid var(--line);padding:10px;overflow-y:auto;max-height:520px}
+.pt-side .grp{font-size:11px;color:var(--dim);margin:10px 4px 4px;text-transform:none}
+.pt-side .grp:first-child{margin-top:0}
+.pal-item{display:flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--panel2);border-radius:9px;
+padding:6px 9px;margin:4px 0;font-size:12.5px;cursor:grab;touch-action:none}
+.pal-item:active{cursor:grabbing}
+.pal-item .dot{width:8px;height:8px;border-radius:99px;flex-shrink:0}
+.pal-item.dis{opacity:.38;cursor:not-allowed}
+.pal-item.shake{animation:shake .3s}
+@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.pal-why{font-size:10.5px;color:var(--r);margin:-2px 4px 4px;display:none}
+.pal-why.show{display:block}
+
+.pt-canvas{position:relative;padding:26px 18px 18px;overflow-x:auto;background:
+radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--dim) 22%, transparent) 1px, transparent 0) 0 0/22px 22px}
+.chain{display:flex;align-items:center;min-height:120px}
+.cnode{position:relative;border:1.5px solid;border-radius:12px;background:var(--panel);min-width:148px;max-width:190px;
+padding:8px 11px;cursor:grab;touch-action:none;transition:box-shadow .15s, opacity .15s}
+.cnode:active{cursor:grabbing}
+.cnode.sel{box-shadow:0 0 0 2.5px color-mix(in srgb, var(--a) 55%, transparent)}
+.cnode.dragging{opacity:.25}
+.cnode .cat{font-size:10px;letter-spacing:.4px;margin-bottom:1px}
+.cnode .nm{font-size:13px;font-weight:640;line-height:1.3}
+.cnode .bd{font-size:10.5px;color:var(--mut);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cnode .del{position:absolute;top:-8px;right:-8px;width:18px;height:18px;border-radius:99px;background:var(--r);color:#fff;
+border:none;font-size:11px;line-height:1;cursor:pointer;display:none;align-items:center;justify-content:center}
+.cnode:hover .del{display:flex}
+.cnode.trigger{cursor:pointer}
+.cnode.trigger .del{display:none!important}
+.c-trigger{border-color:color-mix(in srgb, var(--p) 55%, transparent);}
+.c-trigger .cat{color:var(--p)}
+.c-filter{border-color:color-mix(in srgb, var(--y) 55%, transparent)}
+.c-filter .cat{color:var(--y)}
+.c-transform{border-color:color-mix(in srgb, var(--g) 55%, transparent)}
+.c-transform .cat{color:var(--g)}
+.c-action{border-color:color-mix(in srgb, var(--a) 55%, transparent)}
+.c-action .cat{color:var(--a)}
+.edge{display:flex;flex-direction:column;align-items:center;gap:2px;padding:0 2px;flex-shrink:0}
+.edge .ln{display:flex;align-items:center}
+.edge .ln::before{content:"";display:block;width:16px;height:1.5px;background:var(--dim)}
+.edge .ln::after{content:"";display:block;border:4px solid transparent;border-left-color:var(--dim)}
+.edge .tp{font-size:9.5px;color:var(--dim);background:var(--chip);border-radius:8px;padding:0 6px;white-space:nowrap}
+.slot{width:0;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:width .16s ease;overflow:visible}
+.slot .in{width:0;height:84px;border:2px dashed transparent;border-radius:12px;transition:all .16s ease}
+.slot.open{width:118px}
+.slot.open .in{width:104px;border-color:var(--slot);background:color-mix(in srgb, var(--slot) 10%, transparent);
+box-shadow:0 0 14px color-mix(in srgb, var(--slot) 35%, transparent)}
+.endcap{border:1.5px dashed var(--line);border-radius:12px;padding:8px 11px;color:var(--dim);font-size:11.5px;min-width:110px;flex-shrink:0}
+.ghost{position:fixed;z-index:50;pointer-events:none;opacity:.92;transform:translate(-50%,-50%) rotate(1.5deg);
+box-shadow:0 10px 28px rgba(0,0,0,.35)}
+.removezone{position:absolute;left:50%;transform:translateX(-50%);bottom:10px;border:1.5px dashed var(--r);color:var(--r);
+border-radius:10px;padding:5px 18px;font-size:12px;background:color-mix(in srgb, var(--r) 8%, transparent);opacity:0;transition:opacity .15s;pointer-events:none}
+.removezone.show{opacity:1}
+.removezone.hot{background:color-mix(in srgb, var(--r) 22%, transparent)}
+.pt-insp{border-left:1px solid var(--line);padding:12px;overflow-y:auto;max-height:520px}
+.pt-insp h4{margin:0 0 2px;font-size:13.5px}
+.pt-insp .cat{font-size:10.5px;margin-bottom:8px}
+.fld{margin:8px 0}
+.fld label{display:block;font-size:11px;color:var(--mut);margin-bottom:3px}
+.fld input,.fld select{width:100%;background:var(--code);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:5px 9px;font-size:12.5px;font-family:inherit}
+.fld .chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.fld .chip{font-size:10.5px;background:var(--chip);border-radius:99px;padding:1px 8px;color:var(--mut)}
+.insp-note{font-size:11px;color:var(--dim);border-top:1px solid var(--line);margin-top:12px;padding-top:8px}
+.insp-empty{color:var(--dim);font-size:12.5px;padding:20px 6px;text-align:center}
+</style></head><body><div class="wrap">
+
+<h1>Workflow 编辑器重设计</h1>
+<p class="sub">三栏画布布局 · 真实节点拖拽 · 磁性插槽吸附 —— 下面的原型可以直接操作</p>
+<p class="note">状态：<b>已落地</b>（所有者拍板：路由页 / 直接替换 / 批次 C 一并实施）。实现于 <code class="i">src/web/src/components/Workflow/CanvasEditor</code>，路由 <code class="i">/workflows/editor</code>；旧模态编辑器（WorkflowEditor/ActivityCard/ActivityPicker）已移除。本页 §0 原型保留作交互规约的参照。相关：<a href="workflow-capability-map.html">能力全景</a> ｜ <a href="file-cleaning-workflow.html">文件清洗设计</a>。</p>
+
+<h2 id="s0"><span class="n">§0</span>动手试：可交互原型</h2>
+<div class="rule">这不是截图——<b>直接拖</b>。从左侧节点库把节点拖进中间链条：靠近时插槽会<b>磁性张开</b>并发光；松手即插入。链上的节点同样可以拖动换位，或拖向下方的移除区删除；点击任意节点，右侧出现它的配置面板。变暗的节点接不住当前链条的条目类型（悬停可见原因）——这就是类型校验在选择器层面的样子。</div>
+
+<div class="proto" id="proto">
+  <div class="pt-top">
+    <input type="text" value="清洗下载目录" aria-label="名称">
+    <label style="font-size:12px;color:var(--mut);display:flex;align-items:center;gap:5px"><input type="checkbox" checked style="accent-color:var(--a)">启用</label>
+    <span class="pt-hint" id="lint"></span>
+    <span class="spacer"></span>
+    <button class="pt-btn">运行记录</button>
+    <button class="pt-btn">▶ 运行</button>
+    <button class="pt-btn primary">保存</button>
+  </div>
+  <div class="pt-body">
+    <div class="pt-side" id="palette"></div>
+    <div class="pt-canvas" id="canvas">
+      <div class="chain" id="chain"></div>
+      <div class="removezone" id="rmzone">拖到这里移除</div>
+    </div>
+    <div class="pt-insp" id="insp"></div>
+  </div>
+</div>
+<p class="note">原型为纯静态演示：不落库、刷新即恢复。真实实现中节点配置表单就是现有的 <code class="i">ConfigForm</code> 组件原样移入右栏（见 §4 映射表）。</p>
+
+<h2 id="s1"><span class="n">§1</span>现状诊断：为什么"不直观、很难配置"</h2>
+<table><tr><th style="width:26%">症状</th><th>根因（对应现有实现）</th></tr>
+<tr><td>配置时"看不见全局"</td><td>一切都挤在一个 <code class="i">3xl</code> 模态框里（<code class="i">WorkflowEditor.tsx</code>）：触发器表单 + N 个节点表单纵向排队，配置第 3 个节点时链条其余部分全部滚出视野。</td></tr>
+<tr><td>读不出"流程"感</td><td>链条被渲染成纵向卡片堆叠（<code class="i">ActivityCard</code> 列表），节点之间的类型标签（<code class="i">ItemTypePill</code>）又小又淡——用户看到的是"一摞设置卡"，不是"一条流水线"。</td></tr>
+<tr><td>配置一个节点，页面跳一下</td><td>表单藏在卡片的手风琴里，展开/收起把下方所有卡片推来推去，位置感全失。</td></tr>
+<tr><td>不知道"还能加什么"</td><td>可用节点藏在"添加活动"弹出的选择器（<code class="i">ActivityPicker</code>）里，能力完全不可见；类型不兼容的节点直接消失，用户不知道它们存在、更不知道为什么不能用。</td></tr>
+<tr><td>拖拽没有"节点"手感</td><td>dnd-kit 的列表排序：能拖，但只是"换行序"，没有插槽、没有吸附、没有让位动画。</td></tr></table>
+
+<h2 id="s2"><span class="n">§2</span>方案：三栏画布，模态换全屏</h2>
+<table><tr><th style="width:16%">区域</th><th>职责</th><th style="width:38%">关键决定</th></tr>
+<tr><td><b>顶栏</b></td><td>名称、启用开关、保存 / 运行 / 运行记录、校验提示</td><td>软校验（如"链上没有动作"）以提示条出现，不阻塞编辑；硬校验（类型断链）阻止保存并在画布上标红断点。</td></tr>
+<tr><td><b>左栏 · 节点库</b></td><td>全部节点按域分组常驻可见，顶部搜索</td><td>接不住当前链尾类型的节点<b>变暗但不隐藏</b>，悬停给出原因（"此节点接受订阅条目，当前流动的是文件系统条目"）——能力可发现，约束可理解。可经 AI 桥接的节点保留原有"需 AI 桥接"标记。</td></tr>
+<tr><td><b>中央 · 画布</b></td><td>链条 = 横向节点流：触发器 → 节点… → 终点摘要</td><td>连线上标条目类型与 1→N 展开；拖动时插槽<b>磁性吸附</b>（阈值内链条让位张开、插槽发光）；节点可拖动换位、拖离链条移除；点选节点在右栏配置。触发器是特殊首节点：不可拖除，点它配置触发器与过滤。</td></tr>
+<tr><td><b>右栏 · 检查器</b></td><td>被选节点的配置表单 + 错误策略 + 帮助入口</td><td>表单<b>固定在右栏</b>，链条永远可见、永不跳动；表单组件与现在完全同一套（<code class="i">ConfigForm</code>/<code class="i">FilterForm</code> 原样复用），杜绝双实现漂移——与 RenamePlanPanel 的"同一组件双形态"同一条纪律。</td></tr></table>
+<div class="rule"><b>承载方式建议：路由页</b>（<code class="i">/workflow/editor/:id?</code>），列表页保留现状。全屏模态也可行，但路由页可直达、可刷新、可放进浏览器历史，与 file-processor 等既有全屏页一致。窄屏（&lt;900px）画布退化为纵向流，三栏变上下三段。</div>
+
+<h2 id="s3"><span class="n">§3</span>交互规约（磁性的具体定义）</h2>
+<ul>
+<li><b>吸附半径</b>：指针距插槽中心 ≤ 90px 时插槽激活；同时命中多个取最近。激活插槽从 0 宽度动画张开到节点宽（160ms ease），两侧节点自然让位——"链条为你腾位置"。</li>
+<li><b>放下</b>：松手落在激活插槽 → 插入/移动到该位置；落在其它任何地方 → 取消回弹。移动链上节点时，原位置以 25% 透明度占位，方向感不丢。</li>
+<li><b>移除</b>：拖动链上节点时画布下缘出现虚线移除区，进入变实、松手删除；触发器节点无移除。</li>
+<li><b>类型拒绝</b>：不兼容节点在库里即变暗不可拖（点按轻晃 + 原因提示）；因此<b>画布上不存在"拖进来才发现不行"</b>——拒绝发生在最早的一刻。链中段插入用同一规则按"该位置的当前类型"判定。</li>
+<li><b>键盘可达</b>：节点获得焦点后 ←/→ 换位、Delete 移除、Enter 打开右栏配置——磁性拖拽是增强，不是唯一路径。</li>
+<li><b>画布视口</b>（落地后按所有者反馈补充）：链条渲染在可变换的世界层上——初始视图自动居中（超宽链左对齐、垂直仍居中）；拖拽空白处平移，普通滚轮/触控板双指平移，Ctrl/⌘+滚轮（即触控板捏合）以指针为中心缩放（35%–200%）；右上角工具条提供 −/+/百分比复位/居中。网格背景随视图同步缩放平移；磁性命中基于屏幕坐标，任意缩放下无需换算。</li>
+</ul>
+
+<h2 id="s4"><span class="n">§4</span>与现有代码的映射（复用优先）</h2>
+<table><tr><th style="width:30%">现有</th><th style="width:22%">去向</th><th>说明</th></tr>
+<tr><td><code class="i">chainWalk.ts</code> / <code class="i">activityFit.ts</code> / <code class="i">itemTypeRegistry.ts</code></td><td><b>原样保留</b></td><td>类型推导即画布的数据源：连线标签 = <code class="i">steps[i].typeAfter</code>，节点库变暗 = <code class="i">classifyActivity</code> 结果。B1 收敛后它们已是通用集合运算，一行不用改。</td></tr>
+<tr><td>各触发器/活动的 <code class="i">FilterForm</code> / <code class="i">ConfigForm</code> / <code class="i">Summary</code></td><td><b>原样保留</b></td><td>Summary 进节点卡片，表单进右栏检查器。注册表结构（<code class="i">WorkflowTriggerUI</code>/<code class="i">WorkflowActivityUI</code>）不动。</td></tr>
+<tr><td><code class="i">WorkflowEditor.tsx</code>（模态壳）</td><td>重写为 <code class="i">WorkflowCanvasEditor</code></td><td>状态管理（drafts/chain/save）逻辑平移，渲染层换掉。</td></tr>
+<tr><td><code class="i">ActivityCard.tsx</code></td><td>重写为 <code class="i">CanvasNode</code></td><td>手风琴移除；卡片只剩 类别色 + 名称 + Summary + 状态点。</td></tr>
+<tr><td><code class="i">ActivityPicker.tsx</code>（弹窗）</td><td>重写为 <code class="i">NodePalette</code>（常驻左栏）</td><td>分组/搜索/AI 桥接标记逻辑平移。</td></tr>
+<tr><td>dnd-kit（已有依赖）</td><td><b>继续用</b></td><td>线性链用不上自由拓扑，<b>不引入 react-flow</b>（100KB+ 且约束更弱）。磁性插槽 = 自定义 collision detection + CSS 过渡，本页原型已验证手感。</td></tr></table>
+
+<h2 id="s5"><span class="n">§5</span>实施切法（沿用薄纵切纪律）</h2>
+<table><tr><th style="width:10%">批次</th><th>内容</th><th style="width:34%">做完之后</th></tr>
+<tr><td>A</td><td>路由页 + 三栏壳 + 画布静态渲染 + 右栏检查器（复用全部表单）+ 现有 dnd-kit 排序平移</td><td>新布局可用，配置不再跳动，链条全程可见；拖拽手感与现在持平</td></tr>
+<tr><td>B</td><td>磁性插槽（自定义 collision + 让位动画）+ 移除区 + 节点库变暗与原因提示 + 键盘操作</td><td>本页原型的完整手感进入真实页面</td></tr>
+<tr><td>C（可选）</td><td>空态引导 + "文件清洗"一键模板 + file-name-modifier 页"升级为清洗流程"入口（补上清洗设计 §6 的两个入口）</td><td>新用户从零到第一条可跑的链 &lt; 1 分钟</td></tr></table>
+<div class="rule ask"><b>待拍板</b>：① 承载走路由页还是全屏模态（建议路由页）；② 旧模态编辑器是直接替换还是保留一个版本作回退（建议直接替换，列表页入口不变，风险集中在编辑器内部）；③ 批次 C 是否随本次一起做。确认后按 A→B（→C）落地。</div>
+
+<footer style="margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(--line);padding-top:14px">Workflow 编辑器重设计 · 设计稿 v1 · 2026-09</footer>
+</div>
+
+<script>
+(function(){
+"use strict";
+var CATS = {trigger:{label:"触发器",cls:"c-trigger"},filter:{label:"过滤",cls:"c-filter"},transform:{label:"变换",cls:"c-transform"},action:{label:"动作",cls:"c-action"}};
+var TYPES = {
+ "fs.manualScan":{cat:"trigger",name:"手动文件系统扫描",badge:"目录：下载 · 仅文件 · 深度 1"},
+ "transform.fs.fileNameOp":{cat:"transform",name:"修改文件名",badge:'替换 " (1080p)" → ""'},
+ "transform.text.removeWrapped":{cat:"transform",name:"删除包装片段",badge:"[…] × 字幕组"},
+ "transform.text.removeTexts":{cat:"transform",name:"删除命中文本",badge:"广告词 · 包含"},
+ "transform.text.trim":{cat:"transform",name:"清理残留",badge:"空白 · 首尾 · 空括号"},
+ "transform.text.capture":{cat:"transform",name:"捕获变量",badge:"S(?<season>\\d+)"},
+ "transform.text.template":{cat:"transform",name:"按模板重建",badge:"{var:title} - …"},
+ "transform.fs.expandChildren":{cat:"transform",name:"展开为子条目",badge:"仅文件",oneToMany:true},
+ "action.fs.saveName":{cat:"action",name:"保存文件名（计划）",badge:"仅记计划，不碰磁盘"},
+ "action.common.createNotification":{cat:"action",name:"发送通知",badge:'标题："已清洗 {name}"'},
+ "transform.ai":{cat:"transform",name:"AI 变换",badge:"自动适配目标类型"},
+ "filter.subscription.titleContains":{cat:"filter",name:"按标题过滤",dis:"接受：订阅条目 —— 当前链上流动的是文件系统条目"},
+ "action.downloader.exhentai.enqueue":{cat:"action",name:"入队 ExHentai 下载",dis:"接受：ExHentai 画廊 —— 当前链上流动的是文件系统条目"}
+};
+var GROUPS = [
+ ["文件系统",["transform.fs.fileNameOp","transform.fs.expandChildren","action.fs.saveName"]],
+ ["文本",["transform.text.removeWrapped","transform.text.removeTexts","transform.text.trim","transform.text.capture","transform.text.template"]],
+ ["通用",["action.common.createNotification","transform.ai"]],
+ ["其他域（类型不兼容示例）",["filter.subscription.titleContains","action.downloader.exhentai.enqueue"]]
+];
+var FORMS = {
+ "fs.manualScan":[["扫描目录","input","D:/下载"],["产出","select","仅文件|仅目录|文件和目录"],["深度","input","1"],["扩展名过滤","input","mkv, mp4"]],
+ "transform.fs.fileNameOp":[["操作 1 · 替换","input",'" (1080p)" → ""'],["+ 添加操作","btn",""]],
+ "transform.text.removeWrapped":[["包装符","select","[ ]（内置）|（ ）（内置）"],["文本集","select","字幕组（12 条）|广告词（5 条）"],["命中方式","select","等于条目|包含条目|条目作为正则"]],
+ "transform.text.removeTexts":[["文本集","select","广告词（5 条）|字幕组（12 条）"],["命中方式","select","包含条目|等于条目"]],
+ "transform.text.trim":[["合并连续空白","check","1"],["去除首尾空白与分隔符","check","1"],["删除空的包装符对","check","1"]],
+ "transform.text.capture":[["正则","input","^(?<title>.+) S(?<season>\\d+)$"],["将捕获","chips","title,season"],["未命中时","select","不写变量，继续|视为该条目失败"]],
+ "transform.text.template":[["模板","input","{var:title} - S{var:season}E{var:ep:pad(2)}.{var:extension}"],["可用变量","chips","title,season,ep,extension,originalName,parentName"],["必需变量","input","title, season, ep"]],
+ "transform.fs.expandChildren":[["产出子条目","select","仅文件|仅目录|文件和目录"],["扩展名过滤","input",""],["目录自身也保留在链上","check",""]],
+ "action.fs.saveName":[["说明","static","把每个发生变化的名字记入本次运行的改名计划。仅预览——不会改动磁盘。"]],
+ "action.common.createNotification":[["标题","input","已清洗 {name}"],["正文（可选）","input",""]],
+ "transform.ai":[["目标条目类型","select","（自动适配下一节点）|文件系统条目"],["附加指令","input",""]]
+};
+var chain = ["fs.manualScan","transform.text.removeWrapped","transform.text.trim","action.fs.saveName"];
+var selected = 0;
+var $ = function(id){return document.getElementById(id)};
+var palette=$("palette"), chainEl=$("chain"), insp=$("insp"), rmzone=$("rmzone"), canvas=$("canvas"), lint=$("lint");
+
+function el(tag, cls, html){var e=document.createElement(tag); if(cls)e.className=cls; if(html!=null)e.innerHTML=html; return e}
+
+function renderPalette(){
+ palette.innerHTML="";
+ GROUPS.forEach(function(g){
+  palette.appendChild(el("div","grp",g[0]));
+  g[1].forEach(function(kind){
+   var t=TYPES[kind];
+   var item=el("div","pal-item"+(t.dis?" dis":""));
+   item.appendChild(el("span","dot")).style.background="var(--"+({trigger:"p",filter:"y",transform:"g",action:"a"})[t.cat]+")";
+   item.appendChild(el("span",null,t.name));
+   var why=el("div","pal-why",t.dis||"");
+   if(t.dis){
+    item.title=t.dis;
+    item.addEventListener("pointerdown",function(){item.classList.remove("shake");void item.offsetWidth;item.classList.add("shake");why.classList.add("show");setTimeout(function(){why.classList.remove("show")},2200)});
+   } else {
+    item.addEventListener("pointerdown",function(ev){startDrag(ev,kind,null,item)});
+   }
+   palette.appendChild(item);
+   if(t.dis)palette.appendChild(why);
+  });
+ });
+}
+
+function nodeCard(kind, idx){
+ var t=TYPES[kind];
+ var d=el("div","cnode "+CATS[t.cat].cls+(idx===selected?" sel":"")+(t.cat==="trigger"?" trigger":""));
+ d.appendChild(el("div","cat",CATS[t.cat].label));
+ d.appendChild(el("div","nm",t.name));
+ if(t.badge)d.appendChild(el("div","bd",t.badge));
+ if(t.cat!=="trigger"){
+  var del=el("button","del","×"); del.title="移除";
+  del.addEventListener("pointerdown",function(e){e.stopPropagation()});
+  del.addEventListener("click",function(e){e.stopPropagation();chain.splice(idx,1);if(selected>=chain.length)selected=chain.length-1;render()});
+  d.appendChild(del);
+ }
+ d.addEventListener("click",function(){selected=idx;render()});
+ if(t.cat!=="trigger"){
+  d.addEventListener("pointerdown",function(ev){ if(ev.target.classList.contains("del"))return; startDrag(ev,kind,idx,d)});
+ }
+ return d;
+}
+
+function edge(afterKind){
+ var e=el("div","edge");
+ e.appendChild(el("div","ln"));
+ var note = TYPES[afterKind]&&TYPES[afterKind].oneToMany ? "文件系统条目 · 1→N" : "文件系统条目";
+ e.appendChild(el("div","tp",note));
+ return e;
+}
+function slot(i){
+ var s=el("div","slot"); s.dataset.slot=i;
+ s.appendChild(el("div","in"));
+ return s;
+}
+
+function render(){
+ chainEl.innerHTML="";
+ chain.forEach(function(kind,i){
+  chainEl.appendChild(nodeCard(kind,i));
+  chainEl.appendChild(edge(kind));
+  chainEl.appendChild(slot(i+1));
+ });
+ var end=el("div","endcap");
+ var hasAction = chain.some(function(k){return TYPES[k].cat==="action"});
+ end.innerHTML = hasAction ? "产出：<b>改名计划</b><br>预览 → 应用 → 可撤销" : "（终点）";
+ chainEl.appendChild(end);
+ lint.textContent = hasAction ? "" : "提示：链上没有任何动作——运行不会产生效果";
+ renderInsp();
+}
+
+function renderInsp(){
+ insp.innerHTML="";
+ var kind=chain[selected];
+ if(!kind){insp.appendChild(el("div","insp-empty","点击链上的节点进行配置"));return}
+ var t=TYPES[kind];
+ insp.appendChild(el("h4",null,t.name));
+ var c=el("div","cat",CATS[t.cat].label); c.style.color="inherit"; insp.appendChild(c);
+ (FORMS[kind]||[]).forEach(function(f){
+  var w=el("div","fld");
+  if(f[1]==="static"){w.appendChild(el("div",null,'<span style="font-size:12px;color:var(--mut)">'+f[2]+"</span>"));insp.appendChild(w);return}
+  if(f[1]==="btn"){var b=el("button","pt-btn",f[0]);w.appendChild(b);insp.appendChild(w);return}
+  if(f[1]==="chips"){w.appendChild(el("label",null,f[0]));var ch=el("div","chips");f[2].split(",").forEach(function(x){ch.appendChild(el("span","chip",x))});w.appendChild(ch);insp.appendChild(w);return}
+  if(f[1]==="check"){var l=el("label",null);l.style.display="flex";l.style.alignItems="center";l.style.gap="6px";l.style.fontSize="12.5px";l.style.color="var(--ink)";var cb=document.createElement("input");cb.type="checkbox";cb.checked=!!f[2];cb.style.accentColor="var(--a)";l.appendChild(cb);l.appendChild(document.createTextNode(f[0]));w.appendChild(l);insp.appendChild(w);return}
+  w.appendChild(el("label",null,f[0]));
+  if(f[1]==="select"){var s=document.createElement("select");f[2].split("|").forEach(function(o){var op=document.createElement("option");op.textContent=o;s.appendChild(op)});w.appendChild(s)}
+  else {var inp=document.createElement("input");inp.type="text";inp.value=f[2];w.appendChild(inp)}
+  insp.appendChild(w);
+ });
+ if(t.cat!=="trigger"&&t.cat!=="static"){
+  var pol=el("div","fld");
+  var l2=el("label",null);l2.style.display="flex";l2.style.alignItems="center";l2.style.gap="6px";l2.style.fontSize="12px";l2.style.color="var(--mut)";
+  var cb2=document.createElement("input");cb2.type="checkbox";cb2.style.accentColor="var(--a)";
+  l2.appendChild(cb2);l2.appendChild(document.createTextNode("条目失败时跳过（而不是中止运行）"));
+  pol.appendChild(l2);insp.appendChild(pol);
+ }
+ insp.appendChild(el("div","insp-note","？ 这个节点能做什么 —— 打开帮助中心 · 工作流"));
+}
+
+/* ---------- drag with magnetic slots ---------- */
+/* Click vs drag: nothing visual happens on pointerdown. The ghost, the source
+   fade and the remove zone only materialize once the pointer travels DRAG_START
+   px — so a plain click stays a click (select the node), exactly the rule the
+   real implementation should keep. */
+var drag=null; /* {kind, fromIdx|null, ghost|null, activeSlot, startX, startY, live} */
+var MAGNET=90, DRAG_START=6;
+
+function startDrag(ev, kind, fromIdx, sourceEl){
+ ev.preventDefault();
+ drag={kind:kind, fromIdx:fromIdx, ghost:null, activeSlot:null, sourceEl:sourceEl,
+       startX:ev.clientX, startY:ev.clientY, live:false};
+ window.addEventListener("pointermove",onMove);
+ window.addEventListener("pointerup",onUp,{once:true});
+}
+function materialize(){
+ var g=drag.sourceEl.cloneNode(true);
+ g.classList.add("ghost"); g.style.width=drag.sourceEl.offsetWidth+"px";
+ document.body.appendChild(g);
+ drag.ghost=g; drag.live=true;
+ if(drag.fromIdx!=null){drag.sourceEl.classList.add("dragging"); rmzone.classList.add("show")}
+}
+function moveGhost(x,y){drag.ghost.style.left=x+"px";drag.ghost.style.top=y+"px"}
+function onMove(ev){
+ if(!drag.live){
+  if(Math.hypot(ev.clientX-drag.startX, ev.clientY-drag.startY)<DRAG_START)return;
+  materialize();
+ }
+ moveGhost(ev.clientX,ev.clientY);
+ var best=null,bestD=MAGNET;
+ chainEl.querySelectorAll(".slot").forEach(function(s){
+  var idx=parseInt(s.dataset.slot,10);
+  if(drag.fromIdx!=null&&(idx===drag.fromIdx||idx===drag.fromIdx+1))return; /* no-op positions */
+  var r=s.getBoundingClientRect();
+  var cx=r.left+r.width/2, cy=r.top+r.height/2;
+  var d=Math.hypot(ev.clientX-cx, ev.clientY-cy);
+  if(d<bestD){bestD=d;best=s}
+ });
+ if(drag.activeSlot&&drag.activeSlot!==best)drag.activeSlot.classList.remove("open");
+ drag.activeSlot=best;
+ if(best)best.classList.add("open");
+ if(drag.fromIdx!=null){
+  var rz=rmzone.getBoundingClientRect();
+  var hot=ev.clientX>=rz.left&&ev.clientX<=rz.right&&ev.clientY>=rz.top-8&&ev.clientY<=rz.bottom+8;
+  rmzone.classList.toggle("hot",hot);
+  drag.overRemove=hot;
+  if(hot&&drag.activeSlot){drag.activeSlot.classList.remove("open");drag.activeSlot=null}
+ }
+}
+function onUp(){
+ window.removeEventListener("pointermove",onMove);
+ var d=drag; drag=null;
+ if(!d.live){ /* it was a click, not a drag */
+  if(d.fromIdx!=null){selected=d.fromIdx;render()}
+  return;
+ }
+ d.ghost.remove();
+ rmzone.classList.remove("show","hot");
+ if(d.fromIdx!=null)d.sourceEl.classList.remove("dragging");
+ if(d.overRemove&&d.fromIdx!=null){
+  chain.splice(d.fromIdx,1);
+  if(selected>=chain.length)selected=chain.length-1;
+  render(); return;
+ }
+ if(d.activeSlot){
+  var to=parseInt(d.activeSlot.dataset.slot,10);
+  if(d.fromIdx==null){ chain.splice(to,0,d.kind); selected=to; }
+  else {
+   var k=chain.splice(d.fromIdx,1)[0];
+   if(to>d.fromIdx)to--;
+   chain.splice(to,0,k); selected=to;
+  }
+ }
+ render();
+}
+
+renderPalette();
+render();
+})();
+</script>
+</body></html>

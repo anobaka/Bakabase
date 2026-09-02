@@ -1,4 +1,5 @@
 import type { components } from "@/sdk/BApi2";
+import type { WorkflowItemTypeIndex } from "./itemTypeRegistry";
 
 import { WorkflowItemTypeBehavior } from "@/sdk/constants";
 import { getWorkflowActivityUI } from "./Activities";
@@ -23,11 +24,24 @@ export interface ChainWalkResult {
   allCompatible: boolean;
 }
 
-function accepts(descriptor: ActivityDescriptorVm | undefined, currentType: string): boolean {
+/**
+ * Mirror of the backend's accept rule (WorkflowDefinitionService.ValidateActivities). The
+ * algorithm is duplicated on purpose — it's tiny and stable — but the facts are not: tags and
+ * contracts both come from the backend descriptors, so this stays a generic set operation
+ * (capability map §9·决定 4).
+ */
+function accepts(
+  descriptor: ActivityDescriptorVm | undefined,
+  currentType: string,
+  itemTypes: WorkflowItemTypeIndex,
+): boolean {
   if (!descriptor) return false;
   const accepted = descriptor.acceptedInputItemTypes ?? [];
-  // Empty accept-list = accepts any concrete type (including the heterogeneous "any" tag).
-  return accepted.length === 0 || accepted.includes(currentType);
+  const contract = descriptor.acceptedItemInterface ?? null;
+  // Both surfaces empty = accepts any concrete type (including the heterogeneous "any" tag).
+  if (accepted.length === 0 && !contract) return true;
+  if (accepted.includes(currentType)) return true;
+  return !!contract && itemTypes.implementsInterfaces(currentType).includes(contract);
 }
 
 /**
@@ -40,6 +54,7 @@ export function walkChain(
   startType: string,
   activities: Array<{ kind: string; configJson: string }>,
   descriptorByKind: Map<string, ActivityDescriptorVm>,
+  itemTypes: WorkflowItemTypeIndex,
 ): ChainWalkResult {
   const steps: ChainStep[] = [];
   let currentType = startType;
@@ -49,7 +64,7 @@ export function walkChain(
     const { kind, configJson } = activities[i];
     const descriptor = descriptorByKind.get(kind);
     const typeBefore = currentType;
-    const compatible = accepts(descriptor, currentType);
+    const compatible = accepts(descriptor, currentType, itemTypes);
     if (!compatible) allCompatible = false;
 
     let typeAfter = currentType;
@@ -100,6 +115,10 @@ function peekNextSingleAcceptedType(
   return accepted.length === 1 ? accepted[0] : null;
 }
 
-export function descriptorAccepts(descriptor: ActivityDescriptorVm, currentType: string): boolean {
-  return accepts(descriptor, currentType);
+export function descriptorAccepts(
+  descriptor: ActivityDescriptorVm,
+  currentType: string,
+  itemTypes: WorkflowItemTypeIndex,
+): boolean {
+  return accepts(descriptor, currentType, itemTypes);
 }

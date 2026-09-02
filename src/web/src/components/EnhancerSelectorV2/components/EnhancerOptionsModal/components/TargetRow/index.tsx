@@ -16,8 +16,8 @@ import { createEnhancerTargetOptions } from "../../models";
 import TargetOptions from "./TargetOptions";
 
 import { Autocomplete, AutocompleteItem, Button, Chip, Tooltip } from "@/components/bakaui";
-import { SpecialTextType, StandardValueType } from "@/sdk/constants";
-import { IntegrateWithSpecialTextLabel } from "@/components/SpecialText";
+import { StandardValueType, WellKnownTextType } from "@/sdk/constants";
+import { IntegrateWithTextTypeLabel } from "@/components/TextType";
 import { buildLogger } from "@/components/utils";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import PropertyMatcher from "@/components/PropertyMatcher";
@@ -38,10 +38,10 @@ interface Props {
   readOnly?: boolean;
 }
 
-const StdValueSpecialTextIntegrationMap: {
-  [key in StandardValueType]?: SpecialTextType;
+const StdValueTextTypeIntegrationMap: {
+  [key in StandardValueType]?: WellKnownTextType;
 } = {
-  [StandardValueType.DateTime]: SpecialTextType.DateTime,
+  [StandardValueType.DateTime]: WellKnownTextType.DateTime,
 };
 
 const log = buildLogger("TargetRow");
@@ -114,7 +114,7 @@ const TargetRow = (props: Props) => {
     ? (dt ?? t<string>("enhancer.target.default.label"))
     : descriptor.name;
   const isDefaultTargetOfDynamic = descriptor.isDynamic && dt == undefined;
-  const integratedSpecialTextType = StdValueSpecialTextIntegrationMap[descriptor.valueType];
+  const integratedTextType = StdValueTextTypeIntegrationMap[descriptor.valueType];
 
   let property: IProperty | undefined;
 
@@ -198,8 +198,8 @@ const TargetRow = (props: Props) => {
                     name: descriptor.name,
                   }}
                 />
-                {integratedSpecialTextType && (
-                  <IntegrateWithSpecialTextLabel type={integratedSpecialTextType} />
+                {integratedTextType && (
+                  <IntegrateWithTextTypeLabel type={integratedTextType} />
                 )}
                 {descriptor.description && (
                   <Tooltip

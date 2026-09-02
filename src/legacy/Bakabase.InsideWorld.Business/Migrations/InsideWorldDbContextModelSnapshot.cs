@@ -240,6 +240,55 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.ToTable("ExtensionGroups");
                 });
 
+            modelBuilder.Entity("Bakabase.Abstractions.Models.Db.FileRenameEntry", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("AppliedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("From")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("RunId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Seq")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("To")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RunId");
+
+                    b.HasIndex("RunId", "Status");
+
+                    b.ToTable("FileRenameEntries");
+                });
+
             modelBuilder.Entity("Bakabase.Abstractions.Models.Db.MediaLibraryResourceMappingDbModel", b =>
                 {
                     b.Property<int>("Id")
@@ -799,29 +848,6 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.ToTable("SourceMetadataMappings");
                 });
 
-            modelBuilder.Entity("Bakabase.Abstractions.Models.Db.SpecialText", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("Type")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Value1")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Value2")
-                        .HasMaxLength(64)
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("SpecialTexts");
-                });
-
             modelBuilder.Entity("Bakabase.Abstractions.Models.Db.SteamAppDbModel", b =>
                 {
                     b.Property<int>("Id")
@@ -1064,6 +1090,29 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("PostParserTasks");
+                });
+
+            modelBuilder.Entity("Bakabase.InsideWorld.Business.Models.Db.LegacySpecialText", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Value1")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Value2")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("SpecialTexts");
                 });
 
             modelBuilder.Entity("Bakabase.InsideWorld.Business.Models.Db.ResourceCacheDbModel", b =>
@@ -2109,6 +2158,64 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.HasKey("SubscriptionId");
 
                     b.ToTable("SubscriptionSnapshots");
+                });
+
+            modelBuilder.Entity("Bakabase.Modules.Text.Abstractions.Models.Db.TextEntry", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TypeId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Value1")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Value2")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TypeId");
+
+                    b.ToTable("TextEntries");
+                });
+
+            modelBuilder.Entity("Bakabase.Modules.Text.Abstractions.Models.Db.TextType", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Shape")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("WellKnown")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name");
+
+                    b.HasIndex("WellKnown");
+
+                    b.ToTable("TextTypes");
                 });
 
             modelBuilder.Entity("Bakabase.Modules.Workflow.Abstractions.Models.Db.WorkflowActivityDbModel", b =>

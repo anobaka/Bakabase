@@ -28,4 +28,13 @@ export class WorkflowItemTypeIndex {
   displayName(itemType: string): string {
     return this.byType.get(itemType)?.displayName ?? itemType;
   }
+
+  /**
+   * Capability contracts the type implements (e.g. ["ITextWorkpiece"]). Matched against
+   * activities' `acceptedItemInterface` — the facts come from the backend descriptors, so
+   * this side stays a generic set lookup (capability map §9·决定 4).
+   */
+  implementsInterfaces(itemType: string): string[] {
+    return this.byType.get(itemType)?.implementsInterfaces ?? [];
+  }
 }

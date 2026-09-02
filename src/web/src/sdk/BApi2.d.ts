@@ -5728,70 +5728,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/special-text": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["GetAllSpecialTexts"];
-        put?: never;
-        post: operations["AddSpecialText"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/special-text/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: operations["PatchSpecialText"];
-        post?: never;
-        delete: operations["DeleteSpecialText"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/special-text/prefabs": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["AddSpecialTextPrefabs"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/special-text/pretreatment": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["PretreatText"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/steam-app": {
         parameters: {
             query?: never;
@@ -5962,6 +5898,134 @@ export interface paths {
         get: operations["GetTampermonkeyScript"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/text/type": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAllTextTypes"];
+        put?: never;
+        post: operations["AddTextType"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/text/type/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["RenameTextType"];
+        post?: never;
+        delete: operations["DeleteTextType"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/text/type/{typeId}/entry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetTextEntries"];
+        put?: never;
+        post: operations["AddTextEntry"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/text/type/{typeId}/entry/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AddTextEntries"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/text/entry/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["PatchTextEntry"];
+        post?: never;
+        delete: operations["DeleteTextEntry"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/text/type/{typeId}/set": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ResolveTextSet"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/text/prefabs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AddTextPrefabEntries"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/text/clean": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CleanText"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6256,6 +6320,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/workflow/{id}/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RunWorkflowManually"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/workflow/activities": {
         parameters: {
             query?: never;
@@ -6282,6 +6362,70 @@ export interface paths {
         get: operations["GetWorkflowItemTypes"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workflow/run/{runId}/file-rename-entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetWorkflowRunFileRenameEntries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workflow/file-rename-entry/{id}/excluded": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["SetFileRenameEntryExcluded"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workflow/run/{runId}/file-rename-entries/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ApplyWorkflowRunFileRenames"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workflow/run/{runId}/file-rename-entries/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["UndoWorkflowRunFileRenames"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6456,6 +6600,12 @@ export interface components {
         "Bakabase.Abstractions.Models.Domain.Constants.EnhancementRecordStatus": 1 | 2;
         /**
          * Format: int32
+         * @description [1: Pending, 2: Conflict, 3: Excluded, 4: Applied, 5: Failed, 6: Undone]
+         * @enum {integer}
+         */
+        "Bakabase.Abstractions.Models.Domain.Constants.FileRenameStatus": 1 | 2 | 3 | 4 | 5 | 6;
+        /**
+         * Format: int32
          * @description [1: Simple, 2: Advanced]
          * @enum {integer}
          */
@@ -6594,16 +6744,22 @@ export interface components {
         "Bakabase.Abstractions.Models.Domain.Constants.SearchOperation": 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18;
         /**
          * Format: int32
-         * @description [1: Useless, 3: Wrapper, 4: Standardization, 6: Volume, 7: Trim, 8: DateTime, 9: Language]
-         * @enum {integer}
-         */
-        "Bakabase.Abstractions.Models.Domain.Constants.SpecialTextType": 1 | 3 | 4 | 6 | 7 | 8 | 9;
-        /**
-         * Format: int32
          * @description [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag]
          * @enum {integer}
          */
         "Bakabase.Abstractions.Models.Domain.Constants.StandardValueType": 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+        /**
+         * Format: int32
+         * @description [1: Values, 2: DelimiterPair, 3: MappingPair]
+         * @enum {integer}
+         */
+        "Bakabase.Abstractions.Models.Domain.Constants.TextTypeShape": 1 | 2 | 3;
+        /**
+         * Format: int32
+         * @description [1: Useless, 3: Wrapper, 4: Standardization, 6: Volume, 7: Trim, 8: DateTime, 9: Language]
+         * @enum {integer}
+         */
+        "Bakabase.Abstractions.Models.Domain.Constants.WellKnownTextType": 1 | 3 | 4 | 6 | 7 | 8 | 9;
         "Bakabase.Abstractions.Models.Domain.CustomProperty": {
             /** Format: int32 */
             id: number;
@@ -7003,12 +7159,37 @@ export interface components {
             /** Format: int32 */
             targetPropertyId: number;
         };
-        "Bakabase.Abstractions.Models.Domain.SpecialText": {
+        "Bakabase.Abstractions.Models.Domain.TextEntryValue": {
             /** Format: int32 */
             id: number;
+            /** Format: int32 */
+            typeId: number;
             value1: string;
             value2?: string;
-            type: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.SpecialTextType"];
+        };
+        "Bakabase.Abstractions.Models.Domain.TextPair": {
+            value1: string;
+            value2: string;
+        };
+        "Bakabase.Abstractions.Models.Domain.TextSet": {
+            /** Format: int32 */
+            typeId: number;
+            shape: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.TextTypeShape"];
+            values: string[];
+            pairs: components["schemas"]["Bakabase.Abstractions.Models.Domain.TextPair"][];
+        };
+        "Bakabase.Abstractions.Models.Domain.TextTypeDescriptor": {
+            /** Format: int32 */
+            id: number;
+            name: string;
+            wellKnown?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.WellKnownTextType"];
+            shape: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.TextTypeShape"];
+            description?: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: int32 */
+            entryCount: number;
+            readonly isBuiltin: boolean;
         };
         "Bakabase.Abstractions.Models.Dto.CustomPropertyAddOrPutDto": {
             name: string;
@@ -7115,15 +7296,6 @@ export interface components {
             toId: number;
             keepMediaLibrary: boolean;
             deleteSourceResource: boolean;
-        };
-        "Bakabase.Abstractions.Models.Input.SpecialTextAddInputModel": {
-            type: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.SpecialTextType"];
-            value1: string;
-            value2?: string;
-        };
-        "Bakabase.Abstractions.Models.Input.SpecialTextPatchInputModel": {
-            value1?: string;
-            value2?: string;
         };
         "Bakabase.Abstractions.Models.Input.ThirdPartyContentTrackerMarkViewedInputModel": {
             domainKey: string;
@@ -9684,6 +9856,12 @@ export interface components {
         };
         /**
          * Format: int32
+         * @description [1: OneToOne, 2: OneToMany]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants.WorkflowActivityCardinality": 1 | 2;
+        /**
+         * Format: int32
          * @description [1: Filter, 2: Action, 3: Transform]
          * @enum {integer}
          */
@@ -9735,14 +9913,20 @@ export interface components {
             enabled?: boolean;
             activities?: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowActivityInputModel"][];
         };
+        "Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowManualRunInputModel": {
+            argsJson?: string;
+        };
         "Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowActivityDescriptorViewModel": {
             kind: string;
             displayName: string;
             category: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants.WorkflowActivityCategory"];
             group: string;
             acceptedInputItemTypes: string[];
+            acceptedItemInterface?: string;
             outputBehavior: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants.WorkflowItemTypeBehavior"];
+            cardinality: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants.WorkflowActivityCardinality"];
             fixedOutputItemType?: string;
+            isDestructive: boolean;
         };
         "Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowActivityViewModel": {
             /** Format: int32 */
@@ -9773,6 +9957,7 @@ export interface components {
             itemType: string;
             displayName: string;
             fields: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowItemTypeFieldViewModel"][];
+            implementsInterfaces: string[];
         };
         "Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowItemTypeFieldViewModel": {
             name: string;
@@ -9802,6 +9987,8 @@ export interface components {
         "Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowTriggerDescriptorViewModel": {
             kind: string;
             displayName: string;
+            requiresManualPayload: boolean;
+            payloadFields: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowItemTypeFieldViewModel"][];
         };
         "Bakabase.Service.Controllers.AppDataPathController+RelocateRequest": {
             targetPath: string;
@@ -10068,6 +10255,22 @@ export interface components {
             search: components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
             displayMode: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.FilterDisplayMode"];
         };
+        "Bakabase.Service.Models.Input.TextEntryAddInputModel": {
+            value1: string;
+            value2?: string;
+        };
+        "Bakabase.Service.Models.Input.TextEntryPatchInputModel": {
+            value1?: string;
+            value2?: string;
+        };
+        "Bakabase.Service.Models.Input.TextTypeAddInputModel": {
+            name: string;
+            shape: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.TextTypeShape"];
+            description?: string;
+        };
+        "Bakabase.Service.Models.Input.TextTypePatchInputModel": {
+            name: string;
+        };
         "Bakabase.Service.Models.View.AnalyticsAppInfoViewModel": {
             enableAnonymousDataTracking: boolean;
             deviceId: string;
@@ -10296,6 +10499,23 @@ export interface components {
             /** Format: int32 */
             height?: number;
             error?: string;
+        };
+        "Bakabase.Service.Models.View.FileRenameEntryViewModel": {
+            /** Format: int32 */
+            id: number;
+            /** Format: int32 */
+            runId: number;
+            /** Format: int32 */
+            seq: number;
+            path: string;
+            from: string;
+            to: string;
+            status: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.FileRenameStatus"];
+            error?: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            appliedAt?: string;
         };
         "Bakabase.Service.Models.View.FileRenameResult": {
             oldPath: string;
@@ -10613,6 +10833,18 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.SourceMetadataMapping"][];
         };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.TextEntryValue]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.TextEntryValue"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.TextTypeDescriptor]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.TextTypeDescriptor"][];
+        };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerStatusViewModel]": {
             /** Format: int32 */
             code: number;
@@ -10858,6 +11090,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Models.View.CustomPropertyViewModel"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.FileRenameEntryViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.FileRenameEntryViewModel"][];
         };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.FileRenameResult]": {
             /** Format: int32 */
@@ -11159,11 +11397,23 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceFileSystemCache"];
         };
-        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.SpecialText]": {
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.TextEntryValue]": {
             /** Format: int32 */
             code: number;
             message?: string;
-            data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.SpecialText"];
+            data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.TextEntryValue"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.TextSet]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.TextSet"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.TextTypeDescriptor]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.TextTypeDescriptor"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.CacheOverviewViewModel]": {
             /** Format: int32 */
@@ -11585,6 +11835,12 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowDefinitionViewModel"];
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowRunViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowRunViewModel"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.AppDataPathController+ValidateResponse]": {
             /** Format: int32 */
             code: number;
@@ -11638,6 +11894,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Models.View.FilePlayabilityViewModel"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.FileRenameEntryViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.FileRenameEntryViewModel"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.MobileAppDownloadsViewModel]": {
             /** Format: int32 */
@@ -11707,14 +11969,6 @@ export interface components {
                 [key: string]: {
                     [key: string]: components["schemas"]["Bakabase.Modules.StandardValue.Models.View.StandardValueConversionRuleViewModel"][];
                 } | null;
-            };
-        };
-        "Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.Int32,System.Collections.Generic.List`1[Bakabase.Abstractions.Models.Domain.SpecialText]]]": {
-            /** Format: int32 */
-            code: number;
-            message?: string;
-            data?: {
-                [key: string]: components["schemas"]["Bakabase.Abstractions.Models.Domain.SpecialText"][] | null;
             };
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.Int32,System.Decimal]]": {
@@ -24453,158 +24707,6 @@ export interface operations {
             };
         };
     };
-    GetAllSpecialTexts: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.Int32,System.Collections.Generic.List`1[Bakabase.Abstractions.Models.Domain.SpecialText]]]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.Int32,System.Collections.Generic.List`1[Bakabase.Abstractions.Models.Domain.SpecialText]]]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.Int32,System.Collections.Generic.List`1[Bakabase.Abstractions.Models.Domain.SpecialText]]]"];
-                };
-            };
-        };
-    };
-    AddSpecialText: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Input.SpecialTextAddInputModel"];
-                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Input.SpecialTextAddInputModel"];
-                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Input.SpecialTextAddInputModel"];
-                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Input.SpecialTextAddInputModel"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.SpecialText]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.SpecialText]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.SpecialText]"];
-                };
-            };
-        };
-    };
-    PatchSpecialText: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Input.SpecialTextPatchInputModel"];
-                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Input.SpecialTextPatchInputModel"];
-                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Input.SpecialTextPatchInputModel"];
-                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Input.SpecialTextPatchInputModel"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
-    DeleteSpecialText: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
-    AddSpecialTextPrefabs: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
-    PretreatText: {
-        parameters: {
-            query?: {
-                text?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
-                };
-            };
-        };
-    };
     GetAllSteamApps: {
         parameters: {
             query?: {
@@ -24972,6 +25074,323 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    GetAllTextTypes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.TextTypeDescriptor]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.TextTypeDescriptor]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.TextTypeDescriptor]"];
+                };
+            };
+        };
+    };
+    AddTextType: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.TextTypeAddInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.TextTypeAddInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.TextTypeAddInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.TextTypeAddInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.TextTypeDescriptor]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.TextTypeDescriptor]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.TextTypeDescriptor]"];
+                };
+            };
+        };
+    };
+    RenameTextType: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.TextTypePatchInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.TextTypePatchInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.TextTypePatchInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.TextTypePatchInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    DeleteTextType: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetTextEntries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                typeId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.TextEntryValue]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.TextEntryValue]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.TextEntryValue]"];
+                };
+            };
+        };
+    };
+    AddTextEntry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                typeId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.TextEntryAddInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.TextEntryAddInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.TextEntryAddInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.TextEntryAddInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.TextEntryValue]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.TextEntryValue]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.TextEntryValue]"];
+                };
+            };
+        };
+    };
+    AddTextEntries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                typeId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.TextEntryAddInputModel"][];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.TextEntryAddInputModel"][];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.TextEntryAddInputModel"][];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.TextEntryAddInputModel"][];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    PatchTextEntry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.TextEntryPatchInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.TextEntryPatchInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.TextEntryPatchInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.TextEntryPatchInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    DeleteTextEntry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    ResolveTextSet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                typeId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.TextSet]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.TextSet]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.TextSet]"];
+                };
+            };
+        };
+    };
+    AddTextPrefabEntries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    CleanText: {
+        parameters: {
+            query?: {
+                text?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
+                };
             };
         };
     };
@@ -25519,6 +25938,37 @@ export interface operations {
             };
         };
     };
+    RunWorkflowManually: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowManualRunInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowManualRunInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowManualRunInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowManualRunInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowRunViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowRunViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowRunViewModel]"];
+                };
+            };
+        };
+    };
     GetWorkflowActivities: {
         parameters: {
             query?: never;
@@ -25559,6 +26009,104 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowItemTypeDescriptorViewModel]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowItemTypeDescriptorViewModel]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowItemTypeDescriptorViewModel]"];
+                };
+            };
+        };
+    };
+    GetWorkflowRunFileRenameEntries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.FileRenameEntryViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.FileRenameEntryViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.FileRenameEntryViewModel]"];
+                };
+            };
+        };
+    };
+    SetFileRenameEntryExcluded: {
+        parameters: {
+            query?: {
+                excluded?: boolean;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.FileRenameEntryViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.FileRenameEntryViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.FileRenameEntryViewModel]"];
+                };
+            };
+        };
+    };
+    ApplyWorkflowRunFileRenames: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.FileRenameEntryViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.FileRenameEntryViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.FileRenameEntryViewModel]"];
+                };
+            };
+        };
+    };
+    UndoWorkflowRunFileRenames: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.FileRenameEntryViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.FileRenameEntryViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.FileRenameEntryViewModel]"];
                 };
             };
         };

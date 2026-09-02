@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
@@ -19,7 +20,8 @@ public class WorkflowController(
     IWorkflowDefinitionService service,
     IWorkflowTriggerRegistry triggers,
     IWorkflowActivityRegistry activities,
-    IWorkflowItemTypeRegistry itemTypes) : Controller
+    IWorkflowItemTypeRegistry itemTypes,
+    Bakabase.Abstractions.Services.IFileRenameEntryService fileRenameEntries) : Controller
 {
     [HttpGet]
     [SwaggerOperation(OperationId = "SearchWorkflows")]
@@ -61,7 +63,21 @@ public class WorkflowController(
     [SwaggerOperation(OperationId = "DeleteWorkflow")]
     public async Task<BaseResponse> Delete(int id)
     {
+        // Capture the run ids first: DeleteAsync (which may refuse while a run executes)
+        // removes the run rows, and the rename entries keyed on them must not be orphaned.
+        var runIds = new List<int>();
+        var page = 1;
+        while (true)
+        {
+            var runs = await service.SearchRunsAsync(new WorkflowRunSearchInputModel
+                {WorkflowDefinitionId = id, PageIndex = page, PageSize = 200});
+            runIds.AddRange(runs.Data!.Select(r => r.Id));
+            if (runs.Data!.Count < 200) break;
+            page++;
+        }
+
         await service.DeleteAsync(id);
+        await fileRenameEntries.DeleteByRunIds(runIds);
         return BaseResponseBuilder.Ok;
     }
 
@@ -70,7 +86,27 @@ public class WorkflowController(
     public ListResponse<WorkflowTriggerDescriptorViewModel> GetTriggers()
     {
         return new ListResponse<WorkflowTriggerDescriptorViewModel>(triggers.All.Select(t =>
-            new WorkflowTriggerDescriptorViewModel { Kind = t.Kind, DisplayName = t.DisplayName }));
+            new WorkflowTriggerDescriptorViewModel
+            {
+                Kind = t.Kind,
+                DisplayName = t.DisplayName,
+                RequiresManualPayload = t.RequiresManualPayload,
+                PayloadFields = t.RequiresManualPayload ? BuildFieldVms(t.PayloadType) : [],
+            }));
+    }
+
+    /// <summary>
+    /// Start a run of this definition now. Neither the trigger filter nor the enabled flag
+    /// applies — the user named this definition, and one being switched off is exactly when
+    /// running it by hand is most useful.
+    /// </summary>
+    [HttpPost("{id:int}/run")]
+    [SwaggerOperation(OperationId = "RunWorkflowManually")]
+    public async Task<SingletonResponse<WorkflowRunViewModel>> RunManually(
+        int id, [FromBody] WorkflowManualRunInputModel model, CancellationToken ct)
+    {
+        var run = await service.RunManuallyAsync(id, model.ArgsJson, ct);
+        return new SingletonResponse<WorkflowRunViewModel>(WorkflowRunViewModel.From(run));
     }
 
     [HttpGet("activities")]
@@ -87,8 +123,11 @@ public class WorkflowController(
                 Category = a.Category,
                 Group = a.Group,
                 AcceptedInputItemTypes = a.AcceptedInputItemTypes.ToList(),
+                AcceptedItemInterface = a.AcceptedItemInterface?.Name,
                 OutputBehavior = a.OutputBehavior,
+                Cardinality = a.Cardinality,
                 FixedOutputItemType = a.FixedOutputItemType,
+                IsDestructive = a.IsDestructive,
             }));
     }
 
@@ -100,9 +139,27 @@ public class WorkflowController(
             itemTypes.All.Select(BuildItemTypeVm));
     }
 
-    private static WorkflowItemTypeDescriptorViewModel BuildItemTypeVm(IWorkflowItemTypeDescriptor d)
-    {
-        var fields = d.ClrType
+    private static WorkflowItemTypeDescriptorViewModel BuildItemTypeVm(IWorkflowItemTypeDescriptor d) =>
+        new()
+        {
+            ItemType = d.ItemType,
+            DisplayName = d.DisplayName,
+            Fields = BuildFieldVms(d.ClrType),
+            // Only interfaces deriving from the contract marker — CLR plumbing (IEquatable…)
+            // must not leak into the editor's compatibility metadata.
+            ImplementsInterfaces = d.ClrType.GetInterfaces()
+                .Where(i => typeof(IWorkflowItemContract).IsAssignableFrom(i) &&
+                            i != typeof(IWorkflowItemContract))
+                .Select(i => i.Name)
+                .ToList(),
+        };
+
+    /// <summary>
+    /// Reflect a CLR type into the field list the UI renders — the type pill for item types, the
+    /// payload hint for manual runs. Names are camel-cased to match how the value is serialized.
+    /// </summary>
+    private static List<WorkflowItemTypeFieldViewModel> BuildFieldVms(Type clrType) =>
+        clrType
             .GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
             .Where(p => p.CanRead)
             .Select(p => new WorkflowItemTypeFieldViewModel
@@ -112,13 +169,6 @@ public class WorkflowController(
                 Nullable = IsNullableProperty(p),
             })
             .ToList();
-        return new WorkflowItemTypeDescriptorViewModel
-        {
-            ItemType = d.ItemType,
-            DisplayName = d.DisplayName,
-            Fields = fields,
-        };
-    }
 
     private static string FriendlyTypeName(Type t)
     {
@@ -148,6 +198,51 @@ public class WorkflowController(
         if (p.PropertyType.IsValueType) return false;
         var ctx = new System.Reflection.NullabilityInfoContext();
         return ctx.Create(p).ReadState == System.Reflection.NullabilityState.Nullable;
+    }
+
+    /// <summary>
+    /// The rename plan a run's saveName step recorded. One endpoint for both faces of the
+    /// RenamePlanPanel — the interactive confirm surface and the read-only run-detail view.
+    /// </summary>
+    [HttpGet("run/{runId:int}/file-rename-entries")]
+    [SwaggerOperation(OperationId = "GetWorkflowRunFileRenameEntries")]
+    public async Task<ListResponse<Bakabase.Service.Models.View.FileRenameEntryViewModel>> GetRunFileRenameEntries(
+        int runId)
+    {
+        var rows = await fileRenameEntries.GetByRunId(runId);
+        return new ListResponse<Bakabase.Service.Models.View.FileRenameEntryViewModel>(
+            rows.Select(Bakabase.Service.Models.View.FileRenameEntryViewModel.FromDb));
+    }
+
+    /// <summary>The confirm panel's checkbox: Pending ↔ Excluded.</summary>
+    [HttpPut("file-rename-entry/{id:int}/excluded")]
+    [SwaggerOperation(OperationId = "SetFileRenameEntryExcluded")]
+    public async Task<SingletonResponse<Bakabase.Service.Models.View.FileRenameEntryViewModel>> SetFileRenameEntryExcluded(
+        int id, [FromQuery] bool excluded)
+    {
+        var row = await fileRenameEntries.SetExcluded(id, excluded);
+        return new SingletonResponse<Bakabase.Service.Models.View.FileRenameEntryViewModel>(
+            Bakabase.Service.Models.View.FileRenameEntryViewModel.FromDb(row));
+    }
+
+    /// <summary>Execute the run's Pending renames on disk and return the updated plan.</summary>
+    [HttpPost("run/{runId:int}/file-rename-entries/apply")]
+    [SwaggerOperation(OperationId = "ApplyWorkflowRunFileRenames")]
+    public async Task<ListResponse<Bakabase.Service.Models.View.FileRenameEntryViewModel>> ApplyRunFileRenames(int runId)
+    {
+        var rows = await fileRenameEntries.ApplyRun(runId);
+        return new ListResponse<Bakabase.Service.Models.View.FileRenameEntryViewModel>(
+            rows.Select(Bakabase.Service.Models.View.FileRenameEntryViewModel.FromDb));
+    }
+
+    /// <summary>Revert the run's Applied renames and return the updated plan.</summary>
+    [HttpPost("run/{runId:int}/file-rename-entries/undo")]
+    [SwaggerOperation(OperationId = "UndoWorkflowRunFileRenames")]
+    public async Task<ListResponse<Bakabase.Service.Models.View.FileRenameEntryViewModel>> UndoRunFileRenames(int runId)
+    {
+        var rows = await fileRenameEntries.UndoRun(runId);
+        return new ListResponse<Bakabase.Service.Models.View.FileRenameEntryViewModel>(
+            rows.Select(Bakabase.Service.Models.View.FileRenameEntryViewModel.FromDb));
     }
 
     [HttpGet("{id:int}/runs")]

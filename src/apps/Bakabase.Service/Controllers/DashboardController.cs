@@ -33,7 +33,7 @@ namespace Bakabase.Service.Controllers
         private readonly IThirdPartyService _thirdPartyService;
         private readonly IBOptions<FileSystemOptions> _fsOptions;
         private readonly IAliasService _aliasService;
-        private readonly ISpecialTextService _specialTextService;
+        private readonly ITextVocabularyService _textVocabularyService;
         private readonly PasswordService _passwordService;
         private readonly IPropertyService _propertyService;
         private readonly IBakabaseLocalizer _localizer;
@@ -41,7 +41,7 @@ namespace Bakabase.Service.Controllers
         private readonly IMediaLibraryResourceMappingService _mediaLibraryResourceMappingService;
 
         public DashboardController(IResourceService resourceService, DownloadTaskService downloadTaskService, IThirdPartyService thirdPartyService,
-            IBOptions<FileSystemOptions> fsOptions, IAliasService aliasService, ISpecialTextService specialTextService, PasswordService passwordService,
+            IBOptions<FileSystemOptions> fsOptions, IAliasService aliasService, ITextVocabularyService textVocabularyService, PasswordService passwordService,
             IPropertyService propertyService, IBakabaseLocalizer localizer, IMediaLibraryV2Service mediaLibraryV2Service,
             IMediaLibraryResourceMappingService mediaLibraryResourceMappingService)
         {
@@ -50,7 +50,7 @@ namespace Bakabase.Service.Controllers
             _thirdPartyService = thirdPartyService;
             _fsOptions = fsOptions;
             _aliasService = aliasService;
-            _specialTextService = specialTextService;
+            _textVocabularyService = textVocabularyService;
             _passwordService = passwordService;
             _propertyService = propertyService;
             _localizer = localizer;
@@ -136,12 +136,12 @@ namespace Bakabase.Service.Controllers
                     fileMoverTargets.Count);
             }
 
-            // Alias, Special Text
+            // Alias, text vocabulary
             var aliasCount = await _aliasService.Count();
-            var stCount = await _specialTextService.Count();
+            var textEntryCount = (await _textVocabularyService.GetTypes()).Sum(t => t.EntryCount);
             ds.OtherCounts.Add([
                 new("Aliases", aliasCount),
-                new("SpecialTexts", stCount)
+                new("Text entries", textEntryCount)
             ]);
             
             // Passwords

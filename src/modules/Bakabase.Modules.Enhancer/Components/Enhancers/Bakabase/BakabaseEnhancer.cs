@@ -1,4 +1,5 @@
 ﻿using System.Text.RegularExpressions;
+using Bakabase.Abstractions.Components.Text;
 using Bakabase.Abstractions.Components.Cover;
 using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Components.Localization;
@@ -15,21 +16,23 @@ using Bakabase.Modules.StandardValue.Abstractions.Services;
 using Bootstrap.Extensions;
 using Bootstrap.Models;
 using Microsoft.Extensions.Logging;
+using Bakabase.Abstractions.Extensions;
 
 namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase
 {
     public class BakabaseEnhancer(
         ILoggerFactory loggerFactory,
-        ISpecialTextService specialTextService,
+        ITextVocabularyService textVocabularyService,
         IBakabaseLocalizer localizer,
         IFileManager fileManager,
         ICoverDiscoverer coverDiscoverer,
         IStandardValueService standardValueService,
+        ITextOps textOps,
         IServiceProvider serviceProvider
     )
         : AbstractKeywordEnhancer<BakabaseEnhancerTarget, BakabaseEnhancerContext, IKeywordEnhancerOptions>(
             loggerFactory,
-            fileManager, standardValueService, specialTextService, serviceProvider)
+            fileManager, standardValueService, textOps, serviceProvider)
     {
         protected override EnhancerId TypedId => EnhancerId.Bakabase;
         private readonly IBakabaseLocalizer _localizer = localizer;
@@ -211,7 +214,7 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase
         {
             foreach (var wc in wcs)
             {
-                var dt = await specialTextService.TryToParseDateTime(wc.Content);
+                var dt = await textOps.TryParseDateTime(wc.Content);
                 if (dt.HasValue)
                 {
                     name.Value = $"{name.Value[..wc.Index]}{name.Value[(wc.Index + wc.ContentWithWrapper.Length)..]}";
@@ -227,10 +230,7 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase
         private async Task<(string? Language, string RestName)> GetAndRemoveLanguageWithWrapper(string name,
             IEnumerable<WrappedContent> wcs)
         {
-            var languageWords =
-                (await specialTextService.GetAll(x => x.Type == SpecialTextType.Language, false)).ToDictionary(
-                    t => t.Value1,
-                    t => t.Value2!);
+            var languageWords = (await textVocabularyService.ResolveSet(WellKnownTextType.Language)).ToPairMap();
 
             foreach (var wc in wcs)
             {
@@ -296,11 +296,11 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase
 
         private async Task<bool> IsValid(string name)
         {
-            var wrappers = await specialTextService.GetAll(x => x.Type == SpecialTextType.Wrapper);
+            var wrappers = (await textVocabularyService.ResolveSet(WellKnownTextType.Wrapper)).Pairs;
             foreach (var wrapper in wrappers)
             {
                 var left = wrapper.Value1;
-                var right = wrapper.Value2!;
+                var right = wrapper.Value2;
                 var layer = 0;
                 for (var i = 0; i < name.Length; i++)
                 {
@@ -332,11 +332,11 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase
         private async Task<(string VolumeName, string VolumeTitle, string Match, int Index)?> TryToParseVolume(
             string str)
         {
-            var volumeTexts = await specialTextService.GetAll(x => x.Type == SpecialTextType.Volume, false);
+            var volumeTexts = (await textVocabularyService.ResolveSet(WellKnownTextType.Volume)).Values;
             foreach (var v in volumeTexts)
             {
                 var reg = new System.Text.RegularExpressions.Regex(
-                    $"(?<volumeIndexName>{v.Value1})(?<volumeTitle>.*)$");
+                    $"(?<volumeIndexName>{v})(?<volumeTitle>.*)$");
                 var match = reg.Match(str);
                 if (match.Success)
                 {
@@ -357,12 +357,12 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase
 
         private async Task<WrappedContent[]> MatchAllContentsWithWrappers(string str)
         {
-            var wrappers = await specialTextService.GetAll(x => x.Type == SpecialTextType.Wrapper);
+            var wrappers = (await textVocabularyService.ResolveSet(WellKnownTextType.Wrapper)).Pairs;
 
             var matches = new List<(string Left, string Right, Match Match, string Content)>();
             foreach (var w in wrappers)
             {
-                var r = StringHelpers.BuildRegexWithWrapper(w.Value1, w.Value2!, ".+?");
+                var r = StringHelpers.BuildRegexWithWrapper(w.Value1, w.Value2, ".+?");
                 var m = r.Match(str);
                 var idx = 0;
                 while (m.Success)

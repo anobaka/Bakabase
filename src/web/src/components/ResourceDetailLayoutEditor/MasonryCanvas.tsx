@@ -1,7 +1,7 @@
 import type { BlockPlacement, DetailLayoutConfig, SectionId } from "./types";
 
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { AiOutlineClose, AiOutlineHolder, AiOutlinePlus } from "react-icons/ai";
+import { AiOutlineClose, AiOutlinePlus } from "react-icons/ai";
 import { TbWaveSine } from "react-icons/tb";
 import { Popover, Tooltip, PopoverTrigger, PopoverContent } from "@heroui/react";
 import { useTranslation } from "react-i18next";
@@ -17,36 +17,49 @@ const DESIGNER_ROW_UNIT = "square" as const; // sentinel, computed from colUnit
 // to drop or add new blocks without the canvas feeling cramped.
 const TRAILING_EMPTY_ROWS = 4;
 
+// A press only becomes a drag/resize once the pointer travels this far, so a
+// plain click on a block stays inert instead of nudging the layout.
+const DRAG_START = 6;
+
 type Props = {
   config: DetailLayoutConfig;
   renderSection: (id: SectionId) => React.ReactNode;
   onConfigChange?: (next: DetailLayoutConfig) => void;
 };
 
-type DragState = {
+// One in-flight pointer gesture (whole-block move, or edge/corner resize).
+// A session is created on pointerdown and torn down through a single exit —
+// pointerup commits, pointercancel/unmount abort — so no listener, preview
+// or half-applied state can outlive its gesture.
+type Session = {
   id: SectionId;
-  // Offset (in pixels) from the block's top-left to the pointer at drag start.
-  grabOffsetX: number;
-  grabOffsetY: number;
-};
-
-type ResizeState = {
-  id: SectionId;
-  axis: "x" | "y" | "xy";
-  startPointerX: number;
-  startPointerY: number;
-  startColSpan: number;
-  startRowSpan: number;
-  startColStart: number;
-};
+  startX: number;
+  startY: number;
+  /** Past the click threshold — the gesture is visibly acting on the layout. */
+  live: boolean;
+  /** Last applied grid placement, to skip settle + render on same-cell moves. */
+  lastKey: string | null;
+  preview: DetailLayoutConfig | null;
+} & (
+  | { mode: "move"; grabOffsetX: number; grabOffsetY: number }
+  | {
+      mode: "resize";
+      axis: "x" | "y" | "xy";
+      startColSpan: number;
+      startRowSpan: number;
+      startColStart: number;
+    }
+);
 
 export function MasonryCanvas({ config, renderSection, onConfigChange }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [containerWidth, setContainerWidth] = useState(0);
   const [hoverCell, setHoverCell] = useState<{ col: number; row: number } | null>(null);
   const [previewConfig, setPreviewConfig] = useState<DetailLayoutConfig | null>(null);
-  const dragStateRef = useRef<DragState | null>(null);
-  const resizeStateRef = useRef<ResizeState | null>(null);
+  // The block a live session is acting on — drives z-order and disables its
+  // position transition so it tracks the pointer 1:1.
+  const [activeId, setActiveId] = useState<SectionId | null>(null);
+  const sessionRef = useRef<Session | null>(null);
   const committedRef = useRef(config);
 
   useEffect(() => {
@@ -73,6 +86,20 @@ export function MasonryCanvas({ config, renderSection, onConfigChange }: Props) 
   const unitX = colUnit + effective.gap;
   const unitY = rowUnit + effective.gap;
 
+  // The session's move handler lives across renders — geometry and callbacks
+  // reach it through refs so listeners never need re-registering mid-gesture.
+  const geomRef = useRef({ colUnit, rowUnit, unitX, unitY });
+
+  geomRef.current = { colUnit, rowUnit, unitX, unitY };
+  const onConfigChangeRef = useRef(onConfigChange);
+
+  onConfigChangeRef.current = onConfigChange;
+
+  // Abort an in-flight session if the canvas unmounts mid-gesture.
+  const cancelSessionRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => () => cancelSessionRef.current?.(), []);
+
   const packed = useMemo(() => {
     if (containerWidth <= 0) {
       return { positions: {}, containerHeight: 0 };
@@ -85,7 +112,7 @@ export function MasonryCanvas({ config, renderSection, onConfigChange }: Props) 
   const canvasRows = maxRow + TRAILING_EMPTY_ROWS;
   const canvasHeight = canvasRows * rowUnit + (canvasRows - 1) * effective.gap;
 
-  // --- Pointer tracking on canvas (hover cell + drag/resize pointermove) --
+  // --- Pointer tracking on canvas (hover cell for the add affordance) -----
 
   const pointerToCell = useCallback(
     (clientX: number, clientY: number): { col: number; row: number } | null => {
@@ -106,7 +133,7 @@ export function MasonryCanvas({ config, renderSection, onConfigChange }: Props) 
   );
 
   const handleCanvasPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (dragStateRef.current || resizeStateRef.current) return;
+    if (sessionRef.current) return;
     const cell = pointerToCell(e.clientX, e.clientY);
 
     if (!cell) {
@@ -136,7 +163,112 @@ export function MasonryCanvas({ config, renderSection, onConfigChange }: Props) 
     if (hoverCell !== null) setHoverCell(null);
   };
 
-  // --- Drag ---------------------------------------------------------------
+  // --- Drag / resize sessions ---------------------------------------------
+
+  const beginSession = (ev: React.PointerEvent<HTMLElement>, session: Session) => {
+    // Left button / primary touch only, and never two gestures at once.
+    if (ev.button !== 0 && ev.pointerType === "mouse") return;
+    if (unitX <= 0 || sessionRef.current) return;
+    ev.stopPropagation();
+    ev.preventDefault();
+    (ev.currentTarget as HTMLElement).setPointerCapture(ev.pointerId);
+    sessionRef.current = session;
+
+    const onMove = (e: PointerEvent) => {
+      const s = sessionRef.current;
+
+      if (!s) return;
+
+      if (!s.live) {
+        if (Math.hypot(e.clientX - s.startX, e.clientY - s.startY) < DRAG_START) return;
+        s.live = true;
+        setActiveId(s.id);
+        setHoverCell(null);
+      }
+
+      const el = containerRef.current;
+      const g = geomRef.current;
+
+      if (!el || g.unitX <= 0) return;
+      const base = committedRef.current;
+      const block = base.blocks.find((b) => b.id === s.id);
+
+      if (!block) return;
+
+      let next: BlockPlacement;
+      let key: string;
+
+      if (s.mode === "move") {
+        const anchor = anchorToCell(
+          e.clientX - s.grabOffsetX + 1, // +1 to bias rounding toward the grabbed cell
+          e.clientY - s.grabOffsetY + 1,
+          el.getBoundingClientRect(),
+          g.colUnit,
+          g.rowUnit,
+          base.gap,
+          base.gridCols,
+          block.colSpan,
+          block.rowSpan,
+        );
+        const colStart = Math.max(0, Math.min(base.gridCols - block.colSpan, anchor.colStart));
+        const rowStart = Math.max(0, anchor.rowStart);
+
+        next = { ...block, colStart, rowStart };
+        key = `${colStart}:${rowStart}`;
+      } else {
+        const deltaCols = Math.round((e.clientX - s.startX) / g.unitX);
+        const deltaRows = Math.round((e.clientY - s.startY) / g.unitY);
+        const maxColSpan = base.gridCols - s.startColStart;
+        const colSpan =
+          s.axis === "y" ? s.startColSpan : clampSpan(s.startColSpan + deltaCols, maxColSpan);
+        const rowSpan = s.axis === "x" ? s.startRowSpan : Math.max(1, s.startRowSpan + deltaRows);
+
+        next = { ...block, colSpan, rowSpan };
+        key = `${colSpan}:${rowSpan}`;
+      }
+
+      // Same cell as the last applied placement — settling again is a no-op.
+      if (key === s.lastKey) return;
+      s.lastKey = key;
+      // Pin during the gesture so the active block tracks the pointer; the
+      // commit re-settles without pin to apply the auto-compact.
+      const nextBlocks = settleLayout(
+        base.blocks.map((b) => (b.id === s.id ? next : b)),
+        { movedId: s.id, pinMoved: true },
+      );
+
+      s.preview = { ...base, blocks: nextBlocks };
+      setPreviewConfig(s.preview);
+    };
+
+    /**
+     * The ONE exit for a session — pointerup (commit), pointercancel (the
+     * browser took the pointer away), or unmount. Everything is read from the
+     * captured session object, never back through state closures.
+     */
+    const endSession = (commit: boolean) => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onCancel);
+      cancelSessionRef.current = null;
+      const s = sessionRef.current;
+
+      sessionRef.current = null;
+      setActiveId(null);
+      setPreviewConfig(null);
+      if (!s || !commit || !s.live || !s.preview) return;
+      const compacted = settleLayout(s.preview.blocks, { movedId: s.id });
+
+      onConfigChangeRef.current?.({ ...s.preview, blocks: compacted });
+    };
+    const onUp = () => endSession(true);
+    const onCancel = () => endSession(false);
+
+    cancelSessionRef.current = () => endSession(false);
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onCancel);
+  };
 
   const onBlockDragStart = (
     e: React.PointerEvent<HTMLElement>,
@@ -144,186 +276,46 @@ export function MasonryCanvas({ config, renderSection, onConfigChange }: Props) 
     blockLeft: number,
     blockTop: number,
   ) => {
-    if (unitX <= 0) return;
-    e.stopPropagation();
-    e.preventDefault();
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-
     const el = containerRef.current;
 
     if (!el) return;
     const rect = el.getBoundingClientRect();
-    const grabOffsetX = e.clientX - (rect.left + blockLeft);
-    const grabOffsetY = e.clientY - (rect.top + blockTop);
 
-    dragStateRef.current = { id, grabOffsetX, grabOffsetY };
-    setHoverCell(null);
+    beginSession(e, {
+      mode: "move",
+      id,
+      startX: e.clientX,
+      startY: e.clientY,
+      live: false,
+      lastKey: null,
+      preview: null,
+      grabOffsetX: e.clientX - (rect.left + blockLeft),
+      grabOffsetY: e.clientY - (rect.top + blockTop),
+    });
   };
-
-  const onDragPointerMove = useCallback(
-    (e: PointerEvent) => {
-      const ds = dragStateRef.current;
-
-      if (!ds) return;
-      const el = containerRef.current;
-
-      if (!el || unitX <= 0) return;
-      const rect = el.getBoundingClientRect();
-      const base = committedRef.current;
-      const block = base.blocks.find((b) => b.id === ds.id);
-
-      if (!block) return;
-
-      const anchor = anchorToCell(
-        e.clientX - ds.grabOffsetX + 1, // +1 to bias rounding toward the grabbed cell
-        e.clientY - ds.grabOffsetY + 1,
-        rect,
-        colUnit,
-        rowUnit,
-        base.gap,
-        base.gridCols,
-        block.colSpan,
-        block.rowSpan,
-      );
-
-      const colStart = Math.max(0, Math.min(base.gridCols - block.colSpan, anchor.colStart));
-      const rowStart = Math.max(0, anchor.rowStart);
-
-      const moved: BlockPlacement = { ...block, colStart, rowStart };
-      // Pin during drag so the active block tracks the pointer; on commit
-      // we re-settle without pin to apply the auto-compact.
-      const nextBlocks = settleLayout(
-        base.blocks.map((b) => (b.id === ds.id ? moved : b)),
-        { movedId: ds.id, pinMoved: true },
-      );
-
-      setPreviewConfig({ ...base, blocks: nextBlocks });
-    },
-    [colUnit, rowUnit, unitX],
-  );
-
-  const onDragPointerUp = useCallback(() => {
-    const ds = dragStateRef.current;
-
-    dragStateRef.current = null;
-    if (!ds) return;
-    // onConfigChange must not be called inside a setPreviewConfig updater:
-    // updater functions have to be pure, and React may re-run them, which
-    // re-triggers the parent update and causes an infinite render loop.
-    if (previewConfig) {
-      const compacted = settleLayout(previewConfig.blocks, { movedId: ds.id });
-
-      onConfigChange?.({ ...previewConfig, blocks: compacted });
-    }
-    setPreviewConfig(null);
-  }, [onConfigChange, previewConfig]);
-
-  useEffect(() => {
-    window.addEventListener("pointermove", onDragPointerMove);
-    window.addEventListener("pointerup", onDragPointerUp);
-    window.addEventListener("pointercancel", onDragPointerUp);
-
-    return () => {
-      window.removeEventListener("pointermove", onDragPointerMove);
-      window.removeEventListener("pointerup", onDragPointerUp);
-      window.removeEventListener("pointercancel", onDragPointerUp);
-    };
-  }, [onDragPointerMove, onDragPointerUp]);
-
-  // --- Resize -------------------------------------------------------------
 
   const onResizeStart = (
     e: React.PointerEvent<HTMLElement>,
     id: SectionId,
     axis: "x" | "y" | "xy",
   ) => {
-    if (unitX <= 0) return;
-    e.stopPropagation();
-    e.preventDefault();
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    const base = committedRef.current;
-    const block = base.blocks.find((b) => b.id === id);
+    const block = committedRef.current.blocks.find((b) => b.id === id);
 
     if (!block) return;
-    resizeStateRef.current = {
+    beginSession(e, {
+      mode: "resize",
       id,
       axis,
-      startPointerX: e.clientX,
-      startPointerY: e.clientY,
+      startX: e.clientX,
+      startY: e.clientY,
+      live: false,
+      lastKey: null,
+      preview: null,
       startColSpan: block.colSpan,
       startRowSpan: block.rowSpan,
       startColStart: block.colStart,
-    };
-    setHoverCell(null);
+    });
   };
-
-  const onResizePointerMove = useCallback(
-    (e: PointerEvent) => {
-      const rs = resizeStateRef.current;
-
-      if (!rs || unitX <= 0) return;
-      const base = committedRef.current;
-      const block = base.blocks.find((b) => b.id === rs.id);
-
-      if (!block) return;
-      const dx = e.clientX - rs.startPointerX;
-      const dy = e.clientY - rs.startPointerY;
-      const deltaCols = Math.round(dx / unitX);
-      const deltaRows = Math.round(dy / unitY);
-
-      const maxColSpan = base.gridCols - rs.startColStart;
-      const nextColSpan =
-        rs.axis === "y" ? rs.startColSpan : clampSpan(rs.startColSpan + deltaCols, maxColSpan);
-      const nextRowSpan =
-        rs.axis === "x" ? rs.startRowSpan : Math.max(1, rs.startRowSpan + deltaRows);
-
-      if (nextColSpan === rs.startColSpan && nextRowSpan === rs.startRowSpan && !previewConfig) {
-        return;
-      }
-
-      const next: BlockPlacement = {
-        ...block,
-        colSpan: nextColSpan,
-        rowSpan: nextRowSpan,
-      };
-      // Pin during resize so the block's top edge stays under the user's
-      // anchor; on commit we re-settle without pin so the resized block
-      // also auto-compacts if it now has space above.
-      const nextBlocks = settleLayout(
-        base.blocks.map((b) => (b.id === rs.id ? next : b)),
-        { movedId: rs.id, pinMoved: true },
-      );
-
-      setPreviewConfig({ ...base, blocks: nextBlocks });
-    },
-    [unitX, unitY, previewConfig],
-  );
-
-  const onResizePointerUp = useCallback(() => {
-    const rs = resizeStateRef.current;
-
-    resizeStateRef.current = null;
-    if (!rs) return;
-    // See onDragPointerUp: keep onConfigChange out of the updater function.
-    if (previewConfig) {
-      const compacted = settleLayout(previewConfig.blocks, { movedId: rs.id });
-
-      onConfigChange?.({ ...previewConfig, blocks: compacted });
-    }
-    setPreviewConfig(null);
-  }, [onConfigChange, previewConfig]);
-
-  useEffect(() => {
-    window.addEventListener("pointermove", onResizePointerMove);
-    window.addEventListener("pointerup", onResizePointerUp);
-    window.addEventListener("pointercancel", onResizePointerUp);
-
-    return () => {
-      window.removeEventListener("pointermove", onResizePointerMove);
-      window.removeEventListener("pointerup", onResizePointerUp);
-      window.removeEventListener("pointercancel", onResizePointerUp);
-    };
-  }, [onResizePointerMove, onResizePointerUp]);
 
   // --- Hide / add ---------------------------------------------------------
 
@@ -394,14 +386,12 @@ export function MasonryCanvas({ config, renderSection, onConfigChange }: Props) 
         const pos = packed.positions[b.id];
 
         if (!pos) return null;
-        const isDragging = dragStateRef.current?.id === b.id;
-        const isResizing = resizeStateRef.current?.id === b.id;
 
         return (
           <DesignerBlock
             key={b.id}
             block={b}
-            interactive={!isDragging && !isResizing}
+            interactive={activeId !== b.id}
             pos={pos}
             onDragStart={(e) => onBlockDragStart(e, b.id, pos.left, pos.top)}
             onHide={() => handleHide(b.id)}
@@ -412,7 +402,7 @@ export function MasonryCanvas({ config, renderSection, onConfigChange }: Props) 
         );
       })}
 
-      {hoverCell && !dragStateRef.current && !resizeStateRef.current && addableIds.length > 0 ? (
+      {hoverCell && activeId == null && addableIds.length > 0 ? (
         <AddBlockAffordance
           addableIds={addableIds}
           cell={hoverCell}
@@ -510,7 +500,7 @@ function DesignerBlock({
 
   return (
     <div
-      className={`absolute box-border group rounded-medium ${outlineClass}`}
+      className={`absolute box-border group rounded-medium touch-none cursor-grab active:cursor-grabbing ${outlineClass}`}
       style={{
         top: pos.top,
         left: pos.left,
@@ -521,6 +511,7 @@ function DesignerBlock({
           : "none",
         zIndex: interactive ? 1 : 2,
       }}
+      onPointerDown={onDragStart}
     >
       <div className="absolute inset-0 overflow-hidden rounded-medium pointer-events-none select-none">
         {children}
@@ -536,19 +527,10 @@ function DesignerBlock({
           </span>
         </Tooltip>
       )}
-      <Tooltip content={t<string>("resource.detailLayout.dragToMove")}>
-        <button
-          aria-label={t<string>("resource.detailLayout.dragToMove")}
-          className="absolute top-1 right-1 z-10 w-6 h-6 flex items-center justify-center rounded-small bg-default-200/90 hover:bg-default-300 text-default-700 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
-          onPointerDown={onDragStart}
-        >
-          <AiOutlineHolder />
-        </button>
-      </Tooltip>
       <Tooltip content={t<string>("resource.detailLayout.hideSection")}>
         <button
           aria-label={t<string>("resource.detailLayout.hideSection")}
-          className="absolute top-1 right-8 z-10 w-6 h-6 flex items-center justify-center rounded-small bg-default-200/90 hover:bg-danger-300 text-default-700 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
+          className="absolute top-1 right-1 z-10 w-6 h-6 flex items-center justify-center rounded-small bg-default-200/90 hover:bg-danger-300 text-default-700 hover:text-white cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
           onClick={(e) => {
             e.stopPropagation();
             onHide();

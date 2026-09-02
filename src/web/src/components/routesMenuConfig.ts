@@ -75,6 +75,7 @@ import DataCardPage from "@/pages/data-card";
 import HealthScorePage from "@/pages/health-score";
 import SubscriptionPage from "@/pages/subscription";
 import WorkflowPage from "@/pages/workflow";
+import WorkflowEditorPage from "@/pages/workflow/editor";
 import { SteamIcon, DLsiteIcon, ExHentaiIcon } from "@/components/SourceIcons";
 
 // Lazy load test page to avoid circular dependency
@@ -178,7 +179,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
         menu: true,
       },
       {
-        name: "menu.specialText",
+        name: "menu.text",
         path: "/text",
         component: TextPage,
         icon: AiOutlineFieldString,
@@ -326,6 +327,13 @@ export const routesMenuConfig: RouteMenuItem[] = [
         layout: "basic",
         menu: true,
         isBeta: true,
+      },
+      {
+        name: "menu.workflowEditor",
+        path: "/workflows/editor",
+        component: WorkflowEditorPage,
+        layout: "basic",
+        menu: false,
       },
       {
         name: "menu.postParser",

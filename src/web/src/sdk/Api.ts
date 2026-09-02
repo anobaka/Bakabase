@@ -175,6 +175,12 @@ export type BakabaseAbstractionsModelsDomainConstantsDataStatus = 1 | 2 | 3;
 export type BakabaseAbstractionsModelsDomainConstantsEnhancementRecordStatus = 1 | 2;
 
 /**
+ * [1: Pending, 2: Conflict, 3: Excluded, 4: Applied, 5: Failed, 6: Undone]
+ * @format int32
+ */
+export type BakabaseAbstractionsModelsDomainConstantsFileRenameStatus = 1 | 2 | 3 | 4 | 5 | 6;
+
+/**
  * [1: Simple, 2: Advanced]
  * @format int32
  */
@@ -365,12 +371,6 @@ export type BakabaseAbstractionsModelsDomainConstantsSearchOperation =
   | 18;
 
 /**
- * [1: Useless, 3: Wrapper, 4: Standardization, 6: Volume, 7: Trim, 8: DateTime, 9: Language]
- * @format int32
- */
-export type BakabaseAbstractionsModelsDomainConstantsSpecialTextType = 1 | 3 | 4 | 6 | 7 | 8 | 9;
-
-/**
  * [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag]
  * @format int32
  */
@@ -384,6 +384,18 @@ export type BakabaseAbstractionsModelsDomainConstantsStandardValueType =
   | 7
   | 8
   | 9;
+
+/**
+ * [1: Values, 2: DelimiterPair, 3: MappingPair]
+ * @format int32
+ */
+export type BakabaseAbstractionsModelsDomainConstantsTextTypeShape = 1 | 2 | 3;
+
+/**
+ * [1: Useless, 3: Wrapper, 4: Standardization, 6: Volume, 7: Trim, 8: DateTime, 9: Language]
+ * @format int32
+ */
+export type BakabaseAbstractionsModelsDomainConstantsWellKnownTextType = 1 | 3 | 4 | 6 | 7 | 8 | 9;
 
 export interface BakabaseAbstractionsModelsDomainCustomProperty {
   /** @format int32 */
@@ -864,13 +876,43 @@ export interface BakabaseAbstractionsModelsDomainSourceMetadataMapping {
   targetPropertyId: number;
 }
 
-export interface BakabaseAbstractionsModelsDomainSpecialText {
+export interface BakabaseAbstractionsModelsDomainTextEntryValue {
   /** @format int32 */
   id: number;
+  /** @format int32 */
+  typeId: number;
   value1: string;
   value2?: string;
+}
+
+export interface BakabaseAbstractionsModelsDomainTextPair {
+  value1: string;
+  value2: string;
+}
+
+export interface BakabaseAbstractionsModelsDomainTextSet {
+  /** @format int32 */
+  typeId: number;
+  /** [1: Values, 2: DelimiterPair, 3: MappingPair] */
+  shape: BakabaseAbstractionsModelsDomainConstantsTextTypeShape;
+  values: string[];
+  pairs: BakabaseAbstractionsModelsDomainTextPair[];
+}
+
+export interface BakabaseAbstractionsModelsDomainTextTypeDescriptor {
+  /** @format int32 */
+  id: number;
+  name: string;
   /** [1: Useless, 3: Wrapper, 4: Standardization, 6: Volume, 7: Trim, 8: DateTime, 9: Language] */
-  type: BakabaseAbstractionsModelsDomainConstantsSpecialTextType;
+  wellKnown?: BakabaseAbstractionsModelsDomainConstantsWellKnownTextType;
+  /** [1: Values, 2: DelimiterPair, 3: MappingPair] */
+  shape: BakabaseAbstractionsModelsDomainConstantsTextTypeShape;
+  description?: string;
+  /** @format date-time */
+  createdAt: string;
+  /** @format int32 */
+  entryCount: number;
+  isBuiltin: boolean;
 }
 
 export interface BakabaseAbstractionsModelsDtoCustomPropertyAddOrPutDto {
@@ -1005,18 +1047,6 @@ export interface BakabaseAbstractionsModelsInputResourceTransferInputModelItem {
   toId: number;
   keepMediaLibrary: boolean;
   deleteSourceResource: boolean;
-}
-
-export interface BakabaseAbstractionsModelsInputSpecialTextAddInputModel {
-  /** [1: Useless, 3: Wrapper, 4: Standardization, 6: Volume, 7: Trim, 8: DateTime, 9: Language] */
-  type: BakabaseAbstractionsModelsDomainConstantsSpecialTextType;
-  value1: string;
-  value2?: string;
-}
-
-export interface BakabaseAbstractionsModelsInputSpecialTextPatchInputModel {
-  value1?: string;
-  value2?: string;
 }
 
 export interface BakabaseAbstractionsModelsInputThirdPartyContentTrackerMarkViewedInputModel {
@@ -4115,6 +4145,14 @@ export interface BakabaseModulesThirdPartyThirdPartiesBilibiliModelsFavorites {
 }
 
 /**
+ * [1: OneToOne, 2: OneToMany]
+ * @format int32
+ */
+export type BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowActivityCardinality =
+  | 1
+  | 2;
+
+/**
  * [1: Filter, 2: Action, 3: Transform]
  * @format int32
  */
@@ -4186,6 +4224,10 @@ export interface BakabaseModulesWorkflowAbstractionsModelsInputWorkflowDefinitio
   activities?: BakabaseModulesWorkflowAbstractionsModelsInputWorkflowActivityInputModel[];
 }
 
+export interface BakabaseModulesWorkflowAbstractionsModelsInputWorkflowManualRunInputModel {
+  argsJson?: string;
+}
+
 export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowActivityDescriptorViewModel {
   kind: string;
   displayName: string;
@@ -4193,9 +4235,13 @@ export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowActivityDe
   category: BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowActivityCategory;
   group: string;
   acceptedInputItemTypes: string[];
+  acceptedItemInterface?: string;
   /** [1: Passthrough, 2: Fixed, 3: AdaptToNext] */
   outputBehavior: BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowItemTypeBehavior;
+  /** [1: OneToOne, 2: OneToMany] */
+  cardinality: BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowActivityCardinality;
   fixedOutputItemType?: string;
+  isDestructive: boolean;
 }
 
 export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowActivityViewModel {
@@ -4230,6 +4276,7 @@ export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowItemTypeDe
   itemType: string;
   displayName: string;
   fields: BakabaseModulesWorkflowAbstractionsModelsViewWorkflowItemTypeFieldViewModel[];
+  implementsInterfaces: string[];
 }
 
 export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowItemTypeFieldViewModel {
@@ -4263,6 +4310,8 @@ export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowRunViewMod
 export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowTriggerDescriptorViewModel {
   kind: string;
   displayName: string;
+  requiresManualPayload: boolean;
+  payloadFields: BakabaseModulesWorkflowAbstractionsModelsViewWorkflowItemTypeFieldViewModel[];
 }
 
 export interface BakabaseServiceControllersAppDataPathControllerRelocateRequest {
@@ -4599,6 +4648,43 @@ export interface BakabaseServiceModelsInputSavedSearchAddInputModel {
   displayMode: BakabaseAbstractionsModelsDomainConstantsFilterDisplayMode;
 }
 
+export interface BakabaseServiceModelsInputTextEntryAddInputModel {
+  /**
+   * @minLength 1
+   * @maxLength 64
+   */
+  value1: string;
+  /** @maxLength 64 */
+  value2?: string;
+}
+
+export interface BakabaseServiceModelsInputTextEntryPatchInputModel {
+  /** @maxLength 64 */
+  value1?: string;
+  /** @maxLength 64 */
+  value2?: string;
+}
+
+export interface BakabaseServiceModelsInputTextTypeAddInputModel {
+  /**
+   * @minLength 1
+   * @maxLength 64
+   */
+  name: string;
+  /** [1: Values, 2: DelimiterPair, 3: MappingPair] */
+  shape: BakabaseAbstractionsModelsDomainConstantsTextTypeShape;
+  /** @maxLength 256 */
+  description?: string;
+}
+
+export interface BakabaseServiceModelsInputTextTypePatchInputModel {
+  /**
+   * @minLength 1
+   * @maxLength 64
+   */
+  name: string;
+}
+
 export interface BakabaseServiceModelsViewAnalyticsAppInfoViewModel {
   enableAnonymousDataTracking: boolean;
   deviceId: string;
@@ -4853,6 +4939,25 @@ export interface BakabaseServiceModelsViewFilePlayabilityViewModel {
   /** @format int32 */
   height?: number;
   error?: string;
+}
+
+export interface BakabaseServiceModelsViewFileRenameEntryViewModel {
+  /** @format int32 */
+  id: number;
+  /** @format int32 */
+  runId: number;
+  /** @format int32 */
+  seq: number;
+  path: string;
+  from: string;
+  to: string;
+  /** [1: Pending, 2: Conflict, 3: Excluded, 4: Applied, 5: Failed, 6: Undone] */
+  status: BakabaseAbstractionsModelsDomainConstantsFileRenameStatus;
+  error?: string;
+  /** @format date-time */
+  createdAt: string;
+  /** @format date-time */
+  appliedAt?: string;
 }
 
 export interface BakabaseServiceModelsViewFileRenameResult {
@@ -5228,6 +5333,20 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsM
   data?: BakabaseAbstractionsModelsDomainSourceMetadataMapping[];
 }
 
+export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainTextEntryValue {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDomainTextEntryValue[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainTextTypeDescriptor {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDomainTextTypeDescriptor[];
+}
+
 export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsViewThirdPartyContentTrackerStatusViewModel {
   /** @format int32 */
   code: number;
@@ -5513,6 +5632,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModels
   code: number;
   message?: string;
   data?: BakabaseServiceModelsViewCustomPropertyViewModel[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewFileRenameEntryViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewFileRenameEntryViewModel[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewFileRenameResult {
@@ -5854,11 +5980,25 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstract
   data?: BakabaseAbstractionsModelsDomainResourceFileSystemCache;
 }
 
-export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainSpecialText {
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainTextEntryValue {
   /** @format int32 */
   code: number;
   message?: string;
-  data?: BakabaseAbstractionsModelsDomainSpecialText;
+  data?: BakabaseAbstractionsModelsDomainTextEntryValue;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainTextSet {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDomainTextSet;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainTextTypeDescriptor {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDomainTextTypeDescriptor;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsViewCacheOverviewViewModel {
@@ -6351,6 +6491,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesW
   data?: BakabaseModulesWorkflowAbstractionsModelsViewWorkflowDefinitionViewModel;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowRunViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesWorkflowAbstractionsModelsViewWorkflowRunViewModel;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceControllersAppDataPathControllerValidateResponse {
   /** @format int32 */
   code: number;
@@ -6412,6 +6559,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceM
   code: number;
   message?: string;
   data?: BakabaseServiceModelsViewFilePlayabilityViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewFileRenameEntryViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewFileRenameEntryViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewMobileAppDownloadsViewModel {
@@ -6492,13 +6646,6 @@ export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollection
     string,
     Record<string, BakabaseModulesStandardValueModelsViewStandardValueConversionRuleViewModel[]>
   >;
-}
-
-export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32SystemCollectionsGenericList1BakabaseAbstractionsModelsDomainSpecialText {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: Record<string, BakabaseAbstractionsModelsDomainSpecialText[] | null>;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32SystemDecimal {
@@ -21014,178 +21161,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         ...params,
       }),
   };
-  specialText = {
-    /**
-     * No description
-     *
-     * @tags SpecialText
-     * @name GetAllSpecialTexts
-     * @request GET:/special-text
-     */
-    getAllSpecialTexts: (params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32SystemCollectionsGenericList1BakabaseAbstractionsModelsDomainSpecialText,
-        any
-      >({
-        path: `/special-text`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for getAllSpecialTexts
-     * @name getAllSpecialTextsUrl
-     */
-    getAllSpecialTextsUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/special-text`;
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags SpecialText
-     * @name AddSpecialText
-     * @request POST:/special-text
-     */
-    addSpecialText: (
-      data: BakabaseAbstractionsModelsInputSpecialTextAddInputModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainSpecialText,
-        any
-      >({
-        path: `/special-text`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for addSpecialText
-     * @name addSpecialTextUrl
-     */
-    addSpecialTextUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/special-text`;
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags SpecialText
-     * @name DeleteSpecialText
-     * @request DELETE:/special-text/{id}
-     */
-    deleteSpecialText: (id: number, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/special-text/${id}`,
-        method: "DELETE",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags SpecialText
-     * @name PatchSpecialText
-     * @request PUT:/special-text/{id}
-     */
-    patchSpecialText: (
-      id: number,
-      data: BakabaseAbstractionsModelsInputSpecialTextPatchInputModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/special-text/${id}`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags SpecialText
-     * @name AddSpecialTextPrefabs
-     * @request POST:/special-text/prefabs
-     */
-    addSpecialTextPrefabs: (params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/special-text/prefabs`,
-        method: "POST",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for addSpecialTextPrefabs
-     * @name addSpecialTextPrefabsUrl
-     */
-    addSpecialTextPrefabsUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/special-text/prefabs`;
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags SpecialText
-     * @name PretreatText
-     * @request POST:/special-text/pretreatment
-     */
-    pretreatText: (
-      query?: {
-        text?: string;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemString, any>({
-        path: `/special-text/pretreatment`,
-        method: "POST",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for pretreatText
-     * @name pretreatTextUrl
-     */
-    pretreatTextUrl: (query?: {
-        text?: string;
-      }) => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/special-text/pretreatment`;
-      
-      // Build query string
-      if (query) {
-        // Object.entries rather than indexing by key: the query object is a typed
-        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
-        const queryString = Object.entries(query)
-          .filter(([, value]) => value !== undefined && value !== null)
-          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
-          .join("&");
-
-        return baseUrl + path + (queryString ? `?${queryString}` : "");
-      }
-      
-      return baseUrl + path;
-    },
-  };
   steamApp = {
     /**
      * No description
@@ -21618,6 +21593,295 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getTampermonkeyScriptUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/Tampermonkey/script/bakabase.user.js`;
+      
+      return baseUrl + path;
+    },
+  };
+  text = {
+    /**
+     * No description
+     *
+     * @tags Text
+     * @name GetAllTextTypes
+     * @request GET:/text/type
+     */
+    getAllTextTypes: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainTextTypeDescriptor,
+        any
+      >({
+        path: `/text/type`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getAllTextTypes
+     * @name getAllTextTypesUrl
+     */
+    getAllTextTypesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/text/type`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Text
+     * @name AddTextType
+     * @request POST:/text/type
+     */
+    addTextType: (
+      data: BakabaseServiceModelsInputTextTypeAddInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainTextTypeDescriptor,
+        any
+      >({
+        path: `/text/type`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for addTextType
+     * @name addTextTypeUrl
+     */
+    addTextTypeUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/text/type`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Text
+     * @name RenameTextType
+     * @request PUT:/text/type/{id}
+     */
+    renameTextType: (
+      id: number,
+      data: BakabaseServiceModelsInputTextTypePatchInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/text/type/${id}`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Text
+     * @name DeleteTextType
+     * @request DELETE:/text/type/{id}
+     */
+    deleteTextType: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/text/type/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Text
+     * @name GetTextEntries
+     * @request GET:/text/type/{typeId}/entry
+     */
+    getTextEntries: (typeId: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainTextEntryValue,
+        any
+      >({
+        path: `/text/type/${typeId}/entry`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Text
+     * @name AddTextEntry
+     * @request POST:/text/type/{typeId}/entry
+     */
+    addTextEntry: (
+      typeId: number,
+      data: BakabaseServiceModelsInputTextEntryAddInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainTextEntryValue,
+        any
+      >({
+        path: `/text/type/${typeId}/entry`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Text
+     * @name AddTextEntries
+     * @request POST:/text/type/{typeId}/entry/batch
+     */
+    addTextEntries: (
+      typeId: number,
+      data: BakabaseServiceModelsInputTextEntryAddInputModel[],
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/text/type/${typeId}/entry/batch`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Text
+     * @name PatchTextEntry
+     * @request PUT:/text/entry/{id}
+     */
+    patchTextEntry: (
+      id: number,
+      data: BakabaseServiceModelsInputTextEntryPatchInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/text/entry/${id}`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Text
+     * @name DeleteTextEntry
+     * @request DELETE:/text/entry/{id}
+     */
+    deleteTextEntry: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/text/entry/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Text
+     * @name ResolveTextSet
+     * @request GET:/text/type/{typeId}/set
+     */
+    resolveTextSet: (typeId: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainTextSet,
+        any
+      >({
+        path: `/text/type/${typeId}/set`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Text
+     * @name AddTextPrefabEntries
+     * @request POST:/text/prefabs
+     */
+    addTextPrefabEntries: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/text/prefabs`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for addTextPrefabEntries
+     * @name addTextPrefabEntriesUrl
+     */
+    addTextPrefabEntriesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/text/prefabs`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Text
+     * @name CleanText
+     * @request POST:/text/clean
+     */
+    cleanText: (
+      query?: {
+        text?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemString, any>({
+        path: `/text/clean`,
+        method: "POST",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for cleanText
+     * @name cleanTextUrl
+     */
+    cleanTextUrl: (query?: {
+        text?: string;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/text/clean`;
+      
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
       
       return baseUrl + path;
     },
@@ -22431,6 +22695,30 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Workflow
+     * @name RunWorkflowManually
+     * @request POST:/workflow/{id}/run
+     */
+    runWorkflowManually: (
+      id: number,
+      data: BakabaseModulesWorkflowAbstractionsModelsInputWorkflowManualRunInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowRunViewModel,
+        any
+      >({
+        path: `/workflow/${id}/run`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Workflow
      * @name GetWorkflowActivities
      * @request GET:/workflow/activities
      */
@@ -22484,6 +22772,85 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       return baseUrl + path;
     },
+
+    /**
+     * No description
+     *
+     * @tags Workflow
+     * @name GetWorkflowRunFileRenameEntries
+     * @request GET:/workflow/run/{runId}/file-rename-entries
+     */
+    getWorkflowRunFileRenameEntries: (runId: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewFileRenameEntryViewModel,
+        any
+      >({
+        path: `/workflow/run/${runId}/file-rename-entries`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Workflow
+     * @name SetFileRenameEntryExcluded
+     * @request PUT:/workflow/file-rename-entry/{id}/excluded
+     */
+    setFileRenameEntryExcluded: (
+      id: number,
+      query?: {
+        excluded?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewFileRenameEntryViewModel,
+        any
+      >({
+        path: `/workflow/file-rename-entry/${id}/excluded`,
+        method: "PUT",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Workflow
+     * @name ApplyWorkflowRunFileRenames
+     * @request POST:/workflow/run/{runId}/file-rename-entries/apply
+     */
+    applyWorkflowRunFileRenames: (runId: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewFileRenameEntryViewModel,
+        any
+      >({
+        path: `/workflow/run/${runId}/file-rename-entries/apply`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Workflow
+     * @name UndoWorkflowRunFileRenames
+     * @request POST:/workflow/run/{runId}/file-rename-entries/undo
+     */
+    undoWorkflowRunFileRenames: (runId: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewFileRenameEntryViewModel,
+        any
+      >({
+        path: `/workflow/run/${runId}/file-rename-entries/undo`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
 
     /**
      * No description

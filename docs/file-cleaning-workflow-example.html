@@ -1,0 +1,231 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>文件清洗流程示例 · 动画下载目录标准化</title>
+<style>
+:root{--bg:#0e1116;--panel:#161b22;--panel2:#1c222c;--code:#0b0e14;--line:#2a313c;
+--ink:#e6e9ef;--mut:#98a2b0;--dim:#6b7482;--a:#6ea8fe;--g:#5ecb9e;--y:#e6b566;--r:#e8776f;--p:#b08cff;--c:#4bc0d9;--chip:#222a35;}
+@media (prefers-color-scheme:light){:root{--bg:#f6f7f9;--panel:#fff;--panel2:#eef1f5;--code:#f4f6f9;--line:#e2e6ec;
+--ink:#1a1f27;--mut:#586274;--dim:#8a94a3;--a:#2f6fed;--g:#1f9d6b;--y:#a9761f;--r:#cf4d43;--p:#7a52d6;--c:#1893ad;--chip:#eef1f5;}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);line-height:1.62;
+font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1060px;margin:0 auto;padding:40px 22px 80px}
+h1{font-size:25px;margin:0 0 6px}.sub{color:var(--mut);font-size:14.5px;margin:0 0 4px}
+h2{font-size:17px;margin:36px 0 8px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+h2 .n{color:var(--dim);font-weight:700;margin-right:8px}
+p{margin:9px 0}
+ul{margin:9px 0 9px 4px;padding-left:22px}li{margin:4px 0}
+.note{font-size:12.5px;color:var(--dim);margin:10px 0}
+b{font-weight:650}
+code.i{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;background:var(--chip);padding:1px 5px;border-radius:5px}
+pre.tree{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:13px 15px;overflow-x:auto;margin:10px 0;
+font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:12px;line-height:1.6;white-space:pre}
+pre.tree .del{color:var(--r)}pre.tree .add{color:var(--g)}pre.tree .dim{color:var(--dim)}pre.tree .kept{color:var(--mut)}
+.node{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--a);border-radius:10px;padding:12px 16px;margin:10px 0}
+.node.trigger{border-left-color:var(--p)}.node.filter{border-left-color:var(--y)}
+.node.transform{border-left-color:var(--a)}.node.expand{border-left-color:var(--c)}.node.action{border-left-color:var(--g)}
+.node .head{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
+.node .no{font-weight:700;color:var(--dim);font-size:13px}
+.node .kind{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:12px;font-weight:600}
+.chip{display:inline-block;font-size:10.5px;padding:1px 8px;border-radius:20px;background:var(--chip);color:var(--mut)}
+.chip.cat-trigger{color:var(--p);border:1px solid var(--p)}.chip.cat-filter{color:var(--y);border:1px solid var(--y)}
+.chip.cat-transform{color:var(--a);border:1px solid var(--a)}.chip.cat-expand{color:var(--c);border:1px solid var(--c)}
+.chip.cat-action{color:var(--g);border:1px solid var(--g)}
+.chip.scope{color:var(--mut);border:1px dashed var(--dim)}
+.cfg{width:100%;border-collapse:collapse;font-size:12.5px;margin:6px 0 4px}
+.cfg td{padding:4px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.cfg td:first-child{color:var(--mut);white-space:nowrap;width:170px}
+.cfg tr:last-child td{border-bottom:none}
+.cfg .mono, .mono{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:12px}
+.fx{font-size:12px;color:var(--dim);margin-top:6px;padding-top:6px;border-top:1px dashed var(--line)}
+.io{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;color:var(--dim);margin:0 0 6px}
+.io .t{color:var(--c);font-weight:600}.io .v{color:var(--p)}
+.fx .in{color:var(--r)}.fx .out{color:var(--g)}.fx .var{color:var(--c)}
+.flow{ text-align:center;color:var(--dim);font-size:14px;margin:-2px 0}
+table.t{width:100%;border-collapse:collapse;font-size:12.5px;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:10px 0}
+table.t th,table.t td{padding:7px 10px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+table.t th{background:var(--panel2);color:var(--mut);font-weight:600;font-size:12px}
+table.t tr:last-child td{border-bottom:none}
+.link-callout{background:var(--panel);border:1px solid var(--c);border-radius:10px;padding:10px 14px;font-size:13px;margin:12px 0}
+footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(--line);padding-top:14px}
+</style></head><body><div class="wrap">
+<h1>文件清洗流程示例 · 动画下载目录标准化</h1>
+<p class="sub">多层级（文件夹 + 其内文件）· 节点联动（文件改名依赖父文件夹节点的清洗结果）· 每节点完整配置与出入参契约</p>
+<p class="note">配套设计文档：<a href="file-cleaning-workflow.html">file-cleaning-workflow.html</a>。本例同时是设计探针——它需要的「链中展开 / 变量与系统变量 / 模板重建名 / 能力契约」机制已并入设计文档（见 §6 设计增量）。</p>
+
+<h2><span class="n">§1</span>起始状态与目标</h2>
+<pre class="tree">D:/Downloads/
+├─ <span class="del">[LoliHouse] 葬送のフリーレン Sousou no Frieren [WebRip 1080p HEVC-10bit AAC]</span>/
+│   ├─ <span class="del">[LoliHouse] Sousou no Frieren - 01 [WebRip 1080p HEVC-10bit AAC].mkv</span>
+│   ├─ <span class="del">[LoliHouse] Sousou no Frieren - 02 [WebRip 1080p HEVC-10bit AAC].mkv</span>
+│   └─ <span class="del">[LoliHouse] Sousou no Frieren - SP1 [WebRip 1080p].mkv</span>
+├─ <span class="del">[桜都字幕组] 药屋少女的呢喃 [01-24 Fin][1080p][简繁内封]</span>/
+│   ├─ <span class="del">[桜都字幕組] 藥屋少女的呢喃 [01][1080p][繁体].mkv</span>
+│   └─ <span class="del">[桜都字幕組] 藥屋少女的呢喃 [02][1080p][繁体].mkv</span>
+└─ <span class="kept">Comiket103/</span>                       <span class="dim">← 无括号段，被节点 1 过滤，整树不处理</span></pre>
+<p>目标：文件夹名去掉字幕组/质量标签；<b>文件名统一重建为「文件夹净标题 - 集数」</b>——即使文件原名与文件夹用字不一致（简繁混用）也被统一；捕获不到集数的特典（SP1）只做清洗、不套模板。</p>
+<p class="note">链形（混合流经<b>链序</b>表达，文本节点零 fs 感知）：<b>目录段（T–6）→ 展开（7）→ 文件段（8–13）</b>。目录的改名计划在展开前由节点 6 记录。</p>
+
+<h2><span class="n">§2</span>流程定义（13 个节点，含每节点配置）</h2>
+
+<div class="node trigger"><div class="head"><span class="no">T</span><span class="kind">fs.manualScan</span><span class="chip cat-trigger">触发器</span></div>
+<div class="io"><span class="t">IN</span> —（手动触发 payload：roots + 枚举配置）　<span class="t">OUT</span> item.fs.entry × N</div>
+<table class="cfg">
+<tr><td>roots（constants）</td><td class="mono">["D:/Downloads"]</td></tr>
+<tr><td>enumerate.target</td><td class="mono">Directories</td></tr>
+<tr><td>enumerate.depth</td><td class="mono">1</td></tr></table>
+<div class="fx">产出 3 个 <code class="i">item.fs.entry</code>（目录项），自动注入系统变量 <span class="var">var:parentName</span> 等，逐个流过下方链条。</div></div>
+<div class="flow">▼</div>
+
+<div class="node filter"><div class="head"><span class="no">1</span><span class="kind">filter.fs.byRegex</span><span class="chip cat-filter">Filter</span></div>
+<div class="io"><span class="t">IN</span> item.fs.entry　<span class="t">OUT</span> item.fs.entry ｜ 基数 1→0/1（不命中即 Drop，该树到此终止）</div>
+<table class="cfg">
+<tr><td>pattern</td><td class="mono">\[.+?\]</td></tr>
+<tr><td>mode</td><td class="mono">Match（命中才保留）</td></tr></table>
+<div class="fx"><span class="in">Comiket103</span> 不含括号段 → <b>丢弃</b>（其子文件因从未被展开，整树不受影响）。</div></div>
+<div class="flow">▼</div>
+
+<div class="node transform"><div class="head"><span class="no">2</span><span class="kind">transform.text.removeWrapped</span><span class="chip cat-transform">Transform · 通用文本</span></div>
+<div class="io"><span class="t">IN</span> 能力:ITextWorkpiece（本链此处 = item.fs.entry，<b>作用于其工作文本 WorkingName</b>）　<span class="t">OUT</span> 同 ｜ 基数 1→1</div>
+<table class="cfg">
+<tr><td>wrappers</td><td class="mono">[] 【】 （textTypeId = #3「包装符」，内置·DelimiterPair）</td></tr>
+<tr><td>textSet</td><td>自定义文本集 <code class="i">「字幕组名单」</code>（textTypeId = #11「字幕组名单」，自定义；含 LoliHouse、桜都字幕组、桜都字幕組…）</td></tr>
+<tr><td>match</td><td class="mono">EqualsAny（括号内容全等于集合任一项）</td></tr></table>
+<div class="fx"><span class="in">[LoliHouse] 葬送のフリーレン…</span> → <span class="out">葬送のフリーレン Sousou no Frieren [WebRip 1080p HEVC-10bit AAC]</span></div></div>
+<div class="flow">▼</div>
+
+<div class="node transform"><div class="head"><span class="no">3</span><span class="kind">transform.text.removeWrapped</span><span class="chip cat-transform">Transform · 通用文本</span></div>
+<div class="io"><span class="t">IN</span> 能力:ITextWorkpiece　<span class="t">OUT</span> 同 ｜ 基数 1→1</div>
+<table class="cfg">
+<tr><td>wrappers</td><td class="mono">[]</td></tr>
+<tr><td>textSet</td><td>自定义文本集 <code class="i">「质量与发布标签」</code>（textTypeId = #12「质量与发布标签」，自定义种子集；1080p、WebRip、HEVC、AAC、Fin、简繁内封…）</td></tr>
+<tr><td>match</td><td class="mono">ContainsAny（括号内容包含集合任一项即整段删除）</td></tr></table>
+<div class="fx"><span class="in">药屋少女的呢喃 [01-24 Fin][1080p][简繁内封]</span> → <span class="out">药屋少女的呢喃</span></div></div>
+<div class="flow">▼</div>
+
+<div class="node transform"><div class="head"><span class="no">4</span><span class="kind">transform.text.trim</span><span class="chip cat-transform">Transform · 通用文本</span></div>
+<div class="io"><span class="t">IN</span> 能力:ITextWorkpiece　<span class="t">OUT</span> 同 ｜ 基数 1→1</div>
+<table class="cfg">
+<tr><td>collapseSpaces / trimEnds / removeEmptyWrappers</td><td class="mono">true / true / true</td></tr></table>
+<div class="fx">清掉删除后残留的连续空格与空括号对。</div></div>
+<div class="flow">▼</div>
+
+<div class="node transform"><div class="head"><span class="no">5</span><span class="kind">transform.text.capture</span><span class="chip cat-transform">Transform · 通用文本</span></div>
+<div class="io"><span class="t">IN</span> 能力:ITextWorkpiece　<span class="t">OUT</span> 同 ｜ 基数 1→1 ｜ <span class="v">提供 var:title</span>（软契约，编辑器 lint 供下游校验）</div>
+<table class="cfg">
+<tr><td>pattern</td><td class="mono">^(?&lt;title&gt;.+)$</td></tr>
+<tr><td>onMiss</td><td class="mono">SkipSilently（不设变量）</td></tr></table>
+<div class="fx">不改文本，只捕获：<span class="var">vars.title = "葬送のフリーレン Sousou no Frieren"</span>（对第二个文件夹则是 <span class="var">"药屋少女的呢喃"</span>）</div></div>
+<div class="flow">▼</div>
+
+<div class="node action"><div class="head"><span class="no">6</span><span class="kind">action.fs.saveName</span><span class="chip cat-action">Action</span><span class="chip scope">实例 ①：目录</span></div>
+<div class="io"><span class="t">IN</span> item.fs.entry　<span class="t">OUT</span> item.fs.entry ｜ 基数 1→1 ｜ 副作用：记录<b>目录</b>改名计划</div>
+<table class="cfg">
+<tr><td>mode</td><td class="mono">Preview（默认；确认后按计划 Apply）</td></tr>
+<tr><td>onConflict</td><td class="mono">SkipAndReport</td></tr></table>
+<div class="fx">目录的改名计划在展开前记录——这就是"混合流经链序表达"：此后链上只有文件，任何节点都不需要 scope。</div></div>
+<div class="flow">▼</div>
+
+<div class="node expand"><div class="head"><span class="no">7</span><span class="kind">expand.fs.children</span><span class="chip cat-expand">Expand（链中 1→N）</span></div>
+<div class="io"><span class="t">IN</span> item.fs.entry（目录）　<span class="t">OUT</span> item.fs.entry（文件）｜ 基数 1→N（ExpandTo；类型不变，编辑器校验直通）｜ <span class="v">子项继承 Variables + 注入 var:extension / var:parentName</span></div>
+<table class="cfg">
+<tr><td>target</td><td class="mono">Files</td></tr>
+<tr><td>extensionFilter</td><td class="mono">["mkv", "mka", "ass"]</td></tr>
+<tr><td>emit</td><td class="mono">ChildrenOnly（v1 唯一模式；父项已在节点 6 存盘计划，由展开消费）</td></tr>
+<tr><td>inheritVariables</td><td class="mono">true</td></tr></table>
+<div class="fx">目录项展开出其内 mkv 文件项，<b>每个文件项继承 <span class="var">vars.title</span></b>——这就是「节点 12 依赖节点 5 结果」的传递通道。</div></div>
+<div class="flow">▼</div>
+
+<div class="node transform"><div class="head"><span class="no">8</span><span class="kind">transform.text.removeWrapped</span><span class="chip cat-transform">Transform · 通用文本</span></div>
+<div class="io"><span class="t">IN</span> 能力:ITextWorkpiece（此处 item 均为文件）　<span class="t">OUT</span> 同 ｜ 基数 1→1</div>
+<table class="cfg"><tr><td>（配置同节点 2）</td><td>wrappers [] 【】 ｜ textSet 「字幕组名单」 ｜ EqualsAny</td></tr></table></div>
+<div class="flow">▼</div>
+
+<div class="node transform"><div class="head"><span class="no">9</span><span class="kind">transform.text.removeWrapped</span><span class="chip cat-transform">Transform · 通用文本</span></div>
+<div class="io"><span class="t">IN</span> 能力:ITextWorkpiece　<span class="t">OUT</span> 同 ｜ 基数 1→1</div>
+<table class="cfg"><tr><td>（配置同节点 3）</td><td>wrappers [] ｜ textSet 「质量与发布标签」 ｜ ContainsAny</td></tr></table>
+<div class="fx"><span class="in">[桜都字幕組] 藥屋少女的呢喃 [01][1080p][繁体].mkv</span> → <span class="out">藥屋少女的呢喃 [01].mkv</span>（[01] 不含质量词，保留）</div></div>
+<div class="flow">▼</div>
+
+<div class="node transform"><div class="head"><span class="no">10</span><span class="kind">transform.text.trim</span><span class="chip cat-transform">Transform · 通用文本</span></div>
+<div class="io"><span class="t">IN</span> 能力:ITextWorkpiece　<span class="t">OUT</span> 同 ｜ 基数 1→1</div>
+<table class="cfg"><tr><td>（配置同节点 4）</td><td class="mono">true / true / true</td></tr></table></div>
+<div class="flow">▼</div>
+
+<div class="node transform"><div class="head"><span class="no">11</span><span class="kind">transform.text.capture</span><span class="chip cat-transform">Transform · 通用文本</span></div>
+<div class="io"><span class="t">IN</span> 能力:ITextWorkpiece　<span class="t">OUT</span> 同 ｜ 基数 1→1 ｜ <span class="v">提供 var:ep</span>（onMiss 时不提供）</div>
+<table class="cfg">
+<tr><td>pattern</td><td class="mono">(?:-\s*|\[)(?&lt;ep&gt;\d{2,3})(?:\]|\s|$)</td></tr>
+<tr><td>onMiss</td><td class="mono">SkipSilently</td></tr></table>
+<div class="fx"><span class="in">Sousou no Frieren - 01.mkv</span> → <span class="var">vars.ep = "01"</span>；<span class="in">藥屋少女的呢喃 [01].mkv</span> → <span class="var">vars.ep = "01"</span>；<span class="in">… - SP1.mkv</span> → 捕获失败，<span class="var">ep 不存在</span></div></div>
+<div class="flow">▼</div>
+
+<div class="node transform"><div class="head"><span class="no">12</span><span class="kind">transform.text.template</span><span class="chip cat-transform">Transform · 通用文本</span><span class="chip scope">requiredVars: [title, ep]</span></div>
+<div class="io"><span class="t">IN</span> 能力:ITextWorkpiece　<span class="t">OUT</span> 同 ｜ 基数 1→1 ｜ <span class="v">需要 var:title、var:ep</span>（缺失→节点跳过；编辑器 lint 上游供给：title←节点5经继承、ep←节点11）</div>
+<table class="cfg">
+<tr><td>template</td><td class="mono">{var:title} - {var:ep:pad(2)}{var:extension}</td></tr>
+<tr><td>缺变量行为</td><td class="mono">requiredVars 任一缺失 → 整节点跳过（工作文本保持上游清洗结果）</td></tr></table>
+<div class="fx"><span class="in">藥屋少女的呢喃 [01].mkv</span> + <span class="var">title=药屋少女的呢喃（继承自父目录节点 5）</span> + <span class="var">ep=01</span> + <span class="var">extension=.mkv（系统变量）</span> → <span class="out">药屋少女的呢喃 - 01.mkv</span>　｜　SP1 缺 <span class="var">ep</span> → 跳过，保住清洗结果</div></div>
+<div class="flow">▼</div>
+
+<div class="node action"><div class="head"><span class="no">13</span><span class="kind">action.fs.saveName</span><span class="chip cat-action">Action</span><span class="chip scope">实例 ②：文件</span></div>
+<div class="io"><span class="t">IN</span> item.fs.entry　<span class="t">OUT</span> item.fs.entry（链终点）｜ 基数 1→1 ｜ 副作用：记录<b>文件</b>改名计划 / Apply 改名 + FileRenameRecord</div>
+<table class="cfg">
+<tr><td>mode</td><td class="mono">Preview</td></tr>
+<tr><td>applyOrder</td><td class="mono">DeepestFirst（Apply 期先改文件、后改父目录——计划记录顺序无关紧要）</td></tr>
+<tr><td>onConflict</td><td class="mono">SkipAndReport</td></tr></table>
+<div class="fx">与节点 6 是<b>同一 kind 的两个实例</b>（同 kind 多实例、各带配置是既有规则）。WorkingName == OriginalName 的条目自动跳过。</div></div>
+
+<div class="link-callout"><b>联动链路总结</b>：节点 5（父目录捕获 <code class="i">title</code>）→ 节点 7（展开时变量继承给子文件项 + 注入系统变量）→ 节点 11（文件自捕 <code class="i">ep</code>）→ 节点 12（模板同时消费两者与 <code class="i">var:extension</code> 重建文件名）。变量只在 item 内流动、随继承下发——链仍是线性 per-item，没有全局状态。</div>
+
+<h2><span class="n">§3</span>单条 item 的流转（以 藥屋 [01] 文件为例）</h2>
+<table class="t"><tr><th>经过节点</th><th>工作文本（WorkingName）</th><th>Variables</th></tr>
+<tr><td>7 展开产出</td><td class="mono">[桜都字幕組] 藥屋少女的呢喃 [01][1080p][繁体].mkv</td><td class="mono">title=药屋少女的呢喃（继承）, extension=.mkv, parentName=…</td></tr>
+<tr><td>8 去字幕组</td><td class="mono">藥屋少女的呢喃 [01][1080p][繁体].mkv</td><td class="mono">同上</td></tr>
+<tr><td>9 去质量标签</td><td class="mono">藥屋少女的呢喃 [01].mkv</td><td class="mono">同上</td></tr>
+<tr><td>11 捕获集数</td><td class="mono">藥屋少女的呢喃 [01].mkv</td><td class="mono">+ ep=01</td></tr>
+<tr><td>12 模板重建</td><td class="mono">药屋少女的呢喃 - 01.mkv</td><td class="mono">同上</td></tr>
+<tr><td>13 记入计划</td><td class="mono">（Preview：旧名 → 新名 入 diff）</td><td></td></tr></table>
+
+<h2><span class="n">§4</span>预览与结果</h2>
+<pre class="tree">D:/Downloads/
+├─ <span class="add">葬送のフリーレン Sousou no Frieren</span>/
+│   ├─ <span class="add">葬送のフリーレン Sousou no Frieren - 01.mkv</span>
+│   ├─ <span class="add">葬送のフリーレン Sousou no Frieren - 02.mkv</span>
+│   └─ <span class="add">Sousou no Frieren - SP1.mkv</span>          <span class="dim">← 模板跳过，仅清洗（去字幕组/质量标签）</span>
+├─ <span class="add">药屋少女的呢喃</span>/
+│   ├─ <span class="add">药屋少女的呢喃 - 01.mkv</span>              <span class="dim">← 繁体原名被父目录净标题统一</span>
+│   └─ <span class="add">药屋少女的呢喃 - 02.mkv</span>
+└─ <span class="kept">Comiket103/</span>                            <span class="dim">← 未触碰</span></pre>
+<p class="note">Apply 顺序（DeepestFirst）：8 个文件先改，2 个目录后改（尽管目录计划先被记录）；全部写入 <code class="i">FileRenameRecord</code>，一键逆序撤销。</p>
+
+<h2><span class="n">§5</span>Workflow 视角：类型契约与冲突隔离</h2>
+<p>本功能的节点与其他功能（exhentai / pixiv / subscription…）注册在<b>同一个</b>活动注册表里，但不会互相冲突，隔离靠三层机制：</p>
+<ul>
+<li><b>kind 命名空间</b>：注册表以 kind 字符串为唯一键（<code class="i">WorkflowActivityKinds.Build</code> 校验段格式）——<code class="i">transform.text.*</code> / <code class="i">*.fs.*</code> 与 <code class="i">*.exhentai.*</code> 等天然不撞。</li>
+<li><b>硬契约（编辑器报错级）分两种形态</b>：fs 域节点（filter/expand/saveName）声明 <code class="i">AcceptedInputItemTypes = ["item.fs.entry"]</code>——精确类型白名单；<b>通用文本节点声明 <code class="i">AcceptedItemInterface = typeof(ITextWorkpiece)</code></b>——接受任何 CLR 类型实现该能力接口的 item，编辑器经 <code class="i">IWorkflowItemTypeDescriptor.ClrType</code> 静态校验实现关系。"作用于哪个 property"由 item 类型声明工作文本统一回答（<code class="i">FsEntryItem.WorkingText ≡ WorkingName</code>，编辑器在节点卡上显示"作用于：WorkingName"）；ExHentai 画廊链放不进 <code class="i">action.fs.saveName</code>（类型白名单拦截），但若画廊 item 将来实现 ITextWorkpiece，同一批文本节点直接可用于清洗其标题——按契约互操作，不是冲突。</li>
+<li><b>软契约（编辑器 lint 级）= 变量供需</b>：capture 按配置声明"提供 var:x"，template 声明 <code class="i">requiredVars</code>——编辑器静态核对上游供给链（含 expand 继承与系统变量），缺口给 warning 而非 error（capture 可能条件性命中，运行期由 requiredVars 跳过兜底）。</li>
+</ul>
+<table class="t"><tr><th>节点</th><th>契约（IN）</th><th>基数</th><th>变量</th></tr>
+<tr><td class="mono">T fs.manualScan</td><td class="mono">payload → item.fs.entry</td><td>0→N</td><td>注入系统变量</td></tr>
+<tr><td class="mono">1 filter.fs.byRegex</td><td class="mono">item.fs.entry（精确类型）</td><td>1→0/1</td><td>—</td></tr>
+<tr><td class="mono">2–4 removeWrapped/trim</td><td class="mono">能力: ITextWorkpiece</td><td>1→1</td><td>—</td></tr>
+<tr><td class="mono">5 capture</td><td class="mono">能力: ITextWorkpiece</td><td>1→1</td><td class="mono">提供 title</td></tr>
+<tr><td class="mono">6 saveName（目录实例）</td><td class="mono">item.fs.entry（精确类型）</td><td>1→1</td><td>—（副作用：目录计划）</td></tr>
+<tr><td class="mono">7 expand.fs.children</td><td class="mono">item.fs.entry（精确类型）</td><td><b>1→N</b></td><td>继承全部 + 注入 extension/parentName</td></tr>
+<tr><td class="mono">8–10 removeWrapped/trim</td><td class="mono">能力: ITextWorkpiece</td><td>1→1</td><td>—</td></tr>
+<tr><td class="mono">11 capture</td><td class="mono">能力: ITextWorkpiece</td><td>1→1</td><td class="mono">提供 ep（onMiss 不提供）</td></tr>
+<tr><td class="mono">12 template</td><td class="mono">能力: ITextWorkpiece</td><td>1→1</td><td class="mono">需要 title + ep</td></tr>
+<tr><td class="mono">13 saveName（文件实例）</td><td class="mono">item.fs.entry（精确类型）</td><td>1→1（终点）</td><td>—（副作用：文件计划/改名）</td></tr></table>
+
+<h2><span class="n">§6</span>本例暴露并已并入设计的增量</h2>
+<ul>
+<li><b>链中展开</b>：<code class="i">expand.fs.children</code>（引擎新增 <code class="i">ExpandTo</code> outcome）——多层级处理与变量继承的前提。v1 仅 <code class="i">ChildrenOnly</code>：父项计划在展开前存盘，混合流经<b>链序</b>表达，文本节点因此零 fs 感知（scope 选项被移除）。</li>
+<li><b>能力契约</b>：<code class="i">ITextWorkpiece</code>（WorkingText + WithWorkingText）+ 描述符 <code class="i">AcceptedItemInterface</code> + 经 ClrType 的编辑器校验——文本节点真正通用，"作用于哪个 property"由 item 类型一处声明统一回答。</li>
+<li><b>变量机制</b>：<code class="i">Variables</code> + <code class="i">transform.text.capture</code>（具名捕获，不改文本）+ <code class="i">{var:name(:formatter)}</code> 插值 + <b>系统变量</b>（fs 域注入 <code class="i">var:extension</code> / <code class="i">var:parentName</code>——fs 语义进入通用文本节点的唯一通道）。</li>
+<li><b>模板重建名</b>：<code class="i">transform.text.template</code>——跨层级信息（父标题 + 自身集数 + 系统变量）组合命名的表达方式。</li>
+<li><b>requiredVars</b>：缺变量跳过本节点（SP1 的兜底路径）。</li>
+<li><b>Apply 排序</b>：<code class="i">DeepestFirst</code>——按路径深度从深到浅执行，与计划记录顺序解耦。</li>
+</ul>
+<footer>文件清洗流程示例 · 配套 <a href="file-cleaning-workflow.html">file-cleaning-workflow.html</a>（设计增量已同步）</footer>
+</div></body></html>

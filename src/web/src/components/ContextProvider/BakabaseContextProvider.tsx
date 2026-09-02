@@ -298,7 +298,18 @@ const BakabaseContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
             algorithm: isDarkMode ? theme.darkAlgorithm : theme.defaultAlgorithm,
           }}
         >
-          <ToastProvider placement={"top-center"} />
+          <ToastProvider
+            placement={"top-center"}
+            toastProps={{
+              // Server errors arrive as one long line; without this a toast keeps its default
+              // width and the message runs off the edge instead of wrapping.
+              classNames: {
+                base: "max-w-[min(90vw,42rem)]",
+                title: "break-words",
+                description: "whitespace-pre-wrap break-words max-h-60 overflow-auto",
+              },
+            }}
+          />
           <BakabaseContext.Provider value={contextValue}>
             {portals.map(({ key, component }) => (
               <ErrorBoundary key={key}>

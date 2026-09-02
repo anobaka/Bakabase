@@ -20,15 +20,19 @@ const Toast = (props: Props) => {
   const [copied, setCopied] = useState(false);
 
   return (
-    <div className={"flex items-center gap-4"}>
-      <Chip classNames={{ content: "flex" }} color={"danger"} variant={"light"}>
+    <div className={"flex items-start gap-4 max-w-full"}>
+      <Chip classNames={{ content: "flex" }} className={"shrink-0"} color={"danger"} variant={"light"}>
         <WarningOutlined className={"text-xl"} />
       </Chip>
-      <div className={"flex flex-col gap-1 break-all"}>
+      <div className={"flex flex-col gap-1 min-w-0 flex-1 break-words"}>
         <div>{title}</div>
-        {description && <pre className={"opacity-80 text-xs"}>{description}</pre>}
+        {description && (
+          <pre className={"opacity-80 text-xs whitespace-pre-wrap break-words max-h-60 overflow-auto"}>
+            {description}
+          </pre>
+        )}
       </div>
-      <div className={"flex items-center"}>
+      <div className={"flex items-center shrink-0"}>
         <Button
           isIconOnly
           size={"sm"}

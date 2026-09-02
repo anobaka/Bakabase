@@ -19,13 +19,16 @@ using Bakabase.Modules.Workflow.Abstractions.Models.Db;
 using Microsoft.EntityFrameworkCore;
 using EnhancementRecord = Bakabase.Abstractions.Models.Db.EnhancementRecord;
 using ReservedPropertyValue = Bakabase.Abstractions.Models.Db.ReservedPropertyValue;
-using SpecialText = Bakabase.Abstractions.Models.Db.SpecialText;
 
 namespace Bakabase.InsideWorld.Business
 {
     public class BakabaseDbContext : DbContext, IBulkModificationDbContext, IComparisonDbContext, IHealthScoreDbContext
     {
-        public DbSet<SpecialText> SpecialTexts { get; set; }
+        /// <summary>
+        /// Dormant: only <c>TextSystemMigrator</c> still reads it, to copy the rows into
+        /// <see cref="TextTypes"/> / <see cref="TextEntries"/>. See <see cref="LegacySpecialText"/>.
+        /// </summary>
+        public DbSet<LegacySpecialText> SpecialTexts { get; set; }
         public DbSet<PlayListDbModel> Playlists { get; set; }
 
         public DbSet<DownloadTaskDbModel> DownloadTasks { get; set; }
@@ -119,6 +122,11 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<ComparisonResultGroupMemberDbModel> ComparisonResultGroupMembers { get; set; }
         public DbSet<ComparisonResultPairDbModel> ComparisonResultPairs { get; set; }
 
+        // Text module tables
+        public DbSet<Modules.Text.Abstractions.Models.Db.TextType> TextTypes { get; set; }
+        public DbSet<Modules.Text.Abstractions.Models.Db.TextEntry> TextEntries { get; set; }
+        public DbSet<FileRenameEntry> FileRenameEntries { get; set; }
+
         public BakabaseDbContext()
         {
         }
@@ -149,6 +157,28 @@ namespace Bakabase.InsideWorld.Business
             modelBuilder.Entity<DownloadRecordDbModel>(t =>
             {
                 t.HasIndex(a => new {a.ThirdPartyId, a.Key}).IsUnique();
+            });
+
+            modelBuilder.Entity<Modules.Text.Abstractions.Models.Db.TextType>(t =>
+            {
+                // Deliberately not unique on WellKnown: a database written by an earlier build may
+                // already hold duplicate builtin rows, and a unique index would fail the schema
+                // migration before startup ever got the chance to repair them
+                // (see ITextVocabularyService.EnsureBuiltinTypes). Uniqueness is upheld in code.
+                t.HasIndex(a => a.WellKnown);
+                t.HasIndex(a => a.Name);
+            });
+
+            modelBuilder.Entity<Modules.Text.Abstractions.Models.Db.TextEntry>(t =>
+            {
+                t.HasIndex(a => a.TypeId);
+            });
+
+            modelBuilder.Entity<FileRenameEntry>(t =>
+            {
+                t.HasIndex(a => a.RunId);
+                // Apply/undo iterate a run's rows by status; the composite spares a scan per click.
+                t.HasIndex(a => new {a.RunId, a.Status});
             });
 
             modelBuilder.Entity<PasswordDbModel>(t =>

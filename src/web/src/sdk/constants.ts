@@ -1549,6 +1549,33 @@ export const FileExtensionGroupLabel: Record<FileExtensionGroup, string> = {
   [FileExtensionGroup.Archive]: 'Archive'
 };
 
+export enum FileRenameStatus {
+  Pending = 1,
+  Conflict = 2,
+  Excluded = 3,
+  Applied = 4,
+  Failed = 5,
+  Undone = 6
+}
+
+export const fileRenameStatuses = [
+  { label: 'Pending', value: FileRenameStatus.Pending },
+  { label: 'Conflict', value: FileRenameStatus.Conflict },
+  { label: 'Excluded', value: FileRenameStatus.Excluded },
+  { label: 'Applied', value: FileRenameStatus.Applied },
+  { label: 'Failed', value: FileRenameStatus.Failed },
+  { label: 'Undone', value: FileRenameStatus.Undone }
+] as const;
+
+export const FileRenameStatusLabel: Record<FileRenameStatus, string> = {
+  [FileRenameStatus.Pending]: 'Pending',
+  [FileRenameStatus.Conflict]: 'Conflict',
+  [FileRenameStatus.Excluded]: 'Excluded',
+  [FileRenameStatus.Applied]: 'Applied',
+  [FileRenameStatus.Failed]: 'Failed',
+  [FileRenameStatus.Undone]: 'Undone'
+};
+
 export enum FilterDisplayMode {
   Simple = 1,
   Advanced = 2
@@ -1562,6 +1589,24 @@ export const filterDisplayModes = [
 export const FilterDisplayModeLabel: Record<FilterDisplayMode, string> = {
   [FilterDisplayMode.Simple]: 'Simple',
   [FilterDisplayMode.Advanced]: 'Advanced'
+};
+
+export enum FsScanTarget {
+  Files = 1,
+  Directories = 2,
+  Both = 3
+}
+
+export const fsScanTargets = [
+  { label: 'Files', value: FsScanTarget.Files },
+  { label: 'Directories', value: FsScanTarget.Directories },
+  { label: 'Both', value: FsScanTarget.Both }
+] as const;
+
+export const FsScanTargetLabel: Record<FsScanTarget, string> = {
+  [FsScanTarget.Files]: 'Files',
+  [FsScanTarget.Directories]: 'Directories',
+  [FsScanTarget.Both]: 'Both'
 };
 
 export enum InitializationContentType {
@@ -2206,36 +2251,6 @@ export const SearchOperationLabel: Record<SearchOperation, string> = {
   [SearchOperation.NotMatches]: 'NotMatches'
 };
 
-export enum SpecialTextType {
-  Useless = 1,
-  Wrapper = 3,
-  Standardization = 4,
-  Volume = 6,
-  Trim = 7,
-  DateTime = 8,
-  Language = 9
-}
-
-export const specialTextTypes = [
-  { label: 'Useless', value: SpecialTextType.Useless },
-  { label: 'Wrapper', value: SpecialTextType.Wrapper },
-  { label: 'Standardization', value: SpecialTextType.Standardization },
-  { label: 'Volume', value: SpecialTextType.Volume },
-  { label: 'Trim', value: SpecialTextType.Trim },
-  { label: 'DateTime', value: SpecialTextType.DateTime },
-  { label: 'Language', value: SpecialTextType.Language }
-] as const;
-
-export const SpecialTextTypeLabel: Record<SpecialTextType, string> = {
-  [SpecialTextType.Useless]: 'Useless',
-  [SpecialTextType.Wrapper]: 'Wrapper',
-  [SpecialTextType.Standardization]: 'Standardization',
-  [SpecialTextType.Volume]: 'Volume',
-  [SpecialTextType.Trim]: 'Trim',
-  [SpecialTextType.DateTime]: 'DateTime',
-  [SpecialTextType.Language]: 'Language'
-};
-
 export enum StandardValueType {
   String = 1,
   ListString = 2,
@@ -2270,6 +2285,54 @@ export const StandardValueTypeLabel: Record<StandardValueType, string> = {
   [StandardValueType.Time]: 'Time',
   [StandardValueType.ListListString]: 'ListListString',
   [StandardValueType.ListTag]: 'ListTag'
+};
+
+export enum TextTypeShape {
+  Values = 1,
+  DelimiterPair = 2,
+  MappingPair = 3
+}
+
+export const textTypeShapes = [
+  { label: 'Values', value: TextTypeShape.Values },
+  { label: 'DelimiterPair', value: TextTypeShape.DelimiterPair },
+  { label: 'MappingPair', value: TextTypeShape.MappingPair }
+] as const;
+
+export const TextTypeShapeLabel: Record<TextTypeShape, string> = {
+  [TextTypeShape.Values]: 'Values',
+  [TextTypeShape.DelimiterPair]: 'DelimiterPair',
+  [TextTypeShape.MappingPair]: 'MappingPair'
+};
+
+export enum WellKnownTextType {
+  Useless = 1,
+  Wrapper = 3,
+  Standardization = 4,
+  Volume = 6,
+  Trim = 7,
+  DateTime = 8,
+  Language = 9
+}
+
+export const wellKnownTextTypes = [
+  { label: 'Useless', value: WellKnownTextType.Useless },
+  { label: 'Wrapper', value: WellKnownTextType.Wrapper },
+  { label: 'Standardization', value: WellKnownTextType.Standardization },
+  { label: 'Volume', value: WellKnownTextType.Volume },
+  { label: 'Trim', value: WellKnownTextType.Trim },
+  { label: 'DateTime', value: WellKnownTextType.DateTime },
+  { label: 'Language', value: WellKnownTextType.Language }
+] as const;
+
+export const WellKnownTextTypeLabel: Record<WellKnownTextType, string> = {
+  [WellKnownTextType.Useless]: 'Useless',
+  [WellKnownTextType.Wrapper]: 'Wrapper',
+  [WellKnownTextType.Standardization]: 'Standardization',
+  [WellKnownTextType.Volume]: 'Volume',
+  [WellKnownTextType.Trim]: 'Trim',
+  [WellKnownTextType.DateTime]: 'DateTime',
+  [WellKnownTextType.Language]: 'Language'
 };
 
 export enum TextProcessingOperation {
@@ -2315,6 +2378,24 @@ export const TextProcessingOperationLabel: Record<TextProcessingOperation, strin
   [TextProcessingOperation.ReplaceFromEnd]: 'ReplaceFromEnd',
   [TextProcessingOperation.ReplaceFromAnyPosition]: 'ReplaceFromAnyPosition',
   [TextProcessingOperation.ReplaceWithRegex]: 'ReplaceWithRegex'
+};
+
+export enum TextMatchMode {
+  EqualsAny = 1,
+  ContainsAny = 2,
+  RegexAny = 3
+}
+
+export const textMatchModes = [
+  { label: 'EqualsAny', value: TextMatchMode.EqualsAny },
+  { label: 'ContainsAny', value: TextMatchMode.ContainsAny },
+  { label: 'RegexAny', value: TextMatchMode.RegexAny }
+] as const;
+
+export const TextMatchModeLabel: Record<TextMatchMode, string> = {
+  [TextMatchMode.EqualsAny]: 'EqualsAny',
+  [TextMatchMode.ContainsAny]: 'ContainsAny',
+  [TextMatchMode.RegexAny]: 'RegexAny'
 };
 
 export enum BTaskDuplicateIdHandling {
@@ -4772,6 +4853,21 @@ export const PresetResourceTypeLabel: Record<PresetResourceType, string> = {
   [PresetResourceType.MotionManga]: 'MotionManga',
   [PresetResourceType.Mod]: 'Mod',
   [PresetResourceType.Tool]: 'Tool'
+};
+
+export enum WorkflowActivityCardinality {
+  OneToOne = 1,
+  OneToMany = 2
+}
+
+export const workflowActivityCardinalities = [
+  { label: 'OneToOne', value: WorkflowActivityCardinality.OneToOne },
+  { label: 'OneToMany', value: WorkflowActivityCardinality.OneToMany }
+] as const;
+
+export const WorkflowActivityCardinalityLabel: Record<WorkflowActivityCardinality, string> = {
+  [WorkflowActivityCardinality.OneToOne]: 'OneToOne',
+  [WorkflowActivityCardinality.OneToMany]: 'OneToMany'
 };
 
 export enum WorkflowActivityCategory {

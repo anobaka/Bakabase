@@ -24,7 +24,6 @@ public class TestBakabaseLocalizer : IBakabaseLocalizer
     public string ValueIsNotSet(string name) => $"ValueIsNotSet_{name}";
     public string NewFolderName() => "NewFolderName";
     public string Downloader_FailedToStart(string taskName, string message) => "Downloader_FailedToStart";
-    public string SpecialText_HistoricalLanguageValue2ShouldBeModified() => "SpecialText_HistoricalLanguageValue2ShouldBeModified";
     public string Reserved_Resource_Property_Name(ReservedProperty property) => property.ToString();
     public string Unknown() => "Unknown";
     public string Failed() => "Failed";

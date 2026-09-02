@@ -16,9 +16,9 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
 {
     public class PixivSearchDownloader(
         IServiceProvider serviceProvider,
-        ISpecialTextService specialTextService,
+        ITextVocabularyService textVocabularyService,
         PixivClient client)
-        : AbstractPixivDownloader(serviceProvider, specialTextService,
+        : AbstractPixivDownloader(serviceProvider, textVocabularyService,
             client)
     {
         public override PixivDownloadTaskType EnumTaskType => PixivDownloadTaskType.Search;
