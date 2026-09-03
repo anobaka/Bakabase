@@ -12,9 +12,13 @@
     Icon="/Assets/favicon.png"
     Topmost="True"
     WindowStartupLocation="CenterScreen"
-    Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+    Background="{DynamicResource ExitSurfaceBrush}"
     SystemDecorations="BorderOnly"
     mc:Ignorable="d">
+
+    <Window.Styles>
+        <StyleInclude Source="avares://Bakabase/Styles/ExitStyles.axaml" />
+    </Window.Styles>
 
     <Grid Margin="24" RowDefinitions="Auto,Auto,Auto,Auto">
 
@@ -22,14 +26,11 @@
             <!-- Rounded tile: favicon.png is opaque, see ExitConfirmationDialog.axaml. -->
             <Border
                 Grid.Column="0"
-                Width="36"
-                Height="36"
+                Width="40"
+                Height="40"
                 Margin="0,0,14,0"
-                VerticalAlignment="Top"
-                BorderBrush="{DynamicResource SystemControlTransientBorderBrush}"
-                BorderThickness="1"
-                ClipToBounds="True"
-                CornerRadius="8">
+                Classes="exit-tile"
+                VerticalAlignment="Top">
                 <Image Source="/Assets/favicon.png" Stretch="UniformToFill" />
             </Border>
             <StackPanel Grid.Column="1" Spacing="4">
@@ -54,14 +55,19 @@
             Grid.Row="1"
             Height="6"
             Margin="0,18,0,0"
+            Classes="exit-progress"
             IsIndeterminate="True" />
 
-        <!-- Which tasks are holding the shutdown up. Empty until we know. -->
-        <StackPanel
-            Name="TaskList"
+        <!-- Which tasks are holding the shutdown up. Collapsed until we know. -->
+        <Border
+            Name="TaskPanel"
             Grid.Row="2"
-            Margin="0,14,0,0"
-            Spacing="3" />
+            Margin="0,16,0,0"
+            Padding="14,12"
+            Classes="exit-card"
+            IsVisible="False">
+            <StackPanel Name="TaskList" Spacing="3" />
+        </Border>
 
         <!--
             Escape hatch. Deliberately hidden for the first few seconds: a normal shutdown is
@@ -73,7 +79,7 @@
             Grid.Row="3"
             Margin="0,18,0,0"
             IsVisible="False"
-            Spacing="8">
+            Spacing="10">
             <TextBlock
                 Name="ForceHint"
                 FontSize="12"
@@ -83,6 +89,7 @@
             <Button
                 Name="ForceQuitBtn"
                 MinWidth="110"
+                Classes="exit-secondary"
                 HorizontalAlignment="Right"
                 HorizontalContentAlignment="Center"
                 Content="Quit now" />

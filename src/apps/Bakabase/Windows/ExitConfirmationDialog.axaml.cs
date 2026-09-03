@@ -21,20 +21,30 @@ public enum ExitChoice
     Exit
 }
 
+public enum ExitPromptKind
+{
+    /// <summary>
+    /// The user closed the window and we are asking what that should mean. This prompt decides
+    /// the default close behaviour, so it offers "remember my choice".
+    /// </summary>
+    Choice,
+
+    /// <summary>
+    /// Exiting is already decided (tray → Exit, or the configured behaviour) and we are only
+    /// confirming because work would be lost. Warning-led, and never persisted as a preference.
+    /// </summary>
+    ConfirmBusy
+}
+
 /// <param name="AllowMinimize">
-/// False when the user has already asked to quit outright (tray → Exit) and we are only
-/// confirming because work would be lost — offering "minimize" there would answer a question
-/// they did not ask.
-/// </param>
-/// <param name="ShowRemember">
-/// Only meaningful when this prompt actually decides the default close behaviour, i.e. the
-/// window-close path. A one-off "are you sure, tasks are running" confirmation must not be
-/// turned into a persisted preference.
+/// False when there is no notification area to minimize into — see
+/// <c>TrayIconAvailability</c>. Ignored for <see cref="ExitPromptKind.ConfirmBusy"/>, which
+/// never offers minimize: the user already asked to quit.
 /// </param>
 /// <param name="BusyTaskNames">Critical tasks that are still active, most relevant first.</param>
 public sealed record ExitPromptOptions(
+    ExitPromptKind Kind,
     bool AllowMinimize,
-    bool ShowRemember,
     IReadOnlyList<string> BusyTaskNames);
 
 public sealed record ExitPromptResult(ExitChoice Choice, bool Remember);
@@ -46,15 +56,16 @@ public partial class ExitConfirmationDialog : Window
 
     private ExitChoice _choice = ExitChoice.Cancel;
 
-    public ExitConfirmationDialog() : this(new ExitPromptOptions(true, true, [])) { }
+    public ExitConfirmationDialog() : this(new ExitPromptOptions(ExitPromptKind.Choice, true, [])) { }
 
     public ExitConfirmationDialog(ExitPromptOptions options)
     {
         InitializeComponent();
 
+        var confirming = options.Kind == ExitPromptKind.ConfirmBusy;
+        var canMinimize = options.AllowMinimize && !confirming;
+
         Title = ExitStrings.DialogTitle;
-        Heading.Text = ExitStrings.Heading;
-        Subheading.Text = ExitStrings.Subheading;
         MinimizeBtn.Content = ExitStrings.Minimize;
         ExitBtn.Content = ExitStrings.Exit;
         CancelBtn.Content = ExitStrings.Cancel;
@@ -63,21 +74,31 @@ public partial class ExitConfirmationDialog : Window
         BusyHeading.Text = ExitStrings.BusyHeading;
         BusyBody.Text = ExitStrings.BusyBody;
 
-        MinimizeBtn.IsVisible = options.AllowMinimize;
-        RememberPanel.IsVisible = options.ShowRemember;
+        Heading.Text = confirming ? ExitStrings.BusyHeading : ExitStrings.Heading;
+        Subheading.Text = confirming
+            ? ExitStrings.BusyBody
+            // Promising a tray that is not there would be a lie, and on Linux a hidden window
+            // has no way back — so say what closing will actually do instead.
+            : canMinimize
+                ? ExitStrings.Subheading
+                : ExitStrings.SubheadingNoTray;
 
-        if (!options.AllowMinimize)
+        MinimizeBtn.IsVisible = canMinimize;
+        RememberPanel.IsVisible = !confirming;
+
+        if (!canMinimize)
         {
             // Nothing else can be the default action once "minimize" is gone, and leaving
             // Enter unbound in a modal dialog is worse than binding it to the only forward
             // action the user has left.
             ExitBtn.IsDefault = true;
-            ExitBtn.Classes.Add("accent");
-            Heading.Text = ExitStrings.BusyHeading;
-            Subheading.Text = ExitStrings.BusyBody;
+            // Swap, don't add: both class styles set the same template properties, so leaving
+            // exit-secondary on would make the winner depend on declaration order.
+            ExitBtn.Classes.Remove("exit-secondary");
+            ExitBtn.Classes.Add("exit-primary");
         }
 
-        RenderBusyTasks(options.BusyTaskNames, showPanel: options.AllowMinimize);
+        RenderBusyTasks(options.BusyTaskNames, showPanel: !confirming);
 
         MinimizeBtn.Click += (_, _) => Finish(ExitChoice.Minimize);
         ExitBtn.Click += (_, _) => Finish(ExitChoice.Exit);

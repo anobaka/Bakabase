@@ -68,6 +68,7 @@ public partial class ExitProgressWindow : Window
     public void SetRemainingTasks(IReadOnlyList<string> names)
     {
         TaskList.Children.Clear();
+        TaskPanel.IsVisible = names.Count > 0;
 
         if (names.Count == 0)
         {

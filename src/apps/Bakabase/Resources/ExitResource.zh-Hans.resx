@@ -67,6 +67,9 @@
   <data name="Exit_Subheading" xml:space="preserve">
     <value>最小化到通知区域，后台任务可以继续运行。</value>
   </data>
+  <data name="Exit_SubheadingNoTray" xml:space="preserve">
+    <value>当前桌面环境没有系统托盘，关闭窗口将直接退出。</value>
+  </data>
   <data name="Exit_Minimize" xml:space="preserve">
     <value>最小化到托盘</value>
   </data>

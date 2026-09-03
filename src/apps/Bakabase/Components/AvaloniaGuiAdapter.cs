@@ -259,7 +259,7 @@ public class AvaloniaGuiAdapter : GuiAdapter, ITrayIconController
     {
         var result = await ExitConfirmationDialog.PromptAsync(
             _mainWindow,
-            new ExitPromptOptions(AllowMinimize: true, ShowRemember: true, []));
+            new ExitPromptOptions(ExitPromptKind.Choice, _app.IsTrayIconAvailable, []));
 
         var behavior = result.Choice switch
         {

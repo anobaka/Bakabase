@@ -106,6 +106,15 @@ public sealed class ExitCoordinator(App app, AvaloniaGuiAdapter gui)
             ? CloseBehavior.Exit
             : ResolveCloseBehavior();
 
+        var canMinimize = app.IsTrayIconAvailable;
+
+        // A stored "minimize" from a machine that had a tray must not hide the window on one
+        // that does not — on Linux there is no way to bring it back. Fall back to asking.
+        if (behavior == CloseBehavior.Minimize && !canMinimize)
+        {
+            behavior = CloseBehavior.Prompt;
+        }
+
         if (behavior == CloseBehavior.Minimize)
         {
             gui.Hide();
@@ -118,7 +127,7 @@ public sealed class ExitCoordinator(App app, AvaloniaGuiAdapter gui)
         {
             var result = await ExitConfirmationDialog.PromptAsync(
                 gui.MainWindow,
-                new ExitPromptOptions(AllowMinimize: true, ShowRemember: true, busy));
+                new ExitPromptOptions(ExitPromptKind.Choice, canMinimize, busy));
 
             if (result.Remember && result.Choice != ExitChoice.Cancel)
             {
@@ -140,7 +149,7 @@ public sealed class ExitCoordinator(App app, AvaloniaGuiAdapter gui)
             // whether to do it while work that loses data is in flight.
             var result = await ExitConfirmationDialog.PromptAsync(
                 gui.MainWindow,
-                new ExitPromptOptions(AllowMinimize: false, ShowRemember: false, busy));
+                new ExitPromptOptions(ExitPromptKind.ConfirmBusy, AllowMinimize: false, busy));
 
             if (result.Choice != ExitChoice.Exit)
             {

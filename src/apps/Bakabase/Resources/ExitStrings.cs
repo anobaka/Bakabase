@@ -42,6 +42,9 @@ internal static class ExitStrings
     public static string Subheading => Get("Exit_Subheading",
         "Bakabase can keep running in the notification area so background tasks continue.");
 
+    public static string SubheadingNoTray => Get("Exit_SubheadingNoTray",
+        "This desktop has no system tray, so closing the window will exit Bakabase.");
+
     public static string Minimize => Get("Exit_Minimize", "Minimize to tray");
 
     public static string Exit => Get("Exit_Exit", "Exit");

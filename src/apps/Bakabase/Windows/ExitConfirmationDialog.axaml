@@ -11,8 +11,12 @@
     ShowInTaskbar="False"
     Icon="/Assets/favicon.png"
     WindowStartupLocation="CenterOwner"
-    Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+    Background="{DynamicResource ExitSurfaceBrush}"
     mc:Ignorable="d">
+
+    <Window.Styles>
+        <StyleInclude Source="avares://Bakabase/Styles/ExitStyles.axaml" />
+    </Window.Styles>
 
     <DockPanel LastChildFill="True">
 
@@ -22,11 +26,10 @@
             required: the last child of a DockPanel always fills.
         -->
         <Border
+            Name="Footer"
+            Classes="exit-footer"
             DockPanel.Dock="Bottom"
-            Padding="24,16"
-            Background="{DynamicResource SystemControlBackgroundListLowBrush}"
-            BorderBrush="{DynamicResource SystemControlTransientBorderBrush}"
-            BorderThickness="0,1,0,0">
+            Padding="24,16">
             <StackPanel
                 HorizontalAlignment="Right"
                 Orientation="Horizontal"
@@ -34,18 +37,20 @@
                 <Button
                     Name="CancelBtn"
                     MinWidth="88"
+                    Classes="exit-secondary"
                     HorizontalContentAlignment="Center"
                     IsCancel="True"
                     Content="Cancel" />
                 <Button
                     Name="ExitBtn"
                     MinWidth="88"
+                    Classes="exit-secondary"
                     HorizontalContentAlignment="Center"
                     Content="Exit" />
                 <Button
                     Name="MinimizeBtn"
-                    MinWidth="132"
-                    Classes="accent"
+                    MinWidth="140"
+                    Classes="exit-primary"
                     HorizontalContentAlignment="Center"
                     IsDefault="True"
                     Content="Minimize to tray" />
@@ -59,18 +64,15 @@
                 <!--
                     favicon.png has no alpha channel, so on a dark background it would read as
                     a bare white square. Clipping it into a rounded tile with a hairline border
-                    turns that into a deliberate app mark in both themes.
+                    and a soft shadow turns that into a deliberate app mark in both themes.
                 -->
                 <Border
                     Grid.Column="0"
-                    Width="40"
-                    Height="40"
+                    Width="44"
+                    Height="44"
                     Margin="0,2,14,0"
-                    VerticalAlignment="Top"
-                    BorderBrush="{DynamicResource SystemControlTransientBorderBrush}"
-                    BorderThickness="1"
-                    ClipToBounds="True"
-                    CornerRadius="9">
+                    Classes="exit-tile"
+                    VerticalAlignment="Top">
                     <Image Source="/Assets/favicon.png" Stretch="UniformToFill" />
                 </Border>
                 <StackPanel Grid.Column="1" Spacing="5">
@@ -96,10 +98,7 @@
                 Grid.Row="1"
                 Margin="0,18,0,0"
                 Padding="14,12"
-                Background="{DynamicResource SystemControlBackgroundListLowBrush}"
-                BorderBrush="{DynamicResource SystemControlTransientBorderBrush}"
-                BorderThickness="1"
-                CornerRadius="6"
+                Classes="exit-card"
                 IsVisible="False">
                 <Grid ColumnDefinitions="Auto,*">
                     <Path

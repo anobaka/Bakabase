@@ -31,6 +31,13 @@ public partial class App : Application
 
     public TrayIcon AppTrayIcon { get; private set; } = null!;
 
+    /// <summary>
+    /// Whether "minimize to tray" is a real option on this desktop. See
+    /// <see cref="TrayIconAvailability"/> — on Linux without a StatusNotifierWatcher the icon
+    /// never appears and a hidden window cannot be recovered.
+    /// </summary>
+    public bool IsTrayIconAvailable => TrayIconAvailability.IsSupported(AppTrayIcon);
+
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
