@@ -15,10 +15,6 @@ import toast from "react-hot-toast";
 import { AiOutlineInbox } from "react-icons/ai";
 
 import BulkModification from "./components/BulkModification";
-import {
-  BulkModificationGuideModal,
-  useBulkModificationGuide,
-} from "./components/BulkModificationGuide";
 
 import {
   Accordion,
@@ -31,6 +27,7 @@ import {
   Tooltip,
 } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
+import { HelpCenterButton } from "@/components/HelpCenter";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import BetaChip from "@/components/Chips/BetaChip";
 
@@ -38,7 +35,6 @@ const BulkModification2Page = () => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const forceUpdate = useUpdate();
-  const { showGuide, completeGuide, resetGuide } = useBulkModificationGuide();
 
   const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
   const [bulkModifications, setBulkModifications] = useState<BulkModificationModel[]>();
@@ -71,7 +67,7 @@ const BulkModification2Page = () => {
       <div className="text-default-500 text-center">
         <p className="text-lg mb-2">{t<string>("bulkModification.empty.noData")}</p>
         <p className="text-sm text-default-400">
-          {t<string>("bulkModificationGuide.welcome.description")}
+          {t<string>("helpCenter.bulkModification.intro")}
         </p>
       </div>
       <Button color="primary" startContent={<PlusOutlined />} onPress={handleAdd}>
@@ -215,18 +211,11 @@ const BulkModification2Page = () => {
             </span>
           )}
         </div>
-        <Button
-          color="primary"
-          size="sm"
-          startContent={<QuestionCircleOutlined className="text-base" />}
-          variant="light"
-          onPress={resetGuide}
-        >
-          {t<string>("bulkModificationGuide.action.showGuide")}
-        </Button>
+        <HelpCenterButton
+          label={t<string>("helpCenter.entry.howBulkModificationWorks")}
+          topic="bulkModification"
+        />
       </div>
-
-      <BulkModificationGuideModal visible={showGuide} onComplete={completeGuide} />
 
       {/* Content */}
       {bulkModifications ? (

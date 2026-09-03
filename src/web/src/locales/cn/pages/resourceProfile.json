@@ -26,35 +26,9 @@
   "resourceProfile.action.searchByName": "按名称搜索",
   "resourceProfile.status.loading": "加载中...",
   "resourceProfile.empty.noProfiles": "未找到配置",
-  "resourceProfileGuide.viewAgain": "再次查看引导",
-  "resourceProfileGuide.welcome.title": "欢迎使用资源扩展",
-  "resourceProfileGuide.welcome.description": "资源扩展帮助您自定义不同类型资源的显示、匹配和播放方式。让我们开始吧！",
-  "resourceProfileGuide.matching.title": "搜索条件与优先级",
-  "resourceProfileGuide.matching.subtitle": "控制每个配置适用于哪些资源",
-  "resourceProfileGuide.matching.point1": "定义搜索条件，根据资源属性自动匹配资源",
-  "resourceProfileGuide.matching.point2": "设置优先级，确定多个配置匹配时哪个生效",
-  "resourceProfileGuide.display.title": "显示与增强器",
-  "resourceProfileGuide.display.subtitle": "自定义资源的呈现方式",
-  "resourceProfileGuide.display.point1": "使用属性占位符创建自定义名称模板",
-  "resourceProfileGuide.display.point2": "配置增强器自动丰富资源元数据",
-  "resourceProfileGuide.display.point3": "为每个配置选择要显示的属性",
-  "resourceProfileGuide.playback.title": "播放配置",
-  "resourceProfileGuide.playback.subtitle": "设置文件的打开和播放方式",
-  "resourceProfileGuide.playback.point1": "定义哪些文件扩展名被视为可播放",
-  "resourceProfileGuide.playback.point2": "为不同文件类型配置外部播放器",
-  "resourceProfileGuide.binding.title": "属性绑定",
-  "resourceProfileGuide.binding.subtitle": "为不同配置绑定不同的属性值",
-  "resourceProfileGuide.binding.point1": "为配置绑定特定的属性值，便于更好地组织资源",
-  "resourceProfileGuide.binding.point2": "绑定的属性会被优先展示在资源详情中",
-  "resourceProfileGuide.skip": "跳过",
-  "resourceProfileGuide.previous": "上一步",
-  "resourceProfileGuide.next": "下一步",
-  "resourceProfileGuide.getStarted": "开始使用",
-
   "resourceProfile.modal.deleteEnhancementsTitle": "删除增强数据",
   "resourceProfile.modal.configurePlayersTitle": "配置播放器",
   "resourceProfile.modal.testSearchCriteriaTitle": "测试搜索条件",
-
   "resourceProfile.label.allEnhancers": "所有增强器",
   "resourceProfile.label.selectEnhancer": "选择增强器",
   "resourceProfile.label.deleteEmptyRecordsOnly": "仅删除空记录",
@@ -70,7 +44,6 @@
   "resourceProfile.label.totalMatchingResources": "匹配的资源总数",
   "resourceProfile.label.showLimit": "显示限制",
   "resourceProfile.label.unnamed": "未命名",
-
   "resourceProfile.tip.deleteEnhancementsForProfile": "删除与配置匹配的资源的增强数据",
   "resourceProfile.tip.noEnhancersConfigured": "此配置未配置增强器。将删除匹配资源的所有增强数据。",
   "resourceProfile.tip.deleteEmptyRecordsOnlyDescription": "仅删除没有实际增强数据的增强记录",
@@ -79,33 +52,25 @@
   "resourceProfile.tip.playerExtensionUsage": "此播放器将用于这些扩展名的文件",
   "resourceProfile.tip.enterFilePathPreview": "输入文件路径以预览命令",
   "resourceProfile.tip.testPathIsFolder": "注意：测试路径是文件夹，不是文件",
-
   "resourceProfile.status.testingCriteria": "正在测试条件...",
   "resourceProfile.status.playersConfigured": "已配置 {{count}} 个播放器",
   "resourceProfile.status.noPlayersConfigured": "未配置播放器",
   "resourceProfile.status.showingOfTotal": "显示 {{shown}} / {{total}} 个匹配资源",
-
   "resourceProfile.action.addPlayer": "添加播放器",
   "resourceProfile.action.copied": "已复制！",
   "resourceProfile.action.copyToClipboard": "复制到剪贴板",
-
   "resourceProfile.input.filterResults": "筛选结果...",
-
   "resourceProfile.empty.noPlayersConfiguredGetStarted": "未配置播放器。点击「添加播放器」开始。",
   "resourceProfile.empty.noResourcesMatchFilter": "没有资源匹配您的筛选条件",
   "resourceProfile.empty.noResourcesMatchedByCriteria": "没有资源匹配此条件",
-
   "resourceProfile.error.executablePathRequired": "可执行文件路径为必填项",
   "resourceProfile.error.selectFileNotFolder": "请选择文件，而不是文件夹",
   "resourceProfile.error.fillAllExecutablePaths": "请在保存前填写所有可执行文件路径。",
-
   "resourceProfile.warning.cannotBeUndone": "警告：此操作无法撤销。",
-
   "resourceProfile.modal.selectEnhancersTitle": "选择增强器",
   "resourceProfile.modal.playableFileOptionsTitle": "可播放文件选项",
   "resourceProfile.modal.editResourceProfileTitle": "编辑资源扩展",
   "resourceProfile.modal.addResourceProfileTitle": "添加资源扩展",
-
   "resourceProfile.label.enhanceProperties": "增强属性",
   "resourceProfile.label.more": "更多",
   "resourceProfile.label.selected": "已选择",
@@ -122,19 +87,14 @@
   "resourceProfile.label.pattern": "模式",
   "resourceProfile.label.resourceProfile": "资源扩展",
   "resourceProfile.label.profileName": "配置名称",
-
   "resourceProfile.action.configure": "配置",
   "resourceProfile.action.clearAll": "清除全部",
-
   "resourceProfile.tip.filesWithExtensionsPlayable": "具有这些扩展名的文件将被视为可播放",
   "resourceProfile.tip.regexPatternPlayable": "用于匹配可播放文件名的正则表达式（可选，留空则仅按扩展名匹配）",
   "resourceProfile.tip.higherPriorityPrecedence": "优先级较高的配置优先生效",
   "resourceProfile.tip.otherSettingsAfterCreation": "创建后可直接在表格中配置其他设置。",
-
   "resourceProfile.input.fileNamePatternPlaceholder": "例如：.*\\.(mp4|mkv|avi)$",
-
   "resourceProfile.error.nameRequired": "名称为必填项",
-
   "resourceProfile.modal.editDisplayNameTemplateTitle": "编辑资源显示名称模板",
   "resourceProfile.label.availableProperties": "可用属性",
   "resourceProfile.empty.noPropertiesAvailable": "没有可用属性",
@@ -144,7 +104,6 @@
   "resourceProfile.tip.wrappersRemovedAutomatically": "空属性值周围的包装器将被自动移除。",
   "resourceProfile.input.templatePlaceholder": "输入模板或点击上方属性插入...",
   "resourceProfile.tip.leaveEmptyForFilename": "留空则使用文件名作为显示名称。",
-
   "enhancementConfig.title": "增强属性配置",
   "enhancementConfig.enhancerConfig": "增强器配置",
   "enhancementConfig.needsConfig": "需要配置",
@@ -155,7 +114,6 @@
   "enhancementConfig.columnProperty": "属性",
   "enhancementConfig.columnSources": "数据来源",
   "enhancementConfig.columnBindProperty": "绑定属性",
-
   "enhancementConfig.scenario.general": "通用",
   "enhancementConfig.scenario.doujinshi": "同人志",
   "enhancementConfig.scenario.manga": "漫画",
@@ -169,7 +127,6 @@
   "enhancementConfig.scenario.voiceWork": "音声",
   "enhancementConfig.scenario.book": "书籍",
   "enhancementConfig.scenario.av": "AV",
-
   "enhancementConfig.dynamicHint": "当前分组中的 {{enhancers}} 支持动态属性。点击下方配置按钮添加更多属性。",
   "enhancementConfig.dynamicExplanation": "动态属性由增强器在运行时从数据源中提取，例如 Bangumi 页面左栏中的属性、DLsite 封面右侧的属性、以及正则表达式的捕获组。您需要先配置对应的增强器，配置完成后动态属性将出现在下方列表中。",
   "enhancementConfig.configureDynamicEnhancers": "配置支持动态属性的增强器",
@@ -184,7 +141,6 @@
   "enhancementConfig.introStep1": "选择资源类型，查看可用属性",
   "enhancementConfig.introStep2": "勾选属性的数据来源（增强器），可勾选多个以防某些数据源失效",
   "enhancementConfig.introStep3": "将属性绑定到系统属性，使增强后的数据可见",
-
   "enhancementConfig.validation.action": "验证配置",
   "enhancementConfig.validation.title": "增强器配置验证",
   "enhancementConfig.validation.description": "选择一个资源来验证当前的增强器配置。验证将使用当前配置对所选资源执行增强，您可以查看增强结果。",
@@ -193,7 +149,6 @@
   "enhancementConfig.validation.validate": "验证",
   "enhancementConfig.validation.running": "正在执行增强验证...",
   "enhancementConfig.validation.failed": "验证失败",
-
   "resourceProfile.propertyPool.title": "属性池配置",
   "resourceProfile.propertyPool.description": "配置匹配此方案的资源应显示哪些属性，以及每个属性的值展示优先级。",
   "resourceProfile.propertyPool.addProperty": "添加属性",
@@ -203,10 +158,8 @@
   "resourceProfile.propertyPool.columnScopePriority": "属性值展示优先级",
   "resourceProfile.propertyPool.unknownProperty": "未知属性",
   "resourceProfile.propertyPool.globalScopePriority": "全局展示优先级",
-
   "resourceProfile.globalScopePriority.title": "全局属性值展示优先级",
   "resourceProfile.globalScopePriority.description": "拖拽调整属性值来源的展示优先级。优先级高的来源将优先展示其属性值。此设置对所有未自定义优先级的属性生效。",
-
   "resourceProfile.scopePriority.useGlobal": "使用全局设置",
   "resourceProfile.scopePriority.customize": "自定义",
   "resourceProfile.scopePriority.customizeTooltip": "为此属性自定义值展示优先级，覆盖全局设置",

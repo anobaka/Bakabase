@@ -1,0 +1,98 @@
+<Window
+    x:Class="Bakabase.Windows.ExitProgressWindow"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Title="Closing Bakabase"
+    Width="460"
+    SizeToContent="Height"
+    CanResize="False"
+    ShowInTaskbar="False"
+    Icon="/Assets/favicon.png"
+    Topmost="True"
+    WindowStartupLocation="CenterScreen"
+    Background="{DynamicResource ExitSurfaceBrush}"
+    SystemDecorations="BorderOnly"
+    mc:Ignorable="d">
+
+    <Window.Styles>
+        <StyleInclude Source="avares://Bakabase/Styles/ExitStyles.axaml" />
+    </Window.Styles>
+
+    <Grid Margin="24" RowDefinitions="Auto,Auto,Auto,Auto">
+
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,*">
+            <!-- Rounded tile: favicon.png is opaque, see ExitConfirmationDialog.axaml. -->
+            <Border
+                Grid.Column="0"
+                Width="40"
+                Height="40"
+                Margin="0,0,14,0"
+                Classes="exit-tile"
+                VerticalAlignment="Top">
+                <Image Source="/Assets/favicon.png" Stretch="UniformToFill" />
+            </Border>
+            <StackPanel Grid.Column="1" Spacing="4">
+                <TextBlock
+                    Name="Heading"
+                    FontSize="16"
+                    FontWeight="SemiBold"
+                    Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                    Text="Closing Bakabase…"
+                    TextWrapping="Wrap" />
+                <TextBlock
+                    Name="PhaseText"
+                    FontSize="13"
+                    Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                    Text="Finishing background tasks…"
+                    TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+        </Grid>
+
+        <ProgressBar
+            Name="Progress"
+            Grid.Row="1"
+            Height="6"
+            Margin="0,18,0,0"
+            Classes="exit-progress"
+            IsIndeterminate="True" />
+
+        <!-- Which tasks are holding the shutdown up. Collapsed until we know. -->
+        <Border
+            Name="TaskPanel"
+            Grid.Row="2"
+            Margin="0,16,0,0"
+            Padding="14,12"
+            Classes="exit-card"
+            IsVisible="False">
+            <StackPanel Name="TaskList" Spacing="3" />
+        </Border>
+
+        <!--
+            Escape hatch. Deliberately hidden for the first few seconds: a normal shutdown is
+            quick, and offering "quit now" immediately would train users to click it and lose
+            the very data the graceful path exists to protect.
+        -->
+        <StackPanel
+            Name="ForcePanel"
+            Grid.Row="3"
+            Margin="0,18,0,0"
+            IsVisible="False"
+            Spacing="10">
+            <TextBlock
+                Name="ForceHint"
+                FontSize="12"
+                Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                Text="This is taking longer than usual. Quitting now may lose unsaved changes."
+                TextWrapping="Wrap" />
+            <Button
+                Name="ForceQuitBtn"
+                MinWidth="110"
+                Classes="exit-secondary"
+                HorizontalAlignment="Right"
+                HorizontalContentAlignment="Center"
+                Content="Quit now" />
+        </StackPanel>
+    </Grid>
+</Window>

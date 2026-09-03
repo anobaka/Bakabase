@@ -4,12 +4,14 @@ import React, { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { MenuFoldOutlined, MenuUnfoldOutlined, MoonOutlined, SunOutlined } from "@ant-design/icons";
+import { AiOutlineQuestionCircle } from "react-icons/ai";
 
 import AntdMenu from "./components/AntdMenu";
 import styles from "./index.module.scss";
 
 import AppUpdateBanner from "@/layouts/BasicLayout/components/AppUpdateBanner";
-import { Button, Divider } from "@/components/bakaui";
+import { Button, Divider, Tooltip } from "@/components/bakaui";
+import { HelpCenterModal } from "@/components/HelpCenter";
 import BApi from "@/sdk/BApi";
 import { useAppOptionsStore, useUiOptionsStore } from "@/stores/options";
 import { UiTheme } from "@/sdk/constants";
@@ -27,6 +29,7 @@ const Navigation = () => {
   const isDarkMode = appOptions.uiTheme == UiTheme.Dark;
 
   const [loading, setLoading] = useState(false);
+  const [helpVisible, setHelpVisible] = useState(false);
   const prevPathRef = useRef<string>(pathname);
   const isCollapsed = uiOptionsStore.data.isMenuCollapsed;
 
@@ -91,6 +94,22 @@ const Navigation = () => {
         </Button>
         <NotificationCenter />
         <LanguageSwitcher />
+        {/*
+          The global doorway into the help center. Every other entry point is
+          contextual (a "?" next to the feature it explains); this one is how you
+          get there when you do not already know which feature you need.
+        */}
+        <Tooltip content={t("helpCenter.button.tooltip")}>
+          <Button
+            isIconOnly
+            aria-label={t<string>("helpCenter.button.tooltip")}
+            color={"default"}
+            variant={"light"}
+            onPress={() => setHelpVisible(true)}
+          >
+            <AiOutlineQuestionCircle style={OptIconStyle} />
+          </Button>
+        </Tooltip>
         <Button
           isIconOnly
           color={"default"}
@@ -108,6 +127,10 @@ const Navigation = () => {
           )}
         </Button>
       </div>
+
+      {helpVisible && (
+        <HelpCenterModal visible={helpVisible} onClose={() => setHelpVisible(false)} />
+      )}
     </div>
   );
 };

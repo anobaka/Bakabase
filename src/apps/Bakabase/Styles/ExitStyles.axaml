@@ -1,0 +1,198 @@
+<Styles
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--
+        Shared chrome for the exit dialog and the shutdown progress window.
+
+        Kept in its own StyleInclude rather than App.axaml so it cannot leak into the rest of
+        the app, and expressed with explicit classes (exit-primary / exit-secondary) rather
+        than by restyling bare Button.
+
+        Everything is defined per theme through ThemeDictionaries: the previous dialog
+        hardcoded #03c1fd / #ffffff / #1f2633 and became unreadable the moment ChangeUiTheme
+        switched to dark.
+    -->
+    <Styles.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+
+                <ResourceDictionary x:Key="Light">
+                    <LinearGradientBrush x:Key="ExitSurfaceBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Offset="0" Color="#FFFFFFFF" />
+                        <GradientStop Offset="1" Color="#FFF7F8FA" />
+                    </LinearGradientBrush>
+
+                    <LinearGradientBrush x:Key="ExitFooterBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Offset="0" Color="#FFF4F5F8" />
+                        <GradientStop Offset="1" Color="#FFEDEFF3" />
+                    </LinearGradientBrush>
+
+                    <LinearGradientBrush x:Key="ExitCardBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Offset="0" Color="#FFFFFFFF" />
+                        <GradientStop Offset="1" Color="#FFF6F7F9" />
+                    </LinearGradientBrush>
+
+                    <LinearGradientBrush x:Key="ExitSecondaryBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Offset="0" Color="#FFFFFFFF" />
+                        <GradientStop Offset="1" Color="#FFF1F2F5" />
+                    </LinearGradientBrush>
+
+                    <LinearGradientBrush x:Key="ExitSecondaryHoverBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Offset="0" Color="#FFFFFFFF" />
+                        <GradientStop Offset="1" Color="#FFE8EAEF" />
+                    </LinearGradientBrush>
+
+                    <SolidColorBrush x:Key="ExitSecondaryPressedBrush" Color="#FFE4E6EC" />
+                    <SolidColorBrush x:Key="ExitBorderBrush" Color="#FFD9DCE3" />
+                    <SolidColorBrush x:Key="ExitHairlineBrush" Color="#FFE4E7EC" />
+                    <SolidColorBrush x:Key="ExitOnPrimaryBrush" Color="#FFFFFFFF" />
+                    <BoxShadows x:Key="ExitCardShadow">0 1 3 0 #14000000, 0 6 16 -6 #1A000000</BoxShadows>
+                    <BoxShadows x:Key="ExitButtonShadow">0 1 2 0 #14000000</BoxShadows>
+                    <BoxShadows x:Key="ExitPrimaryShadow">0 2 6 -1 #40000000</BoxShadows>
+                </ResourceDictionary>
+
+                <ResourceDictionary x:Key="Dark">
+                    <LinearGradientBrush x:Key="ExitSurfaceBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Offset="0" Color="#FF2C2C30" />
+                        <GradientStop Offset="1" Color="#FF232326" />
+                    </LinearGradientBrush>
+
+                    <LinearGradientBrush x:Key="ExitFooterBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Offset="0" Color="#FF232326" />
+                        <GradientStop Offset="1" Color="#FF1E1E21" />
+                    </LinearGradientBrush>
+
+                    <LinearGradientBrush x:Key="ExitCardBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Offset="0" Color="#FF35353A" />
+                        <GradientStop Offset="1" Color="#FF2B2B2F" />
+                    </LinearGradientBrush>
+
+                    <LinearGradientBrush x:Key="ExitSecondaryBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Offset="0" Color="#FF3D3D42" />
+                        <GradientStop Offset="1" Color="#FF333337" />
+                    </LinearGradientBrush>
+
+                    <LinearGradientBrush x:Key="ExitSecondaryHoverBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Offset="0" Color="#FF48484E" />
+                        <GradientStop Offset="1" Color="#FF3C3C41" />
+                    </LinearGradientBrush>
+
+                    <SolidColorBrush x:Key="ExitSecondaryPressedBrush" Color="#FF2E2E32" />
+                    <SolidColorBrush x:Key="ExitBorderBrush" Color="#FF4A4A50" />
+                    <SolidColorBrush x:Key="ExitHairlineBrush" Color="#FF3A3A3F" />
+                    <SolidColorBrush x:Key="ExitOnPrimaryBrush" Color="#FFFFFFFF" />
+                    <BoxShadows x:Key="ExitCardShadow">0 1 3 0 #40000000, 0 8 20 -8 #59000000</BoxShadows>
+                    <BoxShadows x:Key="ExitButtonShadow">0 1 2 0 #40000000</BoxShadows>
+                    <BoxShadows x:Key="ExitPrimaryShadow">0 2 8 -1 #73000000</BoxShadows>
+                </ResourceDictionary>
+
+            </ResourceDictionary.ThemeDictionaries>
+
+            <!--
+                Derived from the OS accent so the primary action matches the rest of the
+                desktop. SystemAccentColorLight1/Dark1 are supplied by FluentTheme and already
+                track the user's accent colour.
+            -->
+            <LinearGradientBrush x:Key="ExitPrimaryBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+                <GradientStop Offset="0" Color="{DynamicResource SystemAccentColorLight1}" />
+                <GradientStop Offset="1" Color="{DynamicResource SystemAccentColor}" />
+            </LinearGradientBrush>
+
+            <LinearGradientBrush x:Key="ExitPrimaryHoverBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+                <GradientStop Offset="0" Color="{DynamicResource SystemAccentColorLight2}" />
+                <GradientStop Offset="1" Color="{DynamicResource SystemAccentColorLight1}" />
+            </LinearGradientBrush>
+
+            <SolidColorBrush x:Key="ExitPrimaryPressedBrush" Color="{DynamicResource SystemAccentColorDark1}" />
+        </ResourceDictionary>
+    </Styles.Resources>
+
+    <!--
+        Button visuals live on PART_ContentPresenter, not on Button: Fluent's own
+        :pointerover / :pressed setters target the template child, so setting Background on
+        the Button itself would be overridden the moment the pointer enters.
+    -->
+    <Style Selector="Button.exit-primary">
+        <Setter Property="Foreground" Value="{DynamicResource ExitOnPrimaryBrush}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Padding" Value="18,9" />
+    </Style>
+    <Style Selector="Button.exit-primary /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource ExitPrimaryBrush}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="BoxShadow" Value="{DynamicResource ExitPrimaryShadow}" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <BrushTransition Property="Background" Duration="0:0:0.12" />
+            </Transitions>
+        </Setter>
+    </Style>
+    <Style Selector="Button.exit-primary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource ExitPrimaryHoverBrush}" />
+    </Style>
+    <Style Selector="Button.exit-primary:pressed /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource ExitPrimaryPressedBrush}" />
+        <!-- Shadow off while pressed reads as the button sinking into the surface. -->
+        <Setter Property="BoxShadow" Value="none" />
+    </Style>
+
+    <Style Selector="Button.exit-secondary">
+        <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+        <Setter Property="Padding" Value="18,9" />
+    </Style>
+    <Style Selector="Button.exit-secondary /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource ExitSecondaryBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource ExitBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="BoxShadow" Value="{DynamicResource ExitButtonShadow}" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <BrushTransition Property="Background" Duration="0:0:0.12" />
+            </Transitions>
+        </Setter>
+    </Style>
+    <Style Selector="Button.exit-secondary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource ExitSecondaryHoverBrush}" />
+    </Style>
+    <Style Selector="Button.exit-secondary:pressed /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource ExitSecondaryPressedBrush}" />
+        <Setter Property="BoxShadow" Value="none" />
+    </Style>
+
+    <Style Selector="Border.exit-card">
+        <Setter Property="Background" Value="{DynamicResource ExitCardBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource ExitHairlineBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="BoxShadow" Value="{DynamicResource ExitCardShadow}" />
+    </Style>
+
+    <Style Selector="Border.exit-footer">
+        <Setter Property="Background" Value="{DynamicResource ExitFooterBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource ExitHairlineBrush}" />
+        <Setter Property="BorderThickness" Value="0,1,0,0" />
+    </Style>
+
+    <Style Selector="Border.exit-tile">
+        <Setter Property="BorderBrush" Value="{DynamicResource ExitHairlineBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="ClipToBounds" Value="True" />
+        <Setter Property="BoxShadow" Value="{DynamicResource ExitButtonShadow}" />
+    </Style>
+
+    <Style Selector="ProgressBar.exit-progress">
+        <Setter Property="CornerRadius" Value="4" />
+        <Setter Property="Foreground" Value="{DynamicResource ExitPrimaryBrush}" />
+    </Style>
+    <Style Selector="ProgressBar.exit-progress /template/ Border#ProgressBardeterminateRoot">
+        <Setter Property="CornerRadius" Value="4" />
+    </Style>
+    <Style Selector="ProgressBar.exit-progress /template/ Border#ProgressBarIndicator">
+        <Setter Property="CornerRadius" Value="4" />
+    </Style>
+
+</Styles>

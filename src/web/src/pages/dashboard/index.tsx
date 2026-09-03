@@ -51,7 +51,11 @@ import {
 } from "@/components/bakaui";
 import Resource from "@/components/Resource";
 import { serializeStandardValue } from "@/components/StandardValue";
-import { OnboardingModal, useOnboarding } from "@/components/Onboarding";
+import {
+  GETTING_STARTED_FIRST_RUN_KEY,
+  HelpCenterModal,
+  useFirstRunHelp,
+} from "@/components/HelpCenter";
 import { DataMigrationHintModal } from "@/pages/dashboard/components/DataMigrationHintModal";
 
 // Register Chart.js components
@@ -71,7 +75,9 @@ type ResourceTab = "added" | "played" | "pinned";
 const DashboardPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { showOnboarding, completeOnboarding } = useOnboarding();
+  // First run opens the help center at "getting started" instead of a bespoke
+  // carousel, so the same content stays reachable afterwards from the left menu.
+  const { showFirstRun, completeFirstRun } = useFirstRunHelp(GETTING_STARTED_FIRST_RUN_KEY);
 
   const [data, setData] = useState<BakabaseInsideWorldModelsModelsDtosDashboardStatistics>(
     {} as BakabaseInsideWorldModelsModelsDtosDashboardStatistics,
@@ -341,7 +347,14 @@ const DashboardPage = () => {
 
   return (
     <div className="h-full flex flex-col gap-5 p-5 overflow-auto">
-      <OnboardingModal visible={showOnboarding} onComplete={completeOnboarding} />
+      {showFirstRun && (
+        <HelpCenterModal
+          firstRun
+          topic="gettingStarted"
+          visible={showFirstRun}
+          onClose={completeFirstRun}
+        />
+      )}
       <DataMigrationHintModal />
 
       {/* Stats Row */}
