@@ -6,7 +6,12 @@ import type { ComponentType, ReactNode } from "react";
  * contributes one overview entry to the left navigation, plus (optionally)
  * a group of concept entries rendered below it.
  */
-export type HelpTopicId = "pathMark" | "workflow";
+export type HelpTopicId =
+  | "gettingStarted"
+  | "pathMark"
+  | "workflow"
+  | "resourceProfile"
+  | "bulkModification";
 
 /** Horizontal tabs inside the path mark overview. Extend as more topics arrive. */
 export type PathMarkHelpSectionId = "whatIs" | "examples" | "comparison";

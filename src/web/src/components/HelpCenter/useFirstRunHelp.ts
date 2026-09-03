@@ -43,3 +43,10 @@ export const useFirstRunHelp = (storageKey: string) => {
 
 /** Storage key of the path mark first-run guide (kept from the legacy guide tour). */
 export const PATH_MARK_FIRST_RUN_KEY = "bakabase-path-mark-guide-completed";
+
+/**
+ * Storage key of the welcome tour, deliberately the one the old onboarding carousel
+ * used. Anyone who already finished that tour must not be shown the help center
+ * again just because it replaced the carousel.
+ */
+export const GETTING_STARTED_FIRST_RUN_KEY = "bakabase-onboarding-completed";

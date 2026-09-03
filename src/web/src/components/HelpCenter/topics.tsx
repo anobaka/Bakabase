@@ -1,19 +1,37 @@
 import type { HelpTopicDefinition, HelpTopicId } from "./types";
 
-import { AiOutlineApartment, AiOutlineTags } from "react-icons/ai";
+import {
+  AiOutlineApartment,
+  AiOutlineEdit,
+  AiOutlineProfile,
+  AiOutlineRocket,
+  AiOutlineTags,
+} from "react-icons/ai";
 
+import BulkModificationTopic from "./topics/bulkModification";
+import GettingStartedTopic from "./topics/gettingStarted";
 import PathMarkTopic from "./topics/pathMark";
 import PathMarkConceptDetail from "./topics/pathMark/ConceptDetail";
 import { pathMarkConcepts } from "./topics/pathMark/concepts";
+import ResourceProfileTopic from "./topics/resourceProfile";
 import WorkflowTopic from "./topics/workflow";
 import WorkflowConceptDetail from "./topics/workflow/ConceptDetail";
 import { workflowConcepts } from "./topics/workflow/concepts";
 
 /**
- * Registry of all help center topics. Other guides (onboarding, resource
- * profile, file mover, ...) join the help center by adding an entry here.
+ * Registry of all help center topics. A guide joins the help center by adding an
+ * entry here; nothing else needs to know it exists.
+ *
+ * Order is the reading order in the left navigation, so "getting started" leads —
+ * it is also the topic the first-run help opens at.
  */
 export const helpTopics: HelpTopicDefinition[] = [
+  {
+    id: "gettingStarted",
+    titleKey: "helpCenter.topic.gettingStarted",
+    icon: <AiOutlineRocket className="text-lg" />,
+    Content: GettingStartedTopic,
+  },
   {
     id: "pathMark",
     titleKey: "helpCenter.topic.pathMark",
@@ -37,6 +55,18 @@ export const helpTopics: HelpTopicDefinition[] = [
       labelKey: `helpCenter.workflow.concept.${concept.id}.name`,
     })),
     ConceptContent: WorkflowConceptDetail,
+  },
+  {
+    id: "resourceProfile",
+    titleKey: "helpCenter.topic.resourceProfile",
+    icon: <AiOutlineProfile className="text-lg" />,
+    Content: ResourceProfileTopic,
+  },
+  {
+    id: "bulkModification",
+    titleKey: "helpCenter.topic.bulkModification",
+    icon: <AiOutlineEdit className="text-lg" />,
+    Content: BulkModificationTopic,
   },
 ];
 

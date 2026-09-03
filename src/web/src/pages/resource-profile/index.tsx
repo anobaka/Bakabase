@@ -69,12 +69,9 @@ import {
 } from "@/sdk/constants";
 import { splitPathIntoSegments } from "@/components/utils";
 import BriefEnhancer from "@/components/Chips/Enhancer/BriefEnhancer";
+import { HelpCenterButton } from "@/components/HelpCenter";
 import { EnhancerDescription } from "@/components/Chips/Terms";
 
-import {
-  ResourceProfileGuideModal,
-  useResourceProfileGuide,
-} from "./components/ResourceProfileGuide";
 
 // Parse template and render with highlighted properties
 const parseTemplateSegments = (
@@ -133,7 +130,6 @@ const toProfileInputModel = (profile: Partial<ResourceProfile>) => {
 const ResourceProfilePage = () => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
-  const { showGuide, completeGuide, resetGuide } = useResourceProfileGuide();
   const [profiles, setProfiles] = useState<ResourceProfile[]>([]);
   const [keyword, setKeyword] = useState("");
   const [loading, setLoading] = useState(true);
@@ -816,7 +812,6 @@ const ResourceProfilePage = () => {
 
   return (
     <div className="p-2">
-      <ResourceProfileGuideModal visible={showGuide} onComplete={completeGuide} />
       <div className="flex items-center justify-between gap-2 mb-4">
         <div className="flex items-center gap-2">
           <Button
@@ -833,11 +828,7 @@ const ResourceProfilePage = () => {
           >
             {t("resourceProfile.action.addProfile")}
           </Button>
-          <Tooltip content={t("resourceProfileGuide.viewAgain")}>
-            <Button isIconOnly size="sm" variant="light" onPress={resetGuide}>
-              <QuestionCircleOutlined className="text-base" />
-            </Button>
-          </Tooltip>
+          <HelpCenterButton topic="resourceProfile" />
           <Input
             className="w-64"
             placeholder={t("resourceProfile.action.searchByName")}

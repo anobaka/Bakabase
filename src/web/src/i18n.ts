@@ -50,7 +50,6 @@ import enResourceFilter from "@/locales/en/components/resourceFilter.json";
 import enEnhancer from "@/locales/en/components/enhancer.json";
 import enProperty from "@/locales/en/components/property.json";
 import enMediaPlayer from "@/locales/en/components/mediaPlayer.json";
-import enOnboarding from "@/locales/en/components/onboarding.json";
 import enResourceComponent from "@/locales/en/components/resource.json";
 import enFloatingAssistant from "@/locales/en/components/floatingAssistant.json";
 import enCookieValidator from "@/locales/en/components/cookieValidator.json";
@@ -112,7 +111,6 @@ import cnResourceFilter from "@/locales/cn/components/resourceFilter.json";
 import cnEnhancer from "@/locales/cn/components/enhancer.json";
 import cnProperty from "@/locales/cn/components/property.json";
 import cnMediaPlayer from "@/locales/cn/components/mediaPlayer.json";
-import cnOnboarding from "@/locales/cn/components/onboarding.json";
 import cnResourceComponent from "@/locales/cn/components/resource.json";
 import cnFloatingAssistant from "@/locales/cn/components/floatingAssistant.json";
 import cnCookieValidator from "@/locales/cn/components/cookieValidator.json";
@@ -173,7 +171,6 @@ const enResources = {
   ...enEnhancer,
   ...enProperty,
   ...enMediaPlayer,
-  ...enOnboarding,
   ...enResourceComponent,
   ...enFloatingAssistant,
   ...enCookieValidator,
@@ -235,7 +232,6 @@ const cnResources = {
   ...cnEnhancer,
   ...cnProperty,
   ...cnMediaPlayer,
-  ...cnOnboarding,
   ...cnResourceComponent,
   ...cnFloatingAssistant,
   ...cnCookieValidator,

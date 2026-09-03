@@ -12,7 +12,6 @@ import BApi from "@/sdk/BApi";
 import { Button, Input, Modal, Select, Switch } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { useNetworkOptionsStore, useAppOptionsStore } from "@/stores/options";
-import { OnboardingModal, useOnboarding } from "@/components/Onboarding";
 import SettingsSection from "@/pages/configuration/components/SettingsSection";
 import ProxyTestModal from "@/pages/configuration/components/Others/ProxyTestModal";
 
@@ -34,7 +33,6 @@ interface OthersProps {
 const Others: React.FC<OthersProps> = ({ applyPatches, query }) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
-  const { showOnboarding, resetOnboarding, completeOnboarding } = useOnboarding();
 
   const appOptions = useAppOptionsStore((state) => state.data);
   const networkOptions = useNetworkOptionsStore((state) => state.data);
@@ -289,23 +287,10 @@ const Others: React.FC<OthersProps> = ({ applyPatches, query }) => {
         );
       },
     },
-    {
-      id: "onboarding",
-      label: t("onboarding.viewAgain"),
-      keywords: ["tutorial", "guide", "intro", "引导", "教程"],
-      render: () => {
-        return (
-          <Button color="primary" size="sm" variant="flat" onPress={resetOnboarding}>
-            {t("onboarding.viewAgain")}
-          </Button>
-        );
-      },
-    },
   ];
 
   return (
     <>
-      <OnboardingModal visible={showOnboarding} onComplete={completeOnboarding} />
       <SettingsSection
         items={otherSettings}
         keywords={["misc", "miscellaneous", "其他"]}
