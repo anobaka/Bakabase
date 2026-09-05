@@ -150,9 +150,15 @@ jobs:
         with:
           name: fe
           path: ./publish/web
+      # vpk builds the Setup.exe / Update.exe binaries that the Velopack NuGet package talks
+      # to, and Velopack ships both halves under one version number — they are meant to match.
+      # Unpinned, this step silently took whatever was newest, so the installer version drifted
+      # from the library on its own schedule and every build was a different pair. Pinned to the
+      # version releases are already being cut with; raising it means raising the Velopack
+      # PackageReference in lockstep.
       - name: Install Velopack CLI
         if: matrix.runtimeMode == 'WINFORMS' || matrix.runtimeMode == 'MACOS'
-        run: dotnet tool install -g vpk
+        run: dotnet tool install -g vpk --version 1.2.0
       - name: Determine Velopack channel
         if: matrix.runtimeMode == 'WINFORMS' || matrix.runtimeMode == 'MACOS'
         id: vpk-channel
