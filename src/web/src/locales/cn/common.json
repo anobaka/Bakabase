@@ -205,6 +205,7 @@
   "menu.tools": "工具",
   "menu.fileProcessor": "文件处理器",
   "menu.downloader": "下载器",
+  "menu.javbusDownloader": "Javbus 批量下载",
   "menu.fileMover": "文件移动器",
   "menu.fileNameModifier": "文件名修改器",
   "menu.experimental": "实验性",

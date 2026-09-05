@@ -18,6 +18,7 @@ import {
   AiOutlineHdd,
   AiOutlineCode,
   AiOutlineDownload,
+  AiOutlineCloudDownload,
   AiOutlineSwap,
   AiOutlineEdit,
   AiOutlineBug,
@@ -52,6 +53,7 @@ import BackgroundTaskPage from "@/pages/background-task";
 import Log from "@/pages/log";
 import FileProcessorPage from "@/pages/file-processor";
 import DownloaderPage from "@/pages/downloader";
+import JavbusDownloaderPage from "@/pages/javbus-downloader";
 import FileMoverPage from "@/pages/file-mover";
 import FileNameModifier from "@/pages/file-name-modifier";
 import PostParserPage from "@/pages/post-parser";
@@ -292,6 +294,15 @@ export const routesMenuConfig: RouteMenuItem[] = [
         icon: AiOutlineDownload,
         layout: "basic",
         menu: true,
+      },
+      {
+        name: "menu.javbusDownloader",
+        path: "/javbus-downloader",
+        component: JavbusDownloaderPage,
+        icon: AiOutlineCloudDownload,
+        layout: "basic",
+        menu: true,
+        isBeta: true,
       },
       {
         name: "menu.fileMover",

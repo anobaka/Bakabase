@@ -1,4 +1,12 @@
 {
+  "enum.javbusMagnetTag.plain": "纯 ASCII",
+  "enum.javbusMagnetTag.chinese": "含中文",
+  "enum.javbusMagnetTag.subtitleSuffix": "-C/-UC",
+  "enum.javbusMagnetTag.subtitleKeyword": "字幕关键词",
+  "enum.javbusBatchItemStatus.succeeded": "成功",
+  "enum.javbusBatchItemStatus.notIndexed": "Javbus 未收录",
+  "enum.javbusBatchItemStatus.noMagnet": "没有磁链",
+  "enum.javbusBatchItemStatus.failed": "请求失败",
   "enum.appNotificationSeverity.info": "信息",
   "enum.appNotificationSeverity.success": "成功",
   "enum.appNotificationSeverity.warning": "警告",

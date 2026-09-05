@@ -43,6 +43,7 @@ import enHealthScore from "@/locales/en/pages/healthScore.json";
 import enAvSources from "@/locales/en/pages/avSources.json";
 import enSubscription from "@/locales/en/pages/subscription.json";
 import enWorkflow from "@/locales/en/pages/workflow.json";
+import enJavbusDownloader from "@/locales/en/pages/javbusDownloader.json";
 
 // English - Components
 import enFileExplorer from "@/locales/en/components/fileExplorer.json";
@@ -104,6 +105,7 @@ import cnHealthScore from "@/locales/cn/pages/healthScore.json";
 import cnAvSources from "@/locales/cn/pages/avSources.json";
 import cnSubscription from "@/locales/cn/pages/subscription.json";
 import cnWorkflow from "@/locales/cn/pages/workflow.json";
+import cnJavbusDownloader from "@/locales/cn/pages/javbusDownloader.json";
 
 // Chinese - Components
 import cnFileExplorer from "@/locales/cn/components/fileExplorer.json";
@@ -165,6 +167,7 @@ const enResources = {
   ...enAvSources,
   ...enSubscription,
   ...enWorkflow,
+  ...enJavbusDownloader,
   // Components
   ...enFileExplorer,
   ...enResourceFilter,
@@ -226,6 +229,7 @@ const cnResources = {
   ...cnAvSources,
   ...cnSubscription,
   ...cnWorkflow,
+  ...cnJavbusDownloader,
   // Components
   ...cnFileExplorer,
   ...cnResourceFilter,

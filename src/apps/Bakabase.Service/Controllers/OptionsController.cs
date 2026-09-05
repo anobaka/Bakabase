@@ -1618,5 +1618,48 @@ namespace Bakabase.Service.Controllers
             });
             return BaseResponseBuilder.Ok;
         }
+
+        [HttpGet("javbus-downloader")]
+        [SwaggerOperation(OperationId = "GetJavbusDownloaderOptions")]
+        public SingletonResponse<JavbusDownloaderOptions> GetJavbusDownloaderOptions()
+        {
+            return new SingletonResponse<JavbusDownloaderOptions>(_bakabaseOptionsManager
+                .Get<JavbusDownloaderOptions>().Value);
+        }
+
+        [HttpPatch("javbus-downloader")]
+        [SwaggerOperation(OperationId = "PatchJavbusDownloaderOptions")]
+        public async Task<BaseResponse> PatchJavbusDownloaderOptions(
+            [FromBody] JavbusDownloaderOptionsPatchInputModel model)
+        {
+            await _bakabaseOptionsManager.Get<JavbusDownloaderOptions>().SaveAsync(options =>
+            {
+                if (model.Concurrency.HasValue)
+                {
+                    options.Concurrency = model.Concurrency;
+                }
+
+                if (model.DelayMs.HasValue)
+                {
+                    options.DelayMs = model.DelayMs;
+                }
+
+                if (model.SizeTolerancePercentage.HasValue)
+                {
+                    options.SizeTolerancePercentage = model.SizeTolerancePercentage;
+                }
+
+                if (model.SaveCovers.HasValue)
+                {
+                    options.SaveCovers = model.SaveCovers;
+                }
+
+                if (model.CoverDirectory != null)
+                {
+                    options.CoverDirectory = model.CoverDirectory;
+                }
+            });
+            return BaseResponseBuilder.Ok;
+        }
     }
 }

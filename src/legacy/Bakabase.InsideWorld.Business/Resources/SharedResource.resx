@@ -684,6 +684,12 @@ The version of lux is not limited.</value>
   <data name="BTask_Description_SyncSteam" xml:space="preserve">
     <value>Synchronize games from Steam library</value>
   </data>
+  <data name="BTask_Name_JavbusBatchDownload" xml:space="preserve">
+    <value>Javbus batch download</value>
+  </data>
+  <data name="BTask_Description_JavbusBatchDownload" xml:space="preserve">
+    <value>Fetch covers and pick a magnet for a batch of codes on Javbus</value>
+  </data>
   <data name="BTask_Name_SyncExHentai" xml:space="preserve">
     <value>Sync ExHentai galleries</value>
   </data>

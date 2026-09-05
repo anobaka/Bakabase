@@ -684,6 +684,12 @@
   <data name="BTask_Description_SyncSteam" xml:space="preserve">
     <value>从 Steam 库同步游戏数据</value>
   </data>
+  <data name="BTask_Name_JavbusBatchDownload" xml:space="preserve">
+    <value>Javbus 批量下载</value>
+  </data>
+  <data name="BTask_Description_JavbusBatchDownload" xml:space="preserve">
+    <value>在 Javbus 上批量抓取封面并为每个番号挑选磁力链接</value>
+  </data>
   <data name="BTask_Name_SyncExHentai" xml:space="preserve">
     <value>同步 ExHentai 画廊</value>
   </data>

@@ -41,6 +41,8 @@ import type {
   BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputSteamOptionsPatchInputModel,
   BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainDownloaderGlobalOptions,
   BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputDownloaderGlobalOptionsPatchInputModel,
+  BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainJavbusDownloaderOptions,
+  BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputJavbusDownloaderOptionsPatchInputModel,
 } from "@/sdk/Api";
 
 import { create } from "zustand";
@@ -197,6 +199,11 @@ export const useDownloaderGlobalOptionsStore = createOptionStore<
   BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputDownloaderGlobalOptionsPatchInputModel
 >(BApi.options.patchDownloaderGlobalOptions);
 
+export const useJavbusDownloaderOptionsStore = createOptionStore<
+  BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainJavbusDownloaderOptions,
+  BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputJavbusDownloaderOptionsPatchInputModel
+>(BApi.options.patchJavbusDownloaderOptions);
+
 export const optionsStores = {
   appOptions: useAppOptionsStore,
   uiOptions: useUiOptionsStore,
@@ -222,4 +229,5 @@ export const optionsStores = {
   tmdbOptions: useTmdbOptionsStore,
   steamOptions: useSteamOptionsStore,
   downloaderGlobalOptions: useDownloaderGlobalOptionsStore,
+  javbusDownloaderOptions: useJavbusDownloaderOptionsStore,
 };

@@ -8,6 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Bakabase.Modules.ThirdParty.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Compile Remove="ThirdParties\Bangumi\Models\Constants\**" />
     <EmbeddedResource Remove="ThirdParties\Bangumi\Models\Constants\**" />
     <None Remove="ThirdParties\Bangumi\Models\Constants\**" />

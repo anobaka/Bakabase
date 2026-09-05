@@ -3156,6 +3156,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/javbus/batch-download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetJavbusBatchDownloadState"];
+        put?: never;
+        post: operations["StartJavbusBatchDownload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/log": {
         parameters: {
             query?: never;
@@ -4142,6 +4158,22 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["PatchAvSourceOptions"];
+        trace?: never;
+    };
+    "/options/javbus-downloader": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetJavbusDownloaderOptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["PatchJavbusDownloaderOptions"];
         trace?: never;
     };
     "/password": {
@@ -7677,6 +7709,16 @@ export interface components {
             /** Format: int32 */
             requestTimeout: number;
         };
+        "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.JavbusDownloaderOptions": {
+            /** Format: int32 */
+            concurrency?: number;
+            /** Format: int32 */
+            delayMs?: number;
+            /** Format: int32 */
+            sizeTolerancePercentage?: number;
+            saveCovers?: boolean;
+            coverDirectory?: string;
+        };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.PatreonOptions": {
             accounts?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ThirdPartyAccount"][];
             cookie?: string;
@@ -7932,6 +7974,16 @@ export interface components {
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.JavLibraryOptionsPatchInputModel": {
             cookie?: string;
             collector?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.JavLibraryOptions+CollectorOptions"];
+        };
+        "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.JavbusDownloaderOptionsPatchInputModel": {
+            /** Format: int32 */
+            concurrency?: number;
+            /** Format: int32 */
+            delayMs?: number;
+            /** Format: int32 */
+            sizeTolerancePercentage?: number;
+            saveCovers?: boolean;
+            coverDirectory?: string;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.NetworkOptionsPatchInputModel": {
             customProxies?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.NetworkOptionsPatchInputModel+ProxyOptions"][];
@@ -9860,6 +9912,53 @@ export interface components {
             /** Format: int32 */
             mediaCount: number;
         };
+        "Bakabase.Modules.ThirdParty.ThirdParties.Javbus.Models.JavbusBatchDownloadItem": {
+            code: string;
+            status: components["schemas"]["Bakabase.Modules.ThirdParty.ThirdParties.Javbus.Models.JavbusBatchItemStatus"];
+            error?: string;
+            title?: string;
+            detailUrl?: string;
+            coverUrl?: string;
+            coverPath?: string;
+            coverError?: string;
+            /** Format: int32 */
+            candidateCount: number;
+            magnet?: components["schemas"]["Bakabase.Modules.ThirdParty.ThirdParties.Javbus.Models.JavbusMagnet"];
+        };
+        "Bakabase.Modules.ThirdParty.ThirdParties.Javbus.Models.JavbusBatchDownloadState": {
+            isRunning: boolean;
+            /** Format: int32 */
+            total: number;
+            /** Format: int32 */
+            done: number;
+            coverDirectory?: string;
+            /** Format: date-time */
+            startedAt?: string;
+            /** Format: date-time */
+            completedAt?: string;
+            items: components["schemas"]["Bakabase.Modules.ThirdParty.ThirdParties.Javbus.Models.JavbusBatchDownloadItem"][];
+        };
+        /**
+         * Format: int32
+         * @description [1: Succeeded, 2: NotIndexed, 3: NoMagnet, 4: Failed]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.ThirdParty.ThirdParties.Javbus.Models.JavbusBatchItemStatus": 1 | 2 | 3 | 4;
+        "Bakabase.Modules.ThirdParty.ThirdParties.Javbus.Models.JavbusMagnet": {
+            name: string;
+            size?: string;
+            /** Format: int64 */
+            sizeInBytes: number;
+            date?: string;
+            link: string;
+            tag: components["schemas"]["Bakabase.Modules.ThirdParty.ThirdParties.Javbus.Models.JavbusMagnetTag"];
+        };
+        /**
+         * Format: int32
+         * @description [1: Plain, 2: Chinese, 3: SubtitleSuffix, 4: SubtitleKeyword]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.ThirdParty.ThirdParties.Javbus.Models.JavbusMagnetTag": 1 | 2 | 3 | 4;
         /**
          * Format: int32
          * @description [1: OneToOne, 2: OneToMany]
@@ -10187,6 +10286,9 @@ export interface components {
         "Bakabase.Service.Models.Input.FileSystemEntryGroupStrategyType": 0 | 1 | 2 | 3;
         "Bakabase.Service.Models.Input.IdBasedDataSortInputModel": {
             ids: number[];
+        };
+        "Bakabase.Service.Models.Input.JavbusBatchDownloadInputModel": {
+            codes?: string[];
         };
         "Bakabase.Service.Models.Input.ProxyTestInputModel": {
             customProxyId?: string;
@@ -11523,6 +11625,12 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.FantiaOptions"];
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.JavbusDownloaderOptions]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.JavbusDownloaderOptions"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.PatreonOptions]": {
             /** Format: int32 */
             code: number;
@@ -11834,6 +11942,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.Subscription.Abstractions.Models.View.SubscriptionViewModel"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.ThirdParty.ThirdParties.Javbus.Models.JavbusBatchDownloadState]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.ThirdParty.ThirdParties.Javbus.Models.JavbusBatchDownloadState"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowDefinitionViewModel]": {
             /** Format: int32 */
@@ -18928,6 +19042,57 @@ export interface operations {
             };
         };
     };
+    GetJavbusBatchDownloadState: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.ThirdParty.ThirdParties.Javbus.Models.JavbusBatchDownloadState]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.ThirdParty.ThirdParties.Javbus.Models.JavbusBatchDownloadState]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.ThirdParty.ThirdParties.Javbus.Models.JavbusBatchDownloadState]"];
+                };
+            };
+        };
+    };
+    StartJavbusBatchDownload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.JavbusBatchDownloadInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.JavbusBatchDownloadInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.JavbusBatchDownloadInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.JavbusBatchDownloadInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
     GetAllLogs: {
         parameters: {
             query?: never;
@@ -21569,6 +21734,57 @@ export interface operations {
                 "application/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.AvSourceOptionsPatchInputModel"];
                 "text/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.AvSourceOptionsPatchInputModel"];
                 "application/*+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.AvSourceOptionsPatchInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetJavbusDownloaderOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.JavbusDownloaderOptions]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.JavbusDownloaderOptions]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.JavbusDownloaderOptions]"];
+                };
+            };
+        };
+    };
+    PatchJavbusDownloaderOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.JavbusDownloaderOptionsPatchInputModel"];
+                "application/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.JavbusDownloaderOptionsPatchInputModel"];
+                "text/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.JavbusDownloaderOptionsPatchInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.JavbusDownloaderOptionsPatchInputModel"];
             };
         };
         responses: {

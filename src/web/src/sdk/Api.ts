@@ -1479,6 +1479,17 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
   requestTimeout: number;
 }
 
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainJavbusDownloaderOptions {
+  /** @format int32 */
+  concurrency?: number;
+  /** @format int32 */
+  delayMs?: number;
+  /** @format int32 */
+  sizeTolerancePercentage?: number;
+  saveCovers?: boolean;
+  coverDirectory?: string;
+}
+
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainPatreonOptions {
   accounts?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainThirdPartyAccount[];
   cookie?: string;
@@ -1748,6 +1759,17 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputF
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputJavLibraryOptionsPatchInputModel {
   cookie?: string;
   collector?: BakabaseInsideWorldModelsConfigsJavLibraryOptionsCollectorOptions;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputJavbusDownloaderOptionsPatchInputModel {
+  /** @format int32 */
+  concurrency?: number;
+  /** @format int32 */
+  delayMs?: number;
+  /** @format int32 */
+  sizeTolerancePercentage?: number;
+  saveCovers?: boolean;
+  coverDirectory?: string;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputNetworkOptionsPatchInputModel {
@@ -4150,6 +4172,58 @@ export interface BakabaseModulesThirdPartyThirdPartiesBilibiliModelsFavorites {
   mediaCount: number;
 }
 
+export interface BakabaseModulesThirdPartyThirdPartiesJavbusModelsJavbusBatchDownloadItem {
+  code: string;
+  /** [1: Succeeded, 2: NotIndexed, 3: NoMagnet, 4: Failed] */
+  status: BakabaseModulesThirdPartyThirdPartiesJavbusModelsJavbusBatchItemStatus;
+  error?: string;
+  title?: string;
+  detailUrl?: string;
+  coverUrl?: string;
+  coverPath?: string;
+  coverError?: string;
+  /** @format int32 */
+  candidateCount: number;
+  magnet?: BakabaseModulesThirdPartyThirdPartiesJavbusModelsJavbusMagnet;
+}
+
+export interface BakabaseModulesThirdPartyThirdPartiesJavbusModelsJavbusBatchDownloadState {
+  isRunning: boolean;
+  /** @format int32 */
+  total: number;
+  /** @format int32 */
+  done: number;
+  coverDirectory?: string;
+  /** @format date-time */
+  startedAt?: string;
+  /** @format date-time */
+  completedAt?: string;
+  items: BakabaseModulesThirdPartyThirdPartiesJavbusModelsJavbusBatchDownloadItem[];
+}
+
+/**
+ * [1: Succeeded, 2: NotIndexed, 3: NoMagnet, 4: Failed]
+ * @format int32
+ */
+export type BakabaseModulesThirdPartyThirdPartiesJavbusModelsJavbusBatchItemStatus = 1 | 2 | 3 | 4;
+
+export interface BakabaseModulesThirdPartyThirdPartiesJavbusModelsJavbusMagnet {
+  name: string;
+  size?: string;
+  /** @format int64 */
+  sizeInBytes: number;
+  date?: string;
+  link: string;
+  /** [1: Plain, 2: Chinese, 3: SubtitleSuffix, 4: SubtitleKeyword] */
+  tag: BakabaseModulesThirdPartyThirdPartiesJavbusModelsJavbusMagnetTag;
+}
+
+/**
+ * [1: Plain, 2: Chinese, 3: SubtitleSuffix, 4: SubtitleKeyword]
+ * @format int32
+ */
+export type BakabaseModulesThirdPartyThirdPartiesJavbusModelsJavbusMagnetTag = 1 | 2 | 3 | 4;
+
 /**
  * [1: OneToOne, 2: OneToMany]
  * @format int32
@@ -4560,6 +4634,10 @@ export type BakabaseServiceModelsInputFileSystemEntryGroupStrategyType = 0 | 1 |
 
 export interface BakabaseServiceModelsInputIdBasedDataSortInputModel {
   ids: number[];
+}
+
+export interface BakabaseServiceModelsInputJavbusBatchDownloadInputModel {
+  codes?: string[];
 }
 
 export interface BakabaseServiceModelsInputProxyTestInputModel {
@@ -6126,6 +6204,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWo
   data?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainFantiaOptions;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainJavbusDownloaderOptions {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainJavbusDownloaderOptions;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainPatreonOptions {
   /** @format int32 */
   code: number;
@@ -6488,6 +6573,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesS
   code: number;
   message?: string;
   data?: BakabaseModulesSubscriptionAbstractionsModelsViewSubscriptionViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesThirdPartyThirdPartiesJavbusModelsJavbusBatchDownloadState {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesThirdPartyThirdPartiesJavbusModelsJavbusBatchDownloadState;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowDefinitionViewModel {
@@ -16225,6 +16317,67 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       return baseUrl + path;
     },
   };
+  javbus = {
+    /**
+     * No description
+     *
+     * @tags Javbus
+     * @name GetJavbusBatchDownloadState
+     * @request GET:/javbus/batch-download
+     */
+    getJavbusBatchDownloadState: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesThirdPartyThirdPartiesJavbusModelsJavbusBatchDownloadState,
+        any
+      >({
+        path: `/javbus/batch-download`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getJavbusBatchDownloadState
+     * @name getJavbusBatchDownloadStateUrl
+     */
+    getJavbusBatchDownloadStateUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/javbus/batch-download`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Javbus
+     * @name StartJavbusBatchDownload
+     * @request POST:/javbus/batch-download
+     */
+    startJavbusBatchDownload: (
+      data: BakabaseServiceModelsInputJavbusBatchDownloadInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/javbus/batch-download`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for startJavbusBatchDownload
+     * @name startJavbusBatchDownloadUrl
+     */
+    startJavbusBatchDownloadUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/javbus/batch-download`;
+      
+      return baseUrl + path;
+    },
+  };
   log = {
     /**
      * No description
@@ -19206,6 +19359,66 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchAvSourceOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/av-sources`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Options
+     * @name GetJavbusDownloaderOptions
+     * @request GET:/options/javbus-downloader
+     */
+    getJavbusDownloaderOptions: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainJavbusDownloaderOptions,
+        any
+      >({
+        path: `/options/javbus-downloader`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getJavbusDownloaderOptions
+     * @name getJavbusDownloaderOptionsUrl
+     */
+    getJavbusDownloaderOptionsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/options/javbus-downloader`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Options
+     * @name PatchJavbusDownloaderOptions
+     * @request PATCH:/options/javbus-downloader
+     */
+    patchJavbusDownloaderOptions: (
+      data: BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputJavbusDownloaderOptionsPatchInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/options/javbus-downloader`,
+        method: "PATCH",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for patchJavbusDownloaderOptions
+     * @name patchJavbusDownloaderOptionsUrl
+     */
+    patchJavbusDownloaderOptionsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/options/javbus-downloader`;
       
       return baseUrl + path;
     },

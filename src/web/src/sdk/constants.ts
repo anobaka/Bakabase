@@ -280,6 +280,48 @@ export const SteamMetadataFieldLabel: Record<SteamMetadataField, string> = {
   [SteamMetadataField.ReleaseDate]: 'ReleaseDate'
 };
 
+export enum JavbusBatchItemStatus {
+  Succeeded = 1,
+  NotIndexed = 2,
+  NoMagnet = 3,
+  Failed = 4
+}
+
+export const javbusBatchItemStatuses = [
+  { label: 'Succeeded', value: JavbusBatchItemStatus.Succeeded },
+  { label: 'NotIndexed', value: JavbusBatchItemStatus.NotIndexed },
+  { label: 'NoMagnet', value: JavbusBatchItemStatus.NoMagnet },
+  { label: 'Failed', value: JavbusBatchItemStatus.Failed }
+] as const;
+
+export const JavbusBatchItemStatusLabel: Record<JavbusBatchItemStatus, string> = {
+  [JavbusBatchItemStatus.Succeeded]: 'Succeeded',
+  [JavbusBatchItemStatus.NotIndexed]: 'NotIndexed',
+  [JavbusBatchItemStatus.NoMagnet]: 'NoMagnet',
+  [JavbusBatchItemStatus.Failed]: 'Failed'
+};
+
+export enum JavbusMagnetTag {
+  Plain = 1,
+  Chinese = 2,
+  SubtitleSuffix = 3,
+  SubtitleKeyword = 4
+}
+
+export const javbusMagnetTags = [
+  { label: 'Plain', value: JavbusMagnetTag.Plain },
+  { label: 'Chinese', value: JavbusMagnetTag.Chinese },
+  { label: 'SubtitleSuffix', value: JavbusMagnetTag.SubtitleSuffix },
+  { label: 'SubtitleKeyword', value: JavbusMagnetTag.SubtitleKeyword }
+] as const;
+
+export const JavbusMagnetTagLabel: Record<JavbusMagnetTag, string> = {
+  [JavbusMagnetTag.Plain]: 'Plain',
+  [JavbusMagnetTag.Chinese]: 'Chinese',
+  [JavbusMagnetTag.SubtitleSuffix]: 'SubtitleSuffix',
+  [JavbusMagnetTag.SubtitleKeyword]: 'SubtitleKeyword'
+};
+
 export enum ExHentaiMetadataField {
   Name = 1,
   RawName = 2,

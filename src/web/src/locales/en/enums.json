@@ -1,4 +1,12 @@
 {
+  "enum.javbusMagnetTag.plain": "Plain",
+  "enum.javbusMagnetTag.chinese": "Chinese name",
+  "enum.javbusMagnetTag.subtitleSuffix": "-C/-UC",
+  "enum.javbusMagnetTag.subtitleKeyword": "Subtitle keyword",
+  "enum.javbusBatchItemStatus.succeeded": "Succeeded",
+  "enum.javbusBatchItemStatus.notIndexed": "Not indexed on Javbus",
+  "enum.javbusBatchItemStatus.noMagnet": "No magnet listed",
+  "enum.javbusBatchItemStatus.failed": "Request failed",
   "enum.appNotificationSeverity.info": "Info",
   "enum.appNotificationSeverity.success": "Success",
   "enum.appNotificationSeverity.warning": "Warning",

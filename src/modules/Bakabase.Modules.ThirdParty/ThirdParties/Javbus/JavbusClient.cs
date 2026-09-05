@@ -22,6 +22,126 @@ public class JavbusClient(
     async Task<IAvDetail?> IAvClient.SearchAndParseVideo(string number, string? appointUrl, string? language) =>
         await SearchAndParseVideo(number, appointUrl: appointUrl);
 
+    /// <summary>
+    /// Fetches a code's cover and its full magnet list.
+    ///
+    /// Unlike <see cref="SearchAndParseVideo"/> this does not swallow failures:
+    /// batch callers show one row per code, and "not indexed" has to read
+    /// differently from "the site refused us".
+    /// </summary>
+    /// <returns>null when the source is disabled or the page carries no cover (code not indexed).</returns>
+    public async Task<JavbusMagnetSearchResult?> SearchMagnets(string number, CancellationToken ct = default)
+    {
+        var config = avOptionsProvider.Resolve(AvSourceIds.Javbus);
+        if (!config.Enabled) return null;
+
+        var baseUrl = (config.BaseUrl ?? AvSourceDefaults.DefaultBaseUrls[AvSourceIds.Javbus]).TrimEnd('/');
+        var detailUrl = $"{baseUrl}/{Uri.EscapeDataString(number)}";
+
+        using var request = AvHttpRequestBuilder.BuildGet(detailUrl, config);
+        using var response = await HttpClient.SendAsync(request, ct);
+        response.EnsureSuccessStatusCode();
+        var html = await response.Content.ReadAsStringAsync(ct);
+        if (string.IsNullOrWhiteSpace(html)) return null;
+
+        var cq = new CQ(html);
+        var coverUrl = GetCover(cq, baseUrl);
+        // Javbus answers unknown codes with a soft 200 landing page, so a
+        // missing cover is how "not indexed" actually looks.
+        if (string.IsNullOrEmpty(coverUrl)) return null;
+
+        var magnets = await FetchMagnets(html, baseUrl, detailUrl, config, ct);
+
+        return new JavbusMagnetSearchResult
+        {
+            Number = number,
+            DetailUrl = detailUrl,
+            Title = cq["h3"].First().Text().Trim(),
+            CoverUrl = coverUrl,
+            Magnets = magnets
+        };
+    }
+
+    /// <summary>
+    /// Downloads a cover. Javbus hotlink-protects its image host, so the
+    /// referer and the source's cookie/user-agent have to come along.
+    /// </summary>
+    public async Task<byte[]> DownloadCover(string coverUrl, string refererUrl, CancellationToken ct = default)
+    {
+        var config = avOptionsProvider.Resolve(AvSourceIds.Javbus);
+        using var request = AvHttpRequestBuilder.BuildGet(coverUrl, config);
+        request.Headers.Referrer = new Uri(refererUrl);
+        using var response = await HttpClient.SendAsync(request, ct);
+        response.EnsureSuccessStatusCode();
+
+        return await response.Content.ReadAsByteArrayAsync(ct);
+    }
+
+    private async Task<List<JavbusMagnet>> FetchMagnets(string detailHtml, string baseUrl, string detailUrl,
+        AvSourceResolvedConfig config, CancellationToken ct)
+    {
+        // The magnet table is loaded over ajax, keyed by three variables the
+        // detail page only declares in an inline script.
+        var gid = Regex.Match(detailHtml, @"var\s+gid\s*=\s*(\d+)").Groups[1].Value;
+        var img = Regex.Match(detailHtml, @"var\s+img\s*=\s*['""]([^'""]+)['""]").Groups[1].Value;
+        var uc = Regex.Match(detailHtml, @"var\s+uc\s*=\s*(\d+)").Groups[1].Value;
+        if (string.IsNullOrEmpty(gid) || string.IsNullOrEmpty(img))
+        {
+            return [];
+        }
+
+        var query =
+            $"lang=zh&gid={gid}&img={Uri.EscapeDataString(img)}&uc={(string.IsNullOrEmpty(uc) ? "0" : uc)}&floor={Random.Shared.Next(1, 1000)}";
+        using var request = AvHttpRequestBuilder.BuildGet($"{baseUrl}/ajax/uncledatoolsbyajax.php?{query}", config);
+        request.Headers.Referrer = new Uri(detailUrl);
+        request.Headers.TryAddWithoutValidation("X-Requested-With", "XMLHttpRequest");
+
+        using var response = await HttpClient.SendAsync(request, ct);
+        response.EnsureSuccessStatusCode();
+
+        return ParseMagnets(await response.Content.ReadAsStringAsync(ct));
+    }
+
+    internal static List<JavbusMagnet> ParseMagnets(string? html)
+    {
+        var magnets = new List<JavbusMagnet>();
+        if (string.IsNullOrWhiteSpace(html))
+        {
+            return magnets;
+        }
+
+        // The endpoint answers with bare <tr> rows; they only survive parsing
+        // when wrapped in a table.
+        var cq = new CQ($"<table>{html}</table>");
+        foreach (var row in cq["tr"].Select(r => r.Cq()))
+        {
+            var link = row.Find("a[href^='magnet:']").First();
+            var href = link.Attr("href");
+            if (string.IsNullOrWhiteSpace(href))
+            {
+                continue;
+            }
+
+            var cells = row.Find("td");
+            // Every cell wraps the same magnet in its own <a>; the first one
+            // carries the release name, then size, then date.
+            var size = cells.Length > 1 ? cells[1].Cq().Text().Trim() : null;
+            var name = Regex.Replace(link.Text().Trim(), @"\s+", " ");
+
+            magnets.Add(new JavbusMagnet
+            {
+                Name = name,
+                Size = size,
+                SizeInBytes = JavbusMagnetSelector.ParseSize(size),
+                Date = cells.Length > 2 ? cells[2].Cq().Text().Trim() : null,
+                Link = href,
+                Tag = JavbusMagnetSelector.DetectTag(name)
+            });
+        }
+
+        return magnets;
+    }
+
     public async Task<JavbusVideoDetail?> SearchAndParseVideo(string number, string? appointUrl = null, string? baseUrl = null, string? mosaic = null)
     {
         try

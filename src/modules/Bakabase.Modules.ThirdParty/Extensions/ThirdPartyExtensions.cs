@@ -131,6 +131,7 @@ public static class ThirdPartyExtensions
         services.AddSingleton<IAvClient>(sp => sp.GetRequiredService<Jav321Client>());
         services.TryAddSingleton<JavbusClient>();
         services.AddSingleton<IAvClient>(sp => sp.GetRequiredService<JavbusClient>());
+        services.TryAddSingleton<JavbusBatchDownloadService>();
         services.TryAddSingleton<JavdayClient>();
         services.AddSingleton<IAvClient>(sp => sp.GetRequiredService<JavdayClient>());
         services.TryAddSingleton<JavdbClient>();
