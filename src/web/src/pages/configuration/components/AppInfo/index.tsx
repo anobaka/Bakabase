@@ -9,7 +9,12 @@ import type { SettingItem } from "@/pages/configuration/components/SettingsSecti
 import Markdown from "react-markdown";
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CheckCircleOutlined, FolderOpenOutlined } from "@ant-design/icons";
+import {
+  CheckCircleOutlined,
+  FolderOpenOutlined,
+  InfoCircleOutlined,
+  WarningOutlined,
+} from "@ant-design/icons";
 import { AiOutlineQuestionCircle } from "react-icons/ai";
 
 import { Popover, Divider, Icon, Progress, Snippet, Tooltip } from "@/components/bakaui";
@@ -65,6 +70,63 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo, applyPatches, query }) => {
     </span>
   );
 
+  // "No new version" is not always what it looks like: when the selected channel's newest
+  // release is older than the installed one (a pre-release build with the pre-release
+  // channel off, say), the check will answer that forever. Say so instead of showing a
+  // green tick the user cannot argue with.
+  const renderNoNewVersion = () => {
+    if (!newVersion?.channelBehindInstalled) {
+      return upToDateIndicator;
+    }
+
+    return (
+      <Tooltip
+        className="max-w-[360px]"
+        color="warning"
+        content={t("configuration.appInfo.channelBehind.tip")}
+        placement="top"
+      >
+        <span className="flex items-center gap-1 text-warning">
+          <WarningOutlined className="text-base" />
+          {t("configuration.appInfo.channelBehind", {
+            channel: newVersion.channel,
+            latest: newVersion.channelLatestVersion,
+            installed: newVersion.installedVersion,
+          })}
+        </span>
+      </Tooltip>
+    );
+  };
+
+  // Velopack compares the feed against the install manifest, never against the assembly
+  // the app is running. Copy a build into an existing install directory — the ordinary
+  // local dev loop — and the version on screen stops being the one updates are decided
+  // for, which reads as "it keeps telling me I'm up to date".
+  const renderRunningVersionMismatch = () => {
+    const { runningVersion, installedVersion } = newVersion ?? {};
+
+    if (!runningVersion || !installedVersion || runningVersion === installedVersion) {
+      return null;
+    }
+
+    return (
+      <Tooltip
+        className="max-w-[360px]"
+        color="warning"
+        content={t("configuration.appInfo.runningVersionMismatch.tip", {
+          running: runningVersion,
+          installed: installedVersion,
+        })}
+        placement="top"
+      >
+        <span className="flex items-center gap-1 text-warning text-sm">
+          <WarningOutlined className="text-base" />
+          {t("configuration.appInfo.runningVersionMismatch", { installed: installedVersion })}
+        </span>
+      </Tooltip>
+    );
+  };
+
   const renderNewVersion = () => {
     // When the API has returned a concrete new version, trust it over a
     // possibly-stale UpToDate status carried by the backend singleton.
@@ -76,7 +138,21 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo, applyPatches, query }) => {
 
     switch (effectiveStatus) {
       case UpdaterStatus.UpToDate:
-        return upToDateIndicator;
+        return renderNoNewVersion();
+      case UpdaterStatus.Unavailable:
+        return (
+          <Tooltip
+            className="max-w-[360px]"
+            color="secondary"
+            content={t("configuration.appInfo.updateCheckUnavailable.tip")}
+            placement="top"
+          >
+            <span className="flex items-center gap-1 text-foreground-500">
+              <InfoCircleOutlined className="text-base" />
+              {t("configuration.appInfo.updateCheckUnavailable")}
+            </span>
+          </Tooltip>
+        );
       case UpdaterStatus.Idle:
         if (newVersion) {
           if (newVersion.version) {
@@ -146,10 +222,10 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo, applyPatches, query }) => {
               </div>
             );
           } else {
-            return upToDateIndicator;
+            return renderNoNewVersion();
           }
         } else {
-          return upToDateIndicator;
+          return renderNoNewVersion();
         }
       case UpdaterStatus.Running:
         return (
@@ -309,9 +385,12 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo, applyPatches, query }) => {
         label: "configuration.appInfo.coreVersion",
         keywords: ["version", "build", "版本"],
         value: (
-          <Chip radius="sm" variant="light">
-            {appInfo.coreVersion}
-          </Chip>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Chip radius="sm" variant="light">
+              {appInfo.coreVersion}
+            </Chip>
+            {renderRunningVersionMismatch()}
+          </div>
         ),
       },
       {
