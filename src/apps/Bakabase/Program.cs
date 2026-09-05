@@ -1,4 +1,6 @@
 using Avalonia;
+using Bakabase.Components;
+using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.App.Upgrade;
 using Velopack;
 
@@ -27,6 +29,20 @@ class Program
             .SetAutoApplyOnStartup(false)
             .SetLogger(new SerilogVelopackLogger())
             .Run();
+
+        // Everything from here on can be reported. Velopack's hook invocations never reach this
+        // line (Run ends in Environment.Exit for them), so installing the handler after it costs
+        // no coverage of a real launch.
+        CrashHandler.Install();
+
+        // Touching AppService runs its static constructor, which is what builds the Serilog file
+        // sink. That would otherwise happen a step later, inside OnFrameworkInitializationCompleted
+        // — leaving Avalonia's XAML load and tray-icon resolution in a window where a throw is
+        // recorded nowhere but the OS event log. Pulling it forward changes only when this work
+        // runs, not what it does: OnFrameworkInitializationCompleted's first act is to read the
+        // same property. Deliberately not guarded — the static ctor throws by design when the
+        // AppData layout cannot be migrated, and the handler above is already armed to report it.
+        _ = AppService.DefaultAppDataDirectory;
 
         BuildAvaloniaApp()
             .StartWithClassicDesktopLifetime(args);
