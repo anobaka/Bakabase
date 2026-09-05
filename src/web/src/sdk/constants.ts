@@ -63,7 +63,8 @@ export enum UpdaterStatus {
   Running = 2,
   PendingRestart = 3,
   UpToDate = 4,
-  Failed = 5
+  Failed = 5,
+  Unavailable = 6
 }
 
 export const updaterStatuses = [
@@ -71,7 +72,8 @@ export const updaterStatuses = [
   { label: 'Running', value: UpdaterStatus.Running },
   { label: 'PendingRestart', value: UpdaterStatus.PendingRestart },
   { label: 'UpToDate', value: UpdaterStatus.UpToDate },
-  { label: 'Failed', value: UpdaterStatus.Failed }
+  { label: 'Failed', value: UpdaterStatus.Failed },
+  { label: 'Unavailable', value: UpdaterStatus.Unavailable }
 ] as const;
 
 export const UpdaterStatusLabel: Record<UpdaterStatus, string> = {
@@ -79,7 +81,8 @@ export const UpdaterStatusLabel: Record<UpdaterStatus, string> = {
   [UpdaterStatus.Running]: 'Running',
   [UpdaterStatus.PendingRestart]: 'PendingRestart',
   [UpdaterStatus.UpToDate]: 'UpToDate',
-  [UpdaterStatus.Failed]: 'Failed'
+  [UpdaterStatus.Failed]: 'Failed',
+  [UpdaterStatus.Unavailable]: 'Unavailable'
 };
 
 export enum RelocationMode {
@@ -3788,6 +3791,21 @@ export const attachmentLayouts = [
 export const AttachmentLayoutLabel: Record<AttachmentLayout, string> = {
   [AttachmentLayout.Tile]: 'Tile',
   [AttachmentLayout.Carousel]: 'Carousel'
+};
+
+export enum PropertyValueMatchPolicy {
+  MatchOnly = 1,
+  AutoCreateOptions = 2
+}
+
+export const propertyValueMatchPolicies = [
+  { label: 'MatchOnly', value: PropertyValueMatchPolicy.MatchOnly },
+  { label: 'AutoCreateOptions', value: PropertyValueMatchPolicy.AutoCreateOptions }
+] as const;
+
+export const PropertyValueMatchPolicyLabel: Record<PropertyValueMatchPolicy, string> = {
+  [PropertyValueMatchPolicy.MatchOnly]: 'MatchOnly',
+  [PropertyValueMatchPolicy.AutoCreateOptions]: 'AutoCreateOptions'
 };
 
 export enum ComparisonMode {

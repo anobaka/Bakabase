@@ -7450,9 +7450,15 @@ export interface components {
          */
         "Bakabase.Infrastructures.Components.App.Relocation.RelocationMode": 1 | 3;
         "Bakabase.Infrastructures.Components.App.Upgrade.Abstractions.AppVersionInfo": {
-            version: string;
+            version?: string;
             installers: components["schemas"]["Bakabase.Infrastructures.Components.App.Upgrade.Abstractions.AppVersionInfo+Installer"][];
             changelog?: string;
+            runningVersion?: string;
+            installedVersion?: string;
+            channel?: string;
+            channelLatestVersion?: string;
+            channelBehindInstalled: boolean;
+            updateCheckUnavailable: boolean;
         };
         "Bakabase.Infrastructures.Components.App.Upgrade.Abstractions.AppVersionInfo+Installer": {
             osPlatform?: components["schemas"]["System.Runtime.InteropServices.OSPlatform"];

@@ -1241,9 +1241,15 @@ export type BakabaseInfrastructuresComponentsAppRelocationDataPathValidatorTarge
 export type BakabaseInfrastructuresComponentsAppRelocationRelocationMode = 1 | 3;
 
 export interface BakabaseInfrastructuresComponentsAppUpgradeAbstractionsAppVersionInfo {
-  version: string;
+  version?: string;
   installers: BakabaseInfrastructuresComponentsAppUpgradeAbstractionsAppVersionInfoInstaller[];
   changelog?: string;
+  runningVersion?: string;
+  installedVersion?: string;
+  channel?: string;
+  channelLatestVersion?: string;
+  channelBehindInstalled: boolean;
+  updateCheckUnavailable: boolean;
 }
 
 export interface BakabaseInfrastructuresComponentsAppUpgradeAbstractionsAppVersionInfoInstaller {

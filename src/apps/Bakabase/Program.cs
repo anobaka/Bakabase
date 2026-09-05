@@ -1,4 +1,5 @@
 using Avalonia;
+using Bakabase.Infrastructures.Components.App.Upgrade;
 using Velopack;
 
 namespace Bakabase;
@@ -17,8 +18,14 @@ class Program
         // deliberate user action, so we disable that implicit apply. A staged
         // update then stays as PendingRestart until the user clicks "restart to
         // update", which explicitly calls UpdateManager.ApplyUpdatesAndRestart.
+        //
+        // SetLogger: this logger is handed to the process-wide VelopackLocator, so every
+        // later UpdateManager picks it up and its diagnostics (feed URL, channel, the
+        // versions a check compared) land in AppLog instead of only in Velopack's own log
+        // file, which nobody opens when an update check is being questioned.
         VelopackApp.Build()
             .SetAutoApplyOnStartup(false)
+            .SetLogger(new SerilogVelopackLogger())
             .Run();
 
         BuildAvaloniaApp()
