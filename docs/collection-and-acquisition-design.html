@@ -345,11 +345,11 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <tr><td><code class="i">src/abstractions/.../Constants/InternalProperty.cs</code></td><td>镜像两个成员（索引与扩展方法按此枚举分支）</td></tr>
 <tr><td><code class="i">Bakabase.Modules.Property/Components/PropertyInternals.cs</code></td><td><code class="i">BuiltinPropertyMap</code> 与 <code class="i">InternalPropertyMap</code> 各加两项</td></tr>
 <tr><td><code class="i">Bakabase.Modules.Property/Resources/PropertyResource*.resx</code></td><td><code class="i">BuiltinPropertyName_CollectionMulti</code>、<code class="i">BuiltinPropertyName_HasLocalPath</code></td></tr>
-<tr><td><code class="i">Bakabase.Modules.Property/Services/PropertyService.cs</code></td><td>仿 <code class="i">BuildOptionsForMediaLibraryV2Multi</code> 增加集合选项构建（单个与列表两个方法）</td></tr>
+<tr><td><code class="i">Bakabase.Modules.Property/Services/PropertyService.cs</code></td><td>仿 <code class="i">BuildOptionsForMediaLibraryV2Multi</code> 增加一个集合选项构建方法，并在 <code class="i">GetProperty</code>（单个）与 <code class="i">GetProperties</code>（列表）两处的 <code class="i">InternalProperty</code> 分支中接入</td></tr>
 <tr><td><code class="i">ResourceSearchIndexService.IndexInternalProperties</code></td><td>加载集合成员映射（含规则命中）按集合 id 写值索引；<code class="i">HasLocalPath</code> 写布尔键</td></tr>
 <tr><td><code class="i">ResourceLegacySearchService.cs:57-144</code></td><td>回退搜索的预取与取值分支</td></tr>
 <tr><td><code class="i">ResourceExtensions.GetInternalPropertyValue</code></td><td>返回 (集合 id 列表, 名称列表) / 布尔</td></tr>
-<tr><td><code class="i">ResourceService</code> 的 <code class="i">bulkPutResourcePropertyValue</code> 分支与 <code class="i">Resource.Collections</code> 填充（新增 <code class="i">ResourceAdditionalItem.CollectionName</code> 位并纳入 <code class="i">All</code>）</td><td>批量写入 → <code class="i">SetCollections</code>；读取时附带集合信息</td></tr>
+<tr><td><code class="i">ResourceService.BulkPutPropertyValue</code>（接口 OperationId 为 <code class="i">BulkPutResourcePropertyValue</code>）的 <code class="i">ResourceProperty</code> 分支与 <code class="i">Resource.Collections</code> 填充（新增 <code class="i">ResourceAdditionalItem.CollectionName</code> 位并纳入 <code class="i">All</code>）</td><td>批量写入 → <code class="i">SetCollections</code>；读取时附带集合信息</td></tr>
 <tr><td><code class="i">SearchableReservedProperty</code></td><td>加成员，保持与规则文件一致</td></tr>
 <tr><td>前端 <code class="i">core/models/Resource.ts</code>、<code class="i">components/Resource/index.tsx:581-641</code>、<code class="i">BulkPropertyEditor</code>、<code class="i">ResourceFilter/presets/DefaultFilterPreset.tsx</code></td><td>加 <code class="i">collections</code> 字段、卡片芯片、批量编辑映射、默认筛选固定项</td></tr>
 <tr><td><code class="i">yarn gen-sdk</code></td><td>重新生成 <code class="i">constants.ts / Api.ts / BApi2.d.ts</code> 并提交</td></tr>
@@ -552,7 +552,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <ol>
 <li>后端：在归属模块声明 Kind 常量（<code class="i">WorkflowTriggerKinds.Build</code> / <code class="i">WorkflowActivityKinds.Action</code>）；实现 <code class="i">IWorkflowTrigger</code> 或 <code class="i">IWorkflowActivity</code>；条目类型实现 <code class="i">IWorkflowItemTypeDescriptor</code>；在 <code class="i">src/apps/Bakabase.Service/Extensions/BakabaseBusinessExtensions.cs</code> 的 Workflow 注册块用 <code class="i">AddSingleton</code> 注册。构造函数只能依赖单例，运行时服务从 <code class="i">WorkflowExecutionContext.Services</code> 解析。</li>
 <li>动作里需要写库时用 <code class="i">IServiceScopeFactory</code> 开子作用域，不要在运行共享的 <code class="i">DbContext</code> 上 <code class="i">SaveChanges</code>（能力全景图「发现 6」）。</li>
-<li>前端：<code class="i">src/web/src/components/Workflow/{Triggers|Activities}/&lt;Name&gt;/</code> 提供 <code class="i">index.ts / types.ts / 表单 / 摘要</code>，在对应 <code class="i">index.ts</code> 注册；没有前端包的节点不会出现在面板。</li>
+<li>前端：在 <code class="i">src/web/src/components/Workflow/{Triggers|Activities}/&lt;Name&gt;/</code> 提供节点包（完整形态为 <code class="i">index.ts / types.ts / FilterForm|ConfigForm.tsx / FilterSummary|Summary.tsx</code>，简单节点可合并为单个 <code class="i">index.tsx</code>），并在 <code class="i">Triggers/index.ts</code>、<code class="i">Activities/index.ts</code> 的注册表中登记；没有前端包的节点不会出现在面板。</li>
 <li>i18n：<code class="i">locales/{en,cn}/pages/workflow.json</code> 的 <code class="i">workflow.trigger.*</code> / <code class="i">workflow.activity.*</code> / <code class="i">workflow.itemType.*</code>。</li>
 <li>新条目类型若暴露系统变量，要补 <code class="i">src/web/src/components/Workflow/variables.ts</code>（今天只硬编码了文件系统变量）。</li>
 </ol>
@@ -666,8 +666,8 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <div class="card"><h4>集合列表 <code class="i">/collections</code></h4><p>卡片流（仿 <code class="i">pages/media-library</code>）：封面拼图、名称、颜色、收集率进度条、成员构成小字、来源图标、最近更新。顶部：新建（空集合 / 从规则 / 从外部编号或链接 / 从 Multilevel 节点）、搜索。菜单入口放在 <code class="i">menu.data</code> 分组，标 Beta。</p></div>
 <div class="card"><h4>集合详情 <code class="i">/collections/{id}</code></h4><p>头部：收集率环形图 + 四个数字（已落地 / 未落地 / 获取中 / 已忽略）+ 「获取缺失条目」。标签页：<b>成员</b>（复用 <code class="i">ResourceCard</code> 网格，状态芯片，筛选与排序，右键：获取、忽略、移出、置顶顺序；可按属性分组显示）；<b>来源</b>（订阅列表：种类、目标摘要、间隔、上次检查、错误、立即检查；添加来源用现有 <code class="i">SubscriptionEditor</code>）；<b>规则</b>（<code class="i">ResourceFilterController</code> + 命中预览）；<b>设置</b>（颜色、封面、自动获取、获取设置覆盖）。</p></div>
 <div class="card"><h4>获取中心 <code class="i">/acquisitions</code></h4><p>表格：标题、来源、所属集合、状态（芯片 + 进度）、阶段耗时、操作。<b>需要处理</b>的任务置顶并高亮，行内直接给出对应操作（选择链接 / 购买并继续 / 输入密码 / 认领文件）。右侧抽屉「收件箱」：未认领文件列表，每个文件显示与等待中任务的匹配得分，拖到任务上即认领。顶部：粘贴 URL 创建、打开收件箱目录、设置。</p></div>
-<div class="card"><h4>资源页与详情的增量</h4><p>卡片芯片「未落地」「获取中」；右键菜单「加入集合…」（克隆 <code class="i">MediaLibraryMultiSelector</code> 的三态选择）；筛选面板固定项「已落地」；详情新增块「所属集合」（按 <code class="i">ResourceDetailLayoutEditor</code> 的六步接入，含 <code class="i">defaultLayout</code> 与示例占位）。</p></div>
-<div class="card"><h4>通知深链接</h4><p><code class="i">NotificationCenter</code> 今天没有 <code class="i">onClick</code>，<code class="i">payloadJson</code> 未被使用。约定 <code class="i">PayloadJson.route</code>（例如 <code class="i">/collections/12</code>、<code class="i">/acquisitions?focus=34</code>），通知中心统一按它跳转；订阅通知一并改用该约定。</p></div>
+<div class="card"><h4>资源页与详情的增量</h4><p>卡片芯片「未落地」「获取中」；右键菜单「加入集合…」（克隆 <code class="i">MediaLibraryMultiSelector</code> 的三态选择）；筛选面板固定项「已落地」；详情新增块「所属集合」（按 <code class="i">ResourceDetailLayoutEditor</code> 现有分区的六处接入点新增分区：<code class="i">types.ts</code> 的 <code class="i">SectionId</code>、<code class="i">defaultLayout.ts</code> 的 <code class="i">ALL_SECTIONS / DEFAULT_LAYOUT / SECTION_HEIGHT_BEHAVIOR</code>、<code class="i">SamplePlaceholders.tsx</code>、<code class="i">DetailModal/index.tsx</code> 的渲染分支、<code class="i">locales/{en,cn}/pages/resource.json</code>）。</p></div>
+<div class="card"><h4>通知深链接</h4><p><code class="i">NotificationItem</code> 已声明可选的 <code class="i">onClick</code> 属性，但 <code class="i">NotificationCenter</code> 从未传入，<code class="i">payloadJson</code> 未被使用。约定 <code class="i">PayloadJson.route</code>（例如 <code class="i">/collections/12</code>、<code class="i">/acquisitions?focus=34</code>），通知中心统一按它跳转；订阅通知一并改用该约定。</p></div>
 <div class="card"><h4>实时状态</h4><p>获取任务的进度走 BTask 外壳（前端 <code class="i">useBTasksStore</code> 按 id 前缀 <code class="i">Acquisition:</code> 订阅）；集合收集率变化通过 <code class="i">GetIncrementalData("Collection", dto)</code> 推送，新增 <code class="i">useCollectionsStore</code>。</p></div>
 </div>
 
@@ -683,7 +683,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 
 <h3 id="s12-5">12.5 路径标记配置体验的改进（面向存量库）</h3>
 <ul>
-<li><b>预设</b>：把帮助中心 <code class="i">topics/pathMark/examples.ts</code> 里的十二个示例提升为可一键应用的预设（每个预设 = 有序的 <code class="i">{type, configJson, priority}</code> 列表，正是 <code class="i">copyMarks</code> 的 <code class="i">CandidateGroup.marks</code> 形状），入口在 <code class="i">AddMarkDropdown</code> 与树形视图右键。</li>
+<li><b>预设</b>：把帮助中心 <code class="i">topics/pathMark/examples.ts</code> 里的十二个示例提升为可一键应用的预设（每个预设 = 有序的 <code class="i">{type, configJson, priority}</code> 列表，即 <code class="i">copyMarks</code> 的 <code class="i">CandidateGroup.marks</code>（完整 <code class="i">PathMark</code> 对象数组）去掉 <code class="i">id / path / syncStatus</code> 等实例字段后的子集），入口在 <code class="i">AddMarkDropdown</code> 与树形视图右键。</li>
 <li><b>按样例标记</b>：右键一个「确定是资源」的目录 → 系统按它相对根目录的深度推断 <code class="i">Layer</code>，用现有 <code class="i">previewPathMarkMatchedPaths</code> 展示将命中的兄弟目录，用 <code class="i">MarkDescription</code> 人话描述，确认后批量创建（<code class="i">POST path-mark/batch</code>）。</li>
 <li><b>复制标记持久化</b>：<code class="i">copyMarks</code> 目前是会话级状态，提升为可命名保存的预设，服务端存储。</li>
 <li><b>职责说明</b>：帮助中心明确「资源标记回答哪里是资源；属性来自外部来源或属性标记；配置集中在 ResourceProfile」，减少用户对三种标记的困惑。</li>
@@ -738,10 +738,10 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <tr><td>Workflow 触发器/活动/条目类型契约与前端注册模式</td><td><code class="i">src/modules/Bakabase.Modules.Workflow/</code>、<code class="i">src/web/src/components/Workflow/</code></td><td>§8</td></tr>
 <tr><td>BTask 流式构建器与 <code class="i">DownloaderManager</code> 的任务外壳模式</td><td><code class="i">BTaskHandlerBuilder.cs</code>、<code class="i">DownloaderManager.cs</code></td><td>§7.6 进度与取消</td></tr>
 <tr><td>Notification 模块与通知中心</td><td><code class="i">src/modules/Bakabase.Modules.Notification/</code>、<code class="i">components/NotificationCenter/</code></td><td>§6、§7、§12 通知</td></tr>
-<tr><td>Text 模块（<code class="i">ITextOps</code>）、Alias 模块</td><td><code class="i">src/modules/Bakabase.Modules.Text/</code>、<code class="i">src/modules/Bakabase.Modules.Alias/</code></td><td>§7.3 认领打分、§5.4 后期匹配</td></tr>
+<tr><td>Text 模块（<code class="i">ITextOps</code>）、Alias 模块</td><td>契约 <code class="i">src/abstractions/Bakabase.Abstractions/Components/Text/ITextOps.cs</code>，实现 <code class="i">src/modules/Bakabase.Modules.Text/Components/TextOps.cs</code>；<code class="i">src/modules/Bakabase.Modules.Alias/</code></td><td>§7.3 认领打分、§5.4 后期匹配</td></tr>
 <tr><td><code class="i">ILlmService.CompleteForFeatureAsync</code> 与 <code class="i">AiFeature</code></td><td><code class="i">src/modules/Bakabase.Modules.AI/</code></td><td>§7.2 链接与标题提取</td></tr>
 <tr><td>媒体库页、<code class="i">MediaLibraryMappings</code> 详情块、<code class="i">MediaLibraryMultiSelector</code>、<code class="i">ResourceSelectorModal</code></td><td><code class="i">src/web/src/pages/media-library/</code>、<code class="i">components/Resource/components/DetailModal/</code></td><td>§12 集合界面</td></tr>
-<tr><td>帮助中心路径标记示例、<code class="i">copyMarks</code>、<code class="i">previewPathMarkMatchedPaths</code></td><td><code class="i">components/HelpCenter/topics/pathMark/</code>、<code class="i">stores/copyMarks.ts</code>、<code class="i">PathMarkController.Preview</code></td><td>§12.5 预设与按样例标记</td></tr>
+<tr><td>帮助中心路径标记示例、<code class="i">copyMarks</code>、<code class="i">previewPathMarkMatchedPaths</code></td><td><code class="i">components/HelpCenter/topics/pathMark/</code>、<code class="i">stores/copyMarks.ts</code>、<code class="i">PathMarkController.PreviewMatchedPaths</code>（OperationId <code class="i">PreviewPathMarkMatchedPaths</code>）</td><td>§12.5 预设与按样例标记</td></tr>
 <tr><td>运行时一次性迁移器先例</td><td><code class="i">src/legacy/Bakabase.Migrations/V230/PathsRelocationMigrator.cs</code></td><td>§9 订阅回填集合</td></tr>
 </table></div>
 
