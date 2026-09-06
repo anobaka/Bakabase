@@ -49,7 +49,7 @@ footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(
 
 <table>
 <tr><th style="width:16%">字段</th><th>值</th></tr>
-<tr><td class="e">状态</td><td>设计稿第二版。所有者已就初稿的七条待定问题逐条给出结论（见 <a href="#s0">§0</a>），正文已按结论改写。尚未开始实现</td></tr>
+<tr><td class="e">状态</td><td>设计稿第三版。两轮共十二条待定问题已全部有结论（见 <a href="#s0">§0</a>），正文按结论改写完毕，<b>无剩余待决策项，可进入实现</b>。尚未开始实现</td></tr>
 <tr><td class="e">分支</td><td class="mono">claude/bakabase-client-server-split-l6dqa5</td></tr>
 <tr><td class="e">最后更新</td><td>2026-09-06</td></tr>
 <tr><td class="e">相关文档</td><td><a href="mobile-app-design.md">mobile-app-design.md</a>（移动端 App 设计，本文复用其服务发现与协议版本机制）</td></tr>
@@ -90,7 +90,17 @@ footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(
 <tr><td><b>漏标用户侧端点</b></td><td>本条不需要所有者决策——它是有确定应对方案的实现风险，初稿把它错放进了待定问题</td><td>已移入 <a href="#s10">§10.3</a></td></tr>
 <tr><td><b>实时推送连接的转发</b></td><td>同上，不需要决策。改为实现阶段的验证清单</td><td>已移入 <a href="#s44">§4.4</a></td></tr>
 </table>
-<div class="rule warn"><b>本轮另有两处发现，需要评审时留意：</b>
+<p>第二轮（同日）就 <a href="#s13">§13.2</a> 剩下的五条给出结论：</p>
+<table>
+<tr><th style="width:24%">条目</th><th style="width:38%">结论</th><th>影响的章节</th></tr>
+<tr><td><b>数据目录环境变量</b></td><td>用独立的变量名。并且这个概念应当<b>对数据目录之外的逻辑完全隐藏</b>——它们只面对一个接口，两种模式注入不同实现</td><td><a href="#s54">§5.4</a> 已重写</td></tr>
+<tr><td><b>多服务器切换形态</b></td><td>窗口内切换，<b>不允许多开</b></td><td><a href="#s53">§5.3</a> 已更新</td></tr>
+<tr><td><b>版本不匹配</b></td><td>宽松：允许降级连接，但界面上要有提示</td><td><a href="#s45">§4.5</a> 新增</td></tr>
+<tr><td><b>移动端切换到设备配对</b></td><td>能切最好，统一体验</td><td><a href="#s74">§7.4</a> 已更新</td></tr>
+<tr><td><b>第三方请求由客户端代发</b></td><td><b>否决</b>。大量第三方请求发生在服务端（增强器、下载器、订阅轮询等后台任务），那时客户端不一定开着</td><td><a href="#s91">§9.1</a> 已重写，该方案移除</td></tr>
+</table>
+
+<div class="rule warn"><b>第一轮另有两处发现，评审时留意：</b>
 <ol style="margin-bottom:0">
 <li><b>初稿漏了一个洞</b>：加入认证后，交给外部播放器的流式地址会因为播放器不携带凭据而失效。必须补上签名地址，见 <a href="#s75">§7.5</a>。这会增加阶段一的工作量。</li>
 <li><b>设备配对是一次方向回退</b>：提交 <code class="i">85e2c05</code> 当初删掉的正是设备配对与签名地址。旧代码可直接取回作为起点，见 <a href="#s7">§7</a> 开头的说明。</li>
@@ -192,6 +202,18 @@ footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(
 </table>
 <p class="note">这些属于阶段二的完成判据，写进该阶段的验收清单即可。</p>
 
+<h3 id="s45">4.5 客户端与服务端版本不匹配 <span class="tag t-new">所有者已确定：宽松降级</span></h3>
+<p>先看清楚<b>什么东西可能不匹配</b>——因为单页应用是从远端拉的（<a href="#s4">§4</a> 候选二），界面与服务端<b>永远是配套的</b>，不存在版本差。真正可能落后或超前的只有外壳这一侧：本地转发层，以及它编译进去的那份用户侧端点清单。</p>
+<table>
+<tr><th style="width:34%">不匹配的内容</th><th style="width:33%">后果</th><th>策略</th></tr>
+<tr><td>服务端新增了一个用户侧端点，旧外壳不认识</td><td>外壳把它转发出去，服务端因为自己也标了这个端点而拒绝</td><td><b>降级</b>。两侧都设防，失败是明确的，不会跑到服务器上执行。界面提示"该功能需要更新客户端"</td></tr>
+<tr><td>服务端新增了普通功能端点</td><td>界面来自服务端，所以功能是完整的；外壳只负责转发，不需要认识它</td><td><b>无影响</b>，不必提示</td></tr>
+<tr><td>外壳比服务端新，调用了服务端没有的端点</td><td>404</td><td><b>降级</b>，提示"该功能需要更新服务端"</td></tr>
+<tr><td>配对与签名的握手方式变了</td><td>连不上</td><td><b>硬失败</b>。这一层没有降级空间，必须明确报出"需要升级哪一端"</td></tr>
+</table>
+<div class="rule ok"><b>结论：功能层面一律宽松降级，只有认证握手本身硬失败。</b>
+界面上需要一个持续可见的提示（不是一闪而过的提示条），说明当前客户端与服务端版本不一致、以及建议升级哪一端。已有的协议版本握手（<code class="i">RemoteAccessProtocol.CurrentVersion</code>）继续用来判断"是否属于硬失败"，而不是用来一刀切地拒绝连接。</div>
+
 <h2 id="s5"><span class="n">§5</span>运行模式与进程组合方式</h2>
 
 <h3>5.1 用同一个安装包，还是发两个安装包</h3>
@@ -216,6 +238,7 @@ footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(
 <ul>
 <li><b>单实例标识必须按模式区分</b>。今天 <code class="i">BakabaseHost.SingleInstanceId</code> 是固定的 <code class="i">"Bakabase"</code>（<code class="i">BakabaseHost.cs:36</code>），两个模式共用它的话，第二个进程会被单实例机制直接挡掉。纯客户端需要用自己的标识。</li>
 <li><b>服务器列表里要能看见本机</b>。一体版只要开启了远程访问，它本身就是一台合格的服务端——不需要单独部署什么东西。所以客户端的服务器选择界面应当把本机发现到的服务端也列出来，并明确标注"本机"，避免用户以为列错了。</li>
+<li><b>多台服务端之间是窗口内切换，不允许多开</b> <span class="tag t-new">所有者已确定</span>。一台客户端可以配对多台服务端（本机的、别的设备的），但同一时刻只连一台，切换在窗口内完成，与移动端已有的做法一致。这也让单实例标识保持简单：一个模式一个标识即可，不必再按连接的服务器细分。</li>
 </ul>
 <div class="rule ok"><b>由此得到一条值得对外说明的拓扑</b>：想把自己电脑上的媒体库共享给另一台电脑的用户，不需要改用服务端部署——一体版开启远程访问，另一台机器用纯客户端配对连接即可。服务端部署（Docker）针对的是"没有图形界面的常驻机器"这个不同场景。</div>
 
@@ -228,7 +251,24 @@ footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(
 <li><a href="#s10">§10.1</a> 里"纯客户端不应产生数据库文件"这条验证，因为目录隔离而变成一句 <code class="i">assert 目录不存在</code>，比扫描共享目录可靠。</li>
 </ul>
 <p>目录位置遵循 <code class="i">appdata-paths.md</code> 的全部规则（不得位于安装目录下，Windows 上必须与安装根隔离）。命名上与一体版并列而非嵌套，例如 Windows 下 <code class="i">%LocalAppData%\Bakabase.Client.AppData</code>，macOS 与 Linux 用各自平台的对应位置。</p>
-<div class="rule ask"><b>需要注意现有的环境变量覆盖</b>：<code class="i">BAKABASE_DATA_DIR</code> 今天会覆盖数据目录。如果两种模式都读同一个变量，用户一旦设置了它，隔离就失效了。实现时需要决定是让纯客户端读一个独立的变量名，还是在该变量指定的目录下再分一层子目录——建议前者，语义更清楚。</div>
+
+<h4>怎么实现：换实现，而不是加抽象 <span class="tag t-new">所有者已确定</span></h4>
+<p>所有者的要求是：环境变量名的差异（以及"数据目录在哪"这件事本身）应当<b>对数据目录之外的逻辑完全隐藏</b>，它们只面对一个接口，两种模式注入不同的实现。这个方向是对的，而且核实之后发现——<b>这个架构今天已经基本成立，不需要新建抽象</b>：</p>
+<ul>
+<li>整个主仓库里直接读 <code class="i">AppDataDirectory</code> 的地方<b>只有 15 处</b>，且全部位于应用与基础设施层，业务逻辑里一处都没有。</li>
+<li>模块与业务代码走的是两个已有的接口：注入的 <code class="i">appService.RequestAppDataDirectory(子目录…)</code>（"给我一块地方"），以及 <code class="i">AppDataPaths.Resolve / Relativize</code>（存相对路径、读时还原）。</li>
+<li>所以要做的只是<b>在组合根里注入一个不同的路径解析器</b>：独立的环境变量名、独立的平台默认位置，全部关在解析器内部。上层代码一行都不用改，也永远不会知道自己身处哪种模式。这正是所有者描述的形态。</li>
+</ul>
+<div class="rule ask"><b>但有一处不满足，必须点名</b>：<code class="i">AppService.DefaultAppDataDirectory</code> 是<b>静态</b>成员，无法按模式注入。它被用在 5 处：
+<ul style="margin-bottom:0">
+<li>启动锚点 2 处（<code class="i">Bakabase/Program.cs:45</code>、<code class="i">App.axaml.cs:144</code>）——运行在依赖注入建立之前，静态是合理的，纯客户端的启动路径需要各自处理。</li>
+<li>数据库上下文工厂 3 处（<code class="i">BakabaseDbContextFactory</code>、<code class="i">LogDbContextFactory</code> 等）——这些是 EF 的<b>设计时</b>工厂，只在执行迁移命令时使用，运行时不走。</li>
+</ul>
+因此它们都不构成障碍，但引出一条具体的验证项：<b>纯客户端必须确保自己不触发这些路径</b>（不构造数据库上下文），否则会静默拿到一体版的目录。这条已加入 <a href="#s10">§10.1</a>。</div>
+
+<div class="rule"><b>关于更彻底的版本，我建议不做。</b>
+把"增删改查数据目录"整个包成接口（连 <code class="i">File</code> / <code class="i">Directory</code> 调用也走接口）确实更彻底，但：<code class="i">RequestAppDataDirectory</code> 已经提供了"要一块地方"的语义；纯客户端自己要存的东西（服务器档案、配对凭据、路径映射表、客户端日志、窗口状态）都是新写的代码，不依赖旧代码被改造；而这项重构会大面积触碰历史代码，直接冲撞本设计的<b>第一约束</b>。<br>
+建议作为一次独立的可选清理，用它自己的理由立项，不搭这趟车。</div>
 
 <h2 id="s6"><span class="n">§6</span>执行位置：本设计的核心概念</h2>
 
@@ -307,7 +347,7 @@ footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(
 <div class="rule warn"><b>必须对用户说清楚：不做传输层加密意味着内容是明文的。</b>
 签名只解决"身份不被冒用"，完全不解决"内容不被看到"。同一网络里的旁观者仍然可以看到你在浏览和播放什么，也可以把媒体流原样抓下来。因此文档必须明确：<b>打算把服务端暴露到公网的用户，请自行在前面套一层带传输层加密的反向代理</b>；本设计不提供这个能力，也不假装提供。</div>
 
-<h3>7.4 与现有远程访问模式的关系</h3>
+<h3 id="s74">7.4 与现有远程访问模式的关系</h3>
 <p>配对机制是<b>叠加</b>在现有三个模式之上的，不改动它们：</p>
 <ul>
 <li><b>一体版</b>：请求走回环地址，在闸门第一步就直通（<code class="i">RemoteAccessMiddleware.cs:52</code>），永远走不到配对逻辑。</li>
@@ -315,7 +355,9 @@ footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(
 <li><b>已配对的设备</b>：除 <code class="i">[RunsOnUserMachine]</code> 标记的端点外全部可用。这正是"功能与一体版一致"的实现方式，也是不必逐个去标那 460 个端点的原因。</li>
 <li><code class="i">Disabled</code> / <code class="i">Enabled</code> / <code class="i">Unrestricted</code> 三个取值的语义与各自的默认值一律不动。</li>
 </ul>
-<p class="note">附带收益：移动端将来也可以走同一套配对，从而摆脱今天只能访问 52 个端点的限制。本设计不要求它立刻切换。</p>
+<div class="rule ok"><b>移动端也切换到设备配对</b> <span class="tag t-new">所有者已确定：能切最好，统一体验</span><br>
+切换后移动端也能摆脱今天只能访问 52 个端点的限制，两端的连接方式与设置界面也统一了。<br>
+<b>但迁移方式必须保护现有用户</b>：保留"未配对"作为一种受限状态，其行为与今天<b>完全一致</b>（仍是那 52 个端点）。配对是一次<b>可选的升级</b>，配了就解锁全部功能，不配也照常用。这样已装 App 的用户升级后不会被一个登录墙拦在外面，与本设计的第一约束一致。</div>
 
 <h3 id="s75">7.5 外部播放器拿不到凭据：需要签名地址</h3>
 <div class="rule warn"><b>这是加入认证后必然出现的一个洞，初稿漏了。</b>
@@ -379,15 +421,27 @@ footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(
 <tr><th style="width:8%"></th><th style="width:30%">问题</th><th>能不能解决</th></tr>
 <tr><td class="e">一</td><td>登录窗口必须在客户端弹，但发起方是服务端</td><td><b>能</b>。标记 <code class="i">[RunsOnUserMachine]</code>，采集由本地转发层在客户端执行，用客户端自己的 <code class="i">IGuiAdapter</code> 弹窗</td></tr>
 <tr><td class="e">二</td><td>User-Agent 与 TLS 指纹会取错。<code class="i">GetWebViewUserAgent()</code> 是<b>按当前进程所在操作系统</b>推断的（<code class="i">ToolController.cs:312</code>）——若这段代码在服务端执行，推断出的是服务器的系统，与真正弹窗的客户端不符，连带 TLS 指纹也一起错</td><td><b>能</b>。改为由<b>实际弹窗的那一侧上报</b>自己的 User-Agent，而不是由处理请求的进程推断。一体版下上报方就是本机，行为与今天完全一致</td></tr>
-<tr><td class="e">三</td><td><b>网络出口不同</b>。凭据在客户端的出口地址上取得，之后由服务端的出口使用</td><td><b>不能</b>。这是跨机器本身的属性，传任何参数都消除不了</td></tr>
+<tr><td class="e">三</td><td><b>网络出口可能不同</b>。凭据在客户端的出口地址上取得，之后由服务端的出口使用</td><td><b>不能</b>，但<b>取决于部署位置</b>，见下</td></tr>
 </table>
-<div class="rule warn"><b>第三条必须如实告知，不能假装解决了。</b>
-把会话与出口地址绑定的站点，凭据一到服务端就失效；风控严格的站点会要求重新验证。受影响程度完全取决于具体站点，无法在设计阶段给出保证。界面上应当在纯客户端模式下明确提示这一点，而不是让用户反复采集、反复失败后自己去猜原因。</div>
 
-<h4>应对分级</h4>
+<h4>第三环没有想象中严重：取决于服务端部署在哪</h4>
+<table>
+<tr><th style="width:34%">部署方式</th><th style="width:22%">出口地址</th><th>后果</th></tr>
+<tr><td>家里的常驻机器 / 网络存储 + 同一个家庭网络里的客户端</td><td><b>相同</b>（同一个公网出口）</td><td>站点看到的地址一致，凭据基本可用。<b>这是最常见的部署方式</b></td></tr>
+<tr><td>服务端在云主机 / 机房，客户端在家</td><td><b>不同</b></td><td>把会话与地址绑定的站点会立即失效；风控严格的站点会要求重新验证</td></tr>
+<tr><td>客户端通过外网连回家里的服务端</td><td>相同（凭据由服务端出口使用，与客户端在哪无关）</td><td>基本可用</td></tr>
+</table>
+<div class="rule warn"><b>仍然要如实告知，不能假装解决了。</b>
+受影响程度取决于具体站点与具体部署，无法在设计阶段给出保证。界面上应当在纯客户端模式下把这件事说清楚，而不是让用户反复采集、反复失败之后自己去猜原因。</div>
+
+<h4>应对：客户端代发第三方请求的方案已被否决</h4>
+<div class="rule warn"><b>所有者已否决"由客户端代发第三方请求"。</b>
+理由是决定性的：<b>大量第三方请求本来就发生在服务端</b>——增强器、下载器、订阅轮询等后台任务都是服务端自己按计划发起的，那些时刻客户端不一定开着。把这条链路的可用性绑在"客户端在线"上，等于让后台任务变得不可靠。</div>
+<p>因此第三环<b>没有彻底解法</b>，第一版的做法是：</p>
 <ol>
-<li><b>第一版</b>：解决第一、二环（客户端弹窗 + 上报真实 User-Agent），第三环如实提示。已有的手工粘贴路径天然就是兜底——用户可以在客户端浏览器里自己取，也可以在服务端所在网络的机器上取了再粘贴进来。</li>
-<li><b>后续可选</b>：让需要登录态的第三方请求<b>由客户端代发</b>，服务端只负责发起与接收结果。这样出口地址、User-Agent、TLS 指纹三者全部一致，是唯一能真正解决第三环的办法。代价是客户端必须在线，且要新增一条反向的请求代发通道——不宜与本设计捆绑。</li>
+<li>解决第一、二环（客户端弹窗 + 上报真实的 User-Agent 与 TLS 指纹）。</li>
+<li>第三环如实提示，并把上面那张表的结论直接告诉用户——绝大多数家庭部署不受影响，云主机部署会受影响。</li>
+<li>兜底沿用<b>已有的手工粘贴路径</b>：用户可以在服务端所在网络的任意一台机器上取得凭据后粘贴进来。这条路径今天就存在，不需要新做。</li>
 </ol>
 
 <h4>由哪一台客户端弹窗</h4>
@@ -419,7 +473,7 @@ footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(
 <tr><td>前端新增第三种状态</td><td><code class="i">isLocal</code> 的语义与取值不变，<code class="i">useIsRemoteClient()</code> 不变；新分支的判据是新增字段，一体版下该字段取值使新代码走与今天完全相同的分支</td><td>新增前端测试：一体版取值下，播放控件与封面组件的渲染结果与改动前一致</td></tr>
 <tr><td>登录态采集转交通道</td><td>一体版的图形界面适配器是 Avalonia 实现，转交通道不注册</td><td><code class="i">CookieCaptureOrchestratorTests</code> 保持全绿</td></tr>
 <tr><td>安装包与更新通道</td><td>不变。纯客户端是同一个安装包里的一个设置项，默认值是一体版</td><td>手工执行 <code class="i">src/tests/upgrade-tests/</code> 的升级回归脚本</td></tr>
-<tr><td>数据库与迁移</td><td>一体版不变；纯客户端不建库也不迁移</td><td>纯客户端模式启动后，应用数据目录下不应出现数据库文件</td></tr>
+<tr><td>数据库与迁移</td><td>一体版不变；纯客户端不建库也不迁移</td><td>纯客户端模式启动后，其独立数据目录下不应出现数据库文件；且<b>一体版的数据目录不应被创建或改动</b>（<a href="#s54">§5.4</a> 指出静态的 <code class="i">DefaultAppDataDirectory</code> 无法按模式注入，所以这条要实测而非推理）</td></tr>
 </table>
 
 <h3>10.2 唯一的共享改动面</h3>
@@ -446,7 +500,7 @@ footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(
 <tr><td>日志查看</td><td><span class="tag t-later">需要区分</span></td><td>客户端与服务端各有一份日志，界面要能分别查看</td></tr>
 <tr><td>自动更新</td><td><span class="tag t-later">需要区分</span></td><td>客户端自行更新；服务端由用户自行更新。版本不匹配时用已有的协议版本握手给出提示</td></tr>
 <tr><td>压缩包内视频跳转播放</td><td><span class="tag t-none">不可用</span></td><td>流式提取是管道流，本来就不支持跳转，与移动端限制相同</td></tr>
-<tr><td>第三方站点登录态</td><td><span class="tag t-later">部分站点会失效</span></td><td>凭据取自客户端的网络出口，由服务端出口使用。绑定出口地址的站点会立即失效，见 <a href="#s91">§9.1</a>。手工粘贴是兜底路径</td></tr>
+<tr><td>第三方站点登录态</td><td><span class="tag t-later">取决于部署位置</span></td><td>家庭部署（服务端与客户端同一个公网出口）基本可用；服务端在云主机时，绑定出口地址的站点会失效。见 <a href="#s91">§9.1</a>，手工粘贴是兜底路径</td></tr>
 </table>
 
 <h2 id="s12"><span class="n">§12</span>实施阶段划分</h2>
@@ -466,20 +520,21 @@ footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(
 <table>
 <tr><th style="width:30%">风险</th><th>应对</th></tr>
 <tr><td><b>漏标用户侧端点</b> <span class="tag t-open">高风险</span></td><td>后果是命令在无人看的服务器上执行并返回成功。应对是 <a href="#s103">§10.3</a> 的自动检查加集合快照断言。这是实现纪律问题，不是选型问题</td></tr>
-<tr><td><b>第三方站点登录态跨机器失效</b></td><td>无法根治（<a href="#s91">§9.1</a> 第三环）。第一版如实提示 + 手工粘贴兜底；彻底方案是让客户端代发第三方请求，列为后续可选</td></tr>
+<tr><td><b>第三方站点登录态跨机器失效</b></td><td><b>无彻底解法</b>——客户端代发方案已被否决（服务端的后台任务不能依赖客户端在线）。影响面取决于部署位置：家庭部署出口相同、基本可用，云主机部署会受影响。第一版如实提示 + 沿用已有的手工粘贴兜底，详见 <a href="#s91">§9.1</a></td></tr>
 <tr><td><b>不做传输层加密</b></td><td>身份由签名保护，内容仍是明文。文档必须明示公网暴露需自行套带传输层加密的反向代理（<a href="#s7">§7.3</a>）</td></tr>
 <tr><td><b>实时推送穿过转发层后异常</b></td><td>逐条验证清单见 <a href="#s44">§4.4</a>，作为阶段二的验收判据</td></tr>
 </table>
 
 <h3>13.2 仍需决策</h3>
+<p>第二轮之后，<b>没有需要所有者拍板的问题剩下了</b>。下面几条是实现阶段自行决定即可的细节，列在这里只为不遗漏：</p>
 <table>
-<tr><th style="width:30%">问题</th><th>说明</th></tr>
-<tr><td><b>数据目录环境变量的处理</b> <span class="tag t-open">待决策</span></td><td><code class="i">BAKABASE_DATA_DIR</code> 若被两种模式共用会破坏目录隔离。建议纯客户端读一个独立的变量名，详见 <a href="#s54">§5.4</a>。影响面很小，实现前定即可</td></tr>
-<tr><td><b>多服务器的切换形态</b> <span class="tag t-open">待决策</span></td><td><a href="#s53">§5.3</a> 确认了一台客户端可以面对多台服务端（本机的、别的设备的）。是一个窗口内切换（移动端已有的做法），还是允许开多个窗口各连一台？前者简单，后者更像"多开"，需要重新考虑单实例标识</td></tr>
-<tr><td><b>版本不匹配时的策略</b> <span class="tag t-open">待决策</span></td><td>协议版本握手机制已存在（<code class="i">RemoteAccessProtocol.CurrentVersion</code>）。但握手失败后是硬拒绝并提示升级，还是允许降级连接？考虑到单页应用是从远端拉的，硬拒绝可能过严</td></tr>
-<tr><td><b>移动端是否切换到设备配对</b> <span class="tag t-open">待定</span></td><td>切换后移动端也能突破 52 个端点的限制。但这会改变现有移动端用户的使用流程（需要配对一次），属于独立决策，本设计不做要求</td></tr>
-<tr><td><b>第三方请求由客户端代发</b> <span class="tag t-later">后续</span></td><td>唯一能真正解决登录态跨机器问题的办法，但要新增一条反向的请求代发通道。不与本设计捆绑，等第一版实测确认哪些站点真的失效后再评估</td></tr>
+<tr><th style="width:30%">细节</th><th>说明</th></tr>
+<tr><td>配对码的有效期与长度</td><td>够短到不便被猜到，够长到用户能从日志里抄下来。取值凭经验定即可，不影响架构</td></tr>
+<tr><td>签名地址的有效期</td><td><a href="#s75">§7.5</a> 已给出取值原则（够看完一部片、又不便于分享），具体数值实测后定</td></tr>
+<tr><td>是否限制配对设备数量</td><td>倾向不限制，但设备列表要能看见、能逐台撤销，这比设上限更有用</td></tr>
+<tr><td>纯客户端的独立环境变量名</td><td><a href="#s54">§5.4</a> 已定方向（独立变量名，且关在路径解析器内部），起什么名字是实现细节</td></tr>
 </table>
+<div class="rule ok"><b>本设计已可进入实现。</b>初稿的七条与第二轮的五条待定问题全部有结论，记录在 <a href="#s0">§0</a>。</div>
 
 <footer>
 本文所有现状描述均已在代码中逐条核实并标注文件与行号，评审时可直接核对。<br>
