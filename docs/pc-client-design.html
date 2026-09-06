@@ -1,0 +1,488 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>纯客户端模式设计：客户端与服务端分离</title>
+<style>
+:root{--bg:#0e1116;--panel:#161b22;--panel2:#1c222c;--code:#0b0e14;--line:#2a313c;
+--ink:#e6e9ef;--mut:#98a2b0;--dim:#6b7482;--a:#6ea8fe;--g:#5ecb9e;--y:#e6b566;--r:#e8776f;--p:#b08cff;--c:#4bc0d9;--chip:#222a35;}
+@media (prefers-color-scheme:light){:root{--bg:#f6f7f9;--panel:#fff;--panel2:#eef1f5;--code:#f4f6f9;--line:#e2e6ec;
+--ink:#1a1f27;--mut:#586274;--dim:#8a94a3;--a:#2f6fed;--g:#1f9d6b;--y:#a9761f;--r:#cf4d43;--p:#7a52d6;--c:#1893ad;--chip:#eef1f5;}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);line-height:1.62;
+font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin:0 auto;padding:40px 22px 80px}
+h1{font-size:25px;margin:0 0 6px}.sub{color:var(--mut);font-size:14.5px;margin:0 0 4px}
+h2{font-size:17px;margin:36px 0 8px;padding-bottom:8px;border-bottom:1px solid var(--line);scroll-margin-top:12px}
+h2 .n{color:var(--dim);font-weight:700;margin-right:8px}
+h3{font-size:14.5px;margin:20px 0 6px;color:var(--mut)}
+h4{font-size:13px;margin:16px 0 4px;color:var(--ink);font-weight:650}
+p{margin:9px 0}
+ul,ol{margin:9px 0 9px 4px;padding-left:22px}li{margin:4px 0}
+.note{font-size:12.5px;color:var(--dim);margin:10px 0}
+b{font-weight:650}
+a{color:var(--a)}
+code.i{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;background:var(--chip);padding:1px 5px;border-radius:5px}
+table{width:100%;border-collapse:collapse;font-size:13px;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:10px 0}
+th,td{padding:8px 11px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:var(--panel2);color:var(--mut);font-weight:600;font-size:12px}
+tr:last-child td{border-bottom:none}
+td.k{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:12px}
+td.e{font-weight:700;white-space:nowrap;color:var(--dim)}
+.mono{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:12px}
+.tag{display:inline-block;font-size:10.5px;padding:1px 7px;border-radius:20px;background:var(--chip);color:var(--mut);white-space:nowrap}
+.t-have{color:var(--g);border:1px solid var(--g)}.t-new{color:var(--p);border:1px solid var(--p)}.t-later{color:var(--y);border:1px solid var(--y)}
+.t-open{color:var(--r);border:1px solid var(--r)}.t-none{color:var(--c);border:1px solid var(--c)}
+pre.dia{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:12px 14px;overflow-x:auto;margin:10px 0;
+font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:12px;line-height:1.5;white-space:pre}
+pre.dia .have{color:var(--g)}pre.dia .new{color:var(--p)}pre.dia .cm{color:var(--dim)}pre.dia .warn{color:var(--r)}
+.rule{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--a);border-radius:10px;padding:10px 14px;margin:10px 0;font-size:13px}
+.rule.warn{border-left-color:var(--r)}
+.rule.ask{border-left-color:var(--y)}
+.rule.ok{border-left-color:var(--g)}
+.toc{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin:16px 0;font-size:13px}
+.toc ol{margin:4px 0;padding-left:20px;columns:2;column-gap:28px}
+.toc li{margin:3px 0;break-inside:avoid}
+footer{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(--line);padding-top:14px}
+</style></head><body><div class="wrap">
+
+<h1>纯客户端模式设计：客户端与服务端分离</h1>
+<p class="sub">让 Bakabase 服务端部署在用户自己的服务器上，由本机的桌面客户端连接使用，功能与现在的一体版保持一致</p>
+
+<table>
+<tr><th style="width:16%">字段</th><th>值</th></tr>
+<tr><td class="e">状态</td><td>设计稿第二版。所有者已就初稿的七条待定问题逐条给出结论（见 <a href="#s0">§0</a>），正文已按结论改写。尚未开始实现</td></tr>
+<tr><td class="e">分支</td><td class="mono">claude/bakabase-client-server-split-l6dqa5</td></tr>
+<tr><td class="e">最后更新</td><td>2026-09-06</td></tr>
+<tr><td class="e">相关文档</td><td><a href="mobile-app-design.md">mobile-app-design.md</a>（移动端 App 设计，本文复用其服务发现与协议版本机制）</td></tr>
+<tr><td class="e">相关代码</td><td class="mono">src/modules/Bakabase.Modules.RemoteAccess/<br>src/apps/Bakabase.Service/Components/RemoteAccess/<br>src/apps/Bakabase/（Avalonia 外壳）<br>src/web/src/stores/remoteAccess.ts</td></tr>
+</table>
+
+<div class="rule warn"><b>本设计的第一约束：现有一体版用户的体验必须零变化。</b>
+不是"尽量不影响"，是"改完之后，一体版用户从安装、升级、启动到日常使用，看到的和做的与改动前完全相同"。
+本文的每一项技术选择都优先服务于这条约束，理由与验证方式写在 <a href="#s10">§10</a>。凡是无法论证零影响的方案，本文一律不采用。</div>
+
+<div class="toc"><b>目录</b>
+<ol>
+<li><a href="#s0">决策记录</a></li>
+<li><a href="#s1">名词约定</a></li>
+<li><a href="#s2">现状盘点（已在代码中逐条核实）</a></li>
+<li><a href="#s3">关键发现：完整功能的远程访问今天已经存在</a></li>
+<li><a href="#s4">架构选型：三个候选与结论</a></li>
+<li><a href="#s5">运行模式与进程组合方式</a></li>
+<li><a href="#s6">执行位置：本设计的核心概念</a></li>
+<li><a href="#s7">身份认证：解锁完整功能的前提</a></li>
+<li><a href="#s8">路径语义与路径映射</a></li>
+<li><a href="#s9">需要跨机器协作的三个特例</a></li>
+<li><a href="#s10">对现有一体版用户的零影响保证</a></li>
+<li><a href="#s11">纯客户端模式下降级或不可用的功能</a></li>
+<li><a href="#s12">实施阶段划分</a></li>
+<li><a href="#s13">风险与待定问题</a></li>
+</ol></div>
+
+<h2 id="s0"><span class="n">§0</span>决策记录</h2>
+<p>初稿在 <a href="#s13">§13</a> 里列了七条待定问题。所有者已于 2026-09-06 逐条回复，结论记在这里；正文相应章节已按结论改写。</p>
+<table>
+<tr><th style="width:24%">条目</th><th style="width:38%">结论</th><th>影响的章节</th></tr>
+<tr><td><b>认证方案</b></td><td>采用<b>设备配对</b>，不做传输层加密</td><td><a href="#s7">§7</a> 已重写</td></tr>
+<tr><td><b>多客户端连接同一服务端</b></td><td>通常只有一个用户、多台设备。登录态采集确实是问题：凭据是在客户端的浏览器环境里拿到的，服务端未必能用</td><td><a href="#s9">§9.1</a> 已重写</td></tr>
+<tr><td><b>一台机器同时跑服务端与客户端</b></td><td>允许。此时该客户端既可以连接本机一体版对外暴露的服务端，也可以连接其他设备上的服务端（都需通过配对）</td><td><a href="#s5">§5.3</a> 新增</td></tr>
+<tr><td><b>缩略图本地缓存</b></td><td>暂不做。默认部署在局域网内，带宽不构成瓶颈</td><td>已从待定问题中移除</td></tr>
+<tr><td><b>模式切换的可逆性</b></td><td>纯客户端<b>使用独立的数据目录</b>，不与一体版共用</td><td><a href="#s5">§5.4</a> 新增</td></tr>
+<tr><td><b>漏标用户侧端点</b></td><td>本条不需要所有者决策——它是有确定应对方案的实现风险，初稿把它错放进了待定问题</td><td>已移入 <a href="#s10">§10.3</a></td></tr>
+<tr><td><b>实时推送连接的转发</b></td><td>同上，不需要决策。改为实现阶段的验证清单</td><td>已移入 <a href="#s44">§4.4</a></td></tr>
+</table>
+<div class="rule warn"><b>本轮另有两处发现，需要评审时留意：</b>
+<ol style="margin-bottom:0">
+<li><b>初稿漏了一个洞</b>：加入认证后，交给外部播放器的流式地址会因为播放器不携带凭据而失效。必须补上签名地址，见 <a href="#s75">§7.5</a>。这会增加阶段一的工作量。</li>
+<li><b>设备配对是一次方向回退</b>：提交 <code class="i">85e2c05</code> 当初删掉的正是设备配对与签名地址。旧代码可直接取回作为起点，见 <a href="#s7">§7</a> 开头的说明。</li>
+</ol></div>
+
+<h2 id="s1"><span class="n">§1</span>名词约定</h2>
+<p>本文出现的每个名词都在这里给出完整定义，正文中不使用缩写。</p>
+<table>
+<tr><th style="width:20%">名词</th><th>含义</th></tr>
+<tr><td><b>一体版</b></td><td>今天发布的桌面应用。同一个进程里既有界面外壳，也有数据库、媒体库和后台任务。用户的电脑既是客户端也是服务端。英文对应 all-in-one。</td></tr>
+<tr><td><b>服务端部署</b></td><td>只运行 <code class="i">Bakabase.Service</code>，没有图形界面。今天的 Docker 镜像就是这种形态。数据库和媒体库都在这台机器上。</td></tr>
+<tr><td><b>纯客户端</b></td><td>本设计要新增的形态。桌面应用连接一台远程的服务端部署，自身不持有数据库和媒体库。目标是让用户感觉与一体版没有区别。</td></tr>
+<tr><td><b>数据侧</b></td><td>存放数据库与媒体库的那一侧。一体版里是用户的电脑，服务端部署里是服务器。</td></tr>
+<tr><td><b>用户侧</b></td><td>用户此刻正坐在前面的那台机器。一体版里与数据侧是同一台，纯客户端里是两台不同的机器。</td></tr>
+<tr><td><b>本地转发层</b></td><td>纯客户端模式下，桌面应用内部启动的一个小型 HTTP 进程。它把大部分请求转发给远程服务端，同时自己执行必须在用户侧发生的那部分请求。详见 <a href="#s4">§4</a>。</td></tr>
+<tr><td><b>远程访问闸门</b></td><td>现有的两层机制：<code class="i">RemoteAccessMiddleware</code>（判断这个连接是否被允许）与 <code class="i">RemoteAccessAuthorizationFilter</code>（判断这个端点是否允许被远程调用）。</td></tr>
+</table>
+
+<h2 id="s2"><span class="n">§2</span>现状盘点（已在代码中逐条核实）</h2>
+<p>结论建立在下面这些事实之上，每条都给出了文件与行号，评审时可直接核对。</p>
+<table>
+<tr><th style="width:44%">事实</th><th style="width:38%">代码位置</th><th style="width:18%">对本设计的意义</th></tr>
+<tr><td>服务端已经能在没有任何图形界面的情况下独立运行</td><td class="k">src/apps/Bakabase.Service/Program.cs<br>（使用 <code class="i">NullGuiAdapter</code>）</td><td>服务端形态不需要新建，已经存在</td></tr>
+<tr><td>Docker 部署默认使用 <code class="i">Unrestricted</code> 模式，桌面部署默认 <code class="i">Disabled</code></td><td class="k">BakabaseStartup.cs:111<br>RemoteAccessOptions.cs</td><td>见 <a href="#s3">§3</a> 的关键发现</td></tr>
+<tr><td><code class="i">Unrestricted</code> 模式下，端点授权过滤器整体提前返回，即所有端点都可以被远程调用</td><td class="k">RemoteAccessAuthorizationFilter.cs:30</td><td>完整功能的远程访问已经可用</td></tr>
+<tr><td>回环地址（本机自己发起）的请求在闸门第一步就直通，不受任何远程访问设置影响</td><td class="k">RemoteAccessMiddleware.cs:52</td><td>这是零影响保证的基石</td></tr>
+<tr><td>前端已经有"我是远程客户端"的概念，并已在播放控件与封面组件上分支</td><td class="k">src/web/src/stores/remoteAccess.ts:52<br>PlayControl/index.tsx:248, 322</td><td>第三种状态可以在此基础上扩展</td></tr>
+<tr><td>选择媒体库路径时，文件浏览器是通过接口列举<b>服务端</b>的目录，不是操作系统的原生对话框</td><td class="k">src/web/src/components/FileExplorer/</td><td>跨机器场景下语义天然正确，无需改动</td></tr>
+<tr><td>服务发现（组播域名解析广播、用户数据报协议探测）、服务器唯一标识、协议版本握手均已实现</td><td class="k">Bakabase.Modules.RemoteAccess/Components/Discovery/<br>RemoteAccessProtocol.cs</td><td>客户端找服务器这一环可以直接复用</td></tr>
+<tr><td>文件流式传输已支持断点范围请求，浏览器与原生播放器都能跳转播放</td><td class="k">FileController：<code class="i">/file/raw</code>、<code class="i">/file/play</code></td><td>无路径映射时的播放兜底方案已就绪</td></tr>
+<tr><td>共 512 个控制器动作，其中只有 52 处标记了 <code class="i">[RemoteAccessible]</code></td><td class="k">src/apps/Bakabase.Service/Controllers/</td><td>见 <a href="#s6">§6</a>，这是最大的一处需要重新设计的地方</td></tr>
+</table>
+
+<h2 id="s3"><span class="n">§3</span>关键发现：完整功能的远程访问今天已经存在</h2>
+<p>把 <code class="i">BakabaseStartup.cs:111</code> 和 <code class="i">RemoteAccessAuthorizationFilter.cs:30</code> 这两条放在一起看，会得到一个对本设计影响极大的结论：</p>
+<div class="rule ok"><b>今天用 Docker 部署一台 Bakabase，用浏览器打开它的地址，得到的已经是一个功能完整的客户端。</b>
+因为 Docker 默认 <code class="i">Unrestricted</code>，而该模式下端点授权过滤器整体跳过，512 个端点全部可以远程调用；单页应用本身也由同一个服务端提供，所以版本天然一致。</div>
+<p>这意味着"纯客户端"要新增的东西，比直觉上以为的少得多。它相对于"用浏览器打开服务器地址"的<b>增量价值只有两条</b>：</p>
+<ol>
+<li><b>原生外壳</b>：独立窗口、托盘、单实例、自动更新、启动即进入应用而不是先开浏览器。</li>
+<li><b>把应该在用户面前发生的命令，真的在用户面前执行</b>：用本机的播放器打开影片、用本机的文件管理器打开目录、用本机的浏览器打开链接。这些今天在远程浏览器里要么被拒绝，要么会跑到服务器上去执行。</li>
+</ol>
+<p>第二条正是提问里点到的"本地命令怎么处理"。所以整个设计可以收敛成一个很干净的题目：<b>如何把端点按执行位置一分为二，并解决由此带来的路径语义问题</b>。</p>
+
+<h2 id="s4"><span class="n">§4</span>架构选型：三个候选与结论</h2>
+
+<h3>候选一：纯外壳，直接加载远程单页应用</h3>
+<p>桌面外壳不启动任何本地服务，内嵌浏览器直接指向 <code class="i">http://服务器地址:端口</code>。</p>
+<ul>
+<li><b>优点</b>：功能对等免费获得，单页应用由服务端提供，版本天然对齐。</li>
+<li><b>缺点</b>：所有用户侧能力都没有了。要恢复，必须新造一套网页与原生外壳之间的调用通道，并且前端要为这套通道单独写一份调用分支。前端改动面大，而且这些分支会同时存在于一体版的代码里。</li>
+</ul>
+
+<h3>候选二：本地转发层（推荐）</h3>
+<p>桌面外壳在本机启动一个小型 HTTP 进程，只监听回环地址。内嵌浏览器指向这个本地进程。它做两件事：</p>
+<ol>
+<li><b>转发</b>：把数据侧的请求原样转发给远程服务端，包括实时推送连接。对网页来说仍然是同一个来源，不涉及跨来源资源共享问题。</li>
+<li><b>本地执行</b>：把用户侧的请求留在本进程执行，也就是在用户自己的机器上拉起播放器、打开目录。</li>
+</ol>
+<div class="rule ok"><b>这个方案最大的好处：现有前端几乎不用改。</b>
+<code class="i">BApi.tool.openFileOrDirectory</code> 打开的自然就是客户端的文件管理器，<code class="i">/player/batch-play</code> 拉起的自然就是客户端的播放器——因为这些请求根本没有被转发出去。前端不需要知道自己身处哪种模式。</div>
+<p>单页应用本身仍然从远程服务端拉取，不由本地转发层内置。这样可以避免"新客户端连旧服务端"时前端调用了服务端还不存在的接口。版本兼容由已有的协议版本握手负责。</p>
+
+<h3>候选三：前端维护两个接口地址</h3>
+<p>前端持有两个接口客户端，逐个调用点判断该发往本地还是远程。最灵活，但侵入面最大：每个调用点都要判断，跨来源资源共享与实时推送连接都要单独处理，而且这些判断会永久留在一体版的代码路径里。不推荐。</p>
+
+<h3>结论：采用候选二</h3>
+<pre class="dia"><code><span class="cm">── 一体版（今天，改动后完全不变）──────────────────────────────</span>
+  Avalonia 外壳 ──▶ 内嵌浏览器 ──回环──▶ Kestrel ──▶ 数据库 / 媒体库 / 后台任务
+                                              └──▶ 播放器、文件管理器（同一台机器）
+
+<span class="cm">── 纯客户端（新增）────────────────────────────────────────────</span>
+  用户的电脑                                    用户的服务器
+  ┌──────────────────────────────┐            ┌────────────────────────────┐
+  │ Avalonia 外壳                 │            │ Bakabase.Service           │
+  │   └▶ 内嵌浏览器               │            │   ├ 数据库 / 媒体库         │
+  │        │ 回环                 │            │   ├ 后台任务 / 增强器       │
+  │        ▼                      │            │   └ 远程访问闸门            │
+  │ <span class="new">本地转发层（新增）</span>          │            └────────────────────────────┘
+  │   ├ 用户侧请求 → 本机执行     │                        ▲
+  │   │    播放器 / 文件管理器    │                        │
+  │   └ 其余请求 ────────────────┼── HTTP + 实时推送 ─────┘
+  └──────────────────────────────┘
+         <span class="warn">只监听 127.0.0.1，绝不监听 0.0.0.0</span>
+</code></pre>
+<div class="rule warn"><b>安全边界：本地转发层必须只绑定回环地址。</b>
+如果它监听了所有网卡，局域网里任何人都可以让这台客户端打开目录、拉起播放器、读取已映射的本地文件。它也不参与服务发现广播，不响应探测请求——它不是服务端。</div>
+
+<h3 id="s44">4.4 实时推送连接的转发：实现时必须验证的清单</h3>
+<p>界面的实时数据推送（<code class="i">/hub/ui</code>）要穿过本地转发层。这不需要任何人做决策，但实现阶段必须逐条验证下面这些点，因为它们是转发长连接时最常见的失败方式：</p>
+<table>
+<tr><th style="width:30%">验证项</th><th>失败时的表现</th></tr>
+<tr><td>协商请求的响应被正确透传</td><td>连接建立失败。协商响应里带有连接标识，若被转发层改写或丢弃，后续请求就对不上</td></tr>
+<tr><td>协商响应里若包含重定向地址，需重写为本地转发层地址</td><td>客户端绕过转发层直连服务端，此后所有用户侧端点失效</td></tr>
+<tr><td>连接升级（WebSocket）被透传，而不是被当成普通请求缓冲</td><td>降级到长轮询，界面更新延迟明显变大</td></tr>
+<tr><td>心跳与保活帧双向透传，且转发层不设置比服务端更短的空闲超时</td><td>连接每隔一段时间被静默掐断，界面数据停止更新且没有报错</td></tr>
+<tr><td>服务端重启后，客户端能自动重连</td><td>需要用户手动重启客户端才能恢复</td></tr>
+<tr><td>响应不被压缩或缓冲</td><td>推送数据积压在转发层，界面成批跳变而不是连续更新</td></tr>
+</table>
+<p class="note">这些属于阶段二的完成判据，写进该阶段的验收清单即可。</p>
+
+<h2 id="s5"><span class="n">§5</span>运行模式与进程组合方式</h2>
+
+<h3>5.1 用同一个安装包，还是发两个安装包</h3>
+<p>推荐<b>同一个安装包、同一个可执行文件</b>，运行模式是应用内的一个设置项，默认值是一体版。</p>
+<table>
+<tr><th style="width:26%">对比项</th><th style="width:37%">同一个安装包</th><th style="width:37%">两个安装包</th></tr>
+<tr><td>现有用户的升级体验</td><td>与今天完全一致，升级后除了设置里多一项之外看不出任何区别</td><td>下载页出现两个选项，现有用户需要判断自己该用哪个</td></tr>
+<tr><td>更新通道</td><td>不变，仍是今天的一条 Velopack 通道</td><td>需要两条通道，或一条通道两种产物</td></tr>
+<tr><td>安装体积</td><td>不变（一体版本来就包含全部代码，客户端模式没有新增依赖）</td><td>客户端可以更小，但要额外维护一套裁剪配置</td></tr>
+<tr><td>误操作风险</td><td>用户可能误切模式。缓解：切换需显式确认并说明后果，且可随时切回，本地数据不受影响</td><td>无此风险</td></tr>
+</table>
+<p>选同一个安装包的决定性理由是第一行：这是唯一能做到"现有用户升级后毫无感知"的方案。</p>
+
+<h3>5.2 进程组合方式</h3>
+<p>在 <code class="i">Bakabase.Infrastructures</code> 的 <code class="i">RuntimeMode</code> 上增加一个取值表示纯客户端（该枚举位于子模块，本仓库未签出）。真正重要的是<b>分支点的位置</b>：</p>
+<div class="rule ok"><b>分支必须发生在任何服务注册之前，并且两条分支各自使用独立的组合根类。</b>
+一体版继续使用今天的 <code class="i">BakabaseHost</code> 与 <code class="i">BakabaseStartup</code>，这两个文件<b>一行都不改</b>；纯客户端使用新增的独立组合根，只注册转发、用户侧执行、路径映射三类服务，不注册数据库上下文、不执行数据库迁移、不注册后台任务、不注册增强器与下载器。</div>
+<p>这样做的代价是新增一个组合根类；换来的是"一体版的服务注册代码没有被修改过"这个可以用差异比对直接验证的事实。如果改成在 <code class="i">BakabaseStartup</code> 里加条件分支，就再也无法给出这个保证。</p>
+
+<h3 id="s53">5.3 同一台机器上同时运行服务端与客户端</h3>
+<p>所有者已确认这个组合必须允许。它带来两条具体要求：</p>
+<ul>
+<li><b>单实例标识必须按模式区分</b>。今天 <code class="i">BakabaseHost.SingleInstanceId</code> 是固定的 <code class="i">"Bakabase"</code>（<code class="i">BakabaseHost.cs:36</code>），两个模式共用它的话，第二个进程会被单实例机制直接挡掉。纯客户端需要用自己的标识。</li>
+<li><b>服务器列表里要能看见本机</b>。一体版只要开启了远程访问，它本身就是一台合格的服务端——不需要单独部署什么东西。所以客户端的服务器选择界面应当把本机发现到的服务端也列出来，并明确标注"本机"，避免用户以为列错了。</li>
+</ul>
+<div class="rule ok"><b>由此得到一条值得对外说明的拓扑</b>：想把自己电脑上的媒体库共享给另一台电脑的用户，不需要改用服务端部署——一体版开启远程访问，另一台机器用纯客户端配对连接即可。服务端部署（Docker）针对的是"没有图形界面的常驻机器"这个不同场景。</div>
+
+<h3 id="s54">5.4 数据目录：与一体版物理隔离</h3>
+<p>所有者已确认：纯客户端使用<b>独立的应用数据目录</b>，不与一体版共用。初稿写的是"约定纯客户端不触碰一体版的数据"，物理隔离比约定可靠得多，理由有四条：</p>
+<ul>
+<li>切回一体版后本地数据完好无损，这件事<b>自动成立</b>，不依赖任何代码纪律。</li>
+<li><a href="#s53">§5.3</a> 允许同机同时运行两种模式，共用目录会直接冲突（配置文件、日志、锁文件）。</li>
+<li>客户端自己有需要持久化的东西：服务器档案与配对凭据、路径映射表、客户端自身日志、窗口状态。它们需要有自己的家。</li>
+<li><a href="#s10">§10.1</a> 里"纯客户端不应产生数据库文件"这条验证，因为目录隔离而变成一句 <code class="i">assert 目录不存在</code>，比扫描共享目录可靠。</li>
+</ul>
+<p>目录位置遵循 <code class="i">appdata-paths.md</code> 的全部规则（不得位于安装目录下，Windows 上必须与安装根隔离）。命名上与一体版并列而非嵌套，例如 Windows 下 <code class="i">%LocalAppData%\Bakabase.Client.AppData</code>，macOS 与 Linux 用各自平台的对应位置。</p>
+<div class="rule ask"><b>需要注意现有的环境变量覆盖</b>：<code class="i">BAKABASE_DATA_DIR</code> 今天会覆盖数据目录。如果两种模式都读同一个变量，用户一旦设置了它，隔离就失效了。实现时需要决定是让纯客户端读一个独立的变量名，还是在该变量指定的目录下再分一层子目录——建议前者，语义更清楚。</div>
+
+<h2 id="s6"><span class="n">§6</span>执行位置：本设计的核心概念</h2>
+
+<h3>6.1 现有标记混淆了两件不同的事</h3>
+<p>今天的 <code class="i">[RemoteAccessible]</code> 是默认拒绝的：没有标记的端点一律不允许远程调用。512 个动作里只有 52 处标记，剩下 460 个未标记的端点其实混着两类完全不同的东西：</p>
+<ul>
+<li><b>只是还没有人去审查过</b>——绝大多数属于这类。它们完全可以远程调用，只是当初为移动端开放端点时没必要一次性审完。</li>
+<li><b>确实必须在某台特定机器上执行</b>——拉起播放器、打开目录、打开浏览器。这类是少数。</li>
+</ul>
+<p>做纯客户端必须把这两件事拆开。否则要么客户端功能残缺（大量端点被拒），要么为了开放而逐个标记 460 个端点（改动量巨大，且极容易误把用户侧端点标成可远程，导致命令跑到服务器上执行）。</p>
+
+<h3>6.2 新增标记：<code class="i">[RunsOnUserMachine]</code></h3>
+<p>新增一个与 <code class="i">[RemoteAccessible]</code> 正交的标记，含义是"这个端点的效果落在运行它的那台机器上，所以它必须在用户面前的机器上执行"。它有两个用途，两侧各用一次：</p>
+<table>
+<tr><th style="width:22%">使用方</th><th>作用</th></tr>
+<tr><td><b>服务端</b></td><td>无论调用方是否已认证，一律拒绝远程调用这类端点——因为在服务器上打开一个窗口，用户根本看不见。</td></tr>
+<tr><td><b>本地转发层</b></td><td>据此决定哪些请求不转发，而是自己执行。</td></tr>
+</table>
+<p>两侧各自编译进自己的那份标记，不需要在运行时同步一张路由表。版本不一致时最坏的情况是：客户端把某个端点转发了出去，而服务端因为自己也标了这个端点而明确拒绝并给出原因。两侧都设防，不会出现"命令悄悄在服务器上执行了"的情况。</p>
+
+<h3>6.3 用户侧端点清单（已在代码中找齐）</h3>
+<p>这个集合比想象中短，这也是本方案可行的原因。</p>
+<table>
+<tr><th style="width:30%">能力</th><th style="width:36%">端点 / 位置</th><th>纯客户端下的处理</th></tr>
+<tr><td>用默认浏览器打开链接</td><td class="k">GET /gui/url<br>GuiController.cs:30</td><td>本地执行，直接可用</td></tr>
+<tr><td>打开文件或目录</td><td class="k">GET /tool/open-file-or-directory<br>ToolController.cs:42</td><td>本地执行，需要路径映射（<a href="#s8">§8</a>）</td></tr>
+<tr><td>拉起播放器播放资源</td><td class="k">GET /resource/{id}/play<br>ResourceController.cs:523</td><td>本地执行，路径映射优先，否则用流式地址</td></tr>
+<tr><td>播放指定条目 / 随机播放</td><td class="k">GET /resource/{id}/play-item<br>GET /resource/play/random<br>ResourceController.cs:547, 563</td><td>同上</td></tr>
+<tr><td>批量播放、播放列表播放</td><td class="k">POST /player/batch-play 等<br>PlayerController.cs</td><td>同上；播放列表文件需在本地生成</td></tr>
+<tr><td>打开回收站</td><td class="k">FileController.cs:860</td><td>本地执行，打开客户端自己的回收站</td></tr>
+<tr><td>安装用户脚本管理器脚本</td><td class="k">TampermonkeyService.cs:22</td><td>本地执行（本质是打开链接）</td></tr>
+<tr><td>打开已下载的本地文件</td><td class="k">DLsiteWorkService.cs:674, 684</td><td>本地执行，需要路径映射</td></tr>
+<tr><td>切换界面主题（改的是原生窗口）</td><td class="k">OptionsController.cs:140</td><td>设置存服务端，窗口效果由本地转发层施加于客户端窗口</td></tr>
+<tr><td>提取文件类型图标</td><td class="k">FileController.cs:1998</td><td>见 <a href="#s11">§11</a>，降级为按扩展名取图标</td></tr>
+<tr><td>登录态采集窗口</td><td class="k">CookieCaptureOrchestrator.cs:41</td><td>特例，见 <a href="#s9">§9.1</a></td></tr>
+<tr><td>应用生命周期：重启、退出、托盘、自动更新、日志文件</td><td class="k">AppController.cs:162 等</td><td>客户端与服务端各管各的，界面上需要区分</td></tr>
+</table>
+<div class="rule ask"><b>反向的误判才是真正的风险。</b>
+把数据侧端点误标为用户侧，后果只是该功能在客户端不可用，会被立刻发现；漏标一个用户侧端点，后果是命令被转发到服务器执行，在没人看的屏幕上弹窗并返回成功。为此需要一道自动检查——见 <a href="#s10">§10.3</a>。</div>
+
+<h2 id="s7"><span class="n">§7</span>身份认证：解锁完整功能的前提</h2>
+<p>现有的信任模型是"能连上端口就被信任"，没有身份、没有配对、没有传输层加密，把局域网本身当作安全边界。<code class="i">RemoteAccessOptions</code> 的注释把这个立场写得很清楚，并明确说了"不适合做端口转发"。</p>
+<p>这个立场在今天成立，因为使用场景是"自己家里的手机连自己的电脑"。但本设计要做的事情，是<b>官方鼓励用户把服务端部署到自己的服务器上</b>。一旦鼓励这种部署，公网访问和反向代理就会成为常态，而"能连上就信任"在那个场景下不可接受。</p>
+<div class="rule warn"><b>认证是纯客户端发布前的前置条件，不是后续优化项。</b>
+但它必须以"现有默认行为完全不变"的方式引入：<code class="i">Disabled</code> / <code class="i">Enabled</code> / <code class="i">Unrestricted</code> 三个取值的语义与各自的默认值一律不动，现有的局域网手机用户不会因此被要求配对。</div>
+
+<div class="rule ask"><b>这是一次有意的方向回退，实现前请先读旧实现。</b>
+提交 <code class="i">85e2c05</code>（2026-08-29，<i>drop device pairing, treat anything that can connect as trusted</i>）<b>删掉的正是设备配对</b>——当时的理由是"能连上就被信任，身份层是只有成本没有收益的"。现在重新引入，是因为使用场景变了：本设计要鼓励把服务端放到用户自己的服务器上，那个前提不再成立。<br>
+被删掉的实现包含配对码、令牌存取与吊销、承载令牌的 cookie、<code class="i">RemoteDevice</code> 与 <code class="i">RemoteDevicePlatform</code> 模型，以及 <a href="#s75">§7.5</a> 讲到的签名地址。<code class="i">git show 85e2c05</code> 可以直接取回这些代码作为起点，不必从零写。</div>
+
+<h3>7.1 方案：设备配对 <span class="tag t-new">所有者已确定</span></h3>
+<p>不用"设一个密码，所有设备共用"，改用<b>设备配对</b>：每台设备单独配对一次，各自持有各自的凭据。相比共享密码，它在四个方面更好，而实现复杂度只高一点：</p>
+<table>
+<tr><th style="width:22%">对比项</th><th style="width:39%">共享密码</th><th style="width:39%">设备配对</th></tr>
+<tr><td>撤销</td><td>只能改密码，所有设备一起被踢下线</td><td>逐台撤销，其他设备不受影响</td></tr>
+<tr><td>可见性</td><td>不知道有几台设备在连</td><td>设置里能看到设备列表与最后活跃时间，多出一台一眼就能发现</td></tr>
+<tr><td>输入负担</td><td>每台设备都要输一次密码，还容易被用户设成弱口令或复用</td><td>配对一次，之后无感；凭据由程序生成，不存在弱口令</td></tr>
+<tr><td>泄露面</td><td>一处泄露，全部沦陷</td><td>一台设备的凭据泄露，只影响那一台</td></tr>
+</table>
+
+<h3>7.2 第一台设备怎么配对</h3>
+<p>这是设备配对唯一真正的难点：配对通常需要在<b>服务端</b>做一次确认，而服务端部署没有图形界面，用户没地方点"批准"。分三种情况处理：</p>
+<table>
+<tr><th style="width:26%">场景</th><th>做法</th></tr>
+<tr><td><b>服务端部署（无图形界面）的第一台设备</b></td><td>服务端启动时，若一台设备都没配对过，就把一个配对码写进日志与标准输出。Docker 用户用 <code class="i">docker logs</code> 即可看到。配对码有有效期，用掉即失效，用完再启动不再打印</td></tr>
+<tr><td><b>一体版兼作服务端的第一台设备</b></td><td>它有图形界面，直接在设置页里显示配对码或"批准这台设备"的按钮，不必去翻日志</td></tr>
+<tr><td><b>后续设备</b></td><td>由任意一台<b>已配对</b>的设备批准——客户端收到配对请求通知，用户点一下即可。这样用户不必再回服务端翻日志</td></tr>
+</table>
+
+<h3>7.3 凭据形态：不做传输层加密，就不要把长期凭据放在网线上</h3>
+<p>所有者已确认不做传输层加密。既然如此，凭据的传输方式就需要选得更谨慎一些：</p>
+<div class="rule"><b>配对时</b>客户端生成一份只存在于本机的设备密钥，服务端只保存它的摘要（或对应的公钥），永远不保存可直接使用的原文。<br>
+<b>之后每次请求</b>不携带这份密钥本身，而是携带一个用它对"请求方法 + 路径 + 时间戳 + 一次性随机数"计算出的签名。服务端用自己那份摘要验证签名，并拒绝时间戳过期或随机数重复的请求。</div>
+<p>这样做的收益很具体：即便有人在局域网上被动抓包，也拿不到那份长期凭据，因而无法在之后任意时刻冒充这台设备。代价只是多一次签名计算，不引入证书、不引入任何需要维护的加密基础设施。</p>
+
+<div class="rule warn"><b>必须对用户说清楚：不做传输层加密意味着内容是明文的。</b>
+签名只解决"身份不被冒用"，完全不解决"内容不被看到"。同一网络里的旁观者仍然可以看到你在浏览和播放什么，也可以把媒体流原样抓下来。因此文档必须明确：<b>打算把服务端暴露到公网的用户，请自行在前面套一层带传输层加密的反向代理</b>；本设计不提供这个能力，也不假装提供。</div>
+
+<h3>7.4 与现有远程访问模式的关系</h3>
+<p>配对机制是<b>叠加</b>在现有三个模式之上的，不改动它们：</p>
+<ul>
+<li><b>一体版</b>：请求走回环地址，在闸门第一步就直通（<code class="i">RemoteAccessMiddleware.cs:52</code>），永远走不到配对逻辑。</li>
+<li><b>未配对的局域网设备</b>（今天的移动端）：行为完全不变，仍然只能访问标记了 <code class="i">[RemoteAccessible]</code> 的端点。已有用户不会因为这次改动被要求配对。</li>
+<li><b>已配对的设备</b>：除 <code class="i">[RunsOnUserMachine]</code> 标记的端点外全部可用。这正是"功能与一体版一致"的实现方式，也是不必逐个去标那 460 个端点的原因。</li>
+<li><code class="i">Disabled</code> / <code class="i">Enabled</code> / <code class="i">Unrestricted</code> 三个取值的语义与各自的默认值一律不动。</li>
+</ul>
+<p class="note">附带收益：移动端将来也可以走同一套配对，从而摆脱今天只能访问 52 个端点的限制。本设计不要求它立刻切换。</p>
+
+<h3 id="s75">7.5 外部播放器拿不到凭据：需要签名地址</h3>
+<div class="rule warn"><b>这是加入认证后必然出现的一个洞，初稿漏了。</b>
+<a href="#s8">§8</a> 的第二层降级是"把一个 <code class="i">/file/raw</code> 地址交给本地播放器"。但外部播放器是一个独立进程，它<b>不会</b>携带配对凭据，也不可能替我们做 <a href="#s7">§7.3</a> 的签名计算。认证一旦生效，这条播放路径会直接失效。</div>
+<p>解决办法是<b>签名地址</b>：由已配对的调用方请求一个带签名参数的临时地址，签名覆盖具体文件路径并带有效期，外部播放器凭这个地址即可取流，无需任何凭据。</p>
+<ul>
+<li>签名<b>限定到单个文件</b>，不能是一张可以换任意文件的通行证。</li>
+<li>有效期取"够长到看完一部片子，够短到分享出去很快失效"，并且要能覆盖播放器中途重新发起请求的情况（跳转会产生新的范围请求）。</li>
+<li>这条路径同样适用于移动端把流交给原生播放器，以及浏览器里直接播放的场景。</li>
+</ul>
+<p class="note">同样地，<code class="i">85e2c05</code> 删掉的就有这套签名地址（提交信息原话："signed URLs so a native player could satisfy an auth check"）。实现时优先取回旧代码。</p>
+
+<h2 id="s8"><span class="n">§8</span>路径语义与路径映射</h2>
+<p>这是提问中点到的问题，也是本设计里唯一没有现成基础设施的部分。服务端的一个路径（比如 <code class="i">/media/anime/xxx.mkv</code>）在客户端机器上不存在，而本地播放器需要一个自己能打开的东西。</p>
+
+<h3>8.1 三层降级</h3>
+<table>
+<tr><th style="width:8%">优先级</th><th style="width:26%">方式</th><th>说明</th></tr>
+<tr><td class="e">第一</td><td><b>路径映射</b></td><td>用户配置好服务端路径前缀与本机挂载点的对应关系（例如服务端 <code class="i">/media/anime</code> 对应本机 <code class="i">Z:\anime</code>）。命中后本地播放器直接打开本地文件：跳转、外挂字幕、多音轨全部正常，服务器零消耗。这是最好的体验，也是网络存储用户的常态。</td></tr>
+<tr><td class="e">第二</td><td><b>流式地址</b></td><td>未命中映射时，交给本地播放器一个 <code class="i">/file/raw</code> 地址。已支持断点范围请求，可以跳转。零配置即可用。前端已有的 <code class="i">playerSchemes.ts</code> 沉淀了把流地址交给桌面播放器的完整知识，可以直接复用。<br><b>前提</b>：外部播放器不携带配对凭据，所以这里必须用 <a href="#s75">§7.5</a> 的签名地址，否则认证生效后这条路径会失效。</td></tr>
+<tr><td class="e">第三</td><td><b>明确禁用</b></td><td>没有流式等价物的操作（打开目录、打开回收站）在未命中映射时不可用。返回明确原因，界面提示用户去配置路径映射，而不是静默失败或报一个看不懂的错误。</td></tr>
+</table>
+
+<h3>8.2 映射表的形态</h3>
+<ul>
+<li><b>存在客户端</b>，不是服务端。每台客户端的挂载点都不同，放服务端是错的。存放位置遵循 <code class="i">appdata-paths.md</code> 的约定。</li>
+<li><b>按服务器唯一标识分组</b>。一台客户端可能连接多台服务器，服务器唯一标识已经存在（<code class="i">RemoteAccessOptions.ServerId</code>），且能跨地址变化保持稳定。</li>
+<li><b>最长前缀匹配</b>。一条映射是一对前缀，匹配时取最长的那条。</li>
+<li><b>配置引导</b>：从服务端拉取媒体库列表，把它们的根路径列出来让用户逐个指定本机挂载点，而不是让用户凭空填。保存时校验本机路径确实存在。</li>
+</ul>
+
+<h3>8.3 容易踩的坑</h3>
+<table>
+<tr><th style="width:26%">坑</th><th>处理</th></tr>
+<tr><td>路径分隔符不同</td><td>服务端是 Linux、客户端是 Windows 时需要转换。<code class="i">Modules.Player/Components/CrossPlatformPath.cs</code> 已有雏形，扩展它而不是新写一套</td></tr>
+<tr><td>大小写敏感性不同</td><td>按<b>客户端</b>操作系统的规则做匹配，因为最终要在客户端打开</td></tr>
+<tr><td>通用命名约定路径</td><td>Windows 客户端的挂载点可能是 <code class="i">\\server\share</code> 而不是盘符，两种形式都要支持</td></tr>
+<tr><td>压缩包内的条目</td><td>本身就没有真实路径，只能走流式地址；且流式提取不支持跳转，需要如实告知</td></tr>
+<tr><td>配置了路径映射但网络存储此刻没挂上</td><td>打开失败时自动降级到流式地址，并提示映射可能失效</td></tr>
+</table>
+
+<h3>8.4 写文件类功能的落点</h3>
+<p>文件处理器、批量修改、下载器、资源移动这些会写文件的功能，落点必须是<b>服务端</b>。这在语义上是对的——数据在服务端——但界面上需要让用户明白"我现在配置的是服务器上的路径"。文件浏览器组件本来就在列举服务端目录（<a href="#s2">§2</a>），所以行为已经正确，需要补的只是文案。</p>
+
+<h2 id="s9"><span class="n">§9</span>需要跨机器协作的三个特例</h2>
+
+<h3 id="s91">9.1 登录态采集窗口</h3>
+<p>这是本设计里最麻烦的一处，所有者也点到了：<b>凭据是在客户端的浏览器环境里拿到的，服务端未必能用</b>。先把今天的机制说清楚，才能看出纯客户端下具体坏在哪一环。</p>
+
+<h4>今天是怎么做的</h4>
+<p>现有实现比"抓一个 cookie"要讲究得多，环境一致性已经是它的设计目标：</p>
+<ul>
+<li><code class="i">CookieCaptureOrchestrator</code> 通过 <code class="i">IGuiAdapter.CreateWebViewSession</code> 在本进程弹出登录窗口，采集 cookie。</li>
+<li>采集端点<b>连同 cookie 一起返回 User-Agent 与推断出的 TLS 指纹预设</b>（<code class="i">ToolController.cs:76-84</code>），后续第三方请求会用这套配置发出（<code class="i">AbstractThirdPartyHttpMessageHandler.cs:121-125</code>、<code class="i">TlsPresetHelper</code>）。</li>
+<li>还存在一条手工路径：用户可以自己粘贴 cookie，并单独指定 User-Agent 与 TLS 指纹（<code class="i">ValidateCookie</code> 端点、前端 <code class="i">CookieValidator.tsx</code>）。</li>
+<li>服务端部署下 <code class="i">NullGuiAdapter</code> 返回 <code class="i">CancelledWebViewSession.Instance</code>，即<b>自动采集在 Docker 下今天本来就不可用</b>，用户只能走手工路径。</li>
+</ul>
+
+<h4>纯客户端下坏在哪三环</h4>
+<table>
+<tr><th style="width:8%"></th><th style="width:30%">问题</th><th>能不能解决</th></tr>
+<tr><td class="e">一</td><td>登录窗口必须在客户端弹，但发起方是服务端</td><td><b>能</b>。标记 <code class="i">[RunsOnUserMachine]</code>，采集由本地转发层在客户端执行，用客户端自己的 <code class="i">IGuiAdapter</code> 弹窗</td></tr>
+<tr><td class="e">二</td><td>User-Agent 与 TLS 指纹会取错。<code class="i">GetWebViewUserAgent()</code> 是<b>按当前进程所在操作系统</b>推断的（<code class="i">ToolController.cs:312</code>）——若这段代码在服务端执行，推断出的是服务器的系统，与真正弹窗的客户端不符，连带 TLS 指纹也一起错</td><td><b>能</b>。改为由<b>实际弹窗的那一侧上报</b>自己的 User-Agent，而不是由处理请求的进程推断。一体版下上报方就是本机，行为与今天完全一致</td></tr>
+<tr><td class="e">三</td><td><b>网络出口不同</b>。凭据在客户端的出口地址上取得，之后由服务端的出口使用</td><td><b>不能</b>。这是跨机器本身的属性，传任何参数都消除不了</td></tr>
+</table>
+<div class="rule warn"><b>第三条必须如实告知，不能假装解决了。</b>
+把会话与出口地址绑定的站点，凭据一到服务端就失效；风控严格的站点会要求重新验证。受影响程度完全取决于具体站点，无法在设计阶段给出保证。界面上应当在纯客户端模式下明确提示这一点，而不是让用户反复采集、反复失败后自己去猜原因。</div>
+
+<h4>应对分级</h4>
+<ol>
+<li><b>第一版</b>：解决第一、二环（客户端弹窗 + 上报真实 User-Agent），第三环如实提示。已有的手工粘贴路径天然就是兜底——用户可以在客户端浏览器里自己取，也可以在服务端所在网络的机器上取了再粘贴进来。</li>
+<li><b>后续可选</b>：让需要登录态的第三方请求<b>由客户端代发</b>，服务端只负责发起与接收结果。这样出口地址、User-Agent、TLS 指纹三者全部一致，是唯一能真正解决第三环的办法。代价是客户端必须在线，且要新增一条反向的请求代发通道——不宜与本设计捆绑。</li>
+</ol>
+
+<h4>由哪一台客户端弹窗</h4>
+<p>所有者指出通常只有一个用户、多台设备，所以这个问题比想象中简单：</p>
+<div class="rule ok"><b>规则：谁发起，谁处理。</b>
+采集几乎总是用户在某台客户端上点了"登录"触发的，就由那台客户端弹窗，凭据原路返回。<br>
+只有后台自动触发的重新认证是有歧义的：此时交给<b>最近活跃</b>的已配对客户端；一台都没连接时不要静默失败，而是把这次采集挂起，等有客户端连上再提示用户。</div>
+
+<div class="rule ok"><b>零影响论证</b>：一体版的 <code class="i">IGuiAdapter</code> 是 Avalonia 实现，永远走本地弹窗，转交通道在一体版里根本不会被注册。<code class="i">GetWebViewUserAgent()</code> 改为由弹窗方上报之后，一体版的弹窗方仍是本机，取到的值与今天相同。<br>
+而且这项改动<b>顺带让 Docker 部署第一次拥有了自动采集能力</b>（此前只能手工粘贴），是净增益。</div>
+
+<h3>9.2 拖拽本地文件进入媒体库</h3>
+<p>跨机器操作。要么上传，要么禁用。第一版<b>禁用</b>并给出明确说明：上传会引入进度、断点、磁盘配额、冲突处理一整套问题，不该和本设计捆绑。</p>
+
+<h3>9.3 依赖组件</h3>
+<p>视频处理等依赖组件安装在<b>服务端</b>，客户端不需要也不应该安装。界面上需要说明"安装在服务器上"，避免用户以为是在装到自己电脑上。</p>
+
+<h2 id="s10"><span class="n">§10</span>对现有一体版用户的零影响保证</h2>
+<p>这一节是本设计的验收标准。每一行都给出机制层面的理由，以及可执行的验证方式。</p>
+
+<h3>10.1 逐项论证</h3>
+<table>
+<tr><th style="width:22%">改动</th><th style="width:42%">为什么不可能影响一体版</th><th>验证方式</th></tr>
+<tr><td>新增运行模式与组合根</td><td>分支点在任何服务注册之前；一体版继续使用今天的 <code class="i">BakabaseHost</code> 与 <code class="i">BakabaseStartup</code>，这两个文件不修改</td><td>差异比对：这两个文件在本次改动中应为零改动</td></tr>
+<tr><td>新增 <code class="i">[RunsOnUserMachine]</code> 标记</td><td>只在端点授权过滤器里生效，而该过滤器对回环请求在第一步就提前返回（<code class="i">RemoteAccessAuthorizationFilter.cs:30</code>）。一体版的请求全部来自回环</td><td>新增测试：断言回环请求不进入任何新增判断分支</td></tr>
+<tr><td>新增身份认证</td><td>默认关闭；三个远程访问模式的语义与默认值不变；回环请求在闸门第一步直通，永远走不到认证逻辑</td><td>现有 <code class="i">RemoteAccessServiceTests</code> 全绿即证明默认值未变；补一条回环不触发认证的测试</td></tr>
+<tr><td>本地转发层</td><td>只在纯客户端模式下启动。一体版的进程里不存在这个组件</td><td>新增测试：一体版的服务容器中不存在转发层相关类型</td></tr>
+<tr><td>路径映射</td><td>映射表只在纯客户端模式下注册与读取；一体版下这张表不存在，相关代码不在调用路径上</td><td>同上</td></tr>
+<tr><td>前端新增第三种状态</td><td><code class="i">isLocal</code> 的语义与取值不变，<code class="i">useIsRemoteClient()</code> 不变；新分支的判据是新增字段，一体版下该字段取值使新代码走与今天完全相同的分支</td><td>新增前端测试：一体版取值下，播放控件与封面组件的渲染结果与改动前一致</td></tr>
+<tr><td>登录态采集转交通道</td><td>一体版的图形界面适配器是 Avalonia 实现，转交通道不注册</td><td><code class="i">CookieCaptureOrchestratorTests</code> 保持全绿</td></tr>
+<tr><td>安装包与更新通道</td><td>不变。纯客户端是同一个安装包里的一个设置项，默认值是一体版</td><td>手工执行 <code class="i">src/tests/upgrade-tests/</code> 的升级回归脚本</td></tr>
+<tr><td>数据库与迁移</td><td>一体版不变；纯客户端不建库也不迁移</td><td>纯客户端模式启动后，应用数据目录下不应出现数据库文件</td></tr>
+</table>
+
+<h3>10.2 唯一的共享改动面</h3>
+<p>诚实地说，有三处改动会同时出现在一体版的代码里，需要逐条评审：</p>
+<ol>
+<li><code class="i">/remote-access/context</code> 的返回值<b>增加</b>字段。是纯增量，现有字段语义不变。</li>
+<li>前端会加载纯客户端相关的分支代码（体积影响可忽略），但一体版下不会执行到。</li>
+<li>接口生成产物（<code class="i">Api.ts</code>、<code class="i">BApi2.d.ts</code>、<code class="i">constants.ts</code>）会因新增字段与枚举而重新生成。按 <code class="i">api-conventions.md</code> 的约定执行，不手工编辑。</li>
+</ol>
+
+<h3 id="s103">10.3 防止漏标用户侧端点的自动检查</h3>
+<p><a href="#s6">§6.3</a> 指出漏标是最危险的错误。参照 <code class="i">adding-builtin-property.md</code> 里"扩展编译期防护网"的思路，增加一条测试：</p>
+<div class="rule"><b>凡是（直接或间接）调用了 <code class="i">Process.Start</code> 或 <code class="i">IGuiAdapter</code> 的控制器动作，必须标记 <code class="i">[RunsOnUserMachine]</code>，否则测试失败。</b>
+第一版可以先做简化形态：对依赖了 <code class="i">IGuiAdapter</code> 的控制器，其动作要么带标记，要么出现在一份显式白名单里；白名单的每一项都要写明理由。同时对整个用户侧端点集合做一次快照断言，新增或删除都必须显式修改快照，避免有人不经意间改变了这个集合。</div>
+
+<h2 id="s11"><span class="n">§11</span>纯客户端模式下降级或不可用的功能</h2>
+<p>如实列出，界面上也要如实告知，不要让用户以为是故障。</p>
+<table>
+<tr><th style="width:26%">功能</th><th style="width:16%">状态</th><th>说明</th></tr>
+<tr><td>拖拽本地文件加入媒体库</td><td><span class="tag t-none">第一版不可用</span></td><td>跨机器，需要上传能力，见 <a href="#s9">§9.2</a></td></tr>
+<tr><td>打开目录 / 打开回收站</td><td><span class="tag t-later">依赖路径映射</span></td><td>未配置映射时置灰并引导去配置</td></tr>
+<tr><td>文件类型图标</td><td><span class="tag t-later">降级</span></td><td>路径在服务端、图标提取在客户端，第一版按扩展名取本机图标</td></tr>
+<tr><td>依赖组件安装</td><td><span class="tag t-have">可用（在服务端）</span></td><td>界面需说明安装在服务器上</td></tr>
+<tr><td>日志查看</td><td><span class="tag t-later">需要区分</span></td><td>客户端与服务端各有一份日志，界面要能分别查看</td></tr>
+<tr><td>自动更新</td><td><span class="tag t-later">需要区分</span></td><td>客户端自行更新；服务端由用户自行更新。版本不匹配时用已有的协议版本握手给出提示</td></tr>
+<tr><td>压缩包内视频跳转播放</td><td><span class="tag t-none">不可用</span></td><td>流式提取是管道流，本来就不支持跳转，与移动端限制相同</td></tr>
+<tr><td>第三方站点登录态</td><td><span class="tag t-later">部分站点会失效</span></td><td>凭据取自客户端的网络出口，由服务端出口使用。绑定出口地址的站点会立即失效，见 <a href="#s91">§9.1</a>。手工粘贴是兜底路径</td></tr>
+</table>
+
+<h2 id="s12"><span class="n">§12</span>实施阶段划分</h2>
+<table>
+<tr><th style="width:12%">阶段</th><th style="width:30%">内容</th><th>交付判据</th></tr>
+<tr><td class="e">阶段一</td><td>执行位置分类（新增标记 + 用户侧端点清单 + <a href="#s103">§10.3</a> 的自动检查）；设备配对与签名地址（<a href="#s7">§7</a>、<a href="#s75">§7.5</a>）</td><td>已配对设备可以访问除用户侧端点之外的全部端点；设备列表可查看、可逐台撤销；把流式地址交给外部播放器仍然可用；一体版行为经 <a href="#s10">§10.1</a> 的验证方式确认无变化。<b>这一阶段同时解除了移动端今天的能力天花板</b></td></tr>
+<tr><td class="e">阶段二</td><td>桌面外壳的纯客户端模式：独立数据目录与单实例标识（<a href="#s53">§5.3</a>、<a href="#s54">§5.4</a>）、服务发现与连接、本地转发层、单页应用从远端加载</td><td>能连上一台服务端并完成浏览、搜索、查看详情；播放走流式地址；<a href="#s44">§4.4</a> 的实时推送验证清单逐条通过</td></tr>
+<tr><td class="e">阶段三</td><td>路径映射：配置界面、匹配与规范化、本地播放器直接打开本地路径、打开目录</td><td>配置映射后，本地播放器打开的是本地文件而非流地址；打开目录可用</td></tr>
+<tr><td class="e">阶段四</td><td>登录态采集转交通道与 User-Agent 上报改造（<a href="#s91">§9.1</a>）、日志与更新的区分、界面文案打磨</td><td>Docker 部署下的自动采集首次可用；纯客户端下采集使用的是客户端真实的 User-Agent 与 TLS 指纹</td></tr>
+</table>
+<p class="note">阶段一独立成立且价值最大：即使后面的阶段全部不做，它也已经让"用浏览器打开服务器地址"这条现成路径从"受限"变成"完整"。</p>
+
+<h2 id="s13"><span class="n">§13</span>风险与待定问题</h2>
+<p>初稿的七条经 <a href="#s0">§0</a> 已全部处置。下面只列还剩下的：先是已有应对的风险，再是仍需决策的问题。</p>
+
+<h3>13.1 风险（已有应对，不需要决策）</h3>
+<table>
+<tr><th style="width:30%">风险</th><th>应对</th></tr>
+<tr><td><b>漏标用户侧端点</b> <span class="tag t-open">高风险</span></td><td>后果是命令在无人看的服务器上执行并返回成功。应对是 <a href="#s103">§10.3</a> 的自动检查加集合快照断言。这是实现纪律问题，不是选型问题</td></tr>
+<tr><td><b>第三方站点登录态跨机器失效</b></td><td>无法根治（<a href="#s91">§9.1</a> 第三环）。第一版如实提示 + 手工粘贴兜底；彻底方案是让客户端代发第三方请求，列为后续可选</td></tr>
+<tr><td><b>不做传输层加密</b></td><td>身份由签名保护，内容仍是明文。文档必须明示公网暴露需自行套带传输层加密的反向代理（<a href="#s7">§7.3</a>）</td></tr>
+<tr><td><b>实时推送穿过转发层后异常</b></td><td>逐条验证清单见 <a href="#s44">§4.4</a>，作为阶段二的验收判据</td></tr>
+</table>
+
+<h3>13.2 仍需决策</h3>
+<table>
+<tr><th style="width:30%">问题</th><th>说明</th></tr>
+<tr><td><b>数据目录环境变量的处理</b> <span class="tag t-open">待决策</span></td><td><code class="i">BAKABASE_DATA_DIR</code> 若被两种模式共用会破坏目录隔离。建议纯客户端读一个独立的变量名，详见 <a href="#s54">§5.4</a>。影响面很小，实现前定即可</td></tr>
+<tr><td><b>多服务器的切换形态</b> <span class="tag t-open">待决策</span></td><td><a href="#s53">§5.3</a> 确认了一台客户端可以面对多台服务端（本机的、别的设备的）。是一个窗口内切换（移动端已有的做法），还是允许开多个窗口各连一台？前者简单，后者更像"多开"，需要重新考虑单实例标识</td></tr>
+<tr><td><b>版本不匹配时的策略</b> <span class="tag t-open">待决策</span></td><td>协议版本握手机制已存在（<code class="i">RemoteAccessProtocol.CurrentVersion</code>）。但握手失败后是硬拒绝并提示升级，还是允许降级连接？考虑到单页应用是从远端拉的，硬拒绝可能过严</td></tr>
+<tr><td><b>移动端是否切换到设备配对</b> <span class="tag t-open">待定</span></td><td>切换后移动端也能突破 52 个端点的限制。但这会改变现有移动端用户的使用流程（需要配对一次），属于独立决策，本设计不做要求</td></tr>
+<tr><td><b>第三方请求由客户端代发</b> <span class="tag t-later">后续</span></td><td>唯一能真正解决登录态跨机器问题的办法，但要新增一条反向的请求代发通道。不与本设计捆绑，等第一版实测确认哪些站点真的失效后再评估</td></tr>
+</table>
+
+<footer>
+本文所有现状描述均已在代码中逐条核实并标注文件与行号，评审时可直接核对。<br>
+设计尚未实现，任何一处结论若与代码不符，以代码为准并回来修订本文。
+</footer>
+</div></body></html>
