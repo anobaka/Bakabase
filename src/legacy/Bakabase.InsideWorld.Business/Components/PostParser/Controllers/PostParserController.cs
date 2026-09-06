@@ -26,6 +26,12 @@ public record QueryPostParserTaskStatusesInput
     public List<string> Links { get; set; } = [];
 }
 
+public record DeletePostParserTasksByLinksInput
+{
+    public PostParserSource Source { get; set; }
+    public List<string> Links { get; set; } = [];
+}
+
 [ApiController]
 [Route("~/post-parser")]
 public class PostParserController(
@@ -66,6 +72,14 @@ public class PostParserController(
     {
         await service.Delete(id);
         return BaseResponseBuilder.Ok;
+    }
+
+    [HttpDelete("task/by-links")]
+    [SwaggerOperation(OperationId = "DeletePostParserTasksByLinks")]
+    public async Task<SingletonResponse<int>> DeleteByLinks([FromBody] DeletePostParserTasksByLinksInput input)
+    {
+        var count = await service.DeleteByLinks(input.Source, input.Links);
+        return new SingletonResponse<int>(count);
     }
 
     [HttpPost("task/{id:int}/reparse")]

@@ -1,8 +1,16 @@
 import type { SiteConfig } from '../../types';
+import { findThumbnailBox } from '../../utils/cover';
+import { t } from '../../i18n';
 import { extractPostUrl, soulplusParseTask } from './adapters';
 
 function isListModeTr(el: HTMLElement): boolean {
   return el.tagName === 'TR';
+}
+
+function findPostCover(element: HTMLElement): HTMLElement | null {
+  // List mode rows show no thumbnail; only the image wall has a cover.
+  if (isListModeTr(element)) return null;
+  return findThumbnailBox(element);
 }
 
 export const soulplusConfig: SiteConfig = {
@@ -72,4 +80,10 @@ export const soulplusConfig: SiteConfig = {
   },
 
   parseTask: soulplusParseTask,
+
+  coverOverlay: {
+    findCover: findPostCover,
+    label: () => t('bigParseButton'),
+    description: () => t('bigParseButtonDescription'),
+  },
 };

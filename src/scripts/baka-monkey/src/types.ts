@@ -40,6 +40,41 @@ export interface DownloadTaskAdapter {
   createTask: (url: string) => Promise<void>;
 }
 
+/**
+ * What the backend knows about one download key: whether it sits in the download
+ * list right now (`taskIds`), and whether it was ever downloaded (`downloadedAt`).
+ * Returned by `POST /download-task/keys/query`.
+ */
+export interface DownloadTaskState {
+  /** Ids of the tasks currently in the download list; empty when not queued. */
+  taskIds: number[];
+  /** `DownloadTaskDbModelStatus` of the most active task, null when there is none. */
+  status: number | null;
+  /** ISO timestamp of the last add/completion, null when never downloaded. */
+  downloadedAt: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Cover overlay ("big action button")
+// ---------------------------------------------------------------------------
+
+/**
+ * Turns an item's cover into one large action button: hovering it reveals a layer
+ * that runs the site's primary action (download / parse) on click. Opt-in per site
+ * via the settings panel, because it takes over the cover's own click target.
+ */
+export interface CoverOverlayConfig {
+  /**
+   * Locate the element the overlay should cover — the tightest box around the
+   * item's thumbnail. Return null when the item has no cover (list/minimal views).
+   */
+  findCover: (element: HTMLElement) => HTMLElement | null;
+  /** Localized name of the toggle in the settings panel. */
+  label: () => string;
+  /** Localized explanation shown under the toggle. */
+  description: () => string;
+}
+
 // ---------------------------------------------------------------------------
 // SiteConfig
 // ---------------------------------------------------------------------------
@@ -64,4 +99,10 @@ export interface SiteConfig {
   // -- Action adapters (declare to enable the corresponding shared button) --
   parseTask?: ParseTaskAdapter;
   downloadTask?: DownloadTaskAdapter;
+
+  /**
+   * Declare to offer the "big action button" overlay on this site. The overlay runs
+   * the download action when `downloadTask` is declared, otherwise the parse action.
+   */
+  coverOverlay?: CoverOverlayConfig;
 }

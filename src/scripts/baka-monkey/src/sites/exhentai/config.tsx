@@ -1,4 +1,6 @@
 import type { SiteConfig } from '../../types';
+import { findThumbnailBox } from '../../utils/cover';
+import { t } from '../../i18n';
 import { exhentaiDownloadTask } from './adapters';
 
 type ViewMode = 'gld' | 'gltm' | 'gltc' | 'glte';
@@ -78,6 +80,23 @@ function extractUpdateTime(element: HTMLElement, mode: ViewMode, galleryId: stri
   return null;
 }
 
+// Cell holding the gallery thumbnail, per view mode. Minimal shows no thumbnail,
+// so there is no cover to turn into a button there.
+const COVER_CELL_SELECTORS: Record<ViewMode, string | null> = {
+  gld: '.gl3t',
+  gltm: null,
+  gltc: '.gl1c',
+  glte: '.gl1e',
+};
+
+function findGalleryCover(element: HTMLElement): HTMLElement | null {
+  const mode = getMode(document);
+  if (!mode) return null;
+  const selector = COVER_CELL_SELECTORS[mode];
+  if (!selector) return null;
+  return findThumbnailBox(element.querySelector<HTMLElement>(selector));
+}
+
 // Cache detected mode so all functions use the same value
 let cachedMode: ViewMode | null = null;
 
@@ -136,4 +155,10 @@ export const exhentaiConfig: SiteConfig = {
   },
 
   downloadTask: exhentaiDownloadTask,
+
+  coverOverlay: {
+    findCover: findGalleryCover,
+    label: () => t('bigDownloadButton'),
+    description: () => t('bigDownloadButtonDescription'),
+  },
 };

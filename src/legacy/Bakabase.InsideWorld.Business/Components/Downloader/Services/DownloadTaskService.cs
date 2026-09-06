@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Bakabase.Infrastructures.Components.Gui;
 using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Components;
+using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input;
 using Bakabase.InsideWorld.Business.Components.Downloader.Components;
@@ -420,6 +421,70 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
             var tasks = await GetAll();
             return ToDto(tasks);
         }
+
+        /// <summary>
+        /// Tell, for each of <paramref name="keys"/>, whether the item is in the download list
+        /// right now (and under which task ids) and when it was last downloaded. Keys the
+        /// backend has never heard of are omitted from the result.
+        /// </summary>
+        public async Task<List<DownloadTaskKeyStatus>> QueryKeyStatuses(ThirdPartyId thirdPartyId,
+            IReadOnlyCollection<string>? keys)
+        {
+            if (keys == null || keys.Count == 0)
+            {
+                return [];
+            }
+
+            var keySet = keys.Where(k => !string.IsNullOrEmpty(k)).ToHashSet();
+            if (keySet.Count == 0)
+            {
+                return [];
+            }
+
+            var downloadedAtMap = (await DownloadRecordService.Query(thirdPartyId, keySet))
+                .ToDictionary(r => r.Key, r => r.DownloadedAt);
+            var tasksByKey = (await GetAll(t => t.ThirdPartyId == thirdPartyId))
+                .Where(t => keySet.Contains(t.Key))
+                .GroupBy(t => t.Key)
+                .ToDictionary(g => g.Key, g => g.ToArray());
+
+            var result = new List<DownloadTaskKeyStatus>();
+            foreach (var key in keySet)
+            {
+                var hasRecord = downloadedAtMap.TryGetValue(key, out var downloadedAt);
+                tasksByKey.TryGetValue(key, out var tasks);
+                if (!hasRecord && (tasks == null || tasks.Length == 0))
+                {
+                    continue;
+                }
+
+                result.Add(new DownloadTaskKeyStatus
+                {
+                    Key = key,
+                    TaskIds = tasks?.Select(t => t.Id).ToArray() ?? [],
+                    Status = tasks is {Length: > 0}
+                        ? tasks.MinBy(t => StatusActivenessOrder(t.Status))!.Status
+                        : null,
+                    DownloadedAt = hasRecord ? downloadedAt : null
+                });
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Ranks statuses so that the one the user most likely cares about wins when a key has
+        /// several tasks: something still running, then something that needs attention, then
+        /// what is already done.
+        /// </summary>
+        private static int StatusActivenessOrder(DownloadTaskDbModelStatus status) => status switch
+        {
+            DownloadTaskDbModelStatus.InProgress => 0,
+            DownloadTaskDbModelStatus.Failed => 1,
+            DownloadTaskDbModelStatus.Disabled => 2,
+            DownloadTaskDbModelStatus.Complete => 3,
+            _ => 4
+        };
 
         // public async Task<BaseResponse> Start(int id)
         // {

@@ -2020,6 +2020,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/download-task/keys/query": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["QueryDownloadTaskKeyStatuses"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/download-task/download": {
         parameters: {
             query?: never;
@@ -4715,6 +4731,22 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["DeletePostParserTask"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/post-parser/task/by-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["DeletePostParserTasksByLinks"];
         options?: never;
         head?: never;
         patch?: never;
@@ -8052,6 +8084,12 @@ export interface components {
         "Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants.DownloadTaskActionOnConflict": 0 | 1 | 2;
         /**
          * Format: int32
+         * @description [100: InProgress, 200: Disabled, 300: Complete, 400: Failed]
+         * @enum {integer}
+         */
+        "Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants.DownloadTaskDbModelStatus": 100 | 200 | 300 | 400;
+        /**
+         * Format: int32
          * @description [100: Idle, 200: InQueue, 300: Starting, 400: Downloading, 500: Stopping, 600: Complete, 700: Failed, 800: Disabled]
          * @enum {integer}
          */
@@ -8090,6 +8128,13 @@ export interface components {
             options?: string;
             readonly displayName: string;
             readonly canStart: boolean;
+        };
+        "Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.DownloadTaskKeyStatus": {
+            key: string;
+            taskIds: number[];
+            status?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants.DownloadTaskDbModelStatus"];
+            /** Format: date-time */
+            downloadedAt?: string;
         };
         "Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.DownloaderDefinition": {
             thirdPartyId: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ThirdPartyId"];
@@ -8300,6 +8345,10 @@ export interface components {
                 [key: string]: string[];
             };
             targets: components["schemas"]["Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParseTarget"][];
+        };
+        "Bakabase.InsideWorld.Business.Components.PostParser.Controllers.DeletePostParserTasksByLinksInput": {
+            source: components["schemas"]["Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParserSource"];
+            links: string[];
         };
         "Bakabase.InsideWorld.Business.Components.PostParser.Controllers.QueryPostParserTaskStatusesInput": {
             source: components["schemas"]["Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParserSource"];
@@ -10862,6 +10911,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Compression.CompressedFileEntry"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.DownloadTaskKeyStatus]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.DownloadTaskKeyStatus"][];
         };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.DownloadTask]": {
             /** Format: int32 */
@@ -16847,6 +16902,35 @@ export interface operations {
             };
         };
     };
+    QueryDownloadTaskKeyStatuses: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input.DownloadRecordQueryInputModel"];
+                "application/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input.DownloadRecordQueryInputModel"];
+                "text/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input.DownloadRecordQueryInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input.DownloadRecordQueryInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.DownloadTaskKeyStatus]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.DownloadTaskKeyStatus]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.DownloadTaskKeyStatus]"];
+                };
+            };
+        };
+    };
     StartDownloadTasks: {
         parameters: {
             query?: never;
@@ -22729,6 +22813,35 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    DeletePostParserTasksByLinks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.PostParser.Controllers.DeletePostParserTasksByLinksInput"];
+                "application/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.PostParser.Controllers.DeletePostParserTasksByLinksInput"];
+                "text/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.PostParser.Controllers.DeletePostParserTasksByLinksInput"];
+                "application/*+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.PostParser.Controllers.DeletePostParserTasksByLinksInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Int32]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Int32]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Int32]"];
                 };
             };
         };

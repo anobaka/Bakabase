@@ -13,7 +13,7 @@
    It lives in the `base` layer (like the real preflight) and uses `:where()`
    to keep specificity at 0 so Tailwind/HeroUI utility classes still win. */
 @layer base {
-  :where(#bk-app, #bk-overlay-root, .bk-marker) {
+  :where(#bk-app, #bk-overlay-root, .bk-marker, .bk-cover-overlay-host) {
     line-height: 1.5;
 
     &,
@@ -108,8 +108,103 @@
   outline-color: #f5a524 !important;
 }
 
+/* Cover overlay ("big action button"). The host is parked over an item's cover by
+   App.tsx and is inert on its own — only the overlay inside it catches clicks, so
+   a host left behind by a disabled toggle never steals the cover's own link.
+   No `zoom` here (unlike .bk-marker): it would break the inset-based sizing. */
+.bk-cover-overlay-host {
+  position: absolute;
+  inset: 0;
+  z-index: 99;
+  pointer-events: none;
+}
+
+.bk-cover-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: auto;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  transition: background 0.15s ease;
+  /* The host page's font stack can be anything; pin ours so the label is legible. */
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: #fff;
+}
+
+.bk-cover-overlay:hover {
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.bk-cover-overlay[data-disabled="true"] {
+  cursor: default;
+}
+
+.bk-cover-overlay-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  max-width: 100%;
+  text-align: center;
+  opacity: 0;
+  transform: scale(0.92);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.bk-cover-overlay:hover .bk-cover-overlay-body {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.bk-cover-overlay-icon {
+  width: 32px;
+  height: 32px;
+  color: #fff;
+}
+
+.bk-cover-overlay-label {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.bk-cover-overlay-hint {
+  font-size: 11px;
+  line-height: 1.3;
+  opacity: 0.75;
+}
+
+/* Tone tints the hover veil so the action reads at a glance: blue = add,
+   red = remove it again, amber = redo. */
+.bk-cover-overlay[data-tone="primary"]:hover {
+  background: rgba(0, 111, 238, 0.6);
+}
+
+.bk-cover-overlay[data-tone="danger"]:hover {
+  background: rgba(243, 18, 96, 0.6);
+}
+
+.bk-cover-overlay[data-tone="warning"]:hover {
+  background: rgba(245, 165, 36, 0.65);
+}
+
+.bk-spin {
+  animation: bk-spin 1s linear infinite;
+}
+
+@keyframes bk-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* Settings panel "hide markers" toggle adds this class to <body>. */
-body.bk-hide-markers .bk-marker {
+body.bk-hide-markers .bk-marker,
+body.bk-hide-markers .bk-cover-overlay-host {
   display: none !important;
 }
 
