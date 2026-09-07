@@ -423,6 +423,11 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
                 dbModel.Progress = 100;
                 dbModel.Message = null;
                 updated.Add(dbModel);
+
+                // A downloader left over from an earlier run would otherwise keep speaking for this
+                // task — its status is what the list shows whenever one exists — and the row would
+                // report that run's outcome instead of the completion just recorded.
+                DownloaderManager.Forget(dbModel.Id);
             }
 
             if (updated.Count == 0)

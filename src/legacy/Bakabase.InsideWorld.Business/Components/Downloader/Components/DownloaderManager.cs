@@ -228,6 +228,24 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
         /// <summary>Forget a task's no-torrent verdict so it is re-probed next time it runs.</summary>
         public void ClearNoTorrent(int taskId) => _noTorrentTaskIds.TryRemove(taskId, out _);
 
+        /// <summary>
+        /// Drops the downloader kept for a task that is not running.
+        /// </summary>
+        /// <remarks>
+        /// Needed because a task's displayed status is read off its downloader whenever one exists,
+        /// and only falls back to the stored status when none does. So a task completed without ever
+        /// being started — the pre-check path — would keep showing whatever its previous run left
+        /// behind. Refuses while the downloader still holds its source's slot, where dropping it
+        /// would lose the queue's only record that the source is busy.
+        /// </remarks>
+        public void Forget(int taskId)
+        {
+            if (_downloaders.TryGetValue(taskId, out var downloader) && !downloader.IsOccupyingDownloadTaskSource())
+            {
+                _downloaders.TryRemove(taskId, out _);
+            }
+        }
+
         public async Task Stop(int taskId, DownloaderStopBy stopBy)
         {
             var downloader = this[taskId];
