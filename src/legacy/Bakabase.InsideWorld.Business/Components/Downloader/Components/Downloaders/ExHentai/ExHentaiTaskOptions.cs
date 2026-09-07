@@ -17,6 +17,17 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
         /// Null means never probed, or probed and a torrent was found.
         /// </remarks>
         public DateTime? NoTorrentCheckedAt { get; set; }
+
+        /// <summary>
+        /// When this gallery was last probed and a torrent was found.
+        /// </summary>
+        /// <remarks>
+        /// The counterpart to <see cref="NoTorrentCheckedAt"/>. Only the negative verdict used to be
+        /// written down, so "we have never looked" and "we looked and there is a torrent" were
+        /// indistinguishable afterwards — which is most of what a user wants to know about a
+        /// torrent-priority task. Null means never probed, or probed and no torrent was found.
+        /// </remarks>
+        public DateTime? TorrentFoundAt { get; set; }
     }
 
     /// <summary>Nullable mirror of ExHentaiTaskOptions for parsing: tells an absent value apart from an explicit one. Keep members in sync.</summary>
@@ -24,5 +35,6 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
     {
         public bool? PreferTorrent { get; set; }
         public DateTime? NoTorrentCheckedAt { get; set; }
+        public DateTime? TorrentFoundAt { get; set; }
     }
 }

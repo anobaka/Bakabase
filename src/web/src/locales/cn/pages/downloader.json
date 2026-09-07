@@ -100,5 +100,11 @@
   "downloader.label.configurations": "下载器配置",
   "downloader.config.tab.general": "通用",
   "downloader.config.autoStartAfterCreation.label": "创建后自动开始下载",
-  "downloader.config.autoStartAfterCreation.description": "开启后，新建的下载任务将自动开始，无需手动启动。"
+  "downloader.config.autoStartAfterCreation.description": "开启后，新建的下载任务将自动开始，无需手动启动。",
+  "downloader.label.torrentAvailable": "有种子",
+  "downloader.label.torrentUnavailable": "无种子",
+  "downloader.label.torrentDisabled": "不下种子",
+  "downloader.tip.torrentFoundAt": "{{time}} 检测到该帖子有种子。",
+  "downloader.tip.noTorrentCheckedAt": "{{time}} 检测到该帖子没有种子，将改为逐页下载图片。",
+  "downloader.tip.torrentDisabled": "该任务未开启“优先下载种子”，将直接下载图片。"
 }

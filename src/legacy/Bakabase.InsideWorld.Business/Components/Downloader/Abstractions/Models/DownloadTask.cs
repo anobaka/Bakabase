@@ -36,6 +36,12 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Model
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public string? Options { get; set; }
 
+        /// <summary>
+        /// Display-oriented view of what running this task has taught us. Null when there is nothing
+        /// to say. Read-only for the client — <see cref="Options"/> remains the thing it edits.
+        /// </summary>
+        public DownloadTaskMetadata? Metadata { get; set; }
+
         public T GetTypedOptions<T>() where T : class, new()
         {
             return string.IsNullOrEmpty(Options)

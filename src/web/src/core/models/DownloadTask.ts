@@ -25,4 +25,14 @@ export type DownloadTask = {
   createdAt: string;
   /** Serialized per-downloader options (e.g. ExHentai `{ "preferTorrent": true }`). */
   options?: string;
+  /**
+   * Read-only projection of what running the task has taught the server, already typed so the list
+   * does not have to parse (or interpret) the per-source `options` blob. Absent when there is
+   * nothing to show.
+   */
+  metadata?: {
+    preferTorrent?: boolean;
+    torrentFoundAt?: string;
+    noTorrentCheckedAt?: string;
+  };
 };

@@ -50,7 +50,9 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
             Proxy = webProxy.ForThirdParty(thirdPartyId);
             // Disable automatic cookie handling since we manage cookies manually via headers
             UseCookies = false;
-            _threadsSemaphore = new SemaphoreSlim(options.MaxConcurrency, int.MaxValue);
+            // A zero or negative MaxConcurrency would create a semaphore that can never be entered,
+            // wedging every request through this handler forever. Treat it as "one at a time".
+            _threadsSemaphore = new SemaphoreSlim(NormalizeConcurrency(options.MaxConcurrency), int.MaxValue);
             ConfigureHandler();
         }
 
@@ -62,31 +64,35 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
         {
         }
 
+        /// <summary>
+        /// A concurrency of zero (or a negative value slipping in from a saved configuration) would
+        /// make <see cref="_threadsSemaphore"/> permanently unenterable, so every request through
+        /// this handler would hang forever with no error. Clamp instead.
+        /// </summary>
+        private static int NormalizeConcurrency(int maxConcurrency) => maxConcurrency < 1 ? 1 : maxConcurrency;
+
         protected TOptions Options
         {
             get => _options;
             set
             {
-                var prevMaxThreads = _options.MaxConcurrency;
-                if (value.MaxConcurrency != prevMaxThreads)
+                var prevMaxThreads = NormalizeConcurrency(_options.MaxConcurrency);
+                var nextMaxThreads = NormalizeConcurrency(value.MaxConcurrency);
+                if (nextMaxThreads != prevMaxThreads)
                 {
+                    // Not the request gate: this only guards the debt bookkeeping below, which is why
+                    // it is taken and released in one place rather than around a whole request.
                     _lock.Wait();
 
                     try
                     {
-                        if (prevMaxThreads == value.MaxConcurrency)
+                        if (prevMaxThreads > nextMaxThreads)
                         {
+                            _threadDebts += prevMaxThreads - nextMaxThreads;
                         }
                         else
                         {
-                            if (prevMaxThreads > value.MaxConcurrency)
-                            {
-                                _threadDebts += prevMaxThreads - value.MaxConcurrency;
-                            }
-                            else
-                            {
-                                _threadsSemaphore.Release(value.MaxConcurrency - prevMaxThreads);
-                            }
+                            _threadsSemaphore.Release(nextMaxThreads - prevMaxThreads);
                         }
                     }
                     finally
@@ -183,24 +189,39 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
             }
         }
 
+        // Both request paths below acquire two semaphores and then run the request. The acquisitions
+        // used to sit *outside* the try/finally that releases them, so anything throwing in between
+        // — a cancellation landing after the gate was taken, or a malformed cookie/header making
+        // BeforeRequesting throw — leaked the permit permanently. Because these handlers are
+        // singletons and _lock is a 1-permit gate held for the whole request, one leak wedged every
+        // later request to that source forever: downloads froze mid-step with no error and no way
+        // back short of restarting the app. Track what was actually acquired and release exactly
+        // that, whatever happens.
+
         protected sealed override HttpResponseMessage Send(HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
             WaitForInterval();
-            _lock.Wait(cancellationToken);
 
-            while (_threadDebts > 0)
-            {
-                _threadsSemaphore.Wait(cancellationToken);
-                Interlocked.Decrement(ref _threadDebts);
-            }
-
-            _threadsSemaphore.Wait(cancellationToken);
-
-            BeforeRequesting(request, cancellationToken);
+            var lockTaken = false;
+            var threadTaken = false;
 
             try
             {
+                _lock.Wait(cancellationToken);
+                lockTaken = true;
+
+                while (_threadDebts > 0)
+                {
+                    _threadsSemaphore.Wait(cancellationToken);
+                    Interlocked.Decrement(ref _threadDebts);
+                }
+
+                _threadsSemaphore.Wait(cancellationToken);
+                threadTaken = true;
+
+                BeforeRequesting(request, cancellationToken);
+
                 _prevRequestDt = DateTime.Now;
                 var response = _logger.Capture(ThirdPartyId, () => base.Send(request, cancellationToken),
                     request.RequestUri?.ToString(), ct: cancellationToken);
@@ -209,8 +230,15 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
             }
             finally
             {
-                _threadsSemaphore.Release();
-                _lock.Release();
+                if (threadTaken)
+                {
+                    _threadsSemaphore.Release();
+                }
+
+                if (lockTaken)
+                {
+                    _lock.Release();
+                }
             }
         }
 
@@ -218,20 +246,26 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
             CancellationToken cancellationToken)
         {
             await WaitForIntervalAsync(cancellationToken);
-            await _lock.WaitAsync(cancellationToken);
 
-            while (_threadDebts > 0)
-            {
-                await _threadsSemaphore.WaitAsync(cancellationToken);
-                Interlocked.Decrement(ref _threadDebts);
-            }
-
-            await _threadsSemaphore.WaitAsync(cancellationToken);
-
-            await BeforeRequestingAsync(request, cancellationToken);
+            var lockTaken = false;
+            var threadTaken = false;
 
             try
             {
+                await _lock.WaitAsync(cancellationToken);
+                lockTaken = true;
+
+                while (_threadDebts > 0)
+                {
+                    await _threadsSemaphore.WaitAsync(cancellationToken);
+                    Interlocked.Decrement(ref _threadDebts);
+                }
+
+                await _threadsSemaphore.WaitAsync(cancellationToken);
+                threadTaken = true;
+
+                await BeforeRequestingAsync(request, cancellationToken);
+
                 _prevRequestDt = DateTime.Now;
                 var response = await _logger.CaptureAsync(ThirdPartyId,
                     async () => await base.SendAsync(request, cancellationToken), request.RequestUri?.ToString(),
@@ -241,8 +275,15 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
             }
             finally
             {
-                _threadsSemaphore.Release();
-                _lock.Release();
+                if (threadTaken)
+                {
+                    _threadsSemaphore.Release();
+                }
+
+                if (lockTaken)
+                {
+                    _lock.Release();
+                }
             }
         }
     }

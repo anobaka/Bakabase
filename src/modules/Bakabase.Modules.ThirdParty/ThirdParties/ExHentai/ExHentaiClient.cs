@@ -54,16 +54,19 @@ namespace Bakabase.Modules.ThirdParty.ThirdParties.ExHentai
             return ExHentaiConnectionStatus.UnknownError;
         }
 
-        private async Task<string> GetHtmlAsync(HttpClient client, string url)
+        private async Task<string> GetHtmlAsync(HttpClient client, string url, CancellationToken ct = default)
         {
-            await _lock.WaitAsync();
+            // Honour cancellation while queueing too: this gate is held for the whole request (and
+            // the handler paces requests a second apart), so a stopped download used to stay parked
+            // here with nothing able to interrupt it.
+            await _lock.WaitAsync(ct);
             var tryTimes = 0;
             @try:
             try
             {
                 tryTimes++;
                 //_logger.LogInformation($"Requesting: {url}");
-                var html = await client.GetStringAsync(url);
+                var html = await client.GetStringAsync(url, ct);
                 ThrowIfBanned(html);
                 return html;
             }
@@ -104,16 +107,14 @@ namespace Bakabase.Modules.ThirdParty.ThirdParties.ExHentai
 
                 throw;
             }
-            catch (Exception e)
-            {
-                throw;
-            }
             finally
             {
-                if (_lock.CurrentCount == 0)
-                {
-                    _lock.Release();
-                }
+                // Was guarded by "if (_lock.CurrentCount == 0)". CurrentCount is a racy observation of
+                // a semaphore this method does not exclusively own, so it could read non-zero and skip
+                // the release of a permit this call had definitely taken — wedging every later
+                // ExHentai request behind a gate nobody holds. The permit was acquired above the try,
+                // so releasing it here unconditionally is exactly right.
+                _lock.Release();
             }
         }
 
@@ -128,9 +129,9 @@ namespace Bakabase.Modules.ThirdParty.ThirdParties.ExHentai
 
         private static bool IsBanned(string html) => html.StartsWith("Your") && html.Contains("banned");
 
-        public async Task<ExHentaiList> ParseList(string url)
+        public async Task<ExHentaiList> ParseList(string url, CancellationToken ct = default)
         {
-            var html = await GetHtmlAsync(HttpClient, url);
+            var html = await GetHtmlAsync(HttpClient, url, ct);
             var cq = new CQ(html);
 
             var totalCount = 0;
@@ -198,9 +199,10 @@ namespace Bakabase.Modules.ThirdParty.ThirdParties.ExHentai
             return await ParseList(searchUrl);
         }
 
-        public async Task<ExHentaiResource> ParseDetail(string url, bool includeTorrents)
+        public async Task<ExHentaiResource> ParseDetail(string url, bool includeTorrents,
+            CancellationToken ct = default)
         {
-            var html = await GetHtmlAsync(HttpClient, url);
+            var html = await GetHtmlAsync(HttpClient, url, ct);
             if (html.IsNullOrEmpty())
             {
                 throw new Exception($"Got empty response from {url}");
@@ -300,21 +302,22 @@ namespace Bakabase.Modules.ThirdParty.ThirdParties.ExHentai
 
             if (includeTorrents && r.TorrentPageUrl.IsNotEmpty())
             {
-                r.Torrents = await GetTorrentList(r.TorrentPageUrl);
+                r.Torrents = await GetTorrentList(r.TorrentPageUrl, ct);
             }
 
             return r;
         }
 
-        public async Task<(byte[] Data, string? ContentType)> DownloadImage(string pageUrl)
+        public async Task<(byte[] Data, string? ContentType)> DownloadImage(string pageUrl,
+            CancellationToken ct = default)
         {
-            var pageHtml = await GetHtmlAsync(HttpClient, pageUrl);
+            var pageHtml = await GetHtmlAsync(HttpClient, pageUrl, ct);
             var pageCq = new CQ(pageHtml);
             var img = pageCq["#img"];
             var imgUrl = img.Attr("src");
-            var rsp = await HttpClient.GetAsync(imgUrl);
+            var rsp = await HttpClient.GetAsync(imgUrl, ct);
             var contentType = rsp.Content.Headers.ContentType?.MediaType;
-            var bytes = await rsp.Content.ReadAsByteArrayAsync();
+            var bytes = await rsp.Content.ReadAsByteArrayAsync(ct);
             return (bytes, contentType);
         }
 
@@ -548,9 +551,10 @@ namespace Bakabase.Modules.ThirdParty.ThirdParties.ExHentai
             return data;
         }
 
-        public async Task<(string Title, string PageUrl)[]> GetImageTitleAndPageUrlsFromDetailUrl(string url, int page)
+        public async Task<(string Title, string PageUrl)[]> GetImageTitleAndPageUrlsFromDetailUrl(string url, int page,
+            CancellationToken ct = default)
         {
-            var html = await GetHtmlAsync(HttpClient, $"{Regex.Replace(url, $@"\?.*", string.Empty)}?p={page}");
+            var html = await GetHtmlAsync(HttpClient, $"{Regex.Replace(url, $@"\?.*", string.Empty)}?p={page}", ct);
             return GetImageTitleAndPageUrlsFromDetailHtml(html);
         }
 
@@ -577,9 +581,10 @@ namespace Bakabase.Modules.ThirdParty.ThirdParties.ExHentai
             };
         }
 
-        protected async Task<List<ExHentaiTorrent>?> GetTorrentList(string torrentPageUrl)
+        protected async Task<List<ExHentaiTorrent>?> GetTorrentList(string torrentPageUrl,
+            CancellationToken ct = default)
         {
-            var html = await HttpClient.GetStringAsync(torrentPageUrl);
+            var html = await HttpClient.GetStringAsync(torrentPageUrl, ct);
             var cq = new CQ(html);
             var forms = cq["form"];
             var torrents = new List<ExHentaiTorrent>();
@@ -626,15 +631,15 @@ namespace Bakabase.Modules.ThirdParty.ThirdParties.ExHentai
             };
         }
 
-        public async Task DownloadTorrent(string torrentUrl, string downloadPath)
+        public async Task DownloadTorrent(string torrentUrl, string downloadPath, CancellationToken ct = default)
         {
             if (File.Exists(downloadPath))
             {
                 return;
             }
 
-            var bytes = await HttpClient.GetByteArrayAsync(torrentUrl);
-            await File.WriteAllBytesAsync(downloadPath, bytes);
+            var bytes = await HttpClient.GetByteArrayAsync(torrentUrl, ct);
+            await File.WriteAllBytesAsync(downloadPath, bytes, ct);
         }
     }
 }

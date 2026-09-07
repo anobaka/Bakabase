@@ -100,5 +100,11 @@
   "downloader.label.configurations": "Downloader Configurations",
   "downloader.config.tab.general": "General",
   "downloader.config.autoStartAfterCreation.label": "Auto-start tasks after creation",
-  "downloader.config.autoStartAfterCreation.description": "When enabled, newly created download tasks will be started automatically without manual action."
+  "downloader.config.autoStartAfterCreation.description": "When enabled, newly created download tasks will be started automatically without manual action.",
+  "downloader.label.torrentAvailable": "Torrent",
+  "downloader.label.torrentUnavailable": "No torrent",
+  "downloader.label.torrentDisabled": "Torrent off",
+  "downloader.tip.torrentFoundAt": "A torrent was found for this gallery on {{time}}.",
+  "downloader.tip.noTorrentCheckedAt": "Checked on {{time}}: this gallery has no torrent, so its images are downloaded instead.",
+  "downloader.tip.torrentDisabled": "\"Prefer torrent download\" is off for this task, so its images are downloaded directly."
 }

@@ -1,11 +1,14 @@
 ﻿using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Components;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Downloader.Components;
+using Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloaders.ExHentai;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Linq;
+using System.Text.Json;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
+using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Downloader.Services;
 using Bootstrap.Components.DependencyInjection;
 using Bootstrap.Components.Orm;
@@ -33,8 +36,13 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
             services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, DownloadRecordDbModel, int>>();
             services.AddScoped<DownloadRecordService>();
             services.AddSingleton<DownloaderManager>();
+            services.AddSingleton<ITransientTorrentVerdictCache>(sp => sp.GetRequiredService<DownloaderManager>());
             services.AddTransient<IDownloaderLocalizer, DownloaderLocalizer>();
             services.AddSingleton<IDownloaderFactory, DownloaderFactory>();
+            services.AddSingleton<IDownloadTaskPrecheck, ExHentaiDownloadTaskPrecheck>();
+            services.AddSingleton<DownloadTaskPrecheckRunner>();
+            services.AddSingleton<DownloadQueuePump>();
+            services.AddHostedService<DownloaderQueueDaemon>();
 
             return services;
         }
@@ -178,10 +186,45 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
                 AvailableActions = actions,
                 AutoRetry = task.AutoRetry,
                 CreatedAt = task.CreatedAt,
-                Options = task.Options
+                Options = task.Options,
+                Metadata = BuildMetadata(task)
             };
 
             return dto;
+        }
+
+        /// <summary>
+        /// Turns the source-shaped options blob into the handful of facts the task list can render.
+        /// Only ExHentai has any today; other sources get null and the row shows nothing extra.
+        /// Deliberately tolerant — options written by an older build, or by hand, must degrade to
+        /// "nothing to show" rather than break the list.
+        /// </summary>
+        private static DownloadTaskMetadata? BuildMetadata(DownloadTaskDbModel task)
+        {
+            if (task.ThirdPartyId != ThirdPartyId.ExHentai || string.IsNullOrEmpty(task.Options))
+            {
+                return null;
+            }
+
+            ExHentaiTaskOptions options;
+            try
+            {
+                options = JsonSerializer.Deserialize<ExHentaiTaskOptions>(task.Options, JsonSerializerOptions.Web)
+                          ?? new ExHentaiTaskOptions();
+            }
+            catch (JsonException)
+            {
+                return null;
+            }
+
+            var metadata = new DownloadTaskMetadata
+            {
+                PreferTorrent = options.PreferTorrent,
+                TorrentFoundAt = options.TorrentFoundAt,
+                NoTorrentCheckedAt = options.NoTorrentCheckedAt
+            };
+
+            return metadata.IsEmpty ? null : metadata;
         }
 
         public static DownloadTaskDbModel? ToDbModel(this DownloadTask? task)

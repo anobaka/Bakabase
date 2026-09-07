@@ -1920,8 +1920,17 @@ export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsMode
   /** @format date-time */
   createdAt: string;
   options?: string;
+  metadata?: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloadTaskMetadata;
   displayName: string;
   canStart: boolean;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloadTaskMetadata {
+  preferTorrent?: boolean;
+  /** @format date-time */
+  torrentFoundAt?: string;
+  /** @format date-time */
+  noTorrentCheckedAt?: string;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloaderDefinition {

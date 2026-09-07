@@ -12,12 +12,9 @@ import {
   AiOutlineAim,
   AiOutlineDelete,
   AiOutlineEdit,
-  AiOutlineEllipsis,
   AiOutlineExport,
-  AiOutlineFolderOpen,
   AiOutlinePlayCircle,
   AiOutlinePlusCircle,
-  AiOutlineRedo,
   AiOutlineSearch,
   AiOutlineSetting,
   AiOutlineStop,
@@ -44,7 +41,6 @@ import {
 import "@szhsin/react-menu/dist/index.css";
 import "@szhsin/react-menu/dist/transitions/slide.css";
 import {
-  DownloadTaskAction,
   DownloadTaskActionOnConflict,
   DownloadTaskStatus,
   downloadTaskStatuses,
@@ -61,12 +57,9 @@ import RequestStatistics from "@/pages/downloader/components/RequestStatistics";
 
 import DownloadTaskDetailModal from "./components/TaskDetailModal";
 import BatchEditModal from "./components/BatchEditModal";
+import TaskRow from "./components/TaskRow";
 
 import { toAbsoluteBackendUrl } from "@/config/env.ts";
-
-import { CircularProgress } from "@heroui/react";
-
-import { DownloadTaskTypeIconMap } from "./components/TaskDetailModal/models";
 
 /** Row height handed to the listbox virtualizer; also how "locate" computes a scroll offset. */
 const TASK_ITEM_HEIGHT = 75;
@@ -405,7 +398,11 @@ const DownloaderPage = () => {
     loadDownloaderDefinitions();
   }, []);
 
-  const onTaskClick = (taskId: number, e?: any) => {
+  // Every handler a row receives has to keep the same identity between renders, or memoizing the
+  // rows achieves nothing: a new function per render is a changed prop on all of them. Anything
+  // that varies is therefore read through a ref rather than captured.
+  const onTaskClick = useCallback((taskId: number, e?: any) => {
+    const filtered = filteredTasksRef.current;
     const nextMode = e
       ? e.shiftKey
         ? SelectionMode.Shift
@@ -434,43 +431,130 @@ const DownloaderPage = () => {
         if (selectedTaskIdsRef.current.length == 0) {
           setSelectedTaskIds([taskId]);
         } else {
-          const lastSelectedTaskId = selectedTaskIdsRef.current[selectedTaskIds.length - 1];
-          const lastSelectedTaskIndex = filteredTasks.findIndex((t) => t.id == lastSelectedTaskId);
-          const currentTaskIndex = filteredTasks.findIndex((t) => t.id == taskId);
+          const lastSelectedTaskId =
+            selectedTaskIdsRef.current[selectedTaskIdsRef.current.length - 1];
+          const lastSelectedTaskIndex = filtered.findIndex((t) => t.id == lastSelectedTaskId);
+          const currentTaskIndex = filtered.findIndex((t) => t.id == taskId);
           const start = Math.min(lastSelectedTaskIndex, currentTaskIndex);
           const end = Math.max(lastSelectedTaskIndex, currentTaskIndex);
 
-          setSelectedTaskIds(filteredTasks.slice(start, end + 1).map((t) => t.id));
+          setSelectedTaskIds(filtered.slice(start, end + 1).map((t) => t.id));
         }
         break;
     }
-  };
+  }, []);
 
-  const taskFilters: ((task: any) => boolean)[] = [];
+  // Recomputed on every render before, including the many caused purely by a pushed progress tick.
+  const filteredTasks = useMemo(() => {
+    const taskFilters: ((task: any) => boolean)[] = [];
 
-  if (form.thirdPartyId != undefined) {
-    taskFilters.push((t) => t.thirdPartyId === form.thirdPartyId);
-  }
-  if (form.status != undefined) {
-    taskFilters.push((t) => t.status === form.status);
-  }
+    if (form.thirdPartyId != undefined) {
+      taskFilters.push((t) => t.thirdPartyId === form.thirdPartyId);
+    }
+    if (form.status != undefined) {
+      taskFilters.push((t) => t.status === form.status);
+    }
 
-  if (form.keyword != undefined && form.keyword.length > 0) {
-    const lowerCaseKeyword = form.keyword.toLowerCase();
+    if (form.keyword != undefined && form.keyword.length > 0) {
+      const lowerCaseKeyword = form.keyword.toLowerCase();
 
-    taskFilters.push(
-      (t) =>
-        t.name?.toLowerCase().includes(lowerCaseKeyword) ||
-        t.key.toLowerCase().includes(lowerCaseKeyword),
-    );
-  }
+      taskFilters.push(
+        (t) =>
+          t.name?.toLowerCase().includes(lowerCaseKeyword) ||
+          t.key.toLowerCase().includes(lowerCaseKeyword),
+      );
+    }
 
-  const filteredTasks = tasks.filter((x) => taskFilters.every((f) => f(x)));
+    return taskFilters.length === 0 ? tasks : tasks.filter((x) => taskFilters.every((f) => f(x)));
+  }, [tasks, form.thirdPartyId, form.status, form.keyword]);
+
+  /**
+   * Membership is tested once per row per render. As an array that is a linear scan each time, so
+   * selecting everything (ctrl+A is a supported gesture here) made every render quadratic in the
+   * number of tasks.
+   */
+  const selectedTaskIdSet = useMemo(() => new Set(selectedTaskIds), [selectedTaskIds]);
+
+  /**
+   * Counts for the source and status filter chips, in one pass over the tasks instead of one pass
+   * per chip — there are a dozen chips, so that was a dozen full scans on every render.
+   */
+  const { countsByThirdParty, countsByStatus } = useMemo(() => {
+    const byThirdParty = new Map<number, number>();
+    const byStatus = new Map<number, number>();
+
+    for (const task of tasks) {
+      byThirdParty.set(task.thirdPartyId, (byThirdParty.get(task.thirdPartyId) ?? 0) + 1);
+      byStatus.set(task.status, (byStatus.get(task.status) ?? 0) + 1);
+    }
+
+    return { countsByThirdParty: byThirdParty, countsByStatus: byStatus };
+  }, [tasks]);
 
   // Keep the latest filtered tasks available to the (once-registered) key handler.
   const filteredTasksRef = useRef(filteredTasks);
 
   filteredTasksRef.current = filteredTasks;
+
+  /**
+   * Everything the row handlers need that is rebuilt on each render, kept behind one ref so the
+   * handlers themselves can be created once. Without this each render hands every row a fresh set
+   * of callbacks, which defeats the row memoization entirely.
+   */
+  const rowEnvRef = useRef({ startTasksManually, withOptimisticStatus, createPortal, t });
+
+  rowEnvRef.current = { startTasksManually, withOptimisticStatus, createPortal, t };
+
+  const handleRowStart = useCallback((id: number) => {
+    rowEnvRef.current.startTasksManually([id]);
+  }, []);
+
+  const handleRowStop = useCallback((id: number) => {
+    rowEnvRef.current.withOptimisticStatus([id], DownloadTaskStatus.Stopping, () =>
+      BApi.downloadTask.stopDownloadTasks([id]),
+    );
+  }, []);
+
+  const handleRowEdit = useCallback((id: number) => {
+    rowEnvRef.current.createPortal(DownloadTaskDetailModal, { id });
+  }, []);
+
+  const handleRowOpenFolder = useCallback((path: string) => {
+    BApi.tool.openFileOrDirectory({ path });
+  }, []);
+
+  const handleRowDelete = useCallback((id: number) => {
+    const { createPortal: portal, t: translate } = rowEnvRef.current;
+
+    portal(Modal, {
+      defaultVisible: true,
+      title: translate<string>("downloader.confirm.deleteTask"),
+      onOk: () => BApi.downloadTask.deleteDownloadTasks({ ids: [id] }),
+    });
+  }, []);
+
+  const handleRowShowError = useCallback((task: { message?: string }) => {
+    const { createPortal: portal, t: translate } = rowEnvRef.current;
+
+    portal(Modal, {
+      defaultVisible: true,
+      size: "xl",
+      title: translate<string>("common.label.error"),
+      children: <pre>{task.message}</pre>,
+    });
+  }, []);
+
+  const handleRowClick = useCallback((id: number, e: any) => onTaskClick(id, e), [onTaskClick]);
+
+  const handleRowContextMenu = useCallback((id: number, e: any) => {
+    e.preventDefault();
+    if (!selectedTaskIdsRef.current.includes(id)) {
+      setSelectedTaskIds([id]);
+    }
+    contextMenuAnchorPointRef.current = { x: e.clientX, y: e.clientY };
+    toggleMenu(true);
+    forceUpdate();
+  }, []);
 
   // The active task can sit thousands of rows down; scrolling to find it by hand is
   // the reported pain point. Jump straight to it and select it so it stands out.
@@ -542,7 +626,7 @@ const DownloaderPage = () => {
         <div className="flex items-center gap-2">
           <ButtonGroup size={"sm"}>
             {sortedThirdPartyIds.map((s) => {
-              const count = tasks.filter((t) => t.thirdPartyId == s.value).length;
+              const count = countsByThirdParty.get(s.value) ?? 0;
               const isDeveloping = isThirdPartyDeveloping(s.value);
               const isSelected = form.thirdPartyId === s.value;
 
@@ -579,7 +663,7 @@ const DownloaderPage = () => {
         <div className="flex items-center gap-2">
           <ButtonGroup size={"sm"}>
             {downloadTaskStatuses.map((s) => {
-              const count = tasks.filter((t) => t.status == s.value).length;
+              const count = countsByStatus.get(s.value as number) ?? 0;
               const chipColor = DownloadTaskStatusIceLabelStatusMap[s.value! as DownloadTaskStatus];
               const isSelected = form.status === s.value;
 
@@ -789,226 +873,27 @@ const DownloaderPage = () => {
               itemHeight: TASK_ITEM_HEIGHT,
             }}
           >
-            {filteredTasks.map((task) => {
-              const hasErrorMessage = task.status == DownloadTaskStatus.Failed && task.message;
-              const selected = selectedTaskIds.indexOf(task.id) > -1;
-              const Icon = DownloadTaskTypeIconMap[task.thirdPartyId!]?.[task.type];
-
-              return (
-                <ListboxItem
-                  key={task.id}
-                  className={`${selected ? "bg-primary-50 dark:bg-primary-900/20" : ""}`}
-                >
-                  <div
-                    key={task.id}
-                    className={`flex flex-col gap-1`}
-                    role="button"
-                    tabIndex={0}
-                    onContextMenu={e => {
-                      e.preventDefault();
-                      if (!selectedTaskIdsRef.current.includes(task.id)) {
-                        setSelectedTaskIds([task.id]);
-                      }
-                      contextMenuAnchorPointRef.current = {
-                        x: e.clientX,
-                        y: e.clientY,
-                      };
-                      toggleMenu(true);
-                      forceUpdate();
-                    }}
-                    // style={style}
-                    onClick={(e) => onTaskClick(task.id, e)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        onTaskClick(task.id, e);
-                      }
-                    }}
-                  >
-                    <div className={"flex items-center justify-between"}>
-                      <div className={"flex flex-col gap-1"}>
-                        <div className={"flex items-center gap-2"}>
-                          <ThirdPartyIcon thirdPartyId={task.thirdPartyId} />
-                          {Icon && <Icon className="text-base" />}
-                          <span className={"text-lg"}>{task.name ?? task.key}</span>
-                        </div>
-                        <div className={"flex items-center gap-1"}>
-                          <span className={"opacity-60"}>{task.name && task.key}</span>
-                          {task.nextStartDt && (
-                            <Chip color={"default"} size={"sm"}>
-                              {t<string>("downloader.label.nextStartTime")}:
-                              {formatTaskDateTime(task.nextStartDt)}
-                            </Chip>
-                          )}
-                          <Chip color="default" size="sm">
-                            {t("downloader.label.createdAt")}
-                            &nbsp;
-                            {formatTaskDateTime(task.createdAt)}
-                          </Chip>
-                        </div>
-                      </div>
-                      <div className={"flex items-center"}>
-                        <div className={"mr-8 flex items-center gap-2"}>
-                          <Chip
-                            color={DownloadTaskStatusIceLabelStatusMap[task.status]}
-                            variant={"light"}
-                          >
-                            {t<string>(DownloadTaskStatus[task.status])}
-                          </Chip>
-                          {task.current && (
-                            <span className="text-xs text-default-400">{task.current}</span>
-                          )}
-                          {task.status == DownloadTaskStatus.Failed && (
-                            <Button
-                              isIconOnly
-                              color={"danger"}
-                              // size={"sm"}
-                              variant={"light"}
-                              onPress={() => {
-                                if (hasErrorMessage) {
-                                  createPortal(Modal, {
-                                    defaultVisible: true,
-                                    size: "xl",
-                                    title: t<string>("common.label.error"),
-                                    children: <pre>{task.message}</pre>,
-                                  });
-                                }
-                              }}
-                            >
-                              <AiOutlineWarning className={"text-base"} />
-                              {task.failureTimes}
-                            </Button>
-                          )}
-                          <CircularProgress
-                            disableAnimation
-                            // value={task.progress}
-                            showValueLabel
-                            color={DownloadTaskStatusProgressBarColorMap[task.status]}
-                            size={"lg"}
-                            value={task.progress}
-                            // textRender={() => `${task.progress?.toFixed(2)}%`}
-                            // progressive={t.status != DownloadTaskStatus.Failed}
-                          />
-                        </div>
-                        {task.availableActions?.map((a) => {
-                          switch (a) {
-                            case DownloadTaskAction.StartManually:
-                            case DownloadTaskAction.Restart:
-                              return (
-                                <Button
-                                  key={`start-${task.id}-${a}`}
-                                  isIconOnly
-                                  size={"sm"}
-                                  variant={"light"}
-                                  onPress={() => {
-                                    startTasksManually([task.id]);
-                                  }}
-                                >
-                                  {a == DownloadTaskAction.Restart ? (
-                                    <AiOutlineRedo className={"text-lg"} />
-                                  ) : (
-                                    <AiOutlinePlayCircle className={"text-lg"} />
-                                  )}
-                                </Button>
-                              );
-                            case DownloadTaskAction.Disable:
-                              return (
-                                <Button
-                                  key={`stop-${task.id}-${a}`}
-                                  isIconOnly
-                                  size={"sm"}
-                                  variant={"light"}
-                                  onPress={() => {
-                                    withOptimisticStatus(
-                                      [task.id],
-                                      DownloadTaskStatus.Stopping,
-                                      () => BApi.downloadTask.stopDownloadTasks([task.id]),
-                                    );
-                                  }}
-                                >
-                                  <AiOutlineStop className={"text-lg"} />
-                                </Button>
-                              );
-                          }
-
-                          return;
-                        })}
-                        <Button
-                          isIconOnly
-                          size={"sm"}
-                          variant={"light"}
-                          onPress={() => {
-                            createPortal(DownloadTaskDetailModal, {
-                              id: task.id,
-                            });
-                          }}
-                        >
-                          <AiOutlineEdit className={"text-lg"} />
-                        </Button>
-                        <Button
-                          isIconOnly
-                          size={"sm"}
-                          variant={"light"}
-                          onPress={() => {
-                            BApi.tool.openFileOrDirectory({
-                              path: task.downloadPath,
-                            });
-                          }}
-                        >
-                          <AiOutlineFolderOpen className={"text-lg"} />
-                        </Button>
-                        <Dropdown>
-                          <DropdownTrigger>
-                            <Button isIconOnly size={"sm"} variant={"light"}>
-                              <AiOutlineEllipsis className={"text-lg"} />
-                            </Button>
-                          </DropdownTrigger>
-                          <DropdownMenu
-                            onAction={(key) => {
-                              switch (key as string) {
-                                case "delete":
-                                  createPortal(Modal, {
-                                    defaultVisible: true,
-                                    title: t<string>("downloader.confirm.deleteTask"),
-                                    onOk: () =>
-                                      BApi.downloadTask.deleteDownloadTasks({
-                                        ids: [task.id],
-                                      }),
-                                  });
-                                  break;
-                              }
-                            }}
-                          >
-                            <DropdownItem
-                              key="delete"
-                              color={"danger"}
-                              startContent={<AiOutlineDelete className={"text-lg"} />}
-                            >
-                              {t<string>("common.action.delete")}
-                            </DropdownItem>
-                          </DropdownMenu>
-                        </Dropdown>
-                      </div>
-                    </div>
-                    {/*<div className="progress">*/}
-                    {/*  <Progress*/}
-                    {/*    // value={task.progress}*/}
-                    {/*    color={DownloadTaskStatusProgressBarColorMap[task.status]}*/}
-                    {/*    size={"sm"}*/}
-                    {/*    value={task.progress}*/}
-                    {/*    // textRender={() => `${task.progress?.toFixed(2)}%`}*/}
-                    {/*    // progressive={t.status != DownloadTaskStatus.Failed}*/}
-                    {/*  />*/}
-                    {/*</div>*/}
-                    {/* <CircularProgress */}
-                    {/*   value={task.progress} */}
-                    {/*   color={DownloadTaskStatusProgressBarColorMap[task.status]} */}
-                    {/*   size={'sm'} */}
-                    {/* /> */}
-                  </div>
-                </ListboxItem>
-              );
-            })}
+            {filteredTasks.map((task) => (
+              <ListboxItem
+                key={task.id}
+                className={`${selectedTaskIdSet.has(task.id) ? "bg-primary-50 dark:bg-primary-900/20" : ""}`}
+              >
+                <TaskRow
+                  formatDateTime={formatTaskDateTime}
+                  progressColor={DownloadTaskStatusProgressBarColorMap[task.status]}
+                  statusColor={DownloadTaskStatusIceLabelStatusMap[task.status]}
+                  task={task}
+                  onClick={handleRowClick}
+                  onContextMenu={handleRowContextMenu}
+                  onDelete={handleRowDelete}
+                  onEdit={handleRowEdit}
+                  onOpenFolder={handleRowOpenFolder}
+                  onShowError={handleRowShowError}
+                  onStart={handleRowStart}
+                  onStop={handleRowStop}
+                />
+              </ListboxItem>
+            ))}
           </Listbox>
         )}
       </div>

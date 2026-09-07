@@ -21,7 +21,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
 {
-    public sealed class DownloaderManager
+    public sealed class DownloaderManager : ITransientTorrentVerdictCache
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly ConcurrentDictionary<int, IDownloader> _downloaders = new();
@@ -53,50 +53,88 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
             _downloaderFactory = downloaderFactory;
             _bTaskManager = bTaskManager;
 
-            OnStatusChanged += (taskId, downloader) =>
-                GetNewScopeRequiredService<DownloadTaskService>().OnStatusChanged(taskId, downloader, null);
-            OnStatusChanged += (taskId, downloader) =>
-            {
-                if (downloader.Status is DownloaderStatus.Complete or DownloaderStatus.Failed
-                    or DownloaderStatus.Stopped)
-                {
-                    CompleteBTask(taskId);
-                }
-
-                // Drop the torrent-priority verdict once the task truly ends (success / failure /
-                // manual stop) so a later restart re-probes it. A Defer / AppendToTheQueue stop is a
-                // requeue, not an end, so the verdict must survive it — otherwise we would re-defer
-                // forever.
-                if (downloader.Status is DownloaderStatus.Complete or DownloaderStatus.Failed ||
-                    (downloader.Status == DownloaderStatus.Stopped &&
-                     downloader.StoppedBy == DownloaderStopBy.ManuallyStop))
-                {
-                    ClearNoTorrent(taskId);
-                }
-
-                return Task.CompletedTask;
-            };
-            OnNameAcquired += (taskId, name) =>
-                GetNewScopeRequiredService<DownloadTaskService>().OnNameAcquired(taskId, name);
-            OnProgress += (taskId, progress) =>
-                GetNewScopeRequiredService<DownloadTaskService>().OnProgress(taskId, progress);
-            OnProgress += (taskId, progress) => UpdateBTaskProgress(taskId, progress);
-            OnCurrentChanged += (taskId) =>
-                GetNewScopeRequiredService<DownloadTaskService>().OnCurrentChanged(taskId);
-            OnCurrentChanged += (taskId) => UpdateBTaskProcess(taskId);
-            OnCheckpointReached += (taskId, checkpoint) =>
-                GetNewScopeRequiredService<DownloadTaskService>().OnCheckpointReached(taskId, checkpoint);
-            return;
-
-            T GetNewScopeRequiredService<T>() =>
-                _serviceProvider.CreateAsyncScope().ServiceProvider.GetRequiredService<T>();
         }
 
-        public event Func<int, IDownloader, Task> OnStatusChanged;
-        public event Func<int, string, Task> OnNameAcquired;
-        public event Func<int, decimal, Task> OnProgress;
-        public event Func<int, Task> OnCurrentChanged;
-        public event Func<int, string, Task> OnCheckpointReached;
+        /// <summary>
+        /// Fans a status change out to everything that cares. Each concern is isolated: these used to
+        /// be multicast event handlers, where the first one to throw — a service that could not be
+        /// resolved during shutdown, a task row deleted mid-download — aborted the rest of the chain.
+        /// One of those later handlers is the *only* thing that advances the download queue, so a
+        /// single swallowed exception left every remaining task of that source stuck forever.
+        /// Releasing the BTask comes first: it must happen even if persisting the change fails.
+        /// </summary>
+        private async Task HandleStatusChanged(int taskId, IDownloader downloader)
+        {
+            var status = downloader.Status;
+
+            if (status is DownloaderStatus.Complete or DownloaderStatus.Failed or DownloaderStatus.Stopped)
+            {
+                Guard(() => CompleteBTask(taskId), "release the background task");
+            }
+
+            // Drop the torrent-priority verdict once the task truly ends (success / failure /
+            // manual stop) so a later restart re-probes it. A Defer / AppendToTheQueue stop is a
+            // requeue, not an end, so the verdict must survive it — otherwise we would re-defer
+            // forever.
+            if (status is DownloaderStatus.Complete or DownloaderStatus.Failed ||
+                (status == DownloaderStatus.Stopped && downloader.StoppedBy == DownloaderStopBy.ManuallyStop))
+            {
+                Guard(() => ClearNoTorrent(taskId), "clear the torrent verdict");
+            }
+
+            await GuardAsync(
+                () => GetNewScopeRequiredService<DownloadTaskService>().OnStatusChanged(taskId, downloader, null),
+                "persist the status change");
+        }
+
+        private Task HandleNameAcquired(int taskId, string name) => GuardAsync(
+            () => GetNewScopeRequiredService<DownloadTaskService>().OnNameAcquired(taskId, name),
+            "persist the acquired name");
+
+        private async Task HandleProgress(int taskId, decimal progress)
+        {
+            await GuardAsync(() => GetNewScopeRequiredService<DownloadTaskService>().OnProgress(taskId, progress),
+                "persist progress");
+            await GuardAsync(() => UpdateBTaskProgress(taskId, progress), "update background task progress");
+        }
+
+        private async Task HandleCurrentChanged(int taskId)
+        {
+            await GuardAsync(() => GetNewScopeRequiredService<DownloadTaskService>().OnCurrentChanged(taskId),
+                "push the current step");
+            await GuardAsync(() => UpdateBTaskProcess(taskId), "update background task process");
+        }
+
+        private Task HandleCheckpointReached(int taskId, string checkpoint) => GuardAsync(
+            () => GetNewScopeRequiredService<DownloadTaskService>().OnCheckpointReached(taskId, checkpoint),
+            "persist the checkpoint");
+
+        private T GetNewScopeRequiredService<T>() where T : notnull =>
+            _serviceProvider.CreateAsyncScope().ServiceProvider.GetRequiredService<T>();
+
+        private void Guard(Action action, string what)
+        {
+            try
+            {
+                action();
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Failed to {What} while handling a downloader event", what);
+            }
+        }
+
+        private async Task GuardAsync(Func<Task> action, string what)
+        {
+            try
+            {
+                await action();
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Failed to {What} while handling a downloader event", what);
+            }
+        }
 
         public IDownloader? this[int taskId] => _downloaders.GetValueOrDefault(taskId);
 
@@ -120,6 +158,27 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
             catch (Exception e)
             {
                 _logger.LogError(e, "Failed to persist the no-torrent verdict for task {TaskId}", taskId);
+            }
+        }
+
+        /// <summary>
+        /// Records that a torrent was found for this task. Best-effort, like its negative counterpart:
+        /// this is what the task list reads to say whether a gallery has a torrent at all, but failing
+        /// to write it must never break the download that just succeeded.
+        /// </summary>
+        public async Task MarkTorrentFoundAsync(int taskId)
+        {
+            ClearNoTorrent(taskId);
+
+            try
+            {
+                await using var scope = _serviceProvider.CreateAsyncScope();
+                var service = scope.ServiceProvider.GetRequiredService<DownloadTaskService>();
+                await service.RecordTorrentFoundVerdict(taskId, DateTime.Now);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Failed to persist the torrent-found verdict for task {TaskId}", taskId);
             }
         }
 
@@ -178,11 +237,11 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
             if (!_downloaders.TryGetValue(task.Id, out var downloader))
             {
                 downloader = _downloaderFactory.GetDownloader(task.ThirdPartyId, task.Type);
-                downloader.OnStatusChanged += () => OnStatusChanged(task.Id, downloader);
-                downloader.OnNameAcquired += name => OnNameAcquired(task.Id, name);
-                downloader.OnProgress += progress => OnProgress(task.Id, progress);
-                downloader.OnCurrentChanged += () => OnCurrentChanged(task.Id);
-                downloader.OnCheckpointChanged += checkpoint => OnCheckpointReached(task.Id, checkpoint);
+                downloader.OnStatusChanged += () => HandleStatusChanged(task.Id, downloader);
+                downloader.OnNameAcquired += name => HandleNameAcquired(task.Id, name);
+                downloader.OnProgress += progress => HandleProgress(task.Id, progress);
+                downloader.OnCurrentChanged += () => HandleCurrentChanged(task.Id);
+                downloader.OnCheckpointChanged += checkpoint => HandleCheckpointReached(task.Id, checkpoint);
 
                 _downloaders[task.Id] = downloader;
             }
@@ -192,7 +251,17 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
                 return BaseResponseBuilder.Ok;
             }
 
-            await downloader.Start(task);
+            if (!await downloader.Start(task))
+            {
+                // Start refuses while the downloader is mid-transition (Stopping). Reporting Ok here
+                // would have the scheduler count this task as started and stop looking for work, so
+                // report a conflict instead — the caller already knows to move on to the next task.
+                _logger.LogInformation(
+                    "[TaskId:{TaskId}] Start was refused because the downloader is {Status}", task.Id,
+                    downloader.Status);
+                return BaseResponseBuilder.Build(ResponseCode.Conflict,
+                    $"The downloader of task {task.DisplayName} is {downloader.Status}.");
+            }
 
             await EnsureBTaskExists(task);
 
@@ -202,6 +271,51 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
         public async Task<BaseResponse> Start(DownloadTask task, bool stopConflicts)
         {
             return await _tryStart(task, stopConflicts);
+        }
+
+        /// <summary>
+        /// Force-releases downloaders that claim to be busy but have shown no sign of life for
+        /// <paramref name="stallThreshold"/>. A downloader stuck in Downloading / Starting / Stopping
+        /// occupies its source's only slot and makes every later start attempt a silent no-op, so
+        /// without this the queue stays frozen until the user starts everything by hand.
+        /// </summary>
+        /// <returns>The ids of the tasks that were released.</returns>
+        public async Task<IReadOnlyList<int>> ReleaseStalledDownloaders(TimeSpan stallThreshold)
+        {
+            var now = DateTime.Now;
+            var stalled = _downloaders
+                .Where(a => a.Value.IsOccupyingDownloadTaskSource() &&
+                            now - a.Value.LastActivityAt > stallThreshold)
+                .ToArray();
+
+            var released = new List<int>();
+
+            foreach (var (taskId, downloader) in stalled)
+            {
+                _logger.LogWarning(
+                    "[TaskId:{TaskId}] No activity since {LastActivityAt} while {Status}; releasing it so the queue can move on",
+                    taskId, downloader.LastActivityAt, downloader.Status);
+
+                try
+                {
+                    // AppendToTheQueue, not ManuallyStop: the user did not ask for this, so the task
+                    // must stay eligible and get picked up again rather than looking disabled.
+                    await downloader.Stop(DownloaderStopBy.AppendToTheQueue);
+                    released.Add(taskId);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError(e, "[TaskId:{TaskId}] Failed to release a stalled downloader", taskId);
+                }
+                finally
+                {
+                    // Whatever happened above, the background task must not outlive the download it
+                    // was mirroring, or the app refuses to consider itself idle.
+                    CompleteBTask(taskId);
+                }
+            }
+
+            return released;
         }
 
         private static string GetBTaskId(int downloadTaskId) => $"DownloadTask:{downloadTaskId}";

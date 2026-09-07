@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Abstractions.Models.View;
 using Bakabase.Infrastructures.Components.Configurations.App;
 using Bakabase.Infrastructures.Components.Gui;
 using Bakabase.Service.Components;
@@ -198,7 +199,8 @@ public sealed class ExitCoordinator(App app, AvaloniaGuiAdapter gui)
 
     /// <summary>
     /// Critical tasks are the ones whose interruption loses data — exactly what the old
-    /// <c>CheckIfAppCanExitSafely</c> string warned about, except now we can name them.
+    /// <c>CheckIfAppCanExitSafely</c> string warned about, except now we can name them. Only these
+    /// justify interrupting the user with a confirmation.
     /// </summary>
     private List<string> CollectBlockingTaskNames()
     {
@@ -214,7 +216,7 @@ public sealed class ExitCoordinator(App app, AvaloniaGuiAdapter gui)
                 .Where(t => t.Level == BTaskLevel.Critical && t.Status.IsActive())
                 .OrderByDescending(t => t.Percentage ?? 0)
                 .Take(MaxCollectedTaskNames)
-                .Select(t => t.Percentage is > 0 and < 100 ? $"{t.Name} ({t.Percentage}%)" : t.Name)
+                .Select(Describe)
                 .ToList();
         }
         catch (Exception e)
@@ -223,6 +225,28 @@ public sealed class ExitCoordinator(App app, AvaloniaGuiAdapter gui)
             return [];
         }
     }
+
+    /// <summary>
+    /// Everything still running, critical or not.
+    ///
+    /// The progress window used to list critical tasks only — so on the common shutdown, where
+    /// nothing is critical, it said "finishing background tasks…" over an empty panel while ordinary
+    /// work (downloads, thumbnail generation, indexing) was being wound down behind it. Those are
+    /// exactly the tasks a user wants named while they wait.
+    /// </summary>
+    private static List<ExitTaskLine> CollectActiveTasks(BTaskManager taskManager)
+    {
+        return taskManager.GetTasksViewModel()
+            .Where(t => t.Status.IsActive())
+            .OrderByDescending(t => t.Level == BTaskLevel.Critical)
+            .ThenByDescending(t => t.Percentage ?? 0)
+            .Take(MaxCollectedTaskNames)
+            .Select(t => new ExitTaskLine(Describe(t), t.Level == BTaskLevel.Critical))
+            .ToList();
+    }
+
+    private static string Describe(BTaskViewModel task) =>
+        task.Percentage is > 0 and < 100 ? $"{task.Name} ({task.Percentage}%)" : task.Name;
 
     /// <summary>
     /// Winds the app down for real. Everything here is best-effort: whatever happens, the
@@ -345,7 +369,7 @@ public sealed class ExitCoordinator(App app, AvaloniaGuiAdapter gui)
     /// </param>
     private async Task WindDownAsync(
         Action<string> setPhase,
-        Action<IReadOnlyList<string>> setTasks,
+        Action<IReadOnlyList<ExitTaskLine>> setTasks,
         Func<bool> offerForceQuit,
         CancellationToken ct)
     {
@@ -366,7 +390,6 @@ public sealed class ExitCoordinator(App app, AvaloniaGuiAdapter gui)
         ct.ThrowIfCancellationRequested();
 
         setPhase(ExitStrings.ClosingSavingData);
-        setTasks([]);
 
         // StopAsync runs the hosted services' shutdown; disposing the host afterwards is what
         // drains the DI container, and with it BTaskManager.DisposeAsync (which stops
@@ -375,6 +398,11 @@ public sealed class ExitCoordinator(App app, AvaloniaGuiAdapter gui)
         // still parked on a background task, so the process simply dies.
         using var stopCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         stopCts.CancelAfter(HostStopTimeout);
+
+        // This is where the non-critical tasks are actually stopped, and it can take the whole
+        // fifteen seconds. Keep naming what is still running instead of clearing the list and
+        // leaving the user with a bare spinner for the longest part of the shutdown.
+        using var reporting = StartReportingActiveTasks(taskManager, setTasks);
 
         try
         {
@@ -387,7 +415,77 @@ public sealed class ExitCoordinator(App app, AvaloniaGuiAdapter gui)
 
         await DisposeHostAsync(host, ct);
 
+        reporting.Stop();
+        setTasks([]);
         setPhase(ExitStrings.ClosingDone);
+    }
+
+    /// <summary>
+    /// Polls the task list in the background for as long as the returned handle lives. Every read is
+    /// best-effort: the container is being torn down underneath it, so a failure means "stop
+    /// reporting", never "stop shutting down".
+    /// </summary>
+    private static ActiveTaskReporter StartReportingActiveTasks(
+        BTaskManager? taskManager, Action<IReadOnlyList<ExitTaskLine>> setTasks)
+    {
+        var reporter = new ActiveTaskReporter();
+
+        if (taskManager == null)
+        {
+            return reporter;
+        }
+
+        _ = Task.Run(async () =>
+        {
+            while (!reporter.Token.IsCancellationRequested)
+            {
+                try
+                {
+                    setTasks(CollectActiveTasks(taskManager));
+                }
+                catch (Exception)
+                {
+                    // The manager is gone (or going). Nothing left worth reporting.
+                    return;
+                }
+
+                try
+                {
+                    await Task.Delay(TaskPollInterval, reporter.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
+            }
+        });
+
+        return reporter;
+    }
+
+    private sealed class ActiveTaskReporter : IDisposable
+    {
+        private readonly CancellationTokenSource _cts = new();
+
+        public CancellationToken Token => _cts.Token;
+
+        public void Stop()
+        {
+            try
+            {
+                _cts.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+                // Already stopped.
+            }
+        }
+
+        public void Dispose()
+        {
+            Stop();
+            _cts.Dispose();
+        }
     }
 
     /// <summary>
@@ -422,7 +520,7 @@ public sealed class ExitCoordinator(App app, AvaloniaGuiAdapter gui)
 
     private static async Task WaitForCriticalTasksAsync(
         BTaskManager taskManager,
-        Action<IReadOnlyList<string>> setTasks,
+        Action<IReadOnlyList<ExitTaskLine>> setTasks,
         Func<bool> offerForceQuit,
         CancellationToken ct)
     {
@@ -431,14 +529,12 @@ public sealed class ExitCoordinator(App app, AvaloniaGuiAdapter gui)
 
         while (!ct.IsCancellationRequested)
         {
-            List<string> remaining;
+            List<ExitTaskLine> active;
             try
             {
-                remaining = taskManager.GetTasksViewModel()
-                    .Where(t => t.Level == BTaskLevel.Critical && t.Status.IsActive())
-                    .Take(MaxCollectedTaskNames)
-                    .Select(t => t.Percentage is > 0 and < 100 ? $"{t.Name} ({t.Percentage}%)" : t.Name)
-                    .ToList();
+                // Report everything that is running, but keep waiting only for the critical ones —
+                // those are the ones whose interruption loses data.
+                active = CollectActiveTasks(taskManager);
             }
             catch (Exception e)
             {
@@ -446,13 +542,14 @@ public sealed class ExitCoordinator(App app, AvaloniaGuiAdapter gui)
                 return;
             }
 
-            if (remaining.Count == 0)
+            setTasks(active);
+
+            var remaining = active.Count(t => t.IsCritical);
+
+            if (remaining == 0)
             {
-                setTasks([]);
                 return;
             }
-
-            setTasks(remaining);
 
             if (!forceQuitOffered && waited >= ForceQuitOfferDelay)
             {
@@ -465,7 +562,7 @@ public sealed class ExitCoordinator(App app, AvaloniaGuiAdapter gui)
                     // quit; a bounded grace period is the lesser evil.
                     Serilog.Log.Warning(
                         "Proceeding with shutdown after {Timeout} with {Count} critical task(s) still active and no UI to ask",
-                        NoUiCriticalTaskTimeout, remaining.Count);
+                        NoUiCriticalTaskTimeout, remaining);
                     return;
                 }
             }

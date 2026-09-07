@@ -29,6 +29,49 @@ import { resourceChangedChannel } from "@/services/ResourceChangedChannel";
 
 const hubEndpoint = `${envConfig.apiEndpoint}/hub/ui`;
 
+/**
+ * How long download-task pushes are allowed to pile up before being applied together.
+ *
+ * A running download reports progress and its current step for every file it touches, and each of
+ * those used to become its own store write and therefore its own render of the whole task list.
+ * With hundreds of tasks on screen that saturates the main thread: the list keeps painting, but
+ * clicks queue behind it and menus take many seconds to appear. A sixth of a second is below the
+ * threshold where progress looks anything but live, and turns a burst of pushes into one render.
+ */
+const DOWNLOAD_TASK_FLUSH_INTERVAL = 160;
+
+const pendingDownloadTasks = new Map<number, any>();
+let downloadTaskFlushTimer: ReturnType<typeof setTimeout> | null = null;
+
+const flushDownloadTaskUpdates = () => {
+  downloadTaskFlushTimer = null;
+
+  if (pendingDownloadTasks.size === 0) {
+    return;
+  }
+
+  const batch = Array.from(pendingDownloadTasks.values());
+
+  pendingDownloadTasks.clear();
+  useDownloadTasksStore.getState().updateTasks(batch);
+};
+
+/**
+ * Queues one pushed task. Keyed by id, so several updates to the same task within a window collapse
+ * to the newest one — which is all the UI could have shown anyway.
+ */
+const queueDownloadTaskUpdate = (task: any) => {
+  if (task?.id == undefined) {
+    return;
+  }
+
+  pendingDownloadTasks.set(task.id, task);
+
+  if (downloadTaskFlushTimer == null) {
+    downloadTaskFlushTimer = setTimeout(flushDownloadTaskUpdates, DOWNLOAD_TASK_FLUSH_INTERVAL);
+  }
+};
+
 export const UIHubConnection = () => {
   // 只初始化一次
   const connRef = useRef<any>(null);
@@ -47,6 +90,9 @@ export const UIHubConnection = () => {
       log("GetData", key, data);
       switch (key) {
         case "DownloadTask":
+          // A full set supersedes anything queued: applying stale per-task pushes after it would
+          // briefly resurrect rows the server has already replaced.
+          pendingDownloadTasks.clear();
           useDownloadTasksStore.getState().setTasks(data);
           break;
         case "DependentComponentContext":
@@ -77,7 +123,7 @@ export const UIHubConnection = () => {
       log("GetIncrementalData", key, data);
       switch (key) {
         case "DownloadTask":
-          useDownloadTasksStore.getState().updateTask(data);
+          queueDownloadTaskUpdate(data);
           break;
         case "DependentComponentContext":
           useDependentComponentContextsStore.getState().updateContext(data);
@@ -274,6 +320,11 @@ export const UIHubConnection = () => {
 
     return () => {
       isRunningRef.current = false;
+      if (downloadTaskFlushTimer != null) {
+        clearTimeout(downloadTaskFlushTimer);
+        downloadTaskFlushTimer = null;
+      }
+      pendingDownloadTasks.clear();
       conn.stop();
     };
   }, []);

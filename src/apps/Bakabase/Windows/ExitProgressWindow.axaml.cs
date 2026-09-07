@@ -3,9 +3,20 @@ using System.Collections.Generic;
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Media;
+using Avalonia.Threading;
 using Bakabase.Resources;
 
 namespace Bakabase.Windows;
+
+/// <summary>
+/// One line in the shutdown window's "what is still running" list.
+/// </summary>
+/// <param name="Name">Task name, already suffixed with a percentage when it has one.</param>
+/// <param name="IsCritical">
+/// Whether interrupting it loses data. Critical tasks are what the shutdown actually waits for, so
+/// they are listed first and shown at full strength; the rest are there to explain the wait.
+/// </param>
+public readonly record struct ExitTaskLine(string Name, bool IsCritical);
 
 /// <summary>
 /// Shown while the app is actually shutting down: the host is stopping, background tasks are
@@ -57,33 +68,57 @@ public partial class ExitProgressWindow : Window
     /// <summary>Lets the shutdown sequence — and only it — take the window down.</summary>
     public void AllowClose() => _closingAllowed = true;
 
-    public void SetPhase(string phase) => PhaseText.Text = phase;
+    public void SetPhase(string phase) => OnUiThread(() => PhaseText.Text = phase);
 
-    public void ShowForceQuit() => ForcePanel.IsVisible = true;
+    public void ShowForceQuit() => OnUiThread(() => ForcePanel.IsVisible = true);
 
     /// <summary>
     /// Names the work still in flight so a slow shutdown is legible rather than mysterious.
-    /// Rebuilds the list wholesale — it is at most a handful of rows, updated once a second.
+    /// Rebuilds the list wholesale — it is at most a handful of rows, refreshed a few times a second.
     /// </summary>
-    public void SetRemainingTasks(IReadOnlyList<string> names)
+    public void SetRemainingTasks(IReadOnlyList<ExitTaskLine> tasks) => OnUiThread(() =>
     {
         TaskList.Children.Clear();
-        TaskPanel.IsVisible = names.Count > 0;
+        TaskPanel.IsVisible = tasks.Count > 0;
 
-        if (names.Count == 0)
+        if (tasks.Count == 0)
         {
             return;
         }
 
-        foreach (var name in names.Take(MaxListedTasks))
+        // Header, so the count is visible even when the list is truncated.
+        TaskList.Children.Add(Line(ExitStrings.ClosingRemaining(tasks.Count), 0.55));
+
+        // Critical work first: it is the reason the shutdown is waiting at all.
+        var ordered = tasks.OrderByDescending(t => t.IsCritical).ToArray();
+
+        foreach (var task in ordered.Take(MaxListedTasks))
         {
-            TaskList.Children.Add(Line("•  " + name, 0.85));
+            TaskList.Children.Add(Line("•  " + task.Name, task.IsCritical ? 0.9 : 0.65));
         }
 
-        if (names.Count > MaxListedTasks)
+        if (ordered.Length > MaxListedTasks)
         {
-            TaskList.Children.Add(Line("•  " + ExitStrings.BusyMore(names.Count - MaxListedTasks), 0.6));
+            TaskList.Children.Add(Line("•  " + ExitStrings.BusyMore(ordered.Length - MaxListedTasks), 0.5));
         }
+    });
+
+    /// <summary>
+    /// Every mutation here touches Avalonia controls, and the shutdown sequence reports from
+    /// wherever its awaits happen to resume — which stops being the UI thread the moment anything
+    /// on the path completes on a thread-pool thread. Marshal rather than assume.
+    /// </summary>
+    private void OnUiThread(Action action)
+    {
+        if (Dispatcher.UIThread.CheckAccess())
+        {
+            action();
+            return;
+        }
+
+        // Post, not Invoke: the shutdown must never block waiting on a UI thread that may itself be
+        // waiting on the shutdown.
+        Dispatcher.UIThread.Post(action);
     }
 
     private static TextBlock Line(string text, double opacity) => new()

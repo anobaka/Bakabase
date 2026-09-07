@@ -141,6 +141,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
 
         protected async Task OnProgressInternal(decimal progress)
         {
+            Touch();
             if (OnProgress != null)
             {
                 await OnProgress(progress);
@@ -149,6 +150,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
 
         protected async Task OnCurrentChangedInternal()
         {
+            Touch();
             if (OnCurrentChanged != null)
             {
                 await OnCurrentChanged();
@@ -163,13 +165,42 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             }
         }
 
+        /// <inheritdoc />
+        public DateTime LastActivityAt { get; private set; } = DateTime.Now;
+
+        /// <summary>Records a sign of life for the queue watchdog.</summary>
+        protected void Touch() => LastActivityAt = DateTime.Now;
+
         public DownloaderStatus Status
         {
             get => _status;
             protected set
             {
                 _status = value;
-                OnStatusChanged?.Invoke();
+                LastActivityAt = DateTime.Now;
+
+                // Raised without awaiting because this is a property setter. That is exactly why the
+                // result has to be observed: a handler that faults here used to vanish into an
+                // unobserved Task, and since the *only* thing that advances the download queue is a
+                // status-change handler, one swallowed exception left the queue permanently idle
+                // with no trace in the log.
+                var raised = OnStatusChanged?.Invoke();
+                if (raised is { IsCompletedSuccessfully: false })
+                {
+                    _ = ObserveStatusChangedAsync(raised, value);
+                }
+            }
+        }
+
+        private async Task ObserveStatusChangedAsync(Task raised, DownloaderStatus status)
+        {
+            try
+            {
+                await raised;
+            }
+            catch (Exception e)
+            {
+                Logger.LogError(e, "A status-changed handler failed for status {Status}", status);
             }
         }
 
@@ -183,6 +214,11 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             }
 
             await StopCore();
+
+            // The step text belongs to work that is no longer running. Leaving it behind is what made
+            // a parked task read as "stuck at downloading torrent file" forever: the row kept its last
+            // step next to an idle badge, with nothing to say the step had been abandoned.
+            Current = null;
             Status = DownloaderStatus.Stopped;
         }
 
@@ -193,79 +229,124 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             return Task.CompletedTask;
         }
 
-        public async Task Start(DownloadTask task)
+        public async Task<bool> Start(DownloadTask task)
         {
-            if (Status is DownloaderStatus.Stopped or DownloaderStatus.JustCreated or DownloaderStatus.Failed
-                or DownloaderStatus.Complete)
+            if (Status is not (DownloaderStatus.Stopped or DownloaderStatus.JustCreated or DownloaderStatus.Failed
+                or DownloaderStatus.Complete))
             {
-                StoppedBy = null;
-                Status = DownloaderStatus.Starting;
-                if (Cts != null)
+                return false;
+            }
+
+            StoppedBy = null;
+            Status = DownloaderStatus.Starting;
+            if (Cts != null)
+            {
+                await Cts.CancelAsync();
+            }
+
+            Cts = new CancellationTokenSource();
+
+            Message = null;
+            Current = null;
+            if (OnProgress != null)
+            {
+                await OnProgress(0);
+            }
+
+            Status = DownloaderStatus.Downloading;
+
+            var cts = Cts;
+            var token = cts.Token;
+
+            // Deliberately NOT Task.Run(..., token): a token already cancelled at schedule time makes
+            // the delegate never run, so nothing would ever move the downloader out of Downloading and
+            // the whole source's queue would be blocked by a task that never even began. The body
+            // observes the token itself.
+            _ = Task.Run(async () =>
+            {
+                try
                 {
-                    await Cts.CancelAsync();
+                    await StartCore(task, token);
                 }
-
-                Cts = new CancellationTokenSource();
-
-                Message = null;
-                if (OnProgress != null)
+                catch (OperationCanceledException oce)
                 {
-                    await OnProgress(0);
-                }
-
-                Status = DownloaderStatus.Downloading;
-
-                var token = Cts.Token;
-                _ = Task.Run(async () =>
-                {
-                    try
+                    // Any cancellation of our own token ends the run; comparing token identity missed
+                    // the linked/derived tokens that HttpClient and SemaphoreSlim throw with, which
+                    // left the downloader sitting in Downloading forever.
+                    if (oce.CancellationToken == token || token.IsCancellationRequested)
                     {
-                        await StartCore(task, token);
-                    }
-                    catch (OperationCanceledException oce)
-                    {
-                        if (oce.CancellationToken == token)
+                        if (Status is DownloaderStatus.Downloading)
                         {
+                            // Never leave StoppedBy null on a Stopped downloader: consumers switch on
+                            // it, and a null there threw straight through the status handler — which
+                            // is the one thing that advances the queue.
+                            StoppedBy ??= DownloaderStopBy.AppendToTheQueue;
+                            Current = null;
                             Status = DownloaderStatus.Stopped;
                         }
                     }
-                    catch (DownloadDeferredException)
-                    {
-                        // The task gave up its slot on purpose (e.g. no torrent under torrent-priority).
-                        // Mark it Stopped/Defer so it stays eligible and the scheduler advances, without
-                        // counting as a failure.
-                        StoppedBy = DownloaderStopBy.Defer;
-                        Status = DownloaderStatus.Stopped;
-                    }
-                    catch (Exception e)
+                    else
                     {
                         FailureTimes++;
-                        Message =
-                            $"An error occurred during downloading files. You can use expected checkpoint to skip current file: {NextCheckpoint}\n{e.BuildFullInformationText()}";
+                        Message = BuildFailureMessage(oce);
                         Status = DownloaderStatus.Failed;
                     }
-                    finally
+                }
+                catch (DownloadDeferredException)
+                {
+                    // The task gave up its slot on purpose (e.g. no torrent under torrent-priority).
+                    // Mark it Stopped/Defer so it stays eligible and the scheduler advances, without
+                    // counting as a failure.
+                    StoppedBy = DownloaderStopBy.Defer;
+                    Status = DownloaderStatus.Stopped;
+                }
+                catch (Exception e)
+                {
+                    FailureTimes++;
+                    Message = BuildFailureMessage(e);
+                    Status = DownloaderStatus.Failed;
+                }
+                finally
+                {
+                    try
                     {
-                        await Cts.CancelAsync();
+                        await cts.CancelAsync();
                     }
+                    catch (ObjectDisposedException)
+                    {
+                        // A concurrent restart already replaced and disposed this source.
+                    }
+                }
 
-                    if (Status == DownloaderStatus.Downloading)
+                if (Status == DownloaderStatus.Downloading)
+                {
+                    // Drop the in-flight step text before flipping to a terminal state. The DTO reads
+                    // Current straight off the downloader and the status change is what pushes it to the
+                    // UI, so this has to happen first — otherwise a finished task keeps rendering its last
+                    // step (e.g. "downloading torrent file") right next to a Complete badge.
+                    Current = null;
+                    Status = DownloaderStatus.Complete;
+                    FailureTimes = 0;
+                    if (OnProgress != null)
                     {
-                        // Drop the in-flight step text before flipping to a terminal state. The DTO reads
-                        // Current straight off the downloader and the status change is what pushes it to the
-                        // UI, so this has to happen first — otherwise a finished task keeps rendering its last
-                        // step (e.g. "downloading torrent file") right next to a Complete badge.
-                        Current = null;
-                        Status = DownloaderStatus.Complete;
-                        FailureTimes = 0;
-                        if (OnProgress != null)
-                        {
-                            await OnProgress(100m);
-                        }
+                        await OnProgress(100m);
                     }
-                }, token);
-            }
+                }
+                else if (Status is DownloaderStatus.Starting or DownloaderStatus.Stopping)
+                {
+                    // The body finished while the downloader was mid-transition. Without this the
+                    // downloader would keep claiming the source's single slot with no runner behind it.
+                    Current = null;
+                    StoppedBy ??= DownloaderStopBy.AppendToTheQueue;
+                    Status = DownloaderStatus.Stopped;
+                }
+            });
+
+            return true;
         }
+
+        private string BuildFailureMessage(Exception e) =>
+            $"An error occurred during downloading files. You can use expected checkpoint to skip current file: {NextCheckpoint}\n{e.BuildFullInformationText()}";
 
         protected abstract Task StartCore(DownloadTask task, CancellationToken ct);
 

@@ -1303,6 +1303,24 @@ export const DownloadTaskStatusLabel: Record<DownloadTaskStatus, string> = {
   [DownloadTaskStatus.Disabled]: 'Disabled'
 };
 
+export enum DownloadTaskPrecheckOutcome {
+  Run = 0,
+  Defer = 1,
+  AlreadySatisfied = 2
+}
+
+export const downloadTaskPrecheckOutcomes = [
+  { label: 'Run', value: DownloadTaskPrecheckOutcome.Run },
+  { label: 'Defer', value: DownloadTaskPrecheckOutcome.Defer },
+  { label: 'AlreadySatisfied', value: DownloadTaskPrecheckOutcome.AlreadySatisfied }
+] as const;
+
+export const DownloadTaskPrecheckOutcomeLabel: Record<DownloadTaskPrecheckOutcome, string> = {
+  [DownloadTaskPrecheckOutcome.Run]: 'Run',
+  [DownloadTaskPrecheckOutcome.Defer]: 'Defer',
+  [DownloadTaskPrecheckOutcome.AlreadySatisfied]: 'AlreadySatisfied'
+};
+
 export enum DependentComponentStatus {
   NotInstalled = 1,
   Installed = 2,

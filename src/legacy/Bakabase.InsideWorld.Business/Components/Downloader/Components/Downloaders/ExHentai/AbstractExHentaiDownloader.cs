@@ -48,10 +48,11 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             CancellationToken ct,
             bool preferTorrent = true,
             bool deferIfNoTorrent = false,
-            Func<Task>? onNoTorrentDetected = null)
+            Func<Task>? onNoTorrentDetected = null,
+            Func<Task>? onTorrentDetected = null)
         {
             // Only fetch torrent info when preferTorrent is true
-            var detail = await Client.ParseDetail(url, preferTorrent);
+            var detail = await Client.ParseDetail(url, preferTorrent, ct);
             if (detail == null)
             {
                 throw new Exception($"Got empty response from: {url}");
@@ -66,6 +67,14 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             // Check if torrents are available and download torrent instead of images
             if (detail.Torrents?.Any() == true)
             {
+                // Write the positive verdict down as soon as it is known, before the download that
+                // may still fail: "this gallery has a torrent" is true either way, and it is what the
+                // task list shows.
+                if (onTorrentDetected != null)
+                {
+                    await onTorrentDetected();
+                }
+
                 // Select the best torrent (largest size, most recent)
                 var bestTorrent = detail.Torrents
                     .OrderByDescending(t => t.Size)
@@ -79,7 +88,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                     await onCurrentChanged(Localizer["Downloader_ExHentai_DownloadingTorrent"]);
                 }
 
-                await Client.DownloadTorrent(bestTorrent.DownloadUrl, path);
+                await Client.DownloadTorrent(bestTorrent.DownloadUrl, path, ct);
 
                 if (onProgress != null)
                 {
@@ -133,7 +142,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
 
             for (var page = 0; page < detail.PageCount; page++)
             {
-                var imageTitleAndPageUrls = await Client.GetImageTitleAndPageUrlsFromDetailUrl(detail.Url, page);
+                var imageTitleAndPageUrls = await Client.GetImageTitleAndPageUrlsFromDetailUrl(detail.Url, page, ct);
 
                 var taskDataList = new List<(string filename, string pageUrl)>();
                 var options = await GetDownloaderOptionsAsync();
@@ -243,13 +252,15 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                             {
                                 try
                                 {
-                                    var r = await Client.DownloadImage(pageUrl);
+                                    var r = await Client.DownloadImage(pageUrl, ct);
                                     data = r.Data;
                                     contentType = r.ContentType;
                                     break;
                                 }
-                                catch (Exception)
+                                catch (Exception) when (!ct.IsCancellationRequested)
                                 {
+                                    // A cancelled download must fall straight through instead of
+                                    // burning ten more attempts that are all guaranteed to fail.
                                     tryTimes++;
                                     if (tryTimes >= maxTryTimes)
                                     {

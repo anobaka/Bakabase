@@ -8088,8 +8088,16 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
             options?: string;
+            metadata?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.DownloadTaskMetadata"];
             readonly displayName: string;
             readonly canStart: boolean;
+        };
+        "Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.DownloadTaskMetadata": {
+            preferTorrent?: boolean;
+            /** Format: date-time */
+            torrentFoundAt?: string;
+            /** Format: date-time */
+            noTorrentCheckedAt?: string;
         };
         "Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.DownloaderDefinition": {
             thirdPartyId: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ThirdPartyId"];

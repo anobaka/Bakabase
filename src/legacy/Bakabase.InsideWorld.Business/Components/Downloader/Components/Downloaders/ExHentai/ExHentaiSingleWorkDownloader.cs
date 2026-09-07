@@ -46,7 +46,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                     await OnCurrentChangedInternal();
                 }, OnProgressInternal, OnCheckpointChangedInternal, ct,
                 options.PreferTorrent && !knownToHaveNoTorrent,
-                deferIfNoTorrent, () => manager.MarkNoTorrentAsync(task.Id));
+                deferIfNoTorrent, () => manager.MarkNoTorrentAsync(task.Id),
+                () => manager.MarkTorrentFoundAsync(task.Id));
         }
     }
 }

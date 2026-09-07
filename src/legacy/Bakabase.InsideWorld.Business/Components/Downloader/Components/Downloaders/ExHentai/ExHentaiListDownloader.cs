@@ -34,7 +34,9 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
 
             while (true)
             {
-                var result = await Client.ParseList(nextUrl);
+                ct.ThrowIfCancellationRequested();
+
+                var result = await Client.ParseList(nextUrl, ct);
 
                 if (result.Resources?.Any() == true && result.ResultCount == 0)
                 {
