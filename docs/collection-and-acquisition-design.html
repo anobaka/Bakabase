@@ -68,8 +68,8 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 
 <div class="sum">
 <div class="card"><h4>一句话结论</h4><p>「我还没有的作品」就是<b>尚未落地的资源</b>：一条 <code class="i">Resource</code>，<code class="i">Path</code> 为空，身份由 <code class="i">ResourceSourceLink</code> 的 (Source, SourceKey) 给出。代码里这种资源今天已经存在（未安装的 Steam 游戏、未下载的 DLsite 作品），本方案只是把它从三个站点的私有实现推广为通用机制。</p></div>
-<div class="card"><h4>三层拆分</h4><p><b>获取流水线</b>把「想要」变成「入库」，是带人工检查点与小时级等待的状态机；<b>集合</b>是资源（含未落地资源）的命名分组，收集率 = 已落地成员 ÷ 全部成员；<b>订阅</b>是集合的外部真相源，负责告诉集合「应该有哪些条目」，并在有新条目时驱动获取。</p></div>
-<div class="card"><h4>先做什么</h4><p>第一阶段只做「收件箱版」获取流水线：帖子解析 → 打开链接 → 用户把文件丢进收件箱 → 自动认领、解压、按模板放置、同步、建立外部身份链接。它不依赖集合，却直接消灭当前人工流程里五步中的四步，且与来源站点无关。</p></div>
+<div class="card"><h4>四层拆分，自下而上</h4><p><b>未落地资源</b>是地基：不依赖任何集合就能创建、查看、获取、关联，「我缺了哪个资源」在这一层就能表达。<b>获取流水线</b>以一个未落地资源为目标，按它自带的获取线索（帖子链接、直链、某个外部身份）选择路线，把它变成已落地资源。<b>集合</b>是资源（含未落地资源）的命名分组，收集率 = 已落地成员 ÷ 全部成员。<b>订阅</b>是集合的外部真相源，负责告诉集合「应该有哪些条目」。</p></div>
+<div class="card"><h4>先做什么</h4><p>第一阶段把未落地资源做成独立可用的概念：手动创建、按「未落地」筛选、关联本地目录、卡片与详情的状态表现。第二阶段做「收件箱版」获取流水线：帖子解析 → 打开链接 → 用户把文件丢进收件箱 → 自动认领、解压、按模板放置、落地。两期都不需要集合，却直接消灭当前人工流程里五步中的四步。</p></div>
 </div>
 
 <nav class="toc" aria-label="目录">
@@ -101,11 +101,14 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <tr><td class="e">5</td><td>未收集部分像订阅列表：有更新要提醒；能否自动补全；数据从哪里采集、用什么 key；自动补全和人工下载是同一件事</td><td><a href="#s6">§6</a>：订阅就是集合的外部来源，key 是 (ResourceSource, SourceKey)；新条目 → 通知 + Workflow 事件 + 可选自动创建获取任务；获取任务复用 <a href="#s7">§7</a> 的同一条流水线</td></tr>
 <tr><td class="e">6</td><td>不止游戏：漫画、同人本、同人音声、电影、电视剧</td><td>集合、订阅、流水线都不含游戏特有逻辑；来源提供器与阶段处理器按站点/格式增加（<a href="#s6-3">§6.3</a>、<a href="#s7-1">§7.1</a>）</td></tr>
 <tr><td class="e">7</td><td>展示与配置必须丝滑；不能每个集合配一次路径标记；现有路径标记体验也可能要优化</td><td>流水线内容的元数据来自外部身份而非文件夹名，路径标记只回答「哪里是资源」，配一次（<a href="#s12-2">§12.2</a>）；预设与按样例标记（<a href="#s12-5">§12.5</a>）</td></tr>
+<tr><td class="e">8</td><td>补充：漫画、动画等可能各自从不同来源获取，这些获取与集合无关，只是「我缺了哪个资源，应该用什么方式补上」，该资源可能属于某个集合也可能不属于。因此未落地资源必须先于集合、不涉及集合就能使用</td><td>未落地资源是独立的第一层（<a href="#s4-5">§4.5</a>）；获取任务以资源为目标、以线索决定方式，集合只是可选上下文（<a href="#s7-0">§7.0</a>）；分期顺序据此调整为「未落地资源 → 获取流水线 → 集合 → 订阅」（<a href="#s13">§13</a>）</td></tr>
 </table></div>
 
 <h3>已做出并遵守的决定</h3>
 <ul>
 <li><b>不引入与 Resource 割裂的新概念。</b>「作品」不是新实体，就是资源；未拥有的作品是尚未落地的资源。</li>
+<li><b>未落地资源先于集合、独立于集合。</b>创建、查看、获取、关联都不以集合为前提；集合只是对资源的聚合视图。</li>
+<li><b>获取以资源为目标。</b>每个获取任务补齐的是一个具体的资源，用什么方式由该资源的获取线索决定；集合、订阅只是发起获取的场景之一。</li>
 <li><b>术语只用代码标识符与标准中文。</b>不出现自造缩写与代号。</li>
 <li><b>迁移一律由 <code class="i">dotnet ef migrations add</code> 生成，纯 schema。</b>需要搬运存量数据时用运行时的一次性迁移器（先例：<code class="i">src/legacy/Bakabase.Migrations/V230/PathsRelocationMigrator.cs</code>），且接受 beta 期的存量数据丢失。</li>
 <li><b>新功能优先进 <code class="i">src/modules/</code>。</b>只有与 legacy 紧耦合的小改动留在 <code class="i">src/legacy/</code>。</li>
@@ -177,7 +180,8 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <tr><td><b>外部身份</b> <span class="tag t-have">现有</span></td><td class="k">ResourceSourceLink (Source, SourceKey)</td><td>资源在某个外部来源里的编号：DLsite 的 RJ 号、Steam 的 AppId、ExHentai 的 gid/token、SoulPlus 的帖子 id、Bangumi 的条目 id。一个资源可以有多条。</td></tr>
 <tr><td><b>集合</b> <span class="tag t-new">新增</span></td><td class="k">Collection<br>CollectionResourceMapping</td><td>资源的命名分组，成员可以是未落地资源。成员有三种来路：手动加入、规则命中、订阅带入。收集率 = 已落地且未忽略的成员 ÷ 未忽略的成员。</td></tr>
 <tr><td><b>订阅</b>（集合的外部来源）<span class="tag t-fix">需修正</span></td><td class="k">Subscription<br>ISubscriptionProvider</td><td>一个外部列表（社团页、系列页、标签搜索、关注动态），定期抓取，把列表中的每一项确保为一条带外部身份的资源并加入所属集合。现有的 Subscription 模块演进为它，每个订阅必须属于一个集合。</td></tr>
-<tr><td><b>获取任务</b> <span class="tag t-new">新增</span></td><td class="k">AcquisitionTask<br>AcquisitionStatus</td><td>把一个来源页面（例如论坛帖子）变成库里已落地资源的一次执行，是状态机；可以关联一个未落地资源（替它落地），也可以不关联（临时从帖子发起，落地后新建资源）。</td></tr>
+<tr><td><b>获取线索</b> <span class="tag t-new">新增</span></td><td class="k">AcquisitionLead (Kind, Value)</td><td>告诉系统「用什么方式补齐这个资源」的一条信息：帖子链接、直链、磁力链接、或一个外部身份（DLsite 已购买作品、ExHentai 画廊、Steam 应用）。外部身份类线索直接来自资源已有的 <code class="i">ResourceSourceLink</code>；链接类线索由用户或订阅提供。一个资源可以有多条线索，也可以暂时没有。</td></tr>
+<tr><td><b>获取任务</b> <span class="tag t-new">新增</span></td><td class="k">AcquisitionTask<br>AcquisitionStatus</td><td>为<b>一个未落地资源</b>补齐本地文件的一次执行，是状态机。每个获取任务都指向一个资源，并按一条线索选择路线；与集合无关，集合只作为可选的上下文记录。从帖子链接直接发起时，系统先按解析出的标题创建未落地资源，再对它发起获取。</td></tr>
 </table></div>
 
 <figure>
@@ -208,9 +212,9 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <!-- Acquisition -->
 <rect x="640" y="180" width="200" height="100" rx="10"/>
 <text x="740" y="204" text-anchor="middle" fill="currentColor" font-weight="700">AcquisitionTask 获取任务</text>
-<text x="740" y="224" text-anchor="middle" fill="currentColor" opacity=".7">SourceUrl 帖子/页面</text>
-<text x="740" y="242" text-anchor="middle" fill="currentColor" opacity=".7">状态机 §7</text>
-<text x="740" y="262" text-anchor="middle" fill="currentColor" opacity=".7">ResourceId 可空</text>
+<text x="740" y="224" text-anchor="middle" fill="currentColor" opacity=".7">ResourceId 必填</text>
+<text x="740" y="242" text-anchor="middle" fill="currentColor" opacity=".7">Lead 线索：链接 / 外部身份</text>
+<text x="740" y="262" text-anchor="middle" fill="currentColor" opacity=".7">状态机 §7</text>
 <!-- Library dir -->
 <rect x="640" y="330" width="200" height="60" rx="10"/>
 <text x="740" y="354" text-anchor="middle" fill="currentColor" font-weight="700">库根目录 + PathMark</text>
@@ -233,14 +237,14 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <path d="M640 360 C560 360 520 320 500 280" marker-end="url(#ar)" stroke-dasharray="4 3"/>
 <text x="540" y="345" fill="currentColor" opacity=".8">路径标记补属性</text>
 </g></svg>
-<figcaption>五个概念的关系。紫色边为本方案的核心通道：订阅确保未落地资源存在，获取任务让它落地。规则命中的成员不落表，按需计算。</figcaption>
+<figcaption>概念关系。紫色边为本方案的核心通道：获取任务让一个未落地资源落地，与集合无关；订阅只是让未落地资源批量出现并进入集合的一种方式。规则命中的成员不落表，按需计算。</figcaption>
 </figure>
 
 <div class="rule ok"><b>为什么不叫「作品」。</b>如果引入 Work 实体，就要维护 Work↔Resource 的链接、两套属性、两套封面、两套搜索。而「未落地资源」让集合成员、搜索、卡片、详情、属性、增强器全部复用资源体系，落地只是给一行赋 <code class="i">Path</code>。代价是资源体系里那些默认「有路径」的位置要逐一门控，这份清单已经核出（<a href="#s4-3">§4.3</a>），可控。</div>
 
 <div class="rule"><b>与 09-collections 设计稿的关系。</b>那份文档回答的是「我已有的文件如何按 IP 聚拢到目录树」，结论是系列/IP 用 Multilevel 属性表达、集合只是路径模板的一种写法。本方案不推翻它：系列层级仍用 Multilevel 属性；集合实体解决的是它没有覆盖的问题，即「应该存在但我还没有」的条目和收集率。两者的边界：<b>属性描述资源是什么，集合描述我想收齐什么。</b></div>
 <h2 id="s4"><span class="n">§4</span>尚未落地的资源</h2>
-<p>这一节把「资源可以没有本地路径」从三个站点的隐含行为变成明确的、有统一入口的机制。它是集合与获取流水线共同依赖的地基，因此排在第二阶段单独交付（<a href="#s13">§13</a>）。</p>
+<p>这一节把「资源可以没有本地路径」从三个站点的隐含行为变成明确的、有统一入口、不依赖集合就能独立使用的机制。它是获取流水线与集合共同依赖的地基，因此排在第一阶段交付（<a href="#s13">§13</a>）。</p>
 
 <h3 id="s4-1">4.1 表示方式</h3>
 <ul>
@@ -306,6 +310,17 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <li>筛选：内部属性「已落地」布尔开关，默认预设里固定显示，与媒体库筛选并列。</li>
 <li>随机播放、健康度、文件移动自动排除未落地资源，并在界面说明被排除的数量。</li>
 </ul>
+
+<h3 id="s4-5">4.5 不依赖集合的独立使用</h3>
+<p>未落地资源在没有任何集合的情况下就是一个完整可用的功能：它本身就是「我缺了什么」的清单。集合只是之后对这些资源的聚合视图。</p>
+<div class="tw"><table><tr><th style="width:12%">动作</th><th style="width:44%">怎么做</th><th>涉及的现有能力</th></tr>
+<tr><td><b>创建</b></td><td>资源页「新建未落地资源」，三种方式：① 输入标题；② 粘贴一个外部编号或页面链接（RJ 号、Steam AppId、Bangumi 条目、DLsite 作品页），系统按来源查详情，写入名称、封面与 <code class="i">ResourceSourceLink</code>；③ 粘贴一个帖子链接，系统解析后按清洗过的标题创建，并把帖子链接作为获取线索挂上。批量创建：粘贴多行。</td><td><code class="i">ParseWorkDetailById</code>（DLsite）、<code class="i">GetAppDetails</code>（Steam）、<code class="i">BangumiClient.ParseDetail</code>、帖子解析器；创建逻辑与 <a href="#s6-2">§6.2</a> 订阅共用</td></tr>
+<tr><td><b>查看</b></td><td>资源页筛选「已落地 = 否」就是缺失清单；卡片显示来源封面、名称、「未落地」或「获取中」芯片；可与任何其他筛选组合（例如「未落地 且 作者 = X」）。</td><td><code class="i">InternalProperty.HasLocalPath</code>、现有筛选面板与卡片</td></tr>
+<tr><td><b>获取</b></td><td>卡片或详情上的「获取」：列出该资源的线索（已有的外部身份自动成为线索；可粘贴新链接），选一条即创建获取任务进入 <a href="#s7">§7</a> 的流水线。线索为空时提示补一条链接，后期支持按名称到已配置的来源搜索。</td><td><code class="i">AcquisitionTask</code>、按线索种类注册的路线（<a href="#s7-0">§7.0</a>）</td></tr>
+<tr><td><b>关联</b></td><td>文件已经在本地时，详情里「关联本地目录」选一个目录直接落地，不经过流水线。</td><td><code class="i">IResourceMaterializationService.MaterializeAsync</code></td></tr>
+<tr><td><b>放弃</b></td><td>删除该资源即可；它没有文件，删除无副作用。</td><td>现有删除</td></tr>
+</table></div>
+<p>三个不同媒体类型的例子，全部不涉及集合：漫画《X》缺第 3 卷，用户按标题新建未落地资源并粘贴某漫画站的页面链接作为线索，流水线用该站的抓取器取回；某部动画在另一处以磁力链接分发，线索是磁力链接，路线是外部下载工具的抓取器；某个游戏是 SoulPlus 帖子，线索是帖子链接，路线是帖子解析 + 收件箱。三者的差别只在线索种类与对应的处理器，其余阶段与界面完全相同。若这些资源恰好命中了某个集合的规则或被某个订阅带入，它们自然出现在集合里；没有集合也丝毫不影响上述流程。</p>
 <h2 id="s5"><span class="n">§5</span>集合</h2>
 
 <h3 id="s5-1">5.1 定义与三种成员来路</h3>
@@ -390,7 +405,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <li>差异：新成员 = 本次新建的映射；从来源消失 = 本订阅带入但本次未出现的映射，只标记不删除（成员页显示「来源中已不存在」）。</li>
 <li><b>首次检查也落库</b>（这是集合的种子），只是不发通知、不发 Workflow 事件——与今天 :187 处的抑制策略相比，保留「不打扰」但去掉「不记录」。</li>
 <li>有新成员时：通知（<code class="i">Source = "collection:{id}"</code>，正文含新增数与收集率，<code class="i">PayloadJson</code> 带 <code class="i">collectionId</code> 供深链接）；发布 <code class="i">subscription.updated</code>（载荷扩展 <code class="i">CollectionId</code> 与 <code class="i">ResourceIds</code>）。</li>
-<li>若集合开启 <code class="i">AutoAcquire</code> 且提供器 <code class="i">ItemsHaveAcquisitionUrl</code>：为每个新成员创建获取任务（<a href="#s7">§7</a>）。否则在集合页把它们标为「待获取」，等用户提供下载页链接或后期的自动搜索。</li>
+<li>若集合开启 <code class="i">AutoAcquire</code> 且提供器 <code class="i">ItemsHaveAcquisitionUrl</code>：以条目的页面链接为线索（<code class="i">PostUrl</code>）为每个新成员创建获取任务（<a href="#s7">§7</a>）；条目本身是 DLsite / ExHentai / Steam 身份时则以该身份为线索（<code class="i">SourceIdentity</code>）。两者都没有时在集合页把它们标为「待获取」，等用户补线索或后期的自动搜索。</li>
 </ol>
 <ul>
 <li><code class="i">SubscriptionCheckTask</code> 改为按订阅各自的 <code class="i">IntervalMinutes</code>（为空用全局默认）判定是否到期，冲突键增加 <code class="i">"SyncResources"</code>，去掉指向不存在任务的 <code class="i">"SyncPixiv"</code>。</li>
@@ -417,7 +432,18 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 </ul>
 <p>这是<span class="tag t-later">后期</span>工作：三张表今天能用，先让新机制在 SoulPlus 场景跑通，再回头收编，避免第一阶段就动 DLsite 下载与启动逻辑。</p>
 <h2 id="s7"><span class="n">§7</span>获取流水线</h2>
-<p>获取任务把「一个来源页面」变成「库里已落地的资源」。它是一个状态机而不是线性流，因为中间有人工检查点（选链接、付费、认领文件、补密码）和小时级等待（网盘下载）。Workflow 引擎不能暂停也不能等待长任务，所以流水线由 <code class="i">Bakabase.Modules.Acquisition</code> 自己承载，Workflow 只在边缘触发与定制（<a href="#s8">§8</a>）。</p>
+<p>获取任务把「一个未落地资源」变成「已落地资源」。它是一个状态机而不是线性流，因为中间有人工检查点（选链接、付费、认领文件、补密码）和小时级等待（网盘下载）。Workflow 引擎不能暂停也不能等待长任务，所以流水线由 <code class="i">Bakabase.Modules.Acquisition</code> 自己承载，Workflow 只在边缘触发与定制（<a href="#s8">§8</a>）。</p>
+
+<h3 id="s7-0">7.0 目标是资源，方式由线索决定</h3>
+<p>每个获取任务有且只有一个目标资源（<code class="i">AcquisitionTask.ResourceId</code> 必填）和一条被选中的线索。线索的种类决定 Resolving 与 Fetching 阶段用哪条路线；之后的解压、放置、落地对所有路线相同。集合 id 只是可选的上下文，用于统计与通知，不影响执行。</p>
+<div class="tw"><table><tr><th style="width:20%">线索种类 <code class="i">AcquisitionLeadKind</code></th><th style="width:30%">线索值</th><th style="width:30%">路线（Resolving → Fetching）</th><th>典型场景</th></tr>
+<tr><td class="k">PostUrl</td><td>论坛帖子链接</td><td>帖子解析器提取链接与密码 → 按网盘种类选抓取器或收件箱</td><td>SoulPlus 上的游戏、同人本</td></tr>
+<tr><td class="k">DirectUrl</td><td>http(s) 直链</td><td>跳过解析 → <code class="i">HttpLinkFetcher</code></td><td>自建站、Cloudflare 盘直链</td></tr>
+<tr><td class="k">Magnet</td><td>磁力链接 / 种子文件</td><td>跳过解析 → 外部下载工具抓取器（<span class="tag t-later">后期</span>，仓库内没有 BitTorrent 客户端）→ 或收件箱</td><td>动画、电影</td></tr>
+<tr><td class="k">SourceIdentity</td><td>该资源的某条 <code class="i">ResourceSourceLink</code></td><td>按 <code class="i">ResourceSource</code> 选路线：DLsite 已购买 → 现有 <code class="i">DLsiteWorkService.DownloadWork / ExtractWork</code>；ExHentai → 现有下载器 <code class="i">DownloadTaskService.AddRange</code> 并等待 <code class="i">downloader.completed</code>；Steam → 打开 <code class="i">steam://install/{appId}</code> 并等待安装检测 <code class="i">SteamAppService.UpdateInstallationStatus</code></td><td>已购买的音声、收藏的画廊、已拥有的游戏</td></tr>
+<tr><td class="k">Manual</td><td>无</td><td>直接进入 <code class="i">WaitingForFile</code>，等收件箱或「关联本地目录」</td><td>线索不明，先占位</td></tr>
+</table></div>
+<p>新增一种来源或媒体类型，就是新增一个线索种类的处理器（或一个网盘的抓取器），不改状态机、不改界面。这正是需求 3「快速复制到其他场景」的落点。</p>
 
 <figure>
 <svg viewBox="0 0 1000 300" role="img" aria-label="获取任务状态机：Pending 到 Resolving 到 WaitingForFile 或 Fetching，再到 Unpacking、Placing、Syncing、Completed；任一阶段可进入 NeedsAttention 并在人工处理后回到原阶段，或进入 Failed 并可重试；Cancelled 为终态。">
@@ -461,7 +487,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <h3 id="s7-1">7.1 阶段与处理器：骨架固定、槽内可换</h3>
 <p>阶段顺序不可重排；每个阶段由一个接口定义，实现按来源/网盘/格式增加。这和 <code class="i">foundations.md</code> 的组件模型是同一原则。</p>
 <div class="tw"><table><tr><th style="width:12%">阶段</th><th style="width:30%">处理器接口</th><th style="width:30%">第一批实现</th><th>复用的现有代码</th></tr>
-<tr><td class="k">Resolving</td><td><code class="i">IAcquisitionLinkResolver</code><br><span class="mono">Task&lt;AcquisitionLinkSet&gt; ResolveAsync(AcquisitionTask task, ct)</span></td><td><code class="i">PostParserLinkResolver</code>：按 URL 主机选 <code class="i">IPostContentFetcher</code>，再走 <code class="i">DownloadInfoHandler</code>；输出链接列表（每条含 <code class="i">Url / AccessCode / ArchivePassword / DriveKind</code>）与清洗后的标题</td><td>帖子解析器全部；<code class="i">AiFeature.PostParser</code></td></tr>
+<tr><td class="k">Resolving</td><td><code class="i">IAcquisitionLinkResolver</code><br><span class="mono">AcquisitionLeadKind LeadKind;<br>Task&lt;AcquisitionLinkSet&gt; ResolveAsync(AcquisitionTask task, ct)</span><br>按线索种类分派</td><td><code class="i">PostParserLinkResolver</code>（PostUrl）：按 URL 主机选 <code class="i">IPostContentFetcher</code>，再走 <code class="i">DownloadInfoHandler</code>；输出链接列表（每条含 <code class="i">Url / AccessCode / ArchivePassword / DriveKind</code>）与清洗后的标题。<code class="i">DirectLinkResolver</code>（DirectUrl / Magnet）：原样透传。<code class="i">SourceIdentityResolver</code>（SourceIdentity）：按 <code class="i">ResourceSource</code> 转到该来源的既有下载路线（<a href="#s7-0">§7.0</a>）</td><td>帖子解析器全部；<code class="i">AiFeature.PostParser</code>；DLsite / ExHentai / Steam 的既有下载与安装检测</td></tr>
 <tr><td class="k">Fetching / WaitingForFile</td><td><code class="i">IAcquisitionFetcher</code><br><span class="mono">DriveKind Kind; Task&lt;FetchResult&gt; FetchAsync(link, inboxDirectory, progress, ct)</span></td><td><code class="i">HttpLinkFetcher</code>（直链）；<code class="i">ManualFetcher</code>（打开链接、复制提取码、进入 WaitingForFile）</td><td><code class="i">SingleFileHttpDownloader</code>（加空长度检查、去掉整文件内存 MD5、读 Content-Disposition 文件名）</td></tr>
 <tr><td class="k">Unpacking</td><td><code class="i">IAcquisitionUnpacker</code><br><span class="mono">Task&lt;UnpackResult&gt; UnpackAsync(files, passwordCandidates, workDirectory, ct)</span></td><td><code class="i">SevenZipUnpacker</code>：分组分卷 → 逐密码 <code class="i">TestCompressedFile</code> → <code class="i">ExtractWithProgress</code>；非压缩包直接透传</td><td><code class="i">CompressedFileHelper.DetectCompressedFileGroups</code>、<code class="i">CompressedFileService</code>、<code class="i">PasswordService</code>；把 <code class="i">FileController.cs:133-327</code> 的候选逐试与 <code class="i">:329-493</code> 的解压后删除/上移逻辑提取为服务</td></tr>
 <tr><td class="k">Placing</td><td><code class="i">IAcquisitionPlacer</code><br><span class="mono">Task&lt;PlaceResult&gt; PlaceAsync(extractedRoot, template, variables, ct)</span></td><td><code class="i">TemplateDirectoryPlacer</code>：渲染目标目录、处理冲突、折叠单层外壳目录、移动、压缩包进回收站</td><td><code class="i">ResourceUtils.SplitDisplayNameTemplateIntoSegments</code>；<code class="i">AbstractDownloader.BuildDownloadFilename</code> 的非法字符清理</td></tr>
@@ -498,9 +524,10 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <h3 id="s7-5">7.5 放置、同步与链接</h3>
 <ul>
 <li><b>目标目录 = 库根目录 / 模板渲染结果。</b>模板用显示名模板语法（<code class="i">{Title}</code>、<code class="i">{Code}</code>、<code class="i">{Collection}</code>、<code class="i">{Source}</code>、<code class="i">{Year}</code>，包装符内为空则整段丢弃），逐段做非法字符清理与长度预算；冲突策略：追加序号 / 合并进已有目录 / 停车询问。默认模板 <code class="i">{Title}</code>，即每个作品一个目录，正好匹配库根目录上 <code class="i">Layer = 1</code> 的资源标记。</li>
-<li><b>有关联资源</b>（从集合成员或未落地资源发起）：直接 <code class="i">MaterializeAsync(resourceId, targetDirectory)</code>，不必等待同步任务；随后入队标记同步让 Property / MediaLibrary 标记补属性。</li>
-<li><b>无关联资源</b>（临时从帖子发起）：入队库根目录标记同步；轮询按路径查找资源（超时 2 分钟 → <code class="i">NeedsAttention</code>）；找到后 <code class="i">EnsureLinks</code> 写入 <code class="i">(ResourceSource.SoulPlus, 帖子 id)</code>，名称为空则写清洗后的标题；若任务创建时指定了集合则加入成员。</li>
-<li>完成后：通知（<code class="i">Source = "acquisition:{id}"</code>，深链接到资源）；发布 <code class="i">acquisition.completed</code>；集合收集率刷新。</li>
+<li><b>落地始终作用于目标资源</b>：<code class="i">MaterializeAsync(resourceId, targetDirectory)</code>，不必等待同步任务；随后入队库根目录标记同步，让 Property / MediaLibrary 标记补属性。因为每个任务都有目标资源，不存在「等同步扫出新资源再认领」的分支。</li>
+<li><b>从帖子链接直接发起的任务</b>：在创建任务之前就已按解析出的标题创建了未落地资源，并把 <code class="i">(ResourceSource.SoulPlus, 帖子 id)</code> 作为外部身份挂上；落地时若解析出更好的标题且资源名称仍是占位值，则更新名称。</li>
+<li>目标目录已被另一条资源占用（路径标记先扫到）时，按 <a href="#s4-2">§4.2</a> 的合并策略处理，以目标资源为主体。</li>
+<li>完成后：通知（<code class="i">Source = "acquisition:{id}"</code>，深链接到资源）；发布 <code class="i">acquisition.statusChanged</code>；若资源属于某些集合，这些集合的收集率刷新。</li>
 </ul>
 
 <h3 id="s7-6">7.6 失败、重试与并发</h3>
@@ -512,12 +539,14 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 </ul>
 
 <h3 id="s7-7">7.7 发起入口</h3>
+<p>所有入口最终都落到同一个调用：<span class="mono">IAcquisitionService.CreateAsync(resourceId, lead, collectionId?)</span>。没有资源的入口先创建未落地资源。</p>
 <ul>
-<li>油猴脚本（<code class="i">src/scripts/baka-monkey</code>）在 SoulPlus 列表页的「解析」按钮旁增加「获取到 Bakabase」，可选目标集合。</li>
-<li>集合详情页：「获取缺失条目」（对有页面地址的成员批量创建任务）、单个成员的「获取」。</li>
-<li>资源卡片与详情：未落地资源的「获取」。</li>
+<li>资源卡片与详情：未落地资源的「获取」，选一条线索（首要入口，不涉及集合）。</li>
+<li>资源页「新建未落地资源」对话框里勾选「创建后立即获取」。</li>
+<li>油猴脚本（<code class="i">src/scripts/baka-monkey</code>）在 SoulPlus 列表页的「解析」按钮旁增加「获取到 Bakabase」：后端先解析标题创建未落地资源，再以帖子链接为线索创建任务；可选目标集合。</li>
+<li>获取中心：粘贴一个或多个链接，同上。</li>
 <li>帖子解析页：已有解析结果的「转为获取任务」。</li>
-<li>获取中心：粘贴 URL 直接创建。</li>
+<li>集合详情页：「获取缺失条目」（对有线索的未落地成员批量创建）、单个成员的「获取」。</li>
 <li>Workflow 活动 <code class="i">action.acquisition.create</code>（<a href="#s8">§8</a>）。</li>
 </ul>
 <h2 id="s8"><span class="n">§8</span>Workflow 集成</h2>
@@ -526,21 +555,21 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <h3>8.1 条目类型</h3>
 <div class="tw"><table><tr><th style="width:24%">标签</th><th style="width:30%">CLR 类型</th><th>说明</th></tr>
 <tr><td class="k">item.resource</td><td><code class="i">ResourceWorkflowItem { Id, Name, Path, HasLocalPath, SourceLinks[] }</code>，实现 <code class="i">IHasWorkflowSystemVariables</code>（暴露 <code class="i">resourceId / name / path</code>）</td><td>所有「资源类」触发器与动作的统一条目；订阅触发器改为输出它，取代按提供器种类映射的三个类型</td></tr>
-<tr><td class="k">item.acquisition</td><td><code class="i">AcquisitionWorkflowItem { Id, Status, ResourceId, SourceUrl, TargetDirectory }</code></td><td>获取任务状态变化的条目</td></tr>
+<tr><td class="k">item.acquisition</td><td><code class="i">AcquisitionWorkflowItem { Id, Status, ResourceId, LeadKind, LeadValue, TargetDirectory }</code></td><td>获取任务状态变化的条目</td></tr>
 </table></div>
 
 <h3>8.2 触发器</h3>
 <div class="tw"><table><tr><th style="width:26%">Kind</th><th style="width:34%">载荷</th><th>生产者与过滤器</th></tr>
 <tr><td class="k">subscription.updated <span class="tag t-fix">扩展</span></td><td>增加 <code class="i">CollectionId</code>、<code class="i">ResourceIds</code>；<code class="i">ExtractItems</code> 输出 <code class="i">item.resource</code></td><td><code class="i">SubscriptionService.RunCheckAsync</code>；过滤器：订阅 id、集合 id</td></tr>
 <tr><td class="k">collection.membersAdded</td><td><code class="i">{ CollectionId, ResourceIds, Origin }</code></td><td>手动加入、规则重算、订阅带入都发；过滤器：集合 id、来路</td></tr>
-<tr><td class="k">acquisition.statusChanged</td><td><code class="i">{ AcquisitionTaskId, Status, PreviousStatus, ResourceId?, TargetDirectory? }</code></td><td><code class="i">AcquisitionService</code> 每次状态推进；过滤器：目标状态集合（例如只要 Completed 或 NeedsAttention）</td></tr>
+<tr><td class="k">acquisition.statusChanged</td><td><code class="i">{ AcquisitionTaskId, Status, PreviousStatus, ResourceId, LeadKind, TargetDirectory? }</code></td><td><code class="i">AcquisitionService</code> 每次状态推进；过滤器：目标状态集合（例如只要 Completed 或 NeedsAttention）</td></tr>
 <tr><td class="k">resource.materialized</td><td><code class="i">{ ResourceId, Path }</code></td><td><code class="i">IResourceMaterializationService</code>；也覆盖 Steam 安装、DLsite 下载完成后的落地</td></tr>
 <tr><td class="k">resource.changed / resource.created / enhancement.applied / pathmark.sync.completed <span class="tag t-later">后期</span></td><td>见 <code class="i">docs/workflow-capability-map.html</code> §6 列出的代码位置</td><td>不在本方案范围，但命名沿用该文档，避免两套名字</td></tr>
 </table></div>
 
 <h3>8.3 动作</h3>
 <div class="tw"><table><tr><th style="width:30%">Kind</th><th style="width:22%">接受条目</th><th>行为与配置</th></tr>
-<tr><td class="k">action.acquisition.create</td><td><code class="i">item.resource</code>（须有页面地址的来源链接）或 <code class="i">item.subscription.any</code></td><td>创建获取任务；配置：目标集合、是否允许自动购买、网盘偏好覆盖</td></tr>
+<tr><td class="k">action.acquisition.create</td><td><code class="i">item.resource</code></td><td>为条目资源创建获取任务；线索取自条目资源已有的线索（配置里可指定优先的线索种类），没有线索则丢弃条目并计数；配置：是否允许自动购买、网盘偏好覆盖、记录到哪个集合</td></tr>
 <tr><td class="k">action.collection.addResource</td><td><code class="i">item.resource</code></td><td>把资源加入指定集合（<code class="i">Origin = Manual</code>）</td></tr>
 <tr><td class="k">action.resource.setPropertyValue</td><td><code class="i">item.resource</code></td><td>能力全景图已标为「写数据的主通道」；配置：属性 + 值模板（支持 <code class="i">{var:…}</code>）</td></tr>
 <tr><td class="k">action.enhancer.enhance</td><td><code class="i">item.resource</code></td><td>对资源运行指定增强器（<code class="i">IEnhancerService.EnhanceResource</code>）</td></tr>
@@ -581,10 +610,11 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
   IntervalMinutes 开始被使用
 <span class="cm">  SubscriptionSnapshot 表：停用并在后续版本删除</span>
 
-<span class="new">AcquisitionTask</span>               <span class="cm">-- 获取任务</span>
+<span class="new">AcquisitionTask</span>               <span class="cm">-- 获取任务：为一个资源补齐本地文件</span>
   Id int PK
-  ResourceId int? FK → Resource (置空)   CollectionId int? FK → Collection (置空)
-  SourceUrl string  Title string?
+  ResourceId int FK → Resource (级联删除，必填)   CollectionId int? FK → Collection (置空，仅上下文)
+  LeadKind AcquisitionLeadKind { PostUrl=1, DirectUrl=2, Magnet=3, SourceIdentity=4, Manual=5 }
+  LeadValue string?                                  <span class="cm">-- 链接文本，或 SourceIdentity 时的 "Source:SourceKey"</span>
   Status AcquisitionStatus { Pending=1, Resolving=2, WaitingForFile=3, Fetching=4, Unpacking=5,
                              Placing=6, Syncing=7, Completed=8, NeedsAttention=9, Failed=10, Cancelled=11 }
   StatusBeforeAttention AcquisitionStatus?   AttentionReason AcquisitionAttentionReason?
@@ -614,7 +644,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <h2 id="s10"><span class="n">§10</span>模块与代码布局</h2>
 <div class="tw"><table><tr><th style="width:36%">位置</th><th>内容</th></tr>
 <tr><td><code class="i">src/modules/Bakabase.Modules.Collection/</code> <span class="tag t-new">新增</span></td><td>领域模型、Db 模型、<code class="i">ICollectionService</code>（增删改查、成员管理、规则评估、收集率）、<code class="i">ICollectionResourceMappingService</code>（双向内存索引，仿 <code class="i">IMediaLibraryResourceMappingService</code>）、Workflow 的触发器/动作/条目类型、DI 扩展 <code class="i">AddCollection&lt;TDbContext&gt;()</code></td></tr>
-<tr><td><code class="i">src/modules/Bakabase.Modules.Acquisition/</code> <span class="tag t-new">新增</span></td><td><code class="i">AcquisitionTask</code> 模型、<code class="i">IAcquisitionService</code>、<code class="i">AcquisitionRunner</code>（后台服务，驱动状态机与并发）、<code class="i">AcquisitionInboxWatcher</code>、四个处理器接口与 <code class="i">HttpLinkFetcher / ManualFetcher / SevenZipUnpacker / TemplateDirectoryPlacer</code>、<code class="i">AcquisitionOptions</code>、Workflow 节点</td></tr>
+<tr><td><code class="i">src/modules/Bakabase.Modules.Acquisition/</code> <span class="tag t-new">新增</span></td><td><code class="i">AcquisitionTask</code> 模型、<code class="i">IAcquisitionService</code>、<code class="i">AcquisitionRunner</code>（后台服务，驱动状态机与并发）、<code class="i">AcquisitionInboxWatcher</code>、线索模型 <code class="i">AcquisitionLead</code>、四个处理器接口与 <code class="i">DirectLinkResolver / SourceIdentityResolver / HttpLinkFetcher / ManualFetcher / SevenZipUnpacker / TemplateDirectoryPlacer</code>、<code class="i">AcquisitionOptions</code>、Workflow 节点</td></tr>
 <tr><td><code class="i">src/modules/Bakabase.Modules.Subscription/</code> <span class="tag t-fix">演进</span></td><td>提供器契约改为 <code class="i">FetchAllItemsAsync</code> + <code class="i">ResourceSource</code>；<code class="i">RunCheckAsync</code> 改为写资源与成员；删除快照相关代码</td></tr>
 <tr><td><code class="i">src/apps/Bakabase.Service/Components/Subscription/Providers/</code></td><td>新提供器（依赖 ThirdParty 客户端）：<code class="i">SoulPlusSearchProvider</code>、<code class="i">DLsiteCircleProvider</code>、<code class="i">BangumiSubjectRelationsProvider</code>；现有三个改契约</td></tr>
 <tr><td><code class="i">src/apps/Bakabase.Service/Components/Acquisition/</code></td><td><code class="i">PostParserLinkResolver</code>（依赖 legacy 的帖子解析器）；控制器</td></tr>
@@ -631,14 +661,17 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <tr><td class="k">GET/POST/PUT/DELETE collection</td><td>集合增删改查；列表返回收集率与成员构成</td></tr>
 <tr><td class="k">GET collection/{id}/members?state=&amp;page=</td><td>成员分页，state ∈ 全部 / 已落地 / 未落地 / 获取中 / 已忽略 / 来源中已不存在；返回资源视图模型 + 成员元信息</td></tr>
 <tr><td class="k">POST collection/{id}/members</td><td>按资源 id 加入</td></tr>
-<tr><td class="k">POST collection/{id}/members/placeholder</td><td>按标题或按外部身份 (Source, SourceKey) 创建未落地资源并加入</td></tr>
+<tr><td class="k">POST collection/{id}/members/placeholder</td><td>便捷入口：调用 <code class="i">POST resource/placeholder</code> 创建未落地资源后加入集合</td></tr>
 <tr><td class="k">DELETE collection/{id}/members/{resourceId}</td><td>移出</td></tr>
 <tr><td class="k">PUT collection/{id}/members/{resourceId}/ignored · /order</td><td>忽略、排序</td></tr>
 <tr><td class="k">POST collection/{id}/acquire-missing</td><td>为有页面地址的未落地成员批量创建获取任务</td></tr>
 <tr><td class="k">POST collection/{id}/rule/preview</td><td>预览规则命中（复用 <code class="i">ResourceProfileTestModal</code> 的接口形状）</td></tr>
 <tr><td class="k">GET collection/for-resource/{resourceId}</td><td>资源详情「所属集合」块</td></tr>
 <tr><td class="k">subscription（现有）+ collectionId 字段；POST subscription/{id}/run 返回新增成员数与收集率</td><td>订阅编辑入口移到集合详情</td></tr>
-<tr><td class="k">POST acquisition</td><td>从 URL 创建；可带 collectionId、resourceId</td></tr>
+<tr><td class="k">POST resource/placeholder</td><td>创建未落地资源：body 为标题 / 外部身份 (source, sourceKey) / 页面链接三者之一，可批量；可选「创建后立即获取」</td></tr>
+<tr><td class="k">GET resource/{id}/acquisition-leads</td><td>该资源可用的线索（外部身份自动生成 + 用户挂上的链接）</td></tr>
+<tr><td class="k">POST acquisition</td><td>body：<code class="i">resourceId</code>（必填）、<code class="i">lead { kind, value }</code>、<code class="i">collectionId?</code></td></tr>
+<tr><td class="k">POST acquisition/from-url</td><td>便捷入口：解析链接 → 创建未落地资源 → 创建任务；供油猴脚本与获取中心使用</td></tr>
 <tr><td class="k">GET acquisition?status=&amp;page= · GET acquisition/{id}</td><td>列表与详情（含阶段数据）</td></tr>
 <tr><td class="k">POST acquisition/{id}/retry · /cancel</td><td>重试当前阶段；取消</td></tr>
 <tr><td class="k">POST acquisition/{id}/select-link · /approve-purchase · /password · /claim</td><td>四种人工介入：选链接、批准购买、补密码、认领收件箱文件（body 为收件箱内路径）</td></tr>
@@ -667,7 +700,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <div class="card"><h4>集合列表 <code class="i">/collections</code></h4><p>卡片流（仿 <code class="i">pages/media-library</code>）：封面拼图、名称、颜色、收集率进度条、成员构成小字、来源图标、最近更新。顶部：新建（空集合 / 从规则 / 从外部编号或链接 / 从 Multilevel 节点）、搜索。菜单入口放在 <code class="i">menu.data</code> 分组，标 Beta。</p></div>
 <div class="card"><h4>集合详情 <code class="i">/collections/{id}</code></h4><p>头部：收集率环形图 + 四个数字（已落地 / 未落地 / 获取中 / 已忽略）+ 「获取缺失条目」。标签页：<b>成员</b>（复用 <code class="i">ResourceCard</code> 网格，状态芯片，筛选与排序，右键：获取、忽略、移出、置顶顺序；可按属性分组显示）；<b>来源</b>（订阅列表：种类、目标摘要、间隔、上次检查、错误、立即检查；添加来源用现有 <code class="i">SubscriptionEditor</code>）；<b>规则</b>（<code class="i">ResourceFilterController</code> + 命中预览）；<b>设置</b>（颜色、封面、自动获取、获取设置覆盖）。</p></div>
 <div class="card"><h4>获取中心 <code class="i">/acquisitions</code></h4><p>表格：标题、来源、所属集合、状态（芯片 + 进度）、阶段耗时、操作。<b>需要处理</b>的任务置顶并高亮，行内直接给出对应操作（选择链接 / 购买并继续 / 输入密码 / 认领文件）。右侧抽屉「收件箱」：未认领文件列表，每个文件显示与等待中任务的匹配得分，拖到任务上即认领。顶部：粘贴 URL 创建、打开收件箱目录、设置。</p></div>
-<div class="card"><h4>资源页与详情的增量</h4><p>卡片芯片「未落地」「获取中」；右键菜单「加入集合…」（克隆 <code class="i">MediaLibraryMultiSelector</code> 的三态选择）；筛选面板固定项「已落地」；详情新增块「所属集合」（按 <code class="i">ResourceDetailLayoutEditor</code> 现有分区的六处接入点新增分区：<code class="i">types.ts</code> 的 <code class="i">SectionId</code>、<code class="i">defaultLayout.ts</code> 的 <code class="i">ALL_SECTIONS / DEFAULT_LAYOUT / SECTION_HEIGHT_BEHAVIOR</code>、<code class="i">SamplePlaceholders.tsx</code>、<code class="i">DetailModal/index.tsx</code> 的渲染分支、<code class="i">locales/{en,cn}/pages/resource.json</code>）。</p></div>
+<div class="card"><h4>资源页与详情的增量</h4><p>顶部「新建未落地资源」（标题 / 外部身份 / 链接，可批量，可勾选立即获取）；卡片芯片「未落地」「获取中」与「获取」按钮；右键菜单「加入集合…」（克隆 <code class="i">MediaLibraryMultiSelector</code> 的三态选择）；筛选面板固定项「已落地」；详情新增块「所属集合」（按 <code class="i">ResourceDetailLayoutEditor</code> 现有分区的六处接入点新增分区：<code class="i">types.ts</code> 的 <code class="i">SectionId</code>、<code class="i">defaultLayout.ts</code> 的 <code class="i">ALL_SECTIONS / DEFAULT_LAYOUT / SECTION_HEIGHT_BEHAVIOR</code>、<code class="i">SamplePlaceholders.tsx</code>、<code class="i">DetailModal/index.tsx</code> 的渲染分支、<code class="i">locales/{en,cn}/pages/resource.json</code>）。</p></div>
 <div class="card"><h4>通知深链接</h4><p><code class="i">NotificationItem</code> 已声明可选的 <code class="i">onClick</code> 属性，但 <code class="i">NotificationCenter</code> 从未传入，<code class="i">payloadJson</code> 未被使用。约定 <code class="i">PayloadJson.route</code>（例如 <code class="i">/collections/12</code>、<code class="i">/acquisitions?focus=34</code>），通知中心统一按它跳转；订阅通知一并改用该约定。</p></div>
 <div class="card"><h4>实时状态</h4><p>获取任务的进度走 BTask 外壳（前端 <code class="i">useBTasksStore</code> 按 id 前缀 <code class="i">Acquisition:</code> 订阅）；集合收集率变化通过 <code class="i">GetIncrementalData("Collection", dto)</code> 推送，新增 <code class="i">useCollectionsStore</code>。</p></div>
 </div>
@@ -675,7 +708,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <h3 id="s12-4">12.4 SoulPlus 用户的一次完整体验</h3>
 <ol>
 <li>在论坛列表页看到喜欢的帖子，点「获取到 Bakabase」，弹出选择集合（可不选）。</li>
-<li>Bakabase 解析帖子；若需付费弹出通知「需要 8 SP，是否购买」（或在上限内自动购买）。</li>
+<li>Bakabase 解析帖子标题，创建一条未落地资源并挂上帖子链接作为线索，随后解析下载信息；若需付费弹出通知「需要 8 SP，是否购买」（或在上限内自动购买）。此时资源页已经能看到它，芯片显示「获取中」。</li>
 <li>解析完成，自动打开网盘链接，提取码已在剪贴板；用户在网盘页面点下载。</li>
 <li>文件落到收件箱，Bakabase 自动认领、用帖子里的解压码解压、放到 <code class="i">库根目录/作品名/</code>、同步、写入来源身份，通知「已入库」。</li>
 <li>资源卡片出现在库里，带来源封面与名称；若来自集合，收集率 +1。</li>
@@ -691,10 +724,10 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 </ul>
 
 <h2 id="s13"><span class="n">§13</span>分期交付</h2>
-<p>每一期完成后都独立可用、可验收；顺序按依赖与收益排。第一期刻意不碰集合，先把所有者当前最痛的人工劳动消掉。</p>
+<p>每一期完成后都独立可用、可验收；顺序按依赖与收益排。前两期刻意不碰集合：先让未落地资源独立成立，再让它能被自动补齐，这两期就已消掉所有者当前最痛的人工劳动。</p>
 <div class="tw"><table><tr><th style="width:12%">阶段</th><th style="width:36%">内容</th><th>验收标准</th></tr>
-<tr><td><b>第一期</b><br>收件箱版获取流水线</td><td><code class="i">Bakabase.Modules.Acquisition</code>；<code class="i">PostParserLinkResolver</code>；<code class="i">HttpLinkFetcher / ManualFetcher</code>；收件箱监听与认领；<code class="i">SevenZipUnpacker</code>（含 <code class="i">FileController</code> 解压逻辑提取）；<code class="i">TemplateDirectoryPlacer</code>；无关联资源的同步与链接（<code class="i">ResourceSource.SoulPlus</code>）；SoulPlus 付费停车点；获取中心页；首次向导；油猴按钮</td><td>给定一个 SoulPlus 帖子链接，用户只做「在网盘页面点下载」，游戏最终成为库里一个 Active 资源，带来源链接与清洗后的名称，全程无需手工配置路径标记。进程中途重启后任务从当前阶段续跑。分卷压缩包、嵌套压缩包、无密码包、错误密码四种情况都有明确结果</td></tr>
-<tr><td><b>第二期</b><br>未落地资源</td><td><code class="i">IResourceMaterializationService</code>；<a href="#s4-3">§4.3</a> 触点清单全部修正；<code class="i">InternalProperty.HasLocalPath</code>；卡片/详情/筛选的未落地表现；「关联本地目录」；<code class="i">resource.materialized</code> 事件</td><td>未安装的 Steam 游戏与未下载的 DLsite 作品在资源页有「未落地」芯片、可按此筛选；手动关联目录后父子关系、封面、可播放文件、路径标记属性全部正确；批量修改、路径搜索、NFO 生成不再对空路径报错</td></tr>
+<tr><td><b>第一期</b><br>未落地资源</td><td><code class="i">Resource.HasLocalPath</code> 与 <code class="i">InternalProperty.HasLocalPath</code>；<code class="i">IResourceMaterializationService</code>；<a href="#s4-3">§4.3</a> 触点清单全部修正；「新建未落地资源」（标题 / 外部身份 / 链接，含帖子解析取标题）；卡片/详情/筛选的未落地表现；「关联本地目录」；<code class="i">ResourceSource</code> 新成员；<code class="i">resource.materialized</code> 事件</td><td>用户不建任何集合就能维护一份「缺失清单」：按标题或 RJ 号新建未落地资源，资源页按「已落地 = 否」筛出它们，带来源封面与名称；未安装的 Steam 游戏与未下载的 DLsite 作品同样出现在该筛选里；手动关联目录后父子关系、封面、可播放文件、路径标记属性全部正确，增强器随即重跑；批量修改、路径搜索、NFO 生成不再对空路径报错</td></tr>
+<tr><td><b>第二期</b><br>收件箱版获取流水线</td><td><code class="i">Bakabase.Modules.Acquisition</code>；线索模型与 <code class="i">PostParserLinkResolver / DirectLinkResolver</code>；<code class="i">HttpLinkFetcher / ManualFetcher</code>；收件箱监听与认领；<code class="i">SevenZipUnpacker</code>（含 <code class="i">FileController</code> 解压逻辑提取）；<code class="i">TemplateDirectoryPlacer</code>；落地与来源链接写入；SoulPlus 付费停车点；获取中心页；首次向导；油猴按钮；<code class="i">SourceIdentityResolver</code> 的 DLsite 与 Steam 路线（复用既有下载/安装检测）</td><td>对第一期创建的任意未落地资源点「获取」并给一条帖子链接，用户只做「在网盘页面点下载」，该资源最终落地为 Active 资源，带来源链接与清洗后的名称，全程无需手工配置路径标记。从油猴脚本直接发起时，资源在解析完成的瞬间就出现在资源页并显示「获取中」。进程中途重启后任务从当前阶段续跑。分卷压缩包、嵌套压缩包、无密码包、错误密码四种情况都有明确结果</td></tr>
 <tr><td><b>第三期</b><br>集合</td><td><code class="i">Bakabase.Modules.Collection</code>；<code class="i">CollectionMulti</code> 内部属性；集合列表与详情页（成员 / 规则 / 设置）；右键「加入集合」；详情块「所属集合」；占位成员；收集率；获取任务与集合的关联</td><td>创建一个集合，手动加入五个已有资源和三个按标题创建的未落地成员，收集率显示 62.5%；对其中一个未落地成员发起获取并完成后收集率变为 75%；资源页按「在集合 X 里」筛选结果正确；规则集合「作者 = X」的成员与资源页同条件筛选一致</td></tr>
 <tr><td><b>第四期</b><br>订阅作为集合来源</td><td>Subscription 模块契约演进与迁移器；<code class="i">soulplus.search</code>、<code class="i">dlsite.circle</code>、<code class="i">bangumi.subjectRelations</code> 提供器及所需客户端方法；按订阅间隔调度；通知深链接；<code class="i">AutoAcquire</code>；Workflow 触发器与动作（<a href="#s8">§8</a>）</td><td>给某社团建集合并挂 <code class="i">dlsite.circle</code> 来源，首次检查后集合含该社团全部作品，已有的本地作品自动匹配为已落地成员；社团发新作后 30 分钟内收到通知并（开启自动获取时）出现获取任务；一条工作流「集合新增成员 → 创建获取任务 → 完成后通知」可在编辑器里搭出并跑通</td></tr>
 <tr><td><b>第五期</b><br>扩展与收编</td><td>有 API 的网盘抓取器（Mega、PikPak）；<code class="i">VndbClient</code> 与来源；帖子标题归一化与外部编号提取以合并重复帖子；规则集合的增量索引；路径标记预设与按样例标记；三张外部目录表收编为内置订阅；<code class="i">action.downloader.enqueue</code> 泛化</td><td>逐项独立验收；每项都可单独发布</td></tr>
@@ -712,6 +745,8 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <tr><td>规则集合评估成本（每次打开集合都跑一次搜索）</td><td>大库集合页慢</td><td>结果缓存并随资源变更事件失效；第五期接入 <code class="i">ResourceProfileIndexService</code> 泛化后的搜索集索引</td></tr>
 <tr><td>Multilevel 只索引叶子节点</td><td>按父节点建的规则集合漏掉子节点</td><td>构造筛选时展开后代 id；不改索引语义</td></tr>
 <tr><td>第三方页面结构变化</td><td>提供器或抓取器失效</td><td>与现有第三方客户端同一风险面；错误写入订阅的 <code class="i">LastError</code> 并通知，不影响其他来源</td></tr>
+<tr><td>未落地资源没有任何线索（例如来自 Bangumi 关联条目的占位）</td><td>「获取」无从下手</td><td>界面提示粘贴一条链接；后期按名称到已配置的来源搜索并给出候选线索，用户确认后再发起</td></tr>
+<tr><td>未落地资源被误当作普通资源批量操作</td><td>移动、健康度、随机播放出现空路径</td><td><a href="#s4-3">§4.3</a> 的门控清单；所有批量操作在界面显示被跳过的未落地数量</td></tr>
 </table></div>
 <h3>开放问题</h3>
 <ul>
@@ -749,6 +784,8 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <h2 id="s16"><span class="n">§16</span>关键决策记录</h2>
 <div class="tw"><table><tr><th style="width:26%">决策</th><th style="width:34%">备选</th><th>理由</th></tr>
 <tr><td>未拥有的作品建模为 <code class="i">Path</code> 为空的 <code class="i">Resource</code></td><td>独立的 Work / CatalogItem 实体</td><td>代码里已存在且在用；集合、搜索、卡片、属性、增强器全部免费复用；落地只是赋值。代价是一份有限的门控清单</td></tr>
+<tr><td>未落地资源先于集合、独立于集合成立</td><td>把未落地资源作为集合成员的附属概念</td><td>漫画、动画、游戏各有来源，用户可能只想表达「缺了哪个资源」而无意建集合；独立成立后集合与订阅都只是它的聚合与批量来源</td></tr>
+<tr><td>获取任务以资源为目标（<code class="i">ResourceId</code> 必填），方式由线索决定</td><td>获取任务以集合或来源页面为目标，落地后再建资源</td><td>一个调用覆盖所有入口；不再有「等同步扫出资源再认领」的分支；新增来源或媒体类型只是新增一种线索的处理器</td></tr>
 <tr><td>集合成员是资源，规则命中不落表</td><td>全部落表 / 全部计算</td><td>手动与来源成员需要「忽略」「顺序」「上次出现」这类成员级状态；规则成员没有这些状态且会随资源变化，落表只会过期</td></tr>
 <tr><td>不做树形集合</td><td>父子集合</td><td>系列层级已由 Multilevel 属性承担；组合维度由规则承担；树形带来的边界问题收益不成比例</td></tr>
 <tr><td>订阅演进为集合来源，每个订阅属于一个集合</td><td>保留独立订阅，另建集合来源</td><td>抓取逻辑完全相同；两个概念只会让用户困惑；停用快照后差异计算更可靠（持久化的已见集合）</td></tr>
