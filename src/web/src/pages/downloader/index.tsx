@@ -166,6 +166,28 @@ const DownloaderPage = () => {
 
   const [taskListHeight, setTaskListHeight] = useState(0);
 
+  // Keeps the virtualizer's viewport in step with the container, which is measured once when the
+  // ref lands and otherwise never again.
+  useEffect(() => {
+    const container = taskListRef.current;
+
+    if (!container || typeof ResizeObserver === "undefined") {
+      return;
+    }
+
+    const observer = new ResizeObserver(() => {
+      const next = container.clientHeight;
+
+      // Only on a real change: the observer fires during layout, and setting state unconditionally
+      // there is a render loop.
+      setTaskListHeight((current) => (current === next ? current : next));
+    });
+
+    observer.observe(container);
+
+    return () => observer.disconnect();
+  }, [taskListHeight > 0]);
+
   /**
    * Reflect an action on the row straight away, and put the old value back if the call
    * is rejected. The server pushes authoritative state over SignalR either way; this
@@ -859,6 +881,9 @@ const DownloaderPage = () => {
         }}
         className={"grow overflow-hidden"}
       >
+        {/* The virtualizer is told the viewport height once, so resizing the window (or opening a
+            panel that changes the layout) left it rendering for the old size — a short list with
+            dead space below, or a long one clipped. Keep it in step. */}
         {taskListHeight > 0 && (
           <Listbox
             isVirtualized

@@ -30,6 +30,26 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
         public abstract ThirdPartyId ThirdPartyId { get; }
 
         /// <summary>
+        /// How long a cookie that has just been proven good is taken on trust.
+        /// </summary>
+        /// <remarks>
+        /// Validation is a live network round trip, and it runs as the first act of <em>every</em>
+        /// start attempt — so draining a queue of a thousand tasks made a thousand identical requests
+        /// to the source before any of them downloaded anything, and every one of them was a chance
+        /// for a transient network blip to park a task in Failed.
+        ///
+        /// Only success is remembered, and only against the exact cookie that produced it, so a
+        /// changed or cleared cookie is re-checked at once and a failing one is retried at once. A
+        /// cookie that expires inside the window costs a failed download, which the download itself
+        /// reports — the same thing that happens when it expires mid-download today.
+        /// </remarks>
+        private static readonly TimeSpan CookieValidityWindow = TimeSpan.FromMinutes(5);
+
+        private string? _lastValidCookie;
+        private DateTime _lastValidCookieAt;
+        private readonly object _cookieValidationLock = new();
+
+        /// <summary>
         /// Optional URL to validate cookie correctness
         /// </summary>
         protected virtual string? CookieValidationUrl => null;
@@ -254,13 +274,15 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
             var options = await GetOptionsAsync();
 
             // Validate cookie if provided and validation URL exists
-            if (!string.IsNullOrWhiteSpace(options.Cookie))
+            if (!string.IsNullOrWhiteSpace(options.Cookie) && !IsCookieRecentlyValidated(options.Cookie))
             {
                 var isCookieValid = await ValidateCookieAsync(options.Cookie);
                 if (!isCookieValid)
                 {
                     return BaseResponseBuilder.BuildBadRequest(localizer.InvalidCookie());
                 }
+
+                RememberValidCookie(options.Cookie);
             }
 
             // // Check if download path is set
@@ -272,6 +294,32 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
             // Perform additional validation
             var additionalValidation = await ValidateAdditional(options);
             return additionalValidation;
+        }
+
+        private bool IsCookieRecentlyValidated(string cookie)
+        {
+            lock (_cookieValidationLock)
+            {
+                if (_lastValidCookie != cookie)
+                {
+                    return false;
+                }
+
+                var age = DateTime.Now - _lastValidCookieAt;
+
+                // A stamp from the future means the clock moved backwards; re-check rather than
+                // trusting it until the clock catches up.
+                return age >= TimeSpan.Zero && age < CookieValidityWindow;
+            }
+        }
+
+        private void RememberValidCookie(string cookie)
+        {
+            lock (_cookieValidationLock)
+            {
+                _lastValidCookie = cookie;
+                _lastValidCookieAt = DateTime.Now;
+            }
         }
     }
 }

@@ -24,6 +24,15 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
 
         public void ResetStatus()
         {
+            // Guarded because the scheduler resets every task it did not start, on every pass. Firing
+            // a status change unconditionally there meant a database read and a SignalR broadcast per
+            // idle task per pass — for a value that had not moved.
+            if (_status == DownloaderStatus.JustCreated)
+            {
+                return;
+            }
+
+            Current = null;
             Status = DownloaderStatus.JustCreated;
         }
 
@@ -289,6 +298,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                     {
                         FailureTimes++;
                         Message = BuildFailureMessage(oce);
+                        Current = null;
                         Status = DownloaderStatus.Failed;
                     }
                 }
@@ -304,6 +314,9 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                 {
                     FailureTimes++;
                     Message = BuildFailureMessage(e);
+                    // The step that was in flight is over either way; a failed row showing "downloading
+                    // torrent file" next to its error reads as still running.
+                    Current = null;
                     Status = DownloaderStatus.Failed;
                 }
                 finally

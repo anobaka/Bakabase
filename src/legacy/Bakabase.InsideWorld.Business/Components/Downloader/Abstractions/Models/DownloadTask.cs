@@ -42,11 +42,32 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Model
         /// </summary>
         public DownloadTaskMetadata? Metadata { get; set; }
 
+        /// <summary>
+        /// The task's source-specific options, or the source's defaults when there are none.
+        /// </summary>
+        /// <remarks>
+        /// Tolerant of unreadable options on purpose. This is read while deciding what to run next,
+        /// for every candidate task — so one row with options a newer build wrote, or a truncated
+        /// write, used to throw out of the whole scheduling pass. That pass is what advances the
+        /// queue, and it runs inside an event handler whose result nobody looks at, so the failure
+        /// was invisible and the queue simply stopped. Falling back to defaults costs that one task
+        /// its settings; throwing costs every task its turn.
+        /// </remarks>
         public T GetTypedOptions<T>() where T : class, new()
         {
-            return string.IsNullOrEmpty(Options)
-                ? new T()
-                : JsonSerializer.Deserialize<T>(Options, JsonSerializerOptions.Web) ?? new T();
+            if (string.IsNullOrEmpty(Options))
+            {
+                return new T();
+            }
+
+            try
+            {
+                return JsonSerializer.Deserialize<T>(Options, JsonSerializerOptions.Web) ?? new T();
+            }
+            catch (JsonException)
+            {
+                return new T();
+            }
         }
 
         public void SetTypedOptions<T>(T options) where T : class

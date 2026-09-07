@@ -10,6 +10,7 @@ using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Co
 using Bakabase.InsideWorld.Business.Components.Downloader.Extensions;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
 using Bakabase.InsideWorld.Business.Components.Downloader.Services;
+using Bakabase.InsideWorld.Models.Constants;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Extensions;
 using Bootstrap.Models.Constants;
@@ -40,7 +41,34 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
 
         private readonly ILogger<DownloaderManager> _logger;
 
+        /// <summary>
+        /// A snapshot of the live downloaders.
+        /// </summary>
+        /// <remarks>
+        /// Allocates a copy per call, and callers reach for it once per task while projecting a task
+        /// list — which made building the list quadratic in the number of tasks. Prefer
+        /// <see cref="IsSourceOccupied"/> when all that is needed is whether a source is busy, and
+        /// call this once and reuse it when a snapshot is genuinely required.
+        /// </remarks>
         public IDictionary<int, IDownloader> Downloaders => new Dictionary<int, IDownloader>(_downloaders);
+
+        /// <summary>
+        /// Whether some downloader other than <paramref name="exceptTaskId"/> currently holds
+        /// <paramref name="thirdPartyId"/>'s single download slot. Answers without copying the map.
+        /// </summary>
+        public bool IsSourceOccupied(ThirdPartyId thirdPartyId, int? exceptTaskId = null)
+        {
+            foreach (var (taskId, downloader) in _downloaders)
+            {
+                if (taskId != exceptTaskId && downloader.ThirdPartyId == thirdPartyId &&
+                    downloader.IsOccupyingDownloadTaskSource())
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
 
         public DownloaderManager(IServiceProvider serviceProvider, IStringLocalizer<SharedResource> localizer,
             ILogger<DownloaderManager> logger, IDownloaderLocalizer downloaderLocalizer,
@@ -83,34 +111,46 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
             }
 
             await GuardAsync(
-                () => GetNewScopeRequiredService<DownloadTaskService>().OnStatusChanged(taskId, downloader, null),
+                () => WithScopedService<DownloadTaskService>(s => s.OnStatusChanged(taskId, downloader, null)),
                 "persist the status change");
         }
 
         private Task HandleNameAcquired(int taskId, string name) => GuardAsync(
-            () => GetNewScopeRequiredService<DownloadTaskService>().OnNameAcquired(taskId, name),
+            () => WithScopedService<DownloadTaskService>(s => s.OnNameAcquired(taskId, name)),
             "persist the acquired name");
 
         private async Task HandleProgress(int taskId, decimal progress)
         {
-            await GuardAsync(() => GetNewScopeRequiredService<DownloadTaskService>().OnProgress(taskId, progress),
+            await GuardAsync(() => WithScopedService<DownloadTaskService>(s => s.OnProgress(taskId, progress)),
                 "persist progress");
             await GuardAsync(() => UpdateBTaskProgress(taskId, progress), "update background task progress");
         }
 
         private async Task HandleCurrentChanged(int taskId)
         {
-            await GuardAsync(() => GetNewScopeRequiredService<DownloadTaskService>().OnCurrentChanged(taskId),
+            await GuardAsync(() => WithScopedService<DownloadTaskService>(s => s.OnCurrentChanged(taskId)),
                 "push the current step");
             await GuardAsync(() => UpdateBTaskProcess(taskId), "update background task process");
         }
 
         private Task HandleCheckpointReached(int taskId, string checkpoint) => GuardAsync(
-            () => GetNewScopeRequiredService<DownloadTaskService>().OnCheckpointReached(taskId, checkpoint),
+            () => WithScopedService<DownloadTaskService>(s => s.OnCheckpointReached(taskId, checkpoint)),
             "persist the checkpoint");
 
-        private T GetNewScopeRequiredService<T>() where T : notnull =>
-            _serviceProvider.CreateAsyncScope().ServiceProvider.GetRequiredService<T>();
+        /// <summary>
+        /// Runs <paramref name="use"/> against a freshly scoped service, disposing the scope
+        /// afterwards.
+        /// </summary>
+        /// <remarks>
+        /// These handlers used to create a scope per event and never dispose it. Progress fires once
+        /// per downloaded file, so a single gallery leaked hundreds of scopes — and with them their
+        /// DbContexts and connections — for the lifetime of the process.
+        /// </remarks>
+        private async Task WithScopedService<T>(Func<T, Task> use) where T : notnull
+        {
+            await using var scope = _serviceProvider.CreateAsyncScope();
+            await use(scope.ServiceProvider.GetRequiredService<T>());
+        }
 
         private void Guard(Action action, string what)
         {
@@ -336,7 +376,12 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
                     .Named(() => task.DisplayName)
                     .OfType(BTaskType.Download)
                     .StartImmediately()
-                    .IgnoreIfExists()
+                    // Replace, not ignore. A download that stops and starts again — a requeue, a
+                    // torrent-priority defer, a retry — completes its background task on the way out,
+                    // and ignoring the duplicate id then left that finished task in place: the run
+                    // that followed had no background task at all, so its progress and its very
+                    // existence were invisible for the rest of the download's life.
+                    .ReplaceIfExists()
                     .Run(async args =>
                     {
                         try

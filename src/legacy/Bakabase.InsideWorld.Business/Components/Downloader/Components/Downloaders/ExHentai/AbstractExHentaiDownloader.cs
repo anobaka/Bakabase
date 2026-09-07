@@ -229,12 +229,19 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                     var dir = Path.GetDirectoryName(fullname)!;
                     Directory.CreateDirectory(dir);
 
+                    // Give up once a run of downloads has all genuinely failed — a banned IP or an
+                    // expired cookie fails every image, and grinding through the whole gallery to
+                    // learn that wastes the request budget it takes to find out.
                     const int continuousFailedTaskSampleCount = 10;
-                    var last10Tasks = tasks.TakeLast(continuousFailedTaskSampleCount).ToArray();
-                    if (last10Tasks.Length == continuousFailedTaskSampleCount &&
-                        last10Tasks.All(x => !x.IsCompletedSuccessfully))
+                    var recent = tasks.TakeLast(continuousFailedTaskSampleCount).ToArray();
+
+                    if (recent.Length == continuousFailedTaskSampleCount && recent.All(x => x.IsFaulted))
                     {
-                        throw last10Tasks.Last().Exception!;
+                        // Was "!IsCompletedSuccessfully", which is also true of a task that is merely
+                        // still running — so a slow batch tripped the check and then threw a
+                        // NullReferenceException off the null Exception of an unfinished task,
+                        // reporting a crash instead of the download error that never happened.
+                        throw recent.Last().Exception!;
                     }
 
                     await sm.WaitAsync(ct);

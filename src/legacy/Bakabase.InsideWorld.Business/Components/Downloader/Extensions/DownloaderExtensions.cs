@@ -56,15 +56,15 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
 
             var downloader = downloaderManager[task.Id];
 
-            var allDownloaders = downloaderManager.Downloaders;
-
             DownloadTaskStatus status;
             if (downloader == null)
             {
                 status = task.Status switch
                 {
-                    DownloadTaskDbModelStatus.InProgress => allDownloaders.Values.Any(a =>
-                        a.ThirdPartyId == task.ThirdPartyId && a.IsOccupyingDownloadTaskSource())
+                    // Asked rather than scanned: reading the whole downloader map here allocated a
+                    // copy of it per task, so projecting a list of a thousand tasks copied it a
+                    // thousand times — on every pushed progress tick.
+                    DownloadTaskDbModelStatus.InProgress => downloaderManager.IsSourceOccupied(task.ThirdPartyId)
                         ? DownloadTaskStatus.InQueue
                         : DownloadTaskStatus.Idle,
                     DownloadTaskDbModelStatus.Disabled => DownloadTaskStatus.Disabled,
@@ -83,11 +83,10 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
                 {
                     status = downloader.Status switch
                     {
-                        DownloaderStatus.JustCreated => allDownloaders.Any(a =>
-                            a.Key != task.Id && a.Value.ThirdPartyId == task.ThirdPartyId &&
-                            a.Value.IsOccupyingDownloadTaskSource())
-                            ? DownloadTaskStatus.InQueue
-                            : DownloadTaskStatus.Idle,
+                        DownloaderStatus.JustCreated =>
+                            downloaderManager.IsSourceOccupied(task.ThirdPartyId, task.Id)
+                                ? DownloadTaskStatus.InQueue
+                                : DownloadTaskStatus.Idle,
                         DownloaderStatus.Starting => DownloadTaskStatus.Starting,
                         DownloaderStatus.Downloading => DownloadTaskStatus.Downloading,
                         DownloaderStatus.Complete => DownloadTaskStatus.Complete,
@@ -104,9 +103,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
                             StoppedBy: DownloaderStopBy.AppendToTheQueue or DownloaderStopBy.Defer
                         })
                     {
-                        status = allDownloaders.Any(a =>
-                            a.Key != task.Id && a.Value.ThirdPartyId == task.ThirdPartyId &&
-                            a.Value.IsOccupyingDownloadTaskSource())
+                        status = downloaderManager.IsSourceOccupied(task.ThirdPartyId, task.Id)
                             ? DownloadTaskStatus.InQueue
                             : DownloadTaskStatus.Idle;
                     }

@@ -76,30 +76,37 @@ public partial class ExitProgressWindow : Window
     /// Names the work still in flight so a slow shutdown is legible rather than mysterious.
     /// Rebuilds the list wholesale — it is at most a handful of rows, refreshed a few times a second.
     /// </summary>
-    public void SetRemainingTasks(IReadOnlyList<ExitTaskLine> tasks) => OnUiThread(() =>
+    /// <param name="total">
+    /// How many tasks are actually running, which is not <c>tasks.Count</c>: the caller caps how many
+    /// it bothers to name. Truncating twice and subtracting the wrong pair is how "and N more" ends
+    /// up claiming three when a hundred are left.
+    /// </param>
+    public void SetRemainingTasks(IReadOnlyList<ExitTaskLine> tasks, int total) => OnUiThread(() =>
     {
         TaskList.Children.Clear();
-        TaskPanel.IsVisible = tasks.Count > 0;
+        TaskPanel.IsVisible = total > 0;
 
-        if (tasks.Count == 0)
+        if (total == 0)
         {
             return;
         }
 
-        // Header, so the count is visible even when the list is truncated.
-        TaskList.Children.Add(Line(ExitStrings.ClosingRemaining(tasks.Count), 0.55));
+        // Header, so the real count is visible however much of the list is shown.
+        TaskList.Children.Add(Line(ExitStrings.ClosingRemaining(total), 0.55));
 
         // Critical work first: it is the reason the shutdown is waiting at all.
-        var ordered = tasks.OrderByDescending(t => t.IsCritical).ToArray();
+        var ordered = tasks.OrderByDescending(t => t.IsCritical).Take(MaxListedTasks).ToArray();
 
-        foreach (var task in ordered.Take(MaxListedTasks))
+        foreach (var task in ordered)
         {
             TaskList.Children.Add(Line("•  " + task.Name, task.IsCritical ? 0.9 : 0.65));
         }
 
-        if (ordered.Length > MaxListedTasks)
+        var unlisted = total - ordered.Length;
+
+        if (unlisted > 0)
         {
-            TaskList.Children.Add(Line("•  " + ExitStrings.BusyMore(ordered.Length - MaxListedTasks), 0.5));
+            TaskList.Children.Add(Line("•  " + ExitStrings.BusyMore(unlisted), 0.5));
         }
     });
 

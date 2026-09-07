@@ -234,16 +234,26 @@ public sealed class ExitCoordinator(App app, AvaloniaGuiAdapter gui)
     /// work (downloads, thumbnail generation, indexing) was being wound down behind it. Those are
     /// exactly the tasks a user wants named while they wait.
     /// </summary>
-    private static List<ExitTaskLine> CollectActiveTasks(BTaskManager taskManager)
+    private static ActiveTasks CollectActiveTasks(BTaskManager taskManager)
     {
-        return taskManager.GetTasksViewModel()
+        var active = taskManager.GetTasksViewModel()
             .Where(t => t.Status.IsActive())
             .OrderByDescending(t => t.Level == BTaskLevel.Critical)
             .ThenByDescending(t => t.Percentage ?? 0)
-            .Take(MaxCollectedTaskNames)
-            .Select(t => new ExitTaskLine(Describe(t), t.Level == BTaskLevel.Critical))
             .ToList();
+
+        return new ActiveTasks(
+            active.Take(MaxCollectedTaskNames)
+                .Select(t => new ExitTaskLine(Describe(t), t.Level == BTaskLevel.Critical))
+                .ToList(),
+            active.Count,
+            active.Count(t => t.Level == BTaskLevel.Critical));
     }
+
+    /// <param name="Lines">The ones worth naming on screen.</param>
+    /// <param name="Total">How many are running in total, which is what the count must report.</param>
+    /// <param name="Critical">How many of those the shutdown is actually waiting for.</param>
+    private readonly record struct ActiveTasks(IReadOnlyList<ExitTaskLine> Lines, int Total, int Critical);
 
     private static string Describe(BTaskViewModel task) =>
         task.Percentage is > 0 and < 100 ? $"{task.Name} ({task.Percentage}%)" : task.Name;
@@ -295,11 +305,25 @@ public sealed class ExitCoordinator(App app, AvaloniaGuiAdapter gui)
         using var forceQuit = new CancellationTokenSource();
         ExitProgressWindow? progress = null;
 
+        // The window only appears once the shutdown has proven slow, by which time the phase has
+        // usually already moved on. Remembering the latest report lets the window open showing where
+        // the shutdown actually is, rather than the heading it was built with.
+        var latestPhase = ExitStrings.ClosingStoppingTasks;
+        var latestTasks = default(ActiveTasks);
+
         try
         {
             var windDown = WindDownAsync(
-                phase => progress?.SetPhase(phase),
-                names => progress?.SetRemainingTasks(names),
+                phase =>
+                {
+                    latestPhase = phase;
+                    progress?.SetPhase(phase);
+                },
+                tasks =>
+                {
+                    latestTasks = tasks;
+                    progress?.SetRemainingTasks(tasks.Lines, tasks.Total);
+                },
                 () =>
                 {
                     progress?.ShowForceQuit();
@@ -311,6 +335,8 @@ public sealed class ExitCoordinator(App app, AvaloniaGuiAdapter gui)
             if (await Task.WhenAny(windDown, Task.Delay(ProgressWindowDelay)) != windDown)
             {
                 progress = TryShowProgressWindow(forceQuit);
+                progress?.SetPhase(latestPhase);
+                progress?.SetRemainingTasks(latestTasks.Lines ?? [], latestTasks.Total);
             }
 
             await windDown;
@@ -369,7 +395,7 @@ public sealed class ExitCoordinator(App app, AvaloniaGuiAdapter gui)
     /// </param>
     private async Task WindDownAsync(
         Action<string> setPhase,
-        Action<IReadOnlyList<ExitTaskLine>> setTasks,
+        Action<ActiveTasks> setTasks,
         Func<bool> offerForceQuit,
         CancellationToken ct)
     {
@@ -416,7 +442,7 @@ public sealed class ExitCoordinator(App app, AvaloniaGuiAdapter gui)
         await DisposeHostAsync(host, ct);
 
         reporting.Stop();
-        setTasks([]);
+        setTasks(default);
         setPhase(ExitStrings.ClosingDone);
     }
 
@@ -426,7 +452,7 @@ public sealed class ExitCoordinator(App app, AvaloniaGuiAdapter gui)
     /// reporting", never "stop shutting down".
     /// </summary>
     private static ActiveTaskReporter StartReportingActiveTasks(
-        BTaskManager? taskManager, Action<IReadOnlyList<ExitTaskLine>> setTasks)
+        BTaskManager? taskManager, Action<ActiveTasks> setTasks)
     {
         var reporter = new ActiveTaskReporter();
 
@@ -520,7 +546,7 @@ public sealed class ExitCoordinator(App app, AvaloniaGuiAdapter gui)
 
     private static async Task WaitForCriticalTasksAsync(
         BTaskManager taskManager,
-        Action<IReadOnlyList<ExitTaskLine>> setTasks,
+        Action<ActiveTasks> setTasks,
         Func<bool> offerForceQuit,
         CancellationToken ct)
     {
@@ -529,7 +555,7 @@ public sealed class ExitCoordinator(App app, AvaloniaGuiAdapter gui)
 
         while (!ct.IsCancellationRequested)
         {
-            List<ExitTaskLine> active;
+            ActiveTasks active;
             try
             {
                 // Report everything that is running, but keep waiting only for the critical ones —
@@ -544,7 +570,7 @@ public sealed class ExitCoordinator(App app, AvaloniaGuiAdapter gui)
 
             setTasks(active);
 
-            var remaining = active.Count(t => t.IsCritical);
+            var remaining = active.Critical;
 
             if (remaining == 0)
             {
