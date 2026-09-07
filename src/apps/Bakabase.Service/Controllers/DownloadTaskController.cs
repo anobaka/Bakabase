@@ -83,6 +83,15 @@ public class DownloadTaskController : Controller
         return new ListResponse<DownloadRecordDbModel>(records);
     }
 
+    [HttpPost("keys/query")]
+    [SwaggerOperation(OperationId = "QueryDownloadTaskKeyStatuses")]
+    public async Task<ListResponse<DownloadTaskKeyStatus>> QueryKeyStatuses(
+        [FromBody] DownloadRecordQueryInputModel model)
+    {
+        var statuses = await _service.QueryKeyStatuses(model.ThirdPartyId, model.Keys);
+        return new ListResponse<DownloadTaskKeyStatus>(statuses);
+    }
+
     [HttpPost]
     [SwaggerOperation(OperationId = "AddDownloadTask")]
     public async Task<ListResponse<DownloadTask>> Add([FromBody] DownloadTaskAddInputModel model)

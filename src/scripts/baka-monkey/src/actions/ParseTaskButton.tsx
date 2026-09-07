@@ -1,11 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@heroui/button';
 import { Tooltip } from '@heroui/tooltip';
-import { MdOutlineDocumentScanner, MdOutlineDownloading, MdOutlineRefresh } from 'react-icons/md';
+import {
+  MdOutlineDocumentScanner,
+  MdOutlinePlaylistRemove,
+  MdOutlineRefresh,
+} from 'react-icons/md';
 import type { ParseTaskAdapter } from '../types';
 import { getApiBaseUrl, httpRequest } from '../api';
 import { showToast } from '../components/Toast';
 import { getOverlayRoot } from '../overlay';
+import { CoverActionOverlay, type CoverActionTone } from './CoverActionOverlay';
 import { t, onLocaleChange } from '../i18n';
 import { createBatcher } from '../utils/batcher';
 
@@ -49,17 +54,57 @@ function getStatusBatcher(source: number) {
   return batcher;
 }
 
-function getButtonProps(status: TaskStatus | null) {
-  if (status === null || status === TaskStatus.None) {
-    return { label: t('extractDownloadNow'), disabled: false, icon: MdOutlineDocumentScanner, color: 'primary' as const };
-  }
-  if (status === TaskStatus.Pending) {
-    return { label: t('extractingDownload'), disabled: true, icon: MdOutlineDownloading, color: 'default' as const };
-  }
-  return { label: t('reExtractDownload'), disabled: false, icon: MdOutlineRefresh, color: 'secondary' as const };
+type Action = 'add' | 'remove';
+
+interface ButtonSpec {
+  label: string;
+  action: Action;
+  icon: typeof MdOutlineDocumentScanner;
+  color: 'primary' | 'secondary' | 'danger';
+  tone: CoverActionTone;
 }
 
-export function ParseTaskButton({ adapter, postUrl }: { adapter: ParseTaskAdapter; postUrl: string }) {
+function getButtonSpec(status: TaskStatus): ButtonSpec {
+  // A queued task is the undo handle for an accidental add: clicking it again drops
+  // it from the list. Finished tasks keep the re-parse action instead — removing one
+  // would throw away results the user asked for.
+  if (status === TaskStatus.Pending) {
+    return {
+      label: t('cancelParseTask'),
+      action: 'remove',
+      icon: MdOutlinePlaylistRemove,
+      color: 'danger',
+      tone: 'danger',
+    };
+  }
+  if (status === TaskStatus.Complete || status === TaskStatus.Failed) {
+    return {
+      label: t('reExtractDownload'),
+      action: 'add',
+      icon: MdOutlineRefresh,
+      color: 'secondary',
+      tone: 'warning',
+    };
+  }
+  return {
+    label: t('extractDownloadNow'),
+    action: 'add',
+    icon: MdOutlineDocumentScanner,
+    color: 'primary',
+    tone: 'primary',
+  };
+}
+
+export function ParseTaskButton({
+  adapter,
+  postUrl,
+  overlay,
+}: {
+  adapter: ParseTaskAdapter;
+  postUrl: string;
+  /** Render as the full-cover overlay instead of the small chip button. */
+  overlay?: boolean;
+}) {
   const [status, setStatus] = useState<TaskStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [, forceUpdate] = useState(0);
@@ -77,7 +122,7 @@ export function ParseTaskButton({ adapter, postUrl }: { adapter: ParseTaskAdapte
     return () => { cancelled = true; };
   }, [postUrl, adapter.source]);
 
-  const handleClick = () => {
+  const handleAdd = () => {
     setLoading(true);
     const targets = adapter.targets ?? [1];
     httpRequest({
@@ -96,19 +141,50 @@ export function ParseTaskButton({ adapter, postUrl }: { adapter: ParseTaskAdapte
     });
   };
 
+  const handleRemove = () => {
+    setLoading(true);
+    httpRequest({
+      method: 'DELETE',
+      url: `${getApiBaseUrl()}/post-parser/task/by-links`,
+      data: { source: adapter.source, links: [postUrl] },
+      onSuccess: () => {
+        showToast(t('removedFromParseQueue'));
+        setStatus(TaskStatus.Deleted);
+        setLoading(false);
+      },
+      onError: () => {
+        alert(t('requestFailed'));
+        setLoading(false);
+      },
+    });
+  };
+
   if (status === null) return null;
 
-  const { label, disabled, icon: Icon, color } = getButtonProps(status);
-  const isClickable = !disabled && !loading;
+  const { label, action, icon: Icon, color, tone } = getButtonSpec(status);
+  const handleClick = action === 'remove' ? handleRemove : handleAdd;
+
+  if (overlay) {
+    return (
+      <CoverActionOverlay
+        label={label}
+        icon={Icon}
+        tone={tone}
+        busy={loading}
+        href={postUrl || undefined}
+        onActivate={handleClick}
+      />
+    );
+  }
 
   return (
     <Tooltip content={label} placement="top" size="sm" color="foreground" portalContainer={getOverlayRoot()}>
       <Button
         size="sm"
         color={color}
-        variant={isClickable && hovered ? 'solid' : 'flat'}
+        variant={!loading && hovered ? 'solid' : 'flat'}
         isIconOnly
-        isDisabled={!isClickable}
+        isDisabled={loading}
         onPress={handleClick}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}

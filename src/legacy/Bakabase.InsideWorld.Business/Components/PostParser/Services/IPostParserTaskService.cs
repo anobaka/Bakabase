@@ -13,6 +13,7 @@ public interface IPostParserTaskService
     Task<List<PostParserTask>> GetAll();
     Task AddRange(Dictionary<PostParserSource, List<string>> sourceLinksMap, List<PostParseTarget> targets);
     Task Delete(int id);
+    Task<int> DeleteByLinks(PostParserSource source, List<string> links);
     Task DeleteAll();
     Task ReParse(int id);
     Task Put(int id, PostParserTask pdt);

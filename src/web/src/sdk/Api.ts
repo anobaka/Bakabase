@@ -1879,6 +1879,13 @@ export type BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsCon
   0 | 1 | 2;
 
 /**
+ * [100: InProgress, 200: Disabled, 300: Complete, 400: Failed]
+ * @format int32
+ */
+export type BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsConstantsDownloadTaskDbModelStatus =
+  100 | 200 | 300 | 400;
+
+/**
  * [100: Idle, 200: InQueue, 300: Starting, 400: Downloading, 500: Stopping, 600: Complete, 700: Failed, 800: Disabled]
  * @format int32
  */
@@ -1922,6 +1929,15 @@ export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsMode
   options?: string;
   displayName: string;
   canStart: boolean;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloadTaskKeyStatus {
+  key: string;
+  taskIds: number[];
+  /** [100: InProgress, 200: Disabled, 300: Complete, 400: Failed] */
+  status?: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsConstantsDownloadTaskDbModelStatus;
+  /** @format date-time */
+  downloadedAt?: string;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloaderDefinition {
@@ -2188,6 +2204,12 @@ export interface BakabaseInsideWorldBusinessComponentsPlayListModelsInputPlayLis
 export interface BakabaseInsideWorldBusinessComponentsPostParserControllersAddPostParserTasksInput {
   sourceLinksMap: Record<string, string[]>;
   targets: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstantsPostParseTarget[];
+}
+
+export interface BakabaseInsideWorldBusinessComponentsPostParserControllersDeletePostParserTasksByLinksInput {
+  /** [5: SoulPlus] */
+  source: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstantsPostParserSource;
+  links: string[];
 }
 
 export interface BakabaseInsideWorldBusinessComponentsPostParserControllersQueryPostParserTaskStatusesInput {
@@ -5365,6 +5387,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBu
   code: number;
   message?: string;
   data?: BakabaseInsideWorldBusinessComponentsCompressionCompressedFileEntry[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloadTaskKeyStatus {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloadTaskKeyStatus[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloadTask {
@@ -12002,6 +12031,40 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     queryDownloadRecordsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/download-task/records/query`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DownloadTask
+     * @name QueryDownloadTaskKeyStatuses
+     * @request POST:/download-task/keys/query
+     */
+    queryDownloadTaskKeyStatuses: (
+      data: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsInputDownloadRecordQueryInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloadTaskKeyStatus,
+        any
+      >({
+        path: `/download-task/keys/query`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for queryDownloadTaskKeyStatuses
+     * @name queryDownloadTaskKeyStatusesUrl
+     */
+    queryDownloadTaskKeyStatusesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/download-task/keys/query`;
       
       return baseUrl + path;
     },
@@ -20525,6 +20588,37 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
+
+    /**
+     * No description
+     *
+     * @tags PostParser
+     * @name DeletePostParserTasksByLinks
+     * @request DELETE:/post-parser/task/by-links
+     */
+    deletePostParserTasksByLinks: (
+      data: BakabaseInsideWorldBusinessComponentsPostParserControllersDeletePostParserTasksByLinksInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemInt32, any>({
+        path: `/post-parser/task/by-links`,
+        method: "DELETE",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for deletePostParserTasksByLinks
+     * @name deletePostParserTasksByLinksUrl
+     */
+    deletePostParserTasksByLinksUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/post-parser/task/by-links`;
+      
+      return baseUrl + path;
+    },
 
     /**
      * No description

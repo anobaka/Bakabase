@@ -7,6 +7,8 @@ import { IoSettingsSharp, IoWarning } from 'react-icons/io5';
 import { getApiBaseUrl, setApiBaseUrl, getStoredValue, setStoredValue, httpRequest } from '../api';
 import { pingNow } from '../heartbeat';
 import { getOverlayRoot } from '../overlay';
+import { isCoverOverlayEnabled, setCoverOverlayEnabled } from '../settings';
+import type { CoverOverlayConfig } from '../types';
 import {
   AUTO_TIMEZONE,
   getBrowserTimeZone,
@@ -32,8 +34,18 @@ const HIDE_MARKERS_CLASS = 'bk-hide-markers';
 // resets everyone to "visible" and the working toggle persists from here on.
 const MARKERS_VISIBLE_KEY = 'markers_visible_v2';
 
-export function SettingsPanel({ siteKey, connected }: { siteKey?: string; connected: boolean }) {
+export function SettingsPanel({
+  siteKey,
+  coverOverlay,
+  connected,
+}: {
+  siteKey?: string;
+  /** Present when the current site can turn its covers into one big action button. */
+  coverOverlay?: CoverOverlayConfig;
+  connected: boolean;
+}) {
   const [markersVisible, setMarkersVisible] = useState(() => getStoredValue(MARKERS_VISIBLE_KEY, true));
+  const [coverOverlayOn, setCoverOverlayOn] = useState(() => (siteKey ? isCoverOverlayEnabled(siteKey) : false));
   const [apiUrl, setApiUrl] = useState(() => getApiBaseUrl());
   const [isOpen, setIsOpen] = useState(false);
   const [locale, setLocaleState] = useState(getLocale);
@@ -73,6 +85,15 @@ export function SettingsPanel({ siteKey, connected }: { siteKey?: string; connec
     const next = !markersVisible;
     setMarkersVisible(next);
     setStoredValue(MARKERS_VISIBLE_KEY, next);
+  };
+
+  const handleToggleCoverOverlay = () => {
+    if (!siteKey) return;
+    const next = !coverOverlayOn;
+    setCoverOverlayOn(next);
+    // App.tsx listens for this and re-scans, so the overlay appears/disappears
+    // without a reload.
+    setCoverOverlayEnabled(siteKey, next);
   };
 
   const handleSaveApiUrl = () => {
@@ -164,6 +185,24 @@ export function SettingsPanel({ siteKey, connected }: { siteKey?: string; connec
             >
               {markersVisible ? t('hideMarkers') : t('showMarkers')}
             </Button>
+            {coverOverlay && siteKey && (
+              <div className="flex flex-col gap-1">
+                <Button
+                  size="sm"
+                  color={coverOverlayOn ? 'warning' : 'success'}
+                  variant="flat"
+                  onPress={handleToggleCoverOverlay}
+                  style={{ width: '100%' }}
+                >
+                  {coverOverlayOn
+                    ? t('disableFeature', { name: coverOverlay.label() })
+                    : t('enableFeature', { name: coverOverlay.label() })}
+                </Button>
+                <div style={{ fontSize: 12, color: '#666', lineHeight: 1.5 }}>
+                  {coverOverlay.description()}
+                </div>
+              </div>
+            )}
             <Input
               size="sm"
               label={t('apiUrlLabel')}

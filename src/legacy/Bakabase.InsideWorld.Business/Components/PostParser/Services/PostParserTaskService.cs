@@ -95,6 +95,35 @@ public class PostParserTaskService<TDbContext>(
         await uiHub.Clients.All.GetIncrementalData(nameof(PostParserTask), task.ToDomainModel());
     }
 
+    /// <summary>
+    /// Delete the tasks reachable by their source links instead of by id, so a caller that only
+    /// knows the post url (the baka-monkey userscript) can undo an accidental add. Returns how
+    /// many tasks were deleted.
+    /// </summary>
+    public async Task<int> DeleteByLinks(PostParserSource source, List<string> links)
+    {
+        if (links.Count == 0) return 0;
+
+        var linkSet = links.ToHashSet();
+        var tasks = (await orm.GetAll())
+            .Where(t => t.Source == source && !t.IsDeleted && linkSet.Contains(t.Link))
+            .ToList();
+        if (tasks.Count == 0) return 0;
+
+        foreach (var task in tasks)
+        {
+            task.IsDeleted = true;
+        }
+
+        await orm.UpdateRange(tasks);
+        foreach (var task in tasks)
+        {
+            await uiHub.Clients.All.GetIncrementalData(nameof(PostParserTask), task.ToDomainModel());
+        }
+
+        return tasks.Count;
+    }
+
     public async Task ReParse(int id)
     {
         var task = await orm.GetByKey(id);
