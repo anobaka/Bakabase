@@ -102,6 +102,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <tr><td class="e">6</td><td>不止游戏：漫画、同人本、同人音声、电影、电视剧</td><td>集合、订阅、流水线都不含游戏特有逻辑；来源提供器与阶段处理器按站点/格式增加（<a href="#s6-3">§6.3</a>、<a href="#s7-1">§7.1</a>）</td></tr>
 <tr><td class="e">7</td><td>展示与配置必须丝滑；不能每个集合配一次路径标记；现有路径标记体验也可能要优化</td><td>流水线内容的元数据来自外部身份而非文件夹名，路径标记只回答「哪里是资源」，配一次（<a href="#s12-2">§12.2</a>）；预设与按样例标记（<a href="#s12-5">§12.5</a>）</td></tr>
 <tr><td class="e">8</td><td>补充：漫画、动画等可能各自从不同来源获取，这些获取与集合无关，只是「我缺了哪个资源，应该用什么方式补上」，该资源可能属于某个集合也可能不属于。因此未落地资源必须先于集合、不涉及集合就能使用</td><td>未落地资源是独立的第一层（<a href="#s4-5">§4.5</a>）；获取任务以资源为目标、以线索决定方式，集合只是可选上下文（<a href="#s7-0">§7.0</a>）；分期顺序据此调整为「未落地资源 → 获取流水线 → 集合 → 订阅」（<a href="#s13">§13</a>）</td></tr>
+<tr><td class="e">9</td><td>补充：资源获取有两种本质不同的机制。一是<b>平台持有</b>（Steam、DLsite、ExHentai 这类既有集成）：资源本身属于平台，用户在平台上持有它（购买、收藏、拥有），我们做的是与平台的对接器，处理用户已持有的资源。二是<b>分享获取</b>：从论坛帖子、推文、下载文档、甚至一张表格里看到有人分享了下载链接；资源不属于这些地方，用户也不在这些地方「持有」什么，这些地方只是获取资源的一种可选手段，不服务于我们的资源概念</td><td>两种机制在 <a href="#s3-1">§3.1</a> 正式区分并贯穿全文：平台持有型来源提供资源身份与取回能力，对应 <code class="i">ResourceSourceLink</code> 与平台对接器（<a href="#s6-4">§6.4</a>）；分享渠道不构成资源身份，只产生获取线索 <code class="i">AcquisitionLead</code>（<a href="#s7-0">§7.0</a>），解析器从「帖子解析」泛化为「分享内容解析」（<a href="#s7-2">§7.2</a>）</td></tr>
 </table></div>
 
 <h3>已做出并遵守的决定</h3>
@@ -109,6 +110,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <li><b>不引入与 Resource 割裂的新概念。</b>「作品」不是新实体，就是资源；未拥有的作品是尚未落地的资源。</li>
 <li><b>未落地资源先于集合、独立于集合。</b>创建、查看、获取、关联都不以集合为前提；集合只是对资源的聚合视图。</li>
 <li><b>获取以资源为目标。</b>每个获取任务补齐的是一个具体的资源，用什么方式由该资源的获取线索决定；集合、订阅只是发起获取的场景之一。</li>
+<li><b>平台持有与分享获取是两种独立机制。</b>只有持有资源的平台（以及定义作品身份的元数据库）才能成为资源的外部身份 <code class="i">ResourceSourceLink</code>；论坛、推文、文档、表格这类分享渠道永远不写入身份，只提供获取线索。</li>
 <li><b>术语只用代码标识符与标准中文。</b>不出现自造缩写与代号。</li>
 <li><b>迁移一律由 <code class="i">dotnet ef migrations add</code> 生成，纯 schema。</b>需要搬运存量数据时用运行时的一次性迁移器（先例：<code class="i">src/legacy/Bakabase.Migrations/V230/PathsRelocationMigrator.cs</code>），且接受 beta 期的存量数据丢失。</li>
 <li><b>新功能优先进 <code class="i">src/modules/</code>。</b>只有与 legacy 紧耦合的小改动留在 <code class="i">src/legacy/</code>。</li>
@@ -126,7 +128,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <tr><td>来源同步永不删除资源，只把消失的条目标为 <code class="i">ResourceStatus.Absent</code></td><td><code class="i">ResourceSyncService.cs:539-593</code>（<code class="i">UpdateResolverResourceStatuses</code>）；<code class="i">DeleteOrphanedResources</code> 对非 PathMark 来源直接返回 0（:619-622），且跳过空路径与带外部链接的资源（:661-668）</td><td>未落地资源不会被误删</td></tr>
 <tr><td>搜索索引对空路径不抛错：文件名/目录键不生成，<code class="i">Filename IsNull</code> 正好命中未落地资源</td><td><code class="i">Components/Search/Index/ResourceSearchIndexService.cs:374-392</code>；<code class="i">IsNull</code> 语义在 <code class="i">AbstractPropertyDescriptor.cs:407-414</code></td><td>「只看未落地」今天就能查，但需要一个更明确的属性（<a href="#s4-1">§4.1</a>）</td></tr>
 <tr><td>封面与可播放项提供器各自用 <code class="i">AppliesTo</code> 门控，Steam 未安装项显示官方封面并能通过 <code class="i">steam://</code> 启动</td><td><code class="i">Providers/Cover/LocalFileCoverProvider.cs:58</code>、<code class="i">SteamCoverProvider.cs</code>、<code class="i">SteamPlayableItemProvider.cs</code></td><td>卡片对未落地资源基本可用</td></tr>
-<tr><td>三张外部目录表（<code class="i">DLsiteWorkDbModel</code>、<code class="i">SteamAppDbModel</code>、<code class="i">ExHentaiGalleryDbModel</code>）各自实现「目录 → 本地状态 → 资源」，其 <code class="i">ResourceId</code> 列从未被赋值</td><td><code class="i">src/abstractions/Bakabase.Abstractions/Models/Db/*DbModel.cs</code>；写入点检索结果只有「保留 ResourceId」的注释，链接实际由 <code class="i">ResourceSourceLink</code> 承担</td><td>同一模式抄了三遍，正是集合与订阅要统一的对象（<a href="#s6-4">§6.4</a>）</td></tr>
+<tr><td>三张外部目录表（<code class="i">DLsiteWorkDbModel</code>、<code class="i">SteamAppDbModel</code>、<code class="i">ExHentaiGalleryDbModel</code>）各自实现「目录 → 本地状态 → 资源」，其 <code class="i">ResourceId</code> 列从未被赋值</td><td><code class="i">src/abstractions/Bakabase.Abstractions/Models/Db/*DbModel.cs</code>；写入点检索结果只有「保留 ResourceId」的注释，链接实际由 <code class="i">ResourceSourceLink</code> 承担</td><td>这三者就是「平台持有」型对接器（<a href="#s3-1">§3.1</a>），同一模式抄了三遍，要统一为 <code class="i">IPlatformConnector</code> 契约（<a href="#s6-4">§6.4</a>）</td></tr>
 </table></div>
 
 <h3>2.2 获取链路：每一环都有零件，但没有连起来</h3>
@@ -177,12 +179,23 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <div class="tw"><table><tr><th style="width:18%">术语</th><th style="width:26%">代码标识符</th><th>定义</th></tr>
 <tr><td><b>资源</b> <span class="tag t-have">现有</span></td><td class="k">Resource</td><td>Bakabase 管理的一个对象。<code class="i">Path</code> 可空。</td></tr>
 <tr><td><b>尚未落地的资源</b>（简称未落地资源）<span class="tag t-fix">需修正</span></td><td class="k">Resource.HasLocalPath == false<br>InternalProperty.HasLocalPath</td><td><code class="i">Path</code> 为空的资源。它知道自己是什么（名称、封面、外部身份、属性、所属集合），但本地还没有文件。落地（materialize）= 给它赋予 <code class="i">Path</code> 并刷新派生字段。</td></tr>
-<tr><td><b>外部身份</b> <span class="tag t-have">现有</span></td><td class="k">ResourceSourceLink (Source, SourceKey)</td><td>资源在某个外部来源里的编号：DLsite 的 RJ 号、Steam 的 AppId、ExHentai 的 gid/token、SoulPlus 的帖子 id、Bangumi 的条目 id。一个资源可以有多条。</td></tr>
+<tr><td><b>外部身份</b> <span class="tag t-have">现有</span></td><td class="k">ResourceSourceLink (Source, SourceKey)</td><td>资源在某个<b>持有它的平台</b>或<b>定义作品身份的元数据库</b>里的编号：DLsite 的 RJ 号、Steam 的 AppId、ExHentai 的 gid/token、Bangumi 的条目 id。一个资源可以有多条。论坛帖子、推文、文档这类分享渠道<b>不是</b>外部身份（<a href="#s3-1">§3.1</a>）。</td></tr>
+<tr><td><b>平台对接器</b> <span class="tag t-fix">需修正</span></td><td class="k">IResourceResolver → IPlatformConnector</td><td>与一个持有资源的平台的对接：枚举用户在该平台持有的资源、给出平台身份、（可选）从平台取回文件、检测本地是否已存在。现有的 Steam / DLsite / ExHentai 集成就是三个对接器，只是契约尚未统一（<a href="#s6-4">§6.4</a>）。</td></tr>
+<tr><td><b>分享渠道</b> <span class="tag t-new">新增</span></td><td class="k">SharedContent / ISharedContentReader</td><td>有人分享了下载链接的地方：论坛帖子、推文、一份下载文档、一张表格。资源不属于它，用户也不在它上面持有任何东西；它只是获取的一种可选手段。系统对它做的唯一一件事是「读出文本并提取链接与密码」（<a href="#s7-2">§7.2</a>）。</td></tr>
 <tr><td><b>集合</b> <span class="tag t-new">新增</span></td><td class="k">Collection<br>CollectionResourceMapping</td><td>资源的命名分组，成员可以是未落地资源。成员有三种来路：手动加入、规则命中、订阅带入。收集率 = 已落地且未忽略的成员 ÷ 未忽略的成员。</td></tr>
 <tr><td><b>订阅</b>（集合的外部来源）<span class="tag t-fix">需修正</span></td><td class="k">Subscription<br>ISubscriptionProvider</td><td>一个外部列表（社团页、系列页、标签搜索、关注动态），定期抓取，把列表中的每一项确保为一条带外部身份的资源并加入所属集合。现有的 Subscription 模块演进为它，每个订阅必须属于一个集合。</td></tr>
-<tr><td><b>获取线索</b> <span class="tag t-new">新增</span></td><td class="k">AcquisitionLead (Kind, Value)</td><td>告诉系统「用什么方式补齐这个资源」的一条信息：帖子链接、直链、磁力链接、或一个外部身份（DLsite 已购买作品、ExHentai 画廊、Steam 应用）。外部身份类线索直接来自资源已有的 <code class="i">ResourceSourceLink</code>；链接类线索由用户或订阅提供。一个资源可以有多条线索，也可以暂时没有。</td></tr>
+<tr><td><b>获取线索</b> <span class="tag t-new">新增</span></td><td class="k">AcquisitionLead (Kind, Value)</td><td>告诉系统「用什么方式补齐这个资源」的一条信息。两大类：<b>平台取回</b>（该资源的某条外部身份，例如 DLsite 已购买作品、ExHentai 画廊、Steam 应用，由对接器取回）；<b>分享获取</b>（帖子链接、推文、文档或表格里的一行、直链、磁力链接，由分享内容解析器与抓取器处理）。平台取回类线索直接由 <code class="i">ResourceSourceLink</code> 派生，不单独存储；分享类线索存 <code class="i">AcquisitionLead</code> 表，由用户、订阅或分享清单导入提供。一个资源可以有多条线索，也可以暂时没有。</td></tr>
 <tr><td><b>获取任务</b> <span class="tag t-new">新增</span></td><td class="k">AcquisitionTask<br>AcquisitionStatus</td><td>为<b>一个未落地资源</b>补齐本地文件的一次执行，是状态机。每个获取任务都指向一个资源，并按一条线索选择路线；与集合无关，集合只作为可选的上下文记录。从帖子链接直接发起时，系统先按解析出的标题创建未落地资源，再对它发起获取。</td></tr>
 </table></div>
+
+<h3 id="s3-1">3.1 资源与外部事物的三种关系</h3>
+<p>所有「来源」按它与资源的关系分成三类。这个分类决定了一个外部事物能不能成为资源的身份、能不能取回文件、以及在代码里用什么表示。分类是本方案最重要的边界之一，后文的订阅提供器、线索种类、对接器都按它划分。</p>
+<div class="tw"><table><tr><th style="width:14%">关系</th><th style="width:22%">含义</th><th style="width:9%">给身份</th><th style="width:9%">持有文件</th><th style="width:22%">代码表示</th><th>例子</th></tr>
+<tr><td><b>平台持有</b></td><td>资源本身属于该平台，用户在平台上持有它（购买、收藏、拥有）。平台能列出用户持有什么、能把文件交给用户。</td><td>是</td><td>是</td><td><code class="i">ResourceSourceLink</code> + 平台对接器 <code class="i">IPlatformConnector</code>（现 <code class="i">IResourceResolver</code> 与各站服务）</td><td>Steam 已拥有游戏、DLsite 已购买作品、ExHentai 画廊、Pixiv 插画</td></tr>
+<tr><td><b>元数据权威</b></td><td>不持有文件，但定义了「这是哪个作品」并提供元数据与关联关系。</td><td>是</td><td>否</td><td><code class="i">ResourceSourceLink</code> + 增强器；订阅的目录型提供器</td><td>Bangumi 条目、VNDB 条目、TMDB 条目；DLsite 与 Steam 同时也是权威</td></tr>
+<tr><td><b>分享渠道</b></td><td>有人在这里分享了下载链接。资源不属于它，用户不在它上面持有任何东西；换一个渠道分享同一个文件，资源不变。</td><td><b>否</b></td><td>否（只指向文件所在的网盘或直链）</td><td><code class="i">AcquisitionLead</code>（种类为分享类）+ 分享内容解析器；<b>永不写入 <code class="i">ResourceSourceLink</code></b></td><td>SoulPlus 帖子、推文、一份下载文档、一张表格、群聊里的一条消息</td></tr>
+</table></div>
+<div class="rule warn"><b>一个推论：本文档第一版把 SoulPlus 帖子当成了资源的外部身份（曾计划新增 <code class="i">ResourceSource.SoulPlus</code>），这是错的。</b>同一个游戏可能被十个帖子分享，也可能明天出现在推特上；帖子只能作为线索记在资源上，资源的身份要么来自权威（RJ 号、VNDB 条目），要么暂时没有。本版已按此修正 §4.5、§6、§7、§9。</div>
 
 <figure>
 <svg viewBox="0 0 980 420" role="img" aria-label="资源、外部身份、集合、订阅、获取任务与库目录之间的关系：订阅产出带外部身份的未落地资源并加入集合；获取任务把未落地资源变成有本地路径的资源；库根目录的资源标记让路径标记同步为落地后的资源补属性；集合成员也可由规则命中或手动加入。">
@@ -204,11 +217,12 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <text x="440" y="84" text-anchor="middle" fill="currentColor" opacity=".7">Origin = Manual | Subscription</text>
 <text x="440" y="102" text-anchor="middle" fill="currentColor" opacity=".7">IsIgnored · Order · LastSeenAt</text>
 <!-- Resource -->
-<rect x="330" y="180" width="220" height="100" rx="10" stroke="#b08cff" stroke-width="1.8"/>
+<rect x="330" y="180" width="220" height="118" rx="10" stroke="#b08cff" stroke-width="1.8"/>
 <text x="440" y="204" text-anchor="middle" fill="currentColor" font-weight="700">Resource 资源</text>
 <text x="440" y="224" text-anchor="middle" fill="currentColor" opacity=".7">Path 可空 → HasLocalPath</text>
 <text x="440" y="242" text-anchor="middle" fill="currentColor" opacity=".7">Name · 属性 · 封面 · 状态</text>
-<text x="440" y="262" text-anchor="middle" fill="currentColor" opacity=".7">ResourceSourceLink (Source, SourceKey) ×N</text>
+<text x="440" y="262" text-anchor="middle" fill="currentColor" opacity=".7">ResourceSourceLink ×N（平台 / 权威身份）</text>
+<text x="440" y="282" text-anchor="middle" fill="currentColor" opacity=".7">AcquisitionLead ×N（分享链接，非身份）</text>
 <!-- Acquisition -->
 <rect x="640" y="180" width="200" height="100" rx="10"/>
 <text x="740" y="204" text-anchor="middle" fill="currentColor" font-weight="700">AcquisitionTask 获取任务</text>
@@ -234,7 +248,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <text x="595" y="222" text-anchor="middle" fill="#b08cff">落地</text>
 <line x1="740" y1="280" x2="740" y2="330" marker-end="url(#ar)"/>
 <text x="752" y="310" fill="currentColor" opacity=".8">放置并同步</text>
-<path d="M640 360 C560 360 520 320 500 280" marker-end="url(#ar)" stroke-dasharray="4 3"/>
+<path d="M640 360 C580 360 540 330 520 298" marker-end="url(#ar)" stroke-dasharray="4 3"/>
 <text x="540" y="345" fill="currentColor" opacity=".8">路径标记补属性</text>
 </g></svg>
 <figcaption>概念关系。紫色边为本方案的核心通道：获取任务让一个未落地资源落地，与集合无关；订阅只是让未落地资源批量出现并进入集合的一种方式。规则命中的成员不落表，按需计算。</figcaption>
@@ -314,7 +328,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <h3 id="s4-5">4.5 不依赖集合的独立使用</h3>
 <p>未落地资源在没有任何集合的情况下就是一个完整可用的功能：它本身就是「我缺了什么」的清单。集合只是之后对这些资源的聚合视图。</p>
 <div class="tw"><table><tr><th style="width:12%">动作</th><th style="width:44%">怎么做</th><th>涉及的现有能力</th></tr>
-<tr><td><b>创建</b></td><td>资源页「新建未落地资源」，三种方式：① 输入标题；② 粘贴一个外部编号或页面链接（RJ 号、Steam AppId、Bangumi 条目、DLsite 作品页），系统按来源查详情，写入名称、封面与 <code class="i">ResourceSourceLink</code>；③ 粘贴一个帖子链接，系统解析后按清洗过的标题创建，并把帖子链接作为获取线索挂上。批量创建：粘贴多行。</td><td><code class="i">ParseWorkDetailById</code>（DLsite）、<code class="i">GetAppDetails</code>（Steam）、<code class="i">BangumiClient.ParseDetail</code>、帖子解析器；创建逻辑与 <a href="#s6-2">§6.2</a> 订阅共用</td></tr>
+<tr><td><b>创建</b></td><td>资源页「新建未落地资源」，四种方式：① 输入标题（无身份）；② 粘贴一个<b>平台或权威</b>的编号或页面（RJ 号、Steam AppId、Bangumi 条目、DLsite 作品页），系统按来源查详情，写入名称、封面与 <code class="i">ResourceSourceLink</code>；③ 粘贴一个<b>分享链接</b>（帖子、推文），系统解析后按清洗过的标题创建<b>无身份</b>的资源，并把链接作为获取线索挂上，若正文里含 RJ 号或 VNDB 链接则顺带写入权威身份；④ 导入分享清单（一份文档或表格，每行一个资源），批量执行 ③。</td><td><code class="i">ParseWorkDetailById</code>（DLsite）、<code class="i">GetAppDetails</code>（Steam）、<code class="i">BangumiClient.ParseDetail</code>、帖子解析器；创建逻辑与 <a href="#s6-2">§6.2</a> 订阅共用</td></tr>
 <tr><td><b>查看</b></td><td>资源页筛选「已落地 = 否」就是缺失清单；卡片显示来源封面、名称、「未落地」或「获取中」芯片；可与任何其他筛选组合（例如「未落地 且 作者 = X」）。</td><td><code class="i">InternalProperty.HasLocalPath</code>、现有筛选面板与卡片</td></tr>
 <tr><td><b>获取</b></td><td>卡片或详情上的「获取」：列出该资源的线索（已有的外部身份自动成为线索；可粘贴新链接），选一条即创建获取任务进入 <a href="#s7">§7</a> 的流水线。线索为空时提示补一条链接，后期支持按名称到已配置的来源搜索。</td><td><code class="i">AcquisitionTask</code>、按线索种类注册的路线（<a href="#s7-0">§7.0</a>）</td></tr>
 <tr><td><b>关联</b></td><td>文件已经在本地时，详情里「关联本地目录」选一个目录直接落地，不经过流水线。</td><td><code class="i">IResourceMaterializationService.MaterializeAsync</code></td></tr>
@@ -326,7 +340,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <h3 id="s5-1">5.1 定义与三种成员来路</h3>
 <p>集合是一个命名的资源分组。成员资格来自三条路，可以同时存在于一个集合里：</p>
 <div class="tw"><table><tr><th style="width:16%">来路</th><th style="width:34%">怎么进来</th><th style="width:22%">是否落表</th><th>典型用途</th></tr>
-<tr><td><b>手动</b></td><td>用户在资源页右键「加入集合」、在集合页用资源选择器添加、或直接输入一个标题（生成未落地资源）/ 粘贴一个外部编号或链接（生成带外部身份的未落地资源）</td><td>落 <code class="i">CollectionResourceMapping</code>，<code class="i">Origin = Manual</code></td><td>「我的年度十佳」「等汉化的作品」</td></tr>
+<tr><td><b>手动</b></td><td>用户在资源页右键「加入集合」、在集合页用资源选择器添加、或直接输入一个标题、粘贴一个平台或权威编号（生成带外部身份的未落地资源）、粘贴一个分享链接（生成无身份的未落地资源并挂上线索）</td><td>落 <code class="i">CollectionResourceMapping</code>，<code class="i">Origin = Manual</code></td><td>「我的年度十佳」「等汉化的作品」</td></tr>
 <tr><td><b>规则</b></td><td>集合上保存一条 <code class="i">ResourceSearch</code>（与 <code class="i">ResourceProfile.Search</code> 同一模型与同一编辑器）</td><td>不落表，按需计算并缓存</td><td>「作者 = X」「系列 = 物语系列」「作者 = X 且 系列 = Y」</td></tr>
 <tr><td><b>订阅</b></td><td>集合下挂的订阅每次检查把列表条目确保为资源并加入</td><td>落表，<code class="i">Origin = Subscription</code>，记 <code class="i">SubscriptionId</code> 与 <code class="i">LastSeenAt</code></td><td>「某社团全部作品」「某系列全部条目」「SoulPlus 某标签的新帖」</td></tr>
 </table></div>
@@ -383,8 +397,8 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
     <span class="kw">string</span> Kind { get; }                       <span class="cm">// "dlsite.circle" / "bangumi.subjectRelations" / "soulplus.search" / "exhentai.search" …</span>
     <span class="kw">string</span> DisplayName { get; }
     <span class="kw">string</span>? Icon =&gt; <span class="kw">null</span>;
-    ResourceSource ResourceSource { get; }     <span class="cm">// <span class="new">新增</span>：产出条目的身份命名空间</span>
-    <span class="kw">bool</span> ItemsHaveAcquisitionUrl { get; }      <span class="cm">// <span class="new">新增</span>：条目是否自带可发起获取的页面地址（论坛是，社团页不是）</span>
+    SubscriptionSourceKind SourceKind { get; } <span class="cm">// <span class="new">新增</span>：PlatformHolding 平台持有 | Catalog 元数据权威 | SharingChannel 分享渠道（§3.1）</span>
+    ResourceSource? ResourceSource { get; }    <span class="cm">// <span class="new">新增</span>：前两类给出身份命名空间；分享渠道为 null，永不写身份</span>
     Task&lt;SubscriptionValidationResult&gt; ValidateTargetAsync(<span class="kw">string</span> targetJson, CancellationToken ct);
     <span class="kw">string</span> DescribeTarget(<span class="kw">string</span> targetJson);
     <span class="cm">// <span class="new">改动</span>：返回完整列表（分页在实现内部走完），不再接收上一份快照</span>
@@ -392,20 +406,20 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 }
 
 <span class="kw">public record</span> SubscriptionItem(
-    <span class="kw">string</span> SourceKey,                <span class="cm">// 与 ResourceSourceLink.SourceKey 相同格式</span>
+    <span class="kw">string</span> SourceKey,                <span class="cm">// 平台/权威：与 ResourceSourceLink.SourceKey 相同格式；分享渠道：渠道内去重键（帖子 tid），只用于线索去重</span>
     <span class="kw">string</span>? Title,
-    <span class="kw">string</span>? Url,                     <span class="cm">// 条目页面；对论坛类来源就是帖子链接</span>
+    <span class="kw">string</span>? Url,                     <span class="cm">// 条目页面；分享渠道时就是线索的值</span>
     List&lt;<span class="kw">string</span>&gt;? CoverUrls,
     <span class="kw">string</span>? MetadataJson);           <span class="cm">// 原始字段，进 ResourceSourceLink.MetadataJson</span></code></pre>
 <p><code class="i">SubscriptionService.RunCheckAsync</code> 改写为：</p>
 <ol>
 <li><code class="i">FetchAllItemsAsync</code>；异常照旧写 <code class="i">LastError</code>。</li>
-<li>对每个条目：<code class="i">IResourceSourceLinkService.FindResourceBySourceLinks([(Source, SourceKey)])</code>；命中则复用该资源，否则创建未落地资源（<code class="i">Path = null</code>、保留属性 <code class="i">Name = Title</code>、<code class="i">SourceLinks = [link]</code>）。创建逻辑从 <code class="i">ResourceSyncService.ResolveResourceForEntry</code> 的「新建虚拟资源」分支提取为共享方法。</li>
+<li>对每个条目，按提供器的 <code class="i">SourceKind</code> 分两路：<b>平台持有 / 元数据权威</b> → <code class="i">IResourceSourceLinkService.FindResourceBySourceLinks([(Source, SourceKey)])</code>，命中则复用该资源，否则创建带身份的未落地资源（<code class="i">Path = null</code>、保留属性 <code class="i">Name = Title</code>、<code class="i">SourceLinks = [link]</code>）；<b>分享渠道</b> → 先按 <code class="i">AcquisitionLead (Kind, Value)</code> 查该链接是否已挂在某个资源上，命中则复用；否则用归一化标题（<code class="i">ITextOps.Clean</code> + 别名）与现有资源名称做<b>精确</b>匹配，命中则复用；再否则创建<b>无身份</b>的未落地资源，并把链接作为线索挂上。创建逻辑从 <code class="i">ResourceSyncService.ResolveResourceForEntry</code> 的「新建虚拟资源」分支提取为共享方法。</li>
 <li>确保 <code class="i">CollectionResourceMapping</code> 存在（<code class="i">Origin = Subscription</code>），刷新 <code class="i">LastSeenAt</code>。</li>
 <li>差异：新成员 = 本次新建的映射；从来源消失 = 本订阅带入但本次未出现的映射，只标记不删除（成员页显示「来源中已不存在」）。</li>
 <li><b>首次检查也落库</b>（这是集合的种子），只是不发通知、不发 Workflow 事件——与今天 :187 处的抑制策略相比，保留「不打扰」但去掉「不记录」。</li>
 <li>有新成员时：通知（<code class="i">Source = "collection:{id}"</code>，正文含新增数与收集率，<code class="i">PayloadJson</code> 带 <code class="i">collectionId</code> 供深链接）；发布 <code class="i">subscription.updated</code>（载荷扩展 <code class="i">CollectionId</code> 与 <code class="i">ResourceIds</code>）。</li>
-<li>若集合开启 <code class="i">AutoAcquire</code> 且提供器 <code class="i">ItemsHaveAcquisitionUrl</code>：以条目的页面链接为线索（<code class="i">PostUrl</code>）为每个新成员创建获取任务（<a href="#s7">§7</a>）；条目本身是 DLsite / ExHentai / Steam 身份时则以该身份为线索（<code class="i">SourceIdentity</code>）。两者都没有时在集合页把它们标为「待获取」，等用户补线索或后期的自动搜索。</li>
+<li>若集合开启 <code class="i">AutoAcquire</code>：分享渠道条目以其链接为线索（<code class="i">SharedPage</code>），平台持有条目以其身份为线索（<code class="i">PlatformHolding</code>），为每个新成员创建获取任务（<a href="#s7">§7</a>）。元数据权威条目两者都没有，在集合页标为「待获取」，等用户补线索或后期的自动搜索。</li>
 </ol>
 <ul>
 <li><code class="i">SubscriptionCheckTask</code> 改为按订阅各自的 <code class="i">IntervalMinutes</code>（为空用全局默认）判定是否到期，冲突键增加 <code class="i">"SyncResources"</code>，去掉指向不存在任务的 <code class="i">"SyncPixiv"</code>。</li>
@@ -413,38 +427,53 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 </ul>
 
 <h3 id="s6-3">6.3 首批来源与所需的客户端能力</h3>
-<div class="tw"><table><tr><th style="width:22%">Kind</th><th style="width:14%">ResourceSource</th><th style="width:30%">目标与 SourceKey</th><th>客户端现状与要补的方法</th></tr>
-<tr><td class="k">soulplus.search</td><td>SoulPlus <span class="tag t-new">新增枚举成员</span></td><td>版块 + 关键词/标签；SourceKey = 帖子 tid</td><td><code class="i">SoulPlusClient</code> 只有 <code class="i">GetPostAsync</code> 与 <code class="i">BuyLockedContent</code>；要加列表页抓取（分页）。条目自带帖子链接，可直接发起获取</td></tr>
-<tr><td class="k">dlsite.circle</td><td>DLsite</td><td>社团 maker_id 或系列；SourceKey = RJ/VJ/BJ 号</td><td><code class="i">DLsiteClient</code> 只有账号购买列表、单个作品详情页解析（<code class="i">ParseWorkDetailById</code>）和购买后下载（<code class="i">ResolveDownloadAsync / DownloadFileAsync</code>）；要加社团页/系列页 HTML 抓取。条目无下载页，落地要靠购买后现有的 <code class="i">DownloadWork</code> 或人工</td></tr>
-<tr><td class="k">bangumi.subjectRelations</td><td>Bangumi <span class="tag t-new">新增枚举成员</span></td><td>条目 id；SourceKey = 关联条目 id（含系列、前传续作）</td><td><code class="i">BangumiClient</code> 只有 HTML 详情/搜索；要接 bgm.tv API 的条目关联接口。产出的是「作品目录」，获取页需另行提供</td></tr>
-<tr><td class="k">exhentai.search</td><td>ExHentai</td><td>任意列表 URL；SourceKey = gid/token</td><td>已有；要补 <code class="i">NextListUrl</code> 分页（<code class="i">ExHentaiGalleryService.SyncFromApi</code> 已有分页写法可复用）。落地走现有 ExHentai 下载器</td></tr>
-<tr><td class="k">pixiv.followLatest</td><td>Pixiv <span class="tag t-new">新增枚举成员</span></td><td>关注动态；SourceKey = 插画 id</td><td>已有；作为集合来源意义有限，保留兼容</td></tr>
-<tr><td class="k">vndb.series / vndb.developer</td><td>Vndb <span class="tag t-later">后期</span></td><td>系列或开发商 id；SourceKey = v 号</td><td>没有客户端也没有 <code class="i">ThirdPartyId</code> 成员，需新建。VNDB 有公开 API，是 galgame 系列关系最权威的来源</td></tr>
+<p>按 <a href="#s3-1">§3.1</a> 的三类关系标注。分享渠道型来源的条目只产生线索，不写身份。</p>
+<div class="tw"><table><tr><th style="width:20%">Kind</th><th style="width:11%">类型</th><th style="width:12%">ResourceSource</th><th style="width:24%">目标与去重键</th><th>客户端现状与要补的方法</th></tr>
+<tr><td class="k">soulplus.search</td><td>分享渠道</td><td>无</td><td>版块 + 关键词/标签；去重键 = 帖子 tid；条目 = 标题 + 帖子链接，只产生线索</td><td><code class="i">SoulPlusClient</code> 只有 <code class="i">GetPostAsync</code> 与 <code class="i">BuyLockedContent</code>；要加列表页抓取（分页）。条目自带帖子链接，可直接发起获取</td></tr>
+<tr><td class="k">dlsite.circle</td><td>元数据权威</td><td>DLsite</td><td>社团 maker_id 或系列；SourceKey = RJ/VJ/BJ 号</td><td><code class="i">DLsiteClient</code> 只有账号购买列表、单个作品详情页解析（<code class="i">ParseWorkDetailById</code>）和购买后下载（<code class="i">ResolveDownloadAsync / DownloadFileAsync</code>）；要加社团页/系列页 HTML 抓取。条目本身没有取回途径，落地要靠购买后的平台取回（下一行）或分享线索</td></tr>
+<tr><td class="k">dlsite.purchases</td><td>平台持有</td><td>DLsite</td><td>账号购买列表；SourceKey = RJ 号</td><td>即今天 <code class="i">DLsiteWorkService.SyncFromApi</code> 做的事；后期由平台对接器统一提供（<a href="#s6-4">§6.4</a>）</td></tr>
+<tr><td class="k">bangumi.subjectRelations</td><td>元数据权威</td><td>Bangumi <span class="tag t-new">新增枚举成员</span></td><td>条目 id；SourceKey = 关联条目 id（含系列、前传续作）</td><td><code class="i">BangumiClient</code> 只有 HTML 详情/搜索；要接 bgm.tv API 的条目关联接口。产出的是作品目录，取回途径需另行提供</td></tr>
+<tr><td class="k">exhentai.search / exhentai.favorites</td><td>平台持有</td><td>ExHentai</td><td>任意列表 URL / 收藏夹；SourceKey = gid/token</td><td>已有；要补 <code class="i">NextListUrl</code> 分页（<code class="i">ExHentaiGalleryService.SyncFromApi</code> 已有分页写法可复用）。取回走现有 ExHentai 下载器</td></tr>
+<tr><td class="k">steam.ownedGames</td><td>平台持有</td><td>Steam</td><td>账号已拥有游戏；SourceKey = AppId</td><td>即今天 <code class="i">SteamAppService.SyncFromApi</code>；取回 = 安装</td></tr>
+<tr><td class="k">pixiv.followLatest</td><td>平台持有</td><td>Pixiv <span class="tag t-new">新增枚举成员</span></td><td>关注动态；SourceKey = 插画 id</td><td>已有；取回走现有 Pixiv 下载器</td></tr>
+<tr><td class="k">vndb.series / vndb.developer</td><td>元数据权威</td><td>Vndb <span class="tag t-later">后期</span></td><td>系列或开发商 id；SourceKey = v 号</td><td>没有客户端也没有 <code class="i">ThirdPartyId</code> 成员，需新建。VNDB 有公开 API，是 galgame 系列关系最权威的来源</td></tr>
 </table></div>
-<p class="note">论坛来源的条目是「帖子」而不是「作品」：同一作品可能有多个帖子，帖子标题需清洗。第一阶段不解决帖子去重，靠收集率页面的人工忽略；后期用标题归一化 + 外部编号提取（帖子里常含 RJ 号或 VNDB 链接）把帖子并到已有资源上。<span class="tag t-open">待定</span></p>
-
-<h3 id="s6-4">6.4 三张外部目录表的归宿</h3>
-<p><code class="i">DLsiteWorkDbModel</code>、<code class="i">SteamAppDbModel</code>、<code class="i">ExHentaiGalleryDbModel</code> 每张都是「一个来源的订阅 + 本地状态 + 隐藏标记 + 站点私有字段」。目标形态：</p>
+<p class="note">分享渠道的条目是「一次分享」而不是「一个作品」：同一作品可能被多个帖子分享，帖子标题需清洗。第一阶段只做链接级去重与归一化标题的精确匹配，重复靠收集率页面的人工忽略或合并；后期用外部编号提取（帖子里常含 RJ 号或 VNDB 链接）与更宽松的标题匹配把分享并到已有资源上。<span class="tag t-open">待定</span></p>
+<h3 id="s6-4">6.4 平台对接器：三张外部目录表的归宿</h3>
+<p>Steam、DLsite、ExHentai 三个集成的本质是同一件事：<b>用户在平台持有资源，我们做一个对接器处理这些已持有的资源。</b>今天它们各有一张表、一个服务、一个解析器、一个页面，模式相同而契约不同。目标是把这个模式正式化为一个契约，由现有 <code class="i">IResourceResolver</code> 演进而来：</p>
+<pre class="dia"><code><span class="kw">public interface</span> IPlatformConnector                       <span class="cm">// 演进自 IResourceResolver</span>
+{
+    ResourceSource Source { get; }
+    <span class="cm">// 枚举用户在该平台持有的资源（= 今天的 DiscoverResources）</span>
+    Task&lt;IReadOnlyList&lt;PlatformHolding&gt;&gt; EnumerateHoldingsAsync(CancellationToken ct);
+    <span class="cm">// 能否从平台取回文件；能则由获取流水线的 PlatformHolding 路线调用</span>
+    <span class="kw">bool</span> CanFetch { get; }
+    Task FetchAsync(<span class="kw">string</span> sourceKey, <span class="kw">string</span> workDirectory, IProgress&lt;AcquisitionProgress&gt; progress, CancellationToken ct);
+    <span class="cm">// 检测某条持有在本地是否已存在（Steam 安装检测、DLsite 目录扫描）</span>
+    Task&lt;<span class="kw">string</span>?&gt; DetectLocalPathAsync(<span class="kw">string</span> sourceKey, CancellationToken ct);
+}
+<span class="kw">public record</span> PlatformHolding(<span class="kw">string</span> SourceKey, <span class="kw">string</span> DisplayName, <span class="kw">string</span>? LocalPath, List&lt;<span class="kw">string</span>&gt;? CoverUrls, <span class="kw">string</span>? MetadataJson);</code></pre>
 <ul>
-<li>「账号购买列表 / 已拥有游戏 / 收藏夹」各成为一个内置订阅（Kind：<code class="i">dlsite.purchases</code>、<code class="i">steam.ownedGames</code>、<code class="i">exhentai.favorites</code>），条目 = 带外部身份的资源，所属集合由用户命名。</li>
-<li><code class="i">IsDownloaded / LocalPath / IsInstalled / InstallPath</code> → <code class="i">Resource.Path</code>；<code class="i">IsHidden</code> → 集合成员的 <code class="i">IsIgnored</code>；站点私有字段（<code class="i">DrmKey</code>、<code class="i">Account</code>、<code class="i">UseLocaleEmulator</code>、<code class="i">PlaytimeForever</code>…）→ <code class="i">ResourceSourceLink.MetadataJson</code> 加类型化读取器。</li>
-<li>三个专用页面折叠为集合详情页的「来源特有列」渲染器（按 <code class="i">ResourceSource</code> 选择）。</li>
+<li><code class="i">FetchAsync</code> 的三个实现直接包装既有代码：DLsite → <code class="i">DLsiteWorkService.DownloadWork / ExtractWork</code>；ExHentai → <code class="i">DownloadTaskService.AddRange</code> 并等待 <code class="i">downloader.completed</code>；Steam → 打开 <code class="i">steam://install/{appId}</code> 并轮询 <code class="i">SteamAppService.UpdateInstallationStatus</code>。</li>
+<li>「账号购买列表 / 已拥有游戏 / 收藏夹」成为平台持有型订阅（<code class="i">dlsite.purchases</code>、<code class="i">steam.ownedGames</code>、<code class="i">exhentai.favorites</code>），实现就是调用对接器的 <code class="i">EnumerateHoldingsAsync</code>；条目 = 带平台身份的资源，所属集合由用户命名（或不建集合，只作为未落地资源存在）。</li>
+<li><code class="i">IsDownloaded / LocalPath / IsInstalled / InstallPath</code> → <code class="i">Resource.Path</code>；<code class="i">IsHidden</code> → 集合成员的 <code class="i">IsIgnored</code>（无集合时为资源级隐藏标记，<span class="tag t-open">待定</span>）；站点私有字段（<code class="i">DrmKey</code>、<code class="i">Account</code>、<code class="i">UseLocaleEmulator</code>、<code class="i">PlaytimeForever</code>…）→ <code class="i">ResourceSourceLink.MetadataJson</code> 加类型化读取器。</li>
+<li>三个专用页面折叠为资源页按来源筛选的视图，加上对接器提供的动作（启动、打开平台页、取回）。</li>
 </ul>
-<p>这是<span class="tag t-later">后期</span>工作：三张表今天能用，先让新机制在 SoulPlus 场景跑通，再回头收编，避免第一阶段就动 DLsite 下载与启动逻辑。</p>
+<p>这是<span class="tag t-later">后期</span>工作：三个集成今天能用，先让分享获取这条新机制在 SoulPlus 场景跑通，再回头统一契约，避免第一、二期就动 DLsite 的下载与启动逻辑。但获取流水线从第二期起就按 <code class="i">PlatformHolding</code> 线索预留了对接器的调用位置，先用三个薄适配器顶上。</p>
 <h2 id="s7"><span class="n">§7</span>获取流水线</h2>
 <p>获取任务把「一个未落地资源」变成「已落地资源」。它是一个状态机而不是线性流，因为中间有人工检查点（选链接、付费、认领文件、补密码）和小时级等待（网盘下载）。Workflow 引擎不能暂停也不能等待长任务，所以流水线由 <code class="i">Bakabase.Modules.Acquisition</code> 自己承载，Workflow 只在边缘触发与定制（<a href="#s8">§8</a>）。</p>
 
 <h3 id="s7-0">7.0 目标是资源，方式由线索决定</h3>
-<p>每个获取任务有且只有一个目标资源（<code class="i">AcquisitionTask.ResourceId</code> 必填）和一条被选中的线索。线索的种类决定 Resolving 与 Fetching 阶段用哪条路线；之后的解压、放置、落地对所有路线相同。集合 id 只是可选的上下文，用于统计与通知，不影响执行。</p>
-<div class="tw"><table><tr><th style="width:20%">线索种类 <code class="i">AcquisitionLeadKind</code></th><th style="width:30%">线索值</th><th style="width:30%">路线（Resolving → Fetching）</th><th>典型场景</th></tr>
-<tr><td class="k">PostUrl</td><td>论坛帖子链接</td><td>帖子解析器提取链接与密码 → 按网盘种类选抓取器或收件箱</td><td>SoulPlus 上的游戏、同人本</td></tr>
+<p>每个获取任务有且只有一个目标资源（<code class="i">AcquisitionTask.ResourceId</code> 必填）和一条被选中的线索。线索分两大类，对应 <a href="#s3-1">§3.1</a> 的两种获取机制；种类决定 Resolving 与 Fetching 阶段用哪条路线，之后的解压、放置、落地对所有路线相同。集合 id 只是可选的上下文，用于统计与通知，不影响执行。</p>
+<div class="tw"><table><tr><th style="width:10%">机制</th><th style="width:16%">线索种类 <code class="i">AcquisitionLeadKind</code></th><th style="width:22%">线索值</th><th style="width:30%">路线（Resolving → Fetching）</th><th>典型场景</th></tr>
+<tr><td rowspan="1"><b>平台取回</b></td><td class="k">PlatformHolding</td><td>该资源的某条 <code class="i">ResourceSourceLink</code>（<code class="i">Source:SourceKey</code>），不单独存储</td><td>对接器 <code class="i">IPlatformConnector.FetchAsync</code>：DLsite 已购买 → 现有 <code class="i">DownloadWork / ExtractWork</code>；ExHentai → 现有下载器并等待 <code class="i">downloader.completed</code>；Steam → <code class="i">steam://install</code> 并等待安装检测</td><td>已购买的音声、收藏的画廊、已拥有的游戏</td></tr>
+<tr><td rowspan="5"><b>分享获取</b></td><td class="k">SharedPage</td><td>帖子、推文等网页链接</td><td>分享内容解析器读出正文 → 大模型提取链接与密码 → 按网盘种类选抓取器或收件箱</td><td>SoulPlus 上的游戏、同人本；推特上的分享</td></tr>
+<tr><td class="k">SharedDocument</td><td>一份本地/远程文档或表格中的一行（或整份）</td><td>文档读取器读出文本 → 同上提取（无需抓网页）</td><td>群里传的下载清单、整理好的 Excel</td></tr>
 <tr><td class="k">DirectUrl</td><td>http(s) 直链</td><td>跳过解析 → <code class="i">HttpLinkFetcher</code></td><td>自建站、Cloudflare 盘直链</td></tr>
 <tr><td class="k">Magnet</td><td>磁力链接 / 种子文件</td><td>跳过解析 → 外部下载工具抓取器（<span class="tag t-later">后期</span>，仓库内没有 BitTorrent 客户端）→ 或收件箱</td><td>动画、电影</td></tr>
-<tr><td class="k">SourceIdentity</td><td>该资源的某条 <code class="i">ResourceSourceLink</code></td><td>按 <code class="i">ResourceSource</code> 选路线：DLsite 已购买 → 现有 <code class="i">DLsiteWorkService.DownloadWork / ExtractWork</code>；ExHentai → 现有下载器 <code class="i">DownloadTaskService.AddRange</code> 并等待 <code class="i">downloader.completed</code>；Steam → 打开 <code class="i">steam://install/{appId}</code> 并等待安装检测 <code class="i">SteamAppService.UpdateInstallationStatus</code></td><td>已购买的音声、收藏的画廊、已拥有的游戏</td></tr>
 <tr><td class="k">Manual</td><td>无</td><td>直接进入 <code class="i">WaitingForFile</code>，等收件箱或「关联本地目录」</td><td>线索不明，先占位</td></tr>
 </table></div>
-<p>新增一种来源或媒体类型，就是新增一个线索种类的处理器（或一个网盘的抓取器），不改状态机、不改界面。这正是需求 3「快速复制到其他场景」的落点。</p>
-
+<p>新增一个持有平台 = 一个对接器；新增一种分享渠道 = 一个内容读取器（网页按主机、文档按格式）；新增一种网盘 = 一个抓取器。都不改状态机、不改界面。这正是需求 3「快速复制到其他场景」的落点。</p>
 <figure>
 <svg viewBox="0 0 1000 300" role="img" aria-label="获取任务状态机：Pending 到 Resolving 到 WaitingForFile 或 Fetching，再到 Unpacking、Placing、Syncing、Completed；任一阶段可进入 NeedsAttention 并在人工处理后回到原阶段，或进入 Failed 并可重试；Cancelled 为终态。">
 <defs><marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
@@ -487,7 +516,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <h3 id="s7-1">7.1 阶段与处理器：骨架固定、槽内可换</h3>
 <p>阶段顺序不可重排；每个阶段由一个接口定义，实现按来源/网盘/格式增加。这和 <code class="i">foundations.md</code> 的组件模型是同一原则。</p>
 <div class="tw"><table><tr><th style="width:12%">阶段</th><th style="width:30%">处理器接口</th><th style="width:30%">第一批实现</th><th>复用的现有代码</th></tr>
-<tr><td class="k">Resolving</td><td><code class="i">IAcquisitionLinkResolver</code><br><span class="mono">AcquisitionLeadKind LeadKind;<br>Task&lt;AcquisitionLinkSet&gt; ResolveAsync(AcquisitionTask task, ct)</span><br>按线索种类分派</td><td><code class="i">PostParserLinkResolver</code>（PostUrl）：按 URL 主机选 <code class="i">IPostContentFetcher</code>，再走 <code class="i">DownloadInfoHandler</code>；输出链接列表（每条含 <code class="i">Url / AccessCode / ArchivePassword / DriveKind</code>）与清洗后的标题。<code class="i">DirectLinkResolver</code>（DirectUrl / Magnet）：原样透传。<code class="i">SourceIdentityResolver</code>（SourceIdentity）：按 <code class="i">ResourceSource</code> 转到该来源的既有下载路线（<a href="#s7-0">§7.0</a>）</td><td>帖子解析器全部；<code class="i">AiFeature.PostParser</code>；DLsite / ExHentai / Steam 的既有下载与安装检测</td></tr>
+<tr><td class="k">Resolving</td><td><code class="i">IAcquisitionLinkResolver</code><br><span class="mono">AcquisitionLeadKind LeadKind;<br>Task&lt;AcquisitionLinkSet&gt; ResolveAsync(AcquisitionTask task, ct)</span><br>按线索种类分派</td><td><code class="i">SharedContentLinkResolver</code>（SharedPage / SharedDocument）：网页按 URL 主机选 <code class="i">ISharedContentReader</code>（即现有 <code class="i">IPostContentFetcher</code> 改名），文档按格式选读取器，再走 <code class="i">DownloadInfoHandler</code>；输出链接列表（每条含 <code class="i">Url / AccessCode / ArchivePassword / DriveKind</code>）与清洗后的标题。<code class="i">DirectLinkResolver</code>（DirectUrl / Magnet）：原样透传。<code class="i">PlatformHoldingResolver</code>（PlatformHolding）：交给对应 <code class="i">IPlatformConnector</code>（<a href="#s6-4">§6.4</a>）</td><td>帖子解析器全部；<code class="i">AiFeature.PostParser</code>；DLsite / ExHentai / Steam 的既有下载与安装检测</td></tr>
 <tr><td class="k">Fetching / WaitingForFile</td><td><code class="i">IAcquisitionFetcher</code><br><span class="mono">DriveKind Kind; Task&lt;FetchResult&gt; FetchAsync(link, inboxDirectory, progress, ct)</span></td><td><code class="i">HttpLinkFetcher</code>（直链）；<code class="i">ManualFetcher</code>（打开链接、复制提取码、进入 WaitingForFile）</td><td><code class="i">SingleFileHttpDownloader</code>（加空长度检查、去掉整文件内存 MD5、读 Content-Disposition 文件名）</td></tr>
 <tr><td class="k">Unpacking</td><td><code class="i">IAcquisitionUnpacker</code><br><span class="mono">Task&lt;UnpackResult&gt; UnpackAsync(files, passwordCandidates, workDirectory, ct)</span></td><td><code class="i">SevenZipUnpacker</code>：分组分卷 → 逐密码 <code class="i">TestCompressedFile</code> → <code class="i">ExtractWithProgress</code>；非压缩包直接透传</td><td><code class="i">CompressedFileHelper.DetectCompressedFileGroups</code>、<code class="i">CompressedFileService</code>、<code class="i">PasswordService</code>；把 <code class="i">FileController.cs:133-327</code> 的候选逐试与 <code class="i">:329-493</code> 的解压后删除/上移逻辑提取为服务</td></tr>
 <tr><td class="k">Placing</td><td><code class="i">IAcquisitionPlacer</code><br><span class="mono">Task&lt;PlaceResult&gt; PlaceAsync(extractedRoot, template, variables, ct)</span></td><td><code class="i">TemplateDirectoryPlacer</code>：渲染目标目录、处理冲突、折叠单层外壳目录、移动、压缩包进回收站</td><td><code class="i">ResourceUtils.SplitDisplayNameTemplateIntoSegments</code>；<code class="i">AbstractDownloader.BuildDownloadFilename</code> 的非法字符清理</td></tr>
@@ -495,14 +524,17 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 </table></div>
 <p>处理器是无状态单例，按 DI 枚举注册（与 Enhancer、订阅提供器同一模式）；每个阶段的输入输出都写进 <code class="i">AcquisitionTask</code> 的 JSON 列，阶段推进即落库，所以进程重启后从当前阶段续跑，不重做已完成阶段。</p>
 
-<h3 id="s7-2">7.2 链接解析与付费内容</h3>
+<h3 id="s7-2">7.2 分享内容解析与付费内容</h3>
+<p>帖子解析器泛化为<b>分享内容解析</b>。它的输入是「任何能读出一段文本的东西」，输出是「链接 + 提取码 + 解压码 + 清洗后的标题」。现有 <code class="i">DownloadInfoHandler</code> 本来就只吃 HTML 或文本，与来源无关；变化只在读取这一端。</p>
 <ul>
-<li><code class="i">DownloadInfoHandler</code> 的提示词已列出 baidu / pikpak / gofile / mega / 115 / magnet，但结果里只有字符串。方案给 <code class="i">DownloadInfoResource</code> 增加 <code class="i">DriveKind</code>（由链接主机名规则推断，大模型输出只作参考），供 Fetching 阶段选处理器。</li>
+<li><b>读取器按内容类型分派。</b>网页：现有 <code class="i">IPostContentFetcher</code> 改名为 <code class="i">ISharedContentReader</code>，按 URL 主机选择（SoulPlus 保留现有实现；无专用读取器的主机走通用 HTML 正文抽取）。文档：新增文本、Markdown、Excel/CSV 读取器。粘贴文本：直接送入处理器。<code class="i">AddPostParser</code> 的程序集扫描改为扫描所有已加载程序集，新读取器可以放在模块里。</li>
+<li><b>分享清单。</b>一份文档或表格可能列出很多资源。导入时按行（或按大模型切分的条目）提取「标题 + 链接 + 密码」，每一条走 <a href="#s6-2">§6.2</a> 分享渠道条目的同一套匹配逻辑：链接级去重 → 归一化标题精确匹配 → 新建无身份的未落地资源；再把链接挂为线索。用户在预览表里逐行确认或取消，然后可一键为全部创建获取任务。</li>
+<li><b>网盘种类。</b><code class="i">DownloadInfoHandler</code> 的提示词已列出 baidu / pikpak / gofile / mega / 115 / magnet，但结果里只有字符串。方案给 <code class="i">DownloadInfoResource</code> 增加 <code class="i">DriveKind</code>（由链接主机名规则推断，大模型输出只作参考），供 Fetching 阶段选抓取器。</li>
 <li><b>付费内容改为显式停车点。</b><code class="i">SoulPlusContentFetcher</code> 不再在抓取时购买。解析阶段发现付费块时：若集合（或全局）设置了「自动购买上限」且价格不超过上限，购买并把 <code class="i">{价格, 时间, 帖子}</code> 记入任务的阶段数据；否则进入 <code class="i">NeedsAttention(PaidContent)</code>，界面显示价格与「购买并继续」。今天 <code class="i">null &gt; int</code> 为 false 导致价格未知也会买的问题一并修掉。</li>
-<li>多个链接时默认按网盘偏好顺序（用户可配，例如 Mega &gt; PikPak &gt; 百度）自动选第一条；没有可用处理器的链接进入 <code class="i">ManualFetcher</code>；一个都没有 → <code class="i">NeedsAttention(NoLinks)</code>。</li>
-<li>解析结果同时写回 <code class="i">PostParserTask</code>（复用其表与页面），保持帖子解析页可独立使用；<code class="i">AddPostParser</code> 的程序集扫描改为扫描所有已加载程序集，新论坛抓取器可以放在模块里。</li>
+<li><b>多个链接。</b>默认按网盘偏好顺序（用户可配，例如 Mega &gt; PikPak &gt; 百度）自动选第一条；没有可用抓取器的链接进入 <code class="i">ManualFetcher</code>；一个都没有 → <code class="i">NeedsAttention(NoLinks)</code>。</li>
+<li><b>身份。</b>解析出的正文若含权威编号（RJ 号、Steam AppId、VNDB 链接），写入目标资源的 <code class="i">ResourceSourceLink</code>；分享页面本身只作为线索与任务记录保存，永不成为身份。</li>
+<li>解析结果同时写回 <code class="i">PostParserTask</code>（复用其表与页面），保持帖子解析页可独立使用。</li>
 </ul>
-
 <h3 id="s7-3">7.3 收件箱认领：网盘问题的务实解法</h3>
 <p>百度、迅雷、飞猫、Cloudflare 盘要登录、验证码、官方客户端，自动化脆弱且随时失效。方案把「从网盘取回文件」留给人，其余全部自动：</p>
 <ol>
@@ -525,7 +557,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <ul>
 <li><b>目标目录 = 库根目录 / 模板渲染结果。</b>模板用显示名模板语法（<code class="i">{Title}</code>、<code class="i">{Code}</code>、<code class="i">{Collection}</code>、<code class="i">{Source}</code>、<code class="i">{Year}</code>，包装符内为空则整段丢弃），逐段做非法字符清理与长度预算；冲突策略：追加序号 / 合并进已有目录 / 停车询问。默认模板 <code class="i">{Title}</code>，即每个作品一个目录，正好匹配库根目录上 <code class="i">Layer = 1</code> 的资源标记。</li>
 <li><b>落地始终作用于目标资源</b>：<code class="i">MaterializeAsync(resourceId, targetDirectory)</code>，不必等待同步任务；随后入队库根目录标记同步，让 Property / MediaLibrary 标记补属性。因为每个任务都有目标资源，不存在「等同步扫出新资源再认领」的分支。</li>
-<li><b>从帖子链接直接发起的任务</b>：在创建任务之前就已按解析出的标题创建了未落地资源，并把 <code class="i">(ResourceSource.SoulPlus, 帖子 id)</code> 作为外部身份挂上；落地时若解析出更好的标题且资源名称仍是占位值，则更新名称。</li>
+<li><b>从分享链接直接发起的任务</b>：在创建任务之前就已按解析出的标题创建了无身份的未落地资源，并把链接挂为 <code class="i">AcquisitionLead</code>；落地时若解析出更好的标题且资源名称仍是占位值则更新名称，若正文含权威编号则写入 <code class="i">ResourceSourceLink</code>。分享页面本身不成为身份。</li>
 <li>目标目录已被另一条资源占用（路径标记先扫到）时，按 <a href="#s4-2">§4.2</a> 的合并策略处理，以目标资源为主体。</li>
 <li>完成后：通知（<code class="i">Source = "acquisition:{id}"</code>，深链接到资源）；发布 <code class="i">acquisition.statusChanged</code>；若资源属于某些集合，这些集合的收集率刷新。</li>
 </ul>
@@ -613,8 +645,9 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <span class="new">AcquisitionTask</span>               <span class="cm">-- 获取任务：为一个资源补齐本地文件</span>
   Id int PK
   ResourceId int FK → Resource (级联删除，必填)   CollectionId int? FK → Collection (置空，仅上下文)
-  LeadKind AcquisitionLeadKind { PostUrl=1, DirectUrl=2, Magnet=3, SourceIdentity=4, Manual=5 }
-  LeadValue string?                                  <span class="cm">-- 链接文本，或 SourceIdentity 时的 "Source:SourceKey"</span>
+  LeadKind AcquisitionLeadKind { PlatformHolding=1, SharedPage=2, SharedDocument=3, DirectUrl=4, Magnet=5, Manual=6 }
+  LeadValue string?                                  <span class="cm">-- 链接文本 / 文档定位；PlatformHolding 时为 "Source:SourceKey"</span>
+  AcquisitionLeadId int?                             <span class="cm">-- 分享类线索所在的行（见下表）</span>
   Status AcquisitionStatus { Pending=1, Resolving=2, WaitingForFile=3, Fetching=4, Unpacking=5,
                              Placing=6, Syncing=7, Completed=8, NeedsAttention=9, Failed=10, Cancelled=11 }
   StatusBeforeAttention AcquisitionStatus?   AttentionReason AcquisitionAttentionReason?
@@ -628,25 +661,36 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
   CreatedAt  UpdatedAt  CompletedAt DateTime?
   索引 Status；索引 ResourceId
 
+<span class="new">AcquisitionLead</span>               <span class="cm">-- 分享类获取线索（平台取回类不存，由 ResourceSourceLink 派生）</span>
+  Id int PK
+  ResourceId int FK → Resource (级联删除)
+  Kind AcquisitionLeadKind                           <span class="cm">-- 只允许 SharedPage / SharedDocument / DirectUrl / Magnet</span>
+  Value string                                       <span class="cm">-- 链接，或文档路径 + 行号</span>
+  Origin AcquisitionLeadOrigin { User=1, Subscription=2, SharedListImport=3, PostParser=4 }
+  Note string?  LastUsedAt DateTime?  LastResult AcquisitionLeadResult? { Succeeded, Failed }
+  CreatedAt
+  唯一索引 (Kind, Value)                             <span class="cm">-- 同一个分享链接只挂在一个资源上，去重靠它</span>
+
 <span class="kw">BulkModificationDiff.ResourcePath</span>  string → string?    <span class="cm">-- 见 §4.3</span>
 
 <span class="kw">枚举扩展</span>
-  ResourceSource        + SoulPlus = 6, Bangumi = 7, Pixiv = 8        <span class="cm">-- Vndb 后期</span>
+  ResourceSource        + Bangumi = 6, Pixiv = 7                      <span class="cm">-- Vndb 后期；分享渠道（SoulPlus 等）永不进入此枚举</span>
   ResourceProperty      + CollectionMulti = 29, HasLocalPath = 30     <span class="cm">-- InternalProperty 镜像</span>
   ResourceAdditionalItem + CollectionName（下一个空位）
   BTaskType             + Acquisition</code></pre>
 <ul>
 <li>获取的全局设置（收件箱目录、库根目录、目录模板、网盘偏好、自动购买上限、解压后删除压缩包、密码回退策略）作为 <code class="i">AcquisitionOptions</code> 放在选项文件里（与 <code class="i">SoulPlusOptions</code> 同一机制），不建表；集合级覆盖存在 <code class="i">Collection.AcquisitionSettingsJson</code>。</li>
-<li>迁移名称建议：<code class="i">AddCollections</code>、<code class="i">AddAcquisitionTasks</code>、<code class="i">AddSubscriptionCollectionId</code>、<code class="i">MakeBulkModificationDiffResourcePathNullable</code>。全部由 <code class="i">dotnet ef migrations add</code> 生成，不含数据语句。</li>
+<li>迁移名称建议：<code class="i">AddCollections</code>、<code class="i">AddAcquisitionTasksAndLeads</code>、<code class="i">AddSubscriptionCollectionId</code>、<code class="i">MakeBulkModificationDiffResourcePathNullable</code>。全部由 <code class="i">dotnet ef migrations add</code> 生成，不含数据语句。</li>
 <li>运行时一次性迁移器（放在 <code class="i">src/legacy/Bakabase.Migrations</code>）：为每个 <code class="i">CollectionId</code> 为空的订阅创建同名集合并回填。</li>
 </ul>
 
 <h2 id="s10"><span class="n">§10</span>模块与代码布局</h2>
 <div class="tw"><table><tr><th style="width:36%">位置</th><th>内容</th></tr>
 <tr><td><code class="i">src/modules/Bakabase.Modules.Collection/</code> <span class="tag t-new">新增</span></td><td>领域模型、Db 模型、<code class="i">ICollectionService</code>（增删改查、成员管理、规则评估、收集率）、<code class="i">ICollectionResourceMappingService</code>（双向内存索引，仿 <code class="i">IMediaLibraryResourceMappingService</code>）、Workflow 的触发器/动作/条目类型、DI 扩展 <code class="i">AddCollection&lt;TDbContext&gt;()</code></td></tr>
-<tr><td><code class="i">src/modules/Bakabase.Modules.Acquisition/</code> <span class="tag t-new">新增</span></td><td><code class="i">AcquisitionTask</code> 模型、<code class="i">IAcquisitionService</code>、<code class="i">AcquisitionRunner</code>（后台服务，驱动状态机与并发）、<code class="i">AcquisitionInboxWatcher</code>、线索模型 <code class="i">AcquisitionLead</code>、四个处理器接口与 <code class="i">DirectLinkResolver / SourceIdentityResolver / HttpLinkFetcher / ManualFetcher / SevenZipUnpacker / TemplateDirectoryPlacer</code>、<code class="i">AcquisitionOptions</code>、Workflow 节点</td></tr>
+<tr><td><code class="i">src/modules/Bakabase.Modules.Acquisition/</code> <span class="tag t-new">新增</span></td><td><code class="i">AcquisitionTask</code> 模型、<code class="i">IAcquisitionService</code>、<code class="i">AcquisitionRunner</code>（后台服务，驱动状态机与并发）、<code class="i">AcquisitionInboxWatcher</code>、线索模型 <code class="i">AcquisitionLead</code> 与 <code class="i">IAcquisitionLeadService</code>、四个处理器接口与 <code class="i">SharedContentLinkResolver / DirectLinkResolver / PlatformHoldingResolver / HttpLinkFetcher / ManualFetcher / SevenZipUnpacker / TemplateDirectoryPlacer</code>、文档读取器（文本 / Markdown / Excel / CSV）、分享清单导入、<code class="i">AcquisitionOptions</code>、Workflow 节点</td></tr>
 <tr><td><code class="i">src/modules/Bakabase.Modules.Subscription/</code> <span class="tag t-fix">演进</span></td><td>提供器契约改为 <code class="i">FetchAllItemsAsync</code> + <code class="i">ResourceSource</code>；<code class="i">RunCheckAsync</code> 改为写资源与成员；删除快照相关代码</td></tr>
-<tr><td><code class="i">src/apps/Bakabase.Service/Components/Subscription/Providers/</code></td><td>新提供器（依赖 ThirdParty 客户端）：<code class="i">SoulPlusSearchProvider</code>、<code class="i">DLsiteCircleProvider</code>、<code class="i">BangumiSubjectRelationsProvider</code>；现有三个改契约</td></tr>
+<tr><td><code class="i">src/apps/Bakabase.Service/Components/Subscription/Providers/</code></td><td>新提供器（依赖 ThirdParty 客户端）：<code class="i">SoulPlusSearchProvider</code>（分享渠道型）、<code class="i">DLsiteCircleProvider</code>、<code class="i">BangumiSubjectRelationsProvider</code>（元数据权威型）；现有三个改契约并标为平台持有型</td></tr>
+<tr><td><code class="i">src/abstractions/Bakabase.Abstractions/Services/IResourceResolver.cs</code> <span class="tag t-later">后期</span></td><td>演进为 <code class="i">IPlatformConnector</code>（<a href="#s6-4">§6.4</a>）；第二期先在 <code class="i">Bakabase.Service/Components/Acquisition/Connectors/</code> 放三个薄适配器</td></tr>
 <tr><td><code class="i">src/apps/Bakabase.Service/Components/Acquisition/</code></td><td><code class="i">PostParserLinkResolver</code>（依赖 legacy 的帖子解析器）；控制器</td></tr>
 <tr><td><code class="i">src/modules/Bakabase.Modules.ThirdParty/</code></td><td><code class="i">SoulPlusClient</code> 列表页抓取；<code class="i">DLsiteClient</code> 社团/系列页；<code class="i">BangumiClient</code> 条目关联 API；后期 <code class="i">VndbClient</code></td></tr>
 <tr><td><code class="i">src/legacy/Bakabase.InsideWorld.Business/</code> <span class="tag t-fix">小改</span></td><td><code class="i">IResourceMaterializationService</code> 及其实现；<code class="i">ResourceSyncService</code> 三处改动（<a href="#s4-3">§4.3</a>）；解压候选/重试逻辑从 <code class="i">FileController</code> 提取为 <code class="i">IArchiveExtractionService</code>；<code class="i">PostParserExtensions</code> 程序集扫描；<code class="i">SoulPlusContentFetcher</code> 去掉自动购买；<code class="i">AbstractKeywordEnhancer</code> 关键词回退；<code class="i">BakabaseDbContext</code> 新 DbSet</td></tr>
@@ -669,9 +713,10 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <tr><td class="k">GET collection/for-resource/{resourceId}</td><td>资源详情「所属集合」块</td></tr>
 <tr><td class="k">subscription（现有）+ collectionId 字段；POST subscription/{id}/run 返回新增成员数与收集率</td><td>订阅编辑入口移到集合详情</td></tr>
 <tr><td class="k">POST resource/placeholder</td><td>创建未落地资源：body 为标题 / 外部身份 (source, sourceKey) / 页面链接三者之一，可批量；可选「创建后立即获取」</td></tr>
-<tr><td class="k">GET resource/{id}/acquisition-leads</td><td>该资源可用的线索（外部身份自动生成 + 用户挂上的链接）</td></tr>
+<tr><td class="k">GET / POST / DELETE resource/{id}/acquisition-leads</td><td>该资源可用的线索：平台取回类由外部身份自动派生；分享类可增删</td></tr>
+<tr><td class="k">POST acquisition/import-shared-list</td><td>上传文档/表格或粘贴文本 → 逐行提取 → 返回预览（匹配到的资源 / 将新建的资源 / 线索）；确认后批量创建资源、线索与可选的获取任务</td></tr>
 <tr><td class="k">POST acquisition</td><td>body：<code class="i">resourceId</code>（必填）、<code class="i">lead { kind, value }</code>、<code class="i">collectionId?</code></td></tr>
-<tr><td class="k">POST acquisition/from-url</td><td>便捷入口：解析链接 → 创建未落地资源 → 创建任务；供油猴脚本与获取中心使用</td></tr>
+<tr><td class="k">POST acquisition/from-url</td><td>便捷入口：解析分享链接 → 匹配或创建未落地资源并挂线索 → 创建任务；供油猴脚本与获取中心使用</td></tr>
 <tr><td class="k">GET acquisition?status=&amp;page= · GET acquisition/{id}</td><td>列表与详情（含阶段数据）</td></tr>
 <tr><td class="k">POST acquisition/{id}/retry · /cancel</td><td>重试当前阶段；取消</td></tr>
 <tr><td class="k">POST acquisition/{id}/select-link · /approve-purchase · /password · /claim</td><td>四种人工介入：选链接、批准购买、补密码、认领收件箱文件（body 为收件箱内路径）</td></tr>
@@ -726,11 +771,11 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <h2 id="s13"><span class="n">§13</span>分期交付</h2>
 <p>每一期完成后都独立可用、可验收；顺序按依赖与收益排。前两期刻意不碰集合：先让未落地资源独立成立，再让它能被自动补齐，这两期就已消掉所有者当前最痛的人工劳动。</p>
 <div class="tw"><table><tr><th style="width:12%">阶段</th><th style="width:36%">内容</th><th>验收标准</th></tr>
-<tr><td><b>第一期</b><br>未落地资源</td><td><code class="i">Resource.HasLocalPath</code> 与 <code class="i">InternalProperty.HasLocalPath</code>；<code class="i">IResourceMaterializationService</code>；<a href="#s4-3">§4.3</a> 触点清单全部修正；「新建未落地资源」（标题 / 外部身份 / 链接，含帖子解析取标题）；卡片/详情/筛选的未落地表现；「关联本地目录」；<code class="i">ResourceSource</code> 新成员；<code class="i">resource.materialized</code> 事件</td><td>用户不建任何集合就能维护一份「缺失清单」：按标题或 RJ 号新建未落地资源，资源页按「已落地 = 否」筛出它们，带来源封面与名称；未安装的 Steam 游戏与未下载的 DLsite 作品同样出现在该筛选里；手动关联目录后父子关系、封面、可播放文件、路径标记属性全部正确，增强器随即重跑；批量修改、路径搜索、NFO 生成不再对空路径报错</td></tr>
-<tr><td><b>第二期</b><br>收件箱版获取流水线</td><td><code class="i">Bakabase.Modules.Acquisition</code>；线索模型与 <code class="i">PostParserLinkResolver / DirectLinkResolver</code>；<code class="i">HttpLinkFetcher / ManualFetcher</code>；收件箱监听与认领；<code class="i">SevenZipUnpacker</code>（含 <code class="i">FileController</code> 解压逻辑提取）；<code class="i">TemplateDirectoryPlacer</code>；落地与来源链接写入；SoulPlus 付费停车点；获取中心页；首次向导；油猴按钮；<code class="i">SourceIdentityResolver</code> 的 DLsite 与 Steam 路线（复用既有下载/安装检测）</td><td>对第一期创建的任意未落地资源点「获取」并给一条帖子链接，用户只做「在网盘页面点下载」，该资源最终落地为 Active 资源，带来源链接与清洗后的名称，全程无需手工配置路径标记。从油猴脚本直接发起时，资源在解析完成的瞬间就出现在资源页并显示「获取中」。进程中途重启后任务从当前阶段续跑。分卷压缩包、嵌套压缩包、无密码包、错误密码四种情况都有明确结果</td></tr>
+<tr><td><b>第一期</b><br>未落地资源</td><td><code class="i">Resource.HasLocalPath</code> 与 <code class="i">InternalProperty.HasLocalPath</code>；<code class="i">IResourceMaterializationService</code>；<a href="#s4-3">§4.3</a> 触点清单全部修正；「新建未落地资源」（标题 / 外部身份 / 链接，含帖子解析取标题）；卡片/详情/筛选的未落地表现；「关联本地目录」；<code class="i">ResourceSource</code> 新成员（Bangumi、Pixiv）；<code class="i">resource.materialized</code> 事件</td><td>用户不建任何集合就能维护一份「缺失清单」：按标题或 RJ 号新建未落地资源，资源页按「已落地 = 否」筛出它们，带来源封面与名称；未安装的 Steam 游戏与未下载的 DLsite 作品同样出现在该筛选里；手动关联目录后父子关系、封面、可播放文件、路径标记属性全部正确，增强器随即重跑；批量修改、路径搜索、NFO 生成不再对空路径报错</td></tr>
+<tr><td><b>第二期</b><br>收件箱版获取流水线</td><td><code class="i">Bakabase.Modules.Acquisition</code>；线索模型 <code class="i">AcquisitionLead</code> 与 <code class="i">SharedContentLinkResolver / DirectLinkResolver</code>；文本与表格读取器与分享清单导入；<code class="i">HttpLinkFetcher / ManualFetcher</code>；收件箱监听与认领；<code class="i">SevenZipUnpacker</code>（含 <code class="i">FileController</code> 解压逻辑提取）；<code class="i">TemplateDirectoryPlacer</code>；落地与来源链接写入；SoulPlus 付费停车点；获取中心页；首次向导；油猴按钮；<code class="i">PlatformHoldingResolver</code> 经三个薄适配器接 DLsite / ExHentai / Steam 的既有取回路线</td><td>对第一期创建的任意未落地资源点「获取」并给一条帖子链接，用户只做「在网盘页面点下载」，该资源最终落地为 Active 资源，带来源链接与清洗后的名称，全程无需手工配置路径标记。从油猴脚本直接发起时，资源在解析完成的瞬间就出现在资源页并显示「获取中」。进程中途重启后任务从当前阶段续跑。分卷压缩包、嵌套压缩包、无密码包、错误密码四种情况都有明确结果</td></tr>
 <tr><td><b>第三期</b><br>集合</td><td><code class="i">Bakabase.Modules.Collection</code>；<code class="i">CollectionMulti</code> 内部属性；集合列表与详情页（成员 / 规则 / 设置）；右键「加入集合」；详情块「所属集合」；占位成员；收集率；获取任务与集合的关联</td><td>创建一个集合，手动加入五个已有资源和三个按标题创建的未落地成员，收集率显示 62.5%；对其中一个未落地成员发起获取并完成后收集率变为 75%；资源页按「在集合 X 里」筛选结果正确；规则集合「作者 = X」的成员与资源页同条件筛选一致</td></tr>
 <tr><td><b>第四期</b><br>订阅作为集合来源</td><td>Subscription 模块契约演进与迁移器；<code class="i">soulplus.search</code>、<code class="i">dlsite.circle</code>、<code class="i">bangumi.subjectRelations</code> 提供器及所需客户端方法；按订阅间隔调度；通知深链接；<code class="i">AutoAcquire</code>；Workflow 触发器与动作（<a href="#s8">§8</a>）</td><td>给某社团建集合并挂 <code class="i">dlsite.circle</code> 来源，首次检查后集合含该社团全部作品，已有的本地作品自动匹配为已落地成员；社团发新作后 30 分钟内收到通知并（开启自动获取时）出现获取任务；一条工作流「集合新增成员 → 创建获取任务 → 完成后通知」可在编辑器里搭出并跑通</td></tr>
-<tr><td><b>第五期</b><br>扩展与收编</td><td>有 API 的网盘抓取器（Mega、PikPak）；<code class="i">VndbClient</code> 与来源；帖子标题归一化与外部编号提取以合并重复帖子；规则集合的增量索引；路径标记预设与按样例标记；三张外部目录表收编为内置订阅；<code class="i">action.downloader.enqueue</code> 泛化</td><td>逐项独立验收；每项都可单独发布</td></tr>
+<tr><td><b>第五期</b><br>扩展与收编</td><td>有 API 的网盘抓取器（Mega、PikPak）；<code class="i">VndbClient</code> 与来源；帖子标题归一化与外部编号提取以合并重复帖子；规则集合的增量索引；路径标记预设与按样例标记；三个平台集成统一为 <code class="i">IPlatformConnector</code> 契约，持有型订阅经对接器提供，专用页面折叠进资源页；<code class="i">action.downloader.enqueue</code> 泛化</td><td>逐项独立验收；每项都可单独发布</td></tr>
 </table></div>
 
 <h2 id="s14"><span class="n">§14</span>风险、失败模式与开放问题</h2>
@@ -745,6 +790,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <tr><td>规则集合评估成本（每次打开集合都跑一次搜索）</td><td>大库集合页慢</td><td>结果缓存并随资源变更事件失效；第五期接入 <code class="i">ResourceProfileIndexService</code> 泛化后的搜索集索引</td></tr>
 <tr><td>Multilevel 只索引叶子节点</td><td>按父节点建的规则集合漏掉子节点</td><td>构造筛选时展开后代 id；不改索引语义</td></tr>
 <tr><td>第三方页面结构变化</td><td>提供器或抓取器失效</td><td>与现有第三方客户端同一风险面；错误写入订阅的 <code class="i">LastError</code> 并通知，不影响其他来源</td></tr>
+<tr><td>分享清单（表格、文档）的提取质量参差</td><td>标题错切、链接与密码错配</td><td>导入前逐行预览可编辑；每行独立成败；同一链接只挂一个资源</td></tr>
 <tr><td>未落地资源没有任何线索（例如来自 Bangumi 关联条目的占位）</td><td>「获取」无从下手</td><td>界面提示粘贴一条链接；后期按名称到已配置的来源搜索并给出候选线索，用户确认后再发起</td></tr>
 <tr><td>未落地资源被误当作普通资源批量操作</td><td>移动、健康度、随机播放出现空路径</td><td><a href="#s4-3">§4.3</a> 的门控清单；所有批量操作在界面显示被跳过的未落地数量</td></tr>
 </table></div>
@@ -785,6 +831,8 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <div class="tw"><table><tr><th style="width:26%">决策</th><th style="width:34%">备选</th><th>理由</th></tr>
 <tr><td>未拥有的作品建模为 <code class="i">Path</code> 为空的 <code class="i">Resource</code></td><td>独立的 Work / CatalogItem 实体</td><td>代码里已存在且在用；集合、搜索、卡片、属性、增强器全部免费复用；落地只是赋值。代价是一份有限的门控清单</td></tr>
 <tr><td>未落地资源先于集合、独立于集合成立</td><td>把未落地资源作为集合成员的附属概念</td><td>漫画、动画、游戏各有来源，用户可能只想表达「缺了哪个资源」而无意建集合；独立成立后集合与订阅都只是它的聚合与批量来源</td></tr>
+<tr><td>平台持有与分享获取是两种独立机制；分享渠道永不成为资源身份</td><td>把论坛帖子也当作一种 <code class="i">ResourceSource</code></td><td>资源不属于分享渠道，同一文件可被任意多处分享；把帖子当身份会造成一作多身份、换渠道即换身份。身份只来自持有平台与元数据权威，分享只产生线索</td></tr>
+<tr><td>平台持有型集成正式化为 <code class="i">IPlatformConnector</code> 契约</td><td>把三张外部目录表直接改成订阅</td><td>「枚举持有 + 取回 + 本地检测」是一个独立的能力集合，订阅只是其中枚举这一项的调度方式；对接器同时服务于获取流水线的平台取回路线</td></tr>
 <tr><td>获取任务以资源为目标（<code class="i">ResourceId</code> 必填），方式由线索决定</td><td>获取任务以集合或来源页面为目标，落地后再建资源</td><td>一个调用覆盖所有入口；不再有「等同步扫出资源再认领」的分支；新增来源或媒体类型只是新增一种线索的处理器</td></tr>
 <tr><td>集合成员是资源，规则命中不落表</td><td>全部落表 / 全部计算</td><td>手动与来源成员需要「忽略」「顺序」「上次出现」这类成员级状态；规则成员没有这些状态且会随资源变化，落表只会过期</td></tr>
 <tr><td>不做树形集合</td><td>父子集合</td><td>系列层级已由 Multilevel 属性承担；组合维度由规则承担；树形带来的边界问题收益不成比例</td></tr>
