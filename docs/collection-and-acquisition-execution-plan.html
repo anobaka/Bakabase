@@ -1,0 +1,640 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>集合与获取流水线执行计划</title>
+<style>
+:root{--bg:#0e1116;--panel:#161b22;--panel2:#1c222c;--code:#0b0e14;--line:#2a313c;
+--ink:#e6e9ef;--mut:#98a2b0;--dim:#6b7482;--a:#6ea8fe;--g:#5ecb9e;--y:#e6b566;--r:#e8776f;--p:#b08cff;--c:#4bc0d9;--chip:#222a35;
+--soft-a:rgba(110,168,254,.12);--soft-g:rgba(94,203,158,.12);--soft-y:rgba(230,181,102,.12);--soft-r:rgba(232,119,111,.12);--soft-p:rgba(176,140,255,.12);}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){--bg:#f6f7f9;--panel:#fff;--panel2:#eef1f5;--code:#f4f6f9;--line:#e2e6ec;
+--ink:#1a1f27;--mut:#586274;--dim:#8a94a3;--a:#2f6fed;--g:#1f9d6b;--y:#a9761f;--r:#cf4d43;--p:#7a52d6;--c:#1893ad;--chip:#eef1f5;
+--soft-a:rgba(47,111,237,.08);--soft-g:rgba(31,157,107,.1);--soft-y:rgba(169,118,31,.1);--soft-r:rgba(207,77,67,.09);--soft-p:rgba(122,82,214,.09);}}
+:root[data-theme="light"]{--bg:#f6f7f9;--panel:#fff;--panel2:#eef1f5;--code:#f4f6f9;--line:#e2e6ec;
+--ink:#1a1f27;--mut:#586274;--dim:#8a94a3;--a:#2f6fed;--g:#1f9d6b;--y:#a9761f;--r:#cf4d43;--p:#7a52d6;--c:#1893ad;--chip:#eef1f5;
+--soft-a:rgba(47,111,237,.08);--soft-g:rgba(31,157,107,.1);--soft-y:rgba(169,118,31,.1);--soft-r:rgba(207,77,67,.09);--soft-p:rgba(122,82,214,.09);}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--bg);color:var(--ink);line-height:1.66;
+font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1100px;margin:0 auto;padding:40px 22px 90px}
+h1{font-size:26px;margin:0 0 6px;text-wrap:balance}.sub{color:var(--mut);font-size:14.5px;margin:0 0 4px}
+h2{font-size:18px;margin:44px 0 10px;padding-bottom:8px;border-bottom:1px solid var(--line);scroll-margin-top:14px;text-wrap:balance}
+h2 .n{color:var(--dim);font-weight:700;margin-right:8px;font-variant-numeric:tabular-nums}
+h3{font-size:15px;margin:24px 0 6px;color:var(--mut);scroll-margin-top:14px}
+h4{font-size:13.5px;margin:16px 0 4px;color:var(--mut)}
+p{margin:9px 0;max-width:78ch}
+ul,ol{margin:9px 0 9px 4px;padding-left:22px;max-width:80ch}li{margin:4px 0}
+.note{font-size:12.5px;color:var(--dim);margin:10px 0;max-width:80ch}
+b{font-weight:650}
+a{color:var(--a)}a:focus-visible{outline:2px solid var(--a);outline-offset:2px;border-radius:3px}
+code.i{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;background:var(--chip);padding:1px 5px;border-radius:5px;overflow-wrap:anywhere;word-break:normal}
+table{width:100%;border-collapse:collapse;font-size:13px;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:10px 0}
+.tw{overflow-x:auto;margin:10px 0}.tw table{margin:0;min-width:640px}
+th,td{padding:8px 11px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:var(--panel2);color:var(--mut);font-weight:600;font-size:12px}
+tr:last-child td{border-bottom:none}
+td.k{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:12px;white-space:nowrap}
+td.e{font-weight:700;white-space:nowrap;color:var(--dim);font-variant-numeric:tabular-nums}
+.mono{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:12px}
+.tag{display:inline-block;font-size:10.5px;padding:1px 7px;border-radius:20px;background:var(--chip);color:var(--mut);white-space:nowrap;line-height:1.6}
+.t-have{color:var(--g);border:1px solid var(--g);background:var(--soft-g)}.t-new{color:var(--p);border:1px solid var(--p);background:var(--soft-p)}
+.t-later{color:var(--y);border:1px solid var(--y);background:var(--soft-y)}.t-open{color:var(--r);border:1px solid var(--r);background:var(--soft-r)}
+.t-fix{color:var(--c);border:1px solid var(--c)}
+pre.dia{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:12px 14px;overflow-x:auto;margin:10px 0;
+font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:12px;line-height:1.5;white-space:pre}
+pre.dia .have{color:var(--g)}pre.dia .new{color:var(--p)}pre.dia .cm{color:var(--dim)}pre.dia .kw{color:var(--a)}
+.rule{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--a);border-radius:10px;padding:10px 14px;margin:12px 0;font-size:13px;max-width:none}
+.rule.warn{border-left-color:var(--y)}.rule.no{border-left-color:var(--r)}.rule.ok{border-left-color:var(--g)}
+.rule p{max-width:none}
+.toc{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:6px 18px;margin:14px 0 6px;padding:14px 16px;background:var(--panel);border:1px solid var(--line);border-radius:12px;font-size:13px}
+.toc a{text-decoration:none;color:var(--ink)}.toc a:hover{color:var(--a)}.toc .n{color:var(--dim);font-variant-numeric:tabular-nums;margin-right:6px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin:10px 0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:13px}
+.card h4{margin:0 0 6px;color:var(--ink)}
+.card p,.card ul{max-width:none}
+figure{margin:14px 0;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+figure svg{max-width:100%;height:auto;display:block;margin:0 auto}
+figcaption{font-size:12.5px;color:var(--dim);margin-top:8px;text-align:center}
+.kv{display:grid;grid-template-columns:max-content 1fr;gap:4px 14px;font-size:13px;margin:8px 0}
+.kv div:nth-child(odd){color:var(--mut);white-space:nowrap}
+.sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:14px 0}
+.sum .card{border-top:3px solid var(--a)}.sum .card:nth-child(2){border-top-color:var(--p)}.sum .card:nth-child(3){border-top-color:var(--g)}
+.state{display:inline-block;font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;padding:1px 6px;border-radius:5px;background:var(--chip)}
+hr{border:0;border-top:1px solid var(--line);margin:28px 0}
+</style></head><body><div class="wrap">
+<h1>集合与获取流水线执行计划</h1>
+<p class="sub">配套 <a href="collection-and-acquisition-design.html">集合与获取流水线设计</a>。设计文档回答「做成什么样」，本文档回答「按什么顺序、每一步改哪些文件、怎么验收」。顺序自底向上：先让未落地资源独立成立，再让它能被自动补齐，然后才是集合与订阅。</p>
+<p class="note">批次是执行单位：一个批次 = 一个分支 = 一个 PR = 一次可以独立验收的交付。每个批次的「改动清单」写到文件与成员级，引用的位置均已在代码中核实（行号随代码演进可能漂移，以文件与成员名为准）。每个批次的描述足以直接作为一次开发会话的任务书。工作量是单人加 AI 辅助的指示值，用于排序与切分，不是承诺。</p>
+
+<div class="sum">
+<div class="card"><h4>五个里程碑</h4><p><b>一</b> 未落地资源独立可用 → <b>二</b> 收件箱版获取流水线 → <b>三</b> 集合与收集率 → <b>四</b> 订阅与平台对接器 → <b>五</b> 扩展。前两个里程碑不引入集合概念，完成后所有者当前的人工流程已只剩「在网盘页面点下载」。</p></div>
+<div class="card"><h4>关键路径</h4><p>1.1 → 1.2 → 1.4 → 1.5 → 2.1 → 2.2 → 2.3 → 2.4 → 2.5 → 2.6 → 2.7。其余批次可与关键路径并行；里程碑三、四只依赖里程碑一、二的产物，不依赖彼此的全部内容。</p></div>
+<div class="card"><h4>每个批次的完成定义</h4><p>迁移由 <code class="i">dotnet ef migrations add</code> 生成且纯 schema；<code class="i">yarn gen-sdk</code> 产物已提交；新增行为有测试；中英文 i18n 齐全；<code class="i">dotnet build</code> 与前端类型检查通过；偏离设计文档的决定回写到设计文档 §16。</p></div>
+</div>
+
+<nav class="toc" aria-label="目录">
+<a href="#s0"><span class="n">§0</span>总览与依赖</a>
+<a href="#s1"><span class="n">§1</span>工程约定</a>
+<a href="#s2"><span class="n">§2</span>里程碑一：未落地资源</a>
+<a href="#s3"><span class="n">§3</span>里程碑二：获取流水线</a>
+<a href="#s4"><span class="n">§4</span>里程碑三：集合</a>
+<a href="#s5"><span class="n">§5</span>里程碑四：订阅与平台对接器</a>
+<a href="#s6"><span class="n">§6</span>里程碑五：扩展</a>
+<a href="#s7"><span class="n">§7</span>横切事项与风险控制</a>
+<a href="#s8"><span class="n">§8</span>批次总表</a>
+</nav>
+
+<h2 id="s0"><span class="n">§0</span>总览与依赖</h2>
+<figure>
+<svg viewBox="0 0 1040 470" role="img" aria-label="五个里程碑的批次依赖图：里程碑一的七个批次为地基，里程碑二的流水线批次依次串联，里程碑三的集合与里程碑四的订阅并行建立在前两者之上，里程碑五为扩展。">
+<defs><marker id="pa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+<g fill="none" stroke="currentColor" stroke-width="1.1" font-size="11.5" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif">
+<!-- lanes -->
+<text x="100" y="22" text-anchor="middle" fill="currentColor" font-weight="700">里程碑一 · 未落地资源</text>
+<text x="330" y="22" text-anchor="middle" fill="currentColor" font-weight="700">里程碑二 · 获取流水线</text>
+<text x="560" y="22" text-anchor="middle" fill="currentColor" font-weight="700">里程碑三 · 集合</text>
+<text x="790" y="22" text-anchor="middle" fill="currentColor" font-weight="700">里程碑四 · 订阅与对接器</text>
+<text x="980" y="22" text-anchor="middle" fill="currentColor" font-weight="700">五</text>
+<line x1="215" y1="34" x2="215" y2="460" stroke-dasharray="3 4" opacity=".4"/>
+<line x1="445" y1="34" x2="445" y2="460" stroke-dasharray="3 4" opacity=".4"/>
+<line x1="675" y1="34" x2="675" y2="460" stroke-dasharray="3 4" opacity=".4"/>
+<line x1="905" y1="34" x2="905" y2="460" stroke-dasharray="3 4" opacity=".4"/>
+<!-- M1 boxes -->
+<rect x="30" y="44" width="140" height="30" rx="7" stroke="#b08cff" stroke-width="1.6"/><text x="100" y="63" text-anchor="middle" fill="currentColor">1.1 HasLocalPath</text>
+<rect x="30" y="94" width="140" height="30" rx="7" stroke="#b08cff" stroke-width="1.6"/><text x="100" y="113" text-anchor="middle" fill="currentColor">1.2 落地服务</text>
+<rect x="30" y="144" width="140" height="30" rx="7"/><text x="100" y="163" text-anchor="middle" fill="currentColor">1.3 触点修正</text>
+<rect x="30" y="194" width="140" height="30" rx="7" stroke="#b08cff" stroke-width="1.6"/><text x="100" y="213" text-anchor="middle" fill="currentColor">1.4 创建未落地资源</text>
+<rect x="30" y="244" width="140" height="30" rx="7" stroke="#b08cff" stroke-width="1.6"/><text x="100" y="263" text-anchor="middle" fill="currentColor">1.5 获取线索（记录）</text>
+<rect x="30" y="294" width="140" height="30" rx="7"/><text x="100" y="313" text-anchor="middle" fill="currentColor">1.6 前端体验</text>
+<rect x="30" y="344" width="140" height="30" rx="7"/><text x="100" y="363" text-anchor="middle" fill="currentColor">1.7 关联目录 + 触发器</text>
+<line x1="100" y1="74" x2="100" y2="94" marker-end="url(#pa)"/>
+<line x1="100" y1="124" x2="100" y2="144" marker-end="url(#pa)"/>
+<line x1="100" y1="174" x2="100" y2="194" marker-end="url(#pa)"/>
+<line x1="100" y1="224" x2="100" y2="244" marker-end="url(#pa)"/>
+<line x1="100" y1="274" x2="100" y2="294" marker-end="url(#pa)"/>
+<line x1="100" y1="324" x2="100" y2="344" marker-end="url(#pa)"/>
+<!-- M2 boxes -->
+<rect x="260" y="44" width="140" height="30" rx="7" stroke="#b08cff" stroke-width="1.6"/><text x="330" y="63" text-anchor="middle" fill="currentColor">2.1 模块与状态机</text>
+<rect x="260" y="94" width="140" height="30" rx="7" stroke="#b08cff" stroke-width="1.6"/><text x="330" y="113" text-anchor="middle" fill="currentColor">2.2 分享内容解析</text>
+<rect x="260" y="144" width="140" height="30" rx="7" stroke="#b08cff" stroke-width="1.6"/><text x="330" y="163" text-anchor="middle" fill="currentColor">2.3 抓取</text>
+<rect x="260" y="194" width="140" height="30" rx="7" stroke="#b08cff" stroke-width="1.6"/><text x="330" y="213" text-anchor="middle" fill="currentColor">2.4 收件箱认领</text>
+<rect x="260" y="244" width="140" height="30" rx="7" stroke="#b08cff" stroke-width="1.6"/><text x="330" y="263" text-anchor="middle" fill="currentColor">2.5 解压</text>
+<rect x="260" y="294" width="140" height="30" rx="7" stroke="#b08cff" stroke-width="1.6"/><text x="330" y="313" text-anchor="middle" fill="currentColor">2.6 放置与落地</text>
+<rect x="260" y="344" width="140" height="30" rx="7" stroke="#b08cff" stroke-width="1.6"/><text x="330" y="363" text-anchor="middle" fill="currentColor">2.7 获取中心与向导</text>
+<rect x="260" y="394" width="140" height="30" rx="7" stroke-dasharray="4 3"/><text x="330" y="413" text-anchor="middle" fill="currentColor">2.8 / 2.9 可延后</text>
+<line x1="330" y1="74" x2="330" y2="94" marker-end="url(#pa)"/>
+<line x1="330" y1="124" x2="330" y2="144" marker-end="url(#pa)"/>
+<line x1="330" y1="174" x2="330" y2="194" marker-end="url(#pa)"/>
+<line x1="330" y1="224" x2="330" y2="244" marker-end="url(#pa)"/>
+<line x1="330" y1="274" x2="330" y2="294" marker-end="url(#pa)"/>
+<line x1="330" y1="324" x2="330" y2="344" marker-end="url(#pa)"/>
+<!-- M3 boxes -->
+<rect x="490" y="44" width="140" height="30" rx="7"/><text x="560" y="63" text-anchor="middle" fill="currentColor">3.1 模块与数据</text>
+<rect x="490" y="94" width="140" height="30" rx="7"/><text x="560" y="113" text-anchor="middle" fill="currentColor">3.2 CollectionMulti</text>
+<rect x="490" y="144" width="140" height="30" rx="7"/><text x="560" y="163" text-anchor="middle" fill="currentColor">3.3 规则集合</text>
+<rect x="490" y="194" width="140" height="30" rx="7"/><text x="560" y="213" text-anchor="middle" fill="currentColor">3.4 集合页面</text>
+<rect x="490" y="244" width="140" height="30" rx="7"/><text x="560" y="263" text-anchor="middle" fill="currentColor">3.5 集合与获取联动</text>
+<line x1="560" y1="74" x2="560" y2="94" marker-end="url(#pa)"/>
+<line x1="560" y1="124" x2="560" y2="144" marker-end="url(#pa)"/>
+<line x1="560" y1="174" x2="560" y2="194" marker-end="url(#pa)"/>
+<line x1="560" y1="224" x2="560" y2="244" marker-end="url(#pa)"/>
+<!-- M4 boxes -->
+<rect x="720" y="44" width="140" height="30" rx="7"/><text x="790" y="63" text-anchor="middle" fill="currentColor">4.1 订阅契约演进</text>
+<rect x="720" y="94" width="140" height="30" rx="7"/><text x="790" y="113" text-anchor="middle" fill="currentColor">4.2 分享渠道提供器</text>
+<rect x="720" y="144" width="140" height="30" rx="7"/><text x="790" y="163" text-anchor="middle" fill="currentColor">4.3 权威提供器</text>
+<rect x="720" y="194" width="140" height="30" rx="7"/><text x="790" y="213" text-anchor="middle" fill="currentColor">4.4 自动获取与 Workflow</text>
+<rect x="720" y="244" width="140" height="30" rx="7"/><text x="790" y="263" text-anchor="middle" fill="currentColor">4.5 平台对接器契约</text>
+<line x1="790" y1="74" x2="790" y2="94" marker-end="url(#pa)"/>
+<line x1="790" y1="124" x2="790" y2="144" marker-end="url(#pa)"/>
+<line x1="790" y1="174" x2="790" y2="194" marker-end="url(#pa)"/>
+<!-- M5 -->
+<rect x="930" y="44" width="100" height="30" rx="7" stroke-dasharray="4 3"/><text x="980" y="63" text-anchor="middle" fill="currentColor">网盘抓取器</text>
+<rect x="930" y="94" width="100" height="30" rx="7" stroke-dasharray="4 3"/><text x="980" y="113" text-anchor="middle" fill="currentColor">VNDB</text>
+<rect x="930" y="144" width="100" height="30" rx="7" stroke-dasharray="4 3"/><text x="980" y="163" text-anchor="middle" fill="currentColor">模糊匹配</text>
+<rect x="930" y="194" width="100" height="30" rx="7" stroke-dasharray="4 3"/><text x="980" y="213" text-anchor="middle" fill="currentColor">标记预设</text>
+<!-- cross arrows -->
+<path d="M170 259 C215 259 215 59 260 59" marker-end="url(#pa)" stroke="#b08cff" stroke-width="1.6"/>
+<path d="M170 109 C215 109 215 59 260 59" marker-end="url(#pa)" stroke="#b08cff" stroke-width="1.6"/>
+<path d="M400 359 C445 359 445 59 490 59" marker-end="url(#pa)"/>
+<path d="M170 209 C215 209 215 450 490 450 C640 450 660 59 720 59" marker-end="url(#pa)" opacity=".8"/>
+<path d="M630 59 C675 59 675 59 720 59" marker-end="url(#pa)"/>
+<path d="M400 359 C445 359 445 209 720 209" marker-end="url(#pa)" opacity=".8"/>
+<path d="M860 259 C905 259 905 59 930 59" marker-end="url(#pa)" opacity=".6"/>
+<text x="600" y="440" fill="currentColor" opacity=".7">1.4 →  4.1（共享的资源创建方法）</text>
+</g></svg>
+<figcaption>批次依赖。紫色框与紫色箭头是关键路径；同一里程碑内的竖向箭头表示推荐顺序，未画出的横向依赖在各批次的「依赖」行里写明。</figcaption>
+</figure>
+
+<div class="tw"><table><tr><th style="width:12%">里程碑</th><th style="width:40%">完成后用户得到什么</th><th style="width:16%">指示工作量</th><th>前置</th></tr>
+<tr><td><b>一</b> 未落地资源</td><td>不建集合也能维护「缺失清单」：新建未落地资源（标题 / 平台或权威编号 / 分享链接）、按「已落地」筛选、记录获取线索、关联本地目录；未安装的 Steam 游戏与未下载的 DLsite 作品同样出现在清单里</td><td>约 10 个工作日</td><td>无</td></tr>
+<tr><td><b>二</b> 获取流水线</td><td>对任意未落地资源点「获取」，除「在网盘页面点下载」外全部自动：解析、认领、解压、放置、落地、通知</td><td>约 15 个工作日</td><td>一</td></tr>
+<tr><td><b>三</b> 集合</td><td>命名分组、三种成员来路、收集率、按集合搜索、一键获取缺失成员</td><td>约 10 个工作日</td><td>一（1.1、1.2、1.4）；3.5 需要二</td></tr>
+<tr><td><b>四</b> 订阅与平台对接器</td><td>集合有外部真相源并自动更新、自动获取；Steam / DLsite / ExHentai 集成统一为对接器契约</td><td>约 15 个工作日</td><td>三（4.1 起）；二（4.4）</td></tr>
+<tr><td><b>五</b> 扩展</td><td>网盘 API 抓取器、VNDB、模糊匹配、规则集合索引、路径标记预设</td><td>逐项独立</td><td>按项</td></tr>
+</table></div>
+
+<h2 id="s1"><span class="n">§1</span>工程约定（每个批次都遵守）</h2>
+<div class="grid2">
+<div class="card"><h4>分支与提交</h4><ul><li>一个批次一个分支，从 <code class="i">main</code> 拉出，命名 <code class="i">feat/&lt;里程碑&gt;-&lt;批次&gt;-&lt;短名&gt;</code>。</li><li>提交信息英文、沿用 <code class="i">feat / fix / refactor / docs</code> 前缀；一个批次合并前可以多次提交，合并用 PR。</li><li>只改文档或 <code class="i">.claude/</code> 的提交加 <code class="i">[skip ci]</code>；本计划的批次都含代码，不加。</li></ul></div>
+<div class="card"><h4>数据库</h4><ul><li>迁移一律 <code class="i">dotnet ef migrations add {Name} --project src/legacy/Bakabase.InsideWorld.Business --startup-project src/apps/Bakabase.Service --context BakabaseDbContext</code>，纯 schema，不写 <code class="i">migrationBuilder.Sql</code>。</li><li>需要搬运存量数据时写运行时迁移器，放在 <code class="i">src/legacy/Bakabase.Migrations</code>，先例 <code class="i">V230/PathsRelocationMigrator.cs</code>。</li><li>新模块的 <code class="i">DbSet</code> 与实体配置进 <code class="i">src/legacy/Bakabase.InsideWorld.Business/BakabaseDbContext.cs</code>，与 Workflow、Subscription 一致。</li></ul></div>
+<div class="card"><h4>模块与依赖</h4><ul><li>新模块放 <code class="i">src/modules/Bakabase.Modules.&lt;Name&gt;/</code>，只依赖 abstractions 与其他模块的抽象；依赖 legacy 服务的实现放 <code class="i">src/apps/Bakabase.Service/Components/&lt;Name&gt;/</code>（订阅提供器的先例）。</li><li>DI 扩展方法 <code class="i">Add&lt;Name&gt;&lt;TDbContext&gt;()</code>，在 <code class="i">BakabaseBusinessExtensions.cs</code> 调用。</li><li>后台服务、多实现枚举注册、BTask 外壳都沿用现有模式，不引入新框架。</li></ul></div>
+<div class="card"><h4>前端</h4><ul><li>任何 C# 枚举、模型、控制器改动后运行 <code class="i">cd src/web &amp;&amp; yarn gen-sdk</code>，提交 <code class="i">Api.ts / BApi2.d.ts / constants.ts</code>，不手改。</li><li>请求只走 <code class="i">BApi</code>；组件用 <code class="i">@/components/bakaui</code> 的封装；弹窗用 <code class="i">useBakabaseContext().createPortal</code>。</li><li>i18n 用令牌键 <code class="i">namespace.component.element.type</code>，en 与 cn 同步；新页面在 <code class="i">i18n.ts</code> 注册命名空间。</li><li>新菜单项在 <code class="i">routesMenuConfig.ts</code> 标 <code class="i">isBeta</code>。</li></ul></div>
+<div class="card"><h4>测试</h4><ul><li>跨模块集成测试进 <code class="i">src/tests/Bakabase.Tests</code>，用 <code class="i">TestServiceBuilder.BuildServiceProvider</code>（临时 SQLite）；纯逻辑放各模块自己的测试工程（<code class="i">src/tests/Bakabase.Modules.&lt;Name&gt;.Tests</code>，新模块新建）。</li><li>路径标记场景用 <code class="i">Bakabase.TestKit/Utils/PathMarkGenerator.cs</code>。</li><li>依赖 7-Zip 的测试在可执行文件缺失时跳过（沿用 <code class="i">CompressedFileServiceTests</code> 的做法）。</li><li>每个批次至少覆盖：新增行为的正向用例、一个失败用例、一个进程重启/幂等用例（若涉及状态）。</li></ul></div>
+<div class="card"><h4>完成定义</h4><ul><li><code class="i">dotnet build</code> 无警告升级为错误的项；<code class="i">dotnet test</code> 通过；前端 <code class="i">tsc</code> 与 lint 通过。</li><li>批次验收标准逐条演示（本地实跑，不只靠单测）。</li><li>与设计文档的偏离写入其 §16 并说明理由。</li><li>用户可见的新入口有帮助中心条目或至少一段说明文案。</li></ul></div>
+</div>
+
+<h2 id="s2"><span class="n">§2</span>里程碑一：未落地资源</h2>
+<p>目标：把「资源可以没有本地路径」做成明确、统一、可独立使用的机制。完成后用户不建任何集合就能维护缺失清单。七个批次，1.1 到 1.5 为关键路径。</p>
+
+<h3 id="b1-1">批次 1.1 <code class="i">HasLocalPath</code> 判定与内部属性</h3>
+<div class="kv">
+<div>目标</div><div>统一「是否已落地」的判定，并把它变成可筛选的内部布尔属性。</div>
+<div>依赖</div><div>无。</div>
+<div>规模</div><div>小，约 1 个工作日。</div>
+</div>
+<h4>改动清单</h4>
+<ul>
+<li><code class="i">src/abstractions/Bakabase.Abstractions/Models/Domain/Resource.cs</code>：新增只读属性 <code class="i">HasLocalPath =&gt; !string.IsNullOrEmpty(Path)</code>。资源视图模型同步输出该字段。</li>
+<li><code class="i">src/legacy/Bakabase.InsideWorld.Models/Constants/ResourceProperty.cs</code>：新增 <code class="i">HasLocalPath = 30</code>（29 预留给里程碑三的 <code class="i">CollectionMulti</code>）；<code class="i">src/abstractions/.../Constants/InternalProperty.cs</code> 镜像。</li>
+<li><code class="i">src/modules/Bakabase.Modules.Property/Components/PropertyInternals.cs</code>：<code class="i">BuiltinPropertyMap</code> 与 <code class="i">InternalPropertyMap</code> 各加一项，类型 <code class="i">PropertyType.Boolean</code>。</li>
+<li><code class="i">src/modules/Bakabase.Modules.Property/Resources/PropertyResource.resx</code> 与 <code class="i">.zh-Hans.resx</code>：<code class="i">BuiltinPropertyName_HasLocalPath</code>。</li>
+<li><code class="i">src/legacy/.../Components/Search/Index/ResourceSearchIndexService.cs</code> <code class="i">IndexInternalProperties</code>：按 <code class="i">dbModel.Path</code> 是否为空写入 <code class="i">"true" / "false"</code> 值键。</li>
+<li><code class="i">src/legacy/.../Components/Search/ResourceLegacySearchService.cs</code>：内部属性取值分支加 <code class="i">HasLocalPath</code>。</li>
+<li><code class="i">src/abstractions/.../Extensions/ResourceExtensions.cs</code> <code class="i">GetInternalPropertyValue</code>：新增分支。</li>
+<li><code class="i">src/legacy/Bakabase.InsideWorld.Models/Constants/SearchableReservedProperty.cs</code>：新增成员。</li>
+<li>后端约 20 处 <code class="i">!string.IsNullOrEmpty(resource.Path)</code>（<code class="i">ResourceSyncService</code>、<code class="i">ResourceService</code>、<code class="i">LocalFileCoverProvider</code>、<code class="i">LocalFilePlayableItemProvider</code>、<code class="i">HealthScoreService</code>、<code class="i">ResourceMoveService</code>、<code class="i">ResourceController</code>）改为 <code class="i">HasLocalPath</code>，不改行为。</li>
+<li>前端：<code class="i">yarn gen-sdk</code>；<code class="i">src/web/src/core/models/Resource.ts</code> 加 <code class="i">hasLocalPath</code>；<code class="i">components/ResourceFilter/presets/DefaultFilterPreset.tsx</code> 把它作为固定筛选项与媒体库并列。</li>
+</ul>
+<h4>测试</h4>
+<ul><li><code class="i">src/tests/Bakabase.Tests/ResourceHasLocalPathSearchTests.cs</code>：建两条资源（一条 <code class="i">Path = null</code>），索引就绪时 <code class="i">HasLocalPath Equals false</code> 只命中未落地资源；索引未就绪的回退搜索结果一致。</li></ul>
+<h4>验收</h4>
+<ul><li>资源页筛选面板出现「已落地」开关；选「否」后只显示未安装的 Steam 游戏或未下载的 DLsite 作品（用现有集成造数据）。</li></ul>
+
+<h3 id="b1-2">批次 1.2 落地服务 <code class="i">IResourceMaterializationService</code></h3>
+<div class="kv">
+<div>目标</div><div>落地与反落地只有一个入口，并把今天缺失的副作用补齐。</div>
+<div>依赖</div><div>1.1。</div>
+<div>规模</div><div>中，约 2 到 3 个工作日。</div>
+</div>
+<h4>改动清单</h4>
+<ul>
+<li>新增 <code class="i">src/abstractions/Bakabase.Abstractions/Services/IResourceMaterializationService.cs</code>：<code class="i">MaterializeAsync(int resourceId, string path, MaterializationOptions options, CancellationToken ct)</code>、<code class="i">DematerializeAsync(int resourceId, CancellationToken ct)</code>；<code class="i">MaterializationOptions(bool MergeIfPathOwnedByAnotherResource = true, bool EnqueuePathMarkSync = true)</code>；返回 <code class="i">MaterializationResult</code>（是否合并了另一条资源、其 id）。</li>
+<li>新增 <code class="i">src/legacy/Bakabase.InsideWorld.Business/Services/ResourceMaterializationService.cs</code>，按设计文档 §4.2 的八步实现：写 <code class="i">Path / IsFile / FileCreatedAt / FileModifiedAt</code>；路径已被另一条资源占用时以目标资源为主体走现有合并（<code class="i">ResourceService</code> 的 <code class="i">MergeResources</code> 路径，<code class="i">ResourceMergeInputModel</code>）；刷新资源缓存（<code class="i">ResourceService</code> 现有的缓存刷新入口）；调用 <code class="i">ResourceSyncService.RebuildAllParentChildRelationships</code> 的公开包装；<code class="i">MarkRelatedPathMarksAsPending</code> 并按选项 <code class="i">IPathMarkSyncService.EnqueueSync</code>；<code class="i">IResourceDataChangeEventPublisher.PublishResourcesChanged</code>；清除该资源的空增强记录并入队重新增强（新增 <code class="i">IEnhancerService.ClearEmptyEnhancementRecords(resourceId)</code>，对应 <code class="i">EnhancerService.cs:446-448, 584-594, 694-704</code> 的记录逻辑）。反落地：清空 <code class="i">Path</code>，保留身份、属性、名称，缓存失效。</li>
+<li><code class="i">ResourceSyncService.cs</code>：<code class="i">ResolveResourceForEntry</code> 的来源链接分支（约 352-356 行）改为调用落地服务；<code class="i">PopulateResourceNames</code>（约 437-534 行）对虚拟条目改为按 <code class="i">ctx.SourceLinkToResourceId</code> 查找并写保留属性 <code class="i">Name</code>；<code class="i">newResourcePaths</code>（约 127-130 行）不再计入虚拟路径字符串。</li>
+<li>DI：在 <code class="i">MediaLibraryTemplateExtensions.cs</code> 或同级注册处加 scoped 注册。</li>
+</ul>
+<h4>测试</h4>
+<ul>
+<li><code class="i">src/tests/Bakabase.Tests/ResourceMaterializationTests.cs</code>：① 未落地资源落地到临时目录后 <code class="i">IsFile</code>、文件时间、<code class="i">ParentId</code> 正确，覆盖该目录的 Property 标记被置为待同步（用 <code class="i">PathMarkGenerator</code>）；② 目标路径已属于另一条路径标记资源时合并，属性值保留在目标资源，另一条被删除；③ 反落地后再落地不残留旧缓存；④ 来源同步对未下载条目仍创建 <code class="i">Path = null</code> 的资源且 <code class="i">Name</code> 已写入。</li>
+</ul>
+<h4>验收</h4>
+<ul><li>用 DLsite 集成：下载并解压一个作品后手动触发同步，资源卡片从「未落地」变为可打开文件夹，封面与可播放文件正常，名称不再为空。</li></ul>
+
+<h3 id="b1-3">批次 1.3 触点修正</h3>
+<div class="kv">
+<div>目标</div><div>让所有默认「有路径」的代码对未落地资源安全。</div>
+<div>依赖</div><div>1.1；可与 1.2 并行。</div>
+<div>规模</div><div>中，约 2 个工作日。</div>
+</div>
+<h4>改动清单（每行一个独立提交）</h4>
+<div class="tw"><table><tr><th style="width:40%">位置</th><th>改动</th></tr>
+<tr><td><code class="i">ResourceSearchIndexService.cs</code> 约 394-404 行</td><td><code class="i">Path</code> 为空时不写 <code class="i">FileCreatedAt / FileModifiedAt</code> 范围键；排序中空值置后（<code class="i">ResourceExtensions.cs</code> 排序键）</td></tr>
+<tr><td><code class="i">ResourceLegacySearchService.cs</code> 约 208-214 行；<code class="i">AbstractPropertyDescriptor.cs:95</code></td><td>否定运算符对空值资源的结果与索引路径一致（包含）</td></tr>
+<tr><td><code class="i">AbstractKeywordEnhancer.cs</code> 约 99-115 行</td><td>文件名为空时回退到保留属性 <code class="i">Name</code></td></tr>
+<tr><td><code class="i">Bakabase.Modules.Enhancer</code>：<code class="i">EnhancerAttribute</code> 加 <code class="i">RequiresLocalFiles</code>；Bakabase / Kodi / Regex 标记为 true；<code class="i">EnhancerService.BuildContextCreationTasks</code> 对 <code class="i">HasLocalPath == false</code> 且需要本地文件的增强器不生成记录</td><td>避免生成会永久阻断重跑的空记录</td></tr>
+<tr><td><code class="i">AiEnhancer.cs</code> 约 32-41 行</td><td>名称与路径都为空时返回 null</td></tr>
+<tr><td><code class="i">BulkModificationDiffDbModel.ResourcePath</code>、<code class="i">BulkModificationDiff.ResourcePath</code>；<code class="i">BulkModificationService.cs</code> 约 234-237 行</td><td>改为可空；迁移 <code class="i">MakeBulkModificationDiffResourcePathNullable</code>；筛选加空值保护</td></tr>
+<tr><td><code class="i">ResourceController.cs</code> 约 615-619 行 <code class="i">SearchPaths</code></td><td>谓词加 <code class="i">x.Path != null &amp;&amp;</code></td></tr>
+<tr><td><code class="i">OptionsController.cs</code> 约 659、674 行；<code class="i">ResourceNfoService.cs</code> 约 96-101 行；<code class="i">MediaLibraryTemplateService.cs</code> 约 673-675 行</td><td>先过滤 <code class="i">HasLocalPath</code></td></tr>
+<tr><td><code class="i">ResourceService.PlayRandomResource</code> 约 1210-1223 行</td><td>实时探测分支排除未落地资源</td></tr>
+<tr><td><code class="i">ResourceMoveService.cs</code> 约 53-57 行</td><td>返回被跳过的未落地资源数量，供前端提示</td></tr>
+</table></div>
+<h4>测试</h4>
+<ul><li>批量修改预览包含未落地资源不抛异常；增强任务对未落地资源不生成 Bakabase 增强器记录、对 DLsite 增强器按 <code class="i">Name</code> 生成关键词；按文件时间排序时未落地资源在末尾。</li></ul>
+
+<h3 id="b1-4">批次 1.4 创建未落地资源</h3>
+<div class="kv">
+<div>目标</div><div>用户能主动声明「我缺这个」：按标题、按平台或权威编号、按分享链接。</div>
+<div>依赖</div><div>1.2（共享的创建方法从其改动的代码提取）。</div>
+<div>规模</div><div>中，约 2 个工作日。</div>
+</div>
+<h4>改动清单</h4>
+<ul>
+<li>新增 <code class="i">src/abstractions/.../Services/IPlaceholderResourceService.cs</code>：<code class="i">CreateByTitleAsync(string title)</code>、<code class="i">CreateOrMatchByExternalIdentityAsync(ResourceSource source, string sourceKey)</code>、<code class="i">CreateOrMatchBySharedUrlAsync(string url)</code>，均返回「新建或命中」的结果。实现放 legacy，复用从 <code class="i">ResourceSyncService.ResolveResourceForEntry</code> 提取出的「新建虚拟资源」方法（<code class="i">Path = null</code>、<code class="i">Name</code>、<code class="i">SourceLinks</code>、<code class="i">CoverUrls</code>）。</li>
+<li>外部身份查详情：按 <code class="i">ResourceSource</code> 分派到现有客户端 <code class="i">DLsiteClient.ParseWorkDetailById</code>、<code class="i">SteamClient.GetAppDetails</code>、<code class="i">BangumiClient.ParseDetail</code>、<code class="i">ExHentaiClient.ParseDetail</code>；用新接口 <code class="i">IExternalIdentityLookup</code>（每来源一个实现，放 <code class="i">Bakabase.Service/Components/Resource/IdentityLookups/</code>）包装，便于测试替身。输入可以是编号或页面链接，用共享的 <code class="i">TryExtractSourceKey</code>（把 <code class="i">DLsiteResolver</code>、<code class="i">DLsiteWorkService.ScanFolder</code>、<code class="i">ExHentaiGalleryService</code>、<code class="i">SteamResolver</code> 里各自的正则收敛到 <code class="i">Bakabase.Abstractions</code> 的一个静态类）。</li>
+<li>分享链接：<code class="i">CreateOrMatchBySharedUrlAsync</code> 在本里程碑只取标题：SoulPlus 链接走 <code class="i">SoulPlusClient.GetPostAsync</code> 的 <code class="i">Title</code>，其他链接取 HTML <code class="i">&lt;title&gt;</code>；用 <code class="i">ITextOps.Clean</code> 清洗；匹配：先按 1.5 的线索表查链接，再按清洗后的标题与现有资源名称精确匹配；都未命中才新建。链接写入 1.5 的线索表。</li>
+<li><code class="i">src/abstractions/.../Constants/ResourceSource.cs</code>：新增 <code class="i">Bangumi = 6</code>、<code class="i">Pixiv = 7</code>；<code class="i">ResourceSyncService.UpdateResolverResourceStatuses / DeleteOrphanedResources</code> 对没有解析器的来源不做任何事（确认现有逻辑已如此，补一个测试锁定）。</li>
+<li>控制器 <code class="i">ResourceController</code>：<code class="i">POST resource/placeholder</code>，body 为 <code class="i">{ items: [{ title? , source?, sourceKey?, sharedUrl? }], acquireImmediately: false }</code>（<code class="i">acquireImmediately</code> 在里程碑二接通），返回每项的结果。</li>
+</ul>
+<h4>测试</h4>
+<ul><li><code class="i">PlaceholderResourceServiceTests.cs</code>：按标题创建；按 RJ 号创建带 <code class="i">ResourceSourceLink</code> 的资源（替身返回详情）；同一 RJ 号第二次调用命中而非新建；分享链接按标题命中已有资源。</li></ul>
+<h4>验收</h4>
+<ul><li>通过接口粘贴三行（一个标题、一个 RJ 号、一个 SoulPlus 帖子链接），资源页出现三条未落地资源，RJ 号那条带 DLsite 封面。</li></ul>
+
+<h3 id="b1-5">批次 1.5 获取线索（只记录，不执行）</h3>
+<div class="kv">
+<div>目标</div><div>资源能记住「在哪能拿到」，为里程碑二准备数据。同时建立 Acquisition 模块工程。</div>
+<div>依赖</div><div>1.4 与本批次互相引用：先建表与服务，再让 1.4 写入；实际可与 1.4 同一分支交付。</div>
+<div>规模</div><div>小，约 1 个工作日。</div>
+</div>
+<h4>改动清单</h4>
+<ul>
+<li>新建 <code class="i">src/modules/Bakabase.Modules.Acquisition/</code>（本批次只含线索）：<code class="i">AcquisitionLeadKind { PlatformHolding=1, SharedPage=2, SharedDocument=3, DirectUrl=4, Magnet=5, Manual=6 }</code>、<code class="i">AcquisitionLeadOrigin</code>、<code class="i">AcquisitionLead</code> 领域与 Db 模型、<code class="i">IAcquisitionLeadService</code>（按资源列出、增、删、按 (Kind, Value) 查找）、DI 扩展 <code class="i">AddAcquisition&lt;TDbContext&gt;()</code>。</li>
+<li><code class="i">BakabaseDbContext.cs</code> 加 <code class="i">DbSet&lt;AcquisitionLeadDbModel&gt;</code>，唯一索引 (Kind, Value)，索引 ResourceId；迁移 <code class="i">AddAcquisitionLeads</code>。</li>
+<li>控制器 <code class="i">AcquisitionLeadController</code>：<code class="i">GET / POST / DELETE resource/{id}/acquisition-leads</code>；GET 的返回把该资源 <code class="i">ResourceSourceLink</code> 中来源属于持有平台（Steam、DLsite、ExHentai、Pixiv）的条目派生为只读的 <code class="i">PlatformHolding</code> 线索一并返回。</li>
+<li>新建测试工程 <code class="i">src/tests/Bakabase.Modules.Acquisition.Tests/</code>。</li>
+</ul>
+<h4>测试</h4>
+<ul><li>同一链接挂到第二个资源时被拒绝并返回已挂载的资源 id；派生线索随 <code class="i">ResourceSourceLink</code> 变化。</li></ul>
+
+<h3 id="b1-6">批次 1.6 前端：未落地资源的体验</h3>
+<div class="kv">
+<div>目标</div><div>用户在资源页与详情里能看见、创建、管理未落地资源。</div>
+<div>依赖</div><div>1.1、1.4、1.5 的接口。</div>
+<div>规模</div><div>中，约 2 到 3 个工作日。</div>
+</div>
+<h4>改动清单</h4>
+<ul>
+<li><code class="i">yarn gen-sdk</code>。</li>
+<li><code class="i">components/Resource/index.tsx</code>：卡片芯片「未落地」；播放按钮位置改为「获取」（本里程碑点击后提示「里程碑二可用」并打开线索列表）；显示来源封面。</li>
+<li><code class="i">components/Resource/components/Operations/index.tsx</code>：「预览」按 <code class="i">hasLocalPath</code> 门控（约 180 行）。</li>
+<li><code class="i">components/Resource/components/DetailModal/index.tsx</code> 与 <code class="i">BasicInfo</code>：未落地时隐藏「打开文件夹」（约 226-237 行），文件时间行显示「尚未落地」；新增区块「获取线索」（列表、粘贴链接新增、删除）；新增操作「关联本地目录」（调用 1.7 的接口，本批次先做界面）。</li>
+<li><code class="i">components/ResourceMoveModal/index.tsx</code>（约 95 行）：提示被跳过的未落地资源数量。</li>
+<li>资源页顶部「新建未落地资源」对话框：多行输入（每行自动识别为标题 / 编号 / 链接），提交 <code class="i">POST resource/placeholder</code>，结果表显示新建或命中。</li>
+<li>i18n：<code class="i">locales/{en,cn}/pages/resource.json</code> 新键；帮助中心加一段「未落地资源是什么」。</li>
+</ul>
+<h4>验收</h4>
+<ul><li>设计文档 §4.4 的四条界面表现逐条演示；「新建未落地资源」粘贴三行后立即在网格里看到三张卡片。</li></ul>
+
+<h3 id="b1-7">批次 1.7 关联本地目录与 <code class="i">resource.materialized</code> 触发器</h3>
+<div class="kv">
+<div>目标</div><div>用户手动把已有文件夹关联到未落地资源；Workflow 能响应落地事件。</div>
+<div>依赖</div><div>1.2。</div>
+<div>规模</div><div>小，约 1 个工作日。</div>
+</div>
+<h4>改动清单</h4>
+<ul>
+<li><code class="i">ResourceController</code>：<code class="i">POST resource/{id}/materialize</code>（body：<code class="i">path</code>）、<code class="i">POST resource/{id}/dematerialize</code>，调用落地服务；目录被其他资源占用时返回合并信息供前端确认。</li>
+<li>Workflow：在 <code class="i">Bakabase.Modules.Acquisition</code> 之外新建通用的 <code class="i">src/apps/Bakabase.Service/Components/Workflow/Resource/</code>：条目类型 <code class="i">item.resource</code>（<code class="i">ResourceWorkflowItem { Id, Name, Path, HasLocalPath, SourceLinks[] }</code>，实现 <code class="i">IHasWorkflowSystemVariables</code>）与描述符；触发器 <code class="i">resource.materialized</code>（载荷 <code class="i">{ ResourceId, Path }</code>，过滤器：无或按来源）；落地服务发布事件；<code class="i">BakabaseBusinessExtensions.cs</code> 注册。</li>
+<li>前端：<code class="i">components/Workflow/Triggers/ResourceMaterialized/</code> 节点包并注册；<code class="i">components/Workflow/variables.ts</code> 加资源系统变量提示；<code class="i">workflow.json</code> i18n。</li>
+</ul>
+<h4>测试</h4>
+<ul><li><code class="i">WorkflowManualRunTests</code> 的模式：一条「资源落地 → 发通知」的工作流在落地后产生一次运行且通知里含资源名。</li></ul>
+
+<h3>里程碑一验收清单</h3>
+<ul>
+<li>不建任何集合，粘贴三行（标题、RJ 号、SoulPlus 帖子链接）得到三条未落地资源，可按「已落地 = 否」筛出，卡片带来源封面与名称。</li>
+<li>未安装的 Steam 游戏与未下载的 DLsite 作品出现在同一筛选里。</li>
+<li>手动关联目录后父子关系、封面、可播放文件、路径标记属性全部正确，增强器重跑。</li>
+<li>批量修改、路径搜索、NFO 生成、随机播放对未落地资源不报错、不误选。</li>
+<li>一条「资源落地 → 通知」的工作流可在编辑器搭出并跑通。</li>
+</ul>
+<h2 id="s3"><span class="n">§3</span>里程碑二：获取流水线（收件箱版）</h2>
+<p>目标：对任意未落地资源点「获取」，除「在网盘页面点下载」外全部自动。批次按状态机的阶段顺序排列，每完成一个批次，流水线就能多走一段并停在下一段的人工介入点，因此每个批次都能单独演示。</p>
+
+<h3 id="b2-1">批次 2.1 模块与状态机</h3>
+<div class="kv">
+<div>目标</div><div><code class="i">AcquisitionTask</code> 的数据、状态迁移、后台驱动与进度外壳，用假处理器跑通全部状态。</div>
+<div>依赖</div><div>1.2、1.5。</div>
+<div>规模</div><div>中，约 3 个工作日。</div>
+</div>
+<h4>改动清单</h4>
+<ul>
+<li><code class="i">Bakabase.Modules.Acquisition</code>：<code class="i">AcquisitionStatus</code>、<code class="i">AcquisitionAttentionReason</code>、<code class="i">AcquisitionTask</code> 领域与 Db 模型（字段按设计文档 §9）；迁移 <code class="i">AddAcquisitionTasks</code>；<code class="i">BakabaseDbContext</code> 的 <code class="i">DbSet</code> 与索引。</li>
+<li><code class="i">AcquisitionOptions</code>（<code class="i">[Options(fileKey: "acquisition")]</code>，与 <code class="i">SoulPlusOptions</code> 同一机制）：收件箱目录、库根目录、目录模板（默认 <code class="i">{Title}</code>）、网盘偏好顺序、自动购买上限、解压后删除压缩包、密码回退策略、并发数（默认 2）。</li>
+<li>四个处理器接口（<code class="i">IAcquisitionLinkResolver</code>、<code class="i">IAcquisitionFetcher</code>、<code class="i">IAcquisitionUnpacker</code>、<code class="i">IAcquisitionPlacer</code>），本批次只提供用于测试的假实现。</li>
+<li><code class="i">IAcquisitionService</code>：<code class="i">CreateAsync(resourceId, lead, collectionId?)</code>（目标资源必须 <code class="i">HasLocalPath == false</code> 且没有进行中的任务）、列表、详情、<code class="i">RetryAsync</code>（只重跑当前阶段）、<code class="i">CancelAsync</code>、四种人工介入的入口（本批次先落状态迁移，具体行为在后续批次）。</li>
+<li><code class="i">AcquisitionRunner : BackgroundService</code>：轮询待推进任务，按并发上限执行阶段，<code class="i">WaitingForFile</code> 不占名额；每个活动任务建 BTask 外壳 <code class="i">Acquisition:{id}</code>（<code class="i">BTaskBuilder.Create(...).OfType(BTaskType.Acquisition).StartImmediately().IgnoreIfExists().Run(...)</code>，仿 <code class="i">DownloaderManager.cs:209-244</code>），进度、暂停、取消经它暴露；<code class="i">BTaskType</code> 加 <code class="i">Acquisition</code>，<code class="i">SharedResource.resx</code> 加 <code class="i">BTask_Name_Acquisition</code>。</li>
+<li>启动恢复：<code class="i">Fetching / Unpacking / Placing / Syncing</code> 中的任务回到该阶段起点，<code class="i">WaitingForFile</code> 原地保留（仿 <code class="i">WorkflowRunRehydrator</code>，在 <code class="i">BakabaseHost.cs</code> 同一位置调用）。</li>
+<li>事件：每次状态推进发布 Workflow 事件 <code class="i">acquisition.statusChanged</code>（本批次只发布，触发器在 2.7）。</li>
+<li>控制器 <code class="i">AcquisitionController</code>：<code class="i">POST acquisition</code>、<code class="i">GET acquisition</code>、<code class="i">GET acquisition/{id}</code>、<code class="i">POST acquisition/{id}/retry</code>、<code class="i">POST acquisition/{id}/cancel</code>、<code class="i">GET/PUT acquisition/options</code>。</li>
+</ul>
+<h4>测试</h4>
+<ul><li><code class="i">Bakabase.Modules.Acquisition.Tests/AcquisitionStateMachineTests.cs</code>：假处理器下走完全部状态；某阶段抛异常进入 <code class="i">Failed</code> 且 <code class="i">Retry</code> 只重跑该阶段；<code class="i">NeedsAttention</code> 恢复后回到停车前阶段；模拟重启后 <code class="i">Unpacking</code> 重跑而 <code class="i">WaitingForFile</code> 不动；并发上限生效。</li></ul>
+
+<h3 id="b2-2">批次 2.2 分享内容解析阶段</h3>
+<div class="kv">
+<div>目标</div><div>Resolving 阶段可用：网页与文本都能读出正文，大模型提取链接、提取码、解压码、标题；付费内容变成停车点。</div>
+<div>依赖</div><div>2.1。</div>
+<div>规模</div><div>中，约 2 到 3 个工作日。</div>
+</div>
+<h4>改动清单</h4>
+<ul>
+<li><code class="i">src/legacy/.../Components/PostParser/Fetchers/IPostContentFetcher.cs</code> 改名为 <code class="i">ISharedContentReader</code>（保留旧名的过渡别名一个版本）；新增 <code class="i">GenericHtmlReader</code>（无专用读取器的主机取正文与 <code class="i">&lt;title&gt;</code>）、<code class="i">PlainTextReader</code>（粘贴文本 / txt / markdown）。<code class="i">PostParserExtensions.AddPostParser</code>（约 24-52 行）改为扫描所有已加载程序集。</li>
+<li><code class="i">SoulPlusContentFetcher.cs</code>（约 25-52 行）：去掉自动购买；返回内容时附带 <code class="i">LockedContents</code>（价格、是否已购）。购买动作由 <code class="i">SharedContentLinkResolver</code> 决定：价格不超过任务生效的自动购买上限则调用 <code class="i">SoulPlusClient.BuyLockedContent</code> 并写 <code class="i">PurchaseRecordJson</code>，否则进入 <code class="i">NeedsAttention(PaidContent)</code>；新增 <code class="i">POST acquisition/{id}/approve-purchase</code>。修正 <code class="i">Price</code> 为 null 时的比较。</li>
+<li><code class="i">DownloadInfoResource</code> 加 <code class="i">DriveKind</code>（<code class="i">Http / Baidu / Xunlei / Feimao / Cloudflare / Mega / PikPak / Gofile / OneOneFive / Magnet / Unknown</code>），由链接主机名规则推断，大模型输出只作参考；提示词补充要求输出标题。</li>
+<li><code class="i">SharedContentLinkResolver</code>（<code class="i">SharedPage / SharedDocument</code>）与 <code class="i">DirectLinkResolver</code>（<code class="i">DirectUrl / Magnet</code>）放 <code class="i">src/apps/Bakabase.Service/Components/Acquisition/Resolvers/</code>；解析结果同时写回 <code class="i">PostParserTask</code>（<code class="i">PostParserTaskService.Put</code>）。</li>
+<li>解析出权威编号（<code class="i">TryExtractSourceKey</code> 命中 RJ 号、Steam AppId、VNDB 链接）时对目标资源 <code class="i">EnsureLinks</code>。</li>
+<li>多链接选择：按 <code class="i">AcquisitionOptions</code> 的网盘偏好自动选；无可用抓取器的进入 <code class="i">ManualFetcher</code>；全无 → <code class="i">NeedsAttention(NoLinks)</code>；<code class="i">POST acquisition/{id}/select-link</code>。</li>
+</ul>
+<h4>测试</h4>
+<ul><li>用固定的 HTML 与文本样例（放 <code class="i">Bakabase.Tests/Fixtures/Acquisition/</code>）加大模型替身：提取出两条链接、一条提取码、一条解压码；付费块高于上限时进入停车；<code class="i">DriveKind</code> 推断覆盖每种主机。</li></ul>
+<h4>验收</h4>
+<ul><li>对一个真实 SoulPlus 帖子创建任务，任务停在「等待选择链接」或「需要购买」，阶段数据里能看到链接与密码。</li></ul>
+
+<h3 id="b2-3">批次 2.3 抓取阶段</h3>
+<div class="kv">
+<div>目标</div><div>直链自动下载；网盘链接自动打开并进入等待文件状态。</div>
+<div>依赖</div><div>2.2。</div>
+<div>规模</div><div>小，约 1 到 2 个工作日。</div>
+</div>
+<h4>改动清单</h4>
+<ul>
+<li><code class="i">IAcquisitionFetcher { DriveKind Kind; Task&lt;FetchResult&gt; FetchAsync(AcquisitionLink link, string workDirectory, IProgress&lt;AcquisitionProgress&gt; progress, CancellationToken ct) }</code>，按 <code class="i">DriveKind</code> 注册与查找。</li>
+<li><code class="i">HttpLinkFetcher</code>：复用 <code class="i">SingleFileHttpDownloader</code>，并修正：<code class="i">Content-Length</code> 缺失时不抛（改为流式无进度）、去掉整文件读入内存的 MD5 校验、读取 <code class="i">Content-Disposition</code> 文件名、支持无 Range 的服务器（从头下载）。</li>
+<li><code class="i">ManualFetcher</code>（默认兜底）：调用现有 <code class="i">IGuiAdapter</code> 打开链接（<code class="i">GuiController.OpenUrlInDefaultBrowser</code> 的同一路径），把任务置为 <code class="i">WaitingForFile</code>，记录 <code class="i">WaitingSince</code> 与期望文件名（解析阶段若有）；提取码由前端复制到剪贴板（<code class="i">navigator.clipboard</code>），后端不做。</li>
+<li>工作目录：<code class="i">IAppService.AppDataDirectory/acquisition/{taskId}/</code>，遵守 <code class="i">appdata-paths.md</code>。</li>
+</ul>
+<h4>测试</h4>
+<ul><li>本地 HTTP 测试服务器：有 Range 与无 Range 两种情况都下载完整；中断后重试从断点续传；<code class="i">ManualFetcher</code> 置状态并记录时间。</li></ul>
+
+<h3 id="b2-4">批次 2.4 收件箱监听与认领</h3>
+<div class="kv">
+<div>目标</div><div>用户把文件放进收件箱后，系统自动认领到正确的任务，歧义时停车让人选。</div>
+<div>依赖</div><div>2.3。</div>
+<div>规模</div><div>中，约 2 到 3 个工作日。</div>
+</div>
+<h4>改动清单</h4>
+<ul>
+<li><code class="i">AcquisitionInboxWatcher : BackgroundService</code>（仿 <code class="i">WorkflowFsWatchService</code>）：监听收件箱一层深度；「稳定」判定 = 无 <code class="i">.part / .crdownload / .tmp / .baiduyun.downloading / .xltd</code> 等后缀 + 连续两次采样大小不变 + 可独占打开；分卷组用 <code class="i">CompressedFileHelper.DetectCompressedFileGroups</code> 判齐全后才视为一个候选。</li>
+<li>认领打分（纯函数，放模块内 <code class="i">InboxClaimScorer</code>）：文件名与任务标题的归一化词元重合（<code class="i">ITextOps.Clean</code> 后按分隔符切分）、期望文件名精确命中、文件名方括号密码与任务解压码一致、创建时间与 <code class="i">WaitingSince</code> 的接近度；输出每个等待任务的分数。唯一高于阈值且领先第二名足够多 → 自动认领；否则 <code class="i">NeedsAttention(AmbiguousInboxFile)</code>。</li>
+<li>认领动作：文件移到任务工作目录，写 <code class="i">ReceivedFilesJson</code>，进入 <code class="i">Unpacking</code>；取消任务时退回收件箱。</li>
+<li>接口：<code class="i">GET acquisition/inbox</code>（未认领文件与每个等待任务的分数）、<code class="i">POST acquisition/{id}/claim</code>（body：收件箱内路径列表）、<code class="i">POST acquisition/{id}/unclaim</code>。</li>
+</ul>
+<h4>测试</h4>
+<ul><li>打分函数的表驱动用例；监听器对正在写入的文件不认领（用临时文件模拟增长）；分卷未齐不认领。</li></ul>
+<h4>验收</h4>
+<ul><li>两个等待任务、往收件箱丢一个文件名含其中一个标题的压缩包，几秒内被正确任务认领；再丢一个与两者都无关的文件，任务进入「需要认领」。</li></ul>
+
+<h3 id="b2-5">批次 2.5 解压阶段</h3>
+<div class="kv">
+<div>目标</div><div>用帖子里的密码（及回退候选）自动解压，失败时停车要密码。</div>
+<div>依赖</div><div>2.4。</div>
+<div>规模</div><div>中，约 2 个工作日。</div>
+</div>
+<h4>改动清单</h4>
+<ul>
+<li>把 <code class="i">FileController.cs</code> 约 133-327 行（候选密码逐试）与约 329-493 行（解压后删除压缩包 / 上移到父目录）的逻辑提取为 <code class="i">IArchiveExtractionService</code>（放 legacy，<code class="i">FileController</code> 改为委托，行为不变），接口：<code class="i">TestPasswordsAsync(group, candidates)</code>、<code class="i">ExtractAsync(group, password, targetDirectory, overwriteMode, progress)</code>、<code class="i">PostProcess(deleteArchive, moveToParent)</code>。</li>
+<li><code class="i">SevenZipUnpacker : IAcquisitionUnpacker</code>：候选顺序 = 任务解压码 → <code class="i">StringExtensions.GetPasswordsFromPath</code> → 来源站点常用密码（<code class="i">AcquisitionOptions</code>）→ <code class="i">PasswordService.Search</code> 前 N（可关闭）→ 无密码；成功后 <code class="i">PasswordService.AddUsedTimes</code>；嵌套压缩再解一层；非压缩包透传；全部失败 → <code class="i">NeedsAttention(PasswordUnknown)</code>，<code class="i">POST acquisition/{id}/password</code> 后重跑本阶段。</li>
+<li>进度经 BTask 外壳推送（<code class="i">ExtractWithProgress</code> 的输出行解析已存在）。</li>
+</ul>
+<h4>测试</h4>
+<ul><li>在测试里用 7-Zip 生成带密码的单文件、分卷、嵌套三种压缩包（7-Zip 缺失时跳过）；错误密码 → 停车 → 补密码 → 成功；<code class="i">FileController</code> 现有解压测试全部通过（行为未变）。</li></ul>
+
+<h3 id="b2-6">批次 2.6 放置与落地阶段</h3>
+<div class="kv">
+<div>目标</div><div>解压产物按模板放进库根目录并落地为资源，路径标记补属性，发通知。</div>
+<div>依赖</div><div>2.5、1.2。</div>
+<div>规模</div><div>中，约 2 个工作日。</div>
+</div>
+<h4>改动清单</h4>
+<ul>
+<li>把 <code class="i">AbstractDownloader.BuildDownloadFilename</code> 的非法字符清理提取为 <code class="i">Bakabase.Abstractions</code> 的 <code class="i">FileNameSanitizer</code>（若 <code class="i">Fs/FileNameSanitizer.cs</code> 已有等价实现则复用）。</li>
+<li><code class="i">TemplateDirectoryPlacer : IAcquisitionPlacer</code>：用 <code class="i">ResourceUtils.SplitDisplayNameTemplateIntoSegments</code> 渲染模板，变量 <code class="i">{Title} {Code} {Collection} {Source} {Year}</code>；逐段清理与长度预算；冲突策略（追加序号 / 合并 / 停车 <code class="i">TargetExists</code>）；折叠单层外壳目录；移动；压缩包按设置进回收站（复用仓库内现有的回收站工具，若无则用 <code class="i">Microsoft.VisualBasic.FileIO.FileSystem</code> 的回收站删除）。</li>
+<li>Syncing 阶段（模块内置）：<code class="i">IResourceMaterializationService.MaterializeAsync(resourceId, targetDirectory)</code>；<code class="i">IPathMarkSyncService.EnqueueSync</code>；名称为占位值时用解析标题更新；通知 <code class="i">INotificationService.CreateAsync(Source = "acquisition:{id}", PayloadJson.route = "/resource?...")</code>。</li>
+<li><code class="i">Completed</code> 后清理工作目录（保留阶段数据）。</li>
+</ul>
+<h4>测试</h4>
+<ul><li>模板渲染的表驱动用例（空变量整段丢弃、非法字符、超长）；放置到已存在目录的三种策略；端到端：假读取器 + 本地 HTTP 直链 + 真实压缩包 → 资源落地、<code class="i">ResourceSourceLink</code> 与通知存在。</li></ul>
+<h4>验收</h4>
+<ul><li>设计文档 §12.4 的五步全程演示一次；期间只有「在网盘页面点下载」是人工。</li></ul>
+
+<h3 id="b2-7">批次 2.7 获取中心、首次向导、入口接通</h3>
+<div class="kv">
+<div>目标</div><div>用户能从界面发起、观察、干预获取；一次向导完成全部配置。</div>
+<div>依赖</div><div>2.6。</div>
+<div>规模</div><div>大，约 3 到 4 个工作日。</div>
+</div>
+<h4>改动清单</h4>
+<ul>
+<li><code class="i">yarn gen-sdk</code>；新页面 <code class="i">src/web/src/pages/acquisition/</code>（<code class="i">/acquisitions</code>）：任务表、需要处理置顶并行内操作（选择链接 / 购买并继续 / 输入密码 / 认领文件）、收件箱抽屉（未认领文件与分数、拖拽认领）、粘贴链接创建、打开收件箱目录、设置；BTask 进度经 <code class="i">useBTasksStore</code> 按前缀 <code class="i">Acquisition:</code> 订阅；菜单项标 Beta；i18n 命名空间 <code class="i">pages/acquisition.json</code>。</li>
+<li>首次向导（设计文档 §12.1）：四步，第二步调用 <code class="i">POST path-mark</code> 在库根目录创建 <code class="i">ResourceMarkConfig { MatchMode = Layer, Layer = 1, FsTypeFilter = Directory }</code>（存在则跳过），第三步用最近一次解析结果实时预览模板。</li>
+<li>资源卡片与详情的「获取」接通：弹出线索选择 → <code class="i">POST acquisition</code>；「新建未落地资源」的「创建后立即获取」接通。</li>
+<li>通知深链接：<code class="i">NotificationCenter/index.tsx</code> 约 87 行向 <code class="i">NotificationItem</code> 传 <code class="i">onClick</code>，解析 <code class="i">payloadJson.route</code> 并导航；订阅通知改用同一约定。</li>
+<li>油猴脚本 <code class="i">src/scripts/baka-monkey/src/sites/soulplus/adapters.ts</code>：「获取到 Bakabase」按钮 → <code class="i">POST acquisition/from-url</code>（后端新增：解析标题 → <code class="i">IPlaceholderResourceService.CreateOrMatchBySharedUrlAsync</code> → 创建任务）。</li>
+<li>Workflow：触发器 <code class="i">acquisition.statusChanged</code>（过滤：目标状态集合）与条目类型 <code class="i">item.acquisition</code>；动作 <code class="i">action.acquisition.create</code>；前端节点包与 i18n。</li>
+</ul>
+<h4>验收</h4>
+<ul><li>新用户从向导到第一个游戏入库不超过五分钟；获取中心里每种停车都能在行内解决；一条「获取完成 → 通知」的工作流可搭出并跑通。</li></ul>
+
+<h3 id="b2-8">批次 2.8 平台取回路线（可延后到里程碑四）</h3>
+<div class="kv">
+<div>目标</div><div>「获取」对已购买的 DLsite 作品、收藏的 ExHentai 画廊、已拥有的 Steam 游戏同样有效。</div>
+<div>依赖</div><div>2.6。</div>
+<div>规模</div><div>中，约 2 个工作日。</div>
+</div>
+<ul>
+<li><code class="i">PlatformHoldingResolver</code> 按 <code class="i">ResourceSource</code> 分派到三个薄适配器（<code class="i">src/apps/Bakabase.Service/Components/Acquisition/Connectors/</code>）：DLsite → <code class="i">DLsiteWorkService.DownloadWork / ExtractWork</code> 后把产物目录交给放置阶段；ExHentai → <code class="i">DownloadTaskService.AddRange</code> 并等待 <code class="i">downloader.completed</code>（订阅 <code class="i">DownloadTaskService.OnStatusChanged</code> 的同一事件，超时进入停车）；Steam → 打开 <code class="i">steam://install/{appId}</code>，轮询 <code class="i">SteamAppService.UpdateInstallationStatus</code>，检测到路径后直接落地（跳过解压与放置）。</li>
+<li>这三个适配器就是里程碑四 <code class="i">IPlatformConnector.FetchAsync</code> 的雏形，届时原样迁入。</li>
+</ul>
+
+<h3 id="b2-9">批次 2.9 分享清单导入（可延后到里程碑五）</h3>
+<ul>
+<li>Excel / CSV 读取器（后端已有 xlsx 导出所用的库，复用其读取能力）；<code class="i">POST acquisition/import-shared-list</code>：逐行提取标题、链接、密码 → 走 1.4 的匹配或新建 → 挂线索 → 返回预览；前端预览表逐行确认后批量创建任务。</li>
+</ul>
+
+<h3>里程碑二验收清单</h3>
+<ul>
+<li>对里程碑一创建的任意未落地资源点「获取」并给一条帖子链接，用户只做「在网盘页面点下载」，资源最终落地为 Active 资源，带清洗后的名称与（若正文含编号）权威身份。</li>
+<li>从油猴脚本直接发起时，资源在解析完成的瞬间就出现在资源页并显示「获取中」。</li>
+<li>进程中途重启后任务从当前阶段续跑；分卷、嵌套、无密码、错误密码四种压缩包情况都有明确结果。</li>
+<li>付费帖子在上限内自动购买且有审计记录，超出上限停车。</li>
+<li>全程无需手工配置路径标记。</li>
+</ul>
+<h2 id="s4"><span class="n">§4</span>里程碑三：集合</h2>
+<p>目标：命名分组、三种成员来路、收集率、按集合搜索、一键获取缺失成员。集合建立在里程碑一之上；3.5 需要里程碑二。</p>
+
+<h3 id="b3-1">批次 3.1 模块与数据</h3>
+<div class="kv"><div>依赖</div><div>1.1、1.2、1.4。</div><div>规模</div><div>中，约 2 到 3 个工作日。</div></div>
+<ul>
+<li>新建 <code class="i">src/modules/Bakabase.Modules.Collection/</code>：<code class="i">Collection</code>、<code class="i">CollectionResourceMapping</code>、<code class="i">CollectionMembershipOrigin</code> 领域与 Db 模型（字段按设计文档 §9）；迁移 <code class="i">AddCollections</code>；<code class="i">BakabaseDbContext</code> 的 <code class="i">DbSet</code>、唯一索引 (CollectionId, ResourceId)。</li>
+<li><code class="i">ICollectionResourceMappingService</code>：双向内存索引（仿 <code class="i">IMediaLibraryResourceMappingService</code>），加入、移出、忽略、排序、按资源查集合、按集合查资源。</li>
+<li><code class="i">ICollectionService</code>：增删改查；成员分页（状态筛选：全部 / 已落地 / 未落地 / 获取中 / 已忽略 / 来源中已不存在）；收集率与成员构成（已落地且未忽略 ÷ 未忽略）；成员变化后 <code class="i">IResourceDataChangeEventPublisher.PublishResourcesChanged</code>（否则索引与界面不刷新）。</li>
+<li>控制器 <code class="i">CollectionController</code>：设计文档 §11 集合部分除 <code class="i">rule/preview</code>（3.3）与 <code class="i">acquire-missing</code>（3.5）之外的全部路由；<code class="i">POST collection/{id}/members/placeholder</code> 转调 <code class="i">POST resource/placeholder</code> 后加入。</li>
+<li>SignalR：成员或收集率变化时 <code class="i">GetIncrementalData("Collection", dto)</code>（仿 <code class="i">PathMarkService.cs:40</code>）。</li>
+<li>测试工程 <code class="i">Bakabase.Modules.Collection.Tests</code>：收集率计算（含忽略）、同一资源重复加入幂等、删除集合级联。</li>
+</ul>
+
+<h3 id="b3-2">批次 3.2 内部属性 <code class="i">CollectionMulti</code></h3>
+<div class="kv"><div>依赖</div><div>3.1。</div><div>规模</div><div>中，约 2 个工作日。</div></div>
+<p>按设计文档 §5.5 的十二行清单逐项完成，要点：</p>
+<ul>
+<li><code class="i">ResourceProperty.CollectionMulti = 29</code> 与 <code class="i">InternalProperty</code> 镜像；<code class="i">PropertyInternals</code> 两张表；resx。</li>
+<li><code class="i">PropertyService</code>：仿 <code class="i">BuildOptionsForMediaLibraryV2Multi</code>（约 35 行）增加集合选项构建，并在 <code class="i">GetProperty</code>（约 88-90 行）与 <code class="i">GetProperties</code>（约 169-173 行）接入。</li>
+<li><code class="i">ResourceSearchIndexService.IndexInternalProperties</code>：加载集合成员映射，按集合 id 写值键（仿约 420-428 行）；规则成员在 3.3 接入。</li>
+<li><code class="i">ResourceLegacySearchService</code> 预取与取值分支；<code class="i">ResourceExtensions.GetInternalPropertyValue</code>；<code class="i">ResourceService.BulkPutPropertyValue</code>（约 1945-1950 行旁）加 <code class="i">SetCollections</code> 分支；<code class="i">Resource.Collections</code> 与 <code class="i">ResourceAdditionalItem.CollectionName</code>（纳入 <code class="i">All</code>）；<code class="i">SearchableReservedProperty</code>。</li>
+<li>前端：<code class="i">Resource.ts</code> 加 <code class="i">collections</code>；卡片芯片（<code class="i">components/Resource/index.tsx</code> 约 584-619 行旁）；<code class="i">BulkPropertyEditor</code> 映射；<code class="i">DefaultFilterPreset</code>。</li>
+<li>测试：按集合筛选与直接查成员结果一致；批量设置集合后索引更新。</li>
+</ul>
+
+<h3 id="b3-3">批次 3.3 规则集合</h3>
+<div class="kv"><div>依赖</div><div>3.2。</div><div>规模</div><div>小到中，约 1 到 2 个工作日。</div></div>
+<ul>
+<li><code class="i">Collection.RuleSearchJson</code> 的评估：调用 <code class="i">IResourceProfileService.GetMatchingResourceIdsBySearchJson</code>；结果缓存在集合服务内，随资源变更事件失效。</li>
+<li>成员并集：落表成员 ∪ 规则命中；索引构建与资源变更时把规则命中也写入 <code class="i">CollectionMulti</code> 键。</li>
+<li><code class="i">POST collection/{id}/rule/preview</code>；前端复用 <code class="i">ResourceFilterController</code> 与 <code class="i">ResourceProfileTestModal</code> 的形状。</li>
+<li>从 Multilevel 节点创建规则集合时在前端展开后代 id（<code class="i">StandardValue/helpers.ts</code> 的 <code class="i">findNodeChainInMultilevelData</code> 系列）。</li>
+<li>测试：规则「作者 = X」的成员与资源页同条件筛选一致；资源属性变化后成员随之变化。</li>
+</ul>
+
+<h3 id="b3-4">批次 3.4 集合页面</h3>
+<div class="kv"><div>依赖</div><div>3.1、3.2；3.3 的规则标签页可后补。</div><div>规模</div><div>大，约 3 到 4 个工作日。</div></div>
+<ul>
+<li><code class="i">src/web/src/pages/collection/</code>：列表页（仿 <code class="i">pages/media-library</code> 的卡片流 + 收集率进度条 + 成员构成）、详情页（成员 / 来源占位 / 规则 / 设置四个标签；成员网格复用 <code class="i">ResourceCard</code>，状态芯片与右键动作；按属性分组显示）。</li>
+<li>右键菜单「加入集合…」：克隆 <code class="i">MediaLibraryMultiSelector</code> 为 <code class="i">CollectionMultiSelector</code>，在 <code class="i">ContextMenuItems/index.tsx</code> 约 346-358 行旁加入。</li>
+<li>详情块「所属集合」：克隆 <code class="i">DetailModal/MediaLibraryMappings</code>，按 <code class="i">ResourceDetailLayoutEditor</code> 的六处接入点新增分区（<code class="i">types.ts</code>、<code class="i">defaultLayout.ts</code>、<code class="i">SamplePlaceholders.tsx</code>、<code class="i">DetailModal/index.tsx</code>、两份 <code class="i">resource.json</code>）。</li>
+<li>「在资源页打开」：<code class="i">usePendingSearchStore</code> + 导航，筛选 <code class="i">CollectionMulti In [id]</code>。</li>
+<li><code class="i">routesMenuConfig.ts</code> 在 <code class="i">menu.data</code> 下加 <code class="i">/collections</code>（Beta）；<code class="i">useCollectionsStore</code> 接 SignalR；i18n 命名空间 <code class="i">pages/collection.json</code>。</li>
+</ul>
+
+<h3 id="b3-5">批次 3.5 集合与获取联动</h3>
+<div class="kv"><div>依赖</div><div>3.4、2.7。</div><div>规模</div><div>小，约 1 个工作日。</div></div>
+<ul>
+<li><code class="i">POST collection/{id}/acquire-missing</code>：对有线索的未落地成员批量 <code class="i">IAcquisitionService.CreateAsync(..., collectionId)</code>；成员卡片显示获取进度。</li>
+<li>Workflow：触发器 <code class="i">collection.membersAdded</code>、动作 <code class="i">action.collection.addResource</code>，前端节点包。</li>
+<li>验收（设计文档 §13 第三期）：五个已有资源加三个未落地成员收集率 62.5%，获取一个后 75%。</li>
+</ul>
+
+<h2 id="s5"><span class="n">§5</span>里程碑四：订阅与平台对接器</h2>
+<p>目标：集合有外部真相源并自动更新、自动获取；平台持有型集成统一为对接器契约。4.1 是本里程碑的地基，4.2 与 4.3 可并行，4.5 独立。</p>
+
+<h3 id="b4-1">批次 4.1 订阅契约演进</h3>
+<div class="kv"><div>依赖</div><div>3.1、1.4。</div><div>规模</div><div>大，约 3 到 4 个工作日。</div></div>
+<ul>
+<li><code class="i">ISubscriptionProvider</code>：新增 <code class="i">SubscriptionSourceKind SourceKind</code>、<code class="i">ResourceSource? ResourceSource</code>；<code class="i">CheckAsync</code> 改为 <code class="i">FetchAllItemsAsync</code>（分页在实现内走完）；<code class="i">SubscriptionItem</code> 加 <code class="i">CoverUrls</code>、<code class="i">MetadataJson</code>；删除 <code class="i">AbstractListIdDiffProvider</code> 的快照差异。</li>
+<li><code class="i">SubscriptionDbModel</code> 加 <code class="i">CollectionId</code>（迁移 <code class="i">AddSubscriptionCollectionId</code>，迁移期可空）；运行时迁移器 <code class="i">SubscriptionCollectionBackfillMigrator</code>（<code class="i">src/legacy/Bakabase.Migrations</code>）为每个空 <code class="i">CollectionId</code> 的订阅建同名集合；<code class="i">SubscriptionSnapshotDbModel</code> 停用（保留表一个版本，不再读写）。</li>
+<li><code class="i">SubscriptionService.RunCheckAsync</code> 重写（设计文档 §6.2 七步）：平台/权威条目走 <code class="i">FindResourceBySourceLinks</code> 或新建带身份资源；分享渠道条目走线索去重 → 归一化标题精确匹配 → 新建无身份资源 + 线索；确保成员映射并刷新 <code class="i">LastSeenAt</code>；首次检查落库不通知；通知与 <code class="i">subscription.updated</code>（载荷加 <code class="i">CollectionId</code>、<code class="i">ResourceIds</code>）。</li>
+<li><code class="i">SubscriptionCheckTask</code>：按各订阅 <code class="i">IntervalMinutes</code> 判到期；冲突键加 <code class="i">"SyncResources"</code>，去掉 <code class="i">"SyncPixiv"</code>。</li>
+<li>现有三个提供器改契约：<code class="i">ExHentaiSearchProvider</code> 补 <code class="i">NextListUrl</code> 分页；三者标为平台持有型。</li>
+<li><code class="i">SubscriptionUpdatedTrigger</code>：去掉 <code class="i">KindToItemType</code> 手工表，统一输出 <code class="i">item.resource</code>；前端 <code class="i">Triggers/SubscriptionUpdated</code> 同步。</li>
+<li>前端：<code class="i">SubscriptionEditor</code> 增加所属集合；集合详情「来源」标签接通；<code class="i">/subscription</code> 页保留为总览。</li>
+<li>测试：首次检查落库不通知；第二次新增条目产生通知与成员；分享渠道条目与已有资源按标题精确匹配；从来源消失的成员被标记不删除。</li>
+</ul>
+
+<h3 id="b4-2">批次 4.2 分享渠道提供器：<code class="i">soulplus.search</code></h3>
+<div class="kv"><div>依赖</div><div>4.1。</div><div>规模</div><div>中，约 2 个工作日。</div></div>
+<ul>
+<li><code class="i">SoulPlusClient</code> 新增列表页抓取（版块 / 关键词，分页，返回 tid、标题、链接）。</li>
+<li><code class="i">SoulPlusSearchProvider</code>（分享渠道型，<code class="i">ResourceSource = null</code>）；前端 <code class="i">Subscription/Providers/SoulPlusSearch/</code> 表单与摘要。</li>
+<li>集合 <code class="i">AutoAcquire</code> 对分享渠道条目以 <code class="i">SharedPage</code> 线索创建获取任务。</li>
+</ul>
+
+<h3 id="b4-3">批次 4.3 权威提供器：<code class="i">dlsite.circle</code> 与 <code class="i">bangumi.subjectRelations</code></h3>
+<div class="kv"><div>依赖</div><div>4.1。</div><div>规模</div><div>中，约 2 到 3 个工作日。</div></div>
+<ul>
+<li><code class="i">DLsiteClient</code> 新增社团页 / 系列页抓取；<code class="i">DLsiteCircleProvider</code>。</li>
+<li><code class="i">BangumiClient</code> 接 bgm.tv API 的条目关联接口；<code class="i">BangumiSubjectRelationsProvider</code>；Bangumi 增强器命中后写 <code class="i">ResourceSourceLink</code>（设计文档 §5.4）。</li>
+<li>两者的前端表单与摘要。</li>
+</ul>
+
+<h3 id="b4-4">批次 4.4 自动获取与 Workflow 桥接</h3>
+<div class="kv"><div>依赖</div><div>4.1、2.7。</div><div>规模</div><div>中，约 2 个工作日。</div></div>
+<ul>
+<li>集合级 <code class="i">AutoAcquire</code> 与获取设置覆盖（<code class="i">Collection.AcquisitionSettingsJson</code>）。</li>
+<li>动作 <code class="i">action.resource.setPropertyValue</code>、<code class="i">action.enhancer.enhance</code>、<code class="i">action.pathmark.enqueueSync</code>（按能力全景图 §6 列出的代码位置实现）及其前端节点包。</li>
+<li>验收：一条「集合新增成员 → 创建获取任务 → 完成后通知」的工作流可搭出并跑通。</li>
+</ul>
+
+<h3 id="b4-5">批次 4.5 平台对接器契约</h3>
+<div class="kv"><div>依赖</div><div>2.8（适配器雏形）；与 4.1 到 4.4 无硬依赖。</div><div>规模</div><div>大，约 4 到 5 个工作日，建议拆成三个子批次（契约与 Steam、DLsite、ExHentai）。</div></div>
+<ul>
+<li><code class="i">IResourceResolver</code> 演进为 <code class="i">IPlatformConnector</code>（设计文档 §6.4）：<code class="i">EnumerateHoldingsAsync</code> = 现 <code class="i">DiscoverResources</code>；<code class="i">FetchAsync</code> 迁入 2.8 的适配器；<code class="i">DetectLocalPathAsync</code> = Steam 安装检测 / DLsite 目录扫描。</li>
+<li>持有型订阅 <code class="i">dlsite.purchases</code>、<code class="i">steam.ownedGames</code>、<code class="i">exhentai.favorites</code>：实现即调用对接器枚举；<code class="i">SyncDLsiteTask / SyncSteamTask / SyncExHentaiTask</code> 改为经订阅调度。</li>
+<li>三张外部目录表：<code class="i">IsDownloaded / LocalPath / IsInstalled / InstallPath</code> → <code class="i">Resource.Path</code>（经落地服务）；私有字段 → <code class="i">ResourceSourceLink.MetadataJson</code> 加类型化读取器；<code class="i">IsHidden</code> → 成员忽略或资源级隐藏（<span class="tag t-open">待定</span>）；表在后一个版本删除。</li>
+<li>三个专用页面折叠为资源页按来源筛选 + 对接器动作；<code class="i">DLsiteWorkService</code> 的下载 / 解压 / 扫描完成后调用落地服务（今天什么都不触发）。</li>
+</ul>
+
+<h2 id="s6"><span class="n">§6</span>里程碑五：扩展</h2>
+<div class="tw"><table><tr><th style="width:26%">项目</th><th style="width:44%">内容</th><th>依赖</th></tr>
+<tr><td>网盘抓取器</td><td>Mega、PikPak 等有 API 的网盘作为 <code class="i">IAcquisitionFetcher</code>；用户零配置变更</td><td>2.3</td></tr>
+<tr><td>磁力抓取器</td><td>对接外部下载工具（aria2 或系统 BT 客户端）</td><td>2.3</td></tr>
+<tr><td>VNDB</td><td><code class="i">ThirdPartyId.Vndb</code>、客户端、<code class="i">ResourceSource.Vndb</code>、<code class="i">vndb.series / vndb.developer</code> 提供器、VNDB 增强器写身份</td><td>4.1</td></tr>
+<tr><td>模糊匹配</td><td>分享条目与资源的宽松标题匹配进「待确认」列表；沿用 <code class="i">docs/local-file-organization/modules/04-resolution.md</code> 的保守策略</td><td>4.2</td></tr>
+<tr><td>规则集合索引</td><td>把 <code class="i">ResourceProfileIndexService</code> 泛化为搜索集索引，规则集合与配置档案共用</td><td>3.3</td></tr>
+<tr><td>路径标记预设与按样例标记</td><td>帮助中心示例提升为预设；右键样例目录推断 <code class="i">Layer</code> 并批量创建；<code class="i">copyMarks</code> 持久化</td><td>无</td></tr>
+<tr><td>分享清单导入</td><td>2.9（若未在里程碑二完成）</td><td>2.6</td></tr>
+<tr><td><code class="i">action.downloader.enqueue</code> 泛化</td><td>ExHentai 专用入队动作泛化为按来源选择下载器</td><td>4.5</td></tr>
+</table></div>
+
+<h2 id="s7"><span class="n">§7</span>横切事项与风险控制</h2>
+<div class="grid2">
+<div class="card"><h4>可见性与回滚</h4><ul><li>新菜单项（获取中心、集合）标 Beta；未完成的入口不显示而不是显示后报错。</li><li>每个批次的迁移只增不删（删除表推迟一个版本），保证能回退到上一版本二进制。</li><li>里程碑一改动现有同步与增强逻辑，合并前用现有 DLsite / Steam 数据做一次全量同步对比资源数与名称。</li></ul></div>
+<div class="card"><h4>花钱的动作</h4><ul><li>自动购买默认关闭；2.2 之前 <code class="i">SoulPlusContentFetcher</code> 的自动购买已被移除，任何购买都有 <code class="i">PurchaseRecordJson</code> 与通知。</li></ul></div>
+<div class="card"><h4>第三方页面变化</h4><ul><li>读取器与提供器的解析用固定样例做回归测试；线上失败写入订阅或任务的错误字段并通知，不影响其他来源。</li></ul></div>
+<div class="card"><h4>性能</h4><ul><li>落地服务不等待全量同步；规则集合结果缓存并随事件失效；订阅检查按各自间隔而非固定 30 分钟；收件箱监听只看一层。</li></ul></div>
+<div class="card"><h4>文档回写</h4><ul><li>每个批次合并时更新设计文档 §13 的进度与 §16 的偏离记录；本计划的批次表同步勾选。</li></ul></div>
+<div class="card"><h4>何时该停下来重新讨论</h4><ul><li>1.2 的合并策略在真实库上出现非预期合并；2.4 的自动认领错误率高于人工可接受；4.1 的分享条目标题匹配产生错误合并。这三处都有「保守默认 + 人工确认」的退路，触发时先降级为人工确认再讨论算法。</li></ul></div>
+</div>
+
+<h2 id="s8"><span class="n">§8</span>批次总表</h2>
+<div class="tw"><table><tr><th style="width:8%">批次</th><th style="width:26%">名称</th><th style="width:12%">依赖</th><th style="width:10%">规模</th><th>交付物摘要</th></tr>
+<tr><td class="e">1.1</td><td><code class="i">HasLocalPath</code> 判定与内部属性</td><td>无</td><td>小</td><td>统一判定、布尔内部属性、筛选固定项</td></tr>
+<tr><td class="e">1.2</td><td>落地服务</td><td>1.1</td><td>中</td><td><code class="i">IResourceMaterializationService</code>、同步服务三处修正、空增强记录清理</td></tr>
+<tr><td class="e">1.3</td><td>触点修正</td><td>1.1</td><td>中</td><td>十处门控与一条迁移</td></tr>
+<tr><td class="e">1.4</td><td>创建未落地资源</td><td>1.2</td><td>中</td><td><code class="i">IPlaceholderResourceService</code>、身份查询、<code class="i">POST resource/placeholder</code>、<code class="i">ResourceSource</code> 新成员</td></tr>
+<tr><td class="e">1.5</td><td>获取线索（记录）</td><td>1.4</td><td>小</td><td>Acquisition 模块工程、<code class="i">AcquisitionLead</code> 表与接口</td></tr>
+<tr><td class="e">1.6</td><td>前端体验</td><td>1.1、1.4、1.5</td><td>中</td><td>卡片、详情、筛选、新建对话框、线索区块</td></tr>
+<tr><td class="e">1.7</td><td>关联目录与触发器</td><td>1.2</td><td>小</td><td>落地接口、<code class="i">item.resource</code>、<code class="i">resource.materialized</code></td></tr>
+<tr><td class="e">2.1</td><td>模块与状态机</td><td>1.2、1.5</td><td>中</td><td><code class="i">AcquisitionTask</code>、后台驱动、BTask 外壳、接口</td></tr>
+<tr><td class="e">2.2</td><td>分享内容解析</td><td>2.1</td><td>中</td><td>读取器泛化、网盘种类、付费停车点、两个解析器</td></tr>
+<tr><td class="e">2.3</td><td>抓取</td><td>2.2</td><td>小</td><td>直链抓取器、手动抓取器</td></tr>
+<tr><td class="e">2.4</td><td>收件箱认领</td><td>2.3</td><td>中</td><td>监听器、打分、认领接口</td></tr>
+<tr><td class="e">2.5</td><td>解压</td><td>2.4</td><td>中</td><td>解压服务提取、密码回退链</td></tr>
+<tr><td class="e">2.6</td><td>放置与落地</td><td>2.5、1.2</td><td>中</td><td>模板放置、落地、通知</td></tr>
+<tr><td class="e">2.7</td><td>获取中心与向导</td><td>2.6</td><td>大</td><td>页面、向导、入口接通、深链接、油猴、Workflow 节点</td></tr>
+<tr><td class="e">2.8</td><td>平台取回路线</td><td>2.6</td><td>中</td><td>三个薄适配器（可延后）</td></tr>
+<tr><td class="e">2.9</td><td>分享清单导入</td><td>2.6</td><td>小</td><td>表格 / 文档读取与批量创建（可延后）</td></tr>
+<tr><td class="e">3.1</td><td>集合模块与数据</td><td>1.1、1.2、1.4</td><td>中</td><td>两张表、映射索引、收集率、接口</td></tr>
+<tr><td class="e">3.2</td><td><code class="i">CollectionMulti</code></td><td>3.1</td><td>中</td><td>内部属性十二处接入</td></tr>
+<tr><td class="e">3.3</td><td>规则集合</td><td>3.2</td><td>小到中</td><td>规则评估、缓存、预览</td></tr>
+<tr><td class="e">3.4</td><td>集合页面</td><td>3.1、3.2</td><td>大</td><td>列表、详情、右键、详情块、菜单</td></tr>
+<tr><td class="e">3.5</td><td>集合与获取联动</td><td>3.4、2.7</td><td>小</td><td>获取缺失成员、两个 Workflow 节点</td></tr>
+<tr><td class="e">4.1</td><td>订阅契约演进</td><td>3.1、1.4</td><td>大</td><td>契约、检查流程重写、迁移器、调度</td></tr>
+<tr><td class="e">4.2</td><td>分享渠道提供器</td><td>4.1</td><td>中</td><td>SoulPlus 列表抓取与提供器</td></tr>
+<tr><td class="e">4.3</td><td>权威提供器</td><td>4.1</td><td>中</td><td>DLsite 社团页、Bangumi 关联</td></tr>
+<tr><td class="e">4.4</td><td>自动获取与 Workflow</td><td>4.1、2.7</td><td>中</td><td>自动获取、三个资源类动作</td></tr>
+<tr><td class="e">4.5</td><td>平台对接器契约</td><td>2.8</td><td>大</td><td><code class="i">IPlatformConnector</code>、持有型订阅、目录表收编</td></tr>
+</table></div>
+<hr>
+<p class="note">批次编号与设计文档 §13 的分期一一对应；实施中若拆分或合并批次，在本表更新并在设计文档 §16 记录原因。</p>
+</div></body></html>
