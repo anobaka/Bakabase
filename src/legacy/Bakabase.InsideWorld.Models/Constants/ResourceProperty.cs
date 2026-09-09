@@ -53,7 +53,13 @@ namespace Bakabase.InsideWorld.Models.Constants
         /// matching ScoringProfiles; null when no profile has scored the resource.
         /// </summary>
         HealthScore = 28,
-        // 29 is reserved for CollectionMulti.
+        /// <summary>
+        /// Which collections the resource belongs to (MultipleChoice). Derived from the
+        /// collection memberships — written-down ones and rule matches alike — so that
+        /// "everything in this series" is an ordinary resource search rather than a
+        /// separate way of listing things.
+        /// </summary>
+        CollectionMulti = 29,
         /// <summary>
         /// Whether the resource currently has local files (Boolean). Derived from
         /// <c>Resource.Path</c>: a resource without a path is known to Bakabase but not

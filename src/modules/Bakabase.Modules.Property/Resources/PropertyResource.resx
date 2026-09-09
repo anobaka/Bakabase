@@ -243,6 +243,9 @@
   <data name="BuiltinPropertyName_HealthScore" xml:space="preserve">
     <value>Health score</value>
   </data>
+  <data name="BuiltinPropertyName_CollectionMulti" xml:space="preserve">
+    <value>Collections</value>
+  </data>
   <data name="BuiltinPropertyName_HasLocalPath" xml:space="preserve">
     <value>Has local files</value>
   </data>

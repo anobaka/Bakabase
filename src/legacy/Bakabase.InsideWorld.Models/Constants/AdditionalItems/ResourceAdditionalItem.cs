@@ -19,7 +19,9 @@ namespace Bakabase.InsideWorld.Models.Constants.AdditionalItems
         MediaLibraryName = 1 << 11,
         Cover = 1 << 14 | Properties,
         PlayableItem = 1 << 15,
+        CollectionName = 1 << 16,
 
-        All = Properties | DisplayName | Alias | HasChildren | MediaLibraryName | Cover | PlayableItem
+        All = Properties | DisplayName | Alias | HasChildren | MediaLibraryName | Cover | PlayableItem |
+              CollectionName
     }
 }

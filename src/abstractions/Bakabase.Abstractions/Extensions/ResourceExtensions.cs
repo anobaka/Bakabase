@@ -71,6 +71,10 @@ namespace Bakabase.Abstractions.Extensions
                     resource.SourceLinks?.Select(l => l.Source.ToString()).Distinct().ToList()
                 ),
                 InternalProperty.HasLocalPath => (resource.HasLocalPath, resource.HasLocalPath),
+                InternalProperty.CollectionMulti => (
+                    resource.Collections?.Select(c => c.Id.ToString()).ToList(),
+                    resource.Collections?.Select(c => c.Name).ToList()
+                ),
                 _ => (null, null)
             };
         }

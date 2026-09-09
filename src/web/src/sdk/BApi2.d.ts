@@ -7463,6 +7463,13 @@ export interface components {
             /** @deprecated */
             mediaLibraryColor?: string;
             mediaLibraries?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Resource+MediaLibraryInfo"][];
+            collections?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Resource+CollectionInfo"][];
+        };
+        "Bakabase.Abstractions.Models.Domain.Resource+CollectionInfo": {
+            /** Format: int32 */
+            id: number;
+            name: string;
+            color?: string;
         };
         "Bakabase.Abstractions.Models.Domain.Resource+MediaLibraryInfo": {
             /** Format: int32 */
@@ -8913,10 +8920,10 @@ export interface components {
         "Bakabase.InsideWorld.Models.Constants.AdditionalItems.CustomPropertyAdditionalItem": 0 | 2;
         /**
          * Format: int32
-         * @description [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 52064: All]
+         * @description [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 65536: CollectionName, 117600: All]
          * @enum {integer}
          */
-        "Bakabase.InsideWorld.Models.Constants.AdditionalItems.ResourceAdditionalItem": 0 | 32 | 64 | 288 | 512 | 2048 | 16416 | 32768 | 52064;
+        "Bakabase.InsideWorld.Models.Constants.AdditionalItems.ResourceAdditionalItem": 0 | 32 | 64 | 288 | 512 | 2048 | 16416 | 32768 | 65536 | 117600;
         /**
          * Format: int32
          * @description [1: Latest, 2: Frequency]
@@ -24953,7 +24960,7 @@ export interface operations {
             query?: {
                 saveSearch?: boolean;
                 searchId?: string;
-                /** @description [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 52064: All] */
+                /** @description [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 65536: CollectionName, 117600: All] */
                 additionalItems?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.AdditionalItems.ResourceAdditionalItem"];
             };
             header?: never;
@@ -25015,7 +25022,7 @@ export interface operations {
         parameters: {
             query?: {
                 ids?: number[];
-                /** @description [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 52064: All] */
+                /** @description [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 65536: CollectionName, 117600: All] */
                 additionalItems?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.AdditionalItems.ResourceAdditionalItem"];
             };
             header?: never;
@@ -25869,7 +25876,7 @@ export interface operations {
     GetResourceConflicts: {
         parameters: {
             query?: {
-                /** @description [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 52064: All] */
+                /** @description [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 65536: CollectionName, 117600: All] */
                 additionalItems?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.AdditionalItems.ResourceAdditionalItem"];
             };
             header?: never;

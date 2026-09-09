@@ -727,6 +727,14 @@ export interface BakabaseAbstractionsModelsDomainResource {
   /** @deprecated */
   mediaLibraryColor?: string;
   mediaLibraries?: BakabaseAbstractionsModelsDomainResourceMediaLibraryInfo[];
+  collections?: BakabaseAbstractionsModelsDomainResourceCollectionInfo[];
+}
+
+export interface BakabaseAbstractionsModelsDomainResourceCollectionInfo {
+  /** @format int32 */
+  id: number;
+  name: string;
+  color?: string;
 }
 
 export interface BakabaseAbstractionsModelsDomainResourceMediaLibraryInfo {
@@ -2413,7 +2421,7 @@ export type BakabaseInsideWorldModelsConstantsAdditionalCoverDiscoveringSource =
 export type BakabaseInsideWorldModelsConstantsAdditionalItemsCustomPropertyAdditionalItem = 0 | 2;
 
 /**
- * [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 52064: All]
+ * [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 65536: CollectionName, 117600: All]
  * @format int32
  */
 export type BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem =
@@ -2425,7 +2433,8 @@ export type BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalI
   | 2048
   | 16416
   | 32768
-  | 52064;
+  | 65536
+  | 117600;
 
 /**
  * [1: Latest, 2: Frequency]
@@ -9248,7 +9257,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       query?: {
         saveSearch?: boolean;
         searchId?: string;
-        /** [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 52064: All] */
+        /** [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 65536: CollectionName, 117600: All] */
         additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem;
       },
       params: RequestParams = {},
@@ -9273,7 +9282,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     searchResourcesUrl: (query?: {
         saveSearch?: boolean;
         searchId?: string;
-        /** [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 52064: All] */
+        /** [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 65536: CollectionName, 117600: All] */
         additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem;
       }) => {
       const baseUrl = this.baseUrl || "";
@@ -9335,7 +9344,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getResourcesByKeys: (
       query?: {
         ids?: number[];
-        /** [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 52064: All] */
+        /** [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 65536: CollectionName, 117600: All] */
         additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem;
       },
       params: RequestParams = {},
@@ -9357,7 +9366,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     getResourcesByKeysUrl: (query?: {
         ids?: number[];
-        /** [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 52064: All] */
+        /** [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 65536: CollectionName, 117600: All] */
         additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem;
       }) => {
       const baseUrl = this.baseUrl || "";
@@ -10189,7 +10198,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getResourceConflicts: (
       id: number,
       query?: {
-        /** [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 52064: All] */
+        /** [0: None, 32: Properties, 64: Alias, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 16416: Cover, 32768: PlayableItem, 65536: CollectionName, 117600: All] */
         additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem;
       },
       params: RequestParams = {},

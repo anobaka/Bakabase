@@ -156,6 +156,8 @@ export type Resource = {
   /** @deprecated */
   mediaLibraryColor?: string;
   mediaLibraries?: { id: number; name: string; color?: string }[];
+  /** Which collections this belongs to — written-down memberships and rule matches alike. */
+  collections?: { id: number; name: string; color?: string }[];
   /** @deprecated */
   category?: { id: number; name: string };
   pinned: boolean;

@@ -589,6 +589,38 @@ const Resource = React.forwardRef((props: Props, ref) => {
                 switch (dpk.pool) {
                   case PropertyPool.Internal:
                     switch (dpk.id) {
+                      case ResourceProperty.CollectionMulti:
+                        // One chip per collection. Rule members are in here too — the server does
+                        // not distinguish, because a member is a member.
+                        if (resource.collections && resource.collections.length > 0) {
+                          return resource.collections.map((c) => {
+                            const cStyle: CSSProperties = {};
+
+                            if (c.color) {
+                              cStyle.color = c.color;
+                              cStyle.backgroundColor = autoBackgroundColor(c.color);
+                            }
+
+                            return (
+                              <Chip
+                                key={`${dpk.pool}-${dpk.id}-${c.id}`}
+                                className={"h-auto w-fit resource-display-property-chip"}
+                                radius={"sm"}
+                                size={"sm"}
+                                style={cStyle}
+                                variant={"flat"}
+                              >
+                                <StandardValueRenderer
+                                  type={StandardValueType.String}
+                                  value={c.name}
+                                  variant="light"
+                                />
+                              </Chip>
+                            );
+                          });
+                        }
+
+                        return [];
                       case ResourceProperty.MediaLibraryV2:
                       case ResourceProperty.MediaLibraryV2Multi:
                         // Render multiple chips for multiple media libraries

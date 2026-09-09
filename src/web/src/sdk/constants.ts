@@ -1641,6 +1641,7 @@ export enum InternalProperty {
   MediaLibraryV2Multi = 25,
   Source = 26,
   HealthScore = 28,
+  CollectionMulti = 29,
   HasLocalPath = 30
 }
 
@@ -1658,6 +1659,7 @@ export const internalProperties = [
   { label: 'MediaLibraryV2Multi', value: InternalProperty.MediaLibraryV2Multi },
   { label: 'Source', value: InternalProperty.Source },
   { label: 'HealthScore', value: InternalProperty.HealthScore },
+  { label: 'CollectionMulti', value: InternalProperty.CollectionMulti },
   { label: 'HasLocalPath', value: InternalProperty.HasLocalPath }
 ] as const;
 
@@ -1675,6 +1677,7 @@ export const InternalPropertyLabel: Record<InternalProperty, string> = {
   [InternalProperty.MediaLibraryV2Multi]: 'MediaLibraryV2Multi',
   [InternalProperty.Source]: 'Source',
   [InternalProperty.HealthScore]: 'HealthScore',
+  [InternalProperty.CollectionMulti]: 'CollectionMulti',
   [InternalProperty.HasLocalPath]: 'HasLocalPath'
 };
 
@@ -2666,6 +2669,7 @@ export enum ResourceProperty {
   Source = 26,
   Name = 27,
   HealthScore = 28,
+  CollectionMulti = 29,
   HasLocalPath = 30
 }
 
@@ -2688,6 +2692,7 @@ export const resourceProperties = [
   { label: 'Source', value: ResourceProperty.Source },
   { label: 'Name', value: ResourceProperty.Name },
   { label: 'HealthScore', value: ResourceProperty.HealthScore },
+  { label: 'CollectionMulti', value: ResourceProperty.CollectionMulti },
   { label: 'HasLocalPath', value: ResourceProperty.HasLocalPath }
 ] as const;
 
@@ -2710,6 +2715,7 @@ export const ResourcePropertyLabel: Record<ResourceProperty, string> = {
   [ResourceProperty.Source]: 'Source',
   [ResourceProperty.Name]: 'Name',
   [ResourceProperty.HealthScore]: 'HealthScore',
+  [ResourceProperty.CollectionMulti]: 'CollectionMulti',
   [ResourceProperty.HasLocalPath]: 'HasLocalPath'
 };
 
@@ -2726,6 +2732,7 @@ export enum SearchableReservedProperty {
   MediaLibraryV2Multi = 25,
   Source = 26,
   Name = 27,
+  CollectionMulti = 29,
   HasLocalPath = 30
 }
 
@@ -2742,6 +2749,7 @@ export const searchableReservedProperties = [
   { label: 'MediaLibraryV2Multi', value: SearchableReservedProperty.MediaLibraryV2Multi },
   { label: 'Source', value: SearchableReservedProperty.Source },
   { label: 'Name', value: SearchableReservedProperty.Name },
+  { label: 'CollectionMulti', value: SearchableReservedProperty.CollectionMulti },
   { label: 'HasLocalPath', value: SearchableReservedProperty.HasLocalPath }
 ] as const;
 
@@ -2758,6 +2766,7 @@ export const SearchableReservedPropertyLabel: Record<SearchableReservedProperty,
   [SearchableReservedProperty.MediaLibraryV2Multi]: 'MediaLibraryV2Multi',
   [SearchableReservedProperty.Source]: 'Source',
   [SearchableReservedProperty.Name]: 'Name',
+  [SearchableReservedProperty.CollectionMulti]: 'CollectionMulti',
   [SearchableReservedProperty.HasLocalPath]: 'HasLocalPath'
 };
 
@@ -2902,7 +2911,8 @@ export enum ResourceAdditionalItem {
   MediaLibraryName = 2048,
   Cover = 16416,
   PlayableItem = 32768,
-  All = 52064
+  CollectionName = 65536,
+  All = 117600
 }
 
 export const resourceAdditionalItems = [
@@ -2914,6 +2924,7 @@ export const resourceAdditionalItems = [
   { label: 'MediaLibraryName', value: ResourceAdditionalItem.MediaLibraryName },
   { label: 'Cover', value: ResourceAdditionalItem.Cover },
   { label: 'PlayableItem', value: ResourceAdditionalItem.PlayableItem },
+  { label: 'CollectionName', value: ResourceAdditionalItem.CollectionName },
   { label: 'All', value: ResourceAdditionalItem.All }
 ] as const;
 
@@ -2926,6 +2937,7 @@ export const ResourceAdditionalItemLabel: Record<ResourceAdditionalItem, string>
   [ResourceAdditionalItem.MediaLibraryName]: 'MediaLibraryName',
   [ResourceAdditionalItem.Cover]: 'Cover',
   [ResourceAdditionalItem.PlayableItem]: 'PlayableItem',
+  [ResourceAdditionalItem.CollectionName]: 'CollectionName',
   [ResourceAdditionalItem.All]: 'All'
 };
 

@@ -137,17 +137,17 @@ const BulkPropertyEditor: React.FC<Props> = ({
 
       const propMap = new Map<PropertyKey, IProperty>();
 
-      // Add Internal property: only MediaLibraryV2Multi
-      const mediaLibMultiProp = builtinProps.find(
-        (p) =>
-          p.pool === PropertyPool.Internal && p.id === ResourcePropertyEnum.MediaLibraryV2Multi,
-      );
+      // The internal properties a person can actually set in bulk. The rest are derived from the
+      // resource itself and would be read-only here.
+      for (const id of [
+        ResourcePropertyEnum.MediaLibraryV2Multi,
+        ResourcePropertyEnum.CollectionMulti,
+      ]) {
+        const prop = builtinProps.find((p) => p.pool === PropertyPool.Internal && p.id === id);
 
-      if (mediaLibMultiProp) {
-        propMap.set(
-          makePropertyKey(PropertyPool.Internal, mediaLibMultiProp.id),
-          mediaLibMultiProp,
-        );
+        if (prop) {
+          propMap.set(makePropertyKey(PropertyPool.Internal, prop.id), prop);
+        }
       }
 
       // Add all Reserved properties
@@ -189,7 +189,7 @@ const BulkPropertyEditor: React.FC<Props> = ({
         let dbValue: any = undefined;
         let bizValue: any = undefined;
 
-        // Special handling for MediaLibraryV2Multi - get from resource.mediaLibraries
+        // These two live on the resource itself rather than in its property values.
         if (
           property.pool === PropertyPool.Internal &&
           property.id === ResourcePropertyEnum.MediaLibraryV2Multi
@@ -198,6 +198,14 @@ const BulkPropertyEditor: React.FC<Props> = ({
             // Use library IDs as dbValue, names as bizValue
             dbValue = resource.mediaLibraries.map((ml) => String(ml.id));
             bizValue = resource.mediaLibraries.map((ml) => ml.name);
+          }
+        } else if (
+          property.pool === PropertyPool.Internal &&
+          property.id === ResourcePropertyEnum.CollectionMulti
+        ) {
+          if (resource.collections && resource.collections.length > 0) {
+            dbValue = resource.collections.map((c) => String(c.id));
+            bizValue = resource.collections.map((c) => c.name);
           }
         } else {
           // Bulk edit only operates on scope=Manual values; other scopes are not surfaced here

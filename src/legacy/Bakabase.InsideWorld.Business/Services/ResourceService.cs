@@ -783,6 +783,32 @@ namespace Bakabase.InsideWorld.Business.Services
 
                                     break;
                                 }
+                                case ResourceAdditionalItem.CollectionName:
+                                {
+                                    // Optional by design: a build without the collection module
+                                    // simply leaves the field null.
+                                    var collectionNames = _serviceProvider.GetService<ICollectionNameProvider>();
+
+                                    if (collectionNames != null)
+                                    {
+                                        var byResource = await collectionNames.GetByResourceIdsAsync(
+                                            doList.Select(d => d.Id).ToArray());
+
+                                        foreach (var resource in doList)
+                                        {
+                                            var names = byResource.GetValueOrDefault(resource.Id);
+
+                                            if (names is {Count: > 0})
+                                            {
+                                                resource.Collections = names
+                                                    .Select(c => new Resource.CollectionInfo(c.Id, c.Name, null))
+                                                    .ToList();
+                                            }
+                                        }
+                                    }
+
+                                    break;
+                                }
                                 case ResourceAdditionalItem.Cover:
                                 {
                                     // Load Cache internally (needed by LocalFileCoverProvider)
@@ -1765,6 +1791,55 @@ namespace Bakabase.InsideWorld.Business.Services
         }
 
         /// <summary>
+        /// Puts these resources in exactly these collections — the bulk editor's "set the value",
+        /// which for a multi-valued property means replace rather than add.
+        /// <para>
+        /// Rule membership is untouched: it is not a value anyone can set, and a resource that
+        /// matches a rule stays a member whatever this does.
+        /// </para>
+        /// </summary>
+        public async Task<BaseResponse> SetCollections(int[] resourceIds, int[] collectionIds)
+        {
+            if (resourceIds.Length == 0) return BaseResponseBuilder.Ok;
+
+            var collectionService = _serviceProvider
+                .GetService<Modules.Collection.Abstractions.Services.ICollectionService>();
+            var mappingService = _serviceProvider
+                .GetService<Modules.Collection.Abstractions.Services.ICollectionResourceMappingService>();
+
+            if (collectionService == null || mappingService == null) return BaseResponseBuilder.Ok;
+
+            var all = (await collectionService.GetAll()).Select(c => c.Id).ToHashSet();
+            var invalid = collectionIds.Where(id => !all.Contains(id)).ToList();
+
+            if (invalid.Count > 0)
+            {
+                return BaseResponseBuilder.BuildBadRequest(
+                    $"Invalid collection IDs: [{string.Join(',', invalid)}]");
+            }
+
+            var wanted = collectionIds.ToHashSet();
+
+            foreach (var resourceId in resourceIds)
+            {
+                var current = (await mappingService.GetByResourceId(resourceId))
+                    .Select(m => m.CollectionId).ToHashSet();
+
+                foreach (var collectionId in wanted.Except(current))
+                {
+                    await collectionService.AddMembers(collectionId, [resourceId]);
+                }
+
+                foreach (var collectionId in current.Except(wanted))
+                {
+                    await collectionService.RemoveMembers(collectionId, [resourceId]);
+                }
+            }
+
+            return BaseResponseBuilder.Ok;
+        }
+
+        /// <summary>
         /// When IsBizValue is true, converts bizValue to dbValue via PrepareDbValue and auto-creates options if needed.
         /// </summary>
         private async Task<string?> ConvertBizValueToDbValueIfNeeded(ResourcePropertyValuePutInputModel model)
@@ -1953,6 +2028,14 @@ namespace Bakabase.InsideWorld.Business.Services
                         var mediaLibraryIds = model.Value?.DeserializeAsStandardValue<List<string>>(StandardValueType.ListString)?
                             .Select(int.Parse).ToArray() ?? [];
                         return await SetMediaLibraries(resourceIds, mediaLibraryIds);
+                    }
+                    case ResourceProperty.CollectionMulti:
+                    {
+                        var collectionIds = model.Value
+                            ?.DeserializeAsStandardValue<List<string>>(StandardValueType.ListString)
+                            ?.Select(int.Parse).ToArray() ?? [];
+
+                        return await SetCollections(resourceIds, collectionIds);
                     }
                     case ResourceProperty.Introduction:
                     case ResourceProperty.Cover:

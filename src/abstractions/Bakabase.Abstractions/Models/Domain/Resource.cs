@@ -135,5 +135,13 @@ public record Resource
 
     public List<MediaLibraryInfo>? MediaLibraries { get; set; }
 
+    /// <summary>
+    /// Which collections this belongs to — written-down memberships and rule matches alike. Loaded
+    /// only when asked for (<c>ResourceAdditionalItem.CollectionName</c>).
+    /// </summary>
+    public List<CollectionInfo>? Collections { get; set; }
+
     public record MediaLibraryInfo(int Id, string Name, string? Color);
+
+    public record CollectionInfo(int Id, string Name, string? Color);
 }

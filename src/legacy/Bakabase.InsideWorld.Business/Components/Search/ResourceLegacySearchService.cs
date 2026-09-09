@@ -12,6 +12,7 @@ using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.Modules.Property;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bootstrap.Extensions;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Bakabase.InsideWorld.Business.Components.Search
 {
@@ -21,14 +22,22 @@ namespace Bakabase.InsideWorld.Business.Components.Search
         private readonly ICustomPropertyValueService _customPropertyValueService;
         private readonly IMediaLibraryResourceMappingService _mediaLibraryResourceMappingService;
 
+        /// <summary>
+        /// Resolved lazily so this service does not require the collection module to exist: a build
+        /// without it searches everything else exactly as before.
+        /// </summary>
+        private readonly IServiceProvider _serviceProvider;
+
         public ResourceLegacySearchService(
             IReservedPropertyValueService reservedPropertyValueService,
             ICustomPropertyValueService customPropertyValueService,
-            IMediaLibraryResourceMappingService mediaLibraryResourceMappingService)
+            IMediaLibraryResourceMappingService mediaLibraryResourceMappingService,
+            IServiceProvider serviceProvider)
         {
             _reservedPropertyValueService = reservedPropertyValueService;
             _customPropertyValueService = customPropertyValueService;
             _mediaLibraryResourceMappingService = mediaLibraryResourceMappingService;
+            _serviceProvider = serviceProvider;
         }
 
         public async Task<HashSet<int>?> SearchAsync(List<Abstractions.Models.Domain.Resource> allResources, ResourceSearchFilterGroup? group, List<ResourceTag>? tags = null)
@@ -116,6 +125,30 @@ namespace Bakabase.InsideWorld.Business.Components.Search
                             }
                         }
 
+                        // Collections, when a filter asks about them. Loaded for the whole pool
+                        // rather than per filter value: membership includes rule matches, which
+                        // cannot be looked up backwards from a collection id.
+                        Dictionary<int, List<string>>? resourceCollectionMap = null;
+
+                        if (filters.Any(f => f is
+                            {
+                                PropertyPool: PropertyPool.Internal,
+                                PropertyId: (int) ResourceProperty.CollectionMulti
+                            }))
+                        {
+                            var provider = _serviceProvider.GetService<ICollectionNameProvider>();
+
+                            if (provider != null)
+                            {
+                                var byResource =
+                                    await provider.GetByResourceIdsAsync(context.ResourcesPool.Keys.ToArray());
+
+                                resourceCollectionMap = byResource.ToDictionary(
+                                    kv => kv.Key,
+                                    kv => kv.Value.Select(c => c.Id.ToString()).ToList());
+                            }
+                        }
+
                         var getValue = SpecificEnumUtils<InternalProperty>.Values.ToDictionary(d => d, d => d switch
                         {
                             InternalProperty.Filename => (Func<Abstractions.Models.Domain.Resource, object?>) (r => r.FileName),
@@ -130,6 +163,7 @@ namespace Bakabase.InsideWorld.Business.Components.Search
                             InternalProperty.ParentResource => r => r.ParentId?.ToString(),
                             InternalProperty.PlayedAt => r => r.PlayedAt,
                             InternalProperty.HasLocalPath => r => r.HasLocalPath,
+                            InternalProperty.CollectionMulti => r => resourceCollectionMap?.GetValueOrDefault(r.Id),
                             _ => null
                         });
                         context.PropertyValueMap[PropertyPool.Internal] = getValue.Where(x => x.Value != null)
