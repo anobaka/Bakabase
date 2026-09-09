@@ -19,4 +19,13 @@ public interface IEnhancerService
     Task EnhanceResourceWithOptions(int resourceId, List<EnhancerFullOptions> enhancerOptionsList, CancellationToken ct);
     Task ApplyEnhancementsToResources(Dictionary<int, HashSet<int>> resourceIdEnhancerIdsMap,
         List<Enhancement> enhancements, CancellationToken ct);
+
+    /// <summary>
+    /// Deletes the applied-but-empty enhancement records of the given resources, so their enhancers
+    /// run again next round. An enhancer that found nothing still records a result, and an applied
+    /// record is never retried — which is correct while the resource is unchanged, and wrong the
+    /// moment it changes in a way the enhancer can now read (most obviously: its files arrive).
+    /// </summary>
+    /// <returns>How many records were deleted.</returns>
+    Task<int> ClearEmptyEnhancementRecords(IReadOnlyCollection<int> resourceIds, CancellationToken ct);
 }

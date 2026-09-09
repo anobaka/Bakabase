@@ -40,6 +40,8 @@ public class ResourceSyncService : ScopedService
     private readonly ILogger<ResourceSyncService> _logger;
     private readonly IEnumerable<IResourceResolver> _resourceResolvers;
     private readonly IReservedPropertyValueService _reservedPropertyValueService;
+    private readonly ResourceStructureService _structureService;
+    private readonly IResourceMaterializationService _materializationService;
 
     public ResourceSyncService(
         IServiceProvider serviceProvider,
@@ -50,7 +52,9 @@ public class ResourceSyncService : ScopedService
         IBakabaseLocalizer localizer,
         ILogger<ResourceSyncService> logger,
         IEnumerable<IResourceResolver> resourceResolvers,
-        IReservedPropertyValueService reservedPropertyValueService) : base(serviceProvider)
+        IReservedPropertyValueService reservedPropertyValueService,
+        ResourceStructureService structureService,
+        IResourceMaterializationService materializationService) : base(serviceProvider)
     {
         _resourceService = resourceService;
         _sourceLinkService = sourceLinkService;
@@ -60,6 +64,8 @@ public class ResourceSyncService : ScopedService
         _logger = logger;
         _resourceResolvers = resourceResolvers;
         _reservedPropertyValueService = reservedPropertyValueService;
+        _structureService = structureService;
+        _materializationService = materializationService;
     }
 
     /// <summary>
@@ -114,6 +120,7 @@ public class ResourceSyncService : ScopedService
 
         var resourcesToCreateOrUpdate = new List<Resource>();
         var newResourcePaths = new List<string>();
+        var newResourceCount = 0;
 
         foreach (var entry in discoveredEntries)
         {
@@ -126,7 +133,14 @@ public class ResourceSyncService : ScopedService
                 resourcesToCreateOrUpdate.Add(resource);
                 if (resource.Id == 0)
                 {
-                    newResourcePaths.Add(entry.EffectivePath);
+                    newResourceCount++;
+                    // Only a real path counts. A virtual entry ("dlsite://RJ01") names a resource
+                    // we know about but hold no files for, and feeding that string to the marker
+                    // writer or to path-mark coverage matching describes nothing on disk.
+                    if (resource.HasLocalPath)
+                    {
+                        newResourcePaths.Add(resource.Path!);
+                    }
                 }
             }
         }
@@ -147,8 +161,8 @@ public class ResourceSyncService : ScopedService
                 await ReportProgress(onProgressChange, onProcessChange, progress, "Creating/updating resources...");
             }
 
-            result.ResourcesCreated = newResourcePaths.Count;
-            result.ResourcesUpdated = resourcesToCreateOrUpdate.Count - newResourcePaths.Count;
+            result.ResourcesCreated = newResourceCount;
+            result.ResourcesUpdated = resourcesToCreateOrUpdate.Count - newResourceCount;
 
             _logger.LogInformation(
                 "[ResourceSync] Created {Created}, Updated {Updated} resources from {Source}",
@@ -176,7 +190,10 @@ public class ResourceSyncService : ScopedService
             }
         }
 
-        // ===== Step 2.5: Auto-populate Name reserved property =====
+        // ===== Step 2.5: Materialize resources whose files just showed up =====
+        result.ResourcesMaterialized = await ApplyPendingMaterializations(ctx, ct);
+
+        // ===== Step 2.6: Auto-populate Name reserved property =====
         if (resourcesToCreateOrUpdate.Count > 0)
         {
             await PopulateResourceNames(source, discoveredEntries, ct);
@@ -195,15 +212,15 @@ public class ResourceSyncService : ScopedService
         if (result.ResourcesCreated > 0 || result.ResourcesDeleted > 0)
         {
             await ReportProgress(onProgressChange, onProcessChange, 85, "Rebuilding parent-child relationships...");
-            await RebuildAllParentChildRelationships(ct);
+            await _structureService.RebuildParentChildRelationships(ct);
             result.ParentChildRebuilt = true;
         }
 
         // ===== Step 6: Mark related path marks as pending (92-98%) =====
-        if (result.ResourcesCreated > 0)
+        if (newResourcePaths.Count > 0)
         {
             await ReportProgress(onProgressChange, onProcessChange, 92, "Marking related path marks as pending...");
-            await MarkRelatedPathMarksAsPending(newResourcePaths, ct);
+            await _structureService.MarkPathMarksAsPendingForPaths(newResourcePaths, ct);
             result.PathMarksMarkedPending = true;
         }
 
@@ -352,8 +369,18 @@ public class ResourceSyncService : ScopedService
             var newPath = isVirtual ? entry.LocalPath : entry.EffectivePath;
             if (newPath != linkedResource.Path)
             {
-                linkedResource.Path = newPath;
-                linkedResource.UpdatedAt = DateTime.Now;
+                // Writing Path here would leave IsFile, the file times, the filesystem caches, the
+                // parent-child tree and the covering path marks all describing the state before
+                // the files arrived. Gaining or losing local files is a transition with side
+                // effects, so it is deferred to the one service that applies all of them.
+                if (string.IsNullOrEmpty(newPath))
+                {
+                    ctx.PendingDematerializations.Add(linkedResource.Id);
+                }
+                else
+                {
+                    ctx.PendingMaterializations[linkedResource.Id] = newPath;
+                }
             }
             EnsureSourceLink(linkedResource, entry.Source, entry.SourceKey, entry.CoverUrls);
             return linkedResource;
@@ -439,13 +466,24 @@ public class ResourceSyncService : ScopedService
         List<DiscoveredResourceEntry> discoveredEntries,
         CancellationToken ct)
     {
-        // Reload resources to get assigned IDs
+        // Reload resources and links to get assigned IDs
         var allResources = await _resourceService.GetAll();
         var pathToResource = new Dictionary<string, Resource>(StringComparer.OrdinalIgnoreCase);
+        var idToResource = new Dictionary<int, Resource>();
         foreach (var r in allResources)
         {
             if (r.HasLocalPath)
                 pathToResource[r.Path!] = r;
+            idToResource[r.Id] = r;
+        }
+
+        // A resource we hold no files for has no path to look it up by, so its identity — the
+        // source link — is the only handle. Without this an undownloaded DLsite work never got a
+        // Name and showed up blank in the UI.
+        var sourceLinkToResourceId = new Dictionary<(ResourceSource Source, string SourceKey), int>();
+        foreach (var link in await _sourceLinkService.GetAll())
+        {
+            sourceLinkToResourceId[(link.Source, link.SourceKey)] = link.ResourceId;
         }
 
         var scope = source.GetPropertyValueScope();
@@ -457,12 +495,16 @@ public class ResourceSyncService : ScopedService
         {
             ct.ThrowIfCancellationRequested();
 
-            // Find the resource by its effective path or local path
+            // Find the resource by its path, falling back to its source link — the only handle a
+            // resource without local files has.
             Resource? resource = null;
-            if (!string.IsNullOrEmpty(entry.EffectivePath))
+            if (!string.IsNullOrEmpty(entry.EffectivePath) && !IsVirtualPath(entry.EffectivePath))
                 pathToResource.TryGetValue(entry.EffectivePath, out resource);
             if (resource == null && !string.IsNullOrEmpty(entry.LocalPath))
                 pathToResource.TryGetValue(entry.LocalPath, out resource);
+            if (resource == null &&
+                sourceLinkToResourceId.TryGetValue((entry.Source, entry.SourceKey), out var linkedResourceId))
+                idToResource.TryGetValue(linkedResourceId, out resource);
 
             if (resource == null || resource.Id == 0) continue;
 
@@ -685,104 +727,65 @@ public class ResourceSyncService : ScopedService
     /// Recompute ParentId/IsParent after resource paths changed outside a sync pass
     /// (e.g. a resource move).
     /// </summary>
-    public Task RebuildParentChildRelationships(CancellationToken ct) => RebuildAllParentChildRelationships(ct);
+    public Task RebuildParentChildRelationships(CancellationToken ct) =>
+        _structureService.RebuildParentChildRelationships(ct);
 
     /// <summary>
-    /// Rebuilds parent-child relationships for ALL resources based on path hierarchy.
+    /// Applies the path transitions collected during resolution. Each one goes through
+    /// <see cref="IResourceMaterializationService"/> so a resource that just gained files ends up
+    /// with correct file times, fresh caches and re-synced path marks — none of which the plain
+    /// create/update batch would have given it.
     /// </summary>
-    private async Task RebuildAllParentChildRelationships(CancellationToken ct)
+    private async Task<int> ApplyPendingMaterializations(ResourceSyncContext ctx, CancellationToken ct)
     {
-        var allResources = await _resourceService.GetAll();
-        var pathToResource = new Dictionary<string, Resource>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var r in allResources)
+        if (ctx.PendingMaterializations.Count == 0 && ctx.PendingDematerializations.Count == 0)
         {
-            if (r.HasLocalPath)
-                pathToResource[r.Path!] = r;
+            return 0;
         }
 
-        var changedResources = new Dictionary<int, Resource>();
+        // The whole pass shares one path-mark sync, kicked once at the end instead of per resource.
+        var options = new MaterializationOptions(EnqueuePathMarkSync: false);
+        var applied = 0;
 
-        foreach (var resource in allResources)
+        foreach (var (resourceId, path) in ctx.PendingMaterializations)
         {
             ct.ThrowIfCancellationRequested();
-
-            if (!resource.HasLocalPath) continue;
-
-            // Walk up directory tree to find closest parent resource
-            var parentPath = Path.GetDirectoryName(resource.Path!);
-            int? parentResourceId = null;
-
-            while (!string.IsNullOrEmpty(parentPath))
+            try
             {
-                if (pathToResource.TryGetValue(parentPath, out var parentResource))
-                {
-                    parentResourceId = parentResource.Id;
-                    break;
-                }
-                parentPath = Path.GetDirectoryName(parentPath);
+                await _materializationService.MaterializeAsync(resourceId, path, options, ct);
+                applied++;
             }
-
-            if (resource.ParentId != parentResourceId)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                resource.ParentId = parentResourceId;
-                changedResources[resource.Id] = resource;
+                // One resource failing to materialize (a path that vanished between discovery and
+                // now, a conflict we refuse to resolve) must not abort the rest of the sync.
+                _logger.LogError(ex, "[ResourceSync] Failed to materialize resource {ResourceId} at {Path}",
+                    resourceId, path);
             }
         }
 
-        if (changedResources.Count > 0)
-        {
-            await _resourceService.AddOrPutRange(changedResources.Values.ToList());
-            _logger.LogInformation("[ResourceSync] Updated parent-child for {Count} resources", changedResources.Count);
-        }
-
-        await _resourceService.RefreshParentTag();
-    }
-
-    /// <summary>
-    /// Marks all property and media library path marks that cover the new resource paths as pending.
-    /// This triggers PathMarkSyncService to sync properties for the new resources.
-    /// </summary>
-    private async Task MarkRelatedPathMarksAsPending(List<string> newResourcePaths, CancellationToken ct)
-    {
-        if (newResourcePaths.Count == 0) return;
-
-        var allMarks = await _pathMarkService.GetAll();
-        var propertyAndMlMarks = allMarks
-            .Where(m => m.Type is PathMarkType.Property or PathMarkType.MediaLibrary
-                         && m.SyncStatus == PathMarkSyncStatus.Synced)
-            .ToList();
-
-        var markIdsToMarkPending = new HashSet<int>();
-
-        foreach (var mark in propertyAndMlMarks)
+        foreach (var resourceId in ctx.PendingDematerializations)
         {
             ct.ThrowIfCancellationRequested();
-
-            var markPath = mark.Path.StandardizePath();
-            if (string.IsNullOrEmpty(markPath)) continue;
-
-            foreach (var resourcePath in newResourcePaths)
+            try
             {
-                var standardizedResourcePath = resourcePath.StandardizePath();
-                if (string.IsNullOrEmpty(standardizedResourcePath)) continue;
-
-                // Check if the resource is under the mark's path
-                if (standardizedResourcePath.StartsWith(markPath + InternalOptions.DirSeparator, StringComparison.OrdinalIgnoreCase) ||
-                    standardizedResourcePath.Equals(markPath, StringComparison.OrdinalIgnoreCase))
-                {
-                    markIdsToMarkPending.Add(mark.Id);
-                    break;
-                }
+                await _materializationService.DematerializeAsync(resourceId, ct);
+                applied++;
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger.LogError(ex, "[ResourceSync] Failed to dematerialize resource {ResourceId}", resourceId);
             }
         }
 
-        if (markIdsToMarkPending.Count > 0)
+        if (ctx.PendingMaterializations.Count > 0)
         {
-            await _pathMarkService.MarkAsPendingBatch(markIdsToMarkPending);
-            _logger.LogInformation("[ResourceSync] Marked {Count} property/media-library marks as pending for new resources",
-                markIdsToMarkPending.Count);
+            await GetRequiredService<IPathMarkSyncService>().EnqueueSync();
         }
+
+        _logger.LogInformation("[ResourceSync] Applied {Count} materialization changes", applied);
+
+        return applied;
     }
 
     #endregion
@@ -936,6 +939,18 @@ internal class ResourceSyncContext
     public List<Resource> AllResources { get; private set; } = new();
     public Dictionary<string, Resource> PathToResource { get; } = new(StringComparer.OrdinalIgnoreCase);
     public Dictionary<int, Resource> IdToResource { get; } = new();
+
+    /// <summary>
+    /// Resources discovered to have local files they did not have before, and where those files
+    /// are. Applied after the create/update batch by <see cref="IResourceMaterializationService"/>.
+    /// </summary>
+    public Dictionary<int, string> PendingMaterializations { get; } = new();
+
+    /// <summary>
+    /// Resources whose local files the source no longer reports.
+    /// </summary>
+    public HashSet<int> PendingDematerializations { get; } = new();
+
     public Dictionary<(ResourceSource Source, string SourceKey), int> SourceLinkToResourceId { get; } = new();
     public Dictionary<int, HashSet<(ResourceSource Source, string SourceKey)>> ResourceIdToSourceLinks { get; } = new();
 
@@ -946,6 +961,8 @@ internal class ResourceSyncContext
         IdToResource.Clear();
         SourceLinkToResourceId.Clear();
         ResourceIdToSourceLinks.Clear();
+        PendingMaterializations.Clear();
+        PendingDematerializations.Clear();
 
         foreach (var resource in allResources)
         {
@@ -978,6 +995,11 @@ public class ResourceSyncResult
     public int ResourcesCreated { get; set; }
     public int ResourcesUpdated { get; set; }
     public int ResourcesDeleted { get; set; }
+
+    /// <summary>
+    /// Resources that gained or lost their local files during this pass.
+    /// </summary>
+    public int ResourcesMaterialized { get; set; }
     public bool ParentChildRebuilt { get; set; }
     public bool PathMarksMarkedPending { get; set; }
 }
