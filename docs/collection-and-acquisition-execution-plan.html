@@ -68,7 +68,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 
 <div class="sum">
 <div class="card"><h4>五个里程碑</h4><p><b>一</b> 未落地资源独立可用 → <b>二</b> 收件箱版获取流水线 → <b>三</b> 集合与收集率 → <b>四</b> 订阅与平台对接器 → <b>五</b> 扩展。前两个里程碑不引入集合概念，完成后所有者当前的人工流程已只剩「在网盘页面点下载」。</p></div>
-<div class="card"><h4>关键路径</h4><p>1.1 → 1.2 → 1.4 → 1.5 → 2.1 → 2.2 → 2.3 → 2.4 → 2.5 → 2.6 → 2.7。其余批次可与关键路径并行；里程碑三、四只依赖里程碑一、二的产物，不依赖彼此的全部内容。</p></div>
+<div class="card"><h4>关键路径</h4><p>1.1 → 1.2 → 1.4 → 1.5 → 2.1 → 2.2 → 2.3 → 2.4 → 2.5 → 2.6 → 2.7 → 2.8。2.1（步骤契约）与 2.2（引擎扩展）可并行；其余批次可与关键路径并行；里程碑三、四只依赖里程碑一、二的产物，不依赖彼此的全部内容。</p></div>
 <div class="card"><h4>每个批次的完成定义</h4><p>迁移由 <code class="i">dotnet ef migrations add</code> 生成且纯 schema；<code class="i">yarn gen-sdk</code> 产物已提交；新增行为有测试；中英文 i18n 齐全；<code class="i">dotnet build</code> 与前端类型检查通过；偏离设计文档的决定回写到设计文档 §16。</p></div>
 </div>
 
@@ -86,7 +86,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 
 <h2 id="s0"><span class="n">§0</span>总览与依赖</h2>
 <figure>
-<svg viewBox="0 0 1040 470" role="img" aria-label="五个里程碑的批次依赖图：里程碑一的七个批次为地基，里程碑二的流水线批次依次串联，里程碑三的集合与里程碑四的订阅并行建立在前两者之上，里程碑五为扩展。">
+<svg viewBox="0 0 1040 500" role="img" aria-label="五个里程碑的批次依赖图：里程碑一的七个批次为地基，里程碑二的流水线批次依次串联，里程碑三的集合与里程碑四的订阅并行建立在前两者之上，里程碑五为扩展。">
 <defs><marker id="pa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
 <g fill="none" stroke="currentColor" stroke-width="1.1" font-size="11.5" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif">
 <!-- lanes -->
@@ -95,10 +95,10 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <text x="560" y="22" text-anchor="middle" fill="currentColor" font-weight="700">里程碑三 · 集合</text>
 <text x="790" y="22" text-anchor="middle" fill="currentColor" font-weight="700">里程碑四 · 订阅与对接器</text>
 <text x="980" y="22" text-anchor="middle" fill="currentColor" font-weight="700">五</text>
-<line x1="215" y1="34" x2="215" y2="460" stroke-dasharray="3 4" opacity=".4"/>
-<line x1="445" y1="34" x2="445" y2="460" stroke-dasharray="3 4" opacity=".4"/>
-<line x1="675" y1="34" x2="675" y2="460" stroke-dasharray="3 4" opacity=".4"/>
-<line x1="905" y1="34" x2="905" y2="460" stroke-dasharray="3 4" opacity=".4"/>
+<line x1="215" y1="34" x2="215" y2="490" stroke-dasharray="3 4" opacity=".4"/>
+<line x1="445" y1="34" x2="445" y2="490" stroke-dasharray="3 4" opacity=".4"/>
+<line x1="675" y1="34" x2="675" y2="490" stroke-dasharray="3 4" opacity=".4"/>
+<line x1="905" y1="34" x2="905" y2="490" stroke-dasharray="3 4" opacity=".4"/>
 <!-- M1 boxes -->
 <rect x="30" y="44" width="140" height="30" rx="7" stroke="#b08cff" stroke-width="1.6"/><text x="100" y="63" text-anchor="middle" fill="currentColor">1.1 HasLocalPath</text>
 <rect x="30" y="94" width="140" height="30" rx="7" stroke="#b08cff" stroke-width="1.6"/><text x="100" y="113" text-anchor="middle" fill="currentColor">1.2 落地服务</text>
@@ -114,14 +114,16 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <line x1="100" y1="274" x2="100" y2="294" marker-end="url(#pa)"/>
 <line x1="100" y1="324" x2="100" y2="344" marker-end="url(#pa)"/>
 <!-- M2 boxes -->
-<rect x="260" y="44" width="140" height="30" rx="7" stroke="#b08cff" stroke-width="1.6"/><text x="330" y="63" text-anchor="middle" fill="currentColor">2.1 模块与状态机</text>
-<rect x="260" y="94" width="140" height="30" rx="7" stroke="#b08cff" stroke-width="1.6"/><text x="330" y="113" text-anchor="middle" fill="currentColor">2.2 分享内容解析</text>
-<rect x="260" y="144" width="140" height="30" rx="7" stroke="#b08cff" stroke-width="1.6"/><text x="330" y="163" text-anchor="middle" fill="currentColor">2.3 抓取</text>
-<rect x="260" y="194" width="140" height="30" rx="7" stroke="#b08cff" stroke-width="1.6"/><text x="330" y="213" text-anchor="middle" fill="currentColor">2.4 收件箱认领</text>
-<rect x="260" y="244" width="140" height="30" rx="7" stroke="#b08cff" stroke-width="1.6"/><text x="330" y="263" text-anchor="middle" fill="currentColor">2.5 解压</text>
-<rect x="260" y="294" width="140" height="30" rx="7" stroke="#b08cff" stroke-width="1.6"/><text x="330" y="313" text-anchor="middle" fill="currentColor">2.6 放置与落地</text>
-<rect x="260" y="344" width="140" height="30" rx="7" stroke="#b08cff" stroke-width="1.6"/><text x="330" y="363" text-anchor="middle" fill="currentColor">2.7 获取中心与向导</text>
-<rect x="260" y="394" width="140" height="30" rx="7" stroke-dasharray="4 3"/><text x="330" y="413" text-anchor="middle" fill="currentColor">2.8 / 2.9 可延后</text>
+<rect x="260" y="44" width="140" height="30" rx="7" stroke="#b08cff" stroke-width="1.6"/><text x="330" y="63" text-anchor="middle" fill="currentColor">2.1 步骤契约（抽象底层）</text>
+<rect x="260" y="94" width="140" height="30" rx="7" stroke="#b08cff" stroke-width="1.6"/><text x="330" y="113" text-anchor="middle" fill="currentColor">2.2 引擎挂起 / 恢复</text>
+<rect x="260" y="144" width="140" height="30" rx="7" stroke="#b08cff" stroke-width="1.6"/><text x="330" y="163" text-anchor="middle" fill="currentColor">2.3 适配器与方案</text>
+<rect x="260" y="194" width="140" height="30" rx="7" stroke="#b08cff" stroke-width="1.6"/><text x="330" y="213" text-anchor="middle" fill="currentColor">2.4 解析与选链</text>
+<rect x="260" y="244" width="140" height="30" rx="7" stroke="#b08cff" stroke-width="1.6"/><text x="330" y="263" text-anchor="middle" fill="currentColor">2.5 抓取与收件箱</text>
+<rect x="260" y="294" width="140" height="30" rx="7" stroke="#b08cff" stroke-width="1.6"/><text x="330" y="313" text-anchor="middle" fill="currentColor">2.6 解压</text>
+<rect x="260" y="344" width="140" height="30" rx="7" stroke="#b08cff" stroke-width="1.6"/><text x="330" y="363" text-anchor="middle" fill="currentColor">2.7 重命名、放置、落地</text>
+<rect x="260" y="394" width="140" height="30" rx="7" stroke="#b08cff" stroke-width="1.6"/><text x="330" y="413" text-anchor="middle" fill="currentColor">2.8 获取中心与向导</text>
+<rect x="260" y="444" width="140" height="30" rx="7" stroke-dasharray="4 3"/><text x="330" y="463" text-anchor="middle" fill="currentColor">2.9 / 2.10 可延后</text>
+<line x1="330" y1="374" x2="330" y2="394" marker-end="url(#pa)"/>
 <line x1="330" y1="74" x2="330" y2="94" marker-end="url(#pa)"/>
 <line x1="330" y1="124" x2="330" y2="144" marker-end="url(#pa)"/>
 <line x1="330" y1="174" x2="330" y2="194" marker-end="url(#pa)"/>
@@ -155,19 +157,19 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <!-- cross arrows -->
 <path d="M170 259 C215 259 215 59 260 59" marker-end="url(#pa)" stroke="#b08cff" stroke-width="1.6"/>
 <path d="M170 109 C215 109 215 59 260 59" marker-end="url(#pa)" stroke="#b08cff" stroke-width="1.6"/>
-<path d="M400 359 C445 359 445 59 490 59" marker-end="url(#pa)"/>
-<path d="M170 209 C215 209 215 450 490 450 C640 450 660 59 720 59" marker-end="url(#pa)" opacity=".8"/>
+<path d="M400 409 C445 409 445 59 490 59" marker-end="url(#pa)"/>
+<path d="M170 209 C215 209 215 485 490 485 C640 485 660 59 720 59" marker-end="url(#pa)" opacity=".8"/>
 <path d="M630 59 C675 59 675 59 720 59" marker-end="url(#pa)"/>
-<path d="M400 359 C445 359 445 209 720 209" marker-end="url(#pa)" opacity=".8"/>
+<path d="M400 409 C445 409 445 209 720 209" marker-end="url(#pa)" opacity=".8"/>
 <path d="M860 259 C905 259 905 59 930 59" marker-end="url(#pa)" opacity=".6"/>
-<text x="600" y="440" fill="currentColor" opacity=".7">1.4 →  4.1（共享的资源创建方法）</text>
+<text x="560" y="478" fill="currentColor" opacity=".7">1.4 →  4.1（共享的资源创建方法）</text>
 </g></svg>
 <figcaption>批次依赖。紫色框与紫色箭头是关键路径；同一里程碑内的竖向箭头表示推荐顺序，未画出的横向依赖在各批次的「依赖」行里写明。</figcaption>
 </figure>
 
 <div class="tw"><table><tr><th style="width:12%">里程碑</th><th style="width:40%">完成后用户得到什么</th><th style="width:16%">指示工作量</th><th>前置</th></tr>
 <tr><td><b>一</b> 未落地资源</td><td>不建集合也能维护「缺失清单」：新建未落地资源（标题 / 平台或权威编号 / 分享链接）、按「已落地」筛选、记录获取线索、关联本地目录；未安装的 Steam 游戏与未下载的 DLsite 作品同样出现在清单里</td><td>约 10 个工作日</td><td>无</td></tr>
-<tr><td><b>二</b> 获取流水线</td><td>对任意未落地资源点「获取」，除「在网盘页面点下载」外全部自动：解析、认领、解压、放置、落地、通知</td><td>约 15 个工作日</td><td>一</td></tr>
+<tr><td><b>二</b> 获取流水线</td><td>对任意未落地资源点「获取」，除「在网盘页面点下载」外全部自动：解析、认领、解压、重命名、放置、落地、通知；流程是可编排的方案，步骤可增删重排；Workflow 引擎获得挂起 / 恢复能力</td><td>约 18 个工作日</td><td>一</td></tr>
 <tr><td><b>三</b> 集合</td><td>命名分组、三种成员来路、收集率、按集合搜索、一键获取缺失成员</td><td>约 10 个工作日</td><td>一（1.1、1.2、1.4）；3.5 需要二</td></tr>
 <tr><td><b>四</b> 订阅与平台对接器</td><td>集合有外部真相源并自动更新、自动获取；Steam / DLsite / ExHentai 集成统一为对接器契约</td><td>约 15 个工作日</td><td>三（4.1 起）；二（4.4）</td></tr>
 <tr><td><b>五</b> 扩展</td><td>网盘 API 抓取器、VNDB、模糊匹配、规则集合索引、路径标记预设</td><td>逐项独立</td><td>按项</td></tr>
@@ -329,157 +331,173 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <li>批量修改、路径搜索、NFO 生成、随机播放对未落地资源不报错、不误选。</li>
 <li>一条「资源落地 → 通知」的工作流可在编辑器搭出并跑通。</li>
 </ul>
-<h2 id="s3"><span class="n">§3</span>里程碑二：获取流水线（收件箱版）</h2>
-<p>目标：对任意未落地资源点「获取」，除「在网盘页面点下载」外全部自动。批次按状态机的阶段顺序排列，每完成一个批次，流水线就能多走一段并停在下一段的人工介入点，因此每个批次都能单独演示。</p>
+<h2 id="s3"><span class="n">§3</span>里程碑二：获取流水线（可编排方案）</h2>
+<p>目标：对任意未落地资源点「获取」，除「在网盘页面点下载」外全部自动；流程是可编排、可替换的方案而不是写死的阶段。先做与宿主无关的抽象底层（2.1），并行做 Workflow 引擎的最小扩展（2.2），把两者接起来（2.3），然后按步骤逐个实现（2.4 到 2.7）。每完成一个步骤批次，内置方案就能多走一段并停在下一段的挂起点，因此每个批次都能单独演示。</p>
+<div class="rule warn"><b>降级路径。</b>若 2.2 的引擎扩展在实施中遇到不可接受的风险，改做独立的 <code class="i">AcquisitionRunner</code>（后台服务 + BTask 外壳）驱动 2.1 的同一套步骤契约，方案改存 <code class="i">AcquisitionRecipe</code> 表；2.4 到 2.7 的步骤实现零改动，2.8 的界面只换数据来源。决定点在 2.2 结束时。</div>
 
-<h3 id="b2-1">批次 2.1 模块与状态机</h3>
+<h3 id="b2-1">批次 2.1 抽象底层：步骤契约、工作项、结果</h3>
 <div class="kv">
-<div>目标</div><div><code class="i">AcquisitionTask</code> 的数据、状态迁移、后台驱动与进度外壳，用假处理器跑通全部状态。</div>
+<div>目标</div><div>定义与任何宿主无关的获取抽象，用假宿主跑通一份方案。</div>
 <div>依赖</div><div>1.2、1.5。</div>
+<div>规模</div><div>小到中，约 1 到 2 个工作日。</div>
+</div>
+<h4>改动清单</h4>
+<ul>
+<li><code class="i">Bakabase.Modules.Acquisition</code>：<code class="i">IAcquisitionStep</code>（<code class="i">Kind / DisplayName / ConfigType / ExecuteAsync / ResumeAsync</code>）、<code class="i">AcquisitionStepOutcome</code>（<code class="i">Continue / Suspend / Skip / Fail</code>）、<code class="i">AcquisitionWaitReason</code>、<code class="i">AcquisitionResumeSignal</code>（信号 JSON 的类型化包装）、<code class="i">AcquisitionWorkItem</code>（实现 <code class="i">ITextWorkpiece</code>；<code class="i">WorkingText</code> = 将要使用的目录名）、<code class="i">AcquisitionStepContext</code>（服务提供者、日志、进度回调、工作目录）。步骤契约不引用 Workflow 类型。</li>
+<li>步骤注册表 <code class="i">IAcquisitionStepRegistry</code>（DI 枚举 → 按 Kind 索引，重复 Kind 启动即抛，仿 <code class="i">WorkflowActivityRegistry</code>）。</li>
+<li>方案的内存表示 <code class="i">AcquisitionRecipe { Name, Steps[{ Kind, ConfigJson }] }</code> 与五份内置方案的定义（<a href="collection-and-acquisition-design.html#s7-4">设计文档 §7.4</a>），此时只是常量，2.3 落成工作流定义。</li>
+<li>测试用的假宿主 <code class="i">InMemoryAcquisitionHost</code>：顺序执行步骤，遇 <code class="i">Suspend</code> 停下，可注入信号恢复。</li>
+<li><code class="i">AcquisitionOptions</code>：收件箱目录、库根目录、目录模板（默认 <code class="i">{Title}</code>）、网盘偏好顺序、线索种类到默认方案的映射、自动购买上限、解压后删除压缩包、密码回退策略、并发数（默认 2）。</li>
+</ul>
+<h4>测试</h4>
+<ul><li><code class="i">Bakabase.Modules.Acquisition.Tests/AcquisitionStepContractTests.cs</code>：假宿主 + 两个假步骤（一个会挂起）走通 <code class="i">Continue → Suspend → 恢复 → Continue → 完成</code>；<code class="i">Skip</code> 不中断；<code class="i">Fail</code> 停在当前步；工作项序列化往返无损。</li></ul>
+
+<h3 id="b2-2">批次 2.2 Workflow 引擎的挂起 / 恢复与单条目游标</h3>
+<div class="kv">
+<div>目标</div><div>引擎获得「运行可以停下来等一个外部信号」的能力，且现有工作流行为不变。</div>
+<div>依赖</div><div>无（与 2.1 并行）。</div>
 <div>规模</div><div>中，约 3 个工作日。</div>
 </div>
 <h4>改动清单</h4>
 <ul>
-<li><code class="i">Bakabase.Modules.Acquisition</code>：<code class="i">AcquisitionStatus</code>、<code class="i">AcquisitionAttentionReason</code>、<code class="i">AcquisitionTask</code> 领域与 Db 模型（字段按设计文档 §9）；迁移 <code class="i">AddAcquisitionTasks</code>；<code class="i">BakabaseDbContext</code> 的 <code class="i">DbSet</code> 与索引。</li>
-<li><code class="i">AcquisitionOptions</code>（<code class="i">[Options(fileKey: "acquisition")]</code>，与 <code class="i">SoulPlusOptions</code> 同一机制）：收件箱目录、库根目录、目录模板（默认 <code class="i">{Title}</code>）、网盘偏好顺序、自动购买上限、解压后删除压缩包、密码回退策略、并发数（默认 2）。</li>
-<li>四个处理器接口（<code class="i">IAcquisitionLinkResolver</code>、<code class="i">IAcquisitionFetcher</code>、<code class="i">IAcquisitionUnpacker</code>、<code class="i">IAcquisitionPlacer</code>），本批次只提供用于测试的假实现。</li>
-<li><code class="i">IAcquisitionService</code>：<code class="i">CreateAsync(resourceId, lead, collectionId?)</code>（目标资源必须 <code class="i">HasLocalPath == false</code> 且没有进行中的任务）、列表、详情、<code class="i">RetryAsync</code>（只重跑当前阶段）、<code class="i">CancelAsync</code>、四种人工介入的入口（本批次先落状态迁移，具体行为在后续批次）。</li>
-<li><code class="i">AcquisitionRunner : BackgroundService</code>：轮询待推进任务，按并发上限执行阶段，<code class="i">WaitingForFile</code> 不占名额；每个活动任务建 BTask 外壳 <code class="i">Acquisition:{id}</code>（<code class="i">BTaskBuilder.Create(...).OfType(BTaskType.Acquisition).StartImmediately().IgnoreIfExists().Run(...)</code>，仿 <code class="i">DownloaderManager.cs:209-244</code>），进度、暂停、取消经它暴露；<code class="i">BTaskType</code> 加 <code class="i">Acquisition</code>，<code class="i">SharedResource.resx</code> 加 <code class="i">BTask_Name_Acquisition</code>。</li>
-<li>启动恢复：<code class="i">Fetching / Unpacking / Placing / Syncing</code> 中的任务回到该阶段起点，<code class="i">WaitingForFile</code> 原地保留（仿 <code class="i">WorkflowRunRehydrator</code>，在 <code class="i">BakabaseHost.cs</code> 同一位置调用）。</li>
-<li>事件：每次状态推进发布 Workflow 事件 <code class="i">acquisition.statusChanged</code>（本批次只发布，触发器在 2.7）。</li>
-<li>控制器 <code class="i">AcquisitionController</code>：<code class="i">POST acquisition</code>、<code class="i">GET acquisition</code>、<code class="i">GET acquisition/{id}</code>、<code class="i">POST acquisition/{id}/retry</code>、<code class="i">POST acquisition/{id}/cancel</code>、<code class="i">GET/PUT acquisition/options</code>。</li>
+<li><code class="i">src/modules/Bakabase.Modules.Workflow/Abstractions/Components/WorkflowItemOutcome.cs</code>：增加 <code class="i">Suspend(WorkflowSuspension)</code>（<code class="i">WorkflowSuspension { string Reason; string? PromptJson; object Item }</code>）；新接口 <code class="i">IResumableWorkflowActivity : IWorkflowActivity { Task&lt;WorkflowItemOutcome&gt; ResumeAsync(WorkflowExecutionContext ctx, object item, string signalJson, CancellationToken ct) }</code>。</li>
+<li><code class="i">WorkflowRunStatus</code> 加 <code class="i">Waiting = 7</code>；<code class="i">WorkflowRunDbModel</code> 加 <code class="i">CurrentStepIndex int?</code>、<code class="i">CurrentItemJson string?</code>、<code class="i">WaitReason string?</code>、<code class="i">WaitPromptJson string?</code>、<code class="i">WaitingSince DateTime?</code>；迁移 <code class="i">AddWorkflowRunSuspension</code>；领域模型与视图模型同步。</li>
+<li><code class="i">WorkflowRunner.ExecuteAsync</code>：当 <code class="i">trigger.ExtractItems</code> 只返回一个条目时进入「单条目逐步模式」：从 <code class="i">CurrentStepIndex</code>（空则 0）开始，每步结束写游标与条目快照并 <code class="i">SaveChanges</code>；遇 <code class="i">Suspend</code> 写 <code class="i">Waiting / WaitReason / WaitPromptJson / WaitingSince</code> 并正常结束 BTask；恢复入口传入信号时对游标步骤调用 <code class="i">ResumeAsync</code>。多条目路径保持现状；多条目路径中活动返回 <code class="i">Suspend</code> 抛 <code class="i">WorkflowActivityConfigException</code>。</li>
+<li>新增 <code class="i">IWorkflowRunResumer.ResumeAsync(int runId, string signalJson, CancellationToken ct)</code>（scoped）：校验 <code class="i">Waiting</code>，把信号暂存到运行行，状态改 <code class="i">Pending</code>，用与 <code class="i">WorkflowEventBus.cs:96-99</code> 相同的 BTask id 与冲突键重新入队。</li>
+<li><code class="i">WorkflowRunRehydrator</code>：<code class="i">Waiting</code> 保留；<code class="i">CurrentStepIndex</code> 非空的 <code class="i">Running</code> 改为 <code class="i">Pending</code> 重新入队（从游标重跑）；其余沿用「标 Interrupted」。</li>
+<li><code class="i">WorkflowController</code>：<code class="i">POST workflow/run/{id}/resume</code>。</li>
+<li>前端：<code class="i">WorkflowRunsDrawer.tsx</code> 显示 <code class="i">Waiting</code> 状态、等待原因与「恢复」入口；<code class="i">WorkflowActivityUI</code> 增加可选 <code class="i">ResumeForm</code>（输入 <code class="i">promptJson</code>，输出 <code class="i">signalJson</code>）；<code class="i">yarn gen-sdk</code>。</li>
 </ul>
 <h4>测试</h4>
-<ul><li><code class="i">Bakabase.Modules.Acquisition.Tests/AcquisitionStateMachineTests.cs</code>：假处理器下走完全部状态；某阶段抛异常进入 <code class="i">Failed</code> 且 <code class="i">Retry</code> 只重跑该阶段；<code class="i">NeedsAttention</code> 恢复后回到停车前阶段；模拟重启后 <code class="i">Unpacking</code> 重跑而 <code class="i">WaitingForFile</code> 不动；并发上限生效。</li></ul>
+<ul><li>现有全部 Workflow 测试不变通过；新增 <code class="i">WorkflowSuspensionTests.cs</code>：单条目运行在第二步挂起 → 数据库状态为 <code class="i">Waiting</code> 且游标为 1 → 恢复后从第二步的 <code class="i">ResumeAsync</code> 继续并完成；多条目运行中的挂起抛配置异常；模拟重启后带游标的 <code class="i">Running</code> 重新入队而 <code class="i">Waiting</code> 不动；旧式运行仍标 <code class="i">Interrupted</code>。</li></ul>
 
-<h3 id="b2-2">批次 2.2 分享内容解析阶段</h3>
+<h3 id="b2-3">批次 2.3 适配器、入口触发器、方案种子与任务索引</h3>
 <div class="kv">
-<div>目标</div><div>Resolving 阶段可用：网页与文本都能读出正文，大模型提取链接、提取码、解压码、标题；付费内容变成停车点。</div>
-<div>依赖</div><div>2.1。</div>
+<div>目标</div><div>2.1 的步骤成为 Workflow 活动；五份内置方案成为工作流定义；「获取」有了统一的服务入口。</div>
+<div>依赖</div><div>2.1、2.2。</div>
 <div>规模</div><div>中，约 2 到 3 个工作日。</div>
 </div>
 <h4>改动清单</h4>
 <ul>
-<li><code class="i">src/legacy/.../Components/PostParser/Fetchers/IPostContentFetcher.cs</code> 改名为 <code class="i">ISharedContentReader</code>（保留旧名的过渡别名一个版本）；新增 <code class="i">GenericHtmlReader</code>（无专用读取器的主机取正文与 <code class="i">&lt;title&gt;</code>）、<code class="i">PlainTextReader</code>（粘贴文本 / txt / markdown）。<code class="i">PostParserExtensions.AddPostParser</code>（约 24-52 行）改为扫描所有已加载程序集。</li>
-<li><code class="i">SoulPlusContentFetcher.cs</code>（约 25-52 行）：去掉自动购买；返回内容时附带 <code class="i">LockedContents</code>（价格、是否已购）。购买动作由 <code class="i">SharedContentLinkResolver</code> 决定：价格不超过任务生效的自动购买上限则调用 <code class="i">SoulPlusClient.BuyLockedContent</code> 并写 <code class="i">PurchaseRecordJson</code>，否则进入 <code class="i">NeedsAttention(PaidContent)</code>；新增 <code class="i">POST acquisition/{id}/approve-purchase</code>。修正 <code class="i">Price</code> 为 null 时的比较。</li>
-<li><code class="i">DownloadInfoResource</code> 加 <code class="i">DriveKind</code>（<code class="i">Http / Baidu / Xunlei / Feimao / Cloudflare / Mega / PikPak / Gofile / OneOneFive / Magnet / Unknown</code>），由链接主机名规则推断，大模型输出只作参考；提示词补充要求输出标题。</li>
-<li><code class="i">SharedContentLinkResolver</code>（<code class="i">SharedPage / SharedDocument</code>）与 <code class="i">DirectLinkResolver</code>（<code class="i">DirectUrl / Magnet</code>）放 <code class="i">src/apps/Bakabase.Service/Components/Acquisition/Resolvers/</code>；解析结果同时写回 <code class="i">PostParserTask</code>（<code class="i">PostParserTaskService.Put</code>）。</li>
-<li>解析出权威编号（<code class="i">TryExtractSourceKey</code> 命中 RJ 号、Steam AppId、VNDB 链接）时对目标资源 <code class="i">EnsureLinks</code>。</li>
-<li>多链接选择：按 <code class="i">AcquisitionOptions</code> 的网盘偏好自动选；无可用抓取器的进入 <code class="i">ManualFetcher</code>；全无 → <code class="i">NeedsAttention(NoLinks)</code>；<code class="i">POST acquisition/{id}/select-link</code>。</li>
+<li>适配器 <code class="i">AcquisitionStepActivity : IResumableWorkflowActivity</code>：由 <code class="i">IAcquisitionStepRegistry</code> 为每个步骤生成一个活动实例并注册（Group = <code class="i">acquisition</code>，接受 <code class="i">item.acquisition</code>，Passthrough）；<code class="i">Continue/Skip → KeepItem 或 ReplaceWith</code>，<code class="i">Suspend → Suspend</code>，<code class="i">Fail → 抛出</code>；每步结束同步 <code class="i">AcquisitionTask</code> 状态并发布 <code class="i">acquisition.statusChanged</code>。</li>
+<li>触发器 <code class="i">acquisition.requested</code>（<code class="i">RequiresManualPayload = true</code>；载荷 <code class="i">{ resourceId, leadId?, collectionId? }</code>；<code class="i">Matches</code> 恒 false，不参与扇出）；条目类型 <code class="i">item.acquisition</code> 与描述符。</li>
+<li><code class="i">AcquisitionRecipeSeeder</code>：启动时按名称幂等创建五份内置方案的 <code class="i">WorkflowDefinition</code>（触发器 <code class="i">acquisition.requested</code>，活动 = 步骤序列），标记只读（<code class="i">WorkflowDefinitionDbModel</code> 加 <code class="i">IsBuiltin bool</code>，迁移并入 <code class="i">AddWorkflowRunSuspension</code> 或单列一条）；编辑器对内置定义提供「复制」。</li>
+<li><code class="i">AcquisitionTask</code> 薄索引表（字段按设计文档 §9）与迁移 <code class="i">AddAcquisitionTasks</code>；<code class="i">IAcquisitionService</code>：<code class="i">CreateAsync(resourceId, lead, recipeDefinitionId?, collectionId?)</code>（校验资源未落地且无进行中任务；按线索种类取默认方案；<code class="i">RunManuallyAsync</code>）、<code class="i">ResumeAsync(taskId, signalJson)</code>（转 <code class="i">IWorkflowRunResumer</code>）、<code class="i">RetryAsync</code>、<code class="i">CancelAsync</code>、并发闸门（活动运行数上限，<code class="i">Waiting</code> 不占）。</li>
+<li>控制器 <code class="i">AcquisitionController</code>：<code class="i">POST acquisition</code>、<code class="i">GET acquisition</code>、<code class="i">GET acquisition/{id}</code>、<code class="i">POST acquisition/{id}/resume · /retry · /cancel</code>、<code class="i">GET acquisition/recipes</code>、<code class="i">GET/PUT acquisition/options</code>；<code class="i">BTaskType</code> 加 <code class="i">Acquisition</code>。</li>
+<li>前端：<code class="i">Activities/index.ts</code> 注册九个步骤的通用节点包（配置表单按 <code class="i">ConfigType</code> 的 JSON 形状生成，先用通用 JSON 表单，专用表单在各步骤批次补）；<code class="i">Triggers/AcquisitionRequested</code>；<code class="i">itemTypes.ts</code>、<code class="i">variables.ts</code> 加获取变量；i18n。</li>
 </ul>
 <h4>测试</h4>
-<ul><li>用固定的 HTML 与文本样例（放 <code class="i">Bakabase.Tests/Fixtures/Acquisition/</code>）加大模型替身：提取出两条链接、一条提取码、一条解压码；付费块高于上限时进入停车；<code class="i">DriveKind</code> 推断覆盖每种主机。</li></ul>
-<h4>验收</h4>
-<ul><li>对一个真实 SoulPlus 帖子创建任务，任务停在「等待选择链接」或「需要购买」，阶段数据里能看到链接与密码。</li></ul>
+<ul><li>用 2.1 的假步骤组成方案 → <code class="i">CreateAsync</code> → 运行到挂起 → <code class="i">ResumeAsync</code> → 完成，全程 <code class="i">AcquisitionTask.Status</code> 与运行状态一致；并发闸门生效；种子幂等。</li></ul>
 
-<h3 id="b2-3">批次 2.3 抓取阶段</h3>
+<h3 id="b2-4">批次 2.4 步骤：解析分享内容与选择链接</h3>
 <div class="kv">
-<div>目标</div><div>直链自动下载；网盘链接自动打开并进入等待文件状态。</div>
-<div>依赖</div><div>2.2。</div>
-<div>规模</div><div>小，约 1 到 2 个工作日。</div>
-</div>
-<h4>改动清单</h4>
-<ul>
-<li><code class="i">IAcquisitionFetcher { DriveKind Kind; Task&lt;FetchResult&gt; FetchAsync(AcquisitionLink link, string workDirectory, IProgress&lt;AcquisitionProgress&gt; progress, CancellationToken ct) }</code>，按 <code class="i">DriveKind</code> 注册与查找。</li>
-<li><code class="i">HttpLinkFetcher</code>：复用 <code class="i">SingleFileHttpDownloader</code>，并修正：<code class="i">Content-Length</code> 缺失时不抛（改为流式无进度）、去掉整文件读入内存的 MD5 校验、读取 <code class="i">Content-Disposition</code> 文件名、支持无 Range 的服务器（从头下载）。</li>
-<li><code class="i">ManualFetcher</code>（默认兜底）：调用现有 <code class="i">IGuiAdapter</code> 打开链接（<code class="i">GuiController.OpenUrlInDefaultBrowser</code> 的同一路径），把任务置为 <code class="i">WaitingForFile</code>，记录 <code class="i">WaitingSince</code> 与期望文件名（解析阶段若有）；提取码由前端复制到剪贴板（<code class="i">navigator.clipboard</code>），后端不做。</li>
-<li>工作目录：<code class="i">IAppService.AppDataDirectory/acquisition/{taskId}/</code>，遵守 <code class="i">appdata-paths.md</code>。</li>
-</ul>
-<h4>测试</h4>
-<ul><li>本地 HTTP 测试服务器：有 Range 与无 Range 两种情况都下载完整；中断后重试从断点续传；<code class="i">ManualFetcher</code> 置状态并记录时间。</li></ul>
-
-<h3 id="b2-4">批次 2.4 收件箱监听与认领</h3>
-<div class="kv">
-<div>目标</div><div>用户把文件放进收件箱后，系统自动认领到正确的任务，歧义时停车让人选。</div>
+<div>目标</div><div><code class="i">acquisition.resolveSharedContent</code> 与 <code class="i">acquisition.selectLink</code> 可用；付费内容成为挂起点。</div>
 <div>依赖</div><div>2.3。</div>
 <div>规模</div><div>中，约 2 到 3 个工作日。</div>
 </div>
 <h4>改动清单</h4>
 <ul>
-<li><code class="i">AcquisitionInboxWatcher : BackgroundService</code>（仿 <code class="i">WorkflowFsWatchService</code>）：监听收件箱一层深度；「稳定」判定 = 无 <code class="i">.part / .crdownload / .tmp / .baiduyun.downloading / .xltd</code> 等后缀 + 连续两次采样大小不变 + 可独占打开；分卷组用 <code class="i">CompressedFileHelper.DetectCompressedFileGroups</code> 判齐全后才视为一个候选。</li>
-<li>认领打分（纯函数，放模块内 <code class="i">InboxClaimScorer</code>）：文件名与任务标题的归一化词元重合（<code class="i">ITextOps.Clean</code> 后按分隔符切分）、期望文件名精确命中、文件名方括号密码与任务解压码一致、创建时间与 <code class="i">WaitingSince</code> 的接近度；输出每个等待任务的分数。唯一高于阈值且领先第二名足够多 → 自动认领；否则 <code class="i">NeedsAttention(AmbiguousInboxFile)</code>。</li>
-<li>认领动作：文件移到任务工作目录，写 <code class="i">ReceivedFilesJson</code>，进入 <code class="i">Unpacking</code>；取消任务时退回收件箱。</li>
-<li>接口：<code class="i">GET acquisition/inbox</code>（未认领文件与每个等待任务的分数）、<code class="i">POST acquisition/{id}/claim</code>（body：收件箱内路径列表）、<code class="i">POST acquisition/{id}/unclaim</code>。</li>
+<li><code class="i">src/legacy/.../Components/PostParser/Fetchers/IPostContentFetcher.cs</code> 改名为 <code class="i">ISharedContentReader</code>（保留旧名的过渡别名一个版本）；新增 <code class="i">GenericHtmlReader</code>、<code class="i">PlainTextReader</code>；<code class="i">PostParserExtensions.AddPostParser</code>（约 24-52 行）改为扫描所有已加载程序集。</li>
+<li><code class="i">SoulPlusContentFetcher.cs</code>（约 25-52 行）：去掉自动购买；返回内容时附带 <code class="i">LockedContents</code>。购买由步骤决定：价格不超过任务生效的自动购买上限则调用 <code class="i">SoulPlusClient.BuyLockedContent</code> 并记入工作项 <code class="i">Purchases</code>，否则 <code class="i">Suspend(PaidContent)</code>，恢复信号为「批准购买」。修正 <code class="i">Price</code> 为 null 时的比较。</li>
+<li><code class="i">DownloadInfoResource</code> 加 <code class="i">DriveKind</code>（<code class="i">Http / Baidu / Xunlei / Feimao / Cloudflare / Mega / PikPak / Gofile / OneOneFive / Magnet / Unknown</code>），由链接主机名规则推断；提示词补充要求输出标题。</li>
+<li>步骤 <code class="i">ResolveSharedContentStep</code>（<code class="i">Bakabase.Service/Components/Acquisition/Steps/</code>，依赖 legacy 解析器）：网页按主机选读取器，文档按格式；结果写入工作项 <code class="i">Links / Title</code>，同时写回 <code class="i">PostParserTask</code>；正文含权威编号时对目标资源 <code class="i">EnsureLinks</code>。</li>
+<li>步骤 <code class="i">SelectLinkStep</code>（模块内）：按网盘偏好自动选；配置 <code class="i">alwaysAsk</code> 时 <code class="i">Suspend(ChooseLink)</code>；无链接 <code class="i">Suspend(NoLinks)</code>（恢复信号可携带用户补的链接）。两者的专用配置表单与恢复表单。</li>
 </ul>
 <h4>测试</h4>
-<ul><li>打分函数的表驱动用例；监听器对正在写入的文件不认领（用临时文件模拟增长）；分卷未齐不认领。</li></ul>
+<ul><li>固定 HTML 与文本样例（<code class="i">Bakabase.Tests/Fixtures/Acquisition/</code>）加大模型替身：提取两条链接、一条提取码、一条解压码；付费块高于上限挂起，批准后继续；<code class="i">DriveKind</code> 推断覆盖每种主机；偏好顺序选择正确。</li></ul>
 <h4>验收</h4>
-<ul><li>两个等待任务、往收件箱丢一个文件名含其中一个标题的压缩包，几秒内被正确任务认领；再丢一个与两者都无关的文件，任务进入「需要认领」。</li></ul>
+<ul><li>对一个真实 SoulPlus 帖子用「论坛帖子 + 网盘」方案发起，运行停在「需要购买」或走到 <code class="i">waitForInbox</code>（此时该步骤尚未实现，运行以配置错误失败，属预期）。</li></ul>
 
-<h3 id="b2-5">批次 2.5 解压阶段</h3>
+<h3 id="b2-5">批次 2.5 步骤：直链下载、等待收件箱与收件箱监听</h3>
 <div class="kv">
-<div>目标</div><div>用帖子里的密码（及回退候选）自动解压，失败时停车要密码。</div>
+<div>目标</div><div><code class="i">acquisition.fetchHttp</code> 与 <code class="i">acquisition.waitForInbox</code> 可用；收件箱文件自动认领为恢复信号。</div>
 <div>依赖</div><div>2.4。</div>
-<div>规模</div><div>中，约 2 个工作日。</div>
+<div>规模</div><div>中，约 3 个工作日。</div>
 </div>
 <h4>改动清单</h4>
 <ul>
-<li>把 <code class="i">FileController.cs</code> 约 133-327 行（候选密码逐试）与约 329-493 行（解压后删除压缩包 / 上移到父目录）的逻辑提取为 <code class="i">IArchiveExtractionService</code>（放 legacy，<code class="i">FileController</code> 改为委托，行为不变），接口：<code class="i">TestPasswordsAsync(group, candidates)</code>、<code class="i">ExtractAsync(group, password, targetDirectory, overwriteMode, progress)</code>、<code class="i">PostProcess(deleteArchive, moveToParent)</code>。</li>
-<li><code class="i">SevenZipUnpacker : IAcquisitionUnpacker</code>：候选顺序 = 任务解压码 → <code class="i">StringExtensions.GetPasswordsFromPath</code> → 来源站点常用密码（<code class="i">AcquisitionOptions</code>）→ <code class="i">PasswordService.Search</code> 前 N（可关闭）→ 无密码；成功后 <code class="i">PasswordService.AddUsedTimes</code>；嵌套压缩再解一层；非压缩包透传；全部失败 → <code class="i">NeedsAttention(PasswordUnknown)</code>，<code class="i">POST acquisition/{id}/password</code> 后重跑本阶段。</li>
-<li>进度经 BTask 外壳推送（<code class="i">ExtractWithProgress</code> 的输出行解析已存在）。</li>
+<li><code class="i">FetchHttpStep</code>：复用 <code class="i">SingleFileHttpDownloader</code>，并修正 <code class="i">Content-Length</code> 缺失、去掉整文件内存 MD5、读 <code class="i">Content-Disposition</code>、支持无 Range；进度经 <code class="i">AcquisitionStepContext</code> 回调到 BTask；幂等：工作目录已有完整文件即跳过。工作目录 <code class="i">IAppService.AppDataDirectory/acquisition/{taskId}/</code>。</li>
+<li><code class="i">WaitForInboxStep</code>：用 <code class="i">IGuiAdapter</code> 打开链接（<code class="i">GuiController.OpenUrlInDefaultBrowser</code> 的同一路径），<code class="i">Suspend(WaitingForFile)</code>，<code class="i">PromptJson</code> 含提取码、期望文件名、等待开始时间；<code class="i">ResumeAsync</code> 接收「认领的文件列表」信号，把文件移入工作目录，<code class="i">Continue</code>。提取码由前端复制到剪贴板。</li>
+<li><code class="i">AcquisitionInboxWatcher : BackgroundService</code>（仿 <code class="i">WorkflowFsWatchService</code>）：监听收件箱一层；稳定判定（后缀、大小两次不变、可独占打开、分卷齐全）；<code class="i">InboxClaimScorer</code>（纯函数：词元重合、期望文件名、方括号密码、时间接近）；唯一高分 → 调 <code class="i">IAcquisitionService.ResumeAsync</code>；歧义 → 把运行的 <code class="i">WaitReason</code> 改为 <code class="i">AmbiguousInboxFile</code>（通过 <code class="i">IWorkflowRunResumer</code> 的「更新提示」接口）。</li>
+<li>接口：<code class="i">GET acquisition/inbox</code>（未认领文件与每个等待任务的分数）、<code class="i">POST acquisition/{id}/unclaim</code>；认领本身走通用 <code class="i">resume</code>。</li>
 </ul>
 <h4>测试</h4>
-<ul><li>在测试里用 7-Zip 生成带密码的单文件、分卷、嵌套三种压缩包（7-Zip 缺失时跳过）；错误密码 → 停车 → 补密码 → 成功；<code class="i">FileController</code> 现有解压测试全部通过（行为未变）。</li></ul>
-
-<h3 id="b2-6">批次 2.6 放置与落地阶段</h3>
-<div class="kv">
-<div>目标</div><div>解压产物按模板放进库根目录并落地为资源，路径标记补属性，发通知。</div>
-<div>依赖</div><div>2.5、1.2。</div>
-<div>规模</div><div>中，约 2 个工作日。</div>
-</div>
-<h4>改动清单</h4>
-<ul>
-<li>把 <code class="i">AbstractDownloader.BuildDownloadFilename</code> 的非法字符清理提取为 <code class="i">Bakabase.Abstractions</code> 的 <code class="i">FileNameSanitizer</code>（若 <code class="i">Fs/FileNameSanitizer.cs</code> 已有等价实现则复用）。</li>
-<li><code class="i">TemplateDirectoryPlacer : IAcquisitionPlacer</code>：用 <code class="i">ResourceUtils.SplitDisplayNameTemplateIntoSegments</code> 渲染模板，变量 <code class="i">{Title} {Code} {Collection} {Source} {Year}</code>；逐段清理与长度预算；冲突策略（追加序号 / 合并 / 停车 <code class="i">TargetExists</code>）；折叠单层外壳目录；移动；压缩包按设置进回收站（复用仓库内现有的回收站工具，若无则用 <code class="i">Microsoft.VisualBasic.FileIO.FileSystem</code> 的回收站删除）。</li>
-<li>Syncing 阶段（模块内置）：<code class="i">IResourceMaterializationService.MaterializeAsync(resourceId, targetDirectory)</code>；<code class="i">IPathMarkSyncService.EnqueueSync</code>；名称为占位值时用解析标题更新；通知 <code class="i">INotificationService.CreateAsync(Source = "acquisition:{id}", PayloadJson.route = "/resource?...")</code>。</li>
-<li><code class="i">Completed</code> 后清理工作目录（保留阶段数据）。</li>
-</ul>
-<h4>测试</h4>
-<ul><li>模板渲染的表驱动用例（空变量整段丢弃、非法字符、超长）；放置到已存在目录的三种策略；端到端：假读取器 + 本地 HTTP 直链 + 真实压缩包 → 资源落地、<code class="i">ResourceSourceLink</code> 与通知存在。</li></ul>
+<ul><li>本地 HTTP 服务器：有 / 无 Range 都下载完整，中断后续传；打分表驱动用例；监听器对正在增长的文件不认领；分卷未齐不认领；唯一高分自动恢复运行。</li></ul>
 <h4>验收</h4>
-<ul><li>设计文档 §12.4 的五步全程演示一次；期间只有「在网盘页面点下载」是人工。</li></ul>
+<ul><li>两个等待中的任务，往收件箱丢一个文件名含其中一个标题的压缩包，几秒内被正确任务认领并继续；再丢一个无关文件，任务变为「需要认领」。</li></ul>
 
-<h3 id="b2-7">批次 2.7 获取中心、首次向导、入口接通</h3>
+<h3 id="b2-6">批次 2.6 步骤：解压</h3>
 <div class="kv">
-<div>目标</div><div>用户能从界面发起、观察、干预获取；一次向导完成全部配置。</div>
-<div>依赖</div><div>2.6。</div>
+<div>目标</div><div><code class="i">acquisition.unpack</code> 可用，失败时挂起要密码。</div>
+<div>依赖</div><div>2.5。</div>
+<div>规模</div><div>中，约 2 个工作日。</div>
+</div>
+<h4>改动清单</h4>
+<ul>
+<li>把 <code class="i">FileController.cs</code> 约 133-327 行（候选密码逐试）与约 329-493 行（解压后删除压缩包 / 上移到父目录）的逻辑提取为 <code class="i">IArchiveExtractionService</code>（放 legacy，<code class="i">FileController</code> 改为委托，行为不变）。</li>
+<li><code class="i">UnpackStep</code>：<code class="i">DetectCompressedFileGroups</code> 分组；候选顺序 = 工作项解压码 → <code class="i">GetPasswordsFromPath</code> → 来源站点常用密码 → <code class="i">PasswordService.Search</code> 前 N（可关闭）→ 无密码；成功后 <code class="i">AddUsedTimes</code>；嵌套再解一层；非压缩包 <code class="i">Skip</code>；全部失败 <code class="i">Suspend(PasswordUnknown)</code>，恢复信号为密码。配置：是否删除压缩包、嵌套深度。</li>
+</ul>
+<h4>测试</h4>
+<ul><li>7-Zip 生成带密码的单文件、分卷、嵌套三种压缩包（7-Zip 缺失时跳过）；错误密码 → 挂起 → 补密码 → 成功；无压缩包 → <code class="i">Skip</code>；<code class="i">FileController</code> 现有解压测试全部通过。</li></ul>
+
+<h3 id="b2-7">批次 2.7 步骤：选择目录、重命名、放置、落地</h3>
+<div class="kv">
+<div>目标</div><div>方案走到终点：目录名可由现有文本节点改写，产物落地为资源。</div>
+<div>依赖</div><div>2.6、1.2。</div>
+<div>规模</div><div>中，约 2 到 3 个工作日。</div>
+</div>
+<h4>改动清单</h4>
+<ul>
+<li>把 <code class="i">AbstractDownloader.BuildDownloadFilename</code> 的非法字符清理提取为 <code class="i">Bakabase.Abstractions</code> 的 <code class="i">FileNameSanitizer</code>（若已有等价实现则复用）。</li>
+<li><code class="i">PickLocalDirectoryStep</code>（模块内）：<code class="i">Suspend(PickDirectory)</code>，恢复信号为目录路径，写入工作项 <code class="i">ExtractedDirectory</code>。</li>
+<li><b>重命名不写新步骤</b>：<code class="i">AcquisitionWorkItem.WorkingText</code> 由 <code class="i">PlaceStep</code> 之前的第一个读取者初始化为模板渲染结果；现有 <code class="i">transform.text.*</code> 节点接受 <code class="i">ITextWorkpiece</code>，直接可插进方案。需确认 <code class="i">AdaptToNext</code> 与 Passthrough 的类型校验对 <code class="i">item.acquisition</code> 成立（<code class="i">chainWalk.ts</code> 与 <code class="i">WorkflowDefinitionService.ValidateActivities</code> 都按接口判定，应无改动）。</li>
+<li><code class="i">PlaceStep</code>：用 <code class="i">ResourceUtils.SplitDisplayNameTemplateIntoSegments</code> 渲染模板到 <code class="i">WorkingText</code>（若尚未设置），逐段清理与长度预算，冲突策略（追加序号 / 合并 / <code class="i">Suspend(TargetExists)</code>），折叠单层外壳目录，移动，压缩包按设置进回收站；幂等。</li>
+<li><code class="i">MaterializeStep</code>（<code class="i">Bakabase.Service</code>）：<code class="i">IResourceMaterializationService.MaterializeAsync</code>；<code class="i">IPathMarkSyncService.EnqueueSync</code>；名称为占位值时用解析标题更新；通知 <code class="i">INotificationService.CreateAsync(Source = "acquisition:{id}", PayloadJson.route)</code>；清理工作目录。</li>
+</ul>
+<h4>测试</h4>
+<ul><li>模板渲染表驱动用例；「本地已有目录」方案端到端：选择目录 → <code class="i">transform.text.trim</code> 改名 → 放置 → 落地；「直链」方案端到端：本地 HTTP 直链 + 真实压缩包 → 资源落地、来源链接与通知存在；放置到已存在目录的三种策略。</li></ul>
+<h4>验收</h4>
+<ul><li>设计文档 §12.4 的五步全程演示一次，期间只有「在网盘页面点下载」是人工；在方案里插入一个「去掉方括号」文本节点后，落地目录名随之变化。</li></ul>
+
+<h3 id="b2-8">批次 2.8 获取中心、首次向导、入口接通</h3>
+<div class="kv">
+<div>目标</div><div>用户能从界面发起、观察、干预获取；选方案、编辑方案；一次向导完成配置。</div>
+<div>依赖</div><div>2.7。</div>
 <div>规模</div><div>大，约 3 到 4 个工作日。</div>
 </div>
 <h4>改动清单</h4>
 <ul>
-<li><code class="i">yarn gen-sdk</code>；新页面 <code class="i">src/web/src/pages/acquisition/</code>（<code class="i">/acquisitions</code>）：任务表、需要处理置顶并行内操作（选择链接 / 购买并继续 / 输入密码 / 认领文件）、收件箱抽屉（未认领文件与分数、拖拽认领）、粘贴链接创建、打开收件箱目录、设置；BTask 进度经 <code class="i">useBTasksStore</code> 按前缀 <code class="i">Acquisition:</code> 订阅；菜单项标 Beta；i18n 命名空间 <code class="i">pages/acquisition.json</code>。</li>
+<li><code class="i">yarn gen-sdk</code>；新页面 <code class="i">src/web/src/pages/acquisition/</code>（<code class="i">/acquisitions</code>）：任务表、等待中置顶并行内渲染该步骤的 <code class="i">ResumeForm</code>、收件箱抽屉（未认领文件与分数、拖拽认领 = 发送认领信号）、粘贴链接创建（可选方案）、「编辑方案」跳转画布编辑器、打开收件箱目录、设置；BTask 进度经 <code class="i">useBTasksStore</code>；菜单项标 Beta；i18n 命名空间 <code class="i">pages/acquisition.json</code>。</li>
+<li>为九个步骤补专用配置表单与恢复表单（替换 2.3 的通用 JSON 表单）。</li>
 <li>首次向导（设计文档 §12.1）：四步，第二步调用 <code class="i">POST path-mark</code> 在库根目录创建 <code class="i">ResourceMarkConfig { MatchMode = Layer, Layer = 1, FsTypeFilter = Directory }</code>（存在则跳过），第三步用最近一次解析结果实时预览模板。</li>
-<li>资源卡片与详情的「获取」接通：弹出线索选择 → <code class="i">POST acquisition</code>；「新建未落地资源」的「创建后立即获取」接通。</li>
+<li>资源卡片与详情的「获取」接通（选线索、可选方案）；「新建未落地资源」的「创建后立即获取」接通。</li>
 <li>通知深链接：<code class="i">NotificationCenter/index.tsx</code> 约 87 行向 <code class="i">NotificationItem</code> 传 <code class="i">onClick</code>，解析 <code class="i">payloadJson.route</code> 并导航；订阅通知改用同一约定。</li>
 <li>油猴脚本 <code class="i">src/scripts/baka-monkey/src/sites/soulplus/adapters.ts</code>：「获取到 Bakabase」按钮 → <code class="i">POST acquisition/from-url</code>（后端新增：解析标题 → <code class="i">IPlaceholderResourceService.CreateOrMatchBySharedUrlAsync</code> → 创建任务）。</li>
-<li>Workflow：触发器 <code class="i">acquisition.statusChanged</code>（过滤：目标状态集合）与条目类型 <code class="i">item.acquisition</code>；动作 <code class="i">action.acquisition.create</code>；前端节点包与 i18n。</li>
+<li>Workflow：动作 <code class="i">action.acquisition.create</code>；<code class="i">acquisition.statusChanged</code> 触发器的前端节点包。</li>
 </ul>
 <h4>验收</h4>
-<ul><li>新用户从向导到第一个游戏入库不超过五分钟；获取中心里每种停车都能在行内解决；一条「获取完成 → 通知」的工作流可搭出并跑通。</li></ul>
+<ul><li>新用户从向导到第一个游戏入库不超过五分钟；获取中心里每种挂起都能在行内解决；复制内置方案、删掉「解压」步骤后，一个不带压缩包的直链能直接落地；一条「获取完成 → 通知」的工作流可搭出并跑通。</li></ul>
 
-<h3 id="b2-8">批次 2.8 平台取回路线（可延后到里程碑四）</h3>
-<div class="kv">
-<div>目标</div><div>「获取」对已购买的 DLsite 作品、收藏的 ExHentai 画廊、已拥有的 Steam 游戏同样有效。</div>
-<div>依赖</div><div>2.6。</div>
-<div>规模</div><div>中，约 2 个工作日。</div>
-</div>
+<h3 id="b2-9">批次 2.9 步骤：平台取回（可延后到里程碑四）</h3>
+<div class="kv"><div>依赖</div><div>2.7。</div><div>规模</div><div>中，约 2 个工作日。</div></div>
 <ul>
-<li><code class="i">PlatformHoldingResolver</code> 按 <code class="i">ResourceSource</code> 分派到三个薄适配器（<code class="i">src/apps/Bakabase.Service/Components/Acquisition/Connectors/</code>）：DLsite → <code class="i">DLsiteWorkService.DownloadWork / ExtractWork</code> 后把产物目录交给放置阶段；ExHentai → <code class="i">DownloadTaskService.AddRange</code> 并等待 <code class="i">downloader.completed</code>（订阅 <code class="i">DownloadTaskService.OnStatusChanged</code> 的同一事件，超时进入停车）；Steam → 打开 <code class="i">steam://install/{appId}</code>，轮询 <code class="i">SteamAppService.UpdateInstallationStatus</code>，检测到路径后直接落地（跳过解压与放置）。</li>
-<li>这三个适配器就是里程碑四 <code class="i">IPlatformConnector.FetchAsync</code> 的雏形，届时原样迁入。</li>
+<li><code class="i">FetchFromPlatformStep</code> 按 <code class="i">ResourceSource</code> 分派到三个薄适配器（<code class="i">Bakabase.Service/Components/Acquisition/Connectors/</code>）：DLsite → <code class="i">DLsiteWorkService.DownloadWork / ExtractWork</code> 后把产物目录交给工作项；ExHentai → <code class="i">DownloadTaskService.AddRange</code> 后 <code class="i">Suspend(PlatformFetch)</code>，订阅 <code class="i">DownloadTaskService.OnStatusChanged</code> 的完成事件作为恢复信号；Steam → 打开 <code class="i">steam://install/{appId}</code> 后挂起，轮询 <code class="i">SteamAppService.UpdateInstallationStatus</code> 检测到路径后恢复并直接落地。</li>
+<li>这三个适配器就是里程碑四 <code class="i">IPlatformConnector.FetchAsync</code> 的雏形。</li>
 </ul>
 
-<h3 id="b2-9">批次 2.9 分享清单导入（可延后到里程碑五）</h3>
+<h3 id="b2-10">批次 2.10 分享清单导入（可延后到里程碑五）</h3>
 <ul>
-<li>Excel / CSV 读取器（后端已有 xlsx 导出所用的库，复用其读取能力）；<code class="i">POST acquisition/import-shared-list</code>：逐行提取标题、链接、密码 → 走 1.4 的匹配或新建 → 挂线索 → 返回预览；前端预览表逐行确认后批量创建任务。</li>
+<li>Excel / CSV 读取器（复用后端已有 xlsx 导出所用的库）；<code class="i">POST acquisition/import-shared-list</code>：逐行提取标题、链接、密码 → 走 1.4 的匹配或新建 → 挂线索 → 返回预览；前端预览表逐行确认后批量创建任务（可选方案）。</li>
 </ul>
 
 <h3>里程碑二验收清单</h3>
 <ul>
 <li>对里程碑一创建的任意未落地资源点「获取」并给一条帖子链接，用户只做「在网盘页面点下载」，资源最终落地为 Active 资源，带清洗后的名称与（若正文含编号）权威身份。</li>
+<li>五份内置方案都能跑通各自的典型场景；复制一份方案、删掉或插入一个步骤（例如去掉解压、加一个文本清洗），行为随之变化，不改任何代码。</li>
 <li>从油猴脚本直接发起时，资源在解析完成的瞬间就出现在资源页并显示「获取中」。</li>
-<li>进程中途重启后任务从当前阶段续跑；分卷、嵌套、无密码、错误密码四种压缩包情况都有明确结果。</li>
-<li>付费帖子在上限内自动购买且有审计记录，超出上限停车。</li>
-<li>全程无需手工配置路径标记。</li>
+<li>进程中途重启后，运行从游标步骤续跑，等待中的运行原地保留；分卷、嵌套、无密码、错误密码四种压缩包情况都有明确结果。</li>
+<li>付费帖子在上限内自动购买且有审计记录，超出上限挂起。</li>
+<li>现有的文件清洗工作流测试全部通过，引擎扩展对它们没有可观察的影响。</li>
 </ul>
 <h2 id="s4"><span class="n">§4</span>里程碑三：集合</h2>
 <p>目标：命名分组、三种成员来路、收集率、按集合搜索、一键获取缺失成员。集合建立在里程碑一之上；3.5 需要里程碑二。</p>
@@ -528,7 +546,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 </ul>
 
 <h3 id="b3-5">批次 3.5 集合与获取联动</h3>
-<div class="kv"><div>依赖</div><div>3.4、2.7。</div><div>规模</div><div>小，约 1 个工作日。</div></div>
+<div class="kv"><div>依赖</div><div>3.4、2.8。</div><div>规模</div><div>小，约 1 个工作日。</div></div>
 <ul>
 <li><code class="i">POST collection/{id}/acquire-missing</code>：对有线索的未落地成员批量 <code class="i">IAcquisitionService.CreateAsync(..., collectionId)</code>；成员卡片显示获取进度。</li>
 <li>Workflow：触发器 <code class="i">collection.membersAdded</code>、动作 <code class="i">action.collection.addResource</code>，前端节点包。</li>
@@ -568,7 +586,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 </ul>
 
 <h3 id="b4-4">批次 4.4 自动获取与 Workflow 桥接</h3>
-<div class="kv"><div>依赖</div><div>4.1、2.7。</div><div>规模</div><div>中，约 2 个工作日。</div></div>
+<div class="kv"><div>依赖</div><div>4.1、2.8。</div><div>规模</div><div>中，约 2 个工作日。</div></div>
 <ul>
 <li>集合级 <code class="i">AutoAcquire</code> 与获取设置覆盖（<code class="i">Collection.AcquisitionSettingsJson</code>）。</li>
 <li>动作 <code class="i">action.resource.setPropertyValue</code>、<code class="i">action.enhancer.enhance</code>、<code class="i">action.pathmark.enqueueSync</code>（按能力全景图 §6 列出的代码位置实现）及其前端节点包。</li>
@@ -576,9 +594,9 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 </ul>
 
 <h3 id="b4-5">批次 4.5 平台对接器契约</h3>
-<div class="kv"><div>依赖</div><div>2.8（适配器雏形）；与 4.1 到 4.4 无硬依赖。</div><div>规模</div><div>大，约 4 到 5 个工作日，建议拆成三个子批次（契约与 Steam、DLsite、ExHentai）。</div></div>
+<div class="kv"><div>依赖</div><div>2.9（适配器雏形）；与 4.1 到 4.4 无硬依赖。</div><div>规模</div><div>大，约 4 到 5 个工作日，建议拆成三个子批次（契约与 Steam、DLsite、ExHentai）。</div></div>
 <ul>
-<li><code class="i">IResourceResolver</code> 演进为 <code class="i">IPlatformConnector</code>（设计文档 §6.4）：<code class="i">EnumerateHoldingsAsync</code> = 现 <code class="i">DiscoverResources</code>；<code class="i">FetchAsync</code> 迁入 2.8 的适配器；<code class="i">DetectLocalPathAsync</code> = Steam 安装检测 / DLsite 目录扫描。</li>
+<li><code class="i">IResourceResolver</code> 演进为 <code class="i">IPlatformConnector</code>（设计文档 §6.4）：<code class="i">EnumerateHoldingsAsync</code> = 现 <code class="i">DiscoverResources</code>；<code class="i">FetchAsync</code> 迁入 2.9 的适配器；<code class="i">DetectLocalPathAsync</code> = Steam 安装检测 / DLsite 目录扫描。</li>
 <li>持有型订阅 <code class="i">dlsite.purchases</code>、<code class="i">steam.ownedGames</code>、<code class="i">exhentai.favorites</code>：实现即调用对接器枚举；<code class="i">SyncDLsiteTask / SyncSteamTask / SyncExHentaiTask</code> 改为经订阅调度。</li>
 <li>三张外部目录表：<code class="i">IsDownloaded / LocalPath / IsInstalled / InstallPath</code> → <code class="i">Resource.Path</code>（经落地服务）；私有字段 → <code class="i">ResourceSourceLink.MetadataJson</code> 加类型化读取器；<code class="i">IsHidden</code> → 成员忽略或资源级隐藏（<span class="tag t-open">待定</span>）；表在后一个版本删除。</li>
 <li>三个专用页面折叠为资源页按来源筛选 + 对接器动作；<code class="i">DLsiteWorkService</code> 的下载 / 解压 / 扫描完成后调用落地服务（今天什么都不触发）。</li>
@@ -586,13 +604,13 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 
 <h2 id="s6"><span class="n">§6</span>里程碑五：扩展</h2>
 <div class="tw"><table><tr><th style="width:26%">项目</th><th style="width:44%">内容</th><th>依赖</th></tr>
-<tr><td>网盘抓取器</td><td>Mega、PikPak 等有 API 的网盘作为 <code class="i">IAcquisitionFetcher</code>；用户零配置变更</td><td>2.3</td></tr>
-<tr><td>磁力抓取器</td><td>对接外部下载工具（aria2 或系统 BT 客户端）</td><td>2.3</td></tr>
+<tr><td>网盘抓取器</td><td>Mega、PikPak 等有 API 的网盘作为新的抓取步骤；用户只需在方案里换掉 <code class="i">waitForInbox</code>，或由 <code class="i">selectLink</code> 配置自动切换</td><td>2.5</td></tr>
+<tr><td>磁力抓取器</td><td>对接外部下载工具（aria2 或系统 BT 客户端）的抓取步骤</td><td>2.5</td></tr>
 <tr><td>VNDB</td><td><code class="i">ThirdPartyId.Vndb</code>、客户端、<code class="i">ResourceSource.Vndb</code>、<code class="i">vndb.series / vndb.developer</code> 提供器、VNDB 增强器写身份</td><td>4.1</td></tr>
 <tr><td>模糊匹配</td><td>分享条目与资源的宽松标题匹配进「待确认」列表；沿用 <code class="i">docs/local-file-organization/modules/04-resolution.md</code> 的保守策略</td><td>4.2</td></tr>
 <tr><td>规则集合索引</td><td>把 <code class="i">ResourceProfileIndexService</code> 泛化为搜索集索引，规则集合与配置档案共用</td><td>3.3</td></tr>
 <tr><td>路径标记预设与按样例标记</td><td>帮助中心示例提升为预设；右键样例目录推断 <code class="i">Layer</code> 并批量创建；<code class="i">copyMarks</code> 持久化</td><td>无</td></tr>
-<tr><td>分享清单导入</td><td>2.9（若未在里程碑二完成）</td><td>2.6</td></tr>
+<tr><td>分享清单导入</td><td>2.10（若未在里程碑二完成）</td><td>2.7</td></tr>
 <tr><td><code class="i">action.downloader.enqueue</code> 泛化</td><td>ExHentai 专用入队动作泛化为按来源选择下载器</td><td>4.5</td></tr>
 </table></div>
 
@@ -603,7 +621,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <div class="card"><h4>第三方页面变化</h4><ul><li>读取器与提供器的解析用固定样例做回归测试；线上失败写入订阅或任务的错误字段并通知，不影响其他来源。</li></ul></div>
 <div class="card"><h4>性能</h4><ul><li>落地服务不等待全量同步；规则集合结果缓存并随事件失效；订阅检查按各自间隔而非固定 30 分钟；收件箱监听只看一层。</li></ul></div>
 <div class="card"><h4>文档回写</h4><ul><li>每个批次合并时更新设计文档 §13 的进度与 §16 的偏离记录；本计划的批次表同步勾选。</li></ul></div>
-<div class="card"><h4>何时该停下来重新讨论</h4><ul><li>1.2 的合并策略在真实库上出现非预期合并；2.4 的自动认领错误率高于人工可接受；4.1 的分享条目标题匹配产生错误合并。这三处都有「保守默认 + 人工确认」的退路，触发时先降级为人工确认再讨论算法。</li></ul></div>
+<div class="card"><h4>何时该停下来重新讨论</h4><ul><li>1.2 的合并策略在真实库上出现非预期合并；2.5 的自动认领错误率高于人工可接受；4.1 的分享条目标题匹配产生错误合并。这三处都有「保守默认 + 人工确认」的退路，触发时先降级为人工确认再讨论算法。</li><li>2.2 的引擎扩展导致现有 Workflow 测试失败且不能在改动范围内修复：切换到独立运行器宿主（§3 开头的降级路径），不扩大引擎改动。</li></ul></div>
 </div>
 
 <h2 id="s8"><span class="n">§8</span>批次总表</h2>
@@ -615,25 +633,26 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <tr><td class="e">1.5</td><td>获取线索（记录）</td><td>1.4</td><td>小</td><td>Acquisition 模块工程、<code class="i">AcquisitionLead</code> 表与接口</td></tr>
 <tr><td class="e">1.6</td><td>前端体验</td><td>1.1、1.4、1.5</td><td>中</td><td>卡片、详情、筛选、新建对话框、线索区块</td></tr>
 <tr><td class="e">1.7</td><td>关联目录与触发器</td><td>1.2</td><td>小</td><td>落地接口、<code class="i">item.resource</code>、<code class="i">resource.materialized</code></td></tr>
-<tr><td class="e">2.1</td><td>模块与状态机</td><td>1.2、1.5</td><td>中</td><td><code class="i">AcquisitionTask</code>、后台驱动、BTask 外壳、接口</td></tr>
-<tr><td class="e">2.2</td><td>分享内容解析</td><td>2.1</td><td>中</td><td>读取器泛化、网盘种类、付费停车点、两个解析器</td></tr>
-<tr><td class="e">2.3</td><td>抓取</td><td>2.2</td><td>小</td><td>直链抓取器、手动抓取器</td></tr>
-<tr><td class="e">2.4</td><td>收件箱认领</td><td>2.3</td><td>中</td><td>监听器、打分、认领接口</td></tr>
-<tr><td class="e">2.5</td><td>解压</td><td>2.4</td><td>中</td><td>解压服务提取、密码回退链</td></tr>
-<tr><td class="e">2.6</td><td>放置与落地</td><td>2.5、1.2</td><td>中</td><td>模板放置、落地、通知</td></tr>
-<tr><td class="e">2.7</td><td>获取中心与向导</td><td>2.6</td><td>大</td><td>页面、向导、入口接通、深链接、油猴、Workflow 节点</td></tr>
-<tr><td class="e">2.8</td><td>平台取回路线</td><td>2.6</td><td>中</td><td>三个薄适配器（可延后）</td></tr>
-<tr><td class="e">2.9</td><td>分享清单导入</td><td>2.6</td><td>小</td><td>表格 / 文档读取与批量创建（可延后）</td></tr>
+<tr><td class="e">2.1</td><td>抽象底层：步骤契约、工作项、结果</td><td>1.2、1.5</td><td>小到中</td><td><code class="i">IAcquisitionStep</code>、<code class="i">AcquisitionWorkItem</code>、注册表、内置方案定义、假宿主、<code class="i">AcquisitionOptions</code></td></tr>
+<tr><td class="e">2.2</td><td>Workflow 引擎挂起 / 恢复与单条目游标</td><td>无</td><td>中</td><td><code class="i">Suspend</code> 结果、<code class="i">Waiting</code> 状态、游标列、恢复服务与接口、重启规则、运行抽屉</td></tr>
+<tr><td class="e">2.3</td><td>适配器、入口触发器、方案种子、任务索引</td><td>2.1、2.2</td><td>中</td><td><code class="i">AcquisitionStepActivity</code>、<code class="i">acquisition.requested</code>、五份内置方案、<code class="i">AcquisitionTask</code>、<code class="i">IAcquisitionService</code>、接口</td></tr>
+<tr><td class="e">2.4</td><td>步骤：解析分享内容与选择链接</td><td>2.3</td><td>中</td><td>读取器泛化、网盘种类、付费挂起、两个步骤</td></tr>
+<tr><td class="e">2.5</td><td>步骤：直链下载、等待收件箱与监听</td><td>2.4</td><td>中</td><td>两个步骤、收件箱监听器与打分、认领信号</td></tr>
+<tr><td class="e">2.6</td><td>步骤：解压</td><td>2.5</td><td>中</td><td>解压服务提取、密码回退链、挂起要密码</td></tr>
+<tr><td class="e">2.7</td><td>步骤：选择目录、重命名、放置、落地</td><td>2.6、1.2</td><td>中</td><td>三个步骤、现有文本节点作为重命名、通知</td></tr>
+<tr><td class="e">2.8</td><td>获取中心与向导</td><td>2.7</td><td>大</td><td>页面、恢复表单、专用配置表单、向导、入口接通、深链接、油猴、Workflow 节点</td></tr>
+<tr><td class="e">2.9</td><td>步骤：平台取回</td><td>2.7</td><td>中</td><td>三个薄适配器（可延后）</td></tr>
+<tr><td class="e">2.10</td><td>分享清单导入</td><td>2.7</td><td>小</td><td>表格 / 文档读取与批量创建（可延后）</td></tr>
 <tr><td class="e">3.1</td><td>集合模块与数据</td><td>1.1、1.2、1.4</td><td>中</td><td>两张表、映射索引、收集率、接口</td></tr>
 <tr><td class="e">3.2</td><td><code class="i">CollectionMulti</code></td><td>3.1</td><td>中</td><td>内部属性十二处接入</td></tr>
 <tr><td class="e">3.3</td><td>规则集合</td><td>3.2</td><td>小到中</td><td>规则评估、缓存、预览</td></tr>
 <tr><td class="e">3.4</td><td>集合页面</td><td>3.1、3.2</td><td>大</td><td>列表、详情、右键、详情块、菜单</td></tr>
-<tr><td class="e">3.5</td><td>集合与获取联动</td><td>3.4、2.7</td><td>小</td><td>获取缺失成员、两个 Workflow 节点</td></tr>
+<tr><td class="e">3.5</td><td>集合与获取联动</td><td>3.4、2.8</td><td>小</td><td>获取缺失成员、两个 Workflow 节点</td></tr>
 <tr><td class="e">4.1</td><td>订阅契约演进</td><td>3.1、1.4</td><td>大</td><td>契约、检查流程重写、迁移器、调度</td></tr>
 <tr><td class="e">4.2</td><td>分享渠道提供器</td><td>4.1</td><td>中</td><td>SoulPlus 列表抓取与提供器</td></tr>
 <tr><td class="e">4.3</td><td>权威提供器</td><td>4.1</td><td>中</td><td>DLsite 社团页、Bangumi 关联</td></tr>
-<tr><td class="e">4.4</td><td>自动获取与 Workflow</td><td>4.1、2.7</td><td>中</td><td>自动获取、三个资源类动作</td></tr>
-<tr><td class="e">4.5</td><td>平台对接器契约</td><td>2.8</td><td>大</td><td><code class="i">IPlatformConnector</code>、持有型订阅、目录表收编</td></tr>
+<tr><td class="e">4.4</td><td>自动获取与 Workflow</td><td>4.1、2.9</td><td>中</td><td>自动获取、三个资源类动作</td></tr>
+<tr><td class="e">4.5</td><td>平台对接器契约</td><td>2.9</td><td>大</td><td><code class="i">IPlatformConnector</code>、持有型订阅、目录表收编</td></tr>
 </table></div>
 <hr>
 <p class="note">批次编号与设计文档 §13 的分期一一对应；实施中若拆分或合并批次，在本表更新并在设计文档 §16 记录原因。</p>
