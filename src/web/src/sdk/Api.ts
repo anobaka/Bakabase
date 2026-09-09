@@ -323,10 +323,10 @@ export type BakabaseAbstractionsModelsDomainConstantsResourceMoveRecordStatus =
   | 6;
 
 /**
- * [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc]
+ * [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 6: Bangumi, 7: Pixiv]
  * @format int32
  */
-export type BakabaseAbstractionsModelsDomainConstantsResourceSource = 1 | 2 | 3 | 4 | 5;
+export type BakabaseAbstractionsModelsDomainConstantsResourceSource = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
 /**
  * [1: Active, 2: Absent, 3: Unavailable]
@@ -834,7 +834,7 @@ export interface BakabaseAbstractionsModelsDomainResourceSourceLink {
   id: number;
   /** @format int32 */
   resourceId: number;
-  /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc] */
+  /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 6: Bangumi, 7: Pixiv] */
   source: BakabaseAbstractionsModelsDomainConstantsResourceSource;
   sourceKey: string;
   /** @format date-time */
@@ -868,7 +868,7 @@ export interface BakabaseAbstractionsModelsDomainSourceMetadataFieldInfo {
 export interface BakabaseAbstractionsModelsDomainSourceMetadataMapping {
   /** @format int32 */
   id: number;
-  /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc] */
+  /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 6: Bangumi, 7: Pixiv] */
   source: BakabaseAbstractionsModelsDomainConstantsResourceSource;
   metadataField: string;
   /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
@@ -4678,6 +4678,19 @@ export interface BakabaseServiceModelsInputResourceOptionsPatchInputModel {
   deleteKeepResourceMarkers?: boolean;
 }
 
+export interface BakabaseServiceModelsInputResourcePlaceholderInputModel {
+  items: BakabaseServiceModelsInputResourcePlaceholderItemInputModel[];
+  acquireImmediately: boolean;
+}
+
+export interface BakabaseServiceModelsInputResourcePlaceholderItemInputModel {
+  title?: string;
+  /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 6: Bangumi, 7: Pixiv] */
+  source?: BakabaseAbstractionsModelsDomainConstantsResourceSource;
+  sourceKey?: string;
+  sharedUrl?: string;
+}
+
 export interface BakabaseServiceModelsInputResourceProfileInputModel {
   name: string;
   search?: BakabaseServiceModelsInputResourceSearchInputModel;
@@ -5211,6 +5224,16 @@ export interface BakabaseServiceModelsViewResourcePathInfoViewModel {
   id: number;
   path: string;
   fileName: string;
+}
+
+export interface BakabaseServiceModelsViewResourcePlaceholderResultViewModel {
+  /** @format int32 */
+  index: number;
+  /** @format int32 */
+  resourceId?: number;
+  created: boolean;
+  name?: string;
+  error?: string;
 }
 
 export interface BakabaseServiceModelsViewResourceProfileViewModel {
@@ -5773,6 +5796,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModels
   code: number;
   message?: string;
   data?: BakabaseServiceModelsViewResourcePathInfoViewModel[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewResourcePlaceholderResultViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewResourcePlaceholderResultViewModel[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewResourceProfileViewModel {
@@ -8948,6 +8978,40 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     transferResourceDataUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource/transfer`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name CreatePlaceholderResources
+     * @request POST:/resource/placeholder
+     */
+    createPlaceholderResources: (
+      data: BakabaseServiceModelsInputResourcePlaceholderInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewResourcePlaceholderResultViewModel,
+        any
+      >({
+        path: `/resource/placeholder`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for createPlaceholderResources
+     * @name createPlaceholderResourcesUrl
+     */
+    createPlaceholderResourcesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/placeholder`;
       
       return baseUrl + path;
     },
@@ -20173,7 +20237,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     startSyncBySource: (
       query?: {
-        /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc] */
+        /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 6: Bangumi, 7: Pixiv] */
         source?: BakabaseAbstractionsModelsDomainConstantsResourceSource;
       },
       params: RequestParams = {},
@@ -20191,7 +20255,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name startSyncBySourceUrl
      */
     startSyncBySourceUrl: (query?: {
-        /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc] */
+        /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 6: Bangumi, 7: Pixiv] */
         source?: BakabaseAbstractionsModelsDomainConstantsResourceSource;
       }) => {
       const baseUrl = this.baseUrl || "";

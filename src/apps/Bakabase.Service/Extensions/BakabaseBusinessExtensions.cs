@@ -1,4 +1,5 @@
 ﻿using Bakabase.Abstractions.Components.Events;
+using Bakabase.Service.Components.IdentityLookups;
 using Bakabase.Modules.Acquisition.Extensions;
 using Bakabase.Abstractions.Components.Tracing;
 using Bakabase.Abstractions.Extensions;
@@ -157,6 +158,14 @@ namespace Bakabase.Service.Extensions
             services.AddSingleton<ISubscriptionProvider, PixivFollowLatestProvider>();
             services.AddWorkflow<BakabaseDbContext>();
             services.AddAcquisition<BakabaseDbContext>();
+
+            // "I am missing this" — creating resources for things the user does not have yet.
+            services.AddScoped<IPlaceholderResourceService, PlaceholderResourceService>();
+            services.AddScoped<IExternalIdentityLookup, DLsiteIdentityLookup>();
+            services.AddScoped<IExternalIdentityLookup, SteamIdentityLookup>();
+            services.AddScoped<IExternalIdentityLookup, BangumiIdentityLookup>();
+            services.AddScoped<IExternalIdentityLookup, ExHentaiIdentityLookup>();
+            services.AddScoped<ISharedUrlTitleResolver, SharedUrlTitleResolver>();
             services.AddSingleton<IWorkflowTrigger, SubscriptionUpdatedTrigger>();
             services.AddSingleton<IWorkflowTrigger, DownloaderCompletedTrigger>();
             // Item type descriptors — give the editor type info to render and the AI

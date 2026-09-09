@@ -274,6 +274,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <ul><li><code class="i">PlaceholderResourceServiceTests.cs</code>：按标题创建；按 RJ 号创建带 <code class="i">ResourceSourceLink</code> 的资源（替身返回详情）；同一 RJ 号第二次调用命中而非新建；分享链接按标题命中已有资源。</li></ul>
 <h4>验收</h4>
 <ul><li>通过接口粘贴三行（一个标题、一个 RJ 号、一个 SoulPlus 帖子链接），资源页出现三条未落地资源，RJ 号那条带 DLsite 封面。</li></ul>
+<div class="rule"><b>落地时与计划的差异。</b>按批次 1.5 自己的说明，先交付 1.5（线索表与服务），再交付 1.4，两者在同一分支上是两个提交。<br>几处补充：身份查询与标题读取都放在抽象层接口（<code class="i">IExternalIdentityLookup</code>、<code class="i">ISharedUrlTitleResolver</code>）之后，实现在 <code class="i">Bakabase.Service/Components/IdentityLookups/</code>（不是计划里的 <code class="i">Components/Resource/IdentityLookups/</code>，因为 <code class="i">Bakabase.Service.Components.Resource</code> 这个命名空间会与 <code class="i">Resource</code> 类型冲突）；<code class="i">TryExtractSourceKey</code> 落成 <code class="i">ExternalIdentityParser.TryExtract / TryExtractFor</code>，后者允许在已知平台时接受裸编号，而 <code class="i">TryExtract</code> 对裸数字一律不认——它可能是 Steam、Bangumi 或 Pixiv 的编号，猜错会把资源挂到错误的平台上；<code class="i">POST resource/placeholder</code> 的每个条目在只给 <code class="i">title</code> 时会自行判断它其实是编号还是链接，这样前端可以只给一个「一行一个」的输入框；<code class="i">acquireImmediately</code> 按计划留到里程碑二，现在只记录一条日志。<br>标题匹配是精确匹配：传入标题同时用原样与 <code class="i">ITextOps.Clean</code> 后的形式去比，已存在的名称只做去空白与忽略大小写，不逐条过词表——那会让每次查询都对全库做一遍词表处理，而近似匹配悄悄复用错资源比留下一条可合并的重复更糟。</div>
 
 <h3 id="b1-5">批次 1.5 获取线索（只记录，不执行）</h3>
 <div class="kv">
@@ -627,7 +628,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 </div>
 
 <h2 id="s8"><span class="n">§8</span>批次总表</h2>
-<div class="rule ok"><b>进度。</b>已完成：1.1、1.2、1.3。进行中：无。进度只在本行更新，批次行内不写状态。</div>
+<div class="rule ok"><b>进度。</b>已完成：1.1、1.2、1.3、1.4、1.5。进行中：无。进度只在本行更新，批次行内不写状态。</div>
 <div class="tw"><table><tr><th style="width:8%">批次</th><th style="width:26%">名称</th><th style="width:12%">依赖</th><th style="width:10%">规模</th><th>交付物摘要</th></tr>
 <tr><td class="e">1.1</td><td><code class="i">HasLocalPath</code> 判定与内部属性</td><td>无</td><td>小</td><td>统一判定、布尔内部属性、筛选固定项</td></tr>
 <tr><td class="e">1.2</td><td>落地服务</td><td>1.1</td><td>中</td><td><code class="i">IResourceMaterializationService</code>、同步服务三处修正、空增强记录清理</td></tr>

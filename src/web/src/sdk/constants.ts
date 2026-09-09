@@ -2088,7 +2088,9 @@ export enum ResourceSource {
   Steam = 2,
   DLsite = 3,
   ExHentai = 4,
-  Aigc = 5
+  Aigc = 5,
+  Bangumi = 6,
+  Pixiv = 7
 }
 
 export const resourceSources = [
@@ -2096,7 +2098,9 @@ export const resourceSources = [
   { label: 'Steam', value: ResourceSource.Steam },
   { label: 'DLsite', value: ResourceSource.DLsite },
   { label: 'ExHentai', value: ResourceSource.ExHentai },
-  { label: 'Aigc', value: ResourceSource.Aigc }
+  { label: 'Aigc', value: ResourceSource.Aigc },
+  { label: 'Bangumi', value: ResourceSource.Bangumi },
+  { label: 'Pixiv', value: ResourceSource.Pixiv }
 ] as const;
 
 export const ResourceSourceLabel: Record<ResourceSource, string> = {
@@ -2104,7 +2108,9 @@ export const ResourceSourceLabel: Record<ResourceSource, string> = {
   [ResourceSource.Steam]: 'Steam',
   [ResourceSource.DLsite]: 'DLsite',
   [ResourceSource.ExHentai]: 'ExHentai',
-  [ResourceSource.Aigc]: 'Aigc'
+  [ResourceSource.Aigc]: 'Aigc',
+  [ResourceSource.Bangumi]: 'Bangumi',
+  [ResourceSource.Pixiv]: 'Pixiv'
 };
 
 export enum ResourceStatus {

@@ -5344,6 +5344,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/resource/placeholder": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CreatePlaceholderResources"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/resource/paths": {
         parameters: {
             query?: never;
@@ -6746,10 +6762,10 @@ export interface components {
         "Bakabase.Abstractions.Models.Domain.Constants.ResourceMoveRecordStatus": 1 | 2 | 3 | 4 | 5 | 6;
         /**
          * Format: int32
-         * @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc]
+         * @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 6: Bangumi, 7: Pixiv]
          * @enum {integer}
          */
-        "Bakabase.Abstractions.Models.Domain.Constants.ResourceSource": 1 | 2 | 3 | 4 | 5;
+        "Bakabase.Abstractions.Models.Domain.Constants.ResourceSource": 1 | 2 | 3 | 4 | 5 | 6 | 7;
         /**
          * Format: int32
          * @description [1: Active, 2: Absent, 3: Unavailable]
@@ -10301,6 +10317,16 @@ export interface components {
             keepResourcesOnPathChange?: boolean;
             deleteKeepResourceMarkers?: boolean;
         };
+        "Bakabase.Service.Models.Input.ResourcePlaceholderInputModel": {
+            items: components["schemas"]["Bakabase.Service.Models.Input.ResourcePlaceholderItemInputModel"][];
+            acquireImmediately: boolean;
+        };
+        "Bakabase.Service.Models.Input.ResourcePlaceholderItemInputModel": {
+            title?: string;
+            source?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceSource"];
+            sourceKey?: string;
+            sharedUrl?: string;
+        };
         "Bakabase.Service.Models.Input.ResourceProfileInputModel": {
             name: string;
             search?: components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
@@ -10747,6 +10773,15 @@ export interface components {
             id: number;
             path: string;
             fileName: string;
+        };
+        "Bakabase.Service.Models.View.ResourcePlaceholderResultViewModel": {
+            /** Format: int32 */
+            index: number;
+            /** Format: int32 */
+            resourceId?: number;
+            created: boolean;
+            name?: string;
+            error?: string;
         };
         "Bakabase.Service.Models.View.ResourceProfileViewModel": {
             /** Format: int32 */
@@ -11229,6 +11264,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Models.View.ResourcePathInfoViewModel"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourcePlaceholderResultViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.ResourcePlaceholderResultViewModel"][];
         };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourceProfileViewModel]": {
             /** Format: int32 */
@@ -22445,7 +22486,7 @@ export interface operations {
     StartSyncBySource: {
         parameters: {
             query?: {
-                /** @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc] */
+                /** @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 6: Bangumi, 7: Pixiv] */
                 source?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceSource"];
             };
             header?: never;
@@ -24026,6 +24067,35 @@ export interface operations {
             };
         };
     };
+    CreatePlaceholderResources: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.ResourcePlaceholderInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.ResourcePlaceholderInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.ResourcePlaceholderInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.ResourcePlaceholderInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourcePlaceholderResultViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourcePlaceholderResultViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourcePlaceholderResultViewModel]"];
+                };
+            };
+        };
+    };
     SearchResourcePaths: {
         parameters: {
             query?: {
@@ -24788,7 +24858,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc] */
+                /** @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 6: Bangumi, 7: Pixiv] */
                 source: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceSource"];
             };
             cookie?: never;
@@ -24813,7 +24883,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc] */
+                /** @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 6: Bangumi, 7: Pixiv] */
                 source: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceSource"];
             };
             cookie?: never;
@@ -24845,7 +24915,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc] */
+                /** @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 6: Bangumi, 7: Pixiv] */
                 source: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceSource"];
             };
             cookie?: never;
@@ -24870,7 +24940,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc] */
+                /** @description [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 6: Bangumi, 7: Pixiv] */
                 source: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceSource"];
             };
             cookie?: never;

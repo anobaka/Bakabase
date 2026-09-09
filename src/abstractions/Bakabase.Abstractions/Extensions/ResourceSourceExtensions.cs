@@ -9,6 +9,9 @@ public static class ResourceSourceExtensions
         ResourceSource.Steam => PropertyValueScope.Steam,
         ResourceSource.DLsite => PropertyValueScope.DLsite,
         ResourceSource.ExHentai => PropertyValueScope.ExHentai,
+        ResourceSource.Bangumi => PropertyValueScope.Bangumi,
+        // Pixiv has no scope of its own yet; it gets one when there is a Pixiv integration writing
+        // values that need to be told apart from other synchronized ones.
         _ => PropertyValueScope.Synchronization
     };
 
@@ -28,10 +31,13 @@ public static class ResourceSourceExtensions
         ResourceSource.Steam => true,
         ResourceSource.DLsite => true,
         ResourceSource.ExHentai => true,
+        ResourceSource.Pixiv => true,
         // Found on the user's own disk — there is nothing to fetch from anywhere.
         ResourceSource.PathMark => false,
         // Locally generated content; no platform holds it.
-        ResourceSource.Aigc => false
+        ResourceSource.Aigc => false,
+        // A metadata authority. It knows what the work is and nothing about where to get it.
+        ResourceSource.Bangumi => false
     };
 
     public static DataOrigin? ToDataOrigin(this ResourceSource source) => source switch

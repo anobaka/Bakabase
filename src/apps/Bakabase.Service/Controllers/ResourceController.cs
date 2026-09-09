@@ -1,4 +1,6 @@
 ﻿using System;
+using Bakabase.Abstractions.Components.Identity;
+using System.Threading;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -61,7 +63,8 @@ public class ResourceController(
     IBOptionsManager<FileSystemOptions> fsOptionsManager,
     IPropertyValueScopePreferenceService scopePreferenceService,
     Bakabase.Abstractions.Components.ResourceMove.ResourceMoveGuard resourceMoveGuard,
-    Bakabase.Abstractions.Components.Localization.IBakabaseLocalizer bakabaseLocalizer)
+    Bakabase.Abstractions.Components.Localization.IBakabaseLocalizer bakabaseLocalizer,
+    IPlaceholderResourceService placeholderResourceService)
     : Controller
 {
     [HttpGet("search-operation")]
@@ -607,6 +610,82 @@ public class ResourceController(
 
         await service.Transfer(model);
         return BaseResponseBuilder.Ok;
+    }
+
+    [HttpPost("placeholder")]
+    [SwaggerOperation(OperationId = "CreatePlaceholderResources")]
+    public async Task<ListResponse<ResourcePlaceholderResultViewModel>> CreatePlaceholders(
+        [FromBody] ResourcePlaceholderInputModel model)
+    {
+        var results = new List<ResourcePlaceholderResultViewModel>();
+
+        for (var i = 0; i < model.Items.Count; i++)
+        {
+            var item = model.Items[i];
+            try
+            {
+                var result = await ResolveItem(placeholderResourceService, item, HttpContext.RequestAborted);
+                results.Add(new ResourcePlaceholderResultViewModel(i, result.ResourceId, result.Created,
+                    result.Name, null));
+            }
+            catch (Exception ex)
+            {
+                // One bad line must not cost the user the other nineteen.
+                logger.LogWarning(ex, "[Placeholder] Item {Index} could not be resolved", i);
+                results.Add(new ResourcePlaceholderResultViewModel(i, null, false, null, ex.Message));
+            }
+        }
+
+        if (model.AcquireImmediately)
+        {
+            logger.LogInformation(
+                "[Placeholder] Immediate acquisition was requested but the acquisition pipeline is not wired up yet; {Count} resources were created and left alone",
+                results.Count);
+        }
+
+        return new ListResponse<ResourcePlaceholderResultViewModel>(results);
+    }
+
+    /// <summary>
+    /// Picks the shape of one requested item. An explicit source wins; then an explicit shared link;
+    /// then whatever the free-text field turns out to be, so a client can offer one box and let the
+    /// user paste a name, a work id or a link into it.
+    /// </summary>
+    private static async Task<PlaceholderResourceResult> ResolveItem(IPlaceholderResourceService service,
+        ResourcePlaceholderItemInputModel item, CancellationToken ct)
+    {
+        if (item.Source.HasValue && !string.IsNullOrWhiteSpace(item.SourceKey))
+        {
+            // Accepts the platform's page URL as well as a bare id.
+            var key = ExternalIdentityParser.TryExtractFor(item.Source.Value, item.SourceKey, out var extracted)
+                ? extracted
+                : item.SourceKey;
+            return await service.CreateOrMatchByExternalIdentity(item.Source.Value, key, ct);
+        }
+
+        if (!string.IsNullOrWhiteSpace(item.SharedUrl))
+        {
+            return await service.CreateOrMatchBySharedUrl(item.SharedUrl, ct);
+        }
+
+        var text = item.Title?.Trim();
+        if (string.IsNullOrEmpty(text))
+        {
+            throw new ArgumentException("An item needs a title, an external identity or a shared link.");
+        }
+
+        if (ExternalIdentityParser.TryExtract(text, out var source, out var sourceKey))
+        {
+            return await service.CreateOrMatchByExternalIdentity(source, sourceKey, ct);
+        }
+
+        if (Uri.TryCreate(text, UriKind.Absolute, out var uri) &&
+            (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
+        {
+            return await service.CreateOrMatchBySharedUrl(text, ct);
+        }
+
+        return await service.CreateByTitle(text, ct);
     }
 
     [HttpGet("paths")]

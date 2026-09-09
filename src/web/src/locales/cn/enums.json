@@ -78,6 +78,9 @@
   "enum.resourceSource.steam": "Steam",
   "enum.resourceSource.dlsite": "DLsite",
   "enum.resourceSource.exHentai": "ExHentai",
+  "enum.resourceSource.aigc": "AIGC",
+  "enum.resourceSource.bangumi": "Bangumi",
+  "enum.resourceSource.pixiv": "Pixiv",
 
   "enum.resourceStatus.active": "正常",
   "enum.resourceStatus.absent": "已不存在",
