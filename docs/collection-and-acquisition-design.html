@@ -815,6 +815,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 
 <h2 id="s13"><span class="n">§13</span>分期交付</h2>
 <p>每一期完成后都独立可用、可验收；顺序按依赖与收益排。前两期刻意不碰集合：先让未落地资源独立成立，再让它能被自动补齐，这两期就已消掉所有者当前最痛的人工劳动。每一期到批次、到文件级的拆解见配套的<a href="collection-and-acquisition-execution-plan.html">执行计划</a>。</p>
+<p class="note"><b>进度。</b>第一期到第四期已实现并有测试覆盖；第二期的分享清单导入与平台取回也已完成。第五期只完成了平台对接器契约与三个实现（连同三个持有型订阅），其余各项与三张外部目录表的收编未做，理由见 <a href="#s16">§16</a> 的偏离记录。进度只在本段更新。</p>
 <div class="tw"><table><tr><th style="width:12%">阶段</th><th style="width:36%">内容</th><th>验收标准</th></tr>
 <tr><td><b>第一期</b><br>未落地资源</td><td><code class="i">Resource.HasLocalPath</code> 与 <code class="i">InternalProperty.HasLocalPath</code>；<code class="i">IResourceMaterializationService</code>；<a href="#s4-3">§4.3</a> 触点清单全部修正；「新建未落地资源」（标题 / 外部身份 / 链接，含帖子解析取标题）；卡片/详情/筛选的未落地表现；「关联本地目录」；<code class="i">ResourceSource</code> 新成员（Bangumi、Pixiv）；<code class="i">resource.materialized</code> 事件</td><td>用户不建任何集合就能维护一份「缺失清单」：按标题或 RJ 号新建未落地资源，资源页按「已落地 = 否」筛出它们，带来源封面与名称；未安装的 Steam 游戏与未下载的 DLsite 作品同样出现在该筛选里；手动关联目录后父子关系、封面、可播放文件、路径标记属性全部正确，增强器随即重跑；批量修改、路径搜索、NFO 生成不再对空路径报错</td></tr>
 <tr><td><b>第二期</b><br>可编排的获取流水线</td><td>抽象底层（步骤契约、工作项、结果）；Workflow 引擎的挂起 / 恢复与单条目游标；适配器、<code class="i">acquisition.requested</code> 触发器、内置方案种子；九个步骤实现（解析分享内容、选择链接、直链下载、等待收件箱与收件箱监听、平台取回、解压、选择目录、放置、落地）；现有文本节点作为重命名；获取中心与恢复表单；首次向导；油猴按钮；分享清单导入（可延后）</td><td>对第一期创建的任意未落地资源点「获取」并给一条帖子链接，用户只做「在网盘页面点下载」，该资源最终落地为 Active 资源，带来源链接与清洗后的名称，全程无需手工配置路径标记。从油猴脚本直接发起时，资源在解析完成的瞬间就出现在资源页并显示「获取中」。进程中途重启后任务从当前阶段续跑。分卷压缩包、嵌套压缩包、无密码包、错误密码四种情况都有明确结果</td></tr>
@@ -890,6 +891,15 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <tr><td>规则集合复用 ResourceProfile 的搜索评估，不复用 SavedSearch</td><td>新建第三套查询定义</td><td>已有两套是历史包袱，不能再加；SavedSearch 是可变标签页状态，不适合做定义</td></tr>
 <tr><td>「已落地」是独立的内部布尔属性</td><td>并入 <code class="i">ResourceStatus</code></td><td>两者正交：来源是否仍列出 vs 本地是否有文件</td></tr>
 <tr><td>三张外部目录表在第五期收编</td><td>第一期就统一</td><td>它们今天能用；先在 SoulPlus 场景验证新机制，再回头迁移 DLsite 的下载与启动逻辑，降低第一期风险</td></tr>
+</table></div>
+
+<h3>实现中的偏离</h3>
+<div class="tw"><table><tr><th style="width:26%">偏离</th><th style="width:34%">原方案</th><th>实际与理由</th></tr>
+<tr><td>去掉「单个画廊内容变化」的订阅能力</td><td><code class="i">exhentai.gallery</code> 提供器用指纹比对检测页数、标签、更新时间的变化，产出 <code class="i">UpdatedItems</code></td><td>新契约里来源只回答「现在列出什么」，差异对成员表计算，没有「同一条目但内容变了」的位置。该提供器保留为「只列出一个条目」的来源。要恢复这项能力需要另一套机制（对条目本身而非成员集合求差），本次未做</td></tr>
+<tr><td><code class="i">IPlatformConnector</code> 按平台键注册，而非枚举</td><td>§6.4 未指定注册方式</td><td>每个对接器都带着自己的 HTTP 会话、下载队列或商店客户端；用 <code class="i">GetServices</code> 枚举会为了用一个而构造三个。改为 <code class="i">AddKeyedScoped</code> + <code class="i">IPlatformConnectorRegistry</code>，按需构造</td></tr>
+<tr><td><code class="i">IHasResourceId</code> 从获取模块下沉到 Workflow 模块</td><td>§8 未指定归属，实现初期放在 <code class="i">Bakabase.Modules.Acquisition</code></td><td>它是「一个条目指向某个资源」这一能力本身。留在获取模块意味着别的模块（如集合）产出的条目无法被获取动作接受，而「集合新增成员 → 获取」正是本方案的核心链路</td></tr>
+<tr><td>集合规则缓存改为注入的单例而非静态字段</td><td>§5 未指定</td><td>静态字段在多个服务容器间共享，测试中互相污染，生产中也是不必要的全局状态</td></tr>
+<tr><td>三张外部目录表的收编（<code class="i">IsDownloaded</code> / <code class="i">LocalPath</code> → <code class="i">Resource.Path</code>、私有字段 → <code class="i">MetadataJson</code>、三个页面合并）未做</td><td>§6.4 第五期</td><td>对接器契约与三个实现已完成，持有型订阅（<code class="i">dlsite.purchases</code> 等）已可用。余下部分要迁移三张表的用户数据并删除三个在用页面，且只能对着真实的 DLsite / Steam / ExHentai 账号数据验证；在没有这些数据的环境里做这项迁移风险不成比例</td></tr>
 </table></div>
 <hr>
 <p class="note">本文档是集合、订阅、获取流水线三项能力的唯一真相源。实现过程中偏离本文的决定，应回写到 §16 并注明原因。</p>
