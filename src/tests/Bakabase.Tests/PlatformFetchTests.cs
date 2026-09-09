@@ -207,6 +207,36 @@ public sealed class PlatformFetchTests
     }
 
     /// <summary>
+    /// The three platforms are also sources: "everything I own here" is a listing like any other,
+    /// and once a platform can be asked what the user holds, watching it is asking on a timer.
+    /// </summary>
+    [TestMethod]
+    public async Task WhatAPlatformHoldsIsAlsoASourceYouCanWatch()
+    {
+        var providers = _sp
+            .GetServices<Bakabase.Modules.Subscription.Abstractions.Components.ISubscriptionProvider>()
+            .Where(p => p is Bakabase.Service.Components.Subscription.Providers.Platform.PlatformHoldingProvider)
+            .ToList();
+
+        CollectionAssert.AreEquivalent(
+            new[] {"dlsite.purchases", "steam.ownedGames", "exhentai.favorites"},
+            providers.Select(p => p.Kind).ToArray());
+
+        foreach (var provider in providers)
+        {
+            Assert.AreEqual(
+                Bakabase.Modules.Subscription.Abstractions.Models.Domain.Constants
+                    .SubscriptionSourceKind.PlatformHolding, provider.SourceKind);
+            Assert.IsNotNull(provider.ResourceSource,
+                "what the user holds carries the platform's identity");
+
+            // Nothing to fill in: the account is in the platform's own settings, and a second
+            // place to configure it is a second place to get it wrong.
+            Assert.IsTrue((await provider.ValidateTargetAsync("{}", CancellationToken.None)).IsValid);
+        }
+    }
+
+    /// <summary>
     /// The three platforms are registered by name, and a connector is built only when its platform
     /// is the one being asked about. Enumerating them would construct an HTTP session, a download
     /// queue and a shop client every time a step ran.

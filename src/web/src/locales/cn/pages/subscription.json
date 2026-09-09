@@ -65,5 +65,9 @@
   "subscription.provider.bangumi.subjectRelations.subject.description": "粘贴条目页面地址，或直接填写条目 id。",
   "subscription.provider.bangumi.subjectRelations.relations.label": "跟随的关联类型",
   "subscription.provider.bangumi.subjectRelations.relations.description": "留空表示全部关联；对长篇系列来说会非常多。",
-  "subscription.provider.bangumi.subjectRelations.includeSelf": "包含条目本身"
+  "subscription.provider.bangumi.subjectRelations.includeSelf": "包含条目本身",
+  "subscription.provider.platformHolding.hint": "无需填写——它会跟踪你在该平台持有的全部内容。账号在该平台自己的设置里配置。",
+  "subscription.provider.dlsite.purchases.subKindLabel": "已购买",
+  "subscription.provider.steam.ownedGames.subKindLabel": "游戏库",
+  "subscription.provider.exhentai.favorites.subKindLabel": "收藏夹"
 }

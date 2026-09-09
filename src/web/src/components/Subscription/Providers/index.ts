@@ -6,6 +6,7 @@ import { PixivFollowLatestUI } from "./PixivFollowLatest";
 import { SoulPlusSearchUI } from "./SoulPlusSearch";
 import { DLsiteCircleUI } from "./DLsiteCircle";
 import { BangumiSubjectRelationsUI } from "./BangumiSubjectRelations";
+import { DLsitePurchasesUI, ExHentaiFavoritesUI, SteamOwnedGamesUI } from "./DLsitePurchases";
 
 /**
  * Registry of provider UIs keyed by their backend `kind`.
@@ -23,6 +24,9 @@ export const subscriptionProviderRegistry: Record<string, SubscriptionProviderUI
   [SoulPlusSearchUI.kind]: SoulPlusSearchUI,
   [DLsiteCircleUI.kind]: DLsiteCircleUI,
   [BangumiSubjectRelationsUI.kind]: BangumiSubjectRelationsUI,
+  [DLsitePurchasesUI.kind]: DLsitePurchasesUI,
+  [SteamOwnedGamesUI.kind]: SteamOwnedGamesUI,
+  [ExHentaiFavoritesUI.kind]: ExHentaiFavoritesUI,
 };
 
 export function getProviderUI(kind: string): SubscriptionProviderUI<any> | undefined {

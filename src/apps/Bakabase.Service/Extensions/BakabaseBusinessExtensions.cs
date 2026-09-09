@@ -177,6 +177,14 @@ namespace Bakabase.Service.Extensions
                 Components.Subscription.Providers.DLsite.DLsiteCircleProvider>();
             services.AddSingleton<ISubscriptionProvider,
                 Components.Subscription.Providers.Bangumi.BangumiSubjectRelationsProvider>();
+            // What the user already holds, as sources. They take no configuration: the account
+            // lives in each platform's own settings.
+            services.AddSingleton<ISubscriptionProvider,
+                Components.Subscription.Providers.Platform.DLsitePurchasesProvider>();
+            services.AddSingleton<ISubscriptionProvider,
+                Components.Subscription.Providers.Platform.SteamOwnedGamesProvider>();
+            services.AddSingleton<ISubscriptionProvider,
+                Components.Subscription.Providers.Platform.ExHentaiFavoritesProvider>();
             services.AddWorkflow<BakabaseDbContext>();
             services.AddAcquisition<BakabaseDbContext>();
             services.AddCollections<BakabaseDbContext>();

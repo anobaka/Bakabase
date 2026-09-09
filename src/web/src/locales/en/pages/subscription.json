@@ -65,5 +65,9 @@
   "subscription.provider.bangumi.subjectRelations.subject.description": "Paste the subject's page, or type its id.",
   "subscription.provider.bangumi.subjectRelations.relations.label": "Relations to follow",
   "subscription.provider.bangumi.subjectRelations.relations.description": "Leave empty to take every relation, which for a long-running franchise is a lot.",
-  "subscription.provider.bangumi.subjectRelations.includeSelf": "Include the subject itself"
+  "subscription.provider.bangumi.subjectRelations.includeSelf": "Include the subject itself",
+  "subscription.provider.platformHolding.hint": "Nothing to fill in — this watches everything you hold there. The account is in that platform's own settings.",
+  "subscription.provider.dlsite.purchases.subKindLabel": "Purchases",
+  "subscription.provider.steam.ownedGames.subKindLabel": "Library",
+  "subscription.provider.exhentai.favorites.subKindLabel": "Favorites"
 }
