@@ -131,6 +131,12 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<Modules.Acquisition.Abstractions.Models.Db.AcquisitionLeadDbModel> AcquisitionLeads { get; set; }
         public DbSet<Modules.Acquisition.Abstractions.Models.Db.AcquisitionTaskDbModel> AcquisitionTasks { get; set; }
 
+        // Collection module tables
+        public DbSet<Modules.Collection.Abstractions.Models.Db.CollectionDbModel> Collections { get; set; }
+
+        public DbSet<Modules.Collection.Abstractions.Models.Db.CollectionResourceMappingDbModel>
+            CollectionResourceMappings { get; set; }
+
         public BakabaseDbContext()
         {
         }
@@ -199,6 +205,14 @@ namespace Bakabase.InsideWorld.Business
                 // asks "is this one being got?" — both are one indexed lookup.
                 t.HasIndex(a => a.Status);
                 t.HasIndex(a => a.ResourceId);
+            });
+
+            modelBuilder.Entity<Modules.Collection.Abstractions.Models.Db.CollectionResourceMappingDbModel>(t =>
+            {
+                // A resource belongs to a collection once. The unique index is what makes adding
+                // the same thing twice a no-op rather than a duplicate member.
+                t.HasIndex(m => new {m.CollectionId, m.ResourceId}).IsUnique();
+                t.HasIndex(m => m.ResourceId);
             });
 
             modelBuilder.Entity<PasswordDbModel>(t =>

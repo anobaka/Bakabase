@@ -2427,6 +2427,11 @@ namespace Bakabase.InsideWorld.Business.Services
             var acquisitionLeadService = GetRequiredService<IAcquisitionLeadService>();
             await acquisitionLeadService.DeleteByResourceIds(ids);
 
+            // Collection memberships are keyed by ResourceId with no FK too. One left behind would
+            // count towards a collection's rate forever, for something that no longer exists.
+            await GetRequiredService<Bakabase.Modules.Collection.Abstractions.Services
+                .ICollectionResourceMappingService>().RemoveByResourceIds(ids);
+
             // Acquisition tasks are keyed the same way. One left behind would keep showing on the
             // acquisitions page as something being got for a resource that is gone.
             await DbContext.Set<Bakabase.Modules.Acquisition.Abstractions.Models.Db.AcquisitionTaskDbModel>()

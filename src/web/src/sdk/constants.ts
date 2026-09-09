@@ -4681,6 +4681,48 @@ export const AliasExceptionTypeLabel: Record<AliasExceptionType, string> = {
   [AliasExceptionType.ConflictAliasGroup]: 'ConflictAliasGroup'
 };
 
+export enum CollectionMemberFilter {
+  All = 0,
+  Owned = 1,
+  Missing = 2,
+  Acquiring = 3,
+  Ignored = 4,
+  GoneFromSource = 5
+}
+
+export const collectionMemberFilters = [
+  { label: 'All', value: CollectionMemberFilter.All },
+  { label: 'Owned', value: CollectionMemberFilter.Owned },
+  { label: 'Missing', value: CollectionMemberFilter.Missing },
+  { label: 'Acquiring', value: CollectionMemberFilter.Acquiring },
+  { label: 'Ignored', value: CollectionMemberFilter.Ignored },
+  { label: 'GoneFromSource', value: CollectionMemberFilter.GoneFromSource }
+] as const;
+
+export const CollectionMemberFilterLabel: Record<CollectionMemberFilter, string> = {
+  [CollectionMemberFilter.All]: 'All',
+  [CollectionMemberFilter.Owned]: 'Owned',
+  [CollectionMemberFilter.Missing]: 'Missing',
+  [CollectionMemberFilter.Acquiring]: 'Acquiring',
+  [CollectionMemberFilter.Ignored]: 'Ignored',
+  [CollectionMemberFilter.GoneFromSource]: 'GoneFromSource'
+};
+
+export enum CollectionMembershipOrigin {
+  Manual = 1,
+  Subscription = 2
+}
+
+export const collectionMembershipOrigins = [
+  { label: 'Manual', value: CollectionMembershipOrigin.Manual },
+  { label: 'Subscription', value: CollectionMembershipOrigin.Subscription }
+] as const;
+
+export const CollectionMembershipOriginLabel: Record<CollectionMembershipOrigin, string> = {
+  [CollectionMembershipOrigin.Manual]: 'Manual',
+  [CollectionMembershipOrigin.Subscription]: 'Subscription'
+};
+
 export enum StandardValueConversionRule {
   Directly = 1,
   Incompatible = 2,

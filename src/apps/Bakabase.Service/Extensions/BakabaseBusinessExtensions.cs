@@ -2,6 +2,8 @@
 using Bakabase.Service.Components.Workflow.Resources;
 using Bakabase.Service.Components.IdentityLookups;
 using Bakabase.Modules.Acquisition.Extensions;
+using Bakabase.Modules.Collection.Abstractions.Services;
+using Bakabase.Modules.Collection.Extensions;
 using Bakabase.Abstractions.Components.Tracing;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Db;
@@ -159,6 +161,10 @@ namespace Bakabase.Service.Extensions
             services.AddSingleton<ISubscriptionProvider, PixivFollowLatestProvider>();
             services.AddWorkflow<BakabaseDbContext>();
             services.AddAcquisition<BakabaseDbContext>();
+            services.AddCollections<BakabaseDbContext>();
+            // The app-layer subclass supplies the two things the module deliberately does not know:
+            // how to run a resource search, and what is currently being acquired.
+            services.AddScoped<ICollectionService, Components.Collections.BakabaseCollectionService>();
             // Acquisition steps. Each registers its workflow activity alongside itself, so a step
             // added here becomes something a recipe can name.
             services.AddAcquisitionStep<Bakabase.Modules.Acquisition.Components.Steps.SelectLinkStep>();

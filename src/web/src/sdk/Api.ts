@@ -1180,6 +1180,13 @@ export interface BakabaseAbstractionsModelsViewThirdPartyContentTrackerStatusVie
   hasUpdate: boolean;
 }
 
+export interface BakabaseAbstractionsServicesPlaceholderResourceResult {
+  /** @format int32 */
+  resourceId: number;
+  created: boolean;
+  name?: string;
+}
+
 /**
  * [0: Default, 1: UserConfigured, 2: Environment]
  * @format int32
@@ -3441,6 +3448,106 @@ export interface BakabaseModulesAliasModelsInputAliasPatchInputModel {
   isPreferred: boolean;
 }
 
+export interface BakabaseModulesCollectionAbstractionsModelsDomainCollectionMember {
+  /** @format int32 */
+  collectionId: number;
+  /** @format int32 */
+  resourceId: number;
+  /** [1: Manual, 2: Subscription] */
+  origin?: BakabaseModulesCollectionAbstractionsModelsDomainConstantsCollectionMembershipOrigin;
+  /** @format int32 */
+  subscriptionId?: number;
+  /** @format date-time */
+  lastSeenAt?: string;
+  isIgnored: boolean;
+  /** @format int32 */
+  order?: number;
+  isFromRule: boolean;
+}
+
+export interface BakabaseModulesCollectionAbstractionsModelsDomainCollectionProgress {
+  /** @format int32 */
+  total: number;
+  /** @format int32 */
+  owned: number;
+  /** @format int32 */
+  acquiring: number;
+  /** @format int32 */
+  ignored: number;
+  /** @format double */
+  ratio: number;
+}
+
+/**
+ * [0: All, 1: Owned, 2: Missing, 3: Acquiring, 4: Ignored, 5: GoneFromSource]
+ * @format int32
+ */
+export type BakabaseModulesCollectionAbstractionsModelsDomainConstantsCollectionMemberFilter =
+  | 0
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5;
+
+/**
+ * [1: Manual, 2: Subscription]
+ * @format int32
+ */
+export type BakabaseModulesCollectionAbstractionsModelsDomainConstantsCollectionMembershipOrigin =
+  | 1
+  | 2;
+
+export interface BakabaseModulesCollectionAbstractionsModelsDomainResourceCollection {
+  /** @format int32 */
+  id: number;
+  name: string;
+  description?: string;
+  color?: string;
+  coverPath?: string;
+  ruleSearchJson?: string;
+  autoAcquire: boolean;
+  acquisitionSettingsJson?: string;
+  /** @format int32 */
+  order: number;
+  /** @format date-time */
+  createdAt: string;
+  /** @format date-time */
+  updatedAt: string;
+  progress?: BakabaseModulesCollectionAbstractionsModelsDomainCollectionProgress;
+  hasRule: boolean;
+}
+
+export interface BakabaseModulesCollectionAbstractionsServicesCollectionMemberPage {
+  resourceIds: number[];
+  /** @format int32 */
+  totalCount: number;
+  /** @format int32 */
+  pageIndex: number;
+  /** @format int32 */
+  pageSize: number;
+}
+
+export interface BakabaseModulesCollectionModelsInputCollectionInputModel {
+  /**
+   * @minLength 1
+   * @maxLength 128
+   */
+  name: string;
+  description?: string;
+  color?: string;
+  coverPath?: string;
+  ruleSearchJson?: string;
+  autoAcquire: boolean;
+  acquisitionSettingsJson?: string;
+  /** @format int32 */
+  order: number;
+}
+
+export interface BakabaseModulesCollectionModelsInputCollectionMembersInputModel {
+  resourceIds: number[];
+}
+
 export interface BakabaseModulesComparisonModelsDomainComparisonPlan {
   /** @format int32 */
   id: number;
@@ -4641,6 +4748,10 @@ export interface BakabaseServiceControllersChatControllerUpdateTitleRequest {
   title: string;
 }
 
+export interface BakabaseServiceControllersCollectionPlaceholderInputModel {
+  title: string;
+}
+
 export interface BakabaseServiceControllersCookieCaptureResult {
   cookie: string;
   userAgent?: string;
@@ -5823,6 +5934,20 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesAcquis
   data?: BakabaseModulesAcquisitionAbstractionsServicesAcquisitionRecipeSummary[];
 }
 
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesCollectionAbstractionsModelsDomainCollectionMember {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesCollectionAbstractionsModelsDomainCollectionMember[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesCollectionAbstractionsModelsDomainResourceCollection {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesCollectionAbstractionsModelsDomainResourceCollection[];
+}
+
 export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesDataCardAbstractionsModelsDomainDataCardType {
   /** @format int32 */
   code: number;
@@ -6386,6 +6511,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstract
   data?: BakabaseAbstractionsModelsViewThirdPartyContentTrackerNearestViewModel;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsServicesPlaceholderResourceResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsServicesPlaceholderResourceResult;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInfrastructuresComponentsAppModelsResponseModelsAppInfo {
   /** @format int32 */
   code: number;
@@ -6771,6 +6903,27 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesA
   data?: BakabaseModulesAcquisitionModelsDomainAcquisitionOptions;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesCollectionAbstractionsModelsDomainCollectionProgress {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesCollectionAbstractionsModelsDomainCollectionProgress;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesCollectionAbstractionsModelsDomainResourceCollection {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesCollectionAbstractionsModelsDomainResourceCollection;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesCollectionAbstractionsServicesCollectionMemberPage {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesCollectionAbstractionsServicesCollectionMemberPage;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesComparisonModelsDomainComparisonPlan {
   /** @format int32 */
   code: number;
@@ -7038,6 +7191,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollection
     string,
     Record<string, BakabaseModulesStandardValueModelsViewStandardValueConversionRuleViewModel[]>
   >;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32SystemCollectionsGenericList1SystemInt32 {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: Record<string, number[] | null>;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32SystemDecimal {
@@ -8501,6 +8661,55 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
+
+    /**
+     * No description
+     *
+     * @tags Collection
+     * @name GetCollectionIdsByResourceIds
+     * @request GET:/resource/collections
+     */
+    getCollectionIdsByResourceIds: (
+      query?: {
+        resourceIds?: number[];
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32SystemCollectionsGenericList1SystemInt32,
+        any
+      >({
+        path: `/resource/collections`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getCollectionIdsByResourceIds
+     * @name getCollectionIdsByResourceIdsUrl
+     */
+    getCollectionIdsByResourceIdsUrl: (query?: {
+        resourceIds?: number[];
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/collections`;
+      
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+      
+      return baseUrl + path;
+    },
 
     /**
      * No description
@@ -12716,6 +12925,331 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         method: "PUT",
         body: data,
         type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+  };
+  collection = {
+    /**
+     * No description
+     *
+     * @tags Collection
+     * @name GetAllCollections
+     * @request GET:/collection
+     */
+    getAllCollections: (
+      query?: {
+        /** @default true */
+        withProgress?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesCollectionAbstractionsModelsDomainResourceCollection,
+        any
+      >({
+        path: `/collection`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getAllCollections
+     * @name getAllCollectionsUrl
+     */
+    getAllCollectionsUrl: (query?: {
+        /** @default true */
+        withProgress?: boolean;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/collection`;
+      
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Collection
+     * @name AddCollection
+     * @request POST:/collection
+     */
+    addCollection: (
+      data: BakabaseModulesCollectionModelsInputCollectionInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesCollectionAbstractionsModelsDomainResourceCollection,
+        any
+      >({
+        path: `/collection`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for addCollection
+     * @name addCollectionUrl
+     */
+    addCollectionUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/collection`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Collection
+     * @name GetCollection
+     * @request GET:/collection/{id}
+     */
+    getCollection: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesCollectionAbstractionsModelsDomainResourceCollection,
+        any
+      >({
+        path: `/collection/${id}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Collection
+     * @name PutCollection
+     * @request PUT:/collection/{id}
+     */
+    putCollection: (
+      id: number,
+      data: BakabaseModulesCollectionModelsInputCollectionInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesCollectionAbstractionsModelsDomainResourceCollection,
+        any
+      >({
+        path: `/collection/${id}`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Collection
+     * @name DeleteCollection
+     * @request DELETE:/collection/{id}
+     */
+    deleteCollection: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/collection/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Collection
+     * @name SearchCollectionMembers
+     * @request GET:/collection/{id}/members
+     */
+    searchCollectionMembers: (
+      id: number,
+      query?: {
+        /** [0: All, 1: Owned, 2: Missing, 3: Acquiring, 4: Ignored, 5: GoneFromSource] */
+        filter?: BakabaseModulesCollectionAbstractionsModelsDomainConstantsCollectionMemberFilter;
+        /**
+         * @format int32
+         * @default 1
+         */
+        pageIndex?: number;
+        /**
+         * @format int32
+         * @default 60
+         */
+        pageSize?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesCollectionAbstractionsServicesCollectionMemberPage,
+        any
+      >({
+        path: `/collection/${id}/members`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Collection
+     * @name AddCollectionMembers
+     * @request POST:/collection/{id}/members
+     */
+    addCollectionMembers: (
+      id: number,
+      data: BakabaseModulesCollectionModelsInputCollectionMembersInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/collection/${id}/members`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Collection
+     * @name RemoveCollectionMembers
+     * @request DELETE:/collection/{id}/members
+     */
+    removeCollectionMembers: (
+      id: number,
+      data: BakabaseModulesCollectionModelsInputCollectionMembersInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/collection/${id}/members`,
+        method: "DELETE",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Collection
+     * @name GetCollectionMemberships
+     * @request GET:/collection/{id}/memberships
+     */
+    getCollectionMemberships: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesCollectionAbstractionsModelsDomainCollectionMember,
+        any
+      >({
+        path: `/collection/${id}/memberships`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Collection
+     * @name SetCollectionMemberIgnored
+     * @request PUT:/collection/{id}/members/{resourceId}/ignored
+     */
+    setCollectionMemberIgnored: (
+      id: number,
+      resourceId: number,
+      query?: {
+        ignored?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/collection/${id}/members/${resourceId}/ignored`,
+        method: "PUT",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Collection
+     * @name ReorderCollectionMembers
+     * @request PUT:/collection/{id}/members/order
+     */
+    reorderCollectionMembers: (
+      id: number,
+      data: BakabaseModulesCollectionModelsInputCollectionMembersInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/collection/${id}/members/order`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Collection
+     * @name AddCollectionPlaceholderMember
+     * @request POST:/collection/{id}/members/placeholder
+     */
+    addCollectionPlaceholderMember: (
+      id: number,
+      data: BakabaseServiceControllersCollectionPlaceholderInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsServicesPlaceholderResourceResult,
+        any
+      >({
+        path: `/collection/${id}/members/placeholder`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Collection
+     * @name GetCollectionProgress
+     * @request GET:/collection/{id}/progress
+     */
+    getCollectionProgress: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesCollectionAbstractionsModelsDomainCollectionProgress,
+        any
+      >({
+        path: `/collection/${id}/progress`,
+        method: "GET",
         format: "json",
         ...params,
       }),

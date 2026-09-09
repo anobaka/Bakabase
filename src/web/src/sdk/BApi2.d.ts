@@ -1380,6 +1380,150 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/collection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAllCollections"];
+        put?: never;
+        post: operations["AddCollection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/collection/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetCollection"];
+        put: operations["PutCollection"];
+        post?: never;
+        delete: operations["DeleteCollection"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/collection/{id}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SearchCollectionMembers"];
+        put?: never;
+        post: operations["AddCollectionMembers"];
+        delete: operations["RemoveCollectionMembers"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/collection/{id}/memberships": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetCollectionMemberships"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/collection/{id}/members/{resourceId}/ignored": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["SetCollectionMemberIgnored"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/collection/{id}/members/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["ReorderCollectionMembers"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/collection/{id}/members/placeholder": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AddCollectionPlaceholderMember"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/collection/{id}/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetCollectionProgress"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource/collections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetCollectionIdsByResourceIds"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/comparison/plan": {
         parameters: {
             query?: never;
@@ -7674,6 +7818,12 @@ export interface components {
             readonly isViewed: boolean;
             readonly hasUpdate: boolean;
         };
+        "Bakabase.Abstractions.Services.PlaceholderResourceResult": {
+            /** Format: int32 */
+            resourceId: number;
+            created: boolean;
+            name?: string;
+        };
         /**
          * Format: int32
          * @description [0: Default, 1: UserConfigured, 2: Environment]
@@ -9602,6 +9752,87 @@ export interface components {
             text?: string;
             isPreferred: boolean;
         };
+        "Bakabase.Modules.Collection.Abstractions.Models.Domain.CollectionMember": {
+            /** Format: int32 */
+            collectionId: number;
+            /** Format: int32 */
+            resourceId: number;
+            origin?: components["schemas"]["Bakabase.Modules.Collection.Abstractions.Models.Domain.Constants.CollectionMembershipOrigin"];
+            /** Format: int32 */
+            subscriptionId?: number;
+            /** Format: date-time */
+            lastSeenAt?: string;
+            isIgnored: boolean;
+            /** Format: int32 */
+            order?: number;
+            readonly isFromRule: boolean;
+        };
+        "Bakabase.Modules.Collection.Abstractions.Models.Domain.CollectionProgress": {
+            /** Format: int32 */
+            total: number;
+            /** Format: int32 */
+            owned: number;
+            /** Format: int32 */
+            acquiring: number;
+            /** Format: int32 */
+            ignored: number;
+            /** Format: double */
+            readonly ratio: number;
+        };
+        /**
+         * Format: int32
+         * @description [0: All, 1: Owned, 2: Missing, 3: Acquiring, 4: Ignored, 5: GoneFromSource]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.Collection.Abstractions.Models.Domain.Constants.CollectionMemberFilter": 0 | 1 | 2 | 3 | 4 | 5;
+        /**
+         * Format: int32
+         * @description [1: Manual, 2: Subscription]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.Collection.Abstractions.Models.Domain.Constants.CollectionMembershipOrigin": 1 | 2;
+        "Bakabase.Modules.Collection.Abstractions.Models.Domain.ResourceCollection": {
+            /** Format: int32 */
+            id: number;
+            name: string;
+            description?: string;
+            color?: string;
+            coverPath?: string;
+            ruleSearchJson?: string;
+            autoAcquire: boolean;
+            acquisitionSettingsJson?: string;
+            /** Format: int32 */
+            order: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            progress?: components["schemas"]["Bakabase.Modules.Collection.Abstractions.Models.Domain.CollectionProgress"];
+            readonly hasRule: boolean;
+        };
+        "Bakabase.Modules.Collection.Abstractions.Services.CollectionMemberPage": {
+            resourceIds: number[];
+            /** Format: int32 */
+            totalCount: number;
+            /** Format: int32 */
+            pageIndex: number;
+            /** Format: int32 */
+            pageSize: number;
+        };
+        "Bakabase.Modules.Collection.Models.Input.CollectionInputModel": {
+            name: string;
+            description?: string;
+            color?: string;
+            coverPath?: string;
+            ruleSearchJson?: string;
+            autoAcquire: boolean;
+            acquisitionSettingsJson?: string;
+            /** Format: int32 */
+            order: number;
+        };
+        "Bakabase.Modules.Collection.Models.Input.CollectionMembersInputModel": {
+            resourceIds: number[];
+        };
         "Bakabase.Modules.Comparison.Models.Domain.ComparisonPlan": {
             /** Format: int32 */
             id: number;
@@ -10504,6 +10735,9 @@ export interface components {
             isEnabled: boolean;
         };
         "Bakabase.Service.Controllers.ChatController+UpdateTitleRequest": {
+            title: string;
+        };
+        "Bakabase.Service.Controllers.CollectionPlaceholderInputModel": {
             title: string;
         };
         "Bakabase.Service.Controllers.CookieCaptureResult": {
@@ -11491,6 +11725,18 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Services.AcquisitionRecipeSummary"][];
         };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.CollectionMember]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Collection.Abstractions.Models.Domain.CollectionMember"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.ResourceCollection]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Collection.Abstractions.Models.Domain.ResourceCollection"][];
+        };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCardType]": {
             /** Format: int32 */
             code: number;
@@ -11983,6 +12229,12 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerNearestViewModel"];
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Services.PlaceholderResourceResult]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Services.PlaceholderResourceResult"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Infrastructures.Components.App.Models.ResponseModels.AppInfo]": {
             /** Format: int32 */
             code: number;
@@ -12313,6 +12565,24 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.Acquisition.Models.Domain.AcquisitionOptions"];
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.CollectionProgress]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Collection.Abstractions.Models.Domain.CollectionProgress"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.ResourceCollection]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Collection.Abstractions.Models.Domain.ResourceCollection"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Collection.Abstractions.Services.CollectionMemberPage]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Collection.Abstractions.Services.CollectionMemberPage"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Comparison.Models.Domain.ComparisonPlan]": {
             /** Format: int32 */
             code: number;
@@ -12543,6 +12813,14 @@ export interface components {
                 [key: string]: {
                     [key: string]: components["schemas"]["Bakabase.Modules.StandardValue.Models.View.StandardValueConversionRuleViewModel"][];
                 } | null;
+            };
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.Int32,System.Collections.Generic.List`1[System.Int32]]]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: {
+                [key: string]: number[] | null;
             };
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.Int32,System.Decimal]]": {
@@ -16040,6 +16318,390 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetAllCollections: {
+        parameters: {
+            query?: {
+                withProgress?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.ResourceCollection]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.ResourceCollection]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.ResourceCollection]"];
+                };
+            };
+        };
+    };
+    AddCollection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Collection.Models.Input.CollectionInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.Collection.Models.Input.CollectionInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.Collection.Models.Input.CollectionInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.Collection.Models.Input.CollectionInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.ResourceCollection]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.ResourceCollection]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.ResourceCollection]"];
+                };
+            };
+        };
+    };
+    GetCollection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.ResourceCollection]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.ResourceCollection]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.ResourceCollection]"];
+                };
+            };
+        };
+    };
+    PutCollection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Collection.Models.Input.CollectionInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.Collection.Models.Input.CollectionInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.Collection.Models.Input.CollectionInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.Collection.Models.Input.CollectionInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.ResourceCollection]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.ResourceCollection]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.ResourceCollection]"];
+                };
+            };
+        };
+    };
+    DeleteCollection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    SearchCollectionMembers: {
+        parameters: {
+            query?: {
+                /** @description [0: All, 1: Owned, 2: Missing, 3: Acquiring, 4: Ignored, 5: GoneFromSource] */
+                filter?: components["schemas"]["Bakabase.Modules.Collection.Abstractions.Models.Domain.Constants.CollectionMemberFilter"];
+                pageIndex?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Collection.Abstractions.Services.CollectionMemberPage]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Collection.Abstractions.Services.CollectionMemberPage]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Collection.Abstractions.Services.CollectionMemberPage]"];
+                };
+            };
+        };
+    };
+    AddCollectionMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Collection.Models.Input.CollectionMembersInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.Collection.Models.Input.CollectionMembersInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.Collection.Models.Input.CollectionMembersInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.Collection.Models.Input.CollectionMembersInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    RemoveCollectionMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Collection.Models.Input.CollectionMembersInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.Collection.Models.Input.CollectionMembersInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.Collection.Models.Input.CollectionMembersInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.Collection.Models.Input.CollectionMembersInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetCollectionMemberships: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.CollectionMember]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.CollectionMember]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.CollectionMember]"];
+                };
+            };
+        };
+    };
+    SetCollectionMemberIgnored: {
+        parameters: {
+            query?: {
+                ignored?: boolean;
+            };
+            header?: never;
+            path: {
+                id: number;
+                resourceId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    ReorderCollectionMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Collection.Models.Input.CollectionMembersInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.Collection.Models.Input.CollectionMembersInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.Collection.Models.Input.CollectionMembersInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.Collection.Models.Input.CollectionMembersInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    AddCollectionPlaceholderMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.CollectionPlaceholderInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.CollectionPlaceholderInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.CollectionPlaceholderInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.CollectionPlaceholderInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Services.PlaceholderResourceResult]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Services.PlaceholderResourceResult]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Services.PlaceholderResourceResult]"];
+                };
+            };
+        };
+    };
+    GetCollectionProgress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.CollectionProgress]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.CollectionProgress]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.CollectionProgress]"];
+                };
+            };
+        };
+    };
+    GetCollectionIdsByResourceIds: {
+        parameters: {
+            query?: {
+                resourceIds?: number[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.Int32,System.Collections.Generic.List`1[System.Int32]]]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.Int32,System.Collections.Generic.List`1[System.Int32]]]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.Int32,System.Collections.Generic.List`1[System.Int32]]]"];
                 };
             };
         };
