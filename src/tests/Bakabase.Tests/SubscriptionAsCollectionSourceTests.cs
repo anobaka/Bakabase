@@ -58,6 +58,23 @@ public sealed class SubscriptionAsCollectionSourceTests
         }
     }
 
+    /// <summary>A step that does nothing, so a recipe can exist without any real work happening.</summary>
+    private sealed class NoopStep : Bakabase.Modules.Acquisition.Abstractions.Components.IAcquisitionStep
+    {
+        public const string StepKind = "acquisition.test.noop";
+
+        public string Kind => StepKind;
+        public string DisplayName => "Noop (test)";
+        public Type? ConfigType => null;
+
+        public Task<Bakabase.Modules.Acquisition.Abstractions.Components.AcquisitionStepOutcome> ExecuteAsync(
+            Bakabase.Modules.Acquisition.Abstractions.Components.AcquisitionStepContext ctx,
+            Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionWorkItem item,
+            CancellationToken ct) =>
+            Task.FromResult<Bakabase.Modules.Acquisition.Abstractions.Components.AcquisitionStepOutcome>(
+                new Bakabase.Modules.Acquisition.Abstractions.Components.AcquisitionStepOutcome.Continue(item));
+    }
+
     [TestInitialize]
     public async Task Setup()
     {
@@ -66,7 +83,11 @@ public sealed class SubscriptionAsCollectionSourceTests
         FakeSource.Kind_ = SubscriptionSourceKind.PlatformHolding;
 
         _sp = await TestServiceBuilder.BuildServiceProvider(services =>
-            services.AddSingleton<ISubscriptionProvider, FakeSource>());
+        {
+            services.AddSingleton<ISubscriptionProvider, FakeSource>();
+            Bakabase.Modules.Acquisition.Extensions.ServiceCollectionExtensions
+                .AddAcquisitionStep<NoopStep>(services);
+        });
     }
 
     private ISubscriptionService Subscriptions => _sp.GetRequiredService<ISubscriptionService>();
@@ -223,6 +244,55 @@ public sealed class SubscriptionAsCollectionSourceTests
         Assert.AreEqual(WorkflowItemTypes.Resource, trigger.ResolveOutputItemType(null));
         Assert.AreEqual(WorkflowItemTypes.Resource,
             trigger.ResolveOutputItemType("""{"kinds":["exhentai.search"]}"""));
+    }
+
+    /// <summary>
+    /// A collection set to get things automatically does. A sharing channel's item carries its own
+    /// link, so there is nothing else to wait for — which is the whole shape of the feature: a
+    /// board is watched, something is shared, and it starts coming down without anyone looking.
+    /// </summary>
+    [TestMethod]
+    public async Task ACollectionThatGetsThingsAutomaticallyStartsOnWhatArrives()
+    {
+        FakeSource.Kind_ = SubscriptionSourceKind.SharingChannel;
+
+        var subscription = await NewSubscription();
+        var collection = (await Collections.Get(subscription.CollectionId!.Value))!;
+
+        await Collections.Put(collection.Id, new Bakabase.Modules.Collection.Models.Input.CollectionInputModel
+        {
+            Name = collection.Name,
+            AutoAcquire = true,
+        });
+
+        // Something has to run when an acquisition starts; which recipe is not the point here.
+        await _sp.GetRequiredService<Bakabase.Modules.Workflow.Abstractions.Services.IWorkflowDefinitionService>()
+            .CreateAsync(new Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowDefinitionCreationInputModel
+            {
+                Name = Bakabase.Modules.Acquisition.Components.BuiltinAcquisitionRecipes.DefaultRecipeNameFor(
+                    Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionLeadKind.SharedPage),
+                TriggerKind = Bakabase.Modules.Acquisition.Components.Workflow.AcquisitionWorkflowKinds.TriggerRequested,
+                Enabled = true,
+                Activities = [new Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowActivityInputModel
+                {
+                    Kind = NoopStep.StepKind, ConfigJson = "{}"
+                }],
+            });
+
+        // The first check is the seed and announces nothing; it should not start acquiring the
+        // whole board either.
+        await Subscriptions.RunCheckAsync(subscription.Id);
+
+        FakeSource.Items.Add(new SubscriptionItem("tid-1", "A Doujin Game",
+            "https://forum.example/read.php?tid=1"));
+
+        await Subscriptions.RunCheckAsync(subscription.Id);
+
+        var tasks = await _sp.GetRequiredService<Bakabase.Modules.Acquisition.Abstractions.Services.IAcquisitionService>()
+            .SearchAsync();
+
+        Assert.AreEqual(1, tasks.Count, "the one thing that arrived, and only it");
+        Assert.AreEqual(collection.Id, tasks[0].CollectionId);
     }
 
     /// <summary>Deleting the source leaves what it found. That is yours either way.</summary>

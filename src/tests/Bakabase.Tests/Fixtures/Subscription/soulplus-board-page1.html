@@ -1,0 +1,38 @@
+<!--
+  A board's thread list, reduced to the structure the parser actually reads: links to
+  read.php?tid=N with the thread title as their text, plus the pager. Everything cosmetic is
+  left out on purpose — the parser must not depend on it, and a fixture full of skin markup
+  would suggest it does.
+-->
+<div id="ajaxtable">
+  <table>
+    <tr>
+      <td class="tal">
+        <h3><a href="read.php?tid=100001&amp;fpage=1">[汉化] Some Doujin Game v1.2</a></h3>
+      </td>
+      <td class="tal">
+        <a href="read.php?tid=100001&amp;page=e#a">最后回复</a>
+      </td>
+    </tr>
+    <tr>
+      <td class="tal">
+        <h3><a href="/read.php?tid=100002">[生肉] Another Work</a></h3>
+      </td>
+    </tr>
+    <tr>
+      <td class="tal">
+        <h3><a href="read.php?tid=100003&amp;fpage=1">Third Thread About Something Else</a></h3>
+      </td>
+    </tr>
+    <tr>
+      <!-- A link with no text: a thumbnail anchor. Not a title, and not an item. -->
+      <td><a href="read.php?tid=100004"><img src="thumb.jpg" /></a></td>
+    </tr>
+  </table>
+</div>
+
+<div class="pages">
+  <a href="thread.php?fid=42&amp;page=1">1</a>
+  <a href="thread.php?fid=42&amp;page=2">2</a>
+  <a href="thread.php?fid=42&amp;page=2">下一页</a>
+</div>

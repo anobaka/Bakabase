@@ -46,5 +46,13 @@
   "subscription.provider.pixiv.followLatest.mode.all": "All",
   "subscription.provider.pixiv.followLatest.mode.r18": "R-18 only",
   "subscription.field.collection": "Collection",
-  "subscription.field.collection.description": "Where what it finds goes. Leave empty and one is made with this subscription's name."
+  "subscription.field.collection.description": "Where what it finds goes. Leave empty and one is made with this subscription's name.",
+  "subscription.provider.soulplus.search.subKindLabel": "Board",
+  "subscription.provider.soulplus.search.url.label": "Board URL",
+  "subscription.provider.soulplus.search.url.description": "The board's thread list, as it appears in your browser's address bar.",
+  "subscription.provider.soulplus.search.url.placeholder": "https://…/thread.php?fid=42",
+  "subscription.provider.soulplus.search.keywords.label": "Only titles containing",
+  "subscription.provider.soulplus.search.keywords.description": "Comma-separated. Leave empty to take the whole board — which is a lot, on a busy one.",
+  "subscription.provider.soulplus.search.maxPages.label": "Pages per check",
+  "subscription.provider.soulplus.search.maxPages.description": "New threads are on the first page. More pages only helps the first check."
 }

@@ -46,5 +46,13 @@
   "subscription.provider.pixiv.followLatest.mode.all": "全部",
   "subscription.provider.pixiv.followLatest.mode.r18": "仅 R-18",
   "subscription.field.collection": "所属集合",
-  "subscription.field.collection.description": "订阅找到的条目会进入该集合。留空则以订阅名称新建一个集合。"
+  "subscription.field.collection.description": "订阅找到的条目会进入该集合。留空则以订阅名称新建一个集合。",
+  "subscription.provider.soulplus.search.subKindLabel": "版块",
+  "subscription.provider.soulplus.search.url.label": "版块地址",
+  "subscription.provider.soulplus.search.url.description": "版块主题列表页的地址，直接从浏览器地址栏复制即可。",
+  "subscription.provider.soulplus.search.url.placeholder": "https://…/thread.php?fid=42",
+  "subscription.provider.soulplus.search.keywords.label": "仅标题包含",
+  "subscription.provider.soulplus.search.keywords.description": "以逗号分隔。留空表示整个版块——在活跃版块上会非常多。",
+  "subscription.provider.soulplus.search.maxPages.label": "每次检查的页数",
+  "subscription.provider.soulplus.search.maxPages.description": "新帖都在第一页；更多页数只对第一次检查有用。"
 }
