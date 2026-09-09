@@ -381,15 +381,15 @@ public sealed class AcquisitionPipelineTests
         // Seeding twice produces one of each, not two.
         Assert.AreEqual(builtin.Select(d => d.Name).Distinct().Count(), builtin.Count);
 
-        // Recipes are seeded only once every step they name exists. Platform fetch is the one still
-        // waiting for a step, so it is skipped rather than written out broken — and it will seed
-        // itself on the first start after that step lands.
+        // A recipe seeds once every step it names exists — which is now true of all of them,
+        // platform fetch included. A build missing a step skips that recipe rather than writing
+        // it out broken, and seeds it on the first start after the step lands.
         var seeded = builtin.Select(d => d.Name).ToHashSet();
 
-        Assert.IsTrue(seeded.Contains(BuiltinAcquisitionRecipes.ForumPostWithCloudDrive));
-        Assert.IsTrue(seeded.Contains(BuiltinAcquisitionRecipes.LocalDirectory));
-        Assert.IsFalse(seeded.Contains(BuiltinAcquisitionRecipes.PlatformFetch),
-            "acquisition.fetchFromPlatform does not exist yet");
+        foreach (var recipe in BuiltinAcquisitionRecipes.All)
+        {
+            Assert.IsTrue(seeded.Contains(recipe.Name), recipe.Name);
+        }
     }
 
     /// <summary>

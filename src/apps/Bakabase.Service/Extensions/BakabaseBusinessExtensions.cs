@@ -159,6 +159,18 @@ namespace Bakabase.Service.Extensions
             services.AddSingleton<ISubscriptionProvider, ExHentaiSearchProvider>();
             services.AddSingleton<ISubscriptionProvider, ExHentaiGalleryProvider>();
             services.AddSingleton<ISubscriptionProvider, PixivFollowLatestProvider>();
+            // The platforms the user already holds things on. Each wraps the service that
+            // already knows how to talk to it rather than reimplementing any of it, and each is
+            // keyed so asking for one does not build the other two.
+            services.AddKeyedScoped<Bakabase.Abstractions.Components.Platform.IPlatformConnector,
+                Components.Acquisition.Connectors.DLsiteConnector>(Bakabase.Abstractions.Models.Domain.Constants.ResourceSource.DLsite);
+            services.AddKeyedScoped<Bakabase.Abstractions.Components.Platform.IPlatformConnector,
+                Components.Acquisition.Connectors.SteamConnector>(Bakabase.Abstractions.Models.Domain.Constants.ResourceSource.Steam);
+            services.AddKeyedScoped<Bakabase.Abstractions.Components.Platform.IPlatformConnector,
+                Components.Acquisition.Connectors.ExHentaiConnector>(Bakabase.Abstractions.Models.Domain.Constants.ResourceSource.ExHentai);
+            services.AddScoped<Bakabase.Abstractions.Components.Platform.IPlatformConnectorRegistry,
+                Components.Acquisition.Connectors.PlatformConnectorRegistry>();
+
             services.AddSingleton<ISubscriptionProvider,
                 Components.Subscription.Providers.SoulPlus.SoulPlusSearchProvider>();
             services.AddSingleton<ISubscriptionProvider,
@@ -179,6 +191,7 @@ namespace Bakabase.Service.Extensions
             services.AddAcquisitionStep<Components.Acquisition.Steps.ResolveSharedContentStep>();
             services.AddAcquisitionStep<Components.Acquisition.Steps.FetchHttpStep>();
             services.AddAcquisitionStep<Components.Acquisition.Steps.WaitForInboxStep>();
+            services.AddAcquisitionStep<Components.Acquisition.Steps.FetchFromPlatformStep>();
             services.AddAcquisitionStep<Components.Acquisition.Steps.UnpackStep>();
             services.AddAcquisitionStep<Bakabase.Modules.Acquisition.Components.Steps.PickLocalDirectoryStep>();
             services.AddAcquisitionStep<Bakabase.Modules.Acquisition.Components.Steps.PlaceStep>();
