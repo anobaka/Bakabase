@@ -7,6 +7,7 @@
 	</PropertyGroup>
 
 <ItemGroup>
+		<ProjectReference Include="..\..\modules\Bakabase.Modules.Acquisition\Bakabase.Modules.Acquisition.csproj" />
 		<ProjectReference Include="..\..\modules\Bakabase.Modules.AI\Bakabase.Modules.AI.csproj" />
 		<ProjectReference Include="..\..\modules\Bakabase.Modules.Alias\Bakabase.Modules.Alias.csproj" />
 		<ProjectReference Include="..\..\modules\Bakabase.Modules.Comparison\Bakabase.Modules.Comparison.csproj" />

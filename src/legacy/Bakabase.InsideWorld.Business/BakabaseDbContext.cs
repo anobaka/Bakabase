@@ -127,6 +127,9 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<Modules.Text.Abstractions.Models.Db.TextEntry> TextEntries { get; set; }
         public DbSet<FileRenameEntry> FileRenameEntries { get; set; }
 
+        // Acquisition module tables
+        public DbSet<Modules.Acquisition.Abstractions.Models.Db.AcquisitionLeadDbModel> AcquisitionLeads { get; set; }
+
         public BakabaseDbContext()
         {
         }
@@ -179,6 +182,14 @@ namespace Bakabase.InsideWorld.Business
                 t.HasIndex(a => a.RunId);
                 // Apply/undo iterate a run's rows by status; the composite spares a scan per click.
                 t.HasIndex(a => new {a.RunId, a.Status});
+            });
+
+            modelBuilder.Entity<Modules.Acquisition.Abstractions.Models.Db.AcquisitionLeadDbModel>(t =>
+            {
+                // A shared link describes exactly one resource. The unique index is what makes
+                // importing the same list twice a no-op instead of a pile of duplicates.
+                t.HasIndex(a => new {a.Kind, a.Value}).IsUnique();
+                t.HasIndex(a => a.ResourceId);
             });
 
             modelBuilder.Entity<PasswordDbModel>(t =>

@@ -1,4 +1,5 @@
 ﻿using Bakabase.Abstractions.Components.Events;
+using Bakabase.Modules.Acquisition.Extensions;
 using Bakabase.Abstractions.Components.Tracing;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Db;
@@ -155,6 +156,7 @@ namespace Bakabase.Service.Extensions
             services.AddSingleton<ISubscriptionProvider, ExHentaiGalleryProvider>();
             services.AddSingleton<ISubscriptionProvider, PixivFollowLatestProvider>();
             services.AddWorkflow<BakabaseDbContext>();
+            services.AddAcquisition<BakabaseDbContext>();
             services.AddSingleton<IWorkflowTrigger, SubscriptionUpdatedTrigger>();
             services.AddSingleton<IWorkflowTrigger, DownloaderCompletedTrigger>();
             // Item type descriptors — give the editor type info to render and the AI

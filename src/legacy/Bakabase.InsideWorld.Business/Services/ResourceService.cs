@@ -1,4 +1,5 @@
 ﻿using System;
+using Bakabase.Modules.Acquisition.Abstractions.Services;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -2420,6 +2421,11 @@ namespace Bakabase.InsideWorld.Business.Services
             await sourceLinkService.DeleteByResourceIds(ids);
             var scopePreferenceService = GetRequiredService<IPropertyValueScopePreferenceService>();
             await scopePreferenceService.RemoveByResourceIds(ids);
+            // Leads are keyed by ResourceId with no FK, like the cache row below. Left behind they
+            // would hold their link's unique index hostage, so the same link could never be
+            // attached to anything again.
+            var acquisitionLeadService = GetRequiredService<IAcquisitionLeadService>();
+            await acquisitionLeadService.DeleteByResourceIds(ids);
 
             // The cache row is keyed by ResourceId with no FK, so it survives the resource
             // unless we drop it here. Leftovers are not just dead weight: PlayRandomResource

@@ -4453,6 +4453,69 @@ export const BulkModificationProcessorValueTypeLabel: Record<BulkModificationPro
   [BulkModificationProcessorValueType.Variable]: 'Variable'
 };
 
+export enum AcquisitionLeadKind {
+  PlatformHolding = 1,
+  SharedPage = 2,
+  SharedDocument = 3,
+  DirectUrl = 4,
+  Magnet = 5,
+  Manual = 6
+}
+
+export const acquisitionLeadKinds = [
+  { label: 'PlatformHolding', value: AcquisitionLeadKind.PlatformHolding },
+  { label: 'SharedPage', value: AcquisitionLeadKind.SharedPage },
+  { label: 'SharedDocument', value: AcquisitionLeadKind.SharedDocument },
+  { label: 'DirectUrl', value: AcquisitionLeadKind.DirectUrl },
+  { label: 'Magnet', value: AcquisitionLeadKind.Magnet },
+  { label: 'Manual', value: AcquisitionLeadKind.Manual }
+] as const;
+
+export const AcquisitionLeadKindLabel: Record<AcquisitionLeadKind, string> = {
+  [AcquisitionLeadKind.PlatformHolding]: 'PlatformHolding',
+  [AcquisitionLeadKind.SharedPage]: 'SharedPage',
+  [AcquisitionLeadKind.SharedDocument]: 'SharedDocument',
+  [AcquisitionLeadKind.DirectUrl]: 'DirectUrl',
+  [AcquisitionLeadKind.Magnet]: 'Magnet',
+  [AcquisitionLeadKind.Manual]: 'Manual'
+};
+
+export enum AcquisitionLeadOrigin {
+  User = 1,
+  Subscription = 2,
+  SharedListImport = 3,
+  PostParser = 4
+}
+
+export const acquisitionLeadOrigins = [
+  { label: 'User', value: AcquisitionLeadOrigin.User },
+  { label: 'Subscription', value: AcquisitionLeadOrigin.Subscription },
+  { label: 'SharedListImport', value: AcquisitionLeadOrigin.SharedListImport },
+  { label: 'PostParser', value: AcquisitionLeadOrigin.PostParser }
+] as const;
+
+export const AcquisitionLeadOriginLabel: Record<AcquisitionLeadOrigin, string> = {
+  [AcquisitionLeadOrigin.User]: 'User',
+  [AcquisitionLeadOrigin.Subscription]: 'Subscription',
+  [AcquisitionLeadOrigin.SharedListImport]: 'SharedListImport',
+  [AcquisitionLeadOrigin.PostParser]: 'PostParser'
+};
+
+export enum AcquisitionLeadResult {
+  Succeeded = 1,
+  Failed = 2
+}
+
+export const acquisitionLeadResults = [
+  { label: 'Succeeded', value: AcquisitionLeadResult.Succeeded },
+  { label: 'Failed', value: AcquisitionLeadResult.Failed }
+] as const;
+
+export const AcquisitionLeadResultLabel: Record<AcquisitionLeadResult, string> = {
+  [AcquisitionLeadResult.Succeeded]: 'Succeeded',
+  [AcquisitionLeadResult.Failed]: 'Failed'
+};
+
 export enum AliasExceptionType {
   ConflictAliasGroup = 1
 }

@@ -4,6 +4,38 @@
  */
 
 export interface paths {
+    "/resource/{resourceId}/acquisition-leads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetResourceAcquisitionLeads"];
+        put?: never;
+        post: operations["AddResourceAcquisitionLead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource/{resourceId}/acquisition-leads/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["DeleteResourceAcquisitionLead"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ai/providers": {
         parameters: {
             query?: never;
@@ -9165,6 +9197,47 @@ export interface components {
             detectedSourceLanguage?: string;
             targetLanguage: string;
         };
+        "Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionLead": {
+            /** Format: int32 */
+            id: number;
+            /** Format: int32 */
+            resourceId: number;
+            kind: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionLeadKind"];
+            value: string;
+            origin: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionLeadOrigin"];
+            note?: string;
+            /** Format: date-time */
+            lastUsedAt?: string;
+            lastResult?: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionLeadResult"];
+            /** Format: date-time */
+            createdAt: string;
+            isDerived: boolean;
+            sourceName?: string;
+        };
+        /**
+         * Format: int32
+         * @description [1: PlatformHolding, 2: SharedPage, 3: SharedDocument, 4: DirectUrl, 5: Magnet, 6: Manual]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionLeadKind": 1 | 2 | 3 | 4 | 5 | 6;
+        /**
+         * Format: int32
+         * @description [1: User, 2: Subscription, 3: SharedListImport, 4: PostParser]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionLeadOrigin": 1 | 2 | 3 | 4;
+        /**
+         * Format: int32
+         * @description [1: Succeeded, 2: Failed]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionLeadResult": 1 | 2;
+        "Bakabase.Modules.Acquisition.Models.Input.AcquisitionLeadAddInputModel": {
+            kind: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionLeadKind"];
+            value: string;
+            origin: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionLeadOrigin"];
+            note?: string;
+        };
         "Bakabase.Modules.Alias.Abstractions.Models.Domain.Alias": {
             text: string;
             preferred?: string;
@@ -10977,6 +11050,12 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.AI.Models.Domain.LlmModelInfo"][];
         };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionLead]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionLead"][];
+        };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCardType]": {
             /** Format: int32 */
             code: number;
@@ -11768,6 +11847,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.AI.Services.TranslationResult"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionLead]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionLead"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Comparison.Models.Domain.ComparisonPlan]": {
             /** Format: int32 */
@@ -12641,6 +12726,86 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    GetResourceAcquisitionLeads: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                resourceId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionLead]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionLead]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionLead]"];
+                };
+            };
+        };
+    };
+    AddResourceAcquisitionLead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                resourceId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Acquisition.Models.Input.AcquisitionLeadAddInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.Acquisition.Models.Input.AcquisitionLeadAddInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.Acquisition.Models.Input.AcquisitionLeadAddInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.Acquisition.Models.Input.AcquisitionLeadAddInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionLead]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionLead]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionLead]"];
+                };
+            };
+        };
+    };
+    DeleteResourceAcquisitionLead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                resourceId: number;
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
     GetAllAiProviders: {
         parameters: {
             query?: never;

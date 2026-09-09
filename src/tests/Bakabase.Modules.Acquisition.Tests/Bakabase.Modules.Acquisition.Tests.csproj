@@ -1,0 +1,9 @@
+<Project Sdk="MSTest.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\modules\Bakabase.Modules.Acquisition\Bakabase.Modules.Acquisition.csproj" />
+    <ProjectReference Include="..\..\apps\Bakabase.Service\Bakabase.Service.csproj" />
+    <ProjectReference Include="..\Bakabase.TestKit\Bakabase.TestKit.csproj" />
+  </ItemGroup>
+
+</Project>
