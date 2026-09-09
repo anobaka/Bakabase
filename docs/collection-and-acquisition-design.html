@@ -524,7 +524,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <p>宿主要提供：游标持久化、挂起与恢复、并发、进度、方案编辑器。Workflow 引擎已有前四项之外的所有基础设施：注册表、配置表单、类型校验、画布编辑器、运行记录、BTask 外壳、事件总线。缺的只有「运行可以停下来等一个外部信号」和「单条目的逐步游标」。因此宿主选 Workflow 引擎，并做一次<b>范围明确、可选加入</b>的扩展；这也直接回答了最初「要不要结合 Workflow」的问题。</p>
 <div class="tw"><table><tr><th style="width:26%">引擎改动</th><th style="width:44%">内容</th><th>影响面</th></tr>
 <tr><td>挂起结果</td><td><code class="i">WorkflowItemOutcome.Suspend(WorkflowSuspension)</code>；新接口 <code class="i">IResumableWorkflowActivity.ResumeAsync(ctx, item, signalJson)</code></td><td>只对实现该接口的活动有意义；现有活动不变</td></tr>
-<tr><td>等待状态与游标</td><td><code class="i">WorkflowRunStatus.Waiting</code>；<code class="i">WorkflowRunDbModel</code> 加 <code class="i">CurrentStepIndex / CurrentItemJson / WaitReason / WaitPromptJson / WaitingSince</code>；迁移 <code class="i">AddWorkflowRunSuspension</code></td><td>纯增列；旧运行这些列为空</td></tr>
+<tr><td>等待状态与游标</td><td><code class="i">WorkflowRunStatus.Waiting</code>；<code class="i">WorkflowRunDbModel</code> 加 <code class="i">CurrentStepIndex / CurrentItemJson / WaitReason / WaitPromptJson / WaitingSince / PendingSignalJson</code>；迁移 <code class="i">AddWorkflowRunSuspension</code></td><td>纯增列；旧运行这些列为空。<code class="i">PendingSignalJson</code> 是实现时补的第六列：运行器由只带 runId 的 BTask 重新进入，信号只能随行落库</td></tr>
 <tr><td>单条目逐步模式</td><td><code class="i">WorkflowRunner</code>：当触发器只产出一个条目时，改为「每步结束写游标与条目快照」；遇 <code class="i">Suspend</code> 置 <code class="i">Waiting</code> 并结束 BTask。多条目批处理运行保持今天的活动优先循环；批处理中活动返回 <code class="i">Suspend</code> 视为配置错误（<code class="i">WorkflowActivityConfigException</code>）</td><td>批处理路径逻辑不变，只多一个分支</td></tr>
 <tr><td>恢复</td><td><code class="i">IWorkflowRunResumer.ResumeAsync(runId, signalJson)</code>：校验状态为 <code class="i">Waiting</code>，重新入队同一个 BTask id，运行器从游标步骤调用 <code class="i">ResumeAsync</code></td><td>新增服务与 <code class="i">POST workflow/run/{id}/resume</code></td></tr>
 <tr><td>重启恢复</td><td><code class="i">WorkflowRunRehydrator</code>：<code class="i">Waiting</code> 保留；带游标的 <code class="i">Running</code> 从游标步骤重跑；无游标的旧式运行仍标 <code class="i">Interrupted</code></td><td>旧运行行为不变</td></tr>
@@ -694,7 +694,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
   索引 Status；索引 ResourceId
 
 <span class="kw">WorkflowRun</span> <span class="cm">(现有表，改动，见 §7.2)</span>
-  + CurrentStepIndex int?  CurrentItemJson string?  WaitReason string?  WaitPromptJson string?  WaitingSince DateTime?
+  + CurrentStepIndex int?  CurrentItemJson string?  WaitReason string?  WaitPromptJson string?  WaitingSince DateTime?  PendingSignalJson string?
   WorkflowRunStatus + Waiting = 7
 
 <span class="new">AcquisitionLead</span>               <span class="cm">-- 分享类获取线索（平台取回类不存，由 ResourceSourceLink 派生）</span>

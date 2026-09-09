@@ -4459,6 +4459,66 @@ export const BulkModificationProcessorValueTypeLabel: Record<BulkModificationPro
   [BulkModificationProcessorValueType.Variable]: 'Variable'
 };
 
+export enum AcquisitionRunState {
+  Completed = 1,
+  Waiting = 2,
+  Failed = 3
+}
+
+export const acquisitionRunStates = [
+  { label: 'Completed', value: AcquisitionRunState.Completed },
+  { label: 'Waiting', value: AcquisitionRunState.Waiting },
+  { label: 'Failed', value: AcquisitionRunState.Failed }
+] as const;
+
+export const AcquisitionRunStateLabel: Record<AcquisitionRunState, string> = {
+  [AcquisitionRunState.Completed]: 'Completed',
+  [AcquisitionRunState.Waiting]: 'Waiting',
+  [AcquisitionRunState.Failed]: 'Failed'
+};
+
+export enum AcquisitionDriveKind {
+  Unknown = 0,
+  DirectUrl = 1,
+  Baidu = 2,
+  Xunlei = 3,
+  Feimao = 4,
+  Cloudflare = 5,
+  Mega = 6,
+  PikPak = 7,
+  GoogleDrive = 8,
+  OneDrive = 9,
+  Magnet = 10
+}
+
+export const acquisitionDriveKinds = [
+  { label: 'Unknown', value: AcquisitionDriveKind.Unknown },
+  { label: 'DirectUrl', value: AcquisitionDriveKind.DirectUrl },
+  { label: 'Baidu', value: AcquisitionDriveKind.Baidu },
+  { label: 'Xunlei', value: AcquisitionDriveKind.Xunlei },
+  { label: 'Feimao', value: AcquisitionDriveKind.Feimao },
+  { label: 'Cloudflare', value: AcquisitionDriveKind.Cloudflare },
+  { label: 'Mega', value: AcquisitionDriveKind.Mega },
+  { label: 'PikPak', value: AcquisitionDriveKind.PikPak },
+  { label: 'GoogleDrive', value: AcquisitionDriveKind.GoogleDrive },
+  { label: 'OneDrive', value: AcquisitionDriveKind.OneDrive },
+  { label: 'Magnet', value: AcquisitionDriveKind.Magnet }
+] as const;
+
+export const AcquisitionDriveKindLabel: Record<AcquisitionDriveKind, string> = {
+  [AcquisitionDriveKind.Unknown]: 'Unknown',
+  [AcquisitionDriveKind.DirectUrl]: 'DirectUrl',
+  [AcquisitionDriveKind.Baidu]: 'Baidu',
+  [AcquisitionDriveKind.Xunlei]: 'Xunlei',
+  [AcquisitionDriveKind.Feimao]: 'Feimao',
+  [AcquisitionDriveKind.Cloudflare]: 'Cloudflare',
+  [AcquisitionDriveKind.Mega]: 'Mega',
+  [AcquisitionDriveKind.PikPak]: 'PikPak',
+  [AcquisitionDriveKind.GoogleDrive]: 'GoogleDrive',
+  [AcquisitionDriveKind.OneDrive]: 'OneDrive',
+  [AcquisitionDriveKind.Magnet]: 'Magnet'
+};
+
 export enum AcquisitionLeadKind {
   PlatformHolding = 1,
   SharedPage = 2,
@@ -4520,6 +4580,42 @@ export const acquisitionLeadResults = [
 export const AcquisitionLeadResultLabel: Record<AcquisitionLeadResult, string> = {
   [AcquisitionLeadResult.Succeeded]: 'Succeeded',
   [AcquisitionLeadResult.Failed]: 'Failed'
+};
+
+export enum AcquisitionWaitReason {
+  WaitingForFile = 1,
+  AmbiguousInboxFile = 2,
+  PaidContent = 3,
+  NoLinks = 4,
+  ChooseLink = 5,
+  PasswordUnknown = 6,
+  TargetExists = 7,
+  PickDirectory = 8,
+  PlatformFetch = 9
+}
+
+export const acquisitionWaitReasons = [
+  { label: 'WaitingForFile', value: AcquisitionWaitReason.WaitingForFile },
+  { label: 'AmbiguousInboxFile', value: AcquisitionWaitReason.AmbiguousInboxFile },
+  { label: 'PaidContent', value: AcquisitionWaitReason.PaidContent },
+  { label: 'NoLinks', value: AcquisitionWaitReason.NoLinks },
+  { label: 'ChooseLink', value: AcquisitionWaitReason.ChooseLink },
+  { label: 'PasswordUnknown', value: AcquisitionWaitReason.PasswordUnknown },
+  { label: 'TargetExists', value: AcquisitionWaitReason.TargetExists },
+  { label: 'PickDirectory', value: AcquisitionWaitReason.PickDirectory },
+  { label: 'PlatformFetch', value: AcquisitionWaitReason.PlatformFetch }
+] as const;
+
+export const AcquisitionWaitReasonLabel: Record<AcquisitionWaitReason, string> = {
+  [AcquisitionWaitReason.WaitingForFile]: 'WaitingForFile',
+  [AcquisitionWaitReason.AmbiguousInboxFile]: 'AmbiguousInboxFile',
+  [AcquisitionWaitReason.PaidContent]: 'PaidContent',
+  [AcquisitionWaitReason.NoLinks]: 'NoLinks',
+  [AcquisitionWaitReason.ChooseLink]: 'ChooseLink',
+  [AcquisitionWaitReason.PasswordUnknown]: 'PasswordUnknown',
+  [AcquisitionWaitReason.TargetExists]: 'TargetExists',
+  [AcquisitionWaitReason.PickDirectory]: 'PickDirectory',
+  [AcquisitionWaitReason.PlatformFetch]: 'PlatformFetch'
 };
 
 export enum AliasExceptionType {
@@ -5023,7 +5119,8 @@ export enum WorkflowRunStatus {
   Success = 3,
   Failed = 4,
   Cancelled = 5,
-  Interrupted = 6
+  Interrupted = 6,
+  Waiting = 7
 }
 
 export const workflowRunStatuses = [
@@ -5032,7 +5129,8 @@ export const workflowRunStatuses = [
   { label: 'Success', value: WorkflowRunStatus.Success },
   { label: 'Failed', value: WorkflowRunStatus.Failed },
   { label: 'Cancelled', value: WorkflowRunStatus.Cancelled },
-  { label: 'Interrupted', value: WorkflowRunStatus.Interrupted }
+  { label: 'Interrupted', value: WorkflowRunStatus.Interrupted },
+  { label: 'Waiting', value: WorkflowRunStatus.Waiting }
 ] as const;
 
 export const WorkflowRunStatusLabel: Record<WorkflowRunStatus, string> = {
@@ -5041,7 +5139,8 @@ export const WorkflowRunStatusLabel: Record<WorkflowRunStatus, string> = {
   [WorkflowRunStatus.Success]: 'Success',
   [WorkflowRunStatus.Failed]: 'Failed',
   [WorkflowRunStatus.Cancelled]: 'Cancelled',
-  [WorkflowRunStatus.Interrupted]: 'Interrupted'
+  [WorkflowRunStatus.Interrupted]: 'Interrupted',
+  [WorkflowRunStatus.Waiting]: 'Waiting'
 };
 
 export enum LogLevel {

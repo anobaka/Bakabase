@@ -11,7 +11,10 @@ namespace Bakabase.Modules.Workflow.Components;
 ///
 /// - <see cref="MarkInterruptedRunsAsync"/>: flip rows stuck in
 ///   <see cref="WorkflowRunStatus.Running"/> to <see cref="WorkflowRunStatus.Interrupted"/>
-///   (activities aren't guaranteed idempotent — we can't safely auto-resume).
+///   (activities aren't guaranteed idempotent — we can't safely auto-resume). A run that kept a
+///   step cursor is the exception: it goes back to <see cref="WorkflowRunStatus.Pending"/> and
+///   restarts at that step. Runs in <see cref="WorkflowRunStatus.Waiting"/> are left alone —
+///   waiting for a person to do something is not a state a restart should disturb.
 /// - <see cref="ReEnqueuePendingRunsAsync"/>: re-enqueue
 ///   <see cref="WorkflowRunStatus.Pending"/> rows whose definition still exists and is
 ///   enabled, so an event that arrived just before shutdown isn't dropped.
@@ -40,6 +43,22 @@ public class WorkflowRunRehydrator<TDbContext> where TDbContext : DbContext
 
     public async Task MarkInterruptedRunsAsync(CancellationToken ct = default)
     {
+        // A run that was persisting a cursor knows exactly where it got to, and only the step at
+        // that cursor is ever re-run — so it goes back in the queue rather than being written off.
+        var resumable = await _db.Set<WorkflowRunDbModel>()
+            .Where(r => r.Status == WorkflowRunStatus.Running && r.CurrentStepIndex != null)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(r => r.Status, _ => WorkflowRunStatus.Pending), ct);
+
+        if (resumable > 0)
+        {
+            _logger.LogInformation(
+                "Returned {Count} workflow runs to the queue on startup; each restarts at its cursor",
+                resumable);
+        }
+
+        // Everything else was mid-chain with no record of where: activities are not guaranteed
+        // idempotent, so re-running from the top could do the same work twice.
         var count = await _db.Set<WorkflowRunDbModel>()
             .Where(r => r.Status == WorkflowRunStatus.Running)
             .ExecuteUpdateAsync(s => s

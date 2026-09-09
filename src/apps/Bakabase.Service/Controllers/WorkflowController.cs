@@ -21,6 +21,7 @@ public class WorkflowController(
     IWorkflowTriggerRegistry triggers,
     IWorkflowActivityRegistry activities,
     IWorkflowItemTypeRegistry itemTypes,
+    IWorkflowRunResumer runResumer,
     Bakabase.Abstractions.Services.IFileRenameEntryService fileRenameEntries) : Controller
 {
     [HttpGet]
@@ -243,6 +244,28 @@ public class WorkflowController(
         var rows = await fileRenameEntries.UndoRun(runId);
         return new ListResponse<Bakabase.Service.Models.View.FileRenameEntryViewModel>(
             rows.Select(Bakabase.Service.Models.View.FileRenameEntryViewModel.FromDb));
+    }
+
+    /// <summary>
+    /// Answer a run that is waiting. The signal is opaque to the engine — it goes straight back to
+    /// the activity that suspended, which is the only thing that knows what it means.
+    /// </summary>
+    [HttpPost("run/{runId:int}/resume")]
+    [SwaggerOperation(OperationId = "ResumeWorkflowRun")]
+    public async Task<BaseResponse> ResumeRun(int runId, [FromBody] WorkflowRunResumeInputModel model)
+    {
+        try
+        {
+            await runResumer.ResumeAsync(runId, model.SignalJson);
+        }
+        catch (InvalidOperationException e)
+        {
+            // The run finished, was cancelled, or someone else answered it first — a stale
+            // resume button, not a server fault.
+            return BaseResponseBuilder.BuildBadRequest(e.Message);
+        }
+
+        return BaseResponseBuilder.Ok;
     }
 
     [HttpGet("{id:int}/runs")]

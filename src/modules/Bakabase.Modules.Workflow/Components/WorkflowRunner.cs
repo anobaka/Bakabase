@@ -108,8 +108,41 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
         var items = trigger.ExtractItems(payload)
             .Select(i => new WorkItem(i, new Dictionary<string, string>()))
             .ToList();
+
+        // A run carrying exactly one item can afford to persist its progress step by step, which
+        // is what lets a step stop and wait for something from outside. A batch cannot: there is
+        // no single item the user could be asked about, and writing a snapshot per item per step
+        // would cost more than the whole chain.
+        var stepwise = items.Count == 1;
+        var startStep = 0;
+        var signalJson = run.PendingSignalJson;
+
+        if (stepwise && run.CurrentStepIndex is { } cursor)
+        {
+            // Picking up where a suspension or a restart left off.
+            startStep = Math.Clamp(cursor, 0, activityRows.Count);
+            if (!string.IsNullOrEmpty(run.CurrentItemJson))
+            {
+                try
+                {
+                    items = [new WorkItem(WorkflowItemSnapshot.Restore(run.CurrentItemJson),
+                        new Dictionary<string, string>())];
+                }
+                catch (Exception ex)
+                {
+                    await FailRun(db, run, $"Could not restore the item at step {startStep}: {ex.Message}", ct);
+
+                    return;
+                }
+            }
+        }
+
         run.InputCount = items.Count;
         run.Status = WorkflowRunStatus.Running;
+        run.PendingSignalJson = null;
+        run.WaitReason = null;
+        run.WaitPromptJson = null;
+        run.WaitingSince = null;
         await db.SaveChangesAsync(ct);
 
         var totalSteps = Math.Max(1, activityRows.Count);
@@ -118,7 +151,7 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
 
         try
         {
-            for (var stepIndex = 0; stepIndex < activityRows.Count; stepIndex++)
+            for (var stepIndex = startStep; stepIndex < activityRows.Count; stepIndex++)
             {
                 await btaskArgs.YieldAsync();
                 var activityRow = activityRows[stepIndex];
@@ -184,7 +217,24 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
                     WorkflowItemOutcome outcome;
                     try
                     {
-                        outcome = await impl.ProcessItemAsync(itemCtx, item, ct);
+                        if (signalJson != null)
+                        {
+                            // The signal belongs to the step that suspended, and only to its first
+                            // call after the wait; everything downstream runs normally.
+                            if (impl is not IResumableWorkflowActivity resumable)
+                            {
+                                throw new WorkflowActivityConfigException(
+                                    $"Step {stepIndex + 1} ({activityRow.Kind}) was sent a resume signal " +
+                                    "but does not implement IResumableWorkflowActivity.");
+                            }
+
+                            outcome = await resumable.ResumeAsync(itemCtx, item, signalJson, ct);
+                            signalJson = null;
+                        }
+                        else
+                        {
+                            outcome = await impl.ProcessItemAsync(itemCtx, item, ct);
+                        }
                     }
                     catch (OperationCanceledException)
                     {
@@ -217,6 +267,35 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
                         throw;
                     }
 
+                    if (outcome.Suspension is { } suspension)
+                    {
+                        if (!stepwise)
+                        {
+                            // Nothing could answer it: a batch has no single item the question
+                            // would be about. That is a configuration mistake, not a runtime one.
+                            throw new WorkflowActivityConfigException(
+                                $"Step {stepIndex + 1} ({activityRow.Kind}) suspended during a run carrying " +
+                                $"{items.Count} items. Suspension only works on single-item runs.");
+                        }
+
+                        run.Status = WorkflowRunStatus.Waiting;
+                        run.CurrentStepIndex = stepIndex;
+                        run.CurrentItemJson = WorkflowItemSnapshot.Capture(suspension.Item);
+                        run.WaitReason = suspension.Reason;
+                        run.WaitPromptJson = suspension.PromptJson;
+                        run.WaitingSince = DateTime.Now;
+                        run.StepStatsJson = JsonSerializer.Serialize(stepStats, WorkflowJson.Options);
+                        run.FailedItemCount = failedTotal;
+
+                        _logger.LogInformation(
+                            "Workflow run {RunId} is waiting at step {Step} ({Kind}): {Reason}",
+                            run.Id, stepIndex, activityRow.Kind, suspension.Reason);
+
+                        // A wait is not a failure and not an end: the task finishes, the row stays,
+                        // and a signal starts it again from this step.
+                        return;
+                    }
+
                     if (outcome.Children is { } children)
                     {
                         if (impl.Cardinality != WorkflowActivityCardinality.OneToMany)
@@ -238,6 +317,19 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
                 }
 
                 items = nextItems;
+
+                if (stepwise)
+                {
+                    // Written after every step, so a restart resumes from here rather than from
+                    // the beginning. Activities are not required to be idempotent across the whole
+                    // chain — only the step at the cursor is ever re-run.
+                    run.CurrentStepIndex = stepIndex + 1;
+                    run.CurrentItemJson = items.Count == 1
+                        ? WorkflowItemSnapshot.Capture(items[0].Item)
+                        : null;
+                    await db.SaveChangesAsync(ct);
+                }
+
                 stepStats.Add(new WorkflowRunStepStat
                 {
                     StepIndex = stepIndex,
@@ -259,6 +351,8 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
             run.StepStatsJson = JsonSerializer.Serialize(stepStats, WorkflowJson.Options);
             run.Status = WorkflowRunStatus.Success;
             run.CompletedAt = DateTime.Now;
+            run.CurrentStepIndex = null;
+            run.CurrentItemJson = null;
             definition.LastRunAt = run.CompletedAt;
             definition.LastError = null;
         }

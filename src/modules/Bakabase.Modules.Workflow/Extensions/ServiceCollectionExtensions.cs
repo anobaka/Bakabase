@@ -19,6 +19,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IWorkflowEventBus, WorkflowEventBus<TDbContext>>();
         services.AddScoped<IWorkflowDefinitionService, WorkflowDefinitionService<TDbContext>>();
         services.AddScoped<WorkflowRunRehydrator<TDbContext>>();
+        services.AddScoped<IWorkflowRunResumer, WorkflowRunResumer<TDbContext>>();
         return services;
     }
 }

@@ -17,6 +17,16 @@ public record WorkflowRunViewModel
     public List<WorkflowRunStepStat> StepStats { get; set; } = [];
     public string? ErrorMessage { get; set; }
 
+    /// <summary>Set while the run is waiting, so the drawer can say what it is waiting for.</summary>
+    public string? WaitReason { get; set; }
+
+    /// <summary>What to ask the user for, so the resume form can render itself.</summary>
+    public string? WaitPromptJson { get; set; }
+
+    public DateTime? WaitingSince { get; set; }
+
+    public int? CurrentStepIndex { get; set; }
+
     public static WorkflowRunViewModel From(WorkflowRun r) => new()
     {
         Id = r.Id,
@@ -30,5 +40,9 @@ public record WorkflowRunViewModel
         FailedItemCount = r.FailedItemCount,
         StepStats = r.StepStats,
         ErrorMessage = r.ErrorMessage,
+        WaitReason = r.WaitReason,
+        WaitPromptJson = r.WaitPromptJson,
+        WaitingSince = r.WaitingSince,
+        CurrentStepIndex = r.CurrentStepIndex,
     };
 }

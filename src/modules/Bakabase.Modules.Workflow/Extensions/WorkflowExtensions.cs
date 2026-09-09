@@ -49,6 +49,10 @@ public static class WorkflowExtensions
         FailedItemCount = db.FailedItemCount,
         StepStats = ParseStepStats(db.StepStatsJson),
         ErrorMessage = db.ErrorMessage,
+        CurrentStepIndex = db.CurrentStepIndex,
+        WaitReason = db.WaitReason,
+        WaitPromptJson = db.WaitPromptJson,
+        WaitingSince = db.WaitingSince,
     };
 
     private static readonly JsonSerializerOptions StepStatsJsonOptions = new()

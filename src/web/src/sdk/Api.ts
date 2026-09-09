@@ -4257,7 +4257,7 @@ export type BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowItem
   | 3;
 
 /**
- * [1: Pending, 2: Running, 3: Success, 4: Failed, 5: Cancelled, 6: Interrupted]
+ * [1: Pending, 2: Running, 3: Success, 4: Failed, 5: Cancelled, 6: Interrupted, 7: Waiting]
  * @format int32
  */
 export type BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowRunStatus =
@@ -4266,7 +4266,8 @@ export type BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowRunS
   | 3
   | 4
   | 5
-  | 6;
+  | 6
+  | 7;
 
 export interface BakabaseModulesWorkflowAbstractionsModelsDomainWorkflowRunStepStat {
   /** @format int32 */
@@ -4304,6 +4305,11 @@ export interface BakabaseModulesWorkflowAbstractionsModelsInputWorkflowDefinitio
 
 export interface BakabaseModulesWorkflowAbstractionsModelsInputWorkflowManualRunInputModel {
   argsJson?: string;
+}
+
+export interface BakabaseModulesWorkflowAbstractionsModelsInputWorkflowRunResumeInputModel {
+  /** @minLength 1 */
+  signalJson: string;
 }
 
 export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowActivityDescriptorViewModel {
@@ -4368,7 +4374,7 @@ export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowRunViewMod
   id: number;
   /** @format int32 */
   workflowDefinitionId: number;
-  /** [1: Pending, 2: Running, 3: Success, 4: Failed, 5: Cancelled, 6: Interrupted] */
+  /** [1: Pending, 2: Running, 3: Success, 4: Failed, 5: Cancelled, 6: Interrupted, 7: Waiting] */
   status: BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowRunStatus;
   /** @format date-time */
   startedAt: string;
@@ -4383,6 +4389,12 @@ export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowRunViewMod
   failedItemCount: number;
   stepStats: BakabaseModulesWorkflowAbstractionsModelsDomainWorkflowRunStepStat[];
   errorMessage?: string;
+  waitReason?: string;
+  waitPromptJson?: string;
+  /** @format date-time */
+  waitingSince?: string;
+  /** @format int32 */
+  currentStepIndex?: number;
 }
 
 export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowTriggerDescriptorViewModel {
@@ -23132,6 +23144,27 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       >({
         path: `/workflow/run/${runId}/file-rename-entries/undo`,
         method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Workflow
+     * @name ResumeWorkflowRun
+     * @request POST:/workflow/run/{runId}/resume
+     */
+    resumeWorkflowRun: (
+      runId: number,
+      data: BakabaseModulesWorkflowAbstractionsModelsInputWorkflowRunResumeInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/workflow/run/${runId}/resume`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),

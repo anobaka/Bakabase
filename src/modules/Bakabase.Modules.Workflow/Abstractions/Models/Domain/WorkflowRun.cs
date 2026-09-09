@@ -16,4 +16,8 @@ public record WorkflowRun
     public int FailedItemCount { get; set; }
     public List<WorkflowRunStepStat> StepStats { get; set; } = [];
     public string? ErrorMessage { get; set; }
+    public int? CurrentStepIndex { get; set; }
+    public string? WaitReason { get; set; }
+    public string? WaitPromptJson { get; set; }
+    public DateTime? WaitingSince { get; set; }
 }

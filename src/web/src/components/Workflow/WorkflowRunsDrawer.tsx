@@ -8,6 +8,7 @@ import { Drawer, DrawerBody, DrawerContent, DrawerFooter, DrawerHeader } from "@
 
 import { activityDisplayName } from "./displayNames";
 import RenamePlanPanel from "./RenamePlanPanel";
+import ResumeRunModal from "./ResumeRunModal";
 
 import BApi from "@/sdk/BApi";
 import { Button, Chip, Pagination, Spinner } from "@/components/bakaui";
@@ -30,7 +31,7 @@ const PAGE_SIZE = 20;
 
 const StatusColor: Record<
   WorkflowRunStatus,
-  "default" | "primary" | "success" | "danger" | "warning"
+  "default" | "primary" | "success" | "danger" | "warning" | "secondary"
 > = {
   [WorkflowRunStatus.Pending]: "default",
   [WorkflowRunStatus.Running]: "primary",
@@ -38,7 +39,24 @@ const StatusColor: Record<
   [WorkflowRunStatus.Failed]: "danger",
   [WorkflowRunStatus.Cancelled]: "warning",
   [WorkflowRunStatus.Interrupted]: "warning",
+  [WorkflowRunStatus.Waiting]: "secondary",
 };
+
+/** "3 days" reads very differently from "3 minutes" when it's a person being waited on. */
+function formatWaitingFor(since: string): string | null {
+  try {
+    const ms = Date.now() - new Date(since).getTime();
+
+    if (isNaN(ms) || ms < 0) return null;
+    if (ms < 60_000) return `${Math.floor(ms / 1000)}s`;
+    if (ms < 3_600_000) return `${Math.floor(ms / 60_000)}m`;
+    if (ms < 86_400_000) return `${Math.floor(ms / 3_600_000)}h`;
+
+    return `${Math.floor(ms / 86_400_000)}d`;
+  } catch {
+    return null;
+  }
+}
 
 function formatDuration(start: string, end?: string | null): string | null {
   try {
@@ -127,6 +145,26 @@ const WorkflowRunsDrawer: React.FC<Props> = ({
                       {duration && (
                         <span className="text-xs text-default-400">· {duration}</span>
                       )}
+                      {status === WorkflowRunStatus.Waiting && (
+                        <Button
+                          className="ml-auto"
+                          color="secondary"
+                          size="sm"
+                          variant="flat"
+                          onPress={() =>
+                            createPortal(ResumeRunModal, {
+                              runId: r.id,
+                              workflowDefinitionId,
+                              currentStepIndex: r.currentStepIndex,
+                              waitReason: r.waitReason,
+                              waitPromptJson: r.waitPromptJson,
+                              onResumed: load,
+                            })
+                          }
+                        >
+                          {t<string>("workflow.resume.respond")}
+                        </Button>
+                      )}
                       {["fs.manualScan", "fs.scheduledScan", "fs.watch"].includes(
                         triggerKind ?? "",
                       ) && (
@@ -160,6 +198,18 @@ const WorkflowRunsDrawer: React.FC<Props> = ({
                         </span>
                       )}
                     </div>
+                    {status === WorkflowRunStatus.Waiting && (
+                      <div className="text-xs text-secondary-600 break-words">
+                        {t<string>("workflow.resume.waitingFor", {
+                          reason: r.waitReason
+                            ? t<string>(`workflow.waitReason.${r.waitReason}`, {
+                                defaultValue: r.waitReason,
+                              })
+                            : t<string>("workflow.resume.unknownReason"),
+                        })}
+                        {r.waitingSince && ` · ${formatWaitingFor(r.waitingSince)}`}
+                      </div>
+                    )}
                     {r.errorMessage && (
                       <div className="text-xs text-danger break-words">
                         {r.errorMessage}

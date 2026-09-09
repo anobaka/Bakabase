@@ -6512,6 +6512,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/workflow/run/{runId}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ResumeWorkflowRun"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/workflow/{id}/runs": {
         parameters: {
             query?: never;
@@ -10013,10 +10029,10 @@ export interface components {
         "Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants.WorkflowItemTypeBehavior": 1 | 2 | 3;
         /**
          * Format: int32
-         * @description [1: Pending, 2: Running, 3: Success, 4: Failed, 5: Cancelled, 6: Interrupted]
+         * @description [1: Pending, 2: Running, 3: Success, 4: Failed, 5: Cancelled, 6: Interrupted, 7: Waiting]
          * @enum {integer}
          */
-        "Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants.WorkflowRunStatus": 1 | 2 | 3 | 4 | 5 | 6;
+        "Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants.WorkflowRunStatus": 1 | 2 | 3 | 4 | 5 | 6 | 7;
         "Bakabase.Modules.Workflow.Abstractions.Models.Domain.WorkflowRunStepStat": {
             /** Format: int32 */
             stepIndex: number;
@@ -10048,6 +10064,9 @@ export interface components {
         };
         "Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowManualRunInputModel": {
             argsJson?: string;
+        };
+        "Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowRunResumeInputModel": {
+            signalJson: string;
         };
         "Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowActivityDescriptorViewModel": {
             kind: string;
@@ -10116,6 +10135,12 @@ export interface components {
             failedItemCount: number;
             stepStats: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Domain.WorkflowRunStepStat"][];
             errorMessage?: string;
+            waitReason?: string;
+            waitPromptJson?: string;
+            /** Format: date-time */
+            waitingSince?: string;
+            /** Format: int32 */
+            currentStepIndex?: number;
         };
         "Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowTriggerDescriptorViewModel": {
             kind: string;
@@ -26465,6 +26490,37 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.FileRenameEntryViewModel]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.FileRenameEntryViewModel]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.FileRenameEntryViewModel]"];
+                };
+            };
+        };
+    };
+    ResumeWorkflowRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowRunResumeInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowRunResumeInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowRunResumeInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowRunResumeInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                 };
             };
         };

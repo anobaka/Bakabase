@@ -45,4 +45,18 @@ export interface WorkflowActivityUI<TConfig = unknown> {
     upstream?: UpstreamActivityRef[];
   }>;
   Summary: React.FC<{ config: TConfig }>;
+  /**
+   * Rendered when a run is parked at this activity waiting for something from outside.
+   * `promptJson` is whatever the activity itself put in the suspension, and the string handed
+   * back to `onSubmit` goes straight to its `ResumeAsync` — the two are the same author's
+   * private protocol, which is why the shape isn't typed here.
+   *
+   * Activities that never suspend omit this; a wait that only needs acknowledging ("I've put
+   * the file where you asked") gets the drawer's generic Continue button for free.
+   */
+  ResumeForm?: React.FC<{
+    promptJson: string | null;
+    submitting: boolean;
+    onSubmit: (signalJson: string) => void;
+  }>;
 }
