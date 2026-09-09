@@ -4,18 +4,20 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Subscription.Abstractions.Components;
 using Bakabase.Modules.Subscription.Abstractions.Models.Domain;
+using Bakabase.Modules.Subscription.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.ThirdParty.ThirdParties.Pixiv;
 
 namespace Bakabase.Service.Components.Subscription.Providers.Pixiv;
 
 /// <summary>
-/// Watches the user's Pixiv "follow latest" feed — illustrations posted by users
-/// they follow. Inherits the framework's id-based diff: new illustrations relative
-/// to the previous snapshot become notifications.
+/// The user's Pixiv "follow latest" feed — illustrations posted by artists they follow. What it
+/// lists is available to them on the platform, so each illustration carries its Pixiv identity and
+/// can be fetched through the existing downloader.
 /// </summary>
-public class PixivFollowLatestProvider : AbstractListIdDiffProvider
+public class PixivFollowLatestProvider : ISubscriptionProvider
 {
     private readonly PixivClient _client;
 
@@ -33,10 +35,12 @@ public class PixivFollowLatestProvider : AbstractListIdDiffProvider
         _client = client;
     }
 
-    public override string Kind => "pixiv.followLatest";
-    public override string DisplayName => "Pixiv Follow Feed";
+    public string Kind => "pixiv.followLatest";
+    public string DisplayName => "Pixiv Follow Feed";
+    public SubscriptionSourceKind SourceKind => SubscriptionSourceKind.PlatformHolding;
+    public ResourceSource? ResourceSource => Bakabase.Abstractions.Models.Domain.Constants.ResourceSource.Pixiv;
 
-    public override Task<SubscriptionValidationResult> ValidateTargetAsync(string targetJson, CancellationToken ct)
+    public Task<SubscriptionValidationResult> ValidateTargetAsync(string targetJson, CancellationToken ct)
     {
         var target = TryParse(targetJson) ?? new PixivFollowLatestTarget();
         if (target.Mode != AllowedModeAll && target.Mode != AllowedModeR18)
@@ -46,14 +50,13 @@ public class PixivFollowLatestProvider : AbstractListIdDiffProvider
         return Task.FromResult(SubscriptionValidationResult.Valid);
     }
 
-    public override string DescribeTarget(string targetJson)
+    public string DescribeTarget(string targetJson)
     {
         var target = TryParse(targetJson) ?? new PixivFollowLatestTarget();
         return target.Mode == AllowedModeR18 ? "R-18" : "All";
     }
 
-    protected override async Task<IReadOnlyList<SubscriptionItem>> FetchCurrentItemsAsync(
-        SubscriptionRecord subscription,
+    public async Task<IReadOnlyList<SubscriptionItem>> FetchAllItemsAsync(SubscriptionRecord subscription,
         CancellationToken ct)
     {
         var target = TryParse(subscription.TargetJson) ?? new PixivFollowLatestTarget();
@@ -66,10 +69,10 @@ public class PixivFollowLatestProvider : AbstractListIdDiffProvider
         return thumbnails
             .Where(i => !string.IsNullOrEmpty(i.IllustId))
             .Select(i => new SubscriptionItem(
-                Id: i.IllustId,
-                Title: i.IllustTitle ?? i.Title ?? i.IllustId,
-                Url: $"https://www.pixiv.net/artworks/{i.IllustId}",
-                ThumbnailUrl: i.Urls?.Thumb))
+                i.IllustId,
+                i.IllustTitle ?? i.Title ?? i.IllustId,
+                $"https://www.pixiv.net/artworks/{i.IllustId}",
+                i.Urls?.Thumb == null ? null : [i.Urls.Thumb]))
             .ToList();
     }
 

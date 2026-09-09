@@ -44,5 +44,7 @@
   "subscription.provider.pixiv.followLatest.mode.label": "Mode",
   "subscription.provider.pixiv.followLatest.mode.description": "Which works to watch in the feed of users you follow.",
   "subscription.provider.pixiv.followLatest.mode.all": "All",
-  "subscription.provider.pixiv.followLatest.mode.r18": "R-18 only"
+  "subscription.provider.pixiv.followLatest.mode.r18": "R-18 only",
+  "subscription.field.collection": "Collection",
+  "subscription.field.collection.description": "Where what it finds goes. Leave empty and one is made with this subscription's name."
 }

@@ -12,6 +12,7 @@ import { buildCollectionSearch, percent } from "../helpers";
 
 import MembersTab from "./components/MembersTab";
 import SettingsTab from "./components/SettingsTab";
+import SourceTab from "./components/SourceTab";
 
 import BApi from "@/sdk/BApi";
 import CollectionRuleEditor from "@/components/CollectionRuleEditor";
@@ -161,9 +162,8 @@ const CollectionDetailPage = () => {
           <MembersTab collection={collection} onChanged={load} />
         </Tab>
         <Tab key="source" title={t<string>("collection.tab.source")}>
-          <div className="flex flex-col gap-2 py-6 text-center text-default-400">
-            <span>{t<string>("collection.source.placeholder")}</span>
-            <span className="text-xs">{t<string>("collection.source.placeholderHint")}</span>
+          <div className="py-2">
+            <SourceTab collection={collection} onChanged={load} />
           </div>
         </Tab>
         <Tab key="rule" title={t<string>("collection.tab.rule")}>

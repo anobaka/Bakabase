@@ -8,13 +8,6 @@ import { WorkflowItemTypes } from "@/components/Workflow/itemTypes";
 
 const EMPTY: SubscriptionUpdatedFilter = { subscriptionIds: [], kinds: [] };
 
-// Mirror of SubscriptionUpdatedTrigger.KindToItemType (backend).
-const KIND_TO_ITEM_TYPE: Record<string, string> = {
-  "exhentai.search": WorkflowItemTypes.ExHentaiGallery,
-  "exhentai.gallery": WorkflowItemTypes.ExHentaiGallery,
-  "pixiv.followLatest": WorkflowItemTypes.PixivIllust,
-};
-
 export const SubscriptionUpdatedTriggerUI: WorkflowTriggerUI<SubscriptionUpdatedFilter> = {
   kind: "subscription.updated",
   displayNameKey: "workflow.trigger.subscriptionUpdated.displayName",
@@ -37,11 +30,10 @@ export const SubscriptionUpdatedTriggerUI: WorkflowTriggerUI<SubscriptionUpdated
     return JSON.stringify(filter);
   },
   isValid: () => true, // empty = match-all; always valid
-  resolveOutputItemType: (filter) => {
-    if (filter.kinds.length === 0) return WorkflowItemTypes.SubscriptionAny;
-    const mapped = [...new Set(filter.kinds.map((k) => KIND_TO_ITEM_TYPE[k]))];
-    return mapped.length === 1 && mapped[0] ? mapped[0] : WorkflowItemTypes.SubscriptionAny;
-  },
+  // Every source emits the same thing now: by the time the event fires, each item it listed has
+  // already become a resource. The per-kind table this replaced needed updating in two places
+  // whenever a provider was added, and both said "resource" in the end.
+  resolveOutputItemType: () => WorkflowItemTypes.Resource,
   FilterForm,
   FilterSummary,
 };

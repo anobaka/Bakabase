@@ -2,8 +2,9 @@
 
 import type { DestroyableProps } from "@/components/bakaui/types";
 import type { components } from "@/sdk/BApi2";
+import type { CollectionModel } from "@/stores/collections";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { getProviderUI } from "./Providers";
@@ -31,13 +32,17 @@ interface SubscriptionEditorProps extends DestroyableProps {
  */
 function groupByThirdParty(providers: ProviderVm[]): Map<ThirdPartyId, ProviderVm[]> {
   const grouped = new Map<ThirdPartyId, ProviderVm[]>();
+
   for (const p of providers) {
     const ui = getProviderUI(p.kind);
+
     if (!ui) continue;
     const list = grouped.get(ui.thirdPartyId) ?? [];
+
     list.push(p);
     grouped.set(ui.thirdPartyId, list);
   }
+
   return grouped;
 }
 
@@ -51,15 +56,20 @@ const SubscriptionEditor = ({
   const isEditing = !!subscription;
 
   const groupedProviders = useMemo(() => groupByThirdParty(providers), [providers]);
-  const availableThirdParties = useMemo(() => Array.from(groupedProviders.keys()), [groupedProviders]);
+  const availableThirdParties = useMemo(
+    () => Array.from(groupedProviders.keys()),
+    [groupedProviders],
+  );
 
   // Pick the existing subscription's ThirdParty when editing, otherwise default to
   // the first ThirdParty that has at least one supported kind.
   const initialThirdParty: ThirdPartyId | null = (() => {
     if (subscription) {
       const ui = getProviderUI(subscription.kind);
+
       if (ui) return ui.thirdPartyId;
     }
+
     return availableThirdParties[0] ?? null;
   })();
 
@@ -67,16 +77,29 @@ const SubscriptionEditor = ({
 
   const initialKind =
     subscription?.kind ??
-    (initialThirdParty != null ? groupedProviders.get(initialThirdParty)?.[0]?.kind ?? "" : "");
+    (initialThirdParty != null ? (groupedProviders.get(initialThirdParty)?.[0]?.kind ?? "") : "");
   const [kind, setKind] = useState(initialKind);
 
   const [displayName, setDisplayName] = useState(subscription?.displayName ?? "");
   const [enabled, setEnabled] = useState(subscription?.enabled ?? true);
+  // Where what it finds goes. Empty means "make one named after this subscription", which is
+  // what somebody watching a circle's page almost always wants.
+  const [collectionId, setCollectionId] = useState<number | undefined>(
+    subscription?.collectionId ?? undefined,
+  );
+  const [collections, setCollections] = useState<CollectionModel[]>([]);
+
+  useEffect(() => {
+    BApi.collection
+      .getAllCollections({ withProgress: false })
+      .then((r) => setCollections((r.data ?? []) as CollectionModel[]));
+  }, []);
 
   const providerUi = useMemo(() => getProviderUI(kind), [kind]);
 
   const [target, setTarget] = useState<any>(() => {
     if (!providerUi) return {};
+
     return subscription?.targetJson
       ? providerUi.parseTarget(subscription.targetJson)
       : providerUi.defaultTarget();
@@ -86,19 +109,23 @@ const SubscriptionEditor = ({
     setThirdPartyId(next);
     // Auto-pick the first available kind for the new ThirdParty (and reset target).
     const firstKind = groupedProviders.get(next)?.[0]?.kind ?? "";
+
     setKind(firstKind);
     const nextUi = firstKind ? getProviderUI(firstKind) : undefined;
+
     setTarget(nextUi ? nextUi.defaultTarget() : {});
   };
 
   const onKindChange = (next: string) => {
     setKind(next);
     const nextUi = getProviderUI(next);
+
     setTarget(nextUi ? nextUi.defaultTarget() : {});
   };
 
   const kindOptions = useMemo(() => {
     if (thirdPartyId == null) return [];
+
     return (groupedProviders.get(thirdPartyId) ?? []).map((p) => ({
       value: p.kind,
       label: t<string>(`subscription.provider.${p.kind}.subKindLabel`, {
@@ -115,12 +142,14 @@ const SubscriptionEditor = ({
   const handleSave = async () => {
     if (!isValid) return;
     const targetJson = JSON.stringify(target);
+
     try {
       if (isEditing) {
         await BApi.subscription.patchSubscription(subscription!.id, {
           displayName,
           enabled,
           targetJson,
+          collectionId,
         });
       } else {
         await BApi.subscription.addSubscription({
@@ -128,6 +157,7 @@ const SubscriptionEditor = ({
           displayName,
           enabled,
           targetJson,
+          collectionId,
         });
       }
       onSaved?.();
@@ -144,14 +174,18 @@ const SubscriptionEditor = ({
       defaultVisible
       okProps={{ isDisabled: !isValid }}
       size="xl"
-      title={isEditing ? t<string>("subscription.edit.title") : t<string>("subscription.create.title")}
+      title={
+        isEditing ? t<string>("subscription.edit.title") : t<string>("subscription.create.title")
+      }
       onDestroyed={onDestroyed}
       onOk={handleSave}
     >
       <div className="flex flex-col gap-4">
         <Input
           isRequired
-          errorMessage={!isNameValid ? t<string>("subscription.validation.displayNameRequired") : undefined}
+          errorMessage={
+            !isNameValid ? t<string>("subscription.validation.displayNameRequired") : undefined
+          }
           isInvalid={!isNameValid}
           label={t<string>("subscription.field.displayName")}
           placeholder={t<string>("subscription.field.displayName.placeholder")}
@@ -174,14 +208,18 @@ const SubscriptionEditor = ({
             label={t<string>("subscription.field.thirdParty")}
             renderValue={(items) => {
               const v = (items[0]?.data as { value?: ThirdPartyId } | undefined)?.value;
+
               if (v == null) return null;
+
               return <ThirdPartyLabel thirdPartyId={v} />;
             }}
             selectedKeys={thirdPartyId != null ? [String(thirdPartyId)] : []}
             onSelectionChange={(keys) => {
               const raw = Array.from(keys)[0];
+
               if (raw == null) return;
               const next = Number(raw) as ThirdPartyId;
+
               onThirdPartyChange(next);
             }}
           />
@@ -196,6 +234,7 @@ const SubscriptionEditor = ({
             selectedKeys={kind ? [kind] : []}
             onSelectionChange={(keys) => {
               const next = Array.from(keys)[0] as string | undefined;
+
               if (next) onKindChange(next);
             }}
           />
@@ -208,6 +247,22 @@ const SubscriptionEditor = ({
             {t<string>("subscription.validation.kindRequired")}
           </p>
         )}
+
+        <Select
+          dataSource={collections.map((c) => ({
+            value: String(c.id),
+            label: c.name,
+            textValue: c.name,
+          }))}
+          description={t<string>("subscription.field.collection.description")}
+          label={t<string>("subscription.field.collection")}
+          selectedKeys={collectionId ? [String(collectionId)] : []}
+          onSelectionChange={(keys) => {
+            const raw = Array.from(keys)[0];
+
+            setCollectionId(raw == null ? undefined : Number(raw));
+          }}
+        />
 
         <Switch isSelected={enabled} onValueChange={setEnabled}>
           {t<string>("subscription.field.enabled")}

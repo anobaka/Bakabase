@@ -707,12 +707,12 @@ public class ResourceController(
             var key = ExternalIdentityParser.TryExtractFor(item.Source.Value, item.SourceKey, out var extracted)
                 ? extracted
                 : item.SourceKey;
-            return await service.CreateOrMatchByExternalIdentity(item.Source.Value, key, ct);
+            return await service.CreateOrMatchByExternalIdentity(item.Source.Value, key, ct: ct);
         }
 
         if (!string.IsNullOrWhiteSpace(item.SharedUrl))
         {
-            return await service.CreateOrMatchBySharedUrl(item.SharedUrl, ct);
+            return await service.CreateOrMatchBySharedUrl(item.SharedUrl, ct: ct);
         }
 
         var text = item.Title?.Trim();
@@ -723,13 +723,13 @@ public class ResourceController(
 
         if (ExternalIdentityParser.TryExtract(text, out var source, out var sourceKey))
         {
-            return await service.CreateOrMatchByExternalIdentity(source, sourceKey, ct);
+            return await service.CreateOrMatchByExternalIdentity(source, sourceKey, ct: ct);
         }
 
         if (Uri.TryCreate(text, UriKind.Absolute, out var uri) &&
             (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
         {
-            return await service.CreateOrMatchBySharedUrl(text, ct);
+            return await service.CreateOrMatchBySharedUrl(text, ct: ct);
         }
 
         return await service.CreateByTitle(text, ct);

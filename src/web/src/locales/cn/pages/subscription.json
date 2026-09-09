@@ -44,5 +44,7 @@
   "subscription.provider.pixiv.followLatest.mode.label": "模式",
   "subscription.provider.pixiv.followLatest.mode.description": "监控关注列表中哪类作品。",
   "subscription.provider.pixiv.followLatest.mode.all": "全部",
-  "subscription.provider.pixiv.followLatest.mode.r18": "仅 R-18"
+  "subscription.provider.pixiv.followLatest.mode.r18": "仅 R-18",
+  "subscription.field.collection": "所属集合",
+  "subscription.field.collection.description": "订阅找到的条目会进入该集合。留空则以订阅名称新建一个集合。"
 }

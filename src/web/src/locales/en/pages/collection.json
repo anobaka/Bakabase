@@ -28,8 +28,6 @@
   "collection.tab.source": "Source",
   "collection.tab.rule": "Rule",
   "collection.tab.settings": "Settings",
-  "collection.source.placeholder": "Nothing outside Bakabase feeds this collection.",
-  "collection.source.placeholderHint": "Subscriptions will be able to, and members they bring in will say so here.",
   "collection.member.filter.all": "All",
   "collection.member.filter.owned": "Here",
   "collection.member.filter.missing": "Missing",
@@ -77,5 +75,17 @@
   "collection.action.acquireMissing": "Get what is missing",
   "collection.acquireMissing.started": "Started getting {{count}}.",
   "collection.acquireMissing.noLeads": "{{count}} missing members have nowhere to be got from yet.",
-  "collection.acquireMissing.nothingToDo": "Nothing left to get."
+  "collection.acquireMissing.nothingToDo": "Nothing left to get.",
+  "collection.source.description": "A source says what should be in this collection; the collection holds it whether or not the files are here yet.",
+  "collection.source.add": "Add a source",
+  "collection.source.none": "Nothing outside Bakabase fills this collection.",
+  "collection.source.noneHint": "A circle's page, a forum board, a favourites list — add one and its listings become members.",
+  "collection.source.checkNow": "Check now",
+  "collection.source.edit": "Edit",
+  "collection.source.paused": "Paused",
+  "collection.source.failing": "Last check failed",
+  "collection.source.lastChecked": "Checked {{at}}",
+  "collection.source.neverChecked": "Never checked",
+  "collection.source.foundCount": "{{count}} new.",
+  "collection.source.foundNothing": "Nothing new."
 }

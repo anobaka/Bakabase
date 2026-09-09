@@ -71,7 +71,7 @@ public class PlaceholderResourceService : IPlaceholderResourceService
     }
 
     public async Task<PlaceholderResourceResult> CreateOrMatchByExternalIdentity(ResourceSource source,
-        string sourceKey, CancellationToken ct = default)
+        string sourceKey, KnownItemDetail? known = null, CancellationToken ct = default)
     {
         var key = sourceKey.Trim();
         if (string.IsNullOrEmpty(key))
@@ -87,12 +87,19 @@ public class PlaceholderResourceService : IPlaceholderResourceService
             return new PlaceholderResourceResult(existingId.Value, false, await ReadName(existingId.Value));
         }
 
-        ExternalIdentityDetail? detail = null;
-        if (_lookups.TryGetValue(source, out var lookup))
+        List<string>? coverUrls = known?.CoverUrls;
+        var name = known?.Title?.Trim();
+
+        // Only ask the platform for what the caller did not already read. A source that just
+        // listed twenty works knows all twenty titles.
+        if (string.IsNullOrEmpty(name) && _lookups.TryGetValue(source, out var lookup))
         {
             try
             {
-                detail = await lookup.Lookup(key, ct);
+                var detail = await lookup.Lookup(key, ct);
+
+                name = detail?.Title?.Trim();
+                coverUrls ??= detail?.CoverUrls;
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -102,9 +109,8 @@ public class PlaceholderResourceService : IPlaceholderResourceService
             }
         }
 
-        var name = detail?.Title?.Trim();
         var resource = ResourceFactory.CreateForExternalIdentity(source, key,
-            string.IsNullOrEmpty(name) ? key : name, detail?.CoverUrls);
+            string.IsNullOrEmpty(name) ? key : name, coverUrls, metadataJson: known?.MetadataJson);
         await _resourceService.AddOrPutRange([resource]);
 
         // The source's own scope, so a later sync from that platform updates its own value instead
@@ -116,7 +122,7 @@ public class PlaceholderResourceService : IPlaceholderResourceService
     }
 
     public async Task<PlaceholderResourceResult> CreateOrMatchBySharedUrl(string url,
-        CancellationToken ct = default)
+        KnownItemDetail? known = null, CancellationToken ct = default)
     {
         var trimmed = url.Trim();
         if (string.IsNullOrEmpty(trimmed))
@@ -128,7 +134,7 @@ public class PlaceholderResourceService : IPlaceholderResourceService
         // rather than as an anonymous link.
         if (ExternalIdentityParser.TryExtract(trimmed, out var source, out var sourceKey))
         {
-            return await CreateOrMatchByExternalIdentity(source, sourceKey, ct);
+            return await CreateOrMatchByExternalIdentity(source, sourceKey, known, ct);
         }
 
         // The link is already attached somewhere: that resource is what this link is about.
@@ -139,8 +145,9 @@ public class PlaceholderResourceService : IPlaceholderResourceService
                 await ReadName(existingLead.ResourceId));
         }
 
-        string? title = null;
-        if (_sharedUrlTitleResolver != null)
+        var title = known?.Title?.Trim();
+
+        if (string.IsNullOrWhiteSpace(title) && _sharedUrlTitleResolver != null)
         {
             try
             {

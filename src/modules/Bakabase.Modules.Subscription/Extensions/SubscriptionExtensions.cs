@@ -17,5 +17,6 @@ public static class SubscriptionExtensions
         LastChangeAt = db.LastChangeAt,
         LastError = db.LastError,
         IntervalMinutes = db.IntervalMinutes,
+        CollectionId = db.CollectionId,
     };
 }

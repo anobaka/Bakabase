@@ -41,7 +41,7 @@ public class ExHentaiEnqueueDownloadActivity : IWorkflowActivity
 
         if (string.IsNullOrWhiteSpace(si.Url))
         {
-            ctx.Logger.LogWarning("ExHentai gallery item #{Id} has no URL — skipping", si.Id);
+            ctx.Logger.LogWarning("ExHentai gallery item #{Id} has no URL — skipping", si.SourceKey);
             return WorkflowItemOutcome.KeepItem;
         }
 

@@ -12,4 +12,7 @@ public record SubscriptionRecord
     public DateTime? LastChangeAt { get; set; }
     public string? LastError { get; set; }
     public int? IntervalMinutes { get; set; }
+
+    /// <summary>The collection this source fills.</summary>
+    public int? CollectionId { get; set; }
 }

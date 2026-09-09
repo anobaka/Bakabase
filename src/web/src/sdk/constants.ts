@@ -5152,6 +5152,24 @@ export const PresetResourceTypeLabel: Record<PresetResourceType, string> = {
   [PresetResourceType.Tool]: 'Tool'
 };
 
+export enum SubscriptionSourceKind {
+  PlatformHolding = 1,
+  Catalog = 2,
+  SharingChannel = 3
+}
+
+export const subscriptionSourceKinds = [
+  { label: 'PlatformHolding', value: SubscriptionSourceKind.PlatformHolding },
+  { label: 'Catalog', value: SubscriptionSourceKind.Catalog },
+  { label: 'SharingChannel', value: SubscriptionSourceKind.SharingChannel }
+] as const;
+
+export const SubscriptionSourceKindLabel: Record<SubscriptionSourceKind, string> = {
+  [SubscriptionSourceKind.PlatformHolding]: 'PlatformHolding',
+  [SubscriptionSourceKind.Catalog]: 'Catalog',
+  [SubscriptionSourceKind.SharingChannel]: 'SharingChannel'
+};
+
 export enum WorkflowActivityCardinality {
   OneToOne = 1,
   OneToMany = 2

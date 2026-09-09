@@ -17,14 +17,23 @@ public static class ResourceFactory
     /// Normally null: the source knows the work, the files are not here. Non-null when the source
     /// also reports a local presence, such as an installed Steam game.
     /// </param>
+    /// <param name="metadataJson">
+    /// The source's own fields, verbatim. Kept because a platform-specific reader can make sense of
+    /// them later and nothing else will ever have them again.
+    /// </param>
     public static Resource CreateForExternalIdentity(ResourceSource source, string sourceKey,
-        string? displayName, List<string>? coverUrls = null, string? path = null)
+        string? displayName, List<string>? coverUrls = null, string? path = null,
+        string? metadataJson = null)
     {
         var resource = CreateBase(displayName);
         resource.Path = path;
         resource.SourceLinks =
         [
-            new ResourceSourceLink { Source = source, SourceKey = sourceKey, CoverUrls = coverUrls }
+            new ResourceSourceLink
+            {
+                Source = source, SourceKey = sourceKey, CoverUrls = coverUrls,
+                MetadataJson = metadataJson
+            }
         ];
         return resource;
     }

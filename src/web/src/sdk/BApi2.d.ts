@@ -10503,6 +10503,12 @@ export interface components {
             name: string;
             description?: string;
         };
+        /**
+         * Format: int32
+         * @description [1: PlatformHolding, 2: Catalog, 3: SharingChannel]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.Subscription.Abstractions.Models.Domain.Constants.SubscriptionSourceKind": 1 | 2 | 3;
         "Bakabase.Modules.Subscription.Abstractions.Models.Input.SubscriptionCreationInputModel": {
             kind: string;
             displayName: string;
@@ -10510,6 +10516,8 @@ export interface components {
             enabled: boolean;
             /** Format: int32 */
             intervalMinutes?: number;
+            /** Format: int32 */
+            collectionId?: number;
         };
         "Bakabase.Modules.Subscription.Abstractions.Models.Input.SubscriptionUpdateInputModel": {
             displayName?: string;
@@ -10517,6 +10525,8 @@ export interface components {
             enabled?: boolean;
             /** Format: int32 */
             intervalMinutes?: number;
+            /** Format: int32 */
+            collectionId?: number;
         };
         "Bakabase.Modules.Subscription.Abstractions.Models.View.SubscriptionCheckSummaryViewModel": {
             firstRun: boolean;
@@ -10530,6 +10540,8 @@ export interface components {
             kind: string;
             displayName: string;
             icon?: string;
+            sourceKind: components["schemas"]["Bakabase.Modules.Subscription.Abstractions.Models.Domain.Constants.SubscriptionSourceKind"];
+            resourceSource?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceSource"];
         };
         "Bakabase.Modules.Subscription.Abstractions.Models.View.SubscriptionViewModel": {
             /** Format: int32 */
@@ -10547,6 +10559,8 @@ export interface components {
             lastError?: string;
             /** Format: int32 */
             intervalMinutes?: number;
+            /** Format: int32 */
+            collectionId?: number;
             targetSummary?: string;
         };
         "Bakabase.Modules.ThirdParty.Helpers.TlsPresetInfo": {

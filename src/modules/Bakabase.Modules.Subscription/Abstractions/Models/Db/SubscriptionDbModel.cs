@@ -21,9 +21,12 @@ public record SubscriptionDbModel
     public DateTime? LastChangeAt { get; set; }
     public string? LastError { get; set; }
 
-    /// <summary>
-    /// Optional per-subscription override of the global check interval. Phase 2 leaves this
-    /// nullable + unused; per-kind / per-subscription scheduling lands later.
-    /// </summary>
+    /// <summary>How often to check this one. Null uses the global default.</summary>
     public int? IntervalMinutes { get; set; }
+
+    /// <summary>
+    /// The collection this source fills. Nullable only for the length of the upgrade that adds
+    /// it — a runtime migrator gives every existing subscription a collection of its own name.
+    /// </summary>
+    public int? CollectionId { get; set; }
 }

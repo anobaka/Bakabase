@@ -89,6 +89,8 @@ public class SubscriptionController(
             Kind = p.Kind,
             DisplayName = p.DisplayName,
             Icon = p.Icon,
+            SourceKind = p.SourceKind,
+            ResourceSource = p.ResourceSource,
         }));
     }
 }

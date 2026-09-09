@@ -28,8 +28,6 @@
   "collection.tab.source": "来源",
   "collection.tab.rule": "规则",
   "collection.tab.settings": "设置",
-  "collection.source.placeholder": "该集合没有外部来源。",
-  "collection.source.placeholderHint": "订阅功能上线后，由订阅带入的成员会在这里标明来源。",
   "collection.member.filter.all": "全部",
   "collection.member.filter.owned": "已有",
   "collection.member.filter.missing": "缺失",
@@ -75,5 +73,17 @@
   "collection.action.acquireMissing": "获取缺失成员",
   "collection.acquireMissing.started": "已开始获取 {{count}} 个。",
   "collection.acquireMissing.noLeads": "有 {{count}} 个缺失成员还没有获取线索。",
-  "collection.acquireMissing.nothingToDo": "没有需要获取的成员。"
+  "collection.acquireMissing.nothingToDo": "没有需要获取的成员。",
+  "collection.source.description": "来源决定该集合应该包含什么；无论文件是否已经落地，集合都会记录它们。",
+  "collection.source.add": "添加来源",
+  "collection.source.none": "该集合还没有外部来源。",
+  "collection.source.noneHint": "社团页、论坛版块、收藏夹——添加之后，它列出的条目会成为集合成员。",
+  "collection.source.checkNow": "立即检查",
+  "collection.source.edit": "编辑",
+  "collection.source.paused": "已暂停",
+  "collection.source.failing": "上次检查失败",
+  "collection.source.lastChecked": "检查于 {{at}}",
+  "collection.source.neverChecked": "尚未检查",
+  "collection.source.foundCount": "新增 {{count}} 个。",
+  "collection.source.foundNothing": "没有新增。"
 }
