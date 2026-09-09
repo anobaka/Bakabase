@@ -54,5 +54,16 @@
   "subscription.provider.soulplus.search.keywords.label": "Only titles containing",
   "subscription.provider.soulplus.search.keywords.description": "Comma-separated. Leave empty to take the whole board — which is a lot, on a busy one.",
   "subscription.provider.soulplus.search.maxPages.label": "Pages per check",
-  "subscription.provider.soulplus.search.maxPages.description": "New threads are on the first page. More pages only helps the first check."
+  "subscription.provider.soulplus.search.maxPages.description": "New threads are on the first page. More pages only helps the first check.",
+  "subscription.provider.dlsite.circle.subKindLabel": "Circle / Series",
+  "subscription.provider.dlsite.circle.url.label": "Circle or series page",
+  "subscription.provider.dlsite.circle.url.description": "Everything it lists becomes a member — including works you have never seen, which is the point.",
+  "subscription.provider.dlsite.circle.maxPages.label": "Pages per check",
+  "subscription.provider.dlsite.circle.maxPages.description": "New releases are on the first page. A prolific circle needs more only on the first check.",
+  "subscription.provider.bangumi.subjectRelations.subKindLabel": "Series",
+  "subscription.provider.bangumi.subjectRelations.subject.label": "Subject",
+  "subscription.provider.bangumi.subjectRelations.subject.description": "Paste the subject's page, or type its id.",
+  "subscription.provider.bangumi.subjectRelations.relations.label": "Relations to follow",
+  "subscription.provider.bangumi.subjectRelations.relations.description": "Leave empty to take every relation, which for a long-running franchise is a lot.",
+  "subscription.provider.bangumi.subjectRelations.includeSelf": "Include the subject itself"
 }

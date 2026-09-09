@@ -54,5 +54,16 @@
   "subscription.provider.soulplus.search.keywords.label": "仅标题包含",
   "subscription.provider.soulplus.search.keywords.description": "以逗号分隔。留空表示整个版块——在活跃版块上会非常多。",
   "subscription.provider.soulplus.search.maxPages.label": "每次检查的页数",
-  "subscription.provider.soulplus.search.maxPages.description": "新帖都在第一页；更多页数只对第一次检查有用。"
+  "subscription.provider.soulplus.search.maxPages.description": "新帖都在第一页；更多页数只对第一次检查有用。",
+  "subscription.provider.dlsite.circle.subKindLabel": "社团 / 系列",
+  "subscription.provider.dlsite.circle.url.label": "社团或系列页面",
+  "subscription.provider.dlsite.circle.url.description": "页面列出的作品都会成为成员——包括你没见过的，这正是订阅社团的意义。",
+  "subscription.provider.dlsite.circle.maxPages.label": "每次检查的页数",
+  "subscription.provider.dlsite.circle.maxPages.description": "新作都在第一页；作品众多的社团只在第一次检查时需要更多页数。",
+  "subscription.provider.bangumi.subjectRelations.subKindLabel": "系列",
+  "subscription.provider.bangumi.subjectRelations.subject.label": "条目",
+  "subscription.provider.bangumi.subjectRelations.subject.description": "粘贴条目页面地址，或直接填写条目 id。",
+  "subscription.provider.bangumi.subjectRelations.relations.label": "跟随的关联类型",
+  "subscription.provider.bangumi.subjectRelations.relations.description": "留空表示全部关联；对长篇系列来说会非常多。",
+  "subscription.provider.bangumi.subjectRelations.includeSelf": "包含条目本身"
 }

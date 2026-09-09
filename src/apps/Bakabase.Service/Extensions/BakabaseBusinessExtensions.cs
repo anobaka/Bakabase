@@ -161,6 +161,10 @@ namespace Bakabase.Service.Extensions
             services.AddSingleton<ISubscriptionProvider, PixivFollowLatestProvider>();
             services.AddSingleton<ISubscriptionProvider,
                 Components.Subscription.Providers.SoulPlus.SoulPlusSearchProvider>();
+            services.AddSingleton<ISubscriptionProvider,
+                Components.Subscription.Providers.DLsite.DLsiteCircleProvider>();
+            services.AddSingleton<ISubscriptionProvider,
+                Components.Subscription.Providers.Bangumi.BangumiSubjectRelationsProvider>();
             services.AddWorkflow<BakabaseDbContext>();
             services.AddAcquisition<BakabaseDbContext>();
             services.AddCollections<BakabaseDbContext>();

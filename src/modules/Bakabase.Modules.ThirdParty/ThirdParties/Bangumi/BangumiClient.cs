@@ -35,7 +35,7 @@ public class BangumiClient(IHttpClientFactory httpClientFactory, ILoggerFactory 
             return null;
         }
 
-        var ctx = new BangumiDetail { Name = name };
+        var ctx = new BangumiDetail {Name = name, DetailUrl = detailUrl};
 
         // Introduction
         var intro = detailCq["#subject_summary"]?[0]?.InnerHTML;
@@ -113,6 +113,50 @@ public class BangumiClient(IHttpClientFactory httpClientFactory, ILoggerFactory 
 
         return ctx;
     }
+
+    /// <summary>
+    /// The subjects bgm.tv says are related to this one — sequels, prequels, entries in the same
+    /// series, adaptations.
+    /// <para>
+    /// Read from the API rather than scraped: relations are the one thing Bangumi publishes as
+    /// data, and it is the most reliable statement anywhere of what belongs with what.
+    /// </para>
+    /// </summary>
+    /// <param name="subjectId">The subject the relations are of.</param>
+    /// <param name="relations">
+    /// Which kinds of relation to keep, by their Chinese label ("续集", "系列", …). Empty keeps all
+    /// of them, which for a long-running series is usually too much.
+    /// </param>
+    public async Task<List<BangumiRelatedSubject>> GetRelatedSubjectsAsync(string subjectId,
+        IReadOnlyCollection<string>? relations = null, CancellationToken ct = default)
+    {
+        var url = $"https://api.bgm.tv/v0/subjects/{Uri.EscapeDataString(subjectId)}/subjects";
+        var request = new HttpRequestMessage(HttpMethod.Get, url);
+
+        // bgm.tv asks callers to identify themselves and answers anonymous ones inconsistently.
+        request.Headers.TryAddWithoutValidation("User-Agent", BangumiApiUserAgent);
+        request.Headers.TryAddWithoutValidation("Accept", "application/json");
+
+        var response = await HttpClient.SendAsync(request, ct);
+
+        response.EnsureSuccessStatusCode();
+
+        var json = await response.Content.ReadAsStringAsync(ct);
+        var related = System.Text.Json.JsonSerializer.Deserialize<List<BangumiRelatedSubject>>(json,
+            BangumiApiJsonOptions) ?? [];
+
+        return relations is {Count: > 0}
+            ? related.Where(r => r.Relation != null && relations.Contains(r.Relation)).ToList()
+            : related;
+    }
+
+    /// <summary>bgm.tv asks for a project identifier; this is ours.</summary>
+    private const string BangumiApiUserAgent = "Bakabase/1.0 (+https://github.com/anobaka/Bakabase)";
+
+    private static readonly System.Text.Json.JsonSerializerOptions BangumiApiJsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+    };
 
     public async Task<BangumiDetail?> SearchAndParseFirst(string keyword, string? category = null)
     {
