@@ -216,6 +216,21 @@ function PlaceholderContent({ id }: { id: SectionId }) {
           </div>
         </PlaceholderCard>
       );
+    case "collections":
+      return (
+        <PlaceholderCard color="bg-teal-100" tone="text-teal-900">
+          <div className="flex flex-wrap gap-1">
+            {[
+              t<string>("resource.detailLayout.sample.collections.first"),
+              t<string>("resource.detailLayout.sample.collections.second"),
+            ].map((c) => (
+              <span key={c} className="px-2 py-0.5 rounded-small bg-teal-300/40 text-xs">
+                {c}
+              </span>
+            ))}
+          </div>
+        </PlaceholderCard>
+      );
     case "profiles":
       return (
         <PlaceholderCard color="bg-fuchsia-100" tone="text-fuchsia-900">

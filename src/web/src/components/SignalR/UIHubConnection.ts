@@ -24,6 +24,7 @@ import { useAppUpdaterStateStore } from "@/stores/appUpdaterState";
 import { useThirdPartyRequestStatisticsStore } from "@/stores/thirdPartyRequestStatistics";
 import { optionsStores } from "@/stores/options";
 import { usePathMarksStore } from "@/stores/pathMarks";
+import { useCollectionsStore } from "@/stores/collections";
 import { useNotificationsStore, type NotificationViewModel } from "@/stores/notifications";
 import { resourceChangedChannel } from "@/services/ResourceChangedChannel";
 
@@ -94,6 +95,11 @@ export const UIHubConnection = () => {
         case "PathMark":
           usePathMarksStore.getState().updateMark(data);
           break;
+        case "Collection":
+          // Its numbers move whenever a member is added, ignored, or acquired — the page
+          // showing them should not have to poll to find out.
+          useCollectionsStore.getState().updateCollection(data);
+          break;
         case "Resource":
           // Backend announced these resource ids changed (e.g. cache rebuilt).
           // Fan out to the active resource list, which reloads just the ones it shows.
@@ -105,6 +111,9 @@ export const UIHubConnection = () => {
     conn.on("DeleteData", (key, id) => {
       if (key === "PostParserTask") {
         usePostParserTasksStore.getState().deleteTask(id);
+      }
+      if (key === "Collection") {
+        useCollectionsStore.getState().removeCollection(id as number);
       }
     });
     conn.on("DeleteAllData", (key) => {

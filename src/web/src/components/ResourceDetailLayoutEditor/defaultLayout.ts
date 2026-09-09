@@ -13,6 +13,7 @@ export const ALL_SECTIONS: SectionMeta[] = [
   { id: "properties", label: "Properties", heightBehavior: "dynamic" },
   { id: "relatedDataCards", label: "Related Data Cards", heightBehavior: "dynamic" },
   { id: "mediaLibs", label: "Media Libraries", heightBehavior: "dynamic" },
+  { id: "collections", label: "Collections", heightBehavior: "dynamic" },
   { id: "profiles", label: "Profiles", heightBehavior: "dynamic" },
 ];
 
@@ -43,13 +44,14 @@ export const DEFAULT_LAYOUT: DetailLayoutConfig = {
     { id: "acquisition", colStart: 4, colSpan: 8, rowStart: 13, rowSpan: 3 },
     { id: "basicInfo", colStart: 0, colSpan: 4, rowStart: 8, rowSpan: 2 },
     { id: "mediaLibs", colStart: 0, colSpan: 4, rowStart: 10, rowSpan: 2 },
-    { id: "profiles", colStart: 0, colSpan: 4, rowStart: 12, rowSpan: 2 },
+    { id: "collections", colStart: 0, colSpan: 4, rowStart: 12, rowSpan: 2 },
+    { id: "profiles", colStart: 0, colSpan: 4, rowStart: 14, rowSpan: 2 },
     { id: "name", colStart: 4, colSpan: 8, rowStart: 0, rowSpan: 1 },
     { id: "hierarchy", colStart: 4, colSpan: 8, rowStart: 1, rowSpan: 2 },
     { id: "introduction", colStart: 4, colSpan: 8, rowStart: 3, rowSpan: 3 },
     { id: "playedAt", colStart: 4, colSpan: 8, rowStart: 6, rowSpan: 1 },
     { id: "properties", colStart: 4, colSpan: 8, rowStart: 7, rowSpan: 6 },
-    { id: "relatedDataCards", colStart: 0, colSpan: 12, rowStart: 14, rowSpan: 4 },
+    { id: "relatedDataCards", colStart: 0, colSpan: 12, rowStart: 16, rowSpan: 4 },
   ],
   hidden: [],
 };

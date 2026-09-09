@@ -29,6 +29,7 @@ import ChildrenModal from "../ChildrenModal";
 import BasicInfo from "./BasicInfo";
 import Properties from "./Properties";
 import MediaLibraryMappings from "./MediaLibraryMappings";
+import CollectionMemberships from "./CollectionMemberships";
 import IntroductionSummary from "./IntroductionSummary";
 import ResourceProfiles from "./ResourceProfiles";
 import ResourceHierarchy from "./ResourceHierarchy";
@@ -395,6 +396,10 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
               resourceId={resource.id}
               onMappingsChange={loadResource}
             />
+          );
+        case "collections":
+          return (
+            <CollectionMemberships compact resourceId={resource.id} onChange={loadResource} />
           );
         case "profiles":
           return <ResourceProfiles compact resourceId={resource.id} />;

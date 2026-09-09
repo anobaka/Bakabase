@@ -177,5 +177,17 @@
   "resource.detailLayout.sample.profiles.audioLabel": "Audio",
   "resource.detailLayout.sample.profiles.audioValue": "DTS-HD MA 5.1",
   "resource.detailLayout.sample.profiles.subsLabel": "Subs",
-  "resource.detailLayout.sample.profiles.subsValue": "EN, CN, JP"
+  "resource.detailLayout.sample.profiles.subsValue": "EN, CN, JP",
+  "resource.detailLayout.section.collections": "Collections",
+  "resource.detailLayout.sample.collections.first": "Complete Works",
+  "resource.detailLayout.sample.collections.second": "To read",
+  "resource.contextMenu.addToCollections": "Add to collections…",
+  "resource.contextMenu.addToCollectionsForCount": "Add {{count}} resources to collections…",
+  "resource.collections.label": "Collections",
+  "resource.collections.added": "Added.",
+  "resource.collections.removed": "Removed.",
+  "resource.collections.remove": "Take out of this collection",
+  "resource.collections.fromRule": "In this collection because it matches its rule — edit the rule to change that.",
+  "resource.collections.ruleShort": "rule",
+  "resource.collections.pick": "Pick a collection"
 }

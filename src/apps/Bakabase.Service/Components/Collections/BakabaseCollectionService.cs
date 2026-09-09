@@ -11,7 +11,9 @@ using Bakabase.Modules.Acquisition.Abstractions.Services;
 using Bakabase.Modules.Collection.Abstractions.Models.Db;
 using Bakabase.Modules.Collection.Abstractions.Services;
 using Bakabase.Modules.Collection.Services;
+using Bakabase.InsideWorld.Business.Components.Gui;
 using Bootstrap.Components.Orm;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 
 namespace Bakabase.Service.Components.Collections;
@@ -32,9 +34,27 @@ public class BakabaseCollectionService(
     IResourceProfileService profiles,
     IAcquisitionService acquisitions,
     CollectionRuleCache ruleCache,
+    IHubContext<WebGuiHub, IWebGuiClient> uiHub,
     ILogger<BakabaseCollectionService> logger)
     : CollectionService<BakabaseDbContext>(orm, mappings, resources, changePublisher)
 {
+    /// <summary>
+    /// A collection's numbers are what people watch it for, so a window showing them hears about
+    /// a change rather than finding out on its next poll.
+    /// </summary>
+    protected override async Task OnCollectionChanged(int collectionId, CancellationToken ct)
+    {
+        var collection = await Get(collectionId, true, ct);
+
+        if (collection != null)
+        {
+            await uiHub.Clients.All.GetIncrementalData("Collection", collection);
+        }
+    }
+
+    protected override Task OnCollectionRemoved(int collectionId, CancellationToken ct) =>
+        uiHub.Clients.All.DeleteData("Collection", collectionId);
+
     protected override async Task<IReadOnlyList<int>> RuleMatchedResourceIds(int collectionId,
         CancellationToken ct)
     {

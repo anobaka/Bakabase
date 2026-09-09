@@ -177,5 +177,17 @@
   "resource.detailLayout.sample.profiles.audioLabel": "音轨",
   "resource.detailLayout.sample.profiles.audioValue": "DTS-HD MA 5.1",
   "resource.detailLayout.sample.profiles.subsLabel": "字幕",
-  "resource.detailLayout.sample.profiles.subsValue": "中、英、日"
+  "resource.detailLayout.sample.profiles.subsValue": "中、英、日",
+  "resource.detailLayout.section.collections": "集合",
+  "resource.detailLayout.sample.collections.first": "全集",
+  "resource.detailLayout.sample.collections.second": "待读",
+  "resource.contextMenu.addToCollections": "加入集合…",
+  "resource.contextMenu.addToCollectionsForCount": "将 {{count}} 个资源加入集合…",
+  "resource.collections.label": "所属集合",
+  "resource.collections.added": "已加入。",
+  "resource.collections.removed": "已移出。",
+  "resource.collections.remove": "移出该集合",
+  "resource.collections.fromRule": "因匹配规则而属于该集合，如需变更请修改规则。",
+  "resource.collections.ruleShort": "规则",
+  "resource.collections.pick": "选择集合"
 }

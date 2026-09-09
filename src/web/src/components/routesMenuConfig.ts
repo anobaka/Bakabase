@@ -30,6 +30,7 @@ import {
   AiOutlineBell,
   AiOutlineCloudServer,
   AiOutlineCloudDownload,
+  AiOutlineFolderOpen,
   AiOutlinePartition,
   AiOutlineMobile,
 } from "react-icons/ai";
@@ -76,6 +77,8 @@ import DataCardPage from "@/pages/data-card";
 import HealthScorePage from "@/pages/health-score";
 import SubscriptionPage from "@/pages/subscription";
 import AcquisitionPage from "@/pages/acquisition";
+import CollectionPage from "@/pages/collection";
+import CollectionDetailPage from "@/pages/collection/detail";
 import WorkflowPage from "@/pages/workflow";
 import WorkflowEditorPage from "@/pages/workflow/editor";
 import { SteamIcon, DLsiteIcon, ExHentaiIcon } from "@/components/SourceIcons";
@@ -329,6 +332,22 @@ export const routesMenuConfig: RouteMenuItem[] = [
         layout: "basic",
         menu: true,
         isBeta: true,
+      },
+      {
+        name: "menu.collection",
+        path: "/collections",
+        component: CollectionPage,
+        icon: AiOutlineFolderOpen,
+        layout: "basic",
+        menu: true,
+        isBeta: true,
+      },
+      {
+        name: "menu.collection",
+        path: "/collections/detail",
+        component: CollectionDetailPage,
+        layout: "basic",
+        menu: false,
       },
       {
         name: "menu.workflow",

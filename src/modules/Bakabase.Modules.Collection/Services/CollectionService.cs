@@ -69,7 +69,11 @@ public class CollectionService<TDbContext>(
             UpdatedAt = now,
         });
 
-        return created.Data!.ToDomainModel();
+        var domain = created.Data!.ToDomainModel();
+
+        await OnCollectionChanged(domain.Id, ct);
+
+        return domain;
     }
 
     public async Task<ResourceCollection> Put(int id, CollectionInputModel input, CancellationToken ct = default)
@@ -98,6 +102,8 @@ public class CollectionService<TDbContext>(
             await PublishMembersChanged(await MemberResourceIds(id, ct));
         }
 
+        await OnCollectionChanged(id, ct);
+
         return row.ToDomainModel();
     }
 
@@ -108,6 +114,7 @@ public class CollectionService<TDbContext>(
         await mappings.RemoveByCollectionId(id, ct);
         await orm.RemoveByKey(id);
         await PublishMembersChanged(affected);
+        await OnCollectionRemoved(id, ct);
     }
 
     public async Task<List<CollectionMember>> GetMembers(int id, CancellationToken ct = default)
@@ -192,7 +199,11 @@ public class CollectionService<TDbContext>(
     {
         var added = await mappings.Add(id, resourceIds, origin, subscriptionId, ct);
 
-        if (added > 0) await PublishMembersChanged(resourceIds);
+        if (added > 0)
+        {
+            await PublishMembersChanged(resourceIds);
+            await OnCollectionChanged(id, ct);
+        }
     }
 
     public async Task RemoveMembers(int id, IReadOnlyCollection<int> resourceIds,
@@ -200,6 +211,7 @@ public class CollectionService<TDbContext>(
     {
         await mappings.Remove(id, resourceIds, ct);
         await PublishMembersChanged(resourceIds);
+        await OnCollectionChanged(id, ct);
     }
 
     public async Task SetMemberIgnored(int id, int resourceId, bool ignored, CancellationToken ct = default)
@@ -207,15 +219,31 @@ public class CollectionService<TDbContext>(
         await mappings.SetIgnored(id, resourceId, ignored, ct);
         // Ignoring changes the collected ratio but not which collections the resource is in, so the
         // resource itself is unchanged — only the collection's own numbers move.
+        await OnCollectionChanged(id, ct);
     }
 
-    public Task ReorderMembers(int id, IReadOnlyList<int> resourceIdsInOrder, CancellationToken ct = default) =>
-        mappings.Reorder(id, resourceIdsInOrder, ct);
+    public async Task ReorderMembers(int id, IReadOnlyList<int> resourceIdsInOrder,
+        CancellationToken ct = default)
+    {
+        await mappings.Reorder(id, resourceIdsInOrder, ct);
+        await OnCollectionChanged(id, ct);
+    }
 
     // ------- helpers -------
 
     private async Task<List<int>> MemberResourceIds(int id, CancellationToken ct) =>
         (await GetMembers(id, ct)).Select(m => m.ResourceId).ToList();
+
+    /// <summary>
+    /// This collection changed in a way a page showing it would want to know about. Overridden in
+    /// the app layer to push it to open windows; the module has no idea a UI exists.
+    /// </summary>
+    protected virtual Task OnCollectionChanged(int collectionId, CancellationToken ct) =>
+        Task.CompletedTask;
+
+    /// <summary>This collection is gone. Same reason, opposite direction.</summary>
+    protected virtual Task OnCollectionRemoved(int collectionId, CancellationToken ct) =>
+        Task.CompletedTask;
 
     /// <summary>
     /// Resources the collection's rule matches. Overridden in the app layer, where the search
