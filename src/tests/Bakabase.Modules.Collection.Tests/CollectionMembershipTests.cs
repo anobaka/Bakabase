@@ -163,6 +163,38 @@ public sealed class CollectionMembershipTests
         CollectionAssert.AreEquivalent(new[] {first, second}, byResource[resourceId].ToArray());
     }
 
+    /// <summary>
+    /// The design document's acceptance case for collections, kept as a test because it is the
+    /// number a user looks at: five things you have plus three you do not is 62.5%, and getting
+    /// one of them is 75%.
+    /// </summary>
+    [TestMethod]
+    public async Task FiveHadAndThreeMissingReadsAsSixtyTwoAndAHalfPercent()
+    {
+        var id = await NewCollection();
+        var members = new List<int>();
+
+        for (var i = 1; i <= 5; i++) members.Add(await Owned($"Volume {i}"));
+
+        var next = await Missing("Volume 6");
+
+        members.Add(next);
+        members.Add(await Missing("Volume 7"));
+        members.Add(await Missing("Volume 8"));
+
+        await Collections.AddMembers(id, members);
+
+        Assert.AreEqual(0.625, (await Collections.GetProgress(id)).Ratio, 0.0001);
+
+        // One of them lands — which is all "acquired" means to the ratio.
+        var resource = (await Resources.Get(next))!;
+
+        resource.Path = "/library/Volume 6";
+        await Resources.AddOrPutRange([resource]);
+
+        Assert.AreEqual(0.75, (await Collections.GetProgress(id)).Ratio, 0.0001);
+    }
+
     [TestMethod]
     public async Task MembersKeepTheOrderTheyWereGiven()
     {

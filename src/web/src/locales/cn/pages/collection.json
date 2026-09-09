@@ -5,7 +5,6 @@
   "collection.saved": "已保存。",
   "collection.deleted": "已删除。",
   "collection.percentComplete": "已收集 {{percent}}%",
-
   "collection.action.create": "新建集合",
   "collection.action.createFirst": "创建第一个集合",
   "collection.action.search": "搜索集合",
@@ -15,29 +14,22 @@
   "collection.action.save": "保存",
   "collection.action.saveRule": "保存规则",
   "collection.action.backToList": "返回集合列表",
-
   "collection.confirm.deleteTitle": "删除「{{name}}」？",
   "collection.confirm.delete": "只删除集合本身。",
   "collection.confirm.deleteKeepsResources": "集合内的资源不受影响。",
-
   "collection.error.nameEmpty": "集合需要一个名称。",
-
   "collection.empty.title": "还没有集合",
   "collection.empty.description": "集合是一组资源的名字，其中一些你还没有。它能告诉你一个系列到底收集了多少、还缺哪些。",
-
   "collection.progress.owned": "已有 {{count}}",
   "collection.progress.acquiring": "获取中 {{count}}",
   "collection.progress.missing": "缺失 {{count}}",
   "collection.progress.ignored": "已忽略 {{count}}",
-
   "collection.tab.members": "成员",
   "collection.tab.source": "来源",
   "collection.tab.rule": "规则",
   "collection.tab.settings": "设置",
-
   "collection.source.placeholder": "该集合没有外部来源。",
   "collection.source.placeholderHint": "订阅功能上线后，由订阅带入的成员会在这里标明来源。",
-
   "collection.member.filter.all": "全部",
   "collection.member.filter.owned": "已有",
   "collection.member.filter.missing": "缺失",
@@ -56,13 +48,11 @@
   "collection.member.groupBy": "按属性分组",
   "collection.member.groupNothing": "不分组",
   "collection.member.groupNone": "未填写",
-
   "collection.label.name": "名称",
   "collection.label.description": "描述",
   "collection.label.order": "排序",
   "collection.label.autoAcquire": "自动获取缺失成员",
   "collection.label.autoAcquireDescription": "当集合中出现你没有的成员时，直接开始获取，无需确认。",
-
   "collection.selector.title": "将选中的 {{count}} 个资源加入集合",
   "collection.selector.description": "绿色表示全部选中资源都在其中，黄色表示部分在其中；保存时黄色的集合保持原样。",
   "collection.selector.all": "全部选中资源都在该集合中",
@@ -72,7 +62,6 @@
   "collection.selector.reset": "撤销",
   "collection.selector.submit": "保存",
   "collection.selector.saved": "已保存。",
-
   "collection.rule.title": "规则",
   "collection.rule.tip": "符合规则的资源自动属于该集合，无需手动添加。",
   "collection.rule.description": "符合规则的资源自动属于该集合，无需手动添加；手动添加的成员同样保留。",
@@ -82,5 +71,9 @@
   "collection.rule.checking": "正在计算匹配结果…",
   "collection.rule.failed": "无法解析该规则。",
   "collection.rule.clear": "清除规则",
-  "collection.rule.sample": "例如"
+  "collection.rule.sample": "例如",
+  "collection.action.acquireMissing": "获取缺失成员",
+  "collection.acquireMissing.started": "已开始获取 {{count}} 个。",
+  "collection.acquireMissing.noLeads": "有 {{count}} 个缺失成员还没有获取线索。",
+  "collection.acquireMissing.nothingToDo": "没有需要获取的成员。"
 }

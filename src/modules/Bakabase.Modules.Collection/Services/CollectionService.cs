@@ -4,7 +4,9 @@ using Bakabase.Modules.Collection.Abstractions.Models.Db;
 using Bakabase.Modules.Collection.Abstractions.Models.Domain;
 using Bakabase.Modules.Collection.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Collection.Abstractions.Services;
+using Bakabase.Modules.Collection.Components.Workflow;
 using Bakabase.Modules.Collection.Models.Input;
+using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bootstrap.Components.Orm;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,7 +16,8 @@ public class CollectionService<TDbContext>(
     FullMemoryCacheResourceService<TDbContext, CollectionDbModel, int> orm,
     ICollectionResourceMappingService mappings,
     IResourceService resources,
-    IResourceDataChangeEventPublisher changePublisher)
+    IResourceDataChangeEventPublisher changePublisher,
+    IWorkflowEventBus eventBus)
     : ICollectionService
     where TDbContext : DbContext
 {
@@ -203,6 +206,7 @@ public class CollectionService<TDbContext>(
         {
             await PublishMembersChanged(resourceIds);
             await OnCollectionChanged(id, ct);
+            await PublishMembersAdded(id, resourceIds, origin, subscriptionId, ct);
         }
     }
 
@@ -233,6 +237,29 @@ public class CollectionService<TDbContext>(
 
     private async Task<List<int>> MemberResourceIds(int id, CancellationToken ct) =>
         (await GetMembers(id, ct)).Select(m => m.ResourceId).ToList();
+
+    /// <summary>
+    /// Something joined this collection. Workflows react to it — "when something I do not have
+    /// joins this, go and get it" — so it fires only when membership actually changed, never on a
+    /// re-add of what is already there.
+    /// </summary>
+    private async Task PublishMembersAdded(int id, IReadOnlyCollection<int> resourceIds,
+        CollectionMembershipOrigin origin, int? subscriptionId, CancellationToken ct)
+    {
+        var collection = await orm.GetByKey(id, false);
+
+        if (collection == null) return;
+
+        await eventBus.PublishAsync(CollectionWorkflowKinds.TriggerMembersAdded,
+            new CollectionMembersAddedPayload
+            {
+                CollectionId = id,
+                CollectionName = collection.Name,
+                ResourceIds = resourceIds.ToArray(),
+                Origin = origin,
+                SubscriptionId = subscriptionId,
+            }, ct);
+    }
 
     /// <summary>
     /// This collection changed in a way a page showing it would want to know about. Overridden in

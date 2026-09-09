@@ -11,6 +11,7 @@ using Bakabase.Modules.Acquisition.Abstractions.Services;
 using Bakabase.Modules.Collection.Abstractions.Models.Db;
 using Bakabase.Modules.Collection.Abstractions.Services;
 using Bakabase.Modules.Collection.Services;
+using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bakabase.InsideWorld.Business.Components.Gui;
 using Bootstrap.Components.Orm;
 using Microsoft.AspNetCore.SignalR;
@@ -31,12 +32,13 @@ public class BakabaseCollectionService(
     ICollectionResourceMappingService mappings,
     IResourceService resources,
     IResourceDataChangeEventPublisher changePublisher,
+    IWorkflowEventBus eventBus,
     IResourceProfileService profiles,
     IAcquisitionService acquisitions,
     CollectionRuleCache ruleCache,
     IHubContext<WebGuiHub, IWebGuiClient> uiHub,
     ILogger<BakabaseCollectionService> logger)
-    : CollectionService<BakabaseDbContext>(orm, mappings, resources, changePublisher)
+    : CollectionService<BakabaseDbContext>(orm, mappings, resources, changePublisher, eventBus)
 {
     /// <summary>
     /// A collection's numbers are what people watch it for, so a window showing them hears about

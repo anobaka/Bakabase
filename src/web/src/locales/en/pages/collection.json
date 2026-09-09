@@ -5,7 +5,6 @@
   "collection.saved": "Saved.",
   "collection.deleted": "Deleted.",
   "collection.percentComplete": "{{percent}}% collected",
-
   "collection.action.create": "New collection",
   "collection.action.createFirst": "Make the first one",
   "collection.action.search": "Find a collection",
@@ -15,29 +14,22 @@
   "collection.action.save": "Save",
   "collection.action.saveRule": "Save the rule",
   "collection.action.backToList": "Back to collections",
-
   "collection.confirm.deleteTitle": "Delete {{name}}?",
   "collection.confirm.delete": "The collection goes; nothing else does.",
   "collection.confirm.deleteKeepsResources": "The resources in it stay exactly where they are.",
-
   "collection.error.nameEmpty": "A collection needs a name.",
-
   "collection.empty.title": "Nothing collected yet",
   "collection.empty.description": "A collection is a name over a set of things, some of which you do not have yet. It tells you how much of a series you actually own, and what is still missing.",
-
   "collection.progress.owned": "{{count}} here",
   "collection.progress.acquiring": "{{count}} on the way",
   "collection.progress.missing": "{{count}} missing",
   "collection.progress.ignored": "{{count}} set aside",
-
   "collection.tab.members": "Members",
   "collection.tab.source": "Source",
   "collection.tab.rule": "Rule",
   "collection.tab.settings": "Settings",
-
   "collection.source.placeholder": "Nothing outside Bakabase feeds this collection.",
   "collection.source.placeholderHint": "Subscriptions will be able to, and members they bring in will say so here.",
-
   "collection.member.filter.all": "All",
   "collection.member.filter.owned": "Here",
   "collection.member.filter.missing": "Missing",
@@ -56,13 +48,11 @@
   "collection.member.groupBy": "Group by",
   "collection.member.groupNothing": "No grouping",
   "collection.member.groupNone": "Not set",
-
   "collection.label.name": "Name",
   "collection.label.description": "Description",
   "collection.label.order": "Order",
   "collection.label.autoAcquire": "Get missing members automatically",
   "collection.label.autoAcquireDescription": "When something joins this collection that you do not have, start getting it without asking.",
-
   "collection.selector.title": "Put {{count}} selected in collections",
   "collection.selector.description": "Green means every selected resource is in it, yellow means some are, and a yellow one is left alone when you save.",
   "collection.selector.all": "All of the selection is in this one",
@@ -72,7 +62,6 @@
   "collection.selector.reset": "Undo",
   "collection.selector.submit": "Save",
   "collection.selector.saved": "Done.",
-
   "collection.rule.title": "Rule",
   "collection.rule.tip": "Whatever matches this rule is in the collection, without anybody adding it.",
   "collection.rule.description": "Whatever matches this is in the collection, without anybody adding it. Members you add by hand stay in as well.",
@@ -84,5 +73,9 @@
   "collection.rule.checking": "Checking what this catches…",
   "collection.rule.failed": "That rule could not be read.",
   "collection.rule.clear": "Remove the rule",
-  "collection.rule.sample": "For example"
+  "collection.rule.sample": "For example",
+  "collection.action.acquireMissing": "Get what is missing",
+  "collection.acquireMissing.started": "Started getting {{count}}.",
+  "collection.acquireMissing.noLeads": "{{count}} missing members have nowhere to be got from yet.",
+  "collection.acquireMissing.nothingToDo": "Nothing left to get."
 }

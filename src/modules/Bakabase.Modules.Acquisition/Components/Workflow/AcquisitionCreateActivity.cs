@@ -87,12 +87,3 @@ public class AcquisitionCreateActivity : IWorkflowActivity
         return WorkflowItemOutcome.KeepItem;
     }
 }
-
-/// <summary>
-/// An item that knows which resource it is about. The capability an activity needs in order to act
-/// on a resource without caring where the item came from.
-/// </summary>
-public interface IHasResourceId : IWorkflowItemContract
-{
-    int ResourceId { get; }
-}

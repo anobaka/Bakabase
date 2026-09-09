@@ -5,7 +5,7 @@ import type { CollectionModel } from "@/stores/collections";
 import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { AiOutlineArrowLeft, AiOutlineSearch } from "react-icons/ai";
+import { AiOutlineArrowLeft, AiOutlineCloudDownload, AiOutlineSearch } from "react-icons/ai";
 
 import CompositionBar from "../components/CompositionBar";
 import { buildCollectionSearch, percent } from "../helpers";
@@ -37,6 +37,7 @@ const CollectionDetailPage = () => {
   const [loading, setLoading] = useState(true);
   // undefined means "not edited since the last save", which is also what disables the button.
   const [ruleDraft, setRuleDraft] = useState<string | null>();
+  const [acquiring, setAcquiring] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) {
@@ -83,6 +84,35 @@ const CollectionDetailPage = () => {
     if (location.pathname !== "/resource") navigate("/resource");
   };
 
+  /**
+   * The list of missing members is already on screen; turning it into a queue should not mean
+   * clicking each one. Members with nowhere to be got from are counted, not complained about.
+   */
+  const acquireMissing = async () => {
+    setAcquiring(true);
+    try {
+      const result = (await BApi.collection.acquireMissingCollectionMembers(collection.id)).data;
+
+      if (!result) return;
+
+      if (result.started > 0) {
+        toast.success(t<string>("collection.acquireMissing.started", { count: result.started }));
+      } else if (result.withoutLead > 0) {
+        toast.warning(
+          t<string>("collection.acquireMissing.noLeads", { count: result.withoutLead }),
+        );
+      } else {
+        toast.default(t<string>("collection.acquireMissing.nothingToDo"));
+      }
+
+      for (const problem of result.problems ?? []) toast.danger(problem);
+
+      await load();
+    } finally {
+      setAcquiring(false);
+    }
+  };
+
   const saveRule = async () => {
     await BApi.collection.putCollection(collection.id, {
       ...collection,
@@ -110,6 +140,18 @@ const CollectionDetailPage = () => {
             <AiOutlineSearch className="text-base" />
           </Button>
         </Tooltip>
+        <Button
+          className="ml-auto"
+          color="primary"
+          isDisabled={(collection.progress?.total ?? 0) === 0}
+          isLoading={acquiring}
+          size="sm"
+          startContent={<AiOutlineCloudDownload className="text-base" />}
+          variant="flat"
+          onPress={acquireMissing}
+        >
+          {t<string>("collection.action.acquireMissing")}
+        </Button>
       </div>
 
       <CompositionBar collection={collection} />

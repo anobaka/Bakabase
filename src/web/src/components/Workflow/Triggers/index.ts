@@ -8,6 +8,7 @@ import { FsWatchTriggerUI } from "./FsWatch";
 import { ResourceMaterializedTriggerUI } from "./ResourceMaterialized";
 import { AcquisitionRequestedTriggerUI } from "./AcquisitionRequested";
 import { AcquisitionStatusChangedTriggerUI } from "./AcquisitionStatusChanged";
+import { CollectionMembersAddedTriggerUI } from "./CollectionMembersAdded";
 
 /**
  * Registry of trigger UIs keyed by their backend `kind`.
@@ -23,6 +24,7 @@ export const workflowTriggerRegistry: Record<string, WorkflowTriggerUI<any>> = {
   [ResourceMaterializedTriggerUI.kind]: ResourceMaterializedTriggerUI,
   [AcquisitionRequestedTriggerUI.kind]: AcquisitionRequestedTriggerUI,
   [AcquisitionStatusChangedTriggerUI.kind]: AcquisitionStatusChangedTriggerUI,
+  [CollectionMembersAddedTriggerUI.kind]: CollectionMembersAddedTriggerUI,
 };
 
 export function getWorkflowTriggerUI(kind: string): WorkflowTriggerUI<any> | undefined {

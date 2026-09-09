@@ -4757,6 +4757,14 @@ export interface BakabaseServiceControllersChatControllerUpdateTitleRequest {
   title: string;
 }
 
+export interface BakabaseServiceControllersCollectionAcquireMissingResult {
+  /** @format int32 */
+  started: number;
+  /** @format int32 */
+  withoutLead: number;
+  problems: string[];
+}
+
 export interface BakabaseServiceControllersCollectionPlaceholderInputModel {
   title: string;
 }
@@ -7062,6 +7070,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceC
   code: number;
   message?: string;
   data?: BakabaseServiceControllersAppDataPathControllerValidateResponse;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceControllersCollectionAcquireMissingResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceControllersCollectionAcquireMissingResult;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceControllersCollectionRulePreview {
@@ -13297,6 +13312,24 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       return baseUrl + path;
     },
+
+    /**
+     * No description
+     *
+     * @tags Collection
+     * @name AcquireMissingCollectionMembers
+     * @request POST:/collection/{id}/acquire-missing
+     */
+    acquireMissingCollectionMembers: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceControllersCollectionAcquireMissingResult,
+        any
+      >({
+        path: `/collection/${id}/acquire-missing`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
 
     /**
      * No description

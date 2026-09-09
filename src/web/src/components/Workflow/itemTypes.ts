@@ -13,4 +13,5 @@ export const WorkflowItemTypes = {
   Resource: "item.resource",
   Acquisition: "item.acquisition",
   AcquisitionStatusChange: "item.acquisition.statusChange",
+  CollectionMember: "item.collection.member",
 } as const;

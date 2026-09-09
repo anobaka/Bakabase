@@ -5,6 +5,7 @@ using Bakabase.Modules.Collection.Abstractions.Models.Db;
 using Bakabase.Modules.Collection.Abstractions.Services;
 using Bakabase.Modules.Collection.Models.Input;
 using Bakabase.Modules.Collection.Services;
+using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bakabase.TestKit.Utils;
 using Bootstrap.Components.Orm;
 using Microsoft.Extensions.DependencyInjection;
@@ -34,7 +35,8 @@ public sealed class CollectionNotificationTests
             _sp.GetRequiredService<FullMemoryCacheResourceService<BakabaseDbContext, CollectionDbModel, int>>(),
             _sp.GetRequiredService<ICollectionResourceMappingService>(),
             _sp.GetRequiredService<IResourceService>(),
-            _sp.GetRequiredService<IResourceDataChangeEventPublisher>());
+            _sp.GetRequiredService<IResourceDataChangeEventPublisher>(),
+            _sp.GetRequiredService<IWorkflowEventBus>());
     }
 
     private async Task<int> NewResource(string title) =>
@@ -95,8 +97,9 @@ public sealed class CollectionNotificationTests
         FullMemoryCacheResourceService<BakabaseDbContext, CollectionDbModel, int> orm,
         ICollectionResourceMappingService mappings,
         IResourceService resources,
-        IResourceDataChangeEventPublisher changePublisher)
-        : CollectionService<BakabaseDbContext>(orm, mappings, resources, changePublisher)
+        IResourceDataChangeEventPublisher changePublisher,
+        IWorkflowEventBus eventBus)
+        : CollectionService<BakabaseDbContext>(orm, mappings, resources, changePublisher, eventBus)
     {
         public List<int> Changed { get; } = [];
 

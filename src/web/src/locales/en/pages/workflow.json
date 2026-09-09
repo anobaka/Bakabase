@@ -290,5 +290,16 @@
   "workflow.editor.canvas.zoomIn": "Zoom in",
   "workflow.editor.canvas.zoomOut": "Zoom out",
   "workflow.editor.canvas.resetZoom": "Reset zoom to 100%",
-  "workflow.editor.canvas.fit": "Center the chain"
+  "workflow.editor.canvas.fit": "Center the chain",
+  "workflow.trigger.collectionMembersAdded.displayName": "Added to a collection",
+  "workflow.trigger.collectionMembersAdded.collections.label": "Collections",
+  "workflow.trigger.collectionMembersAdded.collections.description": "Leave empty to react to any collection.",
+  "workflow.trigger.collectionMembersAdded.origins.label": "Added by",
+  "workflow.trigger.collectionMembersAdded.origins.description": "Leave empty to react however it got there.",
+  "workflow.trigger.collectionMembersAdded.summary.matchAll": "Anything joining any collection",
+  "workflow.trigger.collectionMembersAdded.summary.collections": "{{count}} collections",
+  "workflow.collection.addResource.displayName": "Add to a collection",
+  "workflow.collection.addResource.collection.label": "Collection",
+  "workflow.collection.addResource.collection.description": "Where the resource is filed.",
+  "workflow.collection.addResource.notChosen": "Pick a collection."
 }

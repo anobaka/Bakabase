@@ -289,5 +289,16 @@
   "workflow.editor.canvas.zoomIn": "放大",
   "workflow.editor.canvas.zoomOut": "缩小",
   "workflow.editor.canvas.resetZoom": "恢复 100%",
-  "workflow.editor.canvas.fit": "居中显示链条"
+  "workflow.editor.canvas.fit": "居中显示链条",
+  "workflow.trigger.collectionMembersAdded.displayName": "加入集合时",
+  "workflow.trigger.collectionMembersAdded.collections.label": "集合",
+  "workflow.trigger.collectionMembersAdded.collections.description": "留空表示对任意集合生效。",
+  "workflow.trigger.collectionMembersAdded.origins.label": "加入方式",
+  "workflow.trigger.collectionMembersAdded.origins.description": "留空表示不限加入方式。",
+  "workflow.trigger.collectionMembersAdded.summary.matchAll": "任意资源加入任意集合",
+  "workflow.trigger.collectionMembersAdded.summary.collections": "{{count}} 个集合",
+  "workflow.collection.addResource.displayName": "加入集合",
+  "workflow.collection.addResource.collection.label": "集合",
+  "workflow.collection.addResource.collection.description": "资源将被加入该集合。",
+  "workflow.collection.addResource.notChosen": "请选择一个集合。"
 }

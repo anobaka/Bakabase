@@ -1508,6 +1508,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/collection/{id}/acquire-missing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AcquireMissingCollectionMembers"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/collection/{id}/progress": {
         parameters: {
             query?: never;
@@ -10760,6 +10776,13 @@ export interface components {
         "Bakabase.Service.Controllers.ChatController+UpdateTitleRequest": {
             title: string;
         };
+        "Bakabase.Service.Controllers.CollectionAcquireMissingResult": {
+            /** Format: int32 */
+            started: number;
+            /** Format: int32 */
+            withoutLead: number;
+            problems: string[];
+        };
         "Bakabase.Service.Controllers.CollectionPlaceholderInputModel": {
             title: string;
         };
@@ -12717,6 +12740,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Controllers.AppDataPathController+ValidateResponse"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.CollectionAcquireMissingResult]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Controllers.CollectionAcquireMissingResult"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.CollectionRulePreview]": {
             /** Format: int32 */
@@ -16722,6 +16751,30 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.CollectionRulePreview]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.CollectionRulePreview]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.CollectionRulePreview]"];
+                };
+            };
+        };
+    };
+    AcquireMissingCollectionMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.CollectionAcquireMissingResult]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.CollectionAcquireMissingResult]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.CollectionAcquireMissingResult]"];
                 };
             };
         };

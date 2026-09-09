@@ -7,6 +7,7 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
 using Bakabase.Modules.Collection.Abstractions.Models.Domain;
 using Bakabase.Modules.Collection.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.Acquisition.Abstractions.Services;
 using Bakabase.Modules.Collection.Abstractions.Services;
 using Bakabase.Modules.Collection.Models.Input;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
@@ -166,6 +167,60 @@ public class CollectionController(
         }
     }
 
+    /// <summary>
+    /// Starts getting every member that is missing and has somewhere to be got from.
+    /// <para>
+    /// This is the whole point of knowing what you do not have: the list of missing members is
+    /// already on screen, and turning it into a queue should not mean clicking each one.
+    /// </para>
+    /// </summary>
+    [HttpPost("{id:int}/acquire-missing")]
+    [SwaggerOperation(OperationId = "AcquireMissingCollectionMembers")]
+    public async Task<SingletonResponse<CollectionAcquireMissingResult>> AcquireMissing(int id,
+        [FromServices] IAcquisitionService acquisitions,
+        [FromServices] IAcquisitionLeadService leads)
+    {
+        var missing = await service.SearchMembers(id, CollectionMemberFilter.Missing, 1, 500);
+
+        if (missing.ResourceIds.Count == 0)
+        {
+            return new SingletonResponse<CollectionAcquireMissingResult>(
+                new CollectionAcquireMissingResult(0, 0, []));
+        }
+
+        var leadsByResource = await leads.GetByResourceIds(missing.ResourceIds);
+        var started = 0;
+        var withoutLead = 0;
+        var problems = new List<string>();
+
+        foreach (var resourceId in missing.ResourceIds)
+        {
+            // No lead means nothing says where to get it. That is an ordinary state for a member
+            // somebody typed in by hand, not a failure worth reporting one by one.
+            if (leadsByResource.GetValueOrDefault(resourceId)?.FirstOrDefault() is not { } lead)
+            {
+                withoutLead++;
+                continue;
+            }
+
+            try
+            {
+                await acquisitions.CreateAsync(resourceId, lead.Kind, lead.Value,
+                    lead.Id == 0 ? null : lead.Id, collectionId: id);
+                started++;
+            }
+            catch (InvalidOperationException e)
+            {
+                // Already being acquired, or no recipe handles that kind of lead. Named rather
+                // than swallowed: the count alone would not say why nothing happened.
+                problems.Add($"#{resourceId}: {e.Message}");
+            }
+        }
+
+        return new SingletonResponse<CollectionAcquireMissingResult>(
+            new CollectionAcquireMissingResult(started, withoutLead, problems));
+    }
+
     [HttpGet("{id:int}/progress")]
     [SwaggerOperation(OperationId = "GetCollectionProgress")]
     public async Task<SingletonResponse<CollectionProgress>> GetProgress(int id) =>
@@ -191,6 +246,14 @@ public record CollectionRulePreviewInputModel
     /// <summary>How many matching resource ids to return as a sample.</summary>
     public int SampleSize { get; set; } = 24;
 }
+
+/// <param name="Started">How many acquisitions were started.</param>
+/// <param name="WithoutLead">
+/// How many missing members have nowhere to be got from — an ordinary state for one somebody
+/// typed in by hand, not a failure.
+/// </param>
+/// <param name="Problems">Members that could not be started, and why.</param>
+public record CollectionAcquireMissingResult(int Started, int WithoutLead, List<string> Problems);
 
 /// <param name="TotalCount">How many resources the rule matches.</param>
 /// <param name="SampleResourceIds">The first few of them, for the editor to show.</param>
