@@ -4657,6 +4657,12 @@ export interface BakabaseServiceModelsInputResourceCoverSaveInputModel {
   saveMode: BakabaseInsideWorldModelsConstantsCoverSaveMode;
 }
 
+export interface BakabaseServiceModelsInputResourceMaterializeInputModel {
+  /** @minLength 1 */
+  path: string;
+  mergeIfOccupied: boolean;
+}
+
 export interface BakabaseServiceModelsInputResourceMediaLibraryMappingInputModel {
   mediaLibraryIds: number[];
 }
@@ -5217,6 +5223,15 @@ export interface BakabaseServiceModelsViewResourceHierarchyContextViewModel {
   ancestors: BakabaseServiceModelsViewResourceAncestorViewModel[];
   /** @format int32 */
   childrenCount?: number;
+}
+
+export interface BakabaseServiceModelsViewResourceMaterializeResultViewModel {
+  materialized: boolean;
+  path?: string;
+  /** @format int32 */
+  occupiedByResourceId?: number;
+  occupiedByResourceName?: string;
+  merged: boolean;
 }
 
 export interface BakabaseServiceModelsViewResourcePathInfoViewModel {
@@ -6730,6 +6745,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceM
   code: number;
   message?: string;
   data?: BakabaseServiceModelsViewResourceHierarchyContextViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceMaterializeResultViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewResourceMaterializeResultViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceProfileViewModel {
@@ -8981,6 +9003,45 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       return baseUrl + path;
     },
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name MaterializeResource
+     * @request POST:/resource/{id}/materialize
+     */
+    materializeResource: (
+      id: number,
+      data: BakabaseServiceModelsInputResourceMaterializeInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceMaterializeResultViewModel,
+        any
+      >({
+        path: `/resource/${id}/materialize`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name DematerializeResource
+     * @request POST:/resource/{id}/dematerialize
+     */
+    dematerializeResource: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/${id}/dematerialize`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
 
     /**
      * No description

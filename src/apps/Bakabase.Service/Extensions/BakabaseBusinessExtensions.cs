@@ -1,4 +1,5 @@
 ﻿using Bakabase.Abstractions.Components.Events;
+using Bakabase.Service.Components.Workflow.Resources;
 using Bakabase.Service.Components.IdentityLookups;
 using Bakabase.Modules.Acquisition.Extensions;
 using Bakabase.Abstractions.Components.Tracing;
@@ -168,6 +169,7 @@ namespace Bakabase.Service.Extensions
             services.AddScoped<ISharedUrlTitleResolver, SharedUrlTitleResolver>();
             services.AddSingleton<IWorkflowTrigger, SubscriptionUpdatedTrigger>();
             services.AddSingleton<IWorkflowTrigger, DownloaderCompletedTrigger>();
+            services.AddSingleton<IWorkflowTrigger, ResourceMaterializedTrigger>();
             // Item type descriptors — give the editor type info to render and the AI
             // transform shape info for prompts.
             services.AddSingleton<IWorkflowItemTypeDescriptor, SubscriptionAnyItemTypeDescriptor>();
@@ -175,6 +177,7 @@ namespace Bakabase.Service.Extensions
             services.AddSingleton<IWorkflowItemTypeDescriptor, ExHentaiGalleryItemTypeDescriptor>();
             services.AddSingleton<IWorkflowItemTypeDescriptor, SearchQueryItemTypeDescriptor>();
             services.AddSingleton<IWorkflowItemTypeDescriptor, DownloaderCompletedItemTypeDescriptor>();
+            services.AddSingleton<IWorkflowItemTypeDescriptor, ResourceItemTypeDescriptor>();
             // Activities.
             services.AddSingleton<IWorkflowActivity, SubscriptionItemTitleContainsActivity>();
             services.AddSingleton<IWorkflowActivity, AiTransformActivity>();

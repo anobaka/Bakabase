@@ -10,4 +10,5 @@ export const WorkflowItemTypes = {
   SearchQuery: "item.searchQuery",
   DownloaderCompleted: "item.downloader.completed",
   FsEntry: "item.fs.entry",
+  Resource: "item.resource",
 } as const;

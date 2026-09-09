@@ -10,7 +10,9 @@ using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Input;
 using Bakabase.Abstractions.Services;
+using Bakabase.InsideWorld.Business.Workflow;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
+using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Models.Db;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Microsoft.Extensions.Logging;
@@ -24,9 +26,11 @@ public class ResourceMaterializationService : IResourceMaterializationService
     private readonly ResourceStructureService _structureService;
     private readonly IPathMarkSyncService _pathMarkSyncService;
     private readonly IResourceDataChangeEventPublisher _eventPublisher;
+    private readonly IResourceSourceLinkService _sourceLinkService;
     private readonly ICustomPropertyValueService _customPropertyValueService;
     private readonly IReservedPropertyValueService _reservedPropertyValueService;
     private readonly IEnhancerService _enhancerService;
+    private readonly IWorkflowEventBus _workflowEventBus;
     private readonly ILogger<ResourceMaterializationService> _logger;
 
     public ResourceMaterializationService(
@@ -34,18 +38,22 @@ public class ResourceMaterializationService : IResourceMaterializationService
         ResourceStructureService structureService,
         IPathMarkSyncService pathMarkSyncService,
         IResourceDataChangeEventPublisher eventPublisher,
+        IResourceSourceLinkService sourceLinkService,
         ICustomPropertyValueService customPropertyValueService,
         IReservedPropertyValueService reservedPropertyValueService,
         IEnhancerService enhancerService,
+        IWorkflowEventBus workflowEventBus,
         ILogger<ResourceMaterializationService> logger)
     {
         _resourceService = resourceService;
         _structureService = structureService;
         _pathMarkSyncService = pathMarkSyncService;
         _eventPublisher = eventPublisher;
+        _sourceLinkService = sourceLinkService;
         _customPropertyValueService = customPropertyValueService;
         _reservedPropertyValueService = reservedPropertyValueService;
         _enhancerService = enhancerService;
+        _workflowEventBus = workflowEventBus;
         _logger = logger;
     }
 
@@ -114,6 +122,10 @@ public class ResourceMaterializationService : IResourceMaterializationService
             resourceId, standardizedPath,
             mergedResourceId.HasValue ? $" (absorbed resource {mergedResourceId})" : null);
 
+        // Published last, once everything the chain might read is settled. Workflows are additive:
+        // a definition that does not care about this resource simply does not run.
+        await PublishMaterializedEvent(resourceId, standardizedPath, ct);
+
         return new MaterializationResult(resourceId, standardizedPath, mergedResourceId);
     }
 
@@ -145,6 +157,34 @@ public class ResourceMaterializationService : IResourceMaterializationService
 
         _logger.LogInformation("[Materialization] Resource {ResourceId} dematerialized (was at {Path})",
             resourceId, oldPath);
+    }
+
+    private async Task PublishMaterializedEvent(int resourceId, string path, CancellationToken ct)
+    {
+        try
+        {
+            var links = await _sourceLinkService.GetByResourceIds([resourceId]);
+            var reserved = await _reservedPropertyValueService.GetAll(v => v.ResourceId == resourceId);
+
+            await _workflowEventBus.PublishAsync(ResourceWorkflowKinds.TriggerMaterialized,
+                new ResourceMaterializedPayload
+                {
+                    ResourceId = resourceId,
+                    Path = path,
+                    Name = reserved.Select(v => v.Name).FirstOrDefault(n => !string.IsNullOrEmpty(n)) ??
+                           System.IO.Path.GetFileName(path),
+                    SourceLinks = links
+                        .Select(l => new ResourceWorkflowSourceLink(l.Source, l.SourceKey))
+                        .ToList()
+                }, ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // The resource is materialized either way; a workflow failing to start is not a reason
+            // to undo that.
+            _logger.LogError(ex, "[Materialization] Could not publish the materialized event for {ResourceId}",
+                resourceId);
+        }
     }
 
     /// <summary>

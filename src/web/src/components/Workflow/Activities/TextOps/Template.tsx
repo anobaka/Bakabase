@@ -6,7 +6,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 
 import {
-  FS_SYSTEM_VARIABLES,
+  ALL_SYSTEM_VARIABLES,
   referencedVariables,
   upstreamCapturedVariables,
 } from "../../variables";
@@ -28,9 +28,10 @@ const ConfigForm: React.FC<{
 }> = ({ value, onChange, upstream }) => {
   const { t } = useTranslation();
   const captured = upstreamCapturedVariables(upstream);
-  // The soft contract (capability map E4): captures upstream + the domain's system variables.
-  // System vars are listed for fs items; for other domains they simply won't resolve.
-  const available = [...captured, ...FS_SYSTEM_VARIABLES.filter((v) => !captured.includes(v))];
+  // The soft contract (capability map E4): captures upstream + the system variables of every
+  // domain. The form cannot tell which domain the chain is in; one from another domain simply
+  // won't resolve.
+  const available = [...captured, ...ALL_SYSTEM_VARIABLES.filter((v) => !captured.includes(v))];
   const referenced = referencedVariables(value.template);
   const unknown = referenced.filter((v) => !available.includes(v));
 

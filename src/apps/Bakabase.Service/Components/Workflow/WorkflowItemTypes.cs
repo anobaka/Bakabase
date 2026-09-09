@@ -25,4 +25,7 @@ public static class WorkflowItemTypes
 
     /// <summary>A filesystem entry (file or directory) — emitted by the fs.manualScan trigger.</summary>
     public const string FsEntry = "item.fs.entry";
+
+    /// <summary>A resource — emitted by the resource.materialized trigger.</summary>
+    public const string Resource = "item.resource";
 }

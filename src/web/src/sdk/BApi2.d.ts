@@ -5344,6 +5344,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/resource/{id}/materialize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MaterializeResource"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource/{id}/dematerialize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["DematerializeResource"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/resource/placeholder": {
         parameters: {
             query?: never;
@@ -10300,6 +10332,10 @@ export interface components {
             base64String: string;
             saveMode: components["schemas"]["Bakabase.InsideWorld.Models.Constants.CoverSaveMode"];
         };
+        "Bakabase.Service.Models.Input.ResourceMaterializeInputModel": {
+            path: string;
+            mergeIfOccupied: boolean;
+        };
         "Bakabase.Service.Models.Input.ResourceMediaLibraryMappingInputModel": {
             mediaLibraryIds: number[];
         };
@@ -10767,6 +10803,14 @@ export interface components {
             ancestors: components["schemas"]["Bakabase.Service.Models.View.ResourceAncestorViewModel"][];
             /** Format: int32 */
             childrenCount?: number;
+        };
+        "Bakabase.Service.Models.View.ResourceMaterializeResultViewModel": {
+            materialized: boolean;
+            path?: string;
+            /** Format: int32 */
+            occupiedByResourceId?: number;
+            occupiedByResourceName?: string;
+            merged: boolean;
         };
         "Bakabase.Service.Models.View.ResourcePathInfoViewModel": {
             /** Format: int32 */
@@ -12074,6 +12118,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Models.View.ResourceHierarchyContextViewModel"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceMaterializeResultViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.ResourceMaterializeResultViewModel"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileViewModel]": {
             /** Format: int32 */
@@ -24053,6 +24103,61 @@ export interface operations {
                 "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Input.ResourceTransferInputModel"];
             };
         };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    MaterializeResource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceMaterializeInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceMaterializeInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceMaterializeInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceMaterializeInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceMaterializeResultViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceMaterializeResultViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceMaterializeResultViewModel]"];
+                };
+            };
+        };
+    };
+    DematerializeResource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description OK */
             200: {

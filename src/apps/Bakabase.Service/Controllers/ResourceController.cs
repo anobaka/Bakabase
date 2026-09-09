@@ -64,7 +64,8 @@ public class ResourceController(
     IPropertyValueScopePreferenceService scopePreferenceService,
     Bakabase.Abstractions.Components.ResourceMove.ResourceMoveGuard resourceMoveGuard,
     Bakabase.Abstractions.Components.Localization.IBakabaseLocalizer bakabaseLocalizer,
-    IPlaceholderResourceService placeholderResourceService)
+    IPlaceholderResourceService placeholderResourceService,
+    IResourceMaterializationService materializationService)
     : Controller
 {
     [HttpGet("search-operation")]
@@ -609,6 +610,52 @@ public class ResourceController(
         }
 
         await service.Transfer(model);
+        return BaseResponseBuilder.Ok;
+    }
+
+    [HttpPost("{id:int}/materialize")]
+    [SwaggerOperation(OperationId = "MaterializeResource")]
+    public async Task<SingletonResponse<ResourceMaterializeResultViewModel>> Materialize(int id,
+        [FromBody] ResourceMaterializeInputModel model)
+    {
+        var standardized = model.Path.StandardizePath();
+        if (string.IsNullOrEmpty(standardized) ||
+            (!System.IO.Directory.Exists(standardized) && !System.IO.File.Exists(standardized)))
+        {
+            return SingletonResponseBuilder<ResourceMaterializeResultViewModel>.Build(
+                ResponseCode.InvalidPayloadOrOperation, bakabaseLocalizer.PathIsNotFound(model.Path));
+        }
+
+        // Asked before acting rather than caught after: merging deletes a resource, and the user
+        // deserves to be told which one before that happens.
+        var occupant = (await service.GetAllDbModels(r => r.Id != id))
+            .FirstOrDefault(r => !string.IsNullOrEmpty(r.Path) &&
+                                 string.Equals(r.Path, standardized, StringComparison.OrdinalIgnoreCase));
+
+        if (occupant != null && !model.MergeIfOccupied)
+        {
+            var occupantResource = await service.Get(occupant.Id, ResourceAdditionalItem.DisplayName);
+            return new SingletonResponse<ResourceMaterializeResultViewModel>(
+                new ResourceMaterializeResultViewModel(false, null, occupant.Id,
+                    occupantResource?.DisplayName, false));
+        }
+
+        var result = await materializationService.MaterializeAsync(id, standardized,
+            new MaterializationOptions(MergeIfPathOwnedByAnotherResource: model.MergeIfOccupied),
+            HttpContext.RequestAborted);
+
+        return new SingletonResponse<ResourceMaterializeResultViewModel>(
+            new ResourceMaterializeResultViewModel(true, result.Path, result.MergedResourceId, null,
+                result.Merged));
+    }
+
+    [HttpPost("{id:int}/dematerialize")]
+    [SwaggerOperation(OperationId = "DematerializeResource")]
+    public async Task<BaseResponse> Dematerialize(int id)
+    {
+        // The files are not deleted — the resource simply stops claiming to have them, keeping its
+        // identity, properties and name.
+        await materializationService.DematerializeAsync(id, HttpContext.RequestAborted);
         return BaseResponseBuilder.Ok;
     }
 
