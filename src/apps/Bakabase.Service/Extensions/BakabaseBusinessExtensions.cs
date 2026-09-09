@@ -200,6 +200,7 @@ namespace Bakabase.Service.Extensions
             services.AddAcquisitionStep<Components.Acquisition.Steps.FetchHttpStep>();
             services.AddAcquisitionStep<Components.Acquisition.Steps.WaitForInboxStep>();
             services.AddAcquisitionStep<Components.Acquisition.Steps.FetchFromPlatformStep>();
+            services.AddScoped<Components.Acquisition.SharedListImportService>();
             services.AddAcquisitionStep<Components.Acquisition.Steps.UnpackStep>();
             services.AddAcquisitionStep<Bakabase.Modules.Acquisition.Components.Steps.PickLocalDirectoryStep>();
             services.AddAcquisitionStep<Bakabase.Modules.Acquisition.Components.Steps.PlaceStep>();

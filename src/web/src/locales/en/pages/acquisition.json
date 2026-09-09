@@ -43,5 +43,18 @@
   "acquisition.setup.drives.label": "Preferred services",
   "acquisition.setup.drives.description": "When a post offers the same files three ways, the first of these wins. Skippable.",
   "acquisition.setup.limit.label": "Buy without asking up to",
-  "acquisition.setup.limit.description": "Zero never buys unattended; anything dearer stops and shows the price."
+  "acquisition.setup.limit.description": "Zero never buys unattended; anything dearer stops and shows the price.",
+  "acquisition.sharedList.title": "Import a list",
+  "acquisition.sharedList.description": "A message, a spreadsheet, a pasted list of links — whatever shape it is in. Nothing is created until you have seen what was understood, and you can correct any of it here.",
+  "acquisition.sharedList.choose": "Choose a file",
+  "acquisition.sharedList.nothingRead": "Nothing in that file looked like a list.",
+  "acquisition.sharedList.alreadyKnown": "Already known",
+  "acquisition.sharedList.column.include": "Import",
+  "acquisition.sharedList.column.title": "Title",
+  "acquisition.sharedList.column.url": "Link",
+  "acquisition.sharedList.column.password": "Password",
+  "acquisition.sharedList.collection": "Put them in",
+  "acquisition.sharedList.startAcquiring": "Start getting the ones with a link",
+  "acquisition.sharedList.import": "Import {{count}}",
+  "acquisition.sharedList.imported": "{{created}} new, {{matched}} already known."
 }

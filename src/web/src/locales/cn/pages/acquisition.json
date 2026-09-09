@@ -43,5 +43,18 @@
   "acquisition.setup.drives.label": "偏好的网盘",
   "acquisition.setup.drives.description": "同一份文件有多个网盘时，排在前面的优先。可跳过。",
   "acquisition.setup.limit.label": "免确认购买上限",
-  "acquisition.setup.limit.description": "填 0 表示从不自动购买；超过上限会停下来并显示价格。"
+  "acquisition.setup.limit.description": "填 0 表示从不自动购买；超过上限会停下来并显示价格。",
+  "acquisition.sharedList.title": "导入清单",
+  "acquisition.sharedList.description": "消息、表格、粘贴的链接列表——什么格式都行。在你确认解析结果之前不会创建任何内容，这里可以直接修改。",
+  "acquisition.sharedList.choose": "选择文件",
+  "acquisition.sharedList.nothingRead": "该文件中没有识别出清单内容。",
+  "acquisition.sharedList.alreadyKnown": "已存在",
+  "acquisition.sharedList.column.include": "导入",
+  "acquisition.sharedList.column.title": "标题",
+  "acquisition.sharedList.column.url": "链接",
+  "acquisition.sharedList.column.password": "密码",
+  "acquisition.sharedList.collection": "加入集合",
+  "acquisition.sharedList.startAcquiring": "为有链接的条目立即发起获取",
+  "acquisition.sharedList.import": "导入 {{count}} 项",
+  "acquisition.sharedList.imported": "新建 {{created}} 项，已存在 {{matched}} 项。"
 }

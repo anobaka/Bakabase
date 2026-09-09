@@ -4726,6 +4726,25 @@ export interface BakabaseServiceComponentsAcquisitionInboxCandidateScore {
   score: number;
 }
 
+export interface BakabaseServiceComponentsAcquisitionSharedListImportResult {
+  /** @format int32 */
+  created: number;
+  /** @format int32 */
+  matched: number;
+  /** @format int32 */
+  started: number;
+  problems: string[];
+}
+
+export interface BakabaseServiceComponentsAcquisitionSharedListPreviewRow {
+  title?: string;
+  url?: string;
+  password?: string;
+  /** @format int32 */
+  lineNumber: number;
+  alreadyKnown: boolean;
+}
+
 export interface BakabaseServiceControllersAppDataPathControllerRelocateRequest {
   targetPath: string;
   /** [1: UseTarget, 3: MergeOverwrite] */
@@ -4849,6 +4868,21 @@ export interface BakabaseServiceControllersResourceHealthScoreRowViewModel {
   matchedRulesJson?: string;
   /** @format date-time */
   evaluatedAt: string;
+}
+
+export interface BakabaseServiceControllersSharedListImportInputModel {
+  rows: BakabaseServiceControllersSharedListImportRow[];
+  /** @format int32 */
+  collectionId?: number;
+  startAcquiring: boolean;
+}
+
+export interface BakabaseServiceControllersSharedListImportRow {
+  title?: string;
+  url?: string;
+  password?: string;
+  /** @format int32 */
+  lineNumber: number;
 }
 
 export interface BakabaseServiceModelsInputAvSourceTestInputModel {
@@ -6101,6 +6135,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceCompon
   data?: BakabaseServiceComponentsAcquisitionInboxCandidate[];
 }
 
+export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceComponentsAcquisitionSharedListPreviewRow {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionSharedListPreviewRow[];
+}
+
 export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceControllersChatControllerChatToolViewModel {
   /** @format int32 */
   code: number;
@@ -7082,6 +7123,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceC
   code: number;
   message?: string;
   data?: BakabaseServiceComponentsAcquisitionAcquisitionSetupResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionSharedListImportResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionSharedListImportResult;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceControllersAppDataPathControllerValidateResponse {
@@ -8334,6 +8382,77 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     createAcquisitionFromUrlUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/acquisition/from-url`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Acquisition
+     * @name PreviewSharedList
+     * @request POST:/acquisition/shared-list/preview
+     */
+    previewSharedList: (
+      data: {
+        /** @format binary */
+        file?: File;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceComponentsAcquisitionSharedListPreviewRow,
+        any
+      >({
+        path: `/acquisition/shared-list/preview`,
+        method: "POST",
+        body: data,
+        type: ContentType.FormData,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for previewSharedList
+     * @name previewSharedListUrl
+     */
+    previewSharedListUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/shared-list/preview`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Acquisition
+     * @name ImportSharedList
+     * @request POST:/acquisition/shared-list/import
+     */
+    importSharedList: (
+      data: BakabaseServiceControllersSharedListImportInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionSharedListImportResult,
+        any
+      >({
+        path: `/acquisition/shared-list/import`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for importSharedList
+     * @name importSharedListUrl
+     */
+    importSharedListUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/shared-list/import`;
       
       return baseUrl + path;
     },

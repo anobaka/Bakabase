@@ -10,6 +10,7 @@ import InboxDrawer from "./components/InboxDrawer";
 import AcquisitionRow from "./components/AcquisitionRow";
 import StartAcquisitionModal from "./components/StartAcquisitionModal";
 import SetupWizard from "./components/SetupWizard";
+import ImportSharedListModal from "./components/ImportSharedListModal";
 
 import BApi from "@/sdk/BApi";
 import { Button, Chip, Spinner, Tab, Tabs } from "@/components/bakaui";
@@ -111,6 +112,13 @@ const AcquisitionPage: React.FC = () => {
             onPress={() => createPortal(StartAcquisitionModal, { recipes, onStarted: load })}
           >
             {t<string>("acquisition.start")}
+          </Button>
+          <Button
+            size="sm"
+            variant="light"
+            onPress={() => createPortal(ImportSharedListModal, { onImported: load })}
+          >
+            {t<string>("acquisition.sharedList.title")}
           </Button>
         </div>
       </div>

@@ -1,11 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Acquisition.Abstractions.Services;
+using Bakabase.Modules.Acquisition.Components;
 using Bakabase.Modules.Acquisition.Models.Input;
+using Bakabase.Service.Components.Acquisition;
+using Microsoft.AspNetCore.Http;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Models.ResponseModels;
@@ -49,6 +53,49 @@ public class AcquisitionController(
         {
             return SingletonResponseBuilder<AcquisitionTask>.BuildBadRequest(e.Message);
         }
+    }
+
+    /// <summary>
+    /// Reads a list of things to get without creating anything.
+    /// <para>
+    /// A spreadsheet is read wrongly more often than it fails to be read, so the preview's whole
+    /// job is letting the user see what was understood before any of it is committed to.
+    /// </para>
+    /// </summary>
+    [HttpPost("shared-list/preview")]
+    [SwaggerOperation(OperationId = "PreviewSharedList")]
+    public async Task<ListResponse<SharedListPreviewRow>> PreviewSharedList(IFormFile file,
+        [FromServices] SharedListImportService importer)
+    {
+        await using var content = file.OpenReadStream();
+
+        return new ListResponse<SharedListPreviewRow>(
+            await importer.PreviewAsync(content, file.FileName));
+    }
+
+    /// <summary>
+    /// Turns the rows the user confirmed into resources, and optionally starts getting them.
+    /// The rows are sent back rather than the file: what is imported is what was on screen.
+    /// </summary>
+    [HttpPost("shared-list/import")]
+    [SwaggerOperation(OperationId = "ImportSharedList")]
+    public async Task<SingletonResponse<SharedListImportResult>> ImportSharedList(
+        [FromBody] SharedListImportInputModel model,
+        [FromServices] SharedListImportService importer)
+    {
+        var rows = model.Rows
+            .Where(r => !string.IsNullOrWhiteSpace(r.Title) || !string.IsNullOrWhiteSpace(r.Url))
+            .Select(r => new SharedListRow(r.Title, r.Url, r.Password, r.LineNumber))
+            .ToList();
+
+        if (rows.Count == 0)
+        {
+            return new SingletonResponse<SharedListImportResult>(
+                new SharedListImportResult(0, 0, 0, []));
+        }
+
+        return new SingletonResponse<SharedListImportResult>(
+            await importer.ImportAsync(rows, model.CollectionId, model.StartAcquiring));
     }
 
     [HttpPost]
@@ -221,4 +268,23 @@ public class AcquisitionController(
     [SwaggerOperation(OperationId = "GetAcquisitionRecipes")]
     public async Task<ListResponse<AcquisitionRecipeSummary>> GetRecipes() =>
         new(await service.GetRecipesAsync());
+}
+
+/// <param name="Rows">The rows as the user confirmed them, edits and all.</param>
+/// <param name="CollectionId">Put them all in this collection, when there is one.</param>
+/// <param name="StartAcquiring">Start getting the ones that have a link.</param>
+public record SharedListImportInputModel
+{
+    public List<SharedListImportRow> Rows { get; set; } = [];
+    public int? CollectionId { get; set; }
+    public bool StartAcquiring { get; set; }
+}
+
+/// <summary>One row, as the preview showed it and the user possibly corrected it.</summary>
+public record SharedListImportRow
+{
+    public string? Title { get; set; }
+    public string? Url { get; set; }
+    public string? Password { get; set; }
+    public int LineNumber { get; set; }
 }

@@ -20,6 +20,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/acquisition/shared-list/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PreviewSharedList"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/acquisition/shared-list/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ImportSharedList"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/acquisition": {
         parameters: {
             query?: never;
@@ -10751,6 +10783,23 @@ export interface components {
             /** Format: int32 */
             score: number;
         };
+        "Bakabase.Service.Components.Acquisition.SharedListImportResult": {
+            /** Format: int32 */
+            created: number;
+            /** Format: int32 */
+            matched: number;
+            /** Format: int32 */
+            started: number;
+            problems: string[];
+        };
+        "Bakabase.Service.Components.Acquisition.SharedListPreviewRow": {
+            title?: string;
+            url?: string;
+            password?: string;
+            /** Format: int32 */
+            lineNumber: number;
+            alreadyKnown: boolean;
+        };
         "Bakabase.Service.Controllers.AppDataPathController+RelocateRequest": {
             targetPath: string;
             mode: components["schemas"]["Bakabase.Infrastructures.Components.App.Relocation.RelocationMode"];
@@ -10851,6 +10900,19 @@ export interface components {
             matchedRulesJson?: string;
             /** Format: date-time */
             evaluatedAt: string;
+        };
+        "Bakabase.Service.Controllers.SharedListImportInputModel": {
+            rows: components["schemas"]["Bakabase.Service.Controllers.SharedListImportRow"][];
+            /** Format: int32 */
+            collectionId?: number;
+            startAcquiring: boolean;
+        };
+        "Bakabase.Service.Controllers.SharedListImportRow": {
+            title?: string;
+            url?: string;
+            password?: string;
+            /** Format: int32 */
+            lineNumber: number;
         };
         "Bakabase.Service.Models.Input.AvSourceTestInputModel": {
             number?: string;
@@ -11897,6 +11959,12 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Components.Acquisition.InboxCandidate"][];
         };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Components.Acquisition.SharedListPreviewRow]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Components.Acquisition.SharedListPreviewRow"][];
+        };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Controllers.ChatController+ChatToolViewModel]": {
             /** Format: int32 */
             code: number;
@@ -12749,6 +12817,12 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Components.Acquisition.AcquisitionSetupResult"];
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.SharedListImportResult]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Components.Acquisition.SharedListImportResult"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.AppDataPathController+ValidateResponse]": {
             /** Format: int32 */
             code: number;
@@ -13582,6 +13656,64 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask]"];
+                };
+            };
+        };
+    };
+    PreviewSharedList: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Components.Acquisition.SharedListPreviewRow]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Components.Acquisition.SharedListPreviewRow]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Components.Acquisition.SharedListPreviewRow]"];
+                };
+            };
+        };
+    };
+    ImportSharedList: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.SharedListImportInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.SharedListImportInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.SharedListImportInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.SharedListImportInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.SharedListImportResult]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.SharedListImportResult]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.SharedListImportResult]"];
                 };
             };
         };
