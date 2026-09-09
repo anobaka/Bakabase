@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Bakabase.InsideWorld.Business.Workflow;
+using Bakabase.Modules.Acquisition.Components.Workflow;
 using Bakabase.Modules.Workflow.Abstractions.Components;
 
 namespace Bakabase.Service.Components.Workflow.Resources;
@@ -10,9 +11,13 @@ namespace Bakabase.Service.Components.Workflow.Resources;
 /// handle: a chain may run long after the event, and an activity acting on stale-but-explicit
 /// data is easier to reason about than one silently seeing a resource change under it.
 /// </summary>
-public sealed record ResourceWorkflowItem : IHasWorkflowSystemVariables
+public sealed record ResourceWorkflowItem : IHasWorkflowSystemVariables, IHasResourceId
 {
     public required int Id { get; init; }
+
+    /// <summary>Which resource this is about (capability map E3) — the same value as <see cref="Id"/>,
+    /// named the way an activity that only needs a resource asks for it.</summary>
+    public int ResourceId => Id;
 
     public string? Name { get; init; }
 

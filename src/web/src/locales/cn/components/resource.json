@@ -57,7 +57,7 @@
   "acquisition.leads.add.placeholder": "https://example.com/thread/1",
   "acquisition.lead.derived": "持有于",
   "acquisition.action.acquire": "获取",
-  "acquisition.action.acquireNotReady": "按线索下载会随获取流水线一起到来。",
+  "acquisition.action.acquireStarted": "已开始获取，可在「获取」页查看。",
   "acquisition.action.linkLocalFolder": "关联本地目录",
   "acquisition.materialize.success": "资源已指向这些文件。",
   "acquisition.materialize.conflict.title": "该目录已属于另一条资源",

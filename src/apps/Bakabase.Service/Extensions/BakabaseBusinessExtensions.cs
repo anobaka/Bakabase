@@ -171,6 +171,7 @@ namespace Bakabase.Service.Extensions
             services.AddAcquisitionStep<Components.Acquisition.Steps.MaterializeStep>();
             services.AddHttpClient(nameof(Components.Acquisition.Steps.FetchHttpStep));
             services.AddScoped<Components.Acquisition.AcquisitionInboxService>();
+            services.AddScoped<Components.Acquisition.AcquisitionSetupService>();
             services.AddHostedService<Components.Acquisition.AcquisitionInboxWatcher>();
 
             // "I am missing this" — creating resources for things the user does not have yet.

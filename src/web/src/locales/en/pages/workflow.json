@@ -110,6 +110,8 @@
   "workflow.acquisition.pickDirectory.label": "Folder",
   "workflow.acquisition.pickDirectory.description": "Where the files already are.",
   "workflow.acquisition.pickDirectory.use": "Use it",
+  "workflow.acquisition.materialize.notify": "Tell me when it lands",
+  "workflow.acquisition.materialize.clean": "Clear the working folder afterwards",
   "workflow.runs.title": "Run history",
   "workflow.runs.openTooltip": "Open run history",
   "workflow.runs.empty": "No runs yet.",

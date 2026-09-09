@@ -3268,6 +3268,24 @@ export interface BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionTa
 }
 
 /**
+ * [0: Unknown, 1: DirectUrl, 2: Baidu, 3: Xunlei, 4: Feimao, 5: Cloudflare, 6: Mega, 7: PikPak, 8: GoogleDrive, 9: OneDrive, 10: Magnet, 11: OneOneFive]
+ * @format int32
+ */
+export type BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionDriveKind =
+  | 0
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5
+  | 6
+  | 7
+  | 8
+  | 9
+  | 10
+  | 11;
+
+/**
  * [1: PlatformHolding, 2: SharedPage, 3: SharedDocument, 4: DirectUrl, 5: Magnet, 6: Manual]
  * @format int32
  */
@@ -3340,6 +3358,29 @@ export interface BakabaseModulesAcquisitionAbstractionsServicesAcquisitionRecipe
   stepKinds: string[];
 }
 
+export interface BakabaseModulesAcquisitionModelsDomainAcquisitionOptions {
+  inboxDirectory?: string;
+  libraryRootDirectory?: string;
+  directoryTemplate: string;
+  preferredDriveKinds: BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionDriveKind[];
+  recipeByLeadKind: {
+    PlatformHolding: string;
+    SharedPage: string;
+    SharedDocument: string;
+    DirectUrl: string;
+    Magnet: string;
+    Manual: string;
+  };
+  /** @format double */
+  autoPurchaseLimit: number;
+  deleteArchiveAfterExtraction: boolean;
+  tryRecentPasswords: boolean;
+  /** @format int32 */
+  recentPasswordCandidateCount: number;
+  /** @format int32 */
+  concurrency: number;
+}
+
 export interface BakabaseModulesAcquisitionModelsInputAcquisitionCreationInputModel {
   /** @format int32 */
   resourceId: number;
@@ -3348,6 +3389,15 @@ export interface BakabaseModulesAcquisitionModelsInputAcquisitionCreationInputMo
   /** [1: PlatformHolding, 2: SharedPage, 3: SharedDocument, 4: DirectUrl, 5: Magnet, 6: Manual] */
   leadKind?: BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionLeadKind;
   leadValue?: string;
+  /** @format int32 */
+  recipeDefinitionId?: number;
+  /** @format int32 */
+  collectionId?: number;
+}
+
+export interface BakabaseModulesAcquisitionModelsInputAcquisitionFromUrlInputModel {
+  /** @minLength 1 */
+  url: string;
   /** @format int32 */
   recipeDefinitionId?: number;
   /** @format int32 */
@@ -4504,6 +4554,22 @@ export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowTriggerDes
   displayName: string;
   requiresManualPayload: boolean;
   payloadFields: BakabaseModulesWorkflowAbstractionsModelsViewWorkflowItemTypeFieldViewModel[];
+}
+
+export interface BakabaseServiceComponentsAcquisitionAcquisitionSetupInputModel {
+  inboxDirectory?: string;
+  libraryRootDirectory?: string;
+  directoryTemplate?: string;
+  preferredDriveKinds?: BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionDriveKind[];
+  /** @format double */
+  autoPurchaseLimit?: number;
+}
+
+export interface BakabaseServiceComponentsAcquisitionAcquisitionSetupResult {
+  createdInbox: boolean;
+  createdLibrary: boolean;
+  /** @format int32 */
+  pathMarkId?: number;
 }
 
 export interface BakabaseServiceComponentsAcquisitionInboxCandidate {
@@ -6698,6 +6764,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesA
   data?: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionTask;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAcquisitionModelsDomainAcquisitionOptions {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesAcquisitionModelsDomainAcquisitionOptions;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesComparisonModelsDomainComparisonPlan {
   /** @format int32 */
   code: number;
@@ -6801,6 +6874,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesW
   code: number;
   message?: string;
   data?: BakabaseModulesWorkflowAbstractionsModelsViewWorkflowRunViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionAcquisitionSetupResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionAcquisitionSetupResult;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceControllersAppDataPathControllerValidateResponse {
@@ -8006,6 +8086,40 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Acquisition
+     * @name CreateAcquisitionFromUrl
+     * @request POST:/acquisition/from-url
+     */
+    createAcquisitionFromUrl: (
+      data: BakabaseModulesAcquisitionModelsInputAcquisitionFromUrlInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionTask,
+        any
+      >({
+        path: `/acquisition/from-url`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for createAcquisitionFromUrl
+     * @name createAcquisitionFromUrlUrl
+     */
+    createAcquisitionFromUrlUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/from-url`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Acquisition
      * @name CreateAcquisition
      * @request POST:/acquisition
      */
@@ -8206,6 +8320,100 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
+
+    /**
+     * No description
+     *
+     * @tags Acquisition
+     * @name GetAcquisitionOptions
+     * @request GET:/acquisition/options
+     */
+    getAcquisitionOptions: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAcquisitionModelsDomainAcquisitionOptions,
+        any
+      >({
+        path: `/acquisition/options`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getAcquisitionOptions
+     * @name getAcquisitionOptionsUrl
+     */
+    getAcquisitionOptionsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/options`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Acquisition
+     * @name PutAcquisitionOptions
+     * @request PUT:/acquisition/options
+     */
+    putAcquisitionOptions: (
+      data: BakabaseModulesAcquisitionModelsDomainAcquisitionOptions,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/acquisition/options`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for putAcquisitionOptions
+     * @name putAcquisitionOptionsUrl
+     */
+    putAcquisitionOptionsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/options`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Acquisition
+     * @name SetUpAcquisition
+     * @request POST:/acquisition/setup
+     */
+    setUpAcquisition: (
+      data: BakabaseServiceComponentsAcquisitionAcquisitionSetupInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionAcquisitionSetupResult,
+        any
+      >({
+        path: `/acquisition/setup`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for setUpAcquisition
+     * @name setUpAcquisitionUrl
+     */
+    setUpAcquisitionUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/setup`;
+      
+      return baseUrl + path;
+    },
 
     /**
      * No description

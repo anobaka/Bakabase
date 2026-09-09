@@ -109,6 +109,8 @@
   "workflow.acquisition.pickDirectory.label": "目录",
   "workflow.acquisition.pickDirectory.description": "文件已经在的位置。",
   "workflow.acquisition.pickDirectory.use": "就用它",
+  "workflow.acquisition.materialize.notify": "落地时通知我",
+  "workflow.acquisition.materialize.clean": "结束后清理工作目录",
   "workflow.runs.title": "运行历史",
   "workflow.runs.openTooltip": "打开运行历史",
   "workflow.runs.empty": "暂无运行记录。",

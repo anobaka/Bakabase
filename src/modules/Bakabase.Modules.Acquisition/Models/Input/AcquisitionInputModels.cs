@@ -33,3 +33,17 @@ public record AcquisitionResumeInputModel
     [Required]
     public string SignalJson { get; set; } = "{}";
 }
+
+/// <summary>
+/// "Get me whatever is behind this link." The one-field version: everything else — which resource
+/// it is, whether one already exists, which recipe fits — is worked out from the link.
+/// </summary>
+public record AcquisitionFromUrlInputModel
+{
+    [Required] public string Url { get; set; } = null!;
+
+    /// <summary>Which recipe to run. Absent means the one the link's kind implies.</summary>
+    public int? RecipeDefinitionId { get; set; }
+
+    public int? CollectionId { get; set; }
+}

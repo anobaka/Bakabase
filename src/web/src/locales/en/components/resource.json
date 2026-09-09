@@ -57,7 +57,7 @@
   "acquisition.leads.add.placeholder": "https://example.com/thread/1",
   "acquisition.lead.derived": "Owned on",
   "acquisition.action.acquire": "Get it",
-  "acquisition.action.acquireNotReady": "Downloading through a lead arrives with the acquisition pipeline.",
+  "acquisition.action.acquireStarted": "Getting it — see the Acquisitions page.",
   "acquisition.action.linkLocalFolder": "Link a local folder",
   "acquisition.materialize.success": "The resource now points at those files.",
   "acquisition.materialize.conflict.title": "That folder already belongs to another resource",

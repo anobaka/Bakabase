@@ -7,7 +7,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AiOutlineDelete, AiOutlineFolderOpen, AiOutlineLink, AiOutlinePlus } from "react-icons/ai";
 
-import { Button, Chip, Input, Modal, Spinner, Tooltip, toast } from "@/components/bakaui";
+import { Button, Chip, Input, Modal, Spinner, toast } from "@/components/bakaui";
 import { FileSystemSelectorModal } from "@/components/FileSystemSelector";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import BApi from "@/sdk/BApi";
@@ -41,6 +41,7 @@ const AcquisitionPanel: React.FC<Props> = ({ resource, onChanged }) => {
   const [loading, setLoading] = useState(true);
   const [newUrl, setNewUrl] = useState("");
   const [adding, setAdding] = useState(false);
+  const [acquiring, setAcquiring] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -81,6 +82,28 @@ const AcquisitionPanel: React.FC<Props> = ({ resource, onChanged }) => {
       await load();
     } finally {
       setAdding(false);
+    }
+  };
+
+  /**
+   * Starts getting it. Which recipe runs is decided from the lead's kind, so there is nothing to
+   * choose here — the acquisitions page is where a different one gets picked.
+   */
+  const acquire = async (lead: AcquisitionLead) => {
+    setAcquiring(true);
+    try {
+      const rsp = await BApi.acquisition.createAcquisition({
+        resourceId: resource.id,
+        acquisitionLeadId: lead.isDerived ? undefined : lead.id,
+        leadKind: lead.kind,
+        leadValue: lead.value,
+      });
+
+      if (!rsp.code) {
+        toast.success(t<string>("acquisition.action.acquireStarted"));
+      }
+    } finally {
+      setAcquiring(false);
     }
   };
 
@@ -148,16 +171,15 @@ const AcquisitionPanel: React.FC<Props> = ({ resource, onChanged }) => {
           : AcquisitionLeadKindLabel[lead.kind as AcquisitionLeadKind]}
       </Chip>
       <div className="min-w-0 grow break-all text-xs">{lead.value}</div>
-      <Tooltip content={t<string>("acquisition.action.acquireNotReady")}>
-        <Button
-          isDisabled
-          size="sm"
-          startContent={<AiOutlineLink className="text-sm" />}
-          variant="light"
-        >
-          {t<string>("acquisition.action.acquire")}
-        </Button>
-      </Tooltip>
+      <Button
+        isDisabled={acquiring}
+        size="sm"
+        startContent={<AiOutlineLink className="text-sm" />}
+        variant="light"
+        onPress={() => acquire(lead)}
+      >
+        {t<string>("acquisition.action.acquire")}
+      </Button>
       {!lead.isDerived && (
         <Button isIconOnly size="sm" variant="light" onPress={() => deleteLead(lead)}>
           <AiOutlineDelete className="text-sm" />

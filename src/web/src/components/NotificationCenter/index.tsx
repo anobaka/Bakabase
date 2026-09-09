@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import { BellOutlined } from "@ant-design/icons";
 import { Drawer, DrawerBody, DrawerContent, DrawerFooter, DrawerHeader } from "@heroui/react";
 
@@ -16,6 +17,7 @@ const OptIconStyle = { fontSize: 20 };
 const NotificationCenter: React.FC = () => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
+  const navigate = useNavigate();
 
   const unreadCount = useNotificationsStore((s) => s.unreadCount);
   const items = useNotificationsStore((s) => s.items);
@@ -46,6 +48,25 @@ const NotificationCenter: React.FC = () => {
   };
 
   const groups = groupByDate(items);
+
+  /**
+   * A notification is worth clicking when it takes you to the thing it is about. The route travels
+   * in the payload, so any producer can offer one without this component learning what it produced.
+   */
+  const openNotification = (n: { payloadJson?: string | null }) => {
+    if (!n.payloadJson) return;
+
+    try {
+      const route = (JSON.parse(n.payloadJson) as { route?: string }).route;
+
+      if (route) {
+        setIsOpen(false);
+        navigate(route);
+      }
+    } catch {
+      // A payload that is not JSON is not a route. Nothing to do.
+    }
+  };
 
   return (
     <>
@@ -84,7 +105,11 @@ const NotificationCenter: React.FC = () => {
                     </div>
                     <div className="flex flex-col gap-0.5">
                       {g.items.map((n) => (
-                        <NotificationItem key={n.id} notification={n} />
+                        <NotificationItem
+                          key={n.id}
+                          notification={n}
+                          onClick={() => openNotification(n)}
+                        />
                       ))}
                     </div>
                   </div>

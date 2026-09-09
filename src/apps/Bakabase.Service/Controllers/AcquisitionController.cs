@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Acquisition.Abstractions.Services;
 using Bakabase.Modules.Acquisition.Models.Input;
+using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
@@ -17,8 +19,38 @@ namespace Bakabase.Service.Controllers;
 public class AcquisitionController(
     IAcquisitionService service,
     IAcquisitionLeadService leads,
-    Components.Acquisition.AcquisitionInboxService inbox) : ControllerBase
+    Bakabase.Abstractions.Services.IPlaceholderResourceService placeholders,
+    Components.Acquisition.AcquisitionInboxService inbox,
+    Components.Acquisition.AcquisitionSetupService setup,
+    IBOptionsManager<Bakabase.Modules.Acquisition.Models.Domain.AcquisitionOptions> options)
+    : ControllerBase
 {
+    /// <summary>
+    /// Start from a link and nothing else. The link is resolved to a resource — matched against one
+    /// that already exists, or created — and then acquired the ordinary way. This is what the
+    /// browser script calls, and it is the shortest path from "I found this" to "it is coming".
+    /// </summary>
+    [HttpPost("from-url")]
+    [SwaggerOperation(OperationId = "CreateAcquisitionFromUrl")]
+    public async Task<SingletonResponse<AcquisitionTask>> CreateFromUrl(
+        [FromBody] AcquisitionFromUrlInputModel model)
+    {
+        try
+        {
+            var placeholder = await placeholders.CreateOrMatchBySharedUrl(model.Url);
+            var lead = await leads.FindByValue(AcquisitionLeadKind.SharedPage, model.Url);
+
+            var task = await service.CreateAsync(placeholder.ResourceId, AcquisitionLeadKind.SharedPage,
+                model.Url, lead?.Id, model.RecipeDefinitionId, model.CollectionId);
+
+            return new SingletonResponse<AcquisitionTask>(task);
+        }
+        catch (InvalidOperationException e)
+        {
+            return SingletonResponseBuilder<AcquisitionTask>.BuildBadRequest(e.Message);
+        }
+    }
+
     [HttpPost]
     [SwaggerOperation(OperationId = "CreateAcquisition")]
     public async Task<SingletonResponse<AcquisitionTask>> Create([FromBody] AcquisitionCreationInputModel model)
@@ -147,6 +179,42 @@ public class AcquisitionController(
         }
 
         return BaseResponseBuilder.Ok;
+    }
+
+    [HttpGet("options")]
+    [SwaggerOperation(OperationId = "GetAcquisitionOptions")]
+    public SingletonResponse<Bakabase.Modules.Acquisition.Models.Domain.AcquisitionOptions> GetOptions() =>
+        new(options.Value);
+
+    [HttpPut("options")]
+    [SwaggerOperation(OperationId = "PutAcquisitionOptions")]
+    public async Task<BaseResponse> PutOptions(
+        [FromBody] Bakabase.Modules.Acquisition.Models.Domain.AcquisitionOptions model)
+    {
+        await options.SaveAsync(model);
+
+        return BaseResponseBuilder.Ok;
+    }
+
+    /// <summary>
+    /// Everything the first-run wizard asked for, applied at once — including the one path mark a
+    /// user of this pipeline should never have to learn about.
+    /// </summary>
+    [HttpPost("setup")]
+    [SwaggerOperation(OperationId = "SetUpAcquisition")]
+    public async Task<SingletonResponse<Components.Acquisition.AcquisitionSetupResult>> SetUp(
+        [FromBody] Components.Acquisition.AcquisitionSetupInputModel model)
+    {
+        try
+        {
+            return new SingletonResponse<Components.Acquisition.AcquisitionSetupResult>(
+                await setup.ApplyAsync(model));
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            return SingletonResponseBuilder<Components.Acquisition.AcquisitionSetupResult>
+                .BuildBadRequest(e.Message);
+        }
     }
 
     [HttpGet("recipes")]

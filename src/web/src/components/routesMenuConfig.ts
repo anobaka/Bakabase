@@ -29,6 +29,7 @@ import {
   AiOutlineAudit,
   AiOutlineBell,
   AiOutlineCloudServer,
+  AiOutlineCloudDownload,
   AiOutlinePartition,
   AiOutlineMobile,
 } from "react-icons/ai";
@@ -74,6 +75,7 @@ import ExHentaiGalleriesPage from "@/pages/exhentai-galleries";
 import DataCardPage from "@/pages/data-card";
 import HealthScorePage from "@/pages/health-score";
 import SubscriptionPage from "@/pages/subscription";
+import AcquisitionPage from "@/pages/acquisition";
 import WorkflowPage from "@/pages/workflow";
 import WorkflowEditorPage from "@/pages/workflow/editor";
 import { SteamIcon, DLsiteIcon, ExHentaiIcon } from "@/components/SourceIcons";
@@ -315,6 +317,15 @@ export const routesMenuConfig: RouteMenuItem[] = [
         path: "/subscriptions",
         component: SubscriptionPage,
         icon: AiOutlineBell,
+        layout: "basic",
+        menu: true,
+        isBeta: true,
+      },
+      {
+        name: "menu.acquisition",
+        path: "/acquisitions",
+        component: AcquisitionPage,
+        icon: AiOutlineCloudDownload,
         layout: "basic",
         menu: true,
         isBeta: true,

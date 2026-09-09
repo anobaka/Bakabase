@@ -4,6 +4,22 @@
  */
 
 export interface paths {
+    "/acquisition/from-url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CreateAcquisitionFromUrl"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/acquisition": {
         parameters: {
             query?: never;
@@ -110,6 +126,38 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["UnclaimAcquisitionFiles"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/acquisition/options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAcquisitionOptions"];
+        put: operations["PutAcquisitionOptions"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/acquisition/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SetUpAcquisition"];
         delete?: never;
         options?: never;
         head?: never;
@@ -9443,6 +9491,12 @@ export interface components {
         };
         /**
          * Format: int32
+         * @description [0: Unknown, 1: DirectUrl, 2: Baidu, 3: Xunlei, 4: Feimao, 5: Cloudflare, 6: Mega, 7: PikPak, 8: GoogleDrive, 9: OneDrive, 10: Magnet, 11: OneOneFive]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionDriveKind": 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
+        /**
+         * Format: int32
          * @description [1: PlatformHolding, 2: SharedPage, 3: SharedDocument, 4: DirectUrl, 5: Magnet, 6: Manual]
          * @enum {integer}
          */
@@ -9485,6 +9539,28 @@ export interface components {
             isBuiltin: boolean;
             stepKinds: string[];
         };
+        "Bakabase.Modules.Acquisition.Models.Domain.AcquisitionOptions": {
+            inboxDirectory?: string;
+            libraryRootDirectory?: string;
+            directoryTemplate: string;
+            preferredDriveKinds: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionDriveKind"][];
+            recipeByLeadKind: {
+                PlatformHolding: string;
+                SharedPage: string;
+                SharedDocument: string;
+                DirectUrl: string;
+                Magnet: string;
+                Manual: string;
+            };
+            /** Format: double */
+            autoPurchaseLimit: number;
+            deleteArchiveAfterExtraction: boolean;
+            tryRecentPasswords: boolean;
+            /** Format: int32 */
+            recentPasswordCandidateCount: number;
+            /** Format: int32 */
+            concurrency: number;
+        };
         "Bakabase.Modules.Acquisition.Models.Input.AcquisitionCreationInputModel": {
             /** Format: int32 */
             resourceId: number;
@@ -9492,6 +9568,13 @@ export interface components {
             acquisitionLeadId?: number;
             leadKind?: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionLeadKind"];
             leadValue?: string;
+            /** Format: int32 */
+            recipeDefinitionId?: number;
+            /** Format: int32 */
+            collectionId?: number;
+        };
+        "Bakabase.Modules.Acquisition.Models.Input.AcquisitionFromUrlInputModel": {
+            url: string;
             /** Format: int32 */
             recipeDefinitionId?: number;
             /** Format: int32 */
@@ -10352,6 +10435,20 @@ export interface components {
             displayName: string;
             requiresManualPayload: boolean;
             payloadFields: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowItemTypeFieldViewModel"][];
+        };
+        "Bakabase.Service.Components.Acquisition.AcquisitionSetupInputModel": {
+            inboxDirectory?: string;
+            libraryRootDirectory?: string;
+            directoryTemplate?: string;
+            preferredDriveKinds?: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionDriveKind"][];
+            /** Format: double */
+            autoPurchaseLimit?: number;
+        };
+        "Bakabase.Service.Components.Acquisition.AcquisitionSetupResult": {
+            createdInbox: boolean;
+            createdLibrary: boolean;
+            /** Format: int32 */
+            pathMarkId?: number;
         };
         "Bakabase.Service.Components.Acquisition.InboxCandidate": {
             path: string;
@@ -12210,6 +12307,12 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask"];
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Models.Domain.AcquisitionOptions]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Acquisition.Models.Domain.AcquisitionOptions"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Comparison.Models.Domain.ComparisonPlan]": {
             /** Format: int32 */
             code: number;
@@ -12299,6 +12402,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowRunViewModel"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.AcquisitionSetupResult]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Components.Acquisition.AcquisitionSetupResult"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.AppDataPathController+ValidateResponse]": {
             /** Format: int32 */
@@ -13088,6 +13197,35 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    CreateAcquisitionFromUrl: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Acquisition.Models.Input.AcquisitionFromUrlInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.Acquisition.Models.Input.AcquisitionFromUrlInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.Acquisition.Models.Input.AcquisitionFromUrlInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.Acquisition.Models.Input.AcquisitionFromUrlInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask]"];
+                };
+            };
+        };
+    };
     SearchAcquisitions: {
         parameters: {
             query?: {
@@ -13288,6 +13426,86 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetAcquisitionOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Models.Domain.AcquisitionOptions]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Models.Domain.AcquisitionOptions]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Models.Domain.AcquisitionOptions]"];
+                };
+            };
+        };
+    };
+    PutAcquisitionOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Acquisition.Models.Domain.AcquisitionOptions"];
+                "application/json": components["schemas"]["Bakabase.Modules.Acquisition.Models.Domain.AcquisitionOptions"];
+                "text/json": components["schemas"]["Bakabase.Modules.Acquisition.Models.Domain.AcquisitionOptions"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.Acquisition.Models.Domain.AcquisitionOptions"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    SetUpAcquisition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Components.Acquisition.AcquisitionSetupInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Components.Acquisition.AcquisitionSetupInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Components.Acquisition.AcquisitionSetupInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Components.Acquisition.AcquisitionSetupInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.AcquisitionSetupResult]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.AcquisitionSetupResult]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.AcquisitionSetupResult]"];
                 };
             };
         };

@@ -34,6 +34,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IWorkflowTrigger, AcquisitionStatusChangedTrigger>();
         services.AddSingleton<IWorkflowItemTypeDescriptor, AcquisitionItemTypeDescriptor>();
         services.AddSingleton<IWorkflowItemTypeDescriptor, AcquisitionStatusChangeItemTypeDescriptor>();
+        // The outer half: a workflow can also ask for an acquisition.
+        services.AddSingleton<IWorkflowActivity, AcquisitionCreateActivity>();
 
         return services;
     }
