@@ -4761,6 +4761,18 @@ export interface BakabaseServiceControllersCollectionPlaceholderInputModel {
   title: string;
 }
 
+export interface BakabaseServiceControllersCollectionRulePreview {
+  /** @format int32 */
+  totalCount: number;
+  sampleResourceIds: number[];
+}
+
+export interface BakabaseServiceControllersCollectionRulePreviewInputModel {
+  ruleSearchJson?: string;
+  /** @format int32 */
+  sampleSize: number;
+}
+
 export interface BakabaseServiceControllersCookieCaptureResult {
   cookie: string;
   userAgent?: string;
@@ -7050,6 +7062,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceC
   code: number;
   message?: string;
   data?: BakabaseServiceControllersAppDataPathControllerValidateResponse;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceControllersCollectionRulePreview {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceControllersCollectionRulePreview;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceControllersCookieCaptureResult {
@@ -13244,6 +13263,40 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
+
+    /**
+     * No description
+     *
+     * @tags Collection
+     * @name PreviewCollectionRule
+     * @request POST:/collection/rule/preview
+     */
+    previewCollectionRule: (
+      data: BakabaseServiceControllersCollectionRulePreviewInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceControllersCollectionRulePreview,
+        any
+      >({
+        path: `/collection/rule/preview`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for previewCollectionRule
+     * @name previewCollectionRuleUrl
+     */
+    previewCollectionRuleUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/collection/rule/preview`;
+      
+      return baseUrl + path;
+    },
 
     /**
      * No description

@@ -281,6 +281,10 @@ namespace Bakabase.Service.Extensions
             // Resource data change event hub (singleton for event pub/sub)
             services.AddSingleton<ResourceDataChangeEventHub>();
             services.AddSingleton<IResourceDataChangeEvent>(sp => sp.GetRequiredService<ResourceDataChangeEventHub>());
+            // A collection's rule can only give a different answer because a resource changed, so
+            // that is exactly when the cached answer stops being usable.
+            services.AddSingleton<Components.Collections.CollectionRuleCache>();
+            services.AddSingleton<Components.Collections.CollectionRuleCacheInvalidator>();
             services.AddSingleton<IResourceDataChangeEventPublisher>(sp => sp.GetRequiredService<ResourceDataChangeEventHub>());
 
             // Resource search index service (singleton for in-memory caching)

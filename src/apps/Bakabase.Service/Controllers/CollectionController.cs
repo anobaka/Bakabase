@@ -135,6 +135,37 @@ public class CollectionController(
         return new SingletonResponse<PlaceholderResourceResult>(result);
     }
 
+    /// <summary>
+    /// What a rule would match, before saving it. A rule collection is only comprehensible if you
+    /// can see what it catches while you are writing it.
+    /// </summary>
+    [HttpPost("rule/preview")]
+    [SwaggerOperation(OperationId = "PreviewCollectionRule")]
+    public async Task<SingletonResponse<CollectionRulePreview>> PreviewRule(
+        [FromBody] CollectionRulePreviewInputModel model,
+        [FromServices] IResourceProfileService profiles)
+    {
+        if (string.IsNullOrWhiteSpace(model.RuleSearchJson))
+        {
+            return new SingletonResponse<CollectionRulePreview>(new CollectionRulePreview(0, []));
+        }
+
+        try
+        {
+            var matched = await profiles.GetMatchingResourceIdsBySearchJson(model.RuleSearchJson);
+
+            return new SingletonResponse<CollectionRulePreview>(new CollectionRulePreview(
+                matched.Count,
+                matched.Take(Math.Clamp(model.SampleSize, 1, 100)).ToList()));
+        }
+        catch (Exception e)
+        {
+            // A half-written rule is the normal state of one being written; saying what is wrong
+            // beats an error page.
+            return SingletonResponseBuilder<CollectionRulePreview>.BuildBadRequest(e.Message);
+        }
+    }
+
     [HttpGet("{id:int}/progress")]
     [SwaggerOperation(OperationId = "GetCollectionProgress")]
     public async Task<SingletonResponse<CollectionProgress>> GetProgress(int id) =>
@@ -152,3 +183,15 @@ public record CollectionPlaceholderInputModel
 {
     public string Title { get; set; } = null!;
 }
+
+public record CollectionRulePreviewInputModel
+{
+    public string? RuleSearchJson { get; set; }
+
+    /// <summary>How many matching resource ids to return as a sample.</summary>
+    public int SampleSize { get; set; } = 24;
+}
+
+/// <param name="TotalCount">How many resources the rule matches.</param>
+/// <param name="SampleResourceIds">The first few of them, for the editor to show.</param>
+public record CollectionRulePreview(int TotalCount, List<int> SampleResourceIds);

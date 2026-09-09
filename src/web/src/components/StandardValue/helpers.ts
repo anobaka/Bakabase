@@ -61,6 +61,35 @@ export const findNodeChainInMultilevelData = <V>(
 };
 
 /**
+ * A node's own value plus every value beneath it.
+ *
+ * A multilevel value is stored as the leaf node's id alone, so a filter for a
+ * branch ("Doujinshi") matches nothing on its own — the resources are filed
+ * under its children. Anything that turns a node into a filter has to ask for
+ * the subtree instead of the node.
+ */
+export const collectNodeAndDescendantValues = <V>(node: MultilevelData<V>): V[] => {
+  const values: V[] = [node.value];
+
+  for (const child of node.children ?? []) {
+    values.push(...collectNodeAndDescendantValues(child));
+  }
+
+  return values;
+};
+
+/**
+ * The same, found by value: the subtree under the node carrying `value`, or an
+ * empty list when the tree has no such node.
+ */
+export const collectSubtreeValues = <V>(data: MultilevelData<V>[], value: V): V[] => {
+  const chain = findNodeChainInMultilevelData(data, value);
+  const node = chain?.[chain.length - 1];
+
+  return node ? collectNodeAndDescendantValues(node) : [];
+};
+
+/**
  * Walk the multilevel tree matching one label per depth, returning the node
  * chain, or undefined when any level has no matching label. Used to look up
  * node attributes (e.g. colors) for a label chain that came from the server,

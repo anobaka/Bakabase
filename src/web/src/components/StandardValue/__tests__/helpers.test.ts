@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
+import type { MultilevelData } from "@/components/StandardValue/models";
+
 import {
+  collectSubtreeValues,
   deserializeStandardValue,
   findNodeChainByLabels,
   serializeStandardValue,
@@ -86,5 +89,33 @@ describe("findNodeChainByLabels", () => {
     expect(findNodeChainByLabels(data, ["Category", "Missing"])).toBeUndefined();
     expect(findNodeChainByLabels(data, ["Missing"])).toBeUndefined();
     expect(findNodeChainByLabels(data, [])).toBeUndefined();
+  });
+});
+
+describe("collectSubtreeValues", () => {
+  const data: MultilevelData<string>[] = [
+    {
+      value: "1",
+      label: "Doujinshi",
+      children: [
+        { value: "2", label: "Manga", children: [{ value: "3", label: "Full color" }] },
+        { value: "4", label: "CG set" },
+      ],
+    },
+    { value: "5", label: "Game" },
+  ];
+
+  it("returns the node and everything under it", () => {
+    // A resource is filed under a leaf, so filtering by the branch alone would
+    // find nothing — the subtree is what the user means by "Doujinshi".
+    expect(collectSubtreeValues(data, "1")).toEqual(["1", "2", "3", "4"]);
+  });
+
+  it("returns just the node when it is a leaf", () => {
+    expect(collectSubtreeValues(data, "5")).toEqual(["5"]);
+  });
+
+  it("returns nothing for a value the tree does not have", () => {
+    expect(collectSubtreeValues(data, "404")).toEqual([]);
   });
 });

@@ -1,0 +1,13 @@
+{
+  "collection.rule.title": "Rule",
+  "collection.rule.description": "Whatever matches this is in the collection, without anybody adding it. Members you add by hand stay in as well.",
+  "collection.rule.empty": "No rule. The collection holds exactly what you put in it.",
+  "collection.rule.matches": "Matches {{count}} resources",
+  "collection.rule.matches_one": "Matches {{count}} resource",
+  "collection.rule.matches_other": "Matches {{count}} resources",
+  "collection.rule.matchesNone": "Matches nothing at the moment",
+  "collection.rule.checking": "Checking what this catches…",
+  "collection.rule.failed": "That rule could not be read.",
+  "collection.rule.clear": "Remove the rule",
+  "collection.rule.sample": "For example"
+}

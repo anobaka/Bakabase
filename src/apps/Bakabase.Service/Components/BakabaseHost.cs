@@ -141,6 +141,9 @@ namespace Bakabase.Service.Components
             // during host start before MigrateDb has executed.
             await serviceProvider.GetRequiredService<IHealthScoreCacheWarmer>().WarmAsync();
 
+            // Resolved so it exists and has subscribed; it has no other job.
+            serviceProvider.GetRequiredService<Components.Collections.CollectionRuleCacheInvalidator>();
+
             var dynamicTaskRegistry = serviceProvider.GetRequiredService<DynamicTaskRegistry>();
             var taskManager = serviceProvider.GetRequiredService<BTaskManager>();
 

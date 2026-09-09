@@ -1,0 +1,11 @@
+{
+  "collection.rule.title": "规则",
+  "collection.rule.description": "符合规则的资源自动属于该集合，无需手动添加；手动添加的成员同样保留。",
+  "collection.rule.empty": "未设置规则，集合只包含你手动添加的成员。",
+  "collection.rule.matches": "匹配 {{count}} 个资源",
+  "collection.rule.matchesNone": "当前没有匹配到资源",
+  "collection.rule.checking": "正在计算匹配结果…",
+  "collection.rule.failed": "无法解析该规则。",
+  "collection.rule.clear": "清除规则",
+  "collection.rule.sample": "例如"
+}

@@ -1492,6 +1492,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/collection/rule/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PreviewCollectionRule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/collection/{id}/progress": {
         parameters: {
             query?: never;
@@ -10747,6 +10763,16 @@ export interface components {
         "Bakabase.Service.Controllers.CollectionPlaceholderInputModel": {
             title: string;
         };
+        "Bakabase.Service.Controllers.CollectionRulePreview": {
+            /** Format: int32 */
+            totalCount: number;
+            sampleResourceIds: number[];
+        };
+        "Bakabase.Service.Controllers.CollectionRulePreviewInputModel": {
+            ruleSearchJson?: string;
+            /** Format: int32 */
+            sampleSize: number;
+        };
         "Bakabase.Service.Controllers.CookieCaptureResult": {
             cookie: string;
             userAgent?: string;
@@ -12691,6 +12717,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Controllers.AppDataPathController+ValidateResponse"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.CollectionRulePreview]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Controllers.CollectionRulePreview"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.CookieCaptureResult]": {
             /** Format: int32 */
@@ -16661,6 +16693,35 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Services.PlaceholderResourceResult]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Services.PlaceholderResourceResult]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Services.PlaceholderResourceResult]"];
+                };
+            };
+        };
+    };
+    PreviewCollectionRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.CollectionRulePreviewInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.CollectionRulePreviewInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.CollectionRulePreviewInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.CollectionRulePreviewInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.CollectionRulePreview]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.CollectionRulePreview]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.CollectionRulePreview]"];
                 };
             };
         };

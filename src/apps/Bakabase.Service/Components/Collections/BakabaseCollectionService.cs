@@ -31,21 +31,10 @@ public class BakabaseCollectionService(
     IResourceDataChangeEventPublisher changePublisher,
     IResourceProfileService profiles,
     IAcquisitionService acquisitions,
+    CollectionRuleCache ruleCache,
     ILogger<BakabaseCollectionService> logger)
     : CollectionService<BakabaseDbContext>(orm, mappings, resources, changePublisher)
 {
-    /// <summary>
-    /// Cached because the list page asks for every collection's progress at once, and a rule
-    /// evaluation is a full search. Invalidated by resource changes rather than by a timer: the
-    /// answer is only ever wrong because a resource changed.
-    /// </summary>
-    private static readonly Dictionary<int, (HashSet<int> Ids, long Generation)> RuleCache = new();
-
-    private static long _generation;
-
-    /// <summary>Called when resources change, which is the only thing that can move a rule's answer.</summary>
-    public static void InvalidateRuleCache() => Interlocked.Increment(ref _generation);
-
     protected override async Task<IReadOnlyList<int>> RuleMatchedResourceIds(int collectionId,
         CancellationToken ct)
     {
@@ -53,15 +42,10 @@ public class BakabaseCollectionService(
 
         if (collection?.RuleSearchJson is not {Length: > 0} rule) return [];
 
-        var generation = Interlocked.Read(ref _generation);
+        var generation = ruleCache.Generation;
+        var cached = ruleCache.Get(collectionId, generation);
 
-        lock (RuleCache)
-        {
-            if (RuleCache.TryGetValue(collectionId, out var cached) && cached.Generation == generation)
-            {
-                return cached.Ids.ToList();
-            }
-        }
+        if (cached != null) return cached.ToList();
 
         HashSet<int> matched;
         try
@@ -77,10 +61,7 @@ public class BakabaseCollectionService(
             return [];
         }
 
-        lock (RuleCache)
-        {
-            RuleCache[collectionId] = (matched, generation);
-        }
+        ruleCache.Set(collectionId, matched, generation);
 
         return matched.ToList();
     }

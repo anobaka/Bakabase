@@ -44,6 +44,7 @@ import enAvSources from "@/locales/en/pages/avSources.json";
 import enSubscription from "@/locales/en/pages/subscription.json";
 import enWorkflow from "@/locales/en/pages/workflow.json";
 import enAcquisition from "@/locales/en/pages/acquisition.json";
+import enCollection from "@/locales/en/pages/collection.json";
 
 // English - Components
 import enFileExplorer from "@/locales/en/components/fileExplorer.json";
@@ -106,6 +107,7 @@ import cnAvSources from "@/locales/cn/pages/avSources.json";
 import cnSubscription from "@/locales/cn/pages/subscription.json";
 import cnWorkflow from "@/locales/cn/pages/workflow.json";
 import cnAcquisition from "@/locales/cn/pages/acquisition.json";
+import cnCollection from "@/locales/cn/pages/collection.json";
 
 // Chinese - Components
 import cnFileExplorer from "@/locales/cn/components/fileExplorer.json";
@@ -168,6 +170,7 @@ const enResources = {
   ...enSubscription,
   ...enWorkflow,
   ...enAcquisition,
+  ...enCollection,
   // Components
   ...enFileExplorer,
   ...enResourceFilter,
@@ -230,6 +233,7 @@ const cnResources = {
   ...cnSubscription,
   ...cnWorkflow,
   ...cnAcquisition,
+  ...cnCollection,
   // Components
   ...cnFileExplorer,
   ...cnResourceFilter,
