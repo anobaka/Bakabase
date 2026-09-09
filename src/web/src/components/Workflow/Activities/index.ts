@@ -18,6 +18,8 @@ import { AcquisitionResolveSharedContentUI } from "./AcquisitionResolveSharedCon
 import { AcquisitionSelectLinkUI } from "./AcquisitionSelectLink";
 import { AcquisitionWaitForInboxUI } from "./AcquisitionWaitForInbox";
 import { AcquisitionUnpackUI } from "./AcquisitionUnpack";
+import { AcquisitionPlaceUI } from "./AcquisitionPlace";
+import { AcquisitionPickDirectoryUI } from "./AcquisitionPickDirectory";
 
 export const workflowActivityRegistry: Record<string, WorkflowActivityUI<any>> = {
   [SubscriptionItemTitleContainsUI.kind]: SubscriptionItemTitleContainsUI,
@@ -37,6 +39,8 @@ export const workflowActivityRegistry: Record<string, WorkflowActivityUI<any>> =
   [AcquisitionSelectLinkUI.kind]: AcquisitionSelectLinkUI,
   [AcquisitionWaitForInboxUI.kind]: AcquisitionWaitForInboxUI,
   [AcquisitionUnpackUI.kind]: AcquisitionUnpackUI,
+  [AcquisitionPlaceUI.kind]: AcquisitionPlaceUI,
+  [AcquisitionPickDirectoryUI.kind]: AcquisitionPickDirectoryUI,
 };
 
 /** Built once per kind so the editor's forms keep their state across renders. */

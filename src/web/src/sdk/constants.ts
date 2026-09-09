@@ -4480,6 +4480,24 @@ export const AcquisitionRunStateLabel: Record<AcquisitionRunState, string> = {
   [AcquisitionRunState.Failed]: 'Failed'
 };
 
+export enum PlacementConflictPolicy {
+  Rename = 1,
+  Merge = 2,
+  Ask = 3
+}
+
+export const placementConflictPolicies = [
+  { label: 'Rename', value: PlacementConflictPolicy.Rename },
+  { label: 'Merge', value: PlacementConflictPolicy.Merge },
+  { label: 'Ask', value: PlacementConflictPolicy.Ask }
+] as const;
+
+export const PlacementConflictPolicyLabel: Record<PlacementConflictPolicy, string> = {
+  [PlacementConflictPolicy.Rename]: 'Rename',
+  [PlacementConflictPolicy.Merge]: 'Merge',
+  [PlacementConflictPolicy.Ask]: 'Ask'
+};
+
 export enum AcquisitionDriveKind {
   Unknown = 0,
   DirectUrl = 1,

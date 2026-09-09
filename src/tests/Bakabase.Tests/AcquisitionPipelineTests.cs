@@ -376,10 +376,20 @@ public sealed class AcquisitionPipelineTests
             .Where(d => d.TriggerKind == AcquisitionWorkflowKinds.TriggerRequested)
             .ToListAsync();
 
-        // None of the real steps exist in this build yet, so nothing seeds — and seeding twice
-        // still produces nothing rather than duplicates.
-        Assert.AreEqual(0, defs.Count(d => d.IsBuiltin),
-            "no built-in recipe can be seeded while its steps are unimplemented");
+        var builtin = defs.Where(d => d.IsBuiltin).ToList();
+
+        // Seeding twice produces one of each, not two.
+        Assert.AreEqual(builtin.Select(d => d.Name).Distinct().Count(), builtin.Count);
+
+        // Recipes are seeded only once every step they name exists. Platform fetch is the one still
+        // waiting for a step, so it is skipped rather than written out broken — and it will seed
+        // itself on the first start after that step lands.
+        var seeded = builtin.Select(d => d.Name).ToHashSet();
+
+        Assert.IsTrue(seeded.Contains(BuiltinAcquisitionRecipes.ForumPostWithCloudDrive));
+        Assert.IsTrue(seeded.Contains(BuiltinAcquisitionRecipes.LocalDirectory));
+        Assert.IsFalse(seeded.Contains(BuiltinAcquisitionRecipes.PlatformFetch),
+            "acquisition.fetchFromPlatform does not exist yet");
     }
 
     /// <summary>

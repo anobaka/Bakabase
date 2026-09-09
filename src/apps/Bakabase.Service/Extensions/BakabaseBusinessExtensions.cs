@@ -166,6 +166,9 @@ namespace Bakabase.Service.Extensions
             services.AddAcquisitionStep<Components.Acquisition.Steps.FetchHttpStep>();
             services.AddAcquisitionStep<Components.Acquisition.Steps.WaitForInboxStep>();
             services.AddAcquisitionStep<Components.Acquisition.Steps.UnpackStep>();
+            services.AddAcquisitionStep<Bakabase.Modules.Acquisition.Components.Steps.PickLocalDirectoryStep>();
+            services.AddAcquisitionStep<Bakabase.Modules.Acquisition.Components.Steps.PlaceStep>();
+            services.AddAcquisitionStep<Components.Acquisition.Steps.MaterializeStep>();
             services.AddHttpClient(nameof(Components.Acquisition.Steps.FetchHttpStep));
             services.AddScoped<Components.Acquisition.AcquisitionInboxService>();
             services.AddHostedService<Components.Acquisition.AcquisitionInboxWatcher>();

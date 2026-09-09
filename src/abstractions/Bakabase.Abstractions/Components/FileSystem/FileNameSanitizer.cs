@@ -1,13 +1,14 @@
 using System;
 using System.Linq;
 
-namespace Bakabase.Service.Components.Workflow.Fs;
+namespace Bakabase.Abstractions.Components.FileSystem;
 
 /// <summary>
-/// The non-optional defense line in front of every planned rename
-/// (docs/file-cleaning-workflow.html §3.5). Always sanitizes against the WINDOWS rules, even on
-/// other platforms — a name that is legal on Linux but not on Windows would otherwise plan fine
-/// here and break the library the day it is copied to a Windows machine.
+/// The non-optional defense line in front of every name this program writes to disk — a planned
+/// rename (docs/file-cleaning-workflow.html §3.5), and the folder an acquisition files a resource
+/// into. Always sanitizes against the WINDOWS rules, even on other platforms: a name that is legal
+/// on Linux but not on Windows would otherwise pass here and break the library the day it is copied
+/// to a Windows machine.
 /// </summary>
 public static class FileNameSanitizer
 {
