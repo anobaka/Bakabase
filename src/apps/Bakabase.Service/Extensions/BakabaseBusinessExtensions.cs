@@ -165,6 +165,7 @@ namespace Bakabase.Service.Extensions
             services.AddAcquisitionStep<Components.Acquisition.Steps.ResolveSharedContentStep>();
             services.AddAcquisitionStep<Components.Acquisition.Steps.FetchHttpStep>();
             services.AddAcquisitionStep<Components.Acquisition.Steps.WaitForInboxStep>();
+            services.AddAcquisitionStep<Components.Acquisition.Steps.UnpackStep>();
             services.AddHttpClient(nameof(Components.Acquisition.Steps.FetchHttpStep));
             services.AddScoped<Components.Acquisition.AcquisitionInboxService>();
             services.AddHostedService<Components.Acquisition.AcquisitionInboxWatcher>();

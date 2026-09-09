@@ -120,6 +120,7 @@ public static class TestServiceBuilder
 
         // === Compression ===
         services.TryAddSingleton<CompressedFileService>();
+        services.TryAddSingleton<IArchiveExtractionService, ArchiveExtractionService>();
 
         // === File Mover ===
         services.TryAddSingleton<IFileMover, FileMover>();
