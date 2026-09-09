@@ -121,8 +121,10 @@ namespace Bakabase.InsideWorld.Business.Components.Search
                             InternalProperty.Filename => (Func<Abstractions.Models.Domain.Resource, object?>) (r => r.FileName),
                             InternalProperty.DirectoryPath => r => r.Directory,
                             InternalProperty.CreatedAt => r => r.CreatedAt,
-                            InternalProperty.FileCreatedAt => r => r.FileCreatedAt,
-                            InternalProperty.FileModifiedAt => r => r.FileModifiedAt,
+                            // No files, no file times — mirrors the index, which does not record
+                            // these for a resource without a path.
+                            InternalProperty.FileCreatedAt => r => r.HasLocalPath ? r.FileCreatedAt : (object?) null,
+                            InternalProperty.FileModifiedAt => r => r.HasLocalPath ? r.FileModifiedAt : (object?) null,
                             InternalProperty.MediaLibraryV2 => r => r.MediaLibraryId.ToString(),
                             InternalProperty.MediaLibraryV2Multi => r => resourceMediaLibraryMap?.GetValueOrDefault(r.Id),
                             InternalProperty.ParentResource => r => r.ParentId?.ToString(),

@@ -142,6 +142,15 @@ const ResourceMoveModal = ({ resources, onMoved, onDestroyed }: Props) => {
 
           return;
         }
+        // A selected resource with no local files is dropped by the backend rather than
+        // failing the batch; saying so keeps the success toast honest.
+        const skipped = moveRsp.data?.skippedResourceCount ?? 0;
+
+        if (skipped > 0) {
+          toast.warning(
+            t<string>("resourceMove.warning.skippedUnmaterialized", { count: skipped }),
+          );
+        }
         toast.success(t<string>("resourceMove.status.taskCreated"));
         finishAfterTaskCreated();
 
@@ -327,6 +336,13 @@ const ResourceMoveConfirmModal = ({
         }
         if (dontRemindAgain) {
           rememberSkipConfirm();
+        }
+        const skipped = rsp.data?.skippedResourceCount ?? 0;
+
+        if (skipped > 0) {
+          toast.warning(
+            t<string>("resourceMove.warning.skippedUnmaterialized", { count: skipped }),
+          );
         }
         toast.success(t<string>("resourceMove.status.taskCreated"));
         onMoved();

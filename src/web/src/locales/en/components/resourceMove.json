@@ -11,6 +11,7 @@
   "resourceMove.warning.destInsideSource": "The destination cannot be inside a resource being moved.",
   "resourceMove.warning.alreadyAtDestination": "The resource is already in this directory.",
   "resourceMove.warning.lockedDuringMove": "The affected resources cannot be operated on while the move is in progress.",
+  "resourceMove.warning.skippedUnmaterialized": "{{count}} selected resource(s) have no local files and were not moved.",
   "resourceMove.confirm.title": "Confirm moving resource files",
   "resourceMove.confirm.summary": "Move {{count}} resource(s) to:",
   "resourceMove.confirm.coveredResources": "{{count}} more resource(s) inside this directory will move along with it, even though not selected:",

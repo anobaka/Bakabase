@@ -92,7 +92,14 @@ namespace Bakabase.Modules.Property.Components.Properties
                 };
             }
 
-            return operation == SearchOperation.IsNull;
+            // No value at all. "Is null" obviously matches, and so does every negative operation:
+            // a resource that says nothing is not equal to, does not contain and does not start
+            // with whatever was asked for. This also keeps the full-scan fallback agreeing with the
+            // inverted index, which answers a negation as "everything minus the matches" and so has
+            // always included resources carrying no entry for the property.
+            return operation is SearchOperation.IsNull or SearchOperation.NotEquals
+                or SearchOperation.NotContains or SearchOperation.NotStartsWith
+                or SearchOperation.NotEndsWith or SearchOperation.NotIn or SearchOperation.NotMatches;
         }
 
         /// <summary>

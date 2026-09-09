@@ -1174,7 +1174,12 @@ namespace Bakabase.InsideWorld.Business.Services
 
         public async Task<BaseResponse> PlayRandomResource()
         {
-            var existingResourceIds = (await GetAllDbModels(null, false)).Select(r => r.Id).ToHashSet();
+            // Only resources with local files can be played. One without a path is known to
+            // Bakabase but not materialized on disk yet, so it has nothing to open and would
+            // waste a live probe.
+            var existingResourceIds = (await GetAllDbModels(null, false))
+                .Where(r => !string.IsNullOrEmpty(r.Path))
+                .Select(r => r.Id).ToHashSet();
             if (existingResourceIds.Count == 0)
             {
                 return BaseResponseBuilder.BuildBadRequest("No playable resource was found.");

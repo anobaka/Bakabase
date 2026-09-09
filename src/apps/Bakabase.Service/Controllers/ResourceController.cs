@@ -615,7 +615,8 @@ public class ResourceController(
     public async Task<ListResponse<ResourcePathInfoViewModel>> SearchPaths(string keyword)
     {
         var resources =
-            await service.GetAll(x => x.Path.Contains(keyword, StringComparison.OrdinalIgnoreCase),
+            await service.GetAll(
+                x => x.Path != null && x.Path.Contains(keyword, StringComparison.OrdinalIgnoreCase),
                 ResourceAdditionalItem.None);
         var viewModels = resources.Select(r => new ResourcePathInfoViewModel(r.Id, r.Path, r.FileName));
 

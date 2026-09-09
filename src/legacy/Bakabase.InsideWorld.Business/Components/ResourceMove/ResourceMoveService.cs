@@ -56,12 +56,12 @@ public class ResourceMoveService(
                         !resources.Any(o => o.Id != r.Id && r.Path!.IsPathUnder(o.Path)))
             .ToList();
 
-    public async Task<SingletonResponse<string>> CreateBatch(int[] resourceIds, string destDir)
+    public async Task<SingletonResponse<ResourceMoveBatchViewModel>> CreateBatch(int[] resourceIds, string destDir)
     {
         var standardizedDestDir = destDir.StandardizePath();
         if (string.IsNullOrEmpty(standardizedDestDir) || !Directory.Exists(standardizedDestDir))
         {
-            return SingletonResponseBuilder<string>.Build(ResponseCode.InvalidPayloadOrOperation,
+            return SingletonResponseBuilder<ResourceMoveBatchViewModel>.Build(ResponseCode.InvalidPayloadOrOperation,
                 localizer.PathIsNotFound(destDir));
         }
 
@@ -69,28 +69,33 @@ public class ResourceMoveService(
         var missingIds = resourceIds.Except(resources.Select(r => r.Id)).ToArray();
         if (missingIds.Any())
         {
-            return SingletonResponseBuilder<string>.Build(ResponseCode.NotFound,
+            return SingletonResponseBuilder<ResourceMoveBatchViewModel>.Build(ResponseCode.NotFound,
                 localizer.Resource_NotFound(missingIds.First()));
         }
 
         var topLevel = CollapseNestedSelection(resources);
+        // A resource with no local files has nothing to move. CollapseNestedSelection already drops
+        // it; counting it here is what lets the caller say so, instead of leaving the user to
+        // assume their whole selection moved. Resources dropped for being nested are not counted —
+        // those do move, carried by the ancestor that was selected with them.
+        var skippedResourceCount = resources.Count(r => !r.HasLocalPath);
         if (!topLevel.Any())
         {
-            return SingletonResponseBuilder<string>.BadRequest;
+            return SingletonResponseBuilder<ResourceMoveBatchViewModel>.BadRequest;
         }
 
         foreach (var r in topLevel)
         {
             if (standardizedDestDir.IsPathEqualOrUnder(r.Path))
             {
-                return SingletonResponseBuilder<string>.Build(ResponseCode.InvalidPayloadOrOperation,
+                return SingletonResponseBuilder<ResourceMoveBatchViewModel>.Build(ResponseCode.InvalidPayloadOrOperation,
                     localizer.ResourceMove_DestinationInsideSource(r.Path, standardizedDestDir));
             }
 
             var destPath = BuildDestPath(standardizedDestDir, r.Path);
             if (string.Equals(destPath, r.Path.StandardizePath(), StringComparison.OrdinalIgnoreCase))
             {
-                return SingletonResponseBuilder<string>.Build(ResponseCode.InvalidPayloadOrOperation,
+                return SingletonResponseBuilder<ResourceMoveBatchViewModel>.Build(ResponseCode.InvalidPayloadOrOperation,
                     localizer.ResourceMove_DestinationExists(destPath));
             }
         }
@@ -113,7 +118,7 @@ public class ResourceMoveService(
             records.Select(r => r.ResourceId));
         if (!guard.TryReserve(batchId, affectedResourceIds, reservedPaths, out var conflictPath))
         {
-            return SingletonResponseBuilder<string>.Build(ResponseCode.Conflict,
+            return SingletonResponseBuilder<ResourceMoveBatchViewModel>.Build(ResponseCode.Conflict,
                 localizer.ResourceMove_ResourcesAreBeingMoved(conflictPath!));
         }
 
@@ -129,7 +134,8 @@ public class ResourceMoveService(
             throw;
         }
 
-        return new SingletonResponse<string>(batchId);
+        return new SingletonResponse<ResourceMoveBatchViewModel>(
+            new ResourceMoveBatchViewModel(batchId, skippedResourceCount));
     }
 
     /// <summary>

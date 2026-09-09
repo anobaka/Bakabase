@@ -11,6 +11,17 @@ namespace Bakabase.Abstractions.Extensions
     public static class ResourceExtensions
     {
         /// <summary>
+        /// The name a resource is known by when it has no filename to be known by — a work the user
+        /// has not downloaded yet, an uninstalled game. Reads the reserved <c>Name</c> property, so
+        /// it is only populated on a resource loaded with its properties.
+        /// </summary>
+        public static string? GetReservedName(this Resource resource) =>
+            resource.Properties?.GetValueOrDefault((int) PropertyPool.Reserved)
+                ?.GetValueOrDefault((int) ReservedProperty.Name)?.Values
+                ?.Select(v => v.BizValue as string)
+                .FirstOrDefault(v => !string.IsNullOrEmpty(v));
+
+        /// <summary>
         /// Gets a property value from a resource based on PropertyPool, PropertyId, and optional ValueScope.
         /// For Internal properties, values are read directly from Resource fields.
         /// For Reserved/Custom properties, values are read from the Properties dictionary.
@@ -116,14 +127,19 @@ namespace Bakabase.Abstractions.Extensions
                             selectKey = x => x.CreateDt;
                             break;
                         case ResourceSearchSortableProperty.FileCreateDt:
-                            selectKey = x => x.FileCreateDt;
+                            // A resource with no local files has no file time — the column holds
+                            // the moment its row was written. Sink those to the end whichever way
+                            // the sort runs, the same way unscored resources sink below.
+                            var fileCreateSentinel = a ? DateTime.MaxValue : DateTime.MinValue;
+                            selectKey = x => string.IsNullOrEmpty(x.Path) ? fileCreateSentinel : x.FileCreateDt;
                             break;
                         case ResourceSearchSortableProperty.FileModifyDt:
-                            selectKey = x => x.FileModifyDt;
+                            var fileModifySentinel = a ? DateTime.MaxValue : DateTime.MinValue;
+                            selectKey = x => string.IsNullOrEmpty(x.Path) ? fileModifySentinel : x.FileModifyDt;
                             break;
                         case ResourceSearchSortableProperty.Filename:
-                            selectKey = x => Path.GetFileName(x.Path);
-                            comparer = Comparer<object>.Create(StringComparer.OrdinalIgnoreCase.Compare);
+                            selectKey = x => Path.GetFileName(x.Path) ?? string.Empty;
+                            comparer = BuildEmptyLastComparer(a);
                             break;
                         case ResourceSearchSortableProperty.PlayedAt:
                             selectKey = x => x.PlayedAt;
@@ -150,6 +166,30 @@ namespace Bakabase.Abstractions.Extensions
 
             return ordersForSearch.ToArray();
         }
+
+        /// <summary>
+        /// Orders strings case-insensitively but always puts the empty ones last, whichever
+        /// direction the caller asked for. A resource with no local files has no filename, and
+        /// a block of blanks at the top of the list reads as a bug.
+        /// </summary>
+        private static IComparer<object> BuildEmptyLastComparer(bool asc) =>
+            Comparer<object>.Create((l, r) =>
+            {
+                var left = l as string;
+                var right = r as string;
+                var leftEmpty = string.IsNullOrEmpty(left);
+                var rightEmpty = string.IsNullOrEmpty(right);
+
+                if (leftEmpty || rightEmpty)
+                {
+                    if (leftEmpty && rightEmpty) return 0;
+                    // The caller flips the comparison for a descending sort, so pre-flip here to
+                    // keep the empties at the end either way.
+                    return (leftEmpty ? 1 : -1) * (asc ? 1 : -1);
+                }
+
+                return StringComparer.OrdinalIgnoreCase.Compare(left, right);
+            });
 
         public static ResourceDiffDbModel ToDbModel(this ResourceDiff domainModel)
         {

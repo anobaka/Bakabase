@@ -233,7 +233,7 @@ namespace Bakabase.Modules.BulkModification.Services
             Expression<Func<BulkModificationDiffDbModel, bool>> exp = x => x.BulkModificationId == bmId;
             if (model.Path.IsNotEmpty())
             {
-                exp = exp.And(x => x.ResourcePath.Contains(model.Path));
+                exp = exp.And(x => x.ResourcePath != null && x.ResourcePath.Contains(model.Path));
             }
 
             var result = await diffOrm.Search(exp, model.PageIndex, model.PageSize);

@@ -479,6 +479,15 @@ namespace Bakabase.Modules.Enhancer.Services
                             continue;
                         }
 
+                        // An enhancer that reads the resource's files has nothing to read on a
+                        // resource that has none. Skipping it here — rather than letting it run and
+                        // store an empty result — is what keeps it able to run once the files
+                        // arrive, since an applied record is never retried.
+                        if (!tr.HasLocalPath && EnhancerRequirements.RequiresLocalFiles(eId))
+                        {
+                            continue;
+                        }
+
                         var enhancer = _enhancers.GetValueOrDefault(eId);
                         if (enhancer != null)
                         {

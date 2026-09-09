@@ -16,7 +16,7 @@ public interface IResourceMoveService
     /// Validate the request, persist one Pending record per top-level resource and enqueue the
     /// batch's executor task. Returns the batch id.
     /// </summary>
-    Task<SingletonResponse<string>> CreateBatch(int[] resourceIds, string destDir);
+    Task<SingletonResponse<ResourceMoveBatchViewModel>> CreateBatch(int[] resourceIds, string destDir);
 
     /// <summary>
     /// Dry-run of a move: effective top-level resources with destination paths, per-resource

@@ -6,9 +6,10 @@
         public int BulkModificationId { get; set; }
 
         /// <summary>
-        /// redundancy
+        /// redundancy. Null when the resource has no local files — it is known to Bakabase but
+        /// not materialized on disk yet.
         /// </summary>
-        public string ResourcePath { get; set; } = null!;
+        public string? ResourcePath { get; set; }
 
         public int ResourceId { get; set; }
 

@@ -254,6 +254,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 </table></div>
 <h4>测试</h4>
 <ul><li>批量修改预览包含未落地资源不抛异常；增强任务对未落地资源不生成 Bakabase 增强器记录、对 DLsite 增强器按 <code class="i">Name</code> 生成关键词；按文件时间排序时未落地资源在末尾。</li></ul>
+<div class="rule"><b>落地时与计划的差异。</b>十行作为一个提交落地，而不是每行一个：其中五行共用同一个测试文件，另外两行共用一次 SDK 重新生成，拆开反而让每个提交都不完整。<br>逐行说明：<code class="i">MediaLibraryTemplateService</code> 约 673-675 行经核实处理的是文件系统发现出来的 <code class="i">TempSyncResource</code>，路径必然存在，未做改动；<code class="i">ResourceNfoService.GetFullname</code> 目前没有实际调用方，仍改为路径为空时返回 null；文件名排序也一并做了空值置后，理由与文件时间一致；<code class="i">BulkModificationDiffViewModel.ResourcePath</code> 也必须一起可空（计划只列了领域与数据库模型）；<code class="i">IResourceMoveService.CreateBatch</code> 的返回类型改为 <code class="i">ResourceMoveBatchViewModel</code>（批次 id + 跳过数量），因此重新生成了 SDK，并在移动弹窗里加了提示与两个文案键。<br>另有一处计划未写明但必须同改的地方：全表扫描回退里 <code class="i">AbstractPropertyDescriptor.IsMatch</code> 对空值的否定运算结果原先是「不包含」，而倒排索引一直是「全体减去命中」即「包含」。索引不再为无路径资源写文件时间键之后，这个分歧会直接变成两条搜索路径给出不同答案，所以把全表扫描改成与索引一致。</div>
 
 <h3 id="b1-4">批次 1.4 创建未落地资源</h3>
 <div class="kv">
@@ -626,7 +627,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 </div>
 
 <h2 id="s8"><span class="n">§8</span>批次总表</h2>
-<div class="rule ok"><b>进度。</b>已完成：1.1、1.2。进行中：无。进度只在本行更新，批次行内不写状态。</div>
+<div class="rule ok"><b>进度。</b>已完成：1.1、1.2、1.3。进行中：无。进度只在本行更新，批次行内不写状态。</div>
 <div class="tw"><table><tr><th style="width:8%">批次</th><th style="width:26%">名称</th><th style="width:12%">依赖</th><th style="width:10%">规模</th><th>交付物摘要</th></tr>
 <tr><td class="e">1.1</td><td><code class="i">HasLocalPath</code> 判定与内部属性</td><td>无</td><td>小</td><td>统一判定、布尔内部属性、筛选固定项</td></tr>
 <tr><td class="e">1.2</td><td>落地服务</td><td>1.1</td><td>中</td><td><code class="i">IResourceMaterializationService</code>、同步服务三处修正、空增强记录清理</td></tr>

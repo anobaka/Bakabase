@@ -653,10 +653,13 @@ namespace Bakabase.Service.Controllers
                 }
 
                 var resourceIds = cache.Select(r => r.ResourceId).ToArray();
-                var resources = await _resourceService.GetAllDbModels(x => resourceIds.Contains(x.Id));
+                // A resource with no local files has no folder to hold a marker file, and
+                // Path.Combine would throw on its null path.
+                var resources = await _resourceService.GetAllDbModels(x =>
+                    resourceIds.Contains(x.Id) && x.Path != null && x.Path != "");
 
                 // Group resources by path - multiple resources can share the same path
-                var resourcesByPath = resources.GroupBy(r => r.Path).ToDictionary(g => g.Key, g => g.ToList());
+                var resourcesByPath = resources.GroupBy(r => r.Path!).ToDictionary(g => g.Key, g => g.ToList());
                 var uniquePaths = resourcesByPath.Keys.ToList();
                 var total = uniquePaths.Count;
                 var deleted = 0;

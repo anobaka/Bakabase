@@ -15,7 +15,7 @@ namespace Bakabase.Modules.Enhancer.Models.Domain.Constants
 {
     public enum EnhancerId
     {
-        [Enhancer(typeof(BakabaseEnhancer), PropertyValueScope.Bakabase, typeof(BakabaseEnhancerTarget), [EnhancerTag.UseKeyword])]
+        [Enhancer(typeof(BakabaseEnhancer), PropertyValueScope.Bakabase, typeof(BakabaseEnhancerTarget), [EnhancerTag.UseKeyword], requiresLocalFiles: true)]
         Bakabase = 1,
 
         [Enhancer(typeof(ExHentaiEnhancer), PropertyValueScope.ExHentai, typeof(ExHentaiEnhancerTarget), [EnhancerTag.UseKeyword])]
@@ -27,10 +27,10 @@ namespace Bakabase.Modules.Enhancer.Models.Domain.Constants
         [Enhancer(typeof(DLsiteEnhancer), PropertyValueScope.DLsite, typeof(DLsiteEnhancerTarget), [EnhancerTag.UseKeyword])]
         DLsite = 4,
 
-        [Enhancer(typeof(RegexEnhancer), PropertyValueScope.Regex, typeof(RegexEnhancerTarget), [EnhancerTag.UseRegex])]
+        [Enhancer(typeof(RegexEnhancer), PropertyValueScope.Regex, typeof(RegexEnhancerTarget), [EnhancerTag.UseRegex], requiresLocalFiles: true)]
         Regex = 5,
 
-        [Enhancer(typeof(KodiEnhancer), PropertyValueScope.Kodi, typeof(KodiEnhancerTarget), [])]
+        [Enhancer(typeof(KodiEnhancer), PropertyValueScope.Kodi, typeof(KodiEnhancerTarget), [], requiresLocalFiles: true)]
         Kodi = 6,
 
         [Enhancer(typeof(TmdbEnhancer), PropertyValueScope.Tmdb, typeof(TmdbEnhancerTarget), [EnhancerTag.UseKeyword])]

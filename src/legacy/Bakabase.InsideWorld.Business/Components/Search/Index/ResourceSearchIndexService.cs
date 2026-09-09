@@ -399,13 +399,19 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
         AddToRangeIndex(PropertyPool.Internal, (int)InternalProperty.CreatedAt,
             dbModel.CreateDt, resourceId, indexKeys);
 
-        // File created at
-        AddToRangeIndex(PropertyPool.Internal, (int)InternalProperty.FileCreatedAt,
-            dbModel.FileCreateDt, resourceId, indexKeys);
+        // File times, but only for a resource that has files. Without a path these columns hold
+        // the moment the row was written, which is not a file time at all — indexing it would let
+        // "modified before X" match a work nobody has downloaded.
+        if (!string.IsNullOrEmpty(dbModel.Path))
+        {
+            // File created at
+            AddToRangeIndex(PropertyPool.Internal, (int)InternalProperty.FileCreatedAt,
+                dbModel.FileCreateDt, resourceId, indexKeys);
 
-        // File modified at
-        AddToRangeIndex(PropertyPool.Internal, (int)InternalProperty.FileModifiedAt,
-            dbModel.FileModifyDt, resourceId, indexKeys);
+            // File modified at
+            AddToRangeIndex(PropertyPool.Internal, (int)InternalProperty.FileModifiedAt,
+                dbModel.FileModifyDt, resourceId, indexKeys);
+        }
 
         // Played at
         if (dbModel.PlayedAt.HasValue)

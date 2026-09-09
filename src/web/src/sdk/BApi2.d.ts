@@ -7353,6 +7353,11 @@ export interface components {
             uniqueCustomProperties?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Property"][];
             uniqueExtensionGroups?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ExtensionGroup"][];
         };
+        "Bakabase.Abstractions.Models.View.ResourceMoveBatchViewModel": {
+            batchId: string;
+            /** Format: int32 */
+            skippedResourceCount: number;
+        };
         "Bakabase.Abstractions.Models.View.ResourceMovePreviewViewModel": {
             items: components["schemas"]["Bakabase.Abstractions.Models.View.ResourceMovePreviewViewModel+Item"][];
         };
@@ -10353,7 +10358,7 @@ export interface components {
             id: number;
             /** Format: int32 */
             bulkModificationId: number;
-            resourcePath: string;
+            resourcePath?: string;
             /** Format: int32 */
             resourceId: number;
             diffs: components["schemas"]["Bakabase.Service.Models.View.ResourceDiffViewModel"][];
@@ -11433,6 +11438,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.View.MediaLibraryTemplateImportConfigurationViewModel"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ResourceMoveBatchViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Models.View.ResourceMoveBatchViewModel"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ResourceMovePreviewViewModel]": {
             /** Format: int32 */
@@ -24292,9 +24303,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ResourceMoveBatchViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ResourceMoveBatchViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ResourceMoveBatchViewModel]"];
                 };
             };
         };
