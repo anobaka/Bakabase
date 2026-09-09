@@ -1,9 +1,10 @@
 import type { ResourceMaterializedFilter } from "./types";
+import type { ResourceSource } from "@/sdk/constants";
 
 import React from "react";
 import { useTranslation } from "react-i18next";
 
-import { ResourceSource } from "@/sdk/constants";
+import { ResourceSourceLabel } from "@/sdk/constants";
 
 const FilterSummary: React.FC<{ filter: ResourceMaterializedFilter }> = ({ filter }) => {
   const { t } = useTranslation();
@@ -19,7 +20,7 @@ const FilterSummary: React.FC<{ filter: ResourceMaterializedFilter }> = ({ filte
   return (
     <span className="text-xs text-default-500">
       {t<string>("workflow.trigger.resourceMaterialized.summary.only")}&nbsp;
-      {filter.sources.map((id) => ResourceSource[id]).join(", ")}
+      {filter.sources.map((id) => ResourceSourceLabel[id as ResourceSource]).join(", ")}
     </span>
   );
 };

@@ -3,6 +3,7 @@ export type SectionId =
   | "name"
   | "rating"
   | "actions"
+  | "acquisition"
   | "basicInfo"
   | "hierarchy"
   | "introduction"

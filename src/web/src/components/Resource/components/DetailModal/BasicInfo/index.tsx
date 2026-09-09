@@ -10,24 +10,37 @@ type Props = {
   resource: Resource;
 };
 
-const dateTimes = [
+/**
+ * The four timestamps, and which of them describe files rather than the row.
+ *
+ * `fromFiles` matters twice over: a resource with no local files has no file times — the columns
+ * hold the moment its row was written — so showing them would be a lie, and the keys are the
+ * model's own (`fileCreatedAt`, not the long-gone `fileCreateDt`, which read as `undefined` and
+ * made every row render the current time).
+ */
+const dateTimes: { key: keyof Resource; label: string; fromFiles: boolean }[] = [
   {
-    key: "fileCreateDt",
+    key: "fileCreatedAt",
     label: "resource.label.fileAddDate",
+    fromFiles: true,
   },
   {
-    key: "fileModifyDt",
+    key: "fileModifiedAt",
     label: "resource.label.fileModifyDate",
+    fromFiles: true,
   },
   {
-    key: "createDt",
+    key: "createdAt",
     label: "resource.label.resourceCreateDate",
+    fromFiles: false,
   },
   {
-    key: "updateDt",
+    key: "updatedAt",
     label: "resource.label.resourceUpdateDate",
+    fromFiles: false,
   },
 ];
+
 const BasicInfo = ({ resource }: Props) => {
   const { t } = useTranslation();
 
@@ -38,12 +51,17 @@ const BasicInfo = ({ resource }: Props) => {
     >
       {dateTimes.map((dateTime, i) => {
         const label = t<string>(dateTime.label);
-        const value = dayjs(resource[dateTime.key]).format("YYYY-MM-DD HH:mm:ss");
+        const raw = resource[dateTime.key] as string | undefined;
+        const unavailable = dateTime.fromFiles && !resource.hasLocalPath;
 
         return (
           <div key={i} className={"flex flex-col"}>
             <div className={"text-xs opacity-60"}>{label}</div>
-            <div>{value}</div>
+            {unavailable ? (
+              <div className={"opacity-60"}>{t<string>("resource.label.notMaterialized")}</div>
+            ) : (
+              <div>{raw ? dayjs(raw).format("YYYY-MM-DD HH:mm:ss") : "-"}</div>
+            )}
           </div>
         );
       })}

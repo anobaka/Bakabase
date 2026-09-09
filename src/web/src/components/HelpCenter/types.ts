@@ -11,6 +11,7 @@ export type HelpTopicId =
   | "pathMark"
   | "workflow"
   | "resourceProfile"
+  | "unmaterializedResource"
   | "bulkModification";
 
 /** Horizontal tabs inside the path mark overview. Extend as more topics arrive. */

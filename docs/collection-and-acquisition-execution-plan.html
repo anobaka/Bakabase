@@ -310,6 +310,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 </ul>
 <h4>验收</h4>
 <ul><li>设计文档 §4.4 的四条界面表现逐条演示；「新建未落地资源」粘贴三行后立即在网格里看到三张卡片。</li></ul>
+<div class="rule"><b>落地时与计划的差异。</b>「获取线索」与「关联本地目录」做成了一个共用组件 <code class="i">AcquisitionPanel</code>，卡片上的按钮把它装进弹窗，详情里作为新分区嵌入，两处不会各自漂移。<br>「新建未落地资源」按钮放在筛选面板顶部那一行原本空着的左侧位置（网格上方那块整个藏在「有结果」条件后面，恰好在最需要这个按钮的空结果时不可见）。<br>顺带修掉一个撞见的既有缺陷：详情里的四个时间用的是模型上并不存在的字段名（<code class="i">fileCreateDt</code> 等），<code class="i">dayjs(undefined)</code> 让四行永远显示当前时间；改成真实字段后，未落地资源的两个文件时间显示「尚未落地」而不是一个假的时刻。<br>预览操作在两处列表里都做了门控——那份「没有单独选择操作时显示全部」的默认列表是另一份独立的定义，只改一处会让大部分用户看不到效果。</div>
 
 <h3 id="b1-7">批次 1.7 关联本地目录与 <code class="i">resource.materialized</code> 触发器</h3>
 <div class="kv">
@@ -628,7 +629,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 </div>
 
 <h2 id="s8"><span class="n">§8</span>批次总表</h2>
-<div class="rule ok"><b>进度。</b>已完成：1.1、1.2、1.3、1.4、1.5、1.7。进行中：1.6。进行中：无。进度只在本行更新，批次行内不写状态。</div>
+<div class="rule ok"><b>进度。</b>已完成：里程碑一全部（1.1 到 1.7）。进行中：无。进行中：无。进度只在本行更新，批次行内不写状态。</div>
 <div class="tw"><table><tr><th style="width:8%">批次</th><th style="width:26%">名称</th><th style="width:12%">依赖</th><th style="width:10%">规模</th><th>交付物摘要</th></tr>
 <tr><td class="e">1.1</td><td><code class="i">HasLocalPath</code> 判定与内部属性</td><td>无</td><td>小</td><td>统一判定、布尔内部属性、筛选固定项</td></tr>
 <tr><td class="e">1.2</td><td>落地服务</td><td>1.1</td><td>中</td><td><code class="i">IResourceMaterializationService</code>、同步服务三处修正、空增强记录清理</td></tr>

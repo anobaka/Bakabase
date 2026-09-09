@@ -3,6 +3,7 @@ import type { HelpTopicDefinition, HelpTopicId } from "./types";
 import {
   AiOutlineApartment,
   AiOutlineEdit,
+  AiOutlineInbox,
   AiOutlineProfile,
   AiOutlineRocket,
   AiOutlineTags,
@@ -14,6 +15,7 @@ import PathMarkTopic from "./topics/pathMark";
 import PathMarkConceptDetail from "./topics/pathMark/ConceptDetail";
 import { pathMarkConcepts } from "./topics/pathMark/concepts";
 import ResourceProfileTopic from "./topics/resourceProfile";
+import UnmaterializedResourceTopic from "./topics/unmaterializedResource";
 import WorkflowTopic from "./topics/workflow";
 import WorkflowConceptDetail from "./topics/workflow/ConceptDetail";
 import { workflowConcepts } from "./topics/workflow/concepts";
@@ -61,6 +63,12 @@ export const helpTopics: HelpTopicDefinition[] = [
     titleKey: "helpCenter.topic.resourceProfile",
     icon: <AiOutlineProfile className="text-lg" />,
     Content: ResourceProfileTopic,
+  },
+  {
+    id: "unmaterializedResource",
+    titleKey: "helpCenter.topic.unmaterializedResource",
+    icon: <AiOutlineInbox className="text-lg" />,
+    Content: UnmaterializedResourceTopic,
   },
   {
     id: "bulkModification",

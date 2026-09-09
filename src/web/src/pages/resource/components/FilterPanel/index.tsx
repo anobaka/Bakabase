@@ -5,7 +5,7 @@ import type { SearchForm } from "@/pages/resource/models";
 import { useTranslation } from "react-i18next";
 import React, { useEffect, useRef, useState } from "react";
 import { useUpdateEffect } from "react-use";
-import { AiOutlineExport, AiOutlineSearch } from "react-icons/ai";
+import { AiOutlineExport, AiOutlinePlus, AiOutlineSearch } from "react-icons/ai";
 import { MdPlaylistPlay } from "react-icons/md";
 import { HistoryOutlined } from "@ant-design/icons";
 
@@ -17,6 +17,8 @@ import { FilterDisplayMode } from "@/sdk/constants";
 import { PlaylistCollection } from "@/components/Playlist";
 import { Button, Checkbox, Chip, Popover, Spinner, Tooltip } from "@/components/bakaui";
 import MiscellaneousOptions from "@/pages/resource/components/FilterPanel/MiscellaneousOptions";
+import CreatePlaceholderResourcesModal from "@/components/Resource/components/CreatePlaceholderResourcesModal";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { ResourceFilterController, GroupCombinator } from "@/components/ResourceFilter";
 import { buildLogger, useTraceUpdate } from "@/components/utils.tsx";
 
@@ -75,6 +77,7 @@ const FilterPanel = (props: IProps) => {
   });
 
   const { t } = useTranslation();
+  const { createPortal } = useBakabaseContext();
 
   const [selectedAll, setSelectedAll] = useState(false);
 
@@ -171,7 +174,22 @@ const FilterPanel = (props: IProps) => {
     <div className={`${styles.filterPanel} flex flex-col h-full`}>
       {/* Top Actions */}
       <div className="flex items-center justify-between mb-3 flex-shrink-0">
-        <div />
+        <Tooltip content={t<string>("resource.unmaterialized.tip")}>
+          <Button
+            color={"default"}
+            size={"sm"}
+            startContent={<AiOutlinePlus className={"text-base"} />}
+            variant={"light"}
+            onPress={() =>
+              createPortal(CreatePlaceholderResourcesModal, {
+                // Re-run the current search so the new resources appear where the user is looking.
+                onCreated: () => onSearch?.({}, false),
+              })
+            }
+          >
+            {t<string>("resource.unmaterialized.action.open")}
+          </Button>
+        </Tooltip>
         <div className="flex items-center gap-1">
           <ShortcutsButton />
           <Popover

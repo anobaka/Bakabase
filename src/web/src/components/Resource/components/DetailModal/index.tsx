@@ -33,6 +33,8 @@ import IntroductionSummary from "./IntroductionSummary";
 import ResourceProfiles from "./ResourceProfiles";
 import ResourceHierarchy from "./ResourceHierarchy";
 
+import AcquisitionPanel from "@/components/Resource/components/AcquisitionPanel";
+
 import ResourceCover from "@/components/Resource/components/ResourceCover";
 import DataCardAssociationPanel from "@/components/DataCardAssociationPanel";
 
@@ -223,18 +225,20 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
                   PortalComponent={PlayControlPortal}
                   resource={resource}
                 />
-                <Tooltip content={t("common.action.openFolder")}>
-                  <Button
-                    isIconOnly
-                    color="default"
-                    variant="light"
-                    onPress={() => {
-                      BApi.resource.openResourceDirectory({ id: resource.id });
-                    }}
-                  >
-                    <FolderOpenOutlined className="text-lg" />
-                  </Button>
-                </Tooltip>
+                {resource.hasLocalPath && (
+                  <Tooltip content={t("common.action.openFolder")}>
+                    <Button
+                      isIconOnly
+                      color="default"
+                      variant="light"
+                      onPress={() => {
+                        BApi.resource.openResourceDirectory({ id: resource.id });
+                      }}
+                    >
+                      <FolderOpenOutlined className="text-lg" />
+                    </Button>
+                  </Tooltip>
+                )}
                 {resource.hasChildren && (
                   <Tooltip content={t("common.action.viewChildren")}>
                     <Button
@@ -305,6 +309,12 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
                 </Tooltip>
               </ButtonGroup>
             </div>
+          );
+        case "acquisition":
+          // Only worth a block while there is something to acquire; once the files are here the
+          // filesystem sections say everything.
+          return resource.hasLocalPath ? null : (
+            <AcquisitionPanel resource={resource} onChanged={() => loadResource()} />
           );
         case "basicInfo":
           return hideTimeInfo ? null : <BasicInfo resource={resource} />;

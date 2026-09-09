@@ -4,7 +4,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 
 import { Select } from "@/components/bakaui";
-import { ResourceSource, resourceSources } from "@/sdk/constants";
+import { ResourceSourceLabel, resourceSources } from "@/sdk/constants";
 
 interface Props {
   value: ResourceMaterializedFilter;
@@ -20,10 +20,8 @@ const FilterForm: React.FC<Props> = ({ value, onChange }) => {
     <Select
       dataSource={resourceSources.map(({ value: id }) => ({
         value: String(id),
-        label: t<string>(`enum.resourceSource.${ResourceSource[id][0].toLowerCase()}${ResourceSource[id].slice(1)}`, {
-          defaultValue: ResourceSource[id],
-        }),
-        textValue: ResourceSource[id],
+        label: ResourceSourceLabel[id],
+        textValue: ResourceSourceLabel[id],
       }))}
       description={t<string>("workflow.trigger.resourceMaterialized.sources.description")}
       label={t<string>("workflow.trigger.resourceMaterialized.sources.label")}
