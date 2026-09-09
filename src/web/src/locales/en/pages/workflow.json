@@ -301,5 +301,17 @@
   "workflow.collection.addResource.displayName": "Add to a collection",
   "workflow.collection.addResource.collection.label": "Collection",
   "workflow.collection.addResource.collection.description": "Where the resource is filed.",
-  "workflow.collection.addResource.notChosen": "Pick a collection."
+  "workflow.collection.addResource.notChosen": "Pick a collection.",
+  "workflow.resource.setPropertyValue.displayName": "Set a property",
+  "workflow.resource.setPropertyValue.property": "Property",
+  "workflow.resource.setPropertyValue.pick": "Pick a property",
+  "workflow.resource.setPropertyValue.value": "Value",
+  "workflow.resource.setPropertyValue.empty": "Not set",
+  "workflow.enhancer.enhance.displayName": "Enhance",
+  "workflow.enhancer.enhance.label": "Enhancers",
+  "workflow.enhancer.enhance.description": "Leave empty to run whatever the resource's profile says, which is where that decision already lives.",
+  "workflow.enhancer.enhance.all": "Whatever the profile says",
+  "workflow.enhancer.enhance.chosen": "{{count}} chosen",
+  "workflow.pathmark.enqueueSync.displayName": "Sync path marks",
+  "workflow.pathmark.enqueueSync.description": "Re-reads the folders your marks cover, so files a chain just placed become resources without waiting for the next scan."
 }

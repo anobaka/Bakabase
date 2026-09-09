@@ -189,6 +189,10 @@ public class CollectionController(
         }
 
         var leadsByResource = await leads.GetByResourceIds(missing.ResourceIds);
+        // The collection may say which recipe its members want; a circle's works and a board's
+        // shares do not come the same way.
+        var settings = CollectionAcquisitionSettings.Read(
+            (await service.Get(id))?.AcquisitionSettingsJson);
         var started = 0;
         var withoutLead = 0;
         var problems = new List<string>();
@@ -206,7 +210,7 @@ public class CollectionController(
             try
             {
                 await acquisitions.CreateAsync(resourceId, lead.Kind, lead.Value,
-                    lead.Id == 0 ? null : lead.Id, collectionId: id);
+                    lead.Id == 0 ? null : lead.Id, settings?.RecipeDefinitionId, id);
                 started++;
             }
             catch (InvalidOperationException e)

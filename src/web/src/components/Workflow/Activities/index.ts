@@ -22,6 +22,9 @@ import { AcquisitionPlaceUI } from "./AcquisitionPlace";
 import { AcquisitionPickDirectoryUI } from "./AcquisitionPickDirectory";
 import { AcquisitionMaterializeUI } from "./AcquisitionMaterialize";
 import { CollectionAddResourceUI } from "./CollectionAddResource";
+import { ResourceSetPropertyValueUI } from "./ResourceSetPropertyValue";
+import { EnhancerEnhanceUI } from "./EnhancerEnhance";
+import { PathMarkEnqueueSyncUI } from "./PathMarkEnqueueSync";
 
 export const workflowActivityRegistry: Record<string, WorkflowActivityUI<any>> = {
   [SubscriptionItemTitleContainsUI.kind]: SubscriptionItemTitleContainsUI,
@@ -45,6 +48,9 @@ export const workflowActivityRegistry: Record<string, WorkflowActivityUI<any>> =
   [AcquisitionPickDirectoryUI.kind]: AcquisitionPickDirectoryUI,
   [AcquisitionMaterializeUI.kind]: AcquisitionMaterializeUI,
   [CollectionAddResourceUI.kind]: CollectionAddResourceUI,
+  [ResourceSetPropertyValueUI.kind]: ResourceSetPropertyValueUI,
+  [EnhancerEnhanceUI.kind]: EnhancerEnhanceUI,
+  [PathMarkEnqueueSyncUI.kind]: PathMarkEnqueueSyncUI,
 };
 
 /** Built once per kind so the editor's forms keep their state across renders. */

@@ -3,6 +3,7 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Acquisition.Abstractions.Services;
+using Bakabase.Modules.Collection.Abstractions.Models.Domain;
 using Bakabase.Modules.Collection.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Collection.Abstractions.Services;
 using Bakabase.Modules.Collection.Models.Input;
@@ -372,6 +373,9 @@ public class SubscriptionService<TDbContext> : ISubscriptionService
             return;
         }
 
+        // A collection is usually one kind of thing, so how to get one is how to get all of them.
+        var settings = CollectionAcquisitionSettings.Read(collection.AcquisitionSettingsJson);
+
         foreach (var resourceId in added)
         {
             ct.ThrowIfCancellationRequested();
@@ -383,7 +387,7 @@ public class SubscriptionService<TDbContext> : ISubscriptionService
             try
             {
                 await acquisitions.CreateAsync(resourceId, lead.Kind, lead.Value,
-                    lead.Id == 0 ? null : lead.Id, collectionId: collectionId, ct: ct);
+                    lead.Id == 0 ? null : lead.Id, settings?.RecipeDefinitionId, collectionId, ct);
             }
             catch (InvalidOperationException ex)
             {

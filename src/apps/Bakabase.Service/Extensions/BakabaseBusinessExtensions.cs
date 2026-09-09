@@ -212,6 +212,9 @@ namespace Bakabase.Service.Extensions
             services.AddSingleton<IWorkflowActivity, ExHentaiQueryToGalleryActivity>();
             services.AddSingleton<IWorkflowActivity, ExHentaiEnqueueDownloadActivity>();
             services.AddSingleton<IWorkflowActivity, CreateNotificationActivity>();
+            services.AddSingleton<IWorkflowActivity, ResourceSetPropertyValueActivity>();
+            services.AddSingleton<IWorkflowActivity, EnhancerEnhanceActivity>();
+            services.AddSingleton<IWorkflowActivity, PathMarkEnqueueSyncActivity>();
             // File-cleaning vertical (fs domain).
             services.AddSingleton<IWorkflowTrigger, FsManualScanTrigger>();
             services.AddSingleton<IWorkflowItemTypeDescriptor, Components.Workflow.Fs.FsEntryItemTypeDescriptor>();

@@ -300,5 +300,17 @@
   "workflow.collection.addResource.displayName": "加入集合",
   "workflow.collection.addResource.collection.label": "集合",
   "workflow.collection.addResource.collection.description": "资源将被加入该集合。",
-  "workflow.collection.addResource.notChosen": "请选择一个集合。"
+  "workflow.collection.addResource.notChosen": "请选择一个集合。",
+  "workflow.resource.setPropertyValue.displayName": "设置属性",
+  "workflow.resource.setPropertyValue.property": "属性",
+  "workflow.resource.setPropertyValue.pick": "选择属性",
+  "workflow.resource.setPropertyValue.value": "值",
+  "workflow.resource.setPropertyValue.empty": "未设置",
+  "workflow.enhancer.enhance.displayName": "增强",
+  "workflow.enhancer.enhance.label": "增强器",
+  "workflow.enhancer.enhance.description": "留空则按资源所属配置档案的设置运行——那里本来就是做这个决定的地方。",
+  "workflow.enhancer.enhance.all": "按配置档案",
+  "workflow.enhancer.enhance.chosen": "已选 {{count}} 个",
+  "workflow.pathmark.enqueueSync.displayName": "同步路径标记",
+  "workflow.pathmark.enqueueSync.description": "重新扫描标记覆盖的目录，让流程刚放置的文件立即成为资源，而不必等下一次定时扫描。"
 }
