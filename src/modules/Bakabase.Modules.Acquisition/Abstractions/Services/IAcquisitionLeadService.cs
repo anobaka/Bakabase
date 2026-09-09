@@ -25,6 +25,8 @@ public record AcquisitionLeadAddResult(AcquisitionLead? Lead, int? ConflictingRe
 /// </summary>
 public interface IAcquisitionLeadService
 {
+    Task<AcquisitionLead?> Get(int id);
+
     Task<List<AcquisitionLead>> GetByResourceId(int resourceId);
 
     Task<Dictionary<int, List<AcquisitionLead>>> GetByResourceIds(IReadOnlyCollection<int> resourceIds);

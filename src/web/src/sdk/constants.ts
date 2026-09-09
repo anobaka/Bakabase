@@ -2452,6 +2452,7 @@ export enum BTaskType {
   MoveResources = 3,
   CopyFiles = 4,
   Download = 5,
+  Acquisition = 6,
   Any = 1000
 }
 
@@ -2461,6 +2462,7 @@ export const bTaskTypes = [
   { label: 'MoveResources', value: BTaskType.MoveResources },
   { label: 'CopyFiles', value: BTaskType.CopyFiles },
   { label: 'Download', value: BTaskType.Download },
+  { label: 'Acquisition', value: BTaskType.Acquisition },
   { label: 'Any', value: BTaskType.Any }
 ] as const;
 
@@ -2470,6 +2472,7 @@ export const BTaskTypeLabel: Record<BTaskType, string> = {
   [BTaskType.MoveResources]: 'MoveResources',
   [BTaskType.CopyFiles]: 'CopyFiles',
   [BTaskType.Download]: 'Download',
+  [BTaskType.Acquisition]: 'Acquisition',
   [BTaskType.Any]: 'Any'
 };
 
@@ -4580,6 +4583,33 @@ export const acquisitionLeadResults = [
 export const AcquisitionLeadResultLabel: Record<AcquisitionLeadResult, string> = {
   [AcquisitionLeadResult.Succeeded]: 'Succeeded',
   [AcquisitionLeadResult.Failed]: 'Failed'
+};
+
+export enum AcquisitionStatus {
+  Pending = 1,
+  Running = 2,
+  Waiting = 3,
+  Completed = 4,
+  Failed = 5,
+  Cancelled = 6
+}
+
+export const acquisitionStatuses = [
+  { label: 'Pending', value: AcquisitionStatus.Pending },
+  { label: 'Running', value: AcquisitionStatus.Running },
+  { label: 'Waiting', value: AcquisitionStatus.Waiting },
+  { label: 'Completed', value: AcquisitionStatus.Completed },
+  { label: 'Failed', value: AcquisitionStatus.Failed },
+  { label: 'Cancelled', value: AcquisitionStatus.Cancelled }
+] as const;
+
+export const AcquisitionStatusLabel: Record<AcquisitionStatus, string> = {
+  [AcquisitionStatus.Pending]: 'Pending',
+  [AcquisitionStatus.Running]: 'Running',
+  [AcquisitionStatus.Waiting]: 'Waiting',
+  [AcquisitionStatus.Completed]: 'Completed',
+  [AcquisitionStatus.Failed]: 'Failed',
+  [AcquisitionStatus.Cancelled]: 'Cancelled'
 };
 
 export enum AcquisitionWaitReason {

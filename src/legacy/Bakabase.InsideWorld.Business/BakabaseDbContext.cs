@@ -129,6 +129,7 @@ namespace Bakabase.InsideWorld.Business
 
         // Acquisition module tables
         public DbSet<Modules.Acquisition.Abstractions.Models.Db.AcquisitionLeadDbModel> AcquisitionLeads { get; set; }
+        public DbSet<Modules.Acquisition.Abstractions.Models.Db.AcquisitionTaskDbModel> AcquisitionTasks { get; set; }
 
         public BakabaseDbContext()
         {
@@ -189,6 +190,14 @@ namespace Bakabase.InsideWorld.Business
                 // A shared link describes exactly one resource. The unique index is what makes
                 // importing the same list twice a no-op instead of a pile of duplicates.
                 t.HasIndex(a => new {a.Kind, a.Value}).IsUnique();
+                t.HasIndex(a => a.ResourceId);
+            });
+
+            modelBuilder.Entity<Modules.Acquisition.Abstractions.Models.Db.AcquisitionTaskDbModel>(t =>
+            {
+                // The acquisitions page opens on "what is happening now", and every resource card
+                // asks "is this one being got?" — both are one indexed lookup.
+                t.HasIndex(a => a.Status);
                 t.HasIndex(a => a.ResourceId);
             });
 

@@ -33,16 +33,41 @@ public class WorkflowRunResumer<TDbContext>(
         run.Status = WorkflowRunStatus.Pending;
         await db.SaveChangesAsync(ct);
 
-        var defId = run.WorkflowDefinitionId;
+        await Enqueue(runId, run.WorkflowDefinitionId);
 
-        // Same task id and conflict key as the original enqueue, so a resumed run is still one run
-        // of that definition and cannot race another.
-        await taskManager.Enqueue(BTaskBuilder.Create($"workflow.run.{runId}")
+        logger.LogInformation("Workflow run {RunId} resumed from step {Step}", runId, run.CurrentStepIndex);
+    }
+
+    public async Task RequeueAsync(int runId, CancellationToken ct = default)
+    {
+        var run = await db.Set<WorkflowRunDbModel>().FirstOrDefaultAsync(r => r.Id == runId, ct)
+                  ?? throw new InvalidOperationException($"Workflow run #{runId} does not exist.");
+
+        if (run.Status is WorkflowRunStatus.Pending or WorkflowRunStatus.Running
+            or WorkflowRunStatus.Waiting or WorkflowRunStatus.Success)
+        {
+            throw new InvalidOperationException(
+                $"Workflow run #{runId} is {run.Status} — only a run that stopped can be retried.");
+        }
+
+        run.Status = WorkflowRunStatus.Pending;
+        run.CompletedAt = null;
+        run.ErrorMessage = null;
+        await db.SaveChangesAsync(ct);
+
+        await Enqueue(runId, run.WorkflowDefinitionId);
+
+        logger.LogInformation("Workflow run {RunId} requeued from step {Step}", runId, run.CurrentStepIndex);
+    }
+
+    /// <summary>
+    /// Same task id and conflict key as the original enqueue, so a run that comes back is still one
+    /// run of that definition and cannot race another.
+    /// </summary>
+    private Task Enqueue(int runId, int defId) =>
+        taskManager.Enqueue(BTaskBuilder.Create($"workflow.run.{runId}")
             .Named($"Workflow #{defId} run #{runId}")
             .ConflictsWith($"workflow.definition.{defId}")
             .ReplaceIfExists()
             .Run(args => runner.ExecuteAsync(runId, args)));
-
-        logger.LogInformation("Workflow run {RunId} resumed from step {Step}", runId, run.CurrentStepIndex);
-    }
 }

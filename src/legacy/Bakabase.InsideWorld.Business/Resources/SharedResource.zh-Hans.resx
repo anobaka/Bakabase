@@ -600,6 +600,12 @@
   <data name="BTask_Description_ResourceProfileIndex" xml:space="preserve">
     <value>构建资源与配置的匹配索引以加速匹配。资源或配置发生变更时会自动重新构建。</value>
   </data>
+  <data name="BTask_Name_AcquisitionQueue" xml:space="preserve">
+    <value>获取队列</value>
+  </data>
+  <data name="BTask_Description_AcquisitionQueue" xml:space="preserve">
+    <value>让获取任务与执行它们的工作流保持一致，并在有空位时启动排队中的获取。</value>
+  </data>
   <data name="BTask_Name_SearchIndex" xml:space="preserve">
     <value>构建搜索索引</value>
   </data>

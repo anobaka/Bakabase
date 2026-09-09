@@ -54,11 +54,38 @@ public record AcquisitionResumeSignal(AcquisitionWaitReason Reason, string? Payl
 /// <param name="Logger">Written to the run's log.</param>
 /// <param name="ReportProgress">Percentage within this step (0-100) and an optional description.</param>
 /// <param name="WorkingDirectory">This run's own directory; a step must not write outside it.</param>
+/// <param name="ConfigJson">
+/// This step's configuration as the recipe stored it, in the shape of <see cref="IAcquisitionStep.ConfigType"/>.
+/// </param>
 public record AcquisitionStepContext(
     IServiceProvider ServiceProvider,
     ILogger Logger,
     Func<int, string?, Task> ReportProgress,
-    string WorkingDirectory);
+    string WorkingDirectory,
+    string? ConfigJson = null)
+{
+    /// <summary>
+    /// The step's own configuration, or null when the recipe left it out. Malformed JSON reads as
+    /// null too: a step that cannot read its config should fall back to its defaults rather than
+    /// take the whole run down.
+    /// </summary>
+    public T? GetConfig<T>() where T : class
+    {
+        if (string.IsNullOrWhiteSpace(ConfigJson)) return null;
+
+        try
+        {
+            return System.Text.Json.JsonSerializer.Deserialize<T>(ConfigJson,
+                new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            Logger.LogWarning("An acquisition step was given configuration it could not read: {Json}", ConfigJson);
+
+            return null;
+        }
+    }
+}
 
 /// <summary>
 /// One pluggable stage of getting a resource. Stateless and registered as a singleton, discovered

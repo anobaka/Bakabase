@@ -600,6 +600,12 @@ The version of lux is not limited.</value>
   <data name="BTask_Description_ResourceProfileIndex" xml:space="preserve">
     <value>Build the index between resources and profiles to speed up matching. Automatically rebuilds when resources or profiles change.</value>
   </data>
+  <data name="BTask_Name_AcquisitionQueue" xml:space="preserve">
+    <value>Acquisition queue</value>
+  </data>
+  <data name="BTask_Description_AcquisitionQueue" xml:space="preserve">
+    <value>Keep acquisitions in step with the workflows running them, and start queued ones as room becomes available.</value>
+  </data>
   <data name="BTask_Name_SearchIndex" xml:space="preserve">
     <value>Build search index</value>
   </data>

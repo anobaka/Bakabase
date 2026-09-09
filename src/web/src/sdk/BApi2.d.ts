@@ -4,6 +4,102 @@
  */
 
 export interface paths {
+    "/acquisition": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SearchAcquisitions"];
+        put?: never;
+        post: operations["CreateAcquisition"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/acquisition/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAcquisition"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/acquisition/{id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ResumeAcquisition"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/acquisition/{id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RetryAcquisition"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/acquisition/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CancelAcquisition"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/acquisition/recipes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAcquisitionRecipes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/resource/{resourceId}/acquisition-leads": {
         parameters: {
             query?: never;
@@ -9278,6 +9374,41 @@ export interface components {
             isDerived: boolean;
             sourceName?: string;
         };
+        "Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask": {
+            /** Format: int32 */
+            id: number;
+            /** Format: int32 */
+            resourceId: number;
+            /** Format: int32 */
+            collectionId?: number;
+            leadKind: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionLeadKind"];
+            leadValue?: string;
+            /** Format: int32 */
+            acquisitionLeadId?: number;
+            /** Format: int32 */
+            recipeDefinitionId: number;
+            /** Format: int32 */
+            workflowRunId?: number;
+            status: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionStatus"];
+            waitReason?: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionWaitReason"];
+            targetDirectory?: string;
+            error?: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: date-time */
+            completedAt?: string;
+            purchases: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.PurchaseRecord"][];
+            resourceName?: string;
+            recipeName?: string;
+            waitPromptJson?: string;
+            /** Format: date-time */
+            waitingSince?: string;
+            /** Format: int32 */
+            currentStepIndex?: number;
+            readonly isFinished: boolean;
+        };
         /**
          * Format: int32
          * @description [1: PlatformHolding, 2: SharedPage, 3: SharedDocument, 4: DirectUrl, 5: Magnet, 6: Manual]
@@ -9296,11 +9427,52 @@ export interface components {
          * @enum {integer}
          */
         "Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionLeadResult": 1 | 2;
+        /**
+         * Format: int32
+         * @description [1: Pending, 2: Running, 3: Waiting, 4: Completed, 5: Failed, 6: Cancelled]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionStatus": 1 | 2 | 3 | 4 | 5 | 6;
+        /**
+         * Format: int32
+         * @description [1: WaitingForFile, 2: AmbiguousInboxFile, 3: PaidContent, 4: NoLinks, 5: ChooseLink, 6: PasswordUnknown, 7: TargetExists, 8: PickDirectory, 9: PlatformFetch]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionWaitReason": 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+        "Bakabase.Modules.Acquisition.Abstractions.Models.Domain.PurchaseRecord": {
+            /** Format: double */
+            price: number;
+            /** Format: date-time */
+            purchasedAt: string;
+            where: string;
+        };
+        "Bakabase.Modules.Acquisition.Abstractions.Services.AcquisitionRecipeSummary": {
+            /** Format: int32 */
+            definitionId: number;
+            name: string;
+            isBuiltin: boolean;
+            stepKinds: string[];
+        };
+        "Bakabase.Modules.Acquisition.Models.Input.AcquisitionCreationInputModel": {
+            /** Format: int32 */
+            resourceId: number;
+            /** Format: int32 */
+            acquisitionLeadId?: number;
+            leadKind?: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionLeadKind"];
+            leadValue?: string;
+            /** Format: int32 */
+            recipeDefinitionId?: number;
+            /** Format: int32 */
+            collectionId?: number;
+        };
         "Bakabase.Modules.Acquisition.Models.Input.AcquisitionLeadAddInputModel": {
             kind: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionLeadKind"];
             value: string;
             origin: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionLeadOrigin"];
             note?: string;
+        };
+        "Bakabase.Modules.Acquisition.Models.Input.AcquisitionResumeInputModel": {
+            signalJson: string;
         };
         "Bakabase.Modules.Alias.Abstractions.Models.Domain.Alias": {
             text: string;
@@ -10103,6 +10275,7 @@ export interface components {
             /** Format: date-time */
             lastRunAt?: string;
             lastError?: string;
+            isBuiltin: boolean;
             activities: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowActivityViewModel"][];
         };
         "Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowItemTypeDescriptorViewModel": {
@@ -11160,6 +11333,18 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionLead"][];
         };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Acquisition.Abstractions.Services.AcquisitionRecipeSummary]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Services.AcquisitionRecipeSummary"][];
+        };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.DataCard.Abstractions.Models.Domain.DataCardType]": {
             /** Format: int32 */
             code: number;
@@ -11963,6 +12148,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionLead"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Comparison.Models.Domain.ComparisonPlan]": {
             /** Format: int32 */
@@ -12842,6 +13033,186 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    SearchAcquisitions: {
+        parameters: {
+            query?: {
+                /** @description [1: Pending, 2: Running, 3: Waiting, 4: Completed, 5: Failed, 6: Cancelled] */
+                status?: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionStatus"];
+                resourceId?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask]"];
+                };
+            };
+        };
+    };
+    CreateAcquisition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Acquisition.Models.Input.AcquisitionCreationInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.Acquisition.Models.Input.AcquisitionCreationInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.Acquisition.Models.Input.AcquisitionCreationInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.Acquisition.Models.Input.AcquisitionCreationInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask]"];
+                };
+            };
+        };
+    };
+    GetAcquisition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask]"];
+                };
+            };
+        };
+    };
+    ResumeAcquisition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Acquisition.Models.Input.AcquisitionResumeInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.Acquisition.Models.Input.AcquisitionResumeInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.Acquisition.Models.Input.AcquisitionResumeInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.Acquisition.Models.Input.AcquisitionResumeInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    RetryAcquisition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask]"];
+                };
+            };
+        };
+    };
+    CancelAcquisition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetAcquisitionRecipes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Acquisition.Abstractions.Services.AcquisitionRecipeSummary]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Acquisition.Abstractions.Services.AcquisitionRecipeSummary]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Acquisition.Abstractions.Services.AcquisitionRecipeSummary]"];
+                };
+            };
+        };
+    };
     GetResourceAcquisitionLeads: {
         parameters: {
             query?: never;

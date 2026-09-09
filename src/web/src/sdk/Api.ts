@@ -3228,6 +3228,45 @@ export interface BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionLe
   sourceName?: string;
 }
 
+export interface BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionTask {
+  /** @format int32 */
+  id: number;
+  /** @format int32 */
+  resourceId: number;
+  /** @format int32 */
+  collectionId?: number;
+  /** [1: PlatformHolding, 2: SharedPage, 3: SharedDocument, 4: DirectUrl, 5: Magnet, 6: Manual] */
+  leadKind: BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionLeadKind;
+  leadValue?: string;
+  /** @format int32 */
+  acquisitionLeadId?: number;
+  /** @format int32 */
+  recipeDefinitionId: number;
+  /** @format int32 */
+  workflowRunId?: number;
+  /** [1: Pending, 2: Running, 3: Waiting, 4: Completed, 5: Failed, 6: Cancelled] */
+  status: BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionStatus;
+  /** [1: WaitingForFile, 2: AmbiguousInboxFile, 3: PaidContent, 4: NoLinks, 5: ChooseLink, 6: PasswordUnknown, 7: TargetExists, 8: PickDirectory, 9: PlatformFetch] */
+  waitReason?: BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionWaitReason;
+  targetDirectory?: string;
+  error?: string;
+  /** @format date-time */
+  createdAt: string;
+  /** @format date-time */
+  updatedAt: string;
+  /** @format date-time */
+  completedAt?: string;
+  purchases: BakabaseModulesAcquisitionAbstractionsModelsDomainPurchaseRecord[];
+  resourceName?: string;
+  recipeName?: string;
+  waitPromptJson?: string;
+  /** @format date-time */
+  waitingSince?: string;
+  /** @format int32 */
+  currentStepIndex?: number;
+  isFinished: boolean;
+}
+
 /**
  * [1: PlatformHolding, 2: SharedPage, 3: SharedDocument, 4: DirectUrl, 5: Magnet, 6: Manual]
  * @format int32
@@ -3258,6 +3297,63 @@ export type BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisiti
   | 1
   | 2;
 
+/**
+ * [1: Pending, 2: Running, 3: Waiting, 4: Completed, 5: Failed, 6: Cancelled]
+ * @format int32
+ */
+export type BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionStatus =
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5
+  | 6;
+
+/**
+ * [1: WaitingForFile, 2: AmbiguousInboxFile, 3: PaidContent, 4: NoLinks, 5: ChooseLink, 6: PasswordUnknown, 7: TargetExists, 8: PickDirectory, 9: PlatformFetch]
+ * @format int32
+ */
+export type BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionWaitReason =
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5
+  | 6
+  | 7
+  | 8
+  | 9;
+
+export interface BakabaseModulesAcquisitionAbstractionsModelsDomainPurchaseRecord {
+  /** @format double */
+  price: number;
+  /** @format date-time */
+  purchasedAt: string;
+  where: string;
+}
+
+export interface BakabaseModulesAcquisitionAbstractionsServicesAcquisitionRecipeSummary {
+  /** @format int32 */
+  definitionId: number;
+  name: string;
+  isBuiltin: boolean;
+  stepKinds: string[];
+}
+
+export interface BakabaseModulesAcquisitionModelsInputAcquisitionCreationInputModel {
+  /** @format int32 */
+  resourceId: number;
+  /** @format int32 */
+  acquisitionLeadId?: number;
+  /** [1: PlatformHolding, 2: SharedPage, 3: SharedDocument, 4: DirectUrl, 5: Magnet, 6: Manual] */
+  leadKind?: BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionLeadKind;
+  leadValue?: string;
+  /** @format int32 */
+  recipeDefinitionId?: number;
+  /** @format int32 */
+  collectionId?: number;
+}
+
 export interface BakabaseModulesAcquisitionModelsInputAcquisitionLeadAddInputModel {
   /** [1: PlatformHolding, 2: SharedPage, 3: SharedDocument, 4: DirectUrl, 5: Magnet, 6: Manual] */
   kind: BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionLeadKind;
@@ -3270,6 +3366,11 @@ export interface BakabaseModulesAcquisitionModelsInputAcquisitionLeadAddInputMod
   origin: BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionLeadOrigin;
   /** @maxLength 512 */
   note?: string;
+}
+
+export interface BakabaseModulesAcquisitionModelsInputAcquisitionResumeInputModel {
+  /** @minLength 1 */
+  signalJson: string;
 }
 
 export interface BakabaseModulesAliasAbstractionsModelsDomainAlias {
@@ -4353,6 +4454,7 @@ export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowDefinition
   /** @format date-time */
   lastRunAt?: string;
   lastError?: string;
+  isBuiltin: boolean;
   activities: BakabaseModulesWorkflowAbstractionsModelsViewWorkflowActivityViewModel[];
 }
 
@@ -5622,6 +5724,20 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesAcquis
   data?: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionLead[];
 }
 
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionTask {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionTask[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesAcquisitionAbstractionsServicesAcquisitionRecipeSummary {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesAcquisitionAbstractionsServicesAcquisitionRecipeSummary[];
+}
+
 export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesDataCardAbstractionsModelsDomainDataCardType {
   /** @format int32 */
   code: number;
@@ -6547,6 +6663,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesA
   code: number;
   message?: string;
   data?: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionLead;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionTask {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionTask;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesComparisonModelsDomainComparisonPlan {
@@ -7852,6 +7975,197 @@ export class HttpClient<SecurityDataType = unknown> {
  * @version v1
  */
 export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDataType> {
+  acquisition = {
+    /**
+     * No description
+     *
+     * @tags Acquisition
+     * @name CreateAcquisition
+     * @request POST:/acquisition
+     */
+    createAcquisition: (
+      data: BakabaseModulesAcquisitionModelsInputAcquisitionCreationInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionTask,
+        any
+      >({
+        path: `/acquisition`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for createAcquisition
+     * @name createAcquisitionUrl
+     */
+    createAcquisitionUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Acquisition
+     * @name SearchAcquisitions
+     * @request GET:/acquisition
+     */
+    searchAcquisitions: (
+      query?: {
+        /** [1: Pending, 2: Running, 3: Waiting, 4: Completed, 5: Failed, 6: Cancelled] */
+        status?: BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionStatus;
+        /** @format int32 */
+        resourceId?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionTask,
+        any
+      >({
+        path: `/acquisition`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for searchAcquisitions
+     * @name searchAcquisitionsUrl
+     */
+    searchAcquisitionsUrl: (query?: {
+        /** [1: Pending, 2: Running, 3: Waiting, 4: Completed, 5: Failed, 6: Cancelled] */
+        status?: BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionStatus;
+        /** @format int32 */
+        resourceId?: number;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition`;
+      
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Acquisition
+     * @name GetAcquisition
+     * @request GET:/acquisition/{id}
+     */
+    getAcquisition: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionTask,
+        any
+      >({
+        path: `/acquisition/${id}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Acquisition
+     * @name ResumeAcquisition
+     * @request POST:/acquisition/{id}/resume
+     */
+    resumeAcquisition: (
+      id: number,
+      data: BakabaseModulesAcquisitionModelsInputAcquisitionResumeInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/acquisition/${id}/resume`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Acquisition
+     * @name RetryAcquisition
+     * @request POST:/acquisition/{id}/retry
+     */
+    retryAcquisition: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionTask,
+        any
+      >({
+        path: `/acquisition/${id}/retry`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Acquisition
+     * @name CancelAcquisition
+     * @request POST:/acquisition/{id}/cancel
+     */
+    cancelAcquisition: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/acquisition/${id}/cancel`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Acquisition
+     * @name GetAcquisitionRecipes
+     * @request GET:/acquisition/recipes
+     */
+    getAcquisitionRecipes: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesAcquisitionAbstractionsServicesAcquisitionRecipeSummary,
+        any
+      >({
+        path: `/acquisition/recipes`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getAcquisitionRecipes
+     * @name getAcquisitionRecipesUrl
+     */
+    getAcquisitionRecipesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/recipes`;
+      
+      return baseUrl + path;
+    },
+  };
   resource = {
     /**
      * No description

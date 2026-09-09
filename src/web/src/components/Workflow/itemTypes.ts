@@ -11,4 +11,6 @@ export const WorkflowItemTypes = {
   DownloaderCompleted: "item.downloader.completed",
   FsEntry: "item.fs.entry",
   Resource: "item.resource",
+  Acquisition: "item.acquisition",
+  AcquisitionStatusChange: "item.acquisition.statusChange",
 } as const;

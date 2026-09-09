@@ -13,6 +13,9 @@ public class AcquisitionLeadService<TDbContext>(
     FullMemoryCacheResourceService<TDbContext, AcquisitionLeadDbModel, int> orm) : IAcquisitionLeadService
     where TDbContext : DbContext
 {
+    public async Task<AcquisitionLead?> Get(int id) =>
+        (await orm.GetByKey(id, false))?.ToDomainModel();
+
     public async Task<List<AcquisitionLead>> GetByResourceId(int resourceId) =>
         (await orm.GetAll(x => x.ResourceId == resourceId))
         .OrderBy(x => x.CreatedAt)

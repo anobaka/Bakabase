@@ -14,6 +14,9 @@ public record WorkflowDefinitionViewModel
     public DateTime? LastRunAt { get; set; }
     public string? LastError { get; set; }
 
+    /// <summary>Shipped with Bakabase; read-only in the editor, copy to change.</summary>
+    public bool IsBuiltin { get; set; }
+
     public List<WorkflowActivityViewModel> Activities { get; set; } = [];
 
     public static WorkflowDefinitionViewModel From(WorkflowDefinition d) => new()
@@ -27,6 +30,7 @@ public record WorkflowDefinitionViewModel
         UpdatedAt = d.UpdatedAt,
         LastRunAt = d.LastRunAt,
         LastError = d.LastError,
+        IsBuiltin = d.IsBuiltin,
         Activities = d.Activities.Select(WorkflowActivityViewModel.From).ToList(),
     };
 }

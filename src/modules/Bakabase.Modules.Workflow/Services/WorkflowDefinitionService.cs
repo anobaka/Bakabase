@@ -69,6 +69,16 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
         var entity = await Defs.FirstOrDefaultAsync(d => d.Id == id, ct)
             ?? throw new InvalidOperationException($"Workflow #{id} not found");
 
+        // A built-in definition is a seed, not a document: a later release adds a step to it, and
+        // that must not silently overwrite someone's edits or silently fail to reach them. Turning
+        // one off is still theirs to decide — that is a choice about their setup, not about the seed.
+        if (entity.IsBuiltin &&
+            (input.Name is not null || input.TriggerFilterJson is not null || input.Activities is not null))
+        {
+            throw new InvalidOperationException(
+                $"\"{entity.Name}\" ships with Bakabase and cannot be edited. Copy it and change the copy.");
+        }
+
         if (input.Name is not null) entity.Name = input.Name;
         if (input.TriggerFilterJson is not null) entity.TriggerFilterJson = input.TriggerFilterJson;
         if (input.Enabled is { } enabled)
@@ -104,6 +114,12 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
 
     public async Task DeleteAsync(int id)
     {
+        if (await Defs.AnyAsync(d => d.Id == id && d.IsBuiltin))
+        {
+            throw new InvalidOperationException(
+                "This workflow ships with Bakabase and cannot be deleted. Switch it off instead.");
+        }
+
         // A run mid-execution keeps producing side effects after its rows vanish, and its final
         // save then targets deleted data — refuse instead of racing it (capability map §5·发现 9).
         // Pending rows don't block: deleting them makes their stale BTasks no-ops.

@@ -12,5 +12,8 @@ public record WorkflowDefinition
     public DateTime? LastRunAt { get; set; }
     public string? LastError { get; set; }
 
+    /// <summary>Shipped with Bakabase; read-only in the editor, copy to change.</summary>
+    public bool IsBuiltin { get; set; }
+
     public List<WorkflowActivity> Activities { get; set; } = [];
 }

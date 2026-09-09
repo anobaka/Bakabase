@@ -212,6 +212,17 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
                         Variables = workItem.Variables,
                         Services = scope.ServiceProvider,
                         Logger = _logger,
+                        // Scaled into this step's share of the run, so an activity reporting
+                        // 0-100 for its own work never contradicts the per-step accounting below.
+                        ReportProgress = (percentage, process) => btaskArgs.UpdateTask(t =>
+                        {
+                            var within = Math.Clamp(percentage, 0, 100);
+
+                            t.Percentage = (stepIndex * 100 + within) / totalSteps;
+                            t.Process = process is null
+                                ? $"{stepIndex + 1}/{activityRows.Count}"
+                                : $"{stepIndex + 1}/{activityRows.Count} · {process}";
+                        }),
                     };
 
                     WorkflowItemOutcome outcome;

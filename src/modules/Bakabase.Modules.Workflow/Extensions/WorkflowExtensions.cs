@@ -31,6 +31,7 @@ public static class WorkflowExtensions
             UpdatedAt = db.UpdatedAt,
             LastRunAt = db.LastRunAt,
             LastError = db.LastError,
+            IsBuiltin = db.IsBuiltin,
             Activities = activities.OrderBy(a => a.Order).Select(ToDomainModel).ToList(),
         };
     }

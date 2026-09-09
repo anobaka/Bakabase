@@ -161,6 +161,16 @@ namespace Bakabase.Service.Components
                 await rehydrator.ReEnqueuePendingRunsAsync();
             }
 
+            // The built-in acquisition recipes are seeded by name, once each. A recipe whose steps
+            // this build does not have yet is skipped and seeded by a later release instead.
+            await using (var acquisitionScope = serviceProvider.CreateAsyncScope())
+            {
+                await acquisitionScope.ServiceProvider
+                    .GetRequiredService<Bakabase.Modules.Acquisition.Components.AcquisitionRecipeSeeder<
+                        BakabaseDbContext>>()
+                    .SeedAsync();
+            }
+
             // Resource move records survive restarts too, but a half-done physical move is not
             // safe to auto-resume — flip dead Pending/Moving rows to Interrupted so the user can
             // see and retry them explicitly.

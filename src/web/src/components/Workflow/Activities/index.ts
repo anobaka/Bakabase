@@ -13,6 +13,7 @@ import { TextTrimUI } from "./TextOps/Trim";
 import { TextCaptureUI } from "./TextOps/Capture";
 import { TextTemplateUI } from "./TextOps/Template";
 import { FsExpandChildrenUI } from "./FsExpandChildren";
+import { acquisitionStepUI, isAcquisitionStepKind } from "./AcquisitionStep";
 
 export const workflowActivityRegistry: Record<string, WorkflowActivityUI<any>> = {
   [SubscriptionItemTitleContainsUI.kind]: SubscriptionItemTitleContainsUI,
@@ -30,8 +31,21 @@ export const workflowActivityRegistry: Record<string, WorkflowActivityUI<any>> =
   [FsExpandChildrenUI.kind]: FsExpandChildrenUI,
 };
 
+/** Built once per kind so the editor's forms keep their state across renders. */
+const acquisitionStepCache: Record<string, WorkflowActivityUI<any>> = {};
+
 export function getWorkflowActivityUI(kind: string): WorkflowActivityUI<any> | undefined {
-  return workflowActivityRegistry[kind];
+  const registered = workflowActivityRegistry[kind];
+
+  if (registered) return registered;
+
+  // The acquisition steps share one generic package until a step earns a form of its own; an
+  // explicit entry above always wins, so adding one is how a step graduates.
+  if (isAcquisitionStepKind(kind)) {
+    return (acquisitionStepCache[kind] ??= acquisitionStepUI(kind));
+  }
+
+  return undefined;
 }
 
 export type { WorkflowActivityUI } from "./types";

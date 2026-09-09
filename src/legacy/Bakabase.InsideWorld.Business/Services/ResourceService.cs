@@ -2427,6 +2427,12 @@ namespace Bakabase.InsideWorld.Business.Services
             var acquisitionLeadService = GetRequiredService<IAcquisitionLeadService>();
             await acquisitionLeadService.DeleteByResourceIds(ids);
 
+            // Acquisition tasks are keyed the same way. One left behind would keep showing on the
+            // acquisitions page as something being got for a resource that is gone.
+            await DbContext.Set<Bakabase.Modules.Acquisition.Abstractions.Models.Db.AcquisitionTaskDbModel>()
+                .Where(t => ids.Contains(t.ResourceId))
+                .ExecuteDeleteAsync();
+
             // The cache row is keyed by ResourceId with no FK, so it survives the resource
             // unless we drop it here. Leftovers are not just dead weight: PlayRandomResource
             // picks from this table, and a row pointing at a deleted resource used to make
