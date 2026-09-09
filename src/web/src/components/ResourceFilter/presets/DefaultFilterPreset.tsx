@@ -93,6 +93,7 @@ export function createDefaultFilterConfig(
           pinnedProperties: [
             { id: ResourceProperty.MediaLibraryV2Multi, pool: PropertyPool.Internal },
             { id: ResourceProperty.Source, pool: PropertyPool.Internal },
+            { id: ResourceProperty.HasLocalPath, pool: PropertyPool.Internal },
           ],
         });
       },

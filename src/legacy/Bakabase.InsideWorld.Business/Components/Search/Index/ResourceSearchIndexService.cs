@@ -391,6 +391,10 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
         AddToValueIndex(PropertyPool.Internal, (int)InternalProperty.RootPath,
             dbModel.Path, resourceId, indexKeys);
 
+        // Has local path: derived from Path, always indexed so both true and false are searchable.
+        AddToValueIndex(PropertyPool.Internal, (int)InternalProperty.HasLocalPath,
+            (!string.IsNullOrEmpty(dbModel.Path)).ToString(), resourceId, indexKeys);
+
         // Created at (range index)
         AddToRangeIndex(PropertyPool.Internal, (int)InternalProperty.CreatedAt,
             dbModel.CreateDt, resourceId, indexKeys);

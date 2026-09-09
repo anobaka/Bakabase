@@ -20,5 +20,6 @@ public enum SearchableReservedProperty
     MediaLibraryV2 = ResourceProperty.MediaLibraryV2,
 	MediaLibraryV2Multi = ResourceProperty.MediaLibraryV2Multi,
 	Source = ResourceProperty.Source,
-	Name = ResourceProperty.Name
+	Name = ResourceProperty.Name,
+	HasLocalPath = ResourceProperty.HasLocalPath
 }

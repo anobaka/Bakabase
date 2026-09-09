@@ -22,4 +22,5 @@ public enum InternalProperty
     PlayedAt = ResourceProperty.PlayedAt,
     Source = ResourceProperty.Source,
     HealthScore = ResourceProperty.HealthScore,
+    HasLocalPath = ResourceProperty.HasLocalPath,
 }

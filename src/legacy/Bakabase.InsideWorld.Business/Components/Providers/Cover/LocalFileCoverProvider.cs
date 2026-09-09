@@ -55,7 +55,7 @@ public class LocalFileCoverProvider : ICoverProvider
     public DataOrigin Origin => DataOrigin.FileSystem;
     public int Priority => 20;
 
-    public bool AppliesTo(DomainResource resource) => !string.IsNullOrEmpty(resource.Path);
+    public bool AppliesTo(DomainResource resource) => resource.HasLocalPath;
 
     public DataStatus GetStatus(DomainResource resource)
     {
@@ -72,7 +72,7 @@ public class LocalFileCoverProvider : ICoverProvider
             return resource.Cache.CoverPaths is { Count: > 0 } ? resource.Cache.CoverPaths : null;
         }
 
-        if (string.IsNullOrEmpty(resource.Path))
+        if (!resource.HasLocalPath)
             return null;
 
         // Handle missing path gracefully

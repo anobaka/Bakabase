@@ -127,6 +127,7 @@ namespace Bakabase.InsideWorld.Business.Components.Search
                             InternalProperty.MediaLibraryV2Multi => r => resourceMediaLibraryMap?.GetValueOrDefault(r.Id),
                             InternalProperty.ParentResource => r => r.ParentId?.ToString(),
                             InternalProperty.PlayedAt => r => r.PlayedAt,
+                            InternalProperty.HasLocalPath => r => r.HasLocalPath,
                             _ => null
                         });
                         context.PropertyValueMap[PropertyPool.Internal] = getValue.Where(x => x.Value != null)

@@ -120,10 +120,10 @@ public class SteamResolver : IResourceResolver
 
         foreach (var resource in fileSystemResources)
         {
-            if (string.IsNullOrEmpty(resource.Path)) continue;
+            if (!resource.HasLocalPath) continue;
 
             // Check if path contains steamapps/common/ pattern
-            var pathLower = resource.Path.ToLowerInvariant().Replace('\\', '/');
+            var pathLower = resource.Path!.ToLowerInvariant().Replace('\\', '/');
             var steamAppsIdx = pathLower.IndexOf("steamapps/common/", StringComparison.Ordinal);
             if (steamAppsIdx < 0) continue;
 

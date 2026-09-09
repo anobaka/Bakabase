@@ -56,7 +56,7 @@ public class LocalFilePlayableItemProvider : IPlayableItemProvider
 
     public bool AppliesTo(DomainResource resource)
     {
-        return !string.IsNullOrEmpty(resource.Path);
+        return resource.HasLocalPath;
     }
 
     public DataStatus GetStatus(DomainResource resource)
@@ -91,7 +91,7 @@ public class LocalFilePlayableItemProvider : IPlayableItemProvider
             return new PlayableItemProviderResult(cachedItems);
         }
 
-        if (string.IsNullOrEmpty(resource.Path))
+        if (!resource.HasLocalPath)
             return new PlayableItemProviderResult([]);
 
         // Handle missing directory gracefully

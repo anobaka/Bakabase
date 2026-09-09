@@ -52,8 +52,8 @@ public class ResourceMoveService(
     /// </summary>
     private static List<ResourceDomain> CollapseNestedSelection(IReadOnlyCollection<ResourceDomain> resources) =>
         resources
-            .Where(r => !string.IsNullOrEmpty(r.Path) &&
-                        !resources.Any(o => o.Id != r.Id && r.Path.IsPathUnder(o.Path)))
+            .Where(r => r.HasLocalPath &&
+                        !resources.Any(o => o.Id != r.Id && r.Path!.IsPathUnder(o.Path)))
             .ToList();
 
     public async Task<SingletonResponse<string>> CreateBatch(int[] resourceIds, string destDir)

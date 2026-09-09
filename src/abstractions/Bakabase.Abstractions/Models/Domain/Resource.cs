@@ -25,6 +25,14 @@ public record Resource
 
     public string? Path { get; set; }
 
+    /// <summary>
+    /// Whether this resource currently has local files. False means the resource is known
+    /// to Bakabase but not materialized on disk yet — an uninstalled Steam game, a work the
+    /// user intends to acquire. Prefer this over inspecting <see cref="Path"/> directly so
+    /// the rule lives in one place.
+    /// </summary>
+    public bool HasLocalPath => !string.IsNullOrEmpty(Path);
+
     private string? _displayName;
 
     public string? DisplayName

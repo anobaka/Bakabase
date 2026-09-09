@@ -53,5 +53,13 @@ namespace Bakabase.InsideWorld.Models.Constants
         /// matching ScoringProfiles; null when no profile has scored the resource.
         /// </summary>
         HealthScore = 28,
+        // 29 is reserved for CollectionMulti.
+        /// <summary>
+        /// Whether the resource currently has local files (Boolean). Derived from
+        /// <c>Resource.Path</c>: a resource without a path is known to Bakabase but not
+        /// materialized on disk yet (an uninstalled Steam game, a work the user intends
+        /// to acquire). Read-only; set by materializing or dematerializing the resource.
+        /// </summary>
+        HasLocalPath = 30,
     }
 }

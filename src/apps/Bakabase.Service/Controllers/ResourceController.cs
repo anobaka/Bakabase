@@ -318,7 +318,7 @@ public class ResourceController(
         var resource = await service.Get(id, ResourceAdditionalItem.None);
         // Resource.Path is nullable — a resource row with no path can't be
         // opened on disk; return a 400 instead of letting Path.Combine throw.
-        if (string.IsNullOrEmpty(resource.Path))
+        if (!resource.HasLocalPath)
         {
             return BaseResponseBuilder.BuildBadRequest($"Resource {id} has no path.");
         }

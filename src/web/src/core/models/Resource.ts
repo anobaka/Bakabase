@@ -136,6 +136,12 @@ export type Resource = {
   directory?: string;
   displayName?: string;
   path?: string;
+  /**
+   * Whether the resource currently has local files. False means Bakabase knows the
+   * resource but it is not materialized on disk yet — an uninstalled Steam game, a work
+   * the user intends to acquire.
+   */
+  hasLocalPath: boolean;
   parentId?: number;
   hasChildren: boolean;
   isFile: boolean;

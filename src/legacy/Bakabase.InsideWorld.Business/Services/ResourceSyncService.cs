@@ -162,8 +162,8 @@ public class ResourceSyncService : ScopedService
                 var pathToResource = new Dictionary<string, Resource>(StringComparer.OrdinalIgnoreCase);
                 foreach (var r in updatedResources)
                 {
-                    if (!string.IsNullOrEmpty(r.Path))
-                        pathToResource[r.Path] = r;
+                    if (r.HasLocalPath)
+                        pathToResource[r.Path!] = r;
                 }
 
                 foreach (var path in newResourcePaths)
@@ -444,8 +444,8 @@ public class ResourceSyncService : ScopedService
         var pathToResource = new Dictionary<string, Resource>(StringComparer.OrdinalIgnoreCase);
         foreach (var r in allResources)
         {
-            if (!string.IsNullOrEmpty(r.Path))
-                pathToResource[r.Path] = r;
+            if (r.HasLocalPath)
+                pathToResource[r.Path!] = r;
         }
 
         var scope = source.GetPropertyValueScope();
@@ -470,8 +470,8 @@ public class ResourceSyncService : ScopedService
             if (source == ResourceSource.PathMark)
             {
                 // For PathMark: filename without extension
-                name = !string.IsNullOrEmpty(resource.Path)
-                    ? Path.GetFileNameWithoutExtension(resource.Path)
+                name = resource.HasLocalPath
+                    ? Path.GetFileNameWithoutExtension(resource.Path!)
                     : null;
             }
             else
@@ -658,8 +658,8 @@ public class ResourceSyncService : ScopedService
         {
             ct.ThrowIfCancellationRequested();
 
-            if (string.IsNullOrEmpty(resource.Path)) continue;
-            if (!pendingDeletePaths.Contains(resource.Path)) continue;
+            if (!resource.HasLocalPath) continue;
+            if (!pendingDeletePaths.Contains(resource.Path!)) continue;
             if (stillCoveredPaths.Contains(resource.Path)) continue;
 
             if (resource.SourceLinks == null || resource.SourceLinks.Count == 0) continue;
@@ -697,8 +697,8 @@ public class ResourceSyncService : ScopedService
 
         foreach (var r in allResources)
         {
-            if (!string.IsNullOrEmpty(r.Path))
-                pathToResource[r.Path] = r;
+            if (r.HasLocalPath)
+                pathToResource[r.Path!] = r;
         }
 
         var changedResources = new Dictionary<int, Resource>();
@@ -707,10 +707,10 @@ public class ResourceSyncService : ScopedService
         {
             ct.ThrowIfCancellationRequested();
 
-            if (string.IsNullOrEmpty(resource.Path)) continue;
+            if (!resource.HasLocalPath) continue;
 
             // Walk up directory tree to find closest parent resource
-            var parentPath = Path.GetDirectoryName(resource.Path);
+            var parentPath = Path.GetDirectoryName(resource.Path!);
             int? parentResourceId = null;
 
             while (!string.IsNullOrEmpty(parentPath))
@@ -949,9 +949,9 @@ internal class ResourceSyncContext
 
         foreach (var resource in allResources)
         {
-            if (!string.IsNullOrEmpty(resource.Path))
+            if (resource.HasLocalPath)
             {
-                PathToResource[resource.Path] = resource;
+                PathToResource[resource.Path!] = resource;
             }
             IdToResource[resource.Id] = resource;
         }
