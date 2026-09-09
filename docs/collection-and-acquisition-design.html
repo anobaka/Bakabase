@@ -539,7 +539,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 
 <h3 id="s7-3">7.3 步骤清单（第一批实现）</h3>
 <div class="tw"><table><tr><th style="width:26%">Kind</th><th style="width:30%">作用</th><th style="width:20%">挂起点（等待原因）</th><th>复用的现有代码</th></tr>
-<tr><td class="k">acquisition.resolveSharedContent</td><td>读出分享内容（网页按主机选读取器，文档按格式），大模型提取链接 / 提取码 / 解压码 / 标题，写入工作项</td><td><code class="i">PaidContent</code>（付费块超上限）</td><td>帖子解析器全部、<code class="i">AiFeature.PostParser</code></td></tr>
+<tr><td class="k">acquisition.resolveSharedContent</td><td>读出分享内容（网页按主机选读取器，文档按格式；粘贴的文本由兜底读取器直接当内容），大模型提取链接 / 提取码 / 解压码 / 标题，写入工作项。网盘种类由主机名查表得出而非问模型</td><td><code class="i">PaidContent</code>（付费块超上限）</td><td>帖子解析器全部、<code class="i">AiFeature.PostParser</code></td></tr>
 <tr><td class="k">acquisition.selectLink</td><td>按网盘偏好自动选一条，或挂起让人选</td><td><code class="i">NoLinks</code>、<code class="i">ChooseLink</code></td><td>—</td></tr>
 <tr><td class="k">acquisition.fetchHttp</td><td>直链下载到工作目录</td><td>—</td><td><code class="i">SingleFileHttpDownloader</code>（加固）</td></tr>
 <tr><td class="k">acquisition.waitForInbox</td><td>打开链接（提取码由前端复制），挂起等收件箱认领；认领由收件箱监听器以信号恢复</td><td><code class="i">WaitingForFile</code>、<code class="i">AmbiguousInboxFile</code></td><td><code class="i">GuiController.OpenUrlInDefaultBrowser</code> 的 <code class="i">IGuiAdapter</code>；<code class="i">WorkflowFsWatchService</code> 的监听模式</td></tr>

@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants;
+using Bakabase.Modules.Acquisition.Components;
 using Bakabase.Modules.AI.Models.Domain;
 using Bakabase.Modules.AI.Services;
 using Microsoft.Extensions.AI;
@@ -107,6 +108,9 @@ public class DownloadInfoHandler(
                 {
                     if (string.IsNullOrEmpty(r.Code)) r.Code = null;
                     if (string.IsNullOrEmpty(r.Password)) r.Password = null;
+                    // Worked out here rather than asked of the model: a host name maps to a service
+                    // by a table, and a table does not hallucinate.
+                    r.DriveKind = AcquisitionDriveKinds.Infer(r.Link);
                     return r;
                 })
                 .ToList();

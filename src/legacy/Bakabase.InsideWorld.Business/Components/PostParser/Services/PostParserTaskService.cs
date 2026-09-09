@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Components.Tasks;
+using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.Gui;
 using Bakabase.InsideWorld.Business.Components.PostParser.Extensions;
 using Bakabase.InsideWorld.Business.Components.PostParser.Fetchers;
@@ -15,6 +16,7 @@ using Bakabase.InsideWorld.Business.Components.PostParser.Handlers;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Db;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants;
+using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Orm;
 using Bootstrap.Components.Tasks;
 using Bootstrap.Extensions;
@@ -25,14 +27,19 @@ namespace Bakabase.InsideWorld.Business.Components.PostParser.Services;
 
 public class PostParserTaskService<TDbContext>(
     FullMemoryCacheResourceService<TDbContext, PostParserTaskDbModel, int> orm,
-    IEnumerable<IPostContentFetcher> fetchers,
+    IEnumerable<ISharedContentReader> readers,
+    IEnumerable<ISharedContentPurchaser> purchasers,
     IEnumerable<IPostParseTargetHandler> handlers,
+    IBOptions<SoulPlusOptions> soulPlusOptions,
     BTaskManager btm,
     IBakabaseLocalizer localizer,
     IHubContext<WebGuiHub, IWebGuiClient> uiHub) : IPostParserTaskService where TDbContext : DbContext
 {
-    private readonly ConcurrentDictionary<PostParserSource, IPostContentFetcher> _fetcherMap =
-        new(fetchers.ToDictionary(d => d.Source, d => d));
+    private readonly ConcurrentDictionary<PostParserSource, ISharedContentReader> _fetcherMap =
+        new(readers.Where(r => r.Source.HasValue).ToDictionary(d => d.Source!.Value, d => d));
+
+    private readonly ConcurrentDictionary<PostParserSource, ISharedContentPurchaser> _purchaserMap =
+        new(purchasers.ToDictionary(d => d.Source, d => d));
 
     private readonly ConcurrentDictionary<PostParseTarget, IPostParseTargetHandler> _handlerMap =
         new(handlers.ToDictionary(d => d.Target, d => d));
@@ -199,7 +206,13 @@ public class PostParserTaskService<TDbContext>(
 
                     try
                     {
-                        var content = await fetcher.FetchAsync(t.Link, ct);
+                        var content = await fetcher.ReadAsync(t.Link, ct);
+
+                        // Reading stopped buying, so this page keeps doing it: same rule as before
+                        // (anything dearer than the threshold stops the task), except that a lock
+                        // with no stated price no longer compares as free and buys itself.
+                        content = await UnlockForPageAsync(g.Key, fetcher, t.Link, content, ct);
+
                         t.Title ??= content.Title;
 
                         t.Results ??= new Dictionary<PostParseTarget, JsonNode?>();
@@ -261,4 +274,37 @@ public class PostParserTaskService<TDbContext>(
 
         return task.Targets.Any(target => !task.Results.ContainsKey(target));
     }
+
+    /// <summary>
+    /// Buys what the post-parser page is allowed to buy and re-reads if anything changed. The
+    /// acquisition pipeline does not use this: a step suspends and asks instead.
+    /// </summary>
+    private async Task<PostContent> UnlockForPageAsync(PostParserSource source, ISharedContentReader reader,
+        string link, PostContent content, CancellationToken ct)
+    {
+        var locked = content.Locks.Unbought().ToList();
+
+        if (locked.Count == 0 || !_purchaserMap.TryGetValue(source, out var purchaser))
+        {
+            return content;
+        }
+
+        var limit = soulPlusOptions.Value.AutoBuyThreshold;
+        var tooDear = locked.FirstOrDefault(l => !l.IsWithin(limit));
+
+        if (tooDear != null)
+        {
+            throw new Exception(tooDear.Price is { } price
+                ? $"Failed due to price {price} is larger than auto buy threshold {limit}"
+                : "Failed because a locked part of this post did not say what it costs");
+        }
+
+        foreach (var l in locked)
+        {
+            await purchaser.BuyAsync(l.Url!, ct);
+        }
+
+        return await reader.ReadAsync(link, ct);
+    }
+
 }

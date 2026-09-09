@@ -159,6 +159,10 @@ namespace Bakabase.Service.Extensions
             services.AddSingleton<ISubscriptionProvider, PixivFollowLatestProvider>();
             services.AddWorkflow<BakabaseDbContext>();
             services.AddAcquisition<BakabaseDbContext>();
+            // Acquisition steps. Each registers its workflow activity alongside itself, so a step
+            // added here becomes something a recipe can name.
+            services.AddAcquisitionStep<Bakabase.Modules.Acquisition.Components.Steps.SelectLinkStep>();
+            services.AddAcquisitionStep<Components.Acquisition.Steps.ResolveSharedContentStep>();
 
             // "I am missing this" — creating resources for things the user does not have yet.
             services.AddScoped<IPlaceholderResourceService, PlaceholderResourceService>();

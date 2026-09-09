@@ -14,6 +14,8 @@ import { TextCaptureUI } from "./TextOps/Capture";
 import { TextTemplateUI } from "./TextOps/Template";
 import { FsExpandChildrenUI } from "./FsExpandChildren";
 import { acquisitionStepUI, isAcquisitionStepKind } from "./AcquisitionStep";
+import { AcquisitionResolveSharedContentUI } from "./AcquisitionResolveSharedContent";
+import { AcquisitionSelectLinkUI } from "./AcquisitionSelectLink";
 
 export const workflowActivityRegistry: Record<string, WorkflowActivityUI<any>> = {
   [SubscriptionItemTitleContainsUI.kind]: SubscriptionItemTitleContainsUI,
@@ -29,6 +31,8 @@ export const workflowActivityRegistry: Record<string, WorkflowActivityUI<any>> =
   [TextCaptureUI.kind]: TextCaptureUI,
   [TextTemplateUI.kind]: TextTemplateUI,
   [FsExpandChildrenUI.kind]: FsExpandChildrenUI,
+  [AcquisitionResolveSharedContentUI.kind]: AcquisitionResolveSharedContentUI,
+  [AcquisitionSelectLinkUI.kind]: AcquisitionSelectLinkUI,
 };
 
 /** Built once per kind so the editor's forms keep their state across renders. */

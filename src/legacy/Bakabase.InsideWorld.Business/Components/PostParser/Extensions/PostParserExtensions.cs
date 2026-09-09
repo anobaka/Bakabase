@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -28,28 +29,44 @@ public static class PostParserExtensions
         services.AddScoped<IPostParserTaskService, PostParserTaskService<TDbContext>>();
         services.AddSingleton<PostParserTaskTrigger>();
 
-        var currentAssemblyTypes = Assembly.GetExecutingAssembly().GetTypes();
-
-        var fetcherTypes = currentAssemblyTypes.Where(s =>
-                s.IsAssignableTo(SpecificTypeUtils<IPostContentFetcher>.Type) &&
-                s is {IsPublic: true, IsAbstract: false})
+        // Every loaded assembly, not just this one: readers and extractors now come from the
+        // acquisition side too, and a reader nobody scanned for is a reader that silently does not
+        // exist. Assemblies that refuse to enumerate (native, dynamic) are skipped rather than
+        // taking startup down.
+        var types = AppDomain.CurrentDomain.GetAssemblies()
+            .SelectMany(a =>
+            {
+                try { return a.GetTypes(); }
+                catch { return []; }
+            })
             .ToList();
-        foreach (var ft in fetcherTypes)
+
+        foreach (var rt in Concrete<ISharedContentReader>(types))
         {
-            services.AddScoped(SpecificTypeUtils<IPostContentFetcher>.Type, ft);
+            services.AddScoped(SpecificTypeUtils<ISharedContentReader>.Type, rt);
         }
 
-        var handlerTypes = currentAssemblyTypes.Where(s =>
-                s.IsAssignableTo(SpecificTypeUtils<IPostParseTargetHandler>.Type) &&
-                s is {IsPublic: true, IsAbstract: false})
-            .ToList();
-        foreach (var ht in handlerTypes)
+        foreach (var pt in Concrete<ISharedContentPurchaser>(types))
+        {
+            services.AddScoped(SpecificTypeUtils<ISharedContentPurchaser>.Type, pt);
+        }
+
+        foreach (var ht in Concrete<IPostParseTargetHandler>(types))
         {
             services.AddScoped(SpecificTypeUtils<IPostParseTargetHandler>.Type, ht);
         }
 
+        services.AddScoped<SharedContentReaderResolver>();
+        services.AddHttpClient(nameof(GenericHtmlReader));
+
         return services;
     }
+
+    private static List<Type> Concrete<TContract>(IEnumerable<Type> types) =>
+        types.Where(t => t.IsAssignableTo(SpecificTypeUtils<TContract>.Type) &&
+                         t is {IsPublic: true, IsAbstract: false, IsInterface: false})
+            .Distinct()
+            .ToList();
 
     public static async Task ConfigurePostParser(this IApplicationBuilder app)
     {

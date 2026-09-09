@@ -16,5 +16,6 @@ public enum AcquisitionDriveKind
     PikPak = 7,
     GoogleDrive = 8,
     OneDrive = 9,
-    Magnet = 10
+    Magnet = 10,
+    OneOneFive = 11
 }

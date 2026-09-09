@@ -4491,7 +4491,8 @@ export enum AcquisitionDriveKind {
   PikPak = 7,
   GoogleDrive = 8,
   OneDrive = 9,
-  Magnet = 10
+  Magnet = 10,
+  OneOneFive = 11
 }
 
 export const acquisitionDriveKinds = [
@@ -4505,7 +4506,8 @@ export const acquisitionDriveKinds = [
   { label: 'PikPak', value: AcquisitionDriveKind.PikPak },
   { label: 'GoogleDrive', value: AcquisitionDriveKind.GoogleDrive },
   { label: 'OneDrive', value: AcquisitionDriveKind.OneDrive },
-  { label: 'Magnet', value: AcquisitionDriveKind.Magnet }
+  { label: 'Magnet', value: AcquisitionDriveKind.Magnet },
+  { label: 'OneOneFive', value: AcquisitionDriveKind.OneOneFive }
 ] as const;
 
 export const AcquisitionDriveKindLabel: Record<AcquisitionDriveKind, string> = {
@@ -4519,7 +4521,8 @@ export const AcquisitionDriveKindLabel: Record<AcquisitionDriveKind, string> = {
   [AcquisitionDriveKind.PikPak]: 'PikPak',
   [AcquisitionDriveKind.GoogleDrive]: 'GoogleDrive',
   [AcquisitionDriveKind.OneDrive]: 'OneDrive',
-  [AcquisitionDriveKind.Magnet]: 'Magnet'
+  [AcquisitionDriveKind.Magnet]: 'Magnet',
+  [AcquisitionDriveKind.OneOneFive]: 'OneOneFive'
 };
 
 export enum AcquisitionLeadKind {

@@ -6,4 +6,12 @@
     <ProjectReference Include="..\Bakabase.TestKit\Bakabase.TestKit.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Sample shared content the acquisition tests read, kept as files so the same samples can
+         be reused as more steps land. -->
+    <Content Include="Fixtures\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>
