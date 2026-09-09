@@ -163,6 +163,11 @@ namespace Bakabase.Service.Extensions
             // added here becomes something a recipe can name.
             services.AddAcquisitionStep<Bakabase.Modules.Acquisition.Components.Steps.SelectLinkStep>();
             services.AddAcquisitionStep<Components.Acquisition.Steps.ResolveSharedContentStep>();
+            services.AddAcquisitionStep<Components.Acquisition.Steps.FetchHttpStep>();
+            services.AddAcquisitionStep<Components.Acquisition.Steps.WaitForInboxStep>();
+            services.AddHttpClient(nameof(Components.Acquisition.Steps.FetchHttpStep));
+            services.AddScoped<Components.Acquisition.AcquisitionInboxService>();
+            services.AddHostedService<Components.Acquisition.AcquisitionInboxWatcher>();
 
             // "I am missing this" — creating resources for things the user does not have yet.
             services.AddScoped<IPlaceholderResourceService, PlaceholderResourceService>();

@@ -16,6 +16,7 @@ import { FsExpandChildrenUI } from "./FsExpandChildren";
 import { acquisitionStepUI, isAcquisitionStepKind } from "./AcquisitionStep";
 import { AcquisitionResolveSharedContentUI } from "./AcquisitionResolveSharedContent";
 import { AcquisitionSelectLinkUI } from "./AcquisitionSelectLink";
+import { AcquisitionWaitForInboxUI } from "./AcquisitionWaitForInbox";
 
 export const workflowActivityRegistry: Record<string, WorkflowActivityUI<any>> = {
   [SubscriptionItemTitleContainsUI.kind]: SubscriptionItemTitleContainsUI,
@@ -33,6 +34,7 @@ export const workflowActivityRegistry: Record<string, WorkflowActivityUI<any>> =
   [FsExpandChildrenUI.kind]: FsExpandChildrenUI,
   [AcquisitionResolveSharedContentUI.kind]: AcquisitionResolveSharedContentUI,
   [AcquisitionSelectLinkUI.kind]: AcquisitionSelectLinkUI,
+  [AcquisitionWaitForInboxUI.kind]: AcquisitionWaitForInboxUI,
 };
 
 /** Built once per kind so the editor's forms keep their state across renders. */

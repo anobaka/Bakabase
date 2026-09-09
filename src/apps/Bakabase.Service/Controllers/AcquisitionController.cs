@@ -16,7 +16,8 @@ namespace Bakabase.Service.Controllers;
 [Route("~/acquisition")]
 public class AcquisitionController(
     IAcquisitionService service,
-    IAcquisitionLeadService leads) : ControllerBase
+    IAcquisitionLeadService leads,
+    Components.Acquisition.AcquisitionInboxService inbox) : ControllerBase
 {
     [HttpPost]
     [SwaggerOperation(OperationId = "CreateAcquisition")]
@@ -110,6 +111,35 @@ public class AcquisitionController(
         try
         {
             await service.CancelAsync(id);
+        }
+        catch (InvalidOperationException e)
+        {
+            return BaseResponseBuilder.BuildBadRequest(e.Message);
+        }
+
+        return BaseResponseBuilder.Ok;
+    }
+
+    /// <summary>
+    /// What is sitting in the inbox, and what each waiting acquisition makes of it. The scores are
+    /// the watcher's own reasoning, shown so a user can see why it did or did not claim something.
+    /// </summary>
+    [HttpGet("inbox")]
+    [SwaggerOperation(OperationId = "GetAcquisitionInbox")]
+    public async Task<ListResponse<Components.Acquisition.InboxCandidate>> GetInbox() =>
+        new(await inbox.ListAsync());
+
+    /// <summary>
+    /// Undoes a claim the watcher got wrong: the files go back to the inbox and the acquisition
+    /// stops, so they are free for whichever one actually wanted them.
+    /// </summary>
+    [HttpPost("{id:int}/unclaim")]
+    [SwaggerOperation(OperationId = "UnclaimAcquisitionFiles")]
+    public async Task<BaseResponse> Unclaim(int id)
+    {
+        try
+        {
+            await inbox.UnclaimAsync(id);
         }
         catch (InvalidOperationException e)
         {

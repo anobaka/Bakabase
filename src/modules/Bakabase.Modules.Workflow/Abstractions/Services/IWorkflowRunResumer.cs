@@ -21,4 +21,12 @@ public interface IWorkflowRunResumer
     /// a successful one has nothing left to do).
     /// </exception>
     Task RequeueAsync(int runId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Changes what a waiting run says it is waiting for, without resuming it. For when the
+    /// question got harder while nobody was looking — two files turned up in the inbox and the
+    /// run that was waiting for one of them now needs a person to say which.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">There is no such run, or it is not waiting.</exception>
+    Task UpdateWaitAsync(int runId, string reason, string? promptJson, CancellationToken ct = default);
 }

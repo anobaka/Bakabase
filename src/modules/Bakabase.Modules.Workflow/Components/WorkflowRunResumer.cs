@@ -60,6 +60,25 @@ public class WorkflowRunResumer<TDbContext>(
         logger.LogInformation("Workflow run {RunId} requeued from step {Step}", runId, run.CurrentStepIndex);
     }
 
+    public async Task UpdateWaitAsync(int runId, string reason, string? promptJson,
+        CancellationToken ct = default)
+    {
+        var run = await db.Set<WorkflowRunDbModel>().FirstOrDefaultAsync(r => r.Id == runId, ct)
+                  ?? throw new InvalidOperationException($"Workflow run #{runId} does not exist.");
+
+        if (run.Status != WorkflowRunStatus.Waiting)
+        {
+            throw new InvalidOperationException(
+                $"Workflow run #{runId} is {run.Status}, not waiting for anything.");
+        }
+
+        run.WaitReason = reason;
+        run.WaitPromptJson = promptJson;
+        // WaitingSince is deliberately left alone: the run has been waiting since it started
+        // waiting, and restarting that clock would hide how long someone has been stuck.
+        await db.SaveChangesAsync(ct);
+    }
+
     /// <summary>
     /// Same task id and conflict key as the original enqueue, so a run that comes back is still one
     /// run of that definition and cannot race another.

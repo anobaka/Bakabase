@@ -84,6 +84,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/acquisition/inbox": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAcquisitionInbox"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/acquisition/{id}/unclaim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["UnclaimAcquisitionFiles"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/acquisition/recipes": {
         parameters: {
             query?: never;
@@ -10321,6 +10353,23 @@ export interface components {
             requiresManualPayload: boolean;
             payloadFields: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowItemTypeFieldViewModel"][];
         };
+        "Bakabase.Service.Components.Acquisition.InboxCandidate": {
+            path: string;
+            fileName: string;
+            /** Format: int64 */
+            length: number;
+            /** Format: date-time */
+            createdAt: string;
+            isStable: boolean;
+            scores: components["schemas"]["Bakabase.Service.Components.Acquisition.InboxCandidateScore"][];
+        };
+        "Bakabase.Service.Components.Acquisition.InboxCandidateScore": {
+            /** Format: int32 */
+            acquisitionTaskId: number;
+            resourceName?: string;
+            /** Format: int32 */
+            score: number;
+        };
         "Bakabase.Service.Controllers.AppDataPathController+RelocateRequest": {
             targetPath: string;
             mode: components["schemas"]["Bakabase.Infrastructures.Components.App.Relocation.RelocationMode"];
@@ -11428,6 +11477,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowTriggerDescriptorViewModel"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Components.Acquisition.InboxCandidate]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Components.Acquisition.InboxCandidate"][];
         };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Controllers.ChatController+ChatToolViewModel]": {
             /** Format: int32 */
@@ -13168,6 +13223,52 @@ export interface operations {
         };
     };
     CancelAcquisition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetAcquisitionInbox: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Components.Acquisition.InboxCandidate]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Components.Acquisition.InboxCandidate]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Components.Acquisition.InboxCandidate]"];
+                };
+            };
+        };
+    };
+    UnclaimAcquisitionFiles: {
         parameters: {
             query?: never;
             header?: never;

@@ -4506,6 +4506,25 @@ export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowTriggerDes
   payloadFields: BakabaseModulesWorkflowAbstractionsModelsViewWorkflowItemTypeFieldViewModel[];
 }
 
+export interface BakabaseServiceComponentsAcquisitionInboxCandidate {
+  path: string;
+  fileName: string;
+  /** @format int64 */
+  length: number;
+  /** @format date-time */
+  createdAt: string;
+  isStable: boolean;
+  scores: BakabaseServiceComponentsAcquisitionInboxCandidateScore[];
+}
+
+export interface BakabaseServiceComponentsAcquisitionInboxCandidateScore {
+  /** @format int32 */
+  acquisitionTaskId: number;
+  resourceName?: string;
+  /** @format int32 */
+  score: number;
+}
+
 export interface BakabaseServiceControllersAppDataPathControllerRelocateRequest {
   targetPath: string;
   /** [1: UseTarget, 3: MergeOverwrite] */
@@ -5834,6 +5853,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesWorkfl
   code: number;
   message?: string;
   data?: BakabaseModulesWorkflowAbstractionsModelsViewWorkflowTriggerDescriptorViewModel[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceComponentsAcquisitionInboxCandidate {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionInboxCandidate[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceControllersChatControllerChatToolViewModel {
@@ -8132,6 +8158,50 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     cancelAcquisition: (id: number, params: RequestParams = {}) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/acquisition/${id}/cancel`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Acquisition
+     * @name GetAcquisitionInbox
+     * @request GET:/acquisition/inbox
+     */
+    getAcquisitionInbox: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceComponentsAcquisitionInboxCandidate,
+        any
+      >({
+        path: `/acquisition/inbox`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getAcquisitionInbox
+     * @name getAcquisitionInboxUrl
+     */
+    getAcquisitionInboxUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/inbox`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Acquisition
+     * @name UnclaimAcquisitionFiles
+     * @request POST:/acquisition/{id}/unclaim
+     */
+    unclaimAcquisitionFiles: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/acquisition/${id}/unclaim`,
         method: "POST",
         format: "json",
         ...params,
