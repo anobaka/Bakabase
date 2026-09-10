@@ -13,7 +13,9 @@ namespace Bakabase.Service.Components.Collections;
 /// </summary>
 public class CollectionNameProvider(
     ICollectionService collections,
-    ICollectionResourceMappingService mappings) : ICollectionNameProvider
+    ICollectionResourceMappingService mappings,
+    CollectionRuleIndex ruleIndex,
+    IResourceProfileService profiles) : ICollectionNameProvider
 {
     public async Task<List<CollectionName>> GetAllAsync(CancellationToken ct = default) =>
         (await collections.GetAll(false, ct)).Select(c => new CollectionName(c.Id, c.Name)).ToList();
@@ -46,13 +48,21 @@ public class CollectionNameProvider(
 
         // Rule members too: membership is membership, and a search that only saw written-down rows
         // would disagree with the collection page about who is in it.
-        var wanted = resourceIds.ToHashSet();
+        //
+        // Read out of the index rather than by asking each collection for its members: this runs per
+        // batch while the search index is built, and the answer for one resource is a dictionary
+        // lookup once every rule has been evaluated for this generation.
+        var rules = all.Where(c => c.HasRule).Select(c => (c.Id, c.RuleSearchJson)).ToList();
 
-        foreach (var collection in all.Where(c => c.HasRule))
+        if (rules.Count == 0) return result;
+
+        await ruleIndex.EnsureCurrentAsync(rules, profiles, ct);
+
+        foreach (var resourceId in resourceIds)
         {
-            foreach (var member in await collections.GetMembers(collection.Id, ct))
+            foreach (var collectionId in ruleIndex.CollectionIdsOf(resourceId))
             {
-                if (wanted.Contains(member.ResourceId)) Attach(member.ResourceId, collection.Id);
+                Attach(resourceId, collectionId);
             }
         }
 

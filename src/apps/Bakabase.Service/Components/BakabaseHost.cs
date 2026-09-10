@@ -142,7 +142,7 @@ namespace Bakabase.Service.Components
             await serviceProvider.GetRequiredService<IHealthScoreCacheWarmer>().WarmAsync();
 
             // Resolved so it exists and has subscribed; it has no other job.
-            serviceProvider.GetRequiredService<Components.Collections.CollectionRuleCacheInvalidator>();
+            serviceProvider.GetRequiredService<Components.Collections.CollectionRuleIndexInvalidator>();
 
             var dynamicTaskRegistry = serviceProvider.GetRequiredService<DynamicTaskRegistry>();
             var taskManager = serviceProvider.GetRequiredService<BTaskManager>();

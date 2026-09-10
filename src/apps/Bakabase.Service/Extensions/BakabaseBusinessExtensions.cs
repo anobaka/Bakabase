@@ -328,8 +328,8 @@ namespace Bakabase.Service.Extensions
             services.AddSingleton<IResourceDataChangeEvent>(sp => sp.GetRequiredService<ResourceDataChangeEventHub>());
             // A collection's rule can only give a different answer because a resource changed, so
             // that is exactly when the cached answer stops being usable.
-            services.AddSingleton<Components.Collections.CollectionRuleCache>();
-            services.AddSingleton<Components.Collections.CollectionRuleCacheInvalidator>();
+            services.AddSingleton<Components.Collections.CollectionRuleIndex>();
+            services.AddSingleton<Components.Collections.CollectionRuleIndexInvalidator>();
             services.AddSingleton<IResourceDataChangeEventPublisher>(sp => sp.GetRequiredService<ResourceDataChangeEventHub>());
 
             // Resource search index service (singleton for in-memory caching)

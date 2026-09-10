@@ -35,7 +35,7 @@ public class BakabaseCollectionService(
     IWorkflowEventBus eventBus,
     IResourceProfileService profiles,
     IAcquisitionService acquisitions,
-    CollectionRuleCache ruleCache,
+    CollectionRuleIndex ruleIndex,
     IHubContext<WebGuiHub, IWebGuiClient> uiHub,
     ILogger<BakabaseCollectionService> logger)
     : CollectionService<BakabaseDbContext>(orm, mappings, resources, changePublisher, eventBus)
@@ -62,30 +62,7 @@ public class BakabaseCollectionService(
     {
         var collection = await Orm.GetByKey(collectionId, false);
 
-        if (collection?.RuleSearchJson is not {Length: > 0} rule) return [];
-
-        var generation = ruleCache.Generation;
-        var cached = ruleCache.Get(collectionId, generation);
-
-        if (cached != null) return cached.ToList();
-
-        HashSet<int> matched;
-        try
-        {
-            matched = await profiles.GetMatchingResourceIdsBySearchJson(rule);
-        }
-        catch (Exception ex)
-        {
-            // A rule the user has half-written should leave the collection showing its written-down
-            // members, not an error page.
-            logger.LogWarning(ex, "[Collection] Could not evaluate the rule of collection {Id}", collectionId);
-
-            return [];
-        }
-
-        ruleCache.Set(collectionId, matched, generation);
-
-        return matched.ToList();
+        return await ruleIndex.MembersAsync(collectionId, collection?.RuleSearchJson, profiles, ct);
     }
 
     protected override async Task<HashSet<int>> AcquiringResourceIds(IReadOnlyCollection<int> resourceIds,

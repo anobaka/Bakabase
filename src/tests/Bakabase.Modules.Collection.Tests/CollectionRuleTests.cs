@@ -32,9 +32,9 @@ public sealed class CollectionRuleTests
     {
         _sp = await TestServiceBuilder.BuildServiceProvider();
 
-        // Production resolves this at startup so the rule cache hears about resource changes.
-        // Without it these tests would be exercising a cache nothing ever invalidates.
-        _sp.GetRequiredService<CollectionRuleCacheInvalidator>();
+        // Production resolves this at startup so the rule index hears about resource changes.
+        // Without it these tests would be exercising an index nothing ever invalidates.
+        _sp.GetRequiredService<CollectionRuleIndexInvalidator>();
 
         _authorPropertyId = (await _sp.GetRequiredService<ICustomPropertyService>()
             .Add(new CustomPropertyAddOrPutDto {Name = "Author", Type = PropertyType.SingleLineText})).Id;

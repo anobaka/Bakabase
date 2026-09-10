@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Events;
 using Bakabase.Abstractions.Components.Localization;
+using Bakabase.Abstractions.Components.Search;
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
@@ -16,7 +17,14 @@ using Microsoft.Extensions.Logging;
 namespace Bakabase.InsideWorld.Business.Services;
 
 /// <summary>
-/// Maintains an in-memory index for Resource-ResourceProfile matching.
+/// Which resources match which profile, kept in memory both ways round.
+/// <para>
+/// The storage is a <see cref="SearchSetIndex"/>, shared with rule collections: a profile is a
+/// search with configuration hanging off it and a rule collection is a search with a name on it,
+/// and both are asked the same two questions. What is specific to profiles is here — the priority
+/// ordering, the debounced task, and dropping the playable-file cache when a resource's profiles
+/// change.
+/// </para>
 /// </summary>
 public class ResourceProfileIndexService : IResourceProfileIndexService
 {
@@ -25,18 +33,8 @@ public class ResourceProfileIndexService : IResourceProfileIndexService
     private readonly IBakabaseLocalizer _localizer;
     private readonly ILogger<ResourceProfileIndexService> _logger;
 
-    // resourceId => profileIds (sorted by priority, highest first)
-    private readonly ConcurrentDictionary<int, IReadOnlyList<int>> _resourceToProfiles = new();
-
-    // profileId => resourceIds
-    private readonly ConcurrentDictionary<int, IReadOnlySet<int>> _profileToResources = new();
-
-    // Cache of profile priorities for sorting
-    private readonly ConcurrentDictionary<int, int> _profilePriorities = new();
-
-    private volatile bool _isReady;
-    private readonly SemaphoreSlim _readyLock = new(1, 1);
-    private TaskCompletionSource _readyTcs = new();
+    private readonly SearchSetIndex _index = new();
+    private readonly SemaphoreSlim _rebuildLock = new(1, 1);
 
     // Pending invalidation queues
     private readonly ConcurrentQueue<int> _pendingResourceInvalidations = new();
@@ -62,66 +60,34 @@ public class ResourceProfileIndexService : IResourceProfileIndexService
         _localizer = localizer;
         _logger = logger;
 
-        // Subscribe to resource data change events
-        resourceDataChangeEvent.OnResourceDataChanged += OnResourceDataChanged;
-        resourceDataChangeEvent.OnResourceRemoved += OnResourceRemoved;
+        resourceDataChangeEvent.OnResourceDataChanged += args => InvalidateResources(args.ResourceIds);
+        resourceDataChangeEvent.OnResourceRemoved += args => InvalidateResources(args.ResourceIds);
     }
 
-    private void OnResourceDataChanged(ResourceDataChangedEventArgs args)
-    {
-        InvalidateResources(args.ResourceIds);
-    }
+    public bool IsReady => _index.IsReady;
 
-    private void OnResourceRemoved(ResourceRemovedEventArgs args)
-    {
-        // When resources are removed, we need to invalidate them to remove from index
-        InvalidateResources(args.ResourceIds);
-    }
-
-    public bool IsReady => _isReady;
-
-    public async Task WaitUntilReady(CancellationToken ct = default)
-    {
-        if (_isReady) return;
-
-        // Use a copy of the TCS to avoid race conditions
-        var tcs = _readyTcs;
-        await using (ct.Register(() => tcs.TrySetCanceled()))
-        {
-            await tcs.Task;
-        }
-    }
+    public Task WaitUntilReady(CancellationToken ct = default) => _index.WaitUntilReady(ct);
 
     public async Task<IReadOnlyList<int>> GetMatchingProfileIds(int resourceId)
     {
         await WaitUntilReady();
-        return _resourceToProfiles.TryGetValue(resourceId, out var profileIds) ? profileIds : Array.Empty<int>();
+
+        return _index.GetSetIds(resourceId);
     }
 
-    public async Task<Dictionary<int, IReadOnlyList<int>>> GetMatchingProfileIdsForResources(IEnumerable<int> resourceIds)
+    public async Task<Dictionary<int, IReadOnlyList<int>>> GetMatchingProfileIdsForResources(
+        IEnumerable<int> resourceIds)
     {
         await WaitUntilReady();
-        var result = new Dictionary<int, IReadOnlyList<int>>();
-        foreach (var resourceId in resourceIds)
-        {
-            if (_resourceToProfiles.TryGetValue(resourceId, out var profileIds))
-            {
-                result[resourceId] = profileIds;
-            }
-            else
-            {
-                result[resourceId] = Array.Empty<int>();
-            }
-        }
-        return result;
+
+        return resourceIds.Distinct().ToDictionary(id => id, id => _index.GetSetIds(id));
     }
 
     public async Task<IReadOnlySet<int>> GetMatchingResourceIds(int profileId)
     {
         await WaitUntilReady();
-        return _profileToResources.TryGetValue(profileId, out var resourceIds)
-            ? resourceIds
-            : new HashSet<int>();
+
+        return _index.GetMembers(profileId);
     }
 
     public void InvalidateResource(int resourceId)
@@ -161,11 +127,8 @@ public class ResourceProfileIndexService : IResourceProfileIndexService
     public async Task RebuildAsync(Func<int, string?, Task>? onProgress, CancellationToken ct)
     {
         await using var scope = _serviceProvider.CreateAsyncScope();
-        var sp = scope.ServiceProvider;
-        var resourceProfileService = sp.GetRequiredService<IResourceProfileService>();
-        var resourceService = sp.GetRequiredService<IResourceService>();
 
-        await FullRebuildCore(resourceProfileService, resourceService, onProgress, ct);
+        await FullRebuild(scope.ServiceProvider.GetRequiredService<IResourceProfileService>(), onProgress, ct);
     }
 
     private void ScheduleUpdate()
@@ -185,12 +148,8 @@ public class ResourceProfileIndexService : IResourceProfileIndexService
             _debounceTimer = null;
         }
 
-        // Check if there's already a pending task
-        if (_taskManager.IsPending(TaskId))
-        {
-            // Task is already running or queued, it will pick up pending invalidations
-            return;
-        }
+        // Already queued or running: it will pick up whatever is pending when it gets there.
+        if (_taskManager.IsPending(TaskId)) return;
 
         var builder = BTaskBuilder.Create(TaskId)
             .Named(() => _localizer.BTask_Name("ResourceProfileIndex"))
@@ -208,45 +167,37 @@ public class ResourceProfileIndexService : IResourceProfileIndexService
         try
         {
             await using var scope = _serviceProvider.CreateAsyncScope();
-            var sp = scope.ServiceProvider;
-            var resourceProfileService = sp.GetRequiredService<IResourceProfileService>();
-            var resourceService = sp.GetRequiredService<IResourceService>();
+            var profiles = scope.ServiceProvider.GetRequiredService<IResourceProfileService>();
 
-            // Check if full rebuild is needed
-            if (_pendingFullRebuild || !_isReady)
+            if (_pendingFullRebuild || !_index.IsReady)
             {
                 _pendingFullRebuild = false;
-                // Clear partial invalidation queues since we're doing full rebuild
+
+                // A full rebuild answers every pending question, so nothing is left queued to be
+                // answered a second time.
                 while (_pendingResourceInvalidations.TryDequeue(out _)) { }
                 while (_pendingProfileInvalidations.TryDequeue(out _)) { }
 
-                await FullRebuild(resourceProfileService, resourceService, args);
+                await FullRebuild(profiles, async (percentage, process) => await args.UpdateTask(t =>
+                {
+                    t.Percentage = percentage;
+                    t.Process = process;
+                }), args.CancellationToken);
+
                 return;
             }
 
-            // Process profile invalidations first (they may require re-evaluating all resources)
-            var profilesToInvalidate = new HashSet<int>();
-            while (_pendingProfileInvalidations.TryDequeue(out var profileId))
-            {
-                profilesToInvalidate.Add(profileId);
-            }
+            var profilesToInvalidate = Drain(_pendingProfileInvalidations);
+            var resourcesInvalidated = Drain(_pendingResourceInvalidations).Count > 0;
 
-            if (profilesToInvalidate.Count > 0)
-            {
-                await ProcessProfileInvalidations(profilesToInvalidate, resourceProfileService, resourceService, args);
-            }
+            // A resource changed: any profile's answer could have moved, and there is no way to ask
+            // "does this one resource match" — a search is a search. So the profiles are all
+            // re-evaluated, which is one search each rather than one per changed resource.
+            var affected = resourcesInvalidated
+                ? await ReindexAll(profiles, null, args.CancellationToken)
+                : await Reindex(profilesToInvalidate, profiles, args.CancellationToken);
 
-            // Process resource invalidations
-            var resourcesToInvalidate = new HashSet<int>();
-            while (_pendingResourceInvalidations.TryDequeue(out var resourceId))
-            {
-                resourcesToInvalidate.Add(resourceId);
-            }
-
-            if (resourcesToInvalidate.Count > 0)
-            {
-                await ProcessResourceInvalidations(resourcesToInvalidate, resourceProfileService, resourceService, args);
-            }
+            await DropPlayableFileCache(scope.ServiceProvider, affected);
         }
         catch (Exception ex)
         {
@@ -254,320 +205,112 @@ public class ResourceProfileIndexService : IResourceProfileIndexService
         }
     }
 
-    private async Task FullRebuild(
-        IResourceProfileService resourceProfileService,
-        IResourceService resourceService,
-        BTaskArgs args)
-    {
-        await FullRebuildCore(
-            resourceProfileService,
-            resourceService,
-            async (percentage, process) =>
-            {
-                await args.UpdateTask(t =>
-                {
-                    t.Percentage = percentage;
-                    t.Process = process;
-                });
-            },
-            args.CancellationToken);
-    }
-
-    private async Task FullRebuildCore(
-        IResourceProfileService resourceProfileService,
-        IResourceService resourceService,
-        Func<int, string?, Task>? onProgress,
+    private async Task FullRebuild(IResourceProfileService profiles, Func<int, string?, Task>? onProgress,
         CancellationToken ct)
     {
         _logger.LogInformation("Starting full ResourceProfile index rebuild");
 
+        await _rebuildLock.WaitAsync(ct);
         try
         {
-            await _readyLock.WaitAsync(ct);
+            _index.Reset();
 
-            _isReady = false;
-            _resourceToProfiles.Clear();
-            _profileToResources.Clear();
-            _profilePriorities.Clear();
+            await ReindexAll(profiles, onProgress, ct);
 
-            // Get all profiles
-            var profiles = await resourceProfileService.GetAll();
-            var totalProfiles = profiles.Count;
+            _index.MarkReady();
 
-            if (totalProfiles == 0)
-            {
-                _isReady = true;
-                _readyTcs.TrySetResult();
-                return;
-            }
-
-            // Store priorities
-            foreach (var profile in profiles)
-            {
-                _profilePriorities[profile.Id] = profile.Priority;
-            }
-
-            // Get all resource IDs (pass empty search to get all)
-            var allResourceIds = await resourceService.GetAllIds(new ResourceSearch { PageSize = int.MaxValue });
-
-            // Build index per profile
-            var processedProfiles = 0;
-            foreach (var profile in profiles)
-            {
-                ct.ThrowIfCancellationRequested();
-
-                var matchingResourceIds = await resourceProfileService.GetMatchingResourceIds(profile.Id);
-                _profileToResources[profile.Id] = matchingResourceIds;
-
-                // Update reverse index
-                foreach (var resourceId in matchingResourceIds)
-                {
-                    _resourceToProfiles.AddOrUpdate(
-                        resourceId,
-                        _ => new List<int> { profile.Id },
-                        (_, existing) =>
-                        {
-                            var list = existing.ToList();
-                            if (!list.Contains(profile.Id))
-                            {
-                                list.Add(profile.Id);
-                                // Sort by priority (highest first)
-                                list.Sort((a, b) =>
-                                    _profilePriorities.GetValueOrDefault(b, 0)
-                                        .CompareTo(_profilePriorities.GetValueOrDefault(a, 0)));
-                            }
-
-                            return list;
-                        });
-                }
-
-                processedProfiles++;
-                var percentage = (int)(processedProfiles * 100f / totalProfiles);
-                if (onProgress != null)
-                {
-                    await onProgress(percentage, $"{processedProfiles}/{totalProfiles}");
-                }
-            }
-
-            _isReady = true;
-            _readyTcs.TrySetResult();
-            _logger.LogInformation(
-                "ResourceProfile index rebuild completed: {ProfileCount} profiles, {ResourceCount} resources indexed",
-                totalProfiles, _resourceToProfiles.Count);
+            _logger.LogInformation("ResourceProfile index rebuild completed: {ProfileCount} profiles",
+                _index.SetIds.Count);
         }
         finally
         {
-            _readyLock.Release();
+            _rebuildLock.Release();
         }
     }
 
-    private async Task ProcessProfileInvalidations(
-        HashSet<int> profileIds,
-        IResourceProfileService resourceProfileService,
-        IResourceService resourceService,
-        BTaskArgs args)
+    /// <summary>Re-evaluates every profile. One search per profile, whatever prompted it.</summary>
+    private async Task<HashSet<int>> ReindexAll(IResourceProfileService profiles,
+        Func<int, string?, Task>? onProgress, CancellationToken ct)
     {
-        _logger.LogDebug("Processing {Count} profile invalidations", profileIds.Count);
+        var all = await profiles.GetAll();
+        var affected = new HashSet<int>();
+        var done = 0;
 
-        // Get current profiles
-        var allProfiles = await resourceProfileService.GetAll();
-        var profileMap = allProfiles.ToDictionary(p => p.Id);
+        // Ranks first: a profile indexed before its own rank is known would sort by zero.
+        foreach (var profile in all) _index.SetRank(profile.Id, profile.Priority);
 
-        // Update priorities
-        foreach (var profile in allProfiles)
+        // A profile that has gone leaves the index with everything it held.
+        var known = all.Select(p => p.Id).ToHashSet();
+
+        foreach (var setId in _index.SetIds)
         {
-            _profilePriorities[profile.Id] = profile.Priority;
+            if (!known.Contains(setId)) affected.UnionWith(_index.Remove(setId));
         }
 
-        // Resources touched by a profile add/edit/delete: their effective playable-file options
-        // may have changed (the profile gained/lost them, or its playable rules were edited), so
-        // any cached playable-file result must be invalidated to be re-discovered on next access.
-        var affectedResourceIds = new HashSet<int>();
+        foreach (var profile in all)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            affected.UnionWith(_index.Replace(profile.Id, await profiles.GetMatchingResourceIds(profile.Search)));
+
+            done++;
+
+            if (onProgress != null) await onProgress(done * 100 / all.Count, $"{done}/{all.Count}");
+        }
+
+        return affected;
+    }
+
+    /// <summary>Re-evaluates only these profiles — one of them was added, edited or deleted.</summary>
+    private async Task<HashSet<int>> Reindex(IReadOnlyCollection<int> profileIds,
+        IResourceProfileService profiles, CancellationToken ct)
+    {
+        if (profileIds.Count == 0) return [];
+
+        var byId = (await profiles.GetAll()).ToDictionary(p => p.Id);
+        var affected = new HashSet<int>();
 
         foreach (var profileId in profileIds)
         {
-            args.CancellationToken.ThrowIfCancellationRequested();
+            ct.ThrowIfCancellationRequested();
 
-            // Remove old entries for this profile
-            if (_profileToResources.TryRemove(profileId, out var oldResourceIds))
+            if (!byId.TryGetValue(profileId, out var profile))
             {
-                foreach (var resourceId in oldResourceIds)
-                {
-                    RemoveProfileFromResource(resourceId, profileId);
-                    affectedResourceIds.Add(resourceId);
-                }
+                affected.UnionWith(_index.Remove(profileId));
+
+                continue;
             }
 
-            // If profile still exists, rebuild its index
-            if (profileMap.TryGetValue(profileId, out var profile))
-            {
-                // Use profile.Search directly to bypass index cache and avoid circular dependency
-                var matchingResourceIds = await resourceProfileService.GetMatchingResourceIds(profile.Search);
-                _profileToResources[profileId] = matchingResourceIds;
+            _index.SetRank(profileId, profile.Priority);
 
-                foreach (var resourceId in matchingResourceIds)
-                {
-                    AddProfileToResource(resourceId, profileId);
-                    affectedResourceIds.Add(resourceId);
-                }
-            }
-            else
-            {
-                // Profile was deleted, remove from priority cache
-                _profilePriorities.TryRemove(profileId, out _);
-            }
+            // profile.Search directly rather than by id: asking the service by id would come back
+            // through this index and answer with what it already believes.
+            affected.UnionWith(_index.Replace(profileId, await profiles.GetMatchingResourceIds(profile.Search)));
         }
 
-        if (affectedResourceIds.Count > 0)
-        {
-            await resourceService.DeleteResourceCacheByResourceIdsAndCacheType(
-                affectedResourceIds, ResourceCacheType.PlayableFiles);
-        }
+        return affected;
     }
 
-    private async Task ProcessResourceInvalidations(
-        HashSet<int> resourceIds,
-        IResourceProfileService resourceProfileService,
-        IResourceService resourceService,
-        BTaskArgs args)
+    /// <summary>
+    /// A resource's effective playable-file options come from its highest-priority matching profile,
+    /// so a change in which profiles match makes any cached playable-file result stale. This is also
+    /// what lets a freshly synced resource recover: it may have been discovered before it had been
+    /// indexed against anything, and that empty result gets cached as a valid answer.
+    /// </summary>
+    private static async Task DropPlayableFileCache(IServiceProvider scope, IReadOnlyCollection<int> resourceIds)
     {
-        _logger.LogDebug("Processing {Count} resource invalidations", resourceIds.Count);
+        if (resourceIds.Count == 0) return;
 
-        var allProfiles = await resourceProfileService.GetAll();
-
-        // Resources whose matching-profile set actually changed. Their effective playable-file
-        // options come from the highest-priority matching profile, so a change here can make a
-        // previously cached playable-file result stale. This is what lets a freshly-synced
-        // resource auto-recover: it may have been discovered with an empty playable result
-        // before it had been indexed against any profile (GetMatchingProfileIds returned none),
-        // which gets cached as a valid "no playable files" entry; once indexing catches up we
-        // invalidate that entry so the next access re-discovers from the (now resolvable) profile.
-        var matchingChangedResourceIds = new HashSet<int>();
-
-        foreach (var resourceId in resourceIds)
-        {
-            args.CancellationToken.ThrowIfCancellationRequested();
-
-            // Clear existing mappings for this resource
-            var oldProfileIds = _resourceToProfiles.TryRemove(resourceId, out var removed)
-                ? removed
-                : Array.Empty<int>();
-            foreach (var profileId in oldProfileIds)
-            {
-                RemoveResourceFromProfile(profileId, resourceId);
-            }
-
-            // Re-evaluate against all profiles
-            var matchingProfileIds = new List<int>();
-            foreach (var profile in allProfiles)
-            {
-                if (_profileToResources.TryGetValue(profile.Id, out var profileResourceIds))
-                {
-                    // Check if we need to re-evaluate - use profile.Search to bypass index cache
-                    var newMatchingIds = await resourceProfileService.GetMatchingResourceIds(profile.Search);
-                    if (newMatchingIds.Contains(resourceId))
-                    {
-                        matchingProfileIds.Add(profile.Id);
-                        AddResourceToProfile(profile.Id, resourceId);
-                    }
-                }
-                else
-                {
-                    // Profile has no cached resources, evaluate - use profile.Search to bypass index cache
-                    var matchingIds = await resourceProfileService.GetMatchingResourceIds(profile.Search);
-                    _profileToResources[profile.Id] = matchingIds;
-                    if (matchingIds.Contains(resourceId))
-                    {
-                        matchingProfileIds.Add(profile.Id);
-                    }
-                }
-            }
-
-            if (matchingProfileIds.Count > 0)
-            {
-                // Sort by priority
-                matchingProfileIds.Sort((a, b) =>
-                    _profilePriorities.GetValueOrDefault(b, 0)
-                        .CompareTo(_profilePriorities.GetValueOrDefault(a, 0)));
-                _resourceToProfiles[resourceId] = matchingProfileIds;
-            }
-
-            // Order-independent comparison of old vs new matching set.
-            if (!oldProfileIds.OrderBy(x => x).SequenceEqual(matchingProfileIds.OrderBy(x => x)))
-            {
-                matchingChangedResourceIds.Add(resourceId);
-            }
-        }
-
-        if (matchingChangedResourceIds.Count > 0)
-        {
-            await resourceService.DeleteResourceCacheByResourceIdsAndCacheType(
-                matchingChangedResourceIds, ResourceCacheType.PlayableFiles);
-        }
+        await scope.GetRequiredService<IResourceService>()
+            .DeleteResourceCacheByResourceIdsAndCacheType(resourceIds, ResourceCacheType.PlayableFiles);
     }
 
-    private void AddProfileToResource(int resourceId, int profileId)
+    private static List<int> Drain(ConcurrentQueue<int> queue)
     {
-        _resourceToProfiles.AddOrUpdate(
-            resourceId,
-            _ => new List<int> { profileId },
-            (_, existing) =>
-            {
-                var list = existing.ToList();
-                if (!list.Contains(profileId))
-                {
-                    list.Add(profileId);
-                    list.Sort((a, b) =>
-                        _profilePriorities.GetValueOrDefault(b, 0)
-                            .CompareTo(_profilePriorities.GetValueOrDefault(a, 0)));
-                }
+        var drained = new HashSet<int>();
 
-                return list;
-            });
-    }
+        while (queue.TryDequeue(out var id)) drained.Add(id);
 
-    private void RemoveProfileFromResource(int resourceId, int profileId)
-    {
-        _resourceToProfiles.AddOrUpdate(
-            resourceId,
-            _ => Array.Empty<int>(),
-            (_, existing) =>
-            {
-                var list = existing.ToList();
-                list.Remove(profileId);
-                return list;
-            });
-
-        // Clean up empty entries
-        if (_resourceToProfiles.TryGetValue(resourceId, out var profiles) && profiles.Count == 0)
-        {
-            _resourceToProfiles.TryRemove(resourceId, out _);
-        }
-    }
-
-    private void AddResourceToProfile(int profileId, int resourceId)
-    {
-        _profileToResources.AddOrUpdate(
-            profileId,
-            _ => new HashSet<int> { resourceId },
-            (_, existing) =>
-            {
-                var set = existing.ToHashSet();
-                set.Add(resourceId);
-                return set;
-            });
-    }
-
-    private void RemoveResourceFromProfile(int profileId, int resourceId)
-    {
-        _profileToResources.AddOrUpdate(
-            profileId,
-            _ => new HashSet<int>(),
-            (_, existing) =>
-            {
-                var set = existing.ToHashSet();
-                set.Remove(resourceId);
-                return set;
-            });
+        return drained.ToList();
     }
 }
