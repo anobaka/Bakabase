@@ -239,6 +239,7 @@ namespace Bakabase.Service.Extensions
             services.AddSingleton<IWorkflowActivity, AiTransformActivity>();
             services.AddSingleton<IWorkflowActivity, ExHentaiQueryToGalleryActivity>();
             services.AddSingleton<IWorkflowActivity, ExHentaiEnqueueDownloadActivity>();
+            services.AddSingleton<IWorkflowActivity, DownloaderEnqueueActivity>();
             services.AddSingleton<IWorkflowActivity, CreateNotificationActivity>();
             services.AddSingleton<IWorkflowActivity, ResourceSetPropertyValueActivity>();
             services.AddSingleton<IWorkflowActivity, EnhancerEnhanceActivity>();

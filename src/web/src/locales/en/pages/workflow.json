@@ -313,5 +313,13 @@
   "workflow.enhancer.enhance.all": "Whatever the profile says",
   "workflow.enhancer.enhance.chosen": "{{count}} chosen",
   "workflow.pathmark.enqueueSync.displayName": "Sync path marks",
-  "workflow.pathmark.enqueueSync.description": "Re-reads the folders your marks cover, so files a chain just placed become resources without waiting for the next scan."
+  "workflow.pathmark.enqueueSync.description": "Re-reads the folders your marks cover, so files a chain just placed become resources without waiting for the next scan.",
+  "workflow.activity.downloaderEnqueue.displayName": "Download it",
+  "workflow.activity.downloaderEnqueue.description": "The link decides which downloader is used. A link no downloader here can fetch is left alone rather than queued.",
+  "workflow.activity.downloaderEnqueue.intervalMs.label": "Interval (ms)",
+  "workflow.activity.downloaderEnqueue.intervalMs.description": "Minimum 1000ms — the slowest platform's floor, not a preference.",
+  "workflow.activity.downloaderEnqueue.autoRetry.label": "Auto-retry on failure",
+  "workflow.activity.downloaderEnqueue.autoRetry.on": "auto-retry on",
+  "workflow.activity.downloaderEnqueue.autoRetry.off": "auto-retry off",
+  "workflow.activity.downloaderEnqueue.summary": "interval {{intervalMs}}ms · {{autoRetry}}"
 }

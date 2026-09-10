@@ -615,7 +615,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <tr><td>规则集合索引</td><td>把 <code class="i">ResourceProfileIndexService</code> 泛化为搜索集索引，规则集合与配置档案共用</td><td>3.3</td></tr>
 <tr><td>路径标记预设与按样例标记</td><td>帮助中心示例提升为预设；右键样例目录推断 <code class="i">Layer</code> 并批量创建；<code class="i">copyMarks</code> 持久化</td><td>无</td></tr>
 <tr><td>分享清单导入</td><td>2.10（若未在里程碑二完成）</td><td>2.7</td></tr>
-<tr><td><code class="i">action.downloader.enqueue</code> 泛化</td><td>ExHentai 专用入队动作泛化为按来源选择下载器</td><td>4.5</td></tr>
+<tr><td><code class="i">action.downloader.enqueue</code> 泛化</td><td>ExHentai 专用入队动作泛化为按来源选择下载器。<code class="i">DownloadTargetResolver</code>（链接 → 下载器 + 任务类型 + Key）、<code class="i">DownloaderEnqueueActivity</code>；旧的 <code class="i">action.downloader.exhentai.enqueue</code> 保留，因为已保存的工作流按 kind 引用动作。今天解析表只有 ExHentai 一个来源：Fanbox / Fantia / Ci-en / Patreon 的下载器类体仍是 TODO，把它们的链接形状写进表里只会产生永远不动的任务</td><td>4.5</td></tr>
 </table></div>
 
 <h2 id="s7"><span class="n">§7</span>横切事项与风险控制</h2>
@@ -629,7 +629,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 </div>
 
 <h2 id="s8"><span class="n">§8</span>批次总表</h2>
-<div class="rule ok"><b>进度。</b>已完成：里程碑一全部（1.1 到 1.7）、2.1 到 2.7、2.8（除油猴脚本按钮外——脚本不在本仓库，后端 <code class="i">POST acquisition/from-url</code> 已就位）、里程碑三全部（3.1 到 3.5）、2.9、2.10、4.1 到 4.4、4.5 的对接器契约、三个实现与三个持有型订阅；里程碑五的「模糊匹配」。4.5 余下的三张外部目录表折叠与页面合并未做（见 §16 偏离记录）。进行中：无。进度只在本行更新，批次行内不写状态。</div>
+<div class="rule ok"><b>进度。</b>已完成：里程碑一全部（1.1 到 1.7）、2.1 到 2.7、2.8（除油猴脚本按钮外——脚本不在本仓库，后端 <code class="i">POST acquisition/from-url</code> 已就位）、里程碑三全部（3.1 到 3.5）、2.9、2.10、4.1 到 4.4、4.5 的对接器契约、三个实现与三个持有型订阅；里程碑五的「模糊匹配」与「<code class="i">action.downloader.enqueue</code> 泛化」。4.5 余下的三张外部目录表折叠与页面合并未做（见 §16 偏离记录）。进行中：无。进度只在本行更新，批次行内不写状态。</div>
 <div class="tw"><table><tr><th style="width:8%">批次</th><th style="width:26%">名称</th><th style="width:12%">依赖</th><th style="width:10%">规模</th><th>交付物摘要</th></tr>
 <tr><td class="e">1.1</td><td><code class="i">HasLocalPath</code> 判定与内部属性</td><td>无</td><td>小</td><td>统一判定、布尔内部属性、筛选固定项</td></tr>
 <tr><td class="e">1.2</td><td>落地服务</td><td>1.1</td><td>中</td><td><code class="i">IResourceMaterializationService</code>、同步服务三处修正、空增强记录清理</td></tr>

@@ -312,5 +312,13 @@
   "workflow.enhancer.enhance.all": "按配置档案",
   "workflow.enhancer.enhance.chosen": "已选 {{count}} 个",
   "workflow.pathmark.enqueueSync.displayName": "同步路径标记",
-  "workflow.pathmark.enqueueSync.description": "重新扫描标记覆盖的目录，让流程刚放置的文件立即成为资源，而不必等下一次定时扫描。"
+  "workflow.pathmark.enqueueSync.description": "重新扫描标记覆盖的目录，让流程刚放置的文件立即成为资源，而不必等下一次定时扫描。",
+  "workflow.activity.downloaderEnqueue.displayName": "下载它",
+  "workflow.activity.downloaderEnqueue.description": "由链接决定使用哪个下载器。本地没有下载器能处理的链接会被跳过而不是入队。",
+  "workflow.activity.downloaderEnqueue.intervalMs.label": "间隔（毫秒）",
+  "workflow.activity.downloaderEnqueue.intervalMs.description": "最小 1000 毫秒——这是最慢平台的下限，不是偏好设置。",
+  "workflow.activity.downloaderEnqueue.autoRetry.label": "失败时自动重试",
+  "workflow.activity.downloaderEnqueue.autoRetry.on": "自动重试开",
+  "workflow.activity.downloaderEnqueue.autoRetry.off": "自动重试关",
+  "workflow.activity.downloaderEnqueue.summary": "间隔 {{intervalMs}} 毫秒 · {{autoRetry}}"
 }

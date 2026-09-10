@@ -19,6 +19,12 @@ namespace Bakabase.Service.Components.Workflow.Activities.Actions;
 /// Takes a <see cref="SubscriptionItem"/> whose <c>Url</c> points at an ExHentai gallery
 /// and enqueues a single-work download task. The ExHentai downloader helper handles
 /// validation, default options (PreferTorrent), and naming.
+/// <para>
+/// Superseded by <see cref="DownloaderEnqueueActivity"/>, which reads the link to decide which
+/// downloader is meant. This one stays because saved workflows name their activities by kind:
+/// removing it would silently break every recipe that already uses it. New chains should use the
+/// general action.
+/// </para>
 /// </summary>
 public class ExHentaiEnqueueDownloadActivity : IWorkflowActivity
 {

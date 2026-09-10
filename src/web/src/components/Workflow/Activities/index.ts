@@ -1,6 +1,7 @@
 import type { WorkflowActivityUI } from "./types";
 
 import { ExHentaiEnqueueDownloadUI } from "./ExHentaiEnqueueDownload";
+import { DownloaderEnqueueUI } from "./DownloaderEnqueue";
 import { SubscriptionItemTitleContainsUI } from "./SubscriptionItemTitleContains";
 import { AiTransformUI } from "./AiTransform";
 import { ExHentaiQueryToGalleryUI } from "./ExHentaiQueryToGallery";
@@ -31,6 +32,7 @@ export const workflowActivityRegistry: Record<string, WorkflowActivityUI<any>> =
   [AiTransformUI.kind]: AiTransformUI,
   [ExHentaiQueryToGalleryUI.kind]: ExHentaiQueryToGalleryUI,
   [ExHentaiEnqueueDownloadUI.kind]: ExHentaiEnqueueDownloadUI,
+  [DownloaderEnqueueUI.kind]: DownloaderEnqueueUI,
   [CreateNotificationUI.kind]: CreateNotificationUI,
   [FsFileNameOpUI.kind]: FsFileNameOpUI,
   [FsSaveNameUI.kind]: FsSaveNameUI,
