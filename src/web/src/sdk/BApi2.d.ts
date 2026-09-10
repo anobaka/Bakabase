@@ -5984,6 +5984,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/resource/match-suggestion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetPendingResourceMatchSuggestions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource/match-suggestion/count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CountPendingResourceMatchSuggestions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource/match-suggestion/{id}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ConfirmResourceMatchSuggestion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource/match-suggestion/{id}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["DismissResourceMatchSuggestion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/resource-move": {
         parameters: {
             query?: never;
@@ -7188,6 +7252,12 @@ export interface components {
         "Bakabase.Abstractions.Models.Domain.Constants.ResourceDataType": 1 | 2 | 3;
         /**
          * Format: int32
+         * @description [1: Pending, 2: Dismissed]
+         * @enum {integer}
+         */
+        "Bakabase.Abstractions.Models.Domain.Constants.ResourceMatchSuggestionStatus": 1 | 2;
+        /**
+         * Format: int32
          * @description [1: Pending, 2: Moving, 3: Succeeded, 4: Failed, 5: Cancelled, 6: Interrupted]
          * @enum {integer}
          */
@@ -7570,6 +7640,22 @@ export interface components {
             coverPaths?: string[];
             playableFilePaths?: string[];
             cachedTypes: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceCacheType"][];
+        };
+        "Bakabase.Abstractions.Models.Domain.ResourceMatchSuggestion": {
+            /** Format: int32 */
+            id: number;
+            /** Format: int32 */
+            resourceId: number;
+            resourceName?: string;
+            /** Format: int32 */
+            candidateResourceId: number;
+            candidateResourceName?: string;
+            /** Format: double */
+            score: number;
+            reason?: string;
+            status: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceMatchSuggestionStatus"];
+            /** Format: date-time */
+            createdAt: string;
         };
         "Bakabase.Abstractions.Models.Domain.ResourceProfileEnhancerOptions": {
             enhancers?: components["schemas"]["Bakabase.Abstractions.Models.Domain.EnhancerFullOptions"][];
@@ -11682,6 +11768,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PropertyValueScopePreference"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.ResourceMatchSuggestion]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceMatchSuggestion"][];
         };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.ResourceSourceLink]": {
             /** Format: int32 */
@@ -26251,6 +26343,98 @@ export interface operations {
                 "application/*+json": components["schemas"]["Bakabase.Service.Controllers.DiscoverySubscribeRequest"][];
             };
         };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetPendingResourceMatchSuggestions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.ResourceMatchSuggestion]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.ResourceMatchSuggestion]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.ResourceMatchSuggestion]"];
+                };
+            };
+        };
+    };
+    CountPendingResourceMatchSuggestions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Int32]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Int32]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Int32]"];
+                };
+            };
+        };
+    };
+    ConfirmResourceMatchSuggestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    DismissResourceMatchSuggestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description OK */
             200: {

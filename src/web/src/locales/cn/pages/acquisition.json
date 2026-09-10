@@ -56,5 +56,12 @@
   "acquisition.sharedList.collection": "加入集合",
   "acquisition.sharedList.startAcquiring": "为有链接的条目立即发起获取",
   "acquisition.sharedList.import": "导入 {{count}} 项",
-  "acquisition.sharedList.imported": "新建 {{created}} 项，已存在 {{matched}} 项。"
+  "acquisition.sharedList.imported": "新建 {{created}} 项，已存在 {{matched}} 项。",
+  "acquisition.tab.matches": "可能已存在",
+  "acquisition.tab.matchesWithCount": "可能已存在（{{count}}）",
+  "acquisition.matches.empty": "没有发现与已有资源疑似重复的条目。",
+  "acquisition.matches.description": "以下条目的名称相近，值得确认。在你确认之前不会合并——确认后左侧条目会消失，它携带的信息（获取途径、所属集合）会转移到右侧资源上。",
+  "acquisition.matches.same": "是同一个",
+  "acquisition.matches.different": "不是同一个",
+  "acquisition.matches.merged": "已合并。"
 }

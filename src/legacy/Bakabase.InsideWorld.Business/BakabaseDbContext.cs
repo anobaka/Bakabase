@@ -137,6 +137,8 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<Modules.Collection.Abstractions.Models.Db.CollectionResourceMappingDbModel>
             CollectionResourceMappings { get; set; }
 
+        public DbSet<ResourceMatchSuggestionDbModel> ResourceMatchSuggestions { get; set; }
+
         public BakabaseDbContext()
         {
         }
@@ -213,6 +215,14 @@ namespace Bakabase.InsideWorld.Business
                 // the same thing twice a no-op rather than a duplicate member.
                 t.HasIndex(m => new {m.CollectionId, m.ResourceId}).IsUnique();
                 t.HasIndex(m => m.ResourceId);
+            });
+
+            modelBuilder.Entity<ResourceMatchSuggestionDbModel>(t =>
+            {
+                // A pair is asked about once, whatever the answer was — the unique index is what
+                // stops a source that lists the same thing every week from asking every week.
+                t.HasIndex(s => new {s.ResourceId, s.CandidateResourceId}).IsUnique();
+                t.HasIndex(s => s.Status);
             });
 
             modelBuilder.Entity<PasswordDbModel>(t =>

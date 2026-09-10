@@ -217,6 +217,12 @@ namespace Bakabase.Service.Extensions
             services.AddScoped<IExternalIdentityLookup, BangumiIdentityLookup>();
             services.AddScoped<IExternalIdentityLookup, ExHentaiIdentityLookup>();
             services.AddScoped<ISharedUrlTitleResolver, SharedUrlTitleResolver>();
+
+            // "…or is this the one I already have?" — the pairs a person still has to decide.
+            services
+                .AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, ResourceMatchSuggestionDbModel, int>>();
+            services.AddScoped<IResourceMatchSuggestionService, ResourceMatchSuggestionService>();
+
             services.AddSingleton<IWorkflowTrigger, SubscriptionUpdatedTrigger>();
             services.AddSingleton<IWorkflowTrigger, DownloaderCompletedTrigger>();
             services.AddSingleton<IWorkflowTrigger, ResourceMaterializedTrigger>();

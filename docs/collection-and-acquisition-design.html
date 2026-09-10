@@ -368,7 +368,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <ol>
 <li><b>获取流水线自带身份。</b>从订阅条目发起的获取任务知道自己对应哪个未落地资源，落地后成员资格不变，无需识别。这是最常见的路径，也是把身份匹配问题绕开的关键。</li>
 <li><b>按外部编号匹配。</b>存量库里的 <code class="i">ResourceSourceLink</code> 今天由来源同步（<code class="i">ResourceSyncService.ResolveResourceForEntry / EnsureSourceLink</code>）与解析器的迁移候选写入；增强器（含 DLsite、ExHentai、Bangumi）都不写链接，也没有 Steam 增强器。方案给关键词增强器在命中后增加写入链接的逻辑（DLsite 命中 RJ 号、Bangumi 命中条目 id 时 <code class="i">EnsureLinks</code>），订阅检查时按 (Source, SourceKey) 找到已有资源就直接加入集合，不新建未落地资源。目录扫描也走同一逻辑（<code class="i">DLsiteWorkService.ScanFolder</code> 的 RJ 号正则提升为共享的 <code class="i">TryExtractSourceKey</code>）。</li>
-<li><b>按标题模糊匹配。</b><span class="tag t-later">后期</span> 用 <code class="i">ITextOps.Clean</code> + <code class="i">IAliasService</code> 归一化后比对，命中进「待确认」列表，用户确认后合并。沿用 <code class="i">docs/local-file-organization/modules/04-resolution.md</code> 的保守默认：不自动合并。</li>
+<li><b>按标题模糊匹配。</b>用 <code class="i">ITextOps.Clean</code>（精确一侧）与 <code class="i">TitleSimilarity</code>（相近一侧）归一化后比对，命中进「待确认」列表（<code class="i">ResourceMatchSuggestion</code> 表），用户确认后合并。沿用 <code class="i">docs/local-file-organization/modules/04-resolution.md</code> 的保守默认：不自动合并。相似度为字符二元组的 Sørensen–Dice 系数（无空格的日文标题按词切分只会得到 0 或 1），阈值 0.82；<b>两侧数字序列不一致的一律不提</b>——同一系列的分卷字符几乎全同、只差表示第几卷的部分，正是分数最高又必然判错的一类。确认即把新资源的身份、线索与集合成员资格转移到已有资源上并删除新资源；只有未落地资源可被合并掉。拒绝会被记住，同一对不会再问第二次。<br>只在按标题、按分享链接两条路径上计算（它们本就要扫一遍名称）；<b>按外部身份创建不做标题匹配</b>——身份就是身份，且为每个列出的作品扫全库名称会让一次两百件的社团页同步变得昂贵而无所得。</li>
 </ol>
 
 <h3 id="s5-5">5.5 内部属性 CollectionMulti 的接入清单</h3>
@@ -899,6 +899,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <tr><td><code class="i">IPlatformConnector</code> 按平台键注册，而非枚举</td><td>§6.4 未指定注册方式</td><td>每个对接器都带着自己的 HTTP 会话、下载队列或商店客户端；用 <code class="i">GetServices</code> 枚举会为了用一个而构造三个。改为 <code class="i">AddKeyedScoped</code> + <code class="i">IPlatformConnectorRegistry</code>，按需构造</td></tr>
 <tr><td><code class="i">IHasResourceId</code> 从获取模块下沉到 Workflow 模块</td><td>§8 未指定归属，实现初期放在 <code class="i">Bakabase.Modules.Acquisition</code></td><td>它是「一个条目指向某个资源」这一能力本身。留在获取模块意味着别的模块（如集合）产出的条目无法被获取动作接受，而「集合新增成员 → 获取」正是本方案的核心链路</td></tr>
 <tr><td>集合规则缓存改为注入的单例而非静态字段</td><td>§5 未指定</td><td>静态字段在多个服务容器间共享，测试中互相污染，生产中也是不必要的全局状态</td></tr>
+<tr><td>模糊匹配没有「已确认」状态</td><td>§5.4 第三条只说「用户确认后合并」</td><td>确认即合并，合并即删除新资源，而删除资源会带走所有提到它的建议行——包括这一条。为它保留一个 <code class="i">Confirmed</code> 状态就要么让行指向一个已不存在的资源 id（该 id 之后可能被复用），要么把删除清理排除在外。状态只剩 <code class="i">Pending</code> 与 <code class="i">Dismissed</code>：主体消失的问题不是「已决的问题」，而是不再是问题</td></tr>
 <tr><td>三张外部目录表的收编（<code class="i">IsDownloaded</code> / <code class="i">LocalPath</code> → <code class="i">Resource.Path</code>、私有字段 → <code class="i">MetadataJson</code>、三个页面合并）未做</td><td>§6.4 第五期</td><td>对接器契约与三个实现已完成，持有型订阅（<code class="i">dlsite.purchases</code> 等）已可用。余下部分要迁移三张表的用户数据并删除三个在用页面，且只能对着真实的 DLsite / Steam / ExHentai 账号数据验证；在没有这些数据的环境里做这项迁移风险不成比例</td></tr>
 </table></div>
 <hr>

@@ -56,5 +56,12 @@
   "acquisition.sharedList.collection": "Put them in",
   "acquisition.sharedList.startAcquiring": "Start getting the ones with a link",
   "acquisition.sharedList.import": "Import {{count}}",
-  "acquisition.sharedList.imported": "{{created}} new, {{matched}} already known."
+  "acquisition.sharedList.imported": "{{created}} new, {{matched}} already known.",
+  "acquisition.tab.matches": "Might already be here",
+  "acquisition.tab.matchesWithCount": "Might already be here ({{count}})",
+  "acquisition.matches.empty": "Nothing looks like a duplicate of anything you already have.",
+  "acquisition.matches.description": "These pairs are named alike enough to be worth a look. Nothing is merged until you say so — the one on the left goes away, and what it brought with it (where to get it, which collections wanted it) becomes the one on the right's.",
+  "acquisition.matches.same": "Same thing",
+  "acquisition.matches.different": "Different",
+  "acquisition.matches.merged": "Merged."
 }

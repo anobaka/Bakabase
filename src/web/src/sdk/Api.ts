@@ -311,6 +311,12 @@ export type BakabaseAbstractionsModelsDomainConstantsResourceCacheType = 1 | 2 |
 export type BakabaseAbstractionsModelsDomainConstantsResourceDataType = 1 | 2 | 3;
 
 /**
+ * [1: Pending, 2: Dismissed]
+ * @format int32
+ */
+export type BakabaseAbstractionsModelsDomainConstantsResourceMatchSuggestionStatus = 1 | 2;
+
+/**
  * [1: Pending, 2: Moving, 3: Succeeded, 4: Failed, 5: Cancelled, 6: Interrupted]
  * @format int32
  */
@@ -782,6 +788,24 @@ export interface BakabaseAbstractionsModelsDomainResourceFileSystemCache {
   coverPaths?: string[];
   playableFilePaths?: string[];
   cachedTypes: BakabaseAbstractionsModelsDomainConstantsResourceCacheType[];
+}
+
+export interface BakabaseAbstractionsModelsDomainResourceMatchSuggestion {
+  /** @format int32 */
+  id: number;
+  /** @format int32 */
+  resourceId: number;
+  resourceName?: string;
+  /** @format int32 */
+  candidateResourceId: number;
+  candidateResourceName?: string;
+  /** @format double */
+  score: number;
+  reason?: string;
+  /** [1: Pending, 2: Dismissed] */
+  status: BakabaseAbstractionsModelsDomainConstantsResourceMatchSuggestionStatus;
+  /** @format date-time */
+  createdAt: string;
 }
 
 export interface BakabaseAbstractionsModelsDomainResourceProfileEnhancerOptions {
@@ -5813,6 +5837,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsM
   data?: BakabaseAbstractionsModelsDomainPropertyValueScopePreference[];
 }
 
+export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainResourceMatchSuggestion {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDomainResourceMatchSuggestion[];
+}
+
 export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainResourceSourceLink {
   /** @format int32 */
   code: number;
@@ -10503,6 +10534,91 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       return baseUrl + path;
     },
+
+    /**
+     * No description
+     *
+     * @tags ResourceMatchSuggestion
+     * @name GetPendingResourceMatchSuggestions
+     * @request GET:/resource/match-suggestion
+     */
+    getPendingResourceMatchSuggestions: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainResourceMatchSuggestion,
+        any
+      >({
+        path: `/resource/match-suggestion`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getPendingResourceMatchSuggestions
+     * @name getPendingResourceMatchSuggestionsUrl
+     */
+    getPendingResourceMatchSuggestionsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/match-suggestion`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceMatchSuggestion
+     * @name CountPendingResourceMatchSuggestions
+     * @request GET:/resource/match-suggestion/count
+     */
+    countPendingResourceMatchSuggestions: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemInt32, any>({
+        path: `/resource/match-suggestion/count`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for countPendingResourceMatchSuggestions
+     * @name countPendingResourceMatchSuggestionsUrl
+     */
+    countPendingResourceMatchSuggestionsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/match-suggestion/count`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceMatchSuggestion
+     * @name ConfirmResourceMatchSuggestion
+     * @request POST:/resource/match-suggestion/{id}/confirm
+     */
+    confirmResourceMatchSuggestion: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/match-suggestion/${id}/confirm`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceMatchSuggestion
+     * @name DismissResourceMatchSuggestion
+     * @request POST:/resource/match-suggestion/{id}/dismiss
+     */
+    dismissResourceMatchSuggestion: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/match-suggestion/${id}/dismiss`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
   };
   ai = {
     /**

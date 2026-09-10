@@ -2515,6 +2515,13 @@ namespace Bakabase.InsideWorld.Business.Services
             await GetRequiredService<Bakabase.Modules.Collection.Abstractions.Services
                 .ICollectionResourceMappingService>().RemoveByResourceIds(ids);
 
+            // A pending "are these two the same?" naming a resource that is gone can never be
+            // answered, and its unique index would keep the pair from ever being raised again.
+            if (_serviceProvider.GetService<IResourceMatchSuggestionService>() is { } matchSuggestionService)
+            {
+                await matchSuggestionService.DeleteByResourceIds(ids);
+            }
+
             // Acquisition tasks are keyed the same way. One left behind would keep showing on the
             // acquisitions page as something being got for a resource that is gone.
             await DbContext.Set<Bakabase.Modules.Acquisition.Abstractions.Models.Db.AcquisitionTaskDbModel>()

@@ -11,6 +11,7 @@ import AcquisitionRow from "./components/AcquisitionRow";
 import StartAcquisitionModal from "./components/StartAcquisitionModal";
 import SetupWizard from "./components/SetupWizard";
 import ImportSharedListModal from "./components/ImportSharedListModal";
+import MatchSuggestions from "./components/MatchSuggestions";
 
 import BApi from "@/sdk/BApi";
 import { Button, Chip, Spinner, Tab, Tabs } from "@/components/bakaui";
@@ -29,6 +30,8 @@ const LIVE: AcquisitionStatus[] = [
   AcquisitionStatus.Pending,
 ];
 
+type TabKey = "live" | "all" | "matches";
+
 /** Waiting first: it is the only state that needs a person, and it is what the page is for. */
 const ORDER: Record<number, number> = {
   [AcquisitionStatus.Waiting]: 0,
@@ -44,17 +47,20 @@ const AcquisitionPage: React.FC = () => {
   const [tasks, setTasks] = useState<AcquisitionTaskVm[]>([]);
   const [recipes, setRecipes] = useState<AcquisitionRecipeVm[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"live" | "all">("live");
+  const [tab, setTab] = useState<TabKey>("live");
+  const [matchCount, setMatchCount] = useState(0);
 
   const load = useCallback(async () => {
     try {
-      const [tasksRsp, recipesRsp] = await Promise.all([
+      const [tasksRsp, recipesRsp, matchesRsp] = await Promise.all([
         BApi.acquisition.searchAcquisitions({}),
         BApi.acquisition.getAcquisitionRecipes(),
+        BApi.resource.countPendingResourceMatchSuggestions(),
       ]);
 
       setTasks((tasksRsp.data ?? []) as AcquisitionTaskVm[]);
       setRecipes((recipesRsp.data ?? []) as AcquisitionRecipeVm[]);
+      setMatchCount(matchesRsp.data ?? 0);
     } finally {
       setLoading(false);
     }
@@ -80,9 +86,17 @@ const AcquisitionPage: React.FC = () => {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-2">
-        <Tabs selectedKey={tab} size="sm" onSelectionChange={(k) => setTab(k as "live" | "all")}>
+        <Tabs selectedKey={tab} size="sm" onSelectionChange={(k) => setTab(k as TabKey)}>
           <Tab key="live" title={t<string>("acquisition.tab.live")} />
           <Tab key="all" title={t<string>("acquisition.tab.all")} />
+          <Tab
+            key="matches"
+            title={
+              matchCount > 0
+                ? t<string>("acquisition.tab.matchesWithCount", { count: matchCount })
+                : t<string>("acquisition.tab.matches")
+            }
+          />
         </Tabs>
 
         {waitingCount > 0 && (
@@ -123,7 +137,9 @@ const AcquisitionPage: React.FC = () => {
         </div>
       </div>
 
-      {loading && tasks.length === 0 ? (
+      {tab === "matches" ? (
+        <MatchSuggestions onChanged={load} />
+      ) : loading && tasks.length === 0 ? (
         <div className="flex justify-center py-10">
           <Spinner size="lg" />
         </div>

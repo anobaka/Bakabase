@@ -2059,6 +2059,21 @@ export const ResourceDataTypeLabel: Record<ResourceDataType, string> = {
   [ResourceDataType.Metadata]: 'Metadata'
 };
 
+export enum ResourceMatchSuggestionStatus {
+  Pending = 1,
+  Dismissed = 2
+}
+
+export const resourceMatchSuggestionStatuses = [
+  { label: 'Pending', value: ResourceMatchSuggestionStatus.Pending },
+  { label: 'Dismissed', value: ResourceMatchSuggestionStatus.Dismissed }
+] as const;
+
+export const ResourceMatchSuggestionStatusLabel: Record<ResourceMatchSuggestionStatus, string> = {
+  [ResourceMatchSuggestionStatus.Pending]: 'Pending',
+  [ResourceMatchSuggestionStatus.Dismissed]: 'Dismissed'
+};
+
 export enum ResourceMoveRecordStatus {
   Pending = 1,
   Moving = 2,
