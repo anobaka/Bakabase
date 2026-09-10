@@ -18,6 +18,7 @@ import { acquisitionStepUI, isAcquisitionStepKind } from "./AcquisitionStep";
 import { AcquisitionResolveSharedContentUI } from "./AcquisitionResolveSharedContent";
 import { AcquisitionSelectLinkUI } from "./AcquisitionSelectLink";
 import { AcquisitionWaitForInboxUI } from "./AcquisitionWaitForInbox";
+import { AcquisitionFetchMagnetUI } from "./AcquisitionFetchMagnet";
 import { AcquisitionUnpackUI } from "./AcquisitionUnpack";
 import { AcquisitionPlaceUI } from "./AcquisitionPlace";
 import { AcquisitionPickDirectoryUI } from "./AcquisitionPickDirectory";
@@ -45,6 +46,7 @@ export const workflowActivityRegistry: Record<string, WorkflowActivityUI<any>> =
   [AcquisitionResolveSharedContentUI.kind]: AcquisitionResolveSharedContentUI,
   [AcquisitionSelectLinkUI.kind]: AcquisitionSelectLinkUI,
   [AcquisitionWaitForInboxUI.kind]: AcquisitionWaitForInboxUI,
+  [AcquisitionFetchMagnetUI.kind]: AcquisitionFetchMagnetUI,
   [AcquisitionUnpackUI.kind]: AcquisitionUnpackUI,
   [AcquisitionPlaceUI.kind]: AcquisitionPlaceUI,
   [AcquisitionPickDirectoryUI.kind]: AcquisitionPickDirectoryUI,

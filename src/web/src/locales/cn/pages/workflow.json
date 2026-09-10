@@ -320,5 +320,16 @@
   "workflow.activity.downloaderEnqueue.autoRetry.label": "失败时自动重试",
   "workflow.activity.downloaderEnqueue.autoRetry.on": "自动重试开",
   "workflow.activity.downloaderEnqueue.autoRetry.off": "自动重试关",
-  "workflow.activity.downloaderEnqueue.summary": "间隔 {{intervalMs}} 毫秒 · {{autoRetry}}"
+  "workflow.activity.downloaderEnqueue.summary": "间隔 {{intervalMs}} 毫秒 · {{autoRetry}}",
+  "workflow.acquisition.step.fetchMagnet": "获取磁力链接",
+  "workflow.acquisition.fetchMagnet.handler.label": "交给",
+  "workflow.acquisition.fetchMagnet.handler.aria2": "aria2",
+  "workflow.acquisition.fetchMagnet.handler.aria2.description": "获取流程会监视 aria2，文件下载完成后自动继续，因此以磁力结尾的链路可以无人值守地跑完。",
+  "workflow.acquisition.fetchMagnet.handler.system": "本机的 BT 客户端",
+  "workflow.acquisition.fetchMagnet.handler.system.description": "用系统默认程序打开磁力链接。文件会落在该客户端自己的下载目录，因此这一步之后应接「等待收件箱中的文件」。",
+  "workflow.acquisition.fetchMagnet.rpcUrl.label": "aria2 RPC 地址",
+  "workflow.acquisition.fetchMagnet.secret.label": "RPC 令牌",
+  "workflow.acquisition.fetchMagnet.secret.description": "仅当 aria2 以 --rpc-secret 启动时需要填写。",
+  "workflow.acquisition.fetchMagnet.timeout.label": "超时放弃（分钟）",
+  "workflow.acquisition.fetchMagnet.timeout.description": "没有做种者的种子不会失败，只是永远下不完。"
 }

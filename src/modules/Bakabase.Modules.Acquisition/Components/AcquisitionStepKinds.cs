@@ -27,6 +27,9 @@ public static class AcquisitionStepKinds
     /// </summary>
     public const string WaitForInbox = $"{Module}.waitForInbox";
 
+    /// <summary>Hands a magnet link to something that can fetch it — aria2, or the machine's own client.</summary>
+    public const string FetchMagnet = $"{Module}.fetchMagnet";
+
     /// <summary>Asks the platform that holds the resource to hand it over.</summary>
     public const string FetchFromPlatform = $"{Module}.fetchFromPlatform";
 

@@ -199,6 +199,7 @@ namespace Bakabase.Service.Extensions
             services.AddAcquisitionStep<Components.Acquisition.Steps.ResolveSharedContentStep>();
             services.AddAcquisitionStep<Components.Acquisition.Steps.FetchHttpStep>();
             services.AddAcquisitionStep<Components.Acquisition.Steps.WaitForInboxStep>();
+            services.AddAcquisitionStep<Components.Acquisition.Steps.FetchMagnetStep>();
             services.AddAcquisitionStep<Components.Acquisition.Steps.FetchFromPlatformStep>();
             services.AddScoped<Components.Acquisition.SharedListImportService>();
             services.AddAcquisitionStep<Components.Acquisition.Steps.UnpackStep>();
@@ -206,6 +207,7 @@ namespace Bakabase.Service.Extensions
             services.AddAcquisitionStep<Bakabase.Modules.Acquisition.Components.Steps.PlaceStep>();
             services.AddAcquisitionStep<Components.Acquisition.Steps.MaterializeStep>();
             services.AddHttpClient(nameof(Components.Acquisition.Steps.FetchHttpStep));
+            services.AddHttpClient(nameof(Components.Acquisition.Steps.FetchMagnetStep));
             services.AddScoped<Components.Acquisition.AcquisitionInboxService>();
             services.AddScoped<Components.Acquisition.AcquisitionSetupService>();
             services.AddHostedService<Components.Acquisition.AcquisitionInboxWatcher>();

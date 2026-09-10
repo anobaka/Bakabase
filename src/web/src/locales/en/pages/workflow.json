@@ -321,5 +321,16 @@
   "workflow.activity.downloaderEnqueue.autoRetry.label": "Auto-retry on failure",
   "workflow.activity.downloaderEnqueue.autoRetry.on": "auto-retry on",
   "workflow.activity.downloaderEnqueue.autoRetry.off": "auto-retry off",
-  "workflow.activity.downloaderEnqueue.summary": "interval {{intervalMs}}ms · {{autoRetry}}"
+  "workflow.activity.downloaderEnqueue.summary": "interval {{intervalMs}}ms · {{autoRetry}}",
+  "workflow.acquisition.step.fetchMagnet": "Fetch the magnet link",
+  "workflow.acquisition.fetchMagnet.handler.label": "Send it to",
+  "workflow.acquisition.fetchMagnet.handler.aria2": "aria2",
+  "workflow.acquisition.fetchMagnet.handler.aria2.description": "The run watches aria2 and carries on by itself when the files land, so a chain that ends in a magnet finishes unattended.",
+  "workflow.acquisition.fetchMagnet.handler.system": "This machine's torrent client",
+  "workflow.acquisition.fetchMagnet.handler.system.description": "The magnet is opened with whatever handles magnet links here. The files arrive wherever that client puts them, so put a \"wait for the file in the inbox\" step after this one.",
+  "workflow.acquisition.fetchMagnet.rpcUrl.label": "aria2 RPC address",
+  "workflow.acquisition.fetchMagnet.secret.label": "RPC token",
+  "workflow.acquisition.fetchMagnet.secret.description": "Only if aria2 was started with --rpc-secret.",
+  "workflow.acquisition.fetchMagnet.timeout.label": "Give up after (minutes)",
+  "workflow.acquisition.fetchMagnet.timeout.description": "A torrent with no seeds never fails, it simply never finishes."
 }
