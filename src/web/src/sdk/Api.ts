@@ -329,10 +329,10 @@ export type BakabaseAbstractionsModelsDomainConstantsResourceMoveRecordStatus =
   | 6;
 
 /**
- * [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 6: Bangumi, 7: Pixiv]
+ * [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 6: Bangumi, 7: Pixiv, 8: Vndb]
  * @format int32
  */
-export type BakabaseAbstractionsModelsDomainConstantsResourceSource = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+export type BakabaseAbstractionsModelsDomainConstantsResourceSource = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
 /**
  * [1: Active, 2: Absent, 3: Unavailable]
@@ -866,7 +866,7 @@ export interface BakabaseAbstractionsModelsDomainResourceSourceLink {
   id: number;
   /** @format int32 */
   resourceId: number;
-  /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 6: Bangumi, 7: Pixiv] */
+  /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 6: Bangumi, 7: Pixiv, 8: Vndb] */
   source: BakabaseAbstractionsModelsDomainConstantsResourceSource;
   sourceKey: string;
   /** @format date-time */
@@ -900,7 +900,7 @@ export interface BakabaseAbstractionsModelsDomainSourceMetadataFieldInfo {
 export interface BakabaseAbstractionsModelsDomainSourceMetadataMapping {
   /** @format int32 */
   id: number;
-  /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 6: Bangumi, 7: Pixiv] */
+  /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 6: Bangumi, 7: Pixiv, 8: Vndb] */
   source: BakabaseAbstractionsModelsDomainConstantsResourceSource;
   metadataField: string;
   /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
@@ -1936,7 +1936,7 @@ export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsMode
   id: number;
   key: string;
   name?: string;
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
   thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
   /** @format int32 */
   type: number;
@@ -1971,7 +1971,7 @@ export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsMode
 }
 
 export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloaderDefinition {
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
   thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
   /** @format int32 */
   taskType: number;
@@ -2008,13 +2008,13 @@ export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsMode
 }
 
 export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsInputDownloadRecordQueryInputModel {
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
   thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
   keys: string[];
 }
 
 export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsInputDownloadTaskAddInputModel {
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
   thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
   /** @format int32 */
   type: number;
@@ -2036,7 +2036,7 @@ export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsMode
 
 export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsInputDownloadTaskDeleteInputModel {
   ids?: number[];
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
   thirdPartyId?: BakabaseInsideWorldModelsConstantsThirdPartyId;
 }
 
@@ -2069,7 +2069,7 @@ export type BakabaseInsideWorldBusinessComponentsDownloaderComponentsDownloaders
 export interface BakabaseInsideWorldBusinessComponentsDownloaderModelsDbDownloadRecordDbModel {
   /** @format int32 */
   id: number;
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
   thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
   /** @minLength 1 */
   key: string;
@@ -2531,7 +2531,7 @@ export type BakabaseInsideWorldModelsConstantsPlaylistItemType = 1 | 2 | 3 | 4;
 export type BakabaseInsideWorldModelsConstantsStartupPage = 0 | 1;
 
 /**
- * [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam]
+ * [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb]
  * @format int32
  */
 export type BakabaseInsideWorldModelsConstantsThirdPartyId =
@@ -2546,7 +2546,8 @@ export type BakabaseInsideWorldModelsConstantsThirdPartyId =
   | 9
   | 10
   | 11
-  | 12;
+  | 12
+  | 13;
 
 export interface BakabaseInsideWorldModelsModelsAosPreviewerItem {
   filePath: string;
@@ -2557,7 +2558,7 @@ export interface BakabaseInsideWorldModelsModelsAosPreviewerItem {
 }
 
 export interface BakabaseInsideWorldModelsModelsAosThirdPartyRequestStatistics {
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
   id: BakabaseInsideWorldModelsConstantsThirdPartyId;
   counts?: Record<string, number>;
 }
@@ -2592,7 +2593,7 @@ export interface BakabaseInsideWorldModelsModelsDtosDashboardStatistics {
 }
 
 export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsDownloaderTaskCount {
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
   id: BakabaseInsideWorldModelsConstantsThirdPartyId;
   statusAndCounts: Record<string, number>;
 }
@@ -2612,7 +2613,7 @@ export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCo
 }
 
 export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsThirdPartyRequestCount {
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
   id: BakabaseInsideWorldModelsConstantsThirdPartyId;
   /** @format int32 */
   resultType: number;
@@ -4494,7 +4495,7 @@ export interface BakabaseModulesSubscriptionAbstractionsModelsViewSubscriptionPr
   icon?: string;
   /** [1: PlatformHolding, 2: Catalog, 3: SharingChannel] */
   sourceKind: BakabaseModulesSubscriptionAbstractionsModelsDomainConstantsSubscriptionSourceKind;
-  /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 6: Bangumi, 7: Pixiv] */
+  /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 6: Bangumi, 7: Pixiv, 8: Vndb] */
   resourceSource?: BakabaseAbstractionsModelsDomainConstantsResourceSource;
 }
 
@@ -5107,7 +5108,7 @@ export interface BakabaseServiceModelsInputResourcePlaceholderInputModel {
 
 export interface BakabaseServiceModelsInputResourcePlaceholderItemInputModel {
   title?: string;
-  /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 6: Bangumi, 7: Pixiv] */
+  /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 6: Bangumi, 7: Pixiv, 8: Vndb] */
   source?: BakabaseAbstractionsModelsDomainConstantsResourceSource;
   sourceKey?: string;
   sharedUrl?: string;
@@ -21785,7 +21786,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     startSyncBySource: (
       query?: {
-        /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 6: Bangumi, 7: Pixiv] */
+        /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 6: Bangumi, 7: Pixiv, 8: Vndb] */
         source?: BakabaseAbstractionsModelsDomainConstantsResourceSource;
       },
       params: RequestParams = {},
@@ -21803,7 +21804,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name startSyncBySourceUrl
      */
     startSyncBySourceUrl: (query?: {
-        /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 6: Bangumi, 7: Pixiv] */
+        /** [1: PathMark, 2: Steam, 3: DLsite, 4: ExHentai, 5: Aigc, 6: Bangumi, 7: Pixiv, 8: Vndb] */
         source?: BakabaseAbstractionsModelsDomainConstantsResourceSource;
       }) => {
       const baseUrl = this.baseUrl || "";

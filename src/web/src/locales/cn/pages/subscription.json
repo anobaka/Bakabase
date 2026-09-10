@@ -69,5 +69,13 @@
   "subscription.provider.platformHolding.hint": "无需填写——它会跟踪你在该平台持有的全部内容。账号在该平台自己的设置里配置。",
   "subscription.provider.dlsite.purchases.subKindLabel": "已购买",
   "subscription.provider.steam.ownedGames.subKindLabel": "游戏库",
-  "subscription.provider.exhentai.favorites.subKindLabel": "收藏夹"
+  "subscription.provider.exhentai.favorites.subKindLabel": "收藏夹",
+  "subscription.provider.vndb.series.visualNovel.label": "视觉小说",
+  "subscription.provider.vndb.series.visualNovel.description": "VNDB 的条目号（v17），或你复制的页面地址。",
+  "subscription.provider.vndb.series.relations.label": "关联类型",
+  "subscription.provider.vndb.series.relations.description": "留空表示全部保留——对长寿系列来说通常太多了。",
+  "subscription.provider.vndb.series.officialOnly": "仅官方作品",
+  "subscription.provider.vndb.series.includeSelf": "包含条目本身",
+  "subscription.provider.vndb.developer.producer.label": "开发商",
+  "subscription.provider.vndb.developer.producer.description": "VNDB 的会社号（p17），或你复制的页面地址。"
 }

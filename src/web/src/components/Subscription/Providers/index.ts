@@ -6,6 +6,8 @@ import { PixivFollowLatestUI } from "./PixivFollowLatest";
 import { SoulPlusSearchUI } from "./SoulPlusSearch";
 import { DLsiteCircleUI } from "./DLsiteCircle";
 import { BangumiSubjectRelationsUI } from "./BangumiSubjectRelations";
+import { VndbSeriesUI } from "./VndbSeries";
+import { VndbDeveloperUI } from "./VndbDeveloper";
 import { DLsitePurchasesUI, ExHentaiFavoritesUI, SteamOwnedGamesUI } from "./DLsitePurchases";
 
 /**
@@ -24,6 +26,8 @@ export const subscriptionProviderRegistry: Record<string, SubscriptionProviderUI
   [SoulPlusSearchUI.kind]: SoulPlusSearchUI,
   [DLsiteCircleUI.kind]: DLsiteCircleUI,
   [BangumiSubjectRelationsUI.kind]: BangumiSubjectRelationsUI,
+  [VndbSeriesUI.kind]: VndbSeriesUI,
+  [VndbDeveloperUI.kind]: VndbDeveloperUI,
   [DLsitePurchasesUI.kind]: DLsitePurchasesUI,
   [SteamOwnedGamesUI.kind]: SteamOwnedGamesUI,
   [ExHentaiFavoritesUI.kind]: ExHentaiFavoritesUI,

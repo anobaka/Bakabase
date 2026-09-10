@@ -8,6 +8,7 @@ using Bakabase.Modules.ThirdParty.ThirdParties.Bangumi;
 using Bakabase.Modules.ThirdParty.ThirdParties.DLsite;
 using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai;
 using Bakabase.Modules.ThirdParty.ThirdParties.Steam;
+using Bakabase.Modules.ThirdParty.ThirdParties.Vndb;
 
 namespace Bakabase.Service.Components.IdentityLookups;
 
@@ -80,5 +81,24 @@ public class ExHentaiIdentityLookup(ExHentaiClient client) : IExternalIdentityLo
             ? null
             : new ExternalIdentityDetail(sourceKey, gallery.Name,
                 string.IsNullOrEmpty(gallery.CoverUrl) ? null : [gallery.CoverUrl]);
+    }
+}
+
+/// <summary>
+/// VNDB, which answers in JSON and needs no account for reading — so putting a name to a v-number
+/// costs one request and never a login.
+/// </summary>
+public class VndbIdentityLookup(VndbClient client) : IExternalIdentityLookup
+{
+    public ResourceSource Source => ResourceSource.Vndb;
+
+    public async Task<ExternalIdentityDetail?> Lookup(string sourceKey, CancellationToken ct)
+    {
+        var vn = await client.GetAsync(sourceKey, ct);
+
+        return vn == null
+            ? null
+            : new ExternalIdentityDetail(sourceKey, vn.DisplayName,
+                vn.Image?.Url is { } cover ? [cover] : null);
     }
 }

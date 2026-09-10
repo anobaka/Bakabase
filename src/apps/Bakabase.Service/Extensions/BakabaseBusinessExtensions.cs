@@ -177,6 +177,10 @@ namespace Bakabase.Service.Extensions
                 Components.Subscription.Providers.DLsite.DLsiteCircleProvider>();
             services.AddSingleton<ISubscriptionProvider,
                 Components.Subscription.Providers.Bangumi.BangumiSubjectRelationsProvider>();
+            services.AddSingleton<ISubscriptionProvider,
+                Components.Subscription.Providers.Vndb.VndbSeriesProvider>();
+            services.AddSingleton<ISubscriptionProvider,
+                Components.Subscription.Providers.Vndb.VndbDeveloperProvider>();
             // What the user already holds, as sources. They take no configuration: the account
             // lives in each platform's own settings.
             services.AddSingleton<ISubscriptionProvider,
@@ -217,6 +221,7 @@ namespace Bakabase.Service.Extensions
             services.AddScoped<IExternalIdentityLookup, DLsiteIdentityLookup>();
             services.AddScoped<IExternalIdentityLookup, SteamIdentityLookup>();
             services.AddScoped<IExternalIdentityLookup, BangumiIdentityLookup>();
+            services.AddScoped<IExternalIdentityLookup, VndbIdentityLookup>();
             services.AddScoped<IExternalIdentityLookup, ExHentaiIdentityLookup>();
             services.AddScoped<ISharedUrlTitleResolver, SharedUrlTitleResolver>();
 

@@ -69,5 +69,13 @@
   "subscription.provider.platformHolding.hint": "Nothing to fill in — this watches everything you hold there. The account is in that platform's own settings.",
   "subscription.provider.dlsite.purchases.subKindLabel": "Purchases",
   "subscription.provider.steam.ownedGames.subKindLabel": "Library",
-  "subscription.provider.exhentai.favorites.subKindLabel": "Favorites"
+  "subscription.provider.exhentai.favorites.subKindLabel": "Favorites",
+  "subscription.provider.vndb.series.visualNovel.label": "Visual novel",
+  "subscription.provider.vndb.series.visualNovel.description": "A VNDB id (v17) or the page you copied it from.",
+  "subscription.provider.vndb.series.relations.label": "Which relations",
+  "subscription.provider.vndb.series.relations.description": "Empty keeps every kind, which for a long-running franchise is more than anyone wants.",
+  "subscription.provider.vndb.series.officialOnly": "Official releases only",
+  "subscription.provider.vndb.series.includeSelf": "Include this one too",
+  "subscription.provider.vndb.developer.producer.label": "Developer",
+  "subscription.provider.vndb.developer.producer.description": "A VNDB producer id (p17) or the page you copied it from."
 }

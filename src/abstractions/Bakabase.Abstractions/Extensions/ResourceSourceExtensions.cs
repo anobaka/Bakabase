@@ -37,7 +37,8 @@ public static class ResourceSourceExtensions
         // Locally generated content; no platform holds it.
         ResourceSource.Aigc => false,
         // A metadata authority. It knows what the work is and nothing about where to get it.
-        ResourceSource.Bangumi => false
+        ResourceSource.Bangumi => false,
+        ResourceSource.Vndb => false
     };
 
     public static DataOrigin? ToDataOrigin(this ResourceSource source) => source switch

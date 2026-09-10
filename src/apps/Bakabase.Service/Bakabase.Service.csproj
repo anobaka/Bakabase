@@ -5,6 +5,11 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
     <ItemGroup>
+        <!-- So a helper can stay internal and still be tested, rather than being made public to
+             suit the tests. -->
+        <InternalsVisibleTo Include="Bakabase.Tests" />
+    </ItemGroup>
+    <ItemGroup>
         <Compile Remove="logs\**" />
         <Compile Remove="wwwroot\**" />
         <Content Remove="logs\**" />

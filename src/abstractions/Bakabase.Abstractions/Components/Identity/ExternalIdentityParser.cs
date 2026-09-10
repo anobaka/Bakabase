@@ -34,6 +34,14 @@ public static class ExternalIdentityParser
     private static readonly Regex PixivArtworkUrl =
         new(@"pixiv\.net/(?:[a-z]{2}/)?artworks/(\d+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+    // VNDB's ids carry their own type letter — v17 is a visual novel, p17 a producer, r17 a
+    // release — so unlike everywhere else here, the bare id is unambiguous.
+    private static readonly Regex VndbVisualNovel =
+        new(@"\b(v\d+)\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    private static readonly Regex VndbUrl =
+        new(@"vndb\.org/(v\d+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
     /// <summary>
     /// Recognises the identity in <paramref name="input"/>, if there is one.
     /// </summary>
@@ -88,6 +96,14 @@ public static class ExternalIdentityParser
             return true;
         }
 
+        var vndbUrl = VndbUrl.Match(text);
+        if (vndbUrl.Success)
+        {
+            source = ResourceSource.Vndb;
+            sourceKey = vndbUrl.Groups[1].Value.ToLowerInvariant();
+            return true;
+        }
+
         var dlsite = DLsiteWorkId.Match(text);
         if (dlsite.Success)
         {
@@ -126,6 +142,14 @@ public static class ExternalIdentityParser
             long.TryParse(text, out _))
         {
             sourceKey = text;
+            return true;
+        }
+
+        // A VNDB id looks like v17, which reads as "volume 17" in half the file names in a library
+        // — so it is only an identity once somebody has said VNDB is what they mean.
+        if (source is ResourceSource.Vndb && VndbVisualNovel.Match(text) is {Success: true} vndb)
+        {
+            sourceKey = vndb.Groups[1].Value.ToLowerInvariant();
             return true;
         }
 

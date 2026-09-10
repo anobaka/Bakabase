@@ -19,7 +19,6 @@
   "enum.propertyType.formula": "公式",
   "enum.propertyType.multilevel": "多级选项",
   "enum.propertyType.tags": "标签",
-
   "enum.standardValueType.string": "文本",
   "enum.standardValueType.listString": "多个文本",
   "enum.standardValueType.decimal": "数字",
@@ -29,7 +28,6 @@
   "enum.standardValueType.time": "时间",
   "enum.standardValueType.listListString": "多级文本",
   "enum.standardValueType.listTag": "标签",
-
   "enum.searchOperation.equals": "是",
   "enum.searchOperation.notEquals": "不是",
   "enum.searchOperation.contains": "包含",
@@ -48,7 +46,6 @@
   "enum.searchOperation.notIn": "不属于",
   "enum.searchOperation.matches": "匹配正则",
   "enum.searchOperation.notMatches": "不匹配正则",
-
   "enum.propertyValueScope.manual": "手动",
   "enum.propertyValueScope.synchronization": "同步",
   "enum.propertyValueScope.bakabase": "Bakabase",
@@ -60,7 +57,6 @@
   "enum.propertyValueScope.tmdb": "TMDb",
   "enum.propertyValueScope.av": "AV",
   "enum.propertyValueScope.steam": "Steam",
-
   "PropertyValueScope.Manual": "手动",
   "PropertyValueScope.Synchronization": "同步",
   "PropertyValueScope.Bakabase": "Bakabase",
@@ -73,7 +69,6 @@
   "PropertyValueScope.Av": "AV",
   "PropertyValueScope.Steam": "Steam",
   "PropertyValueScope.Ai": "AI",
-
   "enum.resourceSource.fileSystem": "文件系统",
   "enum.resourceSource.steam": "Steam",
   "enum.resourceSource.dlsite": "DLsite",
@@ -81,14 +76,11 @@
   "enum.resourceSource.aigc": "AIGC",
   "enum.resourceSource.bangumi": "Bangumi",
   "enum.resourceSource.pixiv": "Pixiv",
-
   "enum.resourceStatus.active": "正常",
   "enum.resourceStatus.absent": "已不存在",
   "enum.resourceStatus.unavailable": "暂时不可用",
-
   "BulkModificationProcessorValueType.ManuallyInput": "手动输入",
   "BulkModificationProcessorValueType.Variable": "变量",
-
   "PropertyType.SingleLineText": "单行文本",
   "PropertyType.MultilineText": "多行文本",
   "PropertyType.SingleChoice": "单选",
@@ -105,20 +97,16 @@
   "PropertyType.Formula": "公式",
   "PropertyType.Multilevel": "多级选项",
   "PropertyType.Tags": "标签",
-
   "PropertyPool.Internal": "内置",
   "PropertyPool.Reserved": "保留",
   "PropertyPool.Custom": "自定义",
   "PropertyPool.All": "全部",
-
   "PropertyPool.Abbreviation.Internal": "内",
   "PropertyPool.Abbreviation.Reserved": "保",
   "PropertyPool.Abbreviation.Custom": "自",
   "PropertyPool.Abbreviation.All": "全",
-
   "bulkModification.label.useAny": "使用{{any}}",
   "bulkModification.label.editor": "编辑器",
-
   "enum.bulkModificationFilterOperation.equals": "等于",
   "enum.bulkModificationFilterOperation.notEquals": "不等于",
   "enum.bulkModificationFilterOperation.contains": "包含",
@@ -137,23 +125,18 @@
   "enum.bulkModificationFilterOperation.notIn": "不在列表中",
   "enum.bulkModificationFilterOperation.matches": "正则匹配",
   "enum.bulkModificationFilterOperation.notMatches": "正则不匹配",
-
   "enum.resourceTag.isParent": "是父级",
   "enum.resourceTag.pinned": "已置顶",
   "enum.resourceTag.pathDoesNotExist": "路径不存在",
   "enum.resourceTag.unknownMediaLibrary": "未知媒体库",
-
   "enum.durationUnit.day": "天",
   "enum.durationUnit.hour": "小时",
   "enum.durationUnit.minute": "分钟",
   "enum.durationUnit.second": "秒",
-
   "enum.combinator.and": "且",
   "enum.combinator.or": "或",
-
   "enum.builtinPropertyForDisplayName.filename": "文件名",
   "enum.builtinPropertyForDisplayName.name": "名称",
-
   "enum.bulkModificationTimeProcessOperation.delete": "删除",
   "enum.bulkModificationTimeProcessOperation.setWithFixedValue": "设置为固定值",
   "enum.bulkModificationTimeProcessOperation.addHours": "增加小时",
@@ -162,7 +145,6 @@
   "enum.bulkModificationTimeProcessOperation.subtractMinutes": "减少分钟",
   "enum.bulkModificationTimeProcessOperation.addSeconds": "增加秒数",
   "enum.bulkModificationTimeProcessOperation.subtractSeconds": "减少秒数",
-
   "enum.bulkModificationStringProcessOperation.delete": "删除",
   "enum.bulkModificationStringProcessOperation.setWithFixedValue": "设置为固定值",
   "enum.bulkModificationStringProcessOperation.addToStart": "添加到开头",
@@ -175,32 +157,27 @@
   "enum.bulkModificationStringProcessOperation.replaceFromEnd": "从结尾替换",
   "enum.bulkModificationStringProcessOperation.replaceFromAnyPosition": "从任意位置替换",
   "enum.bulkModificationStringProcessOperation.replaceWithRegex": "使用正则表达式替换",
-
   "enum.bulkModificationListTagProcessOperation.delete": "删除",
   "enum.bulkModificationListTagProcessOperation.setWithFixedValue": "设置为固定值",
   "enum.bulkModificationListTagProcessOperation.append": "追加",
   "enum.bulkModificationListTagProcessOperation.prepend": "前置",
   "enum.bulkModificationListTagProcessOperation.remove": "移除",
-
   "enum.bulkModificationListStringProcessOperation.setWithFixedValue": "设置为固定值",
   "enum.bulkModificationListStringProcessOperation.append": "追加",
   "enum.bulkModificationListStringProcessOperation.prepend": "前置",
   "enum.bulkModificationListStringProcessOperation.modify": "修改",
   "enum.bulkModificationListStringProcessOperation.delete": "删除",
-
   "enum.bulkModificationListListStringProcessOperation.delete": "删除",
   "enum.bulkModificationListListStringProcessOperation.setWithFixedValue": "设置为固定值",
   "enum.bulkModificationListListStringProcessOperation.append": "追加",
   "enum.bulkModificationListListStringProcessOperation.prepend": "前置",
   "enum.bulkModificationListListStringProcessOperation.remove": "移除",
-
   "enum.bulkModificationLinkProcessOperation.delete": "删除",
   "enum.bulkModificationLinkProcessOperation.setWithFixedValue": "设置为固定值",
   "enum.bulkModificationLinkProcessOperation.setText": "设置文本",
   "enum.bulkModificationLinkProcessOperation.setUrl": "设置链接",
   "enum.bulkModificationLinkProcessOperation.modifyText": "修改文本",
   "enum.bulkModificationLinkProcessOperation.modifyUrl": "修改链接",
-
   "enum.bulkModificationDecimalProcessOperation.delete": "删除",
   "enum.bulkModificationDecimalProcessOperation.setWithFixedValue": "设置为固定值",
   "enum.bulkModificationDecimalProcessOperation.add": "加",
@@ -210,7 +187,6 @@
   "enum.bulkModificationDecimalProcessOperation.round": "四舍五入",
   "enum.bulkModificationDecimalProcessOperation.ceil": "向上取整",
   "enum.bulkModificationDecimalProcessOperation.floor": "向下取整",
-
   "enum.bulkModificationDateTimeProcessOperation.delete": "删除",
   "enum.bulkModificationDateTimeProcessOperation.setWithFixedValue": "设置为固定值",
   "enum.bulkModificationDateTimeProcessOperation.addDays": "增加天数",
@@ -220,29 +196,23 @@
   "enum.bulkModificationDateTimeProcessOperation.addYears": "增加年数",
   "enum.bulkModificationDateTimeProcessOperation.subtractYears": "减少年数",
   "enum.bulkModificationDateTimeProcessOperation.setToNow": "设置为当前时间",
-
   "enum.bulkModificationBooleanProcessOperation.delete": "删除",
   "enum.bulkModificationBooleanProcessOperation.setWithFixedValue": "设置为固定值",
   "enum.bulkModificationBooleanProcessOperation.toggle": "切换",
-
   "enum.bulkModificationProcessorOptionsItemsFilterBy.all": "全部",
   "enum.bulkModificationProcessorOptionsItemsFilterBy.containing": "包含",
   "enum.bulkModificationProcessorOptionsItemsFilterBy.matching": "匹配",
-
   "BangumiSubjectType.All": "全部",
   "BangumiSubjectType.Anime": "动画",
   "BangumiSubjectType.Book": "书籍",
   "BangumiSubjectType.Music": "音乐",
   "BangumiSubjectType.Game": "游戏",
   "BangumiSubjectType.Real": "三次元",
-
   "CoverSelectOrder.FilenameAscending": "文件名升序",
   "CoverSelectOrder.FileModifyDtDescending": "文件修改时间降序",
-
   "enhancer.bangumi.prioritySubjectType.label": "优先类别",
   "enhancer.bangumi.prioritySubjectType.description": "如果设置了此选项，Bangumi 将首先使用该类别进行搜索。如果没有找到结果，则会回退到搜索全部类别。",
   "enhancer.bangumi.prioritySubjectType.hint": "留空则默认搜索全部类别。",
-
   "enum.thirdPartyId.bilibili": "Bilibili",
   "enum.thirdPartyId.exHentai": "ExHentai",
   "enum.thirdPartyId.pixiv": "Pixiv",
@@ -255,11 +225,12 @@
   "enum.thirdPartyId.patreon": "Patreon",
   "enum.thirdPartyId.tmdb": "TMDB",
   "enum.thirdPartyId.steam": "Steam",
-
   "enum.resourceMoveRecordStatus.pending": "等待中",
   "enum.resourceMoveRecordStatus.moving": "移动中",
   "enum.resourceMoveRecordStatus.succeeded": "已完成",
   "enum.resourceMoveRecordStatus.failed": "失败",
   "enum.resourceMoveRecordStatus.cancelled": "已取消",
-  "enum.resourceMoveRecordStatus.interrupted": "已中断"
+  "enum.resourceMoveRecordStatus.interrupted": "已中断",
+  "enum.resourceSource.vndb": "VNDB",
+  "enum.thirdPartyId.vndb": "VNDB"
 }

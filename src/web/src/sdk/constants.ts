@@ -2108,7 +2108,8 @@ export enum ResourceSource {
   ExHentai = 4,
   Aigc = 5,
   Bangumi = 6,
-  Pixiv = 7
+  Pixiv = 7,
+  Vndb = 8
 }
 
 export const resourceSources = [
@@ -2118,7 +2119,8 @@ export const resourceSources = [
   { label: 'ExHentai', value: ResourceSource.ExHentai },
   { label: 'Aigc', value: ResourceSource.Aigc },
   { label: 'Bangumi', value: ResourceSource.Bangumi },
-  { label: 'Pixiv', value: ResourceSource.Pixiv }
+  { label: 'Pixiv', value: ResourceSource.Pixiv },
+  { label: 'Vndb', value: ResourceSource.Vndb }
 ] as const;
 
 export const ResourceSourceLabel: Record<ResourceSource, string> = {
@@ -2128,7 +2130,8 @@ export const ResourceSourceLabel: Record<ResourceSource, string> = {
   [ResourceSource.ExHentai]: 'ExHentai',
   [ResourceSource.Aigc]: 'Aigc',
   [ResourceSource.Bangumi]: 'Bangumi',
-  [ResourceSource.Pixiv]: 'Pixiv'
+  [ResourceSource.Pixiv]: 'Pixiv',
+  [ResourceSource.Vndb]: 'Vndb'
 };
 
 export enum ResourceStatus {
@@ -2812,7 +2815,8 @@ export enum ThirdPartyId {
   Cien = 9,
   Patreon = 10,
   Tmdb = 11,
-  Steam = 12
+  Steam = 12,
+  Vndb = 13
 }
 
 export const thirdPartyIds = [
@@ -2827,7 +2831,8 @@ export const thirdPartyIds = [
   { label: 'Cien', value: ThirdPartyId.Cien },
   { label: 'Patreon', value: ThirdPartyId.Patreon },
   { label: 'Tmdb', value: ThirdPartyId.Tmdb },
-  { label: 'Steam', value: ThirdPartyId.Steam }
+  { label: 'Steam', value: ThirdPartyId.Steam },
+  { label: 'Vndb', value: ThirdPartyId.Vndb }
 ] as const;
 
 export const ThirdPartyIdLabel: Record<ThirdPartyId, string> = {
@@ -2842,7 +2847,8 @@ export const ThirdPartyIdLabel: Record<ThirdPartyId, string> = {
   [ThirdPartyId.Cien]: 'Cien',
   [ThirdPartyId.Patreon]: 'Patreon',
   [ThirdPartyId.Tmdb]: 'Tmdb',
-  [ThirdPartyId.Steam]: 'Steam'
+  [ThirdPartyId.Steam]: 'Steam',
+  [ThirdPartyId.Vndb]: 'Vndb'
 };
 
 export enum PasswordSearchOrder {

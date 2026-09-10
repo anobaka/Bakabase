@@ -19,7 +19,6 @@
   "enum.propertyType.formula": "Formula",
   "enum.propertyType.multilevel": "Multi-level option",
   "enum.propertyType.tags": "Tags",
-
   "enum.standardValueType.string": "Text",
   "enum.standardValueType.listString": "Multiple texts",
   "enum.standardValueType.decimal": "Number",
@@ -29,7 +28,6 @@
   "enum.standardValueType.time": "Time",
   "enum.standardValueType.listListString": "Multilevel texts",
   "enum.standardValueType.listTag": "Tags",
-
   "enum.searchOperation.equals": "Equals",
   "enum.searchOperation.notEquals": "Not equals",
   "enum.searchOperation.contains": "Contains",
@@ -48,7 +46,6 @@
   "enum.searchOperation.notIn": "Is none of",
   "enum.searchOperation.matches": "Matches regex",
   "enum.searchOperation.notMatches": "Doesn't match regex",
-
   "enum.propertyValueScope.manual": "Manual",
   "enum.propertyValueScope.synchronization": "Synchronization",
   "enum.propertyValueScope.bakabase": "Bakabase",
@@ -60,7 +57,6 @@
   "enum.propertyValueScope.tmdb": "TMDb",
   "enum.propertyValueScope.av": "AV",
   "enum.propertyValueScope.steam": "Steam",
-
   "PropertyValueScope.Manual": "Manual",
   "PropertyValueScope.Synchronization": "Synchronization",
   "PropertyValueScope.Bakabase": "Bakabase",
@@ -73,7 +69,6 @@
   "PropertyValueScope.Av": "AV",
   "PropertyValueScope.Steam": "Steam",
   "PropertyValueScope.Ai": "AI",
-
   "enum.resourceSource.fileSystem": "File System",
   "enum.resourceSource.steam": "Steam",
   "enum.resourceSource.dlsite": "DLsite",
@@ -81,14 +76,11 @@
   "enum.resourceSource.aigc": "AIGC",
   "enum.resourceSource.bangumi": "Bangumi",
   "enum.resourceSource.pixiv": "Pixiv",
-
   "enum.resourceStatus.active": "Active",
   "enum.resourceStatus.absent": "Absent",
   "enum.resourceStatus.unavailable": "Unavailable",
-
   "BulkModificationProcessorValueType.ManuallyInput": "Manually input",
   "BulkModificationProcessorValueType.Variable": "Variable",
-
   "PropertyType.SingleLineText": "Single-line text",
   "PropertyType.MultilineText": "Multi-line text",
   "PropertyType.SingleChoice": "Single choice",
@@ -105,20 +97,16 @@
   "PropertyType.Formula": "Formula",
   "PropertyType.Multilevel": "Multi-level option",
   "PropertyType.Tags": "Tags",
-
   "PropertyPool.Internal": "Internal",
   "PropertyPool.Reserved": "Reserved",
   "PropertyPool.Custom": "Custom",
   "PropertyPool.All": "All",
-
   "PropertyPool.Abbreviation.Internal": "I",
   "PropertyPool.Abbreviation.Reserved": "R",
   "PropertyPool.Abbreviation.Custom": "C",
   "PropertyPool.Abbreviation.All": "A",
-
   "bulkModification.label.useAny": "Use {{any}}",
   "bulkModification.label.editor": "editor",
-
   "enum.bulkModificationFilterOperation.equals": "Equals",
   "enum.bulkModificationFilterOperation.notEquals": "Not Equals",
   "enum.bulkModificationFilterOperation.contains": "Contains",
@@ -137,23 +125,18 @@
   "enum.bulkModificationFilterOperation.notIn": "Not In",
   "enum.bulkModificationFilterOperation.matches": "Matches",
   "enum.bulkModificationFilterOperation.notMatches": "Not Matches",
-
   "enum.resourceTag.isParent": "Is parent",
   "enum.resourceTag.pinned": "Pinned",
   "enum.resourceTag.pathDoesNotExist": "Path does not exist",
   "enum.resourceTag.unknownMediaLibrary": "Unknown media library",
-
   "enum.durationUnit.day": "days",
   "enum.durationUnit.hour": "hours",
   "enum.durationUnit.minute": "minutes",
   "enum.durationUnit.second": "seconds",
-
   "enum.combinator.and": "And",
   "enum.combinator.or": "Or",
-
   "enum.builtinPropertyForDisplayName.filename": "Filename",
   "enum.builtinPropertyForDisplayName.name": "Name",
-
   "enum.bulkModificationTimeProcessOperation.delete": "Delete",
   "enum.bulkModificationTimeProcessOperation.setWithFixedValue": "Set with fixed value",
   "enum.bulkModificationTimeProcessOperation.addHours": "Add hours",
@@ -162,7 +145,6 @@
   "enum.bulkModificationTimeProcessOperation.subtractMinutes": "Subtract minutes",
   "enum.bulkModificationTimeProcessOperation.addSeconds": "Add seconds",
   "enum.bulkModificationTimeProcessOperation.subtractSeconds": "Subtract seconds",
-
   "enum.bulkModificationStringProcessOperation.delete": "Delete",
   "enum.bulkModificationStringProcessOperation.setWithFixedValue": "Set with fixed value",
   "enum.bulkModificationStringProcessOperation.addToStart": "Add to start",
@@ -175,32 +157,27 @@
   "enum.bulkModificationStringProcessOperation.replaceFromEnd": "Replace from end",
   "enum.bulkModificationStringProcessOperation.replaceFromAnyPosition": "Replace from any position",
   "enum.bulkModificationStringProcessOperation.replaceWithRegex": "Replace with regex",
-
   "enum.bulkModificationListTagProcessOperation.delete": "Delete",
   "enum.bulkModificationListTagProcessOperation.setWithFixedValue": "Set with fixed value",
   "enum.bulkModificationListTagProcessOperation.append": "Append",
   "enum.bulkModificationListTagProcessOperation.prepend": "Prepend",
   "enum.bulkModificationListTagProcessOperation.remove": "Remove",
-
   "enum.bulkModificationListStringProcessOperation.setWithFixedValue": "Set with fixed value",
   "enum.bulkModificationListStringProcessOperation.append": "Append",
   "enum.bulkModificationListStringProcessOperation.prepend": "Prepend",
   "enum.bulkModificationListStringProcessOperation.modify": "Modify",
   "enum.bulkModificationListStringProcessOperation.delete": "Delete",
-
   "enum.bulkModificationListListStringProcessOperation.delete": "Delete",
   "enum.bulkModificationListListStringProcessOperation.setWithFixedValue": "Set with fixed value",
   "enum.bulkModificationListListStringProcessOperation.append": "Append",
   "enum.bulkModificationListListStringProcessOperation.prepend": "Prepend",
   "enum.bulkModificationListListStringProcessOperation.remove": "Remove",
-
   "enum.bulkModificationLinkProcessOperation.delete": "Delete",
   "enum.bulkModificationLinkProcessOperation.setWithFixedValue": "Set with fixed value",
   "enum.bulkModificationLinkProcessOperation.setText": "Set text",
   "enum.bulkModificationLinkProcessOperation.setUrl": "Set URL",
   "enum.bulkModificationLinkProcessOperation.modifyText": "Modify text",
   "enum.bulkModificationLinkProcessOperation.modifyUrl": "Modify URL",
-
   "enum.bulkModificationDecimalProcessOperation.delete": "Delete",
   "enum.bulkModificationDecimalProcessOperation.setWithFixedValue": "Set with fixed value",
   "enum.bulkModificationDecimalProcessOperation.add": "Add",
@@ -210,7 +187,6 @@
   "enum.bulkModificationDecimalProcessOperation.round": "Round",
   "enum.bulkModificationDecimalProcessOperation.ceil": "Ceil",
   "enum.bulkModificationDecimalProcessOperation.floor": "Floor",
-
   "enum.bulkModificationDateTimeProcessOperation.delete": "Delete",
   "enum.bulkModificationDateTimeProcessOperation.setWithFixedValue": "Set with fixed value",
   "enum.bulkModificationDateTimeProcessOperation.addDays": "Add days",
@@ -220,29 +196,23 @@
   "enum.bulkModificationDateTimeProcessOperation.addYears": "Add years",
   "enum.bulkModificationDateTimeProcessOperation.subtractYears": "Subtract years",
   "enum.bulkModificationDateTimeProcessOperation.setToNow": "Set to now",
-
   "enum.bulkModificationBooleanProcessOperation.delete": "Delete",
   "enum.bulkModificationBooleanProcessOperation.setWithFixedValue": "Set with fixed value",
   "enum.bulkModificationBooleanProcessOperation.toggle": "Toggle",
-
   "enum.bulkModificationProcessorOptionsItemsFilterBy.all": "All",
   "enum.bulkModificationProcessorOptionsItemsFilterBy.containing": "Containing",
   "enum.bulkModificationProcessorOptionsItemsFilterBy.matching": "Matching",
-
   "BangumiSubjectType.All": "All",
   "BangumiSubjectType.Anime": "Anime",
   "BangumiSubjectType.Book": "Book",
   "BangumiSubjectType.Music": "Music",
   "BangumiSubjectType.Game": "Game",
   "BangumiSubjectType.Real": "Real",
-
   "CoverSelectOrder.FilenameAscending": "Filename ascending",
   "CoverSelectOrder.FileModifyDtDescending": "File modify time descending",
-
   "enhancer.bangumi.prioritySubjectType.label": "Priority subject type",
   "enhancer.bangumi.prioritySubjectType.description": "If set, Bangumi will first search with this type. If no results found, it will fall back to searching all types.",
   "enhancer.bangumi.prioritySubjectType.hint": "Leave empty to search all types by default.",
-
   "enum.thirdPartyId.bilibili": "Bilibili",
   "enum.thirdPartyId.exHentai": "ExHentai",
   "enum.thirdPartyId.pixiv": "Pixiv",
@@ -255,11 +225,12 @@
   "enum.thirdPartyId.patreon": "Patreon",
   "enum.thirdPartyId.tmdb": "TMDB",
   "enum.thirdPartyId.steam": "Steam",
-
   "enum.resourceMoveRecordStatus.pending": "Pending",
   "enum.resourceMoveRecordStatus.moving": "Moving",
   "enum.resourceMoveRecordStatus.succeeded": "Succeeded",
   "enum.resourceMoveRecordStatus.failed": "Failed",
   "enum.resourceMoveRecordStatus.cancelled": "Cancelled",
-  "enum.resourceMoveRecordStatus.interrupted": "Interrupted"
+  "enum.resourceMoveRecordStatus.interrupted": "Interrupted",
+  "enum.resourceSource.vndb": "VNDB",
+  "enum.thirdPartyId.vndb": "VNDB"
 }
