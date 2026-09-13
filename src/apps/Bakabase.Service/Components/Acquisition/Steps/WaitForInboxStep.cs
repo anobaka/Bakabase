@@ -31,7 +31,7 @@ public class WaitForInboxStep : IAcquisitionStep
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
     public string Kind => AcquisitionStepKinds.WaitForInbox;
-    public string DisplayName => "Wait for the file in the inbox";
+    public string DisplayName => "Wait for the file in the pending processing folder";
     public Type? ConfigType => typeof(Config);
 
     public record Config
@@ -62,7 +62,7 @@ public class WaitForInboxStep : IAcquisitionStep
         if (string.IsNullOrWhiteSpace(options.InboxDirectory))
         {
             return new AcquisitionStepOutcome.Fail(
-                "No inbox directory is set. Point it at wherever your browser saves downloads.");
+                "No pending processing folder is set. Point it at wherever your browser saves downloads.");
         }
 
         var link = item.SelectedLink ?? item.Links.FirstOrDefault();
@@ -121,7 +121,7 @@ public class WaitForInboxStep : IAcquisitionStep
             if (!string.IsNullOrWhiteSpace(inbox) && !IsInside(source, inbox))
             {
                 return new AcquisitionStepOutcome.Fail(
-                    $"\"{Path.GetFileName(source)}\" is not in the inbox.");
+                    $"\"{Path.GetFileName(source)}\" is not in the pending processing folder.");
             }
 
             var target = Path.Combine(ctx.WorkingDirectory, Path.GetFileName(source));
@@ -148,7 +148,7 @@ public class WaitForInboxStep : IAcquisitionStep
             catch (IOException ex)
             {
                 return new AcquisitionStepOutcome.Fail(
-                    $"Could not move \"{Path.GetFileName(source)}\" out of the inbox: {ex.Message}", ex);
+                    $"Could not move \"{Path.GetFileName(source)}\" out of the pending processing folder: {ex.Message}", ex);
             }
         }
 

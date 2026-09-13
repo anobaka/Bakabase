@@ -145,7 +145,7 @@ public class AcquisitionInboxService(
 
         if (string.IsNullOrWhiteSpace(inbox))
         {
-            throw new InvalidOperationException("No inbox directory is set, so there is nowhere to put them back.");
+            throw new InvalidOperationException("No pending processing folder is set, so there is nowhere to put them back.");
         }
 
         var task = await acquisitions.GetAsync(taskId, ct)

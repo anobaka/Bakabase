@@ -69,7 +69,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <div class="sum">
 <div class="card"><h4>一句话结论</h4><p>「我还没有的作品」就是<b>尚未落地的资源</b>：一条 <code class="i">Resource</code>，<code class="i">Path</code> 为空，身份由 <code class="i">ResourceSourceLink</code> 的 (Source, SourceKey) 给出。代码里这种资源今天已经存在（未安装的 Steam 游戏、未下载的 DLsite 作品），本方案只是把它从三个站点的私有实现推广为通用机制。</p></div>
 <div class="card"><h4>四层拆分，自下而上</h4><p><b>未落地资源</b>是地基：不依赖任何集合就能创建、查看、获取、关联，「我缺了哪个资源」在这一层就能表达。<b>获取流水线</b>以一个未落地资源为目标，按它自带的获取线索（帖子链接、直链、某个外部身份）选一份<b>获取方案</b>（可编排、可替换的步骤序列，由 Workflow 引擎承载），把它变成已落地资源。<b>集合</b>是资源（含未落地资源）的命名分组，收集率 = 已落地成员 ÷ 全部成员。<b>订阅</b>是集合的外部真相源，负责告诉集合「应该有哪些条目」。</p></div>
-<div class="card"><h4>先做什么</h4><p>第一阶段把未落地资源做成独立可用的概念：手动创建、按「未落地」筛选、关联本地目录、卡片与详情的状态表现。第二阶段做「收件箱版」获取流水线：帖子解析 → 打开链接 → 用户把文件丢进收件箱 → 自动认领、解压、按模板放置、落地。两期都不需要集合，却直接消灭当前人工流程里五步中的四步。</p></div>
+<div class="card"><h4>先做什么</h4><p>第一阶段把未落地资源做成独立可用的概念：手动创建、按「未落地」筛选、关联本地目录、卡片与详情的状态表现。第二阶段做「待处理目录版」获取流水线：帖子解析 → 打开链接 → 用户把文件丢进待处理目录 → 自动认领、解压、按模板放置、落地。两期都不需要集合，却直接消灭当前人工流程里五步中的四步。</p></div>
 </div>
 
 <nav class="toc" aria-label="目录">
@@ -95,7 +95,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <p>需求来自所有者的原始描述，逐条对应到本方案的章节。每条都有明确的落点，没有被并入其他条目而悄悄消失的需求。</p>
 <div class="tw"><table><tr><th style="width:4%">#</th><th style="width:40%">原始需求</th><th>方案落点</th></tr>
 <tr><td class="e">1</td><td>在 Bakabase 里管理从论坛人工下载、本地管理的 galgame 与小型单机游戏</td><td>获取流水线的产物就是普通的本地资源（<a href="#s7">§7</a>）；库根目录只需一条「第一层是资源」的资源标记（<a href="#s12-2">§12.2</a>）</td></tr>
-<tr><td class="e">2</td><td>人工流程：检索帖子 → 找下载地址（各类网盘）→ 下载 → 用帖子里的密码解压 → 移到管理目录 → 配路径标记 → 同步。现有帖子解析器只覆盖「找下载地址」且只支持 SoulPlus</td><td>七步中除「从网盘把文件拿下来」以外全部自动化（<a href="#s7-3">§7.3</a> 收件箱认领、<a href="#s7-4">§7.4</a> 解压、<a href="#s7-5">§7.5</a> 放置与同步）；帖子解析器成为流水线的第一个阶段处理器（<a href="#s7-2">§7.2</a>）</td></tr>
+<tr><td class="e">2</td><td>人工流程：检索帖子 → 找下载地址（各类网盘）→ 下载 → 用帖子里的密码解压 → 移到管理目录 → 配路径标记 → 同步。现有帖子解析器只覆盖「找下载地址」且只支持 SoulPlus</td><td>七步中除「从网盘把文件拿下来」以外全部自动化（<a href="#s7-3">§7.3</a> 待处理目录认领、<a href="#s7-4">§7.4</a> 解压、<a href="#s7-5">§7.5</a> 放置与同步）；帖子解析器成为流水线的第一个阶段处理器（<a href="#s7-2">§7.2</a>）</td></tr>
 <tr><td class="e">3</td><td>易扩展的架构，让流程能快速复制到 SoulPlus 之外</td><td>阶段固定、处理器可插拔：换一个论坛 = 一个 <code class="i">IPostContentFetcher</code>；换一种网盘 = 一个 <code class="i">IAcquisitionFetcher</code>（<a href="#s7-1">§7.1</a>）；Workflow 在边缘做触发与定制（<a href="#s8">§8</a>）</td></tr>
 <tr><td class="e">4</td><td>集合：系列、作者、作者+系列等无限划分维度；虚拟；一个资源属于多个集合；能由用户或系统补充信息；自动把识别到的资源放进去；显示收集率；要回答是否多层级、如何管理、如何关联资源、如何搜索</td><td><a href="#s5">§5</a> 全部回答：成员是资源（含未落地资源）；手动成员、规则成员、来源成员三种来路；收集率定义；不做树形；用 Multilevel 属性表达系列层级；搜索通过内部属性 <code class="i">CollectionMulti</code> 走现有倒排索引</td></tr>
 <tr><td class="e">5</td><td>未收集部分像订阅列表：有更新要提醒；能否自动补全；数据从哪里采集、用什么 key；自动补全和人工下载是同一件事</td><td><a href="#s6">§6</a>：订阅就是集合的外部来源，key 是 (ResourceSource, SourceKey)；新条目 → 通知 + Workflow 事件 + 可选自动创建获取任务；获取任务复用 <a href="#s7">§7</a> 的同一条流水线</td></tr>
@@ -186,7 +186,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <tr><td><b>集合</b> <span class="tag t-new">新增</span></td><td class="k">Collection<br>CollectionResourceMapping</td><td>资源的命名分组，成员可以是未落地资源。成员有三种来路：手动加入、规则命中、订阅带入。收集率 = 已落地且未忽略的成员 ÷ 未忽略的成员。</td></tr>
 <tr><td><b>订阅</b>（集合的外部来源）<span class="tag t-fix">需修正</span></td><td class="k">Subscription<br>ISubscriptionProvider</td><td>一个外部列表（社团页、系列页、标签搜索、关注动态），定期抓取，把列表中的每一项确保为一条带外部身份的资源并加入所属集合。现有的 Subscription 模块演进为它，每个订阅必须属于一个集合。</td></tr>
 <tr><td><b>获取线索</b> <span class="tag t-new">新增</span></td><td class="k">AcquisitionLead (Kind, Value)</td><td>告诉系统「用什么方式补齐这个资源」的一条信息。两大类：<b>平台取回</b>（该资源的某条外部身份，例如 DLsite 已购买作品、ExHentai 画廊、Steam 应用，由对接器取回）；<b>分享获取</b>（帖子链接、推文、文档或表格里的一行、直链、磁力链接，由分享内容解析器与抓取器处理）。平台取回类线索直接由 <code class="i">ResourceSourceLink</code> 派生，不单独存储；分享类线索存 <code class="i">AcquisitionLead</code> 表，由用户、订阅或分享清单导入提供。一个资源可以有多条线索，也可以暂时没有。</td></tr>
-<tr><td><b>获取步骤</b> <span class="tag t-new">新增</span></td><td class="k">IAcquisitionStep</td><td>获取流程里的一个可插拔环节（解析分享内容、选择链接、直链下载、等待收件箱、平台取回、解压、重命名、按模板放置、落地……）。契约与宿主无关：输入一个工作项，输出「继续 / 挂起等待 / 失败 / 跳过」。</td></tr>
+<tr><td><b>获取步骤</b> <span class="tag t-new">新增</span></td><td class="k">IAcquisitionStep</td><td>获取流程里的一个可插拔环节（解析分享内容、选择链接、直链下载、等待文件进入待处理目录、平台取回、解压、重命名、按模板放置、落地……）。契约与宿主无关：输入一个工作项，输出「继续 / 挂起等待 / 失败 / 跳过」。</td></tr>
 <tr><td><b>获取方案</b> <span class="tag t-new">新增</span></td><td class="k">WorkflowDefinition（触发器 acquisition.requested）</td><td>一份有序、带配置的步骤列表，是数据不是代码。内置几份可复制的种子方案（论坛帖子 + 网盘、直链、磁力、平台取回、本地已有目录），按线索种类选默认，用户可增删重排步骤，也可混入现有的文本处理与通知节点。</td></tr>
 <tr><td><b>获取任务</b> <span class="tag t-new">新增</span></td><td class="k">AcquisitionTask<br>AcquisitionStatus</td><td>为<b>一个未落地资源</b>按一份方案执行一次获取。每个任务指向一个资源、一条线索、一份方案，对应一次 Workflow 运行；与集合无关，集合只作为可选的上下文记录。从帖子链接直接发起时，系统先按解析出的标题创建未落地资源，再对它发起获取。</td></tr>
 </table></div>
@@ -337,7 +337,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <tr><td><b>关联</b></td><td>文件已经在本地时，详情里「关联本地目录」选一个目录直接落地，不经过流水线。</td><td><code class="i">IResourceMaterializationService.MaterializeAsync</code></td></tr>
 <tr><td><b>放弃</b></td><td>删除该资源即可；它没有文件，删除无副作用。</td><td>现有删除</td></tr>
 </table></div>
-<p>三个不同媒体类型的例子，全部不涉及集合：漫画《X》缺第 3 卷，用户按标题新建未落地资源并粘贴某漫画站的页面链接作为线索，流水线用该站的抓取器取回；某部动画在另一处以磁力链接分发，线索是磁力链接，路线是外部下载工具的抓取器；某个游戏是 SoulPlus 帖子，线索是帖子链接，路线是帖子解析 + 收件箱。三者的差别只在线索种类与对应的处理器，其余阶段与界面完全相同。若这些资源恰好命中了某个集合的规则或被某个订阅带入，它们自然出现在集合里；没有集合也丝毫不影响上述流程。</p>
+<p>三个不同媒体类型的例子，全部不涉及集合：漫画《X》缺第 3 卷，用户按标题新建未落地资源并粘贴某漫画站的页面链接作为线索，流水线用该站的抓取器取回；某部动画在另一处以磁力链接分发，线索是磁力链接，路线是外部下载工具的抓取器；某个游戏是 SoulPlus 帖子，线索是帖子链接，路线是帖子解析 + 待处理目录。三者的差别只在线索种类与对应的处理器，其余阶段与界面完全相同。若这些资源恰好命中了某个集合的规则或被某个订阅带入，它们自然出现在集合里；没有集合也丝毫不影响上述流程。</p>
 <h2 id="s5"><span class="n">§5</span>集合</h2>
 
 <h3 id="s5-1">5.1 定义与三种成员来路</h3>
@@ -470,10 +470,10 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <p>每个获取任务有且只有一个目标资源（<code class="i">AcquisitionTask.ResourceId</code> 必填）和一条被选中的线索。线索分两大类，对应 <a href="#s3-1">§3.1</a> 的两种获取机制；线索种类决定<b>默认方案</b>，用户可在发起时改选方案。集合 id 只是可选的上下文，用于统计与通知，不影响执行。</p>
 <div class="tw"><table><tr><th style="width:10%">机制</th><th style="width:16%">线索种类 <code class="i">AcquisitionLeadKind</code></th><th style="width:22%">线索值</th><th style="width:30%">默认方案（<a href="#s7-4">§7.4</a>）</th><th>典型场景</th></tr>
 <tr><td><b>平台取回</b></td><td class="k">PlatformHolding</td><td>该资源的某条 <code class="i">ResourceSourceLink</code>（<code class="i">Source:SourceKey</code>），不单独存储</td><td>「平台取回」：对接器取回 → 落地（DLsite 已购买走现有 <code class="i">DownloadWork / ExtractWork</code>；ExHentai 走现有下载器并等待 <code class="i">downloader.completed</code>；Steam 走 <code class="i">steam://install</code> 并等待安装检测）</td><td>已购买的音声、收藏的画廊、已拥有的游戏</td></tr>
-<tr><td rowspan="5"><b>分享获取</b></td><td class="k">SharedPage</td><td>帖子、推文等网页链接</td><td>「论坛帖子 + 网盘」：解析分享内容 → 选择链接 → 直链下载或等待收件箱 → 解压 → 放置 → 落地</td><td>SoulPlus 上的游戏、同人本；推特上的分享</td></tr>
+<tr><td rowspan="5"><b>分享获取</b></td><td class="k">SharedPage</td><td>帖子、推文等网页链接</td><td>「论坛帖子 + 网盘」：解析分享内容 → 选择链接 → 直链下载或等待文件进入待处理目录 → 解压 → 放置 → 落地</td><td>SoulPlus 上的游戏、同人本；推特上的分享</td></tr>
 <tr><td class="k">SharedDocument</td><td>一份本地/远程文档或表格中的一行（或整份）</td><td>同上，解析步骤改为文档读取</td><td>群里传的下载清单、整理好的 Excel</td></tr>
 <tr><td class="k">DirectUrl</td><td>http(s) 直链</td><td>「直链」：直链下载 → 解压（无压缩包则跳过）→ 放置 → 落地</td><td>自建站、Cloudflare 盘直链</td></tr>
-<tr><td class="k">Magnet</td><td>磁力链接 / 种子文件</td><td>「磁力」：打开链接并等待收件箱 → 放置 → 落地（<span class="tag t-later">后期</span>外部下载工具步骤）</td><td>动画、电影</td></tr>
+<tr><td class="k">Magnet</td><td>磁力链接 / 种子文件</td><td>「磁力」：打开链接并等待文件进入待处理目录 → 放置 → 落地（<span class="tag t-later">后期</span>外部下载工具步骤）</td><td>动画、电影</td></tr>
 <tr><td class="k">Manual</td><td>无</td><td>「本地已有目录」：选择目录 → 重命名 → 放置 → 落地</td><td>文件已经在别处，只是没入库</td></tr>
 </table></div>
 
@@ -544,7 +544,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <tr><td class="k">acquisition.resolveSharedContent</td><td>读出分享内容（网页按主机选读取器，文档按格式；粘贴的文本由兜底读取器直接当内容），大模型提取链接 / 提取码 / 解压码 / 标题，写入工作项。网盘种类由主机名查表得出而非问模型</td><td><code class="i">PaidContent</code>（付费块超上限）</td><td>帖子解析器全部、<code class="i">AiFeature.PostParser</code></td></tr>
 <tr><td class="k">acquisition.selectLink</td><td>按网盘偏好自动选一条，或挂起让人选</td><td><code class="i">NoLinks</code>、<code class="i">ChooseLink</code></td><td>—</td></tr>
 <tr><td class="k">acquisition.fetchHttp</td><td>直链下载到工作目录</td><td>—</td><td><code class="i">SingleFileHttpDownloader</code>（加固）</td></tr>
-<tr><td class="k">acquisition.waitForInbox</td><td>打开链接（提取码由前端复制），挂起等收件箱认领；认领由收件箱监听器以信号恢复。认领只接受收件箱内的路径——信号来自接口，否则任意路径都会被搬走</td><td><code class="i">WaitingForFile</code>、<code class="i">AmbiguousInboxFile</code></td><td><code class="i">GuiController.OpenUrlInDefaultBrowser</code> 的 <code class="i">IGuiAdapter</code>；<code class="i">WorkflowFsWatchService</code> 的监听模式</td></tr>
+<tr><td class="k">acquisition.waitForInbox</td><td>打开链接（提取码由前端复制），挂起等待处理目录认领；认领由待处理目录监听器以信号恢复。认领只接受待处理目录内的路径——信号来自接口，否则任意路径都会被搬走</td><td><code class="i">WaitingForFile</code>、<code class="i">AmbiguousInboxFile</code></td><td><code class="i">GuiController.OpenUrlInDefaultBrowser</code> 的 <code class="i">IGuiAdapter</code>；<code class="i">WorkflowFsWatchService</code> 的监听模式</td></tr>
 <tr><td class="k">acquisition.fetchFromPlatform</td><td>按 <code class="i">ResourceSource</code> 交给平台对接器取回；对接器完成事件恢复</td><td><code class="i">PlatformFetch</code></td><td>DLsite / ExHentai / Steam 既有取回与安装检测</td></tr>
 <tr><td class="k">acquisition.unpack</td><td>分卷分组 → 逐密码测试 → 解压；非压缩包 <code class="i">Skip</code></td><td><code class="i">PasswordUnknown</code></td><td><code class="i">CompressedFileHelper</code>、<code class="i">CompressedFileService</code>、<code class="i">PasswordService</code>；从 <code class="i">FileController</code> 提取的解压服务</td></tr>
 <tr><td class="k">acquisition.pickLocalDirectory</td><td>挂起让用户选一个已有目录作为文件来源</td><td><code class="i">PickDirectory</code></td><td>—</td></tr>
@@ -579,11 +579,11 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <li><b>身份。</b>正文若含权威编号（RJ 号、Steam AppId、VNDB 链接），写入目标资源的 <code class="i">ResourceSourceLink</code>；分享页面本身只作为线索与任务记录保存，永不成为身份。</li>
 <li>解析结果同时写回 <code class="i">PostParserTask</code>（复用其表与页面），保持帖子解析页可独立使用。</li>
 </ul>
-<h4>7.5.2 等待收件箱：网盘问题的务实解法</h4>
+<h4>7.5.2 等待文件进入待处理目录：网盘问题的务实解法</h4>
 <p>百度、迅雷、飞猫、Cloudflare 盘要登录、验证码、官方客户端，自动化脆弱且随时失效。方案把「从网盘取回文件」留给人，其余全部自动：</p>
 <ol>
 <li><code class="i">waitForInbox</code> 用系统浏览器打开链接（提取码由前端复制到剪贴板），<code class="i">Suspend(WaitingForFile)</code>，记录等待开始时间与期望文件名（若解析步骤拿到）。</li>
-<li>用户以任何方式把文件放进<b>收件箱目录</b>（获取设置里配置一次；可以直接把浏览器/网盘客户端的下载目录设为它）。</li>
+<li>用户以任何方式把文件放进<b>待处理目录</b>（获取设置里配置一次；可以直接把浏览器/网盘客户端的下载目录设为它）。</li>
 <li><code class="i">AcquisitionInboxWatcher</code>（<code class="i">BackgroundService</code>，仿 <code class="i">WorkflowFsWatchService</code>）监听一层深度；「稳定」判定：无 <code class="i">.part / .crdownload / .tmp / .baiduyun.downloading</code> 等后缀、连续两次采样大小不变、可独占打开；分卷组齐全后才算一个候选。</li>
 <li>认领打分：对每个等待中的运行计算 <span class="mono">得分 = 文件名与任务标题的归一化词元重合（<code class="i">ITextOps.Clean</code> 后）+ 期望文件名精确命中 + 文件名方括号里的密码与解压码一致 + 时间接近度</span>。唯一高分 → 以「认领信号」恢复该运行；多个接近或都低 → 该运行改为 <code class="i">AmbiguousInboxFile</code>，界面并排列出未认领文件与等待中的任务，拖拽或点选完成认领。</li>
 <li>认领后文件移到运行的工作目录（<code class="i">AppDataDirectory/acquisition/{taskId}/</code>，遵守 <code class="i">appdata-paths.md</code>），步骤 <code class="i">Continue</code>。</li>
@@ -609,7 +609,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <li>步骤抛异常或返回 <code class="i">Fail</code> → 运行 <code class="i">Failed</code>，游标停在该步；「重试」= 从游标步骤重新入队。步骤幂等（<a href="#s7-1">§7.1</a>）。</li>
 <li>进程重启：<code class="i">Waiting</code> 原地保留；<code class="i">Running</code> 从游标步骤重跑。</li>
 <li>并发：<code class="i">IAcquisitionService</code> 控制同时处于活动步骤的运行数（默认 2，<code class="i">Waiting</code> 不占名额）；每个运行就是一个 BTask（引擎已有），进度、暂停、取消经它暴露；<code class="i">BTaskType</code> 加 <code class="i">Acquisition</code> 便于界面筛选。</li>
-<li>取消：运行 <code class="i">Cancelled</code>，工作目录清理，收件箱中已认领的文件退回收件箱。</li>
+<li>取消：运行 <code class="i">Cancelled</code>，工作目录清理，待处理目录中已认领的文件退回待处理目录。</li>
 <li><code class="i">AcquisitionTask</code> 表是运行的薄索引（资源、线索、方案、运行 id、状态镜像、目标目录、购买审计），供资源卡片与获取中心按资源快速查询；状态由适配器在每次步骤结束时同步。</li>
 </ul>
 
@@ -720,7 +720,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
   ResourceAdditionalItem + CollectionName（下一个空位）
   BTaskType             + Acquisition</code></pre>
 <ul>
-<li>获取的全局设置（收件箱目录、库根目录、目录模板、网盘偏好、线索种类到默认方案的映射、自动购买上限、解压后删除压缩包、密码回退策略、并发数）作为 <code class="i">AcquisitionOptions</code> 放在选项文件里（与 <code class="i">SoulPlusOptions</code> 同一机制），不建表；集合级覆盖存在 <code class="i">Collection.AcquisitionSettingsJson</code>。</li>
+<li>获取的全局设置（待处理目录、库根目录、目录模板、网盘偏好、线索种类到默认方案的映射、自动购买上限、解压后删除压缩包、密码回退策略、并发数）作为 <code class="i">AcquisitionOptions</code> 放在选项文件里（与 <code class="i">SoulPlusOptions</code> 同一机制），不建表；集合级覆盖存在 <code class="i">Collection.AcquisitionSettingsJson</code>。</li>
 <li>迁移名称建议：<code class="i">AddCollections</code>、<code class="i">AddAcquisitionLeads</code>、<code class="i">AddWorkflowRunSuspension</code>、<code class="i">AddAcquisitionTasks</code>、<code class="i">AddSubscriptionCollectionId</code>、<code class="i">MakeBulkModificationDiffResourcePathNullable</code>。全部由 <code class="i">dotnet ef migrations add</code> 生成，不含数据语句。</li>
 <li>运行时一次性迁移器（放在 <code class="i">src/legacy/Bakabase.Migrations</code>）：为每个 <code class="i">CollectionId</code> 为空的订阅创建同名集合并回填。</li>
 </ul>
@@ -763,7 +763,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <tr><td class="k">POST acquisition/from-url</td><td>便捷入口：解析分享链接 → 匹配或创建未落地资源并挂线索 → 创建任务；供油猴脚本与获取中心使用</td></tr>
 <tr><td class="k">GET acquisition?status=&amp;page= · GET acquisition/{id}</td><td>列表与详情（含阶段数据）</td></tr>
 <tr><td class="k">POST acquisition/{id}/retry · /cancel</td><td>从游标步骤重新入队；取消</td></tr>
-<tr><td class="k">POST acquisition/{id}/resume</td><td>通用恢复：body 为信号 JSON（选中的链接、购买批准、密码、认领的收件箱文件、选中的目录），转调 <code class="i">POST workflow/run/{runId}/resume</code>；前端按 <code class="i">WaitPromptJson</code> 渲染对应的恢复表单</td></tr>
+<tr><td class="k">POST acquisition/{id}/resume</td><td>通用恢复：body 为信号 JSON（选中的链接、购买批准、密码、认领的待处理目录中的文件、选中的目录），转调 <code class="i">POST workflow/run/{runId}/resume</code>；前端按 <code class="i">WaitPromptJson</code> 渲染对应的恢复表单</td></tr>
 <tr><td class="k">POST workflow/run/{id}/resume</td><td>引擎级恢复入口（<a href="#s7-2">§7.2</a>）</td></tr>
 <tr><td class="k">GET acquisition/inbox</td><td>未认领文件及其对各等待任务的匹配得分</td></tr>
 <tr><td class="k">GET/PUT acquisition/options</td><td>全局获取设置；PUT 时若库根目录尚无资源标记则创建 <code class="i">Layer = 1</code> 的标记</td></tr>
@@ -775,7 +775,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <h3 id="s12-1">12.1 首次使用：一个向导，配一次</h3>
 <p>目标是「从 SoulPlus 用户装好软件到第一个游戏自动入库」不超过一分钟的配置。向导只有四个问题，都有默认值：</p>
 <ol>
-<li><b>收件箱目录</b>：默认 <code class="i">~/Downloads/Bakabase 收件箱</code>，并提示把浏览器或网盘客户端的下载目录指向它。</li>
+<li><b>待处理目录</b>：默认 <code class="i">~/Downloads/Bakabase 收件箱</code>，并提示把浏览器或网盘客户端的下载目录指向它。</li>
 <li><b>库根目录</b>：游戏最终存放的地方。向导在此创建一条资源标记（<code class="i">ResourceMarkConfig { MatchMode = Layer, Layer = 1, FsTypeFilter = Directory }</code>），这是用户唯一会接触到的「路径标记」，且由向导代劳。</li>
 <li><b>目录模板</b>：默认 <code class="i">{Title}</code>；提供两个备选 <code class="i">{Collection}/{Title}</code>、<code class="i">{Source}/{Title}</code>，右侧用最近一次解析结果实时预览。</li>
 <li><b>网盘偏好与自动购买上限</b>：可跳过。</li>
@@ -789,7 +789,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <div class="grid2">
 <div class="card"><h4>集合列表 <code class="i">/collections</code></h4><p>卡片流（仿 <code class="i">pages/media-library</code>）：封面拼图、名称、颜色、收集率进度条、成员构成小字、来源图标、最近更新。顶部：新建（空集合 / 从规则 / 从外部编号或链接 / 从 Multilevel 节点）、搜索。菜单入口放在 <code class="i">menu.data</code> 分组，标 Beta。</p></div>
 <div class="card"><h4>集合详情 <code class="i">/collections/{id}</code></h4><p>头部：收集率环形图 + 四个数字（已落地 / 未落地 / 获取中 / 已忽略）+ 「获取缺失条目」。标签页：<b>成员</b>（复用 <code class="i">ResourceCard</code> 网格，状态芯片，筛选与排序，右键：获取、忽略、移出、置顶顺序；可按属性分组显示）；<b>来源</b>（订阅列表：种类、目标摘要、间隔、上次检查、错误、立即检查；添加来源用现有 <code class="i">SubscriptionEditor</code>）；<b>规则</b>（<code class="i">ResourceFilterController</code> + 命中预览）；<b>设置</b>（颜色、封面、自动获取、获取设置覆盖）。</p></div>
-<div class="card"><h4>获取中心 <code class="i">/acquisitions</code></h4><p>表格：标题、来源、所属集合、状态（芯片 + 进度）、阶段耗时、操作。<b>等待中</b>的任务置顶并高亮，行内直接渲染该步骤声明的恢复表单（选择链接 / 购买并继续 / 输入密码 / 认领文件 / 选择目录）。发起时可选方案；「编辑方案」跳到 Workflow 画布编辑器。右侧抽屉「收件箱」：未认领文件列表，每个文件显示与等待中任务的匹配得分，拖到任务上即认领。顶部：粘贴 URL 创建、打开收件箱目录、设置。</p></div>
+<div class="card"><h4>获取中心 <code class="i">/acquisitions</code></h4><p>表格：标题、来源、所属集合、状态（芯片 + 进度）、阶段耗时、操作。<b>等待中</b>的任务置顶并高亮，行内直接渲染该步骤声明的恢复表单（选择链接 / 购买并继续 / 输入密码 / 认领文件 / 选择目录）。发起时可选方案；「编辑方案」跳到 Workflow 画布编辑器。右侧抽屉「待处理目录」：未认领文件列表，每个文件显示与等待中任务的匹配得分，拖到任务上即认领。顶部：粘贴 URL 创建、打开待处理目录、设置。</p></div>
 <div class="card"><h4>资源页与详情的增量</h4><p>顶部「新建未落地资源」（标题 / 外部身份 / 链接，可批量，可勾选立即获取）；卡片芯片「未落地」「获取中」与「获取」按钮；右键菜单「加入集合…」（克隆 <code class="i">MediaLibraryMultiSelector</code> 的三态选择）；筛选面板固定项「已落地」；详情新增块「所属集合」（按 <code class="i">ResourceDetailLayoutEditor</code> 现有分区的六处接入点新增分区：<code class="i">types.ts</code> 的 <code class="i">SectionId</code>、<code class="i">defaultLayout.ts</code> 的 <code class="i">ALL_SECTIONS / DEFAULT_LAYOUT / SECTION_HEIGHT_BEHAVIOR</code>、<code class="i">SamplePlaceholders.tsx</code>、<code class="i">DetailModal/index.tsx</code> 的渲染分支、<code class="i">locales/{en,cn}/pages/resource.json</code>）。</p></div>
 <div class="card"><h4>通知深链接</h4><p><code class="i">NotificationItem</code> 已声明可选的 <code class="i">onClick</code> 属性，但 <code class="i">NotificationCenter</code> 从未传入，<code class="i">payloadJson</code> 未被使用。约定 <code class="i">PayloadJson.route</code>（例如 <code class="i">/collections/12</code>、<code class="i">/acquisitions?focus=34</code>），通知中心统一按它跳转；订阅通知一并改用该约定。</p></div>
 <div class="card"><h4>实时状态</h4><p>获取任务的进度走 BTask 外壳（前端 <code class="i">useBTasksStore</code> 按 id 前缀 <code class="i">Acquisition:</code> 订阅）；集合收集率变化通过 <code class="i">GetIncrementalData("Collection", dto)</code> 推送，新增 <code class="i">useCollectionsStore</code>。</p></div>
@@ -800,7 +800,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <li>在论坛列表页看到喜欢的帖子，点「获取到 Bakabase」，弹出选择集合（可不选）。</li>
 <li>Bakabase 解析帖子标题，创建一条未落地资源并挂上帖子链接作为线索，随后解析下载信息；若需付费弹出通知「需要 8 SP，是否购买」（或在上限内自动购买）。此时资源页已经能看到它，芯片显示「获取中」。</li>
 <li>解析完成，自动打开网盘链接，提取码已在剪贴板；用户在网盘页面点下载。</li>
-<li>文件落到收件箱，Bakabase 自动认领、用帖子里的解压码解压、放到 <code class="i">库根目录/作品名/</code>、同步、写入来源身份，通知「已入库」。</li>
+<li>文件落到待处理目录，Bakabase 自动认领、用帖子里的解压码解压、放到 <code class="i">库根目录/作品名/</code>、同步、写入来源身份，通知「已入库」。</li>
 <li>资源卡片出现在库里，带来源封面与名称；若来自集合，收集率 +1。</li>
 </ol>
 <p>用户手动做的事只剩第 1 步的点击、第 2 步的可选确认、第 3 步的网盘下载。</p>
@@ -818,7 +818,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <p class="note"><b>进度。</b>第一期到第四期已实现并有测试覆盖；第二期的分享清单导入与平台取回也已完成。第五期只完成了平台对接器契约与三个实现（连同三个持有型订阅），其余各项与三张外部目录表的收编未做，理由见 <a href="#s16">§16</a> 的偏离记录。进度只在本段更新。</p>
 <div class="tw"><table><tr><th style="width:12%">阶段</th><th style="width:36%">内容</th><th>验收标准</th></tr>
 <tr><td><b>第一期</b><br>未落地资源</td><td><code class="i">Resource.HasLocalPath</code> 与 <code class="i">InternalProperty.HasLocalPath</code>；<code class="i">IResourceMaterializationService</code>；<a href="#s4-3">§4.3</a> 触点清单全部修正；「新建未落地资源」（标题 / 外部身份 / 链接，含帖子解析取标题）；卡片/详情/筛选的未落地表现；「关联本地目录」；<code class="i">ResourceSource</code> 新成员（Bangumi、Pixiv）；<code class="i">resource.materialized</code> 事件</td><td>用户不建任何集合就能维护一份「缺失清单」：按标题或 RJ 号新建未落地资源，资源页按「已落地 = 否」筛出它们，带来源封面与名称；未安装的 Steam 游戏与未下载的 DLsite 作品同样出现在该筛选里；手动关联目录后父子关系、封面、可播放文件、路径标记属性全部正确，增强器随即重跑；批量修改、路径搜索、NFO 生成不再对空路径报错</td></tr>
-<tr><td><b>第二期</b><br>可编排的获取流水线</td><td>抽象底层（步骤契约、工作项、结果）；Workflow 引擎的挂起 / 恢复与单条目游标；适配器、<code class="i">acquisition.requested</code> 触发器、内置方案种子；九个步骤实现（解析分享内容、选择链接、直链下载、等待收件箱与收件箱监听、平台取回、解压、选择目录、放置、落地）；现有文本节点作为重命名；获取中心与恢复表单；首次向导；油猴按钮；分享清单导入（可延后）</td><td>对第一期创建的任意未落地资源点「获取」并给一条帖子链接，用户只做「在网盘页面点下载」，该资源最终落地为 Active 资源，带来源链接与清洗后的名称，全程无需手工配置路径标记。从油猴脚本直接发起时，资源在解析完成的瞬间就出现在资源页并显示「获取中」。进程中途重启后任务从当前阶段续跑。分卷压缩包、嵌套压缩包、无密码包、错误密码四种情况都有明确结果</td></tr>
+<tr><td><b>第二期</b><br>可编排的获取流水线</td><td>抽象底层（步骤契约、工作项、结果）；Workflow 引擎的挂起 / 恢复与单条目游标；适配器、<code class="i">acquisition.requested</code> 触发器、内置方案种子；九个步骤实现（解析分享内容、选择链接、直链下载、等待文件进入待处理目录与待处理目录监听、平台取回、解压、选择目录、放置、落地）；现有文本节点作为重命名；获取中心与恢复表单；首次向导；油猴按钮；分享清单导入（可延后）</td><td>对第一期创建的任意未落地资源点「获取」并给一条帖子链接，用户只做「在网盘页面点下载」，该资源最终落地为 Active 资源，带来源链接与清洗后的名称，全程无需手工配置路径标记。从油猴脚本直接发起时，资源在解析完成的瞬间就出现在资源页并显示「获取中」。进程中途重启后任务从当前阶段续跑。分卷压缩包、嵌套压缩包、无密码包、错误密码四种情况都有明确结果</td></tr>
 <tr><td><b>第三期</b><br>集合</td><td><code class="i">Bakabase.Modules.Collection</code>；<code class="i">CollectionMulti</code> 内部属性；集合列表与详情页（成员 / 规则 / 设置）；右键「加入集合」；详情块「所属集合」；占位成员；收集率；获取任务与集合的关联</td><td>创建一个集合，手动加入五个已有资源和三个按标题创建的未落地成员，收集率显示 62.5%；对其中一个未落地成员发起获取并完成后收集率变为 75%；资源页按「在集合 X 里」筛选结果正确；规则集合「作者 = X」的成员与资源页同条件筛选一致</td></tr>
 <tr><td><b>第四期</b><br>订阅作为集合来源</td><td>Subscription 模块契约演进与迁移器；<code class="i">soulplus.search</code>、<code class="i">dlsite.circle</code>、<code class="i">bangumi.subjectRelations</code> 提供器及所需客户端方法；按订阅间隔调度；通知深链接；<code class="i">AutoAcquire</code>；Workflow 触发器与动作（<a href="#s8">§8</a>）</td><td>给某社团建集合并挂 <code class="i">dlsite.circle</code> 来源，首次检查后集合含该社团全部作品，已有的本地作品自动匹配为已落地成员；社团发新作后 30 分钟内收到通知并（开启自动获取时）出现获取任务；一条工作流「集合新增成员 → 创建获取任务 → 完成后通知」可在编辑器里搭出并跑通</td></tr>
 <tr><td><b>第五期</b><br>扩展与收编</td><td>有 API 的网盘抓取器（Mega、PikPak）；<code class="i">VndbClient</code> 与来源；帖子标题归一化与外部编号提取以合并重复帖子；规则集合的增量索引；路径标记预设与按样例标记；三个平台集成统一为 <code class="i">IPlatformConnector</code> 契约，持有型订阅经对接器提供，专用页面折叠进资源页；<code class="i">action.downloader.enqueue</code> 泛化</td><td>逐项独立验收；每项都可单独发布</td></tr>
@@ -826,7 +826,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 
 <h2 id="s14"><span class="n">§14</span>风险、失败模式与开放问题</h2>
 <div class="tw"><table><tr><th style="width:28%">风险 / 失败模式</th><th style="width:36%">后果</th><th>对策</th></tr>
-<tr><td>收件箱误认领（文件被分配给错误的任务）</td><td>错误的目录名、错误的集合成员被标为已落地</td><td>只在唯一高分时自动认领；认领记录可撤销（文件退回收件箱，资源反落地）；分卷未齐不认领</td></tr>
+<tr><td>待处理目录误认领（文件被分配给错误的任务）</td><td>错误的目录名、错误的集合成员被标为已落地</td><td>只在唯一高分时自动认领；认领记录可撤销（文件退回待处理目录，资源反落地）；分卷未齐不认领</td></tr>
 <tr><td>网盘下载文件名与帖子标题无关</td><td>无法自动认领</td><td>时间接近度与「只有一个等待任务」兜底；停车让用户点选；用户体验上鼓励一次只处理少量任务</td></tr>
 <tr><td>解压密码错误或帖子里没有密码</td><td>停车</td><td>候选回退链 + 输入框 + 记录到 <code class="i">PasswordService</code>；不做无限穷举</td></tr>
 <tr><td>同一作品多个帖子 / 多个来源</td><td>集合里出现重复成员，收集率虚低</td><td>第一期靠忽略；后期按外部编号与归一化标题合并，参考 04-resolution 的保守策略，永不自动合并低置信候选</td></tr>
@@ -861,7 +861,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <tr><td>帖子解析器（抓取器、大模型处理器、任务表、页面、油猴脚本）</td><td><code class="i">src/legacy/.../Components/PostParser/</code>、<code class="i">src/scripts/baka-monkey/</code></td><td>§7.2 解析阶段</td></tr>
 <tr><td><code class="i">SingleFileHttpDownloader</code></td><td><code class="i">src/legacy/.../Components/Downloader/Components/</code></td><td>§7 直链抓取</td></tr>
 <tr><td><code class="i">CompressedFileService</code>、<code class="i">CompressedFileHelper</code>、<code class="i">PasswordService</code>、<code class="i">FileController</code> 解压流程</td><td><code class="i">src/legacy/.../Components/Compression/</code>、<code class="i">Services/PasswordService.cs</code></td><td>§7.4 解压</td></tr>
-<tr><td><code class="i">WorkflowFsWatchService</code> 的监听与静默期</td><td><code class="i">src/apps/Bakabase.Service/Components/Workflow/</code></td><td>§7.3 收件箱监听</td></tr>
+<tr><td><code class="i">WorkflowFsWatchService</code> 的监听与静默期</td><td><code class="i">src/apps/Bakabase.Service/Components/Workflow/</code></td><td>§7.3 待处理目录监听</td></tr>
 <tr><td>显示名模板引擎、下载器文件名清理</td><td><code class="i">ResourceUtils.SplitDisplayNameTemplateIntoSegments</code>、<code class="i">AbstractDownloader.BuildDownloadFilename</code></td><td>§7.5 目录模板</td></tr>
 <tr><td><code class="i">IPathMarkService.Add</code> 自动入队、<code class="i">IPathMarkSyncService.EnqueueSync</code></td><td><code class="i">src/legacy/.../Services/PathMarkService.cs</code>、<code class="i">Components/PathSyncManager.cs</code></td><td>§7.5 同步、§12.1 向导</td></tr>
 <tr><td>Workflow 触发器/活动/条目类型契约与前端注册模式</td><td><code class="i">src/modules/Bakabase.Modules.Workflow/</code>、<code class="i">src/web/src/components/Workflow/</code></td><td>§8</td></tr>
@@ -886,7 +886,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 <tr><td>订阅演进为集合来源，每个订阅属于一个集合</td><td>保留独立订阅，另建集合来源</td><td>抓取逻辑完全相同；两个概念只会让用户困惑；停用快照后差异计算更可靠（持久化的已见集合）</td></tr>
 <tr><td>获取流程先定义与宿主无关的步骤契约，再选宿主</td><td>直接写死五个阶段的状态机</td><td>流程是动态的：不是都来自论坛、不是都经网盘、不一定解压、可能要重命名。步骤 + 方案把「流程」变成数据，具体流程只是内置的几份方案</td></tr>
 <tr><td>宿主选 Workflow 引擎，做一次最小、可选加入的扩展（挂起 / 恢复 + 单条目游标）；独立运行器为备选</td><td>①独立状态机引擎（本方案第一、二版的决定）；②大改 Workflow 支持分支与批处理挂起</td><td>方案编辑器、注册表、配置表单、运行记录、BTask 外壳、事件总线全部免费获得，现有文本与通知节点可直接混入方案；缺的只是「停下来等信号」。①要重复一套注册表与编辑器；②改动面失控。第一、二版反对改引擎的理由是「不想让引擎理解长流程」，现在的扩展不让引擎理解任何内容，只加一种结果与一个游标，边界见 §7.2</td></tr>
-<tr><td>网盘先走「收件箱认领」，API 网盘后期插入</td><td>先做网盘自动化</td><td>自动化脆弱且平台众多；收件箱与站点无关，一次实现覆盖全部网盘，且为后期自动化留好了接口</td></tr>
+<tr><td>网盘先走「待处理目录认领」，API 网盘后期插入</td><td>先做网盘自动化</td><td>自动化脆弱且平台众多；待处理目录与站点无关，一次实现覆盖全部网盘，且为后期自动化留好了接口</td></tr>
 <tr><td>付费购买改为显式停车点</td><td>沿用抓取时自动购买</td><td>花钱的动作必须可见、可审计、可设上限</td></tr>
 <tr><td>规则集合复用 ResourceProfile 的搜索评估，不复用 SavedSearch</td><td>新建第三套查询定义</td><td>已有两套是历史包袱，不能再加；SavedSearch 是可变标签页状态，不适合做定义</td></tr>
 <tr><td>「已落地」是独立的内部布尔属性</td><td>并入 <code class="i">ResourceStatus</code></td><td>两者正交：来源是否仍列出 vs 本地是否有文件</td></tr>

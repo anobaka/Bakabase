@@ -101,7 +101,7 @@ public class FetchMagnetStep : IAcquisitionStep
             Process.Start(new ProcessStartInfo(magnet) {UseShellExecute = true});
 
             ctx.Logger.LogInformation(
-                "Handed the magnet to this machine's torrent client. The files arrive through the inbox.");
+                "Handed the magnet to this machine's torrent client. The files arrive through the pending processing folder.");
 
             return new AcquisitionStepOutcome.Continue(item);
         }
