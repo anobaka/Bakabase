@@ -1,17 +1,18 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import i18n from "i18next";
+import _ from "lodash";
 import { MdFolder, MdInsertDriveFile } from "react-icons/md";
 
 import "./index.scss";
-import _ from "lodash";
-import { useUpdate } from "react-use";
 
-import { IconType } from "@/sdk/constants";
+import { IconType, RuntimeMode } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
 import { splitPathIntoSegments } from "@/components/utils";
 import { useIconsStore } from "@/stores/icons";
+import { useAppContextStore } from "@/stores/appContext";
+import { useIsPureClient, useUserSideActionsRunHere } from "@/stores/remoteAccess";
 
 type Props = {
   type: IconType;
@@ -53,36 +54,63 @@ const buildCacheKey = (type: IconType, path?: string): string | undefined => {
 
   return `${type}-${suffix}`;
 };
+
+const pendingIcons = new Map<string, Promise<string | null>>();
+
+const loadIcon = (cacheKey: string, type: IconType, path?: string): Promise<string | null> => {
+  const pending = pendingIcons.get(cacheKey);
+
+  if (pending) return pending;
+
+  const request = BApi.file
+    .getIconData({ type, path })
+    .then((response) => response.data ?? null)
+    // An unavailable native icon has the same fallback as an empty response.
+    .catch(() => null)
+    .finally(() => pendingIcons.delete(cacheKey));
+
+  pendingIcons.set(cacheKey, request);
+
+  return request;
+};
+
 const FileSystemEntryIcon = ({ path, type, size = 14, disableCache }: Props) => {
   const cacheKey = buildCacheKey(type, path);
-  const { icons, add } = useIconsStore();
-  const iconCache = cacheKey == undefined ? undefined : (icons[cacheKey] as string);
-  const iconImgDataRef = useRef<string | undefined>(
-    disableCache ? undefined : iconCache === undefined ? undefined : iconCache,
+  const iconCache = useIconsStore((state) =>
+    cacheKey === undefined ? undefined : (state.icons[cacheKey] as string | null | undefined),
   );
-  const forceUpdate = useUpdate();
-
-  // console.log(path, type, size, iconImgData);
+  const add = useIconsStore((state) => state.add);
+  const userSideActionsRunHere = useUserSideActionsRunHere();
+  const isPureClient = useIsPureClient();
+  // AppContext arrives asynchronously. Wait for it before assuming a local
+  // connection has a desktop; a thin client supplies its own icon handler.
+  const hasDesktopRuntime = useAppContextStore(
+    (state) => state.bApi2 !== null && state.runtimeMode !== RuntimeMode.Docker,
+  );
+  const canLoadIcon = userSideActionsRunHere && (isPureClient || hasDesktopRuntime);
+  const [loadedIcon, setLoadedIcon] = useState<{ cacheKey: string; data: string | null }>();
+  const iconImgData =
+    !disableCache && iconCache !== undefined
+      ? iconCache
+      : loadedIcon?.cacheKey === cacheKey
+        ? loadedIcon?.data
+        : undefined;
 
   useEffect(() => {
-    // console.log('cacheKey', cacheKey);
-    // console.log('iconImgDataRef.current', iconImgDataRef.current);
-    // console.log('disableCache', disableCache);
-    // console.log('icons', icons);
-    if (iconImgDataRef.current === undefined && cacheKey != undefined) {
-      BApi.file
-        .getIconData({
-          type,
-          path,
-        })
-        .then((r) => {
-          add({ [cacheKey]: r.data });
-          // console.log('add', { [cacheKey]: r.data });
-          iconImgDataRef.current = r.data;
-          forceUpdate();
-        });
-    }
-  }, []);
+    if (!canLoadIcon || cacheKey === undefined || iconImgData !== undefined) return;
+
+    let active = true;
+
+    loadIcon(cacheKey, type, path).then((data) => {
+      // Cache null too, so unavailable icons are not requested on every mount.
+      if (!disableCache) add({ [cacheKey]: data });
+      if (active) setLoadedIcon({ cacheKey, data });
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [add, cacheKey, canLoadIcon, disableCache, iconImgData, path, type]);
 
   return (
     <div
@@ -94,13 +122,8 @@ const FileSystemEntryIcon = ({ path, type, size = 14, disableCache }: Props) => 
         minHeight: size,
       }}
     >
-      {/* {type == 'directory' ? ( */}
-      {/*   <svg aria-hidden="true"> */}
-      {/*     <use xlinkHref="#icon-folder1" /> */}
-      {/*   </svg> */}
-      {/* ) : */}
-      {iconImgDataRef.current ? (
-        <img alt={""} src={iconImgDataRef.current} />
+      {canLoadIcon && iconImgData ? (
+        <img alt={""} src={iconImgData} />
       ) : type == IconType.Directory ? (
         <MdFolder
           style={{
