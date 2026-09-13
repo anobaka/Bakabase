@@ -18,6 +18,9 @@ import { recipeLabel, stepLabel } from "../../recipeLabels";
 import BApi from "@/sdk/BApi";
 import {
   Button,
+  Card,
+  CardBody,
+  CardHeader,
   Chip,
   Input,
   Pagination,
@@ -371,11 +374,14 @@ const CandidateOverview = ({ onStarted, onViewTasks, onOpenRecipe }: Props) => {
           </div>
           <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,20rem),1fr))] items-start gap-3">
             {data.items.map((candidate) => (
-              <section
+              <Card
                 key={candidate.resourceId}
-                className="flex min-w-0 flex-col gap-3 rounded-xl border border-default-200 bg-content1 p-3"
+                as="section"
+                className="min-w-0 border border-default-200"
+                radius="lg"
+                shadow="none"
               >
-                <div className="flex items-start gap-2">
+                <CardHeader className="items-start gap-2 p-3 pb-0">
                   <AiOutlineFileText
                     aria-hidden
                     className="mt-1 shrink-0 text-xl text-default-400"
@@ -404,26 +410,28 @@ const CandidateOverview = ({ onStarted, onViewTasks, onOpenRecipe }: Props) => {
                       {t<string>("acquisition.overview.viewTask")}
                     </Button>
                   )}
-                </div>
-                {candidate.leads.length === 0 ? (
-                  <div className="flex flex-col gap-2 border-t border-default-200 pt-3">
-                    <span className="text-xs text-default-500">
-                      {t<string>("acquisition.overview.noSources")}
-                    </span>
-                    <Button
-                      className="self-end"
-                      size="sm"
-                      startContent={<AiOutlineLink aria-hidden className="text-base" />}
-                      variant="flat"
-                      onPress={() => openResource(candidate.resourceId)}
-                    >
-                      {t<string>("acquisition.overview.addSource")}
-                    </Button>
-                  </div>
-                ) : (
-                  candidate.leads.map((lead) => renderLead(candidate, lead))
-                )}
-              </section>
+                </CardHeader>
+                <CardBody className="gap-3 p-3">
+                  {candidate.leads.length === 0 ? (
+                    <div className="flex flex-col gap-2 border-t border-default-200 pt-3">
+                      <span className="text-xs text-default-500">
+                        {t<string>("acquisition.overview.noSources")}
+                      </span>
+                      <Button
+                        className="self-end"
+                        size="sm"
+                        startContent={<AiOutlineLink aria-hidden className="text-base" />}
+                        variant="flat"
+                        onPress={() => openResource(candidate.resourceId)}
+                      >
+                        {t<string>("acquisition.overview.addSource")}
+                      </Button>
+                    </div>
+                  ) : (
+                    candidate.leads.map((lead) => renderLead(candidate, lead))
+                  )}
+                </CardBody>
+              </Card>
             ))}
           </div>
           {data.totalCount > PAGE_SIZE && (

@@ -78,7 +78,7 @@
   "resource.success.mediaLibraryRemoved": "Media library removed",
   "resource.error.failedToAddMediaLibrary": "Failed to add media library",
   "resource.error.failedToRemoveMediaLibrary": "Failed to remove media library",
-  "resource.empty.noCustomPropertyBound": "No custom properties yet",
+  "resource.empty.noCustomPropertyBound": "No custom properties linked yet",
   "resource.empty.customPropertiesDescription": "Bind properties such as creator and tags in a matching resource profile to add and organize more information.",
   "resource.empty.configureResourceProfile": "Configure resource profiles",
   "resource.error.failedToLoadChildren": "Failed to load children",

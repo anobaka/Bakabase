@@ -29,6 +29,9 @@ vi.mock("@/components/Resource/components/DetailModal", () => ({ default: () => 
 // Native controls keep disabled actions and selection changes observable while the actual
 // overview owns request timing, lead/recipe selection and submission.
 vi.mock("@/components/bakaui", () => ({
+  Card: ({ children }: { children?: ReactNode }) => <section>{children}</section>,
+  CardHeader: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
+  CardBody: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
   Button: ({
     children,
     isDisabled,
