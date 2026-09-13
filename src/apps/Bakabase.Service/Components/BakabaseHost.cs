@@ -15,6 +15,7 @@ using Bakabase.Infrastructures.Components.Orm;
 using Bakabase.Infrastructures.Components.SystemService;
 using Bakabase.Infrastructures.Resources;
 using Bakabase.InsideWorld.Business;
+using Bakabase.Modules.Acquisition.Models.Domain;
 using Bakabase.Modules.HealthScore.Abstractions.Components;
 using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
@@ -42,6 +43,7 @@ namespace Bakabase.Service.Components
                 Assembly.GetAssembly(SpecificTypeUtils<ResourceOptions>.Type)!,
                 Assembly.GetAssembly(SpecificTypeUtils<UIOptions>.Type)!,
                 Assembly.GetAssembly(SpecificTypeUtils<TaskOptions>.Type)!,
+                typeof(AcquisitionOptions).Assembly,
             ];
 
         protected override string OverrideFeAddress(string feAddress)
