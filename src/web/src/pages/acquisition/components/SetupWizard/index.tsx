@@ -189,10 +189,13 @@ const SetupWizard = ({ onDone, onDestroyed }: Props) => {
         className="flex flex-col gap-2"
         role="group"
       >
-        <div className="text-sm">{t<string>("acquisition.setup.drives.label")}</div>
-        <p className="text-xs text-default-500">
-          {t<string>("acquisition.setup.drives.description")}
-        </p>
+        <div className="text-sm font-medium">{t<string>("acquisition.setup.drives.label")}</div>
+        <div className="flex flex-col gap-1 rounded-lg bg-default-100 p-3">
+          <p className="text-sm text-default-600">
+            {t<string>("acquisition.setup.drives.description")}
+          </p>
+          <p className="text-xs text-default-500">{t<string>("acquisition.setup.drives.scope")}</p>
+        </div>
         <div className="flex flex-wrap gap-2">
           {driveOptions.map(({ value, labelKey, icon: Icon }) => {
             const priority = drives.indexOf(value);
@@ -222,6 +225,7 @@ const SetupWizard = ({ onDone, onDestroyed }: Props) => {
             );
           })}
         </div>
+        <p className="text-xs text-default-500">{t<string>("acquisition.setup.drives.hint")}</p>
       </div>
       <NumberInput
         description={t<string>("acquisition.setup.limit.description")}

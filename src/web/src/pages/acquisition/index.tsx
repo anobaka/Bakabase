@@ -6,6 +6,14 @@ import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { Drawer, DrawerBody, DrawerContent, DrawerHeader } from "@heroui/react";
+import {
+  AiOutlineBranches,
+  AiOutlineDownload,
+  AiOutlineFolderOpen,
+  AiOutlineImport,
+  AiOutlinePlusCircle,
+  AiOutlineSetting,
+} from "react-icons/ai";
 
 import InboxDrawer from "./components/InboxDrawer";
 import AcquisitionRow from "./components/AcquisitionRow";
@@ -101,27 +109,46 @@ const AcquisitionPage: React.FC = () => {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button size="sm" variant="flat" onPress={() => setRecipesOpen(true)}>
+          <Button
+            size="sm"
+            startContent={<AiOutlineBranches aria-hidden className="text-base" />}
+            variant="flat"
+            onPress={() => setRecipesOpen(true)}
+          >
             {t<string>("acquisition.recipes.title")}
           </Button>
           <Tooltip content={t<string>("acquisition.recipes.createDescription")}>
             <Button
               size="sm"
+              startContent={<AiOutlinePlusCircle aria-hidden className="text-base" />}
               variant="flat"
               onPress={() => navigate("/workflows/editor?template=acquisition")}
             >
               {t<string>("acquisition.recipes.create")}
             </Button>
           </Tooltip>
-          <Tooltip content={t<string>("acquisition.setup.description")}>
-            <Button
-              size="sm"
-              variant="light"
-              onPress={() => createPortal(SetupWizard, { onDone: load })}
-            >
-              {t<string>("acquisition.setup.open")}
-            </Button>
-          </Tooltip>
+          <div className="flex items-center gap-2">
+            <Tooltip content={t<string>("acquisition.inbox.hint")}>
+              <Button
+                size="sm"
+                startContent={<AiOutlineFolderOpen aria-hidden className="text-base" />}
+                variant="flat"
+                onPress={() => createPortal(InboxDrawer, { onClaimed: load })}
+              >
+                {t<string>("acquisition.inbox.open")}
+              </Button>
+            </Tooltip>
+            <Tooltip content={t<string>("acquisition.setup.description")}>
+              <Button
+                size="sm"
+                startContent={<AiOutlineSetting aria-hidden className="text-base" />}
+                variant="light"
+                onPress={() => createPortal(SetupWizard, { onDone: load })}
+              >
+                {t<string>("acquisition.setup.open")}
+              </Button>
+            </Tooltip>
+          </div>
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-2">
@@ -146,18 +173,10 @@ const AcquisitionPage: React.FC = () => {
         )}
 
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          <Tooltip content={t<string>("acquisition.inbox.hint")}>
-            <Button
-              size="sm"
-              variant="flat"
-              onPress={() => createPortal(InboxDrawer, { onClaimed: load })}
-            >
-              {t<string>("acquisition.inbox.open")}
-            </Button>
-          </Tooltip>
           <Button
             color="primary"
             size="sm"
+            startContent={<AiOutlineDownload aria-hidden className="text-base" />}
             onPress={() => createPortal(StartAcquisitionModal, { recipes, onStarted: load })}
           >
             {t<string>("acquisition.start")}
@@ -165,6 +184,7 @@ const AcquisitionPage: React.FC = () => {
           <Tooltip content={t<string>("acquisition.sharedList.hint")}>
             <Button
               size="sm"
+              startContent={<AiOutlineImport aria-hidden className="text-base" />}
               variant="light"
               onPress={() => createPortal(ImportSharedListModal, { onImported: load })}
             >

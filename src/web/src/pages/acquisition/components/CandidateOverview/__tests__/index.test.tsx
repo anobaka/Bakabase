@@ -65,14 +65,16 @@ vi.mock("@/components/bakaui", () => ({
     value,
     onValueChange,
     label,
+    "aria-label": ariaLabel,
   }: {
     placeholder?: string;
     value?: string;
     onValueChange?: (value: string) => void;
     label?: string;
+    "aria-label"?: string;
   }) => (
     <input
-      aria-label={label}
+      aria-label={ariaLabel ?? label}
       placeholder={placeholder}
       value={value}
       onChange={(event) => onValueChange?.(event.target.value)}
@@ -264,7 +266,7 @@ describe("CandidateOverview", () => {
       "acquisition.overview.unverified",
     );
     expect(container.querySelector("[data-chip]")).toHaveAttribute("data-color", "default");
-    expect(container).toHaveTextContent("acquisition.overview.unverifiedDescription");
+    expect(container).not.toHaveTextContent("acquisition.overview.unverifiedDescription");
     expect(container).toHaveTextContent("acquisition.overview.method.directDownload");
     expect(container).not.toHaveTextContent("acquisition.overview.unsupported");
     expect(button("acquisition.overview.start")).toBeEnabled();
@@ -288,13 +290,39 @@ describe("CandidateOverview", () => {
         (element) => element.textContent === "acquisition.overview.start",
       ),
     ).toBe(false);
-    await click(button("acquisition.overview.resourceDetails"));
+    await click(button("acquisition.overview.addSource"));
 
     expect(createPortal).toHaveBeenCalledWith(expect.any(Function), {
       id: 1,
       onDestroyed: expect.any(Function),
     });
     expect(createAcquisition).not.toHaveBeenCalled();
+    await act(async () => createPortal.mock.calls[0][1].onDestroyed());
+    expect(searchCandidates).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps the selected workflow when source details are expanded or collapsed", async () => {
+    await renderOverview();
+    const details = container.querySelector("details")!;
+    const summary = details.querySelector("summary")!;
+    const selector = container.querySelector<HTMLSelectElement>(
+      'select[aria-label="acquisition.overview.selectRecipe"]',
+    )!;
+
+    expect(details.open).toBe(false);
+    await select(selector, "20");
+    await click(summary);
+    expect(details.open).toBe(true);
+    await click(button("acquisition.recipes.open", details));
+    expect(onOpenRecipe).toHaveBeenCalledExactlyOnceWith(20);
+    await click(summary);
+    expect(details.open).toBe(false);
+    expect(selector).toHaveValue("20");
+    expect(createAcquisition).not.toHaveBeenCalled();
+    await click(button("acquisition.overview.start"));
+    expect(createAcquisition).toHaveBeenCalledWith(
+      expect.objectContaining({ resourceId: 1, acquisitionLeadId: 11, recipeDefinitionId: 20 }),
+    );
   });
 
   it.each([
