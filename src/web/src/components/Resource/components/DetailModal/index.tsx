@@ -33,6 +33,7 @@ import IntroductionSummary from "./IntroductionSummary";
 import ResourceProfiles from "./ResourceProfiles";
 import ResourceHierarchy from "./ResourceHierarchy";
 import CustomPropertiesEmptyState from "./CustomPropertiesEmptyState";
+import DetailTimestamp from "./DetailTimestamp";
 
 import AcquisitionPanel from "@/components/Resource/components/AcquisitionPanel";
 
@@ -44,7 +45,6 @@ import type { Resource as ResourceModel } from "@/core/models/Resource";
 import {
   Button,
   ButtonGroup,
-  Chip,
   Divider,
   Listbox,
   ListboxItem,
@@ -211,6 +211,7 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
           return (
             <Properties
               hidePropertyName
+              propertyClassNames={{ value: "justify-center" }}
               propertyInnerDirection={"ver"}
               reload={loadResource}
               resource={resource}
@@ -329,23 +330,12 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
           return <IntroductionSummary resource={resource} onReload={loadResource} />;
         case "playedAt":
           return resource.playedAt ? (
-            <div
-              className={"grid gap-x-4 gap-y-1 items-center overflow-visible"}
-              style={{ gridTemplateColumns: "calc(120px) minmax(0, 1fr)" }}
-            >
-              <Chip
-                className={"text-right justify-self-end"}
-                color={"default"}
-                radius={"sm"}
-                size={"sm"}
-              >
-                {t<string>("resource.label.lastPlayedAt")}
-              </Chip>
-              <div className={"flex items-center gap-1"}>
-                {resource.playedAt}
+            <DetailTimestamp
+              action={
                 <Tooltip content={t<string>("resource.action.markAsNotPlayed")}>
                   <Button
                     isIconOnly
+                    aria-label={t<string>("resource.action.markAsNotPlayed")}
                     size={"sm"}
                     variant={"light"}
                     onPress={() => {
@@ -357,8 +347,10 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
                     <CloseCircleOutlined className={"text-base opacity-60"} />
                   </Button>
                 </Tooltip>
-              </div>
-            </div>
+              }
+              label={t<string>("resource.label.lastPlayedAt")}
+              value={resource.playedAt}
+            />
           ) : null;
         case "properties":
           return (

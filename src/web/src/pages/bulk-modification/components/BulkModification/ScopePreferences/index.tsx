@@ -64,7 +64,10 @@ const ScopePreferences = ({ configs: propsConfigs, disabled, onChange }: Props) 
     const summary =
       c.priorities && c.priorities.length > 0
         ? c.priorities
-            .map((p) => `${PropertyValueScopeLabel[p.scope]}${p.fallbackOnEmpty ? "↘" : "·"}`)
+            .map(
+              (p) =>
+                `${t<string>(`PropertyValueScope.${PropertyValueScopeLabel[p.scope]}`)}${p.fallbackOnEmpty ? "↘" : "·"}`,
+            )
             .join(" → ")
         : t<string>("bulkModification.scopePreference.willClear");
 

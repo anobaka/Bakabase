@@ -86,7 +86,7 @@ const ScopePreferencePopover = ({
   const nonEmptyScopes = useMemo(() => {
     const all = propertyValueScopes.map((s) => ({
       scope: s.value,
-      label: PropertyValueScopeLabel[s.value],
+      label: t<string>(`PropertyValueScope.${PropertyValueScopeLabel[s.value]}`),
       value: values?.find((v) => v.scope === s.value),
     }));
     const visible = showEmpty ? all : all.filter((s) => hasValue(s.value));
@@ -99,7 +99,7 @@ const ScopePreferencePopover = ({
     const rest = visible.filter((s) => !inListSet.has(s.scope));
 
     return [...inList, ...rest];
-  }, [values, priorities, showEmpty]);
+  }, [values, priorities, showEmpty, t]);
 
   const effectiveScope = useMemo(() => {
     for (const s of effectivePriority) {
@@ -198,7 +198,7 @@ const ScopePreferencePopover = ({
         <div className="flex items-center justify-between gap-2 text-xs">
           <span className="opacity-60">
             {effectiveScope !== undefined
-              ? `${t("property.scopePreference.currentlyShowing", { scope: PropertyValueScopeLabel[effectiveScope] })} · ${preference ? t("property.scopePreference.viaOverride") : t("property.scopePreference.viaDefault")}`
+              ? `${t("property.scopePreference.currentlyShowing", { scope: t<string>(`PropertyValueScope.${PropertyValueScopeLabel[effectiveScope]}`) })} · ${preference ? t("property.scopePreference.viaOverride") : t("property.scopePreference.viaDefault")}`
               : t("property.scopePreference.currentlyBlank")}
           </span>
           <label className="flex items-center gap-1 shrink-0 cursor-pointer">

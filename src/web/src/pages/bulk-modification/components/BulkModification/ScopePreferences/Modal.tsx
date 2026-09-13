@@ -214,7 +214,9 @@ const ScopePreferenceConfigModal = ({ onDestroyed, config: propsConfig, onSubmit
                     </Button>
                   )}
                   <span className={`flex-1 truncate ${inList ? "" : "opacity-60"}`}>
-                    <span className="font-medium">{PropertyValueScopeLabel[scope]}</span>
+                    <span className="font-medium">
+                      {t<string>(`PropertyValueScope.${PropertyValueScopeLabel[scope]}`)}
+                    </span>
                   </span>
                   {inList && (
                     <Switch

@@ -320,6 +320,9 @@ const AcquisitionPanel: React.FC<Props> = ({ resource, onChanged, onNavigate }) 
           </p>
         </div>
       </div>
+      <p className="text-xs leading-relaxed text-default-500">
+        {t<string>("acquisition.leads.visibilityHint")}
+      </p>
       {loading ? (
         <Spinner aria-label={t<string>("acquisition.leads.loading")} size="sm" />
       ) : failed ? (
@@ -356,28 +359,38 @@ const AcquisitionPanel: React.FC<Props> = ({ resource, onChanged, onNavigate }) 
           )}
         </>
       )}
-      <div className="flex flex-wrap gap-2">
-        <Button
-          color="primary"
-          isDisabled={pending != null || activeTask || loading || failed}
-          size="sm"
-          startContent={<AiOutlinePlus aria-hidden className="text-base" />}
-          variant="flat"
-          onPress={() =>
-            createPortal(AddSourceModal, { resourceId: resource.id, onAdded: refresh })
-          }
-        >
-          {t<string>("acquisition.leads.chooseMethod")}
-        </Button>
-        <Button
-          isDisabled={pending != null || activeTask}
-          size="sm"
-          startContent={<AiOutlineFolderOpen aria-hidden className="text-base" />}
-          variant="light"
-          onPress={linkLocalFolder}
-        >
-          {t<string>("acquisition.action.linkLocalFolder")}
-        </Button>
+      <div className="grid gap-3 border-t border-default-200 pt-3 sm:grid-cols-2">
+        <div className="flex flex-col items-start gap-2">
+          <Button
+            color="primary"
+            isDisabled={pending != null || activeTask || loading || failed}
+            size="sm"
+            startContent={<AiOutlinePlus aria-hidden className="text-base" />}
+            variant="flat"
+            onPress={() =>
+              createPortal(AddSourceModal, { resourceId: resource.id, onAdded: refresh })
+            }
+          >
+            {t<string>("acquisition.leads.chooseMethod")}
+          </Button>
+          <p className="text-xs leading-relaxed text-default-500">
+            {t<string>("acquisition.leads.addMethodHint")}
+          </p>
+        </div>
+        <div className="flex flex-col items-start gap-2">
+          <Button
+            isDisabled={pending != null || activeTask}
+            size="sm"
+            startContent={<AiOutlineFolderOpen aria-hidden className="text-base" />}
+            variant="flat"
+            onPress={linkLocalFolder}
+          >
+            {t<string>("acquisition.action.linkLocalFolder")}
+          </Button>
+          <p className="text-xs leading-relaxed text-default-500">
+            {t<string>("acquisition.leads.linkLocalHint")}
+          </p>
+        </div>
       </div>
     </section>
   );

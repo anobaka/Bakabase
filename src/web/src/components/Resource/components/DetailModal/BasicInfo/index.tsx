@@ -2,9 +2,10 @@
 
 import type { Resource } from "@/core/models/Resource";
 
-import dayjs from "dayjs";
 import React from "react";
 import { useTranslation } from "react-i18next";
+
+import DetailTimestamp from "../DetailTimestamp";
 
 type Props = {
   resource: Resource;
@@ -46,23 +47,21 @@ const BasicInfo = ({ resource }: Props) => {
 
   return (
     <div
-      className={"grid justify-evenly gap-y-1"}
-      style={{ gridTemplateColumns: "repeat(2, auto)" }}
+      className="grid gap-2"
+      style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 8rem), 1fr))" }}
     >
-      {dateTimes.map((dateTime, i) => {
+      {dateTimes.map((dateTime) => {
         const label = t<string>(dateTime.label);
         const raw = resource[dateTime.key] as string | undefined;
         const unavailable = dateTime.fromFiles && !resource.hasLocalPath;
 
         return (
-          <div key={i} className={"flex flex-col"}>
-            <div className={"text-xs opacity-60"}>{label}</div>
-            {unavailable ? (
-              <div className={"opacity-60"}>{t<string>("resource.label.notMaterialized")}</div>
-            ) : (
-              <div>{raw ? dayjs(raw).format("YYYY-MM-DD HH:mm:ss") : "-"}</div>
-            )}
-          </div>
+          <DetailTimestamp
+            key={dateTime.key}
+            label={label}
+            unavailableText={unavailable ? t<string>("resource.label.notMaterialized") : undefined}
+            value={raw}
+          />
         );
       })}
     </div>

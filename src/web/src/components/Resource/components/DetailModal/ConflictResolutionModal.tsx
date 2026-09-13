@@ -385,7 +385,9 @@ const ConflictResolutionModal = ({ resourceId, onResolved, onDestroyed }: Props)
                           </td>
                           <td className="p-2">
                             <Chip color="default" size="sm" variant="flat">
-                              {PropertyValueScopeLabel[scope] || `Scope ${scope}`}
+                              {PropertyValueScopeLabel[scope]
+                                ? t<string>(`PropertyValueScope.${PropertyValueScopeLabel[scope]}`)
+                                : t<string>("property.valueScope.unknown", { scope })}
                             </Chip>
                           </td>
                           {allResources.map((res) => {
