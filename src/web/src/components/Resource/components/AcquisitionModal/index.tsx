@@ -30,7 +30,7 @@ const AcquisitionModal: React.FC<Props> = ({ resource, onChanged, onDestroyed })
       title={t<string>("acquisition.modal.title", { name: resource.displayName ?? resource.id })}
       onDestroyed={onDestroyed}
     >
-      <AcquisitionPanel resource={resource} onChanged={onChanged} />
+      <AcquisitionPanel resource={resource} onChanged={onChanged} onNavigate={onDestroyed} />
     </Modal>
   );
 };

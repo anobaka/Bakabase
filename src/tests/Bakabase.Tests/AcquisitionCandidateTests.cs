@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Platform;
 using Bakabase.Abstractions.Models.Domain;
@@ -18,6 +19,7 @@ using Bakabase.Modules.Workflow.Abstractions.Models.Input;
 using Bakabase.Modules.Workflow.Abstractions.Services;
 using Bakabase.Service.Components.Acquisition;
 using Bakabase.Service.Components.Acquisition.Steps;
+using Bakabase.Service.Controllers;
 using Bakabase.TestKit.Utils;
 using Bootstrap.Components.Configuration.Abstractions;
 using Microsoft.EntityFrameworkCore;
@@ -191,4 +193,99 @@ public sealed class AcquisitionCandidateTests
         Assert.AreEqual(unsupported, (await Candidates.SearchAsync(filter: "unsupported"))
             .Items.Single().ResourceId);
     }
+    [DataTestMethod]
+    [DataRow(AcquisitionStatus.Pending)]
+    [DataRow(AcquisitionStatus.Running)]
+    [DataRow(AcquisitionStatus.Waiting)]
+    public async Task SingleResourceUsesTheOverviewsRoutesRecipesAndActiveTask(AcquisitionStatus status)
+    {
+        var target = await Missing("The same resource name");
+        await Missing("The same resource name");
+        await Identity(target, ResourceSource.Steam, "123");
+        await Identity(target, ResourceSource.Pixiv, "456");
+        await AddLead(target, AcquisitionLeadKind.DirectUrl, "https://example.invalid/single.zip");
+        _sp.GetRequiredService<IBOptions<AcquisitionOptions>>().Value
+            .RecipeByLeadKind[AcquisitionLeadKind.DirectUrl] = "A deleted default";
+        var recipe = (await _sp.GetRequiredService<IAcquisitionService>().GetRecipesAsync()).First();
+        var active = new AcquisitionTaskDbModel
+        {
+            ResourceId = target, Status = status, RecipeDefinitionId = recipe.DefinitionId,
+            LeadKind = AcquisitionLeadKind.PlatformHolding, CreatedAt = DateTime.Now, UpdatedAt = DateTime.Now
+        };
+        Db.Set<AcquisitionTaskDbModel>().Add(active);
+        await Db.SaveChangesAsync();
+        Db.Set<AcquisitionTaskDbModel>().Add(new AcquisitionTaskDbModel
+        {
+            ResourceId = target, Status = AcquisitionStatus.Completed, RecipeDefinitionId = recipe.DefinitionId,
+            LeadKind = AcquisitionLeadKind.PlatformHolding, CreatedAt = DateTime.Now, UpdatedAt = DateTime.Now
+        });
+        await Db.SaveChangesAsync();
+
+        var overview = await Candidates.SearchAsync();
+        var detail = await Candidates.GetAsync(target);
+
+        Assert.AreEqual(1, detail.TotalCount);
+        Assert.AreEqual(1, detail.Page);
+        Assert.AreEqual(1, detail.PageSize);
+        var item = detail.Items.Single();
+        Assert.AreEqual(JsonSerializer.Serialize(overview.Items.Single(r => r.ResourceId == target)),
+            JsonSerializer.Serialize(item), "Both entry points must describe the same routes and safeguards.");
+        Assert.AreEqual(JsonSerializer.Serialize(overview.Recipes), JsonSerializer.Serialize(detail.Recipes));
+        Assert.AreEqual(active.Id, item.ActiveTaskId);
+        Assert.AreEqual(status, item.ActiveTaskStatus);
+        Assert.AreEqual("Steam:123", item.Leads.Single(l => l.SourceName == "Steam").Value);
+        Assert.AreEqual("unsupportedPlatform", item.Leads.Single(l => l.SourceName == "Pixiv").Capability);
+        Assert.IsNull(item.Leads.Single(l => l.Kind == AcquisitionLeadKind.DirectUrl).DefaultRecipeDefinitionId);
+        Assert.AreEqual(2, await Db.Set<AcquisitionTaskDbModel>().CountAsync(),
+            "Reading either entry point must not start another task.");
+    }
+
+    [TestMethod]
+    public async Task SingleResourceReturnsEmptyForLocalAndMissingResources_ButKeepsRecipes()
+    {
+        var resourceService = _sp.GetRequiredService<IResourceService>();
+        const string path = "/not-probed/single-candidate-local";
+        await resourceService.AddOrPutRange([new Resource {Path = path, Status = ResourceStatus.Active}]);
+        var local = (await resourceService.GetAll(r => r.Path == path)).Single();
+        await Identity(local.Id, ResourceSource.Steam, "999");
+        var recipes = await _sp.GetRequiredService<IAcquisitionService>().GetRecipesAsync();
+
+        foreach (var id in new[] {local.Id, int.MaxValue})
+        {
+            var detail = await Candidates.GetAsync(id);
+            Assert.AreEqual(0, detail.TotalCount);
+            Assert.AreEqual(0, detail.Items.Count);
+            Assert.AreEqual(JsonSerializer.Serialize(recipes), JsonSerializer.Serialize(detail.Recipes));
+        }
+    }
+
+    [TestMethod]
+    public async Task DerivedResourceLeadsUseTheExecutablePlatformReference_WithoutChangingStoredLinks()
+    {
+        var target = await Missing("Platform references");
+        await Identity(target, ResourceSource.Steam, "123");
+        await Identity(target, ResourceSource.DLsite, "RJ00000001");
+        await Identity(target, ResourceSource.ExHentai, "456/abcdef");
+        const string sharedPage = "https://example.invalid/post";
+        await AddLead(target, AcquisitionLeadKind.SharedPage, sharedPage);
+        var leadService = _sp.GetRequiredService<IAcquisitionLeadService>();
+        var controller = new AcquisitionLeadController(leadService,
+            _sp.GetRequiredService<IResourceSourceLinkService>());
+
+        var response = await controller.GetAll(target);
+        var derived = response.Data!.Where(l => l.IsDerived).ToList();
+        Assert.AreEqual(3, derived.Count);
+        foreach (var lead in derived)
+        {
+            Assert.IsTrue(FetchFromPlatformStep.TryReadLead(lead.Value, out var source, out var key));
+            Assert.AreEqual(lead.SourceName, source.ToString());
+            Assert.AreEqual($"{lead.SourceName}:{key}", lead.Value);
+            Assert.AreEqual(0, lead.Id);
+        }
+        CollectionAssert.AreEquivalent(new[] {"Steam:123", "DLsite:RJ00000001", "ExHentai:456/abcdef"},
+            derived.Select(l => l.Value).ToArray());
+        Assert.AreEqual(sharedPage, response.Data!.Single(l => !l.IsDerived).Value);
+        Assert.AreEqual(1, (await leadService.GetByResourceId(target)).Count);
+    }
+
 }

@@ -56,6 +56,17 @@ public class AcquisitionController(
     }
 
     /// <summary>
+    /// The same known routes and workflows as the overview, for one resource. Local resources and
+    /// missing IDs return an empty page; platform accounts and remote links are never probed.
+    /// </summary>
+    [HttpGet("candidates/{resourceId:int}")]
+    [SwaggerOperation(OperationId = "GetAcquisitionCandidate")]
+    [RemoteAccessible]
+    public async Task<SingletonResponse<AcquisitionCandidatePageViewModel>> GetCandidate(int resourceId,
+        [FromServices] AcquisitionCandidateService candidates) =>
+        new(await candidates.GetAsync(resourceId, HttpContext.RequestAborted));
+
+    /// <summary>
     /// Start from a link and nothing else. The link is resolved to a resource — matched against one
     /// that already exists, or created — and then acquired the ordinary way. This is what the
     /// browser script calls, and it is the shortest path from "I found this" to "it is coming".
@@ -95,8 +106,15 @@ public class AcquisitionController(
     {
         await using var content = file.OpenReadStream();
 
-        return new ListResponse<SharedListPreviewRow>(
-            await importer.PreviewAsync(content, file.FileName));
+        try
+        {
+            return new ListResponse<SharedListPreviewRow>(
+                await importer.PreviewAsync(content, file.FileName));
+        }
+        catch (FormatException ex)
+        {
+            return ListResponseBuilder<SharedListPreviewRow>.BuildBadRequest(ex.Message);
+        }
     }
 
     /// <summary>

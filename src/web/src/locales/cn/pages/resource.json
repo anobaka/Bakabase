@@ -142,7 +142,7 @@
   "resource.detailLayout.sample.actions.open": "打开",
   "resource.detailLayout.sample.actions.refresh": "刷新",
   "resource.detailLayout.sample.actions.enhance": "增强",
-  "resource.detailLayout.sample.acquisition.title": "从哪里获取",
+  "resource.detailLayout.sample.acquisition.title": "获取方式",
   "resource.detailLayout.sample.acquisition.lead": "https://example.com/thread/1",
   "resource.detailLayout.sample.acquisition.hint": "或者关联一个已有的目录",
   "resource.detailLayout.sample.basicInfo.createdLabel": "创建于",

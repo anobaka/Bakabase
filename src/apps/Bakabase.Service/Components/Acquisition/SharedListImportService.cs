@@ -149,9 +149,9 @@ public class SharedListImportService(
     {
         var workbook = WorkbookFactory.Create(content);
         var sheet = workbook.GetSheetAt(0);
-        var rows = new List<SharedListRow>();
+        var records = new List<(IReadOnlyList<string> Cells, int LineNumber)>();
 
-        if (sheet == null) return rows;
+        if (sheet == null) return [];
 
         for (var i = sheet.FirstRowNum; i <= sheet.LastRowNum; i++)
         {
@@ -168,12 +168,10 @@ public class SharedListImportService(
                 cells.Add(cell == null ? "" : cell.ToString() ?? "");
             }
 
-            var row = SharedListReader.FromCells(cells, i + 1);
-
-            if (row.Title != null || row.Url != null) rows.Add(row);
+            records.Add((cells, i + 1));
         }
 
-        return rows;
+        return SharedListReader.ReadRows(records);
     }
 
     /// <summary>

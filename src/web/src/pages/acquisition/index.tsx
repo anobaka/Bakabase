@@ -4,7 +4,7 @@ import type { components } from "@/sdk/BApi2";
 
 import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Drawer, DrawerBody, DrawerContent, DrawerHeader } from "@heroui/react";
 import {
   AiOutlineBranches,
@@ -54,12 +54,25 @@ const ORDER: Record<number, number> = {
 const AcquisitionPage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { createPortal } = useBakabaseContext();
 
   const [tasks, setTasks] = useState<AcquisitionTaskVm[]>([]);
   const [recipes, setRecipes] = useState<AcquisitionRecipeVm[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<TabKey>("overview");
+
+  useEffect(() => {
+    const requested = searchParams.get("tab");
+
+    if (
+      requested === "live" ||
+      requested === "all" ||
+      requested === "matches" ||
+      requested === "overview"
+    )
+      setTab(requested);
+  }, [searchParams]);
   const [recipesOpen, setRecipesOpen] = useState(false);
   const [matchCount, setMatchCount] = useState(0);
 

@@ -20,6 +20,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/acquisition/candidates/{resourceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAcquisitionCandidate"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/acquisition/from-url": {
         parameters: {
             query?: never;
@@ -14478,6 +14494,30 @@ export interface operations {
             };
             header?: never;
             path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.AcquisitionCandidatePageViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.AcquisitionCandidatePageViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.AcquisitionCandidatePageViewModel]"];
+                };
+            };
+        };
+    };
+    GetAcquisitionCandidate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                resourceId: number;
+            };
             cookie?: never;
         };
         requestBody?: never;

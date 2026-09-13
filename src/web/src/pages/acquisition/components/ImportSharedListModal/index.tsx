@@ -6,7 +6,9 @@ import type { components } from "@/sdk/BApi2";
 
 import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { AiOutlineUpload } from "react-icons/ai";
+import { AiOutlineDownload, AiOutlineUpload } from "react-icons/ai";
+
+import { getSharedListTemplate } from "./template";
 
 import BApi from "@/sdk/BApi";
 import {
@@ -51,11 +53,13 @@ type Props = DestroyableProps & {
  * correct any of it in place.
  */
 const ImportSharedListModal = ({ onImported, onDestroyed }: Props) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const template = getSharedListTemplate(i18n.resolvedLanguage ?? i18n.language);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [rows, setRows] = useState<Row[]>();
   const [reading, setReading] = useState(false);
+  const [readError, setReadError] = useState<string>();
   const [importing, setImporting] = useState(false);
   const [collections, setCollections] = useState<CollectionModel[]>([]);
   const [collectionId, setCollectionId] = useState<number>();
@@ -69,8 +73,16 @@ const ImportSharedListModal = ({ onImported, onDestroyed }: Props) => {
 
   const read = async (file: File) => {
     setReading(true);
+    setRows(undefined);
+    setReadError(undefined);
     try {
       const rsp = await BApi.acquisition.previewSharedList({ file });
+
+      if (rsp.code !== 0) {
+        setReadError(rsp.message || t<string>("acquisition.sharedList.readFailed"));
+
+        return;
+      }
 
       setRows(
         ((rsp.data ?? []) as PreviewRow[]).map((r) => ({
@@ -83,6 +95,10 @@ const ImportSharedListModal = ({ onImported, onDestroyed }: Props) => {
           // user wants; unchecking it by default says so without hiding it.
           include: !r.alreadyKnown,
         })),
+      );
+    } catch (error) {
+      setReadError(
+        error instanceof Error ? error.message : t<string>("acquisition.sharedList.readFailed"),
       );
     } finally {
       setReading(false);
@@ -153,7 +169,17 @@ const ImportSharedListModal = ({ onImported, onDestroyed }: Props) => {
         </div>
         <p className="text-xs text-default-400">{t<string>("acquisition.sharedList.example")}</p>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            as="a"
+            download={template.fileName}
+            href={template.url}
+            size="sm"
+            startContent={<AiOutlineDownload className="text-base" />}
+            variant="flat"
+          >
+            {t<string>("acquisition.sharedList.downloadTemplate")}
+          </Button>
           <input
             ref={fileRef}
             hidden
@@ -163,6 +189,7 @@ const ImportSharedListModal = ({ onImported, onDestroyed }: Props) => {
               const file = e.target.files?.[0];
 
               if (file) void read(file);
+              e.target.value = "";
             }}
           />
           <Button
@@ -175,6 +202,16 @@ const ImportSharedListModal = ({ onImported, onDestroyed }: Props) => {
           </Button>
           {reading && <Spinner size="sm" />}
         </div>
+
+        <p className="text-xs text-default-500">
+          {t<string>("acquisition.sharedList.templateHelp")}
+        </p>
+
+        {readError && (
+          <p className="text-sm text-danger" role="alert">
+            {readError}
+          </p>
+        )}
 
         {rows && rows.length === 0 && (
           <div className="text-sm text-default-400">

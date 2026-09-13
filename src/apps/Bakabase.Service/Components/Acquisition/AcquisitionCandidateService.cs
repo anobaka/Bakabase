@@ -64,10 +64,43 @@ public class AcquisitionCandidateService(
             ? ids.OrderByDescending(id => id)
                 .Skip((int) Math.Min((long) (page - 1) * pageSize, ids.Length)).Take(pageSize).ToArray()
             : ids;
-        var stored = await leads.GetByResourceIds(lookupIds);
-        var identities = await sourceLinks.GetByResourceIdsGrouped(lookupIds);
+        var routes = await LoadRoutesAsync(lookupIds, recipes, ct);
+
+        var matched = ids.Where(id => filter switch
+        {
+            "withSources" => routes[id].Count > 0,
+            "withoutSources" => routes[id].Count == 0,
+            "unsupported" => routes[id].Count > 0 && routes[id].All(l => l.Capability != "supported"),
+            _ => true
+        }).OrderByDescending(id => id).ToArray();
+        var skip = Math.Min((long) (page - 1) * pageSize, matched.Length);
+        var pageIds = matched.Skip((int) skip).Take(pageSize).ToArray();
+
+        return await BuildPageAsync(pageIds, routes, matched.Length, page, pageSize, recipes, ct);
+    }
+
+    /// <summary>Reads one resource's routes directly, without a global resource search or platform probe.</summary>
+    public async Task<AcquisitionCandidatePageViewModel> GetAsync(int resourceId, CancellationToken ct = default)
+    {
+        var recipes = await acquisitions.GetRecipesAsync(ct);
+        var resource = await resources.Get(resourceId);
+        if (resource == null || resource.HasLocalPath)
+        {
+            return new AcquisitionCandidatePageViewModel([], 0, 1, 1, recipes);
+        }
+
+        var ids = new[] {resourceId};
+        var routes = await LoadRoutesAsync(ids, recipes, ct);
+        return await BuildPageAsync(ids, routes, 1, 1, 1, recipes, ct);
+    }
+
+    private async Task<Dictionary<int, List<AcquisitionCandidateLeadViewModel>>> LoadRoutesAsync(
+        int[] ids, List<AcquisitionRecipeSummary> recipes, CancellationToken ct)
+    {
+        var stored = await leads.GetByResourceIds(ids);
+        var identities = await sourceLinks.GetByResourceIdsGrouped(ids);
         var routes = new Dictionary<int, List<AcquisitionCandidateLeadViewModel>>();
-        foreach (var id in lookupIds)
+        foreach (var id in ids)
         {
             ct.ThrowIfCancellationRequested();
             var known = (identities.GetValueOrDefault(id) ?? [])
@@ -85,19 +118,16 @@ public class AcquisitionCandidateService(
             routes[id] = known;
         }
 
-        var matched = ids.Where(id => filter switch
-        {
-            "withSources" => routes[id].Count > 0,
-            "withoutSources" => routes[id].Count == 0,
-            "unsupported" => routes[id].Count > 0 && routes[id].All(l => l.Capability != "supported"),
-            _ => true
-        }).OrderByDescending(id => id).ToArray();
-        var skip = Math.Min((long) (page - 1) * pageSize, matched.Length);
-        var pageIds = matched.Skip((int) skip).Take(pageSize).ToArray();
+        return routes;
+    }
 
+    private async Task<AcquisitionCandidatePageViewModel> BuildPageAsync(int[] pageIds,
+        Dictionary<int, List<AcquisitionCandidateLeadViewModel>> routes, int totalCount, int page,
+        int pageSize, List<AcquisitionRecipeSummary> recipes, CancellationToken ct)
+    {
         if (pageIds.Length == 0)
         {
-            return new AcquisitionCandidatePageViewModel([], matched.Length, page, pageSize, recipes);
+            return new AcquisitionCandidatePageViewModel([], totalCount, page, pageSize, recipes);
         }
 
         var titles = (await names.GetAll(v => pageIds.Contains(v.ResourceId)))
@@ -116,7 +146,7 @@ public class AcquisitionCandidateService(
             return new AcquisitionCandidateViewModel(id, titles.GetValueOrDefault(id) ?? $"#{id}",
                 routes[id], task?.Id, task?.Status);
         }).ToList();
-        return new AcquisitionCandidatePageViewModel(items, matched.Length, page, pageSize, recipes);
+        return new AcquisitionCandidatePageViewModel(items, totalCount, page, pageSize, recipes);
     }
 
     private async Task<int[]> SearchResourceIds(string? keyword)

@@ -50,27 +50,51 @@ public static partial class SharedListReader
     /// Reads separated values — comma or tab. Quoted fields are honoured because a title with a
     /// comma in it is the commonest thing in one of these files.
     /// </summary>
-    public static List<SharedListRow> ReadDelimited(string text)
+    public static List<SharedListRow> ReadDelimited(string text) =>
+        ReadRows(SplitRecords(text.TrimStart('\uFEFF')));
+
+    /// <summary>
+    /// Recognised headers make the columns authoritative. Headerless lists retain the original
+    /// content-based reading, including lists whose columns are in a different order on each row.
+    /// </summary>
+    public static List<SharedListRow> ReadRows(
+        IEnumerable<(IReadOnlyList<string> Cells, int LineNumber)> records)
     {
         var rows = new List<SharedListRow>();
-        var lines = text.Replace("\r\n", "\n").Split('\n');
+        Dictionary<string, int>? columns = null;
+        var first = true;
 
-        for (var i = 0; i < lines.Length; i++)
+        foreach (var (cells, lineNumber) in records)
         {
-            var line = lines[i];
+            if (cells.All(string.IsNullOrWhiteSpace)) continue;
 
-            if (line.Trim().Length == 0) continue;
+            if (first)
+            {
+                first = false;
+                columns = ReadHeader(cells);
+                if (columns != null) continue;
+            }
 
-            var cells = SplitCells(line);
-
-            if (IsHeader(cells)) continue;
-
-            var row = FromCells(cells, i + 1);
-
+            var row = columns == null
+                ? FromCells(cells, lineNumber)
+                : FromColumns(cells, columns, lineNumber);
             if (row.Title != null || row.Url != null) rows.Add(row);
         }
 
         return rows;
+    }
+
+    private static SharedListRow FromColumns(IReadOnlyList<string> cells,
+        IReadOnlyDictionary<string, int> columns, int lineNumber)
+    {
+        string? Value(string key) => columns.TryGetValue(key, out var index) && index < cells.Count
+            && !string.IsNullOrWhiteSpace(cells[index]) ? cells[index].Trim() : null;
+
+        var title = Value("title");
+        var url = Value("url");
+        var password = Value("password");
+
+        return new SharedListRow(title, url, password, lineNumber);
     }
 
     /// <summary>
@@ -139,30 +163,44 @@ public static partial class SharedListReader
         return FromCells(cells, lineNumber);
     }
 
-    private static List<string> SplitCells(string line)
+    private static List<string> SplitCells(string line) =>
+        SplitRecords(line, strictQuotes: false).First().Cells.ToList();
+
+    private static IEnumerable<(IReadOnlyList<string> Cells, int LineNumber)> SplitRecords(string text, bool strictQuotes = true)
     {
-        var separator = line.Contains('\t') ? '\t' : ',';
+        // Determine the delimiter from the first record, ignoring punctuation inside quotes.
+        var separator = ',';
+        var quoted = false;
+        var hasContent = false;
+        foreach (var c in text)
+        {
+            if (c == '"') quoted = !quoted;
+            if (!quoted && c is '\r' or '\n')
+            {
+                if (hasContent) break;
+                continue;
+            }
+            if (!quoted && c == '\t') { separator = '\t'; break; }
+            if (!char.IsWhiteSpace(c)) hasContent = true;
+        }
+
         var cells = new List<string>();
         var current = new StringBuilder();
-        var quoted = false;
+        var line = 1;
+        var recordLine = 1;
+        quoted = false;
 
-        for (var i = 0; i < line.Length; i++)
+        for (var i = 0; i < text.Length; i++)
         {
-            var c = line[i];
-
+            var c = text[i];
             if (c == '"')
             {
-                // "" inside a quoted field is one quote, which is how a spreadsheet writes it.
-                if (quoted && i + 1 < line.Length && line[i + 1] == '"')
+                if (quoted && i + 1 < text.Length && text[i + 1] == '"')
                 {
                     current.Append('"');
                     i++;
                 }
-                else
-                {
-                    quoted = !quoted;
-                }
-
+                else quoted = !quoted;
                 continue;
             }
 
@@ -170,44 +208,56 @@ public static partial class SharedListReader
             {
                 cells.Add(current.ToString());
                 current.Clear();
+                continue;
+            }
 
+            if (c is '\r' or '\n')
+            {
+                var newline = c == '\r' && i + 1 < text.Length && text[i + 1] == '\n' ? "\r\n" : c.ToString();
+                if (newline.Length == 2) i++;
+                line++;
+
+                if (quoted) current.Append(newline);
+                else
+                {
+                    cells.Add(current.ToString());
+                    yield return (cells, recordLine);
+                    cells = [];
+                    current.Clear();
+                    recordLine = line;
+                }
                 continue;
             }
 
             current.Append(c);
         }
 
-        cells.Add(current.ToString());
+        if (quoted && strictQuotes)
+            throw new FormatException($"CSV record starting on line {recordLine} has an unclosed quoted field. " +
+                                      "Close the quote or save the file as CSV UTF-8 and try again.");
 
-        return cells;
+        cells.Add(current.ToString());
+        yield return (cells, recordLine);
     }
 
-    /// <summary>
-    /// A header row is one whose cells are all field names. Dropping it beats importing a resource
-    /// called "Title".
-    /// </summary>
-    private static bool IsHeader(IReadOnlyList<string> cells)
+    private static Dictionary<string, int>? ReadHeader(IReadOnlyList<string> cells)
     {
-        var named = 0;
-
-        foreach (var cell in cells)
+        var columns = new Dictionary<string, int>();
+        for (var i = 0; i < cells.Count; i++)
         {
-            var value = cell.Trim().ToLowerInvariant();
-
+            var value = cells[i].Trim().TrimStart('\uFEFF').ToLowerInvariant();
             if (value.Length == 0) continue;
-
-            if (value is "title" or "name" or "url" or "link" or "password" or "code"
-                or "标题" or "名称" or "链接" or "地址" or "密码" or "提取码")
+            var key = value switch
             {
-                named++;
-            }
-            else
-            {
-                return false;
-            }
+                "title" or "name" or "标题" or "名称" or "资源名称" => "title",
+                "url" or "link" or "download url" or "download link" or "链接" or "地址" or "下载链接" => "url",
+                "password" or "archive password" or "code" or "密码" or "解压密码" or "提取码" => "password",
+                _ => null
+            };
+            if (key == null || !columns.TryAdd(key, i)) return null;
         }
 
-        return named > 0;
+        return columns.Count > 0 ? columns : null;
     }
 
     /// <summary>

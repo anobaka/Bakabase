@@ -38,7 +38,7 @@ public class AcquisitionLeadController(
             {
                 ResourceId = resourceId,
                 Kind = AcquisitionLeadKind.PlatformHolding,
-                Value = l.SourceKey,
+                Value = $"{l.Source}:{l.SourceKey}",
                 Origin = AcquisitionLeadOrigin.User,
                 IsDerived = true,
                 SourceName = l.Source.ToString()

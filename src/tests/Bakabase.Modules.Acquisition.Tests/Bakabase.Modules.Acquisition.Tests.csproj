@@ -6,4 +6,11 @@
     <ProjectReference Include="..\Bakabase.TestKit\Bakabase.TestKit.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="../../web/src/pages/acquisition/components/ImportSharedListModal/templates/*.csv">
+      <WithCulture>false</WithCulture>
+      <LogicalName>SharedListTemplates.%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
 </Project>

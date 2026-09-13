@@ -8,7 +8,6 @@ import { useTranslation } from "react-i18next";
 import {
   AppstoreOutlined,
   CloseCircleOutlined,
-  DisconnectOutlined,
   FolderOpenOutlined,
   LayoutOutlined,
   LoadingOutlined,
@@ -33,6 +32,7 @@ import CollectionMemberships from "./CollectionMemberships";
 import IntroductionSummary from "./IntroductionSummary";
 import ResourceProfiles from "./ResourceProfiles";
 import ResourceHierarchy from "./ResourceHierarchy";
+import CustomPropertiesEmptyState from "./CustomPropertiesEmptyState";
 
 import AcquisitionPanel from "@/components/Resource/components/AcquisitionPanel";
 
@@ -315,7 +315,11 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
           // Only worth a block while there is something to acquire; once the files are here the
           // filesystem sections say everything.
           return resource.hasLocalPath ? null : (
-            <AcquisitionPanel resource={resource} onChanged={() => loadResource()} />
+            <AcquisitionPanel
+              resource={resource}
+              onChanged={() => loadResource()}
+              onNavigate={props.onDestroyed}
+            />
           );
         case "basicInfo":
           return hideTimeInfo ? null : <BasicInfo resource={resource} />;
@@ -368,14 +372,7 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
               />
               <Properties
                 columns={columns}
-                noPropertyContent={
-                  <div className={"flex flex-col items-center gap-2 justify-center"}>
-                    <div className={"w-4/5"}>
-                      <DisconnectOutlined className={"text-base mr-1"} />
-                      {t<string>("resource.empty.noCustomPropertyBound")}
-                    </div>
-                  </div>
-                }
+                noPropertyContent={<CustomPropertiesEmptyState onNavigate={props.onDestroyed} />}
                 reload={loadResource}
                 resource={resource}
                 restrictedPropertyPool={PropertyPool.Custom}

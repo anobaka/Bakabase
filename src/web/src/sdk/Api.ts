@@ -8903,6 +8903,24 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Acquisition
+     * @name GetAcquisitionCandidate
+     * @request GET:/acquisition/candidates/{resourceId}
+     */
+    getAcquisitionCandidate: (resourceId: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewAcquisitionCandidatePageViewModel,
+        any
+      >({
+        path: `/acquisition/candidates/${resourceId}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Acquisition
      * @name CreateAcquisitionFromUrl
      * @request POST:/acquisition/from-url
      */
