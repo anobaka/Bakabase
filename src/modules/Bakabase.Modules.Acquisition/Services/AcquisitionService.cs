@@ -343,11 +343,11 @@ public class AcquisitionService<TDbContext>(
                    ?? throw new InvalidOperationException($"Recipe #{id} does not exist.");
         }
 
-        var name = options.Value.RecipeByLeadKind.GetValueOrDefault(leadKind)
-                   ?? BuiltinAcquisitionRecipes.DefaultRecipeNameFor(leadKind);
+        var name = BuiltinAcquisitionRecipes.DefaultRecipeNameFor(leadKind, options.Value);
 
-        var byName = await Defs.FirstOrDefaultAsync(
-            d => d.TriggerKind == AcquisitionWorkflowKinds.TriggerRequested && d.Name == name, ct);
+        var byName = await Defs.Where(
+                d => d.TriggerKind == AcquisitionWorkflowKinds.TriggerRequested && d.Name == name)
+            .OrderBy(d => d.Id).FirstOrDefaultAsync(ct);
 
         if (byName != null) return byName;
 

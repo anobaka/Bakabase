@@ -1,5 +1,6 @@
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.Acquisition.Models.Domain;
 
 namespace Bakabase.Modules.Acquisition.Components;
 
@@ -87,6 +88,10 @@ public static class BuiltinAcquisitionRecipes
         AcquisitionLeadKind.Manual => LocalDirectory,
         _ => LocalDirectory
     };
+
+    /// <summary>The same effective default for the overview and for actually starting a task.</summary>
+    public static string DefaultRecipeNameFor(AcquisitionLeadKind kind, AcquisitionOptions options) =>
+        options.RecipeByLeadKind.GetValueOrDefault(kind) ?? DefaultRecipeNameFor(kind);
 
     public static AcquisitionRecipe? ByName(string name) =>
         All.FirstOrDefault(r => string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase));

@@ -9,6 +9,8 @@ using Bakabase.Modules.Acquisition.Abstractions.Services;
 using Bakabase.Modules.Acquisition.Components;
 using Bakabase.Modules.Acquisition.Models.Input;
 using Bakabase.Service.Components.Acquisition;
+using Bakabase.Service.Models.View;
+using Bakabase.Service.Components.RemoteAccess;
 using Microsoft.AspNetCore.Http;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
@@ -29,6 +31,30 @@ public class AcquisitionController(
     IBOptionsManager<Bakabase.Modules.Acquisition.Models.Domain.AcquisitionOptions> options)
     : ControllerBase
 {
+    /// <summary>
+    /// Known routes for resources without local files. Availability and ownership are not probed.
+    /// Filters: all, withSources, withoutSources, unsupported. This only reads server data; it
+    /// takes no filesystem path and does not launch the acquisition's user-side actions.
+    /// </summary>
+    [HttpGet("candidates")]
+    [SwaggerOperation(OperationId = "SearchAcquisitionCandidates")]
+    [RemoteAccessible]
+    public async Task<SingletonResponse<AcquisitionCandidatePageViewModel>> SearchCandidates(
+        [FromServices] AcquisitionCandidateService candidates,
+        [FromQuery] string? keyword = null, [FromQuery] int page = 1, [FromQuery] int pageSize = 24,
+        [FromQuery] string filter = "all")
+    {
+        try
+        {
+            return new(await candidates.SearchAsync(keyword, page, pageSize, filter,
+                HttpContext.RequestAborted));
+        }
+        catch (ArgumentException ex)
+        {
+            return SingletonResponseBuilder<AcquisitionCandidatePageViewModel>.BuildBadRequest(ex.Message);
+        }
+    }
+
     /// <summary>
     /// Start from a link and nothing else. The link is resolved to a resource — matched against one
     /// that already exists, or created — and then acquired the ordinary way. This is what the

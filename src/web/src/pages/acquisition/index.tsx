@@ -12,6 +12,8 @@ import StartAcquisitionModal from "./components/StartAcquisitionModal";
 import SetupWizard from "./components/SetupWizard";
 import ImportSharedListModal from "./components/ImportSharedListModal";
 import MatchSuggestions from "./components/MatchSuggestions";
+import CandidateOverview from "./components/CandidateOverview";
+import RecipeCatalog from "./components/RecipeCatalog";
 
 import BApi from "@/sdk/BApi";
 import { Button, Chip, Spinner, Tab, Tabs } from "@/components/bakaui";
@@ -30,7 +32,7 @@ const LIVE: AcquisitionStatus[] = [
   AcquisitionStatus.Pending,
 ];
 
-type TabKey = "live" | "all" | "matches";
+type TabKey = "overview" | "live" | "all" | "recipes" | "matches";
 
 /** Waiting first: it is the only state that needs a person, and it is what the page is for. */
 const ORDER: Record<number, number> = {
@@ -47,7 +49,7 @@ const AcquisitionPage: React.FC = () => {
   const [tasks, setTasks] = useState<AcquisitionTaskVm[]>([]);
   const [recipes, setRecipes] = useState<AcquisitionRecipeVm[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<TabKey>("live");
+  const [tab, setTab] = useState<TabKey>("overview");
   const [matchCount, setMatchCount] = useState(0);
 
   const load = useCallback(async () => {
@@ -85,10 +87,18 @@ const AcquisitionPage: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-2">
+      <div>
+        <h1 className="text-xl font-semibold">{t<string>("menu.acquisition")}</h1>
+        <p className="mt-1 text-sm text-default-500">
+          {t<string>("acquisition.overview.description")}
+        </p>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
         <Tabs selectedKey={tab} size="sm" onSelectionChange={(k) => setTab(k as TabKey)}>
+          <Tab key="overview" title={t<string>("acquisition.tab.overview")} />
           <Tab key="live" title={t<string>("acquisition.tab.live")} />
           <Tab key="all" title={t<string>("acquisition.tab.all")} />
+          <Tab key="recipes" title={t<string>("acquisition.tab.recipes")} />
           <Tab
             key="matches"
             title={
@@ -105,7 +115,7 @@ const AcquisitionPage: React.FC = () => {
           </Chip>
         )}
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex flex-wrap items-center gap-2">
           <Button
             size="sm"
             variant="light"
@@ -137,7 +147,18 @@ const AcquisitionPage: React.FC = () => {
         </div>
       </div>
 
-      {tab === "matches" ? (
+      {tab === "overview" ? (
+        <CandidateOverview
+          onOpenRecipe={(id) => navigate(`/workflows/editor?id=${id}`)}
+          onStarted={() => {
+            void load();
+            setTab("live");
+          }}
+          onViewTasks={() => setTab("live")}
+        />
+      ) : tab === "recipes" ? (
+        <RecipeCatalog recipes={recipes} onOpen={(id) => navigate(`/workflows/editor?id=${id}`)} />
+      ) : tab === "matches" ? (
         <MatchSuggestions onChanged={load} />
       ) : loading && tasks.length === 0 ? (
         <div className="flex justify-center py-10">

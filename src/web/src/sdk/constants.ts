@@ -3865,6 +3865,213 @@ export const EnhancerTargetOptionsItemLabel: Record<EnhancerTargetOptionsItem, s
   [EnhancerTargetOptionsItem.CoverSelectOrder]: 'CoverSelectOrder'
 };
 
+export enum AcquisitionRunState {
+  Completed = 1,
+  Waiting = 2,
+  Failed = 3
+}
+
+export const acquisitionRunStates = [
+  { label: 'Completed', value: AcquisitionRunState.Completed },
+  { label: 'Waiting', value: AcquisitionRunState.Waiting },
+  { label: 'Failed', value: AcquisitionRunState.Failed }
+] as const;
+
+export const AcquisitionRunStateLabel: Record<AcquisitionRunState, string> = {
+  [AcquisitionRunState.Completed]: 'Completed',
+  [AcquisitionRunState.Waiting]: 'Waiting',
+  [AcquisitionRunState.Failed]: 'Failed'
+};
+
+export enum PlacementConflictPolicy {
+  Rename = 1,
+  Merge = 2,
+  Ask = 3
+}
+
+export const placementConflictPolicies = [
+  { label: 'Rename', value: PlacementConflictPolicy.Rename },
+  { label: 'Merge', value: PlacementConflictPolicy.Merge },
+  { label: 'Ask', value: PlacementConflictPolicy.Ask }
+] as const;
+
+export const PlacementConflictPolicyLabel: Record<PlacementConflictPolicy, string> = {
+  [PlacementConflictPolicy.Rename]: 'Rename',
+  [PlacementConflictPolicy.Merge]: 'Merge',
+  [PlacementConflictPolicy.Ask]: 'Ask'
+};
+
+export enum AcquisitionDriveKind {
+  Unknown = 0,
+  DirectUrl = 1,
+  Baidu = 2,
+  Xunlei = 3,
+  Feimao = 4,
+  Cloudflare = 5,
+  Mega = 6,
+  PikPak = 7,
+  GoogleDrive = 8,
+  OneDrive = 9,
+  Magnet = 10,
+  OneOneFive = 11
+}
+
+export const acquisitionDriveKinds = [
+  { label: 'Unknown', value: AcquisitionDriveKind.Unknown },
+  { label: 'DirectUrl', value: AcquisitionDriveKind.DirectUrl },
+  { label: 'Baidu', value: AcquisitionDriveKind.Baidu },
+  { label: 'Xunlei', value: AcquisitionDriveKind.Xunlei },
+  { label: 'Feimao', value: AcquisitionDriveKind.Feimao },
+  { label: 'Cloudflare', value: AcquisitionDriveKind.Cloudflare },
+  { label: 'Mega', value: AcquisitionDriveKind.Mega },
+  { label: 'PikPak', value: AcquisitionDriveKind.PikPak },
+  { label: 'GoogleDrive', value: AcquisitionDriveKind.GoogleDrive },
+  { label: 'OneDrive', value: AcquisitionDriveKind.OneDrive },
+  { label: 'Magnet', value: AcquisitionDriveKind.Magnet },
+  { label: 'OneOneFive', value: AcquisitionDriveKind.OneOneFive }
+] as const;
+
+export const AcquisitionDriveKindLabel: Record<AcquisitionDriveKind, string> = {
+  [AcquisitionDriveKind.Unknown]: 'Unknown',
+  [AcquisitionDriveKind.DirectUrl]: 'DirectUrl',
+  [AcquisitionDriveKind.Baidu]: 'Baidu',
+  [AcquisitionDriveKind.Xunlei]: 'Xunlei',
+  [AcquisitionDriveKind.Feimao]: 'Feimao',
+  [AcquisitionDriveKind.Cloudflare]: 'Cloudflare',
+  [AcquisitionDriveKind.Mega]: 'Mega',
+  [AcquisitionDriveKind.PikPak]: 'PikPak',
+  [AcquisitionDriveKind.GoogleDrive]: 'GoogleDrive',
+  [AcquisitionDriveKind.OneDrive]: 'OneDrive',
+  [AcquisitionDriveKind.Magnet]: 'Magnet',
+  [AcquisitionDriveKind.OneOneFive]: 'OneOneFive'
+};
+
+export enum AcquisitionLeadKind {
+  PlatformHolding = 1,
+  SharedPage = 2,
+  SharedDocument = 3,
+  DirectUrl = 4,
+  Magnet = 5,
+  Manual = 6
+}
+
+export const acquisitionLeadKinds = [
+  { label: 'PlatformHolding', value: AcquisitionLeadKind.PlatformHolding },
+  { label: 'SharedPage', value: AcquisitionLeadKind.SharedPage },
+  { label: 'SharedDocument', value: AcquisitionLeadKind.SharedDocument },
+  { label: 'DirectUrl', value: AcquisitionLeadKind.DirectUrl },
+  { label: 'Magnet', value: AcquisitionLeadKind.Magnet },
+  { label: 'Manual', value: AcquisitionLeadKind.Manual }
+] as const;
+
+export const AcquisitionLeadKindLabel: Record<AcquisitionLeadKind, string> = {
+  [AcquisitionLeadKind.PlatformHolding]: 'PlatformHolding',
+  [AcquisitionLeadKind.SharedPage]: 'SharedPage',
+  [AcquisitionLeadKind.SharedDocument]: 'SharedDocument',
+  [AcquisitionLeadKind.DirectUrl]: 'DirectUrl',
+  [AcquisitionLeadKind.Magnet]: 'Magnet',
+  [AcquisitionLeadKind.Manual]: 'Manual'
+};
+
+export enum AcquisitionLeadOrigin {
+  User = 1,
+  Subscription = 2,
+  SharedListImport = 3,
+  PostParser = 4
+}
+
+export const acquisitionLeadOrigins = [
+  { label: 'User', value: AcquisitionLeadOrigin.User },
+  { label: 'Subscription', value: AcquisitionLeadOrigin.Subscription },
+  { label: 'SharedListImport', value: AcquisitionLeadOrigin.SharedListImport },
+  { label: 'PostParser', value: AcquisitionLeadOrigin.PostParser }
+] as const;
+
+export const AcquisitionLeadOriginLabel: Record<AcquisitionLeadOrigin, string> = {
+  [AcquisitionLeadOrigin.User]: 'User',
+  [AcquisitionLeadOrigin.Subscription]: 'Subscription',
+  [AcquisitionLeadOrigin.SharedListImport]: 'SharedListImport',
+  [AcquisitionLeadOrigin.PostParser]: 'PostParser'
+};
+
+export enum AcquisitionLeadResult {
+  Succeeded = 1,
+  Failed = 2
+}
+
+export const acquisitionLeadResults = [
+  { label: 'Succeeded', value: AcquisitionLeadResult.Succeeded },
+  { label: 'Failed', value: AcquisitionLeadResult.Failed }
+] as const;
+
+export const AcquisitionLeadResultLabel: Record<AcquisitionLeadResult, string> = {
+  [AcquisitionLeadResult.Succeeded]: 'Succeeded',
+  [AcquisitionLeadResult.Failed]: 'Failed'
+};
+
+export enum AcquisitionStatus {
+  Pending = 1,
+  Running = 2,
+  Waiting = 3,
+  Completed = 4,
+  Failed = 5,
+  Cancelled = 6
+}
+
+export const acquisitionStatuses = [
+  { label: 'Pending', value: AcquisitionStatus.Pending },
+  { label: 'Running', value: AcquisitionStatus.Running },
+  { label: 'Waiting', value: AcquisitionStatus.Waiting },
+  { label: 'Completed', value: AcquisitionStatus.Completed },
+  { label: 'Failed', value: AcquisitionStatus.Failed },
+  { label: 'Cancelled', value: AcquisitionStatus.Cancelled }
+] as const;
+
+export const AcquisitionStatusLabel: Record<AcquisitionStatus, string> = {
+  [AcquisitionStatus.Pending]: 'Pending',
+  [AcquisitionStatus.Running]: 'Running',
+  [AcquisitionStatus.Waiting]: 'Waiting',
+  [AcquisitionStatus.Completed]: 'Completed',
+  [AcquisitionStatus.Failed]: 'Failed',
+  [AcquisitionStatus.Cancelled]: 'Cancelled'
+};
+
+export enum AcquisitionWaitReason {
+  WaitingForFile = 1,
+  AmbiguousInboxFile = 2,
+  PaidContent = 3,
+  NoLinks = 4,
+  ChooseLink = 5,
+  PasswordUnknown = 6,
+  TargetExists = 7,
+  PickDirectory = 8,
+  PlatformFetch = 9
+}
+
+export const acquisitionWaitReasons = [
+  { label: 'WaitingForFile', value: AcquisitionWaitReason.WaitingForFile },
+  { label: 'AmbiguousInboxFile', value: AcquisitionWaitReason.AmbiguousInboxFile },
+  { label: 'PaidContent', value: AcquisitionWaitReason.PaidContent },
+  { label: 'NoLinks', value: AcquisitionWaitReason.NoLinks },
+  { label: 'ChooseLink', value: AcquisitionWaitReason.ChooseLink },
+  { label: 'PasswordUnknown', value: AcquisitionWaitReason.PasswordUnknown },
+  { label: 'TargetExists', value: AcquisitionWaitReason.TargetExists },
+  { label: 'PickDirectory', value: AcquisitionWaitReason.PickDirectory },
+  { label: 'PlatformFetch', value: AcquisitionWaitReason.PlatformFetch }
+] as const;
+
+export const AcquisitionWaitReasonLabel: Record<AcquisitionWaitReason, string> = {
+  [AcquisitionWaitReason.WaitingForFile]: 'WaitingForFile',
+  [AcquisitionWaitReason.AmbiguousInboxFile]: 'AmbiguousInboxFile',
+  [AcquisitionWaitReason.PaidContent]: 'PaidContent',
+  [AcquisitionWaitReason.NoLinks]: 'NoLinks',
+  [AcquisitionWaitReason.ChooseLink]: 'ChooseLink',
+  [AcquisitionWaitReason.PasswordUnknown]: 'PasswordUnknown',
+  [AcquisitionWaitReason.TargetExists]: 'TargetExists',
+  [AcquisitionWaitReason.PickDirectory]: 'PickDirectory',
+  [AcquisitionWaitReason.PlatformFetch]: 'PlatformFetch'
+};
+
 export enum AttachmentLayout {
   Tile = 0,
   Carousel = 1
@@ -4643,213 +4850,6 @@ export const bulkModificationProcessorValueTypes = [
 export const BulkModificationProcessorValueTypeLabel: Record<BulkModificationProcessorValueType, string> = {
   [BulkModificationProcessorValueType.ManuallyInput]: 'ManuallyInput',
   [BulkModificationProcessorValueType.Variable]: 'Variable'
-};
-
-export enum AcquisitionRunState {
-  Completed = 1,
-  Waiting = 2,
-  Failed = 3
-}
-
-export const acquisitionRunStates = [
-  { label: 'Completed', value: AcquisitionRunState.Completed },
-  { label: 'Waiting', value: AcquisitionRunState.Waiting },
-  { label: 'Failed', value: AcquisitionRunState.Failed }
-] as const;
-
-export const AcquisitionRunStateLabel: Record<AcquisitionRunState, string> = {
-  [AcquisitionRunState.Completed]: 'Completed',
-  [AcquisitionRunState.Waiting]: 'Waiting',
-  [AcquisitionRunState.Failed]: 'Failed'
-};
-
-export enum PlacementConflictPolicy {
-  Rename = 1,
-  Merge = 2,
-  Ask = 3
-}
-
-export const placementConflictPolicies = [
-  { label: 'Rename', value: PlacementConflictPolicy.Rename },
-  { label: 'Merge', value: PlacementConflictPolicy.Merge },
-  { label: 'Ask', value: PlacementConflictPolicy.Ask }
-] as const;
-
-export const PlacementConflictPolicyLabel: Record<PlacementConflictPolicy, string> = {
-  [PlacementConflictPolicy.Rename]: 'Rename',
-  [PlacementConflictPolicy.Merge]: 'Merge',
-  [PlacementConflictPolicy.Ask]: 'Ask'
-};
-
-export enum AcquisitionDriveKind {
-  Unknown = 0,
-  DirectUrl = 1,
-  Baidu = 2,
-  Xunlei = 3,
-  Feimao = 4,
-  Cloudflare = 5,
-  Mega = 6,
-  PikPak = 7,
-  GoogleDrive = 8,
-  OneDrive = 9,
-  Magnet = 10,
-  OneOneFive = 11
-}
-
-export const acquisitionDriveKinds = [
-  { label: 'Unknown', value: AcquisitionDriveKind.Unknown },
-  { label: 'DirectUrl', value: AcquisitionDriveKind.DirectUrl },
-  { label: 'Baidu', value: AcquisitionDriveKind.Baidu },
-  { label: 'Xunlei', value: AcquisitionDriveKind.Xunlei },
-  { label: 'Feimao', value: AcquisitionDriveKind.Feimao },
-  { label: 'Cloudflare', value: AcquisitionDriveKind.Cloudflare },
-  { label: 'Mega', value: AcquisitionDriveKind.Mega },
-  { label: 'PikPak', value: AcquisitionDriveKind.PikPak },
-  { label: 'GoogleDrive', value: AcquisitionDriveKind.GoogleDrive },
-  { label: 'OneDrive', value: AcquisitionDriveKind.OneDrive },
-  { label: 'Magnet', value: AcquisitionDriveKind.Magnet },
-  { label: 'OneOneFive', value: AcquisitionDriveKind.OneOneFive }
-] as const;
-
-export const AcquisitionDriveKindLabel: Record<AcquisitionDriveKind, string> = {
-  [AcquisitionDriveKind.Unknown]: 'Unknown',
-  [AcquisitionDriveKind.DirectUrl]: 'DirectUrl',
-  [AcquisitionDriveKind.Baidu]: 'Baidu',
-  [AcquisitionDriveKind.Xunlei]: 'Xunlei',
-  [AcquisitionDriveKind.Feimao]: 'Feimao',
-  [AcquisitionDriveKind.Cloudflare]: 'Cloudflare',
-  [AcquisitionDriveKind.Mega]: 'Mega',
-  [AcquisitionDriveKind.PikPak]: 'PikPak',
-  [AcquisitionDriveKind.GoogleDrive]: 'GoogleDrive',
-  [AcquisitionDriveKind.OneDrive]: 'OneDrive',
-  [AcquisitionDriveKind.Magnet]: 'Magnet',
-  [AcquisitionDriveKind.OneOneFive]: 'OneOneFive'
-};
-
-export enum AcquisitionLeadKind {
-  PlatformHolding = 1,
-  SharedPage = 2,
-  SharedDocument = 3,
-  DirectUrl = 4,
-  Magnet = 5,
-  Manual = 6
-}
-
-export const acquisitionLeadKinds = [
-  { label: 'PlatformHolding', value: AcquisitionLeadKind.PlatformHolding },
-  { label: 'SharedPage', value: AcquisitionLeadKind.SharedPage },
-  { label: 'SharedDocument', value: AcquisitionLeadKind.SharedDocument },
-  { label: 'DirectUrl', value: AcquisitionLeadKind.DirectUrl },
-  { label: 'Magnet', value: AcquisitionLeadKind.Magnet },
-  { label: 'Manual', value: AcquisitionLeadKind.Manual }
-] as const;
-
-export const AcquisitionLeadKindLabel: Record<AcquisitionLeadKind, string> = {
-  [AcquisitionLeadKind.PlatformHolding]: 'PlatformHolding',
-  [AcquisitionLeadKind.SharedPage]: 'SharedPage',
-  [AcquisitionLeadKind.SharedDocument]: 'SharedDocument',
-  [AcquisitionLeadKind.DirectUrl]: 'DirectUrl',
-  [AcquisitionLeadKind.Magnet]: 'Magnet',
-  [AcquisitionLeadKind.Manual]: 'Manual'
-};
-
-export enum AcquisitionLeadOrigin {
-  User = 1,
-  Subscription = 2,
-  SharedListImport = 3,
-  PostParser = 4
-}
-
-export const acquisitionLeadOrigins = [
-  { label: 'User', value: AcquisitionLeadOrigin.User },
-  { label: 'Subscription', value: AcquisitionLeadOrigin.Subscription },
-  { label: 'SharedListImport', value: AcquisitionLeadOrigin.SharedListImport },
-  { label: 'PostParser', value: AcquisitionLeadOrigin.PostParser }
-] as const;
-
-export const AcquisitionLeadOriginLabel: Record<AcquisitionLeadOrigin, string> = {
-  [AcquisitionLeadOrigin.User]: 'User',
-  [AcquisitionLeadOrigin.Subscription]: 'Subscription',
-  [AcquisitionLeadOrigin.SharedListImport]: 'SharedListImport',
-  [AcquisitionLeadOrigin.PostParser]: 'PostParser'
-};
-
-export enum AcquisitionLeadResult {
-  Succeeded = 1,
-  Failed = 2
-}
-
-export const acquisitionLeadResults = [
-  { label: 'Succeeded', value: AcquisitionLeadResult.Succeeded },
-  { label: 'Failed', value: AcquisitionLeadResult.Failed }
-] as const;
-
-export const AcquisitionLeadResultLabel: Record<AcquisitionLeadResult, string> = {
-  [AcquisitionLeadResult.Succeeded]: 'Succeeded',
-  [AcquisitionLeadResult.Failed]: 'Failed'
-};
-
-export enum AcquisitionStatus {
-  Pending = 1,
-  Running = 2,
-  Waiting = 3,
-  Completed = 4,
-  Failed = 5,
-  Cancelled = 6
-}
-
-export const acquisitionStatuses = [
-  { label: 'Pending', value: AcquisitionStatus.Pending },
-  { label: 'Running', value: AcquisitionStatus.Running },
-  { label: 'Waiting', value: AcquisitionStatus.Waiting },
-  { label: 'Completed', value: AcquisitionStatus.Completed },
-  { label: 'Failed', value: AcquisitionStatus.Failed },
-  { label: 'Cancelled', value: AcquisitionStatus.Cancelled }
-] as const;
-
-export const AcquisitionStatusLabel: Record<AcquisitionStatus, string> = {
-  [AcquisitionStatus.Pending]: 'Pending',
-  [AcquisitionStatus.Running]: 'Running',
-  [AcquisitionStatus.Waiting]: 'Waiting',
-  [AcquisitionStatus.Completed]: 'Completed',
-  [AcquisitionStatus.Failed]: 'Failed',
-  [AcquisitionStatus.Cancelled]: 'Cancelled'
-};
-
-export enum AcquisitionWaitReason {
-  WaitingForFile = 1,
-  AmbiguousInboxFile = 2,
-  PaidContent = 3,
-  NoLinks = 4,
-  ChooseLink = 5,
-  PasswordUnknown = 6,
-  TargetExists = 7,
-  PickDirectory = 8,
-  PlatformFetch = 9
-}
-
-export const acquisitionWaitReasons = [
-  { label: 'WaitingForFile', value: AcquisitionWaitReason.WaitingForFile },
-  { label: 'AmbiguousInboxFile', value: AcquisitionWaitReason.AmbiguousInboxFile },
-  { label: 'PaidContent', value: AcquisitionWaitReason.PaidContent },
-  { label: 'NoLinks', value: AcquisitionWaitReason.NoLinks },
-  { label: 'ChooseLink', value: AcquisitionWaitReason.ChooseLink },
-  { label: 'PasswordUnknown', value: AcquisitionWaitReason.PasswordUnknown },
-  { label: 'TargetExists', value: AcquisitionWaitReason.TargetExists },
-  { label: 'PickDirectory', value: AcquisitionWaitReason.PickDirectory },
-  { label: 'PlatformFetch', value: AcquisitionWaitReason.PlatformFetch }
-] as const;
-
-export const AcquisitionWaitReasonLabel: Record<AcquisitionWaitReason, string> = {
-  [AcquisitionWaitReason.WaitingForFile]: 'WaitingForFile',
-  [AcquisitionWaitReason.AmbiguousInboxFile]: 'AmbiguousInboxFile',
-  [AcquisitionWaitReason.PaidContent]: 'PaidContent',
-  [AcquisitionWaitReason.NoLinks]: 'NoLinks',
-  [AcquisitionWaitReason.ChooseLink]: 'ChooseLink',
-  [AcquisitionWaitReason.PasswordUnknown]: 'PasswordUnknown',
-  [AcquisitionWaitReason.TargetExists]: 'TargetExists',
-  [AcquisitionWaitReason.PickDirectory]: 'PickDirectory',
-  [AcquisitionWaitReason.PlatformFetch]: 'PlatformFetch'
 };
 
 export enum AliasExceptionType {

@@ -1,0 +1,194 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Platform;
+using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Abstractions.Services;
+using Bakabase.InsideWorld.Business;
+using Bakabase.Modules.Acquisition.Abstractions.Models.Db;
+using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.Acquisition.Abstractions.Services;
+using Bakabase.Modules.Acquisition.Components;
+using Bakabase.Modules.Acquisition.Components.Workflow;
+using Bakabase.Modules.Acquisition.Models.Domain;
+using Bakabase.Modules.Acquisition.Models.Input;
+using Bakabase.Modules.Workflow.Abstractions.Models.Input;
+using Bakabase.Modules.Workflow.Abstractions.Services;
+using Bakabase.Service.Components.Acquisition;
+using Bakabase.Service.Components.Acquisition.Steps;
+using Bakabase.TestKit.Utils;
+using Bootstrap.Components.Configuration.Abstractions;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Bakabase.Tests;
+
+[TestClass]
+public sealed class AcquisitionCandidateTests
+{
+    private IServiceProvider _sp = null!;
+    private AcquisitionCandidateService Candidates => _sp.GetRequiredService<AcquisitionCandidateService>();
+    private BakabaseDbContext Db => _sp.GetRequiredService<BakabaseDbContext>();
+
+    // Any account/client access while reading the overview fails the test. Implemented platform
+    // names are sufficient; neither ownership nor remote availability is inferred from identity.
+    private sealed class NoProbeRegistry : IPlatformConnectorRegistry
+    {
+        public IReadOnlyCollection<ResourceSource> Sources { get; } =
+            [ResourceSource.DLsite, ResourceSource.Steam, ResourceSource.ExHentai];
+
+        public IPlatformConnector? Get(ResourceSource source) =>
+            throw new AssertFailedException("Browsing candidates must not construct or probe a platform connector.");
+    }
+
+    [TestInitialize]
+    public async Task Setup()
+    {
+        _sp = await TestServiceBuilder.BuildServiceProvider(services =>
+            services.AddSingleton<IPlatformConnectorRegistry, NoProbeRegistry>());
+        await _sp.GetRequiredService<AcquisitionRecipeSeeder<BakabaseDbContext>>().SeedAsync();
+    }
+
+    private async Task<int> Missing(string name) =>
+        (await _sp.GetRequiredService<IPlaceholderResourceService>().CreateByTitle(name)).ResourceId;
+
+    private Task Identity(int id, ResourceSource source, string key) =>
+        _sp.GetRequiredService<IResourceSourceLinkService>().EnsureLinks(id,
+            [new ResourceSourceLink {Source = source, SourceKey = key}]);
+
+    private async Task AddLead(int id, AcquisitionLeadKind kind, string value) =>
+        await _sp.GetRequiredService<IAcquisitionLeadService>().Add(id,
+            new AcquisitionLeadAddInputModel {Kind = kind, Value = value});
+
+    [TestMethod]
+    public async Task PlatformIdentityIsAnUnknownRoute_AndUnsupportedPlatformsCannotBeStarted()
+    {
+        var dlsite = await Missing("An unpurchased catalog work");
+        var pixiv = await Missing("A Pixiv identity");
+        var catalog = await Missing("Metadata only");
+        await Identity(dlsite, ResourceSource.DLsite, "RJ00000001");
+        await Identity(pixiv, ResourceSource.Pixiv, "12345");
+        await Identity(catalog, ResourceSource.Bangumi, "67890");
+        var before = await Db.Set<AcquisitionTaskDbModel>().CountAsync();
+
+        var page = await Candidates.SearchAsync();
+
+        var known = page.Items.Single(r => r.ResourceId == dlsite).Leads.Single();
+        Assert.IsTrue(known.IsDerived);
+        Assert.AreEqual(0, known.Id);
+        Assert.AreEqual("DLsite:RJ00000001", known.Value);
+        Assert.IsTrue(FetchFromPlatformStep.TryReadLead(known.Value, out var source, out var key));
+        Assert.AreEqual(ResourceSource.DLsite, source);
+        Assert.AreEqual("RJ00000001", key);
+        Assert.AreEqual("unknown", known.Availability);
+        Assert.AreEqual("supported", known.Capability,
+            "Supported only describes the implemented route, not a purchase or successful download.");
+        Assert.IsNotNull(known.DefaultRecipeDefinitionId);
+
+        var unsupported = page.Items.Single(r => r.ResourceId == pixiv).Leads.Single();
+        Assert.AreEqual("unknown", unsupported.Availability);
+        Assert.AreEqual("unsupportedPlatform", unsupported.Capability);
+        Assert.AreEqual(0, unsupported.ApplicableRecipeDefinitionIds.Count);
+        Assert.AreEqual(0, page.Items.Single(r => r.ResourceId == catalog).Leads.Count);
+        Assert.AreEqual(before, await Db.Set<AcquisitionTaskDbModel>().CountAsync(),
+            "Reading routes cannot create acquisition tasks.");
+    }
+
+    [TestMethod]
+    public async Task FiltersApplyBeforePagination_AndKeywordUsesThePathlessResourcesName()
+    {
+        var first = await Missing("Overview sample first");
+        await Missing("An unrelated resource");
+        var third = await Missing("Overview sample third");
+        var noLead = await Missing("Overview sample without a route");
+        await AddLead(first, AcquisitionLeadKind.DirectUrl, "https://example.invalid/one.zip");
+        await AddLead(third, AcquisitionLeadKind.SharedPage, "https://example.invalid/thread/three");
+        await _sp.GetRequiredService<IResourceService>().AddOrPutRange([
+            new Resource {Path = "/not-probed/overview-materialized", Status = ResourceStatus.Active}
+        ]);
+
+        var firstPage = await Candidates.SearchAsync("Overview sample", page: 1, pageSize: 1,
+            filter: "withSources");
+        var secondPage = await Candidates.SearchAsync("Overview sample", page: 2, pageSize: 1,
+            filter: "withSources");
+
+        Assert.AreEqual(2, firstPage.TotalCount);
+        Assert.AreEqual(third, firstPage.Items.Single().ResourceId);
+        Assert.AreEqual(first, secondPage.Items.Single().ResourceId);
+        Assert.AreEqual("Overview sample first", secondPage.Items.Single().ResourceName);
+        var without = await Candidates.SearchAsync("Overview sample", filter: "withoutSources");
+        Assert.AreEqual(noLead, without.Items.Single().ResourceId);
+        var all = await Candidates.SearchAsync();
+        Assert.AreEqual(4, all.TotalCount, "The local-path resource is outside this page's purpose.");
+        Assert.AreEqual(0, (await Candidates.SearchAsync(page: int.MaxValue)).Items.Count);
+    }
+
+    [TestMethod]
+    public async Task DefaultRecipeAndItsStepsAgreeWithTheRecipeUsedToCreateATask()
+    {
+        var custom = await _sp.GetRequiredService<IWorkflowDefinitionService>().CreateAsync(
+            new WorkflowDefinitionCreationInputModel
+            {
+                Name = "My direct links go through the inbox",
+                TriggerKind = AcquisitionWorkflowKinds.TriggerRequested,
+                Activities = new[] {AcquisitionStepKinds.WaitForInbox, AcquisitionStepKinds.Place,
+                        AcquisitionStepKinds.Materialize}
+                    .Select(k => new WorkflowActivityInputModel {Kind = k}).ToList()
+            });
+        var options = _sp.GetRequiredService<IBOptions<AcquisitionOptions>>().Value;
+        options.RecipeByLeadKind[AcquisitionLeadKind.DirectUrl] = custom.Name;
+        options.Concurrency = 1;
+        var busyResource = await Missing("Already running");
+        var target = await Missing("A direct link to queue");
+        await AddLead(target, AcquisitionLeadKind.DirectUrl, "https://example.invalid/archive.zip");
+
+        // Occupy the sole slot so CreateAsync resolves its real default and queues without ever
+        // executing a step, opening a browser or starting a download.
+        Db.Set<AcquisitionTaskDbModel>().Add(new AcquisitionTaskDbModel
+        {
+            ResourceId = busyResource, Status = AcquisitionStatus.Running,
+            RecipeDefinitionId = custom.Id, LeadKind = AcquisitionLeadKind.Manual,
+            CreatedAt = DateTime.Now, UpdatedAt = DateTime.Now
+        });
+        await Db.SaveChangesAsync();
+
+        var lead = (await Candidates.SearchAsync()).Items.Single(r => r.ResourceId == target).Leads.Single();
+        Assert.AreEqual(custom.Id, lead.DefaultRecipeDefinitionId);
+        Assert.AreEqual(custom.Name, lead.DefaultRecipeName);
+        Assert.AreEqual("inbox", lead.Method);
+        CollectionAssert.Contains(lead.ApplicableRecipeDefinitionIds, custom.Id);
+
+        var task = await _sp.GetRequiredService<IAcquisitionService>().CreateAsync(target,
+            lead.Kind, lead.Value, lead.Id);
+        Assert.AreEqual(lead.DefaultRecipeDefinitionId, task.RecipeDefinitionId);
+        Assert.IsNull(task.WorkflowRunId, "This regression must not run any acquisition steps.");
+        var reread = (await Candidates.SearchAsync()).Items.Single(r => r.ResourceId == target);
+        Assert.AreEqual(task.Id, reread.ActiveTaskId);
+        Assert.AreEqual(AcquisitionStatus.Pending, reread.ActiveTaskStatus);
+    }
+
+    [TestMethod]
+    public async Task MissingDefaultsAndIncompatibleRecipesAreNotPresentedAsAutomaticFallbacks()
+    {
+        var target = await Missing("A manual direct link");
+        await AddLead(target, AcquisitionLeadKind.DirectUrl, "https://example.invalid/file.zip");
+        _sp.GetRequiredService<IBOptions<AcquisitionOptions>>().Value
+            .RecipeByLeadKind[AcquisitionLeadKind.DirectUrl] = "A deleted recipe";
+
+        var page = await Candidates.SearchAsync();
+        var lead = page.Items.Single().Leads.Single();
+        Assert.AreEqual("A deleted recipe", lead.DefaultRecipeName);
+        Assert.IsNull(lead.DefaultRecipeDefinitionId);
+        Assert.IsTrue(lead.ApplicableRecipeDefinitionIds.Count > 0,
+            "Other routes can still be selected explicitly; they are not the effective default.");
+        var platformRecipe = page.Recipes.Single(r => r.Name == BuiltinAcquisitionRecipes.PlatformFetch);
+        CollectionAssert.DoesNotContain(lead.ApplicableRecipeDefinitionIds, platformRecipe.DefinitionId);
+
+        var unsupported = await Missing("Only an unsupported platform");
+        await Identity(unsupported, ResourceSource.Pixiv, "99999");
+        Assert.AreEqual(unsupported, (await Candidates.SearchAsync(filter: "unsupported"))
+            .Items.Single().ResourceId);
+    }
+}

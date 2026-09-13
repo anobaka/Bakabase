@@ -4,6 +4,22 @@
  */
 
 export interface paths {
+    "/acquisition/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SearchAcquisitionCandidates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/acquisition/from-url": {
         parameters: {
             query?: never;
@@ -11702,6 +11718,41 @@ export interface components {
         "Bakabase.Service.Models.Input.TextTypePatchInputModel": {
             name: string;
         };
+        "Bakabase.Service.Models.View.AcquisitionCandidateLeadViewModel": {
+            /** Format: int32 */
+            id: number;
+            kind: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionLeadKind"];
+            value: string;
+            sourceName?: string;
+            isDerived: boolean;
+            note?: string;
+            availability: string;
+            capability: string;
+            method: string;
+            defaultRecipeName: string;
+            /** Format: int32 */
+            defaultRecipeDefinitionId?: number;
+            applicableRecipeDefinitionIds: number[];
+        };
+        "Bakabase.Service.Models.View.AcquisitionCandidatePageViewModel": {
+            items: components["schemas"]["Bakabase.Service.Models.View.AcquisitionCandidateViewModel"][];
+            /** Format: int32 */
+            totalCount: number;
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            pageSize: number;
+            recipes: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Services.AcquisitionRecipeSummary"][];
+        };
+        "Bakabase.Service.Models.View.AcquisitionCandidateViewModel": {
+            /** Format: int32 */
+            resourceId: number;
+            resourceName: string;
+            leads: components["schemas"]["Bakabase.Service.Models.View.AcquisitionCandidateLeadViewModel"][];
+            /** Format: int32 */
+            activeTaskId?: number;
+            activeTaskStatus?: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionStatus"];
+        };
         "Bakabase.Service.Models.View.AnalyticsAppInfoViewModel": {
             enableAnonymousDataTracking: boolean;
             deviceId: string;
@@ -13603,6 +13654,12 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Controllers.PathMarkSyncStatusResponse"];
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.AcquisitionCandidatePageViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.AcquisitionCandidatePageViewModel"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.AnalyticsAppInfoViewModel]": {
             /** Format: int32 */
             code: number;
@@ -14411,6 +14468,33 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    SearchAcquisitionCandidates: {
+        parameters: {
+            query?: {
+                keyword?: string;
+                page?: number;
+                pageSize?: number;
+                filter?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.AcquisitionCandidatePageViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.AcquisitionCandidatePageViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.AcquisitionCandidatePageViewModel]"];
+                };
+            };
+        };
+    };
     CreateAcquisitionFromUrl: {
         parameters: {
             query?: never;

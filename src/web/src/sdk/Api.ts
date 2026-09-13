@@ -5331,6 +5331,46 @@ export interface BakabaseServiceModelsInputTextTypePatchInputModel {
   name: string;
 }
 
+export interface BakabaseServiceModelsViewAcquisitionCandidateLeadViewModel {
+  /** @format int32 */
+  id: number;
+  /** [1: PlatformHolding, 2: SharedPage, 3: SharedDocument, 4: DirectUrl, 5: Magnet, 6: Manual] */
+  kind: BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionLeadKind;
+  value: string;
+  sourceName?: string;
+  isDerived: boolean;
+  note?: string;
+  availability: string;
+  capability: string;
+  method: string;
+  defaultRecipeName: string;
+  /** @format int32 */
+  defaultRecipeDefinitionId?: number;
+  applicableRecipeDefinitionIds: number[];
+}
+
+export interface BakabaseServiceModelsViewAcquisitionCandidatePageViewModel {
+  items: BakabaseServiceModelsViewAcquisitionCandidateViewModel[];
+  /** @format int32 */
+  totalCount: number;
+  /** @format int32 */
+  page: number;
+  /** @format int32 */
+  pageSize: number;
+  recipes: BakabaseModulesAcquisitionAbstractionsServicesAcquisitionRecipeSummary[];
+}
+
+export interface BakabaseServiceModelsViewAcquisitionCandidateViewModel {
+  /** @format int32 */
+  resourceId: number;
+  resourceName: string;
+  leads: BakabaseServiceModelsViewAcquisitionCandidateLeadViewModel[];
+  /** @format int32 */
+  activeTaskId?: number;
+  /** [1: Pending, 2: Running, 3: Waiting, 4: Completed, 5: Failed, 6: Cancelled] */
+  activeTaskStatus?: BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionStatus;
+}
+
 export interface BakabaseServiceModelsViewAnalyticsAppInfoViewModel {
   enableAnonymousDataTracking: boolean;
   deviceId: string;
@@ -7530,6 +7570,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceC
   data?: BakabaseServiceControllersPathMarkSyncStatusResponse;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewAcquisitionCandidatePageViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewAcquisitionCandidatePageViewModel;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewAnalyticsAppInfoViewModel {
   /** @format int32 */
   code: number;
@@ -8696,7 +8743,7 @@ export class HttpClient<SecurityDataType = unknown> {
         this.abortControllers.delete(cancelToken);
       }
 
-      
+
       if (!response.ok) {
         this.processResponseError(data, fullRequestParams, response);
         throw data;
@@ -8770,7 +8817,7 @@ export class HttpClient<SecurityDataType = unknown> {
     return response as T;
   };
 
-        
+
 }
 
 /**
@@ -8779,6 +8826,79 @@ export class HttpClient<SecurityDataType = unknown> {
  */
 export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDataType> {
   acquisition = {
+    /**
+     * No description
+     *
+     * @tags Acquisition
+     * @name SearchAcquisitionCandidates
+     * @request GET:/acquisition/candidates
+     */
+    searchAcquisitionCandidates: (
+      query?: {
+        keyword?: string;
+        /**
+         * @format int32
+         * @default 1
+         */
+        page?: number;
+        /**
+         * @format int32
+         * @default 24
+         */
+        pageSize?: number;
+        /** @default "all" */
+        filter?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewAcquisitionCandidatePageViewModel,
+        any
+      >({
+        path: `/acquisition/candidates`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for searchAcquisitionCandidates
+     * @name searchAcquisitionCandidatesUrl
+     */
+    searchAcquisitionCandidatesUrl: (query?: {
+        keyword?: string;
+        /**
+         * @format int32
+         * @default 1
+         */
+        page?: number;
+        /**
+         * @format int32
+         * @default 24
+         */
+        pageSize?: number;
+        /** @default "all" */
+        filter?: string;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/candidates`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
     /**
      * No description
      *
@@ -8809,7 +8929,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     createAcquisitionFromUrlUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/acquisition/from-url`;
-      
+
       return baseUrl + path;
     },
 
@@ -8846,7 +8966,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     previewSharedListUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/acquisition/shared-list/preview`;
-      
+
       return baseUrl + path;
     },
 
@@ -8880,7 +9000,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     importSharedListUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/acquisition/shared-list/import`;
-      
+
       return baseUrl + path;
     },
 
@@ -8914,7 +9034,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     createAcquisitionUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/acquisition`;
-      
+
       return baseUrl + path;
     },
 
@@ -8957,7 +9077,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/acquisition`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -8969,7 +9089,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -9070,7 +9190,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAcquisitionInboxUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/acquisition/inbox`;
-      
+
       return baseUrl + path;
     },
 
@@ -9114,7 +9234,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAcquisitionOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/acquisition/options`;
-      
+
       return baseUrl + path;
     },
 
@@ -9145,7 +9265,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     putAcquisitionOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/acquisition/options`;
-      
+
       return baseUrl + path;
     },
 
@@ -9179,7 +9299,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     setUpAcquisitionUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/acquisition/setup`;
-      
+
       return baseUrl + path;
     },
 
@@ -9208,7 +9328,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAcquisitionRecipesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/acquisition/recipes`;
-      
+
       return baseUrl + path;
     },
   };
@@ -9303,7 +9423,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource/collections`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -9315,7 +9435,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -9462,7 +9582,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource/search-operation`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -9474,7 +9594,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -9513,7 +9633,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource/search-operation/by-type`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -9525,7 +9645,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -9572,7 +9692,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource/filter-value-property`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -9584,7 +9704,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -9613,7 +9733,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getLastResourceSearchUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource/last-search`;
-      
+
       return baseUrl + path;
     },
 
@@ -9647,7 +9767,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     saveNewResourceSearchUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource/saved-search`;
-      
+
       return baseUrl + path;
     },
 
@@ -9684,7 +9804,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource/saved-search`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -9696,7 +9816,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -9733,7 +9853,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource/saved-search`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -9745,7 +9865,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -9779,7 +9899,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource/saved-search`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -9791,7 +9911,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -9828,7 +9948,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource/saved-search/display-mode`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -9840,7 +9960,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -9886,7 +10006,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource/search`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -9898,7 +10018,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -9929,7 +10049,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     searchAllResourceIdsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource/search/ids`;
-      
+
       return baseUrl + path;
     },
 
@@ -9970,7 +10090,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource/keys`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -9982,7 +10102,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -10036,7 +10156,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource/directory`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -10048,7 +10168,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -10079,7 +10199,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     setResourceMediaLibrariesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource/media-libraries`;
-      
+
       return baseUrl + path;
     },
 
@@ -10110,7 +10230,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getResourceMediaLibraryMappingsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource/media-library-mappings`;
-      
+
       return baseUrl + path;
     },
 
@@ -10247,7 +10367,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     bulkPutResourcePropertyValueUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource/bulk/property-value`;
-      
+
       return baseUrl + path;
     },
 
@@ -10355,7 +10475,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     playRandomResourceUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource/play/random`;
-      
+
       return baseUrl + path;
     },
 
@@ -10384,7 +10504,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     pickRandomPlayableItemUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource/play/random/candidate`;
-      
+
       return baseUrl + path;
     },
 
@@ -10415,7 +10535,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     bulkDeleteResourcesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource/bulk-delete`;
-      
+
       return baseUrl + path;
     },
 
@@ -10468,7 +10588,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     transferResourceDataUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource/transfer`;
-      
+
       return baseUrl + path;
     },
 
@@ -10541,7 +10661,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     createPlaceholderResourcesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource/placeholder`;
-      
+
       return baseUrl + path;
     },
 
@@ -10578,7 +10698,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource/paths`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -10590,7 +10710,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -10679,7 +10799,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     markResourcesAsPlayedUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource/played-at/bulk`;
-      
+
       return baseUrl + path;
     },
 
@@ -10723,7 +10843,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource/search/keyword-recommendation`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -10735,7 +10855,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -10843,7 +10963,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     bulkAddResourceMediaLibraryMappingsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource/bulk/media-libraries`;
-      
+
       return baseUrl + path;
     },
 
@@ -10918,7 +11038,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     mergeResourcesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource/merge`;
-      
+
       return baseUrl + path;
     },
 
@@ -10943,7 +11063,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     streamResourceDiscoveryUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource/discovery/stream`;
-      
+
       return baseUrl + path;
     },
 
@@ -10974,7 +11094,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     subscribeResourceDiscoveryUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource/discovery/subscribe`;
-      
+
       return baseUrl + path;
     },
 
@@ -11005,7 +11125,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     subscribeResourceDiscoveryBatchUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource/discovery/subscribe/batch`;
-      
+
       return baseUrl + path;
     },
 
@@ -11034,7 +11154,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getPendingResourceMatchSuggestionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource/match-suggestion`;
-      
+
       return baseUrl + path;
     },
 
@@ -11060,7 +11180,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     countPendingResourceMatchSuggestionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource/match-suggestion/count`;
-      
+
       return baseUrl + path;
     },
 
@@ -11125,7 +11245,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addAiProviderUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/ai/providers`;
-      
+
       return baseUrl + path;
     },
 
@@ -11154,7 +11274,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllAiProvidersUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/ai/providers`;
-      
+
       return baseUrl + path;
     },
 
@@ -11276,7 +11396,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAiProviderKindsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/ai/provider-kinds`;
-      
+
       return baseUrl + path;
     },
 
@@ -11347,7 +11467,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/ai/usage`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -11359,7 +11479,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -11388,7 +11508,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getLlmUsageSummaryUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/ai/usage/summary`;
-      
+
       return baseUrl + path;
     },
 
@@ -11417,7 +11537,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllLlmCacheEntriesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/ai/cache`;
-      
+
       return baseUrl + path;
     },
 
@@ -11443,7 +11563,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     clearAllLlmCacheUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/ai/cache`;
-      
+
       return baseUrl + path;
     },
 
@@ -11487,7 +11607,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllAiFeatureConfigsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/ai/features`;
-      
+
       return baseUrl + path;
     },
 
@@ -11584,7 +11704,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     aiTranslateUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/ai/translate`;
-      
+
       return baseUrl + path;
     },
 
@@ -11618,7 +11738,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     aiTranslateBatchUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/ai/translate/batch`;
-      
+
       return baseUrl + path;
     },
 
@@ -11676,7 +11796,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     aiAnalyzeFileStructureUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/ai/file-processor/analyze-structure`;
-      
+
       return baseUrl + path;
     },
 
@@ -11710,7 +11830,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     aiAnalyzeNamingConventionUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/ai/file-processor/analyze-naming`;
-      
+
       return baseUrl + path;
     },
 
@@ -11744,7 +11864,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     aiSuggestFileNameCorrectionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/ai/file-processor/suggest-names`;
-      
+
       return baseUrl + path;
     },
 
@@ -11778,7 +11898,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     aiGroupByPathSimilarityUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/ai/file-processor/group-by-similarity`;
-      
+
       return baseUrl + path;
     },
 
@@ -11812,7 +11932,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     aiSuggestDirectoryCorrectionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/ai/file-processor/suggest-directory-corrections`;
-      
+
       return baseUrl + path;
     },
 
@@ -11846,7 +11966,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     aiApplyFileOperationsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/ai/file-processor/apply-operations`;
-      
+
       return baseUrl + path;
     },
   };
@@ -11876,7 +11996,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getEnabledAigcProvidersUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/aigc/providers`;
-      
+
       return baseUrl + path;
     },
 
@@ -11905,7 +12025,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllAigcGeneratorsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/aigc/generators`;
-      
+
       return baseUrl + path;
     },
 
@@ -11939,7 +12059,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addAigcGeneratorUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/aigc/generators`;
-      
+
       return baseUrl + path;
     },
 
@@ -12072,7 +12192,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     importComfyUiWorkflowsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/aigc/generators/import-comfyui`;
-      
+
       return baseUrl + path;
     },
 
@@ -12111,7 +12231,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/aigc/runs`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -12123,7 +12243,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -12214,7 +12334,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/aigc/artifacts`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -12226,7 +12346,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -12342,7 +12462,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/alias`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -12354,7 +12474,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -12391,7 +12511,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/alias`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -12403,7 +12523,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -12434,7 +12554,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addAliasUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/alias`;
-      
+
       return baseUrl + path;
     },
 
@@ -12468,7 +12588,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/alias`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -12480,7 +12600,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -12514,7 +12634,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/alias/groups`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -12526,7 +12646,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -12560,7 +12680,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/alias/merge`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -12572,7 +12692,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -12597,7 +12717,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     exportAliasesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/alias/xlsx`;
-      
+
       return baseUrl + path;
     },
 
@@ -12631,7 +12751,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/alias/import`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -12643,7 +12763,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
   };
@@ -12673,7 +12793,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     checkAppInitializedUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/app/initialized`;
-      
+
       return baseUrl + path;
     },
 
@@ -12702,7 +12822,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAppInfoUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/app/info`;
-      
+
       return baseUrl + path;
     },
 
@@ -12731,7 +12851,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAnalyticsAppInfoUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/app/analytics-info`;
-      
+
       return baseUrl + path;
     },
 
@@ -12760,7 +12880,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAppTelemetrySnapshotUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/app/telemetry-snapshot`;
-      
+
       return baseUrl + path;
     },
 
@@ -12786,7 +12906,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     acceptTermsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/app/terms`;
-      
+
       return baseUrl + path;
     },
 
@@ -12812,7 +12932,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     restartAppUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/app/restart`;
-      
+
       return baseUrl + path;
     },
 
@@ -12846,7 +12966,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     validateAppDataPathUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/app/data-path/validate`;
-      
+
       return baseUrl + path;
     },
 
@@ -12877,7 +12997,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     relocateAppDataPathUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/app/data-path/relocate`;
-      
+
       return baseUrl + path;
     },
 
@@ -12903,7 +13023,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     cancelAppDataPathRelocationUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/app/data-path/relocate`;
-      
+
       return baseUrl + path;
     },
 
@@ -12929,7 +13049,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     dismissLegacyInstallNoticeUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/app/data-path/legacy-notice/dismiss`;
-      
+
       return baseUrl + path;
     },
   };
@@ -12959,7 +13079,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAvSourcesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/av/sources`;
-      
+
       return baseUrl + path;
     },
 
@@ -12993,7 +13113,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     testAvSourcesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/av/test`;
-      
+
       return baseUrl + path;
     },
   };
@@ -13088,7 +13208,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     cleanInactiveBackgroundTasksUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/background-task`;
-      
+
       return baseUrl + path;
     },
 
@@ -13133,7 +13253,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getBiliBiliFavoritesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/bilibili/favorites`;
-      
+
       return baseUrl + path;
     },
   };
@@ -13232,7 +13352,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllBulkModificationsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/bulk-modification/all`;
-      
+
       return baseUrl + path;
     },
 
@@ -13258,7 +13378,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addBulkModificationUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/bulk-modification`;
-      
+
       return baseUrl + path;
     },
 
@@ -13383,7 +13503,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getCacheOverviewUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/cache`;
-      
+
       return baseUrl + path;
     },
 
@@ -13507,7 +13627,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     refreshResourcesCacheUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/cache/resources/refresh`;
-      
+
       return baseUrl + path;
     },
   };
@@ -13537,7 +13657,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getChangelogReleasesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/changelog/releases`;
-      
+
       return baseUrl + path;
     },
 
@@ -13576,7 +13696,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/changelog/range`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -13588,7 +13708,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -13625,7 +13745,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/changelog/content`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -13637,7 +13757,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
   };
@@ -13667,7 +13787,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     createChatConversationUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/chat/conversations`;
-      
+
       return baseUrl + path;
     },
 
@@ -13696,7 +13816,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getChatConversationsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/chat/conversations`;
-      
+
       return baseUrl + path;
     },
 
@@ -13820,7 +13940,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getChatToolsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/chat/tools`;
-      
+
       return baseUrl + path;
     },
 
@@ -13881,7 +14001,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/collection`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -13893,7 +14013,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -13927,7 +14047,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addCollectionUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/collection`;
-      
+
       return baseUrl + path;
     },
 
@@ -14182,7 +14302,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     previewCollectionRuleUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/collection/rule/preview`;
-      
+
       return baseUrl + path;
     },
 
@@ -14248,7 +14368,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllComparisonPlansUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/comparison/plan`;
-      
+
       return baseUrl + path;
     },
 
@@ -14282,7 +14402,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     createComparisonPlanUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/comparison/plan`;
-      
+
       return baseUrl + path;
     },
 
@@ -14595,7 +14715,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/custom-property/all`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -14607,7 +14727,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -14648,7 +14768,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/custom-property/ids`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -14660,7 +14780,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -14694,7 +14814,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addCustomPropertyUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/custom-property`;
-      
+
       return baseUrl + path;
     },
 
@@ -14728,7 +14848,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addCustomPropertyBatchUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/custom-property/batch`;
-      
+
       return baseUrl + path;
     },
 
@@ -14798,7 +14918,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     sortCustomPropertiesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/custom-property/order`;
-      
+
       return baseUrl + path;
     },
 
@@ -14849,7 +14969,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getCustomPropertyConversionRulesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/custom-property/conversion-rule`;
-      
+
       return baseUrl + path;
     },
 
@@ -14919,7 +15039,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     testCustomPropertyTypeConversionUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/custom-property/type-conversion-overview`;
-      
+
       return baseUrl + path;
     },
   };
@@ -14949,7 +15069,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getStatisticsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/dashboard`;
-      
+
       return baseUrl + path;
     },
 
@@ -14978,7 +15098,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getPropertyStatisticsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/dashboard/property`;
-      
+
       return baseUrl + path;
     },
   };
@@ -15040,7 +15160,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/data-card/search`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -15052,7 +15172,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -15140,7 +15260,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addDataCardUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/data-card`;
-      
+
       return baseUrl + path;
     },
 
@@ -15174,7 +15294,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     findDataCardByIdentityUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/data-card/find-by-identity`;
-      
+
       return baseUrl + path;
     },
 
@@ -15297,7 +15417,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllDataCardTypesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/data-card-type`;
-      
+
       return baseUrl + path;
     },
 
@@ -15331,7 +15451,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addDataCardTypeUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/data-card-type`;
-      
+
       return baseUrl + path;
     },
 
@@ -15468,7 +15588,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/dlsite-work`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -15480,7 +15600,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -15549,7 +15669,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/dlsite-work/sync`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -15561,7 +15681,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -15665,7 +15785,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     scanDLsiteFoldersUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/dlsite-work/scan-folders`;
-      
+
       return baseUrl + path;
     },
 
@@ -15759,7 +15879,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllDownloaderDefinitionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/download-task/downloaders/definitions`;
-      
+
       return baseUrl + path;
     },
 
@@ -15788,7 +15908,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllDownloadTasksUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/download-task`;
-      
+
       return baseUrl + path;
     },
 
@@ -15822,7 +15942,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addDownloadTaskUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/download-task`;
-      
+
       return baseUrl + path;
     },
 
@@ -15853,7 +15973,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     deleteDownloadTasksUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/download-task`;
-      
+
       return baseUrl + path;
     },
 
@@ -15941,7 +16061,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     queryDownloadRecordsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/download-task/records/query`;
-      
+
       return baseUrl + path;
     },
 
@@ -15975,7 +16095,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     queryDownloadTaskKeyStatusesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/download-task/keys/query`;
-      
+
       return baseUrl + path;
     },
 
@@ -16006,7 +16126,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     startDownloadTasksUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/download-task/download`;
-      
+
       return baseUrl + path;
     },
 
@@ -16034,7 +16154,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     stopDownloadTasksUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/download-task/download`;
-      
+
       return baseUrl + path;
     },
 
@@ -16062,7 +16182,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     clearDownloadTaskCheckpointsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/download-task/checkpoint`;
-      
+
       return baseUrl + path;
     },
 
@@ -16087,7 +16207,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     exportAllDownloadTasksUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/download-task/xlsx`;
-      
+
       return baseUrl + path;
     },
 
@@ -16170,7 +16290,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addExHentaiDownloadTaskUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/download-task/exhentai`;
-      
+
       return baseUrl + path;
     },
   };
@@ -16199,7 +16319,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     deleteEnhancementsByResourcesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/resources/enhancements`;
-      
+
       return baseUrl + path;
     },
   };
@@ -16297,7 +16417,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllEnhancerDescriptorsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/enhancer/descriptor`;
-      
+
       return baseUrl + path;
     },
   };
@@ -16372,7 +16492,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllResourceProfilesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource-profile`;
-      
+
       return baseUrl + path;
     },
 
@@ -16406,7 +16526,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addResourceProfileUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource-profile`;
-      
+
       return baseUrl + path;
     },
 
@@ -16557,7 +16677,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/exhentai-gallery`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -16569,7 +16689,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -16661,7 +16781,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/exhentai-gallery/sync`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -16673,7 +16793,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
   };
@@ -16703,7 +16823,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllExtensionGroupsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/extension-group`;
-      
+
       return baseUrl + path;
     },
 
@@ -16737,7 +16857,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addExtensionGroupUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/extension-group`;
-      
+
       return baseUrl + path;
     },
 
@@ -16822,7 +16942,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     detectCompressedFilesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/decompression/detect`;
-      
+
       return baseUrl + path;
     },
 
@@ -16852,7 +16972,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     decompressCompressedFilesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/decompression/decompress`;
-      
+
       return baseUrl + path;
     },
 
@@ -16893,7 +17013,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/top-level-file-system-entries`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -16905,7 +17025,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -16954,7 +17074,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/search-fs-entries`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -16966,7 +17086,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -17011,7 +17131,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/iwfs-info`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -17023,7 +17143,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -17060,7 +17180,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/iwfs-entry`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -17072,7 +17192,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -17106,7 +17226,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/directory`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -17118,7 +17238,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -17159,7 +17279,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/children/iwfs-info`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -17171,7 +17291,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -17202,7 +17322,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     removeFilesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/file`;
-      
+
       return baseUrl + path;
     },
 
@@ -17233,7 +17353,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     renameFileUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/name`;
-      
+
       return baseUrl + path;
     },
 
@@ -17259,7 +17379,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     openRecycleBinUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/recycle-bin`;
-      
+
       return baseUrl + path;
     },
 
@@ -17293,7 +17413,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/extract-and-remove-directory`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -17305,7 +17425,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -17336,7 +17456,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     moveEntriesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/move-entries`;
-      
+
       return baseUrl + path;
     },
 
@@ -17367,7 +17487,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     copyEntriesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/copy-entries`;
-      
+
       return baseUrl + path;
     },
 
@@ -17401,7 +17521,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getSameNameEntriesInWorkingDirectoryUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/same-name-entries-in-working-directory`;
-      
+
       return baseUrl + path;
     },
 
@@ -17432,7 +17552,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     removeSameNameEntryInWorkingDirectoryUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/same-name-entry-in-working-directory`;
-      
+
       return baseUrl + path;
     },
 
@@ -17466,7 +17586,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/standardize`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -17478,7 +17598,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -17515,7 +17635,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/playability`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -17527,7 +17647,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -17560,7 +17680,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/raw`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -17572,7 +17692,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -17605,7 +17725,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/play`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -17617,7 +17737,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -17648,7 +17768,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     decompressFilesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/decompression`;
-      
+
       return baseUrl + path;
     },
 
@@ -17686,7 +17806,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/icon`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -17698,7 +17818,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -17732,7 +17852,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/all-files`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -17744,7 +17864,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -17781,7 +17901,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/compressed-file/entries`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -17793,7 +17913,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -17832,7 +17952,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/file-extension-counts`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -17844,7 +17964,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -17878,7 +17998,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     previewFileSystemEntriesGroupResultUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/group-preview`;
-      
+
       return baseUrl + path;
     },
 
@@ -17909,7 +18029,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getFileSystemEntriesGroupSimilarityBreakpointsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/group-similarity-breakpoints`;
-      
+
       return baseUrl + path;
     },
 
@@ -17940,7 +18060,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     groupFileSystemEntriesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/group`;
-      
+
       return baseUrl + path;
     },
 
@@ -17974,7 +18094,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/file-processor-watcher`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -17986,7 +18106,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -18012,7 +18132,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     stopWatchingChangesInFileProcessorWorkspaceUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/file-processor-watcher`;
-      
+
       return baseUrl + path;
     },
 
@@ -18038,7 +18158,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     keepAliveFileProcessorWatcherUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/file-processor-watcher/keep-alive`;
-      
+
       return baseUrl + path;
     },
 
@@ -18072,7 +18192,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/is-file`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -18084,7 +18204,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -18113,7 +18233,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getHardwareAccelerationInfoUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/hardware-acceleration`;
-      
+
       return baseUrl + path;
     },
 
@@ -18139,7 +18259,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     clearHardwareAccelerationCacheUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/hardware-acceleration/clear-cache`;
-      
+
       return baseUrl + path;
     },
 
@@ -18173,7 +18293,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/first-file-by-ext`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -18185,7 +18305,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -18219,7 +18339,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     uploadFileUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/upload`;
-      
+
       return baseUrl + path;
     },
   };
@@ -18251,7 +18371,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     previewFileNameModificationUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/file-name-modifier/preview`;
-      
+
       return baseUrl + path;
     },
 
@@ -18285,7 +18405,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     modifyFileNamesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/file-name-modifier/modify`;
-      
+
       return baseUrl + path;
     },
   };
@@ -18320,7 +18440,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/gui/url`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -18332,7 +18452,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -18363,7 +18483,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     sendTestNotificationUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/gui/test-notification`;
-      
+
       return baseUrl + path;
     },
   };
@@ -18393,7 +18513,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllHealthScoreProfilesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/health-score/profiles`;
-      
+
       return baseUrl + path;
     },
 
@@ -18422,7 +18542,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addHealthScoreProfileUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/health-score/profiles`;
-      
+
       return baseUrl + path;
     },
 
@@ -18532,7 +18652,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     clearAllHealthScoreCachesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/health-score/clear-all-caches`;
-      
+
       return baseUrl + path;
     },
 
@@ -18558,7 +18678,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     runHealthScoringNowUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/health-score/run`;
-      
+
       return baseUrl + path;
     },
 
@@ -18595,7 +18715,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/health-score/scores`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -18607,7 +18727,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -18654,7 +18774,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllFilePredicatesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/health-score/predicates`;
-      
+
       return baseUrl + path;
     },
   };
@@ -18684,7 +18804,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllLogsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/log`;
-      
+
       return baseUrl + path;
     },
 
@@ -18710,7 +18830,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     clearAllLogUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/log`;
-      
+
       return baseUrl + path;
     },
 
@@ -18783,7 +18903,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/log/filtered`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -18795,7 +18915,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -18821,7 +18941,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getUnreadLogCountUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/log/unread/count`;
-      
+
       return baseUrl + path;
     },
 
@@ -18862,7 +18982,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     readAllLogUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/log/read`;
-      
+
       return baseUrl + path;
     },
   };
@@ -18892,7 +19012,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllMediaLibraryResourceMappingsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/media-library-resource-mapping`;
-      
+
       return baseUrl + path;
     },
 
@@ -18926,7 +19046,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addMediaLibraryResourceMappingUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/media-library-resource-mapping`;
-      
+
       return baseUrl + path;
     },
 
@@ -19023,7 +19143,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     ensureMediaLibraryResourceMappingsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/media-library-resource-mapping/ensure`;
-      
+
       return baseUrl + path;
     },
 
@@ -19054,7 +19174,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     replaceMediaLibraryResourceMappingsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/media-library-resource-mapping/replace`;
-      
+
       return baseUrl + path;
     },
   };
@@ -19095,7 +19215,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/media-library-template`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -19107,7 +19227,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -19139,7 +19259,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addMediaLibraryTemplateUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/media-library-template`;
-      
+
       return baseUrl + path;
     },
 
@@ -19252,7 +19372,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getMediaLibraryTemplateImportConfigurationUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/media-library-template/share-code/import-configuration`;
-      
+
       return baseUrl + path;
     },
 
@@ -19284,7 +19404,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     importMediaLibraryTemplateUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/media-library-template/share-code/import`;
-      
+
       return baseUrl + path;
     },
 
@@ -19330,7 +19450,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getMediaLibraryTemplatePresetDataPoolUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/media-library-template/preset-data-pool`;
-      
+
       return baseUrl + path;
     },
 
@@ -19362,7 +19482,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addMediaLibraryTemplateFromPresetBuilderUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/media-library-template/from-preset-builder`;
-      
+
       return baseUrl + path;
     },
 
@@ -19423,7 +19543,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/media-library-v2`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -19435,7 +19555,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -19466,7 +19586,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addMediaLibraryV2Url: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/media-library-v2`;
-      
+
       return baseUrl + path;
     },
 
@@ -19497,7 +19617,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     saveAllMediaLibrariesV2Url: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/media-library-v2`;
-      
+
       return baseUrl + path;
     },
 
@@ -19686,7 +19806,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/notification`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -19698,7 +19818,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -19729,7 +19849,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     deleteNotificationsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/notification`;
-      
+
       return baseUrl + path;
     },
 
@@ -19755,7 +19875,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getUnreadNotificationCountUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/notification/unread-count`;
-      
+
       return baseUrl + path;
     },
 
@@ -19786,7 +19906,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     markNotificationsAsReadUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/notification/mark-read`;
-      
+
       return baseUrl + path;
     },
 
@@ -19812,7 +19932,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     clearReadNotificationsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/notification/clear-read`;
-      
+
       return baseUrl + path;
     },
 
@@ -19843,7 +19963,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     createTestNotificationUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/notification/test`;
-      
+
       return baseUrl + path;
     },
   };
@@ -19873,7 +19993,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAppOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/app`;
-      
+
       return baseUrl + path;
     },
 
@@ -19904,7 +20024,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchAppOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/app`;
-      
+
       return baseUrl + path;
     },
 
@@ -19935,7 +20055,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     putAppOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/app`;
-      
+
       return baseUrl + path;
     },
 
@@ -19964,7 +20084,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getUiOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/ui`;
-      
+
       return baseUrl + path;
     },
 
@@ -19995,7 +20115,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchUiOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/ui`;
-      
+
       return baseUrl + path;
     },
 
@@ -20021,7 +20141,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     resetResourceDetailLayoutUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/ui/resource-detail-layout`;
-      
+
       return baseUrl + path;
     },
 
@@ -20052,7 +20172,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addLatestUsedPropertyUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/ui/latest-used-property`;
-      
+
       return baseUrl + path;
     },
 
@@ -20081,7 +20201,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getUiStyleOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/ui-style`;
-      
+
       return baseUrl + path;
     },
 
@@ -20112,7 +20232,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchUiStyleOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/ui-style`;
-      
+
       return baseUrl + path;
     },
 
@@ -20141,7 +20261,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getDownloaderGlobalOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/downloader`;
-      
+
       return baseUrl + path;
     },
 
@@ -20172,7 +20292,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchDownloaderGlobalOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/downloader`;
-      
+
       return baseUrl + path;
     },
 
@@ -20201,7 +20321,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getBilibiliOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/bilibili`;
-      
+
       return baseUrl + path;
     },
 
@@ -20232,7 +20352,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchBilibiliOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/bilibili`;
-      
+
       return baseUrl + path;
     },
 
@@ -20261,7 +20381,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getExHentaiOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/exhentai`;
-      
+
       return baseUrl + path;
     },
 
@@ -20292,7 +20412,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchExHentaiOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/exhentai`;
-      
+
       return baseUrl + path;
     },
 
@@ -20321,7 +20441,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getFileSystemOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/filesystem`;
-      
+
       return baseUrl + path;
     },
 
@@ -20352,7 +20472,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchFileSystemOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/filesystem`;
-      
+
       return baseUrl + path;
     },
 
@@ -20380,7 +20500,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addLatestMovingDestinationUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/filesystem/latest-moving-destination`;
-      
+
       return baseUrl + path;
     },
 
@@ -20409,7 +20529,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getJavLibraryOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/javlibrary`;
-      
+
       return baseUrl + path;
     },
 
@@ -20440,7 +20560,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchJavLibraryOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/javlibrary`;
-      
+
       return baseUrl + path;
     },
 
@@ -20469,7 +20589,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getPixivOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/pixiv`;
-      
+
       return baseUrl + path;
     },
 
@@ -20500,7 +20620,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchPixivOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/pixiv`;
-      
+
       return baseUrl + path;
     },
 
@@ -20529,7 +20649,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getResourceOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/resource`;
-      
+
       return baseUrl + path;
     },
 
@@ -20560,7 +20680,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchResourceOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/resource`;
-      
+
       return baseUrl + path;
     },
 
@@ -20585,7 +20705,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     deleteResourceMarkersUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/resource/delete-markers`;
-      
+
       return baseUrl + path;
     },
 
@@ -20614,7 +20734,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getRecentResourceFiltersUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/resource/recent-filters`;
-      
+
       return baseUrl + path;
     },
 
@@ -20645,7 +20765,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addRecentResourceFilterUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/resource/recent-filters`;
-      
+
       return baseUrl + path;
     },
 
@@ -20674,7 +20794,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getThirdPartyOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/thirdparty`;
-      
+
       return baseUrl + path;
     },
 
@@ -20705,7 +20825,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchThirdPartyOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/thirdparty`;
-      
+
       return baseUrl + path;
     },
 
@@ -20736,7 +20856,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     putThirdPartyOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/thirdparty`;
-      
+
       return baseUrl + path;
     },
 
@@ -20765,7 +20885,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getNetworkOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/network`;
-      
+
       return baseUrl + path;
     },
 
@@ -20796,7 +20916,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchNetworkOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/network`;
-      
+
       return baseUrl + path;
     },
 
@@ -20827,7 +20947,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     testProxyUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/network/proxy-test`;
-      
+
       return baseUrl + path;
     },
 
@@ -20856,7 +20976,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getTaskOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/task`;
-      
+
       return baseUrl + path;
     },
 
@@ -20887,7 +21007,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchTaskOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/task`;
-      
+
       return baseUrl + path;
     },
 
@@ -20916,7 +21036,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAiOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/ai`;
-      
+
       return baseUrl + path;
     },
 
@@ -20947,7 +21067,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchAiOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/ai`;
-      
+
       return baseUrl + path;
     },
 
@@ -20978,7 +21098,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     putAiOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/ai`;
-      
+
       return baseUrl + path;
     },
 
@@ -21007,7 +21127,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getSoulPlusOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/soulplus`;
-      
+
       return baseUrl + path;
     },
 
@@ -21038,7 +21158,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchSoulPlusOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/soulplus`;
-      
+
       return baseUrl + path;
     },
 
@@ -21069,7 +21189,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     putSoulPlusOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/soulplus`;
-      
+
       return baseUrl + path;
     },
 
@@ -21098,7 +21218,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getBangumiOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/bangumi`;
-      
+
       return baseUrl + path;
     },
 
@@ -21129,7 +21249,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchBangumiOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/bangumi`;
-      
+
       return baseUrl + path;
     },
 
@@ -21158,7 +21278,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getCienOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/cien`;
-      
+
       return baseUrl + path;
     },
 
@@ -21189,7 +21309,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchCienOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/cien`;
-      
+
       return baseUrl + path;
     },
 
@@ -21218,7 +21338,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getDLsiteOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/dlsite`;
-      
+
       return baseUrl + path;
     },
 
@@ -21249,7 +21369,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchDLsiteOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/dlsite`;
-      
+
       return baseUrl + path;
     },
 
@@ -21278,7 +21398,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getSteamOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/steam`;
-      
+
       return baseUrl + path;
     },
 
@@ -21309,7 +21429,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchSteamOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/steam`;
-      
+
       return baseUrl + path;
     },
 
@@ -21338,7 +21458,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getFanboxOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/fanbox`;
-      
+
       return baseUrl + path;
     },
 
@@ -21369,7 +21489,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchFanboxOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/fanbox`;
-      
+
       return baseUrl + path;
     },
 
@@ -21398,7 +21518,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getFantiaOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/fantia`;
-      
+
       return baseUrl + path;
     },
 
@@ -21429,7 +21549,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchFantiaOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/fantia`;
-      
+
       return baseUrl + path;
     },
 
@@ -21458,7 +21578,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getPatreonOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/patreon`;
-      
+
       return baseUrl + path;
     },
 
@@ -21489,7 +21609,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchPatreonOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/patreon`;
-      
+
       return baseUrl + path;
     },
 
@@ -21518,7 +21638,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getTmdbOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/tmdb`;
-      
+
       return baseUrl + path;
     },
 
@@ -21549,7 +21669,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchTmdbOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/tmdb`;
-      
+
       return baseUrl + path;
     },
 
@@ -21578,7 +21698,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAvSourceOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/av-sources`;
-      
+
       return baseUrl + path;
     },
 
@@ -21609,7 +21729,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchAvSourceOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/av-sources`;
-      
+
       return baseUrl + path;
     },
   };
@@ -21639,7 +21759,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getOtherDeviceDownloadsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/other-devices/downloads`;
-      
+
       return baseUrl + path;
     },
   };
@@ -21699,7 +21819,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/password`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -21711,7 +21831,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -21740,7 +21860,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllPasswordsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/password/all`;
-      
+
       return baseUrl + path;
     },
 
@@ -21795,7 +21915,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/path-mark`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -21807,7 +21927,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -21838,7 +21958,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addPathMarkUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/path-mark`;
-      
+
       return baseUrl + path;
     },
 
@@ -21941,7 +22061,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/path-mark/by-path`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -21953,7 +22073,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -21987,7 +22107,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/path-mark/by-path`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -21999,7 +22119,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -22025,7 +22145,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllPathMarkPathsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/path-mark/paths`;
-      
+
       return baseUrl + path;
     },
 
@@ -22054,7 +22174,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getPendingPathMarksUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/path-mark/pending`;
-      
+
       return baseUrl + path;
     },
 
@@ -22080,7 +22200,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getPendingPathMarksCountUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/path-mark/pending/count`;
-      
+
       return baseUrl + path;
     },
 
@@ -22132,7 +22252,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addPathMarksUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/path-mark/batch`;
-      
+
       return baseUrl + path;
     },
 
@@ -22223,7 +22343,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getPathMarkSyncStatusUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/path-mark/sync-status`;
-      
+
       return baseUrl + path;
     },
 
@@ -22257,7 +22377,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     previewPathMarkMatchedPathsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/path-mark/preview`;
-      
+
       return baseUrl + path;
     },
 
@@ -22286,7 +22406,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     checkPathMarkPathsExistUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/path-mark/check-paths-exist`;
-      
+
       return baseUrl + path;
     },
 
@@ -22317,7 +22437,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     migratePathMarkPathUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/path-mark/migrate-path`;
-      
+
       return baseUrl + path;
     },
 
@@ -22343,7 +22463,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     startPathMarkSyncAllUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/path-mark/sync/start-all`;
-      
+
       return baseUrl + path;
     },
 
@@ -22371,7 +22491,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     startPathMarkSyncUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/path-mark/sync/start`;
-      
+
       return baseUrl + path;
     },
 
@@ -22405,7 +22525,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/path-mark/sync/by-path`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -22417,7 +22537,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -22443,7 +22563,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     forceResyncAllPathMarksUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/path-mark/sync/force-all`;
-      
+
       return baseUrl + path;
     },
 
@@ -22479,7 +22599,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/path-mark/sync/by-source`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -22491,7 +22611,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
   };
@@ -22526,7 +22646,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getBatchPlayResourceSnapshotUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/player/batch-play/resource-snapshot`;
-      
+
       return baseUrl + path;
     },
 
@@ -22578,7 +22698,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getBatchPlayCandidatesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/player/batch-play/candidates`;
-      
+
       return baseUrl + path;
     },
 
@@ -22612,7 +22732,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     batchPlayResourcesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/player/batch-play`;
-      
+
       return baseUrl + path;
     },
 
@@ -22710,7 +22830,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/play-history`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -22722,7 +22842,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
   };
@@ -22827,7 +22947,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllPlaylistsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/playlist`;
-      
+
       return baseUrl + path;
     },
 
@@ -22858,7 +22978,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addPlaylistUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/playlist`;
-      
+
       return baseUrl + path;
     },
 
@@ -22906,7 +23026,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getPostParseTargetsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/post-parser/targets`;
-      
+
       return baseUrl + path;
     },
 
@@ -22935,7 +23055,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllPostParserTasksUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/post-parser/task/all`;
-      
+
       return baseUrl + path;
     },
 
@@ -22961,7 +23081,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     deleteAllPostParserTasksUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/post-parser/task/all`;
-      
+
       return baseUrl + path;
     },
 
@@ -22992,7 +23112,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addPostParserTasksUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/post-parser/task`;
-      
+
       return baseUrl + path;
     },
 
@@ -23038,7 +23158,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     deletePostParserTasksByLinksUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/post-parser/task/by-links`;
-      
+
       return baseUrl + path;
     },
 
@@ -23079,7 +23199,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     startAllPostParserTasksUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/post-parser/start`;
-      
+
       return baseUrl + path;
     },
 
@@ -23113,7 +23233,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getPostParserTaskStatusesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/post-parser/task/statuses`;
-      
+
       return baseUrl + path;
     },
   };
@@ -23194,7 +23314,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAvailablePropertyTypesForManuallySettingValueUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/property/property-types-for-manually-setting-value`;
-      
+
       return baseUrl + path;
     },
 
@@ -23281,7 +23401,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/property/best-matching`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -23293,7 +23413,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
   };
@@ -23323,7 +23443,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getRemoteAccessContextUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/remote-access/context`;
-      
+
       return baseUrl + path;
     },
 
@@ -23352,7 +23472,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getRemoteAccessServerInfoUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/remote-access/server-info`;
-      
+
       return baseUrl + path;
     },
 
@@ -23381,7 +23501,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getRemoteAccessSettingsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/remote-access/settings`;
-      
+
       return baseUrl + path;
     },
 
@@ -23412,7 +23532,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     setRemoteAccessModeUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/remote-access/mode`;
-      
+
       return baseUrl + path;
     },
 
@@ -23443,7 +23563,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     setRemoteAccessLiveTranscodeUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/remote-access/live-transcode`;
-      
+
       return baseUrl + path;
     },
 
@@ -23474,7 +23594,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     setRemoteAccessRequirePairingUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/remote-access/require-pairing`;
-      
+
       return baseUrl + path;
     },
 
@@ -23508,7 +23628,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     pairRemoteDeviceWithCodeUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/remote-access/pair/code`;
-      
+
       return baseUrl + path;
     },
 
@@ -23542,7 +23662,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     requestRemoteDevicePairingUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/remote-access/pair/request`;
-      
+
       return baseUrl + path;
     },
 
@@ -23576,7 +23696,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     claimRemoteDevicePairingUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/remote-access/pair/claim`;
-      
+
       return baseUrl + path;
     },
 
@@ -23605,7 +23725,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     issueRemoteAccessPairingCodeUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/remote-access/pairing/code`;
-      
+
       return baseUrl + path;
     },
 
@@ -23664,7 +23784,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getRemoteAccessDevicesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/remote-access/devices`;
-      
+
       return baseUrl + path;
     },
 
@@ -23693,7 +23813,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getRemoteAccessPairingRequestsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/remote-access/pairing/requests`;
-      
+
       return baseUrl + path;
     },
 
@@ -23764,7 +23884,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     moveResourcesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource-move`;
-      
+
       return baseUrl + path;
     },
 
@@ -23798,7 +23918,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     previewResourceMoveUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource-move/preview`;
-      
+
       return baseUrl + path;
     },
 
@@ -23843,7 +23963,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource-move/records`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -23855,7 +23975,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -23911,7 +24031,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     deleteInactiveResourceMoveRecordsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource-move/records/inactive`;
-      
+
       return baseUrl + path;
     },
   };
@@ -24051,7 +24171,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/steam-app`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -24063,7 +24183,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -24149,7 +24269,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/steam-app/sync`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -24161,7 +24281,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
   };
@@ -24201,7 +24321,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/subscription`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -24213,7 +24333,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -24247,7 +24367,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addSubscriptionUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/subscription`;
-      
+
       return baseUrl + path;
     },
 
@@ -24351,7 +24471,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getSubscriptionProvidersUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/subscription/providers`;
-      
+
       return baseUrl + path;
     },
   };
@@ -24378,7 +24498,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     tampermonkeyHealthUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/Tampermonkey/health`;
-      
+
       return baseUrl + path;
     },
 
@@ -24404,7 +24524,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     installTampermonkeyScriptUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/Tampermonkey/install`;
-      
+
       return baseUrl + path;
     },
 
@@ -24429,7 +24549,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getTampermonkeyScriptUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/Tampermonkey/script/bakabase.user.js`;
-      
+
       return baseUrl + path;
     },
   };
@@ -24459,7 +24579,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllTextTypesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/text/type`;
-      
+
       return baseUrl + path;
     },
 
@@ -24493,7 +24613,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addTextTypeUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/text/type`;
-      
+
       return baseUrl + path;
     },
 
@@ -24672,7 +24792,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addTextPrefabEntriesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/text/prefabs`;
-      
+
       return baseUrl + path;
     },
 
@@ -24706,7 +24826,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/text/clean`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -24718,7 +24838,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
   };
@@ -24748,7 +24868,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllThirdPartyRequestStatisticsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/third-party/request-statistics`;
-      
+
       return baseUrl + path;
     },
   };
@@ -24783,7 +24903,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     queryThirdPartyContentStatusUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/third-party-content-tracker/query`;
-      
+
       return baseUrl + path;
     },
 
@@ -24814,7 +24934,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     markThirdPartyContentAsViewedUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/third-party-content-tracker/mark-viewed`;
-      
+
       return baseUrl + path;
     },
 
@@ -24855,7 +24975,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/third-party-content-tracker/nearest-viewed`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -24867,7 +24987,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
   };
@@ -24904,7 +25024,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/tool/open`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -24916,7 +25036,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -24955,7 +25075,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/tool/cookie-capture`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -24967,7 +25087,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -24993,7 +25113,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getTlsPresetsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/tool/tls-presets`;
-      
+
       return baseUrl + path;
     },
 
@@ -25035,7 +25155,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/tool/cookie-validation`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -25047,7 +25167,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -25088,7 +25208,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/tool/thumbnail`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -25100,7 +25220,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -25139,7 +25259,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/tool/match-all`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -25151,7 +25271,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -25185,7 +25305,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/tool/open-file`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -25197,7 +25317,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -25231,7 +25351,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/tool/generate-files-to-embedded`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -25243,7 +25363,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
   };
@@ -25273,7 +25393,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getNewAppVersionUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/updater/app/new-version`;
-      
+
       return baseUrl + path;
     },
 
@@ -25299,7 +25419,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     startUpdatingAppUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/updater/app/update`;
-      
+
       return baseUrl + path;
     },
 
@@ -25325,7 +25445,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     stopUpdatingAppUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/updater/app/update`;
-      
+
       return baseUrl + path;
     },
 
@@ -25351,7 +25471,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     restartAndUpdateAppUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/updater/app/restart`;
-      
+
       return baseUrl + path;
     },
   };
@@ -25391,7 +25511,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/workflow`;
-      
+
       // Build query string
       if (query) {
         // Object.entries rather than indexing by key: the query object is a typed
@@ -25403,7 +25523,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
+
       return baseUrl + path;
     },
 
@@ -25437,7 +25557,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addWorkflowUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/workflow`;
-      
+
       return baseUrl + path;
     },
 
@@ -25523,7 +25643,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getWorkflowTriggersUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/workflow/triggers`;
-      
+
       return baseUrl + path;
     },
 
@@ -25576,7 +25696,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getWorkflowActivitiesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/workflow/activities`;
-      
+
       return baseUrl + path;
     },
 
@@ -25605,7 +25725,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getWorkflowItemTypesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/workflow/item-types`;
-      
+
       return baseUrl + path;
     },
 

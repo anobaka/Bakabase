@@ -214,6 +214,7 @@ namespace Bakabase.Service.Extensions
             services.AddHttpClient(nameof(Components.Acquisition.Steps.FetchMagnetStep));
             services.AddScoped<Components.Acquisition.AcquisitionInboxService>();
             services.AddScoped<Components.Acquisition.AcquisitionSetupService>();
+            services.AddScoped<Components.Acquisition.AcquisitionCandidateService>();
             services.AddHostedService<Components.Acquisition.AcquisitionInboxWatcher>();
 
             // "I am missing this" — creating resources for things the user does not have yet.

@@ -286,7 +286,7 @@ async function buildApiTs() {
 
   content = injectUrlBuilders(content);
 
-  fs.writeFileSync(apiPath, content, "utf-8");
+  fs.writeFileSync(apiPath, content.replace(/[\t ]+$/gm, ""), "utf-8");
 }
 
 // ---------- pipeline ----------
