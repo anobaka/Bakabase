@@ -17,7 +17,7 @@ import CandidateOverview from "./components/CandidateOverview";
 import RecipeCatalog from "./components/RecipeCatalog";
 
 import BApi from "@/sdk/BApi";
-import { Button, Chip, Spinner, Tab, Tabs } from "@/components/bakaui";
+import { Button, Chip, Spinner, Tab, Tabs, Tooltip } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { AcquisitionStatus } from "@/sdk/constants";
 
@@ -89,11 +89,36 @@ const AcquisitionPage: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-3">
-      <div>
-        <h1 className="text-xl font-semibold">{t<string>("menu.acquisition")}</h1>
-        <p className="mt-1 text-sm text-default-500">
-          {t<string>("acquisition.overview.description")}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold">{t<string>("menu.acquisition")}</h1>
+          <p className="mt-1 text-sm text-default-500">
+            {t<string>("acquisition.overview.description")}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button size="sm" variant="flat" onPress={() => setRecipesOpen(true)}>
+            {t<string>("acquisition.recipes.title")}
+          </Button>
+          <Tooltip content={t<string>("acquisition.recipes.createDescription")}>
+            <Button
+              size="sm"
+              variant="flat"
+              onPress={() => navigate("/workflows/editor?template=acquisition")}
+            >
+              {t<string>("acquisition.recipes.create")}
+            </Button>
+          </Tooltip>
+          <Tooltip content={t<string>("acquisition.setup.description")}>
+            <Button
+              size="sm"
+              variant="light"
+              onPress={() => createPortal(SetupWizard, { onDone: load })}
+            >
+              {t<string>("acquisition.setup.open")}
+            </Button>
+          </Tooltip>
+        </div>
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <Tabs selectedKey={tab} size="sm" onSelectionChange={(k) => setTab(k as TabKey)}>
@@ -117,23 +142,15 @@ const AcquisitionPage: React.FC = () => {
         )}
 
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          <Button size="sm" variant="flat" onPress={() => setRecipesOpen(true)}>
-            {t<string>("acquisition.recipes.title")}
-          </Button>
-          <Button
-            size="sm"
-            variant="light"
-            onPress={() => createPortal(SetupWizard, { onDone: load })}
-          >
-            {t<string>("acquisition.setup.open")}
-          </Button>
-          <Button
-            size="sm"
-            variant="flat"
-            onPress={() => createPortal(InboxDrawer, { onClaimed: load })}
-          >
-            {t<string>("acquisition.inbox.open")}
-          </Button>
+          <Tooltip content={t<string>("acquisition.inbox.hint")}>
+            <Button
+              size="sm"
+              variant="flat"
+              onPress={() => createPortal(InboxDrawer, { onClaimed: load })}
+            >
+              {t<string>("acquisition.inbox.open")}
+            </Button>
+          </Tooltip>
           <Button
             color="primary"
             size="sm"
@@ -141,13 +158,15 @@ const AcquisitionPage: React.FC = () => {
           >
             {t<string>("acquisition.start")}
           </Button>
-          <Button
-            size="sm"
-            variant="light"
-            onPress={() => createPortal(ImportSharedListModal, { onImported: load })}
-          >
-            {t<string>("acquisition.sharedList.title")}
-          </Button>
+          <Tooltip content={t<string>("acquisition.sharedList.hint")}>
+            <Button
+              size="sm"
+              variant="light"
+              onPress={() => createPortal(ImportSharedListModal, { onImported: load })}
+            >
+              {t<string>("acquisition.sharedList.title")}
+            </Button>
+          </Tooltip>
         </div>
       </div>
 

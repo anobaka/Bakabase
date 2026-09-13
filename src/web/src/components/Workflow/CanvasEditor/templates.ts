@@ -36,6 +36,18 @@ const draftOf = (kind: string, configJson?: string): ActivityDraft => {
 };
 
 export const EDITOR_TEMPLATES: Record<string, EditorSeed> = {
+  acquisition: {
+    nameKey: "workflow.template.acquisition.name",
+    triggerKind: "acquisition.requested",
+    activities: [
+      { kind: "acquisition.resolveSharedContent" },
+      { kind: "acquisition.selectLink" },
+      { kind: "acquisition.waitForInbox" },
+      { kind: "acquisition.unpack" },
+      { kind: "acquisition.place" },
+      { kind: "acquisition.materialize" },
+    ],
+  },
   // Scan → rename ops → trim leftovers → record the plan: the basicClean recipe from the
   // help center, ready to point at a folder.
   fileCleaning: {

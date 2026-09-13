@@ -5,6 +5,8 @@ import type { AcquisitionRecipeVm, AcquisitionTaskVm } from "../..";
 import React from "react";
 import { useTranslation } from "react-i18next";
 
+import { recipeLabel } from "../../recipeLabels";
+
 import BApi from "@/sdk/BApi";
 import { Button, Chip, Progress, toast } from "@/components/bakaui";
 import { getWorkflowActivityUI } from "@/components/Workflow/Activities";
@@ -96,7 +98,7 @@ const AcquisitionRow: React.FC<Props> = ({ task, recipes, onChanged, onEditRecip
         <div className="ml-auto flex items-center gap-1">
           {recipe && (
             <Button size="sm" variant="light" onPress={() => onEditRecipe(recipe.definitionId)}>
-              {recipe.name}
+              {recipeLabel(recipe, t)}
             </Button>
           )}
           {isLive && (

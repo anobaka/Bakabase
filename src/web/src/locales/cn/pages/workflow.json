@@ -1,6 +1,7 @@
 {
   "menu.workflow": "工作流",
   "workflow.title": "工作流",
+  "workflow.template.acquisition.name": "新的获取工作流",
   "workflow.empty": "还没有工作流。添加一个在触发时跑自动化。",
   "workflow.action.add": "添加工作流",
   "workflow.activity.add": "添加节点",

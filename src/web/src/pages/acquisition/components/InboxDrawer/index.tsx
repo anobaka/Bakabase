@@ -64,6 +64,8 @@ const InboxDrawer = ({ onClaimed, onDestroyed }: Props) => {
       <DrawerContent>
         <DrawerHeader>{t<string>("acquisition.inbox.title")}</DrawerHeader>
         <DrawerBody>
+          <p className="text-sm text-default-500">{t<string>("acquisition.inbox.description")}</p>
+          <p className="text-xs text-default-400">{t<string>("acquisition.inbox.manualHelp")}</p>
           {candidates == null ? (
             <div className="flex justify-center py-10">
               <Spinner size="lg" />

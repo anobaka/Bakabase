@@ -151,6 +151,7 @@ const ImportSharedListModal = ({ onImported, onDestroyed }: Props) => {
         <div className="text-sm text-default-500">
           {t<string>("acquisition.sharedList.description")}
         </div>
+        <p className="text-xs text-default-400">{t<string>("acquisition.sharedList.example")}</p>
 
         <div className="flex items-center gap-2">
           <input

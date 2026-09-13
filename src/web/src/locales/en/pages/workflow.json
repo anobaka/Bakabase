@@ -1,6 +1,7 @@
 {
   "menu.workflow": "Workflows",
   "workflow.title": "Workflows",
+  "workflow.template.acquisition.name": "New acquisition workflow",
   "workflow.empty": "No workflows yet. Add one to run automation when a trigger fires.",
   "workflow.action.add": "Add workflow",
   "workflow.activity.add": "Add activity",
