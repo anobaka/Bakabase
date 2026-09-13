@@ -10,6 +10,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { AiOutlinePlusCircle, AiOutlineSearch } from "react-icons/ai";
 import { HiOutlineCollection } from "react-icons/hi";
 import { MdOutlineDelete } from "react-icons/md";
+import { useShallow } from "zustand/react/shallow";
 
 import CompositionBar from "./components/CompositionBar";
 import { buildCollectionSearch, percent } from "./helpers";
@@ -39,7 +40,7 @@ const CollectionPage = () => {
   const location = useLocation();
   const { createPortal } = useBakabaseContext();
 
-  const collections = useCollectionsStore(selectCollectionList);
+  const collections = useCollectionsStore(useShallow(selectCollectionList));
   const setCollections = useCollectionsStore((s) => s.setCollections);
   const setPendingSearch = usePendingSearchStore((s) => s.setPendingSearch);
 
