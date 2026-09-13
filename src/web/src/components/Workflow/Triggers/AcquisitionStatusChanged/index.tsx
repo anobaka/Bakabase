@@ -1,12 +1,12 @@
 import type { WorkflowTriggerUI } from "../types";
-import type { AcquisitionStatus } from "@/sdk/constants";
 
 import React from "react";
 import { useTranslation } from "react-i18next";
 
 import { Select } from "@/components/bakaui";
 import { WorkflowItemTypes } from "@/components/Workflow/itemTypes";
-import { AcquisitionStatusLabel, acquisitionStatuses } from "@/sdk/constants";
+import { acquisitionStatusLabel } from "@/components/Workflow/valueLabels";
+import { acquisitionStatuses } from "@/sdk/constants";
 
 interface Filter {
   statuses: number[];
@@ -24,8 +24,8 @@ const FilterForm: React.FC<{ value: Filter; onChange: (v: Filter) => void }> = (
     <Select
       dataSource={acquisitionStatuses.map(({ value: id }) => ({
         value: String(id),
-        label: AcquisitionStatusLabel[id],
-        textValue: AcquisitionStatusLabel[id],
+        label: acquisitionStatusLabel(t, id),
+        textValue: acquisitionStatusLabel(t, id),
       }))}
       description={t<string>("workflow.trigger.acquisitionStatusChanged.statuses.description")}
       label={t<string>("workflow.trigger.acquisitionStatusChanged.statuses.label")}
@@ -49,7 +49,7 @@ const FilterSummary: React.FC<{ filter: Filter }> = ({ filter }) => {
     <span className="text-xs text-default-500">
       {filter.statuses.length === 0
         ? t<string>("workflow.trigger.acquisitionStatusChanged.summary.matchAll")
-        : filter.statuses.map((s) => AcquisitionStatusLabel[s as AcquisitionStatus]).join(", ")}
+        : filter.statuses.map((s) => acquisitionStatusLabel(t, s)).join(", ")}
     </span>
   );
 };

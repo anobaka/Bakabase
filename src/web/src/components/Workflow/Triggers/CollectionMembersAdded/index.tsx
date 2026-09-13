@@ -8,8 +8,9 @@ import { useTranslation } from "react-i18next";
 
 import { Select } from "@/components/bakaui";
 import { WorkflowItemTypes } from "@/components/Workflow/itemTypes";
+import { collectionMembershipOriginLabel } from "@/components/Workflow/valueLabels";
 import BApi from "@/sdk/BApi";
-import { CollectionMembershipOrigin, CollectionMembershipOriginLabel } from "@/sdk/constants";
+import { CollectionMembershipOrigin } from "@/sdk/constants";
 
 interface Filter {
   collectionIds: number[];
@@ -56,8 +57,8 @@ const FilterForm: React.FC<{ value: Filter; onChange: (v: Filter) => void }> = (
           CollectionMembershipOrigin.Subscription,
         ].map((o) => ({
           value: String(o),
-          label: CollectionMembershipOriginLabel[o],
-          textValue: CollectionMembershipOriginLabel[o],
+          label: collectionMembershipOriginLabel(t, o),
+          textValue: collectionMembershipOriginLabel(t, o),
         }))}
         description={t<string>("workflow.trigger.collectionMembersAdded.origins.description")}
         label={t<string>("workflow.trigger.collectionMembersAdded.origins.label")}
@@ -81,7 +82,7 @@ const FilterSummary: React.FC<{ filter: Filter }> = ({ filter }) => {
     );
   }
   if (filter.origins.length > 0) {
-    parts.push(filter.origins.map((o) => CollectionMembershipOriginLabel[o as never]).join(", "));
+    parts.push(filter.origins.map((o) => collectionMembershipOriginLabel(t, o)).join(", "));
   }
 
   return (

@@ -31,6 +31,7 @@ import { activityDisplayName, triggerDisplayName } from "../displayNames";
 import { classifyActivity } from "../activityFit";
 import { descriptorAccepts, walkChain } from "../chainWalk";
 import { WorkflowItemTypeIndex } from "../itemTypeRegistry";
+import { workflowItemTypeDisplayName } from "../itemTypes";
 
 import BApi from "@/sdk/BApi";
 import { Button, Input, Spinner, Switch, toast } from "@/components/bakaui";
@@ -169,9 +170,7 @@ const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => 
   );
 
   const itemTypeName = (tag: string) =>
-    t<string>(`workflow.itemType.${tag}.displayName`, {
-      defaultValue: itemTypes?.get(tag)?.displayName ?? tag,
-    });
+    workflowItemTypeDisplayName(t, tag, itemTypes?.get(tag)?.displayName);
 
   // Palette: every activity (except the hidden AI bridge) grouped, with tail-fit / reason.
   const paletteEntries = useMemo<PaletteEntry[]>(() => {

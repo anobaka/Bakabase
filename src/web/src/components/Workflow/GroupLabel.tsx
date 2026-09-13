@@ -1,6 +1,15 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { AiOutlineBell, AiOutlineCloudDownload, AiOutlineFolderOpen, AiOutlineFontSize, AiOutlineFunction, AiOutlineRobot } from "react-icons/ai";
+import {
+  AiOutlineAppstore,
+  AiOutlineBell,
+  AiOutlineCloudDownload,
+  AiOutlineDatabase,
+  AiOutlineFolderOpen,
+  AiOutlineFontSize,
+  AiOutlineFunction,
+  AiOutlineRobot,
+} from "react-icons/ai";
 
 import ThirdPartyLabel from "@/components/ThirdPartyLabel";
 import { ThirdPartyId } from "@/sdk/constants";
@@ -12,6 +21,7 @@ import { ThirdPartyId } from "@/sdk/constants";
  */
 const GroupLabel: React.FC<{ group: string }> = ({ group }) => {
   const { t } = useTranslation();
+
   switch (group) {
     case "pixiv":
       return <ThirdPartyLabel thirdPartyId={ThirdPartyId.Pixiv} />;
@@ -57,6 +67,27 @@ const GroupLabel: React.FC<{ group: string }> = ({ group }) => {
         <span className="inline-flex items-center gap-2">
           <AiOutlineFontSize />
           <span>{t<string>("workflow.group.text")}</span>
+        </span>
+      );
+    case "acquisition":
+      return (
+        <span className="inline-flex items-center gap-2">
+          <AiOutlineCloudDownload />
+          <span>{t<string>("workflow.group.acquisition")}</span>
+        </span>
+      );
+    case "collection":
+      return (
+        <span className="inline-flex items-center gap-2">
+          <AiOutlineAppstore />
+          <span>{t<string>("workflow.group.collection")}</span>
+        </span>
+      );
+    case "resource":
+      return (
+        <span className="inline-flex items-center gap-2">
+          <AiOutlineDatabase />
+          <span>{t<string>("workflow.group.resource")}</span>
         </span>
       );
     default:

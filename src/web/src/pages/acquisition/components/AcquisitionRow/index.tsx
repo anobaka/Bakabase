@@ -9,7 +9,8 @@ import BApi from "@/sdk/BApi";
 import { Button, Chip, Progress, toast } from "@/components/bakaui";
 import { getWorkflowActivityUI } from "@/components/Workflow/Activities";
 import { activityDisplayName } from "@/components/Workflow/displayNames";
-import { AcquisitionStatus, AcquisitionStatusLabel } from "@/sdk/constants";
+import { acquisitionStatusLabel } from "@/components/Workflow/valueLabels";
+import { AcquisitionStatus } from "@/sdk/constants";
 
 interface Props {
   task: AcquisitionTaskVm;
@@ -83,7 +84,7 @@ const AcquisitionRow: React.FC<Props> = ({ task, recipes, onChanged, onEditRecip
     <div className="border border-default-200 rounded-lg p-3 flex flex-col gap-2">
       <div className="flex items-center gap-2">
         <Chip color={StatusColor[task.status] ?? "default"} size="sm" variant="flat">
-          {AcquisitionStatusLabel[task.status]}
+          {acquisitionStatusLabel(t, task.status)}
         </Chip>
         <span className="font-medium truncate">
           {task.resourceName ?? t<string>("acquisition.unnamed", { id: task.resourceId })}

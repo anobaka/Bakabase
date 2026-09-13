@@ -3,11 +3,13 @@ import type { AiTransformConfig } from "./types";
 import React from "react";
 import { useTranslation } from "react-i18next";
 
+import { workflowItemTypeDisplayName } from "../../itemTypes";
+
 const Summary: React.FC<{ config: AiTransformConfig }> = ({ config }) => {
   const { t } = useTranslation();
   const targetPart = config.targetItemType
     ? t<string>("workflow.activity.aiTransform.summary.targetPinned", {
-        targetItemType: config.targetItemType,
+        targetItemType: workflowItemTypeDisplayName(t, config.targetItemType),
       })
     : t<string>("workflow.activity.aiTransform.summary.targetAuto");
   const customPart = config.extraInstructions
