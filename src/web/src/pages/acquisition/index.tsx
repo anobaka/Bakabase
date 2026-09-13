@@ -5,6 +5,7 @@ import type { components } from "@/sdk/BApi2";
 import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
+import { Drawer, DrawerBody, DrawerContent, DrawerHeader } from "@heroui/react";
 
 import InboxDrawer from "./components/InboxDrawer";
 import AcquisitionRow from "./components/AcquisitionRow";
@@ -32,7 +33,7 @@ const LIVE: AcquisitionStatus[] = [
   AcquisitionStatus.Pending,
 ];
 
-type TabKey = "overview" | "live" | "all" | "recipes" | "matches";
+type TabKey = "overview" | "live" | "all" | "matches";
 
 /** Waiting first: it is the only state that needs a person, and it is what the page is for. */
 const ORDER: Record<number, number> = {
@@ -50,6 +51,7 @@ const AcquisitionPage: React.FC = () => {
   const [recipes, setRecipes] = useState<AcquisitionRecipeVm[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<TabKey>("overview");
+  const [recipesOpen, setRecipesOpen] = useState(false);
   const [matchCount, setMatchCount] = useState(0);
 
   const load = useCallback(async () => {
@@ -98,7 +100,6 @@ const AcquisitionPage: React.FC = () => {
           <Tab key="overview" title={t<string>("acquisition.tab.overview")} />
           <Tab key="live" title={t<string>("acquisition.tab.live")} />
           <Tab key="all" title={t<string>("acquisition.tab.all")} />
-          <Tab key="recipes" title={t<string>("acquisition.tab.recipes")} />
           <Tab
             key="matches"
             title={
@@ -116,6 +117,9 @@ const AcquisitionPage: React.FC = () => {
         )}
 
         <div className="ml-auto flex flex-wrap items-center gap-2">
+          <Button size="sm" variant="flat" onPress={() => setRecipesOpen(true)}>
+            {t<string>("acquisition.recipes.title")}
+          </Button>
           <Button
             size="sm"
             variant="light"
@@ -156,8 +160,6 @@ const AcquisitionPage: React.FC = () => {
           }}
           onViewTasks={() => setTab("live")}
         />
-      ) : tab === "recipes" ? (
-        <RecipeCatalog recipes={recipes} onOpen={(id) => navigate(`/workflows/editor?id=${id}`)} />
       ) : tab === "matches" ? (
         <MatchSuggestions onChanged={load} />
       ) : loading && tasks.length === 0 ? (
@@ -181,6 +183,27 @@ const AcquisitionPage: React.FC = () => {
           ))}
         </div>
       )}
+
+      <Drawer isOpen={recipesOpen} placement="right" size="3xl" onOpenChange={setRecipesOpen}>
+        <DrawerContent>
+          <DrawerHeader>{t<string>("acquisition.recipes.title")}</DrawerHeader>
+          <DrawerBody>
+            {loading ? (
+              <div className="flex justify-center py-10">
+                <Spinner aria-label={t<string>("acquisition.recipes.loading")} size="lg" />
+              </div>
+            ) : (
+              <RecipeCatalog
+                recipes={recipes}
+                onOpen={(id) => {
+                  setRecipesOpen(false);
+                  navigate(`/workflows/editor?id=${id}`);
+                }}
+              />
+            )}
+          </DrawerBody>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 };
