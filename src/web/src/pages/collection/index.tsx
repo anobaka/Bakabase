@@ -1,8 +1,6 @@
 "use client";
 
 import type { CollectionModel } from "@/stores/collections";
-import type { InputProps } from "@heroui/react";
-import type { ButtonProps } from "@/components/bakaui";
 
 import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -29,7 +27,6 @@ import {
   toast,
 } from "@/components/bakaui";
 import { buildColorValueString } from "@/components/bakaui/components/ColorPicker";
-import { EditableValue } from "@/components/EditableValue";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { selectCollectionList, useCollectionsStore } from "@/stores/collections";
 import { usePendingSearchStore } from "@/stores/pendingSearch";
@@ -101,108 +98,110 @@ const CollectionPage = () => {
     if (location.pathname !== "/resource") navigate("/resource");
   };
 
-  const rename = async (collection: CollectionModel, name: string) => {
-    if (!name) {
-      toast.danger(t<string>("collection.error.nameEmpty"));
-
-      return;
-    }
-
-    await BApi.collection.putCollection(collection.id, { ...collection, name });
-    await load();
-  };
-
   const shown = keyword
     ? collections.filter((c) => c.name.toLowerCase().includes(keyword.toLowerCase()))
     : collections;
 
   const renderCard = (collection: CollectionModel) => (
-    <Card key={collection.id} shadow="sm">
-      <CardBody className="p-4 flex flex-col gap-3">
-        <div className="flex items-center justify-between gap-2">
-          <EditableValue<string, InputProps, ButtonProps & { value: string }>
-            Editor={Input}
-            Viewer={({ value, ...props }) => (
-              <Button
-                className="whitespace-break-spaces h-auto text-left font-medium text-base px-2 min-w-0"
-                size="sm"
-                style={{ color: collection.color ?? undefined }}
-                variant="light"
-                {...props}
-              >
-                <span className="truncate">{value}</span>
-              </Button>
+    <div
+      key={collection.id}
+      aria-label={collection.name}
+      className="h-full cursor-pointer rounded-large outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+      role="link"
+      tabIndex={0}
+      onClick={(event) => {
+        const target = event.target;
+
+        // Controls and portalled popovers keep their own actions.
+        if (
+          !(target instanceof Element) ||
+          !event.currentTarget.contains(target) ||
+          target.closest(
+            'button, a, input, textarea, select, [role="button"], [role="combobox"], [contenteditable="true"]',
+          )
+        ) {
+          return;
+        }
+
+        navigate(`/collections/detail?id=${collection.id}`);
+      }}
+      onKeyDown={(event) => {
+        if (event.target !== event.currentTarget || event.repeat) return;
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          navigate(`/collections/detail?id=${collection.id}`);
+        }
+      }}
+    >
+      <Card className="h-full transition-shadow hover:shadow-md" shadow="sm">
+        <CardBody className="p-4 flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-2">
+            <h2
+              className="min-w-0 flex-1 break-words text-base font-medium"
+              style={{ color: collection.color ?? undefined }}
+            >
+              {collection.name}
+            </h2>
+            <ColorPicker
+              color={collection.color ?? undefined}
+              onChange={async (color) => {
+                await BApi.collection.putCollection(collection.id, {
+                  ...collection,
+                  color: buildColorValueString(color),
+                });
+                await load();
+              }}
+            />
+          </div>
+
+          <CompositionBar collection={collection} />
+
+          <div className="flex items-center gap-2">
+            <Chip
+              color={percent(collection) === 100 ? "success" : "default"}
+              size="sm"
+              variant="flat"
+            >
+              {t<string>("collection.percentComplete", { percent: percent(collection) })}
+            </Chip>
+            {collection.hasRule && (
+              <Tooltip content={t<string>("collection.rule.tip")}>
+                <Chip color="secondary" size="sm" variant="flat">
+                  {t<string>("collection.rule.title")}
+                </Chip>
+              </Tooltip>
             )}
-            editorProps={{ size: "sm", isRequired: true }}
-            trigger="viewer"
-            value={collection.name}
-            onSubmit={(v) => rename(collection, (v ?? "").trim())}
-          />
-          <ColorPicker
-            color={collection.color ?? undefined}
-            onChange={async (color) => {
-              await BApi.collection.putCollection(collection.id, {
-                ...collection,
-                color: buildColorValueString(color),
-              });
-              await load();
-            }}
-          />
-        </div>
+          </div>
 
-        <CompositionBar collection={collection} />
-
-        <div className="flex items-center gap-2">
-          <Chip
-            color={percent(collection) === 100 ? "success" : "default"}
-            size="sm"
-            variant="flat"
-          >
-            {t<string>("collection.percentComplete", { percent: percent(collection) })}
-          </Chip>
-          {collection.hasRule && (
-            <Tooltip content={t<string>("collection.rule.tip")}>
-              <Chip color="secondary" size="sm" variant="flat">
-                {t<string>("collection.rule.title")}
-              </Chip>
+          <div className="flex items-center gap-1">
+            <Tooltip content={t<string>("collection.action.openInResourcePage")}>
+              <Button
+                isIconOnly
+                aria-label={t<string>("collection.action.openInResourcePage")}
+                size="sm"
+                variant="light"
+                onPress={() => openInResourcePage(collection)}
+              >
+                <AiOutlineSearch className="text-base" />
+              </Button>
             </Tooltip>
-          )}
-        </div>
-
-        <div className="flex items-center gap-1">
-          <Button
-            color="primary"
-            size="sm"
-            variant="light"
-            onPress={() => navigate(`/collections/detail?id=${collection.id}`)}
-          >
-            {t<string>("collection.action.open")}
-          </Button>
-          <Tooltip content={t<string>("collection.action.openInResourcePage")}>
-            <Button
-              isIconOnly
-              size="sm"
-              variant="light"
-              onPress={() => openInResourcePage(collection)}
-            >
-              <AiOutlineSearch className="text-base" />
-            </Button>
-          </Tooltip>
-          <Tooltip content={t<string>("collection.action.delete")}>
-            <Button
-              isIconOnly
-              className="ml-auto"
-              color="danger"
-              size="sm"
-              variant="light"
-              onPress={() => remove(collection)}
-            >
-              <MdOutlineDelete className="text-base" />
-            </Button>
-          </Tooltip>
-        </div>
-      </CardBody>
-    </Card>
+            <Tooltip content={t<string>("collection.action.delete")}>
+              <Button
+                isIconOnly
+                aria-label={t<string>("collection.action.delete")}
+                className="ml-auto"
+                color="danger"
+                size="sm"
+                variant="light"
+                onPress={() => remove(collection)}
+              >
+                <MdOutlineDelete className="text-base" />
+              </Button>
+            </Tooltip>
+          </div>
+        </CardBody>
+      </Card>
+    </div>
   );
 
   if (loading) {

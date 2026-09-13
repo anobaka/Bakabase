@@ -19,13 +19,7 @@ import CollectionRuleEditor from "@/components/CollectionRuleEditor";
 import { Button, Chip, Spinner, Tab, Tabs, Tooltip, toast } from "@/components/bakaui";
 import { usePendingSearchStore } from "@/stores/pendingSearch";
 
-/**
- * One collection: who is in it, where they came from, what rule keeps it, and what it does.
- *
- * The four tabs are the four questions a collection raises, in the order people ask them. Source
- * is a placeholder until subscriptions land — showing where a member came from only means
- * something once something other than a person can put one there.
- */
+/** A collection's resources, subscriptions, automatic inclusion criteria and settings. */
 const CollectionDetailPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -157,7 +151,18 @@ const CollectionDetailPage = () => {
 
       <CompositionBar collection={collection} />
 
-      <Tabs>
+      <Tabs
+        isVertical
+        aria-label={collection.name}
+        classNames={{
+          tabWrapper: "w-full min-w-0 items-start gap-2 sm:gap-4",
+          base: "w-24 shrink-0 sm:w-32",
+          tabList: "w-full",
+          tab: "justify-start px-2 sm:px-3",
+          tabContent: "whitespace-normal text-left",
+          panel: "min-w-0 flex-1 overflow-x-auto px-0",
+        }}
+      >
         <Tab key="members" title={t<string>("collection.tab.members")}>
           <MembersTab collection={collection} onChanged={load} />
         </Tab>
