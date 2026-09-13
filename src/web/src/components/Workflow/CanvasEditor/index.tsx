@@ -7,6 +7,7 @@ import type { components } from "@/sdk/BApi2";
 import React, { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
+import { v4 as uuidv4 } from "uuid";
 import {
   AiOutlineArrowLeft,
   AiOutlineExpand,
@@ -58,7 +59,7 @@ interface Props {
 
 function activityVmToDraft(a: ActivityVm): ActivityDraft {
   return {
-    clientId: crypto.randomUUID(),
+    clientId: uuidv4(),
     kind: a.kind,
     configJson: a.configJson,
     onItemError: a.onItemError as WorkflowActivityErrorBehavior,
@@ -208,7 +209,7 @@ const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => 
     const ui = getWorkflowActivityUI(kind);
 
     return {
-      clientId: crypto.randomUUID(),
+      clientId: uuidv4(),
       kind,
       configJson: configJson ?? (ui ? ui.serializeConfig(ui.defaultConfig()) : "{}"),
       onItemError: WorkflowActivityErrorBehavior.Fail,
@@ -221,7 +222,7 @@ const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => 
     if (!aiUi) return null;
 
     return {
-      clientId: crypto.randomUUID(),
+      clientId: uuidv4(),
       kind: AI_TRANSFORM_KIND,
       configJson: aiUi.serializeConfig({
         ...(aiUi.defaultConfig() as object),

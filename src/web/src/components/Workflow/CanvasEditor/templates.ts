@@ -1,5 +1,7 @@
 import type { ActivityDraft } from "./types";
 
+import { v4 as uuidv4 } from "uuid";
+
 import { getWorkflowActivityUI } from "../Activities";
 
 import { WorkflowActivityErrorBehavior } from "@/sdk/constants";
@@ -26,7 +28,7 @@ const draftOf = (kind: string, configJson?: string): ActivityDraft => {
   const ui = getWorkflowActivityUI(kind);
 
   return {
-    clientId: crypto.randomUUID(),
+    clientId: uuidv4(),
     kind,
     configJson: configJson ?? (ui ? ui.serializeConfig(ui.defaultConfig()) : "{}"),
     onItemError: WorkflowActivityErrorBehavior.Fail,
