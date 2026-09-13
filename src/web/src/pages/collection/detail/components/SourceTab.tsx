@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 import { AiOutlinePlusCircle, AiOutlineReload } from "react-icons/ai";
 
 import BApi from "@/sdk/BApi";
+import { HelpCenterButton } from "@/components/HelpCenter";
 import SubscriptionEditor from "@/components/Subscription/SubscriptionEditor";
 import { Button, Chip, Spinner, Tooltip, toast } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
@@ -102,6 +103,7 @@ const SourceTab: React.FC<Props> = ({ collection, onChanged }) => {
         <span className="text-sm text-default-500">
           {t<string>("collection.source.description")}
         </span>
+        <HelpCenterButton topic="subscription" />
         <Button
           className="ml-auto"
           size="sm"

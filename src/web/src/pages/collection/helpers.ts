@@ -40,5 +40,10 @@ export const missingCount = (collection: CollectionModel): number => {
   return Math.max(0, p.total - p.owned - p.acquiring);
 };
 
-export const percent = (collection: CollectionModel): number =>
-  Math.round((collection.progress?.ratio ?? 1) * 100);
+export const percent = (collection: CollectionModel): number | undefined => {
+  const progress = collection.progress;
+
+  if (!progress || progress.total === 0) return undefined;
+
+  return Math.round((progress.owned / progress.total) * 100);
+};

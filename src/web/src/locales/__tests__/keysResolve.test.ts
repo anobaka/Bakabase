@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import { WorkflowItemTypes } from "@/components/Workflow/itemTypes";
 import { acquisitionWaitReasons } from "@/sdk/constants";
+import i18n from "@/i18n";
 
 /**
  * Guards against a translation key that no locale file answers.
@@ -130,5 +131,22 @@ describe("translation keys", () => {
     const stale = [...KNOWN_MISSING].filter((key) => en.has(key) && cn.has(key));
 
     expect(stale, `translated but still allowlisted: ${stale.join(", ")}`).toEqual([]);
+  });
+
+  it("loads the new help guides into the runtime translation bundles", () => {
+    for (const [locale, language] of [
+      ["cn", "zh-CN"],
+      ["en", "en-US"],
+    ]) {
+      for (const topic of ["Collection", "Subscription", "Acquisition"]) {
+        const translations = JSON.parse(
+          readFileSync(join(localesDir, locale, "components", `help${topic}.json`), "utf8"),
+        );
+
+        for (const [key, value] of Object.entries(translations)) {
+          expect(i18n.getResource(language, "translation", key), `${language}: ${key}`).toBe(value);
+        }
+      }
+    }
   });
 });

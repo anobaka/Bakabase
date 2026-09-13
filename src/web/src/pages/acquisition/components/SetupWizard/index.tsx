@@ -7,6 +7,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 
 import BApi from "@/sdk/BApi";
+import { HelpCenterButton } from "@/components/HelpCenter";
 import { Button, Chip, Input, Modal, NumberInput, Select, toast } from "@/components/bakaui";
 import { AcquisitionDriveKindLabel, acquisitionDriveKinds } from "@/sdk/constants";
 
@@ -68,11 +69,21 @@ const SetupWizard = ({ onDone, onDestroyed }: Props) => {
 
   const steps = [
     <div key="inbox" className="flex flex-col gap-2">
+      <p className="rounded-lg bg-primary/5 p-3 text-sm text-default-600">
+        {t<string>("acquisition.setup.inbox.explanation")}
+      </p>
       <Input
         description={t<string>("acquisition.setup.inbox.description")}
         label={t<string>("acquisition.setup.inbox.label")}
         value={inbox}
         onValueChange={setInbox}
+      />
+      <p className="text-xs text-default-500">{t<string>("acquisition.setup.inbox.example")}</p>
+      <HelpCenterButton
+        className="self-start"
+        concept="inbox"
+        label={t<string>("acquisition.setup.inbox.help")}
+        topic="acquisition"
       />
     </div>,
     <div key="library" className="flex flex-col gap-2">

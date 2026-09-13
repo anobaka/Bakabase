@@ -11,9 +11,11 @@ import { MdOutlineDelete } from "react-icons/md";
 import { useShallow } from "zustand/react/shallow";
 
 import CompositionBar from "./components/CompositionBar";
-import { buildCollectionSearch, percent } from "./helpers";
+import ProgressChip from "./components/ProgressChip";
+import { buildCollectionSearch } from "./helpers";
 
 import BApi from "@/sdk/BApi";
+import { HelpCenterButton } from "@/components/HelpCenter";
 import {
   Button,
   Card,
@@ -157,13 +159,7 @@ const CollectionPage = () => {
           <CompositionBar collection={collection} />
 
           <div className="flex items-center gap-2">
-            <Chip
-              color={percent(collection) === 100 ? "success" : "default"}
-              size="sm"
-              variant="flat"
-            >
-              {t<string>("collection.percentComplete", { percent: percent(collection) })}
-            </Chip>
+            <ProgressChip collection={collection} />
             {collection.hasRule && (
               <Tooltip content={t<string>("collection.rule.tip")}>
                 <Chip color="secondary" size="sm" variant="flat">
@@ -230,6 +226,7 @@ const CollectionPage = () => {
           value={keyword}
           onValueChange={setKeyword}
         />
+        <HelpCenterButton topic="collection" />
       </div>
 
       {collections.length === 0 ? (

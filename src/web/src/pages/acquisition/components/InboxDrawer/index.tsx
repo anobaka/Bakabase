@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 import { Drawer, DrawerBody, DrawerContent, DrawerHeader } from "@heroui/react";
 
 import BApi from "@/sdk/BApi";
+import { HelpCenterButton } from "@/components/HelpCenter";
 import { Button, Chip, Spinner, toast } from "@/components/bakaui";
 import { AcquisitionWaitReason } from "@/sdk/constants";
 
@@ -62,7 +63,10 @@ const InboxDrawer = ({ onClaimed, onDestroyed }: Props) => {
   return (
     <Drawer defaultOpen placement="right" size="lg" onClose={onDestroyed}>
       <DrawerContent>
-        <DrawerHeader>{t<string>("acquisition.inbox.title")}</DrawerHeader>
+        <DrawerHeader className="flex items-center gap-2">
+          {t<string>("acquisition.inbox.title")}
+          <HelpCenterButton concept="inbox" topic="acquisition" />
+        </DrawerHeader>
         <DrawerBody>
           <p className="text-sm text-default-500">{t<string>("acquisition.inbox.description")}</p>
           <p className="text-xs text-default-400">{t<string>("acquisition.inbox.manualHelp")}</p>

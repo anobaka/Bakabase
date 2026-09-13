@@ -30,6 +30,10 @@ vi.mock("@/components/ContextProvider/BakabaseContextProvider", () => ({
   useBakabaseContext: () => ({ createPortal }),
 }));
 
+vi.mock("@/components/HelpCenter", () => ({
+  HelpCenterButton: () => <button type="button">Collection help</button>,
+}));
+
 // Keep the page and its Zustand subscription real. Replace UI boundaries so loading the
 // collection list does not also initialize unrelated dialogs and property editors.
 vi.mock("@/components/bakaui", () => ({
@@ -48,7 +52,9 @@ vi.mock("@/components/bakaui", () => ({
   ),
   Card: ({ children }: { children?: ReactNode }) => <article>{children}</article>,
   CardBody: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
-  Chip: ({ children }: { children?: ReactNode }) => <span>{children}</span>,
+  Chip: ({ children, color }: { children?: ReactNode; color?: string }) => (
+    <span data-color={color}>{children}</span>
+  ),
   ColorPicker: () => (
     <div
       aria-label="Collection color"
@@ -157,6 +163,49 @@ describe("CollectionPage", () => {
 
     expect(displayedNames()).toEqual(["First", "Second", "Later"]);
     expect(getAllCollections).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not mark empty, ignored-only or unavailable collections as complete", async () => {
+    getAllCollections.mockResolvedValueOnce({
+      data: [
+        {
+          ...collection(1, "Empty"),
+          progress: { total: 0, owned: 0, acquiring: 0, ignored: 0, ratio: 1 },
+        },
+        {
+          ...collection(2, "Ignored"),
+          progress: { total: 0, owned: 0, acquiring: 0, ignored: 2, ratio: 1 },
+        },
+        collection(3, "Unavailable"),
+        {
+          ...collection(4, "Complete"),
+          progress: { total: 2, owned: 2, acquiring: 0, ignored: 0, ratio: 1 },
+        },
+        {
+          ...collection(5, "Missing files"),
+          progress: { total: 2, owned: 0, acquiring: 0, ignored: 0, ratio: 0 },
+        },
+      ],
+    });
+
+    await renderPage();
+
+    const cards = Array.from(container.querySelectorAll("article"));
+
+    expect(cards[0]).toHaveTextContent("collection.progress.empty");
+    expect(cards[1]).toHaveTextContent("collection.progress.allIgnored");
+    expect(cards[1]).toHaveTextContent("collection.progress.ignored");
+    expect(cards[2]).toHaveTextContent("collection.progress.unavailable");
+    for (const card of cards.slice(0, 3)) {
+      expect(card).not.toHaveTextContent("collection.percentComplete");
+      expect(card.querySelector('[data-color="success"]')).toBeNull();
+      expect(card).not.toHaveTextContent("collection.progress.owned");
+    }
+    expect(cards[3].querySelector('[data-color="success"]')).toHaveTextContent(
+      "collection.percentComplete",
+    );
+    expect(cards[4]).toHaveTextContent("collection.percentComplete");
+    expect(cards[4].querySelector('[data-color="success"]')).toBeNull();
   });
 
   it("reflects pushed additions, updates and removals without reloading the list", async () => {

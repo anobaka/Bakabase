@@ -29,6 +29,34 @@ export interface TopicStep {
   descKey: string;
 }
 
+/** A process diagram that reads horizontally on wide screens and vertically on narrow ones. */
+export const TopicFlow = ({ titleKey, steps }: { titleKey?: string; steps: TopicStep[] }) => {
+  const { t } = useTranslation();
+
+  return (
+    <div className="flex flex-col gap-2">
+      {titleKey && <div className="text-sm font-medium">{t(titleKey)}</div>}
+      <ol className="flex flex-col gap-2 lg:flex-row lg:items-stretch">
+        {steps.map((step, index) => (
+          <li key={step.id} className="flex min-w-0 flex-1 flex-col gap-2 lg:flex-row">
+            {index > 0 && (
+              <span aria-hidden className="self-center text-lg text-primary">
+                <span className="lg:hidden">↓</span>
+                <span className="hidden lg:inline">→</span>
+              </span>
+            )}
+            <div className="min-w-0 flex-1 rounded-lg border border-primary/20 bg-primary/5 p-3">
+              <div className="text-xs font-semibold text-primary">{index + 1}</div>
+              <div className="mt-1 text-sm font-medium">{t(step.titleKey)}</div>
+              <p className="mt-1 text-xs text-default-600">{t(step.descKey)}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+};
+
 /** Numbered steps, used for the "how you actually use this" sections. */
 export const TopicSteps = ({ titleKey, steps }: { titleKey?: string; steps: TopicStep[] }) => {
   const { t } = useTranslation();

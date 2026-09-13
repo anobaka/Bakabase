@@ -17,6 +17,7 @@ import CandidateOverview from "./components/CandidateOverview";
 import RecipeCatalog from "./components/RecipeCatalog";
 
 import BApi from "@/sdk/BApi";
+import { HelpCenterButton } from "@/components/HelpCenter";
 import { Button, Chip, Spinner, Tab, Tabs, Tooltip } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { AcquisitionStatus } from "@/sdk/constants";
@@ -91,7 +92,10 @@ const AcquisitionPage: React.FC = () => {
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold">{t<string>("menu.acquisition")}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-semibold">{t<string>("menu.acquisition")}</h1>
+            <HelpCenterButton topic="acquisition" />
+          </div>
           <p className="mt-1 text-sm text-default-500">
             {t<string>("acquisition.overview.description")}
           </p>

@@ -179,22 +179,6 @@ export const routesMenuConfig: RouteMenuItem[] = [
     menu: true,
     children: [
       {
-        name: "menu.collection",
-        path: "/collections",
-        component: CollectionPage,
-        icon: AiOutlineFolderOpen,
-        layout: "basic",
-        menu: true,
-        isBeta: true,
-      },
-      {
-        name: "menu.collection",
-        path: "/collections/detail",
-        component: CollectionDetailPage,
-        layout: "basic",
-        menu: false,
-      },
-      {
         name: "menu.customProperty",
         path: "/customproperty",
         component: CustomPropertyPage,
@@ -209,6 +193,22 @@ export const routesMenuConfig: RouteMenuItem[] = [
         icon: AiOutlineHdd,
         layout: "basic",
         menu: true,
+      },
+      {
+        name: "menu.collection",
+        path: "/collections",
+        component: CollectionPage,
+        icon: AiOutlineFolderOpen,
+        layout: "basic",
+        menu: true,
+        isBeta: true,
+      },
+      {
+        name: "menu.collection",
+        path: "/collections/detail",
+        component: CollectionDetailPage,
+        layout: "basic",
+        menu: false,
       },
       {
         name: "menu.text",

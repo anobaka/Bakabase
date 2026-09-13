@@ -65,6 +65,9 @@ import enResourceMove from "@/locales/en/components/resourceMove.json";
 import enBakaChat from "@/locales/en/components/bakaChat.json";
 import enNotificationCenter from "@/locales/en/components/notificationCenter.json";
 import enHelpCenter from "@/locales/en/components/helpCenter.json";
+import enHelpCollection from "@/locales/en/components/helpCollection.json";
+import enHelpSubscription from "@/locales/en/components/helpSubscription.json";
+import enHelpAcquisition from "@/locales/en/components/helpAcquisition.json";
 
 // New modular imports - Chinese
 import cnCommon from "@/locales/cn/common.json";
@@ -130,6 +133,9 @@ import cnResourceMove from "@/locales/cn/components/resourceMove.json";
 import cnBakaChat from "@/locales/cn/components/bakaChat.json";
 import cnNotificationCenter from "@/locales/cn/components/notificationCenter.json";
 import cnHelpCenter from "@/locales/cn/components/helpCenter.json";
+import cnHelpCollection from "@/locales/cn/components/helpCollection.json";
+import cnHelpSubscription from "@/locales/cn/components/helpSubscription.json";
+import cnHelpAcquisition from "@/locales/cn/components/helpAcquisition.json";
 
 // Merge all English resources
 const enResources = {
@@ -194,6 +200,9 @@ const enResources = {
   ...enBakaChat,
   ...enNotificationCenter,
   ...enHelpCenter,
+  ...enHelpCollection,
+  ...enHelpSubscription,
+  ...enHelpAcquisition,
 };
 
 // Merge all Chinese resources
@@ -259,6 +268,9 @@ const cnResources = {
   ...cnBakaChat,
   ...cnNotificationCenter,
   ...cnHelpCenter,
+  ...cnHelpCollection,
+  ...cnHelpSubscription,
+  ...cnHelpAcquisition,
 };
 
 // 只初始化一次，防止热更新或多次 import 时重复初始化

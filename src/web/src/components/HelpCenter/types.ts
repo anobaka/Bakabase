@@ -12,6 +12,9 @@ export type HelpTopicId =
   | "workflow"
   | "resourceProfile"
   | "unmaterializedResource"
+  | "collection"
+  | "subscription"
+  | "acquisition"
   | "bulkModification";
 
 /** Horizontal tabs inside the path mark overview. Extend as more topics arrive. */

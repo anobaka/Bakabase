@@ -15,6 +15,7 @@ import SubscriptionEditor from "@/components/Subscription/SubscriptionEditor";
 import { getProviderUI } from "@/components/Subscription/Providers";
 import ThirdPartyLabel from "@/components/ThirdPartyLabel";
 import BApi from "@/sdk/BApi";
+import { HelpCenterButton } from "@/components/HelpCenter";
 import { Button, Chip, Modal, Spinner, Switch, toast } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
@@ -139,6 +140,7 @@ const SubscriptionPage: React.FC = () => {
     <div className="flex flex-col gap-3 p-4">
       <div className="flex items-center gap-2">
         <h2 className="text-lg font-semibold">{t<string>("subscription.title")}</h2>
+        <HelpCenterButton topic="subscription" />
         <Button
           color="primary"
           size="sm"

@@ -8,15 +8,17 @@ import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { AiOutlineArrowLeft, AiOutlineCloudDownload, AiOutlineSearch } from "react-icons/ai";
 
 import CompositionBar from "../components/CompositionBar";
-import { buildCollectionSearch, percent } from "../helpers";
+import ProgressChip from "../components/ProgressChip";
+import { buildCollectionSearch } from "../helpers";
 
 import MembersTab from "./components/MembersTab";
 import SettingsTab from "./components/SettingsTab";
 import SourceTab from "./components/SourceTab";
 
 import BApi from "@/sdk/BApi";
+import { HelpCenterButton } from "@/components/HelpCenter";
 import CollectionRuleEditor from "@/components/CollectionRuleEditor";
-import { Button, Chip, Spinner, Tab, Tabs, Tooltip, toast } from "@/components/bakaui";
+import { Button, Spinner, Tab, Tabs, Tooltip, toast } from "@/components/bakaui";
 import { usePendingSearchStore } from "@/stores/pendingSearch";
 
 /** A collection's resources, subscriptions, automatic inclusion criteria and settings. */
@@ -127,9 +129,8 @@ const CollectionDetailPage = () => {
         <span className="text-lg font-medium" style={{ color: collection.color ?? undefined }}>
           {collection.name}
         </span>
-        <Chip color={percent(collection) === 100 ? "success" : "default"} size="sm" variant="flat">
-          {t<string>("collection.percentComplete", { percent: percent(collection) })}
-        </Chip>
+        <ProgressChip collection={collection} />
+        <HelpCenterButton topic="collection" />
         <Tooltip content={t<string>("collection.action.openInResourcePage")}>
           <Button isIconOnly size="sm" variant="light" onPress={openInResourcePage}>
             <AiOutlineSearch className="text-base" />

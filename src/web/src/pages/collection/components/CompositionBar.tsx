@@ -28,6 +28,14 @@ const CompositionBar: React.FC<Props> = ({ collection, showLegend = true }) => {
   const acquiring = p?.acquiring ?? 0;
   const missing = Math.max(0, total - owned - acquiring);
 
+  if (total === 0) {
+    return showLegend && (p?.ignored ?? 0) > 0 ? (
+      <span className="text-xs text-default-400">
+        {t<string>("collection.progress.ignored", { count: p!.ignored })}
+      </span>
+    ) : null;
+  }
+
   const share = (n: number) => (total === 0 ? 0 : (n / total) * 100);
 
   return (
