@@ -5,17 +5,21 @@ import type { AcquisitionDriveKind } from "@/sdk/constants";
 
 import React from "react";
 import { useTranslation } from "react-i18next";
+import { AiOutlineFolderOpen } from "react-icons/ai";
+
+import { driveOptions, normalizePreferredDrives } from "./driveOptions";
 
 import BApi from "@/sdk/BApi";
 import { HelpCenterButton } from "@/components/HelpCenter";
-import { Button, Chip, Input, Modal, NumberInput, Select, toast } from "@/components/bakaui";
-import { AcquisitionDriveKindLabel, acquisitionDriveKinds } from "@/sdk/constants";
+import { Button, Input, Modal, NumberInput, toast } from "@/components/bakaui";
+import { FileSystemSelectorModal } from "@/components/FileSystemSelector";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
 interface Props extends DestroyableProps {
   onDone?: () => void;
 }
 
-const TEMPLATES = ["{Title}", "{LeadKind}/{Title}", "{Date} {Title}"];
+const TEMPLATES = ["{Title}", "{LeadKind}/{Title}", "{Date}/{Title}", "{LeadKind}/{Date}/{Title}"];
 
 /**
  * Four questions, all with defaults. The point is that someone who installed this an hour ago can
@@ -25,6 +29,7 @@ const TEMPLATES = ["{Title}", "{LeadKind}/{Title}", "{Date} {Title}"];
  */
 const SetupWizard = ({ onDone, onDestroyed }: Props) => {
   const { t } = useTranslation();
+  const { createPortal } = useBakabaseContext();
   const [step, setStep] = React.useState(0);
   const [inbox, setInbox] = React.useState("");
   const [library, setLibrary] = React.useState("");
@@ -41,19 +46,49 @@ const SetupWizard = ({ onDone, onDestroyed }: Props) => {
       setInbox(o.inboxDirectory ?? "");
       setLibrary(o.libraryRootDirectory ?? "");
       setTemplate(o.directoryTemplate ?? TEMPLATES[0]);
-      setDrives(o.preferredDriveKinds ?? []);
+      setDrives(normalizePreferredDrives(o.preferredDriveKinds ?? []));
       setLimit(o.autoPurchaseLimit ?? 0);
     });
   }, []);
 
+  const relativeTemplate = template.trim().replace(/\\/g, "/") || TEMPLATES[0];
+  const invalidTemplate =
+    relativeTemplate.startsWith("/") ||
+    /^[a-z]:/i.test(relativeTemplate) ||
+    relativeTemplate.split("/").some((part) => ["", ".", ".."].includes(part.trim()));
+  const previewVariables: Record<string, string> = {
+    title: t<string>("acquisition.setup.template.exampleTitle"),
+    leadkind: "SharedPage",
+    date: new Date().toLocaleDateString("sv-SE"),
+    resourceid: "123",
+  };
+  const preview = relativeTemplate.replace(
+    /\{([A-Za-z0-9_]+)\}/g,
+    (placeholder, key: string) => previewVariables[key.toLowerCase()] ?? placeholder,
+  );
+  const previewPath = `${library.trim().replace(/[\\/]+$/, "") || t<string>("acquisition.setup.library.label")}/${preview}`;
+
+  const chooseDirectory = (path: string, onSelected: (value: string) => void) => {
+    createPortal(FileSystemSelectorModal, {
+      targetType: "folder",
+      multiple: false,
+      startPath: path.trim() || undefined,
+      defaultSelectedPath: path.trim() || undefined,
+      onSelected: (entry) => {
+        if (entry.path) onSelected(entry.path);
+      },
+    });
+  };
+
   const finish = async () => {
+    if (invalidTemplate) return;
     setSaving(true);
     try {
       const rsp = await BApi.acquisition.setUpAcquisition({
         inboxDirectory: inbox.trim() || undefined,
         libraryRootDirectory: library.trim() || undefined,
-        directoryTemplate: template.trim() || undefined,
-        preferredDriveKinds: drives,
+        directoryTemplate: relativeTemplate,
+        preferredDriveKinds: normalizePreferredDrives(drives),
         autoPurchaseLimit: limit,
       });
 
@@ -74,6 +109,17 @@ const SetupWizard = ({ onDone, onDestroyed }: Props) => {
       </p>
       <Input
         description={t<string>("acquisition.setup.inbox.description")}
+        endContent={
+          <Button
+            isIconOnly
+            aria-label={t<string>("acquisition.setup.inbox.browse")}
+            size="sm"
+            variant="light"
+            onPress={() => chooseDirectory(inbox, setInbox)}
+          >
+            <AiOutlineFolderOpen className="text-lg" />
+          </Button>
+        }
         label={t<string>("acquisition.setup.inbox.label")}
         value={inbox}
         onValueChange={setInbox}
@@ -89,6 +135,17 @@ const SetupWizard = ({ onDone, onDestroyed }: Props) => {
     <div key="library" className="flex flex-col gap-2">
       <Input
         description={t<string>("acquisition.setup.library.description")}
+        endContent={
+          <Button
+            isIconOnly
+            aria-label={t<string>("acquisition.setup.library.browse")}
+            size="sm"
+            variant="light"
+            onPress={() => chooseDirectory(library, setLibrary)}
+          >
+            <AiOutlineFolderOpen className="text-lg" />
+          </Button>
+        }
         label={t<string>("acquisition.setup.library.label")}
         value={library}
         onValueChange={setLibrary}
@@ -98,51 +155,74 @@ const SetupWizard = ({ onDone, onDestroyed }: Props) => {
     <div key="template" className="flex flex-col gap-2">
       <Input
         description={t<string>("acquisition.setup.template.description")}
+        errorMessage={t<string>("acquisition.setup.template.invalid")}
+        isInvalid={invalidTemplate}
         label={t<string>("acquisition.setup.template.label")}
         value={template}
         onValueChange={setTemplate}
       />
       <div className="flex flex-wrap gap-1">
         {TEMPLATES.map((x) => (
-          <Chip
+          <Button
             key={x}
-            className="cursor-pointer"
+            aria-pressed={template === x}
+            color={template === x ? "primary" : "default"}
             size="sm"
             variant="flat"
-            onClick={() => setTemplate(x)}
+            onPress={() => setTemplate(x)}
           >
             {x}
-          </Chip>
+          </Button>
         ))}
       </div>
-      <div className="text-xs text-default-500">
-        {t<string>("acquisition.setup.template.preview", {
-          preview: template
-            .replace("{Title}", "A Great Work")
-            .replace("{LeadKind}", "SharedPage")
-            .replace("{Date}", new Date().toISOString().slice(0, 10)),
-        })}
+      <div aria-live="polite" className="rounded-lg bg-default-100 p-3 text-sm">
+        <p className="mb-1 text-xs text-default-500">
+          {t<string>("acquisition.setup.template.previewLabel")}
+        </p>
+        <code className="break-all">{previewPath}</code>
       </div>
+      <p className="text-xs text-default-500">{t<string>("acquisition.setup.template.example")}</p>
     </div>,
     <div key="drives" className="flex flex-col gap-3">
-      <Select
-        dataSource={acquisitionDriveKinds.map(({ value }) => ({
-          value: String(value),
-          label: AcquisitionDriveKindLabel[value],
-          textValue: AcquisitionDriveKindLabel[value],
-        }))}
-        description={t<string>("acquisition.setup.drives.description")}
-        label={t<string>("acquisition.setup.drives.label")}
-        selectedKeys={drives.map(String)}
-        selectionMode="multiple"
-        onSelectionChange={(keys) =>
-          setDrives(
-            Array.from(keys)
-              .map((k) => Number(k))
-              .filter((n) => !isNaN(n)) as AcquisitionDriveKind[],
-          )
-        }
-      />
+      <div
+        aria-label={t<string>("acquisition.setup.drives.label")}
+        className="flex flex-col gap-2"
+        role="group"
+      >
+        <div className="text-sm">{t<string>("acquisition.setup.drives.label")}</div>
+        <p className="text-xs text-default-500">
+          {t<string>("acquisition.setup.drives.description")}
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {driveOptions.map(({ value, labelKey, icon: Icon }) => {
+            const priority = drives.indexOf(value);
+            const selected = priority >= 0;
+
+            return (
+              <Button
+                key={value}
+                aria-pressed={selected}
+                color={selected ? "primary" : "default"}
+                endContent={
+                  selected ? (
+                    <span className="text-xs tabular-nums">{priority + 1}</span>
+                  ) : undefined
+                }
+                size="sm"
+                startContent={<Icon aria-hidden className="text-base" />}
+                variant="flat"
+                onPress={() =>
+                  setDrives((current) =>
+                    selected ? current.filter((drive) => drive !== value) : [...current, value],
+                  )
+                }
+              >
+                {t<string>(labelKey)}
+              </Button>
+            );
+          })}
+        </div>
+      </div>
       <NumberInput
         description={t<string>("acquisition.setup.limit.description")}
         label={t<string>("acquisition.setup.limit.label")}
@@ -171,7 +251,7 @@ const SetupWizard = ({ onDone, onDestroyed }: Props) => {
             )}
             <Button
               color="primary"
-              isDisabled={saving}
+              isDisabled={saving || (step >= 2 && invalidTemplate)}
               size="sm"
               onPress={() => (isLast ? finish() : setStep(step + 1))}
             >

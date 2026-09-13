@@ -145,4 +145,66 @@ public sealed class PathMarkResourceBoundaryTests
         Assert.AreEqual(2, resources.Count);
         Assert.IsFalse(resources.Any(r => r.Path!.Replace('\\', '/').Contains("/special/")));
     }
+
+    [TestMethod]
+    public async Task BoundaryAllowsItsOwnRuleAndMarksInsideItsSubtree()
+    {
+        MakeDir("category/from-boundary");
+        MakeDir("category/deeper/from-child");
+        await AddMark(_testRoot, new ResourceMarkConfig
+        {
+            MatchMode = PathMatchMode.Layer, Layer = 1, FsTypeFilter = PathFilterFsType.Directory,
+        });
+        await AddMark(Sub("category"), new ResourceMarkConfig
+        {
+            MatchMode = PathMatchMode.Regex, Regex = "^from-boundary$",
+            FsTypeFilter = PathFilterFsType.Directory, IsResourceBoundary = true,
+        });
+        await AddMark(Sub("category/deeper/from-child"), new ResourceMarkConfig
+        {
+            MatchMode = PathMatchMode.Layer, Layer = 0, FsTypeFilter = PathFilterFsType.Directory,
+        });
+
+        await Sync();
+        var resources = await Resources();
+        CollectionAssert.AreEquivalent(new[]
+        {
+            Sub("category/from-boundary").Replace('\\', '/'),
+            Sub("category/deeper/from-child").Replace('\\', '/'),
+        }, resources.Select(resource => resource.Path).ToArray());
+    }
+
+    [TestMethod]
+    public async Task SyncedBoundaryStillBlocksAPendingAncestor_WithoutChangingUserMarks()
+    {
+        MakeDir("category/kept");
+        await AddMark(Sub("category"), new ResourceMarkConfig
+        {
+            MatchMode = PathMatchMode.Regex, Regex = "(?!)",
+            FsTypeFilter = PathFilterFsType.Directory, IsResourceBoundary = true,
+        });
+        await AddMark(Sub("category/kept"), new ResourceMarkConfig
+        {
+            MatchMode = PathMatchMode.Layer, Layer = 0, FsTypeFilter = PathFilterFsType.Directory,
+        });
+        await Sync();
+        var resourceId = (await Resources()).Single().Id;
+        var marks = _sp.GetRequiredService<IPathMarkService>();
+        var original = (await marks.GetAll()).ToDictionary(mark => mark.Id, mark => mark.ConfigJson);
+        Assert.IsTrue((await marks.GetAll()).All(mark => mark.SyncStatus == PathMarkSyncStatus.Synced));
+
+        await AddMark(_testRoot, new ResourceMarkConfig
+        {
+            MatchMode = PathMatchMode.Layer, Layer = 1, FsTypeFilter = PathFilterFsType.Directory,
+        });
+        await Sync();
+
+        var resources = await Resources();
+        Assert.AreEqual(1, resources.Count);
+        Assert.AreEqual(resourceId, resources.Single().Id);
+        foreach (var mark in await marks.GetAll())
+        {
+            if (original.TryGetValue(mark.Id, out var json)) Assert.AreEqual(json, mark.ConfigJson);
+        }
+    }
 }

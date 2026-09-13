@@ -15,12 +15,14 @@ using Bakabase.Modules.Acquisition.Abstractions.Services;
 using Bakabase.Modules.Acquisition.Components.Workflow;
 using Bakabase.Modules.Acquisition.Extensions;
 using Bakabase.Modules.Acquisition.Models.Input;
+using Bakabase.Modules.Acquisition.Models.Domain;
 using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bakabase.Modules.Workflow.Abstractions.Models.Input;
 using Bakabase.Modules.Workflow.Abstractions.Services;
 using Bakabase.Service.Components.Acquisition;
 using Bakabase.Service.Components.Workflow.Resources;
 using Bakabase.TestKit.Utils;
+using Bootstrap.Components.Configuration.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Newtonsoft.Json;
@@ -228,5 +230,47 @@ public sealed class AcquisitionEntryPointsTests
 
         Assert.AreEqual(result.PathMarkId, second.PathMarkId);
         Assert.IsFalse(second.CreatedLibrary);
+    }
+
+    [TestMethod]
+    public async Task NestedSetupDoesNotMarkCategories_AndNormalizesPreferredDrives()
+    {
+        var library = Path.Combine(_root, "nested-library");
+        await using var scope = _sp.CreateAsyncScope();
+        var setup = scope.ServiceProvider.GetRequiredService<AcquisitionSetupService>();
+        var result = await setup.ApplyAsync(new AcquisitionSetupInputModel
+        {
+            LibraryRootDirectory = library,
+            DirectoryTemplate = "游戏/{LeadKind}/{Title}",
+            PreferredDriveKinds = [AcquisitionDriveKind.Unknown, AcquisitionDriveKind.Mega,
+                AcquisitionDriveKind.Baidu, AcquisitionDriveKind.Mega, (AcquisitionDriveKind)999],
+        });
+
+        Assert.IsTrue(result.CreatedLibrary);
+        Assert.IsNull(result.PathMarkId, "placement will mark the actual resource, not its categories");
+        Assert.AreEqual(0, (await scope.ServiceProvider.GetRequiredService<IPathMarkService>().GetAll()).Count);
+        var options = scope.ServiceProvider.GetRequiredService<IBOptions<AcquisitionOptions>>().Value;
+        Assert.AreEqual("游戏/{LeadKind}/{Title}", options.DirectoryTemplate);
+        CollectionAssert.AreEqual(new[] {AcquisitionDriveKind.Mega, AcquisitionDriveKind.Baidu},
+            options.PreferredDriveKinds.ToArray());
+    }
+
+    [TestMethod]
+    public async Task InvalidSetupTemplateIsRejectedBeforeSettingsOrDirectoriesChange()
+    {
+        var library = Path.Combine(_root, "must-not-exist");
+        await using var scope = _sp.CreateAsyncScope();
+        var options = scope.ServiceProvider.GetRequiredService<IBOptions<AcquisitionOptions>>().Value;
+        var before = options.DirectoryTemplate;
+        await Assert.ThrowsExceptionAsync<ArgumentException>(() =>
+            scope.ServiceProvider.GetRequiredService<AcquisitionSetupService>().ApplyAsync(new AcquisitionSetupInputModel
+            {
+                LibraryRootDirectory = library,
+                DirectoryTemplate = "../{Title}",
+            }));
+
+        Assert.IsFalse(Directory.Exists(library));
+        Assert.AreEqual(before, options.DirectoryTemplate);
+        Assert.AreEqual(0, (await scope.ServiceProvider.GetRequiredService<IPathMarkService>().GetAll()).Count);
     }
 }

@@ -61,24 +61,13 @@ public class FileSystemResolver : IResourceResolver
     /// <returns>List of discovered resources with their associated mark IDs.</returns>
     public async Task<List<FileSystemDiscoveredResource>> DiscoverFromMarks(
         List<PathMark> resourceMarks,
-        CancellationToken ct)
+        CancellationToken ct,
+        IReadOnlyCollection<PathMark>? boundaryMarks = null)
     {
         var results = new List<FileSystemDiscoveredResource>();
 
         // Pre-compute resource boundary paths from all marks
-        var boundaryPaths = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-        foreach (var mark in resourceMarks)
-        {
-            var config = JsonSerializer.Deserialize<ResourceMarkConfig>(mark.ConfigJson, JsonSerializerOptions.Web);
-            if (config is { IsResourceBoundary: true })
-            {
-                var normalizedPath = mark.Path.StandardizePath();
-                if (!string.IsNullOrEmpty(normalizedPath))
-                {
-                    boundaryPaths[normalizedPath] = mark.Id;
-                }
-            }
-        }
+        var boundaryPaths = BoundaryPathsOf(boundaryMarks ?? resourceMarks);
 
         // Pre-load all extension groups for resolving ExtensionGroupIds
         var allExtensionGroups = await _extensionGroupService.GetAll();
@@ -118,7 +107,7 @@ public class FileSystemResolver : IResourceResolver
                     var standardizedPath = path.StandardizePath()!;
 
                     // Skip if blocked by another mark's boundary
-                    if (IsPathBlockedByBoundary(standardizedPath, mark.Id, boundaryPaths))
+                    if (IsPathBlockedByBoundary(standardizedPath, mark.Path.StandardizePath()!, boundaryPaths))
                         continue;
 
                     // Check if path exists on filesystem
@@ -143,6 +132,31 @@ public class FileSystemResolver : IResourceResolver
         }
 
         return results;
+    }
+
+    /// <summary>Rechecks completed discovery against boundaries persisted while the scan ran.</summary>
+    public static List<FileSystemDiscoveredResource> ApplyResourceBoundaries(
+        List<FileSystemDiscoveredResource> discovered,
+        IReadOnlyCollection<PathMark> sourceMarks,
+        IReadOnlyCollection<PathMark> boundaryMarks)
+    {
+        var markPaths = sourceMarks.ToDictionary(mark => mark.Id, mark => mark.Path.StandardizePath()!);
+        var boundaries = BoundaryPathsOf(boundaryMarks);
+        return discovered.Where(candidate => markPaths.TryGetValue(candidate.MarkId, out var markPath) &&
+                                              !IsPathBlockedByBoundary(candidate.Path, markPath, boundaries)).ToList();
+    }
+
+    private static Dictionary<string, int> BoundaryPathsOf(IEnumerable<PathMark> marks)
+    {
+        var paths = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        foreach (var mark in marks)
+        {
+            var config = JsonSerializer.Deserialize<ResourceMarkConfig>(mark.ConfigJson, JsonSerializerOptions.Web);
+            if (config is {IsResourceBoundary: true} && mark.Path.StandardizePath() is {Length: > 0} path)
+                paths[path] = mark.Id;
+        }
+
+        return paths;
     }
 
     #region Discovery Helpers
@@ -398,12 +412,15 @@ public class FileSystemResolver : IResourceResolver
 
     private static bool IsPathBlockedByBoundary(
         string path,
-        int currentMarkId,
+        string currentMarkPath,
         Dictionary<string, int> boundaryPaths)
     {
-        foreach (var (boundaryPath, markId) in boundaryPaths)
+        foreach (var boundaryPath in boundaryPaths.Keys)
         {
-            if (markId == currentMarkId)
+            // A boundary only blocks marks rooted above it. Marks on or inside the boundary
+            // define that subtree's own resource layout and must remain effective.
+            if (!boundaryPath.StartsWith(currentMarkPath.TrimEnd('/') + InternalOptions.DirSeparator,
+                    StringComparison.OrdinalIgnoreCase))
                 continue;
 
             if (path.StartsWith(boundaryPath + InternalOptions.DirSeparator, StringComparison.OrdinalIgnoreCase) ||

@@ -275,7 +275,17 @@ public class ResourceSyncService : ScopedService
 
         try
         {
-            var discovered = await fsResolver.DiscoverFromMarks(pendingResourceMarks, ct);
+            var discovered = await fsResolver.DiscoverFromMarks(pendingResourceMarks, ct,
+                allMarks.Where(mark => mark.Type == PathMarkType.Resource && !mark.IsDeleted &&
+                                       mark.SyncStatus != PathMarkSyncStatus.PendingDelete).ToList());
+
+            // Acquisition persists its boundary before creating category directories. If this
+            // scan saw a new category using an older mark snapshot, its boundary must now exist.
+            // Recheck before turning discovery candidates into resources.
+            var currentMarks = (await _pathMarkService.GetAll())
+                .Where(mark => mark.Type == PathMarkType.Resource && !mark.IsDeleted &&
+                               mark.SyncStatus != PathMarkSyncStatus.PendingDelete).ToList();
+            discovered = FileSystemResolver.ApplyResourceBoundaries(discovered, pendingResourceMarks, currentMarks);
 
             var entries = discovered.Select(d => new DiscoveredResourceEntry
             {

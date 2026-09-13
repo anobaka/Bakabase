@@ -6,6 +6,8 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Services;
+using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.InsideWorld.Business.Services;
 using Bakabase.Modules.Acquisition.Abstractions.Components;
 using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
@@ -16,6 +18,7 @@ using Bakabase.Modules.Acquisition.Models.Domain;
 using Bakabase.Service.Components.Acquisition.Steps;
 using Bakabase.TestKit.Utils;
 using Bootstrap.Components.Configuration.Abstractions;
+using Bootstrap.Components.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -133,6 +136,46 @@ public sealed class AcquisitionPlacementTests
         Assert.AreEqual(name, Bakabase.Abstractions.Components.FileSystem.FileNameSanitizer.Sanitize(name));
     }
 
+    [DataTestMethod]
+    [DataRow("游戏/{LeadKind}/{Title}")]
+    [DataRow("游戏\\{LeadKind}\\{Title}")]
+    public void TemplateSeparatorsCreateFolders_ButVariableSeparatorsRemainInsideOneName(string template)
+    {
+        Assert.AreEqual(Path.Combine("游戏", "SharedPage", "A_B_C"),
+            AcquisitionDirectoryNamer.Render(template, Item("A/B\\C")));
+        Assert.AreEqual(Path.Combine("分类", "A Great Work"),
+            AcquisitionDirectoryNamer.Render("分类/{Circle}/{Title}", Item()));
+        Assert.AreEqual(Path.Combine("分类", "acquisition-1"),
+            AcquisitionDirectoryNamer.Render("分类/{Title}", Item(null)));
+    }
+
+    [DataTestMethod]
+    [DataRow("../{Title}")]
+    [DataRow("分类/../{Title}")]
+    [DataRow("分类/./{Title}")]
+    [DataRow("分类//{Title}")]
+    [DataRow("/{Title}")]
+    [DataRow("\\\\server\\share\\{Title}")]
+    [DataRow("C:\\{Title}")]
+    [DataRow("C:{Title}")]
+    public void UnsafeRelativeTemplatesAreRejected(string template)
+    {
+        Assert.ThrowsException<ArgumentException>(() => AcquisitionDirectoryNamer.Render(template, Item()));
+    }
+
+    [TestMethod]
+    public void DestinationValidationAcceptsFilesystemRoots_WithoutWritingToThem()
+    {
+        var root = Path.GetPathRoot(Path.GetFullPath(_library))!;
+        var relative = Path.Combine("Games", "A Work");
+        Assert.AreEqual(Path.Combine(root, relative),
+            AcquisitionDirectoryNamer.ResolveTargetDirectory(root, relative));
+        Assert.AreEqual(Path.Combine(_library, relative),
+            AcquisitionDirectoryNamer.ResolveTargetDirectory(_library + Path.DirectorySeparatorChar, relative));
+        Assert.ThrowsException<ArgumentException>(() =>
+            AcquisitionDirectoryNamer.ResolveTargetDirectory(_library, "../outside"));
+    }
+
     // ------- picking a folder -------
 
     [TestMethod]
@@ -179,6 +222,133 @@ public sealed class AcquisitionPlacementTests
         Assert.AreEqual(Path.Combine(_library, "A Great Work"), item.TargetDirectory);
         Assert.IsTrue(File.Exists(Path.Combine(item.TargetDirectory!, "a.txt")));
         Assert.IsTrue(File.Exists(Path.Combine(item.TargetDirectory!, "sub", "b.txt")));
+    }
+
+    [TestMethod]
+    public async Task NestedPlacementMarksOnlyTheResource_AndPreservesTheLegacyRootMarkAndExistingResource()
+    {
+        var marks = _sp.GetRequiredService<IPathMarkService>();
+        var resources = _sp.GetRequiredService<IResourceService>();
+        var oldMark = await marks.Add(new Bakabase.Abstractions.Models.Domain.PathMark
+        {
+            Path = _library,
+            Type = PathMarkType.Resource,
+            ConfigJson = JsonSerializer.Serialize(new Bakabase.Abstractions.Models.Domain.ResourceMarkConfig
+            {
+                MatchMode = PathMatchMode.Layer,
+                Layer = 1,
+                FsTypeFilter = PathFilterFsType.Directory,
+            }, Json),
+        });
+        var oldConfig = oldMark.ConfigJson;
+        WithFiles(Path.Combine(_library, "Previous Resource"), "kept.txt");
+        var sync = _sp.GetRequiredService<ResourceSyncService>();
+        await sync.SyncResources(ResourceSource.PathMark, null, null, new PauseToken(), CancellationToken.None);
+        var previous = (await resources.GetAll()).Single();
+        var insideId = await CreateMissingResource("Keep this name");
+        var insidePath = WithFiles(Path.Combine(_library, "游戏", "Already Have"), "existing.txt");
+        await _sp.GetRequiredService<IResourceMaterializationService>().MaterializeAsync(insideId, insidePath);
+        var newId = await CreateMissingResource();
+        WithFiles(_working, "a.txt", "sub/b.txt");
+
+        var outcome = await new PlaceStep().ExecuteAsync(
+            Context("""{"directoryTemplate":"游戏/{LeadKind}/{Title}"}"""),
+            Item() with {ResourceId = newId}, CancellationToken.None);
+        var placed = ((AcquisitionStepOutcome.Continue) outcome).Item;
+        var target = Path.Combine(_library, "游戏", "SharedPage", "A Great Work");
+        Assert.AreEqual(target, placed.TargetDirectory);
+        Assert.IsTrue(File.Exists(Path.Combine(target, "sub", "b.txt")));
+        await new MaterializeStep().ExecuteAsync(Context(), placed, CancellationToken.None);
+
+        // Re-scanning the old broad root must still see the new, already-synced boundary.
+        await sync.SyncResources(ResourceSource.PathMark, null, null, new PauseToken(), CancellationToken.None);
+        await marks.MarkAsPending(oldMark.Id);
+        await sync.SyncResources(ResourceSource.PathMark, null, null, new PauseToken(), CancellationToken.None);
+        var all = await resources.GetAll();
+        Assert.AreEqual(3, all.Count);
+        Assert.IsTrue(all.Any(resource => resource.Id == previous.Id && resource.Path == previous.Path));
+        Assert.AreEqual(insidePath.Replace('\\', '/'), (await resources.Get(insideId))!.Path);
+        Assert.IsTrue((await _sp.GetRequiredService<IReservedPropertyValueService>()
+            .GetAll(value => value.ResourceId == insideId)).Any(value => value.Name == "Keep this name"));
+        Assert.AreEqual(target.Replace('\\', '/'), (await resources.Get(newId))!.Path);
+        Assert.AreEqual(oldConfig, (await marks.Get(oldMark.Id))!.ConfigJson);
+        Assert.IsFalse(all.Any(resource => resource.Path == Path.Combine(_library, "游戏").Replace('\\', '/')));
+    }
+
+    [TestMethod]
+    public async Task UnsafePlacementDoesNotMoveFilesOrCreateMarks()
+    {
+        WithFiles(_working, "a.txt");
+        var outcome = await new PlaceStep().ExecuteAsync(
+            Context("""{"directoryTemplate":"../outside/{Title}"}"""), Item(), CancellationToken.None);
+
+        Assert.IsInstanceOfType<AcquisitionStepOutcome.Fail>(outcome);
+        Assert.IsTrue(File.Exists(Path.Combine(_working, "a.txt")));
+        Assert.IsFalse(Directory.Exists(Path.Combine(_root, "outside")));
+        Assert.AreEqual(0, (await _sp.GetRequiredService<IPathMarkService>().GetAll()).Count);
+    }
+
+    [TestMethod]
+    public async Task ASymbolicLinkCannotRedirectNestedPlacementOutsideTheLibrary()
+    {
+        if (OperatingSystem.IsWindows()) Assert.Inconclusive("Creating symlinks can require Windows privileges.");
+        var outside = Path.Combine(_root, "outside");
+        Directory.CreateDirectory(outside);
+        Directory.CreateSymbolicLink(Path.Combine(_library, "linked"), outside);
+        WithFiles(_working, "a.txt");
+
+        var outcome = await new PlaceStep().ExecuteAsync(
+            Context("""{"directoryTemplate":"linked/{Title}"}"""), Item(), CancellationToken.None);
+
+        Assert.IsInstanceOfType<AcquisitionStepOutcome.Fail>(outcome);
+        Assert.IsTrue(File.Exists(Path.Combine(_working, "a.txt")));
+        Assert.IsFalse(Directory.EnumerateFileSystemEntries(outside).Any());
+    }
+
+    [TestMethod]
+    public async Task AnInFlightScanCannotDiscoverANewCategoryUsingItsOldMarkSnapshot()
+    {
+        var marks = _sp.GetRequiredService<IPathMarkService>();
+        await marks.Add(new Bakabase.Abstractions.Models.Domain.PathMark
+        {
+            Path = _library,
+            Type = PathMarkType.Resource,
+            ConfigJson = """{"matchMode":1,"layer":1,"fsTypeFilter":2}""",
+        });
+        WithFiles(_working, "a.txt");
+        var snapshotTaken = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var allowDiscovery = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var sync = _sp.GetRequiredService<ResourceSyncService>();
+        var scanning = sync.SyncResources(ResourceSource.PathMark, null, message =>
+        {
+            if (message?.StartsWith("Discovering filesystem resources", StringComparison.Ordinal) != true)
+                return Task.CompletedTask;
+            snapshotTaken.TrySetResult();
+            return allowDiscovery.Task;
+        }, new PauseToken(), CancellationToken.None);
+        await snapshotTaken.Task.WaitAsync(TimeSpan.FromSeconds(10));
+
+        var placing = new PlaceStep().ExecuteAsync(
+            Context("""{"directoryTemplate":"Games/{Title}"}"""), Item(), CancellationToken.None);
+        try
+        {
+            Assert.IsInstanceOfType<AcquisitionStepOutcome.Continue>(await placing);
+            Assert.IsTrue(Directory.Exists(Path.Combine(_library, "Games")));
+        }
+        finally
+        {
+            allowDiscovery.TrySetResult();
+        }
+
+        await scanning;
+        Assert.AreEqual(0, (await _sp.GetRequiredService<IResourceService>().GetAll()).Count,
+            "the completed scan must discard the category discovered with its old root mark");
+        await marks.MarkAsPending((await marks.GetByPath(_library)).Single().Id);
+        await sync.SyncResources(ResourceSource.PathMark, null, null, new PauseToken(), CancellationToken.None);
+        var resources = await _sp.GetRequiredService<IResourceService>().GetAll();
+        Assert.AreEqual(1, resources.Count);
+        Assert.AreEqual(Path.Combine(_library, "Games", "A Great Work").Replace('\\', '/'),
+            resources.Single().Path);
     }
 
     /// <summary>

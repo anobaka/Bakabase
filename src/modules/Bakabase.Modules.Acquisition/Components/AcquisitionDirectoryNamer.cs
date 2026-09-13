@@ -7,7 +7,9 @@ namespace Bakabase.Modules.Acquisition.Components;
 /// <summary>
 /// Works out what the folder an acquired resource lands in should be called.
 /// <para>
-/// A template over the work item, then sanitized and budgeted. It is deliberately not the
+/// A relative-path template over the work item, sanitized and budgeted one component at a time.
+/// Only separators written in the template create subdirectories; values remain single names.
+/// It is deliberately not the
 /// display-name template machinery: that exists to render a name for a resource that already has
 /// properties, and this runs before the resource has any. What it does borrow is the one behaviour
 /// that matters — a placeholder that resolves to nothing takes its brackets with it, so a template
@@ -39,29 +41,79 @@ public static class AcquisitionDirectoryNamer
     public static string Render(string? template, AcquisitionWorkItem item)
     {
         var values = ValuesOf(item);
-        var text = string.IsNullOrWhiteSpace(template) ? "{Title}" : template;
+        var parts = TemplateParts(template);
+        var rendered = new List<string>();
 
-        var rendered = Placeholder.Replace(text, m =>
-            values.GetValueOrDefault(m.Groups["key"].Value) is {Length: > 0} v ? v : Nothing);
-
-        rendered = DropEmptyWrappers(rendered);
-        rendered = Regex.Replace(rendered.Replace(Nothing, ""), @"\s{2,}", " ").Trim();
-
-        var safe = FileNameSanitizer.Sanitize(rendered);
-
-        if (string.IsNullOrWhiteSpace(safe))
+        for (var i = 0; i < parts.Length; i++)
         {
-            // Everything the template referred to was empty, or the whole name sanitized away.
-            safe = FileNameSanitizer.Sanitize(item.Title ?? "");
+            var part = Placeholder.Replace(parts[i], m =>
+            {
+                var value = FileNameSanitizer.Sanitize(values.GetValueOrDefault(m.Groups["key"].Value) ?? "");
+
+                return string.IsNullOrWhiteSpace(value) ? Nothing : value;
+            });
+
+            part = DropEmptyWrappers(part);
+            part = Regex.Replace(part.Replace(Nothing, ""), @"\s{2,}", " ").Trim();
+            var safe = Budget(FileNameSanitizer.Sanitize(part));
+
+            if (string.IsNullOrWhiteSpace(safe))
+            {
+                // Missing categories can disappear; the resource itself must still have a leaf.
+                if (i < parts.Length - 1) continue;
+                safe = Budget(FileNameSanitizer.Sanitize(item.Title ?? ""));
+                if (string.IsNullOrWhiteSpace(safe)) safe = $"acquisition-{item.ResourceId}";
+            }
+
+            rendered.Add(safe);
         }
 
-        if (string.IsNullOrWhiteSpace(safe))
-        {
-            safe = $"acquisition-{item.ResourceId}";
-        }
-
-        return safe.Length <= MaxLength ? safe : safe[..MaxLength].TrimEnd('.', ' ');
+        return Path.Combine(rendered.ToArray());
     }
+
+    /// <summary>Rejects paths that cannot name a descendant of the configured library.</summary>
+    public static void ValidateTemplate(string? template) => TemplateParts(template);
+
+    public static bool HasSubdirectories(string? template) => TemplateParts(template).Length > 1;
+
+    /// <summary>Resolves a rendered relative name, including libraries rooted at a filesystem root.</summary>
+    public static string ResolveTargetDirectory(string libraryRoot, string relativeName)
+    {
+        var root = Path.GetFullPath(libraryRoot);
+        var target = Path.GetFullPath(Path.Combine(root, relativeName));
+        var prefix = Path.EndsInDirectorySeparator(root) ? root : root + Path.DirectorySeparatorChar;
+        if (!target.StartsWith(prefix, OperatingSystem.IsWindows()
+                ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal) || target == root)
+        {
+            throw new ArgumentException("The resource directory must stay inside the library.", nameof(relativeName));
+        }
+
+        return target;
+    }
+
+    private static string[] TemplateParts(string? template)
+    {
+        var text = string.IsNullOrWhiteSpace(template) ? "{Title}" : template.Trim();
+
+        // Check both slash styles and drive prefixes on every OS, including drive-relative C:foo.
+        if (text.StartsWith('/') || text.StartsWith('\\') || Regex.IsMatch(text, @"^[A-Za-z]:"))
+        {
+            throw new ArgumentException("The directory template must be a relative path inside the library.",
+                nameof(template));
+        }
+
+        var parts = text.Split(['/', '\\']);
+        if (parts.Any(part => string.IsNullOrWhiteSpace(part) || part.Trim() is "." or ".."))
+        {
+            throw new ArgumentException("The directory template cannot contain empty, '.' or '..' path segments.",
+                nameof(template));
+        }
+
+        return parts;
+    }
+
+    private static string Budget(string name) =>
+        name.Length <= MaxLength ? name : name[..MaxLength].TrimEnd('.', ' ');
 
     /// <summary>
     /// What a template may refer to. The item's own variables come last so a step that captured

@@ -8,6 +8,7 @@ using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.Acquisition.Components;
 using Bakabase.Modules.Acquisition.Models.Domain;
 using Bootstrap.Components.Configuration.Abstractions;
 using Microsoft.Extensions.Logging;
@@ -51,6 +52,10 @@ public class AcquisitionSetupService(
     public async Task<AcquisitionSetupResult> ApplyAsync(AcquisitionSetupInputModel input,
         CancellationToken ct = default)
     {
+        var template = input.DirectoryTemplate is {Length: > 0}
+            ? input.DirectoryTemplate : options.Value.DirectoryTemplate;
+        AcquisitionDirectoryNamer.ValidateTemplate(template);
+
         var createdInbox = EnsureDirectory(input.InboxDirectory);
         var createdLibrary = EnsureDirectory(input.LibraryRootDirectory);
 
@@ -59,11 +64,20 @@ public class AcquisitionSetupService(
             if (input.InboxDirectory is {Length: > 0}) o.InboxDirectory = input.InboxDirectory;
             if (input.LibraryRootDirectory is {Length: > 0}) o.LibraryRootDirectory = input.LibraryRootDirectory;
             if (input.DirectoryTemplate is {Length: > 0}) o.DirectoryTemplate = input.DirectoryTemplate;
-            if (input.PreferredDriveKinds != null) o.PreferredDriveKinds = input.PreferredDriveKinds;
+            if (input.PreferredDriveKinds != null)
+            {
+                o.PreferredDriveKinds = input.PreferredDriveKinds
+                    .Where(kind => kind != AcquisitionDriveKind.Unknown && Enum.IsDefined(kind))
+                    .Distinct().ToList();
+            }
             if (input.AutoPurchaseLimit is { } limit) o.AutoPurchaseLimit = limit;
         });
 
-        var markId = await EnsureLibraryMarkAsync(input.LibraryRootDirectory, ct);
+        // Variable categories and workflow overrides can change depth. Those paths receive a
+        // boundary and an exact resource mark when placement knows the final destination.
+        var markId = AcquisitionDirectoryNamer.HasSubdirectories(template)
+            ? null
+            : await EnsureLibraryMarkAsync(input.LibraryRootDirectory, ct);
 
         return new AcquisitionSetupResult(createdInbox, createdLibrary, markId);
     }

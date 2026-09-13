@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Bakabase.Abstractions.Services;
 using Bakabase.Modules.Acquisition.Abstractions.Components;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
@@ -102,12 +103,21 @@ public class PlaceStep : IAcquisitionStep
             return new AcquisitionStepOutcome.Fail("There is nothing here to file away.");
         }
 
-        // Only when nothing else named it: a text activity earlier in the recipe has the last word.
-        var name = string.IsNullOrWhiteSpace(item.WorkingName)
-            ? AcquisitionDirectoryNamer.Render(config.DirectoryTemplate ?? options.DirectoryTemplate, item)
-            : AcquisitionDirectoryNamer.Render(item.WorkingName, item);
-
-        var target = Path.Combine(libraryRoot, name);
+        string name;
+        string target;
+        try
+        {
+            // Only when nothing else named it: a text activity earlier in the recipe has the last word.
+            name = string.IsNullOrWhiteSpace(item.WorkingName)
+                ? AcquisitionDirectoryNamer.Render(config.DirectoryTemplate ?? options.DirectoryTemplate, item)
+                : AcquisitionDirectoryNamer.Render(item.WorkingName, item);
+            libraryRoot = Path.GetFullPath(libraryRoot);
+            target = AcquisitionDirectoryNamer.ResolveTargetDirectory(libraryRoot, name);
+        }
+        catch (ArgumentException ex)
+        {
+            return new AcquisitionStepOutcome.Fail(ex.Message);
+        }
 
         if (item.TargetDirectory is {Length: > 0} already && Directory.Exists(already) &&
             !Directory.Exists(source))
@@ -142,6 +152,22 @@ public class PlaceStep : IAcquisitionStep
 
         try
         {
+            var candidate = libraryRoot;
+            foreach (var part in Path.GetRelativePath(libraryRoot, target).Split(Path.DirectorySeparatorChar))
+            {
+                candidate = Path.Combine(candidate, part);
+                if (Directory.Exists(candidate) &&
+                    (File.GetAttributes(candidate) & FileAttributes.ReparsePoint) != 0)
+                {
+                    return new AcquisitionStepOutcome.Fail(
+                        "The resource directory cannot pass through a symbolic link inside the library.");
+                }
+            }
+
+            // Boundaries must be persisted before categories appear. Resource discovery rechecks
+            // fresh boundaries before using its candidates, including scans already in progress.
+            await AcquisitionLibraryMarks.PrepareAsync(
+                ctx.ServiceProvider.GetRequiredService<IPathMarkService>(), libraryRoot, target, ct);
             Directory.CreateDirectory(libraryRoot);
             MoveInto(Collapse(source), target);
         }
