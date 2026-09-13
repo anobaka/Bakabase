@@ -1,5 +1,5 @@
 {
-  "menu.acquisition": "Acquisitions",
+  "menu.acquisition": "Acquire Resources",
   "acquisition.tab.live": "In progress",
   "acquisition.tab.all": "Everything",
   "acquisition.waitingCount": "{{count}} waiting for you",

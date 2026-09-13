@@ -1,5 +1,5 @@
 {
-  "menu.acquisition": "获取",
+  "menu.acquisition": "获取资源",
   "acquisition.tab.live": "进行中",
   "acquisition.tab.all": "全部",
   "acquisition.waitingCount": "{{count}} 项在等你",
