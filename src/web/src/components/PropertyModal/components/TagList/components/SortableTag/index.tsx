@@ -1,145 +1,92 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import type { Tag } from "@/components/Property/models";
 
-import React, { useEffect, useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useTranslation } from "react-i18next";
-import { useUpdateEffect } from "react-use";
-import { DeleteOutlined, EyeInvisibleOutlined, EyeOutlined } from "@ant-design/icons";
 
-import ReferenceValueUsage from "@/components/PropertyModal/components/ReferenceValueUsage";
+import { ReferenceColor, ReferenceItemActions } from "../../../ChoiceList/ReferenceItemTools";
+import { tagText } from "../../../ChoiceList/helpers";
+
 import DragHandle from "@/components/DragHandle";
-import { Button, ColorPicker, Input, Modal } from "@/components/bakaui";
-import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import { buildColorValueString } from "@/components/bakaui/components/ColorPicker";
-import colors from "@/components/bakaui/colors";
+import { Input } from "@/components/bakaui";
 
-interface IProps {
+interface Props {
   id: string;
   tag: Tag;
-  onRemove?: (choice: Tag) => any;
-  onChange?: (choice: Tag) => any;
-  style?: any;
+  compact?: boolean;
+  onRemove?: (tag: Tag) => void;
+  onChange?: (tag: Tag) => void;
+  style?: CSSProperties;
   checkUsage?: (value: string) => Promise<number>;
 }
 
-export function SortableTag({
-  id,
-  tag: propsTag,
-  onRemove,
-  onChange,
-  style: propsStyle,
-  checkUsage,
-}: IProps) {
+export function SortableTag({ id, tag, compact, onRemove, onChange, style, checkUsage }: Props) {
   const { t } = useTranslation();
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: id });
-  const { createPortal } = useBakabaseContext();
-
-  const [tag, setTag] = useState(propsTag);
-
-  useEffect(() => {
-    // console.log(9999, 'new rendering');
-  }, []);
-
-  useUpdateEffect(() => {
-    onChange?.(tag);
-  }, [tag]);
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    ...propsStyle,
-  };
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+  });
 
   return (
-    <div ref={setNodeRef} className={"flex gap-1 items-center"} style={style}>
-      <DragHandle {...listeners} {...attributes} />
-      <ColorPicker
-        color={tag.color ?? colors.color}
-        onChange={(color) => {
-          setTag({
-            ...tag,
-            color: buildColorValueString(color),
-          });
-        }}
-      />
-      <Input
-        placeholder={t<string>("Group of tag, optional")}
-        size={"sm"}
-        value={tag?.group}
-        onValueChange={(group) => {
-          setTag({
-            ...tag,
-            group,
-          });
-        }}
-      />
-      <Input
-        placeholder={t<string>("Name of tag, required")}
-        size={"sm"}
-        value={tag?.name}
-        onValueChange={(name) => {
-          setTag({
-            ...tag,
-            name,
-          });
-        }}
-      />
-      <ReferenceValueUsage
-        value={tag.value}
-        label={tag.group ? `${tag.group}:${tag.name ?? ""}` : tag.name}
-      />
-      <div className={"flex items-center"}>
-        <Button
-          isIconOnly
-          radius={"sm"}
-          size={"sm"}
-          title={t<string>("Hide in view")}
-          variant={"light"}
-          onClick={() => {
-            setTag({
-              ...tag,
-              hide: !tag.hide,
-            });
-          }}
-        >
-          {tag.hide ? (
-            <EyeInvisibleOutlined className={"text-base"} />
-          ) : (
-            <EyeOutlined className={"text-base"} />
-          )}
-        </Button>
-        <Button
-          isIconOnly
-          color={"danger"}
-          radius={"sm"}
-          size={"sm"}
-          variant={"light"}
-          onClick={async () => {
-            if (checkUsage) {
-              const count = await checkUsage(tag.value);
-
-              if (count > 0) {
-                createPortal(Modal, {
-                  defaultVisible: true,
-                  size: "sm",
-                  title: t<string>("Value is being referenced in {{count}} places", { count }),
-                  children: t<string>("Sure to delete?"),
-                  onOk: async () => {
-                    onRemove?.(tag);
-                  },
-                });
-
-                return;
-              }
-            }
-            onRemove?.(tag);
-          }}
-        >
-          <DeleteOutlined className={"text-base"} />
-        </Button>
+    <div
+      ref={setNodeRef}
+      className="pb-1.5"
+      style={{
+        ...style,
+        transform: CSS.Transform.toString(transform),
+        transition,
+        zIndex: isDragging ? 1 : undefined,
+      }}
+    >
+      <div
+        className={`flex h-full items-center gap-1.5 rounded-xl bg-default-50 px-2 py-2 ${isDragging ? "shadow-md" : ""}`}
+      >
+        <DragHandle
+          {...listeners}
+          {...attributes}
+          aria-label={t("property.referenceEditor.drag")}
+          className="shrink-0"
+          title={t("property.referenceEditor.drag")}
+        />
+        <div className={`flex min-w-0 flex-1 gap-1.5 ${compact ? "flex-col" : "items-center"}`}>
+          <div className="flex min-w-0 flex-1 items-center gap-1.5">
+            <ReferenceColor color={tag.color} onChange={(color) => onChange?.({ ...tag, color })} />
+            <div
+              className={`grid min-w-0 flex-1 gap-1.5 ${compact ? "grid-cols-1" : "grid-cols-2"}`}
+            >
+              <Input
+                aria-label={t("property.referenceEditor.tags.group")}
+                className="min-w-0"
+                classNames={{ inputWrapper: "bg-default-100 shadow-none" }}
+                placeholder={t("property.referenceEditor.tags.group")}
+                size="sm"
+                value={tag.group ?? ""}
+                onValueChange={(group) => onChange?.({ ...tag, group })}
+              />
+              <Input
+                aria-label={t("property.referenceEditor.tags.name")}
+                className="min-w-0"
+                classNames={{ inputWrapper: "bg-default-100 shadow-none" }}
+                placeholder={t("property.referenceEditor.tags.name")}
+                size="sm"
+                value={tag.name ?? ""}
+                onValueChange={(name) => onChange?.({ ...tag, name })}
+              />
+            </div>
+          </div>
+          <div className="flex shrink-0 justify-end">
+            <ReferenceItemActions
+              checkUsage={checkUsage}
+              hidden={tag.hide}
+              label={tagText(tag)}
+              value={tag.value}
+              onRemove={() => onRemove?.(tag)}
+              onToggleHidden={() => onChange?.({ ...tag, hide: !tag.hide })}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
