@@ -4,13 +4,15 @@ export type SourceKind =
   | AcquisitionLeadKind.DirectUrl
   | AcquisitionLeadKind.SharedPage
   | AcquisitionLeadKind.SharedDocument
-  | AcquisitionLeadKind.Magnet;
+  | AcquisitionLeadKind.Magnet
+  | AcquisitionLeadKind.Torrent;
 
 export const sourceMethods = [
   { id: "directUrl", kind: AcquisitionLeadKind.DirectUrl },
   { id: "sharedPage", kind: AcquisitionLeadKind.SharedPage },
   { id: "sharedDocument", kind: AcquisitionLeadKind.SharedDocument },
   { id: "magnet", kind: AcquisitionLeadKind.Magnet },
+  { id: "torrent", kind: AcquisitionLeadKind.Torrent },
 ] as const;
 
 export const MAX_SOURCE_LENGTH = 2048;
@@ -55,6 +57,7 @@ export const validateAcquisitionSource = (kind: SourceKind | undefined, raw: str
   switch (kind) {
     case AcquisitionLeadKind.DirectUrl:
     case AcquisitionLeadKind.SharedPage:
+    case AcquisitionLeadKind.Torrent:
       if (!isHttpUrl(value, url)) return "httpUrl";
       if (kind === AcquisitionLeadKind.DirectUrl && isKnownSharingPage(url!)) return "sharingPage";
 

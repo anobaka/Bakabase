@@ -22,7 +22,9 @@ import AddSourceModal from "./AddSourceModal";
 import { Button, Chip, Modal, Select, Spinner, toast } from "@/components/bakaui";
 import { FileSystemSelectorModal } from "@/components/FileSystemSelector";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import { recipeLabel, stepLabel } from "@/pages/acquisition/recipeLabels";
+import { recipeLabel } from "@/pages/acquisition/recipeLabels";
+import WorkflowSummary from "@/components/Workflow/WorkflowSummary";
+import WorkflowDiagnostics from "@/components/Workflow/WorkflowDiagnostics";
 import BApi from "@/sdk/BApi";
 import { AcquisitionLeadKind } from "@/sdk/constants";
 
@@ -42,6 +44,7 @@ const KIND_LABELS: Partial<Record<AcquisitionLeadKind, string>> = {
   [AcquisitionLeadKind.SharedDocument]: "acquisition.leads.kind.sharedDocument",
   [AcquisitionLeadKind.DirectUrl]: "acquisition.leads.kind.directUrl",
   [AcquisitionLeadKind.Magnet]: "acquisition.leads.kind.magnet",
+  [AcquisitionLeadKind.Torrent]: "acquisition.leads.kind.torrent",
   [AcquisitionLeadKind.PlatformHolding]: "acquisition.leads.kind.platform",
   [AcquisitionLeadKind.Manual]: "acquisition.leads.kind.local",
 };
@@ -185,6 +188,9 @@ const AcquisitionPanel: React.FC<Props> = ({ resource, onChanged, onNavigate }) 
         : undefined;
     const selected = recipes.find((recipe) => recipe.definitionId === selectedId);
     const supported = lead.capability === "supported" && recipes.length > 0;
+    const leadDisplay = lead.value.startsWith("bakabase-torrent:")
+      ? lead.note || t<string>("acquisition.sourcePicker.torrent.title")
+      : lead.value;
 
     return (
       <div
@@ -221,8 +227,8 @@ const AcquisitionPanel: React.FC<Props> = ({ resource, onChanged, onNavigate }) 
             {t<string>("acquisition.leads.platformDescription", { source: lead.sourceName })}
           </p>
         ) : (
-          <p className="line-clamp-2 break-all text-xs text-default-500" title={lead.value}>
-            {lead.value}
+          <p className="line-clamp-2 break-all text-xs text-default-500" title={leadDisplay}>
+            {leadDisplay}
           </p>
         )}
         {!supported && (
@@ -263,16 +269,19 @@ const AcquisitionPanel: React.FC<Props> = ({ resource, onChanged, onNavigate }) 
             {t<string>("acquisition.overview.defaultUnavailable")}
           </p>
         )}
+        {selected?.validation?.isValid === false && (
+          <WorkflowDiagnostics result={selected.validation} />
+        )}
         <details className="text-xs text-default-500">
           <summary className="w-fit cursor-pointer rounded py-1 hover:text-foreground">
             {t<string>("acquisition.overview.sourceDetails")}
           </summary>
           <div className="mt-1 flex flex-col gap-2 rounded-lg bg-default-100 p-3">
-            <p className="max-h-24 overflow-auto break-all">{lead.value}</p>
-            {lead.note && <p>{lead.note}</p>}
+            <p className="max-h-24 overflow-auto break-all">{leadDisplay}</p>
+            {lead.note && lead.note !== leadDisplay && <p>{lead.note}</p>}
             {selected && (
               <>
-                <p>{selected.stepKinds.map((kind) => stepLabel(kind, t)).join(" → ")}</p>
+                <WorkflowSummary activityKinds={selected.stepKinds} workflow={selected} />
                 <Button
                   className="h-auto min-w-0 self-start px-0 py-1"
                   size="sm"
@@ -289,7 +298,14 @@ const AcquisitionPanel: React.FC<Props> = ({ resource, onChanged, onNavigate }) 
         <Button
           className="self-end"
           color="primary"
-          isDisabled={!supported || !selected || activeTask || pending != null || loading}
+          isDisabled={
+            !supported ||
+            !selected ||
+            selected.validation?.isValid === false ||
+            activeTask ||
+            pending != null ||
+            loading
+          }
           isLoading={pending === leadKey(lead)}
           size="sm"
           startContent={<AiOutlineCloudDownload aria-hidden className="text-base" />}

@@ -21,6 +21,8 @@ public class SelectLinkStep(IBOptions<AcquisitionOptions> options) : IAcquisitio
 
     public string Kind => AcquisitionStepKinds.SelectLink;
     public string DisplayName => "Choose a link";
+    public string Description => "Choose among the links supplied by an earlier node. Provider preferences only rank existing links; they do not search for files.";
+    public string DescriptionKey => "workflow.activity.acquisition.selectLink.description";
     public Type? ConfigType => typeof(Config);
 
     public record Config

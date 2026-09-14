@@ -225,6 +225,115 @@ public sealed class AcquisitionPlacementTests
     }
 
     [TestMethod]
+    public async Task PreservedDirectoryTreesCanMoveAcrossLinuxMounts()
+    {
+        var otherMount = CreateCrossMountTarget();
+        try
+        {
+            var resourceId = await CreateMissingResource();
+            WithFiles(_working, "Disc1/Content/a.txt", "Disc2/Content/b.txt", "readme.txt");
+            File.WriteAllText(Path.Combine(_working, "Disc1", "Content", "a.txt"), "first payload");
+            File.WriteAllText(Path.Combine(_working, "Disc2", "Content", "b.txt"), "second payload");
+            Directory.CreateDirectory(Path.Combine(_working, "Disc1", "Empty"));
+            var config = JsonSerializer.Serialize(new PlaceStep.Config {LibraryRootDirectory = otherMount}, Json);
+
+            var outcome = await new PlaceStep().ExecuteAsync(Context(config),
+                Item() with {ResourceId = resourceId, PreserveDirectoryStructure = true}, CancellationToken.None);
+
+            Assert.IsInstanceOfType<AcquisitionStepOutcome.Continue>(outcome, Describe(outcome));
+            var placed = ((AcquisitionStepOutcome.Continue) outcome).Item;
+            var target = Path.Combine(otherMount, "A Great Work");
+            Assert.AreEqual(target, placed.TargetDirectory);
+            Assert.AreEqual("first payload", File.ReadAllText(Path.Combine(target, "Disc1", "Content", "a.txt")));
+            Assert.AreEqual("second payload", File.ReadAllText(Path.Combine(target, "Disc2", "Content", "b.txt")));
+            Assert.IsTrue(File.Exists(Path.Combine(target, "readme.txt")));
+            Assert.IsTrue(Directory.Exists(Path.Combine(target, "Disc1", "Empty")));
+            Assert.IsFalse(Directory.EnumerateFileSystemEntries(_working).Any());
+
+            var materialized = await new MaterializeStep().ExecuteAsync(Context(config), placed, CancellationToken.None);
+            Assert.IsInstanceOfType<AcquisitionStepOutcome.Continue>(materialized, Describe(materialized));
+            Assert.AreEqual(target, (await _sp.GetRequiredService<IResourceService>().Get(resourceId))!.Path);
+        }
+        finally
+        {
+            Directory.Delete(otherMount, true);
+        }
+    }
+
+    [TestMethod]
+    public async Task RecursivePlacementMovesDirectoryLinksWithoutMovingTheirTargetFiles()
+    {
+        if (OperatingSystem.IsWindows()) Assert.Inconclusive("Creating symlinks can require Windows privileges.");
+        var linkedDirectory = WithFiles(Path.Combine(_root, "linked-directory"), "keep.txt");
+        Directory.CreateSymbolicLink(Path.Combine(_working, "link"), linkedDirectory);
+        WithFiles(_working, "regular/a.txt");
+
+        var outcome = await new PlaceStep().ExecuteAsync(Context(),
+            Item() with {PreserveDirectoryStructure = true}, CancellationToken.None);
+
+        Assert.IsInstanceOfType<AcquisitionStepOutcome.Continue>(outcome, Describe(outcome));
+        var target = ((AcquisitionStepOutcome.Continue) outcome).Item.TargetDirectory!;
+        Assert.AreEqual("x", File.ReadAllText(Path.Combine(linkedDirectory, "keep.txt")));
+        Assert.AreNotEqual(0, (int) (File.GetAttributes(Path.Combine(target, "link")) & FileAttributes.ReparsePoint));
+        Assert.AreEqual("x", File.ReadAllText(Path.Combine(target, "regular", "a.txt")));
+    }
+
+    [TestMethod]
+    public async Task ADirectoryMoveFailurePreservesUnmovedFilesAndTheExistingTarget()
+    {
+        WithFiles(_working, "complete/a.txt", "blocked/nested/b.txt");
+        var target = Path.Combine(_library, "A Great Work");
+        WithFiles(target, "blocked/nested");
+        File.WriteAllText(Path.Combine(target, "blocked", "nested"), "existing file");
+
+        var outcome = await new PlaceStep().ExecuteAsync(
+            Context(JsonSerializer.Serialize(new PlaceStep.Config {OnConflict = PlacementConflictPolicy.Merge}, Json)),
+            Item() with {PreserveDirectoryStructure = true}, CancellationToken.None);
+
+        Assert.IsInstanceOfType<AcquisitionStepOutcome.Fail>(outcome);
+        Assert.AreEqual("x", File.ReadAllText(Path.Combine(_working, "blocked", "nested", "b.txt")),
+            "a failed subtree must not be deleted from the source");
+        Assert.AreEqual("existing file", File.ReadAllText(Path.Combine(target, "blocked", "nested")));
+        var original = Path.Combine(_working, "complete", "a.txt");
+        var moved = Path.Combine(target, "complete", "a.txt");
+        Assert.AreEqual("x", File.ReadAllText(File.Exists(original) ? original : moved),
+            "files visited before the failure remain at their source or their completed destination");
+    }
+
+    private string CreateCrossMountTarget()
+    {
+        if (!OperatingSystem.IsLinux() || !Directory.Exists("/dev/shm"))
+            Assert.Inconclusive("This regression requires Linux /dev/shm on a different mount from the working folder.");
+
+        var otherMount = Path.Combine("/dev/shm", $"BakabasePlace_{Guid.NewGuid():N}");
+        try
+        {
+            Directory.CreateDirectory(otherMount);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Assert.Inconclusive($"The separate mount is not writable: {ex.Message}");
+        }
+
+        // Verify the fixture really crosses mounts rather than assuming /dev/shm is separate.
+        var probe = Path.Combine(_root, "cross-mount-probe");
+        Directory.CreateDirectory(probe);
+        try
+        {
+            Directory.Move(probe, Path.Combine(otherMount, "probe"));
+        }
+        catch (IOException)
+        {
+            Directory.Delete(probe);
+            return otherMount;
+        }
+
+        Directory.Delete(otherMount, true);
+        Assert.Inconclusive("Directory.Move succeeded: /dev/shm is not a separate mount in this environment.");
+        return otherMount;
+    }
+
+    [TestMethod]
     public async Task NestedPlacementMarksOnlyTheResource_AndPreservesTheLegacyRootMarkAndExistingResource()
     {
         var marks = _sp.GetRequiredService<IPathMarkService>();

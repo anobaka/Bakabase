@@ -8,6 +8,7 @@ using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bakabase.Modules.Workflow.Abstractions.Models.Input;
 using Bakabase.Modules.Workflow.Abstractions.Models.View;
 using Bakabase.Modules.Workflow.Abstractions.Services;
+using Bakabase.Service.Components.RemoteAccess;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
@@ -18,6 +19,7 @@ namespace Bakabase.Service.Controllers;
 [Route("workflow")]
 public class WorkflowController(
     IWorkflowDefinitionService service,
+    IWorkflowValidationService validation,
     IWorkflowTriggerRegistry triggers,
     IWorkflowActivityRegistry activities,
     IWorkflowItemTypeRegistry itemTypes,
@@ -40,6 +42,23 @@ public class WorkflowController(
         var row = await service.GetAsync(id);
         return new SingletonResponse<WorkflowDefinitionViewModel?>(
             row is null ? null : WorkflowDefinitionViewModel.From(row));
+    }
+
+    [HttpPost("validate")]
+    [SwaggerOperation(OperationId = "ValidateWorkflow")]
+    [RemoteAccessible]
+    public async Task<SingletonResponse<WorkflowValidationResult>> ValidateDraft(
+        [FromBody] WorkflowValidationInputModel model, CancellationToken ct) =>
+        new(await validation.ValidateAsync(model, ct: ct));
+
+    [HttpGet("{id:int}/validation")]
+    [SwaggerOperation(OperationId = "ValidateSavedWorkflow")]
+    [RemoteAccessible]
+    public async Task<SingletonResponse<WorkflowValidationResult>> ValidateSaved(int id, CancellationToken ct)
+    {
+        var definition = await service.GetAsync(id)
+            ?? throw new InvalidOperationException($"Workflow #{id} not found");
+        return new(await validation.ValidateAsync(definition, ct: ct));
     }
 
     [HttpPost]
@@ -91,6 +110,8 @@ public class WorkflowController(
             {
                 Kind = t.Kind,
                 DisplayName = t.DisplayName,
+                Description = t.Description,
+                DescriptionKey = t.DescriptionKey,
                 RequiresManualPayload = t.RequiresManualPayload,
                 PayloadFields = t.RequiresManualPayload ? BuildFieldVms(t.PayloadType) : [],
             }));
@@ -121,6 +142,8 @@ public class WorkflowController(
             {
                 Kind = a.Kind,
                 DisplayName = a.DisplayName,
+                Description = a.Description,
+                DescriptionKey = a.DescriptionKey,
                 Category = a.Category,
                 Group = a.Group,
                 AcceptedInputItemTypes = a.AcceptedInputItemTypes.ToList(),

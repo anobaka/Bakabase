@@ -35,5 +35,8 @@ public enum AcquisitionLeadKind
     /// The user will obtain it by hand and does not want the system to try. Not stored as a lead —
     /// it describes a recipe's choice, not a place to get files from.
     /// </summary>
-    Manual = 6
+    Manual = 6,
+
+    /// <summary>A torrent metadata URL or a managed uploaded torrent reference.</summary>
+    Torrent = 7
 }

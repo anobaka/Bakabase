@@ -19,6 +19,8 @@ const builtinNames = [
   ["Forum post + cloud drive", "分享内容与网盘"],
   ["Direct download", "直链下载"],
   ["Magnet", "磁力链接手动下载入库"],
+  ["Magnet download", "磁力链接下载"],
+  ["Torrent download", "BT 种子下载"],
   ["Platform fetch", "平台获取"],
   ["Local directory", "本地目录入库"],
 ];

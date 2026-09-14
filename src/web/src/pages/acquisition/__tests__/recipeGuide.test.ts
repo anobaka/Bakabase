@@ -2,58 +2,52 @@ import type { AcquisitionRecipeVm } from "..";
 
 import { describe, expect, it } from "vitest";
 
-import { acceptsSharedPage, recipeInputKind, sharedPageDefaultRecipe } from "../recipeGuide";
+import { acceptsSharedPage, sharedPageDefaultRecipe } from "../recipeGuide";
 
-const recipe = (definitionId: number, name: string, stepKinds: string[]): AcquisitionRecipeVm => ({
+import { AcquisitionLeadKind } from "@/sdk/constants";
+
+const recipe = (
+  definitionId: number,
+  name: string,
+  applicableLeadKinds: AcquisitionRecipeVm["applicableLeadKinds"] = [],
+): AcquisitionRecipeVm => ({
   definitionId,
   name,
   isBuiltin: false,
-  stepKinds,
+  stepKinds: [],
+  validation: { isValid: true, diagnostics: [] },
+  applicableLeadKinds,
 });
-const materialize = "acquisition.materialize";
-const resolve = "acquisition.resolveSharedContent";
-const inbox = "acquisition.waitForInbox";
+const shared = [AcquisitionLeadKind.SharedPage];
 
-describe("sharing-page workflow guidance", () => {
-  it("uses the first consuming step for copied and renamed workflows, skipping other steps", () => {
-    const copied = recipe(12, "My renamed workflow", [
-      "transform.example",
-      resolve,
-      inbox,
-      materialize,
-    ]);
-
-    expect(recipeInputKind(copied)).toBe("sharedContent");
-    expect(acceptsSharedPage(copied)).toBe(true);
-    expect(recipeInputKind(recipe(13, "Manual intake", [inbox, materialize]))).toBe("inbox");
-    expect(acceptsSharedPage(recipe(13, "Manual intake", [inbox, materialize]))).toBe(true);
+describe("sharing-page workflow input metadata", () => {
+  it("uses declared inputs even when kinds and prose suggest a different behavior", () => {
+    expect(
+      acceptsSharedPage({ ...recipe(1, "Custom", shared), stepKinds: ["custom.action"] }),
+    ).toBe(true);
+    expect(
+      acceptsSharedPage({
+        ...recipe(2, "Forum post + cloud drive"),
+        description: "Accepts sharing pages",
+        stepKinds: ["acquisition.resolveSharedContent", "acquisition.materialize"],
+      }),
+    ).toBe(false);
   });
 
-  it.each(["fetchHttp", "fetchMagnet", "fetchFromPlatform", "pickLocalDirectory"])(
-    "does not offer a workflow whose first source is %s even if it later resolves a page",
-    (first) => {
-      expect(
-        acceptsSharedPage(
-          recipe(1, "Mixed inputs", [`acquisition.${first}`, resolve, materialize]),
-        ),
-      ).toBe(false);
-    },
-  );
+  it("does not infer compatibility when input metadata is missing", () => {
+    const unknown = { ...recipe(1, "Custom", shared), applicableLeadKinds: undefined };
 
-  it("requires materialization and a recognized sharing-page input", () => {
-    expect(acceptsSharedPage(recipe(1, "Resolve only", [resolve]))).toBe(false);
-    expect(acceptsSharedPage(recipe(2, "Unknown", ["custom.step", materialize]))).toBe(false);
-    expect(recipeInputKind(recipe(3, "Empty", []))).toBe("custom");
+    expect(acceptsSharedPage(unknown)).toBe(false);
   });
 
   it.each(["SharedPage", "2"])(
     "does not skip an incompatible lowest-id default configured through %s",
     (key) => {
       const recipes = [
-        recipe(1, "Forum post + cloud drive", [resolve, materialize]),
-        recipe(8, "My intake", [inbox, materialize]),
-        recipe(4, "My intake", [resolve, materialize]),
-        recipe(2, "My intake", ["acquisition.fetchHttp", materialize]),
+        recipe(1, "Forum post + cloud drive", shared),
+        recipe(8, "My intake", shared),
+        recipe(4, "My intake", shared),
+        recipe(2, "My intake"),
       ];
 
       expect(sharedPageDefaultRecipe(recipes, { [key]: "My intake" })).toBeUndefined();
@@ -63,9 +57,9 @@ describe("sharing-page workflow guidance", () => {
 
   it("selects the lowest-id named definition when that definition is compatible", () => {
     const recipes = [
-      recipe(1, "Forum post + cloud drive", [resolve, materialize]),
-      recipe(8, "My intake", [inbox, materialize]),
-      recipe(4, "My intake", [resolve, materialize]),
+      recipe(1, "Forum post + cloud drive", shared),
+      recipe(8, "My intake", shared),
+      recipe(4, "My intake", shared),
     ];
 
     expect(sharedPageDefaultRecipe(recipes, { SharedPage: "My intake" })?.definitionId).toBe(4);
@@ -75,17 +69,14 @@ describe("sharing-page workflow guidance", () => {
   it.each(["Missing workflow", "Direct download", ""])(
     "does not silently replace a configured %j default",
     (name) => {
-      const recipes = [
-        recipe(1, "Forum post + cloud drive", [resolve, materialize]),
-        recipe(2, "Direct download", ["acquisition.fetchHttp", materialize]),
-      ];
+      const recipes = [recipe(1, "Forum post + cloud drive", shared), recipe(2, "Direct download")];
 
       expect(sharedPageDefaultRecipe(recipes, { SharedPage: name })).toBeUndefined();
     },
   );
 
   it("uses the built-in system default only when no per-kind default is configured", () => {
-    const builtin = recipe(31, "Forum post + cloud drive", [resolve, materialize]);
+    const builtin = recipe(31, "Forum post + cloud drive", shared);
 
     expect(sharedPageDefaultRecipe([builtin], {})).toBe(builtin);
   });

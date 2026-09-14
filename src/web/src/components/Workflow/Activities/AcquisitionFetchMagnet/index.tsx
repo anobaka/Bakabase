@@ -10,6 +10,7 @@ import { WorkflowActivityCategory } from "@/sdk/constants";
 
 /** Mirrors the backend FetchMagnetStep.Handler enum. */
 enum Handler {
+  Builtin = 0,
   Aria2 = 1,
   SystemDefault = 2,
 }
@@ -24,7 +25,7 @@ interface Config {
 }
 
 const DEFAULT: Config = {
-  handler: Handler.Aria2,
+  handler: Handler.Builtin,
   rpcUrl: "http://127.0.0.1:6800/jsonrpc",
   timeoutMinutes: 240,
   pollSeconds: 5,
@@ -39,7 +40,13 @@ const ConfigForm: React.FC<{ value: Config; onChange: (v: Config) => void }> = (
   return (
     <div className="flex flex-col gap-3">
       <Select
+        disallowEmptySelection
         dataSource={[
+          {
+            value: String(Handler.Builtin),
+            label: t<string>("workflow.acquisition.fetchMagnet.handler.builtin"),
+            textValue: t<string>("workflow.acquisition.fetchMagnet.handler.builtin"),
+          },
           {
             value: String(Handler.Aria2),
             label: t<string>("workflow.acquisition.fetchMagnet.handler.aria2"),
@@ -54,10 +61,12 @@ const ConfigForm: React.FC<{ value: Config; onChange: (v: Config) => void }> = (
         description={t<string>(
           value.handler === Handler.SystemDefault
             ? "workflow.acquisition.fetchMagnet.handler.system.description"
-            : "workflow.acquisition.fetchMagnet.handler.aria2.description",
+            : value.handler === Handler.Aria2
+              ? "workflow.acquisition.fetchMagnet.handler.aria2.description"
+              : "workflow.acquisition.fetchMagnet.handler.builtin.description",
         )}
         label={t<string>("workflow.acquisition.fetchMagnet.handler.label")}
-        selectedKeys={[String(value.handler ?? Handler.Aria2)]}
+        selectedKeys={[String(value.handler ?? Handler.Builtin)]}
         size="sm"
         onSelectionChange={(keys) => {
           const raw = Array.from(keys)[0];
@@ -66,7 +75,7 @@ const ConfigForm: React.FC<{ value: Config; onChange: (v: Config) => void }> = (
         }}
       />
 
-      {value.handler !== Handler.SystemDefault && (
+      {value.handler === Handler.Aria2 && (
         <>
           <Input
             label={t<string>("workflow.acquisition.fetchMagnet.rpcUrl.label")}
@@ -83,19 +92,37 @@ const ConfigForm: React.FC<{ value: Config; onChange: (v: Config) => void }> = (
             onValueChange={(secret) => onChange({ ...value, secret })}
           />
           <Input
-            description={t<string>("workflow.acquisition.fetchMagnet.timeout.description")}
-            label={t<string>("workflow.acquisition.fetchMagnet.timeout.label")}
+            label={t<string>("workflow.acquisition.fetchMagnet.pollSeconds.label")}
+            max={60}
             min={1}
             size="sm"
             type="number"
-            value={String(value.timeoutMinutes ?? DEFAULT.timeoutMinutes)}
-            onValueChange={(v) => {
-              const n = Number(v);
+            value={String(value.pollSeconds)}
+            onValueChange={(raw) => {
+              const next = Number(raw);
 
-              if (!isNaN(n)) onChange({ ...value, timeoutMinutes: Math.max(1, n) });
+              if (Number.isFinite(next))
+                onChange({ ...value, pollSeconds: Math.min(60, Math.max(1, next)) });
             }}
           />
         </>
+      )}
+      {value.handler !== Handler.SystemDefault && (
+        <Input
+          description={t<string>("workflow.acquisition.fetchMagnet.timeout.description")}
+          label={t<string>("workflow.acquisition.fetchMagnet.timeout.label")}
+          max={43200}
+          min={1}
+          size="sm"
+          type="number"
+          value={String(value.timeoutMinutes ?? DEFAULT.timeoutMinutes)}
+          onValueChange={(v) => {
+            const n = Number(v);
+
+            if (Number.isFinite(n))
+              onChange({ ...value, timeoutMinutes: Math.min(43200, Math.max(1, n)) });
+          }}
+        />
       )}
     </div>
   );
@@ -109,7 +136,9 @@ const Summary: React.FC<{ config: Config }> = ({ config }) => {
       {t<string>(
         config.handler === Handler.SystemDefault
           ? "workflow.acquisition.fetchMagnet.handler.system"
-          : "workflow.acquisition.fetchMagnet.handler.aria2",
+          : config.handler === Handler.Aria2
+            ? "workflow.acquisition.fetchMagnet.handler.aria2"
+            : "workflow.acquisition.fetchMagnet.handler.builtin",
       )}
     </span>
   );
@@ -132,7 +161,13 @@ export const AcquisitionFetchMagnetUI: WorkflowActivityUI<Config> = {
   // An aria2 endpoint that is not there is a runtime failure with a clear message; an empty one is
   // a mistake the editor can catch.
   isValid: (config) =>
-    config.handler === Handler.SystemDefault || (config.rpcUrl?.trim().length ?? 0) > 0,
+    [Handler.Builtin, Handler.Aria2, Handler.SystemDefault].includes(config.handler) &&
+    (config.handler === Handler.SystemDefault ||
+      (config.timeoutMinutes >= 1 && config.timeoutMinutes <= 43200)) &&
+    (config.handler !== Handler.Aria2 ||
+      ((config.rpcUrl?.trim().length ?? 0) > 0 &&
+        config.pollSeconds >= 1 &&
+        config.pollSeconds <= 60)),
   ConfigForm,
   Summary,
 };

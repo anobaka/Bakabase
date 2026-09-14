@@ -19,6 +19,10 @@ const { getOptions, createFromUrl, success, danger, started, destroyed } = vi.ho
   destroyed: vi.fn(),
 }));
 
+// Only activity names are used here; the editor's configuration forms stay outside this test.
+vi.mock("@/components/Workflow/Activities", () => ({ getWorkflowActivityUI: () => undefined }));
+vi.mock("@/components/Workflow/Triggers", () => ({ getWorkflowTriggerUI: () => undefined }));
+
 vi.mock("@/sdk/BApi", () => ({
   default: {
     acquisition: { getAcquisitionOptions: getOptions, createAcquisitionFromUrl: createFromUrl },
@@ -86,6 +90,8 @@ vi.mock("@/components/bakaui", async () => ({
 const recipes: AcquisitionRecipeVm[] = [
   {
     definitionId: 17,
+    validation: { isValid: true, diagnostics: [] },
+    applicableLeadKinds: [2],
     name: "Forum post + cloud drive",
     isBuiltin: true,
     stepKinds: [
@@ -96,12 +102,17 @@ const recipes: AcquisitionRecipeVm[] = [
   },
   {
     definitionId: 71,
+    applicableLeadKinds: [2],
+    description: "Wait for supplied files",
+    validation: { isValid: true, diagnostics: [] },
     name: "My manual intake",
     isBuiltin: false,
     stepKinds: ["acquisition.waitForInbox", "acquisition.materialize"],
   },
   {
     definitionId: 9,
+    applicableLeadKinds: [],
+    validation: { isValid: true, diagnostics: [] },
     name: "Mixed direct download",
     isBuiltin: false,
     stepKinds: [
@@ -112,6 +123,8 @@ const recipes: AcquisitionRecipeVm[] = [
   },
   {
     definitionId: 11,
+    applicableLeadKinds: [],
+    validation: { isValid: true, diagnostics: [] },
     name: "Resolve without materialization",
     isBuiltin: false,
     stepKinds: ["acquisition.resolveSharedContent"],
@@ -195,7 +208,8 @@ describe("start acquisition from a sharing page", () => {
       expect(getOptions).toHaveBeenCalledTimes(1);
       expect(selector()).toHaveValue("71");
       expect([...selector().options].map((item) => item.value)).toEqual(["", "17", "71"]);
-      expect(dialog()).toHaveTextContent("acquisition.recipeGuide.inbox.requirements");
+      expect(dialog()).toHaveTextContent("Wait for supplied files");
+      expect(dialog()).toHaveTextContent("workflow.diagnostics.passed");
       await setUrl("  https://example.invalid/posts/123  ");
       await click();
 
@@ -208,6 +222,37 @@ describe("start acquisition from a sharing page", () => {
       expect(dialog()).toBeNull();
     },
   );
+
+  it("shows generic configuration diagnostics and cannot start an invalid workflow", async () => {
+    await open(
+      recipes.map((item) =>
+        item.definitionId === 17
+          ? {
+              ...item,
+              validation: {
+                isValid: false,
+                diagnostics: [
+                  {
+                    code: "missingSetting",
+                    severity: "error",
+                    message: "Required setting is missing",
+                    nodeIndex: 0,
+                  },
+                ],
+              },
+            }
+          : item,
+      ),
+    );
+    await setUrl("https://example.invalid/post");
+
+    expect(dialog()).toHaveTextContent("Required setting is missing");
+    expect(button()).toBeDisabled();
+    await click();
+    expect(createFromUrl).not.toHaveBeenCalled();
+    await select("71");
+    expect(button()).toBeEnabled();
+  });
 
   it("disables submission until defaults finish loading", async () => {
     let resolve!: (value: unknown) => void;

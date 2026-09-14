@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
 {
     /// <summary>
-    /// Downloads one file over HTTP, resuming where it can.
+    /// Downloads one file over HTTP and verifies the length and any server-provided checksum.
     /// </summary>
     public class SingleFileHttpDownloader(HttpClient httpClient, ILogger<SingleFileHttpDownloader> logger)
     {
@@ -27,8 +27,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
         /// Downloads into <paramref name="directory"/>, naming the file the way the server does, and
         /// returns where it ended up.
         /// <para>
-        /// Idempotent on purpose: a file already there at the full length is left alone, so a step
-        /// re-run after a restart does not download it again.
+        /// A complete existing file is reused only when it matches the current server checksum.
+        /// Without a saved validator for existing partial bytes, retries safely start over.
         /// </para>
         /// </summary>
         public async Task<string> DownloadToDirectory(string url, string directory, CancellationToken ct)
@@ -39,7 +39,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
             var fileName = ResolveFileName(probe, url);
             var filePath = Path.Combine(directory, fileName);
 
-            await Download(url, filePath, ct);
+            await DownloadCore(url, filePath, probe, ct);
 
             return filePath;
         }
@@ -47,6 +47,11 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
         public async Task Download(string url, string filePath, CancellationToken ct)
         {
             var probe = await Probe(url, ct);
+            await DownloadCore(url, filePath, probe, ct);
+        }
+
+        private async Task DownloadCore(string url, string filePath, ProbeResult probe, CancellationToken ct)
+        {
             var fileSize = probe.Length;
             var downloadUrl = probe.FinalUrl;
 
@@ -65,27 +70,29 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
             var fs = File.Open(filePath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
             try
             {
-                if (fs.Length > expected)
+                if (fs.Length > 0)
                 {
-                    await fs.DisposeAsync();
-                    File.Delete(filePath);
-                    logger.LogError(
-                        $"Current file size: {fs.Length} is larger than expected: {expected} and will be deleted.");
-                    fs = File.Open(filePath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+                    // Today's ETag cannot identify bytes left by a previous request. Do not append
+                    // to or reuse those bytes based on size alone, even when If-Range is available.
+                    var verifiedComplete = false;
+                    if (fs.Length == expected && probe.Md5 is { } checksum)
+                    {
+                        using var md5 = MD5.Create();
+                        verifiedComplete = (await md5.ComputeHashAsync(fs, ct)).SequenceEqual(checksum);
+                    }
+                    if (!verifiedComplete) fs.SetLength(0);
                 }
+
+                // Multiple responses need a stable version condition. A server without one is
+                // downloaded in a single response so an in-flight change cannot mix byte ranges.
+                var canUseRanges = probe.SupportsRange &&
+                    (probe.ETag is {IsWeak: false} || probe.LastModified.HasValue);
 
                 await TriggerOnProgress((int) (fs.Length * 100 / Math.Max(1, expected)));
 
                 if (fs.Length < expected)
                 {
-                    if (!probe.SupportsRange && fs.Length > 0)
-                    {
-                        // A partial file is worthless against a server that cannot resume; start over
-                        // rather than appending the whole body onto what is already there.
-                        fs.SetLength(0);
-                    }
-
-                    if (!probe.SupportsRange)
+                    if (!canUseRanges)
                     {
                         await fs.DisposeAsync();
                         await StreamWhole(downloadUrl, filePath, ct);
@@ -94,16 +101,37 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
                     else
                     {
                         fs.Seek(0, SeekOrigin.End);
-                        for (var blockStart = fs.Length; blockStart < expected; blockStart += DownloadBlockSize)
+                        while (fs.Length < expected)
                         {
-                            var downloadReq = new HttpRequestMessage(HttpMethod.Get, downloadUrl);
+                            var blockStart = fs.Length;
+                            var blockEnd = Math.Min(expected, blockStart + DownloadBlockSize) - 1;
+                            using var downloadReq = new HttpRequestMessage(HttpMethod.Get, downloadUrl);
 
-                            downloadReq.Headers.Range = new RangeHeaderValue(blockStart,
-                                Math.Min(expected, blockStart + DownloadBlockSize) - 1);
-                            var blockRsp = await httpClient.SendAsync(downloadReq, ct);
+                            downloadReq.Headers.Range = new RangeHeaderValue(blockStart, blockEnd);
+                            if (probe.ETag is {IsWeak: false})
+                                downloadReq.Headers.IfRange = new RangeConditionHeaderValue(probe.ETag);
+                            else if (probe.LastModified is { } modified)
+                                downloadReq.Headers.IfRange = new RangeConditionHeaderValue(modified);
+                            using var blockRsp = await httpClient.SendAsync(downloadReq,
+                                HttpCompletionOption.ResponseHeadersRead, ct);
 
                             blockRsp.EnsureSuccessStatusCode();
+                            if (blockRsp.StatusCode == HttpStatusCode.OK)
+                            {
+                                // A server may advertise ranges but ignore them, or If-Range may
+                                // detect a changed file. Never append an entire response to a prefix.
+                                await fs.DisposeAsync();
+                                await StreamWhole(downloadUrl, filePath, ct);
+                                fs = File.Open(filePath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+                                break;
+                            }
+                            var range = blockRsp.Content.Headers.ContentRange;
+                            if (blockRsp.StatusCode != HttpStatusCode.PartialContent || range?.From != blockStart ||
+                                range.To != blockEnd || range.Length != expected)
+                                throw new IOException("The server returned a different byte range than requested.");
                             await blockRsp.Content.CopyToAsync(fs, ct);
+                            if (fs.Length != blockEnd + 1)
+                                throw new IOException("The server returned an incomplete byte range.");
 
                             await TriggerOnProgress((int) (fs.Length * 100 / expected));
                         }
@@ -173,43 +201,47 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
                 }
             }
 
+            if (total.HasValue && written != total.Value)
+                throw new IOException($"The response ended after {written} bytes; {total.Value} were expected.");
+
             await TriggerOnProgress(100);
         }
 
         private async Task<ProbeResult> Probe(string url, CancellationToken ct)
         {
-            HttpResponseMessage rsp;
             try
             {
-                rsp = await httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Head, url), ct);
+                using var request = new HttpRequestMessage(HttpMethod.Head, url);
+                using var rsp = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
                 rsp.EnsureSuccessStatusCode();
+                return new ProbeResult(
+                    rsp.Content.Headers.ContentLength,
+                    rsp.Headers.AcceptRanges.Any(v => v.Equals("bytes", StringComparison.OrdinalIgnoreCase)),
+                    rsp.Content.Headers.ContentMD5,
+                    rsp.Content.Headers.ContentDisposition?.FileNameStar ?? rsp.Content.Headers.ContentDisposition?.FileName,
+                    rsp.RequestMessage?.RequestUri?.ToString() ?? url,
+                    rsp.Headers.ETag, rsp.Content.Headers.LastModified);
             }
             catch (HttpRequestException)
             {
                 // Plenty of servers refuse HEAD. Ask for the first byte instead — it tells us the
                 // same three things and costs nothing.
-                var req = new HttpRequestMessage(HttpMethod.Get, url);
+                using var req = new HttpRequestMessage(HttpMethod.Get, url);
 
                 req.Headers.Range = new RangeHeaderValue(0, 0);
-                rsp = await httpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
+                using var rsp = await httpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
                 rsp.EnsureSuccessStatusCode();
 
                 return new ProbeResult(
-                    rsp.Content.Headers.ContentRange?.Length,
+                    rsp.Content.Headers.ContentRange?.Length ?? rsp.Content.Headers.ContentLength,
                     rsp.StatusCode == HttpStatusCode.PartialContent,
-                    rsp.Content.Headers.ContentMD5,
+                    // A range response's checksum describes that range, not the complete file.
+                    rsp.StatusCode == HttpStatusCode.PartialContent ? null : rsp.Content.Headers.ContentMD5,
                     rsp.Content.Headers.ContentDisposition?.FileNameStar ??
                     rsp.Content.Headers.ContentDisposition?.FileName,
-                    rsp.RequestMessage?.RequestUri?.ToString() ?? url);
+                    rsp.RequestMessage?.RequestUri?.ToString() ?? url,
+                    rsp.Headers.ETag, rsp.Content.Headers.LastModified);
             }
-
-            return new ProbeResult(
-                rsp.Content.Headers.ContentLength,
-                rsp.Headers.AcceptRanges.Any(v => v.Equals("bytes", StringComparison.OrdinalIgnoreCase)),
-                rsp.Content.Headers.ContentMD5,
-                rsp.Content.Headers.ContentDisposition?.FileNameStar ??
-                rsp.Content.Headers.ContentDisposition?.FileName,
-                rsp.RequestMessage?.RequestUri?.ToString() ?? url);
         }
 
         /// <summary>
@@ -232,7 +264,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
                 candidate = "download";
             }
 
-            foreach (var c in Path.GetInvalidFileNameChars())
+            foreach (var c in Path.GetInvalidFileNameChars().Concat("/\\:*?\"<>|"))
             {
                 candidate = candidate.Replace(c, '_');
             }
@@ -248,7 +280,9 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
             bool SupportsRange,
             byte[]? Md5,
             string? FileName,
-            string FinalUrl);
+            string FinalUrl,
+            EntityTagHeaderValue? ETag,
+            DateTimeOffset? LastModified);
 
         protected virtual async Task TriggerOnProgress(int e)
         {

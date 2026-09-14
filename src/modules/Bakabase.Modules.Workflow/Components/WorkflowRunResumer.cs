@@ -1,4 +1,7 @@
+using System.Text.Json;
 using Bakabase.Abstractions.Components.Tasks;
+using Bakabase.Modules.Workflow.Abstractions.Components;
+using Bakabase.Modules.Workflow.Extensions;
 using Bakabase.Modules.Workflow.Abstractions.Models.Db;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Workflow.Abstractions.Services;
@@ -10,6 +13,8 @@ namespace Bakabase.Modules.Workflow.Components;
 /// <inheritdoc />
 public class WorkflowRunResumer<TDbContext>(
     TDbContext db,
+    IWorkflowValidationService validation,
+    IWorkflowTriggerRegistry triggers,
     BTaskManager taskManager,
     WorkflowRunner<TDbContext> runner,
     ILogger<WorkflowRunResumer<TDbContext>> logger) : IWorkflowRunResumer
@@ -26,6 +31,8 @@ public class WorkflowRunResumer<TDbContext>(
             throw new InvalidOperationException(
                 $"Workflow run #{runId} is {run.Status}, not waiting for anything.");
         }
+
+        await ValidateRemaining(run, ct);
 
         // The signal travels on the row: the runner is re-entered through a background task that
         // carries nothing but the run id.
@@ -49,6 +56,8 @@ public class WorkflowRunResumer<TDbContext>(
             throw new InvalidOperationException(
                 $"Workflow run #{runId} is {run.Status} — only a run that stopped can be retried.");
         }
+
+        await ValidateRemaining(run, ct);
 
         run.Status = WorkflowRunStatus.Pending;
         run.CompletedAt = null;
@@ -79,10 +88,24 @@ public class WorkflowRunResumer<TDbContext>(
         await db.SaveChangesAsync(ct);
     }
 
-    /// <summary>
-    /// Same task id and conflict key as the original enqueue, so a run that comes back is still one
-    /// run of that definition and cannot race another.
-    /// </summary>
+    private async Task ValidateRemaining(WorkflowRunDbModel run, CancellationToken ct)
+    {
+        var definition = await db.Set<WorkflowDefinitionDbModel>().AsNoTracking()
+            .FirstOrDefaultAsync(d => d.Id == run.WorkflowDefinitionId, ct)
+            ?? throw new InvalidOperationException($"Workflow #{run.WorkflowDefinitionId} not found");
+        var nodes = await db.Set<WorkflowActivityDbModel>().AsNoTracking()
+            .Where(a => a.WorkflowDefinitionId == definition.Id).ToListAsync(ct);
+        object? payload = null;
+        if (triggers.TryGet(definition.TriggerKind, out var trigger) && !string.IsNullOrEmpty(run.PayloadJson))
+        {
+            try { payload = JsonSerializer.Deserialize(run.PayloadJson, trigger.PayloadType, WorkflowJson.Options); }
+            catch (JsonException ex) { throw new InvalidOperationException($"Run payload is invalid: {ex.Message}", ex); }
+        }
+        var check = await validation.ValidateAsync(definition.ToDomainModel(nodes), true, payload, ct, run.CurrentStepIndex ?? 0);
+        if (!check.IsValid) throw new WorkflowValidationException(check);
+    }
+
+    /// <summary>Keep the original task id/conflict key when returning to the queue.</summary>
     private Task Enqueue(int runId, int defId) =>
         taskManager.Enqueue(BTaskBuilder.Create($"workflow.run.{runId}")
             .Named($"Workflow #{defId} run #{runId}")

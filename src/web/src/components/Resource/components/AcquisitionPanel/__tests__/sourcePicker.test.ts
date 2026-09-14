@@ -8,6 +8,7 @@ describe("acquisition source validation", () => {
   it.each([
     [Kind.DirectUrl, "https://files.example.com/download?id=42"],
     [Kind.DirectUrl, "http://files.example.com/work.zip"],
+    [Kind.Torrent, "https://files.example.com/download?id=42"],
     [Kind.SharedPage, "https://pan.baidu.com/s/example"],
     [Kind.SharedPage, "https://www.south-plus.net/read.php?tid=42"],
     [Kind.SharedDocument, "下载地址：https://example.com/work.zip\n密码：example"],
@@ -22,6 +23,8 @@ describe("acquisition source validation", () => {
     [undefined, "https://example.com/work.zip", "chooseMethod"],
     [Kind.DirectUrl, "  ", "required"],
     [Kind.DirectUrl, "file:///srv/work.zip", "httpUrl"],
+    [Kind.Torrent, "file:///srv/private.torrent", "httpUrl"],
+    [Kind.Torrent, "bakabase-torrent:invalid", "httpUrl"],
     [Kind.DirectUrl, "https:example.com/work.zip", "httpUrl"],
     [Kind.DirectUrl, "https://example.com/file name.zip", "httpUrl"],
     [Kind.DirectUrl, "https://pan.baidu.com/s/example", "sharingPage"],

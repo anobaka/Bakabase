@@ -13,9 +13,11 @@ import {
   AiOutlineUnorderedList,
 } from "react-icons/ai";
 
-import { recipeLabel, stepLabel } from "../../recipeLabels";
+import { recipeLabel } from "../../recipeLabels";
 
 import BApi from "@/sdk/BApi";
+import WorkflowSummary from "@/components/Workflow/WorkflowSummary";
+import WorkflowDiagnostics from "@/components/Workflow/WorkflowDiagnostics";
 import {
   Button,
   Card,
@@ -47,16 +49,6 @@ type Props = {
 
 const PAGE_SIZE = 24;
 const FILTERS = ["all", "withSources", "withoutSources", "unsupported"];
-const METHODS: Record<string, string> = {
-  sharedContent: "acquisition.overview.method.sharedContent",
-  directDownload: "acquisition.overview.method.directDownload",
-  inbox: "acquisition.overview.method.inbox",
-  platformDownload: "acquisition.overview.method.platformDownload",
-  platformInstall: "acquisition.overview.method.platformInstall",
-  localDirectory: "acquisition.overview.method.localDirectory",
-  magnetDownload: "acquisition.overview.method.magnetDownload",
-};
-
 const leadKey = (resourceId: number, lead: Lead) =>
   `${resourceId}-${lead.kind}-${lead.id}-${lead.value}`;
 
@@ -210,7 +202,13 @@ const CandidateOverview = ({ onStarted, onViewTasks, onOpenRecipe }: Props) => {
     }
   };
 
+  const sourceValue = (lead: Lead) =>
+    lead.value.startsWith("bakabase-torrent:")
+      ? lead.note || t<string>("acquisition.overview.source.torrent")
+      : lead.value;
+
   const sourceLabel = (lead: Lead) => {
+    if (lead.value.startsWith("bakabase-torrent:")) return sourceValue(lead);
     if (lead.sourceName) return lead.sourceName;
     try {
       const url = new URL(lead.value);
@@ -295,18 +293,25 @@ const CandidateOverview = ({ onStarted, onViewTasks, onOpenRecipe }: Props) => {
             )}
           </p>
         )}
+        {selected?.validation?.isValid === false && (
+          <WorkflowDiagnostics result={selected.validation} />
+        )}
         <details className="text-xs text-default-500">
           <summary className="w-fit cursor-pointer rounded py-1 outline-offset-2 hover:text-foreground focus-visible:outline-2">
             {t<string>("acquisition.overview.sourceDetails")}
           </summary>
           <div className="mt-1 flex flex-col gap-2 rounded-lg bg-default-100 p-3">
-            <div className="max-h-24 overflow-auto break-all">{lead.value}</div>
-            {lead.note && <p className="break-words">{lead.note}</p>}
+            <div className="max-h-24 overflow-auto break-all">{sourceValue(lead)}</div>
+            {lead.note && lead.note !== sourceValue(lead) && (
+              <p className="break-words">{lead.note}</p>
+            )}
             {selected && (
               <>
-                <div className="leading-relaxed">
-                  {selected.stepKinds.map((kind) => stepLabel(kind, t)).join(" → ")}
-                </div>
+                <WorkflowSummary
+                  activityKinds={selected.stepKinds}
+                  showDiagnostics={selected.validation?.isValid !== false}
+                  workflow={selected}
+                />
                 <Button
                   className="h-auto min-w-0 self-start px-0 py-1"
                   size="sm"
@@ -318,15 +323,9 @@ const CandidateOverview = ({ onStarted, onViewTasks, onOpenRecipe }: Props) => {
                 </Button>
               </>
             )}
-            {supported && (
+            {supported && !selected && (
               <p className="leading-relaxed">
-                {t<string>(
-                  !selected
-                    ? "acquisition.overview.selectRecipeFirst"
-                    : selected.definitionId !== lead.defaultRecipeDefinitionId
-                      ? "acquisition.overview.method.selectedRecipe"
-                      : (METHODS[lead.method] ?? "acquisition.overview.unverifiedDescription"),
-                )}
+                {t<string>("acquisition.overview.selectRecipeFirst")}
               </p>
             )}
           </div>
@@ -334,7 +333,14 @@ const CandidateOverview = ({ onStarted, onViewTasks, onOpenRecipe }: Props) => {
         <Button
           className="self-end"
           color="primary"
-          isDisabled={!supported || !selected || active || starting != null || loading}
+          isDisabled={
+            !supported ||
+            !selected ||
+            selected.validation?.isValid === false ||
+            active ||
+            starting != null ||
+            loading
+          }
           isLoading={starting === key}
           size="sm"
           startContent={<AiOutlineCloudDownload aria-hidden className="text-base" />}

@@ -11,6 +11,8 @@ const BUILTIN_NAME_KEYS = new Map([
   ["Forum post + cloud drive", "acquisition.recipe.sharedContent"],
   ["Direct download", "acquisition.recipe.directDownload"],
   ["Magnet", "acquisition.recipe.magnet"],
+  ["Magnet download", "acquisition.recipe.magnetDownload"],
+  ["Torrent download", "acquisition.recipe.torrent"],
   ["Platform fetch", "acquisition.recipe.platform"],
   ["Local directory", "acquisition.recipe.localDirectory"],
 ]);

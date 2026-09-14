@@ -16,6 +16,7 @@ public record WorkflowActivityDbModel
     public int Order { get; set; }
 
     public string Kind { get; set; } = null!;
+    public string? Notes { get; set; }
 
     /// <summary>Opaque, parsed by the activity implementation.</summary>
     public string ConfigJson { get; set; } = "{}";

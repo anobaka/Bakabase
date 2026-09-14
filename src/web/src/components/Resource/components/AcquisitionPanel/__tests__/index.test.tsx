@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import type { Root } from "react-dom/client";
 import type { Resource } from "@/core/models/Resource";
 
-import { act } from "react";
+import { act } from "react-dom/test-utils";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -44,6 +44,8 @@ vi.mock("@/components/ContextProvider/BakabaseContextProvider", () => ({
   useBakabaseContext: () => ({ createPortal }),
 }));
 vi.mock("../AddSourceModal", () => ({ default: () => null }));
+vi.mock("@/components/Workflow/Activities", () => ({ getWorkflowActivityUI: () => undefined }));
+vi.mock("@/components/Workflow/Triggers", () => ({ getWorkflowTriggerUI: () => undefined }));
 vi.mock("@/components/FileSystemSelector", () => ({ FileSystemSelectorModal: () => null }));
 
 // Native controls expose disabled actions while the actual panel owns its state and requests.
@@ -191,6 +193,58 @@ afterEach(async () => {
 });
 
 describe("AcquisitionPanel", () => {
+  it("shows configuration problems outside collapsed details and blocks starting", async () => {
+    const result = response();
+
+    getCandidate.mockResolvedValueOnce({
+      ...result,
+      data: {
+        ...result.data,
+        recipes: recipes.map((recipe) => ({
+          ...recipe,
+          validation: {
+            isValid: false,
+            diagnostics: [
+              {
+                code: "missingLibrary",
+                message: "Choose a library folder",
+                severity: "error",
+                nodeIndex: 1,
+              },
+            ],
+          },
+        })),
+      },
+    });
+    await render();
+    expect(button("acquisition.overview.start")).toBeDisabled();
+    const message = [...container.querySelectorAll("p")].find(
+      (element) => element.textContent === "Choose a library folder",
+    );
+
+    expect(message).toBeDefined();
+    expect(message!.closest("details")).toBeNull();
+    await click(button("acquisition.overview.start"));
+    expect(createAcquisition).not.toHaveBeenCalled();
+  });
+
+  it("shows the uploaded torrent filename instead of its storage reference", async () => {
+    getCandidate.mockResolvedValueOnce(
+      response({
+        leads: [
+          lead({
+            kind: AcquisitionLeadKind.Torrent,
+            value: `bakabase-torrent:${"a".repeat(64)}`,
+            note: "demo.torrent",
+          }),
+        ],
+      }),
+    );
+    await render();
+    expect(container).toHaveTextContent("demo.torrent");
+    expect(container).not.toHaveTextContent("bakabase-torrent:");
+  });
+
   it("does not render or request acquisition routes for a local resource", async () => {
     await render(resource(1, true));
 

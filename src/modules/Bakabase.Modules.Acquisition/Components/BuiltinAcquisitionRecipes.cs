@@ -9,8 +9,8 @@ namespace Bakabase.Modules.Acquisition.Components;
 /// meant to be copied and changed rather than edited in place — the same arrangement as the
 /// built-in text vocabularies.
 /// <para>
-/// The five of them differ only in how the files are obtained. Everything after that — unpack,
-/// place, materialize — is the same work, which is the point of making a recipe data.
+/// Each recipe combines reusable acquisition nodes. Downloads may be placed directly or unpacked
+/// first; platform-managed directories can be associated with the resource in place.
 /// </para>
 /// </summary>
 public static class BuiltinAcquisitionRecipes
@@ -26,6 +26,9 @@ public static class BuiltinAcquisitionRecipes
 
     /// <summary>A magnet link, fetched by whatever the user already uses for torrents.</summary>
     public const string Magnet = "Magnet";
+
+    public const string MagnetDownload = "Magnet download";
+    public const string TorrentDownload = "Torrent download";
 
     /// <summary>The user owns it on a platform that can hand it over.</summary>
     public const string PlatformFetch = "Platform fetch";
@@ -45,33 +48,51 @@ public static class BuiltinAcquisitionRecipes
             Step(AcquisitionStepKinds.Unpack),
             Step(AcquisitionStepKinds.Place),
             Step(AcquisitionStepKinds.Materialize)
-        ]),
+        ], "Extract download links and passwords from shared content, then receive downloaded files and import them.",
+            "acquisition.workflow.sharedContent.description"),
         new(DirectDownload,
         [
             Step(AcquisitionStepKinds.FetchHttp),
             Step(AcquisitionStepKinds.Unpack),
             Step(AcquisitionStepKinds.Place),
             Step(AcquisitionStepKinds.Materialize)
-        ]),
+        ], "Download an HTTP(S) file, extract archives when needed, and import the files into the library.",
+            "acquisition.workflow.directDownload.description"),
         new(Magnet,
         [
-            // No fetch step yet: the user's own torrent client puts the files in the inbox. An
-            // external-downloader step slots in here later without the rest changing.
+            // Preserve the old manual workflow: suspended runs retain their cursor in this chain.
             Step(AcquisitionStepKinds.WaitForInbox),
             Step(AcquisitionStepKinds.Place),
             Step(AcquisitionStepKinds.Materialize)
-        ]),
+        ], "Download the magnet with your own client, then provide the completed files for import.",
+            "acquisition.workflow.manualMagnet.description"),
+        new(MagnetDownload,
+        [
+            Step(AcquisitionStepKinds.FetchMagnet),
+            Step(AcquisitionStepKinds.Place),
+            Step(AcquisitionStepKinds.Materialize)
+        ], "Download a magnet using the built-in BitTorrent engine, preserve its folders, and import the files.",
+            "acquisition.workflow.magnetDownload.description"),
+        new(TorrentDownload,
+        [
+            Step(AcquisitionStepKinds.FetchTorrent),
+            Step(AcquisitionStepKinds.Place),
+            Step(AcquisitionStepKinds.Materialize)
+        ], "Download the files described by a torrent URL or uploaded torrent using the built-in BitTorrent engine.",
+            "acquisition.workflow.torrentDownload.description"),
         new(PlatformFetch,
         [
             Step(AcquisitionStepKinds.FetchFromPlatform),
             Step(AcquisitionStepKinds.Materialize)
-        ]),
+        ], "Use a linked platform account to obtain files and associate the platform's existing directory with this resource.",
+            "acquisition.workflow.platform.description"),
         new(LocalDirectory,
         [
             Step(AcquisitionStepKinds.PickLocalDirectory),
             Step(AcquisitionStepKinds.Place),
             Step(AcquisitionStepKinds.Materialize)
-        ])
+        ], "Choose a server-accessible folder, organize it in the library, and associate it with the resource.",
+            "acquisition.workflow.localDirectory.description")
     ];
 
     /// <summary>
@@ -84,7 +105,8 @@ public static class BuiltinAcquisitionRecipes
         AcquisitionLeadKind.SharedPage => ForumPostWithCloudDrive,
         AcquisitionLeadKind.SharedDocument => ForumPostWithCloudDrive,
         AcquisitionLeadKind.DirectUrl => DirectDownload,
-        AcquisitionLeadKind.Magnet => Magnet,
+        AcquisitionLeadKind.Magnet => MagnetDownload,
+        AcquisitionLeadKind.Torrent => TorrentDownload,
         AcquisitionLeadKind.Manual => LocalDirectory,
         _ => LocalDirectory
     };

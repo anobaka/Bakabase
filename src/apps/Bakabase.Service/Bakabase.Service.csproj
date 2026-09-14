@@ -25,6 +25,7 @@
     </ItemGroup>
     <ItemGroup>
         <PackageReference Include="DotNetEnv" Version="3.1.1" />
+        <PackageReference Include="MonoTorrent" Version="3.0.2" />
         <PackageReference Include="Google.Apis.Analytics.v3" Version="1.68.0.1679" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.0">
             <PrivateAssets>all</PrivateAssets>
@@ -55,6 +56,7 @@
         <ProjectReference Include="..\..\modules\Bakabase.Modules.RemoteAccess\Bakabase.Modules.RemoteAccess.csproj" />
     </ItemGroup>
     <ItemGroup>
+        <Content Include="ThirdPartyNotices\MonoTorrent.txt" CopyToOutputDirectory="PreserveNewest" />
         <None Update="Assets\favicon.ico">
             <CopyToOutputDirectory>Never</CopyToOutputDirectory>
         </None>

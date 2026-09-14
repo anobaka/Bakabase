@@ -4,6 +4,8 @@ using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bakabase.Modules.Workflow.Abstractions.Models.Db;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.Workflow.Abstractions.Services;
+using Bakabase.Modules.Workflow.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -102,6 +104,15 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
             .Where(a => a.WorkflowDefinitionId == definition.Id)
             .OrderBy(a => a.Order)
             .ToListAsync(ct);
+
+        // Recheck mutable environment/configuration after queueing, before extracting or executing items.
+        var validation = scope.ServiceProvider.GetRequiredService<IWorkflowValidationService>();
+        var check = await validation.ValidateAsync(definition.ToDomainModel(activityRows), true, payload, ct, run.CurrentStepIndex ?? 0);
+        if (!check.IsValid)
+        {
+            await FailRun(db, run, new WorkflowValidationException(check).Message, ct);
+            return;
+        }
 
         // Each item travels with its variable bag (capability map E4) — chain-local named
         // values that never live inside the item's own CLR shape.

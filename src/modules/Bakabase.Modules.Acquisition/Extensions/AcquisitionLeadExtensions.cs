@@ -16,7 +16,8 @@ public static class AcquisitionLeadExtensions
         AcquisitionLeadKind.SharedPage,
         AcquisitionLeadKind.SharedDocument,
         AcquisitionLeadKind.DirectUrl,
-        AcquisitionLeadKind.Magnet
+        AcquisitionLeadKind.Magnet,
+        AcquisitionLeadKind.Torrent
     };
 
     /// <summary>

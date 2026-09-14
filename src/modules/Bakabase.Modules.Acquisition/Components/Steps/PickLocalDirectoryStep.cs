@@ -19,6 +19,9 @@ public class PickLocalDirectoryStep : IAcquisitionStep
 
     public string Kind => AcquisitionStepKinds.PickLocalDirectory;
     public string DisplayName => "Point at a local folder";
+    public string Description => "Pause for the user to select an existing server-accessible folder. Later nodes decide how to organize it.";
+    public string DescriptionKey => "workflow.activity.acquisition.pickLocalDirectory.description";
+    public IReadOnlyList<AcquisitionLeadKind>? AcceptedLeadKinds => [AcquisitionLeadKind.Manual];
     public Type? ConfigType => null;
 
     /// <summary>What the interface should ask about.</summary>

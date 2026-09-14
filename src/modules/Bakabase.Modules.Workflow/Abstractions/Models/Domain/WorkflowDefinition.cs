@@ -4,6 +4,8 @@ public record WorkflowDefinition
 {
     public int Id { get; set; }
     public string Name { get; set; } = null!;
+    public string? Description { get; set; }
+    public string? DescriptionKey { get; set; }
     public string TriggerKind { get; set; } = null!;
     public string? TriggerFilterJson { get; set; }
     public bool Enabled { get; set; }

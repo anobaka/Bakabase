@@ -41,7 +41,17 @@ public class AcquisitionRecipeSeeder<TDbContext>(
 
         foreach (var recipe in BuiltinAcquisitionRecipes.All)
         {
-            if (known.Contains(recipe.Name)) continue;
+            if (known.Contains(recipe.Name))
+            {
+                // Enrich shipped documentation only. Never replace an existing node chain:
+                // suspended runs persist a cursor into it, and copies belong to their users.
+                await db.Set<WorkflowDefinitionDbModel>()
+                    .Where(d => d.Name == recipe.Name && d.IsBuiltin && d.DescriptionKey == null &&
+                                (d.Description == null || d.Description == ""))
+                    .ExecuteUpdateAsync(s => s.SetProperty(d => d.Description, recipe.Description)
+                        .SetProperty(d => d.DescriptionKey, recipe.DescriptionKey), ct);
+                continue;
+            }
 
             var missing = recipe.Steps
                 .Select(s => s.Kind)
@@ -60,6 +70,8 @@ public class AcquisitionRecipeSeeder<TDbContext>(
             var created = await workflows.CreateAsync(new WorkflowDefinitionCreationInputModel
             {
                 Name = recipe.Name,
+                Description = recipe.Description,
+                DescriptionKey = recipe.DescriptionKey,
                 TriggerKind = AcquisitionWorkflowKinds.TriggerRequested,
                 Enabled = true,
                 Activities = recipe.Steps.Select(s => new WorkflowActivityInputModel

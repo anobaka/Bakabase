@@ -1,5 +1,8 @@
 using System.Collections.Generic;
+using System;
 using System.Linq;
+using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Services;
@@ -11,6 +14,9 @@ using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Models.Constants;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
+using Bakabase.Service.Components.Acquisition.Downloads;
+using Bakabase.Service.Components.RemoteAccess;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace Bakabase.Service.Controllers;
@@ -19,7 +25,9 @@ namespace Bakabase.Service.Controllers;
 [Route("~/resource/{resourceId:int}/acquisition-leads")]
 public class AcquisitionLeadController(
     IAcquisitionLeadService service,
-    IResourceSourceLinkService sourceLinkService) : ControllerBase
+    IResourceSourceLinkService sourceLinkService,
+    IAcquisitionTorrentMetadataStore torrentMetadata,
+    IResourceService resources) : ControllerBase
 {
     [HttpGet]
     [SwaggerOperation(OperationId = "GetResourceAcquisitionLeads")]
@@ -60,6 +68,42 @@ public class AcquisitionLeadController(
 
         return SingletonResponseBuilder<AcquisitionLead>.Build(ResponseCode.Conflict,
             $"This link is already attached to resource {result.ConflictingResourceId}.");
+    }
+
+    [HttpPost("torrent")]
+    [RemoteAccessible]
+    [RequestSizeLimit(AcquisitionTorrentMetadataStore.MaxMetadataBytes + 65536)]
+    [SwaggerOperation(OperationId = "AddResourceAcquisitionTorrent")]
+    public async Task<SingletonResponse<AcquisitionLead>> AddTorrent(int resourceId, IFormFile file,
+        CancellationToken ct)
+    {
+        var resource = await resources.Get(resourceId);
+        if (resource == null || resource.HasLocalPath)
+            return SingletonResponseBuilder<AcquisitionLead>.Build(ResponseCode.InvalidPayloadOrOperation,
+                "Choose a resource that does not have local files yet.");
+        if (file.Length is 0 or > AcquisitionTorrentMetadataStore.MaxMetadataBytes)
+            return SingletonResponseBuilder<AcquisitionLead>.Build(ResponseCode.InvalidPayloadOrOperation,
+                "Choose a torrent file no larger than 4 MiB.");
+        await using var stream = file.OpenReadStream();
+        string reference;
+        try
+        {
+            var bytes = await AcquisitionTorrentMetadataStore.ReadBoundedAsync(stream, ct);
+            reference = await torrentMetadata.SaveAsync(bytes, ct);
+        }
+        catch (ArgumentException ex)
+        {
+            return SingletonResponseBuilder<AcquisitionLead>.BuildBadRequest(ex.Message);
+        }
+        var result = await service.Add(resourceId, new AcquisitionLeadAddInputModel
+        {
+            Kind = AcquisitionLeadKind.Torrent, Value = reference, Origin = AcquisitionLeadOrigin.User,
+            Note = Path.GetFileName(file.FileName)
+        });
+        return result.Lead != null
+            ? new SingletonResponse<AcquisitionLead>(result.Lead)
+            : SingletonResponseBuilder<AcquisitionLead>.Build(ResponseCode.Conflict,
+                $"This torrent is already attached to resource {result.ConflictingResourceId}.");
     }
 
     [HttpDelete("{id:int}")]

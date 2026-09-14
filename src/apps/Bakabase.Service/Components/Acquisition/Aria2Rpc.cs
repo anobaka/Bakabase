@@ -63,7 +63,7 @@ public static class Aria2Rpc
         if (!string.IsNullOrWhiteSpace(secret)) parameters.Add($"token:{secret}");
 
         parameters.Add(new JsonArray(JsonValue.Create(uri)));
-        parameters.Add(new JsonObject {["dir"] = directory});
+        parameters.Add(new JsonObject {["dir"] = directory, ["seed-time"] = "0"});
 
         return Request("aria2.addUri", parameters, requestId);
     }
@@ -78,6 +78,15 @@ public static class Aria2Rpc
         parameters.Add(gid);
 
         return Request("aria2.tellStatus", parameters, requestId);
+    }
+
+    /// <summary>Stops only the job this acquisition created, including after cancellation.</summary>
+    public static string BuildForceRemove(string gid, string? secret, string requestId)
+    {
+        var parameters = new JsonArray();
+        if (!string.IsNullOrWhiteSpace(secret)) parameters.Add($"token:{secret}");
+        parameters.Add(gid);
+        return Request("aria2.forceRemove", parameters, requestId);
     }
 
     /// <summary>The id aria2 gave the download it just accepted.</summary>

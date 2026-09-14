@@ -29,6 +29,7 @@ const icons = {
   sharedPage: AiOutlineGlobal,
   sharedDocument: AiOutlineFileText,
   magnet: FaMagnet,
+  torrent: AiOutlineFileText,
 };
 const k = (key: string) => `acquisition.sourcePicker.${key}`;
 
@@ -37,21 +38,33 @@ const AddSourceModal = ({ resourceId, onAdded, onDestroyed }: Props) => {
   const [visible, setVisible] = useState(true);
   const [kind, setKind] = useState<SourceKind>();
   const [value, setValue] = useState("");
+  const [torrentMode, setTorrentMode] = useState<"file" | "url">("file");
+  const [file, setFile] = useState<File>();
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string>();
   const method = sourceMethods.find((item) => item.kind === kind);
-  const validation = validateAcquisitionSource(kind, value);
+  const uploadingTorrent = kind === AcquisitionLeadKind.Torrent && torrentMode === "file";
+  const validation = uploadingTorrent
+    ? !file
+      ? "torrentRequired"
+      : file.size === 0 || file.size > 4 * 1024 * 1024
+        ? "torrentSize"
+        : undefined
+    : validateAcquisitionSource(kind, value);
 
   const save = async () => {
     if (validation || kind === undefined || saving) return;
     setSaving(true);
     setSaveError(undefined);
     try {
-      const response = await BApi.resource.addResourceAcquisitionLead(resourceId, {
-        kind,
-        value: value.trim(),
-        origin: AcquisitionLeadOrigin.User,
-      });
+      const response =
+        uploadingTorrent && file
+          ? await BApi.resource.addResourceAcquisitionTorrent(resourceId, { file })
+          : await BApi.resource.addResourceAcquisitionLead(resourceId, {
+              kind,
+              value: value.trim(),
+              origin: AcquisitionLeadOrigin.User,
+            });
 
       if (response.code) {
         setSaveError(response.message || t<string>(k("saveFailed")));
@@ -134,6 +147,7 @@ const AddSourceModal = ({ resourceId, onAdded, onDestroyed }: Props) => {
                   if (selected) return;
                   setKind(item.kind);
                   setValue("");
+                  setFile(undefined);
                   setSaveError(undefined);
                 }}
               >
@@ -160,7 +174,54 @@ const AddSourceModal = ({ resourceId, onAdded, onDestroyed }: Props) => {
             <p className="rounded-lg bg-primary/5 p-3 text-sm text-default-600">
               {t<string>(k(`${method.id}.description`))}
             </p>
-            {kind === AcquisitionLeadKind.SharedDocument ? (
+            {kind === AcquisitionLeadKind.Torrent && (
+              <div
+                aria-label={t<string>(k("torrent.inputMethod"))}
+                className="flex gap-2"
+                role="group"
+              >
+                {(["file", "url"] as const).map((mode) => (
+                  <Button
+                    key={mode}
+                    aria-pressed={torrentMode === mode}
+                    color={torrentMode === mode ? "primary" : "default"}
+                    isDisabled={saving}
+                    size="sm"
+                    variant="flat"
+                    onPress={() => {
+                      setTorrentMode(mode);
+                      setSaveError(undefined);
+                    }}
+                  >
+                    {t<string>(k(`torrent.${mode}`))}
+                  </Button>
+                ))}
+              </div>
+            )}
+            {uploadingTorrent ? (
+              <label className="flex flex-col gap-2 text-sm">
+                <span>{t<string>(k("torrent.fileLabel"))}</span>
+                <input
+                  accept=".torrent,application/x-bittorrent"
+                  className="w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-default-100 file:px-3 file:py-2 file:text-foreground"
+                  disabled={saving}
+                  type="file"
+                  onChange={(event) => {
+                    setFile(event.target.files?.[0]);
+                    setSaveError(undefined);
+                  }}
+                />
+                <span
+                  className={
+                    file && validation ? "text-xs text-danger" : "text-xs text-default-500"
+                  }
+                >
+                  {t<string>(
+                    k(file && validation ? `validation.${validation}` : "torrent.fileHint"),
+                  )}
+                </span>
+              </label>
+            ) : kind === AcquisitionLeadKind.SharedDocument ? (
               <Textarea {...inputProps} minRows={5} />
             ) : (
               <Input {...inputProps} />

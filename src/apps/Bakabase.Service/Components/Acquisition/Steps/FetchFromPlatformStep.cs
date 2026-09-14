@@ -31,7 +31,31 @@ public class FetchFromPlatformStep : IAcquisitionStep
 
     public string Kind => AcquisitionStepKinds.FetchFromPlatform;
     public string DisplayName => "Fetch from the platform";
+    public string Description => "Use an already linked platform identity to request its files. Requires the platform account and runtime environment; the installation stays in the platform-managed directory.";
+    public string DescriptionKey => "workflow.activity.acquisition.fetchFromPlatform.description";
+    public IReadOnlyList<AcquisitionLeadKind>? AcceptedLeadKinds => [AcquisitionLeadKind.PlatformHolding];
     public Type? ConfigType => null;
+
+    public Task<IReadOnlyList<AcquisitionValidationIssue>> ValidateConfigurationAsync(
+        AcquisitionValidationContext context, CancellationToken ct)
+    {
+        if (context.LeadKind == null) return Task.FromResult<IReadOnlyList<AcquisitionValidationIssue>>([]);
+        if (context.LeadKind != AcquisitionLeadKind.PlatformHolding ||
+            !TryReadLead(context.LeadValue ?? "", out var source, out _))
+            return Task.FromResult<IReadOnlyList<AcquisitionValidationIssue>>([
+                new("acquisition.source.invalid", "This node requires a linked platform resource identity.",
+                    "workflow.validation.acquisition.invalidSource")]);
+        var registry = context.Services.GetRequiredService<IPlatformConnectorRegistry>();
+        if (!registry.Sources.Contains(source))
+            return Task.FromResult<IReadOnlyList<AcquisitionValidationIssue>>([
+                new("acquisition.platform.unsupported", "This build does not include the required platform connector.",
+                    "workflow.validation.acquisition.platformUnsupported")]);
+        if (registry.Get(source)?.CanFetch != true)
+            return Task.FromResult<IReadOnlyList<AcquisitionValidationIssue>>([
+                new("acquisition.platform.unavailable", "This platform connector cannot obtain files.",
+                    "workflow.validation.acquisition.platformUnavailable")]);
+        return Task.FromResult<IReadOnlyList<AcquisitionValidationIssue>>([]);
+    }
 
     /// <summary>What the interface tells the user while the platform is working.</summary>
     public record Prompt(string Source, string SourceKey, string? Note, DateTime WaitingSince);
@@ -128,6 +152,9 @@ public class FetchFromPlatformStep : IAcquisitionStep
         new AcquisitionStepOutcome.Continue(item with
         {
             ExtractedDirectory = directory,
+            // Platform installations stay where the platform manages them. The default workflow
+            // associates that directory directly; a custom Place node can override the target.
+            TargetDirectory = directory,
             WorkingName = string.IsNullOrEmpty(item.WorkingName)
                 ? System.IO.Path.GetFileName(directory.TrimEnd('/', '\\'))
                 : item.WorkingName,

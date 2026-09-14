@@ -37,7 +37,19 @@ public class PlaceStep : IAcquisitionStep
 
     public string Kind => AcquisitionStepKinds.Place;
     public string DisplayName => "File it away";
+    public string Description => "Move the prepared files into the configured library folder. Requires a library directory; existing destinations may require confirmation.";
+    public string DescriptionKey => "workflow.activity.acquisition.place.description";
     public Type? ConfigType => typeof(Config);
+
+    public Task<IReadOnlyList<AcquisitionValidationIssue>> ValidateConfigurationAsync(
+        AcquisitionValidationContext context, CancellationToken ct)
+    {
+        var directory = context.GetConfig<Config>()?.LibraryRootDirectory ??
+                        context.Services.GetRequiredService<IBOptions<AcquisitionOptions>>().Value.LibraryRootDirectory;
+        return Task.FromResult(AcquisitionConfigurationValidation.Directory(directory,
+            "acquisition.library.missing", "Choose a library directory in this node or in the acquisition settings.",
+            "workflow.validation.acquisition.libraryMissing"));
+    }
 
     public record Config
     {
@@ -169,7 +181,7 @@ public class PlaceStep : IAcquisitionStep
             await AcquisitionLibraryMarks.PrepareAsync(
                 ctx.ServiceProvider.GetRequiredService<IPathMarkService>(), libraryRoot, target, ct);
             Directory.CreateDirectory(libraryRoot);
-            MoveInto(Collapse(source), target);
+            MoveInto(item.PreserveDirectoryStructure ? source : Collapse(source), target);
         }
         catch (IOException ex)
         {
@@ -226,15 +238,17 @@ public class PlaceStep : IAcquisitionStep
 
             if (Directory.Exists(entry))
             {
-                if (Directory.Exists(destination))
+                if ((File.GetAttributes(entry) & FileAttributes.ReparsePoint) != 0)
                 {
-                    // Merging into a folder that already has one of the same name.
-                    MoveInto(entry, destination);
-                    Directory.Delete(entry, true);
+                    // Move the link itself; recursing would move files out of its external target.
+                    Directory.Move(entry, destination);
                 }
                 else
                 {
-                    Directory.Move(entry, destination);
+                    // File.Move also supports different volumes; Directory.Move does not. Recurse
+                    // for both new and merged folders, and remove only a successfully emptied source.
+                    MoveInto(entry, destination);
+                    Directory.Delete(entry);
                 }
             }
             else

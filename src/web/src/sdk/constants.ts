@@ -3952,7 +3952,8 @@ export enum AcquisitionLeadKind {
   SharedDocument = 3,
   DirectUrl = 4,
   Magnet = 5,
-  Manual = 6
+  Manual = 6,
+  Torrent = 7
 }
 
 export const acquisitionLeadKinds = [
@@ -3961,7 +3962,8 @@ export const acquisitionLeadKinds = [
   { label: 'SharedDocument', value: AcquisitionLeadKind.SharedDocument },
   { label: 'DirectUrl', value: AcquisitionLeadKind.DirectUrl },
   { label: 'Magnet', value: AcquisitionLeadKind.Magnet },
-  { label: 'Manual', value: AcquisitionLeadKind.Manual }
+  { label: 'Manual', value: AcquisitionLeadKind.Manual },
+  { label: 'Torrent', value: AcquisitionLeadKind.Torrent }
 ] as const;
 
 export const AcquisitionLeadKindLabel: Record<AcquisitionLeadKind, string> = {
@@ -3970,7 +3972,8 @@ export const AcquisitionLeadKindLabel: Record<AcquisitionLeadKind, string> = {
   [AcquisitionLeadKind.SharedDocument]: 'SharedDocument',
   [AcquisitionLeadKind.DirectUrl]: 'DirectUrl',
   [AcquisitionLeadKind.Magnet]: 'Magnet',
-  [AcquisitionLeadKind.Manual]: 'Manual'
+  [AcquisitionLeadKind.Manual]: 'Manual',
+  [AcquisitionLeadKind.Torrent]: 'Torrent'
 };
 
 export enum AcquisitionLeadOrigin {

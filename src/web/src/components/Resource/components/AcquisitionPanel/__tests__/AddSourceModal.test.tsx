@@ -9,14 +9,15 @@ import AddSourceModal from "../AddSourceModal";
 
 import { AcquisitionLeadKind, AcquisitionLeadOrigin } from "@/sdk/constants";
 
-const { addLead, createAcquisition } = vi.hoisted(() => ({
+const { addLead, addTorrent, createAcquisition } = vi.hoisted(() => ({
   addLead: vi.fn(),
+  addTorrent: vi.fn(),
   createAcquisition: vi.fn(),
 }));
 
 vi.mock("@/sdk/BApi", () => ({
   default: {
-    resource: { addResourceAcquisitionLead: addLead },
+    resource: { addResourceAcquisitionLead: addLead, addResourceAcquisitionTorrent: addTorrent },
     acquisition: { createAcquisition },
   },
 }));
@@ -169,6 +170,7 @@ beforeEach(() => {
   (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
   vi.resetAllMocks();
   addLead.mockResolvedValue({ code: 0, data: { id: 9 } });
+  addTorrent.mockResolvedValue({ code: 0, data: { id: 10 } });
   onAdded = vi.fn();
   onDestroyed = vi.fn();
   container = document.createElement("div");
@@ -182,6 +184,69 @@ afterEach(async () => {
 });
 
 describe("AddSourceModal", () => {
+  const chooseFile = async (file: File) => {
+    const input = container.querySelector<HTMLInputElement>('input[type="file"]')!;
+
+    await act(async () => {
+      Object.defineProperty(input, "files", { value: [file], configurable: true });
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+  };
+
+  it("uploads torrent metadata without starting a download", async () => {
+    await renderModal();
+    await click(button("torrent.title"));
+    expect(button("save")).toBeDisabled();
+    const file = new File(["torrent metadata"], "demo.torrent");
+
+    await chooseFile(file);
+    expect(addTorrent).not.toHaveBeenCalled();
+    await click(button("save"));
+    expect(addTorrent).toHaveBeenCalledExactlyOnceWith(42, { file });
+    expect(addLead).not.toHaveBeenCalled();
+    expect(createAcquisition).not.toHaveBeenCalled();
+    expect(onAdded).toHaveBeenCalledOnce();
+  });
+
+  it("saves a torrent URL with its type instead of uploading a file", async () => {
+    await renderModal();
+    await click(button("torrent.title"));
+    await click(button("torrent.url"));
+    await type("https://example.com/download?id=42");
+    await click(button("save"));
+    expect(addLead).toHaveBeenCalledExactlyOnceWith(42, {
+      kind: AcquisitionLeadKind.Torrent,
+      value: "https://example.com/download?id=42",
+      origin: AcquisitionLeadOrigin.User,
+    });
+    expect(addTorrent).not.toHaveBeenCalled();
+    expect(createAcquisition).not.toHaveBeenCalled();
+  });
+
+  it.each([0, 4 * 1024 * 1024 + 1])("rejects a torrent of %s bytes before upload", async (size) => {
+    await renderModal();
+    await click(button("torrent.title"));
+    await chooseFile(new File([new Uint8Array(size)], "demo.torrent"));
+    expect(button("save")).toBeDisabled();
+    expect(container).toHaveTextContent(k("validation.torrentSize"));
+    expect(addTorrent).not.toHaveBeenCalled();
+  });
+
+  it("retains the chosen torrent after a failed upload so it can be retried", async () => {
+    addTorrent.mockRejectedValueOnce(new Error("Upload failed"));
+    await renderModal();
+    await click(button("torrent.title"));
+    const file = new File(["torrent metadata"], "demo.torrent");
+
+    await chooseFile(file);
+    await click(button("save"));
+    expect(container).toHaveTextContent("Upload failed");
+    expect(button("save")).toBeEnabled();
+    await click(button("save"));
+    expect(addTorrent).toHaveBeenLastCalledWith(42, { file });
+    expect(onAdded).toHaveBeenCalledOnce();
+  });
+
   it("requires choosing a method before showing a field or allowing a save", async () => {
     await renderModal();
     expect(container.querySelector("input, textarea")).toBeNull();

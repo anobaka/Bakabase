@@ -2,6 +2,8 @@ using System.Text.Json;
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bakabase.Modules.Workflow.Abstractions.Models.Db;
+using Bakabase.Modules.Workflow.Abstractions.Services;
+using Bakabase.Modules.Workflow.Extensions;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -18,6 +20,7 @@ namespace Bakabase.Modules.Workflow.Components;
 public class WorkflowEventBus<TDbContext> : IWorkflowEventBus where TDbContext : DbContext
 {
     private readonly TDbContext _db;
+    private readonly IWorkflowValidationService _validation;
     private readonly IWorkflowTriggerRegistry _triggers;
     private readonly BTaskManager _taskManager;
     private readonly WorkflowRunner<TDbContext> _runner;
@@ -28,9 +31,11 @@ public class WorkflowEventBus<TDbContext> : IWorkflowEventBus where TDbContext :
         IWorkflowTriggerRegistry triggers,
         BTaskManager taskManager,
         WorkflowRunner<TDbContext> runner,
-        ILogger<WorkflowEventBus<TDbContext>> logger)
+        ILogger<WorkflowEventBus<TDbContext>> logger,
+        IWorkflowValidationService validation)
     {
         _db = db;
+        _validation = validation;
         _triggers = triggers;
         _taskManager = taskManager;
         _runner = runner;
@@ -72,6 +77,16 @@ public class WorkflowEventBus<TDbContext> : IWorkflowEventBus where TDbContext :
                 continue;
             }
             if (!matches) continue;
+
+            var nodes = await _db.Set<WorkflowActivityDbModel>()
+                .AsNoTracking().Where(a => a.WorkflowDefinitionId == def.Id).ToListAsync(ct);
+            var check = await _validation.ValidateAsync(def.ToDomainModel(nodes), true, payload, ct);
+            if (!check.IsValid)
+            {
+                _logger.LogWarning("Workflow #{DefId} failed preflight: {Errors}", def.Id,
+                    string.Join("; ", check.Diagnostics.Where(d => d.Severity == "error").Select(d => d.Message)));
+                continue;
+            }
 
             var run = new WorkflowRunDbModel
             {

@@ -6,6 +6,8 @@ public record WorkflowDefinitionViewModel
 {
     public int Id { get; set; }
     public string Name { get; set; } = null!;
+    public string? Description { get; set; }
+    public string? DescriptionKey { get; set; }
     public string TriggerKind { get; set; } = null!;
     public string? TriggerFilterJson { get; set; }
     public bool Enabled { get; set; }
@@ -23,6 +25,8 @@ public record WorkflowDefinitionViewModel
     {
         Id = d.Id,
         Name = d.Name,
+        Description = d.Description,
+        DescriptionKey = d.DescriptionKey,
         TriggerKind = d.TriggerKind,
         TriggerFilterJson = d.TriggerFilterJson,
         Enabled = d.Enabled,

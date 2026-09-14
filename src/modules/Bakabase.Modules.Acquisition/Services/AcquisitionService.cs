@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Services;
 using Bakabase.Infrastructures.Components.App;
@@ -24,10 +25,13 @@ public class AcquisitionService<TDbContext>(
     IResourceService resources,
     IReservedPropertyValueService reservedValues,
     IWorkflowDefinitionService workflows,
+    IWorkflowValidationService validation,
+    IWorkflowActivityRegistry activities,
     IWorkflowRunResumer resumer,
     IWorkflowEventBus eventBus,
     IBOptions<AcquisitionOptions> options,
     AppService appService,
+    BTaskManager taskManager,
     ILogger<AcquisitionService<TDbContext>> logger) : IAcquisitionService, IAcquisitionQueue
     where TDbContext : DbContext
 {
@@ -66,6 +70,7 @@ public class AcquisitionService<TDbContext>(
         }
 
         var recipe = await ResolveRecipe(recipeDefinitionId, leadKind, ct);
+        await ValidateBeforeStarting(recipe.Id, resourceId, leadKind, leadValue, ct);
 
         var now = DateTime.Now;
         var task = new AcquisitionTaskDbModel
@@ -147,6 +152,13 @@ public class AcquisitionService<TDbContext>(
                 $"Acquisition #{taskId} is {task.Status} — it has not stopped, so there is nothing to retry.");
         }
 
+        var startNodeIndex = task.WorkflowRunId is { } existingRunId
+            ? await Runs.Where(r => r.Id == existingRunId).Select(r => r.CurrentStepIndex)
+                .FirstOrDefaultAsync(ct)
+            : 0;
+        await ValidateBeforeStarting(task.RecipeDefinitionId, task.ResourceId, task.LeadKind,
+            task.LeadValue, ct, startNodeIndex ?? 0);
+
         task.Error = null;
         task.CompletedAt = null;
         task.Status = AcquisitionStatus.Pending;
@@ -175,13 +187,14 @@ public class AcquisitionService<TDbContext>(
 
         if (task.WorkflowRunId is { } runId)
         {
-            // Cancelling the run is what actually stops the work; a run already executing finishes
-            // its current step and the runner's Pending-only guard stops the next one.
+            // Mark the queued run as cancelled and signal an already executing step's token too.
+            // Updating the row alone cannot interrupt a live HTTP or torrent transfer.
             await Runs.Where(r => r.Id == runId && r.Status != WorkflowRunStatus.Success)
                 .ExecuteUpdateAsync(s => s
                     .SetProperty(r => r.Status, _ => WorkflowRunStatus.Cancelled)
                     .SetProperty(r => r.CompletedAt, _ => DateTime.Now)
                     .SetProperty(r => r.ErrorMessage, _ => "Cancelled: the acquisition was cancelled"), ct);
+            await taskManager.Stop($"workflow.run.{runId}");
         }
 
         task.Status = AcquisitionStatus.Cancelled;
@@ -224,10 +237,43 @@ public class AcquisitionService<TDbContext>(
             TriggerKind = AcquisitionWorkflowKinds.TriggerRequested
         });
 
-        return defs
-            .Select(d => new AcquisitionRecipeSummary(d.Id, d.Name, d.IsBuiltin,
-                d.Activities.OrderBy(a => a.Order).Select(a => a.Kind).ToList()))
-            .ToList();
+        var result = new List<AcquisitionRecipeSummary>();
+        foreach (var definition in defs)
+        {
+            var kinds = definition.Activities.OrderBy(a => a.Order).Select(a => a.Kind).ToList();
+            result.Add(new AcquisitionRecipeSummary(definition.Id, definition.Name, definition.IsBuiltin, kinds)
+            {
+                Description = definition.Description,
+                DescriptionKey = definition.DescriptionKey,
+                ApplicableLeadKinds = ApplicableLeadKinds(kinds),
+                Validation = await validation.ValidateAsync(definition, ct: ct)
+            });
+        }
+        return result;
+    }
+
+    private List<AcquisitionLeadKind> ApplicableLeadKinds(List<string> kinds)
+    {
+        if (!kinds.Contains(AcquisitionStepKinds.Materialize) ||
+            kinds.Any(kind => !activities.TryGet(kind, out _))) return [];
+        // The source-reading node declares accepted inputs. Presentation never infers whether
+        // later nodes download automatically, wait for a person, or perform other work.
+        foreach (var kind in kinds)
+            if (activities.Get(kind) is AcquisitionStepActivity {AcceptedLeadKinds: { } accepted})
+                return accepted.ToList();
+        return [];
+    }
+
+    private async Task ValidateBeforeStarting(int definitionId, int resourceId,
+        AcquisitionLeadKind leadKind, string leadValue, CancellationToken ct, int startNodeIndex = 0)
+    {
+        var definition = await workflows.GetAsync(definitionId)
+            ?? throw new InvalidOperationException($"Workflow #{definitionId} no longer exists.");
+        var result = await validation.ValidateAsync(definition, true, new AcquisitionRequestedPayload
+        {
+            ResourceId = resourceId, LeadKind = leadKind, LeadValue = leadValue
+        }, ct, startNodeIndex);
+        if (!result.IsValid) throw new WorkflowValidationException(result);
     }
 
     // ------- the queue -------
@@ -374,8 +420,23 @@ public class AcquisitionService<TDbContext>(
             WorkingName = title ?? $"acquisition-{task.Id}",
         };
 
-        var run = await workflows.RunManuallyAsync(task.RecipeDefinitionId,
-            JsonSerializer.Serialize(payload, Json), ct);
+        Workflow.Abstractions.Models.Domain.WorkflowRun run;
+        try
+        {
+            run = await workflows.RunManuallyAsync(task.RecipeDefinitionId,
+                JsonSerializer.Serialize(payload, Json), ct);
+        }
+        catch (WorkflowValidationException ex)
+        {
+            // Configuration can change while a task is queued. Finish that task visibly instead
+            // of leaving a permanently pending row at the front of every queue pump.
+            task.Status = AcquisitionStatus.Failed;
+            task.Error = ex.Message;
+            task.CompletedAt = DateTime.Now;
+            task.UpdatedAt = task.CompletedAt.Value;
+            await db.SaveChangesAsync(ct);
+            return;
+        }
 
         task.WorkflowRunId = run.Id;
         task.Status = AcquisitionStatus.Running;

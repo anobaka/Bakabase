@@ -30,6 +30,9 @@ public static class AcquisitionStepKinds
     /// <summary>Hands a magnet link to something that can fetch it — aria2, or the machine's own client.</summary>
     public const string FetchMagnet = $"{Module}.fetchMagnet";
 
+    /// <summary>Downloads the files described by torrent metadata.</summary>
+    public const string FetchTorrent = $"{Module}.fetchTorrent";
+
     /// <summary>Asks the platform that holds the resource to hand it over.</summary>
     public const string FetchFromPlatform = $"{Module}.fetchFromPlatform";
 

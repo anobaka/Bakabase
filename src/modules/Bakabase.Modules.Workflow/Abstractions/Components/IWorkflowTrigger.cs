@@ -13,6 +13,9 @@ public interface IWorkflowTrigger
     /// <summary>Human-readable name for the trigger picker in the editor.</summary>
     string DisplayName { get; }
 
+    string? Description => null;
+    string? DescriptionKey => null;
+
     /// <summary>CLR type of the payload this trigger publishes. Activities can cast against it.</summary>
     Type PayloadType { get; }
 

@@ -3315,7 +3315,7 @@ export interface BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionLe
   id: number;
   /** @format int32 */
   resourceId: number;
-  /** [1: PlatformHolding, 2: SharedPage, 3: SharedDocument, 4: DirectUrl, 5: Magnet, 6: Manual] */
+  /** [1: PlatformHolding, 2: SharedPage, 3: SharedDocument, 4: DirectUrl, 5: Magnet, 6: Manual, 7: Torrent] */
   kind: BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionLeadKind;
   value: string;
   /** [1: User, 2: Subscription, 3: SharedListImport, 4: PostParser] */
@@ -3338,7 +3338,7 @@ export interface BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionTa
   resourceId: number;
   /** @format int32 */
   collectionId?: number;
-  /** [1: PlatformHolding, 2: SharedPage, 3: SharedDocument, 4: DirectUrl, 5: Magnet, 6: Manual] */
+  /** [1: PlatformHolding, 2: SharedPage, 3: SharedDocument, 4: DirectUrl, 5: Magnet, 6: Manual, 7: Torrent] */
   leadKind: BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionLeadKind;
   leadValue?: string;
   /** @format int32 */
@@ -3389,7 +3389,7 @@ export type BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisiti
   | 11;
 
 /**
- * [1: PlatformHolding, 2: SharedPage, 3: SharedDocument, 4: DirectUrl, 5: Magnet, 6: Manual]
+ * [1: PlatformHolding, 2: SharedPage, 3: SharedDocument, 4: DirectUrl, 5: Magnet, 6: Manual, 7: Torrent]
  * @format int32
  */
 export type BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionLeadKind =
@@ -3398,7 +3398,8 @@ export type BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisiti
   | 3
   | 4
   | 5
-  | 6;
+  | 6
+  | 7;
 
 /**
  * [1: User, 2: Subscription, 3: SharedListImport, 4: PostParser]
@@ -3459,6 +3460,10 @@ export interface BakabaseModulesAcquisitionAbstractionsServicesAcquisitionRecipe
   name: string;
   isBuiltin: boolean;
   stepKinds: string[];
+  description?: string;
+  descriptionKey?: string;
+  applicableLeadKinds: BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionLeadKind[];
+  validation: BakabaseModulesWorkflowAbstractionsModelsViewWorkflowValidationResult;
 }
 
 export interface BakabaseModulesAcquisitionModelsDomainAcquisitionOptions {
@@ -3473,6 +3478,7 @@ export interface BakabaseModulesAcquisitionModelsDomainAcquisitionOptions {
     DirectUrl: string;
     Magnet: string;
     Manual: string;
+    Torrent: string;
   };
   /** @format double */
   autoPurchaseLimit: number;
@@ -3489,7 +3495,7 @@ export interface BakabaseModulesAcquisitionModelsInputAcquisitionCreationInputMo
   resourceId: number;
   /** @format int32 */
   acquisitionLeadId?: number;
-  /** [1: PlatformHolding, 2: SharedPage, 3: SharedDocument, 4: DirectUrl, 5: Magnet, 6: Manual] */
+  /** [1: PlatformHolding, 2: SharedPage, 3: SharedDocument, 4: DirectUrl, 5: Magnet, 6: Manual, 7: Torrent] */
   leadKind?: BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionLeadKind;
   leadValue?: string;
   /** @format int32 */
@@ -3508,7 +3514,7 @@ export interface BakabaseModulesAcquisitionModelsInputAcquisitionFromUrlInputMod
 }
 
 export interface BakabaseModulesAcquisitionModelsInputAcquisitionLeadAddInputModel {
-  /** [1: PlatformHolding, 2: SharedPage, 3: SharedDocument, 4: DirectUrl, 5: Magnet, 6: Manual] */
+  /** [1: PlatformHolding, 2: SharedPage, 3: SharedDocument, 4: DirectUrl, 5: Magnet, 6: Manual, 7: Torrent] */
   kind: BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionLeadKind;
   /**
    * @minLength 1
@@ -4706,7 +4712,9 @@ export interface BakabaseModulesWorkflowAbstractionsModelsDomainWorkflowRunStepS
 }
 
 export interface BakabaseModulesWorkflowAbstractionsModelsInputWorkflowActivityInputModel {
+  nodeId?: string;
   kind: string;
+  notes?: string;
   configJson: string;
   /** [1: Fail, 2: Skip] */
   onItemError: BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowActivityErrorBehavior;
@@ -4714,6 +4722,8 @@ export interface BakabaseModulesWorkflowAbstractionsModelsInputWorkflowActivityI
 
 export interface BakabaseModulesWorkflowAbstractionsModelsInputWorkflowDefinitionCreationInputModel {
   name: string;
+  description?: string;
+  descriptionKey?: string;
   triggerKind: string;
   triggerFilterJson?: string;
   enabled: boolean;
@@ -4722,6 +4732,7 @@ export interface BakabaseModulesWorkflowAbstractionsModelsInputWorkflowDefinitio
 
 export interface BakabaseModulesWorkflowAbstractionsModelsInputWorkflowDefinitionUpdateInputModel {
   name?: string;
+  description?: string;
   triggerFilterJson?: string;
   enabled?: boolean;
   activities?: BakabaseModulesWorkflowAbstractionsModelsInputWorkflowActivityInputModel[];
@@ -4736,9 +4747,17 @@ export interface BakabaseModulesWorkflowAbstractionsModelsInputWorkflowRunResume
   signalJson: string;
 }
 
+export interface BakabaseModulesWorkflowAbstractionsModelsInputWorkflowValidationInputModel {
+  triggerKind: string;
+  triggerFilterJson?: string;
+  activities: BakabaseModulesWorkflowAbstractionsModelsInputWorkflowActivityInputModel[];
+}
+
 export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowActivityDescriptorViewModel {
   kind: string;
   displayName: string;
+  description?: string;
+  descriptionKey?: string;
   /** [1: Filter, 2: Action, 3: Transform] */
   category: BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowActivityCategory;
   group: string;
@@ -4758,6 +4777,7 @@ export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowActivityVi
   /** @format int32 */
   order: number;
   kind: string;
+  notes?: string;
   configJson: string;
   /** [1: Fail, 2: Skip] */
   onItemError: BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowActivityErrorBehavior;
@@ -4767,6 +4787,8 @@ export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowDefinition
   /** @format int32 */
   id: number;
   name: string;
+  description?: string;
+  descriptionKey?: string;
   triggerKind: string;
   triggerFilterJson?: string;
   enabled: boolean;
@@ -4825,8 +4847,26 @@ export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowRunViewMod
 export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowTriggerDescriptorViewModel {
   kind: string;
   displayName: string;
+  description?: string;
+  descriptionKey?: string;
   requiresManualPayload: boolean;
   payloadFields: BakabaseModulesWorkflowAbstractionsModelsViewWorkflowItemTypeFieldViewModel[];
+}
+
+export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowValidationDiagnostic {
+  code: string;
+  message: string;
+  messageKey?: string;
+  severity: string;
+  nodeId?: string;
+  /** @format int32 */
+  nodeIndex?: number;
+  kind?: string;
+}
+
+export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowValidationResult {
+  isValid: boolean;
+  diagnostics: BakabaseModulesWorkflowAbstractionsModelsViewWorkflowValidationDiagnostic[];
 }
 
 export interface BakabaseServiceComponentsAcquisitionAcquisitionSetupInputModel {
@@ -5334,7 +5374,7 @@ export interface BakabaseServiceModelsInputTextTypePatchInputModel {
 export interface BakabaseServiceModelsViewAcquisitionCandidateLeadViewModel {
   /** @format int32 */
   id: number;
-  /** [1: PlatformHolding, 2: SharedPage, 3: SharedDocument, 4: DirectUrl, 5: Magnet, 6: Manual] */
+  /** [1: PlatformHolding, 2: SharedPage, 3: SharedDocument, 4: DirectUrl, 5: Magnet, 6: Manual, 7: Torrent] */
   kind: BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionLeadKind;
   value: string;
   sourceName?: string;
@@ -7521,6 +7561,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesW
   data?: BakabaseModulesWorkflowAbstractionsModelsViewWorkflowRunViewModel;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowValidationResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesWorkflowAbstractionsModelsViewWorkflowValidationResult;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionAcquisitionSetupResult {
   /** @format int32 */
   code: number;
@@ -9389,6 +9436,33 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         method: "POST",
         body: data,
         type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionLead
+     * @name AddResourceAcquisitionTorrent
+     * @request POST:/resource/{resourceId}/acquisition-leads/torrent
+     */
+    addResourceAcquisitionTorrent: (
+      resourceId: number,
+      data: {
+        /** @format binary */
+        file?: File;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionLead,
+        any
+      >({
+        path: `/resource/${resourceId}/acquisition-leads/torrent`,
+        method: "POST",
+        body: data,
+        type: ContentType.FormData,
         format: "json",
         ...params,
       }),
@@ -25632,6 +25706,58 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/workflow/${id}`,
         method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Workflow
+     * @name ValidateWorkflow
+     * @request POST:/workflow/validate
+     */
+    validateWorkflow: (
+      data: BakabaseModulesWorkflowAbstractionsModelsInputWorkflowValidationInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowValidationResult,
+        any
+      >({
+        path: `/workflow/validate`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for validateWorkflow
+     * @name validateWorkflowUrl
+     */
+    validateWorkflowUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/workflow/validate`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Workflow
+     * @name ValidateSavedWorkflow
+     * @request GET:/workflow/{id}/validation
+     */
+    validateSavedWorkflow: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowValidationResult,
+        any
+      >({
+        path: `/workflow/${id}/validation`,
+        method: "GET",
         format: "json",
         ...params,
       }),

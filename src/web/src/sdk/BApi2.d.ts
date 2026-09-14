@@ -260,6 +260,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/resource/{resourceId}/acquisition-leads/torrent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AddResourceAcquisitionTorrent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/resource/{resourceId}/acquisition-leads/{id}": {
         parameters: {
             query?: never;
@@ -7248,6 +7264,38 @@ export interface paths {
         patch: operations["PatchWorkflow"];
         trace?: never;
     };
+    "/workflow/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ValidateWorkflow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workflow/{id}/validation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ValidateSavedWorkflow"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/workflow/triggers": {
         parameters: {
             query?: never;
@@ -10270,10 +10318,10 @@ export interface components {
         "Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionDriveKind": 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
         /**
          * Format: int32
-         * @description [1: PlatformHolding, 2: SharedPage, 3: SharedDocument, 4: DirectUrl, 5: Magnet, 6: Manual]
+         * @description [1: PlatformHolding, 2: SharedPage, 3: SharedDocument, 4: DirectUrl, 5: Magnet, 6: Manual, 7: Torrent]
          * @enum {integer}
          */
-        "Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionLeadKind": 1 | 2 | 3 | 4 | 5 | 6;
+        "Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionLeadKind": 1 | 2 | 3 | 4 | 5 | 6 | 7;
         /**
          * Format: int32
          * @description [1: User, 2: Subscription, 3: SharedListImport, 4: PostParser]
@@ -10311,6 +10359,10 @@ export interface components {
             name: string;
             isBuiltin: boolean;
             stepKinds: string[];
+            description?: string;
+            descriptionKey?: string;
+            applicableLeadKinds: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionLeadKind"][];
+            validation: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowValidationResult"];
         };
         "Bakabase.Modules.Acquisition.Models.Domain.AcquisitionOptions": {
             inboxDirectory?: string;
@@ -10324,6 +10376,7 @@ export interface components {
                 DirectUrl: string;
                 Magnet: string;
                 Manual: string;
+                Torrent: string;
             };
             /** Format: double */
             autoPurchaseLimit: number;
@@ -11241,12 +11294,16 @@ export interface components {
             failedCount: number;
         };
         "Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowActivityInputModel": {
+            nodeId?: string;
             kind: string;
+            notes?: string;
             configJson: string;
             onItemError: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants.WorkflowActivityErrorBehavior"];
         };
         "Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowDefinitionCreationInputModel": {
             name: string;
+            description?: string;
+            descriptionKey?: string;
             triggerKind: string;
             triggerFilterJson?: string;
             enabled: boolean;
@@ -11254,6 +11311,7 @@ export interface components {
         };
         "Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowDefinitionUpdateInputModel": {
             name?: string;
+            description?: string;
             triggerFilterJson?: string;
             enabled?: boolean;
             activities?: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowActivityInputModel"][];
@@ -11264,9 +11322,16 @@ export interface components {
         "Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowRunResumeInputModel": {
             signalJson: string;
         };
+        "Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowValidationInputModel": {
+            triggerKind: string;
+            triggerFilterJson?: string;
+            activities: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowActivityInputModel"][];
+        };
         "Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowActivityDescriptorViewModel": {
             kind: string;
             displayName: string;
+            description?: string;
+            descriptionKey?: string;
             category: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants.WorkflowActivityCategory"];
             group: string;
             acceptedInputItemTypes: string[];
@@ -11282,6 +11347,7 @@ export interface components {
             /** Format: int32 */
             order: number;
             kind: string;
+            notes?: string;
             configJson: string;
             onItemError: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants.WorkflowActivityErrorBehavior"];
         };
@@ -11289,6 +11355,8 @@ export interface components {
             /** Format: int32 */
             id: number;
             name: string;
+            description?: string;
+            descriptionKey?: string;
             triggerKind: string;
             triggerFilterJson?: string;
             enabled: boolean;
@@ -11342,8 +11410,24 @@ export interface components {
         "Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowTriggerDescriptorViewModel": {
             kind: string;
             displayName: string;
+            description?: string;
+            descriptionKey?: string;
             requiresManualPayload: boolean;
             payloadFields: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowItemTypeFieldViewModel"][];
+        };
+        "Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowValidationDiagnostic": {
+            code: string;
+            message: string;
+            messageKey?: string;
+            severity: string;
+            nodeId?: string;
+            /** Format: int32 */
+            nodeIndex?: number;
+            kind?: string;
+        };
+        "Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowValidationResult": {
+            readonly isValid: boolean;
+            diagnostics: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowValidationDiagnostic"][];
         };
         "Bakabase.Service.Components.Acquisition.AcquisitionSetupInputModel": {
             inboxDirectory?: string;
@@ -13628,6 +13712,12 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowRunViewModel"];
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowValidationResult]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowValidationResult"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.AcquisitionSetupResult]": {
             /** Format: int32 */
             code: number;
@@ -14967,6 +15057,37 @@ export interface operations {
                 "application/json": components["schemas"]["Bakabase.Modules.Acquisition.Models.Input.AcquisitionLeadAddInputModel"];
                 "text/json": components["schemas"]["Bakabase.Modules.Acquisition.Models.Input.AcquisitionLeadAddInputModel"];
                 "application/*+json": components["schemas"]["Bakabase.Modules.Acquisition.Models.Input.AcquisitionLeadAddInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionLead]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionLead]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionLead]"];
+                };
+            };
+        };
+    };
+    AddResourceAcquisitionTorrent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                resourceId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file?: string;
+                };
             };
         };
         responses: {
@@ -29533,6 +29654,59 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowDefinitionViewModel]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowDefinitionViewModel]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowDefinitionViewModel]"];
+                };
+            };
+        };
+    };
+    ValidateWorkflow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowValidationInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowValidationInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowValidationInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Input.WorkflowValidationInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowValidationResult]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowValidationResult]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowValidationResult]"];
+                };
+            };
+        };
+    };
+    ValidateSavedWorkflow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowValidationResult]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowValidationResult]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowValidationResult]"];
                 };
             };
         };

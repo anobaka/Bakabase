@@ -107,6 +107,20 @@ public interface IAcquisitionStep
 
     string DisplayName { get; }
 
+    string? Description => null;
+    string? DescriptionKey => null;
+
+    /// <summary>
+    /// Input leads understood when this is the first source-reading step. Null means this step
+    /// only processes existing work. This is input metadata, not a guarantee of execution success.
+    /// </summary>
+    IReadOnlyList<AcquisitionLeadKind>? AcceptedLeadKinds => null;
+
+    /// <summary>Read-only configuration and environment checks; never starts a download.</summary>
+    Task<IReadOnlyList<AcquisitionValidationIssue>> ValidateConfigurationAsync(
+        AcquisitionValidationContext context, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<AcquisitionValidationIssue>>([]);
+
     /// <summary>The shape of this step's configuration JSON, which the editor renders a form for. Null when it takes none.</summary>
     Type? ConfigType { get; }
 
@@ -121,3 +135,19 @@ public interface IAcquisitionStep
         AcquisitionResumeSignal signal, CancellationToken ct) =>
         throw new NotSupportedException($"Step '{Kind}' does not suspend, so it cannot be resumed.");
 }
+
+public record AcquisitionValidationContext(
+    IServiceProvider Services,
+    string? ConfigJson,
+    bool IsExecution = false,
+    AcquisitionLeadKind? LeadKind = null,
+    string? LeadValue = null)
+{
+    public T? GetConfig<T>() where T : class => string.IsNullOrWhiteSpace(ConfigJson)
+        ? null
+        : System.Text.Json.JsonSerializer.Deserialize<T>(ConfigJson,
+            new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
+}
+
+public record AcquisitionValidationIssue(string Code, string Message, string? MessageKey = null,
+    string Severity = "error");

@@ -6,6 +6,8 @@ public record WorkflowActivityDescriptorViewModel
 {
     public string Kind { get; set; } = null!;
     public string DisplayName { get; set; } = null!;
+    public string? Description { get; set; }
+    public string? DescriptionKey { get; set; }
     public WorkflowActivityCategory Category { get; set; }
 
     /// <summary>Free-form group tag for the picker's section layout (e.g. "exhentai", "ai").</summary>

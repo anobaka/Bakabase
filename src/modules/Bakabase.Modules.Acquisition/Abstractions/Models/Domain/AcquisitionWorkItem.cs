@@ -67,6 +67,9 @@ public sealed record AcquisitionWorkItem : ITextWorkpiece
     /// <summary>What unpacking produced.</summary>
     public string? ExtractedDirectory { get; init; }
 
+    /// <summary>The prepared directory is the content root; keep its internal folders during placement.</summary>
+    public bool PreserveDirectoryStructure { get; init; }
+
     /// <summary>
     /// The directory name the resource will end up under. This is the item's working text, so a
     /// recipe can put any text transform in front of the placement step to clean it up.

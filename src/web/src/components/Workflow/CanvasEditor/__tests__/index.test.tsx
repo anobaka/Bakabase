@@ -17,14 +17,19 @@ import {
 
 import { WorkflowActivityErrorBehavior, WorkflowItemTypeBehavior } from "@/sdk/constants";
 
-const { getWorkflowActivities, getWorkflowItemTypes, patchWorkflow } = vi.hoisted(() => ({
-  getWorkflowActivities: vi.fn(),
-  getWorkflowItemTypes: vi.fn(),
-  patchWorkflow: vi.fn(),
-}));
+const { getWorkflowActivities, getWorkflowItemTypes, patchWorkflow, validateWorkflow } = vi.hoisted(
+  () => ({
+    getWorkflowActivities: vi.fn(),
+    getWorkflowItemTypes: vi.fn(),
+    patchWorkflow: vi.fn(),
+    validateWorkflow: vi.fn(),
+  }),
+);
 
 vi.mock("@/sdk/BApi", () => ({
-  default: { workflow: { getWorkflowActivities, getWorkflowItemTypes, patchWorkflow } },
+  default: {
+    workflow: { getWorkflowActivities, getWorkflowItemTypes, patchWorkflow, validateWorkflow },
+  },
 }));
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
@@ -123,6 +128,21 @@ vi.mock("@/components/bakaui", () => ({
       onChange={(event) => onValueChange?.(event.target.value)}
     />
   ),
+  Textarea: ({
+    value,
+    onValueChange,
+    label,
+  }: {
+    value: string;
+    onValueChange: (value: string) => void;
+    label: string;
+  }) => (
+    <textarea
+      aria-label={label}
+      value={value}
+      onChange={(event) => onValueChange(event.target.value)}
+    />
+  ),
   Switch: () => null,
   Spinner: () => <div role="status">Loading</div>,
   toast: { success: vi.fn(), danger: vi.fn() },
@@ -191,6 +211,8 @@ beforeEach(() => {
   });
   getWorkflowItemTypes.mockResolvedValue({ code: 0, data: [] });
   patchWorkflow.mockResolvedValue({ code: 0 });
+  validateWorkflow.mockReset();
+  validateWorkflow.mockResolvedValue({ code: 0, data: { isValid: true, diagnostics: [] } });
   container = document.createElement("div");
   document.body.appendChild(container);
   root = createRoot(container);
@@ -347,5 +369,105 @@ describe("workflow name presentation", () => {
       expect.objectContaining({ name: "My downloads" }),
     );
     expect(workflow.name).toBe("Direct download");
+  });
+});
+
+describe("workflow metadata and configuration checks", () => {
+  const definition = (): NonNullable<EditorProps["workflow"]> => ({
+    id: 31,
+    name: "My workflow",
+    isBuiltin: false,
+    triggerKind: "fs.manualScan",
+    enabled: true,
+    description: "Original purpose",
+    createdAt: "2026-09-13T00:00:00Z",
+    activities: [
+      {
+        id: 10,
+        order: 0,
+        kind: directKind,
+        configJson: "{}",
+        notes: "Keep this node note",
+        onItemError: WorkflowActivityErrorBehavior.Fail,
+      },
+    ],
+  });
+  const button = (text: string) =>
+    [...container.querySelectorAll("button")].find((item) => item.textContent === text)!;
+
+  it("preserves node notes and saves an explicitly edited workflow description", async () => {
+    await render({ workflow: definition() });
+    const description = container.querySelector("textarea")!;
+
+    expect(description.value).toBe("Original purpose");
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")!.set!.call(
+        description,
+        "New purpose",
+      );
+      description.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await act(async () => button("workflow.editor.save").click());
+    expect(patchWorkflow).toHaveBeenCalledWith(
+      31,
+      expect.objectContaining({
+        description: "New purpose",
+        activities: [expect.objectContaining({ notes: "Keep this node note" })],
+      }),
+    );
+  });
+
+  it("checks draft node IDs, shows diagnostics and permits saving with missing environment configuration", async () => {
+    validateWorkflow.mockResolvedValueOnce({
+      code: 0,
+      data: {
+        isValid: false,
+        diagnostics: [
+          {
+            nodeIndex: 0,
+            code: "missingSetting",
+            severity: "error",
+            message: "Missing required server setting",
+          },
+        ],
+      },
+    });
+    await render({ workflow: definition() });
+    await act(async () => button("workflow.diagnostics.check").click());
+    expect(validateWorkflow).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        triggerKind: "fs.manualScan",
+        activities: [
+          expect.objectContaining({
+            nodeId: drafts()[0].clientId,
+            notes: "Keep this node note",
+            kind: directKind,
+          }),
+        ],
+      }),
+    );
+    expect(container).toHaveTextContent("Missing required server setting");
+    expect(button("workflow.editor.save")).toBeEnabled();
+  });
+
+  it("discards a late check after the draft changes and allows failed checks to be retried", async () => {
+    let finish!: (value: unknown) => void;
+
+    validateWorkflow.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    await render({ workflow: definition() });
+    await act(async () => button("workflow.diagnostics.check").click());
+    await act(async () => button(`Add ${directKind}`).click());
+    await act(async () => finish({ code: 0, data: { isValid: true, diagnostics: [] } }));
+    expect(container).not.toHaveTextContent("workflow.diagnostics.passed");
+    expect(container).toHaveTextContent("workflow.diagnostics.unchecked");
+    validateWorkflow.mockRejectedValueOnce(new Error("Offline"));
+    await act(async () => button("workflow.diagnostics.check").click());
+    expect(container).toHaveTextContent("workflow.diagnostics.failed");
+    await act(async () => button("workflow.diagnostics.retry").click());
+    expect(container).toHaveTextContent("workflow.diagnostics.passed");
   });
 });

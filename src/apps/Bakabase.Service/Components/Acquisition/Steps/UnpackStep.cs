@@ -35,6 +35,8 @@ public class UnpackStep : IAcquisitionStep
 
     public string Kind => AcquisitionStepKinds.Unpack;
     public string DisplayName => "Unpack";
+    public string Description => "Extract archives in the working files, trying supplied passwords. Encrypted files may require the user to provide a password; ordinary files are kept.";
+    public string DescriptionKey => "workflow.activity.acquisition.unpack.description";
     public Type? ConfigType => typeof(Config);
 
     public record Config

@@ -37,7 +37,6 @@ public class AcquisitionCandidateService(
     IAcquisitionLeadService leads,
     IAcquisitionService acquisitions,
     IPlatformConnectorRegistry platforms,
-    IWorkflowActivityRegistry activities,
     IBOptions<AcquisitionOptions> options,
     BakabaseDbContext db)
 {
@@ -193,77 +192,16 @@ public class AcquisitionCandidateService(
         var defaultName = BuiltinAcquisitionRecipes.DefaultRecipeNameFor(lead.Kind, options.Value);
         var defaultRecipe = recipes.Where(r => r.Name == defaultName)
             .OrderBy(r => r.DefinitionId).FirstOrDefault();
-        var applicable = recipes.Where(r => AppliesTo(r, lead.Kind))
+        var applicable = recipes.Where(r => r.ApplicableLeadKinds.Contains(lead.Kind))
             .Select(r => r.DefinitionId).ToList();
         var unsupportedPlatform = platform.HasValue && !platforms.Sources.Contains(platform.Value);
         var capability = unsupportedPlatform ? "unsupportedPlatform"
             : applicable.Count == 0 ? "noApplicableRecipe" : "supported";
         if (unsupportedPlatform) applicable.Clear();
-        var describedRecipe = defaultRecipe ?? recipes.FirstOrDefault(r => applicable.Contains(r.DefinitionId));
 
         return new AcquisitionCandidateLeadViewModel(lead.Id, lead.Kind, lead.Value, lead.SourceName,
-            lead.IsDerived, lead.Note, "unknown", capability, MethodFor(describedRecipe, lead.Kind, platform),
+            lead.IsDerived, lead.Note, "unknown", capability, "workflow",
             defaultName, defaultRecipe?.DefinitionId, applicable);
     }
 
-    /// <summary>
-    /// Recommendations follow the recipe's first source-consuming step, rather than its name.
-    /// This includes copies/custom recipes and does not claim that arbitrary user configuration
-    /// has been verified. Recipes must contain a materialization step and registered activities.
-    /// </summary>
-    private bool AppliesTo(AcquisitionRecipeSummary recipe, AcquisitionLeadKind kind)
-    {
-        if (!recipe.StepKinds.Contains(AcquisitionStepKinds.Materialize) ||
-            recipe.StepKinds.Any(k => activities.Get(k) == null)) return false;
-
-        foreach (var step in recipe.StepKinds)
-        {
-            switch (step)
-            {
-                case AcquisitionStepKinds.ResolveSharedContent:
-                    return kind is AcquisitionLeadKind.SharedPage or AcquisitionLeadKind.SharedDocument;
-                case AcquisitionStepKinds.FetchHttp:
-                    return kind == AcquisitionLeadKind.DirectUrl;
-                case AcquisitionStepKinds.FetchMagnet:
-                    return kind == AcquisitionLeadKind.Magnet;
-                case AcquisitionStepKinds.FetchFromPlatform:
-                    return kind == AcquisitionLeadKind.PlatformHolding;
-                case AcquisitionStepKinds.PickLocalDirectory:
-                    return kind == AcquisitionLeadKind.Manual;
-                case AcquisitionStepKinds.WaitForInbox:
-                    return kind is AcquisitionLeadKind.SharedPage or AcquisitionLeadKind.SharedDocument
-                        or AcquisitionLeadKind.DirectUrl or AcquisitionLeadKind.Magnet;
-            }
-        }
-
-        return false;
-    }
-
-    private static string MethodFor(AcquisitionRecipeSummary? recipe, AcquisitionLeadKind kind,
-        ResourceSource? platform)
-    {
-        foreach (var step in recipe?.StepKinds ?? [])
-        {
-            switch (step)
-            {
-                case AcquisitionStepKinds.ResolveSharedContent: return "sharedContent";
-                case AcquisitionStepKinds.FetchHttp: return "directDownload";
-                case AcquisitionStepKinds.FetchMagnet: return "magnetDownload";
-                case AcquisitionStepKinds.WaitForInbox: return "inbox";
-                case AcquisitionStepKinds.PickLocalDirectory: return "localDirectory";
-                case AcquisitionStepKinds.FetchFromPlatform:
-                    return platform == ResourceSource.Steam ? "platformInstall" : "platformDownload";
-            }
-        }
-
-        return kind switch
-        {
-            AcquisitionLeadKind.SharedPage or AcquisitionLeadKind.SharedDocument => "sharedContent",
-            AcquisitionLeadKind.DirectUrl => "directDownload",
-            AcquisitionLeadKind.Magnet => "inbox",
-            AcquisitionLeadKind.PlatformHolding when platform == ResourceSource.Steam => "platformInstall",
-            AcquisitionLeadKind.PlatformHolding => "platformDownload",
-            _ => "localDirectory"
-        };
-    }
 }

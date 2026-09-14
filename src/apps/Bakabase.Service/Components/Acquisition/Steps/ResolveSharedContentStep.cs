@@ -16,6 +16,8 @@ using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Acquisition.Components;
 using Bakabase.Modules.Acquisition.Models.Domain;
+using Bakabase.Modules.AI.Models.Domain;
+using Bakabase.Modules.AI.Services;
 using Bootstrap.Components.Configuration.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -37,7 +39,29 @@ public class ResolveSharedContentStep : IAcquisitionStep
 
     public string Kind => AcquisitionStepKinds.ResolveSharedContent;
     public string DisplayName => "Read the shared page";
+    public string Description => "Read a sharing page or text and extract links, access codes and passwords with the configured post-parsing AI model. This step does not download the shared files.";
+    public string DescriptionKey => "workflow.activity.acquisition.resolveSharedContent.description";
+    public IReadOnlyList<AcquisitionLeadKind>? AcceptedLeadKinds =>
+        [AcquisitionLeadKind.SharedPage, AcquisitionLeadKind.SharedDocument];
     public Type? ConfigType => typeof(Config);
+
+    public async Task<IReadOnlyList<AcquisitionValidationIssue>> ValidateConfigurationAsync(
+        AcquisitionValidationContext context, CancellationToken ct)
+    {
+        var features = context.Services.GetService<IAiFeatureService>();
+        var providers = context.Services.GetService<IAiProviderService>();
+        var config = features == null ? null : await features.GetConfigAsync(AiFeature.PostParser, ct);
+        if (features != null && (config == null || config.UseDefault))
+            config = await features.GetConfigAsync(AiFeature.Default, ct);
+        if (config?.ProviderConfigId == null || string.IsNullOrWhiteSpace(config.ModelId) || providers == null)
+            return [new("acquisition.ai.missing", "Configure an AI provider and model for post parsing or the default AI feature.",
+                "workflow.validation.acquisition.aiMissing")];
+        var provider = await providers.GetAsync(config.ProviderConfigId.Value, ct);
+        if (provider == null || !provider.IsEnabled || !provider.LlmEnabled)
+            return [new("acquisition.ai.disabled", "The configured post-parsing AI provider is missing or disabled.",
+                "workflow.validation.acquisition.aiDisabled")];
+        return [];
+    }
 
     public record Config
     {

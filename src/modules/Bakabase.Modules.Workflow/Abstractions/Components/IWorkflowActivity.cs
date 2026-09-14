@@ -21,6 +21,15 @@ public interface IWorkflowActivity
     /// <summary>Human-readable name for the activity picker.</summary>
     string DisplayName { get; }
 
+    /// <summary>What this node does and which inputs/configuration it requires.</summary>
+    string? Description => null;
+    string? DescriptionKey => null;
+
+    /// <summary>Read-only checks before a run or from the editor; see the context's side-effect contract.</summary>
+    Task<IReadOnlyList<WorkflowValidationIssue>> ValidateConfigAsync(
+        WorkflowValidationContext context, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<WorkflowValidationIssue>>([]);
+
     /// <summary>UI bucketing (Filter / Action / Transform).</summary>
     WorkflowActivityCategory Category { get; }
 

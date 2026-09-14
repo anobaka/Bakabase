@@ -12,6 +12,7 @@ public static class WorkflowExtensions
         WorkflowDefinitionId = db.WorkflowDefinitionId,
         Order = db.Order,
         Kind = db.Kind,
+        Notes = db.Notes,
         ConfigJson = db.ConfigJson,
         OnItemError = db.OnItemError,
     };
@@ -24,6 +25,8 @@ public static class WorkflowExtensions
         {
             Id = db.Id,
             Name = db.Name,
+            Description = db.Description,
+            DescriptionKey = db.DescriptionKey,
             TriggerKind = db.TriggerKind,
             TriggerFilterJson = db.TriggerFilterJson,
             Enabled = db.Enabled,

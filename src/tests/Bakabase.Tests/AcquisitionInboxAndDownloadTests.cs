@@ -475,7 +475,7 @@ public sealed class AcquisitionInboxAndDownloadTests
     }
 
     [TestMethod]
-    public async Task AnInterruptedDownloadResumesRatherThanStartingOver()
+    public async Task AnInterruptedDownloadCanBeRetriedWithoutTrustingItsOldPrefix()
     {
         var body = Encoding.UTF8.GetBytes(new string('y', 30_000));
 

@@ -1,24 +1,10 @@
 import type { AcquisitionRecipeVm } from ".";
 
-export const recipeInputKinds = {
-  "acquisition.resolveSharedContent": "sharedContent",
-  "acquisition.fetchHttp": "directDownload",
-  "acquisition.fetchMagnet": "magnetDownload",
-  "acquisition.fetchFromPlatform": "platform",
-  "acquisition.pickLocalDirectory": "localDirectory",
-  "acquisition.waitForInbox": "inbox",
-} as const;
+import { AcquisitionLeadKind } from "@/sdk/constants";
 
-/** Follow the first input-consuming step, so copied and renamed workflows get the same guidance. */
-export const recipeInputKind = (recipe: AcquisitionRecipeVm) => {
-  const first = recipe.stepKinds.find((kind) => kind in recipeInputKinds);
-
-  return first ? recipeInputKinds[first as keyof typeof recipeInputKinds] : "custom";
-};
-
-export const acceptsSharedPage = (recipe: AcquisitionRecipeVm) =>
-  recipe.stepKinds.includes("acquisition.materialize") &&
-  ["sharedContent", "inbox"].includes(recipeInputKind(recipe));
+/** Input compatibility is declared by the server, never inferred from step order or prose. */
+export const acceptsSharedPage = (recipe: Partial<AcquisitionRecipeVm>) =>
+  recipe.applicableLeadKinds?.includes(AcquisitionLeadKind.SharedPage) === true;
 
 export const sharedPageDefaultRecipe = (
   recipes: AcquisitionRecipeVm[],

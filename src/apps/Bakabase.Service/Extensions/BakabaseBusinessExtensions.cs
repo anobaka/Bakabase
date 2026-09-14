@@ -204,14 +204,21 @@ namespace Bakabase.Service.Extensions
             services.AddAcquisitionStep<Components.Acquisition.Steps.FetchHttpStep>();
             services.AddAcquisitionStep<Components.Acquisition.Steps.WaitForInboxStep>();
             services.AddAcquisitionStep<Components.Acquisition.Steps.FetchMagnetStep>();
+            services.AddAcquisitionStep<Components.Acquisition.Steps.FetchTorrentStep>();
+            services.AddSingleton<Components.Acquisition.Downloads.IAcquisitionTorrentDownloader,
+                Components.Acquisition.Downloads.BuiltInTorrentDownloader>();
+            services.AddSingleton<Components.Acquisition.Downloads.IAcquisitionTorrentMetadataStore,
+                Components.Acquisition.Downloads.AcquisitionTorrentMetadataStore>();
             services.AddAcquisitionStep<Components.Acquisition.Steps.FetchFromPlatformStep>();
             services.AddScoped<Components.Acquisition.SharedListImportService>();
             services.AddAcquisitionStep<Components.Acquisition.Steps.UnpackStep>();
             services.AddAcquisitionStep<Bakabase.Modules.Acquisition.Components.Steps.PickLocalDirectoryStep>();
             services.AddAcquisitionStep<Bakabase.Modules.Acquisition.Components.Steps.PlaceStep>();
             services.AddAcquisitionStep<Components.Acquisition.Steps.MaterializeStep>();
-            services.AddHttpClient(nameof(Components.Acquisition.Steps.FetchHttpStep));
+            services.AddHttpClient(nameof(Components.Acquisition.Steps.FetchHttpStep),
+                client => client.Timeout = System.Threading.Timeout.InfiniteTimeSpan);
             services.AddHttpClient(nameof(Components.Acquisition.Steps.FetchMagnetStep));
+            services.AddHttpClient(nameof(Components.Acquisition.Steps.FetchTorrentStep));
             services.AddScoped<Components.Acquisition.AcquisitionInboxService>();
             services.AddScoped<Components.Acquisition.AcquisitionSetupService>();
             services.AddScoped<Components.Acquisition.AcquisitionCandidateService>();

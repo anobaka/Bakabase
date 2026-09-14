@@ -3,7 +3,7 @@ import type { Root } from "react-dom/client";
 
 import { createRoot } from "react-dom/client";
 import { createPortal as createReactPortal } from "react-dom";
-import { act } from "react";
+import { act } from "react-dom/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Button as HeroButton } from "@heroui/button";
 
@@ -22,6 +22,10 @@ const { searchCandidates, createAcquisition, createPortal, toastDanger, controls
     controls: { realSelect: false },
   }),
 );
+
+// Only activity names are used here; the editor's configuration forms stay outside this test.
+vi.mock("@/components/Workflow/Activities", () => ({ getWorkflowActivityUI: () => undefined }));
+vi.mock("@/components/Workflow/Triggers", () => ({ getWorkflowTriggerUI: () => undefined }));
 
 vi.mock("@/sdk/BApi", () => ({
   default: { acquisition: { searchAcquisitionCandidates: searchCandidates, createAcquisition } },
@@ -94,7 +98,9 @@ vi.mock("@/components/bakaui", async () => {
           aria-label={ariaLabel ?? label}
           isDisabled={isDisabled}
           selectedKeys={selectedKeys}
-          onSelectionChange={onSelectionChange}
+          onSelectionChange={(keys) => {
+            if (keys !== "all") onSelectionChange?.(new Set([...keys].map(String)));
+          }}
         >
           {dataSource.map((option) => (
             <SelectItem key={option.value} isDisabled={option.disabled}>
@@ -377,11 +383,11 @@ describe("CandidateOverview", () => {
         </CandidateCard>,
       ),
     );
-    await act(async () =>
+    await act(async () => {
       button("Disabled action")
         .querySelector("path")!
-        .dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true })),
-    );
+        .dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    });
     expect(cardPress).not.toHaveBeenCalled();
     expect(childPress).not.toHaveBeenCalled();
     await click(container.querySelector("section")!);
@@ -578,7 +584,8 @@ describe("CandidateOverview", () => {
     );
     expect(container.querySelector("[data-chip]")).toHaveAttribute("data-color", "default");
     expect(container).not.toHaveTextContent("acquisition.overview.unverifiedDescription");
-    expect(container).toHaveTextContent("acquisition.overview.method.directDownload");
+    expect(container).toHaveTextContent("workflow.description.empty");
+    expect(container).not.toHaveTextContent("acquisition.overview.method.directDownload");
     expect(container).not.toHaveTextContent("acquisition.overview.unsupported");
     expect(button("acquisition.overview.start")).toBeEnabled();
     expect(createAcquisition).not.toHaveBeenCalled();
@@ -588,6 +595,79 @@ describe("CandidateOverview", () => {
       pageSize: 24,
       filter: "all",
     });
+  });
+
+  it("shows configuration diagnostics without mislabeling an applicable workflow as unsupported", async () => {
+    searchCandidates.mockResolvedValueOnce(
+      response([candidate()], {
+        recipes: recipes.map((recipe) => ({
+          ...recipe,
+          description: "Author-defined workflow purpose",
+          validation: {
+            isValid: recipe.definitionId !== 10,
+            diagnostics:
+              recipe.definitionId === 10
+                ? [
+                    {
+                      nodeIndex: 0,
+                      severity: "error",
+                      code: "missingSetting",
+                      message: "Required setting is missing",
+                    },
+                  ]
+                : [],
+          },
+        })),
+      }),
+    );
+    await renderOverview();
+
+    expect(container).toHaveTextContent("Author-defined workflow purpose");
+    expect(container).toHaveTextContent("Required setting is missing");
+    const diagnostic = [...container.querySelectorAll("p")].find(
+      (element) => element.textContent === "Required setting is missing",
+    )!;
+
+    expect(diagnostic.closest("details")).toBeNull();
+    expect(container.querySelector("[data-chip]")).toHaveTextContent(
+      "acquisition.overview.unverified",
+    );
+    expect(container).not.toHaveTextContent("acquisition.overview.unsupported");
+    expect(button("acquisition.overview.start")).toBeDisabled();
+    await click(button("acquisition.overview.start"));
+    expect(createAcquisition).not.toHaveBeenCalled();
+    await select(
+      container.querySelector<HTMLSelectElement>(
+        'select[aria-label="acquisition.overview.selectRecipe"]',
+      )!,
+      "20",
+    );
+    expect(button("acquisition.overview.start")).toBeEnabled();
+  });
+
+  it("shows an uploaded torrent filename instead of its internal managed reference", async () => {
+    const value = `bakabase-torrent:${"a".repeat(64)}`;
+
+    searchCandidates.mockResolvedValueOnce(
+      response([
+        candidate({
+          leads: [
+            lead({
+              kind: AcquisitionLeadKind.Torrent,
+              value,
+              note: "Travel photos.torrent",
+              sourceName: value,
+            }),
+          ],
+        }),
+      ]),
+    );
+    await renderOverview();
+
+    expect(container).toHaveTextContent("Travel photos.torrent");
+    expect(container).not.toHaveTextContent("bakabase-torrent:");
+    await click(button("acquisition.overview.start"));
+    expect(createAcquisition).toHaveBeenCalledWith(expect.objectContaining({ leadValue: value }));
   });
 
   it("opens the source picker directly for a resource without sources and refreshes after adding", async () => {
@@ -713,7 +793,8 @@ describe("CandidateOverview", () => {
 
       expect(button("acquisition.overview.start")).toBeEnabled();
       expect(container).not.toHaveTextContent("acquisition.overview.selectRecipeFirst");
-      expect(container).toHaveTextContent("acquisition.overview.method.selectedRecipe");
+      expect(container).toHaveTextContent("workflow.description.empty");
+      expect(container).not.toHaveTextContent("acquisition.overview.method.selectedRecipe");
       await click(button("acquisition.overview.start"));
 
       expect(createAcquisition).toHaveBeenCalledExactlyOnceWith({

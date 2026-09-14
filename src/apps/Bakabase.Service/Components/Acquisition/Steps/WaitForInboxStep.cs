@@ -32,7 +32,19 @@ public class WaitForInboxStep : IAcquisitionStep
 
     public string Kind => AcquisitionStepKinds.WaitForInbox;
     public string DisplayName => "Wait for the file in the pending processing folder";
+    public string Description => "Wait for files the user downloaded separately. Requires a server pending directory; the user confirms which files belong to the task.";
+    public string DescriptionKey => "workflow.activity.acquisition.waitForInbox.description";
+    public IReadOnlyList<AcquisitionLeadKind>? AcceptedLeadKinds =>
+        [AcquisitionLeadKind.SharedPage, AcquisitionLeadKind.SharedDocument, AcquisitionLeadKind.DirectUrl,
+            AcquisitionLeadKind.Magnet, AcquisitionLeadKind.Torrent];
     public Type? ConfigType => typeof(Config);
+
+    public Task<IReadOnlyList<AcquisitionValidationIssue>> ValidateConfigurationAsync(
+        AcquisitionValidationContext context, CancellationToken ct) =>
+        Task.FromResult(AcquisitionConfigurationValidation.Directory(
+            context.Services.GetRequiredService<IBOptions<AcquisitionOptions>>().Value.InboxDirectory,
+            "acquisition.inbox.missing", "Choose a pending processing directory in the acquisition settings.",
+            "workflow.validation.acquisition.inboxMissing"));
 
     public record Config
     {

@@ -1,5 +1,6 @@
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.Workflow.Abstractions.Models.View;
 
 namespace Bakabase.Modules.Acquisition.Abstractions.Services;
 
@@ -49,4 +50,10 @@ public interface IAcquisitionService
 }
 
 /// <summary>A recipe as the picker shows it.</summary>
-public record AcquisitionRecipeSummary(int DefinitionId, string Name, bool IsBuiltin, List<string> StepKinds);
+public record AcquisitionRecipeSummary(int DefinitionId, string Name, bool IsBuiltin, List<string> StepKinds)
+{
+    public string? Description { get; init; }
+    public string? DescriptionKey { get; init; }
+    public List<AcquisitionLeadKind> ApplicableLeadKinds { get; init; } = [];
+    public WorkflowValidationResult Validation { get; init; } = new();
+}

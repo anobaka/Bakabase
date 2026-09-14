@@ -6,10 +6,11 @@ import type { DestroyableProps } from "@/components/bakaui/types";
 import React from "react";
 import { useTranslation } from "react-i18next";
 
-import { recipeLabel, stepLabel } from "../../recipeLabels";
-import { acceptsSharedPage, recipeInputKind, sharedPageDefaultRecipe } from "../../recipeGuide";
+import { recipeLabel } from "../../recipeLabels";
+import { acceptsSharedPage, sharedPageDefaultRecipe } from "../../recipeGuide";
 
 import BApi from "@/sdk/BApi";
+import WorkflowSummary from "@/components/Workflow/WorkflowSummary";
 import { Button, Input, Modal, Select, toast } from "@/components/bakaui";
 import { AcquisitionLeadKind } from "@/sdk/constants";
 import {
@@ -69,14 +70,15 @@ const StartAcquisitionModal = ({ recipes, onStarted, onDestroyed }: Props) => {
         actions: ["cancel", "ok"],
         okProps: {
           children: t<string>("acquisition.startFromUrl.createTask"),
-          isDisabled: !!validation || !selected || loadingDefault,
+          isDisabled:
+            !!validation || !selected || selected.validation?.isValid === false || loadingDefault,
         },
       }}
       size="2xl"
       title={t<string>("acquisition.startFromUrl.title")}
       onDestroyed={onDestroyed}
       onOk={async () => {
-        if (validation || !selected || loadingDefault)
+        if (validation || !selected || selected.validation?.isValid === false || loadingDefault)
           throw new Error(t("acquisition.startFromUrl.completeForm"));
         const rsp = await BApi.acquisition.createAcquisitionFromUrl({
           url: url.trim(),
@@ -164,22 +166,9 @@ const StartAcquisitionModal = ({ recipes, onStarted, onDestroyed }: Props) => {
             <p className="text-xs font-medium text-default-700">
               {t<string>("acquisition.startFromUrl.whatHappens")}
             </p>
-            <p className="mt-1 text-xs leading-relaxed text-default-600">
-              {t<string>(`acquisition.recipeGuide.${recipeInputKind(selected)}.requirements`)}
-            </p>
-            {recipeInputKind(selected) !== "inbox" &&
-              selected.stepKinds.includes("acquisition.waitForInbox") && (
-                <p className="mt-1 text-xs leading-relaxed text-default-600">
-                  {t<string>("acquisition.overview.method.inbox")}
-                </p>
-              )}
-            <ol className="mt-2 flex flex-wrap gap-1.5 text-xs text-default-500">
-              {selected.stepKinds.map((kind, index) => (
-                <li key={`${index}-${kind}`} className="rounded-md bg-default-100 px-2 py-1">
-                  {index + 1}. {stepLabel(kind, t)}
-                </li>
-              ))}
-            </ol>
+            <div className="mt-2">
+              <WorkflowSummary activityKinds={selected.stepKinds} workflow={selected} />
+            </div>
           </div>
         )}
         <details className="text-sm text-default-600">

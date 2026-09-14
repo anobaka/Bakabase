@@ -67,7 +67,7 @@ public class AcquisitionRequestedTrigger : IWorkflowTrigger
     internal static AcquisitionWorkItem PopulateLeadLink(AcquisitionWorkItem item)
     {
         if (item.Links.Count > 0 || string.IsNullOrWhiteSpace(item.LeadValue) ||
-            item.LeadKind is not (AcquisitionLeadKind.DirectUrl or AcquisitionLeadKind.Magnet))
+            item.LeadKind is not (AcquisitionLeadKind.DirectUrl or AcquisitionLeadKind.Magnet or AcquisitionLeadKind.Torrent))
         {
             return item;
         }

@@ -5,6 +5,7 @@ export interface ActivityDraft {
   clientId: string;
   kind: string;
   configJson: string;
+  notes?: string;
   onItemError: WorkflowActivityErrorBehavior;
 }
 

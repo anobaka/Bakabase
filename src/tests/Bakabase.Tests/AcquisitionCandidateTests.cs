@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -18,6 +19,7 @@ using Bakabase.Modules.Acquisition.Models.Input;
 using Bakabase.Modules.Workflow.Abstractions.Models.Input;
 using Bakabase.Modules.Workflow.Abstractions.Services;
 using Bakabase.Service.Components.Acquisition;
+using Bakabase.Service.Components.Acquisition.Downloads;
 using Bakabase.Service.Components.Acquisition.Steps;
 using Bakabase.Service.Controllers;
 using Bakabase.TestKit.Utils;
@@ -141,6 +143,8 @@ public sealed class AcquisitionCandidateTests
             });
         var options = _sp.GetRequiredService<IBOptions<AcquisitionOptions>>().Value;
         options.RecipeByLeadKind[AcquisitionLeadKind.DirectUrl] = custom.Name;
+        options.InboxDirectory = Path.Combine(Path.GetTempPath(), "candidate-inbox-" + Guid.NewGuid().ToString("N"));
+        options.LibraryRootDirectory = Path.Combine(Path.GetTempPath(), "candidate-library-" + Guid.NewGuid().ToString("N"));
         options.Concurrency = 1;
         var busyResource = await Missing("Already running");
         var target = await Missing("A direct link to queue");
@@ -159,8 +163,10 @@ public sealed class AcquisitionCandidateTests
         var lead = (await Candidates.SearchAsync()).Items.Single(r => r.ResourceId == target).Leads.Single();
         Assert.AreEqual(custom.Id, lead.DefaultRecipeDefinitionId);
         Assert.AreEqual(custom.Name, lead.DefaultRecipeName);
-        Assert.AreEqual("inbox", lead.Method);
+        Assert.AreEqual("workflow", lead.Method);
         CollectionAssert.Contains(lead.ApplicableRecipeDefinitionIds, custom.Id);
+        CollectionAssert.Contains((await _sp.GetRequiredService<IAcquisitionService>().GetRecipesAsync())
+            .Single(r => r.DefinitionId == custom.Id).ApplicableLeadKinds, AcquisitionLeadKind.DirectUrl);
 
         var task = await _sp.GetRequiredService<IAcquisitionService>().CreateAsync(target,
             lead.Kind, lead.Value, lead.Id);
@@ -270,7 +276,9 @@ public sealed class AcquisitionCandidateTests
         await AddLead(target, AcquisitionLeadKind.SharedPage, sharedPage);
         var leadService = _sp.GetRequiredService<IAcquisitionLeadService>();
         var controller = new AcquisitionLeadController(leadService,
-            _sp.GetRequiredService<IResourceSourceLinkService>());
+            _sp.GetRequiredService<IResourceSourceLinkService>(),
+            _sp.GetRequiredService<IAcquisitionTorrentMetadataStore>(),
+            _sp.GetRequiredService<IResourceService>());
 
         var response = await controller.GetAll(target);
         var derived = response.Data!.Where(l => l.IsDerived).ToList();

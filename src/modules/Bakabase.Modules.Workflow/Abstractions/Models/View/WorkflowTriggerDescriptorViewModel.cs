@@ -4,6 +4,8 @@ public record WorkflowTriggerDescriptorViewModel
 {
     public string Kind { get; set; } = null!;
     public string DisplayName { get; set; } = null!;
+    public string? Description { get; set; }
+    public string? DescriptionKey { get; set; }
 
     /// <summary>
     /// Whether starting a run by hand needs the user to supply a payload. Drives which panel the

@@ -1,11 +1,13 @@
 "use client";
 
 import type { components } from "@/sdk/BApi2";
+import type { WorkflowValidation } from "@/components/Workflow/metadata";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import {
+  CheckCircleOutlined,
   DeleteOutlined,
   EditOutlined,
   HistoryOutlined,
@@ -20,6 +22,8 @@ import ManualRunModal from "@/components/Workflow/ManualRunModal";
 import { getWorkflowTriggerUI } from "@/components/Workflow/Triggers";
 import { activityDisplayName, triggerDisplayName } from "@/components/Workflow/displayNames";
 import { workflowLabel } from "@/components/Workflow/builtinLabels";
+import { workflowDescription } from "@/components/Workflow/metadata";
+import WorkflowDiagnostics from "@/components/Workflow/WorkflowDiagnostics";
 import BApi from "@/sdk/BApi";
 import { Button, Chip, Modal, Spinner, Switch, toast } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
@@ -46,6 +50,35 @@ const WorkflowPage: React.FC = () => {
   const [workflows, setWorkflows] = useState<WorkflowVm[]>([]);
   const [triggers, setTriggers] = useState<TriggerDescriptorVm[]>([]);
   const [loading, setLoading] = useState(true);
+  const [validationFor, setValidationFor] = useState<{
+    id: number;
+    result?: WorkflowValidation;
+    loading?: boolean;
+    failed?: boolean;
+  }>();
+  const checkRevision = useRef(0);
+
+  useEffect(
+    () => () => {
+      checkRevision.current += 1;
+    },
+    [],
+  );
+
+  const checkWorkflow = async (id: number) => {
+    const revision = ++checkRevision.current;
+
+    setValidationFor({ id, loading: true });
+    try {
+      const rsp = await BApi.workflow.validateSavedWorkflow(id);
+
+      if (revision !== checkRevision.current) return;
+      if (rsp.code || !rsp.data) throw new Error("Workflow validation failed");
+      setValidationFor({ id, result: rsp.data });
+    } catch {
+      if (revision === checkRevision.current) setValidationFor({ id, failed: true });
+    }
+  };
   // Single drawer instance — opening for a different workflow replaces the
   // selection. Using createPortal would spawn a new component per click.
   const [runsDrawerFor, setRunsDrawerFor] = useState<WorkflowVm | null>(null);
@@ -148,7 +181,7 @@ const WorkflowPage: React.FC = () => {
             return (
               <div
                 key={wf.id}
-                className="border border-default-200 rounded-lg p-3 flex items-center gap-3"
+                className="border border-default-200 rounded-lg p-3 flex flex-wrap items-center gap-3"
               >
                 <Switch
                   isSelected={wf.enabled}
@@ -166,6 +199,11 @@ const WorkflowPage: React.FC = () => {
                       {t<string>("workflow.activity.count", { count: wf.activities.length })}
                     </Chip>
                   </div>
+                  {workflowDescription(wf, t) && (
+                    <p className="line-clamp-3 whitespace-pre-wrap break-words text-xs text-default-500">
+                      {workflowDescription(wf, t)}
+                    </p>
+                  )}
                   {FilterSummary && filter && <FilterSummary filter={filter} />}
                   <div className="flex flex-wrap gap-1.5 mt-1">
                     {/* Tiny chain preview — kind chips in order. */}
@@ -181,6 +219,16 @@ const WorkflowPage: React.FC = () => {
                       {formatTime(wf.lastRunAt) ?? t<string>("workflow.status.lastRunNever")}
                     </span>
                   </div>
+                  {validationFor?.id === wf.id && (
+                    <div className="mt-2">
+                      <WorkflowDiagnostics
+                        failed={validationFor.failed}
+                        loading={validationFor.loading}
+                        result={validationFor.result}
+                        onCheck={() => void checkWorkflow(wf.id)}
+                      />
+                    </div>
+                  )}
                   {wf.lastError && (
                     <div className="text-xs text-danger">
                       {t<string>("workflow.status.error")}: {wf.lastError}
@@ -188,7 +236,17 @@ const WorkflowPage: React.FC = () => {
                   )}
                 </div>
 
-                <div className="flex items-center gap-1">
+                <div className="flex flex-wrap items-center gap-1">
+                  <Button
+                    isIconOnly
+                    aria-label={t<string>("workflow.diagnostics.check")}
+                    size="sm"
+                    title={t<string>("workflow.diagnostics.check")}
+                    variant="light"
+                    onPress={() => void checkWorkflow(wf.id)}
+                  >
+                    <CheckCircleOutlined className="text-lg" />
+                  </Button>
                   <Button
                     isIconOnly
                     color="primary"

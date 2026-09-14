@@ -6,6 +6,8 @@ public record WorkflowDefinitionDbModel
 {
     [Key] public int Id { get; set; }
     public string Name { get; set; } = null!;
+    public string? Description { get; set; }
+    public string? DescriptionKey { get; set; }
 
     /// <summary>Trigger kind, e.g. <c>subscription.updated</c>.</summary>
     public string TriggerKind { get; set; } = null!;

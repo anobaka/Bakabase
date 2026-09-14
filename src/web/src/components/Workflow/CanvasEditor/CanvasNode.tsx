@@ -43,6 +43,7 @@ interface Props {
   selected: boolean;
   /** The chain walk says this node can't accept the type reaching it. */
   incompatible: boolean;
+  hasValidationError?: boolean;
   /** True while this node is the drag source (rendered dimmed in place). */
   dragSource: boolean;
   onPointerDown: (ev: React.PointerEvent) => void;
@@ -62,6 +63,7 @@ const CanvasNode: React.FC<Props> = ({
   descriptor,
   selected,
   incompatible,
+  hasValidationError,
   dragSource,
   onPointerDown,
   onDelete,
@@ -92,7 +94,7 @@ const CanvasNode: React.FC<Props> = ({
     <div
       className={`group relative rounded-xl border-1.5 bg-content1 px-3 py-2 min-w-[150px] max-w-[200px]
         cursor-grab active:cursor-grabbing select-none touch-none outline-none
-        ${incompatible ? "border-danger" : (tone?.border ?? "border-default-300")}
+        ${incompatible || hasValidationError ? "border-danger" : (tone?.border ?? "border-default-300")}
         ${selected ? "ring-2 ring-primary/60" : ""}
         ${dragSource ? "opacity-30" : ""}`}
       role="button"
@@ -118,6 +120,16 @@ const CanvasNode: React.FC<Props> = ({
       </div>
       <div className="text-[13px] font-semibold leading-tight">{name}</div>
       <div className="text-[10.5px] text-default-500 truncate">{SummaryComponent}</div>
+      {draft.notes && (
+        <p className="mt-1 line-clamp-2 break-words text-[10.5px] text-default-500">
+          {draft.notes}
+        </p>
+      )}
+      {hasValidationError && (
+        <p className="mt-1 text-[10.5px] text-danger">
+          {t<string>("workflow.diagnostics.needsAttention")}
+        </p>
+      )}
 
       <button
         aria-label={t<string>("workflow.editor.node.remove")}

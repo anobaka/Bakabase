@@ -2462,6 +2462,9 @@ namespace Bakabase.InsideWorld.Business.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Notes")
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("OnItemError")
                         .HasColumnType("INTEGER");
 
@@ -2487,6 +2490,12 @@ namespace Bakabase.InsideWorld.Business.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DescriptionKey")
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("Enabled")

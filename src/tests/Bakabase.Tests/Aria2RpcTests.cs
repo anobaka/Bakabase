@@ -29,6 +29,8 @@ public sealed class Aria2RpcTests
         Assert.AreEqual("magnet:?xt=urn:btih:abc", parameters[0]!.AsArray()[0]!.GetValue<string>());
         Assert.AreEqual("/runs/17", parameters[1]!["dir"]!.GetValue<string>(),
             "a step must not write outside its own working directory");
+        Assert.AreEqual("0", parameters[1]!["seed-time"]!.GetValue<string>(),
+            "the acquisition must stop seeding before placement moves its files");
     }
 
     /// <summary>
@@ -55,6 +57,17 @@ public sealed class Aria2RpcTests
 
         Assert.AreEqual("token:s3cret", parameters[0]!.GetValue<string>());
         Assert.AreEqual("2089b05ecca3d829", parameters[1]!.GetValue<string>());
+    }
+
+    [TestMethod]
+    public void CancellationOnlyStopsTheJobCreatedByThisAcquisition()
+    {
+        var body = JsonNode.Parse(Aria2Rpc.BuildForceRemove("owned-job", "s3cret", "stop"))!.AsObject();
+        Assert.AreEqual("aria2.forceRemove", body["method"]!.GetValue<string>());
+        var parameters = body["params"]!.AsArray();
+        Assert.AreEqual(2, parameters.Count);
+        Assert.AreEqual("token:s3cret", parameters[0]!.GetValue<string>());
+        Assert.AreEqual("owned-job", parameters[1]!.GetValue<string>());
     }
 
     [TestMethod]

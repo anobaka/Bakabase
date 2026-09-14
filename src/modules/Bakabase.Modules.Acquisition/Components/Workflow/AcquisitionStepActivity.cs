@@ -26,6 +26,9 @@ public class AcquisitionStepActivity(IAcquisitionStep step) : IResumableWorkflow
 
     public string Kind => step.Kind;
     public string DisplayName => step.DisplayName;
+    public string? Description => step.Description;
+    public string? DescriptionKey => step.DescriptionKey;
+    public IReadOnlyList<AcquisitionLeadKind>? AcceptedLeadKinds => step.AcceptedLeadKinds;
     public WorkflowActivityCategory Category => WorkflowActivityCategory.Action;
     public string Group => AcquisitionWorkflowKinds.ActivityGroup;
 
@@ -42,6 +45,33 @@ public class AcquisitionStepActivity(IAcquisitionStep step) : IResumableWorkflow
     /// which is exactly the "let a model clean up the folder name" shape a recipe wants.
     /// </summary>
     public bool IsDestructive => false;
+
+    public async Task<IReadOnlyList<WorkflowValidationIssue>> ValidateConfigAsync(
+        WorkflowValidationContext context, CancellationToken ct)
+    {
+        try
+        {
+            if (step.ConfigType != null && !string.IsNullOrWhiteSpace(context.ConfigJson))
+                JsonSerializer.Deserialize(context.ConfigJson, step.ConfigType, Json);
+            var payload = context.Payload as AcquisitionRequestedPayload;
+            var issues = await step.ValidateConfigurationAsync(new AcquisitionValidationContext(
+                context.Services, context.ConfigJson, context.IsExecution, payload?.LeadKind,
+                payload?.LeadValue), ct);
+            return issues.Select(issue => new WorkflowValidationIssue
+            {
+                Code = issue.Code, Message = issue.Message, MessageKey = issue.MessageKey,
+                Severity = issue.Severity
+            }).ToList();
+        }
+        catch (JsonException)
+        {
+            return [new WorkflowValidationIssue
+            {
+                Code = "acquisition.config.invalid", Message = "The node configuration is invalid.",
+                MessageKey = "workflow.validation.acquisition.invalidConfig"
+            }];
+        }
+    }
 
     public async Task<WorkflowItemOutcome> ProcessItemAsync(WorkflowExecutionContext ctx, object item,
         CancellationToken ct)

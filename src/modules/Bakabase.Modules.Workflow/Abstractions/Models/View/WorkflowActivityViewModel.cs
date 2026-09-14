@@ -8,6 +8,7 @@ public record WorkflowActivityViewModel
     public int Id { get; set; }
     public int Order { get; set; }
     public string Kind { get; set; } = null!;
+    public string? Notes { get; set; }
     public string ConfigJson { get; set; } = "{}";
     public WorkflowActivityErrorBehavior OnItemError { get; set; }
 
@@ -16,6 +17,7 @@ public record WorkflowActivityViewModel
         Id = a.Id,
         Order = a.Order,
         Kind = a.Kind,
+        Notes = a.Notes,
         ConfigJson = a.ConfigJson,
         OnItemError = a.OnItemError,
     };

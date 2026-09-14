@@ -13,4 +13,5 @@ public record AcquisitionRecipeStep(string Kind, string? ConfigJson = null);
 /// </summary>
 /// <param name="Name">Identifies a built-in recipe, and is what a copy is named after.</param>
 /// <param name="Steps">Run in order.</param>
-public record AcquisitionRecipe(string Name, IReadOnlyList<AcquisitionRecipeStep> Steps);
+public record AcquisitionRecipe(string Name, IReadOnlyList<AcquisitionRecipeStep> Steps,
+    string? Description = null, string? DescriptionKey = null);

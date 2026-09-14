@@ -39,6 +39,24 @@ public sealed class AcquisitionPipelineTests
 {
     private IServiceProvider _sp = null!;
 
+    private sealed class CancellableStep : IAcquisitionStep
+    {
+        public const string StepKind = "acquisition.test.cancellable";
+        public static TaskCompletionSource Started = null!;
+        public static TaskCompletionSource Cancelled = null!;
+        public string Kind => StepKind;
+        public string DisplayName => "Cancellable transfer";
+        public Type? ConfigType => null;
+        public async Task<AcquisitionStepOutcome> ExecuteAsync(AcquisitionStepContext ctx,
+            AcquisitionWorkItem item, CancellationToken ct)
+        {
+            Started.TrySetResult();
+            try { await Task.Delay(Timeout.InfiniteTimeSpan, ct); }
+            finally { if (ct.IsCancellationRequested) Cancelled.TrySetResult(); }
+            return new AcquisitionStepOutcome.Continue(item);
+        }
+    }
+
     /// <summary>Continues, leaving a mark so a test can see it ran.</summary>
     private sealed class FetchStep : IAcquisitionStep
     {
@@ -105,9 +123,12 @@ public sealed class AcquisitionPipelineTests
     public async Task Setup()
     {
         FetchStep.Executions = 0;
+        CancellableStep.Started = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        CancellableStep.Cancelled = new(TaskCreationOptions.RunContinuationsAsynchronously);
         _sp = await TestServiceBuilder.BuildServiceProvider(services =>
         {
             services.AddAcquisitionStep<FetchStep>();
+            services.AddAcquisitionStep<CancellableStep>();
             services.AddAcquisitionStep<AskStep>();
             services.AddAcquisitionStep<PlaceStep>();
         });
@@ -327,6 +348,29 @@ public sealed class AcquisitionPipelineTests
     /// A failed run keeps its cursor, so retrying re-runs the step that stopped rather than the
     /// chain — which is the whole reason steps are required to be idempotent rather than the run.
     /// </summary>
+    [TestMethod]
+    [Timeout(15000)]
+    public async Task CancellingAnAcquisitionSignalsTheRealRunningBTaskToken()
+    {
+        var recipeId = await CreateRecipe(CancellableStep.StepKind, PlaceStep.StepKind);
+        var task = await Create(await CreateMissingResource(), recipeId);
+        var manager = _sp.GetRequiredService<BTaskManager>();
+        var btaskId = $"workflow.run.{task.WorkflowRunId}";
+        await manager.Start(btaskId);
+        await CancellableStep.Started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await using (var scope = _sp.CreateAsyncScope())
+            await scope.ServiceProvider.GetRequiredService<IAcquisitionService>().CancelAsync(task.Id);
+        await CancellableStep.Cancelled.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        using var guard = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        while (manager.GetTaskViewModel(btaskId)?.Status != Bakabase.Abstractions.Models.Domain.Constants.BTaskStatus.Cancelled)
+            await Task.Delay(10, guard.Token);
+
+        Assert.AreEqual(AcquisitionStatus.Cancelled, (await Task_(task.Id)).Status);
+        Assert.AreEqual(WorkflowRunStatus.Cancelled, (await Run(task.WorkflowRunId!.Value)).Status);
+        Assert.IsNull((await Task_(task.Id)).TargetDirectory, "placement must not run after cancellation");
+        await manager.Clean(btaskId);
+    }
+
     [TestMethod]
     public async Task Retry_PicksUpAtTheStepThatStopped()
     {

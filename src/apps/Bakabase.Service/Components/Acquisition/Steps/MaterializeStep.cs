@@ -30,6 +30,8 @@ public class MaterializeStep : IAcquisitionStep
 
     public string Kind => AcquisitionStepKinds.Materialize;
     public string DisplayName => "Point the resource at the files";
+    public string Description => "Associate the prepared target directory with the resource and refresh its file metadata. Earlier nodes must provide that directory.";
+    public string DescriptionKey => "workflow.activity.acquisition.materialize.description";
     public Type? ConfigType => typeof(Config);
 
     public record Config
