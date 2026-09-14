@@ -4,6 +4,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 
 import { recipeLabel, stepLabel } from "../../recipeLabels";
+import { recipeInputKind } from "../../recipeGuide";
 
 import { Button, Chip } from "@/components/bakaui";
 
@@ -42,6 +43,30 @@ const RecipeCatalog = ({ recipes, onOpen }: Props) => {
                   {t<string>("acquisition.recipes.open")}
                 </Button>
               </div>
+              <dl className="mt-3 space-y-2 text-xs leading-relaxed">
+                <div>
+                  <dt className="font-medium text-default-700">
+                    {t<string>("acquisition.recipeGuide.input")}
+                  </dt>
+                  <dd className="mt-0.5 text-default-500">
+                    {t<string>(`acquisition.recipeGuide.${recipeInputKind(recipe)}.input`)}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="font-medium text-default-700">
+                    {t<string>("acquisition.recipeGuide.requirements")}
+                  </dt>
+                  <dd className="mt-0.5 text-default-500">
+                    {t<string>(`acquisition.recipeGuide.${recipeInputKind(recipe)}.requirements`)}
+                  </dd>
+                  {recipeInputKind(recipe) !== "inbox" &&
+                    recipe.stepKinds.includes("acquisition.waitForInbox") && (
+                      <dd className="mt-0.5 text-default-500">
+                        {t<string>("acquisition.recipeGuide.inbox.requirements")}
+                      </dd>
+                    )}
+                </div>
+              </dl>
               <ol className="mt-3 flex flex-wrap items-center gap-2 text-xs text-default-600">
                 {recipe.stepKinds.map((kind, index) => (
                   <li key={`${index}-${kind}`} className="rounded-md bg-default-100 px-2 py-1">
