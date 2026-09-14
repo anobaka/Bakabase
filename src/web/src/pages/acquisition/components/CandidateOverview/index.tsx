@@ -59,6 +59,31 @@ const METHODS: Record<string, string> = {
 const leadKey = (resourceId: number, lead: Lead) =>
   `${resourceId}-${lead.kind}-${lead.id}-${lead.value}`;
 
+// usePress normalizes PressEvent.target to the card itself. Stop interactive descendants
+// before their DOM events reach that hook, without cancelling their own native behavior.
+const stopCardPressFromControl = (event: React.SyntheticEvent<HTMLElement>) => {
+  const target = event.target;
+
+  if (!(target instanceof Element)) return;
+  const control = target.closest(
+    'button, a, input, textarea, select, summary, [role="button"], [role="combobox"], [contenteditable="true"]',
+  );
+
+  if (!event.currentTarget.contains(target) || (control && event.currentTarget.contains(control))) {
+    event.stopPropagation();
+  }
+};
+
+const cardContentEvents = {
+  onClick: stopCardPressFromControl,
+  onPointerDown: stopCardPressFromControl,
+  onPointerUp: stopCardPressFromControl,
+  onMouseDown: stopCardPressFromControl,
+  onTouchStart: stopCardPressFromControl,
+  onKeyDown: stopCardPressFromControl,
+  onKeyUp: stopCardPressFromControl,
+};
+
 const CandidateOverview = ({ onStarted, onViewTasks, onOpenRecipe }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
@@ -376,29 +401,31 @@ const CandidateOverview = ({ onStarted, onViewTasks, onOpenRecipe }: Props) => {
             {data.items.map((candidate) => (
               <Card
                 key={candidate.resourceId}
+                disableRipple
+                isHoverable
+                isPressable
+                aria-label={
+                  candidate.resourceName ||
+                  t<string>("acquisition.unnamed", { id: candidate.resourceId })
+                }
                 as="section"
-                className="min-w-0 border border-default-200"
+                className="min-w-0 cursor-pointer border border-default-200 text-left transition-colors hover:border-primary-300 hover:bg-default-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                 radius="lg"
                 shadow="none"
+                onPress={() => openResource(candidate.resourceId)}
               >
-                <CardHeader className="items-start gap-2 p-3 pb-0">
+                <CardHeader {...cardContentEvents} className="items-start gap-2 p-3 pb-0">
                   <AiOutlineFileText
                     aria-hidden
                     className="mt-1 shrink-0 text-xl text-default-400"
                   />
-                  <Button
-                    className="h-auto min-w-0 flex-1 justify-start whitespace-normal px-0 py-0.5 text-left text-sm font-medium"
-                    variant="light"
-                    onPress={() => openResource(candidate.resourceId)}
+                  <span
+                    className="min-w-0 flex-1 line-clamp-2 break-all py-0.5 text-sm font-medium"
+                    title={candidate.resourceName ?? undefined}
                   >
-                    <span
-                      className="line-clamp-2 break-all"
-                      title={candidate.resourceName ?? undefined}
-                    >
-                      {candidate.resourceName ||
-                        t<string>("acquisition.unnamed", { id: candidate.resourceId })}
-                    </span>
-                  </Button>
+                    {candidate.resourceName ||
+                      t<string>("acquisition.unnamed", { id: candidate.resourceId })}
+                  </span>
                   {candidate.activeTaskId != null && (
                     <Button
                       className="shrink-0"
@@ -411,7 +438,7 @@ const CandidateOverview = ({ onStarted, onViewTasks, onOpenRecipe }: Props) => {
                     </Button>
                   )}
                 </CardHeader>
-                <CardBody className="gap-3 p-3">
+                <CardBody {...cardContentEvents} className="gap-3 p-3">
                   {candidate.leads.length === 0 ? (
                     <div className="flex flex-col gap-2 border-t border-default-200 pt-3">
                       <span className="text-xs text-default-500">

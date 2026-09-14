@@ -4,6 +4,7 @@ import type { Resource } from "@/core/models/Resource";
 
 import React from "react";
 import { useTranslation } from "react-i18next";
+import { useMeasure } from "react-use";
 
 import DetailTimestamp from "../DetailTimestamp";
 
@@ -43,12 +44,16 @@ const dateTimes: { key: keyof Resource; label: string; fromFiles: boolean }[] = 
 ];
 
 const BasicInfo = ({ resource }: Props) => {
+  const [containerRef, { width }] = useMeasure<HTMLDivElement>();
+  // Keep the four timestamps in pairs until all four fit comfortably on one row.
+  const columns = width >= 612 ? 4 : width > 0 && width < 236 ? 1 : 2;
   const { t } = useTranslation();
 
   return (
     <div
-      className="grid gap-2"
-      style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 8rem), 1fr))" }}
+      ref={containerRef}
+      className="grid gap-x-3 gap-y-2 rounded-xl bg-default-50/60 p-3"
+      style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
     >
       {dateTimes.map((dateTime) => {
         const label = t<string>(dateTime.label);

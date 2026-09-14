@@ -2,19 +2,22 @@ import type { ReactNode } from "react";
 import type { Root } from "react-dom/client";
 
 import { createRoot } from "react-dom/client";
-import { act } from "react-dom/test-utils";
+import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import CandidateOverview from "..";
 
 import { AcquisitionLeadKind, AcquisitionStatus } from "@/sdk/constants";
 
-const { searchCandidates, createAcquisition, createPortal, toastDanger } = vi.hoisted(() => ({
-  searchCandidates: vi.fn(),
-  createAcquisition: vi.fn(),
-  createPortal: vi.fn(),
-  toastDanger: vi.fn(),
-}));
+const { searchCandidates, createAcquisition, createPortal, toastDanger, controls } = vi.hoisted(
+  () => ({
+    searchCandidates: vi.fn(),
+    createAcquisition: vi.fn(),
+    createPortal: vi.fn(),
+    toastDanger: vi.fn(),
+    controls: { realSelect: false },
+  }),
+);
 
 vi.mock("@/sdk/BApi", () => ({
   default: { acquisition: { searchAcquisitionCandidates: searchCandidates, createAcquisition } },
@@ -26,117 +29,113 @@ vi.mock("@/components/ContextProvider/BakabaseContextProvider", () => ({
 
 vi.mock("@/components/Resource/components/DetailModal", () => ({ default: () => null }));
 
-// Native controls keep disabled actions and selection changes observable while the actual
-// overview owns request timing, lead/recipe selection and submission.
-vi.mock("@/components/bakaui", () => ({
-  Card: ({ children }: { children?: ReactNode }) => <section>{children}</section>,
-  CardHeader: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
-  CardBody: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
-  Button: ({
-    children,
-    isDisabled,
-    isLoading,
-    onPress,
-    onClick,
-    type = "button",
-    "aria-label": label,
-  }: {
-    children?: ReactNode;
-    isDisabled?: boolean;
-    isLoading?: boolean;
-    onPress?: () => void;
-    onClick?: () => void;
-    type?: "button" | "submit" | "reset";
-    "aria-label"?: string;
-  }) => (
-    <button
-      aria-label={label}
-      disabled={isDisabled || isLoading}
-      type={type}
-      onClick={onPress ?? onClick}
-    >
-      {children}
-    </button>
-  ),
-  Chip: ({ children, color }: { children?: ReactNode; color?: string }) => (
-    <span data-chip data-color={color}>
-      {children}
-    </span>
-  ),
-  Input: ({
-    placeholder,
-    value,
-    onValueChange,
-    label,
-    "aria-label": ariaLabel,
-  }: {
-    placeholder?: string;
-    value?: string;
-    onValueChange?: (value: string) => void;
-    label?: string;
-    "aria-label"?: string;
-  }) => (
-    <input
-      aria-label={ariaLabel ?? label}
-      placeholder={placeholder}
-      value={value}
-      onChange={(event) => onValueChange?.(event.target.value)}
-    />
-  ),
-  Select: ({
-    dataSource,
-    selectedKeys,
-    onSelectionChange,
-    label,
-    isDisabled,
-    "aria-label": ariaLabel,
-  }: {
-    dataSource: { value: string | number; label: ReactNode; disabled?: boolean }[];
-    selectedKeys?: Iterable<string>;
-    onSelectionChange?: (keys: Set<string>) => void;
-    label?: string;
-    isDisabled?: boolean;
-    "aria-label"?: string;
-  }) => (
-    <select
-      aria-label={ariaLabel ?? label}
-      disabled={isDisabled}
-      value={Array.from(selectedKeys ?? [])[0] ?? ""}
-      onChange={(event) => onSelectionChange?.(new Set([event.target.value]))}
-    >
-      <option value="">Choose</option>
-      {dataSource.map((option) => (
-        <option key={option.value} disabled={option.disabled} value={option.value}>
-          {option.label}
-        </option>
-      ))}
-    </select>
-  ),
-  Pagination: ({
-    page,
-    total,
-    onChange,
-  }: {
-    page: number;
-    total: number;
-    onChange: (page: number) => void;
-  }) => (
-    <nav aria-label="Pagination">
-      <button disabled={page <= 1} type="button" onClick={() => onChange(page - 1)}>
-        Previous page
-      </button>
-      <span>
-        {page} / {total}
+// The real installed Card and Button preserve HeroUI/usePress keyboard and event bubbling
+// behavior. Other native controls keep request/selection tests compact.
+vi.mock("@/components/bakaui", async () => {
+  const { Card, CardHeader, CardBody } = await import("@heroui/card");
+  const { Button } = await import("@heroui/button");
+  const { Select: HeroSelect, SelectItem } = await import("@heroui/select");
+
+  return {
+    Card,
+    CardHeader,
+    CardBody,
+    Button,
+    Chip: ({ children, color }: { children?: ReactNode; color?: string }) => (
+      <span data-chip data-color={color}>
+        {children}
       </span>
-      <button disabled={page >= total} type="button" onClick={() => onChange(page + 1)}>
-        Next page
-      </button>
-    </nav>
-  ),
-  Spinner: () => <div role="status">Loading</div>,
-  Tooltip: ({ children }: { children?: ReactNode }) => <>{children}</>,
-  toast: { success: vi.fn(), danger: toastDanger },
-}));
+    ),
+    Input: ({
+      placeholder,
+      value,
+      onValueChange,
+      label,
+      "aria-label": ariaLabel,
+    }: {
+      placeholder?: string;
+      value?: string;
+      onValueChange?: (value: string) => void;
+      label?: string;
+      "aria-label"?: string;
+    }) => (
+      <input
+        aria-label={ariaLabel ?? label}
+        placeholder={placeholder}
+        value={value}
+        onChange={(event) => onValueChange?.(event.target.value)}
+      />
+    ),
+    Select: ({
+      dataSource,
+      selectedKeys,
+      onSelectionChange,
+      label,
+      isDisabled,
+      "aria-label": ariaLabel,
+    }: {
+      dataSource: { value: string | number; label: ReactNode; disabled?: boolean }[];
+      selectedKeys?: Iterable<string>;
+      onSelectionChange?: (keys: Set<string>) => void;
+      label?: string;
+      isDisabled?: boolean;
+      "aria-label"?: string;
+    }) =>
+      controls.realSelect ? (
+        <HeroSelect
+          disableAnimation
+          aria-label={ariaLabel ?? label}
+          isDisabled={isDisabled}
+          selectedKeys={selectedKeys}
+          onSelectionChange={onSelectionChange}
+        >
+          {dataSource.map((option) => (
+            <SelectItem key={option.value} isDisabled={option.disabled}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </HeroSelect>
+      ) : (
+        <select
+          aria-label={ariaLabel ?? label}
+          disabled={isDisabled}
+          value={Array.from(selectedKeys ?? [])[0] ?? ""}
+          onChange={(event) => onSelectionChange?.(new Set([event.target.value]))}
+        >
+          <option value="">Choose</option>
+          {dataSource.map((option) => (
+            <option key={option.value} disabled={option.disabled} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      ),
+    Pagination: ({
+      page,
+      total,
+      onChange,
+    }: {
+      page: number;
+      total: number;
+      onChange: (page: number) => void;
+    }) => (
+      <nav aria-label="Pagination">
+        <button disabled={page <= 1} type="button" onClick={() => onChange(page - 1)}>
+          Previous page
+        </button>
+        <span>
+          {page} / {total}
+        </span>
+        <button disabled={page >= total} type="button" onClick={() => onChange(page + 1)}>
+          Next page
+        </button>
+      </nav>
+    ),
+    Spinner: () => <div role="status">Loading</div>,
+    Tooltip: ({ children }: { children?: ReactNode }) => <>{children}</>,
+    toast: { success: vi.fn(), danger: toastDanger },
+  };
+});
 
 const recipes = [
   {
@@ -224,6 +223,29 @@ const click = async (element: HTMLElement) => {
   await act(async () => element.click());
 };
 
+const pointerPress = async (element: HTMLElement) => {
+  await act(async () => {
+    if (typeof PointerEvent !== "undefined") {
+      const init = {
+        bubbles: true,
+        cancelable: true,
+        pointerId: 1,
+        pointerType: "mouse",
+        button: 0,
+      };
+
+      element.dispatchEvent(new PointerEvent("pointerdown", init));
+      element.dispatchEvent(new PointerEvent("pointerup", init));
+    } else {
+      element.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, button: 0 }));
+      element.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, button: 0 }));
+    }
+    element.dispatchEvent(
+      new MouseEvent("click", { bubbles: true, cancelable: true, button: 0, detail: 1 }),
+    );
+  });
+};
+
 async function setInput(input: HTMLInputElement, value: string) {
   const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
 
@@ -242,7 +264,10 @@ async function select(input: HTMLSelectElement, value: string) {
 
 beforeEach(() => {
   (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
-  vi.resetAllMocks();
+  vi.clearAllMocks();
+  searchCandidates.mockReset();
+  createAcquisition.mockReset();
+  controls.realSelect = false;
   searchCandidates.mockResolvedValue(response());
   createAcquisition.mockResolvedValue({ code: 0, data: { id: 100 } });
   onStarted = vi.fn();
@@ -260,6 +285,138 @@ afterEach(async () => {
 });
 
 describe("CandidateOverview", () => {
+  it("handles pointer presses on card text, summary and nested actions independently", async () => {
+    await renderOverview();
+    const card = container.querySelector<HTMLElement>('section[role="button"]')!;
+
+    await pointerPress(card.querySelector<HTMLElement>('[title="Missing work"]')!);
+    expect(createPortal).toHaveBeenCalledTimes(1);
+    createPortal.mockClear();
+    await pointerPress(card.querySelector("summary")!);
+    expect(card.querySelector("details")!.open).toBe(true);
+    await pointerPress(button("acquisition.recipes.open"));
+    expect(onOpenRecipe).toHaveBeenCalledExactlyOnceWith(10);
+    expect(createPortal).not.toHaveBeenCalled();
+    await pointerPress(button("acquisition.overview.start"));
+    expect(createAcquisition).toHaveBeenCalledTimes(1);
+    expect(createPortal).not.toHaveBeenCalled();
+  });
+
+  it("lets the real HeroUI workflow select open its portal and change recipes without opening details", async () => {
+    controls.realSelect = true;
+    await renderOverview();
+    const card = container.querySelector<HTMLElement>('section[role="button"]')!;
+    const trigger = button("acquisition.overview.selectRecipe", card);
+
+    await click(trigger);
+    const listbox = document.querySelector('[role="listbox"]')!;
+
+    expect(listbox).toBeInTheDocument();
+    expect(card.contains(listbox)).toBe(false);
+    const option = Array.from(listbox.querySelectorAll<HTMLElement>('[role="option"]')).find(
+      (element) => element.textContent?.includes("My download recipe"),
+    )!;
+
+    await click(option);
+    expect(trigger).toHaveTextContent("My download recipe");
+    expect(createPortal).not.toHaveBeenCalled();
+    await click(button("acquisition.overview.start"));
+    expect(createAcquisition).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ recipeDefinitionId: 20 }),
+    );
+    expect(createPortal).not.toHaveBeenCalled();
+  });
+
+  it("opens the resource once from the card surface and ordinary title text", async () => {
+    await renderOverview();
+    const card = container.querySelector<HTMLElement>('section[role="button"]')!;
+    const title = card.querySelector<HTMLElement>('[title="Missing work"]')!;
+
+    expect(card.tagName).toBe("SECTION");
+    expect(card).toHaveAttribute("tabindex", "0");
+    expect(card).toHaveAttribute("aria-label", "Missing work");
+    expect(card.className).toContain("focus-visible:ring-2");
+    expect(title.closest("button")).toBeNull();
+    expect(card.querySelector("button button")).toBeNull();
+    await click(card);
+    expect(createPortal).toHaveBeenCalledTimes(1);
+    expect(createPortal).toHaveBeenLastCalledWith(expect.any(Function), {
+      id: 1,
+      onDestroyed: expect.any(Function),
+    });
+    createPortal.mockClear();
+    await click(title);
+    expect(createPortal).toHaveBeenCalledTimes(1);
+    expect(createAcquisition).not.toHaveBeenCalled();
+  });
+
+  it.each(["Enter", " "])(
+    "opens the focused card once with %j, ignoring repeated keydown",
+    async (key) => {
+      await renderOverview();
+      const card = container.querySelector<HTMLElement>('section[role="button"]')!;
+
+      await act(async () => {
+        card.focus();
+        card.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true }));
+        card.dispatchEvent(
+          new KeyboardEvent("keydown", { key, repeat: true, bubbles: true, cancelable: true }),
+        );
+        card.dispatchEvent(new KeyboardEvent("keyup", { key, bubbles: true, cancelable: true }));
+      });
+      expect(createPortal).toHaveBeenCalledTimes(1);
+      expect(createPortal.mock.calls[0][1].id).toBe(1);
+      expect(createAcquisition).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(["Enter", " "])(
+    "keeps native select and summary keyboard actions out of the card press for %j",
+    async (key) => {
+      await renderOverview();
+      const card = container.querySelector<HTMLElement>('section[role="button"]')!;
+      const summary = card.querySelector("summary")!;
+      const selector = card.querySelector("select")!;
+
+      for (const control of [selector, summary]) {
+        const down = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true });
+
+        await act(async () => {
+          control.focus();
+          control.dispatchEvent(down);
+          control.dispatchEvent(
+            new KeyboardEvent("keyup", { key, bubbles: true, cancelable: true }),
+          );
+        });
+        expect(down.defaultPrevented).toBe(false);
+        expect(createPortal).not.toHaveBeenCalled();
+      }
+      // JSDOM does not synthesize the browser's summary click from a keyboard event.
+      await click(summary);
+      expect(card.querySelector("details")!.open).toBe(true);
+      expect(createPortal).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(["Enter", " "])(
+    "activates a nested HeroUI task button exactly once with %j",
+    async (key) => {
+      searchCandidates.mockResolvedValueOnce(response([candidate({ activeTaskId: 99 })]));
+      await renderOverview();
+      const action = button("acquisition.overview.viewTask");
+
+      await act(async () => {
+        action.focus();
+        action.dispatchEvent(
+          new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true }),
+        );
+        action.dispatchEvent(new KeyboardEvent("keyup", { key, bubbles: true, cancelable: true }));
+      });
+      expect(onViewTasks).toHaveBeenCalledTimes(1);
+      expect(createPortal).not.toHaveBeenCalled();
+    },
+  );
+
   it("shows an unverified source and its method without promising it is downloadable", async () => {
     await renderOverview();
 
@@ -295,7 +452,7 @@ describe("CandidateOverview", () => {
     ).toBe(false);
     await click(button("acquisition.overview.addSource"));
 
-    expect(createPortal).toHaveBeenCalledWith(expect.any(Function), {
+    expect(createPortal).toHaveBeenCalledExactlyOnceWith(expect.any(Function), {
       id: 1,
       onDestroyed: expect.any(Function),
     });
@@ -318,14 +475,16 @@ describe("CandidateOverview", () => {
     expect(details.open).toBe(true);
     await click(button("acquisition.recipes.open", details));
     expect(onOpenRecipe).toHaveBeenCalledExactlyOnceWith(20);
+    expect(createPortal).not.toHaveBeenCalled();
     await click(summary);
     expect(details.open).toBe(false);
     expect(selector).toHaveValue("20");
     expect(createAcquisition).not.toHaveBeenCalled();
     await click(button("acquisition.overview.start"));
-    expect(createAcquisition).toHaveBeenCalledWith(
+    expect(createAcquisition).toHaveBeenCalledExactlyOnceWith(
       expect.objectContaining({ resourceId: 1, acquisitionLeadId: 11, recipeDefinitionId: 20 }),
     );
+    expect(createPortal).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -495,6 +654,7 @@ describe("CandidateOverview", () => {
       expect(createAcquisition).not.toHaveBeenCalled();
       await click(button("acquisition.overview.viewTask"));
       expect(onViewTasks).toHaveBeenCalledTimes(1);
+      expect(createPortal).not.toHaveBeenCalled();
     },
   );
 

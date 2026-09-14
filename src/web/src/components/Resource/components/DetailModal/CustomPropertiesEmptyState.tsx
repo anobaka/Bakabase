@@ -11,23 +11,23 @@ const CustomPropertiesEmptyState = ({ onNavigate }: { onNavigate?: () => void })
   const navigate = useNavigate();
 
   return (
-    <div className="flex items-start gap-3 rounded-xl border border-dashed border-default-200 bg-default-50/60 p-4">
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-        <AiOutlineAppstore aria-hidden className="text-xl" />
+    <div className="flex flex-wrap items-start gap-3 rounded-xl bg-default-50/60 p-3">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-default-100 text-default-500">
+        <AiOutlineAppstore aria-hidden className="text-lg" />
       </span>
       <div className="min-w-0 flex-1">
         <h3 className="text-sm font-medium text-default-700">
           {t<string>("resource.empty.noCustomPropertyBound")}
         </h3>
-        <p className="mt-1 text-sm leading-relaxed text-default-500">
+        <p className="mt-1 text-xs leading-relaxed text-default-500">
           {t<string>("resource.empty.customPropertiesDescription")}
         </p>
         <Button
-          className="mt-3"
+          className="mt-2 h-auto min-w-0 justify-start px-0 py-1"
           color="primary"
           endContent={<AiOutlineArrowRight aria-hidden className="text-base" />}
           size="sm"
-          variant="flat"
+          variant="light"
           onPress={() => {
             onNavigate?.();
             navigate("/resource-profile");

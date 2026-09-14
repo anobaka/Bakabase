@@ -79,6 +79,7 @@
   "resource.error.failedToAddMediaLibrary": "添加媒体库失败",
   "resource.error.failedToRemoveMediaLibrary": "移除媒体库失败",
   "resource.empty.noCustomPropertyBound": "还没有关联自定义属性",
+  "resource.detail.customProperties": "自定义属性",
   "resource.empty.customPropertiesDescription": "在适用于此资源的资源扩展中绑定作者、标签等属性，方便补充和整理信息。",
   "resource.empty.configureResourceProfile": "配置资源扩展",
   "resource.error.failedToLoadChildren": "加载子项失败",

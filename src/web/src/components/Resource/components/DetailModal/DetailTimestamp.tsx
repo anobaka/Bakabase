@@ -19,7 +19,7 @@ const DetailTimestamp = ({ label, value, unavailableText, action }: Props) => {
   const date = parsed?.isValid() ? parsed : undefined;
 
   return (
-    <div className="min-w-0 rounded-xl border border-default-200 bg-default-50/60 p-3">
+    <div className="min-w-0 py-1">
       <div className="flex min-h-5 items-center justify-between gap-2">
         <span className="text-xs font-medium text-default-500">{label}</span>
         {action}

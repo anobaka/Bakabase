@@ -354,7 +354,7 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
           ) : null;
         case "properties":
           return (
-            <div className={"flex flex-col gap-1"}>
+            <div className="flex min-w-0 flex-col gap-4">
               <Properties
                 columns={1}
                 reload={loadResource}
@@ -362,13 +362,18 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
                 restrictedPropertyIds={[ReservedProperty.Cover]}
                 restrictedPropertyPool={PropertyPool.Reserved}
               />
-              <Properties
-                columns={columns}
-                noPropertyContent={<CustomPropertiesEmptyState onNavigate={props.onDestroyed} />}
-                reload={loadResource}
-                resource={resource}
-                restrictedPropertyPool={PropertyPool.Custom}
-              />
+              <section className="min-w-0 border-t border-default-200/60 pt-4">
+                <h3 className="mb-2 text-sm font-medium text-default-700">
+                  {t<string>("resource.detail.customProperties")}
+                </h3>
+                <Properties
+                  columns={columns}
+                  noPropertyContent={<CustomPropertiesEmptyState onNavigate={props.onDestroyed} />}
+                  reload={loadResource}
+                  resource={resource}
+                  restrictedPropertyPool={PropertyPool.Custom}
+                />
+              </section>
             </div>
           );
         case "relatedDataCards":

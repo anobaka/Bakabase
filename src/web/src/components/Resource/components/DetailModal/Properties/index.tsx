@@ -6,7 +6,7 @@ import type { IProperty } from "@/components/Property/models";
 
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useUpdate } from "react-use";
+import { useMeasure, useUpdate } from "react-use";
 
 import { PropertyPool, PropertyValueScope, propertyValueScopes } from "@/sdk/constants";
 import { useResourceOptionsStore, useUiOptionsStore } from "@/stores/options";
@@ -18,6 +18,8 @@ import { deserializeStandardValue } from "@/components/StandardValue/helpers";
 import { Divider, Masonry } from "@/components/bakaui";
 
 type ColumnCount = 1 | 2 | 3;
+const COLUMN_GAP = 24;
+const MIN_COLUMN_WIDTH = 224;
 
 type Props = {
   resource: Resource;
@@ -60,6 +62,13 @@ const Properties = (props: Props) => {
   } = props;
   const { t } = useTranslation();
   const forceUpdate = useUpdate();
+  const [containerRef, { width }] = useMeasure<HTMLDivElement>();
+  // Keep the user's column preference as the maximum, while leaving room for labels and editors.
+  const fittingColumns =
+    width > 0
+      ? Math.max(1, Math.floor((width + COLUMN_GAP) / (MIN_COLUMN_WIDTH + COLUMN_GAP)))
+      : columns;
+  const displayColumns = Math.min(columns, fittingColumns);
   const cps = resource.properties;
   const resourceOptions = useResourceOptionsStore((state) => state.data);
   const [valueScopePriority, setValueScopePriority] = useState<PropertyValueScope[]>([]);
@@ -133,9 +142,13 @@ const Properties = (props: Props) => {
 
   if (!cps || Object.keys(cps).length == 0) {
     return (
-      <div className={"opacity-60"}>
-        {t<string>("There is no property bound yet, you can bind properties in resource profile.")}
-      </div>
+      noPropertyContent ?? (
+        <div className={"opacity-60"}>
+          {t<string>(
+            "There is no property bound yet, you can bind properties in resource profile.",
+          )}
+        </div>
+      )
     );
   }
 
@@ -286,24 +299,36 @@ const Properties = (props: Props) => {
   // log(renderContext);
 
   return (
-    <div>
+    <div ref={containerRef} className="min-w-0">
       {propertyInnerDirection == "hoz" ? (
         <>
-          <Masonry className={`${className} overflow-visible`} columns={columns}>
-            {visibleProperties.map((pCtx) => (
-              <div key={`${pCtx.propertyPool}-${pCtx.property.id}`}>{renderProperty(pCtx)}</div>
-            ))}
-          </Masonry>
+          {visibleProperties.length > 0 && (
+            <Masonry
+              className={`${className ?? ""} min-w-0 overflow-visible`}
+              columnGap={`${COLUMN_GAP}px`}
+              columns={Math.max(1, Math.min(displayColumns, visibleProperties.length))}
+              rowGap="0.5rem"
+            >
+              {visibleProperties.map((pCtx) => (
+                <div key={`${pCtx.propertyPool}-${pCtx.property.id}`}>{renderProperty(pCtx)}</div>
+              ))}
+            </Masonry>
+          )}
           {invisibleProperties.length > 0 && (
             <>
-              <div className="flex items-center gap-2 my-3 opacity-50">
-                <Divider className="flex-1" />
-                <span className="text-xs text-default-400 whitespace-nowrap">
+              <div className="my-3 flex items-center gap-2">
+                {visibleProperties.length > 0 && <Divider className="flex-1" />}
+                <span className="min-w-0 text-xs leading-relaxed text-default-500">
                   {t("The following properties are not bound to resource profiles")}
                 </span>
-                <Divider className="flex-1" />
+                {visibleProperties.length > 0 && <Divider className="flex-1" />}
               </div>
-              <Masonry className={`${className} overflow-visible`} columns={columns}>
+              <Masonry
+                className={`${className ?? ""} min-w-0 overflow-visible`}
+                columnGap={`${COLUMN_GAP}px`}
+                columns={Math.max(1, Math.min(displayColumns, invisibleProperties.length))}
+                rowGap="0.5rem"
+              >
                 {invisibleProperties.map((pCtx) => (
                   <div key={`${pCtx.propertyPool}-${pCtx.property.id}`}>{renderProperty(pCtx)}</div>
                 ))}
@@ -320,12 +345,12 @@ const Properties = (props: Props) => {
           ))}
           {invisibleProperties.length > 0 && (
             <>
-              <div className="flex items-center gap-2 my-1 opacity-50">
-                <Divider className="flex-1" />
-                <span className="text-xs text-default-400 whitespace-nowrap">
+              <div className="my-1 flex items-center gap-2">
+                {visibleProperties.length > 0 && <Divider className="flex-1" />}
+                <span className="min-w-0 text-xs leading-relaxed text-default-500">
                   {t("The following properties are not bound to resource profiles")}
                 </span>
-                <Divider className="flex-1" />
+                {visibleProperties.length > 0 && <Divider className="flex-1" />}
               </div>
               {invisibleProperties.map((pCtx) => (
                 <div
