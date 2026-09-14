@@ -5,6 +5,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
     public class ExHentaiTaskOptions
     {
         public bool PreferTorrent { get; set; } = true;
+        /// <summary>Frozen per task. Null preserves the save-only behavior of older tasks.</summary>
+        public int? DownloadResultWorkflowId { get; set; }
 
         /// <summary>
         /// When this gallery was last probed and found to have no torrent.
@@ -50,6 +52,14 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
     internal class ExHentaiTaskOptionsPatch
     {
         public bool? PreferTorrent { get; set; }
+        private int? _downloadResultWorkflowId;
+        public int? DownloadResultWorkflowId
+        {
+            get => _downloadResultWorkflowId;
+            set { _downloadResultWorkflowId = value; DownloadResultWorkflowSpecified = true; }
+        }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool DownloadResultWorkflowSpecified { get; private set; }
         public DateTime? NoTorrentCheckedAt { get; set; }
         public DateTime? TorrentFoundAt { get; set; }
         public DateTime? TorrentDownloadedAt { get; set; }

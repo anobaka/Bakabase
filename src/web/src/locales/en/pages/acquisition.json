@@ -186,5 +186,7 @@
   "acquisition.input.localDirectory": "Existing directory",
   "acquisition.input.torrent": "Torrent",
   "acquisition.input.other": "Other input",
-  "acquisition.input.none": "No compatible inputs declared"
+  "acquisition.input.none": "No compatible inputs declared",
+  "acquisition.recipe.exHentai": "ExHentai download",
+  "acquisition.recipe.exHentai.description": "Fetch a gallery through the ExHentai downloader, continue with BT when a torrent is returned, then organize and link the files to the pending resource. Requires site credentials and a library directory."
 }

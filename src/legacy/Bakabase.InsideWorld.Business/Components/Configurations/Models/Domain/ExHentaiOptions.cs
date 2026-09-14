@@ -52,6 +52,9 @@ namespace Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain
         /// </summary>
         public bool PreferTorrent { get; set; } = true;
 
+        /// <summary>Post-processing workflow for each new task's per-work result. Null only saves the result.</summary>
+        public int? DownloadResultWorkflowId { get; set; }
+
         /// <summary>
         /// When enabled (only meaningful while <see cref="PreferTorrent"/> is on), SingleWork tasks
         /// that turn out to have a torrent are processed first: a task without a torrent yields its

@@ -104,6 +104,20 @@ public class DownloadTaskPrecheckTests
     }
 
     [TestMethod]
+    public async Task ConfiguredResultWorkflow_MustRecoverAResultBeforeSkippingAnOldTorrent()
+    {
+        var task = NewTask(5, "Existing", new ExHentaiTaskOptions
+        {
+            PreferTorrent = true,
+            TorrentDownloadedAt = DateTime.Now,
+            DownloadResultWorkflowId = 42
+        });
+        WriteTorrent("Existing");
+        var verdict = await Evaluate(BuildPrecheck(), task);
+        Assert.IsNull(verdict, "The producer must durably record metadata before a configured handoff completes.");
+    }
+
+    [TestMethod]
     public async Task TorrentDownloadedStamp_IsSatisfiedWithoutTouchingTheDisk()
     {
         // The stamp is the whole point: no network, and no folder listing either. Note there is no

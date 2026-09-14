@@ -6,6 +6,10 @@
 		<Nullable>enable</Nullable>
 	</PropertyGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Bakabase.Tests" />
+  </ItemGroup>
+
 <ItemGroup>
 		<ProjectReference Include="..\..\modules\Bakabase.Modules.Downloader\Bakabase.Modules.Downloader.csproj" />
 		<ProjectReference Include="..\..\modules\Bakabase.Modules.Acquisition\Bakabase.Modules.Acquisition.csproj" />

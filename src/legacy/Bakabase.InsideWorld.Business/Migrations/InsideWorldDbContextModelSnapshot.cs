@@ -1006,6 +1006,122 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.ToTable("DownloadRecords");
                 });
 
+            modelBuilder.Entity("Bakabase.InsideWorld.Business.Components.Downloader.Models.Db.DownloadResultDbModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DeduplicationKey")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DownloadDirectory")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("DownloadTaskId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("FilesJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Fingerprint")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SourceKey")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ThirdPartyId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("WorkflowDefinitionId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeduplicationKey")
+                        .IsUnique();
+
+                    b.HasIndex("DownloadTaskId", "SourceKey");
+
+                    b.ToTable("DownloadResults");
+                });
+
+            modelBuilder.Entity("Bakabase.InsideWorld.Business.Components.Downloader.Models.Db.DownloadResultOwnerDbModel", b =>
+                {
+                    b.Property<int>("DownloadTaskId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("AcquisitionTaskId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ResourceId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("WorkflowRunId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("DownloadTaskId");
+
+                    b.HasIndex("AcquisitionTaskId")
+                        .IsUnique();
+
+                    b.ToTable("DownloadResultOwners");
+                });
+
+            modelBuilder.Entity("Bakabase.InsideWorld.Business.Components.Downloader.Models.Db.DownloadResultProcessingDbModel", b =>
+                {
+                    b.Property<int>("DownloadResultId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ContentsDirectory")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ContentsFilesJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ContentsReadyAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DispatchError")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("FilterDidNotMatch")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("LastAttemptAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("ResourceId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("WorkflowRunId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("DownloadResultId");
+
+                    b.ToTable("DownloadResultProcessing");
+                });
+
             modelBuilder.Entity("Bakabase.InsideWorld.Business.Components.Downloader.Models.Db.DownloadTaskDbModel", b =>
                 {
                     b.Property<int>("Id")

@@ -215,6 +215,12 @@ namespace Bakabase.Service.Extensions
             services.AddSingleton<Components.Acquisition.Downloads.IAcquisitionTorrentMetadataStore,
                 Components.Acquisition.Downloads.AcquisitionTorrentMetadataStore>();
             services.AddAcquisitionStep<Components.Acquisition.Steps.FetchFromPlatformStep>();
+            services.AddScoped<Components.Acquisition.Downloads.IExHentaiAcquisitionQueue,
+                Components.Acquisition.Downloads.ExHentaiAcquisitionQueue>();
+            services.AddScoped<Components.Acquisition.Downloads.ExHentaiAcquisitionService>();
+            services.AddAcquisitionStep<Components.Acquisition.Steps.FetchExHentaiStep>();
+            services.AddAcquisitionStep<Components.Acquisition.Steps.FetchResultTorrentStep>();
+            Components.Downloader.DownloadResultWorkflow.AddDownloadResultWorkflows(services);
             services.AddScoped<Components.Acquisition.SharedListImportService>();
             services.AddAcquisitionStep<Components.Acquisition.Steps.UnpackStep>();
             services.AddAcquisitionStep<Bakabase.Modules.Acquisition.Components.Steps.PickLocalDirectoryStep>();

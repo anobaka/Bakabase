@@ -122,7 +122,9 @@ public class AcquisitionStepActivity(IAcquisitionStep step) : IResumableWorkflow
             ctx.Logger,
             ctx.ReportProgress,
             workItem.WorkingDirectory,
-            ctx.ActivityConfigJson);
+            ctx.ActivityConfigJson,
+            (ctx.Payload as AcquisitionRequestedPayload)?.TaskId,
+            checked((int) ctx.RunId));
 
         return (workItem, stepCtx);
     }

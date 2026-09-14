@@ -11,6 +11,7 @@ export const WorkflowItemTypes = {
   ExHentaiGallery: "item.exhentai.gallery",
   SearchQuery: "item.searchQuery",
   DownloaderCompleted: "item.downloader.completed",
+  DownloaderResult: "item.downloader.result",
   FsEntry: "item.fs.entry",
   Resource: "item.resource",
   Acquisition: "item.acquisition",

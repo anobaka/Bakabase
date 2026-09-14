@@ -186,5 +186,7 @@
   "acquisition.input.localDirectory": "已有目录",
   "acquisition.input.torrent": "BT 种子",
   "acquisition.input.other": "其他输入",
-  "acquisition.input.none": "暂无声明的适用输入"
+  "acquisition.input.none": "暂无声明的适用输入",
+  "acquisition.recipe.exHentai": "ExHentai 下载",
+  "acquisition.recipe.exHentai.description": "通过 ExHentai 下载器取得作品，遇到种子时继续 BT 下载，再整理并关联到待下载资源。需配置站点账号与库目录。"
 }

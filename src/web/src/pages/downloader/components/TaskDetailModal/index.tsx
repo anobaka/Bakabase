@@ -35,6 +35,7 @@ import CheckpointField from "@/pages/downloader/components/TaskDetailModal/compo
 import AutoRetryField from "@/pages/downloader/components/TaskDetailModal/components/AutoRetryField.tsx";
 import AllowDuplicateField from "@/pages/downloader/components/TaskDetailModal/components/AllowDuplicateField.tsx";
 import PreferTorrentField from "@/pages/downloader/components/TaskDetailModal/components/PreferTorrentField.tsx";
+import DownloadResultsPanel from "@/pages/downloader/components/TaskDetailModal/components/DownloadResultsPanel";
 
 type Form =
   components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input.DownloadTaskAddInputModel"];
@@ -462,6 +463,9 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
         )}
         {form.thirdPartyId && form.type && (
           <div className={"flex flex-col gap-2"}>{renderFields()}</div>
+        )}
+        {!isAdding && id != null && form.thirdPartyId === ThirdPartyId.ExHentai && (
+          <DownloadResultsPanel taskId={id} />
         )}
       </Modal>
     </>

@@ -29,6 +29,10 @@ import { CollectionAddResourceUI } from "./CollectionAddResource";
 import { ResourceSetPropertyValueUI } from "./ResourceSetPropertyValue";
 import { EnhancerEnhanceUI } from "./EnhancerEnhance";
 import { PathMarkEnqueueSyncUI } from "./PathMarkEnqueueSync";
+import { DownloaderFetchTorrentResultUI } from "./DownloaderFetchTorrentResult";
+import { DownloaderPrepareResourceUI } from "./DownloaderPrepareResource";
+import { AcquisitionFetchExHentaiUI } from "./AcquisitionFetchExHentai";
+import { AcquisitionFetchResultTorrentUI } from "./AcquisitionFetchResultTorrent";
 
 export const workflowActivityRegistry: Record<string, WorkflowActivityUI<any>> = {
   [SubscriptionItemTitleContainsUI.kind]: SubscriptionItemTitleContainsUI,
@@ -59,6 +63,10 @@ export const workflowActivityRegistry: Record<string, WorkflowActivityUI<any>> =
   [ResourceSetPropertyValueUI.kind]: ResourceSetPropertyValueUI,
   [EnhancerEnhanceUI.kind]: EnhancerEnhanceUI,
   [PathMarkEnqueueSyncUI.kind]: PathMarkEnqueueSyncUI,
+  [DownloaderFetchTorrentResultUI.kind]: DownloaderFetchTorrentResultUI,
+  [DownloaderPrepareResourceUI.kind]: DownloaderPrepareResourceUI,
+  [AcquisitionFetchExHentaiUI.kind]: AcquisitionFetchExHentaiUI,
+  [AcquisitionFetchResultTorrentUI.kind]: AcquisitionFetchResultTorrentUI,
 };
 
 /** Built once per kind so the editor's forms keep their state across renders. */

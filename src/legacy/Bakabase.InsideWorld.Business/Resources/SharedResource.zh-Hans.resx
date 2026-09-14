@@ -864,4 +864,13 @@
   <data name="BTask_MessageOnInterruption_WorkflowScheduler" xml:space="preserve">
     <value>应用未运行期间定时工作流不会启动</value>
   </data>
+  <data name="BTask_Name_DownloadResultDispatch" xml:space="preserve">
+    <value>处理下载结果</value>
+  </data>
+  <data name="BTask_Description_DownloadResultDispatch" xml:space="preserve">
+    <value>为每个作品的下载结果启动已配置的后续工作流，并恢复尚未派发的结果。</value>
+  </data>
+  <data name="BTask_MessageOnInterruption_DownloadResultDispatch" xml:space="preserve">
+    <value>下载结果处理将在下一次调度时继续。</value>
+  </data>
 </root>

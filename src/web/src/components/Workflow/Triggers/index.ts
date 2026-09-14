@@ -2,6 +2,7 @@ import type { WorkflowTriggerUI } from "./types";
 
 import { SubscriptionUpdatedTriggerUI } from "./SubscriptionUpdated";
 import { DownloaderCompletedTriggerUI } from "./DownloaderCompleted";
+import { DownloaderResultReadyTriggerUI } from "./DownloaderResultReady";
 import { FsManualScanTriggerUI } from "./FsManualScan";
 import { FsScheduledScanTriggerUI } from "./FsScheduledScan";
 import { FsWatchTriggerUI } from "./FsWatch";
@@ -18,6 +19,7 @@ import { CollectionMembersAddedTriggerUI } from "./CollectionMembersAdded";
 export const workflowTriggerRegistry: Record<string, WorkflowTriggerUI<any>> = {
   [SubscriptionUpdatedTriggerUI.kind]: SubscriptionUpdatedTriggerUI,
   [DownloaderCompletedTriggerUI.kind]: DownloaderCompletedTriggerUI,
+  [DownloaderResultReadyTriggerUI.kind]: DownloaderResultReadyTriggerUI,
   [FsManualScanTriggerUI.kind]: FsManualScanTriggerUI,
   [FsScheduledScanTriggerUI.kind]: FsScheduledScanTriggerUI,
   [FsWatchTriggerUI.kind]: FsWatchTriggerUI,

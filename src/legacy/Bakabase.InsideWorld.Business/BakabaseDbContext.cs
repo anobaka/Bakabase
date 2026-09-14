@@ -34,6 +34,9 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<DownloadTaskDbModel> DownloadTasks { get; set; }
 
         public DbSet<DownloadRecordDbModel> DownloadRecords { get; set; }
+        public DbSet<DownloadResultDbModel> DownloadResults { get; set; }
+        public DbSet<DownloadResultOwnerDbModel> DownloadResultOwners { get; set; }
+        public DbSet<DownloadResultProcessingDbModel> DownloadResultProcessing { get; set; }
 
         public DbSet<PasswordDbModel> Passwords { get; set; }
 
@@ -164,6 +167,24 @@ namespace Bakabase.InsideWorld.Business
                 t.HasIndex(a => a.ThirdPartyId);
                 t.HasIndex(a => new {a.ThirdPartyId, a.Type});
                 t.HasIndex(a => a.Status);
+            });
+
+            modelBuilder.Entity<DownloadResultDbModel>(t =>
+            {
+                t.HasIndex(a => a.DeduplicationKey).IsUnique();
+                t.HasIndex(a => new {a.DownloadTaskId, a.SourceKey});
+            });
+
+            modelBuilder.Entity<DownloadResultProcessingDbModel>(t =>
+            {
+                t.HasKey(a => a.DownloadResultId);
+                t.Property(a => a.DownloadResultId).ValueGeneratedNever();
+            });
+
+            modelBuilder.Entity<DownloadResultOwnerDbModel>(t =>
+            {
+                t.HasKey(a => a.DownloadTaskId);
+                t.HasIndex(a => a.AcquisitionTaskId).IsUnique();
             });
 
             modelBuilder.Entity<DownloadRecordDbModel>(t =>

@@ -137,7 +137,9 @@ const WorkflowRunsDrawer: React.FC<Props> = ({
                   >
                     <div className="flex items-center gap-2">
                       <Chip color={StatusColor[status] ?? "default"} size="sm" variant="flat">
-                        {WorkflowRunStatusLabel[status]}
+                        {t(`workflow.runs.status.${WorkflowRunStatus[status]}`, {
+                          defaultValue: WorkflowRunStatusLabel[status],
+                        })}
                       </Chip>
                       <span className="text-xs text-default-500">
                         #{r.id} · {new Date(r.startedAt).toLocaleString()}

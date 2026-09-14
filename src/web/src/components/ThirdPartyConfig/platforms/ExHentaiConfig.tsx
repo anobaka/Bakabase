@@ -13,6 +13,7 @@ import TampermonkeyInstallButton from "../base/TampermonkeyInstallButton";
 import AutoSyncPanel from "../base/AutoSyncPanel";
 import ThirdPartyConfigModal from "../base/ThirdPartyConfigModal";
 import ProxyField from "../base/ProxyField";
+import DownloadResultWorkflowField from "../base/DownloadResultWorkflowField";
 
 import { Checkbox, Chip, NumberInput, toast } from "@/components/bakaui";
 import { FileSystemSelectorButton } from "@/components/FileSystemSelector";
@@ -224,6 +225,10 @@ export const ExHentaiConfigPanel: FC<ExHentaiConfigPanelProps> = ({ fields = "al
               // box does not need to mean something different from what the user can type.
               value={options?.torrentCheckValidityHours ?? 0}
               onValueChange={(v) => patch({ torrentCheckValidityHours: Number.isNaN(v) ? 0 : v })}
+            />
+            <DownloadResultWorkflowField
+              value={options?.downloadResultWorkflowId}
+              onChange={(workflowId) => patch({ downloadResultWorkflowId: workflowId ?? 0 })}
             />
           </div>
         ),

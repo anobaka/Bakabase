@@ -35,6 +35,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
             services.AddScoped<DownloadTaskService>();
             services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, DownloadRecordDbModel, int>>();
             services.AddScoped<DownloadRecordService>();
+            services.AddScoped<DownloadResultService>();
             services.AddSingleton<DownloaderManager>();
             services.AddSingleton<ITransientTorrentVerdictCache>(sp => sp.GetRequiredService<DownloaderManager>());
             services.AddTransient<IDownloaderLocalizer, DownloaderLocalizer>();

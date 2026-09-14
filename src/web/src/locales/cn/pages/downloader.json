@@ -106,5 +106,22 @@
   "downloader.label.torrentDisabled": "不下种子",
   "downloader.tip.torrentFoundAt": "{{time}} 检测到该帖子有种子。",
   "downloader.tip.noTorrentCheckedAt": "{{time}} 检测到该帖子没有种子，将改为逐页下载图片。",
-  "downloader.tip.torrentDisabled": "该任务未开启“优先下载种子”，将直接下载图片。"
+  "downloader.tip.torrentDisabled": "该任务未开启“优先下载种子”，将直接下载图片。",
+  "downloader.results.title": "作品下载结果",
+  "downloader.results.description": "每个作品分别记录结果。种子已取得与实际内容已下载是两个阶段；后续工作流负责继续下载和整理。",
+  "downloader.results.refresh": "刷新下载结果",
+  "downloader.results.loadFailed": "暂时无法加载结果，请刷新重试。",
+  "downloader.results.empty": "暂无作品结果。下载器取得种子或完整文件后会显示在这里。",
+  "downloader.results.contentsReady": "实际内容已下载",
+  "downloader.results.torrentReady": "种子已取得",
+  "downloader.results.filesUnavailable": "文件不可用",
+  "downloader.results.saveOnly": "仅保存结果，未配置后续工作流。",
+  "downloader.results.queued": "等待工作流处理",
+  "downloader.results.filtered": "此结果不符合工作流的结果类型条件，已跳过。",
+  "downloader.results.acquisitionOwned": "由获取任务 #{{id}} 发起，后续步骤在原工作流中继续。",
+  "downloader.results.viewAcquisition": "查看获取任务",
+  "downloader.results.viewRun": "运行记录（#{{id}}）",
+  "downloader.results.retry": "重试后续工作流",
+  "downloader.results.retryFailed": "重试未能启动，请刷新状态后重试。",
+  "downloader.results.workflowFallback": "工作流 #{{id}}"
 }

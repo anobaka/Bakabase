@@ -1147,6 +1147,21 @@ export const BilibiliNamingFieldsLabel: Record<BilibiliNamingFields, string> = {
   [BilibiliNamingFields.Extension]: 'Extension'
 };
 
+export enum DownloadResultKind {
+  TorrentMetadata = 1,
+  LocalFiles = 2
+}
+
+export const downloadResultKinds = [
+  { label: 'TorrentMetadata', value: DownloadResultKind.TorrentMetadata },
+  { label: 'LocalFiles', value: DownloadResultKind.LocalFiles }
+] as const;
+
+export const DownloadResultKindLabel: Record<DownloadResultKind, string> = {
+  [DownloadResultKind.TorrentMetadata]: 'TorrentMetadata',
+  [DownloadResultKind.LocalFiles]: 'LocalFiles'
+};
+
 export enum DownloaderStatus {
   JustCreated = 0,
   Starting = 100,
@@ -4162,6 +4177,102 @@ export const NullValueBehaviorLabel: Record<NullValueBehavior, string> = {
   [NullValueBehavior.Pass]: 'Pass'
 };
 
+export enum WorkflowActivityCardinality {
+  OneToOne = 1,
+  OneToMany = 2
+}
+
+export const workflowActivityCardinalities = [
+  { label: 'OneToOne', value: WorkflowActivityCardinality.OneToOne },
+  { label: 'OneToMany', value: WorkflowActivityCardinality.OneToMany }
+] as const;
+
+export const WorkflowActivityCardinalityLabel: Record<WorkflowActivityCardinality, string> = {
+  [WorkflowActivityCardinality.OneToOne]: 'OneToOne',
+  [WorkflowActivityCardinality.OneToMany]: 'OneToMany'
+};
+
+export enum WorkflowActivityCategory {
+  Filter = 1,
+  Action = 2,
+  Transform = 3
+}
+
+export const workflowActivityCategories = [
+  { label: 'Filter', value: WorkflowActivityCategory.Filter },
+  { label: 'Action', value: WorkflowActivityCategory.Action },
+  { label: 'Transform', value: WorkflowActivityCategory.Transform }
+] as const;
+
+export const WorkflowActivityCategoryLabel: Record<WorkflowActivityCategory, string> = {
+  [WorkflowActivityCategory.Filter]: 'Filter',
+  [WorkflowActivityCategory.Action]: 'Action',
+  [WorkflowActivityCategory.Transform]: 'Transform'
+};
+
+export enum WorkflowActivityErrorBehavior {
+  Fail = 1,
+  Skip = 2
+}
+
+export const workflowActivityErrorBehaviors = [
+  { label: 'Fail', value: WorkflowActivityErrorBehavior.Fail },
+  { label: 'Skip', value: WorkflowActivityErrorBehavior.Skip }
+] as const;
+
+export const WorkflowActivityErrorBehaviorLabel: Record<WorkflowActivityErrorBehavior, string> = {
+  [WorkflowActivityErrorBehavior.Fail]: 'Fail',
+  [WorkflowActivityErrorBehavior.Skip]: 'Skip'
+};
+
+export enum WorkflowItemTypeBehavior {
+  Passthrough = 1,
+  Fixed = 2,
+  AdaptToNext = 3
+}
+
+export const workflowItemTypeBehaviors = [
+  { label: 'Passthrough', value: WorkflowItemTypeBehavior.Passthrough },
+  { label: 'Fixed', value: WorkflowItemTypeBehavior.Fixed },
+  { label: 'AdaptToNext', value: WorkflowItemTypeBehavior.AdaptToNext }
+] as const;
+
+export const WorkflowItemTypeBehaviorLabel: Record<WorkflowItemTypeBehavior, string> = {
+  [WorkflowItemTypeBehavior.Passthrough]: 'Passthrough',
+  [WorkflowItemTypeBehavior.Fixed]: 'Fixed',
+  [WorkflowItemTypeBehavior.AdaptToNext]: 'AdaptToNext'
+};
+
+export enum WorkflowRunStatus {
+  Pending = 1,
+  Running = 2,
+  Success = 3,
+  Failed = 4,
+  Cancelled = 5,
+  Interrupted = 6,
+  Waiting = 7
+}
+
+export const workflowRunStatuses = [
+  { label: 'Pending', value: WorkflowRunStatus.Pending },
+  { label: 'Running', value: WorkflowRunStatus.Running },
+  { label: 'Success', value: WorkflowRunStatus.Success },
+  { label: 'Failed', value: WorkflowRunStatus.Failed },
+  { label: 'Cancelled', value: WorkflowRunStatus.Cancelled },
+  { label: 'Interrupted', value: WorkflowRunStatus.Interrupted },
+  { label: 'Waiting', value: WorkflowRunStatus.Waiting }
+] as const;
+
+export const WorkflowRunStatusLabel: Record<WorkflowRunStatus, string> = {
+  [WorkflowRunStatus.Pending]: 'Pending',
+  [WorkflowRunStatus.Running]: 'Running',
+  [WorkflowRunStatus.Success]: 'Success',
+  [WorkflowRunStatus.Failed]: 'Failed',
+  [WorkflowRunStatus.Cancelled]: 'Cancelled',
+  [WorkflowRunStatus.Interrupted]: 'Interrupted',
+  [WorkflowRunStatus.Waiting]: 'Waiting'
+};
+
 export enum DeviceAuthOutcome {
   Anonymous = 0,
   Authenticated = 1,
@@ -5318,102 +5429,6 @@ export const SubscriptionSourceKindLabel: Record<SubscriptionSourceKind, string>
   [SubscriptionSourceKind.PlatformHolding]: 'PlatformHolding',
   [SubscriptionSourceKind.Catalog]: 'Catalog',
   [SubscriptionSourceKind.SharingChannel]: 'SharingChannel'
-};
-
-export enum WorkflowActivityCardinality {
-  OneToOne = 1,
-  OneToMany = 2
-}
-
-export const workflowActivityCardinalities = [
-  { label: 'OneToOne', value: WorkflowActivityCardinality.OneToOne },
-  { label: 'OneToMany', value: WorkflowActivityCardinality.OneToMany }
-] as const;
-
-export const WorkflowActivityCardinalityLabel: Record<WorkflowActivityCardinality, string> = {
-  [WorkflowActivityCardinality.OneToOne]: 'OneToOne',
-  [WorkflowActivityCardinality.OneToMany]: 'OneToMany'
-};
-
-export enum WorkflowActivityCategory {
-  Filter = 1,
-  Action = 2,
-  Transform = 3
-}
-
-export const workflowActivityCategories = [
-  { label: 'Filter', value: WorkflowActivityCategory.Filter },
-  { label: 'Action', value: WorkflowActivityCategory.Action },
-  { label: 'Transform', value: WorkflowActivityCategory.Transform }
-] as const;
-
-export const WorkflowActivityCategoryLabel: Record<WorkflowActivityCategory, string> = {
-  [WorkflowActivityCategory.Filter]: 'Filter',
-  [WorkflowActivityCategory.Action]: 'Action',
-  [WorkflowActivityCategory.Transform]: 'Transform'
-};
-
-export enum WorkflowActivityErrorBehavior {
-  Fail = 1,
-  Skip = 2
-}
-
-export const workflowActivityErrorBehaviors = [
-  { label: 'Fail', value: WorkflowActivityErrorBehavior.Fail },
-  { label: 'Skip', value: WorkflowActivityErrorBehavior.Skip }
-] as const;
-
-export const WorkflowActivityErrorBehaviorLabel: Record<WorkflowActivityErrorBehavior, string> = {
-  [WorkflowActivityErrorBehavior.Fail]: 'Fail',
-  [WorkflowActivityErrorBehavior.Skip]: 'Skip'
-};
-
-export enum WorkflowItemTypeBehavior {
-  Passthrough = 1,
-  Fixed = 2,
-  AdaptToNext = 3
-}
-
-export const workflowItemTypeBehaviors = [
-  { label: 'Passthrough', value: WorkflowItemTypeBehavior.Passthrough },
-  { label: 'Fixed', value: WorkflowItemTypeBehavior.Fixed },
-  { label: 'AdaptToNext', value: WorkflowItemTypeBehavior.AdaptToNext }
-] as const;
-
-export const WorkflowItemTypeBehaviorLabel: Record<WorkflowItemTypeBehavior, string> = {
-  [WorkflowItemTypeBehavior.Passthrough]: 'Passthrough',
-  [WorkflowItemTypeBehavior.Fixed]: 'Fixed',
-  [WorkflowItemTypeBehavior.AdaptToNext]: 'AdaptToNext'
-};
-
-export enum WorkflowRunStatus {
-  Pending = 1,
-  Running = 2,
-  Success = 3,
-  Failed = 4,
-  Cancelled = 5,
-  Interrupted = 6,
-  Waiting = 7
-}
-
-export const workflowRunStatuses = [
-  { label: 'Pending', value: WorkflowRunStatus.Pending },
-  { label: 'Running', value: WorkflowRunStatus.Running },
-  { label: 'Success', value: WorkflowRunStatus.Success },
-  { label: 'Failed', value: WorkflowRunStatus.Failed },
-  { label: 'Cancelled', value: WorkflowRunStatus.Cancelled },
-  { label: 'Interrupted', value: WorkflowRunStatus.Interrupted },
-  { label: 'Waiting', value: WorkflowRunStatus.Waiting }
-] as const;
-
-export const WorkflowRunStatusLabel: Record<WorkflowRunStatus, string> = {
-  [WorkflowRunStatus.Pending]: 'Pending',
-  [WorkflowRunStatus.Running]: 'Running',
-  [WorkflowRunStatus.Success]: 'Success',
-  [WorkflowRunStatus.Failed]: 'Failed',
-  [WorkflowRunStatus.Cancelled]: 'Cancelled',
-  [WorkflowRunStatus.Interrupted]: 'Interrupted',
-  [WorkflowRunStatus.Waiting]: 'Waiting'
 };
 
 export enum LogLevel {

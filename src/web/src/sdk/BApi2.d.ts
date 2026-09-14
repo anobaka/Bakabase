@@ -2500,6 +2500,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/downloader/result": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDownloadResults"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/downloader/result/{id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RetryDownloadResultWorkflow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/download-task/downloaders/definitions": {
         parameters: {
             query?: never;
@@ -8709,6 +8741,8 @@ export interface components {
             defaultPath?: string;
             namingConvention?: string;
             preferTorrent: boolean;
+            /** Format: int32 */
+            downloadResultWorkflowId?: number;
             prioritizeTasksWithTorrent: boolean;
             /** Format: int32 */
             torrentCheckValidityHours?: number;
@@ -8955,6 +8989,8 @@ export interface components {
             defaultPath?: string;
             namingConvention?: string;
             preferTorrent?: boolean;
+            /** Format: int32 */
+            downloadResultWorkflowId?: number;
             prioritizeTasksWithTorrent?: boolean;
             skipExisting?: boolean;
             /** Format: int32 */
@@ -9136,6 +9172,12 @@ export interface components {
          * @enum {integer}
          */
         "Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants.DownloadTaskStatus": 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800;
+        /**
+         * Format: int32
+         * @description [1: TorrentMetadata, 2: LocalFiles]
+         * @enum {integer}
+         */
+        "Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.DownloadResultKind": 1 | 2;
         "Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.DownloadTask": {
             /** Format: int32 */
             id: number;
@@ -12095,6 +12137,33 @@ export interface components {
             percentage?: number;
             message?: string;
         };
+        "Bakabase.Service.Models.View.DownloadResultViewModel": {
+            /** Format: int32 */
+            id: number;
+            /** Format: int32 */
+            downloadTaskId: number;
+            sourceKey: string;
+            name: string;
+            kind: components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.DownloadResultKind"];
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: int32 */
+            workflowDefinitionId?: number;
+            /** Format: int32 */
+            workflowRunId?: number;
+            workflowStatus?: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants.WorkflowRunStatus"];
+            workflowName?: string;
+            workflowIsBuiltin: boolean;
+            /** Format: int32 */
+            acquisitionTaskId?: number;
+            contentsReady: boolean;
+            contentsDirectory?: string;
+            /** Format: int32 */
+            resourceId?: number;
+            error?: string;
+            filterDidNotMatch: boolean;
+            canRetry: boolean;
+        };
         "Bakabase.Service.Models.View.EnhancementViewModel": {
             /** Format: int32 */
             id: number;
@@ -12853,6 +12922,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Models.View.CustomPropertyViewModel"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.DownloadResultViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.DownloadResultViewModel"][];
         };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.FileRenameEntryViewModel]": {
             /** Format: int32 */
@@ -19679,6 +19754,54 @@ export interface operations {
                 "application/*+json": boolean;
             };
         };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetDownloadResults: {
+        parameters: {
+            query?: {
+                taskId?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.DownloadResultViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.DownloadResultViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.DownloadResultViewModel]"];
+                };
+            };
+        };
+    };
+    RetryDownloadResultWorkflow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description OK */
             200: {

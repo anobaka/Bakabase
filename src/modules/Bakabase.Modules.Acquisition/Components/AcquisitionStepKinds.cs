@@ -36,6 +36,9 @@ public static class AcquisitionStepKinds
     /// <summary>Asks the platform that holds the resource to hand it over.</summary>
     public const string FetchFromPlatform = $"{Module}.fetchFromPlatform";
 
+    public const string FetchExHentai = $"{Module}.fetchExHentai";
+    public const string FetchResultTorrent = $"{Module}.fetchResultTorrent";
+
     /// <summary>Extracts archives, trying the passwords it knows about.</summary>
     public const string Unpack = $"{Module}.unpack";
 

@@ -339,10 +339,22 @@ namespace Bakabase.Service.Controllers
 
         [HttpPatch("exhentai")]
         [SwaggerOperation(OperationId = "PatchExHentaiOptions")]
-        public async Task<BaseResponse> PatchExHentaiOptions([FromBody] ExHentaiOptionsPatchInputModel model)
+        public async Task<BaseResponse> PatchExHentaiOptions([FromBody] ExHentaiOptionsPatchInputModel model,
+            [FromServices] Bakabase.Modules.Workflow.Abstractions.Services.IWorkflowDefinitionService workflows)
         {
+            if (model.DownloadResultWorkflowId is < 0)
+                return BaseResponseBuilder.BuildBadRequest("Choose a valid download result workflow.");
+            if (model.DownloadResultWorkflowId is > 0)
+            {
+                var workflow = await workflows.GetAsync(model.DownloadResultWorkflowId.Value);
+                if (workflow == null || !workflow.Enabled ||
+                    workflow.TriggerKind != Components.Downloader.DownloadResultWorkflow.Trigger)
+                    return BaseResponseBuilder.BuildBadRequest("Choose an enabled workflow with the download-result-ready trigger.");
+            }
             await _bakabaseOptionsManager.Get<ExHentaiOptions>().SaveAsync(options =>
             {
+                if (model.DownloadResultWorkflowId.HasValue)
+                    options.DownloadResultWorkflowId = model.DownloadResultWorkflowId > 0 ? model.DownloadResultWorkflowId : null;
                 if (model.Accounts != null)
                 {
                     options.Accounts = model.Accounts;

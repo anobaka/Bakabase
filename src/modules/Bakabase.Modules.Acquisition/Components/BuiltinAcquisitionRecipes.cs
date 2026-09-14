@@ -33,6 +33,8 @@ public static class BuiltinAcquisitionRecipes
     /// <summary>The user owns it on a platform that can hand it over.</summary>
     public const string PlatformFetch = "Platform fetch";
 
+    public const string ExHentaiDownload = "ExHentai download";
+
     /// <summary>The files are already on disk somewhere; only the library does not know.</summary>
     public const string LocalDirectory = "Local directory";
 
@@ -80,6 +82,14 @@ public static class BuiltinAcquisitionRecipes
             Step(AcquisitionStepKinds.Materialize)
         ], "Download the files described by a torrent URL or uploaded torrent using the built-in BitTorrent engine.",
             "acquisition.workflow.torrentDownload.description"),
+        new(ExHentaiDownload,
+        [
+            Step(AcquisitionStepKinds.FetchExHentai),
+            Step(AcquisitionStepKinds.FetchResultTorrent),
+            Step(AcquisitionStepKinds.Place),
+            Step(AcquisitionStepKinds.Materialize)
+        ], "Obtain an ExHentai gallery, download its torrent contents when needed, and import the complete resource.",
+            "acquisition.recipe.exHentai.description"),
         new(PlatformFetch,
         [
             Step(AcquisitionStepKinds.FetchFromPlatform),
@@ -114,6 +124,13 @@ public static class BuiltinAcquisitionRecipes
     /// <summary>The same effective default for the overview and for actually starting a task.</summary>
     public static string DefaultRecipeNameFor(AcquisitionLeadKind kind, AcquisitionOptions options) =>
         options.RecipeByLeadKind.GetValueOrDefault(kind) ?? DefaultRecipeNameFor(kind);
+
+    public static string DefaultRecipeNameFor(AcquisitionLeadKind kind, string? value, AcquisitionOptions options) =>
+        options.RecipeByLeadKind.GetValueOrDefault(kind) ??
+        (kind == AcquisitionLeadKind.PlatformHolding &&
+         value?.StartsWith("ExHentai:", StringComparison.OrdinalIgnoreCase) == true
+            ? ExHentaiDownload
+            : DefaultRecipeNameFor(kind));
 
     public static AcquisitionRecipe? ByName(string name) =>
         All.FirstOrDefault(r => string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase));

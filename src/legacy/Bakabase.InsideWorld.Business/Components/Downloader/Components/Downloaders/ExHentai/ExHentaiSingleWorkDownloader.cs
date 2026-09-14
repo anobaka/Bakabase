@@ -39,7 +39,9 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                                    && options.PreferTorrent
                                    && !knownToHaveNoTorrent;
 
-            await DownloadSingleWork(task.Key, task.Checkpoint, task.DownloadPath, OnNameAcquiredInternal,
+            var workPath = ExHentaiDownloadResultHelper.GetWorkDirectory(task.DownloadPath, task.Key,
+                options.DownloadResultWorkflowId);
+            await DownloadSingleWork(task.Id, task.Key, task.Checkpoint, workPath, OnNameAcquiredInternal,
                 async current =>
                 {
                     Current = current;
@@ -48,7 +50,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                 options.PreferTorrent && !knownToHaveNoTorrent,
                 deferIfNoTorrent, () => manager.MarkNoTorrentAsync(task.Id),
                 () => manager.MarkTorrentFoundAsync(task.Id),
-                () => manager.MarkTorrentDownloadedAsync(task.Id));
+                () => manager.MarkTorrentDownloadedAsync(task.Id),
+                options.DownloadResultWorkflowId);
         }
     }
 }

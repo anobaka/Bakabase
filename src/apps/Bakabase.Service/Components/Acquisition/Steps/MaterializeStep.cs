@@ -63,6 +63,14 @@ public class MaterializeStep : IAcquisitionStep
             var materialization = ctx.ServiceProvider.GetRequiredService<IResourceMaterializationService>();
             var result = await materialization.MaterializeAsync(item.ResourceId, target,
                 MaterializationOptions.Default, ct);
+            if (item.Variables.TryGetValue("downloadResultId", out var resultIdText) &&
+                int.TryParse(resultIdText, out var downloadResultId))
+            {
+                await ctx.ServiceProvider.GetRequiredService<Components.Downloader.DownloadResultWorkflowService>()
+                    .RecordMaterializedAsync(downloadResultId, ctx.WorkflowRunId ??
+                        throw new InvalidOperationException("A download result requires its workflow run."),
+                        result.ResourceId, target, item.Files, ct);
+            }
 
             // The name may still be the placeholder the user typed before anything was known about
             // it; what the shared content called it is better, and it is what the folder is called.

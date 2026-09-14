@@ -69,7 +69,7 @@ public class AcquisitionService<TDbContext>(
                 $"\"{name}\" is already being acquired (task #{existing.Id}).");
         }
 
-        var recipe = await ResolveRecipe(recipeDefinitionId, leadKind, ct);
+        var recipe = await ResolveRecipe(recipeDefinitionId, leadKind, leadValue, ct);
         await ValidateBeforeStarting(recipe.Id, resourceId, leadKind, leadValue, ct);
 
         var now = DateTime.Now;
@@ -380,7 +380,7 @@ public class AcquisitionService<TDbContext>(
 
     // ------- helpers -------
 
-    private async Task<WorkflowDefinitionDbModel> ResolveRecipe(int? explicitId, AcquisitionLeadKind leadKind,
+    private async Task<WorkflowDefinitionDbModel> ResolveRecipe(int? explicitId, AcquisitionLeadKind leadKind, string? leadValue,
         CancellationToken ct)
     {
         if (explicitId is { } id)
@@ -389,7 +389,7 @@ public class AcquisitionService<TDbContext>(
                    ?? throw new InvalidOperationException($"Recipe #{id} does not exist.");
         }
 
-        var name = BuiltinAcquisitionRecipes.DefaultRecipeNameFor(leadKind, options.Value);
+        var name = BuiltinAcquisitionRecipes.DefaultRecipeNameFor(leadKind, leadValue, options.Value);
 
         var byName = await Defs.Where(
                 d => d.TriggerKind == AcquisitionWorkflowKinds.TriggerRequested && d.Name == name)

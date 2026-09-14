@@ -57,5 +57,16 @@
   "thirdPartyConfig.field.requestTimeout.description": "等待响应的最大时间，超时后将放弃请求。",
   "thirdPartyConfig.field.namingConvention.label": "命名规则",
   "thirdPartyConfig.field.namingConvention.description": "定义下载文件和文件夹的命名方式。可使用下方的可用变量。",
-  "thirdPartyConfig.tip.cookieCapturedHereUsedThere": "登录窗口在本机打开，网站看到的是本机的出口地址；而之后使用该 Cookie 的请求由服务端发出，用的是服务端的出口地址。把会话绑定到固定地址的网站会因此拒绝这些请求。"
+  "thirdPartyConfig.tip.cookieCapturedHereUsedThere": "登录窗口在本机打开，网站看到的是本机的出口地址；而之后使用该 Cookie 的请求由服务端发出，用的是服务端的出口地址。把会话绑定到固定地址的网站会因此拒绝这些请求。",
+  "thirdPartyConfig.downloadResultWorkflow.title": "下载结果后续处理",
+  "thirdPartyConfig.downloadResultWorkflow.label": "后续工作流",
+  "thirdPartyConfig.downloadResultWorkflow.saveOnly": "仅保存下载结果",
+  "thirdPartyConfig.downloadResultWorkflow.description": "取得种子不代表已下载实际内容。可选择工作流，在每个作品的结果就绪后继续 BT 下载；内置工作流只下载内容，需要入库时可复制工作流并添加整理、入库节点。",
+  "thirdPartyConfig.downloadResultWorkflow.scope": "此设置用于之后创建的独立下载器任务，已有任务保留创建时的设置。由“获取资源”发起的任务会在原工作流中继续处理。BT 失败时可在任务的下载结果中重试后续工作流，无需重新获取种子。",
+  "thirdPartyConfig.downloadResultWorkflow.refresh": "刷新可用工作流",
+  "thirdPartyConfig.downloadResultWorkflow.view": "查看工作流",
+  "thirdPartyConfig.downloadResultWorkflow.loadFailed": "无法加载工作流，请刷新后重试。当前设置未变更。",
+  "thirdPartyConfig.downloadResultWorkflow.unavailable": "已配置的工作流已停用、删除或不再适用于下载结果，请选择其他工作流。",
+  "thirdPartyConfig.downloadResultWorkflow.unavailableSelection": "当前工作流 #{{id}}",
+  "thirdPartyConfig.downloadResultWorkflow.saveFailed": "保存失败，请重试。当前设置未变更。"
 }

@@ -162,6 +162,7 @@ public class PlaceStep : IAcquisitionStep
             }
         }
 
+        var movedFiles = new List<string>();
         try
         {
             var candidate = libraryRoot;
@@ -181,7 +182,7 @@ public class PlaceStep : IAcquisitionStep
             await AcquisitionLibraryMarks.PrepareAsync(
                 ctx.ServiceProvider.GetRequiredService<IPathMarkService>(), libraryRoot, target, ct);
             Directory.CreateDirectory(libraryRoot);
-            MoveInto(item.PreserveDirectoryStructure ? source : Collapse(source), target);
+            MoveInto(item.PreserveDirectoryStructure ? source : Collapse(source), target, movedFiles);
         }
         catch (IOException ex)
         {
@@ -192,11 +193,10 @@ public class PlaceStep : IAcquisitionStep
             item.ResourceId, target);
         await ctx.ReportProgress(100, name);
 
-        return new AcquisitionStepOutcome.Continue(item with
-        {
-            WorkingName = name,
-            TargetDirectory = target,
-        });
+        var placed = item with {WorkingName = name, TargetDirectory = target, Files = movedFiles};
+        foreach (var observer in ctx.ServiceProvider.GetServices<IAcquisitionContentsObserver>())
+            await observer.OnContentsReadyAsync(ctx, placed, target, movedFiles, ct);
+        return new AcquisitionStepOutcome.Continue(placed);
     }
 
     /// <summary>
@@ -228,7 +228,7 @@ public class PlaceStep : IAcquisitionStep
         return entries.Length == 1 && Directory.Exists(entries[0]) ? entries[0] : source;
     }
 
-    private static void MoveInto(string source, string target)
+    private static void MoveInto(string source, string target, List<string> movedFiles)
     {
         Directory.CreateDirectory(target);
 
@@ -247,7 +247,7 @@ public class PlaceStep : IAcquisitionStep
                 {
                     // File.Move also supports different volumes; Directory.Move does not. Recurse
                     // for both new and merged folders, and remove only a successfully emptied source.
-                    MoveInto(entry, destination);
+                    MoveInto(entry, destination, movedFiles);
                     Directory.Delete(entry);
                 }
             }
@@ -255,6 +255,7 @@ public class PlaceStep : IAcquisitionStep
             {
                 if (File.Exists(destination)) File.Delete(destination);
                 File.Move(entry, destination);
+                movedFiles.Add(Path.GetFullPath(destination));
             }
         }
     }

@@ -189,7 +189,7 @@ public class AcquisitionCandidateService(
     private AcquisitionCandidateLeadViewModel Describe(AcquisitionLead lead,
         List<AcquisitionRecipeSummary> recipes, ResourceSource? platform = null)
     {
-        var defaultName = BuiltinAcquisitionRecipes.DefaultRecipeNameFor(lead.Kind, options.Value);
+        var defaultName = BuiltinAcquisitionRecipes.DefaultRecipeNameFor(lead.Kind, lead.Value, options.Value);
         var defaultRecipe = recipes.Where(r => r.Name == defaultName)
             .OrderBy(r => r.DefinitionId).FirstOrDefault();
         var applicable = recipes.Where(r => r.ApplicableLeadKinds.Contains(lead.Kind))

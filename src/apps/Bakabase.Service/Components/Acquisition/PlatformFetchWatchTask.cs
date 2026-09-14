@@ -9,6 +9,7 @@ using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Acquisition.Abstractions.Services;
 using Bakabase.Service.Components.Acquisition.Steps;
+using Bakabase.Service.Components.Acquisition.Downloads;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -38,15 +39,15 @@ public class PlatformFetchWatchTask(IServiceProvider serviceProvider, IBakabaseL
     /// </summary>
     public override TimeSpan? GetInterval() => TimeSpan.FromMinutes(1);
 
-    /// <summary>Bookkeeping. A row saying "nothing arrived" every minute would bury the task list.</summary>
-    public override bool IsPersistent => false;
-
     public override async Task RunAsync(BTaskArgs args)
     {
         await using var scope = CreateScope();
         var acquisitions = scope.ServiceProvider.GetService<IAcquisitionService>();
 
         if (acquisitions == null) return;
+
+        var ownedDownloads = scope.ServiceProvider.GetRequiredService<ExHentaiAcquisitionService>();
+        await ownedDownloads.StopAbandonedAsync(args.CancellationToken);
 
         var waiting = (await acquisitions.SearchAsync(AcquisitionStatus.Waiting, ct: args.CancellationToken))
             .Where(t => t.WaitReason == AcquisitionWaitReason.PlatformFetch)
@@ -88,6 +89,15 @@ public class PlatformFetchWatchTask(IServiceProvider serviceProvider, IBakabaseL
 
             try
             {
+                var owned = await ownedDownloads.GetAsync(task.Id, task.ResourceId, args.CancellationToken);
+                if (owned != null)
+                {
+                    // Metadata is a result too. Wake the original node so its next BT node can run;
+                    // failed/stopped/deleted children also wake it rather than waiting forever.
+                    if (owned.Result != null || owned.Error != null)
+                        await acquisitions.ResumeAsync(task.Id, "{}", args.CancellationToken);
+                    continue;
+                }
                 if (await connector.DetectLocalPathAsync(prompt.SourceKey, args.CancellationToken)
                     is not {Length: > 0})
                 {

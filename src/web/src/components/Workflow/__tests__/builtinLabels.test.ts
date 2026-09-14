@@ -5,6 +5,8 @@ import { workflowLabel } from "../builtinLabels";
 
 import cn from "@/locales/cn/pages/acquisition.json";
 import en from "@/locales/en/pages/acquisition.json";
+import cnWorkflow from "@/locales/cn/pages/workflow.json";
+import enWorkflow from "@/locales/en/pages/workflow.json";
 
 const instance = createInstance();
 
@@ -12,7 +14,10 @@ await instance.init({
   lng: "cn",
   fallbackLng: "en",
   keySeparator: false,
-  resources: { cn: { translation: cn }, en: { translation: en } },
+  resources: {
+    cn: { translation: { ...cn, ...cnWorkflow } },
+    en: { translation: { ...en, ...enWorkflow } },
+  },
 });
 
 const builtinNames = [
@@ -23,6 +28,8 @@ const builtinNames = [
   ["Torrent download", "BT 种子下载"],
   ["Platform fetch", "平台获取"],
   ["Local directory", "本地目录入库"],
+  ["Download torrent contents", "下载种子内容"],
+  ["ExHentai download", "ExHentai 下载"],
 ];
 
 describe("built-in workflow display names", () => {

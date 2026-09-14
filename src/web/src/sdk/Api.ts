@@ -1511,6 +1511,8 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
   defaultPath?: string;
   namingConvention?: string;
   preferTorrent: boolean;
+  /** @format int32 */
+  downloadResultWorkflowId?: number;
   prioritizeTasksWithTorrent: boolean;
   /** @format int32 */
   torrentCheckValidityHours?: number;
@@ -1770,6 +1772,8 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputE
   defaultPath?: string;
   namingConvention?: string;
   preferTorrent?: boolean;
+  /** @format int32 */
+  downloadResultWorkflowId?: number;
   prioritizeTasksWithTorrent?: boolean;
   skipExisting?: boolean;
   /** @format int32 */
@@ -1968,6 +1972,14 @@ export type BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsCon
  */
 export type BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsConstantsDownloadTaskStatus =
   100 | 200 | 300 | 400 | 500 | 600 | 700 | 800;
+
+/**
+ * [1: TorrentMetadata, 2: LocalFiles]
+ * @format int32
+ */
+export type BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloadResultKind =
+  | 1
+  | 2;
 
 export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloadTask {
   /** @format int32 */
@@ -5681,6 +5693,36 @@ export interface BakabaseServiceModelsViewDecompressionResultViewModel {
   message?: string;
 }
 
+export interface BakabaseServiceModelsViewDownloadResultViewModel {
+  /** @format int32 */
+  id: number;
+  /** @format int32 */
+  downloadTaskId: number;
+  sourceKey: string;
+  name: string;
+  /** [1: TorrentMetadata, 2: LocalFiles] */
+  kind: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloadResultKind;
+  /** @format date-time */
+  createdAt: string;
+  /** @format int32 */
+  workflowDefinitionId?: number;
+  /** @format int32 */
+  workflowRunId?: number;
+  /** [1: Pending, 2: Running, 3: Success, 4: Failed, 5: Cancelled, 6: Interrupted, 7: Waiting] */
+  workflowStatus?: BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowRunStatus;
+  workflowName?: string;
+  workflowIsBuiltin: boolean;
+  /** @format int32 */
+  acquisitionTaskId?: number;
+  contentsReady: boolean;
+  contentsDirectory?: string;
+  /** @format int32 */
+  resourceId?: number;
+  error?: string;
+  filterDidNotMatch: boolean;
+  canRetry: boolean;
+}
+
 export interface BakabaseServiceModelsViewEnhancementViewModel {
   /** @format int32 */
   id: number;
@@ -6569,6 +6611,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModels
   code: number;
   message?: string;
   data?: BakabaseServiceModelsViewCustomPropertyViewModel[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewDownloadResultViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewDownloadResultViewModel[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewFileRenameEntryViewModel {
@@ -15941,6 +15990,73 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         method: "PUT",
         body: data,
         type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+  };
+  downloader = {
+    /**
+     * No description
+     *
+     * @tags DownloadResult
+     * @name GetDownloadResults
+     * @request GET:/downloader/result
+     */
+    getDownloadResults: (
+      query?: {
+        /** @format int32 */
+        taskId?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewDownloadResultViewModel,
+        any
+      >({
+        path: `/downloader/result`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getDownloadResults
+     * @name getDownloadResultsUrl
+     */
+    getDownloadResultsUrl: (query?: {
+        /** @format int32 */
+        taskId?: number;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/downloader/result`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DownloadResult
+     * @name RetryDownloadResultWorkflow
+     * @request POST:/downloader/result/{id}/retry
+     */
+    retryDownloadResultWorkflow: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/downloader/result/${id}/retry`,
+        method: "POST",
         format: "json",
         ...params,
       }),
