@@ -27,7 +27,7 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
 type RequestStatistics =
   components["schemas"]["Bakabase.InsideWorld.Models.Models.Aos.ThirdPartyRequestStatistics"];
-const RequestStatistics = () => {
+const RequestStatistics = ({ compact = false }: { compact?: boolean }) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
@@ -36,7 +36,10 @@ const RequestStatistics = () => {
   return (
     <div className="flex items-center gap-1">
       <Button
+        aria-label={t("downloader.label.requestsOverview")}
+        isIconOnly={compact}
         size={"sm"}
+        title={t("downloader.label.requestsOverview")}
         variant={"light"}
         onPress={() => {
           const thirdPartyRequestCounts = (requestStatistics || []).reduce<any[]>((s, t) => {
@@ -67,41 +70,44 @@ const RequestStatistics = () => {
       >
         <div className="flex items-center gap-1">
           <AiOutlineBarChart className={"text-base"} />
-          {t<string>("downloader.label.requestsOverview")}
-          {requestStatistics?.map((rs) => {
-            let successCount = 0;
-            let failureCount = 0;
+          <span className={compact ? "sr-only" : undefined}>
+            {t<string>("downloader.label.requestsOverview")}
+          </span>
+          {!compact &&
+            requestStatistics?.map((rs) => {
+              let successCount = 0;
+              let failureCount = 0;
 
-            Object.keys(rs.counts || {}).forEach((r) => {
-              const rt = parseInt(r, 10) as ThirdPartyRequestResultType;
+              Object.keys(rs.counts || {}).forEach((r) => {
+                const rt = parseInt(r, 10) as ThirdPartyRequestResultType;
 
-              switch (rt) {
-                case ThirdPartyRequestResultType.Succeed:
-                  successCount += rs.counts![r]!;
-                  break;
-                default:
-                  failureCount += rs.counts![r]!;
-                  break;
-              }
-            });
+                switch (rt) {
+                  case ThirdPartyRequestResultType.Succeed:
+                    successCount += rs.counts![r]!;
+                    break;
+                  default:
+                    failureCount += rs.counts![r]!;
+                    break;
+                }
+              });
 
-            return (
-              <div key={rs.id} className="flex items-center">
-                <ThirdPartyIcon size={"sm"} thirdPartyId={rs.id} />
-                <BakauiTooltip content={t<string>("downloader.label.success")}>
-                  <Chip className={"p-0"} color={"success"} size={"sm"} variant={"light"}>
-                    {successCount}
-                  </Chip>
-                </BakauiTooltip>
-                /
-                <BakauiTooltip content={t<string>("downloader.label.failure")}>
-                  <Chip className={"p-0"} color={"danger"} size={"sm"} variant={"light"}>
-                    {failureCount}
-                  </Chip>
-                </BakauiTooltip>
-              </div>
-            );
-          })}
+              return (
+                <div key={rs.id} className="flex items-center">
+                  <ThirdPartyIcon size={"sm"} thirdPartyId={rs.id} />
+                  <BakauiTooltip content={t<string>("downloader.label.success")}>
+                    <Chip className={"p-0"} color={"success"} size={"sm"} variant={"light"}>
+                      {successCount}
+                    </Chip>
+                  </BakauiTooltip>
+                  /
+                  <BakauiTooltip content={t<string>("downloader.label.failure")}>
+                    <Chip className={"p-0"} color={"danger"} size={"sm"} variant={"light"}>
+                      {failureCount}
+                    </Chip>
+                  </BakauiTooltip>
+                </div>
+              );
+            })}
         </div>
       </Button>
     </div>

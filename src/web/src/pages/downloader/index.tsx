@@ -13,25 +13,29 @@ import {
   AiOutlineDelete,
   AiOutlineEdit,
   AiOutlineExport,
+  AiOutlineDownload,
+  AiOutlineClose,
+  AiOutlineEllipsis,
   AiOutlinePlayCircle,
   AiOutlinePlusCircle,
-  AiOutlineSearch,
   AiOutlineSetting,
   AiOutlineStop,
   AiOutlineWarning,
 } from "react-icons/ai";
 import { MdPlayCircle, MdAccessTime, MdDelete } from "react-icons/md";
 
+import DownloadTaskDetailModal from "./components/TaskDetailModal";
+import BatchEditModal from "./components/BatchEditModal";
+import TaskRow, { DOWNLOAD_TASK_ITEM_HEIGHT } from "./components/TaskRow";
+import DownloadTaskFilters, { type DownloadTaskFilter } from "./components/DownloadTaskFilters";
+
 import { ThirdPartyId } from "@/sdk/constants";
 import {
   Button,
-  ButtonGroup,
-  Chip,
   Dropdown,
   DropdownItem,
   DropdownMenu,
   DropdownTrigger,
-  Input,
   Listbox,
   ListboxItem,
   Modal,
@@ -40,29 +44,16 @@ import {
 } from "@/components/bakaui";
 import "@szhsin/react-menu/dist/index.css";
 import "@szhsin/react-menu/dist/transitions/slide.css";
-import {
-  DownloadTaskActionOnConflict,
-  DownloadTaskStatus,
-  downloadTaskStatuses,
-  ResponseCode,
-} from "@/sdk/constants";
-import { isThirdPartyDeveloping } from "@/pages/downloader/models";
-import DevelopingChip from "@/components/Chips/DevelopingChip";
+import { DownloadTaskActionOnConflict, DownloadTaskStatus, ResponseCode } from "@/sdk/constants";
 import Configurations from "@/pages/downloader/components/Configurations";
 import BApi from "@/sdk/BApi";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import ThirdPartyIcon from "@/components/ThirdPartyIcon";
 import { useDownloadTasksStore } from "@/stores/downloadTasks";
 import RequestStatistics from "@/pages/downloader/components/RequestStatistics";
-
-import DownloadTaskDetailModal from "./components/TaskDetailModal";
-import BatchEditModal from "./components/BatchEditModal";
-import TaskRow from "./components/TaskRow";
-
 import { toAbsoluteBackendUrl } from "@/config/env.ts";
 
 /** Row height handed to the listbox virtualizer; also how "locate" computes a scroll offset. */
-const TASK_ITEM_HEIGHT = 75;
+const TASK_ITEM_HEIGHT = DOWNLOAD_TASK_ITEM_HEIGHT;
 
 /**
  * Formatting a timestamp with moment is not cheap, and every task row does it twice on
@@ -119,22 +110,16 @@ const findScrollContainer = (root: HTMLElement | null): HTMLElement | null => {
   );
 };
 
-// const testTasks: DownloadTask[] = [
-//   {
-//     key: '123121232312321321',
-//     thirdPartyId: ThirdPartyId.Bilibili,
-//     name: 'eeeeeeee',
 const DownloaderPage = () => {
   const { t } = useTranslation();
   const forceUpdate = useUpdate();
-  const [form, setForm] = useState<SearchForm>({});
+  const [form, setForm] = useState<DownloadTaskFilter>({});
   const [downloaderDefinitions, setDownloaderDefinitions] = useState<
     BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloaderDefinition[]
   >([]);
 
   const tasks = useDownloadTasksStore((state) => state.tasks);
   const patchTasks = useDownloadTasksStore((state) => state.patchTasks);
-  // const tasks = testTasks;
 
   // Build third party filter from downloader definitions, sorted by value ASC
   const sortedThirdPartyIds = useMemo(() => {
@@ -637,308 +622,336 @@ const DownloaderPage = () => {
     return () => document.removeEventListener("keydown", onKeyDown);
   }, []);
 
+  const visibleSelectedTasks = filteredTasks.filter((task) => selectedTaskIdSet.has(task.id));
+  const visibleSelectedIds = visibleSelectedTasks.map((task) => task.id);
+  const hasFilters = form.thirdPartyId != null || form.status != null || !!form.keyword;
+  const changeFilters = (next: DownloadTaskFilter) => {
+    setForm(next);
+    setSelectedTaskIds([]);
+  };
+
   return (
-    <div className={"h-full flex flex-col gap-1"}>
+    <div className="flex h-full min-h-0 min-w-0 flex-col gap-4 p-3 sm:p-5">
       {renderContextMenu()}
-      <div
-        className="grid gap-x-4 gap-y-1 items-center"
-        style={{ gridTemplateColumns: "auto 1fr" }}
+      <header className="flex shrink-0 flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <AiOutlineDownload size={22} />
+          </div>
+          <div>
+            <h1 className="text-xl font-semibold tracking-tight">{t("downloader.page.title")}</h1>
+            <p className="mt-0.5 text-xs text-default-500">{t("downloader.page.description")}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="flat" onPress={() => createPortal(Configurations, {})}>
+            <AiOutlineSetting size={17} />
+            {t("downloader.label.configurations")}
+          </Button>
+          <Button
+            color="primary"
+            size="sm"
+            onPress={() => createPortal(DownloadTaskDetailModal, {})}
+          >
+            <AiOutlinePlusCircle size={17} />
+            {t("downloader.action.createTask")}
+          </Button>
+        </div>
+      </header>
+      <div className="max-h-[42%] shrink-0 overflow-y-auto overscroll-contain">
+        <DownloadTaskFilters
+          countsByStatus={countsByStatus}
+          countsByThirdParty={countsByThirdParty}
+          sources={sortedThirdPartyIds}
+          total={tasks.length}
+          value={form}
+          onChange={changeFilters}
+        />
+      </div>
+      <section
+        aria-label={t("downloader.page.taskList")}
+        className="flex min-h-0 min-w-0 flex-1 flex-col gap-2"
       >
-        <div>{t<string>("downloader.filter.source")}</div>
-        <div className="flex items-center gap-2">
-          <ButtonGroup size={"sm"}>
-            {sortedThirdPartyIds.map((s) => {
-              const count = countsByThirdParty.get(s.value) ?? 0;
-              const isDeveloping = isThirdPartyDeveloping(s.value);
-              const isSelected = form.thirdPartyId === s.value;
-
-              return (
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 px-1">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <h2 className="text-sm font-medium">{t("downloader.page.taskList")}</h2>
+            <span aria-live="polite" className="text-xs tabular-nums text-default-500">
+              {visibleSelectedIds.length > 0
+                ? t("downloader.batchEdit.selectedCount", { count: visibleSelectedIds.length })
+                : t("downloader.page.showing", {
+                    count: filteredTasks.length,
+                    total: tasks.length,
+                  })}
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-1">
+            {visibleSelectedIds.length > 0 ? (
+              <>
                 <Button
-                  key={s.value}
-                  // color={isSelected ? "primary" : "default"}
-                  variant={isSelected ? "solid" : "flat"}
+                  size="sm"
+                  variant="flat"
+                  onPress={() => startTasksManually(visibleSelectedIds)}
+                >
+                  <AiOutlinePlayCircle size={17} />
+                  {t("downloader.action.startSelected")}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="light"
+                  onPress={() =>
+                    withOptimisticStatus(visibleSelectedIds, DownloadTaskStatus.Stopping, () =>
+                      BApi.downloadTask.stopDownloadTasks(visibleSelectedIds),
+                    )
+                  }
+                >
+                  <AiOutlineStop size={17} />
+                  {t("downloader.action.stopSelected")}
+                </Button>
+                {visibleSelectedIds.length > 1 && (
+                  <Button
+                    size="sm"
+                    variant="light"
+                    onPress={() => createPortal(BatchEditModal, { tasks: visibleSelectedTasks })}
+                  >
+                    <AiOutlineEdit size={17} />
+                    {t("downloader.action.editSelected")}
+                  </Button>
+                )}
+                <Tooltip content={t("downloader.action.clearSelection")}>
+                  <Button
+                    isIconOnly
+                    aria-label={t("downloader.action.clearSelection")}
+                    size="sm"
+                    variant="light"
+                    onPress={() => setSelectedTaskIds([])}
+                  >
+                    <AiOutlineClose size={16} />
+                  </Button>
+                </Tooltip>
+              </>
+            ) : (
+              <>
+                <Button
+                  isDisabled={tasks.length === 0}
+                  size="sm"
+                  variant="light"
                   onPress={() => {
-                    // Clicking the active source clears the filter, so there is still a way
-                    // back to "all" without a separate reset control.
-                    setForm({
-                      ...form,
-                      thirdPartyId: isSelected ? undefined : s.value,
-                    });
+                    toast.success(t("downloader.toast.startingAll"));
+                    startTasksManually([], DownloadTaskActionOnConflict.Ignore);
                   }}
                 >
-                  <div className={"flex items-center gap-1"}>
-                    <ThirdPartyIcon thirdPartyId={s.value} />
-                    <span>{s.label}</span>
-                    {isDeveloping && <DevelopingChip showTooltip={false} size="sm" />}
-                    {count > 0 && (
-                      <Chip size={"sm"} variant={"flat"}>
-                        {count}
-                      </Chip>
-                    )}
-                  </div>
+                  <AiOutlinePlayCircle size={17} />
+                  {t("downloader.action.startAll")}
                 </Button>
-              );
-            })}
-          </ButtonGroup>
-        </div>
-        <div>{t<string>("downloader.filter.status")}</div>
-        <div className="flex items-center gap-2">
-          <ButtonGroup size={"sm"}>
-            {downloadTaskStatuses.map((s) => {
-              const count = countsByStatus.get(s.value as number) ?? 0;
-              const chipColor = DownloadTaskStatusIceLabelStatusMap[s.value! as DownloadTaskStatus];
-              const isSelected = form.status === s.value;
-
-              return (
                 <Button
-                  key={s.value}
-                  // color={chipColor}
-                  variant={isSelected ? "solid" : "flat"}
+                  isDisabled={tasks.length === 0}
+                  size="sm"
+                  variant="light"
                   onPress={() => {
-                    setForm({
-                      ...form,
-                      status: isSelected ? undefined : s.value,
-                    });
+                    toast.success(t("downloader.toast.stoppingAll"));
+                    BApi.downloadTask.stopDownloadTasks([]);
                   }}
                 >
-                  <div className="flex items-center gap-1">
-                    <Chip color={isSelected ? "default" : chipColor} size={"sm"} variant={"light"}>
-                      {t<string>(s.label)}
-                      {count > 0 && <span>&nbsp;({count})</span>}
-                    </Chip>
-                  </div>
+                  <AiOutlineStop size={17} />
+                  {t("downloader.action.stopAll")}
                 </Button>
-              );
-            })}
-          </ButtonGroup>
+              </>
+            )}
+            <div className="flex shrink-0 items-center gap-1">
+              <span aria-hidden className="mx-1 h-4 w-px bg-divider" />
+              <Tooltip content={t("downloader.action.locateActive.tip")}>
+                <Button
+                  isIconOnly
+                  aria-label={t("downloader.action.locateActive")}
+                  size="sm"
+                  variant="light"
+                  onPress={locateActiveTask}
+                >
+                  <AiOutlineAim size={18} />
+                </Button>
+              </Tooltip>
+              <RequestStatistics compact />
+              <Dropdown>
+                <DropdownTrigger>
+                  <Button
+                    isIconOnly
+                    aria-label={t("downloader.action.moreTasks")}
+                    size="sm"
+                    variant="light"
+                  >
+                    <AiOutlineEllipsis size={18} />
+                  </Button>
+                </DropdownTrigger>
+                <DropdownMenu
+                  onAction={(key) => {
+                    switch (key as string) {
+                      case "export":
+                        BApi.gui.openUrlInDefaultBrowser({
+                          url: toAbsoluteBackendUrl("/download-task/xlsx"),
+                        });
+                        break;
+                      case "delete_completed": {
+                        const ids = tasks
+                          .filter((t) => t.status == DownloadTaskStatus.Complete)
+                          .map((t) => t.id);
+
+                        // Silently returning here used to make the menu item look broken; say why
+                        // nothing happened instead.
+                        if (ids.length === 0) {
+                          toast.warning(t<string>("downloader.toast.noCompletedTasks"));
+
+                          return;
+                        }
+                        createPortal(Modal, {
+                          defaultVisible: true,
+                          title: t<string>("downloader.confirm.deleteCompletedTasks", {
+                            count: ids.length,
+                          }),
+                          onOk: async () => {
+                            await BApi.downloadTask.deleteDownloadTasks({ ids });
+                          },
+                        });
+                        break;
+                      }
+                      case "delete_failed": {
+                        const ids = tasks
+                          .filter((t) => t.status == DownloadTaskStatus.Failed)
+                          .map((t) => t.id);
+
+                        if (ids.length === 0) {
+                          toast.warning(t<string>("downloader.toast.noFailedTasks"));
+
+                          return;
+                        }
+                        createPortal(Modal, {
+                          defaultVisible: true,
+                          title: t<string>("downloader.confirm.deleteFailedTasks", {
+                            count: ids.length,
+                          }),
+                          onOk: async () => {
+                            await BApi.downloadTask.deleteDownloadTasks({ ids });
+                          },
+                        });
+                        break;
+                      }
+                    }
+                  }}
+                >
+                  <DropdownItem
+                    key="export"
+                    showDivider
+                    startContent={<AiOutlineExport size={16} />}
+                  >
+                    {t("downloader.action.exportAll")}
+                  </DropdownItem>
+                  <DropdownItem
+                    key="delete_completed"
+                    startContent={<AiOutlineDelete className={"text-base"} />}
+                  >
+                    {t<string>("downloader.action.deleteCompleted")}
+                  </DropdownItem>
+                  <DropdownItem
+                    key="delete_failed"
+                    color={"danger"}
+                    startContent={<AiOutlineDelete className={"text-base"} />}
+                  >
+                    {t<string>("downloader.action.deleteFailed")}
+                  </DropdownItem>
+                </DropdownMenu>
+              </Dropdown>
+            </div>
+          </div>
         </div>
-        <div>{t<string>("downloader.filter.keyword")}</div>
-        <div>
-          <Input
-            className={"w-[320px]"}
-            fullWidth={false}
-            size={"sm"}
-            startContent={<AiOutlineSearch className={"text-base"} />}
-            onValueChange={(keyword) =>
-              setForm({
-                ...form,
-                keyword,
-              })
+        <div
+          ref={(r) => {
+            taskListRef.current = r;
+            if (r && taskListHeight == 0) {
+              setTaskListHeight(r.clientHeight);
             }
-          />
-        </div>
-      </div>
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1">
-          <Button
-            color={"primary"}
-            size={"small"}
-            onPress={() => {
-              createPortal(DownloadTaskDetailModal, {});
-            }}
-          >
-            <>
-              <AiOutlinePlusCircle className={"text-base"} />
-              {t<string>("downloader.action.createTask")}
-            </>
-          </Button>
-          <Button
-            color={"success"}
-            size={"small"}
-            variant={"flat"}
-            onPress={() => {
-              toast.success(t<string>("downloader.toast.startingAll"));
-              startTasksManually([], DownloadTaskActionOnConflict.Ignore);
-            }}
-          >
-            <AiOutlinePlayCircle className={"text-base"} />
-            {t<string>("downloader.action.startAll")}
-          </Button>
-          <Button
-            color={"warning"}
-            size={"small"}
-            variant={"flat"}
-            onPress={() => {
-              toast.success(t<string>("downloader.toast.stoppingAll"));
-              BApi.downloadTask.stopDownloadTasks([]);
-            }}
-          >
-            <AiOutlineStop className={"text-base"} />
-            {t<string>("downloader.action.stopAll")}
-          </Button>
-          <Tooltip content={t<string>("downloader.action.locateActive.tip")} placement="bottom">
-            <Button size={"small"} variant={"flat"} onPress={locateActiveTask}>
-              <AiOutlineAim className={"text-base"} />
-              {t<string>("downloader.action.locateActive")}
-            </Button>
-          </Tooltip>
-        </div>
-        <div className="flex items-center gap-1">
-          <Dropdown>
-            <DropdownTrigger>
-              <Button size={"sm"} variant={"flat"}>
-                <AiOutlineDelete className={"text-base"} />
-                {t<string>("downloader.action.cleanup")}
-              </Button>
-            </DropdownTrigger>
-            <DropdownMenu
-              onAction={(key) => {
-                switch (key as string) {
-                  case "delete_completed": {
-                    const ids = tasks
-                      .filter((t) => t.status == DownloadTaskStatus.Complete)
-                      .map((t) => t.id);
-
-                    // Silently returning here used to make the menu item look broken; say why
-                    // nothing happened instead.
-                    if (ids.length === 0) {
-                      toast.warning(t<string>("downloader.toast.noCompletedTasks"));
-
-                      return;
-                    }
-                    createPortal(Modal, {
-                      defaultVisible: true,
-                      title: t<string>("downloader.confirm.deleteCompletedTasks", {
-                        count: ids.length,
-                      }),
-                      onOk: async () => {
-                        await BApi.downloadTask.deleteDownloadTasks({ ids });
-                      },
-                    });
-                    break;
-                  }
-                  case "delete_failed": {
-                    const ids = tasks
-                      .filter((t) => t.status == DownloadTaskStatus.Failed)
-                      .map((t) => t.id);
-
-                    if (ids.length === 0) {
-                      toast.warning(t<string>("downloader.toast.noFailedTasks"));
-
-                      return;
-                    }
-                    createPortal(Modal, {
-                      defaultVisible: true,
-                      title: t<string>("downloader.confirm.deleteFailedTasks", {
-                        count: ids.length,
-                      }),
-                      onOk: async () => {
-                        await BApi.downloadTask.deleteDownloadTasks({ ids });
-                      },
-                    });
-                    break;
-                  }
-                }
-              }}
-            >
-              <DropdownItem
-                key="delete_completed"
-                startContent={<AiOutlineDelete className={"text-base"} />}
-              >
-                {t<string>("downloader.action.deleteCompleted")}
-              </DropdownItem>
-              <DropdownItem
-                key="delete_failed"
-                color={"danger"}
-                startContent={<AiOutlineDelete className={"text-base"} />}
-              >
-                {t<string>("downloader.action.deleteFailed")}
-              </DropdownItem>
-            </DropdownMenu>
-          </Dropdown>
-          <RequestStatistics />
-          <Button
-            size={"sm"}
-            variant={"flat"}
-            onPress={() => {
-              BApi.gui.openUrlInDefaultBrowser({
-                url: toAbsoluteBackendUrl("/download-task/xlsx"),
-              });
-            }}
-          >
-            <AiOutlineExport className={"text-base"} />
-            {t<string>("downloader.action.exportAll")}
-          </Button>
-          <Button
-            color={"secondary"}
-            size={"small"}
-            variant={"flat"}
-            onPress={() => {
-              createPortal(Configurations, {});
-            }}
-          >
-            <AiOutlineSetting className={"text-base"} />
-            {t<string>("downloader.action.configurations")}
-          </Button>
-        </div>
-      </div>
-      <div
-        ref={(r) => {
-          taskListRef.current = r;
-          if (r && taskListHeight == 0) {
-            setTaskListHeight(r.clientHeight);
-          }
-        }}
-        className={"grow overflow-hidden"}
-      >
-        {/* The virtualizer is told the viewport height once, so resizing the window (or opening a
+          }}
+          className="min-h-0 flex-1 overflow-hidden"
+        >
+          {/* The virtualizer is told the viewport height once, so resizing the window (or opening a
             panel that changes the layout) left it rendering for the old size — a short list with
             dead space below, or a long one clipped. Keep it in step. */}
-        {taskListHeight > 0 && (
-          <Listbox
-            isVirtualized
-            className={"p-0"}
-            // color={"primary"}
-            emptyContent={t<string>("downloader.empty.noTasks")}
-            label={"Select from 1000 items"}
-            // selectionMode={"multiple"}
-            variant={"flat"}
-            virtualization={{
-              maxListboxHeight: taskListHeight,
-              itemHeight: TASK_ITEM_HEIGHT,
-            }}
-          >
-            {filteredTasks.map((task) => (
-              <ListboxItem
-                key={task.id}
-                className={`${selectedTaskIdSet.has(task.id) ? "bg-primary-50 dark:bg-primary-900/20" : ""}`}
+          {taskListHeight > 0 &&
+            (filteredTasks.length === 0 ? (
+              <div className="flex h-full min-h-40 flex-col items-center justify-center gap-3 rounded-2xl bg-default-50/40 px-6 py-8 text-center">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-default-100 text-default-400">
+                  <AiOutlineDownload size={28} />
+                </div>
+                <div className="space-y-1.5">
+                  <h3 className="text-sm font-medium">
+                    {t(
+                      hasFilters
+                        ? "downloader.empty.filteredTitle"
+                        : "downloader.empty.initialTitle",
+                    )}
+                  </h3>
+                  <p className="max-w-sm text-xs leading-relaxed text-default-500">
+                    {t(
+                      hasFilters
+                        ? "downloader.empty.filteredDescription"
+                        : "downloader.empty.initialDescription",
+                    )}
+                  </p>
+                </div>
+                <Button
+                  color="primary"
+                  size="sm"
+                  variant="flat"
+                  onPress={() =>
+                    hasFilters ? changeFilters({}) : createPortal(DownloadTaskDetailModal, {})
+                  }
+                >
+                  {t(hasFilters ? "downloader.filter.reset" : "downloader.action.createTask")}
+                </Button>
+              </div>
+            ) : (
+              <Listbox
+                isVirtualized
+                aria-label={t("downloader.page.taskList")}
+                className={"p-0"}
+                emptyContent={t<string>("downloader.empty.noTasks")}
+                variant={"flat"}
+                virtualization={{
+                  maxListboxHeight: taskListHeight,
+                  itemHeight: TASK_ITEM_HEIGHT,
+                }}
               >
-                <TaskRow
-                  formatDateTime={formatTaskDateTime}
-                  progressColor={DownloadTaskStatusProgressBarColorMap[task.status]}
-                  statusColor={DownloadTaskStatusIceLabelStatusMap[task.status]}
-                  task={task}
-                  onClick={handleRowClick}
-                  onContextMenu={handleRowContextMenu}
-                  onDelete={handleRowDelete}
-                  onEdit={handleRowEdit}
-                  onOpenFolder={handleRowOpenFolder}
-                  onShowError={handleRowShowError}
-                  onStart={handleRowStart}
-                  onStop={handleRowStop}
-                />
-              </ListboxItem>
+                {filteredTasks.map((task) => (
+                  <ListboxItem
+                    key={task.id}
+                    className={`rounded-xl px-3 py-1.5 ${selectedTaskIdSet.has(task.id) ? "bg-primary-50 dark:bg-primary-900/20" : ""}`}
+                    classNames={{ wrapper: "min-w-0", title: "h-full min-w-0 w-full" }}
+                    style={{ height: TASK_ITEM_HEIGHT }}
+                    textValue={task.name || task.key}
+                  >
+                    <TaskRow
+                      formatDateTime={formatTaskDateTime}
+                      progressColor={DownloadTaskStatusProgressBarColorMap[task.status]}
+                      statusColor={DownloadTaskStatusIceLabelStatusMap[task.status]}
+                      task={task}
+                      onClick={handleRowClick}
+                      onContextMenu={handleRowContextMenu}
+                      onDelete={handleRowDelete}
+                      onEdit={handleRowEdit}
+                      onOpenFolder={handleRowOpenFolder}
+                      onShowError={handleRowShowError}
+                      onStart={handleRowStart}
+                      onStop={handleRowStop}
+                    />
+                  </ListboxItem>
+                ))}
+              </Listbox>
             ))}
-          </Listbox>
-        )}
-      </div>
+        </div>
+      </section>
     </div>
   );
 };
 
 DownloaderPage.displayName = "DownloaderPage";
-//     progress: 80,
-//     status: DownloadTaskStatus.Downloading,
-//   },
-//   {
-//     key: 'cxzkocnmaqwkodn wkjodas1',
-//     name: 'pppppppppppp',
-//     progress: 30,
-//     status: DownloadTaskStatus.Failed,
-//     message: 'dawsdasda',
-//   },
-// ];
-
 const DownloadTaskStatusIceLabelStatusMap: Record<DownloadTaskStatus, ChipProps["color"]> = {
   [DownloadTaskStatus.Idle]: "default",
   [DownloadTaskStatus.InQueue]: "default",
@@ -969,12 +982,5 @@ enum SelectionMode {
   Ctrl,
   Shift,
 }
-
-type SearchForm = {
-  /** Single-select: clicking the active chip clears it. */
-  status?: DownloadTaskStatus;
-  keyword?: string;
-  thirdPartyId?: ThirdPartyId;
-};
 
 export default DownloaderPage;

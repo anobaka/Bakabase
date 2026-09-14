@@ -149,6 +149,10 @@ export const ExHentaiConfigPanel: FC<ExHentaiConfigPanelProps> = ({ fields = "al
         title: t("thirdPartyConfig.group.download"),
         content: (
           <div className="space-y-4">
+            <DownloadResultWorkflowField
+              value={options?.downloadResultWorkflowId}
+              onChange={(workflowId) => patch({ downloadResultWorkflowId: workflowId ?? 0 })}
+            />
             <div>
               <span className="text-sm font-medium">
                 {t<string>("thirdPartyConfig.field.defaultPath.label")}
@@ -225,10 +229,6 @@ export const ExHentaiConfigPanel: FC<ExHentaiConfigPanelProps> = ({ fields = "al
               // box does not need to mean something different from what the user can type.
               value={options?.torrentCheckValidityHours ?? 0}
               onValueChange={(v) => patch({ torrentCheckValidityHours: Number.isNaN(v) ? 0 : v })}
-            />
-            <DownloadResultWorkflowField
-              value={options?.downloadResultWorkflowId}
-              onChange={(workflowId) => patch({ downloadResultWorkflowId: workflowId ?? 0 })}
             />
           </div>
         ),
