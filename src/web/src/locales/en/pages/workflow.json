@@ -372,7 +372,7 @@
   "workflow.acquisition.step.fetchTorrent": "Download torrent contents",
   "workflow.activity.acquisition.resolveSharedContent.description": "Reads accessible sharing pages or full shared text and uses the configured AI to extract links and passwords. Login-protected or dynamic pages may be unavailable. This node does not download files.",
   "workflow.activity.acquisition.selectLink.description": "Selects a parsed download link using the configured preference order. It does not search drives by resource name or download files.",
-  "workflow.activity.acquisition.fetchHttp.description": "Downloads an HTTP(S) file on the server with progress, cancellation and a timeout; restarts when an existing file cannot be verified. The URL must return the file directly.",
+  "workflow.activity.acquisition.fetchHttp.description": "Downloads HTTP(S) files on the server with configurable connections, retries, speed limits and a timeout. Resumes only when saved progress and the server’s file version can be verified; otherwise restarts. The URL must return the file directly.",
   "workflow.activity.acquisition.waitForInbox.description": "Waits for downloaded files to arrive in the server’s pending processing folder, then passes them to the next node. This node does not download files.",
   "workflow.activity.acquisition.fetchMagnet.description": "Processes a magnet using the selected download implementation. The built-in engine and aria2 can wait for completion; the system-default client requires a later node to receive its files.",
   "workflow.activity.acquisition.fetchTorrent.description": "Reads an uploaded .torrent file or the supplied HTTP(S) torrent URL and downloads on the server with the built-in BitTorrent engine. Preserves the content’s folder structure and stops seeding when complete.",
@@ -409,5 +409,17 @@
   "workflow.validation.validationFailed": "The check could not finish. Review the node configuration and retry.",
   "workflow.editor.saveAsCopy": "Save as copy",
   "workflow.editor.copyName": "{{name}} (copy)",
-  "workflow.editor.builtinCopyHint": "Save edits as a new workflow while keeping the built-in workflow and its existing tasks unchanged."
+  "workflow.editor.builtinCopyHint": "Save edits as a new workflow while keeping the built-in workflow and its existing tasks unchanged.",
+  "workflow.acquisition.fetchHttp.parallelConnections.label": "Parallel connections",
+  "workflow.acquisition.fetchHttp.parallelConnections.description": "Maximum simultaneous connections; 1 uses a single connection.",
+  "workflow.acquisition.fetchHttp.maxRetries.label": "Retries after failure",
+  "workflow.acquisition.fetchHttp.maxRetries.description": "Retry transient network failures; 0 disables retries.",
+  "workflow.acquisition.fetchHttp.speedLimitKiB.label": "Speed limit (KiB/s)",
+  "workflow.acquisition.fetchHttp.speedLimitKiB.description": "Total speed limit for this download; 0 means unlimited.",
+  "workflow.acquisition.fetchHttp.timeoutMinutes.label": "Timeout (minutes)",
+  "workflow.acquisition.fetchHttp.timeoutMinutes.description": "Maximum time for this download, including retries.",
+  "workflow.acquisition.fetchHttp.automaticTransferHelp": "Chunking is automatic when the server supports Range requests and its file version can be verified. Resume also needs a valid saved checkpoint. Otherwise, downloads use one connection or restart.",
+  "workflow.validation.acquisition.httpConnectionsInvalid": "Parallel connections must be an integer between 1 and 16.",
+  "workflow.validation.acquisition.httpRetriesInvalid": "The retry count must be an integer between 0 and 10.",
+  "workflow.validation.acquisition.httpSpeedLimitInvalid": "The speed limit must be an integer between 0 and 1048576 KiB/s; 0 means unlimited."
 }

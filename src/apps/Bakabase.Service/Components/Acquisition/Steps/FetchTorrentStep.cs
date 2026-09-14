@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Modules.Acquisition.Abstractions.Components;
@@ -10,6 +8,8 @@ using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Acquisition.Components;
 using Bakabase.Service.Components.Acquisition.Downloads;
+using Bakabase.Modules.Downloader.Abstractions;
+using Bakabase.Modules.Downloader.Models;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bakabase.Service.Components.Acquisition.Steps;
@@ -59,30 +59,30 @@ public class FetchTorrentStep : IAcquisitionStep
         deadline.CancelAfter(TimeSpan.FromMinutes(config.TimeoutMinutes));
         try
         {
-            byte[] metadata;
-            if (reference.StartsWith("bakabase-torrent:", StringComparison.Ordinal))
-                metadata = await ctx.ServiceProvider.GetRequiredService<IAcquisitionTorrentMetadataStore>()
+            var downloader = ctx.ServiceProvider.GetRequiredService<ITorrentDownloader>();
+            TorrentDownloadResult downloaded;
+            if (AcquisitionTorrentMetadataStore.IsManagedReference(reference))
+            {
+                var metadata = await ctx.ServiceProvider.GetRequiredService<IAcquisitionTorrentMetadataStore>()
                     .ReadAsync(reference, deadline.Token);
+                downloaded = await downloader.DownloadTorrentAsync(metadata, ctx.WorkingDirectory,
+                    TimeSpan.FromMinutes(config.TimeoutMinutes), ctx.ReportProgress, deadline.Token);
+            }
             else
             {
-                await ctx.ReportProgress(0, "Reading the torrent file");
-                using var http = ctx.ServiceProvider.GetRequiredService<IHttpClientFactory>().CreateClient(nameof(FetchTorrentStep));
-                using var response = await http.GetAsync(reference, HttpCompletionOption.ResponseHeadersRead, deadline.Token);
-                response.EnsureSuccessStatusCode();
-                if (response.Content.Headers.ContentLength > AcquisitionTorrentMetadataStore.MaxMetadataBytes)
-                    return new AcquisitionStepOutcome.Fail("The torrent metadata exceeds 4 MiB.");
-                await using var input = await response.Content.ReadAsStreamAsync(deadline.Token);
-                metadata = await AcquisitionTorrentMetadataStore.ReadBoundedAsync(input, deadline.Token);
+                downloaded = await downloader.DownloadTorrentUrlAsync(reference, ctx.WorkingDirectory,
+                    TimeSpan.FromMinutes(config.TimeoutMinutes), ctx.ReportProgress, deadline.Token);
             }
-            var downloaded = await ctx.ServiceProvider.GetRequiredService<IAcquisitionTorrentDownloader>()
-                .DownloadTorrentAsync(metadata, ctx.WorkingDirectory, TimeSpan.FromMinutes(config.TimeoutMinutes),
-                    ctx.ReportProgress, deadline.Token);
             return new AcquisitionStepOutcome.Continue(item with
             {
                 Files = item.Files.Concat(downloaded.Files).Distinct().ToList(),
                 ExtractedDirectory = downloaded.Directory,
                 PreserveDirectoryStructure = true
             });
+        }
+        catch (TimeoutException)
+        {
+            return new AcquisitionStepOutcome.Fail($"The torrent download did not finish within {config.TimeoutMinutes} minutes.");
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested && deadline.IsCancellationRequested)
         {

@@ -128,7 +128,11 @@ describe("download action configuration", () => {
   it.each([AcquisitionFetchTorrentUI, AcquisitionFetchHttpUI])(
     "keeps %s timeout defaults and rejects values outside the backend range",
     (ui) => {
-      expect(ui.parseConfig("{}")).toEqual({ timeoutMinutes: 240 });
+      expect(ui.parseConfig("{}")).toEqual(
+        ui === AcquisitionFetchHttpUI
+          ? { timeoutMinutes: 240, parallelConnections: 4, maxRetries: 3, speedLimitKiB: 0 }
+          : { timeoutMinutes: 240 },
+      );
       expect(ui.isValid(ui.parseConfig('{"timeoutMinutes":60}'))).toBe(true);
       expect(ui.isValid(ui.parseConfig('{"timeoutMinutes":0}'))).toBe(false);
       expect(ui.isValid(ui.parseConfig('{"timeoutMinutes":43201}'))).toBe(false);

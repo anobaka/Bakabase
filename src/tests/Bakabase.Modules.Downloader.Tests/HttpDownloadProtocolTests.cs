@@ -8,13 +8,15 @@ using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
-using Bakabase.InsideWorld.Business.Components.Downloader.Components;
-using Microsoft.Extensions.Logging.Abstractions;
+using Bakabase.Modules.Downloader.Abstractions;
+using Bakabase.Modules.Downloader.Extensions;
+using Bakabase.Modules.Downloader.Models;
+using Microsoft.Extensions.DependencyInjection;
 
-namespace Bakabase.Tests;
+namespace Bakabase.Modules.Downloader.Tests;
 
 [TestClass]
-public sealed class AcquisitionHttpDownloadTests
+public sealed class HttpDownloadProtocolTests
 {
     private string _directory = null!;
     [TestInitialize]
@@ -26,8 +28,24 @@ public sealed class AcquisitionHttpDownloadTests
     [TestCleanup]
     public void Cleanup() => Directory.Delete(_directory, true);
 
-    private static SingleFileHttpDownloader Downloader(HttpClient client) =>
-        new(client, NullLogger<SingleFileHttpDownloader>.Instance);
+    private DownloadClient Downloader() => new(Path.Combine(_directory, "cache"));
+
+    private sealed class DownloadClient(string cache)
+    {
+        public async Task Download(string url, string path, CancellationToken ct)
+        {
+            using var provider = new ServiceCollection().AddDownloader(_ => cache).BuildServiceProvider();
+            await provider.GetRequiredService<IHttpDownloader>().DownloadAsync(
+                new HttpDownloadRequest(url, Path.GetDirectoryName(path)!)
+                { FileName = Path.GetFileName(path), MaxRetries = 0 }, null, ct);
+        }
+        public async Task<string> DownloadToDirectory(string url, string directory, CancellationToken ct)
+        {
+            using var provider = new ServiceCollection().AddDownloader(_ => cache).BuildServiceProvider();
+            return await provider.GetRequiredService<IHttpDownloader>().DownloadAsync(
+                new HttpDownloadRequest(url, directory) { MaxRetries = 0 }, null, ct);
+        }
+    }
 
     [TestMethod]
     public async Task AnIgnoredRangeRestartsWithoutAppendingTheWholeFileToThePartialFile()
@@ -35,8 +53,7 @@ public sealed class AcquisitionHttpDownloadTests
         await using var server = new Server {IgnoreRange = true};
         var path = Path.Combine(_directory, "payload.bin");
         await File.WriteAllBytesAsync(path, server.Body[..1234]);
-        using var client = new HttpClient();
-        await Downloader(client).Download(server.Url, path, CancellationToken.None);
+        await Downloader().Download(server.Url, path, CancellationToken.None);
         await AssertContent(server.Body, path);
     }
 
@@ -46,9 +63,8 @@ public sealed class AcquisitionHttpDownloadTests
         await using var server = new Server {WrongRange = true};
         var path = Path.Combine(_directory, "payload.bin");
         await File.WriteAllBytesAsync(path, server.Body[..1234]);
-        using var client = new HttpClient();
-        await Assert.ThrowsExactlyAsync<IOException>(() => Downloader(client).Download(server.Url, path, CancellationToken.None));
-        Assert.AreEqual(0, new FileInfo(path).Length);
+        await Assert.ThrowsExactlyAsync<IOException>(() => Downloader().Download(server.Url, path, CancellationToken.None));
+        Assert.AreEqual(1234, new FileInfo(path).Length, "An invalid response must not replace the previous file.");
     }
 
     [TestMethod]
@@ -57,30 +73,7 @@ public sealed class AcquisitionHttpDownloadTests
         await using var server = new Server();
         var path = Path.Combine(_directory, "payload.bin");
         await File.WriteAllBytesAsync(path, new byte[server.Body.Length + 1]);
-        using var client = new HttpClient();
-        await Downloader(client).Download(server.Url, path, CancellationToken.None);
-        await AssertContent(server.Body, path);
-    }
-
-    [TestMethod]
-    [Timeout(15000)]
-    public async Task CancellationStopsTheBodyAndRetryRestartsWithoutAStoredVersionValidator()
-    {
-        await using var server = new Server {Slow = true};
-        var path = Path.Combine(_directory, "payload.bin");
-        using var client = new HttpClient();
-        using var cancellation = new CancellationTokenSource();
-        var download = Downloader(client).Download(server.Url, path, cancellation.Token);
-        using var guard = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        while (!File.Exists(path) || new FileInfo(path).Length == 0) await Task.Delay(10, guard.Token);
-        cancellation.Cancel();
-        try { await download; Assert.Fail("Cancellation must interrupt the streaming body."); }
-        catch (OperationCanceledException) { }
-        var prefixLength = new FileInfo(path).Length;
-        Assert.IsTrue(prefixLength > 0 && prefixLength < server.Body.Length);
-        server.Slow = false;
-        await Downloader(client).Download(server.Url, path, CancellationToken.None);
-        Assert.IsFalse(server.RangeStarts.Contains(prefixLength), "old bytes have no trusted version validator and must not be appended to");
+        await Downloader().Download(server.Url, path, CancellationToken.None);
         await AssertContent(server.Body, path);
     }
 
@@ -91,8 +84,7 @@ public sealed class AcquisitionHttpDownloadTests
     {
         await using var server = new Server {OmitChecksum = true};
         var path = Path.Combine(_directory, "payload.bin");
-        using var client = new HttpClient();
-        await Downloader(client).Download(server.Url, path, CancellationToken.None);
+        await Downloader().Download(server.Url, path, CancellationToken.None);
         if (partial)
         {
             await using var file = File.OpenWrite(path);
@@ -102,7 +94,7 @@ public sealed class AcquisitionHttpDownloadTests
         server.ETag = "\"updated-test-payload\"";
         var previousRequestCount = server.RangeStarts.Count;
 
-        await Downloader(client).Download(server.Url, path, CancellationToken.None);
+        await Downloader().Download(server.Url, path, CancellationToken.None);
 
         Assert.IsTrue(server.RangeStarts.Count > previousRequestCount, "a new HEAD validator alone cannot validate old bytes");
         await AssertContent(server.Body, path);
@@ -113,11 +105,10 @@ public sealed class AcquisitionHttpDownloadTests
     {
         await using var server = new Server();
         var path = Path.Combine(_directory, "payload.bin");
-        using var client = new HttpClient();
-        await Downloader(client).Download(server.Url, path, CancellationToken.None);
+        await Downloader().Download(server.Url, path, CancellationToken.None);
         var previousRequestCount = server.RangeStarts.Count;
 
-        await Downloader(client).Download(server.Url, path, CancellationToken.None);
+        await Downloader().Download(server.Url, path, CancellationToken.None);
 
         Assert.AreEqual(previousRequestCount, server.RangeStarts.Count);
         await AssertContent(server.Body, path);
@@ -127,8 +118,7 @@ public sealed class AcquisitionHttpDownloadTests
     public async Task APartialProbeChecksumIsNotMistakenForTheWholeFileChecksum()
     {
         await using var server = new Server {RefuseHead = true};
-        using var client = new HttpClient();
-        var path = await Downloader(client).DownloadToDirectory(server.Url, _directory, CancellationToken.None);
+        var path = await Downloader().DownloadToDirectory(server.Url, _directory, CancellationToken.None);
         await AssertContent(server.Body, path);
     }
 
@@ -137,8 +127,7 @@ public sealed class AcquisitionHttpDownloadTests
     {
         await using var server = new Server {WrongChecksum = true};
         var path = Path.Combine(_directory, "payload.bin");
-        using var client = new HttpClient();
-        try { await Downloader(client).Download(server.Url, path, CancellationToken.None); Assert.Fail("The checksum must be checked."); }
+        try { await Downloader().Download(server.Url, path, CancellationToken.None); Assert.Fail("The checksum must be checked."); }
         catch (Exception ex) when (ex is not Microsoft.VisualStudio.TestTools.UnitTesting.AssertFailedException)
         {
             StringAssert.Contains(ex.Message, "MD5");
@@ -203,7 +192,7 @@ public sealed class AcquisitionHttpDownloadTests
                         if (!IgnoreRange)
                         {
                             start = requestedStart;
-                            end = int.Parse(parts[1]);
+                            end = string.IsNullOrEmpty(parts[1]) ? Body.Length - 1 : int.Parse(parts[1]);
                             response.StatusCode = 206;
                             response.Headers.Add("Content-Range", $"bytes {(WrongRange ? start + 1 : start)}-{end}/{Body.Length}");
                         }

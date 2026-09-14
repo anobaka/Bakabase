@@ -371,7 +371,7 @@
   "workflow.acquisition.step.fetchTorrent": "下载 BT 种子内容",
   "workflow.activity.acquisition.resolveSharedContent.description": "读取可访问的分享网页或完整分享文字，使用配置的 AI 解析链接与密码。无法保证读取需登录或动态加载的页面；此节点本身不下载文件。",
   "workflow.activity.acquisition.selectLink.description": "从已解析的下载链接中选取一个，优先使用配置的链接选择顺序。此节点不按资源名称搜索网盘，也不执行下载。",
-  "workflow.activity.acquisition.fetchHttp.description": "在服务端下载 HTTP(S) 文件，支持进度、取消和超时；无法校验旧文件时重新下载。地址需直接返回文件。",
+  "workflow.activity.acquisition.fetchHttp.description": "在服务端下载 HTTP(S) 直链文件，可配置并发连接数、重试、限速和超时。仅在本地进度和服务端文件版本均可验证时续传，否则重新下载。",
   "workflow.activity.acquisition.waitForInbox.description": "等待已下载的文件进入服务端待处理目录，再交给后续节点。此节点不会自行下载文件。",
   "workflow.activity.acquisition.fetchMagnet.description": "使用选定的下载实现处理磁力链接。内置下载器和 aria2 可等待下载完成；系统默认客户端需要后续节点接收外部下载的文件。",
   "workflow.activity.acquisition.fetchTorrent.description": "读取上传的 .torrent 文件或已填写的 HTTP(S) 种子地址，使用内置 BitTorrent 引擎在服务端下载，保留内容的目录层级，完成后停止做种。",
@@ -408,5 +408,17 @@
   "workflow.validation.validationFailed": "未能完成检查，请检查节点配置后重试。",
   "workflow.editor.saveAsCopy": "保存为副本",
   "workflow.editor.copyName": "{{name}} 副本",
-  "workflow.editor.builtinCopyHint": "修改会保存为新的工作流，原内置工作流和已有任务保持不变。"
+  "workflow.editor.builtinCopyHint": "修改会保存为新的工作流，原内置工作流和已有任务保持不变。",
+  "workflow.acquisition.fetchHttp.parallelConnections.label": "并发连接数",
+  "workflow.acquisition.fetchHttp.parallelConnections.description": "同时下载的连接上限，1 表示单连接。",
+  "workflow.acquisition.fetchHttp.maxRetries.label": "失败重试次数",
+  "workflow.acquisition.fetchHttp.maxRetries.description": "临时网络错误后自动重试，0 表示不重试。",
+  "workflow.acquisition.fetchHttp.speedLimitKiB.label": "下载限速（KiB/s）",
+  "workflow.acquisition.fetchHttp.speedLimitKiB.description": "本次下载的总速度上限，0 表示不限速。",
+  "workflow.acquisition.fetchHttp.timeoutMinutes.label": "超时（分钟）",
+  "workflow.acquisition.fetchHttp.timeoutMinutes.description": "本次下载的最长等待时间，包含重试。",
+  "workflow.acquisition.fetchHttp.automaticTransferHelp": "服务端支持分段请求（Range）且文件版本可验证时自动分块，断线续传还需有效的本地进度记录。不满足条件时使用单连接或重新下载。",
+  "workflow.validation.acquisition.httpConnectionsInvalid": "并发连接数须为 1 至 16 的整数。",
+  "workflow.validation.acquisition.httpRetriesInvalid": "失败重试次数须为 0 至 10 的整数。",
+  "workflow.validation.acquisition.httpSpeedLimitInvalid": "下载限速须为 0 至 1048576 KiB/s 的整数；0 表示不限速。"
 }

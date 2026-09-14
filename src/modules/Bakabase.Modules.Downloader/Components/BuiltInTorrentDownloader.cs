@@ -3,57 +3,52 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Bakabase.Infrastructures.Components.App;
+using Bakabase.Modules.Downloader.Abstractions;
+using Bakabase.Modules.Downloader.Extensions;
+using Bakabase.Modules.Downloader.Models;
 using Microsoft.Extensions.Logging;
 using MonoTorrent;
 using MonoTorrent.Client;
 
-namespace Bakabase.Service.Components.Acquisition.Downloads;
-
-public record AcquisitionTorrentDownloadResult(string Directory, IReadOnlyList<string> Files);
-
-public interface IAcquisitionTorrentDownloader
-{
-    Task<AcquisitionTorrentDownloadResult> DownloadMagnetAsync(string magnetUri, string workingDirectory,
-        TimeSpan timeout, Func<int, string?, Task>? progress, CancellationToken ct);
-
-    Task<AcquisitionTorrentDownloadResult> DownloadTorrentAsync(byte[] metadata, string workingDirectory,
-        TimeSpan timeout, Func<int, string?, Task>? progress, CancellationToken ct);
-}
+namespace Bakabase.Modules.Downloader.Components;
 
 /// <summary>
-/// One in-process engine per acquisition. Only verified content leaves the task's directory;
+/// One in-process engine per download. Only verified content leaves the task's directory;
 /// cancellation keeps partial pieces for a hash-checked retry and always releases the engine.
 /// </summary>
-public sealed class BuiltInTorrentDownloader : IAcquisitionTorrentDownloader
+public sealed class BuiltInTorrentDownloader : ITorrentDownloader
 {
     private readonly Func<string> _cacheRoot;
     private readonly ILogger<BuiltInTorrentDownloader> _logger;
     private readonly bool _enableDht;
+    private readonly IHttpClientFactory? _httpClientFactory;
 
-    public BuiltInTorrentDownloader(AppService appService, ILogger<BuiltInTorrentDownloader> logger)
-        : this(() => Path.Combine(appService.AppDataDirectory, "acquisition-torrent-cache"), logger, true)
+    public BuiltInTorrentDownloader(Func<string> cacheRoot, ILogger<BuiltInTorrentDownloader> logger,
+        IHttpClientFactory httpClientFactory) : this(cacheRoot, logger, httpClientFactory, true)
     {
     }
 
     // Local transfer tests disable discovery outside their loopback tracker.
-    internal BuiltInTorrentDownloader(string cacheRoot, ILogger<BuiltInTorrentDownloader> logger, bool enableDht)
-        : this(() => cacheRoot, logger, enableDht)
+    internal BuiltInTorrentDownloader(string cacheRoot, ILogger<BuiltInTorrentDownloader> logger, bool enableDht,
+        IHttpClientFactory? httpClientFactory = null) : this(() => cacheRoot, logger, httpClientFactory, enableDht)
     {
     }
 
-    private BuiltInTorrentDownloader(Func<string> cacheRoot, ILogger<BuiltInTorrentDownloader> logger, bool enableDht)
+    private BuiltInTorrentDownloader(Func<string> cacheRoot, ILogger<BuiltInTorrentDownloader> logger,
+        IHttpClientFactory? httpClientFactory, bool enableDht)
     {
         _cacheRoot = cacheRoot;
         _logger = logger;
+        _httpClientFactory = httpClientFactory;
         _enableDht = enableDht;
     }
 
-    public Task<AcquisitionTorrentDownloadResult> DownloadMagnetAsync(string magnetUri, string workingDirectory,
+    public Task<TorrentDownloadResult> DownloadMagnetAsync(string magnetUri, string workingDirectory,
         TimeSpan timeout, Func<int, string?, Task>? progress, CancellationToken ct)
     {
         if (!MagnetLink.TryParse(magnetUri, out var magnet))
@@ -62,15 +57,40 @@ public sealed class BuiltInTorrentDownloader : IAcquisitionTorrentDownloader
         return DownloadAsync(magnet, null, workingDirectory, timeout, progress, ct);
     }
 
-    public Task<AcquisitionTorrentDownloadResult> DownloadTorrentAsync(byte[] metadata, string workingDirectory,
+    public Task<TorrentDownloadResult> DownloadTorrentAsync(byte[] metadata, string workingDirectory,
         TimeSpan timeout, Func<int, string?, Task>? progress, CancellationToken ct)
     {
-        if (metadata.Length > 4 * 1024 * 1024 || !Torrent.TryLoad(metadata, out var torrent))
-            throw new ArgumentException("The torrent metadata must be a valid .torrent file no larger than 4 MiB.", nameof(metadata));
-
-        ValidatePaths(torrent);
-
+        var torrent = TorrentMetadata.Parse(metadata);
         return DownloadAsync(null, torrent, workingDirectory, timeout, progress, ct);
+    }
+
+    public async Task<TorrentDownloadResult> DownloadTorrentUrlAsync(string url, string workingDirectory,
+        TimeSpan timeout, Func<int, string?, Task>? progress, CancellationToken ct)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https"))
+            throw new ArgumentException("Enter an HTTP(S) URL for the torrent metadata.", nameof(url));
+        ValidateTimeout(timeout);
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        deadline.CancelAfter(timeout);
+        try
+        {
+            if (progress != null) await progress(0, "Reading the torrent file");
+            using var http = (_httpClientFactory ?? throw new InvalidOperationException("An HTTP client factory is required."))
+                .CreateClient(DownloaderServiceCollectionExtensions.HttpClientName);
+            // The operation deadline covers both metadata and file transfer.
+            http.Timeout = Timeout.InfiniteTimeSpan;
+            using var response = await http.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, deadline.Token);
+            response.EnsureSuccessStatusCode();
+            if (response.Content.Headers.ContentLength > TorrentMetadata.MaxMetadataBytes)
+                throw new ArgumentException("The torrent metadata exceeds 4 MiB.");
+            await using var input = await response.Content.ReadAsStreamAsync(deadline.Token);
+            var metadata = await TorrentMetadata.ReadBoundedAsync(input, deadline.Token);
+            return await DownloadTorrentAsync(metadata, workingDirectory, timeout, progress, deadline.Token);
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested && deadline.IsCancellationRequested)
+        {
+            throw new TimeoutException($"The torrent download did not finish within {timeout.TotalMinutes:0.##} minutes.");
+        }
     }
 
     internal EngineSettings SettingsFor(string workingDirectory)
@@ -91,11 +111,10 @@ public sealed class BuiltInTorrentDownloader : IAcquisitionTorrentDownloader
         }.ToSettings();
     }
 
-    private async Task<AcquisitionTorrentDownloadResult> DownloadAsync(MagnetLink? magnet, Torrent? torrent,
+    private async Task<TorrentDownloadResult> DownloadAsync(MagnetLink? magnet, Torrent? torrent,
         string workingDirectory, TimeSpan timeout, Func<int, string?, Task>? progress, CancellationToken ct)
     {
-        if (timeout <= TimeSpan.Zero || timeout > TimeSpan.FromDays(30))
-            throw new ArgumentOutOfRangeException(nameof(timeout), "The download timeout must be between zero and 30 days.");
+        ValidateTimeout(timeout);
 
         ct.ThrowIfCancellationRequested();
         var payloadDirectory = Path.Combine(Path.GetFullPath(workingDirectory), "torrent-data");
@@ -112,9 +131,10 @@ public sealed class BuiltInTorrentDownloader : IAcquisitionTorrentDownloader
             {
                 if (progress != null) await progress(0, "Finding peers and downloading torrent metadata");
                 var metadataPath = Path.Combine(settings.CacheDirectory, "source.torrent");
-                if (File.Exists(metadataPath) && new FileInfo(metadataPath).Length <= 4 * 1024 * 1024)
+                if (File.Exists(metadataPath) && new FileInfo(metadataPath).Length <= TorrentMetadata.MaxMetadataBytes)
                 {
-                    Torrent.TryLoad(await File.ReadAllBytesAsync(metadataPath, deadline.Token), out torrent);
+                    try { torrent = TorrentMetadata.Parse(await File.ReadAllBytesAsync(metadataPath, deadline.Token)); }
+                    catch (ArgumentException) { torrent = null; }
                     if (torrent != null && !torrent.InfoHashes.Contains(magnet!.InfoHashes.V1OrV2)) torrent = null;
                 }
                 if (torrent == null)
@@ -122,13 +142,11 @@ public sealed class BuiltInTorrentDownloader : IAcquisitionTorrentDownloader
                     // Resolve metadata before permitting payload writes. This also lets us reject
                     // path traversal in a magnet's as-yet unknown file list before downloading it.
                     var metadata = await engine.DownloadMetadataAsync(magnet!, deadline.Token);
-                    if (metadata.Length > 4 * 1024 * 1024 || !Torrent.TryLoad(metadata.Span, out torrent))
-                        throw new IOException("The magnet returned invalid or oversized torrent metadata.");
-                    ValidatePaths(torrent);
+                    torrent = TorrentMetadata.Parse(metadata.ToArray());
                     await File.WriteAllBytesAsync(metadataPath, metadata.ToArray(), deadline.Token);
                 }
             }
-            ValidatePaths(torrent);
+            TorrentMetadata.ValidatePaths(torrent);
 
             var torrentSettings = new TorrentSettingsBuilder
             {
@@ -184,7 +202,7 @@ public sealed class BuiltInTorrentDownloader : IAcquisitionTorrentDownloader
             }
             if (files.Count == 0) throw new IOException("The torrent completed without any files.");
             if (progress != null) await progress(100, "Torrent files verified; download stopped");
-            return new AcquisitionTorrentDownloadResult(payloadDirectory, files);
+            return new TorrentDownloadResult(payloadDirectory, files);
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested && deadline.IsCancellationRequested)
         {
@@ -200,14 +218,9 @@ public sealed class BuiltInTorrentDownloader : IAcquisitionTorrentDownloader
         }
     }
 
-    internal static void ValidatePaths(Torrent torrent)
+    private static void ValidateTimeout(TimeSpan timeout)
     {
-        foreach (var file in torrent.Files)
-        {
-            var segments = file.Path.Split(['/', '\\']);
-            if (Path.IsPathRooted(file.Path) || file.Path.StartsWith('/') || file.Path.StartsWith('\\') ||
-                segments.Any(s => s is "" or "." or "..") || segments[0].Contains(':'))
-                throw new ArgumentException("The torrent contains an absolute or unsafe relative file path.");
-        }
+        if (timeout <= TimeSpan.Zero || timeout > TimeSpan.FromDays(30))
+            throw new ArgumentOutOfRangeException(nameof(timeout), "The download timeout must be between zero and 30 days.");
     }
 }

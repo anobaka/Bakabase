@@ -1,4 +1,7 @@
-﻿using Bakabase.Abstractions.Components.Events;
+﻿using Bakabase.Modules.Downloader.Extensions;
+using Bakabase.Infrastructures.Components.App;
+using System.IO;
+using Bakabase.Abstractions.Components.Events;
 using Bakabase.Service.Components.Workflow.Resources;
 using Bakabase.Service.Components.IdentityLookups;
 using Bakabase.Modules.Acquisition.Extensions;
@@ -189,6 +192,10 @@ namespace Bakabase.Service.Extensions
                 Components.Subscription.Providers.Platform.SteamOwnedGamesProvider>();
             services.AddSingleton<ISubscriptionProvider,
                 Components.Subscription.Providers.Platform.ExHentaiFavoritesProvider>();
+            // Shared transfer services are also used by dependency installers and other modules.
+            // Keep the existing cache location so metadata from earlier runs remains reusable.
+            services.AddDownloader(sp => Path.Combine(sp.GetRequiredService<AppService>().AppDataDirectory,
+                "acquisition-torrent-cache"));
             services.AddWorkflow<BakabaseDbContext>();
             services.AddAcquisition<BakabaseDbContext>();
             services.AddCollections<BakabaseDbContext>();
@@ -205,8 +212,6 @@ namespace Bakabase.Service.Extensions
             services.AddAcquisitionStep<Components.Acquisition.Steps.WaitForInboxStep>();
             services.AddAcquisitionStep<Components.Acquisition.Steps.FetchMagnetStep>();
             services.AddAcquisitionStep<Components.Acquisition.Steps.FetchTorrentStep>();
-            services.AddSingleton<Components.Acquisition.Downloads.IAcquisitionTorrentDownloader,
-                Components.Acquisition.Downloads.BuiltInTorrentDownloader>();
             services.AddSingleton<Components.Acquisition.Downloads.IAcquisitionTorrentMetadataStore,
                 Components.Acquisition.Downloads.AcquisitionTorrentMetadataStore>();
             services.AddAcquisitionStep<Components.Acquisition.Steps.FetchFromPlatformStep>();
@@ -215,10 +220,6 @@ namespace Bakabase.Service.Extensions
             services.AddAcquisitionStep<Bakabase.Modules.Acquisition.Components.Steps.PickLocalDirectoryStep>();
             services.AddAcquisitionStep<Bakabase.Modules.Acquisition.Components.Steps.PlaceStep>();
             services.AddAcquisitionStep<Components.Acquisition.Steps.MaterializeStep>();
-            services.AddHttpClient(nameof(Components.Acquisition.Steps.FetchHttpStep),
-                client => client.Timeout = System.Threading.Timeout.InfiniteTimeSpan);
-            services.AddHttpClient(nameof(Components.Acquisition.Steps.FetchMagnetStep));
-            services.AddHttpClient(nameof(Components.Acquisition.Steps.FetchTorrentStep));
             services.AddScoped<Components.Acquisition.AcquisitionInboxService>();
             services.AddScoped<Components.Acquisition.AcquisitionSetupService>();
             services.AddScoped<Components.Acquisition.AcquisitionCandidateService>();

@@ -1,17 +1,15 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Bakabase.InsideWorld.Business.Components.Downloader.Components;
+using Bakabase.Modules.Downloader.Abstractions;
+using Bakabase.Modules.Downloader.Models;
 using Bakabase.Modules.Acquisition.Abstractions.Components;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Acquisition.Components;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 namespace Bakabase.Service.Components.Acquisition.Steps;
 
@@ -27,7 +25,7 @@ public class FetchHttpStep : IAcquisitionStep
 {
     public string Kind => AcquisitionStepKinds.FetchHttp;
     public string DisplayName => "Download the link";
-    public string Description => "Downloads an HTTP(S) file on the server with progress, cancellation and a timeout; restarts when an existing file cannot be verified.";
+    public string Description => "Downloads HTTP(S) files with configurable parallel connections, retries, speed limits and a timeout. Resumes only when saved progress and the server's file version can be verified.";
     public string DescriptionKey => "workflow.activity.acquisition.fetchHttp.description";
     public IReadOnlyList<AcquisitionLeadKind> AcceptedLeadKinds => [AcquisitionLeadKind.DirectUrl];
     public Type? ConfigType => typeof(Config);
@@ -35,18 +33,33 @@ public class FetchHttpStep : IAcquisitionStep
     public record Config
     {
         public int TimeoutMinutes { get; init; } = 240;
+        public int ParallelConnections { get; init; } = 4;
+        public int MaxRetries { get; init; } = 3;
+        public int SpeedLimitKiB { get; init; }
     }
 
     public Task<IReadOnlyList<AcquisitionValidationIssue>> ValidateConfigurationAsync(
         AcquisitionValidationContext context, CancellationToken ct)
     {
-        var issues = new List<AcquisitionValidationIssue>();
-        if ((context.GetConfig<Config>() ?? new Config()).TimeoutMinutes is < 1 or > 43200)
-            issues.Add(new("timeoutInvalid", "The download timeout must be between 1 and 43200 minutes.", "workflow.validation.acquisition.timeoutInvalid"));
+        var issues = ValidateConfig(context.GetConfig<Config>() ?? new Config());
         if (context.IsExecution && context.LeadKind == AcquisitionLeadKind.DirectUrl &&
             (!Uri.TryCreate(context.LeadValue, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https")))
             issues.Add(new("httpSourceInvalid", "Enter an HTTP(S) URL for the file itself.", "workflow.validation.acquisition.httpSourceInvalid"));
         return Task.FromResult<IReadOnlyList<AcquisitionValidationIssue>>(issues);
+    }
+
+    private static List<AcquisitionValidationIssue> ValidateConfig(Config config)
+    {
+        var issues = new List<AcquisitionValidationIssue>();
+        if (config.TimeoutMinutes is < 1 or > 43200)
+            issues.Add(new("timeoutInvalid", "The download timeout must be between 1 and 43200 minutes.", "workflow.validation.acquisition.timeoutInvalid"));
+        if (config.ParallelConnections is < 1 or > 16)
+            issues.Add(new("httpConnectionsInvalid", "Use between 1 and 16 parallel connections.", "workflow.validation.acquisition.httpConnectionsInvalid"));
+        if (config.MaxRetries is < 0 or > 10)
+            issues.Add(new("httpRetriesInvalid", "The retry count must be between 0 and 10.", "workflow.validation.acquisition.httpRetriesInvalid"));
+        if (config.SpeedLimitKiB is < 0 or > 1048576)
+            issues.Add(new("httpSpeedLimitInvalid", "The speed limit must be between 0 and 1048576 KiB/s; zero means unlimited.", "workflow.validation.acquisition.httpSpeedLimitInvalid"));
+        return issues;
     }
 
     public async Task<AcquisitionStepOutcome> ExecuteAsync(AcquisitionStepContext ctx,
@@ -67,25 +80,21 @@ public class FetchHttpStep : IAcquisitionStep
                 $"A {link.DriveKind} link cannot be downloaded without a person.", item);
         }
 
-        Directory.CreateDirectory(ctx.WorkingDirectory);
-
-        var factory = ctx.ServiceProvider.GetRequiredService<IHttpClientFactory>();
-        var loggerFactory = ctx.ServiceProvider.GetRequiredService<ILoggerFactory>();
-        var downloader = new SingleFileHttpDownloader(
-            factory.CreateClient(nameof(FetchHttpStep)),
-            loggerFactory.CreateLogger<SingleFileHttpDownloader>());
-
-        downloader.OnProgress += p => ctx.ReportProgress(p, "Downloading");
-
         var config = ctx.GetConfig<Config>() ?? new Config();
-        if (config.TimeoutMinutes is < 1 or > 43200)
-            return new AcquisitionStepOutcome.Fail("The download timeout must be between 1 and 43200 minutes.");
-        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        deadline.CancelAfter(TimeSpan.FromMinutes(config.TimeoutMinutes));
+        var issues = ValidateConfig(config);
+        if (issues.Count > 0)
+            return new AcquisitionStepOutcome.Fail(string.Join(" ", issues.Select(issue => issue.Message)));
 
         try
         {
-            var path = await downloader.DownloadToDirectory(link.Url, ctx.WorkingDirectory, deadline.Token);
+            var path = await ctx.ServiceProvider.GetRequiredService<IHttpDownloader>().DownloadAsync(
+                new HttpDownloadRequest(link.Url, ctx.WorkingDirectory)
+                {
+                    Timeout = TimeSpan.FromMinutes(config.TimeoutMinutes),
+                    ParallelConnections = config.ParallelConnections,
+                    MaxRetries = config.MaxRetries,
+                    MaximumBytesPerSecond = config.SpeedLimitKiB * 1024L
+                }, ctx.ReportProgress, ct);
 
             return new AcquisitionStepOutcome.Continue(item with
             {
@@ -94,7 +103,7 @@ public class FetchHttpStep : IAcquisitionStep
                 Files = item.Files.Append(path).Distinct().ToList()
             });
         }
-        catch (OperationCanceledException) when (!ct.IsCancellationRequested && deadline.IsCancellationRequested)
+        catch (TimeoutException)
         {
             return new AcquisitionStepOutcome.Fail($"The HTTP download did not finish within {config.TimeoutMinutes} minutes.");
         }

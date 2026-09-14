@@ -7,13 +7,9 @@ using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
-using Bakabase.Modules.Acquisition.Abstractions.Components;
-using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
-using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
-using Bakabase.Modules.Acquisition.Components.Workflow;
-using Bakabase.Service.Components.Acquisition.Downloads;
-using Bakabase.Service.Components.Acquisition.Steps;
-using Microsoft.Extensions.DependencyInjection;
+using System.Net.Http;
+using Bakabase.Modules.Downloader.Abstractions;
+using Bakabase.Modules.Downloader.Components;
 using Microsoft.Extensions.Logging.Abstractions;
 using MonoTorrent;
 using MonoTorrent.BEncoding;
@@ -35,55 +31,37 @@ public sealed class BuiltInTorrentDownloaderTests
     }
 
     private BuiltInTorrentDownloader Downloader() =>
-        new(Path.Combine(_root, "engine-cache"), NullLogger<BuiltInTorrentDownloader>.Instance, false);
+        new(Path.Combine(_root, "engine-cache"), NullLogger<BuiltInTorrentDownloader>.Instance, false, new HttpFactory());
+
+    private sealed class HttpFactory : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name) => new() {Timeout = Timeout.InfiniteTimeSpan};
+    }
 
     [DataTestMethod]
-    [DataRow(false, false)]
-    [DataRow(true, false)]
-    [DataRow(false, true)]
+    [DataRow("magnet")]
+    [DataRow("metadata")]
+    [DataRow("url")]
     [Timeout(90000)]
-    public async Task TheRealStepDownloadsAndVerifiesANestedFileSetFromALoopbackSeed(bool useMagnet, bool selectedFromSharingPage)
+    public async Task TheStandaloneDownloaderVerifiesANestedFileSetFromALoopbackSeed(string inputKind)
     {
         await using var seed = await LocalSeed.CreateAsync(Path.Combine(_root, "seed"));
         var working = Path.Combine(_root, "task");
-        var services = new ServiceCollection();
-        services.AddLogging();
-        services.AddHttpClient();
-        services.AddSingleton<IAcquisitionTorrentDownloader>(Downloader());
-        using var provider = services.BuildServiceProvider();
+        ITorrentDownloader downloader = Downloader();
         var progress = new List<int>();
-        var context = new AcquisitionStepContext(provider, NullLogger.Instance, (percent, _) =>
+        Task Report(int percent, string? message)
         {
             progress.Add(percent);
             return Task.CompletedTask;
-        }, working);
-        var item = (AcquisitionWorkItem)new AcquisitionRequestedTrigger().ExtractItems(new AcquisitionRequestedPayload
-        {
-            ResourceId = 1,
-            LeadKind = useMagnet ? AcquisitionLeadKind.Magnet : AcquisitionLeadKind.Torrent,
-            LeadValue = useMagnet ? seed.Magnet : seed.MetadataUrl,
-            WorkingDirectory = working
-        }).Single();
-        if (selectedFromSharingPage)
-        {
-            var parsedLink = new AcquisitionLink(seed.MetadataUrl, DriveKind: AcquisitionDriveKind.DirectUrl);
-            item = item with
-            {
-                LeadKind = AcquisitionLeadKind.SharedPage,
-                LeadValue = "https://example.invalid/sharing-page",
-                Links = [parsedLink],
-                SelectedLinkIndex = 0
-            };
         }
-        IAcquisitionStep step = useMagnet ? new FetchMagnetStep() : new FetchTorrentStep();
-
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
-        var outcome = await step.ExecuteAsync(context, item, timeout.Token);
-        Assert.IsInstanceOfType<AcquisitionStepOutcome.Continue>(outcome,
-            outcome is AcquisitionStepOutcome.Fail failure ? failure.Message : "The download must finish.");
-        var downloaded = ((AcquisitionStepOutcome.Continue)outcome).Item;
-        Assert.IsTrue(downloaded.PreserveDirectoryStructure);
-        await AssertFiles(seed, downloaded.ExtractedDirectory!, downloaded.Files);
+        var downloaded = inputKind switch
+        {
+            "magnet" => await downloader.DownloadMagnetAsync(seed.Magnet, working, TimeSpan.FromSeconds(60), Report, timeout.Token),
+            "url" => await downloader.DownloadTorrentUrlAsync(seed.MetadataUrl, working, TimeSpan.FromSeconds(60), Report, timeout.Token),
+            _ => await downloader.DownloadTorrentAsync(seed.Metadata, working, TimeSpan.FromSeconds(60), Report, timeout.Token)
+        };
+        await AssertFiles(seed, downloaded.Directory, downloaded.Files);
         Assert.AreEqual(100, progress.Last());
         Assert.IsTrue(seed.StoppedAnnounces > 0, "the downloader announces stop instead of continuing to seed");
         Assert.IsTrue(Directory.GetFiles(working, "*.torrent", SearchOption.AllDirectories).Length == 0,
@@ -92,7 +70,7 @@ public sealed class BuiltInTorrentDownloaderTests
         {
             using var exclusive = File.Open(file, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
         }
-        Directory.Move(downloaded.ExtractedDirectory!, Path.Combine(_root, "placed"));
+        Directory.Move(downloaded.Directory, Path.Combine(_root, "placed"));
     }
 
     [TestMethod]
@@ -139,6 +117,33 @@ public sealed class BuiltInTorrentDownloaderTests
         Directory.Delete(working, true);
     }
 
+    [DataTestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    [Timeout(15000)]
+    public async Task TorrentUrlDeadlineAndCancellationIncludeReadingTheMetadata(bool callerCancels)
+    {
+        await using var seed = await LocalSeed.CreateAsync(Path.Combine(_root, "seed"));
+        seed.DelayMetadataBody = true;
+        using var cancellation = new CancellationTokenSource();
+        var transfer = Downloader().DownloadTorrentUrlAsync(seed.MetadataUrl, Path.Combine(_root, "task"),
+            callerCancels ? TimeSpan.FromSeconds(10) : TimeSpan.FromMilliseconds(150), null, cancellation.Token);
+        if (callerCancels)
+        {
+            await seed.MetadataResponseStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            cancellation.Cancel();
+            try
+            {
+                await transfer;
+                Assert.Fail("Caller cancellation must interrupt the metadata response body.");
+            }
+            catch (OperationCanceledException) { }
+        }
+        else
+            await Assert.ThrowsExactlyAsync<TimeoutException>(() => transfer);
+        Assert.IsFalse(Directory.Exists(Path.Combine(_root, "task", "torrent-data")), "metadata must be complete before content downloads begin");
+    }
+
     [TestMethod]
     public void NetworkSettingsDoNotExposeAnIncomingPeerPortOrEnablePortMapping()
     {
@@ -173,6 +178,8 @@ public sealed class BuiltInTorrentDownloaderTests
         public TorrentManager Manager { get; private set; } = null!;
         public bool AdvertisePeer = true;
         public int StoppedAnnounces;
+        public bool DelayMetadataBody;
+        public readonly TaskCompletionSource MetadataResponseStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         private LocalSeed(HttpListener listener, ClientEngine engine, int peerPort, Dictionary<string, byte[]> files,
             byte[] metadata, string rootUrl)
@@ -257,7 +264,15 @@ public sealed class BuiltInTorrentDownloaderTests
                         }.Encode();
                     }
                     context.Response.ContentLength64 = body.Length;
-                    await context.Response.OutputStream.WriteAsync(body);
+                    if (DelayMetadataBody && context.Request.Url!.AbsolutePath == "/test.torrent")
+                    {
+                        await context.Response.OutputStream.WriteAsync(body.AsMemory(0, 1));
+                        MetadataResponseStarted.TrySetResult();
+                        await Task.Delay(500);
+                        await context.Response.OutputStream.WriteAsync(body.AsMemory(1));
+                    }
+                    else
+                        await context.Response.OutputStream.WriteAsync(body);
                     context.Response.Close();
                 }
                 catch (IOException) { context.Response.Abort(); }

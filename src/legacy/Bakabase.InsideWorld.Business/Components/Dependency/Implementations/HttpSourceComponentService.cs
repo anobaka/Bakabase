@@ -8,7 +8,9 @@ using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
-using Bakabase.InsideWorld.Business.Components.Downloader.Components;
+using Bakabase.Modules.Downloader.Abstractions;
+using Bakabase.Modules.Downloader.Models;
+using Microsoft.Extensions.DependencyInjection;
 using Bakabase.InsideWorld.Models.Constants;
 using Bootstrap.Components.Storage;
 using Bootstrap.Extensions;
@@ -23,7 +25,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations
         : DependentComponentService(loggerFactory, appService, directoryName, globalServiceProvider)
     {
         protected HttpClient HttpClient = httpClientFactory.CreateClient(InternalOptions.HttpClientNames.Default);
-        private readonly ILoggerFactory _loggerFactory = loggerFactory;
+        private readonly IHttpDownloader _downloader = globalServiceProvider.GetRequiredService<IHttpDownloader>();
 
         protected abstract Task<Dictionary<string, string>> GetDownloadUrls(DependentComponentVersion version,
             CancellationToken ct);
@@ -53,27 +55,26 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations
                 {
                     Directory.CreateDirectory(TempDirectory);
                     var perFileProgress = (decimal) InstallationProgressForDownloading / urlAndFileNames.Count;
-                    var singleFileDownloader = new SingleFileHttpDownloader(HttpClient,
-                        _loggerFactory.CreateLogger<SingleFileHttpDownloader>());
                     var allFilePaths = new List<string>();
-                    singleFileDownloader.OnProgress += async (progress) =>
+                    async Task ReportProgress(int progress, string? message)
                     {
                         var newProgress = (int) (perFileProgress * allFilePaths.Count +
                                                  progress * perFileProgress / 100);
                         if (newProgress != Context.InstallationProgress)
                         {
-                            await UpdateContext(d =>
-                            {
-                                d.InstallationProgress = newProgress;
-                            });
+                            await UpdateContext(d => d.InstallationProgress = newProgress);
                         }
-                    };
+                    }
                     foreach (var (url, fileName) in urlAndFileNames)
                     {
                         var filePath = Path.Combine(TempDirectory, fileName);
                         var dir = Path.GetDirectoryName(filePath)!;
                         Directory.CreateDirectory(dir);
-                        await singleFileDownloader.Download(url, filePath, ct);
+                        await _downloader.DownloadAsync(new HttpDownloadRequest(url, dir)
+                        {
+                            FileName = Path.GetFileName(filePath),
+                            HttpClientName = InternalOptions.HttpClientNames.Default
+                        }, ReportProgress, ct);
                         allFilePaths.Add(filePath);
                     }
 

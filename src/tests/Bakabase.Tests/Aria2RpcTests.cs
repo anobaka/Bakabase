@@ -1,6 +1,6 @@
 using System;
 using System.Text.Json.Nodes;
-using Bakabase.Service.Components.Acquisition;
+using Bakabase.Modules.Downloader.Components;
 
 namespace Bakabase.Tests;
 

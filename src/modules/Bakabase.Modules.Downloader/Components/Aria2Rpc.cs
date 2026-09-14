@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
-namespace Bakabase.Service.Components.Acquisition;
+namespace Bakabase.Modules.Downloader.Components;
 
 /// <summary>What aria2 says about one download.</summary>
 /// <param name="Status">aria2's own word: active, waiting, paused, error, complete, removed.</param>
@@ -80,7 +80,7 @@ public static class Aria2Rpc
         return Request("aria2.tellStatus", parameters, requestId);
     }
 
-    /// <summary>Stops only the job this acquisition created, including after cancellation.</summary>
+    /// <summary>Stops only the job this download created, including after cancellation.</summary>
     public static string BuildForceRemove(string gid, string? secret, string requestId)
     {
         var parameters = new JsonArray();

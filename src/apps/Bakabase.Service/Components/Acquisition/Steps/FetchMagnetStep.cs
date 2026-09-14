@@ -1,20 +1,18 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
-using System.Net.Http;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Modules.Acquisition.Abstractions.Components;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Acquisition.Components;
-using Bakabase.Service.Components.Acquisition.Downloads;
+using Bakabase.Modules.Downloader.Abstractions;
+using Bakabase.Modules.Downloader.Components;
+using Bakabase.Modules.Downloader.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using MonoTorrent;
 
 namespace Bakabase.Service.Components.Acquisition.Steps;
 
@@ -82,7 +80,7 @@ public class FetchMagnetStep : IAcquisitionStep
              config.PollSeconds is < 1 or > 60))
             issues.Add(new("aria2RpcInvalid", "aria2 needs an HTTP(S) RPC URL and a poll interval between 1 and 60 seconds.", "workflow.validation.acquisition.aria2RpcInvalid"));
         if (context.IsExecution && context.LeadKind == AcquisitionLeadKind.Magnet &&
-            !MagnetLink.TryParse(context.LeadValue ?? "", out _))
+            !TorrentMetadata.IsValidMagnet(context.LeadValue ?? ""))
             issues.Add(new("magnetInvalid", "Enter a magnet link with a valid BitTorrent info hash.", "workflow.validation.acquisition.magnetInvalid"));
         if (config.Handler == Handler.SystemDefault)
             issues.Add(new("systemHandlerWarning", "The system client opens on the server. Add a wait-for-inbox step to receive its files.", "workflow.validation.acquisition.systemHandlerWarning", "warning"));
@@ -105,8 +103,6 @@ public class FetchMagnetStep : IAcquisitionStep
 
         var cfg = ctx.GetConfig<Config>() ?? new Config();
 
-        Directory.CreateDirectory(ctx.WorkingDirectory);
-
         return cfg.Handler switch
         {
             Handler.Builtin => await FetchBuiltIn(ctx, item, link.Url, cfg, ct),
@@ -121,7 +117,7 @@ public class FetchMagnetStep : IAcquisitionStep
     {
         try
         {
-            var downloaded = await ctx.ServiceProvider.GetRequiredService<IAcquisitionTorrentDownloader>()
+            var downloaded = await ctx.ServiceProvider.GetRequiredService<ITorrentDownloader>()
                 .DownloadMagnetAsync(magnet, ctx.WorkingDirectory, TimeSpan.FromMinutes(config.TimeoutMinutes),
                     ctx.ReportProgress, ct);
             return new AcquisitionStepOutcome.Continue(item with
@@ -164,122 +160,31 @@ public class FetchMagnetStep : IAcquisitionStep
     private static async Task<AcquisitionStepOutcome> FetchWithAria2(AcquisitionStepContext ctx,
         AcquisitionWorkItem item, string magnet, Config cfg, CancellationToken ct)
     {
-        using var http = ctx.ServiceProvider.GetRequiredService<IHttpClientFactory>()
-            .CreateClient(nameof(FetchMagnetStep));
-        var payloadDirectory = Path.Combine(ctx.WorkingDirectory, "torrent-data");
-        Directory.CreateDirectory(payloadDirectory);
-
-        string gid;
         try
         {
-            gid = Aria2Rpc.ReadGid(await Call(http, cfg.RpcUrl,
-                Aria2Rpc.BuildAddUri(magnet, payloadDirectory, cfg.Secret, "add"), ct));
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            return new AcquisitionStepOutcome.Fail(
-                $"Could not reach aria2 at {cfg.RpcUrl}: {ex.Message}", ex);
-        }
-
-        ctx.Logger.LogInformation("aria2 took the magnet as {Gid}", gid);
-
-        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        deadline.CancelAfter(TimeSpan.FromMinutes(Math.Clamp(cfg.TimeoutMinutes, 1, 43200)));
-        var poll = TimeSpan.FromSeconds(Math.Clamp(cfg.PollSeconds, 1, 60));
-        var completed = false;
-        try
-        {
-            while (true)
+            var downloaded = await ctx.ServiceProvider.GetRequiredService<IAria2Downloader>()
+                .DownloadMagnetAsync(magnet, ctx.WorkingDirectory, new Aria2DownloadOptions
+                {
+                    RpcUrl = cfg.RpcUrl,
+                    Secret = cfg.Secret,
+                    Timeout = TimeSpan.FromMinutes(Math.Clamp(cfg.TimeoutMinutes, 1, 43200)),
+                    PollInterval = TimeSpan.FromSeconds(Math.Clamp(cfg.PollSeconds, 1, 60))
+                }, ctx.ReportProgress, ct);
+            return new AcquisitionStepOutcome.Continue(item with
             {
-                await Task.Delay(poll, deadline.Token);
-
-                Aria2Status status;
-                try
-                {
-                    status = Aria2Rpc.ReadStatus(await Call(http, cfg.RpcUrl,
-                        Aria2Rpc.BuildTellStatus(gid, cfg.Secret, "status"), deadline.Token));
-                }
-                catch (OperationCanceledException)
-                {
-                    throw;
-                }
-                catch (Exception ex)
-                {
-                    return new AcquisitionStepOutcome.Fail($"aria2 stopped answering: {ex.Message}", ex);
-                }
-
-                if (status.IsFailed)
-                {
-                    return new AcquisitionStepOutcome.Fail(
-                        $"aria2 gave up on the magnet: {status.ErrorMessage ?? status.Status}");
-                }
-
-                await ctx.ReportProgress(status.Percentage, "Fetching the torrent");
-
-                if (!status.IsComplete) continue;
-
-                // A magnet completes twice: first the metadata, then the files it described. Following
-                // the second id is what separates "aria2 finished" from "the files are here".
-                if (status.FollowedBy is { } next)
-                {
-                    ctx.Logger.LogInformation("The metadata resolved; the files are coming as {Gid}", next);
-                    gid = next;
-
-                    continue;
-                }
-
-                var files = status.Files.Where(File.Exists).Distinct().ToList();
-
-                if (files.Count == 0)
-                {
-                    return new AcquisitionStepOutcome.Fail(
-                        "aria2 reported the magnet complete but wrote no files this run can see.");
-                }
-
-                if (files.Any(file => !Path.GetFullPath(file).StartsWith(
-                        Path.GetFullPath(payloadDirectory) + Path.DirectorySeparatorChar,
-                        OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)))
-                    return new AcquisitionStepOutcome.Fail("aria2 returned a file outside this acquisition's download directory.");
-
-                completed = true;
-
-                return new AcquisitionStepOutcome.Continue(item with
-                {
-                    // Distinct: the host re-runs the step at the cursor after a restart, and the same
-                    // files must not be listed twice.
-                    Files = item.Files.Concat(files).Distinct().ToList(),
-                    ExtractedDirectory = payloadDirectory,
-                    PreserveDirectoryStructure = true
-                });
-            }
+                Files = item.Files.Concat(downloaded.Files).Distinct().ToList(),
+                ExtractedDirectory = downloaded.Directory,
+                PreserveDirectoryStructure = true
+            });
         }
-        catch (OperationCanceledException) when (!ct.IsCancellationRequested && deadline.IsCancellationRequested)
+        catch (TimeoutException)
         {
             return new AcquisitionStepOutcome.Fail($"The magnet was still not finished after {cfg.TimeoutMinutes} minutes.");
         }
-        finally
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
         {
-            if (!completed)
-            {
-                using var cleanup = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-                try { await Call(http, cfg.RpcUrl, Aria2Rpc.BuildForceRemove(gid, cfg.Secret, "stop"), cleanup.Token); }
-                catch (Exception ex) { ctx.Logger.LogWarning(ex, "Could not stop aria2 download {Gid}", gid); }
-            }
+            return new AcquisitionStepOutcome.Fail(ex.Message, ex);
         }
-    }
-
-    private static async Task<string> Call(HttpClient http, string rpcUrl, string body,
-        CancellationToken ct)
-    {
-        using var content = new StringContent(body, Encoding.UTF8, "application/json");
-        using var response = await http.PostAsync(rpcUrl, content, ct);
-
-        response.EnsureSuccessStatusCode();
-
-        return await response.Content.ReadAsStringAsync(ct);
     }
 }

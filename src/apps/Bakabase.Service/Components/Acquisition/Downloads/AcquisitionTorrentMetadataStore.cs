@@ -4,7 +4,7 @@ using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Infrastructures.Components.App;
-using MonoTorrent;
+using Bakabase.Modules.Downloader.Components;
 
 namespace Bakabase.Service.Components.Acquisition.Downloads;
 
@@ -17,7 +17,7 @@ public interface IAcquisitionTorrentMetadataStore
 /// <summary>Uploaded metadata is addressed by hash, never by an arbitrary server path.</summary>
 public sealed class AcquisitionTorrentMetadataStore : IAcquisitionTorrentMetadataStore
 {
-    public const int MaxMetadataBytes = 4 * 1024 * 1024;
+    public const int MaxMetadataBytes = TorrentMetadata.MaxMetadataBytes;
     public const string ReferencePrefix = "bakabase-torrent:";
     private readonly Func<string> _appData;
 
@@ -28,9 +28,7 @@ public sealed class AcquisitionTorrentMetadataStore : IAcquisitionTorrentMetadat
 
     public async Task<string> SaveAsync(byte[] metadata, CancellationToken ct = default)
     {
-        if (metadata.Length is 0 or > MaxMetadataBytes || !Torrent.TryLoad(metadata, out var torrent))
-            throw new ArgumentException("Choose a valid torrent file no larger than 4 MiB.");
-        BuiltInTorrentDownloader.ValidatePaths(torrent);
+        TorrentMetadata.Validate(metadata);
         var hash = Convert.ToHexString(SHA256.HashData(metadata)).ToLowerInvariant();
         Directory.CreateDirectory(Root);
         var target = Path.Combine(Root, hash + ".torrent");
@@ -67,17 +65,6 @@ public sealed class AcquisitionTorrentMetadataStore : IAcquisitionTorrentMetadat
         return true;
     }
 
-    public static async Task<byte[]> ReadBoundedAsync(Stream stream, CancellationToken ct = default)
-    {
-        using var output = new MemoryStream();
-        var buffer = new byte[81920];
-        int read;
-        while ((read = await stream.ReadAsync(buffer, ct)) > 0)
-        {
-            if (output.Length + read > MaxMetadataBytes)
-                throw new ArgumentException("Torrent metadata must be no larger than 4 MiB.");
-            await output.WriteAsync(buffer.AsMemory(0, read), ct);
-        }
-        return output.ToArray();
-    }
+    public static Task<byte[]> ReadBoundedAsync(Stream stream, CancellationToken ct = default) =>
+        TorrentMetadata.ReadBoundedAsync(stream, ct);
 }

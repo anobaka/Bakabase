@@ -8,7 +8,8 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Bakabase.InsideWorld.Business.Components.Downloader.Components;
+using Bakabase.Modules.Downloader.Abstractions;
+using Bakabase.Modules.Downloader.Models;
 using Bakabase.Modules.Acquisition.Abstractions.Components;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
@@ -390,8 +391,16 @@ public sealed class AcquisitionInboxAndDownloadTests
         }
     }
 
-    private SingleFileHttpDownloader Downloader() =>
-        new(new HttpClient(), NullLogger<SingleFileHttpDownloader>.Instance);
+    private HttpDownloadClient Downloader() => new(_sp.GetRequiredService<IHttpDownloader>());
+
+    private sealed class HttpDownloadClient(IHttpDownloader downloader)
+    {
+        public Task<string> DownloadToDirectory(string url, string directory, CancellationToken ct) =>
+            downloader.DownloadAsync(new HttpDownloadRequest(url, directory), null, ct);
+        public Task Download(string url, string path, CancellationToken ct) =>
+            downloader.DownloadAsync(new HttpDownloadRequest(url, Path.GetDirectoryName(path)!)
+                {FileName = Path.GetFileName(path)}, null, ct);
+    }
 
     [TestMethod]
     public async Task ARequestedDirectLinkReachesTheHttpDownloader()
