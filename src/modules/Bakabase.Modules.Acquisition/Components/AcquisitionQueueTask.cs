@@ -26,11 +26,9 @@ public class AcquisitionQueueTask(IServiceProvider serviceProvider, IBakabaseLoc
     public override TimeSpan? GetInterval() => TimeSpan.FromSeconds(30);
 
     /// <summary>
-    /// It is bookkeeping, not work the user asked for; keeping it out of the task list stops the
-    /// panel filling up with a row that says "nothing happened" every half minute.
+    /// The scheduler must retain this periodic task after each tick so later runs are reconciled
+    /// and queued acquisitions can start. It therefore uses the default persistent-task behavior.
     /// </summary>
-    public override bool IsPersistent => false;
-
     public override async Task RunAsync(BTaskArgs args)
     {
         await using var scope = CreateScope();
