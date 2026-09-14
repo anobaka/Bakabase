@@ -71,6 +71,21 @@ type CustomPropertyForm = {
   options?: any;
 };
 
+const withDefaultOptions = (property: CustomPropertyForm): CustomPropertyForm => {
+  if (
+    (property.id ?? 0) > 0 ||
+    property.type == undefined ||
+    !isReferenceValueType(property.type)
+  ) {
+    return property;
+  }
+
+  return {
+    ...property,
+    options: { ...property.options, ignoreCase: property.options?.ignoreCase ?? true },
+  };
+};
+
 const NumberPrecisions = [0, 1, 2, 3, 4];
 
 const RatingMaxValueDataSource = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((x) => ({
@@ -94,7 +109,7 @@ const ModalContent = ({ validValueTypes, value, onChange }: Props) => {
   const [property, setProperty] = useState<CustomPropertyForm>(() => {
     const draft = JSON.parse(JSON.stringify(value ?? {}));
 
-    return { ...draft, options: optimizeOptions(draft.options) };
+    return withDefaultOptions({ ...draft, options: optimizeOptions(draft.options) });
   });
 
   const checkValueUsage = property.id
@@ -342,10 +357,10 @@ const ModalContent = ({ validValueTypes, value, onChange }: Props) => {
     return;
   };
   const patchProperty = (patches: Partial<CustomPropertyForm>) => {
-    const newProperties = {
+    const newProperties = withDefaultOptions({
       ...property,
       ...patches,
-    };
+    });
 
     // A removed option must not remain selected as the draft's default.
     if (newProperties.options) {

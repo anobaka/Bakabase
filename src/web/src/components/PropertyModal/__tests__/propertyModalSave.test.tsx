@@ -93,6 +93,7 @@ beforeEach(() => {
   counts.mockReset();
   counts.mockResolvedValue({ code: 0, data: { isReady: true, counts: {} } });
   save.mockResolvedValue({ code: 0, data: { id: 10 } });
+  add.mockResolvedValue({ code: 0, data: { id: 11 } });
   container = document.createElement("div");
   document.body.appendChild(container);
   root = createRoot(container);
@@ -275,5 +276,112 @@ describe("property configuration save and cancel", () => {
     await click(button("property.editor.save", dialog));
 
     expect(savedOptions()).toMatchObject({ choices: [], defaultValue: [] });
+  });
+});
+
+describe("case matching defaults for custom properties", () => {
+  const referenceTypes = [
+    PropertyType.SingleChoice,
+    PropertyType.MultipleChoice,
+    PropertyType.Tags,
+    PropertyType.Multilevel,
+  ].map((type) => ({ type, name: PropertyType[type] }));
+
+  it.each(referenceTypes)(
+    "checks ignore case after choosing $name for a new property and saves true",
+    async ({ type }) => {
+      const dialog = await open(undefined);
+
+      await click(button("property.editor.chooseType", dialog));
+      const typeButton = Array.from(
+        document.querySelectorAll<HTMLButtonElement>("button[aria-pressed]"),
+      ).find((element) => element.textContent?.includes(`PropertyType.${PropertyType[type]}`))!;
+
+      expect(typeButton).toBeDefined();
+      await click(typeButton);
+      expect(dialog.querySelector('input[type="checkbox"]')).toBeChecked();
+      // MultilevelData is outside this suite's scope; naming the property drives
+      // the real form validation/save path without relying on an editor mount effect.
+      await setInput(
+        dialog.querySelector<HTMLInputElement>(
+          'input[placeholder="property.editor.namePlaceholder"]',
+        )!,
+        "New property",
+      );
+      await click(button("property.editor.save", dialog));
+
+      expect(add).toHaveBeenCalledTimes(1);
+      const payload = add.mock.lastCall![0];
+
+      expect(payload).toMatchObject({ name: "New property", type });
+      expect(typeof payload.options).toBe("string");
+      expect(JSON.parse(payload.options).ignoreCase).toBe(true);
+      expect(save).not.toHaveBeenCalled();
+    },
+  );
+
+  it("keeps an explicit unchecked choice when a new property is edited again and saved", async () => {
+    const dialog = await open({ name: "New tags", type: PropertyType.Tags });
+    const toggle = dialog.querySelector<HTMLInputElement>('input[type="checkbox"]')!;
+
+    expect(toggle).toBeChecked();
+    await click(toggle);
+    expect(toggle).not.toBeChecked();
+    await setInput(
+      dialog.querySelector<HTMLInputElement>(
+        'input[placeholder="property.editor.namePlaceholder"]',
+      )!,
+      "Case-sensitive tags",
+    );
+    expect(toggle).not.toBeChecked();
+    await click(button("property.editor.save", dialog));
+
+    expect(add).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(add.mock.lastCall![0].options).ignoreCase).toBe(false);
+    expect(save).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { name: "missing", ignoreCase: undefined },
+    { name: "explicitly false", ignoreCase: false },
+  ])(
+    "leaves an existing property's $name ignore-case setting unchecked on save",
+    async ({ ignoreCase }) => {
+      const dialog = await open({
+        id: 10,
+        name: "Existing genres",
+        type: PropertyType.MultipleChoice,
+        options: { choices, ...(ignoreCase === undefined ? {} : { ignoreCase }) },
+      });
+
+      expect(dialog.querySelector('input[type="checkbox"]')).not.toBeChecked();
+      await setInput(
+        dialog.querySelector<HTMLInputElement>(
+          'input[placeholder="property.editor.namePlaceholder"]',
+        )!,
+        "Renamed genres",
+      );
+      expect(dialog.querySelector('input[type="checkbox"]')).not.toBeChecked();
+      await click(button("property.editor.save", dialog));
+
+      expect(savedOptions().ignoreCase).toBe(ignoreCase);
+      expect(add).not.toHaveBeenCalled();
+    },
+  );
+
+  it("does not add an ignore-case option to a new numeric property", async () => {
+    const dialog = await open({ name: "New number", type: PropertyType.Number });
+
+    expect(dialog.querySelector('input[type="checkbox"]')).toBeNull();
+    await setInput(
+      dialog.querySelector<HTMLInputElement>(
+        'input[placeholder="property.editor.namePlaceholder"]',
+      )!,
+      "Size",
+    );
+    await click(button("property.editor.save", dialog));
+
+    expect(add).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(add.mock.lastCall![0].options)).not.toHaveProperty("ignoreCase");
   });
 });
