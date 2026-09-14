@@ -1,12 +1,15 @@
 "use client";
 
+import type { Operation, OperationFieldsProps } from "./types";
+
 import React from "react";
 
 import { Input, Checkbox } from "../../bakaui";
 import { getFieldRequirements } from "../validation";
 
-const ReplaceOperationFields: React.FC<any> = ({ operation, t, onChange }) => {
-  const handleChangeField = (key: string, value: any) => onChange({ ...operation, [key]: value });
+const ReplaceOperationFields: React.FC<OperationFieldsProps> = ({ operation, t, onChange }) => {
+  const handleChangeField = <K extends keyof Operation>(key: K, value: Operation[K]) =>
+    onChange({ ...operation, [key]: value });
 
   const requirements = getFieldRequirements(operation);
 
@@ -15,7 +18,7 @@ const ReplaceOperationFields: React.FC<any> = ({ operation, t, onChange }) => {
   return (
     <>
       <Input
-        className="w-[180px]"
+        className="w-full min-w-0"
         isDisabled={isReplaceEntire}
         isRequired={!isReplaceEntire && requirements.targetText}
         label={t<string>("FileNameModifier.Label.TargetText")}
@@ -25,7 +28,7 @@ const ReplaceOperationFields: React.FC<any> = ({ operation, t, onChange }) => {
         onValueChange={(e) => handleChangeField("targetText", e)}
       />
       <Input
-        className="w-[180px]"
+        className="w-full min-w-0"
         isRequired={requirements.text}
         label={t<string>("FileNameModifier.Label.Text")}
         placeholder={t<string>("FileNameModifier.Placeholder.Text")}
@@ -33,26 +36,22 @@ const ReplaceOperationFields: React.FC<any> = ({ operation, t, onChange }) => {
         value={operation.text || ""}
         onValueChange={(e) => handleChangeField("text", e)}
       />
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-1">
-          <Checkbox
-            checked={isReplaceEntire ? false : operation.regex || false}
-            isDisabled={isReplaceEntire}
-            onChange={(e) => handleChangeField("regex", e.target.checked)}
-          />
-          <span className={`text-xs ${isReplaceEntire ? "text-gray-300" : "text-gray-500"}`}>
-            {t<string>("FileNameModifier.UseRegex")}
-          </span>
-        </div>
-        <div className="flex items-center gap-1">
-          <Checkbox
-            checked={isReplaceEntire}
-            onChange={(e) => handleChangeField("replaceEntire", e.target.checked)}
-          />
-          <span className="text-xs text-gray-500">
-            {t<string>("FileNameModifier.ReplaceEntire")}
-          </span>
-        </div>
+      <div className="col-span-2 flex flex-wrap items-center gap-3">
+        <Checkbox
+          isDisabled={isReplaceEntire}
+          isSelected={isReplaceEntire ? false : operation.regex || false}
+          size="sm"
+          onValueChange={(value) => handleChangeField("regex", value)}
+        >
+          {t<string>("FileNameModifier.UseRegex")}
+        </Checkbox>
+        <Checkbox
+          isSelected={isReplaceEntire}
+          size="sm"
+          onValueChange={(value) => handleChangeField("replaceEntire", value)}
+        >
+          {t<string>("FileNameModifier.ReplaceEntire")}
+        </Checkbox>
       </div>
     </>
   );

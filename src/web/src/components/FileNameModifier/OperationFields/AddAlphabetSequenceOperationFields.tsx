@@ -1,5 +1,7 @@
 "use client";
 
+import type { OperationFieldsProps } from "./types";
+
 import React from "react";
 
 import { Input, NumberInput } from "../../bakaui";
@@ -9,13 +11,17 @@ import { FileNameModifierPosition } from "@/sdk/constants";
 
 const PositionType = FileNameModifierPosition;
 
-const AddAlphabetSequenceOperationFields: React.FC<any> = ({ operation, t, onChange }) => {
+const AddAlphabetSequenceOperationFields: React.FC<OperationFieldsProps> = ({
+  operation,
+  t,
+  onChange,
+}) => {
   const requirements = getFieldRequirements(operation);
 
   return (
     <>
       <Input
-        className="w-[100px]"
+        className="w-full min-w-0"
         isRequired={requirements.alphabetStartChar}
         label={t<string>("FileNameModifier.Label.StartChar")}
         maxLength={1}
@@ -25,7 +31,7 @@ const AddAlphabetSequenceOperationFields: React.FC<any> = ({ operation, t, onCha
         onValueChange={(e) => onChange({ ...operation, alphabetStartChar: e })}
       />
       <NumberInput
-        className="w-[100px]"
+        className="w-full min-w-0"
         isRequired={requirements.alphabetCount}
         label={t<string>("FileNameModifier.Label.Count")}
         placeholder={t<string>("FileNameModifier.Placeholder.Count")}
@@ -35,7 +41,7 @@ const AddAlphabetSequenceOperationFields: React.FC<any> = ({ operation, t, onCha
       />
       {operation.position === PositionType.AtPosition && (
         <NumberInput
-          className="w-[120px]"
+          className="w-full min-w-0"
           isRequired={requirements.positionIndex}
           label={t<string>("FileNameModifier.Label.PositionIndex")}
           placeholder={t<string>("FileNameModifier.Placeholder.PositionIndex")}

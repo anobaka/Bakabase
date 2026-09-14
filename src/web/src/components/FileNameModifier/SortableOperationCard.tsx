@@ -18,6 +18,7 @@ interface SortableOperationCardProps {
   ) => void;
   onDelete: () => void;
   onCopy?: () => void;
+  isDisabled?: boolean;
 }
 
 const SortableOperationCard: React.FC<SortableOperationCardProps> = ({
@@ -28,9 +29,11 @@ const SortableOperationCard: React.FC<SortableOperationCardProps> = ({
   onChange,
   onDelete,
   onCopy,
+  isDisabled,
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id,
+    disabled: isDisabled,
   });
 
   const style = {
@@ -46,6 +49,7 @@ const SortableOperationCard: React.FC<SortableOperationCardProps> = ({
       dragHandleProps={{ ...listeners, ...attributes }}
       errors={errors}
       index={index}
+      isDisabled={isDisabled}
       operation={operation}
       style={style}
       onChange={onChange}

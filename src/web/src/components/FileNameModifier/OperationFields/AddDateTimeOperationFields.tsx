@@ -1,5 +1,7 @@
 "use client";
 
+import type { Operation, OperationFieldsProps } from "./types";
+
 import React from "react";
 
 import { Input, Select, NumberInput } from "../../bakaui";
@@ -13,13 +15,13 @@ const PositionTypeOptions = fileNameModifierPositions.map((opt) => ({
   value: opt.value,
 }));
 
-const AddDateTimeOperationFields: React.FC<any> = ({ operation, t, onChange }) => {
+const AddDateTimeOperationFields: React.FC<OperationFieldsProps> = ({ operation, t, onChange }) => {
   const requirements = getFieldRequirements(operation);
 
   return (
     <>
       <Input
-        className="w-[180px]"
+        className="w-full min-w-0"
         isRequired={requirements.dateTimeFormat}
         label={t<string>("FileNameModifier.Label.DateTimeFormat")}
         placeholder={t<string>("FileNameModifier.Placeholder.DateTimeFormat")}
@@ -29,7 +31,7 @@ const AddDateTimeOperationFields: React.FC<any> = ({ operation, t, onChange }) =
       />
       <Select
         disallowEmptySelection
-        className="w-[160px]"
+        className="w-full min-w-0"
         dataSource={PositionTypeOptions.map((opt) => ({
           label: t<string>(opt.label),
           value: opt.value,
@@ -43,13 +45,13 @@ const AddDateTimeOperationFields: React.FC<any> = ({ operation, t, onChange }) =
           const key = parseInt(Array.from(keys)[0] as string);
 
           if (key !== operation.position) {
-            onChange({ ...operation, position: key });
+            onChange({ ...operation, position: key as Operation["position"] });
           }
         }}
       />
       {operation.position === PositionType.AtPosition && (
         <NumberInput
-          className="w-[120px]"
+          className="w-full min-w-0"
           isRequired={requirements.positionIndex}
           label={t<string>("FileNameModifier.Label.PositionIndex")}
           placeholder={t<string>("FileNameModifier.Placeholder.PositionIndex")}
@@ -61,7 +63,7 @@ const AddDateTimeOperationFields: React.FC<any> = ({ operation, t, onChange }) =
       {(operation.position === PositionType.BeforeText ||
         operation.position === PositionType.AfterText) && (
         <Input
-          className="w-[240px]"
+          className="w-full min-w-0"
           isRequired={requirements.targetText}
           label={t<string>("FileNameModifier.Label.TargetText")}
           placeholder={t<string>("FileNameModifier.Placeholder.TargetText")}

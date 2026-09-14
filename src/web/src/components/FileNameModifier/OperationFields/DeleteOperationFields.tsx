@@ -1,5 +1,7 @@
 "use client";
 
+import type { Operation, OperationFieldsProps } from "./types";
+
 import React from "react";
 
 import { Input, NumberInput, Select } from "../../bakaui";
@@ -13,15 +15,16 @@ const PositionTypeOptions = fileNameModifierPositions.map((opt) => ({
   value: opt.value,
 }));
 
-const DeleteOperationFields: React.FC<any> = ({ operation, t, onChange }) => {
-  const handleChangeField = (key: string, value: any) => onChange({ ...operation, [key]: value });
+const DeleteOperationFields: React.FC<OperationFieldsProps> = ({ operation, t, onChange }) => {
+  const handleChangeField = <K extends keyof Operation>(key: K, value: Operation[K]) =>
+    onChange({ ...operation, [key]: value });
 
   const requirements = getFieldRequirements(operation);
 
   return (
     <>
       <NumberInput
-        className="w-[120px]"
+        className="w-full min-w-0"
         isRequired={requirements.deleteCount}
         label={t<string>("FileNameModifier.Label.DeleteCount")}
         placeholder={t<string>("FileNameModifier.Placeholder.DeleteCount")}
@@ -30,7 +33,7 @@ const DeleteOperationFields: React.FC<any> = ({ operation, t, onChange }) => {
         onValueChange={(e) => handleChangeField("deleteCount", e)}
       />
       <NumberInput
-        className="w-[120px]"
+        className="w-full min-w-0"
         isRequired={requirements.deleteStartPosition}
         label={t<string>("FileNameModifier.Label.DeleteStartPosition")}
         placeholder={t<string>("FileNameModifier.Placeholder.DeleteStartPosition")}
@@ -39,7 +42,7 @@ const DeleteOperationFields: React.FC<any> = ({ operation, t, onChange }) => {
         onValueChange={(e) => handleChangeField("deleteStartPosition", e)}
       />
       <Input
-        className="w-[180px]"
+        className="w-full min-w-0"
         isRequired={requirements.targetText}
         label={t<string>("FileNameModifier.Label.MatchText")}
         placeholder={t<string>("FileNameModifier.Placeholder.MatchText")}
@@ -49,7 +52,7 @@ const DeleteOperationFields: React.FC<any> = ({ operation, t, onChange }) => {
       />
       <Select
         disallowEmptySelection
-        className="w-[140px]"
+        className="w-full min-w-0"
         dataSource={PositionTypeOptions.map((opt) => ({
           label: t<string>(opt.label),
           value: opt.value,
@@ -63,13 +66,13 @@ const DeleteOperationFields: React.FC<any> = ({ operation, t, onChange }) => {
           const key = parseInt(Array.from(keys)[0] as string);
 
           if (key !== operation.position) {
-            handleChangeField("position", key);
+            handleChangeField("position", key as Operation["position"]);
           }
         }}
       />
       {operation.position === PositionType.AtPosition && (
         <NumberInput
-          className="w-[120px]"
+          className="w-full min-w-0"
           isRequired={requirements.positionIndex}
           label={t<string>("FileNameModifier.Label.PositionIndex")}
           placeholder={t<string>("FileNameModifier.Placeholder.PositionIndex")}

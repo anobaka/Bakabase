@@ -1,5 +1,7 @@
 "use client";
 
+import type { Operation, OperationFieldsProps } from "./types";
+
 import React from "react";
 
 import { Select } from "../../bakaui";
@@ -12,13 +14,13 @@ const CaseTypeOptions = fileNameModifierCaseTypes.map((opt) => ({
   value: opt.value,
 }));
 
-const ChangeCaseOperationFields: React.FC<any> = ({ operation, t, onChange }) => {
+const ChangeCaseOperationFields: React.FC<OperationFieldsProps> = ({ operation, t, onChange }) => {
   const requirements = getFieldRequirements(operation);
 
   return (
     <Select
       disallowEmptySelection
-      className="w-[180px]"
+      className="w-full min-w-0"
       dataSource={CaseTypeOptions.map((opt) => ({
         label: t<string>(opt.label),
         value: opt.value,
@@ -32,7 +34,7 @@ const ChangeCaseOperationFields: React.FC<any> = ({ operation, t, onChange }) =>
         const key = parseInt(Array.from(keys)[0] as string);
 
         if (key !== operation.caseType) {
-          onChange({ ...operation, caseType: key });
+          onChange({ ...operation, caseType: key as Operation["caseType"] });
         }
       }}
     />
