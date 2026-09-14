@@ -112,13 +112,15 @@ public class WorkflowController(
                 DisplayName = t.DisplayName,
                 Description = t.Description,
                 DescriptionKey = t.DescriptionKey,
+                SupportsManualRun = t.SupportsManualRun,
                 RequiresManualPayload = t.RequiresManualPayload,
-                PayloadFields = t.RequiresManualPayload ? BuildFieldVms(t.PayloadType) : [],
+                PayloadFields = t.SupportsManualRun && t.RequiresManualPayload ? BuildFieldVms(t.PayloadType) : [],
             }));
     }
 
     /// <summary>
-    /// Start a run of this definition now. Neither the trigger filter nor the enabled flag
+    /// Start a manually runnable definition now. Managed triggers must use their source module.
+    /// Neither the trigger filter nor the enabled flag
     /// applies — the user named this definition, and one being switched off is exactly when
     /// running it by hand is most useful.
     /// </summary>

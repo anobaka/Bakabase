@@ -171,7 +171,7 @@ public sealed class AcquisitionPipelineTests
 
         await runner.ExecuteAsync(runId, BuildArgs(_sp));
 
-        // The daemon is not running in tests, so the handler RunManuallyAsync queued would sit in
+        // The daemon is not running in tests, so the handler RunManagedAsync queued would sit in
         // the map forever and refuse to be replaced when the run is resumed. Dropping it here is
         // what the daemon does once it has actually executed the task.
         await _sp.GetRequiredService<BTaskManager>().Clean($"workflow.run.{runId}");
@@ -432,7 +432,7 @@ public sealed class AcquisitionPipelineTests
 
         foreach (var recipe in BuiltinAcquisitionRecipes.All)
         {
-            Assert.IsTrue(seeded.Contains(recipe.Name), recipe.Name);
+            Assert.AreEqual(recipe.SeedOnStartup, seeded.Contains(recipe.Name), recipe.Name);
         }
     }
 

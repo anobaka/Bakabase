@@ -59,6 +59,11 @@ const FilterSummary: WorkflowTriggerUI<Filter>["FilterSummary"] = ({ filter }) =
 export const DownloaderResultReadyTriggerUI: WorkflowTriggerUI<Filter> = {
   kind: "downloader.resultReady",
   displayNameKey: "workflow.trigger.downloaderResultReady.displayName",
+  runEntry: {
+    path: "/downloader",
+    labelKey: "workflow.entry.downloader.label",
+    descriptionKey: "workflow.entry.downloader.description",
+  },
   defaultFilter: () => ({ kinds: [] }),
   parseFilter: (json) => {
     try {

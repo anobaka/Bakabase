@@ -13,5 +13,6 @@ public record AcquisitionRecipeStep(string Kind, string? ConfigJson = null);
 /// </summary>
 /// <param name="Name">Identifies a built-in recipe, and is what a copy is named after.</param>
 /// <param name="Steps">Run in order.</param>
+/// <param name="SeedOnStartup">False for templates and legacy recipes retained only for existing definitions.</param>
 public record AcquisitionRecipe(string Name, IReadOnlyList<AcquisitionRecipeStep> Steps,
-    string? Description = null, string? DescriptionKey = null);
+    string? Description = null, string? DescriptionKey = null, bool SeedOnStartup = true);

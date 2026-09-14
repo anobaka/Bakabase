@@ -10,7 +10,8 @@ using Microsoft.Extensions.Logging;
 namespace Bakabase.Modules.Acquisition.Components;
 
 /// <summary>
-/// Puts the built-in recipes in the database, once, by name.
+/// Puts startup recipes in the database once per built-in name and trigger. A user-created
+/// definition with the same name remains independent and does not suppress the built-in.
 /// <para>
 /// A recipe whose steps are not all implemented yet is skipped rather than created broken — the
 /// steps arrive over several releases, and a definition naming an activity that does not exist
@@ -33,7 +34,7 @@ public class AcquisitionRecipeSeeder<TDbContext>(
     public async Task SeedAsync(CancellationToken ct = default)
     {
         var existing = await db.Set<WorkflowDefinitionDbModel>()
-            .Where(d => d.TriggerKind == AcquisitionWorkflowKinds.TriggerRequested)
+            .Where(d => d.IsBuiltin && d.TriggerKind == AcquisitionWorkflowKinds.TriggerRequested)
             .Select(d => d.Name)
             .ToListAsync(ct);
         var known = existing.ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -46,12 +47,17 @@ public class AcquisitionRecipeSeeder<TDbContext>(
                 // Enrich shipped documentation only. Never replace an existing node chain:
                 // suspended runs persist a cursor into it, and copies belong to their users.
                 await db.Set<WorkflowDefinitionDbModel>()
-                    .Where(d => d.Name == recipe.Name && d.IsBuiltin && d.DescriptionKey == null &&
+                    .Where(d => d.TriggerKind == AcquisitionWorkflowKinds.TriggerRequested &&
+                                d.Name == recipe.Name && d.IsBuiltin && d.DescriptionKey == null &&
                                 (d.Description == null || d.Description == ""))
                     .ExecuteUpdateAsync(s => s.SetProperty(d => d.Description, recipe.Description)
                         .SetProperty(d => d.DescriptionKey, recipe.DescriptionKey), ct);
                 continue;
             }
+
+            // Template-only recipes remain available by name for existing configured defaults,
+            // but new installations do not acquire unused definitions. Never rewrite old runs.
+            if (!recipe.SeedOnStartup) continue;
 
             var missing = recipe.Steps
                 .Select(s => s.Kind)

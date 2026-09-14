@@ -392,10 +392,12 @@ public class AcquisitionService<TDbContext>(
         }
 
         var name = BuiltinAcquisitionRecipes.DefaultRecipeNameFor(leadKind, leadValue, options.Value);
+        var hasConfiguredDefault = options.Value.RecipeByLeadKind.GetValueOrDefault(leadKind) != null;
 
         var byName = await Defs.Where(
                 d => d.TriggerKind == AcquisitionWorkflowKinds.TriggerRequested && d.Name == name)
-            .OrderBy(d => d.Id).FirstOrDefaultAsync(ct);
+            .OrderByDescending(d => !hasConfiguredDefault && d.IsBuiltin)
+            .ThenBy(d => d.Id).FirstOrDefaultAsync(ct);
 
         if (byName != null) return byName;
 
@@ -426,8 +428,7 @@ public class AcquisitionService<TDbContext>(
         Workflow.Abstractions.Models.Domain.WorkflowRun run;
         try
         {
-            run = await workflows.RunManuallyAsync(task.RecipeDefinitionId,
-                JsonSerializer.Serialize(payload, Json), ct);
+            run = await workflows.RunManagedAsync(task.RecipeDefinitionId, payload, ct);
         }
         catch (WorkflowValidationException ex)
         {

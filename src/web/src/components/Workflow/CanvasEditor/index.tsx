@@ -97,7 +97,13 @@ const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => 
   );
   // Existing user workflows keep their names; built-in edits create a localized copy.
   const displayName = workflowLabel({ name, isBuiltin: workflow?.isBuiltin }, t);
-  const [description, setDescription] = useState(workflowDescription(workflow ?? {}, t));
+  const [description, setDescription] = useState(
+    workflow
+      ? workflowDescription(workflow, t)
+      : seed?.descriptionKey
+        ? t<string>(seed.descriptionKey)
+        : "",
+  );
   const [validation, setValidation] = useState<WorkflowValidation>();
   const [checking, setChecking] = useState(false);
   const [checkFailed, setCheckFailed] = useState(false);
@@ -430,6 +436,14 @@ const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => 
     if (!workflow) return;
     const trigger = triggers.find((x) => x.kind === workflow.triggerKind);
 
+    if (trigger?.supportsManualRun === false) {
+      const entry = getWorkflowTriggerUI(workflow.triggerKind)?.runEntry;
+
+      if (entry) navigate(entry.path);
+
+      return;
+    }
+
     if (trigger?.requiresManualPayload) {
       createPortal(ManualRunModal, {
         workflowId: workflow.id,
@@ -466,6 +480,9 @@ const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => 
   }
 
   const TriggerSummary = triggerUi?.FilterSummary;
+  const runTrigger = triggers.find((item) => item.kind === workflow?.triggerKind);
+  const managedRun = runTrigger?.supportsManualRun === false;
+  const runEntry = getWorkflowTriggerUI(workflow?.triggerKind ?? "")?.runEntry;
 
   return (
     <div className="flex flex-col gap-0 h-[calc(100vh-16px)] min-h-0">
@@ -499,12 +516,17 @@ const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => 
               {t<string>("workflow.runs.title")}
             </Button>
             <Button
+              isDisabled={!runTrigger || (managedRun && !runEntry)}
               size="sm"
               startContent={<AiOutlinePlayCircle />}
               variant="flat"
               onPress={handleRun}
             >
-              {t<string>("workflow.manualRun.tooltip")}
+              {t<string>(
+                managedRun
+                  ? (runEntry?.labelKey ?? "workflow.entry.managed")
+                  : "workflow.manualRun.tooltip",
+              )}
             </Button>
           </>
         )}

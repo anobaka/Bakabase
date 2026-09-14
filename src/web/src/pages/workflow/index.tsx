@@ -7,6 +7,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import {
+  ArrowRightOutlined,
   CheckCircleOutlined,
   DeleteOutlined,
   EditOutlined,
@@ -24,8 +25,10 @@ import { activityDisplayName, triggerDisplayName } from "@/components/Workflow/d
 import { workflowLabel } from "@/components/Workflow/builtinLabels";
 import { workflowDescription } from "@/components/Workflow/metadata";
 import WorkflowDiagnostics from "@/components/Workflow/WorkflowDiagnostics";
+import TemplateLibrary from "@/components/Workflow/TemplateLibrary";
+import { PresetUsage, workflowPresetGuide } from "@/components/Workflow/presetGuides";
 import BApi from "@/sdk/BApi";
-import { Button, Chip, Modal, Spinner, Switch, toast } from "@/components/bakaui";
+import { Button, Chip, Modal, Spinner, Switch, Tab, Tabs, toast } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
 type WorkflowVm =
@@ -50,6 +53,7 @@ const WorkflowPage: React.FC = () => {
   const [workflows, setWorkflows] = useState<WorkflowVm[]>([]);
   const [triggers, setTriggers] = useState<TriggerDescriptorVm[]>([]);
   const [loading, setLoading] = useState(true);
+  const [section, setSection] = useState("custom");
   const [validationFor, setValidationFor] = useState<{
     id: number;
     result?: WorkflowValidation;
@@ -110,6 +114,15 @@ const WorkflowPage: React.FC = () => {
   const handleRun = async (wf: WorkflowVm) => {
     const trigger = triggerByKind.get(wf.triggerKind);
 
+    if (!trigger) return;
+    if (trigger.supportsManualRun === false) {
+      const entry = getWorkflowTriggerUI(wf.triggerKind)?.runEntry;
+
+      if (entry) navigate(entry.path);
+
+      return;
+    }
+
     if (trigger?.requiresManualPayload) {
       createPortal(ManualRunModal, {
         workflowId: wf.id,
@@ -130,7 +143,8 @@ const WorkflowPage: React.FC = () => {
   };
 
   const handleAdd = () => navigate("/workflows/editor");
-  const handleAddFromTemplate = () => navigate("/workflows/editor?template=fileCleaning");
+  const handleAddFromTemplate = () =>
+    createPortal(TemplateLibrary, { workflows, onChoose: navigate });
   const handleEdit = (wf: WorkflowVm) => navigate(`/workflows/editor?id=${wf.id}`);
   const handleDelete = (wf: WorkflowVm) =>
     createPortal(Modal, {
@@ -143,13 +157,18 @@ const WorkflowPage: React.FC = () => {
       },
     });
   const handleToggleEnabled = async (wf: WorkflowVm, next: boolean) => {
-    await BApi.workflow.patchWorkflow(wf.id, { enabled: next });
+    const response = await BApi.workflow.patchWorkflow(wf.id, { enabled: next });
+
+    if (response.code) return;
     setWorkflows((arr) => arr.map((w) => (w.id === wf.id ? { ...w, enabled: next } : w)));
   };
+  const displayedWorkflows = workflows.filter((wf) =>
+    section === "builtin" ? wf.isBuiltin : !wf.isBuiltin,
+  );
 
   return (
     <div className="flex flex-col gap-3 p-4">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <h2 className="text-lg font-semibold">{t<string>("workflow.title")}</h2>
         <HelpCenterButton topic="workflow" />
         <Button color="primary" size="sm" startContent={<PlusCircleOutlined />} onPress={handleAdd}>
@@ -161,22 +180,53 @@ const WorkflowPage: React.FC = () => {
           variant="flat"
           onPress={handleAddFromTemplate}
         >
-          {t<string>("workflow.action.addFileCleaning")}
+          {t<string>("workflow.templates.title")}
         </Button>
       </div>
+      <Tabs
+        aria-label={t("workflow.sections.label")}
+        selectedKey={section}
+        onSelectionChange={(key) => setSection(String(key))}
+      >
+        <Tab
+          key="custom"
+          title={t("workflow.sections.custom", {
+            count: workflows.filter((wf) => !wf.isBuiltin).length,
+          })}
+        />
+        <Tab
+          key="builtin"
+          title={t("workflow.sections.builtin", {
+            count: workflows.filter((wf) => wf.isBuiltin).length,
+          })}
+        />
+      </Tabs>
+      <p className="text-sm leading-relaxed text-default-500">
+        {t(`workflow.sections.${section}Hint`)}
+      </p>
 
       {loading ? (
         <div className="flex justify-center py-10">
           <Spinner size="lg" />
         </div>
-      ) : workflows.length === 0 ? (
-        <div className="text-center text-default-500 py-10">{t<string>("workflow.empty")}</div>
+      ) : displayedWorkflows.length === 0 ? (
+        <div className="flex flex-col items-center gap-3 py-12 text-sm text-default-500">
+          <p>{t(`workflow.sections.${section}Empty`)}</p>
+          {section === "custom" && (
+            <Button size="sm" variant="flat" onPress={handleAddFromTemplate}>
+              {t("workflow.templates.title")}
+            </Button>
+          )}
+        </div>
       ) : (
         <div className="flex flex-col gap-2">
-          {workflows.map((wf) => {
+          {displayedWorkflows.map((wf) => {
             const triggerUi = getWorkflowTriggerUI(wf.triggerKind);
             const FilterSummary = triggerUi?.FilterSummary;
             const filter = triggerUi ? triggerUi.parseFilter(wf.triggerFilterJson) : null;
+            const managedRun = triggerByKind.get(wf.triggerKind)?.supportsManualRun === false;
+            const runEntry = triggerUi?.runEntry;
+            const guide = workflowPresetGuide(wf);
 
             return (
               <div
@@ -184,6 +234,7 @@ const WorkflowPage: React.FC = () => {
                 className="border border-default-200 rounded-lg p-3 flex flex-wrap items-center gap-3"
               >
                 <Switch
+                  aria-label={t("workflow.field.enabled")}
                   isSelected={wf.enabled}
                   size="sm"
                   onValueChange={(v) => handleToggleEnabled(wf, v)}
@@ -204,7 +255,20 @@ const WorkflowPage: React.FC = () => {
                       {workflowDescription(wf, t)}
                     </p>
                   )}
-                  {FilterSummary && filter && <FilterSummary filter={filter} />}
+                  {FilterSummary && filter && !managedRun && <FilterSummary filter={filter} />}
+                  {managedRun && runEntry && (
+                    <p className="text-xs text-primary">{t(runEntry.descriptionKey)}</p>
+                  )}
+                  {guide && (
+                    <details className="mt-1 rounded-lg bg-default-50 p-3">
+                      <summary className="w-fit cursor-pointer text-xs font-medium text-default-600">
+                        {t("workflow.usage.title")}
+                      </summary>
+                      <div className="mt-3">
+                        <PresetUsage guide={guide} />
+                      </div>
+                    </details>
+                  )}
                   <div className="flex flex-wrap gap-1.5 mt-1">
                     {/* Tiny chain preview — kind chips in order. */}
                     {wf.activities.map((a, i) => (
@@ -248,17 +312,33 @@ const WorkflowPage: React.FC = () => {
                     <CheckCircleOutlined className="text-lg" />
                   </Button>
                   <Button
-                    isIconOnly
+                    aria-label={t(
+                      managedRun
+                        ? (runEntry?.labelKey ?? "workflow.entry.managed")
+                        : "workflow.manualRun.tooltip",
+                    )}
                     color="primary"
+                    isDisabled={!triggerByKind.has(wf.triggerKind) || (managedRun && !runEntry)}
+                    isIconOnly={!managedRun}
                     size="sm"
-                    title={t<string>("workflow.manualRun.tooltip")}
+                    title={t<string>(
+                      managedRun
+                        ? (runEntry?.labelKey ?? "workflow.entry.managed")
+                        : "workflow.manualRun.tooltip",
+                    )}
                     variant="light"
                     onPress={() => handleRun(wf)}
                   >
-                    <PlayCircleOutlined className="text-lg" />
+                    {managedRun ? (
+                      <ArrowRightOutlined className="text-lg" />
+                    ) : (
+                      <PlayCircleOutlined className="text-lg" />
+                    )}
+                    {managedRun && t(runEntry?.labelKey ?? "workflow.entry.managed")}
                   </Button>
                   <Button
                     isIconOnly
+                    aria-label={t<string>("workflow.runs.openTooltip")}
                     size="sm"
                     title={t<string>("workflow.runs.openTooltip")}
                     variant="light"
@@ -266,18 +346,29 @@ const WorkflowPage: React.FC = () => {
                   >
                     <HistoryOutlined className="text-lg" />
                   </Button>
-                  <Button isIconOnly size="sm" variant="light" onPress={() => handleEdit(wf)}>
-                    <EditOutlined className="text-lg" />
-                  </Button>
                   <Button
                     isIconOnly
-                    color="danger"
+                    aria-label={t(
+                      wf.isBuiltin ? "workflow.templates.configure" : "workflow.action.edit",
+                    )}
                     size="sm"
                     variant="light"
-                    onPress={() => handleDelete(wf)}
+                    onPress={() => handleEdit(wf)}
                   >
-                    <DeleteOutlined className="text-lg" />
+                    <EditOutlined className="text-lg" />
                   </Button>
+                  {!wf.isBuiltin && (
+                    <Button
+                      isIconOnly
+                      aria-label={t("workflow.action.delete")}
+                      color="danger"
+                      size="sm"
+                      variant="light"
+                      onPress={() => handleDelete(wf)}
+                    >
+                      <DeleteOutlined className="text-lg" />
+                    </Button>
+                  )}
                 </div>
               </div>
             );

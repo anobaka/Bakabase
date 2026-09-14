@@ -7,12 +7,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
+using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bakabase.Modules.Acquisition.Abstractions.Components;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Acquisition.Components;
 using Bakabase.Service.Components.Acquisition.Downloads;
 using Microsoft.Extensions.DependencyInjection;
+using Bootstrap.Components.Configuration.Abstractions;
 
 namespace Bakabase.Service.Components.Acquisition.Steps;
 
@@ -29,12 +31,20 @@ public sealed class FetchExHentaiStep : IAcquisitionStep
     public Type? ConfigType => null;
 
     public Task<IReadOnlyList<AcquisitionValidationIssue>> ValidateConfigurationAsync(
-        AcquisitionValidationContext context, CancellationToken ct) =>
-        Task.FromResult<IReadOnlyList<AcquisitionValidationIssue>>(context.LeadKind == null ||
-            context.LeadKind == AcquisitionLeadKind.PlatformHolding && TrySource(context.LeadValue, out _)
-                ? []
-                : [new("exHentaiSourceInvalid", "This node requires an ExHentai gallery identity.",
-                    "workflow.validation.acquisition.exHentaiSourceInvalid")]);
+        AcquisitionValidationContext context, CancellationToken ct)
+    {
+        List<AcquisitionValidationIssue> issues = [];
+        if (context.LeadKind != null && (context.LeadKind != AcquisitionLeadKind.PlatformHolding ||
+                                        !TrySource(context.LeadValue, out _)))
+            issues.Add(new("exHentaiSourceInvalid", "This node requires an ExHentai gallery identity.",
+                "workflow.validation.acquisition.exHentaiSourceInvalid"));
+        // The downloader snapshots the first account's Cookie; another account does not fill
+        // that prerequisite. Presence can be checked here without probing credentials remotely.
+        if (string.IsNullOrWhiteSpace(context.Services.GetRequiredService<IBOptions<ExHentaiOptions>>().Value.Cookie))
+            issues.Add(new("exHentaiAccountMissing", "Configure the first ExHentai account's cookie in downloader settings. Its validity is checked when the downloader connects.",
+                "workflow.validation.acquisition.exHentaiAccountMissing"));
+        return Task.FromResult<IReadOnlyList<AcquisitionValidationIssue>>(issues);
+    }
 
     public async Task<AcquisitionStepOutcome> ExecuteAsync(AcquisitionStepContext ctx,
         AcquisitionWorkItem item, CancellationToken ct)

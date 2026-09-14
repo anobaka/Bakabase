@@ -44,10 +44,10 @@ const WorkflowEditorPage: React.FC = () => {
     return {
       name: raw.name,
       nameKey: raw.nameKey,
+      descriptionKey: raw.descriptionKey,
       triggerKind: raw.triggerKind,
       drafts: seedToDrafts(raw),
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

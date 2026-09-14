@@ -28,7 +28,7 @@ public record AcquisitionRequestedPayload
 /// <summary>
 /// A recipe's entry point. Unlike every other trigger it listens to nothing: a recipe runs because
 /// someone asked for a specific resource, so <see cref="Matches"/> is always false and the only way
-/// in is a manual run started by <c>IAcquisitionService</c>.
+/// in is a managed run started by <c>IAcquisitionService</c>.
 /// <para>
 /// Being a trigger anyway is what makes a recipe an ordinary workflow — editable in the same canvas,
 /// visible in the same run history, mixable with the text and notification activities.
@@ -38,6 +38,9 @@ public class AcquisitionRequestedTrigger : IWorkflowTrigger
 {
     public string Kind => AcquisitionWorkflowKinds.TriggerRequested;
     public string DisplayName => "Acquisition requested";
+    public string Description => "Start this workflow from Acquire resources so the resource, source and acquisition task are supplied together.";
+    public string DescriptionKey => "workflow.trigger.acquisitionRequested.description";
+    public bool SupportsManualRun => false;
     public Type PayloadType => typeof(AcquisitionRequestedPayload);
 
     /// <summary>

@@ -36,25 +36,27 @@ public class FetchFromPlatformStep : IAcquisitionStep
     public IReadOnlyList<AcquisitionLeadKind>? AcceptedLeadKinds => [AcquisitionLeadKind.PlatformHolding];
     public Type? ConfigType => null;
 
-    public Task<IReadOnlyList<AcquisitionValidationIssue>> ValidateConfigurationAsync(
+    public async Task<IReadOnlyList<AcquisitionValidationIssue>> ValidateConfigurationAsync(
         AcquisitionValidationContext context, CancellationToken ct)
     {
-        if (context.LeadKind == null) return Task.FromResult<IReadOnlyList<AcquisitionValidationIssue>>([]);
+        if (context.LeadKind == null) return [];
         if (context.LeadKind != AcquisitionLeadKind.PlatformHolding ||
-            !TryReadLead(context.LeadValue ?? "", out var source, out _))
-            return Task.FromResult<IReadOnlyList<AcquisitionValidationIssue>>([
+            !TryReadLead(context.LeadValue ?? "", out var source, out var sourceKey))
+            return [
                 new("acquisition.source.invalid", "This node requires a linked platform resource identity.",
-                    "workflow.validation.acquisition.invalidSource")]);
+                    "workflow.validation.acquisition.invalidSource")];
         var registry = context.Services.GetRequiredService<IPlatformConnectorRegistry>();
         if (!registry.Sources.Contains(source))
-            return Task.FromResult<IReadOnlyList<AcquisitionValidationIssue>>([
+            return [
                 new("acquisition.platform.unsupported", "This build does not include the required platform connector.",
-                    "workflow.validation.acquisition.platformUnsupported")]);
-        if (registry.Get(source)?.CanFetch != true)
-            return Task.FromResult<IReadOnlyList<AcquisitionValidationIssue>>([
+                    "workflow.validation.acquisition.platformUnsupported")];
+        var connector = registry.Get(source);
+        if (connector?.CanFetch != true)
+            return [
                 new("acquisition.platform.unavailable", "This platform connector cannot obtain files.",
-                    "workflow.validation.acquisition.platformUnavailable")]);
-        return Task.FromResult<IReadOnlyList<AcquisitionValidationIssue>>([]);
+                    "workflow.validation.acquisition.platformUnavailable")];
+        return (await connector.ValidateFetchAsync(sourceKey, ct))
+            .Select(issue => new AcquisitionValidationIssue(issue.Code, issue.Message, issue.MessageKey)).ToList();
     }
 
     /// <summary>What the interface tells the user while the platform is working.</summary>
@@ -176,7 +178,7 @@ public class FetchFromPlatformStep : IAcquisitionStep
 
         if (separator <= 0 || separator == leadValue.Length - 1) return false;
 
-        if (!Enum.TryParse(leadValue[..separator], true, out source)) return false;
+        if (!Enum.TryParse(leadValue[..separator], true, out source) || !Enum.IsDefined(source)) return false;
 
         sourceKey = leadValue[(separator + 1)..];
 

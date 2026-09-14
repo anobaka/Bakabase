@@ -34,4 +34,6 @@ export interface WorkflowTriggerUI<TFilter = unknown> {
   ManualRunForm?: React.FC<{ value: string; onChange: (json: string) => void }>;
   defaultManualPayload?: () => string;
   isManualPayloadValid?: (json: string) => boolean;
+  /** The feature that supplies the managed input for this trigger. */
+  runEntry?: { path: string; labelKey: string; descriptionKey: string };
 }

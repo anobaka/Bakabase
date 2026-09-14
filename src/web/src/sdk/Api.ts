@@ -4886,6 +4886,7 @@ export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowTriggerDes
   displayName: string;
   description?: string;
   descriptionKey?: string;
+  supportsManualRun: boolean;
   requiresManualPayload: boolean;
   payloadFields: BakabaseModulesWorkflowAbstractionsModelsViewWorkflowItemTypeFieldViewModel[];
 }

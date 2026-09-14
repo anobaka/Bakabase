@@ -196,6 +196,10 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
             throw new InvalidOperationException($"Unknown trigger kind: {def.TriggerKind}");
         }
 
+        if (!trigger.SupportsManualRun)
+            throw new InvalidOperationException(
+                $"This workflow must be started from its source module. {trigger.Description}");
+
         // Built before the row is written so an unusable payload surfaces as a failed request
         // rather than a persisted run that dies the moment it starts.
         var definition = await LoadDomain(definitionId, ct)
@@ -209,13 +213,33 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
         if (preparationErrors.Count > 0)
             throw new WorkflowValidationException(new WorkflowValidationResult {Diagnostics = preparationErrors});
         var payload = trigger.BuildManualPayload(def.TriggerFilterJson, argsJson);
+        return await StartPreparedRunAsync(definition, payload, ct);
+    }
+
+    public async Task<WorkflowRun> RunManagedAsync(int definitionId, object payload,
+        CancellationToken ct = default)
+    {
+        var definition = await LoadDomain(definitionId, ct)
+            ?? throw new InvalidOperationException($"Workflow #{definitionId} not found");
+        if (!_triggers.TryGet(definition.TriggerKind, out var trigger))
+            throw new InvalidOperationException($"Unknown trigger kind: {definition.TriggerKind}");
+        if (trigger.SupportsManualRun)
+            throw new InvalidOperationException("This workflow accepts manual input; use its manual-run entry point.");
+        if (!trigger.PayloadType.IsInstanceOfType(payload))
+            throw new InvalidOperationException($"The input does not match {trigger.PayloadType.Name}.");
+        return await StartPreparedRunAsync(definition, payload, ct);
+    }
+
+    private async Task<WorkflowRun> StartPreparedRunAsync(WorkflowDefinition definition, object payload,
+        CancellationToken ct)
+    {
         var check = await _validation.ValidateAsync(definition, isExecution: true, payload: payload, ct: ct);
         if (!check.IsValid) throw new WorkflowValidationException(check);
         var payloadJson = JsonSerializer.Serialize(payload, WorkflowJson.Options);
 
         var run = new WorkflowRunDbModel
         {
-            WorkflowDefinitionId = def.Id,
+            WorkflowDefinitionId = definition.Id,
             Status = WorkflowRunStatus.Pending,
             StartedAt = DateTime.Now,
             PayloadJson = payloadJson,
@@ -226,8 +250,8 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
 
         var runId = run.Id;
         await _taskManager.Enqueue(BTaskBuilder.Create($"workflow.run.{runId}")
-            .Named($"Workflow #{def.Id} run #{runId}")
-            .ConflictsWith($"workflow.definition.{def.Id}")
+            .Named($"Workflow #{definition.Id} run #{runId}")
+            .ConflictsWith($"workflow.definition.{definition.Id}")
             .Run(args => _runner.ExecuteAsync(runId, args)));
 
         return run.ToDomainModel();

@@ -24,7 +24,7 @@ public static class BuiltinAcquisitionRecipes
     /// <summary>An http(s) link that is the file itself.</summary>
     public const string DirectDownload = "Direct download";
 
-    /// <summary>A magnet link, fetched by whatever the user already uses for torrents.</summary>
+    /// <summary>Legacy manual magnet workflow. Retained for existing definitions and templates.</summary>
     public const string Magnet = "Magnet";
 
     public const string MagnetDownload = "Magnet download";
@@ -67,7 +67,7 @@ public static class BuiltinAcquisitionRecipes
             Step(AcquisitionStepKinds.Place),
             Step(AcquisitionStepKinds.Materialize)
         ], "Download the magnet with your own client, then provide the completed files for import.",
-            "acquisition.workflow.manualMagnet.description"),
+            "acquisition.workflow.manualMagnet.description", SeedOnStartup: false),
         new(MagnetDownload,
         [
             Step(AcquisitionStepKinds.FetchMagnet),

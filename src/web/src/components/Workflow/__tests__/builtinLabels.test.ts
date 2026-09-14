@@ -22,14 +22,14 @@ await instance.init({
 
 const builtinNames = [
   ["Forum post + cloud drive", "分享内容与网盘"],
-  ["Direct download", "直链下载"],
-  ["Magnet", "磁力链接手动下载入库"],
-  ["Magnet download", "磁力链接下载"],
-  ["Torrent download", "BT 种子下载"],
-  ["Platform fetch", "平台获取"],
+  ["Direct download", "直链下载并入库"],
+  ["Magnet", "外部下载后入库（磁力链接）"],
+  ["Magnet download", "磁力链接下载并入库"],
+  ["Torrent download", "BT 种子下载并入库"],
+  ["Platform fetch", "平台获取或关联已有文件"],
   ["Local directory", "本地目录入库"],
   ["Download torrent contents", "下载种子内容"],
-  ["ExHentai download", "ExHentai 下载"],
+  ["ExHentai download", "ExHentai 下载并入库"],
   ["Parse post download information", "仅解析帖子"],
 ];
 
@@ -60,6 +60,6 @@ describe("built-in workflow display names", () => {
     expect(workflowLabel({ name: "toString", isBuiltin: true }, t)).toBe("toString");
     expect(
       workflowLabel({ name: "Direct download", isBuiltin: true }, instance.getFixedT("en")),
-    ).toBe("Direct download");
+    ).toBe("Direct download and import");
   });
 });

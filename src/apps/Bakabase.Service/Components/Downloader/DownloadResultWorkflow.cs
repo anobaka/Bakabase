@@ -56,8 +56,9 @@ public sealed class DownloadResultReadyTrigger : IWorkflowTrigger
 {
     public string Kind => DownloadResultWorkflow.Trigger;
     public string DisplayName => "Download result ready";
-    public string Description => "Processes each work's saved result using its configured workflow. Acquisition-owned results continue their original run.";
+    public string Description => "Start or retry this workflow from a downloader result. Each saved result uses its configured workflow; acquisition-owned results continue their original run.";
     public string DescriptionKey => "workflow.trigger.downloaderResultReady.description";
+    public bool SupportsManualRun => false;
     public Type PayloadType => typeof(DownloadResultReadyPayload);
     public bool Matches(object payload, string? triggerFilterJson)
     {

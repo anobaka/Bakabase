@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Tasks;
@@ -124,6 +125,25 @@ public sealed class DownloadResultWorkflowTests
             new BTaskArgs(new PauseToken(), CancellationToken.None, new BTask("test", () => "test"),
                 _ => Task.CompletedTask, _sp));
         await _sp.GetRequiredService<BTaskManager>().Clean($"workflow.run.{id}");
+    }
+
+    [TestMethod]
+    public async Task ManagedResultRejectsManualRunButStillDispatchesAndDownloadsThroughItsOwner()
+    {
+        var definition = await Definition();
+        var result = await TorrentResult(definition);
+        await Assert.ThrowsExactlyAsync<InvalidOperationException>(() =>
+            _sp.GetRequiredService<IWorkflowDefinitionService>().RunManuallyAsync(definition,
+                JsonSerializer.Serialize(new DownloadResultReadyPayload(result.Id, result.Kind, result.Name))));
+        await using (var scope = _sp.CreateAsyncScope())
+            Assert.AreEqual(0, await scope.ServiceProvider.GetRequiredService<BakabaseDbContext>()
+                .Set<WorkflowRunDbModel>().CountAsync());
+        await Dispatch();
+        var state = (await State(result.Id))!;
+        Assert.IsNotNull(state.WorkflowRunId);
+        await Execute(state.WorkflowRunId.Value);
+        Assert.AreEqual(WorkflowRunStatus.Success, (await Run(state.WorkflowRunId.Value)).Status);
+        Assert.AreEqual(1, _torrent.Downloads);
     }
 
     [TestMethod]

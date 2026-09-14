@@ -64,12 +64,17 @@ const ManualRunModal = ({ workflowId, workflowName, trigger, onRan }: Props) => 
       footer={{
         actions: ["ok", "cancel"],
         okProps: {
-          isDisabled: !!parseError || triggerUI?.isManualPayloadValid?.(argsJson) === false,
+          isDisabled:
+            trigger.supportsManualRun === false ||
+            !!parseError ||
+            triggerUI?.isManualPayloadValid?.(argsJson) === false,
         },
       }}
       size="lg"
       title={t<string>("workflow.manualRun.title", { name: workflowName })}
       onOk={async () => {
+        if (trigger.supportsManualRun === false)
+          throw new Error(t<string>("workflow.entry.managed"));
         // Thrown so the modal stays open on a rejected payload — the server validates the shape,
         // not just the syntax, and the user needs the box they typed into to still be there.
         const rsp = await BApi.workflow.runWorkflowManually(workflowId, { argsJson });

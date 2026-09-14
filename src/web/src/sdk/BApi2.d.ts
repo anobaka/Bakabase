@@ -11507,6 +11507,7 @@ export interface components {
             displayName: string;
             description?: string;
             descriptionKey?: string;
+            supportsManualRun: boolean;
             requiresManualPayload: boolean;
             payloadFields: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowItemTypeFieldViewModel"][];
         };

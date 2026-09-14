@@ -17,6 +17,8 @@ export interface EditorSeed {
   nameKey?: string;
   /** Literal name (wins over nameKey) — used by the File Name Modifier hand-off. */
   name?: string;
+  /** Usage, configuration and expected outcome, copied into the new definition. */
+  descriptionKey?: string;
   triggerKind: string;
   activities: Array<{ kind: string; configJson?: string }>;
 }
@@ -52,11 +54,22 @@ export const EDITOR_TEMPLATES: Record<string, EditorSeed> = {
   // help center, ready to point at a folder.
   fileCleaning: {
     nameKey: "workflow.template.fileCleaning.name",
+    descriptionKey: "workflow.preset.fileCleaning.description",
     triggerKind: "fs.manualScan",
     activities: [
       { kind: "transform.fs.fileNameOp" },
       { kind: "transform.text.trim" },
       { kind: "action.fs.saveName" },
+    ],
+  },
+  externalDownload: {
+    nameKey: "workflow.template.externalDownload.name",
+    descriptionKey: "workflow.preset.externalDownload.description",
+    triggerKind: "acquisition.requested",
+    activities: [
+      { kind: "acquisition.waitForInbox" },
+      { kind: "acquisition.place" },
+      { kind: "acquisition.materialize" },
     ],
   },
 };

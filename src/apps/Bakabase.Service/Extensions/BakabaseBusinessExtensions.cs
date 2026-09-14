@@ -169,6 +169,8 @@ namespace Bakabase.Service.Extensions
                 Components.Acquisition.Connectors.DLsiteConnector>(Bakabase.Abstractions.Models.Domain.Constants.ResourceSource.DLsite);
             services.AddKeyedScoped<Bakabase.Abstractions.Components.Platform.IPlatformConnector,
                 Components.Acquisition.Connectors.SteamConnector>(Bakabase.Abstractions.Models.Domain.Constants.ResourceSource.Steam);
+            services.AddSingleton<Components.Acquisition.Connectors.IPlatformClientLauncher,
+                Components.Acquisition.Connectors.PlatformClientLauncher>();
             services.AddKeyedScoped<Bakabase.Abstractions.Components.Platform.IPlatformConnector,
                 Components.Acquisition.Connectors.ExHentaiConnector>(Bakabase.Abstractions.Models.Domain.Constants.ResourceSource.ExHentai);
             services.AddScoped<Bakabase.Abstractions.Components.Platform.IPlatformConnectorRegistry,

@@ -19,7 +19,8 @@ public interface IWorkflowDefinitionService
     Task<SearchResponse<WorkflowRun>> SearchRunsAsync(WorkflowRunSearchInputModel input);
 
     /// <summary>
-    /// Start a run by hand. The payload comes from the definition's trigger — see
+    /// Start a manually runnable trigger by hand. Managed triggers must use their source module.
+    /// The payload comes from the definition's trigger — see
     /// <see cref="Components.IWorkflowTrigger.BuildManualPayload"/> — so <paramref name="argsJson"/>
     /// is whatever that trigger asks the user for, or null when it asks for nothing.
     ///
@@ -28,4 +29,11 @@ public interface IWorkflowDefinitionService
     /// most worth running by hand precisely while it is switched off and being built).
     /// </summary>
     Task<WorkflowRun> RunManuallyAsync(int definitionId, string? argsJson, CancellationToken ct = default);
+
+    /// <summary>
+    /// Starts a managed trigger from its owning application service with an already prepared,
+    /// strongly typed payload. This is not a user-facing manual-run endpoint; the caller owns
+    /// resource/task authorization. The workflow still validates its configuration and input.
+    /// </summary>
+    Task<WorkflowRun> RunManagedAsync(int definitionId, object payload, CancellationToken ct = default);
 }

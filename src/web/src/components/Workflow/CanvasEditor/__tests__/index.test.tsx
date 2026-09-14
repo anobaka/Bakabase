@@ -189,7 +189,13 @@ vi.mock("@/components/bakaui", () => ({
 type EditorProps = ComponentProps<typeof WorkflowCanvasEditor>;
 
 const triggers: EditorProps["triggers"] = [
-  { kind: "fs.manualScan", displayName: "Scan", requiresManualPayload: false, payloadFields: [] },
+  {
+    kind: "fs.manualScan",
+    displayName: "Scan",
+    supportsManualRun: true,
+    requiresManualPayload: false,
+    payloadFields: [],
+  },
 ];
 const aiKind = "transform.ai.transform";
 const directKind = "transform.text.trim";

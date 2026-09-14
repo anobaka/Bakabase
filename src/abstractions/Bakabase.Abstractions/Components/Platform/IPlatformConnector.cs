@@ -15,6 +15,9 @@ public record PlatformHolding(
     List<string>? CoverUrls = null,
     string? MetadataJson = null);
 
+/// <summary>A locally known prerequisite; checking it must not contact the platform or start work.</summary>
+public record PlatformFetchValidationIssue(string Code, string Message, string MessageKey);
+
 /// <summary>How far a fetch got before it had to hand back control.</summary>
 public abstract record PlatformFetchOutcome
 {
@@ -57,6 +60,10 @@ public interface IPlatformConnector
     /// nothing to give; a shop the user has bought from does.
     /// </summary>
     bool CanFetch { get; }
+
+    /// <summary>Checks account, holding and host prerequisites using local state only.</summary>
+    Task<IReadOnlyList<PlatformFetchValidationIssue>> ValidateFetchAsync(string sourceKey, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<PlatformFetchValidationIssue>>([]);
 
     /// <summary>
     /// Brings one holding down.

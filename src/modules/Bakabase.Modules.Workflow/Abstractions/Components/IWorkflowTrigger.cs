@@ -16,6 +16,12 @@ public interface IWorkflowTrigger
     string? Description => null;
     string? DescriptionKey => null;
 
+    /// <summary>
+    /// Whether the generic workflow runner may start this trigger. Managed triggers receive
+    /// their input and ownership from the source module instead of user-supplied JSON.
+    /// </summary>
+    bool SupportsManualRun => true;
+
     /// <summary>CLR type of the payload this trigger publishes. Activities can cast against it.</summary>
     Type PayloadType { get; }
 

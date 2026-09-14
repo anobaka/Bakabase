@@ -27,9 +27,8 @@ namespace Bakabase.Service.Components.Acquisition;
 
 /// <summary>
 /// Joins the resource search, stored links, platform identities and actual workflow definitions.
-/// The number of service/database reads is independent of the number of rows. No connector is
-/// constructed: knowing that a build implements a platform is different from asking an account
-/// whether it owns a particular work, and browsing must never start that work.
+/// Loads definitions once, then validates each visible input against local configuration and
+/// platform state. Browsing must never contact platforms or start their work.
 /// </summary>
 public class AcquisitionCandidateService(
     IResourceService resources,
@@ -133,27 +132,28 @@ public class AcquisitionCandidateService(
             return new AcquisitionCandidatePageViewModel([], totalCount, page, pageSize, recipes);
         }
 
-        // Resolve readiness against the selected, already-parsed input. A general recipe's AI
-        // prerequisite must not prevent using links whose extraction has already completed.
+        // Every visible input needs its own validation: platform identities share a lead kind
+        // without sharing supported workflows. Already parsed inputs also carry their cached links.
         var resolved = await db.Set<AcquisitionLeadDbModel>().AsNoTracking()
             .Where(l => pageIds.Contains(l.ResourceId) && l.IsResolved).ToDictionaryAsync(l => l.Id, ct);
-        if (resolved.Count > 0)
+        if (pageIds.Any(id => routes[id].Count > 0))
         {
             var definitions = (await workflowDefinitions.SearchAsync(new()
                 {TriggerKind = AcquisitionWorkflowKinds.TriggerRequested})).ToDictionary(d => d.Id);
             foreach (var resourceId in pageIds)
             foreach (var route in routes[resourceId])
             {
-                if (!resolved.TryGetValue(route.Id, out var source)) continue;
+                resolved.TryGetValue(route.Id, out var source);
                 foreach (var definitionId in route.ApplicableRecipeDefinitionIds)
                 {
                     if (!definitions.TryGetValue(definitionId, out var definition)) continue;
                     route.RecipeValidations[definitionId] = await validation.ValidateAsync(definition, true,
                         new AcquisitionRequestedPayload
                         {
-                            ResourceId = resourceId, LeadKind = source.Kind, LeadValue = source.Value,
-                            InitialLinks = [new AcquisitionLink(source.Value, source.AccessCode, source.Password,
-                                AcquisitionDriveKinds.Infer(source.Value))]
+                            ResourceId = resourceId, LeadKind = route.Kind, LeadValue = route.Value,
+                            InitialLinks = source == null ? [] :
+                                [new AcquisitionLink(source.Value, source.AccessCode, source.Password,
+                                    AcquisitionDriveKinds.Infer(source.Value))]
                         }, ct);
                 }
             }
@@ -220,8 +220,10 @@ public class AcquisitionCandidateService(
         List<AcquisitionRecipeSummary> recipes, ResourceSource? platform = null)
     {
         var defaultName = BuiltinAcquisitionRecipes.DefaultRecipeNameFor(lead.Kind, lead.Value, options.Value);
+        var explicitlyConfigured = options.Value.RecipeByLeadKind.GetValueOrDefault(lead.Kind) != null;
         var defaultRecipe = recipes.Where(r => r.Name == defaultName)
-            .OrderBy(r => r.DefinitionId).FirstOrDefault();
+            .OrderByDescending(r => !explicitlyConfigured && r.IsBuiltin)
+            .ThenBy(r => r.DefinitionId).FirstOrDefault();
         var applicable = recipes.Where(r => r.ApplicableLeadKinds.Contains(lead.Kind))
             .Select(r => r.DefinitionId).ToList();
         var unsupportedPlatform = platform.HasValue && !platforms.Sources.Contains(platform.Value);

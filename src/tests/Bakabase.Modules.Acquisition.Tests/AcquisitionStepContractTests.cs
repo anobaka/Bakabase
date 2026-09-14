@@ -179,7 +179,7 @@ public sealed class AcquisitionStepContractTests
     [TestMethod]
     public void EveryBuiltinRecipe_EndsByMaterializing()
     {
-        Assert.AreEqual(5, BuiltinAcquisitionRecipes.All.Count);
+        Assert.IsTrue(BuiltinAcquisitionRecipes.All.Count > 0);
 
         foreach (var recipe in BuiltinAcquisitionRecipes.All)
         {

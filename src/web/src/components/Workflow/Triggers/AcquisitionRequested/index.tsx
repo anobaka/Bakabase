@@ -23,6 +23,11 @@ const Explanation: React.FC = () => {
 export const AcquisitionRequestedTriggerUI: WorkflowTriggerUI<Record<string, never>> = {
   kind: "acquisition.requested",
   displayNameKey: "workflow.trigger.acquisitionRequested.displayName",
+  runEntry: {
+    path: "/acquisitions",
+    labelKey: "workflow.entry.acquisition.label",
+    descriptionKey: "workflow.entry.acquisition.description",
+  },
   defaultFilter: () => ({}),
   parseFilter: () => ({}),
   serializeFilter: () => null,

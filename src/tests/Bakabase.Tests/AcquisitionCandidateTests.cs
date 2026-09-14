@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Platform;
 using Bakabase.Abstractions.Models.Domain;
@@ -36,15 +37,27 @@ public sealed class AcquisitionCandidateTests
     private AcquisitionCandidateService Candidates => _sp.GetRequiredService<AcquisitionCandidateService>();
     private BakabaseDbContext Db => _sp.GetRequiredService<BakabaseDbContext>();
 
-    // Any account/client access while reading the overview fails the test. Implemented platform
-    // names are sufficient; neither ownership nor remote availability is inferred from identity.
+    // Validation may inspect locally cached account/holding state, but browsing must never
+    // enumerate a remote library, probe the installation or ask a platform to fetch files.
     private sealed class NoProbeRegistry : IPlatformConnectorRegistry
     {
         public IReadOnlyCollection<ResourceSource> Sources { get; } =
             [ResourceSource.DLsite, ResourceSource.Steam, ResourceSource.ExHentai];
 
-        public IPlatformConnector? Get(ResourceSource source) =>
-            throw new AssertFailedException("Browsing candidates must not construct or probe a platform connector.");
+        public IPlatformConnector? Get(ResourceSource source) => new NoProbeConnector(source);
+    }
+
+    private sealed class NoProbeConnector(ResourceSource source) : IPlatformConnector
+    {
+        public ResourceSource Source => source;
+        public bool CanFetch => true;
+        public Task<IReadOnlyList<PlatformHolding>> EnumerateHoldingsAsync(CancellationToken ct) =>
+            throw new AssertFailedException("Browsing candidates must not enumerate platform libraries.");
+        public Task<string?> DetectLocalPathAsync(string key, CancellationToken ct) =>
+            throw new AssertFailedException("Browsing candidates must not probe installations.");
+        public Task<PlatformFetchOutcome> FetchAsync(string key, string path,
+            Func<int, string?, Task>? progress, CancellationToken ct) =>
+            throw new AssertFailedException("Browsing candidates must not start platform downloads.");
     }
 
     [TestInitialize]
