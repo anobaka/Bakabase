@@ -12,7 +12,9 @@ using Bakabase.InsideWorld.Business.Components.Downloader.Components;
 using Bakabase.Modules.Acquisition.Abstractions.Components;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.Acquisition.Components.Workflow;
 using Bakabase.Modules.Acquisition.Models.Domain;
+using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bakabase.Service.Components.Acquisition;
 using Bakabase.Service.Components.Acquisition.Steps;
 using Bakabase.TestKit.Utils;
@@ -69,6 +71,28 @@ public sealed class AcquisitionInboxAndDownloadTests
         SelectedLinkIndex = links.Length > 0 ? 0 : null,
     };
 
+    private AcquisitionWorkItem RequestedItem(AcquisitionLeadKind kind, string value) =>
+        (AcquisitionWorkItem) new AcquisitionRequestedTrigger().ExtractItems(new AcquisitionRequestedPayload
+        {
+            ResourceId = 1,
+            LeadKind = kind,
+            LeadValue = value,
+            WorkingDirectory = _working
+        }).Single();
+
+    private WorkflowExecutionContext WorkflowContext() => new()
+    {
+        RunId = 1,
+        WorkflowDefinitionId = 1,
+        TriggerKind = AcquisitionWorkflowKinds.TriggerRequested,
+        // Task-row mirroring is covered by AcquisitionPipelineTests; this exercises the real
+        // adapter and steps against a restored item, without an unrelated task row.
+        Payload = new object(),
+        ActivityConfigJson = """{"openLink":false}""",
+        Services = _sp,
+        Logger = NullLogger.Instance
+    };
+
     private string DropInInbox(string name, string content = "payload")
     {
         var path = Path.Combine(_inbox, name);
@@ -97,6 +121,70 @@ public sealed class AcquisitionInboxAndDownloadTests
         Assert.AreEqual("https://pan.baidu.com/s/abc", prompt.Url);
         Assert.AreEqual("8k2p", prompt.AccessCode, "the code is what the user will be asked for");
         Assert.AreEqual(_inbox, prompt.InboxDirectory);
+    }
+
+    [TestMethod]
+    public async Task ARequestedMagnetIsShownWhenTheDefaultRecipeWaitsForFiles()
+    {
+        const string url = "magnet:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567&dn=Example";
+        var item = RequestedItem(AcquisitionLeadKind.Magnet, url);
+
+        Assert.AreEqual(AcquisitionDriveKind.Magnet, item.SelectedLink!.DriveKind);
+
+        var outcome = await new WaitForInboxStep().ExecuteAsync(Context("""{"openLink":false}"""),
+            item, CancellationToken.None);
+        var suspended = (AcquisitionStepOutcome.Suspend) outcome;
+        var prompt = JsonSerializer.Deserialize<WaitForInboxStep.Prompt>(suspended.PromptJson!, Json)!;
+
+        Assert.AreEqual(AcquisitionWaitReason.WaitingForFile, suspended.Reason);
+        Assert.AreEqual(url, prompt.Url);
+        Assert.AreEqual(_inbox, prompt.InboxDirectory);
+    }
+
+    [DataTestMethod]
+    [DataRow(AcquisitionLeadKind.SharedPage, "https://example.com/share")]
+    [DataRow(AcquisitionLeadKind.SharedDocument, "A title and https://example.com/share")]
+    [DataRow(AcquisitionLeadKind.PlatformHolding, "Steam:123")]
+    [DataRow(AcquisitionLeadKind.Manual, "/some/local/directory")]
+    public void OtherLeadKindsDoNotBecomeDownloadLinks(AcquisitionLeadKind kind, string value)
+    {
+        var item = RequestedItem(kind, value);
+
+        Assert.AreEqual(0, item.Links.Count);
+        Assert.IsNull(item.SelectedLink);
+    }
+
+    [DataTestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task AResumedMagnetRecoversAnEmptySnapshotButPreservesExistingLinkChoices(bool hasLinks)
+    {
+        const string magnet = "magnet:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567";
+        const string chosenUrl = "https://pan.baidu.com/s/chosen-by-user";
+        var snapshot = new AcquisitionWorkItem
+        {
+            ResourceId = 1,
+            LeadKind = AcquisitionLeadKind.Magnet,
+            LeadValue = magnet,
+            WorkingDirectory = _working,
+            Links = hasLinks
+                ? [new AcquisitionLink(magnet), new AcquisitionLink(chosenUrl, "1234", "archive-password",
+                    AcquisitionDriveKind.Baidu)]
+                : [],
+            SelectedLinkIndex = hasLinks ? 1 : null
+        };
+        var restored = JsonSerializer.Deserialize<AcquisitionWorkItem>(JsonSerializer.Serialize(snapshot, Json), Json)!;
+
+        var outcome = await new AcquisitionStepActivity(new WaitForInboxStep())
+            .ProcessItemAsync(WorkflowContext(), restored, CancellationToken.None);
+        var prompt = JsonSerializer.Deserialize<WaitForInboxStep.Prompt>(outcome.Suspension!.PromptJson!, Json)!;
+        var waitingItem = (AcquisitionWorkItem) outcome.Suspension.Item;
+
+        Assert.AreEqual(hasLinks ? chosenUrl : magnet, prompt.Url);
+        Assert.AreEqual(hasLinks ? "1234" : null, prompt.AccessCode);
+        Assert.AreEqual(hasLinks ? "archive-password" : null, waitingItem.SelectedLink!.ArchivePassword);
+        Assert.AreEqual(hasLinks ? 1 : 0, waitingItem.SelectedLinkIndex);
+        Assert.AreEqual(hasLinks ? 2 : 0, restored.Links.Count, "restoring does not mutate the old snapshot");
     }
 
     [TestMethod]
@@ -304,6 +392,53 @@ public sealed class AcquisitionInboxAndDownloadTests
 
     private SingleFileHttpDownloader Downloader() =>
         new(new HttpClient(), NullLogger<SingleFileHttpDownloader>.Instance);
+
+    [TestMethod]
+    public async Task ARequestedDirectLinkReachesTheHttpDownloader()
+    {
+        var body = Encoding.UTF8.GetBytes("downloaded from the requested lead");
+        using var server = new Server(body, supportsRange: true);
+        var requested = RequestedItem(AcquisitionLeadKind.DirectUrl, server.Url);
+
+        var outcome = await new FetchHttpStep().ExecuteAsync(Context(), requested, CancellationToken.None);
+        Assert.IsInstanceOfType<AcquisitionStepOutcome.Continue>(outcome);
+        var downloaded = ((AcquisitionStepOutcome.Continue) outcome).Item;
+
+        Assert.AreEqual(server.Url, downloaded.SelectedLink!.Url);
+        Assert.AreEqual(AcquisitionDriveKind.DirectUrl, downloaded.SelectedLink.DriveKind);
+        CollectionAssert.AreEqual(body, await File.ReadAllBytesAsync(downloaded.Files.Single()));
+    }
+
+    [TestMethod]
+    public async Task ARetriedDirectLinkFromAnOldEmptySnapshotCanDownload()
+    {
+        var body = Encoding.UTF8.GetBytes("downloaded after retrying the old snapshot");
+        using var server = new Server(body, supportsRange: true);
+        var oldSnapshot = new AcquisitionWorkItem
+        {
+            ResourceId = 1,
+            LeadKind = AcquisitionLeadKind.DirectUrl,
+            LeadValue = server.Url,
+            WorkingDirectory = _working
+        };
+        var restored = JsonSerializer.Deserialize<AcquisitionWorkItem>(JsonSerializer.Serialize(oldSnapshot, Json), Json)!;
+
+        var outcome = await new AcquisitionStepActivity(new FetchHttpStep())
+            .ProcessItemAsync(WorkflowContext(), restored, CancellationToken.None);
+        var downloaded = (AcquisitionWorkItem) outcome.Replacement!;
+
+        CollectionAssert.AreEqual(body, await File.ReadAllBytesAsync(downloaded.Files.Single()));
+        Assert.AreEqual(server.Url, downloaded.SelectedLink!.Url);
+        Assert.AreEqual(0, restored.Links.Count);
+    }
+
+    [DataTestMethod]
+    [DataRow("https://files.example.r2.dev/work.zip", AcquisitionDriveKind.Cloudflare)]
+    [DataRow("https://pan.baidu.com/s/example", AcquisitionDriveKind.Baidu)]
+    public void DirectLeadsKeepTheExistingHostClassification(string url, AcquisitionDriveKind expected)
+    {
+        Assert.AreEqual(expected, RequestedItem(AcquisitionLeadKind.DirectUrl, url).SelectedLink!.DriveKind);
+    }
 
     [TestMethod]
     public async Task DownloadsWholeFile_WithRangeAndWithout()

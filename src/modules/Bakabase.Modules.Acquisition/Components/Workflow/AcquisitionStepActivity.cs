@@ -83,6 +83,10 @@ public class AcquisitionStepActivity(IAcquisitionStep step) : IResumableWorkflow
                 $"Step '{step.Kind}' received a {item.GetType().Name}, not an {nameof(AcquisitionWorkItem)}.");
         }
 
+        // Retry and resume keep the old snapshot instead of running the trigger again. Fill only
+        // a missing direct/magnet lead link; parsed links, passwords and user choices stay intact.
+        workItem = AcquisitionRequestedTrigger.PopulateLeadLink(workItem);
+
         var stepCtx = new AcquisitionStepContext(
             ctx.Services,
             ctx.Logger,

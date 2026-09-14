@@ -51,7 +51,7 @@ public class AcquisitionRequestedTrigger : IWorkflowTrigger
         // Exactly one, always: the single-item run is what lets a recipe stop and wait.
         return
         [
-            new AcquisitionWorkItem
+            PopulateLeadLink(new AcquisitionWorkItem
             {
                 ResourceId = p.ResourceId,
                 LeadKind = p.LeadKind,
@@ -60,8 +60,24 @@ public class AcquisitionRequestedTrigger : IWorkflowTrigger
                 Title = p.Title,
                 WorkingDirectory = p.WorkingDirectory,
                 WorkingName = p.WorkingName,
-            }
+            })
         ];
+    }
+
+    internal static AcquisitionWorkItem PopulateLeadLink(AcquisitionWorkItem item)
+    {
+        if (item.Links.Count > 0 || string.IsNullOrWhiteSpace(item.LeadValue) ||
+            item.LeadKind is not (AcquisitionLeadKind.DirectUrl or AcquisitionLeadKind.Magnet))
+        {
+            return item;
+        }
+
+        // These leads already are download links; shared pages must still be parsed first.
+        return item with
+        {
+            Links = [new AcquisitionLink(item.LeadValue, DriveKind: AcquisitionDriveKinds.Infer(item.LeadValue))],
+            SelectedLinkIndex = 0
+        };
     }
 
     public string ResolveOutputItemType(string? triggerFilterJson) =>
