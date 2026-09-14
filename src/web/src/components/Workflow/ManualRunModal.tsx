@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 
 import BApi from "@/sdk/BApi";
 import { Chip, Modal, Textarea, toast } from "@/components/bakaui";
+import { getWorkflowTriggerUI } from "@/components/Workflow/Triggers";
 
 type TriggerDescriptorVm =
   components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowTriggerDescriptorViewModel"];
@@ -29,7 +30,8 @@ function buildSkeleton(trigger: TriggerDescriptorVm): string {
 
   for (const f of trigger.payloadFields ?? []) {
     if (f.nullable) continue;
-    draft[f.name] = f.type === "string" ? "" : f.type.endsWith("[]") ? [] : f.type === "bool" ? false : 0;
+    draft[f.name] =
+      f.type === "string" ? "" : f.type.endsWith("[]") ? [] : f.type === "bool" ? false : 0;
   }
 
   return JSON.stringify(draft, null, 2);
@@ -37,7 +39,12 @@ function buildSkeleton(trigger: TriggerDescriptorVm): string {
 
 const ManualRunModal = ({ workflowId, workflowName, trigger, onRan }: Props) => {
   const { t } = useTranslation();
-  const skeleton = useMemo(() => buildSkeleton(trigger), [trigger]);
+  const triggerUI = getWorkflowTriggerUI(trigger.kind);
+  const ManualRunForm = triggerUI?.ManualRunForm;
+  const skeleton = useMemo(
+    () => triggerUI?.defaultManualPayload?.() ?? buildSkeleton(trigger),
+    [trigger, triggerUI],
+  );
   const [argsJson, setArgsJson] = useState<string>(skeleton);
 
   const parseError = useMemo(() => {
@@ -54,7 +61,12 @@ const ManualRunModal = ({ workflowId, workflowName, trigger, onRan }: Props) => 
   return (
     <Modal
       defaultVisible
-      footer={{ actions: ["ok", "cancel"], okProps: { isDisabled: !!parseError } }}
+      footer={{
+        actions: ["ok", "cancel"],
+        okProps: {
+          isDisabled: !!parseError || triggerUI?.isManualPayloadValid?.(argsJson) === false,
+        },
+      }}
       size="lg"
       title={t<string>("workflow.manualRun.title", { name: workflowName })}
       onOk={async () => {
@@ -68,26 +80,32 @@ const ManualRunModal = ({ workflowId, workflowName, trigger, onRan }: Props) => 
       }}
     >
       <div className="flex flex-col gap-2">
-        <div className="text-sm text-default-500">{t<string>("workflow.manualRun.hint")}</div>
-        {(trigger.payloadFields ?? []).length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {trigger.payloadFields.map((f) => (
-              <Chip key={f.name} radius="sm" size="sm" variant="flat">
-                {f.name}
-                <span className="opacity-50">
-                  : {f.type}
-                  {f.nullable ? "?" : ""}
-                </span>
-              </Chip>
-            ))}
-          </div>
+        {ManualRunForm ? (
+          <ManualRunForm value={argsJson} onChange={setArgsJson} />
+        ) : (
+          <>
+            <div className="text-sm text-default-500">{t<string>("workflow.manualRun.hint")}</div>
+            {(trigger.payloadFields ?? []).length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {trigger.payloadFields.map((f) => (
+                  <Chip key={f.name} radius="sm" size="sm" variant="flat">
+                    {f.name}
+                    <span className="opacity-50">
+                      : {f.type}
+                      {f.nullable ? "?" : ""}
+                    </span>
+                  </Chip>
+                ))}
+              </div>
+            )}
+            <Textarea
+              className="font-mono"
+              minRows={8}
+              value={argsJson}
+              onValueChange={setArgsJson}
+            />
+          </>
         )}
-        <Textarea
-          className="font-mono"
-          minRows={8}
-          value={argsJson}
-          onValueChange={setArgsJson}
-        />
         {parseError && <div className="text-xs text-danger">{parseError}</div>}
       </div>
     </Modal>

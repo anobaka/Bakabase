@@ -13,6 +13,8 @@ public record WorkflowRunViewModel
     public string? PayloadSummary { get; set; }
     public int InputCount { get; set; }
     public int OutputCount { get; set; }
+    public string? OutputItemsJson { get; set; }
+    public bool OutputPreviewTruncated { get; set; }
     public int FailedItemCount { get; set; }
     public List<WorkflowRunStepStat> StepStats { get; set; } = [];
     public string? ErrorMessage { get; set; }
@@ -37,6 +39,8 @@ public record WorkflowRunViewModel
         PayloadSummary = r.PayloadSummary,
         InputCount = r.InputCount,
         OutputCount = r.OutputCount,
+        OutputItemsJson = r.OutputItemsJson,
+        OutputPreviewTruncated = r.OutputPreviewTruncated,
         FailedItemCount = r.FailedItemCount,
         StepStats = r.StepStats,
         ErrorMessage = r.ErrorMessage,

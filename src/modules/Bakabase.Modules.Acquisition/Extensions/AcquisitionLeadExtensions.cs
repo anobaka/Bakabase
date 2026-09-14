@@ -47,6 +47,10 @@ public static class AcquisitionLeadExtensions
         Value = dbModel.Value,
         Origin = dbModel.Origin,
         Note = dbModel.Note,
+        AccessCode = dbModel.AccessCode,
+        Password = dbModel.Password,
+        SourceReference = dbModel.SourceReference,
+        IsResolved = dbModel.IsResolved,
         LastUsedAt = dbModel.LastUsedAt,
         LastResult = dbModel.LastResult,
         CreatedAt = dbModel.CreatedAt

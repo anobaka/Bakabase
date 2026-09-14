@@ -23,4 +23,10 @@ public record WorkflowValidationIssue
     public string? MessageKey { get; init; }
     /// <summary>"error" blocks execution; "warning" is advisory.</summary>
     public string Severity { get; init; } = "error";
+    /// <summary>
+    /// This requirement can change with the actual input (for example, a cached input may not
+    /// need an external provider). It is deferred only before a manual payload is built; the
+    /// complete execution check must still pass after the payload is available.
+    /// </summary>
+    public bool DependsOnPayload { get; init; }
 }

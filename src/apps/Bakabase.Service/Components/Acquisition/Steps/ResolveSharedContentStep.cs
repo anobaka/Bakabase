@@ -8,8 +8,8 @@ using Bakabase.Abstractions.Components.Identity;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.PostParser.Fetchers;
-using Bakabase.InsideWorld.Business.Components.PostParser.Handlers;
-using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain;
+using Bakabase.Modules.PostParser.Models.Domain;
+using Bakabase.Modules.PostParser.Services;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants;
 using Bakabase.Modules.Acquisition.Abstractions.Components;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
@@ -48,6 +48,7 @@ public class ResolveSharedContentStep : IAcquisitionStep
     public async Task<IReadOnlyList<AcquisitionValidationIssue>> ValidateConfigurationAsync(
         AcquisitionValidationContext context, CancellationToken ct)
     {
+        if (context.IsExecution && context.InitialLinks is {Count: > 0}) return [];
         var features = context.Services.GetService<IAiFeatureService>();
         var providers = context.Services.GetService<IAiProviderService>();
         var config = features == null ? null : await features.GetConfigAsync(AiFeature.PostParser, ct);
@@ -55,11 +56,11 @@ public class ResolveSharedContentStep : IAcquisitionStep
             config = await features.GetConfigAsync(AiFeature.Default, ct);
         if (config?.ProviderConfigId == null || string.IsNullOrWhiteSpace(config.ModelId) || providers == null)
             return [new("acquisition.ai.missing", "Configure an AI provider and model for post parsing or the default AI feature.",
-                "workflow.validation.acquisition.aiMissing")];
+                "workflow.validation.acquisition.aiMissing", DependsOnPayload: true)];
         var provider = await providers.GetAsync(config.ProviderConfigId.Value, ct);
         if (provider == null || !provider.IsEnabled || !provider.LlmEnabled)
             return [new("acquisition.ai.disabled", "The configured post-parsing AI provider is missing or disabled.",
-                "workflow.validation.acquisition.aiDisabled")];
+                "workflow.validation.acquisition.aiDisabled", DependsOnPayload: true)];
         return [];
     }
 
@@ -83,6 +84,7 @@ public class ResolveSharedContentStep : IAcquisitionStep
     public async Task<AcquisitionStepOutcome> ExecuteAsync(AcquisitionStepContext ctx,
         AcquisitionWorkItem item, CancellationToken ct)
     {
+        if (item.Links.Count > 0) return new AcquisitionStepOutcome.Continue(item);
         var reference = item.LeadValue;
 
         if (string.IsNullOrWhiteSpace(reference))
@@ -90,10 +92,9 @@ public class ResolveSharedContentStep : IAcquisitionStep
             return new AcquisitionStepOutcome.Fail("There is no page or text to read.");
         }
 
-        var resolver = ctx.ServiceProvider.GetRequiredService<SharedContentReaderResolver>();
-        var reader = resolver.Resolve(reference);
+        var reader = ctx.ServiceProvider.GetRequiredService<IPostContentService>();
 
-        if (reader == null)
+        if (!reader.CanRead(reference))
         {
             return new AcquisitionStepOutcome.Fail(
                 $"Nothing here knows how to read \"{Shorten(reference)}\".");
@@ -103,7 +104,7 @@ public class ResolveSharedContentStep : IAcquisitionStep
         try
         {
             await ctx.ReportProgress(10, "Reading the shared content");
-            content = await reader.ReadAsync(reference, ct);
+            content = await reader.ReadAsync(reference, ct: ct);
         }
         catch (OperationCanceledException)
         {
@@ -114,14 +115,14 @@ public class ResolveSharedContentStep : IAcquisitionStep
             return new AcquisitionStepOutcome.Fail($"Could not read the shared content: {ex.Message}", ex);
         }
 
-        var locked = content.Locks.Unbought().ToList();
+        var locked = content.Locks.Where(l => !l.IsBought && !string.IsNullOrEmpty(l.Url)).ToList();
 
         if (locked.Count > 0)
         {
             var limit = ctx.GetConfig<Config>()?.NeverBuy == true
                 ? 0m
                 : ctx.ServiceProvider.GetRequiredService<IBOptions<AcquisitionOptions>>().Value.AutoPurchaseLimit;
-            var affordable = locked.Where(l => l.IsWithin(limit) && limit > 0).ToList();
+            var affordable = locked.Where(l => l.Price is { } price && price <= limit && limit > 0).ToList();
             var tooDear = locked.Except(affordable).ToList();
 
             if (tooDear.Count > 0)
@@ -156,18 +157,18 @@ public class ResolveSharedContentStep : IAcquisitionStep
         }
 
         var reference = item.LeadValue;
-        var reader = ctx.ServiceProvider.GetRequiredService<SharedContentReaderResolver>().Resolve(reference);
+        var reader = ctx.ServiceProvider.GetRequiredService<IPostContentService>();
 
-        if (reader == null)
+        if (!reader.CanRead(reference))
         {
             return new AcquisitionStepOutcome.Fail($"Nothing here knows how to read \"{Shorten(reference)}\".");
         }
 
-        var content = await reader.ReadAsync(reference, ct);
+        var content = await reader.ReadAsync(reference, ct: ct);
 
         if (answer?.Approved == true)
         {
-            content = await BuyAndReread(ctx, reader, reference, content.Locks.Unbought().ToList(), content, ct);
+            content = await BuyAndReread(ctx, reader, reference, content.Locks.Where(l => !l.IsBought && !string.IsNullOrEmpty(l.Url)).ToList(), content, ct);
         }
         // Declining is not a failure: the free part of a post often has everything needed, and if
         // it does not, the link step will say so in its own words.
@@ -175,10 +176,10 @@ public class ResolveSharedContentStep : IAcquisitionStep
         return await ExtractAsync(ctx, item, reader, reference, content, ct);
     }
 
-    private static async Task<PostContent> BuyAndReread(AcquisitionStepContext ctx, ISharedContentReader reader,
-        string reference, IReadOnlyList<SharedContentLock> toBuy, PostContent content, CancellationToken ct)
+    private static async Task<PostContent> BuyAndReread(AcquisitionStepContext ctx, IPostContentService reader,
+        string reference, IReadOnlyList<PostContentLock> toBuy, PostContent content, CancellationToken ct)
     {
-        if (toBuy.Count == 0 || reader.Source is not { } source) return content;
+        if (toBuy.Count == 0 || !Enum.TryParse<PostParserSource>(content.SourceHint, out var source)) return content;
 
         var purchaser = ctx.ServiceProvider.GetServices<ISharedContentPurchaser>()
             .FirstOrDefault(p => p.Source == source);
@@ -192,7 +193,7 @@ public class ResolveSharedContentStep : IAcquisitionStep
                 reference, l.Price);
         }
 
-        return await reader.ReadAsync(reference, ct);
+        return await reader.ReadAsync(reference, content.SourceHint, ct);
     }
 
     /// <summary>
@@ -200,23 +201,16 @@ public class ResolveSharedContentStep : IAcquisitionStep
     /// work item — plus, if the text carried a platform id, onto the resource itself.
     /// </summary>
     private async Task<AcquisitionStepOutcome> ExtractAsync(AcquisitionStepContext ctx,
-        AcquisitionWorkItem item, ISharedContentReader reader, string reference, PostContent content,
+        AcquisitionWorkItem item, IPostContentService reader, string reference, PostContent content,
         CancellationToken ct)
     {
         await ctx.ReportProgress(50, "Looking for download links");
 
-        var handler = ctx.ServiceProvider.GetServices<IPostParseTargetHandler>()
-            .FirstOrDefault(h => h.Target == PostParseTarget.DownloadInfo);
-
-        if (handler == null)
-        {
-            return new AcquisitionStepOutcome.Fail("The download-info extractor is not available.");
-        }
-
-        PostParseHandlerResult result;
+        var extractor = ctx.ServiceProvider.GetRequiredService<IPostDownloadInfoExtractor>();
+        PostDownloadInfo result;
         try
         {
-            result = await handler.HandleAsync(content, ct);
+            result = await extractor.ExtractAsync(content, ct);
         }
         catch (OperationCanceledException)
         {
@@ -227,14 +221,14 @@ public class ResolveSharedContentStep : IAcquisitionStep
             return new AcquisitionStepOutcome.Fail($"Could not read download links out of it: {ex.Message}", ex);
         }
 
-        var resources = ReadResources(result.Data);
+        var resources = result.Resources;
         var links = resources
             .Where(r => !string.IsNullOrWhiteSpace(r.Link))
             .Select(r => new AcquisitionLink(r.Link!.Trim(), Blank(r.Code), Blank(r.Password),
-                r.DriveKind == AcquisitionDriveKind.Unknown ? AcquisitionDriveKinds.Infer(r.Link) : r.DriveKind))
+                AcquisitionDriveKinds.Infer(r.Link)))
             .ToList();
 
-        var title = result.OptimizedTitle ?? content.Title;
+        var title = result.Title ?? content.Title;
 
         await AttachIdentitiesAsync(ctx, item.ResourceId, content, reference);
 
@@ -274,27 +268,6 @@ public class ResolveSharedContentStep : IAcquisitionStep
         {
             // Nice to have, never worth stopping an acquisition for.
             ctx.Logger.LogDebug(ex, "[Acquisition] Could not attach an identity found in {Reference}", reference);
-        }
-    }
-
-    private static List<DownloadInfoResource> ReadResources(object data)
-    {
-        try
-        {
-            var json = JsonSerializer.Serialize(data, Json);
-            using var doc = JsonDocument.Parse(json);
-
-            if (!doc.RootElement.TryGetProperty("resources", out var resources) ||
-                resources.ValueKind != JsonValueKind.Array)
-            {
-                return [];
-            }
-
-            return resources.Deserialize<List<DownloadInfoResource>>(Json) ?? [];
-        }
-        catch (JsonException)
-        {
-            return [];
         }
     }
 

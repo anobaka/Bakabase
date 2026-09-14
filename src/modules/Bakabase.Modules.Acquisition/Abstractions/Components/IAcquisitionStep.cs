@@ -143,7 +143,8 @@ public record AcquisitionValidationContext(
     string? ConfigJson,
     bool IsExecution = false,
     AcquisitionLeadKind? LeadKind = null,
-    string? LeadValue = null)
+    string? LeadValue = null,
+    IReadOnlyList<AcquisitionLink>? InitialLinks = null)
 {
     public T? GetConfig<T>() where T : class => string.IsNullOrWhiteSpace(ConfigJson)
         ? null
@@ -152,4 +153,4 @@ public record AcquisitionValidationContext(
 }
 
 public record AcquisitionValidationIssue(string Code, string Message, string? MessageKey = null,
-    string Severity = "error");
+    string Severity = "error", bool DependsOnPayload = false);

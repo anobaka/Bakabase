@@ -4090,93 +4090,6 @@ export const AcquisitionWaitReasonLabel: Record<AcquisitionWaitReason, string> =
   [AcquisitionWaitReason.PlatformFetch]: 'PlatformFetch'
 };
 
-export enum AttachmentLayout {
-  Tile = 0,
-  Carousel = 1
-}
-
-export const attachmentLayouts = [
-  { label: 'Tile', value: AttachmentLayout.Tile },
-  { label: 'Carousel', value: AttachmentLayout.Carousel }
-] as const;
-
-export const AttachmentLayoutLabel: Record<AttachmentLayout, string> = {
-  [AttachmentLayout.Tile]: 'Tile',
-  [AttachmentLayout.Carousel]: 'Carousel'
-};
-
-export enum PropertyValueMatchPolicy {
-  MatchOnly = 1,
-  AutoCreateOptions = 2
-}
-
-export const propertyValueMatchPolicies = [
-  { label: 'MatchOnly', value: PropertyValueMatchPolicy.MatchOnly },
-  { label: 'AutoCreateOptions', value: PropertyValueMatchPolicy.AutoCreateOptions }
-] as const;
-
-export const PropertyValueMatchPolicyLabel: Record<PropertyValueMatchPolicy, string> = {
-  [PropertyValueMatchPolicy.MatchOnly]: 'MatchOnly',
-  [PropertyValueMatchPolicy.AutoCreateOptions]: 'AutoCreateOptions'
-};
-
-export enum ComparisonMode {
-  StrictEqual = 0,
-  TextSimilarity = 2,
-  RegexExtractNumber = 3,
-  FixedTolerance = 4,
-  RelativeTolerance = 5,
-  SetIntersection = 6,
-  Subset = 7,
-  TimeWindow = 8,
-  SameDay = 9,
-  ExtensionMap = 10
-}
-
-export const comparisonModes = [
-  { label: 'StrictEqual', value: ComparisonMode.StrictEqual },
-  { label: 'TextSimilarity', value: ComparisonMode.TextSimilarity },
-  { label: 'RegexExtractNumber', value: ComparisonMode.RegexExtractNumber },
-  { label: 'FixedTolerance', value: ComparisonMode.FixedTolerance },
-  { label: 'RelativeTolerance', value: ComparisonMode.RelativeTolerance },
-  { label: 'SetIntersection', value: ComparisonMode.SetIntersection },
-  { label: 'Subset', value: ComparisonMode.Subset },
-  { label: 'TimeWindow', value: ComparisonMode.TimeWindow },
-  { label: 'SameDay', value: ComparisonMode.SameDay },
-  { label: 'ExtensionMap', value: ComparisonMode.ExtensionMap }
-] as const;
-
-export const ComparisonModeLabel: Record<ComparisonMode, string> = {
-  [ComparisonMode.StrictEqual]: 'StrictEqual',
-  [ComparisonMode.TextSimilarity]: 'TextSimilarity',
-  [ComparisonMode.RegexExtractNumber]: 'RegexExtractNumber',
-  [ComparisonMode.FixedTolerance]: 'FixedTolerance',
-  [ComparisonMode.RelativeTolerance]: 'RelativeTolerance',
-  [ComparisonMode.SetIntersection]: 'SetIntersection',
-  [ComparisonMode.Subset]: 'Subset',
-  [ComparisonMode.TimeWindow]: 'TimeWindow',
-  [ComparisonMode.SameDay]: 'SameDay',
-  [ComparisonMode.ExtensionMap]: 'ExtensionMap'
-};
-
-export enum NullValueBehavior {
-  Skip = 0,
-  Fail = 1,
-  Pass = 2
-}
-
-export const nullValueBehaviors = [
-  { label: 'Skip', value: NullValueBehavior.Skip },
-  { label: 'Fail', value: NullValueBehavior.Fail },
-  { label: 'Pass', value: NullValueBehavior.Pass }
-] as const;
-
-export const NullValueBehaviorLabel: Record<NullValueBehavior, string> = {
-  [NullValueBehavior.Skip]: 'Skip',
-  [NullValueBehavior.Fail]: 'Fail',
-  [NullValueBehavior.Pass]: 'Pass'
-};
-
 export enum WorkflowActivityCardinality {
   OneToOne = 1,
   OneToMany = 2
@@ -4271,6 +4184,93 @@ export const WorkflowRunStatusLabel: Record<WorkflowRunStatus, string> = {
   [WorkflowRunStatus.Cancelled]: 'Cancelled',
   [WorkflowRunStatus.Interrupted]: 'Interrupted',
   [WorkflowRunStatus.Waiting]: 'Waiting'
+};
+
+export enum AttachmentLayout {
+  Tile = 0,
+  Carousel = 1
+}
+
+export const attachmentLayouts = [
+  { label: 'Tile', value: AttachmentLayout.Tile },
+  { label: 'Carousel', value: AttachmentLayout.Carousel }
+] as const;
+
+export const AttachmentLayoutLabel: Record<AttachmentLayout, string> = {
+  [AttachmentLayout.Tile]: 'Tile',
+  [AttachmentLayout.Carousel]: 'Carousel'
+};
+
+export enum PropertyValueMatchPolicy {
+  MatchOnly = 1,
+  AutoCreateOptions = 2
+}
+
+export const propertyValueMatchPolicies = [
+  { label: 'MatchOnly', value: PropertyValueMatchPolicy.MatchOnly },
+  { label: 'AutoCreateOptions', value: PropertyValueMatchPolicy.AutoCreateOptions }
+] as const;
+
+export const PropertyValueMatchPolicyLabel: Record<PropertyValueMatchPolicy, string> = {
+  [PropertyValueMatchPolicy.MatchOnly]: 'MatchOnly',
+  [PropertyValueMatchPolicy.AutoCreateOptions]: 'AutoCreateOptions'
+};
+
+export enum ComparisonMode {
+  StrictEqual = 0,
+  TextSimilarity = 2,
+  RegexExtractNumber = 3,
+  FixedTolerance = 4,
+  RelativeTolerance = 5,
+  SetIntersection = 6,
+  Subset = 7,
+  TimeWindow = 8,
+  SameDay = 9,
+  ExtensionMap = 10
+}
+
+export const comparisonModes = [
+  { label: 'StrictEqual', value: ComparisonMode.StrictEqual },
+  { label: 'TextSimilarity', value: ComparisonMode.TextSimilarity },
+  { label: 'RegexExtractNumber', value: ComparisonMode.RegexExtractNumber },
+  { label: 'FixedTolerance', value: ComparisonMode.FixedTolerance },
+  { label: 'RelativeTolerance', value: ComparisonMode.RelativeTolerance },
+  { label: 'SetIntersection', value: ComparisonMode.SetIntersection },
+  { label: 'Subset', value: ComparisonMode.Subset },
+  { label: 'TimeWindow', value: ComparisonMode.TimeWindow },
+  { label: 'SameDay', value: ComparisonMode.SameDay },
+  { label: 'ExtensionMap', value: ComparisonMode.ExtensionMap }
+] as const;
+
+export const ComparisonModeLabel: Record<ComparisonMode, string> = {
+  [ComparisonMode.StrictEqual]: 'StrictEqual',
+  [ComparisonMode.TextSimilarity]: 'TextSimilarity',
+  [ComparisonMode.RegexExtractNumber]: 'RegexExtractNumber',
+  [ComparisonMode.FixedTolerance]: 'FixedTolerance',
+  [ComparisonMode.RelativeTolerance]: 'RelativeTolerance',
+  [ComparisonMode.SetIntersection]: 'SetIntersection',
+  [ComparisonMode.Subset]: 'Subset',
+  [ComparisonMode.TimeWindow]: 'TimeWindow',
+  [ComparisonMode.SameDay]: 'SameDay',
+  [ComparisonMode.ExtensionMap]: 'ExtensionMap'
+};
+
+export enum NullValueBehavior {
+  Skip = 0,
+  Fail = 1,
+  Pass = 2
+}
+
+export const nullValueBehaviors = [
+  { label: 'Skip', value: NullValueBehavior.Skip },
+  { label: 'Fail', value: NullValueBehavior.Fail },
+  { label: 'Pass', value: NullValueBehavior.Pass }
+] as const;
+
+export const NullValueBehaviorLabel: Record<NullValueBehavior, string> = {
+  [NullValueBehavior.Skip]: 'Skip',
+  [NullValueBehavior.Fail]: 'Fail',
+  [NullValueBehavior.Pass]: 'Pass'
 };
 
 export enum DeviceAuthOutcome {

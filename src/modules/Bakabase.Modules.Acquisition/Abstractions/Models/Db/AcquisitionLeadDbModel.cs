@@ -28,6 +28,11 @@ public record AcquisitionLeadDbModel
 
     [MaxLength(512)] public string? Note { get; set; }
 
+    [MaxLength(512)] public string? AccessCode { get; set; }
+    [MaxLength(2048)] public string? Password { get; set; }
+    [MaxLength(2048)] public string? SourceReference { get; set; }
+    public bool IsResolved { get; set; }
+
     public DateTime? LastUsedAt { get; set; }
 
     public AcquisitionLeadResult? LastResult { get; set; }

@@ -12,4 +12,9 @@ public record AcquisitionLeadAddInputModel
     public AcquisitionLeadOrigin Origin { get; set; } = AcquisitionLeadOrigin.User;
 
     [MaxLength(512)] public string? Note { get; set; }
+
+    [MaxLength(512)] public string? AccessCode { get; set; }
+    [MaxLength(2048)] public string? Password { get; set; }
+    [MaxLength(2048)] public string? SourceReference { get; set; }
+    public bool IsResolved { get; set; }
 }

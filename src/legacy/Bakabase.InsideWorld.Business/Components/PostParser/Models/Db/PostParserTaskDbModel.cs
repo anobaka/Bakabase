@@ -8,6 +8,10 @@ public record PostParserTaskDbModel
     public PostParserSource Source { get; set; }
     public string Link { get; set; } = null!;
     public string? Title { get; set; }
+    public string? Text { get; set; }
+    public int Revision { get; set; }
+    public int? WorkflowDefinitionId { get; set; }
+    public int? WorkflowRunId { get; set; }
     public string? Targets { get; set; }
     public string? Results { get; set; }
     public string? Error { get; set; }

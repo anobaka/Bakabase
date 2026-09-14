@@ -24,6 +24,9 @@ public record WorkflowRunDbModel
 
     /// <summary>Items surviving every activity (i.e. reached the last step's exit).</summary>
     public int OutputCount { get; set; }
+    /// <summary>A bounded JSON array preview of successful output; null for historical runs.</summary>
+    public string? OutputItemsJson { get; set; }
+    public bool OutputPreviewTruncated { get; set; }
 
     /// <summary>Items dropped because an activity threw under Skip-on-error.</summary>
     public int FailedItemCount { get; set; }

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Acquisition.Abstractions.Services;
+using Bakabase.Modules.Workflow.Abstractions.Models.View;
 
 namespace Bakabase.Service.Models.View;
 
@@ -36,4 +37,7 @@ public record AcquisitionCandidateLeadViewModel(
     string Method,
     string DefaultRecipeName,
     int? DefaultRecipeDefinitionId,
-    List<int> ApplicableRecipeDefinitionIds);
+    List<int> ApplicableRecipeDefinitionIds)
+{
+    public Dictionary<int, WorkflowValidationResult> RecipeValidations { get; init; } = [];
+}

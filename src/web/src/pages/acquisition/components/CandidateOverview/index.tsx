@@ -227,9 +227,12 @@ const CandidateOverview = ({ onStarted, onViewTasks, onOpenRecipe }: Props) => {
 
   const renderLead = (candidate: Candidate, lead: Lead) => {
     const key = leadKey(candidate.resourceId, lead);
-    const recipes = (data?.recipes ?? []).filter((recipe) =>
-      lead.applicableRecipeDefinitionIds.includes(recipe.definitionId),
-    );
+    const recipes = (data?.recipes ?? [])
+      .filter((recipe) => lead.applicableRecipeDefinitionIds.includes(recipe.definitionId))
+      .map((recipe) => ({
+        ...recipe,
+        validation: lead.recipeValidations?.[recipe.definitionId] ?? recipe.validation,
+      }));
     const selectedId = recipes.some((recipe) => recipe.definitionId === selectedRecipes[key])
       ? selectedRecipes[key]
       : recipes.some((recipe) => recipe.definitionId === lead.defaultRecipeDefinitionId)

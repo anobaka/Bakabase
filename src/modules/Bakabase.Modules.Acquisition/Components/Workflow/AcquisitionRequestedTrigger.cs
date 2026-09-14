@@ -16,6 +16,8 @@ public record AcquisitionRequestedPayload
     public string LeadValue { get; init; } = "";
     public string? Title { get; init; }
 
+    public IReadOnlyList<AcquisitionLink> InitialLinks { get; init; } = [];
+
     /// <summary>Where this run may write. Set by the service, which owns the layout.</summary>
     public string WorkingDirectory { get; init; } = "";
 
@@ -58,6 +60,7 @@ public class AcquisitionRequestedTrigger : IWorkflowTrigger
                 LeadValue = p.LeadValue,
                 CollectionId = p.CollectionId,
                 Title = p.Title,
+                Links = p.InitialLinks.ToList(),
                 WorkingDirectory = p.WorkingDirectory,
                 WorkingName = p.WorkingName,
             })

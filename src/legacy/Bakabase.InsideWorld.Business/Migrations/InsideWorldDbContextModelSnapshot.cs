@@ -1232,14 +1232,26 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.Property<string>("Results")
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("Revision")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("Source")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Targets")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Text")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Title")
                         .HasColumnType("TEXT");
+
+                    b.Property<int?>("WorkflowDefinitionId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("WorkflowRunId")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
@@ -1731,8 +1743,15 @@ namespace Bakabase.InsideWorld.Business.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("AccessCode")
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsResolved")
+                        .HasColumnType("INTEGER");
 
                     b.Property<int>("Kind")
                         .HasColumnType("INTEGER");
@@ -1750,8 +1769,16 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.Property<int>("Origin")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Password")
+                        .HasMaxLength(2048)
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("ResourceId")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("SourceReference")
+                        .HasMaxLength(2048)
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Value")
                         .IsRequired()
@@ -2674,6 +2701,12 @@ namespace Bakabase.InsideWorld.Business.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("OutputCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("OutputItemsJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("OutputPreviewTruncated")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("PayloadJson")

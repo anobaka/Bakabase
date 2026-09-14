@@ -144,9 +144,7 @@ const WorkflowRunsDrawer: React.FC<Props> = ({
                       <span className="text-xs text-default-500">
                         #{r.id} · {new Date(r.startedAt).toLocaleString()}
                       </span>
-                      {duration && (
-                        <span className="text-xs text-default-400">· {duration}</span>
-                      )}
+                      {duration && <span className="text-xs text-default-400">· {duration}</span>}
                       {status === WorkflowRunStatus.Waiting && (
                         <Button
                           className="ml-auto"
@@ -213,9 +211,23 @@ const WorkflowRunsDrawer: React.FC<Props> = ({
                       </div>
                     )}
                     {r.errorMessage && (
-                      <div className="text-xs text-danger break-words">
-                        {r.errorMessage}
-                      </div>
+                      <div className="text-xs text-danger break-words">{r.errorMessage}</div>
+                    )}
+
+                    {r.outputItemsJson != null && (
+                      <details className="mt-2 rounded-lg bg-default-50 p-2 text-xs">
+                        <summary className="cursor-pointer font-medium text-primary">
+                          {t("workflow.runs.resultPreview")}
+                        </summary>
+                        {r.outputPreviewTruncated && (
+                          <p className="my-2 text-warning-600">
+                            {t("workflow.runs.resultPreviewTruncated")}
+                          </p>
+                        )}
+                        <pre className="mt-2 max-h-80 overflow-auto whitespace-pre-wrap break-all">
+                          {formatOutputPreview(r.outputItemsJson)}
+                        </pre>
+                      </details>
                     )}
 
                     {/* Per-step funnel: shows where items entered/left/failed. */}
@@ -268,3 +280,11 @@ const WorkflowRunsDrawer: React.FC<Props> = ({
 };
 
 export default WorkflowRunsDrawer;
+
+function formatOutputPreview(json: string): string {
+  try {
+    return JSON.stringify(JSON.parse(json), null, 2);
+  } catch {
+    return json;
+  }
+}

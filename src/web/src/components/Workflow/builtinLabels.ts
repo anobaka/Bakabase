@@ -17,6 +17,7 @@ const BUILTIN_NAME_KEYS = new Map([
   ["Local directory", "acquisition.recipe.localDirectory"],
   ["Download torrent contents", "workflow.recipe.downloadTorrentContents.name"],
   ["ExHentai download", "acquisition.recipe.exHentai"],
+  ["Parse post download information", "workflow.recipe.postParser.name"],
 ]);
 
 /** Display only: never use the localized label as a workflow name in API payloads. */

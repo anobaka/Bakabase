@@ -14,9 +14,11 @@ using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Acquisition.Abstractions.Services;
 using Bakabase.Modules.Acquisition.Components;
+using Bakabase.Modules.Acquisition.Components.Workflow;
 using Bakabase.Modules.Acquisition.Models.Domain;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Workflow.Abstractions.Components;
+using Bakabase.Modules.Workflow.Abstractions.Services;
 using Bakabase.Service.Models.View;
 using Bootstrap.Components.Configuration.Abstractions;
 using Microsoft.EntityFrameworkCore;
@@ -38,7 +40,9 @@ public class AcquisitionCandidateService(
     IAcquisitionService acquisitions,
     IPlatformConnectorRegistry platforms,
     IBOptions<AcquisitionOptions> options,
-    BakabaseDbContext db)
+    BakabaseDbContext db,
+    IWorkflowDefinitionService workflowDefinitions,
+    IWorkflowValidationService validation)
 {
     private static readonly AcquisitionStatus[] Live =
         [AcquisitionStatus.Pending, AcquisitionStatus.Running, AcquisitionStatus.Waiting];
@@ -127,6 +131,32 @@ public class AcquisitionCandidateService(
         if (pageIds.Length == 0)
         {
             return new AcquisitionCandidatePageViewModel([], totalCount, page, pageSize, recipes);
+        }
+
+        // Resolve readiness against the selected, already-parsed input. A general recipe's AI
+        // prerequisite must not prevent using links whose extraction has already completed.
+        var resolved = await db.Set<AcquisitionLeadDbModel>().AsNoTracking()
+            .Where(l => pageIds.Contains(l.ResourceId) && l.IsResolved).ToDictionaryAsync(l => l.Id, ct);
+        if (resolved.Count > 0)
+        {
+            var definitions = (await workflowDefinitions.SearchAsync(new()
+                {TriggerKind = AcquisitionWorkflowKinds.TriggerRequested})).ToDictionary(d => d.Id);
+            foreach (var resourceId in pageIds)
+            foreach (var route in routes[resourceId])
+            {
+                if (!resolved.TryGetValue(route.Id, out var source)) continue;
+                foreach (var definitionId in route.ApplicableRecipeDefinitionIds)
+                {
+                    if (!definitions.TryGetValue(definitionId, out var definition)) continue;
+                    route.RecipeValidations[definitionId] = await validation.ValidateAsync(definition, true,
+                        new AcquisitionRequestedPayload
+                        {
+                            ResourceId = resourceId, LeadKind = source.Kind, LeadValue = source.Value,
+                            InitialLinks = [new AcquisitionLink(source.Value, source.AccessCode, source.Password,
+                                AcquisitionDriveKinds.Infer(source.Value))]
+                        }, ct);
+                }
+            }
         }
 
         var titles = (await names.GetAll(v => pageIds.Contains(v.ResourceId)))

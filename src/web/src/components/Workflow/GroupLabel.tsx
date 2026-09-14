@@ -8,6 +8,7 @@ import {
   AiOutlineFolderOpen,
   AiOutlineFontSize,
   AiOutlineFunction,
+  AiOutlineFileSearch,
   AiOutlineRobot,
 } from "react-icons/ai";
 
@@ -23,6 +24,13 @@ const GroupLabel: React.FC<{ group: string }> = ({ group }) => {
   const { t } = useTranslation();
 
   switch (group) {
+    case "postParser":
+      return (
+        <span className="inline-flex items-center gap-2">
+          <AiOutlineFileSearch />
+          <span>{t("workflow.group.postParser")}</span>
+        </span>
+      );
     case "pixiv":
       return <ThirdPartyLabel thirdPartyId={ThirdPartyId.Pixiv} />;
     case "exhentai":

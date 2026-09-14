@@ -5,6 +5,7 @@ using Bakabase.Modules.Workflow.Abstractions.Models.Db;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Workflow.Abstractions.Models.Input;
+using Bakabase.Modules.Workflow.Abstractions.Models.View;
 using Bakabase.Modules.Workflow.Abstractions.Services;
 using Bakabase.Modules.Workflow.Components;
 using Bakabase.Modules.Workflow.Extensions;
@@ -199,11 +200,16 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
         // rather than a persisted run that dies the moment it starts.
         var definition = await LoadDomain(definitionId, ct)
             ?? throw new InvalidOperationException($"Workflow #{definitionId} not found");
-        var check = await _validation.ValidateAsync(definition, isExecution: true, ct: ct);
-        if (!check.IsValid) throw new WorkflowValidationException(check);
-
+        // Reject structural and unconditional configuration errors before the trigger does any
+        // payload preparation. Only explicitly input-dependent requirements may be reconsidered
+        // once the actual payload is known; an ordinary invalid configuration remains fail-fast.
+        var preparationCheck = await _validation.ValidateAsync(definition, isExecution: true, ct: ct);
+        var preparationErrors = preparationCheck.Diagnostics
+            .Where(d => d.Severity == "error" && !d.DependsOnPayload).ToList();
+        if (preparationErrors.Count > 0)
+            throw new WorkflowValidationException(new WorkflowValidationResult {Diagnostics = preparationErrors});
         var payload = trigger.BuildManualPayload(def.TriggerFilterJson, argsJson);
-        check = await _validation.ValidateAsync(definition, isExecution: true, payload: payload, ct: ct);
+        var check = await _validation.ValidateAsync(definition, isExecution: true, payload: payload, ct: ct);
         if (!check.IsValid) throw new WorkflowValidationException(check);
         var payloadJson = JsonSerializer.Serialize(payload, WorkflowJson.Options);
 

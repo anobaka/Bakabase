@@ -56,11 +56,11 @@ public class AcquisitionStepActivity(IAcquisitionStep step) : IResumableWorkflow
             var payload = context.Payload as AcquisitionRequestedPayload;
             var issues = await step.ValidateConfigurationAsync(new AcquisitionValidationContext(
                 context.Services, context.ConfigJson, context.IsExecution, payload?.LeadKind,
-                payload?.LeadValue), ct);
+                payload?.LeadValue, payload?.InitialLinks), ct);
             return issues.Select(issue => new WorkflowValidationIssue
             {
                 Code = issue.Code, Message = issue.Message, MessageKey = issue.MessageKey,
-                Severity = issue.Severity
+                Severity = issue.Severity, DependsOnPayload = issue.DependsOnPayload
             }).ToList();
         }
         catch (JsonException)

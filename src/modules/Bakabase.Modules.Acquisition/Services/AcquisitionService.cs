@@ -9,6 +9,7 @@ using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Acquisition.Abstractions.Services;
 using Bakabase.Modules.Acquisition.Components;
 using Bakabase.Modules.Acquisition.Components.Workflow;
+using Bakabase.Modules.Acquisition.Extensions;
 using Bakabase.Modules.Acquisition.Models.Domain;
 using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bakabase.Modules.Workflow.Abstractions.Models.Db;
@@ -271,7 +272,8 @@ public class AcquisitionService<TDbContext>(
             ?? throw new InvalidOperationException($"Workflow #{definitionId} no longer exists.");
         var result = await validation.ValidateAsync(definition, true, new AcquisitionRequestedPayload
         {
-            ResourceId = resourceId, LeadKind = leadKind, LeadValue = leadValue
+            ResourceId = resourceId, LeadKind = leadKind, LeadValue = leadValue,
+            InitialLinks = await ReadInitialLinks(resourceId, leadKind, leadValue, ct)
         }, ct, startNodeIndex);
         if (!result.IsValid) throw new WorkflowValidationException(result);
     }
@@ -415,6 +417,7 @@ public class AcquisitionService<TDbContext>(
             CollectionId = task.CollectionId,
             LeadKind = task.LeadKind,
             LeadValue = task.LeadValue ?? "",
+            InitialLinks = await ReadInitialLinks(task.ResourceId, task.LeadKind, task.LeadValue ?? "", ct),
             Title = title,
             WorkingDirectory = workingDirectory,
             WorkingName = title ?? $"acquisition-{task.Id}",
@@ -444,6 +447,19 @@ public class AcquisitionService<TDbContext>(
         await db.SaveChangesAsync(ct);
 
         logger.LogInformation("[Acquisition] Task {TaskId} started as workflow run {RunId}", task.Id, run.Id);
+    }
+
+    private async Task<IReadOnlyList<AcquisitionLink>> ReadInitialLinks(int resourceId,
+        AcquisitionLeadKind kind, string value, CancellationToken ct)
+    {
+        var normalized = value.NormalizeLeadValue();
+        var lead = await db.Set<AcquisitionLeadDbModel>().AsNoTracking()
+            .FirstOrDefaultAsync(l => l.ResourceId == resourceId && l.Kind == kind && l.Value == normalized, ct);
+        if (lead == null || (!lead.IsResolved &&
+            kind is not (AcquisitionLeadKind.DirectUrl or AcquisitionLeadKind.Magnet or AcquisitionLeadKind.Torrent)))
+            return [];
+        return [new AcquisitionLink(lead.Value, lead.AccessCode, lead.Password,
+            AcquisitionDriveKinds.Infer(lead.Value))];
     }
 
     /// <summary>

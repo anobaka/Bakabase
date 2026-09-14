@@ -10,6 +10,9 @@ using Bakabase.InsideWorld.Business.Components.PostParser.Models.Db;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Components.PostParser.Services;
+using Bakabase.InsideWorld.Business.Components.PostParser.Workflow;
+using Bakabase.Modules.PostParser.Extensions;
+using Bakabase.Modules.PostParser.Services;
 using Bootstrap.Components.Orm;
 using Bootstrap.Extensions;
 using Microsoft.AspNetCore.Builder;
@@ -57,6 +60,9 @@ public static class PostParserExtensions
         }
 
         services.AddScoped<SharedContentReaderResolver>();
+        services.AddPostParserCapabilities();
+        services.AddScoped<IPostContentService, LegacyPostContentService>();
+        services.AddPostParserWorkflows<TDbContext>();
         services.AddHttpClient(nameof(GenericHtmlReader));
 
         return services;
@@ -95,6 +101,10 @@ public static class PostParserExtensions
             Id = task.Id,
             Source = task.Source,
             Link = task.Link,
+            Text = task.Text,
+            Revision = task.Revision,
+            WorkflowDefinitionId = task.WorkflowDefinitionId,
+            WorkflowRunId = task.WorkflowRunId,
             Title = task.Title,
             Targets = task.Targets.Count > 0 ? JsonConvert.SerializeObject(task.Targets) : null,
             Results = resultsJson,
@@ -146,6 +156,10 @@ public static class PostParserExtensions
             Id = dbModel.Id,
             Source = dbModel.Source,
             Link = dbModel.Link,
+            Text = dbModel.Text,
+            Revision = dbModel.Revision,
+            WorkflowDefinitionId = dbModel.WorkflowDefinitionId,
+            WorkflowRunId = dbModel.WorkflowRunId,
             Title = dbModel.Title,
             Targets = targets ?? [],
             Results = results,

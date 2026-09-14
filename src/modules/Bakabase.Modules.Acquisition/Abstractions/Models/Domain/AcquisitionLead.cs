@@ -20,6 +20,11 @@ public record AcquisitionLead
 
     public string? Note { get; set; }
 
+    public string? AccessCode { get; set; }
+    public string? Password { get; set; }
+    public string? SourceReference { get; set; }
+    public bool IsResolved { get; set; }
+
     public DateTime? LastUsedAt { get; set; }
 
     public AcquisitionLeadResult? LastResult { get; set; }

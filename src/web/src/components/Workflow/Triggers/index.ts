@@ -10,6 +10,7 @@ import { ResourceMaterializedTriggerUI } from "./ResourceMaterialized";
 import { AcquisitionRequestedTriggerUI } from "./AcquisitionRequested";
 import { AcquisitionStatusChangedTriggerUI } from "./AcquisitionStatusChanged";
 import { CollectionMembersAddedTriggerUI } from "./CollectionMembersAdded";
+import { PostParserManualTriggerUI } from "./PostParserManual";
 
 /**
  * Registry of trigger UIs keyed by their backend `kind`.
@@ -17,6 +18,7 @@ import { CollectionMembersAddedTriggerUI } from "./CollectionMembersAdded";
  * fall back to a read-only "raw JSON" display in the editor.
  */
 export const workflowTriggerRegistry: Record<string, WorkflowTriggerUI<any>> = {
+  [PostParserManualTriggerUI.kind]: PostParserManualTriggerUI,
   [SubscriptionUpdatedTriggerUI.kind]: SubscriptionUpdatedTriggerUI,
   [DownloaderCompletedTriggerUI.kind]: DownloaderCompletedTriggerUI,
   [DownloaderResultReadyTriggerUI.kind]: DownloaderResultReadyTriggerUI,

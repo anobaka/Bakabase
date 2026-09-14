@@ -50,6 +50,8 @@ public static class WorkflowExtensions
         PayloadSummary = db.PayloadSummary,
         InputCount = db.InputCount,
         OutputCount = db.OutputCount,
+        OutputItemsJson = db.OutputItemsJson,
+        OutputPreviewTruncated = db.OutputPreviewTruncated,
         FailedItemCount = db.FailedItemCount,
         StepStats = ParseStepStats(db.StepStatsJson),
         ErrorMessage = db.ErrorMessage,

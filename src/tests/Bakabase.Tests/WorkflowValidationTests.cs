@@ -90,6 +90,10 @@ public sealed class WorkflowValidationTests
                 return Task.FromResult<IReadOnlyList<WorkflowValidationIssue>>([
                     new() { Code = "optionalSetting", Message = "An optional setting is unset.", Severity = "warning" },
                 ]);
+            if (mode == "cached")
+                return Task.FromResult<IReadOnlyList<WorkflowValidationIssue>>(
+                    context.Payload is Payload {Value: "cached"} ? [] :
+                    [new() {Code = "providerMissing", Message = "This input needs an external provider.", DependsOnPayload = true}]);
             return Task.FromResult<IReadOnlyList<WorkflowValidationIssue>>(state.Ready ? [] : [
                 new() { Code = "localSettingMissing", Message = "Configure the local destination.", MessageKey = "workflow.test.localSettingMissing" },
             ]);
@@ -203,6 +207,43 @@ public sealed class WorkflowValidationTests
         Assert.AreEqual("missingPayloadValue", error.Result.Diagnostics.Single().Code);
         Assert.AreEqual(0, (await Definitions.SearchRunsAsync(new() { WorkflowDefinitionId = definition.Id })).TotalCount);
         Assert.AreEqual(0, _state.Executions);
+    }
+
+    [TestMethod]
+    public async Task ManualRun_InputDependentReadinessUsesActualPayloadAndStillRejectsUnreadyInputs()
+    {
+        var definition = await Create("{\"mode\":\"cached\"}");
+        var draftCheck = await Validation.ValidateAsync(definition);
+        Assert.IsFalse(draftCheck.IsValid);
+        Assert.IsTrue(draftCheck.Diagnostics.Single().DependsOnPayload);
+
+        var rejected = await Assert.ThrowsExceptionAsync<WorkflowValidationException>(() =>
+            Definitions.RunManuallyAsync(definition.Id, "fresh"));
+        Assert.AreEqual("providerMissing", rejected.Result.Diagnostics.Single().Code);
+        Assert.AreEqual(1, _state.PayloadBuilds);
+        Assert.AreEqual(0, (await Definitions.SearchRunsAsync(new() {WorkflowDefinitionId = definition.Id})).TotalCount);
+
+        var run = await Definitions.RunManuallyAsync(definition.Id, "cached");
+        Assert.AreEqual(WorkflowRunStatus.Pending, run.Status);
+        Assert.AreEqual(2, _state.PayloadBuilds);
+        Assert.AreEqual(0, _state.Extractions);
+        Assert.AreEqual(0, _state.Executions);
+    }
+
+    [TestMethod]
+    public async Task ManualRun_DeferredRequirementDoesNotHideUnconditionalConfigurationErrors()
+    {
+        var definition = await Definitions.CreateAsync(new WorkflowDefinitionCreationInputModel
+        {
+            Name = "Mixed validation", TriggerKind = TriggerKind,
+            Activities = [Node("{\"mode\":\"cached\"}"), Node()]
+        });
+        var error = await Assert.ThrowsExceptionAsync<WorkflowValidationException>(() =>
+            Definitions.RunManuallyAsync(definition.Id, "cached"));
+        Assert.AreEqual("localSettingMissing", error.Result.Diagnostics.Single().Code);
+        Assert.AreEqual(0, _state.PayloadBuilds);
+        Assert.AreEqual(0, (await Definitions.SearchRunsAsync(new() {WorkflowDefinitionId = definition.Id})).TotalCount);
+        Assert.AreEqual(0, _state.Extractions);
     }
 
     [TestMethod]

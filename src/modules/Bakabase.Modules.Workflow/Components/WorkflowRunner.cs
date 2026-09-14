@@ -369,6 +369,7 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
             }
 
             run.OutputCount = items.Count;
+            (run.OutputItemsJson, run.OutputPreviewTruncated) = WorkflowOutputPreview.Capture(items.Select(i => i.Item));
             run.FailedItemCount = failedTotal;
             run.StepStatsJson = JsonSerializer.Serialize(stepStats, WorkflowJson.Options);
             run.Status = WorkflowRunStatus.Success;

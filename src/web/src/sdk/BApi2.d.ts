@@ -5408,6 +5408,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/post-parser/task/{id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RetryPostParserTaskWorkflow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/post-parser/task/{id}/acquisition": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ImportPostParserTaskToAcquisition"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/property/pool/{pool}/id/{id}/value-resource-counts": {
         parameters: {
             query?: never;
@@ -9437,6 +9469,9 @@ export interface components {
                 [key: string]: string[];
             };
             targets: components["schemas"]["Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParseTarget"][];
+            links: string[];
+            text?: string;
+            title?: string;
         };
         "Bakabase.InsideWorld.Business.Components.PostParser.Controllers.DeletePostParserTasksByLinksInput": {
             source: components["schemas"]["Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParserSource"];
@@ -9471,6 +9506,14 @@ export interface components {
             link: string;
             title?: string;
             content?: string;
+            text?: string;
+            /** Format: int32 */
+            revision: number;
+            /** Format: int32 */
+            workflowDefinitionId?: number;
+            /** Format: int32 */
+            workflowRunId?: number;
+            workflowStatus?: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants.WorkflowRunStatus"];
             targets: components["schemas"]["Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParseTarget"][];
             results?: {
                 DownloadInfo: components["schemas"]["System.Text.Json.Nodes.JsonNode"];
@@ -10309,6 +10352,10 @@ export interface components {
             value: string;
             origin: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionLeadOrigin"];
             note?: string;
+            accessCode?: string;
+            password?: string;
+            sourceReference?: string;
+            isResolved: boolean;
             /** Format: date-time */
             lastUsedAt?: string;
             lastResult?: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionLeadResult"];
@@ -10453,6 +10500,10 @@ export interface components {
             value: string;
             origin: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionLeadOrigin"];
             note?: string;
+            accessCode?: string;
+            password?: string;
+            sourceReference?: string;
+            isResolved: boolean;
         };
         "Bakabase.Modules.Acquisition.Models.Input.AcquisitionResumeInputModel": {
             signalJson: string;
@@ -11438,6 +11489,8 @@ export interface components {
             inputCount: number;
             /** Format: int32 */
             outputCount: number;
+            outputItemsJson?: string;
+            outputPreviewTruncated: boolean;
             /** Format: int32 */
             failedItemCount: number;
             stepStats: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Domain.WorkflowRunStepStat"][];
@@ -11462,6 +11515,7 @@ export interface components {
             message: string;
             messageKey?: string;
             severity: string;
+            dependsOnPayload: boolean;
             nodeId?: string;
             /** Format: int32 */
             nodeIndex?: number;
@@ -11501,6 +11555,13 @@ export interface components {
             resourceName?: string;
             /** Format: int32 */
             score: number;
+        };
+        "Bakabase.Service.Components.Acquisition.PostParserAcquisitionResult": {
+            /** Format: int32 */
+            resourceId: number;
+            created: boolean;
+            /** Format: int32 */
+            leadCount: number;
         };
         "Bakabase.Service.Components.Acquisition.SharedListImportResult": {
             /** Format: int32 */
@@ -11604,6 +11665,12 @@ export interface components {
         "Bakabase.Service.Controllers.PathMigrationRequest": {
             oldPath: string;
             newPath: string;
+        };
+        "Bakabase.Service.Controllers.PostParserAcquisitionInput": {
+            title?: string;
+            resourceIndices: number[];
+            /** Format: int32 */
+            revision: number;
         };
         "Bakabase.Service.Controllers.ResourceHealthScoreRowViewModel": {
             /** Format: int32 */
@@ -11875,6 +11942,9 @@ export interface components {
             /** Format: int32 */
             defaultRecipeDefinitionId?: number;
             applicableRecipeDefinitionIds: number[];
+            recipeValidations: {
+                [key: string]: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowValidationResult"];
+            };
         };
         "Bakabase.Service.Models.View.AcquisitionCandidatePageViewModel": {
             items: components["schemas"]["Bakabase.Service.Models.View.AcquisitionCandidateViewModel"][];
@@ -13798,6 +13868,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Components.Acquisition.AcquisitionSetupResult"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.PostParserAcquisitionResult]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Components.Acquisition.PostParserAcquisitionResult"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.SharedListImportResult]": {
             /** Format: int32 */
@@ -26094,6 +26170,61 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.String,Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParserTaskStatus]]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.String,Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParserTaskStatus]]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.String,Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParserTaskStatus]]"];
+                };
+            };
+        };
+    };
+    RetryPostParserTaskWorkflow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    ImportPostParserTaskToAcquisition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.PostParserAcquisitionInput"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.PostParserAcquisitionInput"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.PostParserAcquisitionInput"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.PostParserAcquisitionInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.PostParserAcquisitionResult]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.PostParserAcquisitionResult]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.PostParserAcquisitionResult]"];
                 };
             };
         };

@@ -1,339 +1,208 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
-using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Components.Tasks;
-using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.Gui;
 using Bakabase.InsideWorld.Business.Components.PostParser.Extensions;
-using Bakabase.InsideWorld.Business.Components.PostParser.Fetchers;
-using Bakabase.InsideWorld.Business.Components.PostParser.Handlers;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Db;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants;
+using Bakabase.InsideWorld.Business.Components.PostParser.Workflow;
+using Bakabase.InsideWorld.Models.Configs;
+using Bakabase.Modules.Workflow.Abstractions.Models.Db;
+using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Orm;
 using Bootstrap.Components.Tasks;
-using Bootstrap.Extensions;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bakabase.InsideWorld.Business.Components.PostParser.Services;
 
-public class PostParserTaskService<TDbContext>(
-    FullMemoryCacheResourceService<TDbContext, PostParserTaskDbModel, int> orm,
-    IEnumerable<ISharedContentReader> readers,
-    IEnumerable<ISharedContentPurchaser> purchasers,
-    IEnumerable<IPostParseTargetHandler> handlers,
-    IBOptions<SoulPlusOptions> soulPlusOptions,
-    BTaskManager btm,
-    IBakabaseLocalizer localizer,
+public class PostParserTaskService<TDbContext>(TDbContext db,
+    FullMemoryCacheResourceService<TDbContext, PostParserTaskDbModel, int> cache,
+    PostParserTaskExecutionGate gate, PostParserWorkflowService<TDbContext> workflow,
+    BTaskManager tasks, IBOptions<ThirdPartyOptions> options,
     IHubContext<WebGuiHub, IWebGuiClient> uiHub) : IPostParserTaskService where TDbContext : DbContext
 {
-    private readonly ConcurrentDictionary<PostParserSource, ISharedContentReader> _fetcherMap =
-        new(readers.Where(r => r.Source.HasValue).ToDictionary(d => d.Source!.Value, d => d));
-
-    private readonly ConcurrentDictionary<PostParserSource, ISharedContentPurchaser> _purchaserMap =
-        new(purchasers.ToDictionary(d => d.Source, d => d));
-
-    private readonly ConcurrentDictionary<PostParseTarget, IPostParseTargetHandler> _handlerMap =
-        new(handlers.ToDictionary(d => d.Target, d => d));
+    private DbSet<PostParserTaskDbModel> ParserTasks => db.Set<PostParserTaskDbModel>();
 
     public async Task<List<PostParserTask>> GetAll()
     {
-        return (await orm.GetAll()).Select(d => d.ToDomainModel()).ToList();
+        await workflow.RefreshTasksAsync();
+        var result = (await ParserTasks.AsNoTracking().ToListAsync()).Select(t => t.ToDomainModel()).ToList();
+        var ids = result.Where(t => t.WorkflowRunId != null).Select(t => t.WorkflowRunId!.Value).ToList();
+        var runs = await db.Set<WorkflowRunDbModel>().AsNoTracking().Where(r => ids.Contains(r.Id))
+            .ToDictionaryAsync(r => r.Id, r => r.Status);
+        foreach (var task in result)
+            if (task.WorkflowRunId is { } id && runs.TryGetValue(id, out var status)) task.WorkflowStatus = status;
+        return result;
     }
 
-    public async Task AddRange(Dictionary<PostParserSource, List<string>> sourceLinksMap,
-        List<PostParseTarget> targets)
-    {
-        var allExisting = await orm.GetAll();
-        var newTasks = new List<PostParserTaskDbModel>();
-        var updatedTasks = new List<PostParserTaskDbModel>();
+    public Task AddRange(Dictionary<PostParserSource, List<string>> sourceLinksMap, List<PostParseTarget> targets) =>
+        AddInputs(sourceLinksMap, targets, [], null, null);
 
-        foreach (var (source, links) in sourceLinksMap)
+    public async Task AddInputs(Dictionary<PostParserSource, List<string>> sourceLinksMap,
+        List<PostParseTarget> targets, List<string> links, string? text, string? title)
+    {
+        targets = targets.Count == 0 ? [PostParseTarget.DownloadInfo] : targets.Distinct().ToList();
+        if (targets.Any(t => t != PostParseTarget.DownloadInfo))
+            throw new InvalidOperationException("Only download-information extraction is currently supported.");
+        var inputs = sourceLinksMap.SelectMany(p => p.Value.Select(link => (Source: p.Key, Link: link.Trim())))
+            .Concat(links.Select(link => (Source: (PostParserSource)0, Link: link.Trim())))
+            .Where(t => t.Link.Length > 0).Distinct().ToList();
+        foreach (var input in inputs) PostParserManualTrigger.Validate(new() {Link = input.Link});
+        if (inputs.Count == 0 && string.IsNullOrWhiteSpace(text))
+            throw new InvalidOperationException("Provide at least one post link or some text.");
+        await workflow.RefreshTasksAsync();
+        var stoppedRuns = new List<int>();
+        await gate.Semaphore.WaitAsync();
+        try
         {
-            foreach (var link in links)
+            var existing = await ParserTasks.ToListAsync();
+            var changed = new List<PostParserTaskDbModel>();
+            foreach (var (source, link) in inputs)
             {
-                var existing = allExisting.FirstOrDefault(t => t.Source == source && t.Link == link);
-                if (existing != null)
+                var task = existing.FirstOrDefault(t => t.Source == source && t.Link == link && t.Text == null);
+                if (task is {IsDeleted: false, Error: null} && PostParserWorkflowService<TDbContext>.IsPending(task.ToDomainModel()) &&
+                    task.ToDomainModel().Targets.Order().SequenceEqual(targets.Order()))
+                    continue;
+                if (task == null)
                 {
-                    // Reset existing task: clear results and error, undelete, update targets
-                    existing.Results = null;
-                    existing.Error = null;
-                    existing.IsDeleted = false;
-                    existing.Targets = Newtonsoft.Json.JsonConvert.SerializeObject(targets);
-                    updatedTasks.Add(existing);
+                    task = new PostParserTaskDbModel {Source = source, Link = link};
+                    ParserTasks.Add(task);
+                    existing.Add(task);
                 }
-                else
-                {
-                    newTasks.Add(new PostParserTaskDbModel
-                    {
-                        Source = source,
-                        Link = link,
-                        Targets = Newtonsoft.Json.JsonConvert.SerializeObject(targets),
-                    });
-                }
+                Reset(task, targets, title, stoppedRuns);
+                changed.Add(task);
             }
+            if (!string.IsNullOrWhiteSpace(text))
+            {
+                // Pasted text is its own task; do not accidentally merge unrelated posts by title.
+                var task = new PostParserTaskDbModel {Source = 0, Link = "", Text = text.Trim()};
+                Reset(task, targets, title, stoppedRuns);
+                ParserTasks.Add(task);
+                changed.Add(task);
+            }
+            await CancelRunsUnderGate(stoppedRuns);
+            await db.SaveChangesAsync();
+            cache.ClearCache();
+            foreach (var task in changed) await Publish(task);
         }
-
-        if (newTasks.Count > 0)
-            await orm.AddRange(newTasks);
-        if (updatedTasks.Count > 0)
-            await orm.UpdateRange(updatedTasks);
-
-        foreach (var task in newTasks.Concat(updatedTasks))
-        {
-            await uiHub.Clients.All.GetIncrementalData(nameof(PostParserTask), task.ToDomainModel());
-        }
+        finally { gate.Semaphore.Release(); }
+        await StopRuns(stoppedRuns);
+        if (options.Value.AutomaticallyParsingPosts) await workflow.DispatchAsync();
     }
 
-    public async Task Delete(int id)
+    private static void Reset(PostParserTaskDbModel task, List<PostParseTarget> targets, string? title, List<int> stoppedRuns)
     {
-        var task = await orm.GetByKey(id);
-        if (task == null) return;
-        task.IsDeleted = true;
-        await orm.Update(task);
-        await uiHub.Clients.All.GetIncrementalData(nameof(PostParserTask), task.ToDomainModel());
+        if (task.WorkflowRunId is { } runId) stoppedRuns.Add(runId);
+        task.Revision++;
+        task.WorkflowRunId = null;
+        task.WorkflowDefinitionId = null;
+        task.Results = null;
+        task.Error = null;
+        task.IsDeleted = false;
+        task.Targets = Newtonsoft.Json.JsonConvert.SerializeObject(targets);
+        if (!string.IsNullOrWhiteSpace(title)) task.Title = title.Trim();
     }
 
-    /// <summary>
-    /// Delete the tasks reachable by their source links instead of by id, so a caller that only
-    /// knows the post url (the baka-monkey userscript) can undo an accidental add. Returns how
-    /// many tasks were deleted.
-    /// </summary>
-    public async Task<int> DeleteByLinks(PostParserSource source, List<string> links)
+    public async Task Delete(int id) => await DeleteWhere(t => t.Id == id);
+    public Task<int> DeleteByLinks(PostParserSource source, List<string> links) =>
+        DeleteWhere(t => t.Source == source && links.Contains(t.Link));
+    public async Task DeleteAll() => await DeleteWhere(_ => true);
+
+    private async Task<int> DeleteWhere(Func<PostParserTaskDbModel, bool> predicate)
     {
-        if (links.Count == 0) return 0;
-
-        var linkSet = links.ToHashSet();
-        var tasks = (await orm.GetAll())
-            .Where(t => t.Source == source && !t.IsDeleted && linkSet.Contains(t.Link))
-            .ToList();
-        if (tasks.Count == 0) return 0;
-
-        foreach (var task in tasks)
+        var stoppedRuns = new List<int>();
+        var count = 0;
+        await gate.Semaphore.WaitAsync();
+        try
         {
-            task.IsDeleted = true;
+            var changed = (await ParserTasks.Where(t => !t.IsDeleted).ToListAsync()).Where(predicate).ToList();
+            count = changed.Count;
+            foreach (var task in changed)
+            {
+                task.IsDeleted = true;
+                task.Revision++;
+                if (task.WorkflowRunId is { } runId) stoppedRuns.Add(runId);
+            }
+            await CancelRunsUnderGate(stoppedRuns);
+            await db.SaveChangesAsync();
+            cache.ClearCache();
+            foreach (var task in changed) await Publish(task);
         }
-
-        await orm.UpdateRange(tasks);
-        foreach (var task in tasks)
-        {
-            await uiHub.Clients.All.GetIncrementalData(nameof(PostParserTask), task.ToDomainModel());
-        }
-
-        return tasks.Count;
+        finally { gate.Semaphore.Release(); }
+        await StopRuns(stoppedRuns);
+        return count;
     }
 
     public async Task ReParse(int id)
     {
-        var task = await orm.GetByKey(id);
-        if (task == null) return;
-        task.Results = null;
-        task.Error = null;
-        task.IsDeleted = false;
-        await orm.Update(task);
-        await uiHub.Clients.All.GetIncrementalData(nameof(PostParserTask), task.ToDomainModel());
+        var stoppedRuns = new List<int>();
+        await gate.Semaphore.WaitAsync();
+        try
+        {
+            var task = await ParserTasks.SingleOrDefaultAsync(t => t.Id == id);
+            if (task == null) return;
+            Reset(task, task.ToDomainModel().Targets, null, stoppedRuns);
+            await CancelRunsUnderGate(stoppedRuns);
+            await db.SaveChangesAsync();
+            cache.ClearCache();
+            await Publish(task);
+        }
+        finally { gate.Semaphore.Release(); }
+        await StopRuns(stoppedRuns);
+        if (options.Value.AutomaticallyParsingPosts) await workflow.DispatchAsync();
     }
 
-    public async Task DeleteAll()
+    public Task Retry(int id) => workflow.RetryAsync(id);
+
+    public async Task Put(int id, PostParserTask value)
     {
-        var data = await orm.GetAll();
-        foreach (var task in data)
+        await gate.Semaphore.WaitAsync();
+        try
         {
-            task.IsDeleted = true;
+            var current = await ParserTasks.AsNoTracking().SingleOrDefaultAsync(t => t.Id == id);
+            if (current == null || current.IsDeleted || current.Revision != value.Revision || current.WorkflowRunId != value.WorkflowRunId)
+                return;
+            var model = (value with {Id = id}).ToDbModel();
+            await ParserTasks.Where(t => t.Id == id).ExecuteUpdateAsync(s => s.SetProperty(t => t.Title, model.Title)
+                .SetProperty(t => t.Results, model.Results).SetProperty(t => t.Error, model.Error));
+            cache.ClearCache();
+            await Publish(model);
         }
-        await orm.UpdateRange(data);
-        foreach (var task in data)
-        {
-            await uiHub.Clients.All.GetIncrementalData(nameof(PostParserTask), task.ToDomainModel());
-        }
+        finally { gate.Semaphore.Release(); }
+    }
+
+    public async Task ParseAll(Func<int, Task>? onProgress, Func<string, Task>? onProcessChange, PauseToken pt, CancellationToken ct)
+    {
+        await pt.WaitWhilePausedAsync(ct);
+        await workflow.DispatchAsync(ct);
+        if (onProgress != null) await onProgress(100);
     }
 
     public async Task<Dictionary<string, PostParserTaskStatus>> GetStatusesByLinks(PostParserSource source, List<string> links)
     {
-        var allTasks = await orm.GetAll();
-        var result = new Dictionary<string, PostParserTaskStatus>();
-
-        foreach (var link in links)
+        var all = await GetAll();
+        return links.Distinct().ToDictionary(link => link, link =>
         {
-            var task = allTasks.FirstOrDefault(t => t.Source == source && t.Link == link);
-            if (task == null)
-            {
-                result[link] = PostParserTaskStatus.None;
-                continue;
-            }
-
-            if (task.IsDeleted)
-            {
-                result[link] = PostParserTaskStatus.Deleted;
-                continue;
-            }
-
-            var domainTask = task.ToDomainModel();
-
-            if (domainTask.Error != null)
-            {
-                result[link] = PostParserTaskStatus.Failed;
-                continue;
-            }
-
-            if (IsPending(domainTask))
-            {
-                result[link] = PostParserTaskStatus.Pending;
-                continue;
-            }
-
-            result[link] = PostParserTaskStatus.Complete;
-        }
-
-        return result;
+            var task = all.FirstOrDefault(t => t.Source == source && t.Link == link);
+            if (task == null) return PostParserTaskStatus.None;
+            if (task.IsDeleted) return PostParserTaskStatus.Deleted;
+            if (task.Error != null) return PostParserTaskStatus.Failed;
+            return PostParserWorkflowService<TDbContext>.IsPending(task) ? PostParserTaskStatus.Pending : PostParserTaskStatus.Complete;
+        });
     }
 
-    public async Task Put(int id, PostParserTask pdt)
+    private Task CancelRunsUnderGate(List<int> ids) => db.Set<WorkflowRunDbModel>()
+        .Where(r => ids.Contains(r.Id) && (r.Status == WorkflowRunStatus.Pending || r.Status == WorkflowRunStatus.Running || r.Status == WorkflowRunStatus.Waiting))
+        .ExecuteUpdateAsync(s => s.SetProperty(r => r.Status, WorkflowRunStatus.Cancelled).SetProperty(r => r.CompletedAt, DateTime.Now));
+    private async Task StopRuns(List<int> ids)
     {
-        var dbModel = (pdt with {Id = id}).ToDbModel();
-        await orm.Update(dbModel);
-        await uiHub.Clients.All.GetIncrementalData(nameof(PostParserTask), dbModel.ToDomainModel());
+        foreach (var id in ids.Distinct()) await tasks.Stop($"workflow.run.{id}");
     }
-
-    public async Task ParseAll(Func<int, Task>? onProgress, Func<string, Task>? onProcessChange, PauseToken pt,
-        CancellationToken ct)
-    {
-        // Get tasks that are pending (no error, not deleted, have unparsed targets)
-        var allTasks = (await orm.GetAll()).Select(d => d.ToDomainModel()).ToList();
-        var pendingTasks = allTasks.Where(t => !t.IsDeleted && t.Error == null && IsPending(t)).ToList();
-
-        if (pendingTasks.Count == 0)
-            return;
-
-        var groups = pendingTasks.GroupBy(d => d.Source)
-            .ToDictionary(d => d.Key, d => d.ToList());
-        var runningTasks = new List<Task>();
-        var totalCount = pendingTasks.Count;
-        var doneCount = 0;
-
-        foreach (var g in groups)
-        {
-            if (!_fetcherMap.TryGetValue(g.Key, out var fetcher))
-                continue;
-
-            runningTasks.Add(Task.Run((Func<Task>) StartBySource, ct));
-            continue;
-
-            async Task StartBySource()
-            {
-                foreach (var t in g.Value)
-                {
-                    await pt.WaitWhilePausedAsync(ct);
-
-                    try
-                    {
-                        var content = await fetcher.ReadAsync(t.Link, ct);
-
-                        // Reading stopped buying, so this page keeps doing it: same rule as before
-                        // (anything dearer than the threshold stops the task), except that a lock
-                        // with no stated price no longer compares as free and buys itself.
-                        content = await UnlockForPageAsync(g.Key, fetcher, t.Link, content, ct);
-
-                        t.Title ??= content.Title;
-
-                        t.Results ??= new Dictionary<PostParseTarget, JsonNode?>();
-
-                        foreach (var target in t.Targets)
-                        {
-                            // Skip already parsed targets
-                            if (t.Results.ContainsKey(target))
-                                continue;
-
-                            if (!_handlerMap.TryGetValue(target, out var handler))
-                                continue;
-
-                            var handlerResult = await handler.HandleAsync(content, ct);
-                            var jsonString = JsonSerializer.Serialize(handlerResult.Data, JsonSerializerOptions.Web);
-
-                            if (!string.IsNullOrWhiteSpace(handlerResult.OptimizedTitle) &&
-                                handlerResult.OptimizedTitle != t.Title)
-                            {
-                                t.Title = handlerResult.OptimizedTitle;
-                            }
-
-                            t.Results[target] = JsonNode.Parse(jsonString);
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        t.Error = e.BuildFullInformationText();
-                    }
-
-                    await Put(t.Id, t);
-                    Interlocked.Increment(ref doneCount);
-                    if (onProgress != null)
-                    {
-                        var pp = (int) (100m * (doneCount - 1) / totalCount);
-                        var np = (int) (100m * doneCount / totalCount);
-                        if (np != pp)
-                        {
-                            await onProgress(np);
-                        }
-                    }
-                }
-            }
-        }
-
-        await Task.WhenAll(runningTasks);
-    }
-
-    /// <summary>
-    /// A task is pending if it has targets without results.
-    /// </summary>
-    private static bool IsPending(PostParserTask task)
-    {
-        if (task.Targets.Count == 0)
-            return false;
-
-        if (task.Results == null)
-            return true;
-
-        return task.Targets.Any(target => !task.Results.ContainsKey(target));
-    }
-
-    /// <summary>
-    /// Buys what the post-parser page is allowed to buy and re-reads if anything changed. The
-    /// acquisition pipeline does not use this: a step suspends and asks instead.
-    /// </summary>
-    private async Task<PostContent> UnlockForPageAsync(PostParserSource source, ISharedContentReader reader,
-        string link, PostContent content, CancellationToken ct)
-    {
-        var locked = content.Locks.Unbought().ToList();
-
-        if (locked.Count == 0 || !_purchaserMap.TryGetValue(source, out var purchaser))
-        {
-            return content;
-        }
-
-        var limit = soulPlusOptions.Value.AutoBuyThreshold;
-        var tooDear = locked.FirstOrDefault(l => !l.IsWithin(limit));
-
-        if (tooDear != null)
-        {
-            throw new Exception(tooDear.Price is { } price
-                ? $"Failed due to price {price} is larger than auto buy threshold {limit}"
-                : "Failed because a locked part of this post did not say what it costs");
-        }
-
-        foreach (var l in locked)
-        {
-            await purchaser.BuyAsync(l.Url!, ct);
-        }
-
-        return await reader.ReadAsync(link, ct);
-    }
-
+    private Task Publish(PostParserTaskDbModel task) => uiHub.Clients.All.GetIncrementalData(nameof(PostParserTask), task.ToDomainModel());
 }

@@ -30,6 +30,7 @@ const builtinNames = [
   ["Local directory", "本地目录入库"],
   ["Download torrent contents", "下载种子内容"],
   ["ExHentai download", "ExHentai 下载"],
+  ["Parse post download information", "仅解析帖子"],
 ];
 
 describe("built-in workflow display names", () => {

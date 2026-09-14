@@ -132,6 +132,7 @@ public sealed class WorkflowValidationService(
             {
                 NodeId = node.NodeId, NodeIndex = i, Kind = node.Kind,
                 Code = issue.Code, Message = issue.Message, MessageKey = issue.MessageKey,
+                DependsOnPayload = issue.DependsOnPayload,
                 // Unknown severity must never let a failing check silently permit execution.
                 Severity = issue.Severity == "warning" ? "warning" : "error",
             });

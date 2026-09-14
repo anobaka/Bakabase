@@ -2302,6 +2302,9 @@ export interface BakabaseInsideWorldBusinessComponentsPlayListModelsInputPlayLis
 export interface BakabaseInsideWorldBusinessComponentsPostParserControllersAddPostParserTasksInput {
   sourceLinksMap: Record<string, string[]>;
   targets: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstantsPostParseTarget[];
+  links: string[];
+  text?: string;
+  title?: string;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsPostParserControllersDeletePostParserTasksByLinksInput {
@@ -2344,6 +2347,15 @@ export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPost
   link: string;
   title?: string;
   content?: string;
+  text?: string;
+  /** @format int32 */
+  revision: number;
+  /** @format int32 */
+  workflowDefinitionId?: number;
+  /** @format int32 */
+  workflowRunId?: number;
+  /** [1: Pending, 2: Running, 3: Success, 4: Failed, 5: Cancelled, 6: Interrupted, 7: Waiting] */
+  workflowStatus?: BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowRunStatus;
   targets: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstantsPostParseTarget[];
   results?: {
     DownloadInfo: SystemTextJsonNodesJsonNode;
@@ -3333,6 +3345,10 @@ export interface BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionLe
   /** [1: User, 2: Subscription, 3: SharedListImport, 4: PostParser] */
   origin: BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionLeadOrigin;
   note?: string;
+  accessCode?: string;
+  password?: string;
+  sourceReference?: string;
+  isResolved: boolean;
   /** @format date-time */
   lastUsedAt?: string;
   /** [1: Succeeded, 2: Failed] */
@@ -3537,6 +3553,13 @@ export interface BakabaseModulesAcquisitionModelsInputAcquisitionLeadAddInputMod
   origin: BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionLeadOrigin;
   /** @maxLength 512 */
   note?: string;
+  /** @maxLength 512 */
+  accessCode?: string;
+  /** @maxLength 2048 */
+  password?: string;
+  /** @maxLength 2048 */
+  sourceReference?: string;
+  isResolved: boolean;
 }
 
 export interface BakabaseModulesAcquisitionModelsInputAcquisitionResumeInputModel {
@@ -4844,6 +4867,8 @@ export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowRunViewMod
   inputCount: number;
   /** @format int32 */
   outputCount: number;
+  outputItemsJson?: string;
+  outputPreviewTruncated: boolean;
   /** @format int32 */
   failedItemCount: number;
   stepStats: BakabaseModulesWorkflowAbstractionsModelsDomainWorkflowRunStepStat[];
@@ -4870,6 +4895,7 @@ export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowValidation
   message: string;
   messageKey?: string;
   severity: string;
+  dependsOnPayload: boolean;
   nodeId?: string;
   /** @format int32 */
   nodeIndex?: number;
@@ -4914,6 +4940,14 @@ export interface BakabaseServiceComponentsAcquisitionInboxCandidateScore {
   resourceName?: string;
   /** @format int32 */
   score: number;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPostParserAcquisitionResult {
+  /** @format int32 */
+  resourceId: number;
+  created: boolean;
+  /** @format int32 */
+  leadCount: number;
 }
 
 export interface BakabaseServiceComponentsAcquisitionSharedListImportResult {
@@ -5041,6 +5075,14 @@ export interface BakabaseServiceControllersPathMarkSyncStatusResponse {
 export interface BakabaseServiceControllersPathMigrationRequest {
   oldPath: string;
   newPath: string;
+}
+
+export interface BakabaseServiceControllersPostParserAcquisitionInput {
+  /** @maxLength 1024 */
+  title?: string;
+  resourceIndices: number[];
+  /** @format int32 */
+  revision: number;
 }
 
 export interface BakabaseServiceControllersResourceHealthScoreRowViewModel {
@@ -5399,6 +5441,10 @@ export interface BakabaseServiceModelsViewAcquisitionCandidateLeadViewModel {
   /** @format int32 */
   defaultRecipeDefinitionId?: number;
   applicableRecipeDefinitionIds: number[];
+  recipeValidations: Record<
+    string,
+    BakabaseModulesWorkflowAbstractionsModelsViewWorkflowValidationResult
+  >;
 }
 
 export interface BakabaseServiceModelsViewAcquisitionCandidatePageViewModel {
@@ -7622,6 +7668,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceC
   code: number;
   message?: string;
   data?: BakabaseServiceComponentsAcquisitionAcquisitionSetupResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPostParserAcquisitionResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPostParserAcquisitionResult;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionSharedListImportResult {
@@ -23444,6 +23497,45 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
       return baseUrl + path;
     },
+
+    /**
+     * No description
+     *
+     * @tags PostParserAcquisition
+     * @name RetryPostParserTaskWorkflow
+     * @request POST:/post-parser/task/{id}/retry
+     */
+    retryPostParserTaskWorkflow: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/post-parser/task/${id}/retry`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags PostParserAcquisition
+     * @name ImportPostParserTaskToAcquisition
+     * @request POST:/post-parser/task/{id}/acquisition
+     */
+    importPostParserTaskToAcquisition: (
+      id: number,
+      data: BakabaseServiceControllersPostParserAcquisitionInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPostParserAcquisitionResult,
+        any
+      >({
+        path: `/post-parser/task/${id}/acquisition`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
   };
   property = {
     /**

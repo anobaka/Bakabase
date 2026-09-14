@@ -17,6 +17,9 @@ export const WorkflowItemTypes = {
   Acquisition: "item.acquisition",
   AcquisitionStatusChange: "item.acquisition.statusChange",
   CollectionMember: "item.collection.member",
+  PostParserInput: "item.postParser.input",
+  PostParserContent: "item.postParser.content",
+  PostParserResult: "item.postParser.result",
 } as const;
 
 /** Shared by the canvas and type selectors; unknown types retain the server's readable name. */

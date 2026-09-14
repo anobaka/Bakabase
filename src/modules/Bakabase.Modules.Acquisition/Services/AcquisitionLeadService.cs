@@ -64,6 +64,21 @@ public class AcquisitionLeadService<TDbContext>(
         var existing = await orm.GetFirstOrDefault(x => x.Kind == model.Kind && x.Value == normalized);
         if (existing != null)
         {
+            if (existing.ResourceId == resourceId &&
+                ((existing.AccessCode == null && model.AccessCode != null) ||
+                 (existing.Password == null && model.Password != null) ||
+                 (existing.SourceReference == null && model.SourceReference != null) ||
+                 (!existing.IsResolved && model.IsResolved)))
+            {
+                await orm.UpdateByKey(existing.Id, lead =>
+                {
+                    lead.AccessCode ??= model.AccessCode;
+                    lead.Password ??= model.Password;
+                    lead.SourceReference ??= model.SourceReference;
+                    lead.IsResolved |= model.IsResolved;
+                });
+                existing = (await orm.GetByKey(existing.Id, false))!;
+            }
             return existing.ResourceId == resourceId
                 ? new AcquisitionLeadAddResult(existing.ToDomainModel(), null)
                 : new AcquisitionLeadAddResult(null, existing.ResourceId);
@@ -76,6 +91,10 @@ public class AcquisitionLeadService<TDbContext>(
             Value = normalized,
             Origin = model.Origin,
             Note = model.Note,
+            AccessCode = model.AccessCode,
+            Password = model.Password,
+            SourceReference = model.SourceReference,
+            IsResolved = model.IsResolved,
             CreatedAt = DateTime.Now
         })).Data!;
 

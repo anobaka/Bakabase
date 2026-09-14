@@ -64,6 +64,7 @@ const AddSourceModal = ({ resourceId, onAdded, onDestroyed }: Props) => {
               kind,
               value: value.trim(),
               origin: AcquisitionLeadOrigin.User,
+              isResolved: false,
             });
 
       if (response.code) {

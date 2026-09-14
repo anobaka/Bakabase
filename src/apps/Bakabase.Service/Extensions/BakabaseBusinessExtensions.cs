@@ -222,6 +222,7 @@ namespace Bakabase.Service.Extensions
             services.AddAcquisitionStep<Components.Acquisition.Steps.FetchResultTorrentStep>();
             Components.Downloader.DownloadResultWorkflow.AddDownloadResultWorkflows(services);
             services.AddScoped<Components.Acquisition.SharedListImportService>();
+            services.AddScoped<Components.Acquisition.PostParserAcquisitionService>();
             services.AddAcquisitionStep<Components.Acquisition.Steps.UnpackStep>();
             services.AddAcquisitionStep<Bakabase.Modules.Acquisition.Components.Steps.PickLocalDirectoryStep>();
             services.AddAcquisitionStep<Bakabase.Modules.Acquisition.Components.Steps.PlaceStep>();

@@ -30,4 +30,8 @@ export interface WorkflowTriggerUI<TFilter = unknown> {
   resolveOutputItemType: (filter: TFilter) => string;
   FilterForm: React.FC<{ value: TFilter; onChange: (v: TFilter) => void }>;
   FilterSummary: React.FC<{ filter: TFilter }>;
+  /** Optional friendly input for a manual run; other triggers retain the JSON editor. */
+  ManualRunForm?: React.FC<{ value: string; onChange: (json: string) => void }>;
+  defaultManualPayload?: () => string;
+  isManualPayloadValid?: (json: string) => boolean;
 }

@@ -177,6 +177,9 @@ namespace Bakabase.Service.Components
                 await acquisitionScope.ServiceProvider
                     .GetRequiredService<Components.Downloader.DownloadResultWorkflowService>()
                     .SeedAsync();
+                await acquisitionScope.ServiceProvider
+                    .GetRequiredService<Bakabase.InsideWorld.Business.Components.PostParser.Workflow.PostParserWorkflowService<BakabaseDbContext>>()
+                    .SeedAsync();
             }
 
             // Resource move records survive restarts too, but a half-done physical move is not

@@ -33,8 +33,11 @@ import { DownloaderFetchTorrentResultUI } from "./DownloaderFetchTorrentResult";
 import { DownloaderPrepareResourceUI } from "./DownloaderPrepareResource";
 import { AcquisitionFetchExHentaiUI } from "./AcquisitionFetchExHentai";
 import { AcquisitionFetchResultTorrentUI } from "./AcquisitionFetchResultTorrent";
+import { PostParserReadContentUI, PostParserExtractDownloadInfoUI } from "./PostParser";
 
 export const workflowActivityRegistry: Record<string, WorkflowActivityUI<any>> = {
+  [PostParserReadContentUI.kind]: PostParserReadContentUI,
+  [PostParserExtractDownloadInfoUI.kind]: PostParserExtractDownloadInfoUI,
   [SubscriptionItemTitleContainsUI.kind]: SubscriptionItemTitleContainsUI,
   [AiTransformUI.kind]: AiTransformUI,
   [ExHentaiQueryToGalleryUI.kind]: ExHentaiQueryToGalleryUI,
