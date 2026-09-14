@@ -6,7 +6,7 @@ import type { IProperty } from "@/components/Property/models";
 
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useMeasure, useUpdate } from "react-use";
+import { useUpdate } from "react-use";
 
 import { PropertyPool, PropertyValueScope, propertyValueScopes } from "@/sdk/constants";
 import { useResourceOptionsStore, useUiOptionsStore } from "@/stores/options";
@@ -19,7 +19,6 @@ import { Divider, Masonry } from "@/components/bakaui";
 
 type ColumnCount = 1 | 2 | 3;
 const COLUMN_GAP = 24;
-const MIN_COLUMN_WIDTH = 224;
 
 type Props = {
   resource: Resource;
@@ -62,13 +61,6 @@ const Properties = (props: Props) => {
   } = props;
   const { t } = useTranslation();
   const forceUpdate = useUpdate();
-  const [containerRef, { width }] = useMeasure<HTMLDivElement>();
-  // Keep the user's column preference as the maximum, while leaving room for labels and editors.
-  const fittingColumns =
-    width > 0
-      ? Math.max(1, Math.floor((width + COLUMN_GAP) / (MIN_COLUMN_WIDTH + COLUMN_GAP)))
-      : columns;
-  const displayColumns = Math.min(columns, fittingColumns);
   const cps = resource.properties;
   const resourceOptions = useResourceOptionsStore((state) => state.data);
   const [valueScopePriority, setValueScopePriority] = useState<PropertyValueScope[]>([]);
@@ -299,14 +291,14 @@ const Properties = (props: Props) => {
   // log(renderContext);
 
   return (
-    <div ref={containerRef} className="min-w-0">
+    <div className="min-w-0">
       {propertyInnerDirection == "hoz" ? (
         <>
           {visibleProperties.length > 0 && (
             <Masonry
               className={`${className ?? ""} min-w-0 overflow-visible`}
               columnGap={`${COLUMN_GAP}px`}
-              columns={Math.max(1, Math.min(displayColumns, visibleProperties.length))}
+              columns={Math.max(1, Math.min(columns, visibleProperties.length))}
               rowGap="0.5rem"
             >
               {visibleProperties.map((pCtx) => (
@@ -326,7 +318,7 @@ const Properties = (props: Props) => {
               <Masonry
                 className={`${className ?? ""} min-w-0 overflow-visible`}
                 columnGap={`${COLUMN_GAP}px`}
-                columns={Math.max(1, Math.min(displayColumns, invisibleProperties.length))}
+                columns={Math.max(1, Math.min(columns, invisibleProperties.length))}
                 rowGap="0.5rem"
               >
                 {invisibleProperties.map((pCtx) => (

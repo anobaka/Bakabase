@@ -6,6 +6,7 @@ import type {
   PropertyValueScopePriority,
 } from "@/core/models/Resource";
 import type { PropertyPool, PropertyValueScope } from "@/sdk/constants";
+import type { IProperty } from "@/components/Property/models";
 
 import React, { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -14,11 +15,14 @@ import { MdAdd, MdArrowDownward, MdArrowUpward, MdClose, MdTune } from "react-ic
 import BApi from "@/sdk/BApi";
 import { PropertyValueScopeLabel, propertyValueScopes } from "@/sdk/constants";
 import { Button, Popover, Switch } from "@/components/bakaui";
+import PropertyValueRenderer from "@/components/Property/components/PropertyValueRenderer";
+import { convertFromApiValue, serializeStandardValue } from "@/components/StandardValue/helpers";
 
 type Props = {
   resourceId: number;
   propertyPool: PropertyPool;
   propertyId: number;
+  property: IProperty;
   /** All scope-value entries for this property. */
   values?: Property["values"];
   /** Current preference for this (resource, property); undefined when no override is saved. */
@@ -51,21 +55,11 @@ const hasValue = (v?: ScopeValue) => {
   return true;
 };
 
-const previewText = (v?: ScopeValue) => {
-  const x = effectiveValueOf(v);
-
-  if (x == null) return "";
-  if (Array.isArray(x))
-    return x.map((i) => (typeof i === "object" ? JSON.stringify(i) : String(i))).join(", ");
-  if (typeof x === "object") return JSON.stringify(x);
-
-  return String(x);
-};
-
 const ScopePreferencePopover = ({
   resourceId,
   propertyPool,
   propertyId,
+  property,
   values,
   preference,
   effectivePriority,
@@ -268,10 +262,20 @@ const ScopePreferencePopover = ({
                     <MdAdd size={14} />
                   </Button>
                 )}
-                <span className={`flex-1 truncate ${inList ? "" : "opacity-60"}`}>
+                <div className={`flex min-w-0 flex-1 flex-col gap-1 ${inList ? "" : "opacity-60"}`}>
                   <span className="font-medium">{s.label}</span>
-                  <span className="opacity-60 ml-2">{previewText(s.value)}</span>
-                </span>
+                  <div className="min-w-0 max-w-full [overflow-wrap:anywhere] [&>*]:max-w-full">
+                    <PropertyValueRenderer
+                      isReadonly
+                      bizValue={serializeStandardValue(
+                        convertFromApiValue(effectiveValueOf(s.value), property.bizValueType),
+                        property.bizValueType,
+                      )}
+                      property={property}
+                      size="sm"
+                    />
+                  </div>
+                </div>
                 {inList && (
                   <Switch
                     isDisabled={isCutOff || isLast}

@@ -45,7 +45,6 @@ import type { Resource as ResourceModel } from "@/core/models/Resource";
 import {
   Button,
   ButtonGroup,
-  Divider,
   Listbox,
   ListboxItem,
   Modal,
@@ -103,9 +102,7 @@ const PlayControlPortal = ({
         isIconOnly
         color="primary"
         isDisabled={status === "loading" || status === "idle"}
-        onPress={() =>
-          mainSource ? onPlaySource(mainSource.source) : onNotFound()
-        }
+        onPress={() => (mainSource ? onPlaySource(mainSource.source) : onNotFound())}
       >
         {status === "loading" || status === "idle" ? (
           <LoadingOutlined spin className="text-lg" />
@@ -223,10 +220,7 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
           return (
             <div className="flex items-center justify-center">
               <ButtonGroup size={"sm"}>
-                <PlayControl
-                  PortalComponent={PlayControlPortal}
-                  resource={resource}
-                />
+                <PlayControl PortalComponent={PlayControlPortal} resource={resource} />
                 {resource.hasLocalPath && (
                   <Tooltip content={t("common.action.openFolder")}>
                     <Button
@@ -363,9 +357,34 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
                 restrictedPropertyPool={PropertyPool.Reserved}
               />
               <section className="min-w-0 border-t border-default-200/60 pt-4">
-                <h3 className="mb-2 text-sm font-medium text-default-700">
-                  {t<string>("resource.detail.customProperties")}
-                </h3>
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="text-sm font-medium text-default-700">
+                    {t<string>("resource.detail.customProperties")}
+                  </h3>
+                  <ButtonGroup
+                    aria-label={t<string>("resource.detail.customPropertiesColumns")}
+                    size="sm"
+                  >
+                    {[
+                      { col: 1 as const, icon: <TbColumns1 className="text-base" /> },
+                      { col: 2 as const, icon: <TbColumns2 className="text-base" /> },
+                      { col: 3 as const, icon: <TbColumns3 className="text-base" /> },
+                    ].map(({ col, icon }) => (
+                      <Tooltip key={col} content={t("resource.detail.columnCount", { count: col })}>
+                        <Button
+                          isIconOnly
+                          aria-label={t<string>("resource.detail.columnCount", { count: col })}
+                          aria-pressed={columns === col}
+                          color={columns === col ? "primary" : "default"}
+                          variant={columns === col ? "flat" : "light"}
+                          onPress={() => setColumns(col)}
+                        >
+                          {icon}
+                        </Button>
+                      </Tooltip>
+                    ))}
+                  </ButtonGroup>
+                </div>
                 <Properties
                   columns={columns}
                   noPropertyContent={<CustomPropertiesEmptyState onNavigate={props.onDestroyed} />}
@@ -392,9 +411,7 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
             />
           );
         case "collections":
-          return (
-            <CollectionMemberships compact resourceId={resource.id} onChange={loadResource} />
-          );
+          return <CollectionMemberships compact resourceId={resource.id} onChange={loadResource} />;
         case "profiles":
           return <ResourceProfiles compact resourceId={resource.id} />;
         default:
@@ -405,6 +422,7 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
       resource,
       hideTimeInfo,
       columns,
+      setColumns,
       uiOptions,
       refreshingCache,
       createPortal,
@@ -484,27 +502,6 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
               }
             >
               <div className="flex flex-col gap-2 p-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-default-500">{t("resource.label.columns")}</span>
-                  <ButtonGroup size="sm">
-                    {[
-                      { col: 1 as const, icon: <TbColumns1 /> },
-                      { col: 2 as const, icon: <TbColumns2 /> },
-                      { col: 3 as const, icon: <TbColumns3 /> },
-                    ].map(({ col, icon }) => (
-                      <Button
-                        key={col}
-                        isIconOnly
-                        color={columns === col ? "primary" : "default"}
-                        variant={columns === col ? "solid" : "flat"}
-                        onPress={() => setColumns(col)}
-                      >
-                        {icon}
-                      </Button>
-                    ))}
-                  </ButtonGroup>
-                </div>
-                <Divider />
                 <Listbox
                   aria-label="Actions"
                   onAction={(key) => {

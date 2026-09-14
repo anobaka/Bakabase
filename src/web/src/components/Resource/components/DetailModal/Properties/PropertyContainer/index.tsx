@@ -137,6 +137,7 @@ const PropertyContainer = (props: PropertyContainerProps) => {
             <ScopePreferencePopover
               effectivePriority={valueScopePriority}
               preference={scopePreference}
+              property={property}
               propertyId={property.id}
               propertyPool={propertyPool!}
               resourceId={resourceId!}
