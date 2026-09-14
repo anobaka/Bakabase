@@ -2,11 +2,15 @@ import type { ReactNode } from "react";
 import type { Root } from "react-dom/client";
 
 import { createRoot } from "react-dom/client";
+import { createPortal as createReactPortal } from "react-dom";
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { Button as HeroButton } from "@heroui/button";
 
-import CandidateOverview from "..";
+import CandidateOverview, { CandidateCard } from "..";
 
+import AddSourceModal from "@/components/Resource/components/AcquisitionPanel/AddSourceModal";
+import ResourceDetailModal from "@/components/Resource/components/DetailModal";
 import { AcquisitionLeadKind, AcquisitionStatus } from "@/sdk/constants";
 
 const { searchCandidates, createAcquisition, createPortal, toastDanger, controls } = vi.hoisted(
@@ -28,6 +32,9 @@ vi.mock("@/components/ContextProvider/BakabaseContextProvider", () => ({
 }));
 
 vi.mock("@/components/Resource/components/DetailModal", () => ({ default: () => null }));
+vi.mock("@/components/Resource/components/AcquisitionPanel/AddSourceModal", () => ({
+  default: () => null,
+}));
 
 // The real installed Card and Button preserve HeroUI/usePress keyboard and event bubbling
 // behavior. Other native controls keep request/selection tests compact.
@@ -282,9 +289,153 @@ afterEach(async () => {
   await act(async () => root.unmount());
   container.remove();
   vi.useRealTimers();
+  vi.unstubAllGlobals();
 });
 
 describe("CandidateOverview", () => {
+  it("does not treat a nested HeroUI virtual press that continues propagation as a card press", async () => {
+    const cardPress = vi.fn();
+    const childPress = vi.fn();
+
+    await act(async () =>
+      root.render(
+        <CandidateCard isPressable as="section" onPress={cardPress}>
+          <HeroButton
+            onPress={(event) => {
+              childPress();
+              event.continuePropagation();
+            }}
+          >
+            Nested action
+          </HeroButton>
+        </CandidateCard>,
+      ),
+    );
+    await click(button("Nested action"));
+    expect(childPress).toHaveBeenCalledTimes(1);
+    expect(cardPress).not.toHaveBeenCalled();
+    await click(container.querySelector("section")!);
+    expect(cardPress).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["Enter", " "])(
+    "isolates forwarded child keyboard presses and allows the next card press with %j",
+    async (key) => {
+      const cardPress = vi.fn();
+      const childPress = vi.fn();
+
+      await act(async () =>
+        root.render(
+          <CandidateCard isPressable as="section" onPress={cardPress}>
+            <HeroButton
+              onPress={(event) => {
+                childPress();
+                event.continuePropagation();
+              }}
+              onPressEnd={(event) => event.continuePropagation()}
+              onPressStart={(event) => event.continuePropagation()}
+            >
+              Forwarded action
+            </HeroButton>
+          </CandidateCard>,
+        ),
+      );
+      const child = button("Forwarded action");
+      const card = container.querySelector("section")!;
+      const pressKey = async (target: HTMLElement) =>
+        act(async () => {
+          target.focus();
+          target.dispatchEvent(
+            new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true }),
+          );
+          target.dispatchEvent(
+            new KeyboardEvent("keyup", { key, bubbles: true, cancelable: true }),
+          );
+        });
+
+      await pressKey(child);
+      expect(childPress).toHaveBeenCalledTimes(1);
+      expect(cardPress).not.toHaveBeenCalled();
+      await pressKey(card);
+      expect(cardPress).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it("ignores clicks from disabled nested button icons without locking the card", async () => {
+    const cardPress = vi.fn();
+    const childPress = vi.fn();
+
+    await act(async () =>
+      root.render(
+        <CandidateCard isPressable as="section" onPress={cardPress}>
+          <HeroButton isDisabled onPress={childPress}>
+            Disabled action{" "}
+            <svg aria-hidden>
+              <path />
+            </svg>
+          </HeroButton>
+        </CandidateCard>,
+      ),
+    );
+    await act(async () =>
+      button("Disabled action")
+        .querySelector("path")!
+        .dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true })),
+    );
+    expect(cardPress).not.toHaveBeenCalled();
+    expect(childPress).not.toHaveBeenCalled();
+    await click(container.querySelector("section")!);
+    expect(cardPress).toHaveBeenCalledTimes(1);
+  });
+
+  it("ignores a related portal action while keeping subsequent title presses active", async () => {
+    const cardPress = vi.fn();
+    const childPress = vi.fn();
+
+    await act(async () =>
+      root.render(
+        <CandidateCard isPressable as="section" onPress={cardPress}>
+          <span>Card title</span>
+          {createReactPortal(
+            <HeroButton
+              onPress={(event) => {
+                childPress();
+                event.continuePropagation();
+              }}
+            >
+              Portal action
+            </HeroButton>,
+            document.body,
+          )}
+        </CandidateCard>,
+      ),
+    );
+    await click(button("Portal action", document.body));
+    expect(childPress).toHaveBeenCalledTimes(1);
+    expect(cardPress).not.toHaveBeenCalled();
+    await click(container.querySelector("section > span")!);
+    expect(cardPress).toHaveBeenCalledTimes(1);
+  });
+
+  it("isolates pointer events from nested button icons in PointerEvent browsers", async () => {
+    class TestPointerEvent extends MouseEvent {
+      pointerId = 1;
+      pointerType = "mouse";
+      isPrimary = true;
+      width = 1;
+      height = 1;
+    }
+
+    vi.stubGlobal("PointerEvent", TestPointerEvent);
+    searchCandidates.mockResolvedValueOnce(response([candidate({ activeTaskId: 99 })]));
+    await renderOverview();
+    const action = button("acquisition.overview.viewTask");
+
+    await pointerPress(action.querySelector("svg")! as unknown as HTMLElement);
+    expect(onViewTasks).toHaveBeenCalledTimes(1);
+    expect(createPortal).not.toHaveBeenCalled();
+  });
+
   it("handles pointer presses on card text, summary and nested actions independently", async () => {
     await renderOverview();
     const card = container.querySelector<HTMLElement>('section[role="button"]')!;
@@ -340,7 +491,7 @@ describe("CandidateOverview", () => {
     expect(card.querySelector("button button")).toBeNull();
     await click(card);
     expect(createPortal).toHaveBeenCalledTimes(1);
-    expect(createPortal).toHaveBeenLastCalledWith(expect.any(Function), {
+    expect(createPortal).toHaveBeenLastCalledWith(ResourceDetailModal, {
       id: 1,
       onDestroyed: expect.any(Function),
     });
@@ -439,7 +590,7 @@ describe("CandidateOverview", () => {
     });
   });
 
-  it("explains a resource without sources and offers its details instead of starting a task", async () => {
+  it("opens the source picker directly for a resource without sources and refreshes after adding", async () => {
     searchCandidates.mockResolvedValueOnce(response([candidate({ leads: [] })]));
 
     await renderOverview();
@@ -452,12 +603,13 @@ describe("CandidateOverview", () => {
     ).toBe(false);
     await click(button("acquisition.overview.addSource"));
 
-    expect(createPortal).toHaveBeenCalledExactlyOnceWith(expect.any(Function), {
-      id: 1,
-      onDestroyed: expect.any(Function),
+    expect(createPortal).toHaveBeenCalledExactlyOnceWith(AddSourceModal, {
+      resourceId: 1,
+      onAdded: expect.any(Function),
     });
+    expect(createPortal).not.toHaveBeenCalledWith(ResourceDetailModal, expect.anything());
     expect(createAcquisition).not.toHaveBeenCalled();
-    await act(async () => createPortal.mock.calls[0][1].onDestroyed());
+    await act(async () => createPortal.mock.calls[0][1].onAdded());
     expect(searchCandidates).toHaveBeenCalledTimes(2);
   });
 

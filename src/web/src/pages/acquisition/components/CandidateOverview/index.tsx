@@ -1,6 +1,6 @@
 import type { components } from "@/sdk/BApi2";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   AiOutlineApartment,
@@ -30,6 +30,7 @@ import {
   toast,
 } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import AddSourceModal from "@/components/Resource/components/AcquisitionPanel/AddSourceModal";
 import ResourceDetailModal from "@/components/Resource/components/DetailModal";
 import { AcquisitionLeadKind } from "@/sdk/constants";
 
@@ -59,19 +60,29 @@ const METHODS: Record<string, string> = {
 const leadKey = (resourceId: number, lead: Lead) =>
   `${resourceId}-${lead.kind}-${lead.id}-${lead.value}`;
 
-// usePress normalizes PressEvent.target to the card itself. Stop interactive descendants
-// before their DOM events reach that hook, without cancelling their own native behavior.
-const stopCardPressFromControl = (event: React.SyntheticEvent<HTMLElement>) => {
-  const target = event.target;
+const isCardControlEvent = (
+  event: React.SyntheticEvent<HTMLElement>,
+  cardRoot = event.currentTarget,
+) => {
+  const target =
+    event.target instanceof Element
+      ? event.target
+      : event.target instanceof Node
+        ? event.target.parentElement
+        : null;
 
-  if (!(target instanceof Element)) return;
+  if (!target || !cardRoot.contains(target)) return true;
   const control = target.closest(
-    'button, a, input, textarea, select, summary, [role="button"], [role="combobox"], [contenteditable="true"]',
+    'button, a, input, textarea, select, summary, [role="button"], [role="combobox"], [role="option"], [role="menuitem"], [contenteditable="true"]',
   );
 
-  if (!event.currentTarget.contains(target) || (control && event.currentTarget.contains(control))) {
-    event.stopPropagation();
-  }
+  return !!control && control !== cardRoot && cardRoot.contains(control);
+};
+
+// Keep native controls (including summary/select keyboard defaults) away from the
+// card's usePress handlers. Capture below also covers forwarded/virtual presses.
+const stopCardPressFromControl = (event: React.SyntheticEvent<HTMLElement>) => {
+  if (isCardControlEvent(event)) event.stopPropagation();
 };
 
 const cardContentEvents = {
@@ -82,6 +93,38 @@ const cardContentEvents = {
   onTouchStart: stopCardPressFromControl,
   onKeyDown: stopCardPressFromControl,
   onKeyUp: stopCardPressFromControl,
+};
+
+export const CandidateCard = ({ onPress, ...props }: React.ComponentProps<typeof Card>) => {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const pressFromControl = useRef(false);
+  const captureOrigin = (event: React.SyntheticEvent<HTMLElement>) => {
+    pressFromControl.current = !cardRef.current || isCardControlEvent(event, cardRef.current);
+  };
+
+  // usePress replaces the original DOM target with the card. Record it before
+  // descendant handlers run, including keyboard presses and portal/virtual clicks.
+  // HeroUI filters *Capture props off Card, so a native contents wrapper owns
+  // capture without changing layout or replacing HeroUI's press semantics.
+  // Each interaction replaces the origin so a child cannot suppress the next card press.
+  return (
+    <div
+      className="contents"
+      onClickCapture={captureOrigin}
+      onKeyDownCapture={captureOrigin}
+      onMouseDownCapture={captureOrigin}
+      onPointerDownCapture={captureOrigin}
+      onTouchStartCapture={captureOrigin}
+    >
+      <Card
+        {...props}
+        ref={cardRef}
+        onPress={(event) => {
+          if (!pressFromControl.current) onPress?.(event);
+        }}
+      />
+    </div>
+  );
 };
 
 const CandidateOverview = ({ onStarted, onViewTasks, onOpenRecipe }: Props) => {
@@ -399,7 +442,7 @@ const CandidateOverview = ({ onStarted, onViewTasks, onOpenRecipe }: Props) => {
           </div>
           <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,20rem),1fr))] items-start gap-3">
             {data.items.map((candidate) => (
-              <Card
+              <CandidateCard
                 key={candidate.resourceId}
                 disableRipple
                 isHoverable
@@ -449,7 +492,12 @@ const CandidateOverview = ({ onStarted, onViewTasks, onOpenRecipe }: Props) => {
                         size="sm"
                         startContent={<AiOutlineLink aria-hidden className="text-base" />}
                         variant="flat"
-                        onPress={() => openResource(candidate.resourceId)}
+                        onPress={() =>
+                          createPortal(AddSourceModal, {
+                            resourceId: candidate.resourceId,
+                            onAdded: refresh,
+                          })
+                        }
                       >
                         {t<string>("acquisition.overview.addSource")}
                       </Button>
@@ -458,7 +506,7 @@ const CandidateOverview = ({ onStarted, onViewTasks, onOpenRecipe }: Props) => {
                     candidate.leads.map((lead) => renderLead(candidate, lead))
                   )}
                 </CardBody>
-              </Card>
+              </CandidateCard>
             ))}
           </div>
           {data.totalCount > PAGE_SIZE && (
