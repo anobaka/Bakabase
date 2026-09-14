@@ -64,7 +64,7 @@ const BasicInfo = ({ resource }: Props) => {
           <DetailTimestamp
             key={dateTime.key}
             label={label}
-            unavailableText={unavailable ? t<string>("resource.label.notMaterialized") : undefined}
+            unavailableText={unavailable ? t<string>("resource.detail.noFile") : undefined}
             value={raw}
           />
         );
