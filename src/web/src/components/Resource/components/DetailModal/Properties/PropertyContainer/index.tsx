@@ -92,7 +92,7 @@ const PropertyContainer = (props: PropertyContainerProps) => {
 
   const titleNode = (
     <div className={`flex min-w-0 items-start gap-2 ${classNames?.name ?? ""}`}>
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0">
         <BriefProperty
           chipProps={
             layout === "vertical"
