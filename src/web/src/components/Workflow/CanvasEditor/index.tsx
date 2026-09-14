@@ -95,7 +95,7 @@ const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => 
   const [name, setName] = useState(
     workflow?.name ?? seed?.name ?? (seed?.nameKey ? t<string>(seed.nameKey) : ""),
   );
-  // Localize presentation only. The draft keeps the original name for API writes.
+  // Existing user workflows keep their names; built-in edits create a localized copy.
   const displayName = workflowLabel({ name, isBuiltin: workflow?.isBuiltin }, t);
   const [description, setDescription] = useState(workflowDescription(workflow ?? {}, t));
   const [validation, setValidation] = useState<WorkflowValidation>();
@@ -392,8 +392,10 @@ const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => 
     if (!isValid || !triggerUi || saving) return;
     setSaving(true);
     const payload = {
-      name,
-      description: workflow?.isBuiltin ? workflow.description : description,
+      name: workflow?.isBuiltin
+        ? t<string>("workflow.editor.copyName", { name: displayName })
+        : name,
+      description,
       triggerFilterJson: triggerUi.serializeFilter(filter) ?? undefined,
       enabled,
       activities: drafts.map((a) => ({
@@ -405,14 +407,14 @@ const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => 
     };
 
     try {
-      if (isEditing) {
+      if (isEditing && !workflow?.isBuiltin) {
         const rsp = await BApi.workflow.patchWorkflow(workflow!.id, payload);
 
         if (rsp.code) throw new Error(rsp.message ?? "save failed");
       } else {
         const rsp = await BApi.workflow.addWorkflow({ ...payload, triggerKind });
 
-        if (rsp.code) throw new Error(rsp.message ?? "save failed");
+        if (rsp.code || !rsp.data) throw new Error(rsp.message ?? "save failed");
         // Stay in the editor, now editing the created definition.
         navigate(`/workflows/editor?id=${rsp.data!.id}`, { replace: true });
       }
@@ -513,10 +515,15 @@ const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => 
           size="sm"
           onPress={handleSave}
         >
-          {t<string>("workflow.editor.save")}
+          {t<string>(workflow?.isBuiltin ? "workflow.editor.saveAsCopy" : "workflow.editor.save")}
         </Button>
       </div>
 
+      {workflow?.isBuiltin && (
+        <p className="mb-2 px-1 text-xs leading-relaxed text-default-500">
+          {t<string>("workflow.editor.builtinCopyHint")}
+        </p>
+      )}
       <details className="mb-2 rounded-lg bg-default-50 px-3 py-2">
         <summary className="w-fit cursor-pointer text-xs font-medium text-default-600">
           {t<string>("workflow.field.description")}

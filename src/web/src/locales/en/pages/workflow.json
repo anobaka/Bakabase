@@ -406,5 +406,8 @@
   "workflow.validation.destructiveAfterAdapt": "Automatically adapted data cannot directly drive destructive operations such as deleting or moving files. Check the input and adjust the conversion.",
   "workflow.validation.missingOutputType": "This node needs an explicit output type. Set its target type in the configuration.",
   "workflow.validation.invalidJson": "The node configuration is not valid JSON. Correct its contents.",
-  "workflow.validation.validationFailed": "The check could not finish. Review the node configuration and retry."
+  "workflow.validation.validationFailed": "The check could not finish. Review the node configuration and retry.",
+  "workflow.editor.saveAsCopy": "Save as copy",
+  "workflow.editor.copyName": "{{name}} (copy)",
+  "workflow.editor.builtinCopyHint": "Save edits as a new workflow while keeping the built-in workflow and its existing tasks unchanged."
 }

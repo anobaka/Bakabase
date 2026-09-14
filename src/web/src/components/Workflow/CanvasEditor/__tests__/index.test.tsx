@@ -17,28 +17,45 @@ import {
 
 import { WorkflowActivityErrorBehavior, WorkflowItemTypeBehavior } from "@/sdk/constants";
 
-const { getWorkflowActivities, getWorkflowItemTypes, patchWorkflow, validateWorkflow } = vi.hoisted(
-  () => ({
-    getWorkflowActivities: vi.fn(),
-    getWorkflowItemTypes: vi.fn(),
-    patchWorkflow: vi.fn(),
-    validateWorkflow: vi.fn(),
-  }),
-);
+const {
+  getWorkflowActivities,
+  getWorkflowItemTypes,
+  patchWorkflow,
+  addWorkflow,
+  validateWorkflow,
+  navigate,
+} = vi.hoisted(() => ({
+  getWorkflowActivities: vi.fn(),
+  getWorkflowItemTypes: vi.fn(),
+  patchWorkflow: vi.fn(),
+  addWorkflow: vi.fn(),
+  navigate: vi.fn(),
+  validateWorkflow: vi.fn(),
+}));
 
 vi.mock("@/sdk/BApi", () => ({
   default: {
-    workflow: { getWorkflowActivities, getWorkflowItemTypes, patchWorkflow, validateWorkflow },
+    workflow: {
+      getWorkflowActivities,
+      getWorkflowItemTypes,
+      patchWorkflow,
+      addWorkflow,
+      validateWorkflow,
+    },
   },
 }));
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (key: string, options?: { defaultValue?: string }) =>
-      key === "acquisition.recipe.directDownload" ? "直链下载" : (options?.defaultValue ?? key),
+    t: (key: string, options?: { defaultValue?: string; name?: string }) =>
+      key === "acquisition.recipe.directDownload"
+        ? "直链下载"
+        : key === "workflow.editor.copyName"
+          ? `${options?.name} 副本`
+          : (options?.defaultValue ?? key),
   }),
   initReactI18next: { type: "3rdParty", init: vi.fn() },
 }));
-vi.mock("react-router-dom", () => ({ useNavigate: () => vi.fn() }));
+vi.mock("react-router-dom", () => ({ useNavigate: () => navigate }));
 vi.mock("@/components/ContextProvider/BakabaseContextProvider", () => ({
   useBakabaseContext: () => ({ createPortal: vi.fn() }),
 }));
@@ -89,7 +106,28 @@ vi.mock("../NodePalette", () => ({
     </div>
   ),
 }));
-vi.mock("../InspectorPanel", () => ({ default: () => null }));
+vi.mock("../InspectorPanel", () => ({
+  default: ({
+    drafts,
+    onDraftChange,
+  }: {
+    drafts: ActivityDraft[];
+    onDraftChange: (index: number, value: ActivityDraft) => void;
+  }) => (
+    <button
+      type="button"
+      onClick={() =>
+        onDraftChange(0, {
+          ...drafts[0],
+          configJson: '{"timeoutMinutes":120}',
+          notes: "My node note",
+        })
+      }
+    >
+      Customize node
+    </button>
+  ),
+}));
 vi.mock("../../ItemTypePill", () => ({ default: () => null }));
 vi.mock("../../ManualRunModal", () => ({ default: () => null }));
 vi.mock("../../WorkflowRunsDrawer", () => ({ default: () => null }));
@@ -211,6 +249,7 @@ beforeEach(() => {
   });
   getWorkflowItemTypes.mockResolvedValue({ code: 0, data: [] });
   patchWorkflow.mockResolvedValue({ code: 0 });
+  addWorkflow.mockResolvedValue({ code: 0, data: { id: 99 } });
   validateWorkflow.mockReset();
   validateWorkflow.mockResolvedValue({ code: 0, data: { isValid: true, diagnostics: [] } });
   container = document.createElement("div");
@@ -322,26 +361,73 @@ describe("workflow name presentation", () => {
     ],
   });
 
-  it("shows a localized built-in name while retaining the canonical name in a save payload", async () => {
-    const workflow = definition("Direct download", true);
+  it("saves modified built-in nodes and metadata as a localized copy without patching the original", async () => {
+    const workflow = {
+      ...definition("Direct download", true),
+      description: "Built-in workflow purpose",
+    };
 
     await render({ workflow });
     const input = container.querySelector("input")!;
 
     expect(input.value).toBe("直链下载");
     expect(input.readOnly).toBe(true);
-    const save = [...container.querySelectorAll("button")].find(
-      (button) => button.textContent === "workflow.editor.save",
+    expect(container).toHaveTextContent("workflow.editor.builtinCopyHint");
+    const customize = [...container.querySelectorAll("button")].find(
+      (button) => button.textContent === "Customize node",
     )!;
 
-    expect(save).toBeDefined();
-    expect(save.disabled).toBe(false);
+    await act(async () => customize.click());
+    const save = [...container.querySelectorAll("button")].find(
+      (button) => button.textContent === "workflow.editor.saveAsCopy",
+    )!;
+
+    expect(save).toBeEnabled();
     await act(async () => save.click());
-    expect(patchWorkflow).toHaveBeenCalledWith(
-      workflow.id,
-      expect.objectContaining({ name: "Direct download" }),
-    );
+    expect(patchWorkflow).not.toHaveBeenCalled();
+    expect(addWorkflow).toHaveBeenCalledExactlyOnceWith({
+      name: "直链下载 副本",
+      description: "Built-in workflow purpose",
+      enabled: true,
+      triggerKind: workflow.triggerKind,
+      triggerFilterJson: "{}",
+      activities: [
+        {
+          kind: directKind,
+          configJson: '{"timeoutMinutes":120}',
+          notes: "My node note",
+          onItemError: WorkflowActivityErrorBehavior.Fail,
+        },
+      ],
+    });
+    expect(navigate).toHaveBeenCalledExactlyOnceWith("/workflows/editor?id=99", { replace: true });
+    expect(workflow.activities[0].configJson).toBe("{}");
     expect(workflow.name).toBe("Direct download");
+  });
+
+  it("keeps a modified built-in draft when copy creation fails and allows retry", async () => {
+    addWorkflow.mockResolvedValueOnce({ code: 400, message: "Could not create the copy" });
+    await render({ workflow: definition("Direct download", true) });
+    const buttons = () => [...container.querySelectorAll("button")];
+
+    await act(async () =>
+      buttons()
+        .find((button) => button.textContent === "Customize node")!
+        .click(),
+    );
+    const save = buttons().find((button) => button.textContent === "workflow.editor.saveAsCopy")!;
+
+    await act(async () => save.click());
+    expect(navigate).not.toHaveBeenCalled();
+    expect(patchWorkflow).not.toHaveBeenCalled();
+    expect(drafts()[0]).toMatchObject({
+      notes: "My node note",
+      configJson: '{"timeoutMinutes":120}',
+    });
+    expect(save).toBeEnabled();
+    await act(async () => save.click());
+    expect(addWorkflow).toHaveBeenCalledTimes(2);
+    expect(navigate).toHaveBeenCalledWith("/workflows/editor?id=99", { replace: true });
   });
 
   it("keeps a user workflow with a seed's name editable and saves an explicit rename", async () => {
@@ -369,6 +455,7 @@ describe("workflow name presentation", () => {
       expect.objectContaining({ name: "My downloads" }),
     );
     expect(workflow.name).toBe("Direct download");
+    expect(addWorkflow).not.toHaveBeenCalled();
   });
 });
 

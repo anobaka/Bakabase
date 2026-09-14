@@ -405,5 +405,8 @@
   "workflow.validation.destructiveAfterAdapt": "自动转换后的数据不能直接用于删除、移动等操作，请先检查输入并调整转换方式。",
   "workflow.validation.missingOutputType": "此节点需要明确的输出类型，请在配置中指定目标类型。",
   "workflow.validation.invalidJson": "节点配置不是有效的 JSON，请修正配置内容。",
-  "workflow.validation.validationFailed": "未能完成检查，请检查节点配置后重试。"
+  "workflow.validation.validationFailed": "未能完成检查，请检查节点配置后重试。",
+  "workflow.editor.saveAsCopy": "保存为副本",
+  "workflow.editor.copyName": "{{name}} 副本",
+  "workflow.editor.builtinCopyHint": "修改会保存为新的工作流，原内置工作流和已有任务保持不变。"
 }
