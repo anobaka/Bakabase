@@ -19,6 +19,7 @@ import WorkflowRunsDrawer from "@/components/Workflow/WorkflowRunsDrawer";
 import ManualRunModal from "@/components/Workflow/ManualRunModal";
 import { getWorkflowTriggerUI } from "@/components/Workflow/Triggers";
 import { activityDisplayName, triggerDisplayName } from "@/components/Workflow/displayNames";
+import { workflowLabel } from "@/components/Workflow/builtinLabels";
 import BApi from "@/sdk/BApi";
 import { Button, Chip, Modal, Spinner, Switch, toast } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
@@ -56,6 +57,7 @@ const WorkflowPage: React.FC = () => {
         BApi.workflow.searchWorkflows({}),
         BApi.workflow.getWorkflowTriggers(),
       ]);
+
       setWorkflows((wfRsp.data ?? []) as WorkflowVm[]);
       setTriggers((trigRsp.data ?? []) as TriggerDescriptorVm[]);
     } finally {
@@ -78,7 +80,7 @@ const WorkflowPage: React.FC = () => {
     if (trigger?.requiresManualPayload) {
       createPortal(ManualRunModal, {
         workflowId: wf.id,
-        workflowName: wf.name,
+        workflowName: workflowLabel(wf, t),
         trigger,
         onRan: () => setRunsDrawerFor(wf),
       });
@@ -101,7 +103,7 @@ const WorkflowPage: React.FC = () => {
     createPortal(Modal, {
       defaultVisible: true,
       title: t<string>("workflow.delete.confirm"),
-      children: wf.name,
+      children: workflowLabel(wf, t),
       onOk: async () => {
         await BApi.workflow.deleteWorkflow(wf.id);
         await load();
@@ -117,12 +119,7 @@ const WorkflowPage: React.FC = () => {
       <div className="flex items-center gap-2">
         <h2 className="text-lg font-semibold">{t<string>("workflow.title")}</h2>
         <HelpCenterButton topic="workflow" />
-        <Button
-          color="primary"
-          size="sm"
-          startContent={<PlusCircleOutlined />}
-          onPress={handleAdd}
-        >
+        <Button color="primary" size="sm" startContent={<PlusCircleOutlined />} onPress={handleAdd}>
           {t<string>("workflow.action.add")}
         </Button>
         <Button
@@ -140,9 +137,7 @@ const WorkflowPage: React.FC = () => {
           <Spinner size="lg" />
         </div>
       ) : workflows.length === 0 ? (
-        <div className="text-center text-default-500 py-10">
-          {t<string>("workflow.empty")}
-        </div>
+        <div className="text-center text-default-500 py-10">{t<string>("workflow.empty")}</div>
       ) : (
         <div className="flex flex-col gap-2">
           {workflows.map((wf) => {
@@ -163,7 +158,7 @@ const WorkflowPage: React.FC = () => {
 
                 <div className="flex-1 min-w-0 flex flex-col gap-1">
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className="font-medium truncate">{wf.name}</span>
+                    <span className="font-medium truncate">{workflowLabel(wf, t)}</span>
                     <Chip color="default" size="sm" variant="flat">
                       {triggerDisplayName(t, wf.triggerKind, triggerNameByKind.get(wf.triggerKind))}
                     </Chip>
@@ -237,7 +232,7 @@ const WorkflowPage: React.FC = () => {
           isOpen
           triggerKind={runsDrawerFor.triggerKind}
           workflowDefinitionId={runsDrawerFor.id}
-          workflowName={runsDrawerFor.name}
+          workflowName={workflowLabel(runsDrawerFor, t)}
           onClose={() => setRunsDrawerFor(null)}
         />
       )}

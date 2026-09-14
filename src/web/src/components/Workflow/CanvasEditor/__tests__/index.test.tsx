@@ -17,13 +17,21 @@ import {
 
 import { WorkflowActivityErrorBehavior, WorkflowItemTypeBehavior } from "@/sdk/constants";
 
-const { getWorkflowActivities, getWorkflowItemTypes } = vi.hoisted(() => ({
+const { getWorkflowActivities, getWorkflowItemTypes, patchWorkflow } = vi.hoisted(() => ({
   getWorkflowActivities: vi.fn(),
   getWorkflowItemTypes: vi.fn(),
+  patchWorkflow: vi.fn(),
 }));
 
 vi.mock("@/sdk/BApi", () => ({
-  default: { workflow: { getWorkflowActivities, getWorkflowItemTypes } },
+  default: { workflow: { getWorkflowActivities, getWorkflowItemTypes, patchWorkflow } },
+}));
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: { defaultValue?: string }) =>
+      key === "acquisition.recipe.directDownload" ? "直链下载" : (options?.defaultValue ?? key),
+  }),
+  initReactI18next: { type: "3rdParty", init: vi.fn() },
 }));
 vi.mock("react-router-dom", () => ({ useNavigate: () => vi.fn() }));
 vi.mock("@/components/ContextProvider/BakabaseContextProvider", () => ({
@@ -45,6 +53,7 @@ vi.mock("../../Triggers", () => ({
   getWorkflowTriggerUI: () => ({
     defaultFilter: () => ({}),
     parseFilter: JSON.parse,
+    serializeFilter: JSON.stringify,
     resolveOutputItemType: () => "text",
   }),
 }));
@@ -99,7 +108,21 @@ vi.mock("@/components/bakaui", () => ({
       {children}
     </button>
   ),
-  Input: ({ value }: { value: string }) => <input readOnly value={value} />,
+  Input: ({
+    value,
+    isReadOnly,
+    onValueChange,
+  }: {
+    value: string;
+    isReadOnly?: boolean;
+    onValueChange?: (value: string) => void;
+  }) => (
+    <input
+      readOnly={isReadOnly}
+      value={value}
+      onChange={(event) => onValueChange?.(event.target.value)}
+    />
+  ),
   Switch: () => null,
   Spinner: () => <div role="status">Loading</div>,
   toast: { success: vi.fn(), danger: vi.fn() },
@@ -167,6 +190,7 @@ beforeEach(() => {
     ],
   });
   getWorkflowItemTypes.mockResolvedValue({ code: 0, data: [] });
+  patchWorkflow.mockResolvedValue({ code: 0 });
   container = document.createElement("div");
   document.body.appendChild(container);
   root = createRoot(container);
@@ -204,7 +228,7 @@ describe("workflow editor without native crypto.randomUUID", () => {
 
     expect(originalDrafts).toHaveLength(2);
     expectDistinctIds(originalDrafts);
-    expect(container.querySelector("input")?.value).toBe("Direct download");
+    expect(container.querySelector("input")?.value).toBe("直链下载");
 
     for (const kind of [directKind, bridgedKind]) {
       const button = Array.from(container.querySelectorAll("button")).find(
@@ -254,5 +278,74 @@ describe("workflow editor without native crypto.randomUUID", () => {
     expect(drafts()).toEqual([expect.objectContaining(handoff.activities[0])]);
     expectDistinctIds(drafts());
     expect(takeStoredSeed()).toBeNull();
+  });
+});
+
+describe("workflow name presentation", () => {
+  const definition = (name: string, isBuiltin: boolean): NonNullable<EditorProps["workflow"]> => ({
+    id: 21,
+    name,
+    isBuiltin,
+    triggerKind: "fs.manualScan",
+    enabled: true,
+    createdAt: "2026-09-13T00:00:00Z",
+    activities: [
+      {
+        id: 1,
+        order: 0,
+        kind: directKind,
+        configJson: "{}",
+        onItemError: WorkflowActivityErrorBehavior.Fail,
+      },
+    ],
+  });
+
+  it("shows a localized built-in name while retaining the canonical name in a save payload", async () => {
+    const workflow = definition("Direct download", true);
+
+    await render({ workflow });
+    const input = container.querySelector("input")!;
+
+    expect(input.value).toBe("直链下载");
+    expect(input.readOnly).toBe(true);
+    const save = [...container.querySelectorAll("button")].find(
+      (button) => button.textContent === "workflow.editor.save",
+    )!;
+
+    expect(save).toBeDefined();
+    expect(save.disabled).toBe(false);
+    await act(async () => save.click());
+    expect(patchWorkflow).toHaveBeenCalledWith(
+      workflow.id,
+      expect.objectContaining({ name: "Direct download" }),
+    );
+    expect(workflow.name).toBe("Direct download");
+  });
+
+  it("keeps a user workflow with a seed's name editable and saves an explicit rename", async () => {
+    const workflow = definition("Direct download", false);
+
+    await render({ workflow });
+    const input = container.querySelector("input")!;
+
+    expect(input.value).toBe("Direct download");
+    expect(input.readOnly).toBe(false);
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(
+        input,
+        "My downloads",
+      );
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    const save = [...container.querySelectorAll("button")].find(
+      (button) => button.textContent === "workflow.editor.save",
+    )!;
+
+    await act(async () => save.click());
+    expect(patchWorkflow).toHaveBeenCalledWith(
+      workflow.id,
+      expect.objectContaining({ name: "My downloads" }),
+    );
+    expect(workflow.name).toBe("Direct download");
   });
 });

@@ -32,6 +32,7 @@ import { classifyActivity } from "../activityFit";
 import { descriptorAccepts, walkChain } from "../chainWalk";
 import { WorkflowItemTypeIndex } from "../itemTypeRegistry";
 import { workflowItemTypeDisplayName } from "../itemTypes";
+import { workflowLabel } from "../builtinLabels";
 
 import BApi from "@/sdk/BApi";
 import { Button, Input, Spinner, Switch, toast } from "@/components/bakaui";
@@ -89,6 +90,8 @@ const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => 
   const [name, setName] = useState(
     workflow?.name ?? seed?.name ?? (seed?.nameKey ? t<string>(seed.nameKey) : ""),
   );
+  // Localize presentation only. The draft keeps the original name for API writes.
+  const displayName = workflowLabel({ name, isBuiltin: workflow?.isBuiltin }, t);
   const [triggerKind, setTriggerKind] = useState(initialTriggerKind);
   const [enabled, setEnabled] = useState(workflow?.enabled ?? true);
   const triggerUi = useMemo(() => getWorkflowTriggerUI(triggerKind), [triggerKind]);
@@ -377,7 +380,7 @@ const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => 
     if (trigger?.requiresManualPayload) {
       createPortal(ManualRunModal, {
         workflowId: workflow.id,
-        workflowName: name,
+        workflowName: displayName,
         trigger,
         onRan: () => setRunsOpen(true),
       });
@@ -421,9 +424,10 @@ const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => 
         <Input
           className="w-56"
           isInvalid={!isNameValid}
+          isReadOnly={workflow?.isBuiltin}
           placeholder={t<string>("workflow.field.name")}
           size="sm"
-          value={name}
+          value={displayName}
           onValueChange={setName}
         />
         <Switch isSelected={enabled} size="sm" onValueChange={setEnabled}>
@@ -633,7 +637,7 @@ const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => 
           isOpen={runsOpen}
           triggerKind={workflow.triggerKind}
           workflowDefinitionId={workflow.id}
-          workflowName={name}
+          workflowName={displayName}
           onClose={() => setRunsOpen(false)}
         />
       )}
