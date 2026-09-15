@@ -135,6 +135,10 @@ const HelpCenterModal = ({
           ) : (
             <Content
               firstRun={firstRun}
+              onNavigate={(path) => {
+                window.location.hash = path;
+                onClose();
+              }}
               section={active.topicId === initialTopicId ? section : undefined}
             />
           )}

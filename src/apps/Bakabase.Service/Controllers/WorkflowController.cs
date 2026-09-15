@@ -112,6 +112,8 @@ public class WorkflowController(
                 DisplayName = t.DisplayName,
                 Description = t.Description,
                 DescriptionKey = t.DescriptionKey,
+                ActivationMode = t.ActivationMode,
+                SourceModule = t.SourceModule,
                 SupportsManualRun = t.SupportsManualRun,
                 RequiresManualPayload = t.RequiresManualPayload,
                 PayloadFields = t.SupportsManualRun && t.RequiresManualPayload ? BuildFieldVms(t.PayloadType) : [],

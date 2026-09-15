@@ -1,3 +1,4 @@
+using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using System.Text.Json;
 using Bakabase.Modules.Collection.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Workflow.Abstractions.Components;
@@ -39,6 +40,10 @@ public class CollectionMembersAddedTrigger : IWorkflowTrigger
 
     public string Kind => CollectionWorkflowKinds.TriggerMembersAdded;
     public string DisplayName => "Added to a collection";
+    public WorkflowActivationMode ActivationMode => WorkflowActivationMode.SystemEvent;
+    public string SourceModule => "collection";
+    public string Description => "When resources are newly added to a collection, enabled workflows matching the collection and membership origin receive only the newly added resources. Re-adding existing members, removal and reordering do not publish this event.";
+    public string DescriptionKey => "workflow.trigger.collectionMembersAdded.description";
     public Type PayloadType => typeof(CollectionMembersAddedPayload);
 
     public bool Matches(object payload, string? triggerFilterJson)
@@ -46,9 +51,7 @@ public class CollectionMembersAddedTrigger : IWorkflowTrigger
         if (payload is not CollectionMembersAddedPayload p) return false;
         if (string.IsNullOrWhiteSpace(triggerFilterJson)) return true;
 
-        Filter? filter;
-        try { filter = JsonSerializer.Deserialize<Filter>(triggerFilterJson, Json); }
-        catch (JsonException) { return false; }
+        var filter = JsonSerializer.Deserialize<Filter>(triggerFilterJson, Json);
 
         if (filter?.CollectionIds is {Length: > 0} wanted && !wanted.Contains(p.CollectionId))
         {

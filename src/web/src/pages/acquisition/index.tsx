@@ -1,4 +1,5 @@
-"use client";
+import WorkflowIntegrationHint from "@/components/Workflow/WorkflowIntegrationHint";
+("use client");
 
 import type { components } from "@/sdk/BApi2";
 
@@ -113,9 +114,10 @@ const AcquisitionPage: React.FC = () => {
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-xl font-semibold">{t<string>("menu.acquisition")}</h1>
             <HelpCenterButton topic="acquisition" />
+            <WorkflowIntegrationHint surface="acquisition" />
           </div>
           <p className="mt-1 text-sm text-default-500">
             {t<string>("acquisition.overview.description")}

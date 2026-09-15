@@ -1,4 +1,5 @@
-"use client";
+import WorkflowIntegrationHint from "@/components/Workflow/WorkflowIntegrationHint";
+("use client");
 
 import type { PostParserTask } from "@/core/models/PostParserTask";
 
@@ -214,6 +215,7 @@ const PostParserPage = () => {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <WorkflowIntegrationHint surface="postParser" />
           <Button
             size="sm"
             startContent={<AiOutlineSetting aria-hidden />}

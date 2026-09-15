@@ -1,3 +1,4 @@
+using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using System.Text.Json;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Workflow.Abstractions.Components;
@@ -30,6 +31,10 @@ public class AcquisitionStatusChangedTrigger : IWorkflowTrigger
 
     public string Kind => AcquisitionWorkflowKinds.TriggerStatusChanged;
     public string DisplayName => "Acquisition status changed";
+    public WorkflowActivationMode ActivationMode => WorkflowActivationMode.SystemEvent;
+    public string SourceModule => "acquisition";
+    public string Description => "When an acquisition task is created or its state changes, enabled workflows matching the configured states receive its resource, status and task details. This reacts to progress; it does not choose or start an acquisition recipe.";
+    public string DescriptionKey => "workflow.trigger.acquisitionStatusChanged.description";
     public Type PayloadType => typeof(AcquisitionStatusChangedPayload);
 
     public bool Matches(object payload, string? triggerFilterJson)
@@ -37,9 +42,7 @@ public class AcquisitionStatusChangedTrigger : IWorkflowTrigger
         if (payload is not AcquisitionStatusChangedPayload p) return false;
         if (string.IsNullOrWhiteSpace(triggerFilterJson)) return true;
 
-        Filter? filter;
-        try { filter = JsonSerializer.Deserialize<Filter>(triggerFilterJson, Json); }
-        catch (JsonException) { return false; }
+        var filter = JsonSerializer.Deserialize<Filter>(triggerFilterJson, Json);
 
         if (filter?.Statuses is not {Length: > 0} wanted) return true;
 

@@ -2,7 +2,9 @@ using Bakabase.Abstractions.Components.Events;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business;
 using Bakabase.Modules.Collection.Abstractions.Models.Db;
+using Bakabase.Modules.Collection.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Collection.Abstractions.Services;
+using Bakabase.Modules.Collection.Components.Workflow;
 using Bakabase.Modules.Collection.Models.Input;
 using Bakabase.Modules.Collection.Services;
 using Bakabase.Modules.Workflow.Abstractions.Components;
@@ -27,16 +29,19 @@ public sealed class CollectionNotificationTests
 
     private RecordingCollectionService _service = null!;
 
+    private RecordingWorkflowEventBus _eventBus = null!;
+
     [TestInitialize]
     public async Task Setup()
     {
         _sp = await TestServiceBuilder.BuildServiceProvider();
+        _eventBus = new RecordingWorkflowEventBus();
         _service = new RecordingCollectionService(
             _sp.GetRequiredService<FullMemoryCacheResourceService<BakabaseDbContext, CollectionDbModel, int>>(),
             _sp.GetRequiredService<ICollectionResourceMappingService>(),
             _sp.GetRequiredService<IResourceService>(),
             _sp.GetRequiredService<IResourceDataChangeEventPublisher>(),
-            _sp.GetRequiredService<IWorkflowEventBus>());
+            _eventBus);
     }
 
     private async Task<int> NewResource(string title) =>
@@ -72,12 +77,75 @@ public sealed class CollectionNotificationTests
 
         await _service.AddMembers(id, [resourceId]);
         _service.Changed.Clear();
+        _eventBus.MembersAdded.Clear();
 
         // A subscription that re-lists the same thing every hour would otherwise announce a
         // change every hour, and every open page would reload for nothing.
-        await _service.AddMembers(id, [resourceId]);
+        await _service.AddMembers(id, [resourceId, resourceId]);
+        await _service.AddMembers(id, []);
 
         Assert.AreEqual(0, _service.Changed.Count);
+        Assert.AreEqual(0, _eventBus.MembersAdded.Count);
+    }
+
+    [TestMethod]
+    public async Task MixedMembershipInputAnnouncesOnlyNewResourcesOnce()
+    {
+        var id = (await _service.Add(new CollectionInputModel {Name = "A Series"})).Id;
+        var existingId = await NewResource("Volume 1");
+        var firstAddedId = await NewResource("Volume 2");
+        var secondAddedId = await NewResource("Volume 3");
+
+        await _service.AddMembers(id, [existingId]);
+        await _service.SetMemberIgnored(id, existingId, true);
+        await _service.ReorderMembers(id, [existingId]);
+        _service.Changed.Clear();
+        _eventBus.MembersAdded.Clear();
+
+        await _service.AddMembers(id,
+            [existingId, firstAddedId, firstAddedId, secondAddedId, existingId],
+            CollectionMembershipOrigin.Subscription, subscriptionId: 42);
+
+        Assert.AreEqual(1, _eventBus.MembersAdded.Count);
+        CollectionAssert.AreEqual(new[] {id}, _service.Changed.ToArray());
+
+        var payload = _eventBus.MembersAdded.Single();
+
+        CollectionAssert.AreEqual(new[] {firstAddedId, secondAddedId}, payload.ResourceIds.ToArray());
+        Assert.AreEqual(id, payload.CollectionId);
+        Assert.AreEqual("A Series", payload.CollectionName);
+        Assert.AreEqual(CollectionMembershipOrigin.Subscription, payload.Origin);
+        Assert.AreEqual(42, payload.SubscriptionId);
+
+        var members = await _service.GetMembers(id);
+        var existing = members.Single(m => m.ResourceId == existingId);
+
+        Assert.AreEqual(3, members.Count);
+        Assert.AreEqual(CollectionMembershipOrigin.Manual, existing.Origin);
+        Assert.IsNull(existing.SubscriptionId);
+        Assert.IsTrue(existing.IsIgnored);
+        Assert.AreEqual(0, existing.Order);
+
+        foreach (var member in members.Where(m => m.ResourceId != existingId))
+        {
+            Assert.AreEqual(CollectionMembershipOrigin.Subscription, member.Origin);
+            Assert.AreEqual(42, member.SubscriptionId);
+            Assert.IsNotNull(member.LastSeenAt);
+        }
+    }
+
+    private sealed class RecordingWorkflowEventBus : IWorkflowEventBus
+    {
+        public List<CollectionMembersAddedPayload> MembersAdded { get; } = [];
+
+        public Task PublishAsync<T>(string triggerKind, T payload, CancellationToken ct = default)
+        {
+            Assert.AreEqual(CollectionWorkflowKinds.TriggerMembersAdded, triggerKind);
+            Assert.IsInstanceOfType<CollectionMembersAddedPayload>(payload);
+            MembersAdded.Add((CollectionMembersAddedPayload)(object)payload!);
+
+            return Task.CompletedTask;
+        }
     }
 
     [TestMethod]

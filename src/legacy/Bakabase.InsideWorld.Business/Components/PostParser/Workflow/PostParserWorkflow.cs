@@ -71,7 +71,9 @@ public sealed class PostParserManualTrigger : IWorkflowTrigger
 {
     public string Kind => PostParserWorkflow.Trigger;
     public string DisplayName => "Parse a post or text";
-    public string Description => "Read one supported link or a pasted text and extract download information. No resource or download task is required.";
+    public WorkflowActivationMode ActivationMode => WorkflowActivationMode.Manual;
+    public string SourceModule => "postParser";
+    public string Description => "Run manually with one supported post link or pasted text. Saved post-parser tasks start their own linked run from the post parser. This is not a broadcast subscription and parsing alone creates no resource or download task.";
     public string DescriptionKey => "workflow.trigger.postParserManual.description";
     public Type PayloadType => typeof(PostParserInput);
     public bool Matches(object payload, string? triggerFilterJson) => false;

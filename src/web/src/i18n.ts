@@ -45,6 +45,7 @@ import enHealthScore from "@/locales/en/pages/healthScore.json";
 import enAvSources from "@/locales/en/pages/avSources.json";
 import enSubscription from "@/locales/en/pages/subscription.json";
 import enWorkflow from "@/locales/en/pages/workflow.json";
+import enWorkflowTriggers from "@/locales/en/pages/workflowTriggers.json";
 import enAcquisition from "@/locales/en/pages/acquisition.json";
 import enCollection from "@/locales/en/pages/collection.json";
 
@@ -113,6 +114,7 @@ import cnHealthScore from "@/locales/cn/pages/healthScore.json";
 import cnAvSources from "@/locales/cn/pages/avSources.json";
 import cnSubscription from "@/locales/cn/pages/subscription.json";
 import cnWorkflow from "@/locales/cn/pages/workflow.json";
+import cnWorkflowTriggers from "@/locales/cn/pages/workflowTriggers.json";
 import cnAcquisition from "@/locales/cn/pages/acquisition.json";
 import cnCollection from "@/locales/cn/pages/collection.json";
 
@@ -181,6 +183,7 @@ const enResources = {
   ...enAvSources,
   ...enSubscription,
   ...enWorkflow,
+  ...enWorkflowTriggers,
   ...enAcquisition,
   ...enCollection,
   // Components
@@ -249,6 +252,7 @@ const cnResources = {
   ...cnAvSources,
   ...cnSubscription,
   ...cnWorkflow,
+  ...cnWorkflowTriggers,
   ...cnAcquisition,
   ...cnCollection,
   // Components

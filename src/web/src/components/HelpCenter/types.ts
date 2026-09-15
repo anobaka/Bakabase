@@ -21,7 +21,7 @@ export type HelpTopicId =
 export type PathMarkHelpSectionId = "whatIs" | "examples" | "comparison";
 
 /** Horizontal tabs inside the workflow overview. */
-export type WorkflowHelpSectionId = "whatIs" | "examples";
+export type WorkflowHelpSectionId = "whatIs" | "examples" | "triggers";
 
 export type HelpSectionId = PathMarkHelpSectionId | WorkflowHelpSectionId;
 
@@ -36,6 +36,8 @@ export interface HelpTarget {
 
 export interface HelpTopicContentProps {
   section?: HelpSectionId;
+  /** Open an application feature and dismiss the hosting help dialog. */
+  onNavigate?: (path: string) => void;
   /** True when the help center was opened automatically for a first-time user. */
   firstRun?: boolean;
 }

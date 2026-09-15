@@ -1,4 +1,5 @@
-"use client";
+import WorkflowIntegrationHint from "@/components/Workflow/WorkflowIntegrationHint";
+("use client");
 
 import type { CollectionModel } from "@/stores/collections";
 import type { Resource as ResourceModel } from "@/core/models/Resource";
@@ -289,6 +290,7 @@ const MembersTab: React.FC<Props> = ({ collection, onChanged }) => {
           ]}
         </Select>
 
+        <WorkflowIntegrationHint surface="collection" />
         <Button
           className="ml-auto"
           size="sm"

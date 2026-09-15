@@ -1,3 +1,4 @@
+using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Workflow.Abstractions.Components;
@@ -38,7 +39,9 @@ public class AcquisitionRequestedTrigger : IWorkflowTrigger
 {
     public string Kind => AcquisitionWorkflowKinds.TriggerRequested;
     public string DisplayName => "Acquisition requested";
-    public string Description => "Start this workflow from Acquire resources so the resource, source and acquisition task are supplied together.";
+    public WorkflowActivationMode ActivationMode => WorkflowActivationMode.Module;
+    public string SourceModule => "acquisition";
+    public string Description => "Start this workflow from Acquire resources with a resource, acquisition link and owned task. It runs only the selected recipe; enabling another recipe does not subscribe it to every acquisition.";
     public string DescriptionKey => "workflow.trigger.acquisitionRequested.description";
     public bool SupportsManualRun => false;
     public Type PayloadType => typeof(AcquisitionRequestedPayload);

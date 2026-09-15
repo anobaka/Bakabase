@@ -51,7 +51,12 @@ public sealed class WorkflowValidationTests
         public string Kind => TriggerKind;
         public string DisplayName => "Validation trigger";
         public Type PayloadType => typeof(Payload);
-        public bool Matches(object payload, string? filter) => true;
+        public bool Matches(object payload, string? filter) => filter switch
+        {
+            "throw" => throw new InvalidOperationException("The event filter could not be evaluated."),
+            "no-match" => false,
+            _ => true,
+        };
         public string ResolveOutputItemType(string? filter) => filter == "other" ? "test.other" : "test.validation.item";
         public IReadOnlyList<object> ExtractItems(object payload)
         {
@@ -247,12 +252,72 @@ public sealed class WorkflowValidationTests
     }
 
     [TestMethod]
-    public async Task EventTrigger_InvalidConfiguration_SkipsRunCreation()
+    public async Task EventTrigger_InvalidConfiguration_RecordsAVisibleFailedStartWithoutExecuting()
     {
         var definition = await Create();
         await _sp.GetRequiredService<IWorkflowEventBus>().PublishAsync(TriggerKind, new Payload { Value = "item" });
-        Assert.AreEqual(0, (await Definitions.SearchRunsAsync(new() { WorkflowDefinitionId = definition.Id })).TotalCount);
+        var db = _sp.GetRequiredService<BakabaseDbContext>();
+        var run = await db.Set<WorkflowRunDbModel>().AsNoTracking().SingleAsync(r => r.WorkflowDefinitionId == definition.Id);
+        Assert.AreEqual(WorkflowRunStatus.Failed, run.Status);
+        Assert.IsNotNull(run.CompletedAt);
+        Assert.IsNull(run.CurrentStepIndex);
+        StringAssert.Contains(run.ErrorMessage, "Configure the local destination");
+        StringAssert.Contains(run.PayloadJson, "item");
+        var saved = await Definitions.GetAsync(definition.Id);
+        Assert.AreEqual(run.ErrorMessage, saved!.LastError);
+        Assert.AreEqual(run.CompletedAt, saved.LastRunAt);
         Assert.AreEqual(0, _state.Executions);
+        Assert.AreEqual(0, _state.Extractions);
+    }
+
+    [TestMethod]
+    public async Task EventTrigger_FilterFailureIsRecordedWhileOtherSubscribersContinueAndNonmatchesStaySilent()
+    {
+        _state.Ready = true;
+        async Task<WorkflowDefinition> Subscriber(string filter, bool enabled = true) =>
+            await Definitions.CreateAsync(new()
+            {
+                Name = filter, TriggerKind = TriggerKind, TriggerFilterJson = filter,
+                Enabled = enabled, Activities = [Node()],
+            });
+        var broken = await Subscriber("throw");
+        var ignored = await Subscriber("no-match");
+        var disabled = await Subscriber("throw", false);
+        var ready = await Subscriber("match");
+
+        await _sp.GetRequiredService<IWorkflowEventBus>().PublishAsync(TriggerKind, new Payload {Value = "item"});
+
+        var runs = await _sp.GetRequiredService<BakabaseDbContext>().Set<WorkflowRunDbModel>().AsNoTracking().ToListAsync();
+        Assert.AreEqual(2, runs.Count);
+        var failed = runs.Single(r => r.WorkflowDefinitionId == broken.Id);
+        Assert.AreEqual(WorkflowRunStatus.Failed, failed.Status);
+        StringAssert.Contains(failed.ErrorMessage, "event filter could not be evaluated");
+        Assert.IsNotNull(failed.CompletedAt);
+        Assert.IsTrue(runs.Any(r => r.WorkflowDefinitionId == ready.Id));
+        Assert.IsFalse(runs.Any(r => r.WorkflowDefinitionId == ignored.Id || r.WorkflowDefinitionId == disabled.Id));
+        Assert.IsNull((await Definitions.GetAsync(ignored.Id))!.LastError);
+    }
+
+    [TestMethod]
+    public async Task EventTrigger_MalformedPersistedFilterIsReportedInsteadOfLookingLikeANormalNonmatch()
+    {
+        var db = _sp.GetRequiredService<BakabaseDbContext>();
+        var definition = new WorkflowDefinitionDbModel
+        {
+            Name = "Legacy damaged filter", TriggerKind = "collection.membersAdded",
+            Enabled = true, TriggerFilterJson = "[invalid json", CreatedAt = DateTime.Now, UpdatedAt = DateTime.Now,
+        };
+        db.Set<WorkflowDefinitionDbModel>().Add(definition);
+        await db.SaveChangesAsync();
+        await _sp.GetRequiredService<IWorkflowEventBus>().PublishAsync("collection.membersAdded",
+            new Bakabase.Modules.Collection.Components.Workflow.CollectionMembersAddedPayload
+            {
+                CollectionId = 7, ResourceIds = [12],
+            });
+        var run = await db.Set<WorkflowRunDbModel>().AsNoTracking().SingleAsync();
+        Assert.AreEqual(WorkflowRunStatus.Failed, run.Status);
+        StringAssert.Contains(run.ErrorMessage, "trigger filter");
+        Assert.AreEqual(definition.Id, run.WorkflowDefinitionId);
     }
 
     [TestMethod]

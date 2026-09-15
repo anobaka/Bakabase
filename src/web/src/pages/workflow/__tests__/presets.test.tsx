@@ -27,10 +27,16 @@ const api = vi.hoisted(() => ({
   validate: vi.fn(),
   navigate: vi.fn(),
   portal: vi.fn(),
+  baseUrl: "",
+  query: "",
+  paramsChanged: vi.fn(),
 }));
 
 vi.mock("@/sdk/BApi", () => ({
   default: {
+    get baseUrl() {
+      return api.baseUrl;
+    },
     workflow: {
       searchWorkflows: api.search,
       getWorkflowTriggers: api.triggers,
@@ -42,7 +48,21 @@ vi.mock("@/sdk/BApi", () => ({
     },
   },
 }));
-vi.mock("react-router-dom", () => ({ useNavigate: () => api.navigate }));
+vi.mock("react-router-dom", () => ({
+  useNavigate: () => api.navigate,
+  useSearchParams: () => {
+    const [params, setParams] = useState(() => new URLSearchParams(api.query));
+
+    return [
+      params,
+      (next: URLSearchParams) => {
+        api.paramsChanged(next);
+        setParams(next);
+      },
+    ];
+  },
+}));
+vi.mock("@/stores/options", () => ({ optionsStores: {} }));
 vi.mock("@/components/ContextProvider/BakabaseContextProvider", () => ({
   useBakabaseContext: () => ({ createPortal: api.portal }),
 }));
@@ -108,6 +128,8 @@ const triggers: Trigger[] = [
     supportsManualRun: false,
     requiresManualPayload: true,
     payloadFields: [],
+    activationMode: 2,
+    sourceModule: "acquisition",
   },
   {
     kind: "downloader.resultReady",
@@ -115,6 +137,8 @@ const triggers: Trigger[] = [
     supportsManualRun: false,
     requiresManualPayload: true,
     payloadFields: [],
+    activationMode: 2,
+    sourceModule: "downloader",
   },
   {
     kind: "postParser.manual",
@@ -122,6 +146,8 @@ const triggers: Trigger[] = [
     supportsManualRun: true,
     requiresManualPayload: true,
     payloadFields: [],
+    activationMode: 1,
+    sourceModule: "postParser",
   },
 ];
 
@@ -143,6 +169,7 @@ const Harness = ({ children }: { children: ReactNode }) => {
 };
 const show = async (content: ReactNode = <WorkflowPage />) => {
   await act(async () => root.render(<Harness>{content}</Harness>));
+  await act(async () => new Promise((resolve) => setTimeout(resolve, 10)));
 };
 const button = (name: string, within: ParentNode = container): HTMLButtonElement => {
   const result = Array.from(within.querySelectorAll<HTMLButtonElement>("button")).find(
@@ -164,9 +191,14 @@ const noWorkflowWrites = () => {
   expect(api.remove).not.toHaveBeenCalled();
 };
 
+let testId = 0;
+
 beforeEach(() => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   vi.clearAllMocks();
+  api.baseUrl = `test-${++testId}`;
+  api.query = "";
+  api.validate.mockReset().mockResolvedValue({ code: 0, data: { isValid: true, diagnostics: [] } });
   api.search.mockResolvedValue({ code: 0, data: workflows });
   api.triggers.mockResolvedValue({ code: 0, data: triggers });
   api.run.mockResolvedValue({ code: 0, data: 101 });
@@ -181,6 +213,101 @@ afterEach(async () => {
 });
 
 describe("workflow preset entry points", () => {
+  it("automatically checks configuration without duplicated check headings or execution", async () => {
+    await show();
+    expect(api.validate.mock.calls.map(([id]) => id)).toEqual([11, 12, 13, 14]);
+    expect(container).toHaveTextContent("workflow.diagnostics.passed");
+    expect(container).not.toHaveTextContent("workflow.diagnostics.title");
+    expect(container.querySelector('[aria-label="workflow.diagnostics.check"]')).toBeNull();
+    noWorkflowWrites();
+  });
+
+  it("includes built-in and custom definitions when a source page filters by trigger", async () => {
+    api.query = "triggerKind=acquisition.requested&keep=1";
+    await show();
+    expect(button("workflow.sections.all")).toHaveAttribute("aria-selected", "true");
+    expect(
+      [...container.querySelectorAll("[data-workflow-id]")].map((element) =>
+        element.getAttribute("data-workflow-id"),
+      ),
+    ).toEqual(["11", "12"]);
+    await click(button("workflow.sections.builtin"));
+    expect(
+      [...container.querySelectorAll("[data-workflow-id]")].map((element) =>
+        element.getAttribute("data-workflow-id"),
+      ),
+    ).toEqual(["12"]);
+    await click(button("workflow.filter.clear"));
+    expect(button("workflow.sections.custom")).toHaveAttribute("aria-selected", "true");
+    expect(api.paramsChanged.mock.calls[0][0].toString()).toBe("keep=1");
+    expect(container.querySelector('[aria-label="workflow.sections.all"]')).toBeNull();
+    noWorkflowWrites();
+  });
+
+  it("guides invalid manual runs to configuration while keeping managed entry points available", async () => {
+    api.validate.mockResolvedValue({
+      code: 0,
+      data: {
+        isValid: false,
+        diagnostics: [{ code: "missing", severity: "error", message: "Missing settings" }],
+      },
+    });
+    await show();
+    await openBuiltins();
+    await click(button("workflow.diagnostics.configure"));
+    expect(api.navigate).toHaveBeenLastCalledWith("/workflows/editor?id=14");
+    expect(api.portal).not.toHaveBeenCalled();
+    await click(button("workflow.entry.acquisition.label"));
+    expect(api.navigate).toHaveBeenLastCalledWith("/acquisitions");
+    noWorkflowWrites();
+  });
+
+  it("shows an unavailable check with retry instead of treating it as missing configuration", async () => {
+    api.validate.mockRejectedValueOnce(new Error("offline"));
+    await show();
+    expect(container).toHaveTextContent("workflow.diagnostics.failed");
+    expect(container).not.toHaveTextContent("workflow.diagnostics.needsAttention");
+    await click(button("workflow.diagnostics.retry"));
+    expect(container).toHaveTextContent("workflow.diagnostics.passed");
+    noWorkflowWrites();
+  });
+
+  it("still accepts manual input when the only diagnostic depends on that input", async () => {
+    api.validate.mockResolvedValue({
+      code: 0,
+      data: {
+        isValid: false,
+        diagnostics: [
+          {
+            code: "needsLink",
+            severity: "error",
+            dependsOnPayload: true,
+            message: "Input link required",
+          },
+        ],
+      },
+    });
+    await show();
+    await openBuiltins();
+    expect(container).toHaveTextContent("workflow.diagnostics.needsInput");
+    await click(button("workflow.manualRun.tooltip"));
+    expect(api.portal).toHaveBeenCalledWith(
+      ManualRunModal,
+      expect.objectContaining({ workflowId: 14 }),
+    );
+    expect(api.navigate).not.toHaveBeenCalled();
+    noWorkflowWrites();
+  });
+
+  it("reports loading errors and lets the user retry the list", async () => {
+    api.search.mockResolvedValueOnce({ code: 500, data: [] });
+    await show();
+    expect(container.querySelector('[role="alert"]')).toHaveTextContent("workflow.list.loadFailed");
+    await click(button("workflow.diagnostics.retry"));
+    expect(container).toHaveTextContent("Direct download");
+    expect(container.querySelector('[role="alert"]')).toBeNull();
+  });
+
   it("starts with user definitions and reveals protected presets in the built-in tab", async () => {
     await show();
 

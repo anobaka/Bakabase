@@ -33,6 +33,7 @@ const {
   validateWorkflow: vi.fn(),
 }));
 
+vi.mock("@/stores/options", () => ({ optionsStores: {} }));
 vi.mock("@/sdk/BApi", () => ({
   default: {
     workflow: {
@@ -80,8 +81,16 @@ vi.mock("../../Triggers", () => ({
   }),
 }));
 vi.mock("../CanvasNode", () => ({
-  default: ({ draft }: { draft: ActivityDraft }) => (
-    <div data-draft={JSON.stringify(draft)}>{draft.kind}</div>
+  default: ({
+    draft,
+    hasValidationError,
+  }: {
+    draft: ActivityDraft;
+    hasValidationError?: boolean;
+  }) => (
+    <div data-draft={JSON.stringify(draft)} data-validation-error={hasValidationError}>
+      {draft.kind}
+    </div>
   ),
 }));
 vi.mock("../NodePalette", () => ({
@@ -195,6 +204,8 @@ const triggers: EditorProps["triggers"] = [
     supportsManualRun: true,
     requiresManualPayload: false,
     payloadFields: [],
+    activationMode: 1,
+    sourceModule: "fileSystem",
   },
 ];
 const aiKind = "transform.ai.transform";
@@ -526,7 +537,9 @@ describe("workflow metadata and configuration checks", () => {
       },
     });
     await render({ workflow: definition() });
-    await act(async () => button("workflow.diagnostics.check").click());
+    expect(container).toHaveTextContent("workflow.diagnostics.checking");
+    expect(container.querySelector('[data-validation-error="true"]')).toBeNull();
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 550)));
     expect(validateWorkflow).toHaveBeenCalledExactlyOnceWith(
       expect.objectContaining({
         triggerKind: "fs.manualScan",
@@ -538,8 +551,10 @@ describe("workflow metadata and configuration checks", () => {
           }),
         ],
       }),
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
     expect(container).toHaveTextContent("Missing required server setting");
+    expect(container.querySelector('[data-validation-error="true"]')).not.toBeNull();
     expect(button("workflow.editor.save")).toBeEnabled();
   });
 
@@ -552,15 +567,16 @@ describe("workflow metadata and configuration checks", () => {
       }),
     );
     await render({ workflow: definition() });
-    await act(async () => button("workflow.diagnostics.check").click());
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 550)));
     await act(async () => button(`Add ${directKind}`).click());
     await act(async () => finish({ code: 0, data: { isValid: true, diagnostics: [] } }));
     expect(container).not.toHaveTextContent("workflow.diagnostics.passed");
-    expect(container).toHaveTextContent("workflow.diagnostics.unchecked");
+    expect(container).toHaveTextContent("workflow.diagnostics.checking");
     validateWorkflow.mockRejectedValueOnce(new Error("Offline"));
-    await act(async () => button("workflow.diagnostics.check").click());
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 550)));
     expect(container).toHaveTextContent("workflow.diagnostics.failed");
     await act(async () => button("workflow.diagnostics.retry").click());
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 550)));
     expect(container).toHaveTextContent("workflow.diagnostics.passed");
   });
 });

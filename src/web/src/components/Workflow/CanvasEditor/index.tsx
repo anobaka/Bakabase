@@ -3,9 +3,8 @@
 import type { PaletteEntry } from "./NodePalette";
 import type { ActivityDraft, CanvasSelection, EditorSeedLike, SlotFit } from "./types";
 import type { components } from "@/sdk/BApi2";
-import type { WorkflowValidation } from "../metadata";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
@@ -31,6 +30,7 @@ import { workflowItemTypeDisplayName } from "../itemTypes";
 import { workflowLabel } from "../builtinLabels";
 import { workflowDescription } from "../metadata";
 import WorkflowDiagnostics from "../WorkflowDiagnostics";
+import { useDraftWorkflowValidation } from "../useWorkflowValidation";
 
 import { useChainDrag } from "./useChainDrag";
 import { useCanvasView } from "./useCanvasView";
@@ -104,10 +104,6 @@ const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => 
         ? t<string>(seed.descriptionKey)
         : "",
   );
-  const [validation, setValidation] = useState<WorkflowValidation>();
-  const [checking, setChecking] = useState(false);
-  const [checkFailed, setCheckFailed] = useState(false);
-  const checkRevision = useRef(0);
   const [triggerKind, setTriggerKind] = useState(initialTriggerKind);
   const [enabled, setEnabled] = useState(workflow?.enabled ?? true);
   const triggerUi = useMemo(() => getWorkflowTriggerUI(triggerKind), [triggerKind]);
@@ -355,44 +351,11 @@ const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => 
             : ""
           : "";
 
-  useEffect(() => {
-    checkRevision.current += 1;
-    setValidation(undefined);
-    setCheckFailed(false);
-    setChecking(false);
-  }, [triggerKind, filter, drafts]);
-
-  useEffect(
-    () => () => {
-      checkRevision.current += 1;
-    },
-    [],
-  );
-
-  const handleCheck = async () => {
-    const revision = ++checkRevision.current;
-
-    setChecking(true);
-    setCheckFailed(false);
-    try {
-      const rsp = await BApi.workflow.validateWorkflow({
-        triggerKind,
-        triggerFilterJson: triggerUi?.serializeFilter(filter) ?? undefined,
-        activities: drafts.map(({ clientId, ...draft }) => ({ ...draft, nodeId: clientId })),
-      });
-
-      if (revision !== checkRevision.current) return;
-      if (rsp.code || !rsp.data) throw new Error("Workflow validation failed");
-      setValidation(rsp.data);
-    } catch {
-      if (revision === checkRevision.current) {
-        setValidation(undefined);
-        setCheckFailed(true);
-      }
-    } finally {
-      if (revision === checkRevision.current) setChecking(false);
-    }
-  };
+  const validation = useDraftWorkflowValidation({
+    triggerKind,
+    triggerFilterJson: triggerUi?.serializeFilter(filter) ?? undefined,
+    activities: drafts.map(({ clientId, ...draft }) => ({ ...draft, nodeId: clientId })),
+  });
 
   const handleSave = async () => {
     if (!isValid || !triggerUi || saving) return;
@@ -623,7 +586,7 @@ const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => 
                     descriptor={descriptorByKind.get(draft.kind)}
                     draft={draft}
                     dragSource={drag.dragging?.fromIdx === i}
-                    hasValidationError={validation?.diagnostics.some(
+                    hasValidationError={validation.result?.diagnostics.some(
                       (diagnostic) =>
                         diagnostic.severity === "error" &&
                         (diagnostic.nodeId === draft.clientId || diagnostic.nodeIndex === i),
@@ -717,10 +680,10 @@ const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => 
         <div className="border-l border-default-200 max-md:border-l-0 max-md:border-t p-3 min-h-0 overflow-y-auto">
           <div className="mb-4 border-b border-default-200 pb-3">
             <WorkflowDiagnostics
-              failed={checkFailed}
-              loading={checking}
-              result={validation}
-              onCheck={() => void handleCheck()}
+              failed={validation.failed}
+              loading={validation.loading}
+              result={validation.result}
+              onCheck={validation.retry}
               onSelectNode={setSelection}
             />
           </div>

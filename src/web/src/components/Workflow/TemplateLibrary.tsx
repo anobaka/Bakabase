@@ -6,6 +6,9 @@ import { useTranslation } from "react-i18next";
 
 import { workflowLabel } from "./builtinLabels";
 import { PresetUsage, workflowPresetGuide } from "./presetGuides";
+import { EDITOR_TEMPLATES } from "./CanvasEditor/templates";
+import TriggerUsageSummary from "./TriggerUsageSummary";
+import { useWorkflowTriggerDescriptors } from "./triggerPresentation";
 
 import { Button, Card, CardBody, Modal } from "@/components/bakaui";
 
@@ -20,11 +23,13 @@ interface Props extends DestroyableProps {
 const TemplateLibrary = ({ workflows, onChoose, onDestroyed }: Props) => {
   const { t } = useTranslation();
   const [visible, setVisible] = useState(true);
+  const { data: triggers } = useWorkflowTriggerDescriptors();
   const entries = [
     ...["fileCleaning", "externalDownload"].map((id) => ({
       id,
       title: t(`workflow.template.${id}.name`),
       guide: id,
+      triggerKind: EDITOR_TEMPLATES[id].triggerKind,
       path: `/workflows/editor?template=${id}`,
     })),
     ...workflows
@@ -33,6 +38,7 @@ const TemplateLibrary = ({ workflows, onChoose, onDestroyed }: Props) => {
         id: String(wf.id),
         title: workflowLabel(wf, t),
         guide: workflowPresetGuide(wf),
+        triggerKind: wf.triggerKind,
         path: `/workflows/editor?id=${wf.id}`,
       })),
   ];
@@ -54,6 +60,11 @@ const TemplateLibrary = ({ workflows, onChoose, onDestroyed }: Props) => {
           <Card key={entry.id} className="bg-default-50" shadow="none">
             <CardBody className="flex gap-3 p-4">
               <h3 className="text-sm font-semibold">{entry.title}</h3>
+              <TriggerUsageSummary
+                compact
+                trigger={triggers?.find((item) => item.kind === entry.triggerKind)}
+                triggerKind={entry.triggerKind}
+              />
               {entry.guide && <PresetUsage guide={entry.guide} />}
               <Button
                 className="mt-auto self-start"

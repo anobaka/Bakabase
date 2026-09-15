@@ -1,3 +1,4 @@
+using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -24,6 +25,10 @@ public class ResourceMaterializedTrigger : IWorkflowTrigger
 
     public string Kind { get; } = ResourceWorkflowKinds.TriggerMaterialized;
     public string DisplayName => "Resource materialized";
+    public WorkflowActivationMode ActivationMode => WorkflowActivationMode.SystemEvent;
+    public string SourceModule => "resource";
+    public string Description => "When the materialization service successfully links a resource to existing local content, enabled workflows matching its resource sources receive that resource. This is not an event for every resource creation or filesystem change, and unlinking content does not publish it.";
+    public string DescriptionKey => "workflow.trigger.resourceMaterialized.description";
     public Type PayloadType => typeof(ResourceMaterializedPayload);
 
     public bool Matches(object payload, string? triggerFilterJson)
@@ -31,9 +36,7 @@ public class ResourceMaterializedTrigger : IWorkflowTrigger
         if (payload is not ResourceMaterializedPayload p) return false;
         if (string.IsNullOrWhiteSpace(triggerFilterJson)) return true;
 
-        Filter? f;
-        try { f = JsonSerializer.Deserialize<Filter>(triggerFilterJson, JsonOptions); }
-        catch (JsonException) { return false; }
+        var f = JsonSerializer.Deserialize<Filter>(triggerFilterJson, JsonOptions);
 
         if (f?.Sources is not { Length: > 0 } pinned) return true;
         return p.SourceLinks.Any(l => pinned.Contains((int)l.Source));

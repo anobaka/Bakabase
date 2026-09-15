@@ -1,4 +1,5 @@
-"use client";
+import WorkflowIntegrationHint from "@/components/Workflow/WorkflowIntegrationHint";
+("use client");
 
 import type { CollectionModel } from "@/stores/collections";
 import type { components } from "@/sdk/BApi2";
@@ -99,11 +100,12 @@ const SourceTab: React.FC<Props> = ({ collection, onChanged }) => {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm text-default-500">
           {t<string>("collection.source.description")}
         </span>
         <HelpCenterButton topic="subscription" />
+        <WorkflowIntegrationHint surface="subscription" />
         <Button
           className="ml-auto"
           size="sm"

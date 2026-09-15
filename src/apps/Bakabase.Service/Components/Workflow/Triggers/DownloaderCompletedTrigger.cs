@@ -1,3 +1,4 @@
+using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -24,6 +25,10 @@ public class DownloaderCompletedTrigger : IWorkflowTrigger
 
     public string Kind { get; } = DownloaderWorkflowKinds.TriggerCompleted;
     public string DisplayName => "Download task completed";
+    public WorkflowActivationMode ActivationMode => WorkflowActivationMode.SystemEvent;
+    public string SourceModule => "downloader";
+    public string Description => "When a downloader task completes, enabled workflows matching its downloader source receive the completed task. This includes a pre-check that finds nothing left to download. It is one event per completed task, not per downloaded file or saved result.";
+    public string DescriptionKey => "workflow.trigger.downloaderCompleted.description";
     public Type PayloadType => typeof(DownloaderCompletedPayload);
 
     public bool Matches(object payload, string? triggerFilterJson)
@@ -31,9 +36,7 @@ public class DownloaderCompletedTrigger : IWorkflowTrigger
         if (payload is not DownloaderCompletedPayload p) return false;
         if (string.IsNullOrWhiteSpace(triggerFilterJson)) return true;
 
-        Filter? f;
-        try { f = JsonSerializer.Deserialize<Filter>(triggerFilterJson, JsonOptions); }
-        catch (JsonException) { return false; }
+        var f = JsonSerializer.Deserialize<Filter>(triggerFilterJson, JsonOptions);
 
         if (f?.ThirdPartyIds is not { Length: > 0 } pinned) return true;
         return pinned.Contains(p.ThirdPartyId);

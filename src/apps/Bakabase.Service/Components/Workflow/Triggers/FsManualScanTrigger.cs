@@ -1,3 +1,4 @@
+using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -37,6 +38,10 @@ public class FsManualScanTrigger : IWorkflowTrigger
 
     public string Kind { get; } = FsWorkflowKinds.TriggerManualScan;
     public string DisplayName => "Manual filesystem scan";
+    public WorkflowActivationMode ActivationMode => WorkflowActivationMode.Manual;
+    public string SourceModule => "fs";
+    public string Description => "Run manually to scan configured existing directories and produce file or directory items. No event or timer starts this trigger; root directories and scan options must be configured first.";
+    public string DescriptionKey => "workflow.trigger.fsManualScan.description";
     public Type PayloadType => typeof(FsManualScanPayload);
 
     // No producer publishes this kind; runs exist only through the manual path. Returning false

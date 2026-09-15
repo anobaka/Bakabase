@@ -200,13 +200,22 @@ public class CollectionService<TDbContext>(
         CollectionMembershipOrigin origin = CollectionMembershipOrigin.Manual,
         int? subscriptionId = null, CancellationToken ct = default)
     {
-        var added = await mappings.Add(id, resourceIds, origin, subscriptionId, ct);
+        if (resourceIds.Count == 0) return;
+
+        // Announce only new written memberships: a subscription may send its whole list again,
+        // and repeated input must not start more than one workflow item for the same resource.
+        var existing = (await mappings.GetResourceIds(id)).ToHashSet();
+        var addedResourceIds = resourceIds.Distinct().Where(resourceId => !existing.Contains(resourceId)).ToArray();
+
+        if (addedResourceIds.Length == 0) return;
+
+        var added = await mappings.Add(id, addedResourceIds, origin, subscriptionId, ct);
 
         if (added > 0)
         {
-            await PublishMembersChanged(resourceIds);
+            await PublishMembersChanged(addedResourceIds);
             await OnCollectionChanged(id, ct);
-            await PublishMembersAdded(id, resourceIds, origin, subscriptionId, ct);
+            await PublishMembersAdded(id, addedResourceIds, origin, subscriptionId, ct);
         }
     }
 

@@ -12,6 +12,7 @@ import { getWorkflowActivityUI } from "../Activities";
 import { getWorkflowTriggerUI } from "../Triggers";
 import { activityDisplayName, triggerDisplayName } from "../displayNames";
 import { workflowDescription } from "../metadata";
+import TriggerUsageSummary from "../TriggerUsageSummary";
 
 import { CategoryTone } from "./CanvasNode";
 
@@ -67,26 +68,14 @@ const InspectorPanel: React.FC<Props> = ({
   if (selection === "trigger") {
     const ui = getWorkflowTriggerUI(triggerKind);
     const FilterForm = ui?.FilterForm;
-    const description = workflowDescription(
-      triggers.find((item) => item.kind === triggerKind) ?? {},
-      t,
-    );
+    const trigger = triggers.find((item) => item.kind === triggerKind);
 
     return (
       <div className="flex flex-col gap-3">
-        <div>
-          <div className="text-[10px] tracking-wide text-secondary">
-            {t<string>("workflow.editor.category.trigger")}
-          </div>
-          <div className="text-sm font-semibold">
-            {triggerDisplayName(
-              t,
-              triggerKind,
-              triggers.find((x) => x.kind === triggerKind)?.displayName,
-            )}
-          </div>
+        <div className="text-[10px] tracking-wide text-secondary">
+          {t<string>("workflow.editor.category.trigger")}
         </div>
-        {description && <p className="text-xs leading-relaxed text-default-500">{description}</p>}
+        <TriggerUsageSummary compact trigger={trigger} triggerKind={triggerKind} />
         <Select
           dataSource={triggers
             .filter((tr) => !!getWorkflowTriggerUI(tr.kind))
@@ -112,9 +101,6 @@ const InspectorPanel: React.FC<Props> = ({
         {ui && FilterForm && filter != null && (
           <FilterForm value={filter} onChange={onFilterChange} />
         )}
-        <div className="border-t border-default-200 pt-2">
-          <HelpCenterButton label={t<string>("workflow.editor.inspector.help")} topic="workflow" />
-        </div>
       </div>
     );
   }

@@ -1,3 +1,5 @@
+using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
+
 namespace Bakabase.Modules.Workflow.Abstractions.Models.View;
 
 public record WorkflowTriggerDescriptorViewModel
@@ -6,6 +8,8 @@ public record WorkflowTriggerDescriptorViewModel
     public string DisplayName { get; set; } = null!;
     public string? Description { get; set; }
     public string? DescriptionKey { get; set; }
+    public WorkflowActivationMode ActivationMode { get; set; }
+    public string SourceModule { get; set; } = "";
 
     /// <summary>False when runs must be started by the trigger's source module.</summary>
     public bool SupportsManualRun { get; set; } = true;

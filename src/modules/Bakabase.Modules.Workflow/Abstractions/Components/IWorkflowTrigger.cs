@@ -1,9 +1,10 @@
 using System.Text.Json;
+using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 
 namespace Bakabase.Modules.Workflow.Abstractions.Components;
 
 /// <summary>
-/// An event source that can fire workflow definitions. One per kind of event in the system.
+/// A workflow entry point, including manual, module-owned, scheduled and event-driven starts.
 /// </summary>
 public interface IWorkflowTrigger
 {
@@ -15,6 +16,12 @@ public interface IWorkflowTrigger
 
     string? Description => null;
     string? DescriptionKey => null;
+
+    /// <summary>The normal activation mechanism. Manual replay is a separate capability.</summary>
+    WorkflowActivationMode ActivationMode => WorkflowActivationMode.Unknown;
+
+    /// <summary>Stable owning-module key. Empty for extensions that do not declare an owner.</summary>
+    string SourceModule => "";
 
     /// <summary>
     /// Whether the generic workflow runner may start this trigger. Managed triggers receive

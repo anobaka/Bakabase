@@ -126,6 +126,32 @@ public sealed class WorkflowAutomationTests
     }
 
     [TestMethod]
+    public async Task Scheduler_DoesNotDuplicateAWaitingRunAndStartsAgainAfterItFinishes()
+    {
+        var defId = await CreateDefinition(FsWorkflowKinds.TriggerScheduledScan,
+            new {roots = new[] {_root}, intervalMinutes = 1});
+        var db = _sp.GetRequiredService<BakabaseDbContext>();
+        var waiting = new WorkflowRunDbModel
+        {
+            WorkflowDefinitionId = defId, Status = WorkflowRunStatus.Waiting,
+            StartedAt = DateTime.Now.AddDays(-1), WaitingSince = DateTime.Now.AddDays(-1),
+            WaitReason = "user-input",
+        };
+        db.Set<WorkflowRunDbModel>().Add(waiting);
+        await db.SaveChangesAsync();
+
+        await Scheduler().RunAsync(BuildArgs(_sp));
+        await Scheduler().RunAsync(BuildArgs(_sp));
+        Assert.AreEqual(1, await RunCount(defId));
+
+        waiting.Status = WorkflowRunStatus.Success;
+        waiting.CompletedAt = DateTime.Now.AddMinutes(-2);
+        await db.SaveChangesAsync();
+        await Scheduler().RunAsync(BuildArgs(_sp));
+        Assert.AreEqual(2, await RunCount(defId));
+    }
+
+    [TestMethod]
     public void ScheduledScanTrigger_IntervalParsing()
     {
         var trigger = new FsScheduledScanTrigger();

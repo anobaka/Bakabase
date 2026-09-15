@@ -1,3 +1,4 @@
+using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -29,6 +30,10 @@ public class SubscriptionUpdatedTrigger : IWorkflowTrigger
 
     public string Kind { get; } = SubscriptionWorkflowKinds.TriggerUpdated;
     public string DisplayName => "Subscription updated";
+    public WorkflowActivationMode ActivationMode => WorkflowActivationMode.SystemEvent;
+    public string SourceModule => "subscription";
+    public string Description => "After a subscription check adds new resources to its collection, enabled workflows whose subscription and source filters match receive those resources. The first initialization and checks with no additions do not publish this event.";
+    public string DescriptionKey => "workflow.trigger.subscriptionUpdated.description";
     public Type PayloadType => typeof(SubscriptionUpdatedPayload);
 
     public bool Matches(object payload, string? triggerFilterJson)
@@ -36,9 +41,7 @@ public class SubscriptionUpdatedTrigger : IWorkflowTrigger
         if (payload is not SubscriptionUpdatedPayload p) return false;
         if (string.IsNullOrWhiteSpace(triggerFilterJson)) return true;
 
-        Filter? filter;
-        try { filter = JsonSerializer.Deserialize<Filter>(triggerFilterJson, JsonOptions); }
-        catch (JsonException) { return false; }
+        var filter = JsonSerializer.Deserialize<Filter>(triggerFilterJson, JsonOptions);
         if (filter is null) return true;
 
         var idOk = filter.SubscriptionIds is not {Length: > 0} ||

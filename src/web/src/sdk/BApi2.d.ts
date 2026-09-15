@@ -11364,6 +11364,12 @@ export interface components {
         };
         /**
          * Format: int32
+         * @description [0: Unknown, 1: Manual, 2: Module, 3: SystemEvent, 4: Schedule, 5: Watch]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants.WorkflowActivationMode": 0 | 1 | 2 | 3 | 4 | 5;
+        /**
+         * Format: int32
          * @description [1: OneToOne, 2: OneToMany]
          * @enum {integer}
          */
@@ -11524,6 +11530,8 @@ export interface components {
             displayName: string;
             description?: string;
             descriptionKey?: string;
+            activationMode: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants.WorkflowActivationMode"];
+            sourceModule: string;
             supportsManualRun: boolean;
             requiresManualPayload: boolean;
             payloadFields: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowItemTypeFieldViewModel"][];

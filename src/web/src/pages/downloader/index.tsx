@@ -1,4 +1,5 @@
-"use client";
+import WorkflowIntegrationHint from "@/components/Workflow/WorkflowIntegrationHint";
+("use client");
 
 import type { ChipProps, CircularProgressProps } from "@/components/bakaui";
 import type { BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloaderDefinition } from "@/sdk/Api";
@@ -643,7 +644,8 @@ const DownloaderPage = () => {
             <p className="mt-0.5 text-xs text-default-500">{t("downloader.page.description")}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <WorkflowIntegrationHint surface="downloader" />
           <Button size="sm" variant="flat" onPress={() => createPortal(Configurations, {})}>
             <AiOutlineSetting size={17} />
             {t("downloader.label.configurations")}

@@ -4689,6 +4689,18 @@ export interface BakabaseModulesThirdPartyThirdPartiesBilibiliModelsFavorites {
 }
 
 /**
+ * [0: Unknown, 1: Manual, 2: Module, 3: SystemEvent, 4: Schedule, 5: Watch]
+ * @format int32
+ */
+export type BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowActivationMode =
+  | 0
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5;
+
+/**
  * [1: OneToOne, 2: OneToMany]
  * @format int32
  */
@@ -4887,6 +4899,9 @@ export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowTriggerDes
   displayName: string;
   description?: string;
   descriptionKey?: string;
+  /** [0: Unknown, 1: Manual, 2: Module, 3: SystemEvent, 4: Schedule, 5: Watch] */
+  activationMode: BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowActivationMode;
+  sourceModule: string;
   supportsManualRun: boolean;
   requiresManualPayload: boolean;
   payloadFields: BakabaseModulesWorkflowAbstractionsModelsViewWorkflowItemTypeFieldViewModel[];
