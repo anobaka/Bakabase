@@ -783,6 +783,7 @@ export interface BakabaseAbstractionsModelsDomainResourceProperty {
   visible: boolean;
   /** @format int32 */
   order: number;
+  profileScopePriority?: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope[];
 }
 
 export interface BakabaseAbstractionsModelsDomainResourcePropertyPropertyValue {

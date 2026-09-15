@@ -11,6 +11,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { DeleteOutlined } from "@ant-design/icons";
 
+import { checkProfileResponse } from "../profileUtils";
+
+import { useProfileModalSave } from "./useProfileModalSave";
+
 import { Button, Checkbox, Modal, Select, Chip } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 
@@ -26,7 +30,6 @@ const DeleteEnhancementsModal = ({ profile, onDeleted, onDestroyed }: Props) => 
   const [enhancerDescriptors, setEnhancerDescriptors] = useState<EnhancerDescriptor[]>([]);
   const [selectedEnhancerId, setSelectedEnhancerId] = useState<string>("all");
   const [deleteEmptyOnly, setDeleteEmptyOnly] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
 
   const enhancerOptions = profile.enhancerOptions?.enhancers ?? [];
 
@@ -55,57 +58,53 @@ const DeleteEnhancementsModal = ({ profile, onDeleted, onDestroyed }: Props) => 
     return options;
   }, [enhancerOptions, enhancerDescriptors, t]);
 
-  const handleDelete = async () => {
-    setIsDeleting(true);
-    try {
-      // Temporary: Use fetch directly until SDK is regenerated
-      const baseUrl = ""; // Uses relative URL which works with proxy
+  const editor = useProfileModalSave(async () => {
+    const query = { deleteEmptyOnly };
+    const response =
+      selectedEnhancerId === "all"
+        ? await BApi.resourceProfile.deleteEnhancementsByResourceProfile(profile.id, query)
+        : await BApi.resourceProfile.deleteEnhancementsByResourceProfileAndEnhancer(
+            profile.id,
+            Number(selectedEnhancerId),
+            query,
+          );
 
-      if (selectedEnhancerId === "all") {
-        // Delete all enhancements for this profile
-        await fetch(
-          `${baseUrl}/resource-profile/${profile.id}/enhancement?deleteEmptyOnly=${deleteEmptyOnly}`,
-          { method: "DELETE" },
-        );
-      } else {
-        // Delete enhancements for specific enhancer
-        await fetch(
-          `${baseUrl}/resource-profile/${profile.id}/enhancer/${selectedEnhancerId}/enhancement?deleteEmptyOnly=${deleteEmptyOnly}`,
-          { method: "DELETE" },
-        );
-      }
-      onDeleted?.();
-      onDestroyed?.();
-    } catch (e) {
-      console.error("Failed to delete enhancements", e);
-    } finally {
-      setIsDeleting(false);
-    }
-  };
+    checkProfileResponse(response, t("resourceProfile.error.save"));
+    await onDeleted?.();
+  }, t("resourceProfile.editor.saveFailed"));
 
   return (
     <Modal
-      defaultVisible
       footer={
         <div className="flex justify-end gap-2">
-          <Button variant="light" onPress={() => onDestroyed?.()}>
+          <Button isDisabled={editor.saving} variant="light" onPress={editor.close}>
             {t<string>("common.action.cancel")}
           </Button>
           <Button
             color="danger"
-            isLoading={isDeleting}
+            isLoading={editor.saving}
             startContent={<DeleteOutlined />}
-            onPress={handleDelete}
+            onPress={() => editor.save(undefined)}
           >
             {t<string>("common.action.delete")}
           </Button>
         </div>
       }
+      hideCloseButton={editor.saving}
+      isDismissable={!editor.saving}
+      isKeyboardDismissDisabled={editor.saving}
       size="md"
       title={t<string>("resourceProfile.modal.deleteEnhancementsTitle")}
+      visible={editor.visible}
+      onClose={editor.close}
       onDestroyed={onDestroyed}
     >
-      <div className="flex flex-col gap-4">
+      {editor.error && (
+        <p className="rounded-lg bg-danger-50 p-3 text-sm text-danger" role="alert">
+          {editor.error}
+        </p>
+      )}
+      <div className="flex flex-col gap-4" {...{ inert: editor.saving ? "" : undefined }}>
         <div className="text-sm">
           {t("resourceProfile.tip.deleteEnhancementsForProfile")}:{" "}
           <Chip color="primary" size="sm" variant="flat">

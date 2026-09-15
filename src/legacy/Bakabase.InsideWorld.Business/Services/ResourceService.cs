@@ -629,6 +629,16 @@ namespace Bakabase.InsideWorld.Business.Services
 
                                                 // Sort property values by scope for this resource (with per-property overrides)
                                                 resourceProfilePropertyOptions.TryGetValue(r.Id, out var profilePropOptions);
+                                                foreach (var prop in profilePropOptions?.Properties ?? [])
+                                                {
+                                                    if (prop.ScopePriority is not { Length: > 0 }) continue;
+                                                    var property = r.Properties.GetValueOrDefault((int)prop.Pool)?
+                                                        .GetValueOrDefault(prop.Id);
+                                                    if (property != null)
+                                                    {
+                                                        property.ProfileScopePriority = prop.ScopePriority.ToArray();
+                                                    }
+                                                }
                                                 SortPropertyValuesByScope(r, scopePriorityMap, profilePropOptions);
 
                                                 // Attach per-resource scope preferences (most granular layer): used by the
@@ -2605,8 +2615,8 @@ namespace Bakabase.InsideWorld.Business.Services
             return ResourceUtils.SplitDisplayNameTemplateIntoSegments(template, replacements, wrappers);
         }
 
-        // The scope resolver applies the per-resource preference over the configured global scope
-        // priority and skips empty scopes (see IPropertyValueScopeResolver).
+        // The scope resolver applies resource preference > profile > global priority and skips
+        // empty scopes (see IPropertyValueScopeResolver).
         private string? GetReservedNameForDisplayName(Resource resource) =>
             _scopeResolver.Resolve(resource, PropertyPool.Reserved, (int)ResourceProperty.Name)?.BizValue as string;
 

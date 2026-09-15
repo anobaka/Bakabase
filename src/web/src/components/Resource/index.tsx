@@ -686,6 +686,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
                       property?.values,
                       valueScopePriority,
                       scopePreferenceMap.get(`${dpk.pool}-${dpk.id}`),
+                      property?.profileScopePriority,
                     );
                     const rawBizValue =
                       selectedValue?.aliasAppliedBizValue ?? selectedValue?.bizValue;
@@ -805,6 +806,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
           p.values,
           valueScopePriority,
           scopePreferenceMap.get(`${PropertyPool.Custom}-${id}`),
+          p.profileScopePriority,
         );
         const tags = (selectedValue?.aliasAppliedBizValue ?? selectedValue?.bizValue) as
           | TagValue[]

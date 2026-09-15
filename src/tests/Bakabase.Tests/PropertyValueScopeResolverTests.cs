@@ -19,7 +19,8 @@ public class PropertyValueScopeResolverTests
 
     private static Resource MakeResource(
         IEnumerable<(PropertyValueScope Scope, object? Value)> values,
-        PropertyValueScopePreference? preference = null)
+        PropertyValueScopePreference? preference = null,
+        PropertyValueScope[]? profilePriority = null)
     {
         var propertyValues = values
             .Select(v => new Resource.Property.PropertyValue((int)v.Scope, v.Value, v.Value, v.Value))
@@ -32,6 +33,7 @@ public class PropertyValueScopeResolverTests
                 [(int)PropertyPool.Reserved] = new()
                 {
                     [PropId] = new Resource.Property("p", PropertyType.SingleLineText, propertyValues)
+                        {ProfileScopePriority = profilePriority}
                 }
             },
             ScopePreferences = preference == null ? null : [preference]
@@ -85,6 +87,89 @@ public class PropertyValueScopeResolverTests
             [(PropertyValueScope.Manual, "Manual Name"), (PropertyValueScope.Av, "Av Name")],
             Preference((PropertyValueScope.Av, true)));
         Assert.AreEqual("Av Name", Resolve(resolver, resource));
+    }
+
+    [TestMethod]
+    public void ProfilePriorityOverridesGlobalWithoutCreatingAResourcePreference()
+    {
+        var resource = MakeResource(
+            [(PropertyValueScope.Manual, "Manual"), (PropertyValueScope.Av, "Profile")],
+            profilePriority: [PropertyValueScope.Av]);
+        Assert.AreEqual("Profile", Resolve(MakeResolver(PropertyValueScope.Manual, PropertyValueScope.Av), resource));
+        Assert.IsNull(resource.ScopePreferences);
+    }
+
+    [TestMethod]
+    public void EmptyProfileScopeFallsThroughToRemainingGlobalOrder()
+    {
+        var resource = MakeResource(
+            [(PropertyValueScope.Av, " "), (PropertyValueScope.Manual, "Manual"),
+                (PropertyValueScope.Synchronization, "Synchronized")],
+            profilePriority: [PropertyValueScope.Av]);
+        Assert.AreEqual("Synchronized", Resolve(MakeResolver(PropertyValueScope.Synchronization,
+            PropertyValueScope.Manual, PropertyValueScope.Av), resource));
+    }
+
+    [TestMethod]
+    public void EmptyProfilePriorityPreservesGlobalResolution()
+    {
+        var resource = MakeResource(
+            [(PropertyValueScope.Manual, "Manual"), (PropertyValueScope.Av, "Global")],
+            profilePriority: []);
+        Assert.AreEqual("Global", Resolve(MakeResolver(PropertyValueScope.Av, PropertyValueScope.Manual), resource));
+    }
+
+    [TestMethod]
+    public void ResourcePreferenceOverridesProfileAndResetRestoresProfile()
+    {
+        var resource = MakeResource(
+            [(PropertyValueScope.Manual, "Resource"), (PropertyValueScope.Av, "Profile")],
+            Preference((PropertyValueScope.Manual, true)), [PropertyValueScope.Av]);
+        var resolver = MakeResolver(PropertyValueScope.Av, PropertyValueScope.Manual);
+        Assert.AreEqual("Resource", Resolve(resolver, resource));
+        resource.ScopePreferences = [Preference()];
+        Assert.AreEqual("Profile", Resolve(resolver, resource));
+    }
+
+    [TestMethod]
+    public void ResourceCutoffStillBlocksProfileAndGlobalFallback()
+    {
+        var resource = MakeResource(
+            [(PropertyValueScope.Manual, ""), (PropertyValueScope.Av, "Profile")],
+            Preference((PropertyValueScope.Manual, false), (PropertyValueScope.Av, true)),
+            [PropertyValueScope.Av]);
+        Assert.IsNull(Resolve(MakeResolver(PropertyValueScope.Av, PropertyValueScope.Manual), resource));
+    }
+
+    [TestMethod]
+    public void ResourceFallbackIsLimitedToItsOwnConfiguredChain()
+    {
+        var resource = MakeResource(
+            [(PropertyValueScope.Manual, null), (PropertyValueScope.Synchronization, "Resource fallback"),
+                (PropertyValueScope.Av, "Profile")],
+            Preference((PropertyValueScope.Manual, true), (PropertyValueScope.Synchronization, true)),
+            [PropertyValueScope.Av]);
+        var resolver = MakeResolver(PropertyValueScope.Av);
+        Assert.AreEqual("Resource fallback", Resolve(resolver, resource));
+        resource.ScopePreferences = [Preference((PropertyValueScope.Manual, true))];
+        Assert.IsNull(Resolve(resolver, resource));
+    }
+
+    [TestMethod]
+    public void ProfileScopeOrderBelongsOnlyToItsProperty()
+    {
+        var resource = MakeResource(
+            [(PropertyValueScope.Manual, "Manual"), (PropertyValueScope.Av, "Profile")],
+            profilePriority: [PropertyValueScope.Av]);
+        resource.Properties![(int)PropertyPool.Custom] = new()
+        {
+            [PropId] = new Resource.Property("Other pool", PropertyType.SingleLineText,
+                [new((int)PropertyValueScope.Manual, "Other manual", "Other manual", "Other manual"),
+                    new((int)PropertyValueScope.Av, "Other AV", "Other AV", "Other AV")])
+        };
+        var resolver = MakeResolver(PropertyValueScope.Manual, PropertyValueScope.Av);
+        Assert.AreEqual("Profile", Resolve(resolver, resource));
+        Assert.AreEqual("Other manual", resolver.Resolve(resource, PropertyPool.Custom, PropId)?.BizValue);
     }
 
     [TestMethod]

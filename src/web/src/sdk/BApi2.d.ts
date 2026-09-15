@@ -8181,6 +8181,7 @@ export interface components {
             visible: boolean;
             /** Format: int32 */
             order: number;
+            profileScopePriority?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyValueScope"][];
         };
         "Bakabase.Abstractions.Models.Domain.Resource+Property+PropertyValue": {
             /** Format: int32 */

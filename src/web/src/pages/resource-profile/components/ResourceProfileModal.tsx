@@ -1,128 +1,168 @@
 "use client";
 
 import type { DestroyableProps } from "@/components/bakaui/types";
-import type { BakabaseServiceModelsViewResourceProfileViewModel } from "@/sdk/Api";
+import type { BakabaseServiceModelsViewResourceProfileViewModel as ResourceProfile } from "@/sdk/Api";
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { AiOutlineInfoCircle } from "react-icons/ai";
+
+import { checkProfileResponse } from "../profileUtils";
 
 import { Modal, Input } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 
-type ResourceProfile = BakabaseServiceModelsViewResourceProfileViewModel;
-
 type Props = {
   profile?: ResourceProfile;
   existingNames?: string[];
-  onSaved?: () => void;
-  /** For editing existing profiles - uses parent's update logic to preserve all fields */
+  onSaved?: (profile: ResourceProfile) => void;
   onUpdate?: (profileId: number, updates: Partial<ResourceProfile>) => Promise<void>;
 } & DestroyableProps;
 
-// Generate default name like "资源配置 1", "资源配置 2", etc.
-const generateDefaultName = (existingNames: string[], t: (key: string) => string): string => {
-  const baseNameKey = "resourceProfile.label.resourceProfile";
-  const baseName = t(baseNameKey);
-  let n = 1;
+function defaultName(existingNames: string[], baseName: string) {
+  let number = 1;
 
-  while (existingNames.includes(`${baseName} ${n}`)) {
-    n++;
-  }
+  while (existingNames.includes(`${baseName} ${number}`)) number++;
 
-  return `${baseName} ${n}`;
-};
+  return `${baseName} ${number}`;
+}
 
-const ResourceProfileModal = ({
+export default function ResourceProfileModal({
   profile,
   existingNames = [],
   onSaved,
   onUpdate,
   onDestroyed,
-}: Props) => {
+}: Props) {
   const { t } = useTranslation();
-  const isEdit = !!profile?.id;
-
+  const isEdit = profile !== undefined;
   const [name, setName] = useState(
-    profile?.name || (isEdit ? "" : generateDefaultName(existingNames, t)),
+    () =>
+      profile?.name ??
+      defaultName(existingNames, t<string>("resourceProfile.label.resourceProfile")),
   );
-  const [priority, setPriority] = useState(profile?.priority ?? 0);
-
+  const [priorityText, setPriorityText] = useState(String(profile?.priority ?? 0));
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const priority = Number(priorityText);
+  const priorityValid =
+    priorityText.trim() !== "" &&
+    Number.isInteger(priority) &&
+    priority >= -2147483648 &&
+    priority <= 2147483647;
+  const editUnavailable = isEdit && (!onUpdate || !Number.isInteger(profile.id) || profile.id <= 0);
+  const isValid = name.trim().length > 0 && priorityValid && !editUnavailable;
 
-  const handleSubmit = async () => {
-    if (!name.trim()) {
-      return;
-    }
-
+  const submit = async () => {
+    if (!isValid)
+      throw new Error(
+        t<string>(
+          editUnavailable
+            ? "resourceProfile.basic.editUnavailable"
+            : !name.trim()
+              ? "resourceProfile.error.nameRequired"
+              : "resourceProfile.basic.invalidPriority",
+        ),
+      );
     setSaving(true);
+    setError("");
     try {
-      if (isEdit && profile?.id && onUpdate) {
-        // Use onUpdate callback which preserves all fields via profilesRef
-        await onUpdate(profile.id, { name, priority });
+      if (isEdit) {
+        // Editing must go through the parent, which merges every other configuration field.
+        if (!onUpdate) throw new Error(t<string>("resourceProfile.basic.editUnavailable"));
+        await onUpdate(profile.id, { name: name.trim(), priority });
       } else {
-        // For creating new profile, only need name and priority
-        const inputModel = {
-          name,
+        const response = await BApi.resourceProfile.addResourceProfile({
+          name: name.trim(),
           priority,
-        };
+        });
 
-        await BApi.resourceProfile.addResourceProfile(inputModel as any);
+        checkProfileResponse(response, t<string>("resourceProfile.basic.saveFailed"));
+        if (!response.data || !Number.isInteger(response.data.id) || response.data.id <= 0)
+          throw new Error(t<string>("resourceProfile.basic.saveFailed"));
+        onSaved?.(response.data);
       }
-      onSaved?.();
-      onDestroyed?.();
-    } catch (e) {
-      console.error("Failed to save resource profile", e);
+    } catch (failure) {
+      setError(
+        failure instanceof Error ? failure.message : t<string>("resourceProfile.basic.saveFailed"),
+      );
+      throw failure;
     } finally {
       setSaving(false);
     }
   };
 
-  const isValid = name.trim() !== "";
-
   return (
     <Modal
       defaultVisible
-      okProps={{
-        isDisabled: !isValid,
-        isLoading: saving,
+      footer={{
+        actions: ["ok", "cancel"],
+        okProps: {
+          children: t<string>(
+            isEdit ? "common.action.save" : "resourceProfile.basic.createAndConfigure",
+          ),
+          isDisabled: !isValid,
+        },
+        cancelProps: { children: t<string>("common.action.cancel"), isDisabled: saving },
       }}
+      hideCloseButton={saving}
+      isDismissable={!saving}
+      isKeyboardDismissDisabled={saving}
       size="md"
-      title={
+      title={t<string>(
         isEdit
-          ? t("resourceProfile.modal.editResourceProfileTitle")
-          : t("resourceProfile.modal.addResourceProfileTitle")
-      }
+          ? "resourceProfile.modal.editResourceProfileTitle"
+          : "resourceProfile.modal.addResourceProfileTitle",
+      )}
       onDestroyed={onDestroyed}
-      onOk={handleSubmit}
+      onOk={submit}
     >
-      <div className="flex flex-col gap-4">
+      <p className="text-sm leading-6 text-default-500">
+        {t<string>("resourceProfile.basic.description")}
+      </p>
+      <div className="flex flex-col gap-5 py-2">
         <Input
           isRequired
-          errorMessage={!name.trim() ? t("resourceProfile.error.nameRequired") : ""}
+          aria-label={t<string>("resourceProfile.label.name")}
+          errorMessage={!name.trim() ? t<string>("resourceProfile.error.nameRequired") : undefined}
+          isDisabled={saving}
           isInvalid={!name.trim()}
-          label={t("resourceProfile.label.name")}
-          placeholder={t("resourceProfile.label.profileName")}
+          label={t<string>("resourceProfile.label.name")}
+          labelPlacement="outside"
+          placeholder={t<string>("resourceProfile.label.profileName")}
           value={name}
           onValueChange={setName}
         />
         <Input
-          description={t("resourceProfile.tip.higherPriorityPrecedence")}
-          label={t("resourceProfile.label.priority")}
-          placeholder="0"
+          aria-label={t<string>("resourceProfile.label.priority")}
+          className="max-w-sm"
+          description={t<string>("resourceProfile.basic.priorityHint")}
+          errorMessage={
+            !priorityValid ? t<string>("resourceProfile.basic.invalidPriority") : undefined
+          }
+          isDisabled={saving}
+          isInvalid={!priorityValid}
+          label={t<string>("resourceProfile.label.priority")}
+          labelPlacement="outside"
+          step={1}
           type="number"
-          value={String(priority)}
-          onValueChange={(v) => setPriority(parseInt(v) || 0)}
+          value={priorityText}
+          onValueChange={setPriorityText}
         />
-        {!isEdit && (
-          <p className="text-xs text-default-400">
-            {t("resourceProfile.tip.otherSettingsAfterCreation")}
-          </p>
-        )}
       </div>
+      {!isEdit && (
+        <div className="flex items-start gap-3 rounded-xl bg-primary/5 p-3">
+          <AiOutlineInfoCircle aria-hidden className="mt-0.5 shrink-0 text-lg text-primary" />
+          <p className="text-sm leading-6 text-default-600">
+            {t<string>("resourceProfile.basic.newScopeHint")}
+          </p>
+        </div>
+      )}
+      {(error || editUnavailable) && (
+        <p className="rounded-lg bg-danger/5 px-3 py-2 text-sm text-danger" role="alert">
+          {editUnavailable ? t<string>("resourceProfile.basic.editUnavailable") : error}
+        </p>
+      )}
     </Modal>
   );
-};
-
-ResourceProfileModal.displayName = "ResourceProfileModal";
-
-export default ResourceProfileModal;
+}

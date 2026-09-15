@@ -51,10 +51,11 @@ const EnhancerValidationModal: React.FC<Props> = ({ enhancerOptions, onDestroyed
         createPortal(ResourceEnhancementsModal, {
           resourceId: selectedResource.id,
         });
+      } else {
+        toast.danger(response.message || t<string>("enhancementConfig.validation.failed"));
       }
-    } catch (err) {
-      console.error("Validation failed:", err);
-      toast.error(t<string>("enhancementConfig.validation.failed"));
+    } catch {
+      toast.danger(t<string>("enhancementConfig.validation.failed"));
     } finally {
       setValidating(false);
     }

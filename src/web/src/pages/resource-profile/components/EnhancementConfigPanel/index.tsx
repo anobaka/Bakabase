@@ -20,6 +20,8 @@ import {
 } from "react-icons/ai";
 import { ExperimentOutlined } from "@ant-design/icons";
 
+import { useProfileModalSave } from "../useProfileModalSave";
+
 import {
   buildSourceStates,
   convertStatesToEnhancerOptions,
@@ -82,6 +84,7 @@ const EnhancementConfigPanel = ({
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
+  const editor = useProfileModalSave(onSubmit, t("resourceProfile.editor.saveFailed"));
   const [descriptors, setDescriptors] = useState<EnhancerDescriptor[]>([]);
   const [sourceStates, setSourceStates] = useState<Map<string, SourceState>>(new Map());
   const [enhancerLevelConfigs, setEnhancerLevelConfigs] = useState<
@@ -466,8 +469,7 @@ const EnhancementConfigPanel = ({
     if (hasUnbound) return;
     const result = getCurrentOptions();
 
-    onSubmit?.(result);
-    onDestroyed?.();
+    void editor.save(result);
   };
 
   const handleValidate = () => {
@@ -628,7 +630,6 @@ const EnhancementConfigPanel = ({
 
   return (
     <Modal
-      defaultVisible
       classNames={{ base: "max-w-[90vw] max-h-[90vh]" }}
       footer={
         <div className="flex justify-between items-center w-full">
@@ -641,20 +642,44 @@ const EnhancementConfigPanel = ({
             {t<string>("enhancementConfig.validation.action")}
           </Button>
           <div className="flex gap-2">
-            <Button color="default" variant="light" onPress={() => onDestroyed?.()}>
+            <Button
+              color="default"
+              isDisabled={editor.saving}
+              variant="light"
+              onPress={editor.close}
+            >
               {t<string>("common.action.cancel")}
             </Button>
-            <Button color="primary" isDisabled={hasUnbound} onPress={handleSubmit}>
+            <Button
+              color="primary"
+              isDisabled={hasUnbound}
+              isLoading={editor.saving}
+              onPress={handleSubmit}
+            >
               {t<string>("common.action.confirm")}
             </Button>
           </div>
         </div>
       }
+      hideCloseButton={editor.saving}
+      isDismissable={!editor.saving}
+      isKeyboardDismissDisabled={editor.saving}
       size="7xl"
       title={t<string>("enhancementConfig.title")}
+      visible={editor.visible}
+      onClose={editor.close}
       onDestroyed={onDestroyed}
     >
-      <div className="flex flex-col" style={{ height: "70vh" }}>
+      {editor.error && (
+        <p className="rounded-lg bg-danger-50 p-3 text-sm text-danger" role="alert">
+          {editor.error}
+        </p>
+      )}
+      <div
+        className={`flex flex-col ${editor.saving ? "pointer-events-none opacity-60" : ""}`}
+        {...{ inert: editor.saving ? "" : undefined }}
+        style={{ height: "70vh" }}
+      >
         {/* ─── Intro tip ─── */}
         <div className="flex-shrink-0 text-sm text-default-500 pb-2">
           <p>{t("enhancementConfig.intro")}</p>

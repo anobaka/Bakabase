@@ -5,8 +5,8 @@ namespace Bakabase.Abstractions.Services;
 
 /// <summary>
 /// Resolves a resource property's per-scope values down to the single effective value: the
-/// per-resource PropertyValueScopePreference wins, the configured global scope priority is the
-/// fallback, empty scopes are skipped. Implementations own where the global priority comes from
+/// per-resource PropertyValueScopePreference wins over the effective profile's scope order and then
+/// the configured global priority; empty scopes are skipped. Implementations own where global priority comes from
 /// (ResourceOptions), so callers never pass priority configuration.
 /// </summary>
 public interface IPropertyValueScopeResolver

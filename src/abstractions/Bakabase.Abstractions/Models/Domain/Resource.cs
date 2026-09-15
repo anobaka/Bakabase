@@ -112,6 +112,12 @@ public record Resource
         public StandardValueType BizValueType => PropertyTypeValueTypes.GetBizValueType(Type);
         public bool Visible { get; set; } = Visible;
         public int Order { get; set; } = Order;
+        /// <summary>
+        /// Scope order from this property's effective resource profile. Null/empty uses the global
+        /// order; a per-resource ScopePreference still takes precedence. This is derived response
+        /// metadata, not a saved per-resource override.
+        /// </summary>
+        public PropertyValueScope[]? ProfileScopePriority { get; set; }
 
         public record PropertyValue(
             int Scope,

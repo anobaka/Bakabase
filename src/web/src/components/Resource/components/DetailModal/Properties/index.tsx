@@ -239,7 +239,11 @@ const Properties = (props: Props) => {
   const renderProperty = (pCtx: PropertyRenderContext) => {
     const { property, propertyValues, propertyPool } = pCtx;
     const preference = preferenceMap.get(`${propertyPool}-${property.id}`);
-    const effectivePriority = buildEffectiveScopePriority(valueScopePriority, preference);
+    const effectivePriority = buildEffectiveScopePriority(
+      valueScopePriority,
+      preference,
+      propertyValues.profileScopePriority,
+    );
 
     // log(pCtx);
     return (
